@@ -39,6 +39,30 @@ describe('normalizeGrokIdentityProbe', () => {
     ).toBeNull();
   });
 
+  test('drops prompt-like at-text from DOM handle fallback', () => {
+    expect(
+      normalizeGrokIdentityProbe({
+        handle: "@google calendar what's on my schedule today?",
+        source: 'dom-handle',
+      }),
+    ).toBeNull();
+  });
+
+  test('keeps plausible Grok handles from DOM handle fallback', () => {
+    expect(
+      normalizeGrokIdentityProbe({
+        handle: '@SwantonDoug',
+        source: 'dom-handle',
+      }),
+    ).toEqual({
+      id: undefined,
+      name: undefined,
+      email: undefined,
+      handle: '@SwantonDoug',
+      source: 'dom-handle',
+    });
+  });
+
   test('drops cookie preference text from settings-dialog fallback', () => {
     expect(
       normalizeGrokIdentityProbe({

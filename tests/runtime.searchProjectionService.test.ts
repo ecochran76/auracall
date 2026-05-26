@@ -31,6 +31,8 @@ describe('search projection service', () => {
         entries: [
           {
             provider: 'chatgpt',
+            tenantKey: 'service-account:chatgpt:eric.cochran@soylei.com',
+            bindingKey: 'binding:chatgpt:wsl-chrome-3:wsl-chrome-3',
             runtimeProfileId: 'wsl-chrome-3',
             browserProfileId: 'wsl-chrome-3',
             boundIdentityKey: 'eric.cochran@soylei.com',

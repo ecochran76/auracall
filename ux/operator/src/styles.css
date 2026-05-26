@@ -2004,6 +2004,41 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.campaign-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #252d38;
+  background: #101620;
+}
+
+.campaign-result strong {
+  min-width: 0;
+  color: #dce6f2;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaign-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.campaign-controls .icon-label-button {
+  min-width: 26px;
+  justify-content: center;
+  padding: 3px 5px;
+}
+
+.campaign-detail {
+  border-top: 1px solid #252d38;
+  background: #101620;
+}
+
 .rotated-icon {
   transform: rotate(180deg);
 }

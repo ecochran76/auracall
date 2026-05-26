@@ -10,6 +10,7 @@ export type BrowserServiceDependencies = {
   pruneRegistry: () => Promise<void>;
   launchManualLoginSession: (options: {
     chromePath: string;
+    display?: string | null;
     profileName: string;
     userDataDir: string;
     url: string;
@@ -80,6 +81,7 @@ export class BrowserService {
       const launchDebugPort = await this.resolveLaunchDebugPort(options.defaultProfileDir);
       const { chrome } = await this.deps.launchManualLoginSession({
         chromePath: this.resolvedConfig.chromePath ?? 'google-chrome',
+        display: this.resolvedConfig.display ?? null,
         profileName,
         userDataDir,
         url,

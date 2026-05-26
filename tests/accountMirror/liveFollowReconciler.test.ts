@@ -128,6 +128,56 @@ describe('account mirror live-follow reconciler', () => {
     expect(start).not.toHaveBeenCalled();
   });
 
+  test('does not duplicate an active bounded campaign completion for the same target', async () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config: {
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                identity: { email: 'operator@example.com' },
+                liveFollow: { enabled: true },
+              },
+            },
+          },
+        },
+      },
+    });
+    const start = vi.fn();
+    const boundedCampaignOperation = {
+      ...baseOperation,
+      id: 'acctmirror_completion_campaign_claim',
+      mode: 'bounded' as const,
+      sweepMode: 'full_sweep' as const,
+      maxPasses: 2,
+      materializationPolicy: 'full_missing_assets' as const,
+      materializationAssetKinds: ['all' as const],
+      materializationRefreshSnapshot: true,
+    };
+
+    const result = await reconcileConfiguredAccountMirrorLiveFollow({
+      registry,
+      completionService: {
+        start,
+        list: vi.fn(() => [boundedCampaignOperation]),
+        read: vi.fn(),
+        control: vi.fn(),
+      },
+    });
+
+    expect(result.metrics).toMatchObject({
+      enabledTargets: 1,
+      started: 0,
+      existing: 1,
+    });
+    expect(result.existing[0]).toMatchObject({
+      id: 'acctmirror_completion_campaign_claim',
+      mode: 'bounded',
+    });
+    expect(start).not.toHaveBeenCalled();
+  });
+
   test('starts configured full-sweep live follow with materialization policy', async () => {
     const registry = createAccountMirrorStatusRegistry({
       config: {

@@ -1350,6 +1350,7 @@ export abstract class LlmService {
       projectId?: string;
       refresh?: boolean;
       cacheOnly?: boolean;
+      allowCacheFallback?: boolean;
       listOptions?: BrowserProviderListOptions;
     },
   ): Promise<ConversationContext> {
@@ -1393,6 +1394,9 @@ export abstract class LlmService {
       await this.cacheStore.writeConversationContext(cacheContext, conversationId, normalized);
       return normalized;
     } catch (error) {
+      if (options?.allowCacheFallback === false) {
+        throw error;
+      }
       const cached = await this.cacheStore.readConversationContext(cacheContext, conversationId);
       if (cached.items.messages.length > 0) {
         return cached.items;

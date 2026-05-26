@@ -4,7 +4,10 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { createAccountMirrorCatalogService } from '../../src/accountMirror/catalogService.js';
-import { createAccountMirrorPersistence } from '../../src/accountMirror/cachePersistence.js';
+import {
+  createAccountMirrorPersistence,
+  type AccountMirrorPersistence,
+} from '../../src/accountMirror/cachePersistence.js';
 import { createCacheStore } from '../../src/browser/llmService/cache/store.js';
 
 const config = {
@@ -16,6 +19,28 @@ const config = {
   runtimeProfiles: {
     default: {
       browserProfile: 'default',
+      defaultService: 'chatgpt',
+      services: {
+        chatgpt: {
+          identity: {
+            email: 'ecochran76@gmail.com',
+            accountLevel: 'Business',
+          },
+        },
+      },
+    },
+  },
+};
+
+const movedBindingConfig = {
+  browser: {
+    cache: {
+      store: 'dual',
+    },
+  },
+  runtimeProfiles: {
+    default: {
+      browserProfile: 'stealth-rdp',
       defaultService: 'chatgpt',
       services: {
         chatgpt: {
@@ -152,6 +177,8 @@ describe('account mirror catalog service', () => {
         entries: [
           {
             provider: 'chatgpt',
+            tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+            bindingKey: 'binding:chatgpt:default:default',
             runtimeProfileId: 'default',
             browserProfileId: 'default',
             boundIdentityKey: 'ecochran76@gmail.com',
@@ -305,6 +332,101 @@ describe('account mirror catalog service', () => {
     }
   });
 
+  test('keeps tenant catalog visible when the browser binding changes', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-catalog-binding-move-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const persistence = createAccountMirrorPersistence({
+      config,
+      cacheStore: createCacheStore('dual'),
+    });
+    try {
+      await writeSingleConversationSnapshot(persistence, 'default');
+      const service = createAccountMirrorCatalogService({
+        config: movedBindingConfig,
+        persistence,
+        now: () => new Date('2026-05-25T12:00:00.000Z'),
+      });
+
+      const catalog = await service.readCatalog({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'conversations',
+      });
+
+      expect(catalog.entries).toHaveLength(1);
+      expect(catalog.entries[0]).toMatchObject({
+        provider: 'chatgpt',
+        tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+        bindingKey: 'binding:chatgpt:default:stealth-rdp',
+        runtimeProfileId: 'default',
+        browserProfileId: 'stealth-rdp',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        status: 'eligible',
+        counts: {
+          conversations: 1,
+        },
+        manifests: {
+          conversations: [
+            expect.objectContaining({
+              id: 'conv_binding_move',
+              title: 'Binding move survives',
+            }),
+          ],
+        },
+      });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('keeps binding-scoped backoff state separate from tenant catalog visibility', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-catalog-binding-backoff-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const persistence = createAccountMirrorPersistence({
+      config,
+      cacheStore: createCacheStore('dual'),
+    });
+    try {
+      await writeSingleConversationSnapshot(persistence, 'default');
+      await persistence.writeState?.({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        updatedAt: '2026-05-25T11:00:00.000Z',
+        state: {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          lastFailureAtMs: Date.parse('2026-05-25T11:00:00.000Z'),
+          consecutiveFailureCount: 4,
+          providerCooldownUntilMs: Date.parse('2026-05-25T13:00:00.000Z'),
+        },
+      });
+      const service = createAccountMirrorCatalogService({
+        config: movedBindingConfig,
+        persistence,
+        now: () => new Date('2026-05-25T12:00:00.000Z'),
+      });
+
+      const catalog = await service.readCatalog({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'conversations',
+      });
+
+      expect(catalog.entries[0]).toMatchObject({
+        tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+        bindingKey: 'binding:chatgpt:default:stealth-rdp',
+        status: 'eligible',
+        reason: 'eligible',
+        counts: {
+          conversations: 1,
+        },
+      });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
   test('projects per-conversation asset counts from account-mirror manifests', async () => {
     const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-catalog-manifest-counts-'));
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -412,3 +534,48 @@ describe('account mirror catalog service', () => {
     }
   });
 });
+
+async function writeSingleConversationSnapshot(
+  persistence: AccountMirrorPersistence,
+  browserProfileId: string,
+): Promise<void> {
+  await persistence.writeSnapshot({
+    provider: 'chatgpt',
+    runtimeProfileId: 'default',
+    browserProfileId,
+    boundIdentityKey: 'ecochran76@gmail.com',
+    detectedIdentityKey: 'ecochran76@gmail.com',
+    detectedAccountLevel: 'Business',
+    requestId: 'acctmirror_binding_move',
+    startedAt: '2026-05-24T00:00:00.000Z',
+    completedAt: '2026-05-24T00:00:05.000Z',
+    dispatcherKey: 'managed-profile:/tmp/default/chatgpt::service:chatgpt',
+    dispatcherOperationId: 'op_binding_move',
+    metadataCounts: {
+      projects: 0,
+      conversations: 1,
+      artifacts: 0,
+      files: 0,
+      media: 0,
+    },
+    metadataEvidence: {
+      identitySource: 'profile-menu',
+      projectSampleIds: [],
+      conversationSampleIds: ['conv_binding_move'],
+      truncated: {
+        projects: false,
+        conversations: false,
+        artifacts: false,
+      },
+    },
+    manifests: {
+      projects: [],
+      conversations: [
+        { id: 'conv_binding_move', title: 'Binding move survives', provider: 'chatgpt' },
+      ],
+      artifacts: [],
+      files: [],
+      media: [],
+    },
+  });
+}

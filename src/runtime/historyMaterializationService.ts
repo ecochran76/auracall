@@ -24,6 +24,7 @@ import { createLlmService } from '../browser/llmService/providers/index.js';
 import type { ConversationArtifact, FileRef, ProviderId } from '../browser/providers/domain.js';
 import { createMediaGenerationService } from '../media/service.js';
 import { createBrowserMediaGenerationMaterializer } from '../media/browserExecutor.js';
+import { resolveRuntimeProfileUserConfig } from '../browser/service/profileConfig.js';
 import type {
   MediaGenerationArtifact,
   MediaGenerationResponse,
@@ -134,6 +135,17 @@ export interface HistoryMediaGenerationMaterializeInput {
   matchBasis: string;
   count: number | null;
   metadata?: Record<string, unknown> | null;
+}
+
+export interface HistoryMaterializationProviderListOptions {
+  configuredUrl?: string;
+  tabUrl?: string;
+  projectId?: string;
+  allowNavigation: true;
+  expectedUserIdentity?: {
+    email?: string;
+    handle?: string;
+  };
 }
 
 export interface HistoryMaterializationResult {
@@ -257,6 +269,8 @@ export function formatHistoryMaterializationFailureReason(input: {
   return geminiRouteabilityReason ?? message;
 }
 
+const DEFAULT_HISTORY_MATERIALIZATION_JOB_TIMEOUT_MS = 10 * 60_000;
+
 export interface HistoryMaterializationServiceDeps {
   config: ResolvedUserConfig | Record<string, unknown>;
   catalogService?: AccountMirrorCatalogService;
@@ -266,6 +280,7 @@ export interface HistoryMaterializationServiceDeps {
   generateId?: () => string;
   schedule?: (work: () => Promise<void>) => void;
   withForegroundWork?: <T>(work: () => Promise<T>) => Promise<T>;
+  jobTimeoutMs?: number | null;
   materializeConversation?: (
     target: HistoryMaterializationTarget,
     request: HistoryMaterializationCreateRequest,
@@ -471,17 +486,21 @@ export function createHistoryMaterializationService(
       await store.upsertJob(running);
       try {
         const result = await withForegroundWork(() =>
-          materializeHistoryRequest({
-            request: running.request,
-            jobId: running.id,
-            catalogService,
-            runArchiveService,
-            materializeConversation,
-            refreshConversationSnapshot,
-            recordConversationEvidence,
-            materializeMediaGeneration,
-            now,
-          }));
+          withHistoryMaterializationJobTimeout(
+            materializeHistoryRequest({
+              request: running.request,
+              jobId: running.id,
+              catalogService,
+              runArchiveService,
+              materializeConversation,
+              refreshConversationSnapshot,
+              recordConversationEvidence,
+              materializeMediaGeneration,
+              now,
+            }),
+            resolveHistoryMaterializationJobTimeoutMs(deps.jobTimeoutMs),
+            running.id,
+          ));
         const completedAt = now().toISOString();
         const completed: HistoryMaterializationJob = {
           ...running,
@@ -535,6 +554,37 @@ export function createHistoryMaterializationService(
   };
 
   return service;
+}
+
+function resolveHistoryMaterializationJobTimeoutMs(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_HISTORY_MATERIALIZATION_JOB_TIMEOUT_MS;
+  }
+  return Math.max(1, Math.floor(value));
+}
+
+function withHistoryMaterializationJobTimeout<T>(
+  work: Promise<T>,
+  timeoutMs: number,
+  jobId: string,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return new Promise<T>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      timeout = null;
+      reject(new Error(`History materialization job ${jobId} timed out after ${timeoutMs}ms.`));
+    }, timeoutMs);
+    work.then(
+      (value) => {
+        if (timeout) clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        if (timeout) clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function createHistoryMaterializationJobStore(
@@ -839,35 +889,50 @@ async function materializeReconciliation(input: {
       }
     }
   } else if (selectedKinds.includes('artifacts') || selectedKinds.includes('files') || selectedKinds.includes('media')) {
+    const candidates: Array<{
+      target: HistoryMaterializationTarget;
+      priority: number;
+      sequence: number;
+    }> = [];
+    let sequence = 0;
     for (const entry of catalog.entries) {
       if (input.request.boundIdentityKey && entry.boundIdentityKey !== input.request.boundIdentityKey) continue;
       for (const item of entry.manifests.conversations) {
-        if (consumedTargetBudget >= maxTargets) break;
         const conversationId = readCatalogStringField(item, ['id', 'conversationId']);
         if (!conversationId) continue;
-        if (!catalogConversationLooksMaterializable(item, selectedKinds, {
+        const priority = catalogConversationMaterializationPriority(item, selectedKinds, {
+          provider: entry.provider,
           conversationId,
           manifests: entry.manifests,
         }, {
           force: input.request.force === true,
           refreshSnapshot: input.request.refreshSnapshot === true,
-        })) continue;
-        const target = targetFromCatalogConversation(entry, item, conversationId);
-        const result = await reconcileConversationTarget({
-          target,
-          request: input.request,
-          jobId: input.jobId,
-          materializeConversation: input.materializeConversation,
-          refreshConversationSnapshot: input.refreshConversationSnapshot,
-          recordConversationEvidence: input.recordConversationEvidence,
-          now: input.now,
         });
-        results.push(result);
-        if (consumesReconciliationTargetBudget(result)) {
-          consumedTargetBudget += 1;
-        }
+        if (priority === null) continue;
+        candidates.push({
+          target: targetFromCatalogConversation(entry, item, conversationId),
+          priority,
+          sequence,
+        });
+        sequence += 1;
       }
+    }
+    candidates.sort((left, right) => left.priority - right.priority || left.sequence - right.sequence);
+    for (const candidate of candidates) {
       if (consumedTargetBudget >= maxTargets) break;
+      const result = await reconcileConversationTarget({
+        target: candidate.target,
+        request: input.request,
+        jobId: input.jobId,
+        materializeConversation: input.materializeConversation,
+        refreshConversationSnapshot: input.refreshConversationSnapshot,
+        recordConversationEvidence: input.recordConversationEvidence,
+        now: input.now,
+      });
+      results.push(result);
+      if (consumesReconciliationTargetBudget(result)) {
+        consumedTargetBudget += 1;
+      }
     }
   }
   if (selectedKinds.includes('media') && consumedTargetBudget < maxTargets && selectedConversationIds.length === 0) {
@@ -916,14 +981,16 @@ function targetFromCatalogConversation(
   item: unknown,
   conversationId: string,
 ): HistoryMaterializationTarget {
+  const rawProviderConversationUrl = readCatalogStringField(item, ['url', 'href', 'providerConversationUrl']);
+  const targetFields = normalizeProviderConversationTargetFields(entry.provider, conversationId, rawProviderConversationUrl);
+  const normalizedConversationId = targetFields?.conversationId ?? conversationId;
   return {
     provider: entry.provider,
     runtimeProfile: entry.runtimeProfileId,
     browserProfile: entry.browserProfileId,
     boundIdentityKey: entry.boundIdentityKey,
-    conversationId,
-    providerConversationUrl: readCatalogStringField(item, ['url', 'href', 'providerConversationUrl']) ??
-      resolveProviderConversationUrl(entry.provider, conversationId),
+    conversationId: normalizedConversationId,
+    providerConversationUrl: targetFields?.providerConversationUrl ?? resolveProviderConversationUrl(entry.provider, normalizedConversationId),
     projectId: readCatalogStringField(item, ['projectId']),
   };
 }
@@ -934,7 +1001,7 @@ async function materializeMediaGenerationTarget(input: {
 }): Promise<MediaGenerationResponse> {
   const mediaService = createMediaGenerationService({
     materializer: createBrowserMediaGenerationMaterializer(
-      withRuntimeProfileSelection(input.config, input.request.runtimeProfile) as ResolvedUserConfig,
+      withRuntimeProfileSelection(input.config, input.request.provider, input.request.runtimeProfile) as ResolvedUserConfig,
     ),
     runtimeProfile: input.request.runtimeProfile,
     refreshArchiveIndex: false,
@@ -1144,16 +1211,18 @@ function buildCatalogConversationCandidates(
     if (request.boundIdentityKey && entry.boundIdentityKey !== request.boundIdentityKey) continue;
     const mediaCounts = countCatalogMediaByConversation(entry.manifests.media);
     for (const item of entry.manifests.conversations) {
-      const conversationId = readCatalogStringField(item, ['id', 'conversationId']);
-      if (!conversationId) continue;
+      const rawConversationId = readCatalogStringField(item, ['id', 'conversationId']);
+      const rawProviderConversationUrl = readCatalogStringField(item, ['url', 'href', 'providerConversationUrl']);
+      const targetFields = normalizeProviderConversationTargetFields(entry.provider, rawConversationId, rawProviderConversationUrl);
+      if (!targetFields) continue;
+      const { conversationId, providerConversationUrl } = targetFields;
       const target: HistoryMaterializationTarget = {
         provider: entry.provider,
         runtimeProfile: entry.runtimeProfileId,
         browserProfile: entry.browserProfileId,
         boundIdentityKey: entry.boundIdentityKey,
         conversationId,
-        providerConversationUrl: readCatalogStringField(item, ['url', 'href', 'providerConversationUrl']) ??
-          resolveProviderConversationUrl(entry.provider, conversationId),
+        providerConversationUrl,
         projectId: readCatalogStringField(item, ['projectId']),
       };
       const title = readCatalogStringField(item, ['title', 'name', 'prompt']);
@@ -1300,15 +1369,19 @@ function unsupportedMediaReconciliationReason(
 function targetFromMediaCandidateProviderConversation(
   candidate: MediaGenerationReconciliationCandidate,
 ): HistoryMaterializationTarget | null {
-  if (!candidate.providerConversationId) return null;
+  const targetFields = normalizeProviderConversationTargetFields(
+    candidate.provider,
+    candidate.providerConversationId,
+    candidate.providerConversationUrl,
+  );
+  if (!targetFields) return null;
   return {
     provider: candidate.provider,
     runtimeProfile: candidate.runtimeProfile,
     browserProfile: candidate.browserProfile,
     boundIdentityKey: candidate.boundIdentityKey,
-    conversationId: candidate.providerConversationId,
-    providerConversationUrl: candidate.providerConversationUrl ??
-      resolveProviderConversationUrl(candidate.provider, candidate.providerConversationId),
+    conversationId: targetFields.conversationId,
+    providerConversationUrl: targetFields.providerConversationUrl,
     projectId: candidate.projectId,
   };
 }
@@ -1568,17 +1641,13 @@ async function refreshConversationSnapshotTarget(input: {
 }): Promise<HistoryMaterializationSnapshotRefresh> {
   const llmService = createLlmService(
     input.target.provider,
-    withRuntimeProfileSelection(input.config, input.target.runtimeProfile) as ResolvedUserConfig,
+    withRuntimeProfileSelection(input.config, input.target.provider, input.target.runtimeProfile) as ResolvedUserConfig,
   );
-  const listOptions = {
-    configuredUrl: input.target.providerConversationUrl ?? undefined,
-    tabUrl: input.target.providerConversationUrl ?? undefined,
-    projectId: input.target.projectId ?? undefined,
-    allowNavigation: true,
-  };
+  const listOptions = resolveHistoryMaterializationProviderListOptions(input.target);
   const context = await llmService.getConversationContext(input.target.conversationId, {
     projectId: input.target.projectId ?? undefined,
     refresh: true,
+    allowCacheFallback: false,
     listOptions,
   });
   return {
@@ -1778,20 +1847,16 @@ async function materializeConversationTarget(input: {
   const maxItems = normalizeMaxItems(input.request.maxItems);
   const llmService = createLlmService(
     input.target.provider,
-    withRuntimeProfileSelection(input.config, input.target.runtimeProfile) as ResolvedUserConfig,
+    withRuntimeProfileSelection(input.config, input.target.provider, input.target.runtimeProfile) as ResolvedUserConfig,
   );
-  const listOptions = {
-    configuredUrl: input.target.providerConversationUrl ?? undefined,
-    tabUrl: input.target.providerConversationUrl ?? undefined,
-    projectId: input.target.projectId ?? undefined,
-    allowNavigation: true,
-  };
+  const listOptions = resolveHistoryMaterializationProviderListOptions(input.target);
   const manifestPaths: string[] = [];
   let remaining = maxItems;
   let artifactFetch: { artifacts: ConversationArtifact[]; files: FileRef[]; manifestPath: string | null } | null = null;
   let fileFetch: { conversationFiles: FileRef[]; files: FileRef[]; manifestPath: string | null } | null = null;
   const entries: HistoryMaterializationManifestEntry[] = [];
   const archiveAssets: RunArchiveHistoryMaterializationAsset[] = [];
+  const refreshMaterializationSource = input.request.refreshSnapshot !== true;
 
   if (selectedKinds.includes('artifacts') || selectedKinds.includes('media')) {
     if (remaining === null || remaining > 0) {
@@ -1799,7 +1864,7 @@ async function materializeConversationTarget(input: {
         artifactFetch = await llmService.materializeConversationArtifacts(input.target.conversationId, {
           projectId: input.target.projectId ?? undefined,
           listOptions,
-          refresh: true,
+          refresh: refreshMaterializationSource,
           maxItems: remaining,
         });
         if (artifactFetch.manifestPath) manifestPaths.push(artifactFetch.manifestPath);
@@ -1829,7 +1894,7 @@ async function materializeConversationTarget(input: {
         fileFetch = await llmService.materializeConversationFiles(input.target.conversationId, {
           projectId: input.target.projectId ?? undefined,
           listOptions,
-          refresh: true,
+          refresh: refreshMaterializationSource,
           maxItems: remaining,
         });
         if (fileFetch.manifestPath) manifestPaths.push(fileFetch.manifestPath);
@@ -2035,10 +2100,11 @@ function defaultAssetKindsForCatalogKind(kind: Exclude<AccountMirrorCatalogKind,
   return ['artifacts', 'files'];
 }
 
-function catalogConversationLooksMaterializable(
+function catalogConversationMaterializationPriority(
   item: unknown,
   selectedKinds: HistoryMaterializationAssetKind[] = ['artifacts', 'files'],
   manifestEvidence: {
+    provider: ProviderId;
     conversationId: string;
     manifests: AccountMirrorCatalogEntry['manifests'];
   },
@@ -2046,24 +2112,21 @@ function catalogConversationLooksMaterializable(
     force?: boolean;
     refreshSnapshot?: boolean;
   } = {},
-): boolean {
+): number | null {
   const record = isRecord(item) ? item : {};
   const metadata = isRecord(record.metadata) ? record.metadata : {};
+  if (catalogConversationHasIgnoredProviderRoute(manifestEvidence.provider, manifestEvidence.conversationId, record, metadata)) {
+    return null;
+  }
   if (!options.force && catalogConversationHasTerminalEvidence(record, metadata)) {
-    return false;
+    return null;
   }
   if (options.force && options.refreshSnapshot) {
-    return true;
+    return 0;
   }
   const freshnessState = readConversationFreshnessString(record, metadata, 'state') ??
     readCatalogStringField(record, ['freshnessState']) ??
     readRecordString(metadata, ['freshnessState']);
-  if (
-    options.refreshSnapshot &&
-    (freshnessState === 'stale' || freshnessState === 'partial' || freshnessState === 'missing_assets')
-  ) {
-    return true;
-  }
   const manifestCounts = countManifestAssetsForConversation(
     manifestEvidence.manifests,
     manifestEvidence.conversationId,
@@ -2086,18 +2149,60 @@ function catalogConversationLooksMaterializable(
     metadata.mediaCount,
   ]);
   const mediaCount = Math.max(rowMediaCount, manifestCounts.media);
+  const assetCounts = readConversationFreshnessRecord(record, metadata, 'assetCounts');
+  const freshnessKnownCount = readNumber(readRecordValue(assetCounts, ['known'])) ?? 0;
+  const freshnessMissingLocalCount = readNumber(readRecordValue(assetCounts, ['missingLocal'])) ?? 0;
+  const assetCompleteness = readConversationFreshnessString(record, metadata, 'assetCompleteness') ??
+    readCatalogStringField(record, ['assetCompleteness']) ??
+    readRecordString(metadata, ['assetCompleteness']);
+  const hasFreshnessAssetEvidence = freshnessKnownCount > 0 || freshnessMissingLocalCount > 0;
   const mediaOnly = selectedKinds.length === 1 && selectedKinds[0] === 'media';
   const hasSelectedAssets = (
     (selectedKinds.includes('artifacts') && artifactCount > 0) ||
     (selectedKinds.includes('files') && fileCount > 0) ||
     (selectedKinds.includes('media') &&
-      (mediaOnly ? rowMediaCount > 0 || rowArtifactCount > 0 : mediaCount > 0 || artifactCount > 0))
+      (mediaOnly ? rowMediaCount > 0 || rowArtifactCount > 0 : mediaCount > 0 || artifactCount > 0)) ||
+    hasFreshnessAssetEvidence
   );
-  if (!hasSelectedAssets) return false;
+  const refreshOnlyCandidate = options.refreshSnapshot === true &&
+    (freshnessState === 'stale' || freshnessState === 'partial' || freshnessState === 'missing_assets');
+  if (!hasSelectedAssets) return refreshOnlyCandidate ? 2 : null;
   if (!options.force && catalogConversationAssetsAlreadyComplete(record, metadata, freshnessState)) {
+    return null;
+  }
+  const hasMissingLocalAssetEvidence = freshnessMissingLocalCount > 0 ||
+    (assetCompleteness === 'partial' && hasFreshnessAssetEvidence) ||
+    (freshnessState === 'missing_assets' && hasFreshnessAssetEvidence);
+  if (hasMissingLocalAssetEvidence) return 0;
+  return 1;
+}
+
+function catalogConversationHasIgnoredProviderRoute(
+  provider: ProviderId,
+  conversationId: string,
+  record: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): boolean {
+  if (provider !== 'gemini') return false;
+  if (isIgnoredGeminiConversationId(conversationId)) return true;
+  const url = readCatalogStringField(record, ['url', 'href', 'providerConversationUrl']) ??
+    readRecordString(metadata, ['url', 'href', 'providerConversationUrl']);
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === 'gemini.google.com' && isIgnoredGeminiConversationPath(parsed.pathname);
+  } catch {
     return false;
   }
-  return true;
+}
+
+function isIgnoredGeminiConversationPath(pathname: string): boolean {
+  const match = pathname.match(/^\/app\/([^/?#]+)$/i);
+  return Boolean(match?.[1] && isIgnoredGeminiConversationId(match[1]));
+}
+
+function isIgnoredGeminiConversationId(conversationId: string): boolean {
+  return conversationId.toLowerCase() === 'download';
 }
 
 function catalogConversationHasTerminalEvidence(
@@ -2479,6 +2584,108 @@ function normalizeConversationIds(value: string[] | null | undefined): string[] 
   return Array.from(new Set(value.map((entry) => normalizeOptionalString(entry)).filter((entry): entry is string => Boolean(entry))));
 }
 
+export function resolveHistoryMaterializationProviderListOptions(
+  target: HistoryMaterializationTarget,
+): HistoryMaterializationProviderListOptions {
+  const providerConversationUrl = target.providerConversationUrl ??
+    resolveProviderConversationUrl(target.provider, target.conversationId) ??
+    undefined;
+  return {
+    configuredUrl: resolveHistoryMaterializationConfiguredUrl(target, providerConversationUrl),
+    tabUrl: providerConversationUrl,
+    projectId: target.projectId ?? undefined,
+    allowNavigation: true,
+    expectedUserIdentity: resolveHistoryMaterializationExpectedIdentity(target),
+  };
+}
+
+function resolveHistoryMaterializationConfiguredUrl(
+  target: HistoryMaterializationTarget,
+  providerConversationUrl: string | undefined,
+): string | undefined {
+  if (target.provider !== 'gemini') return providerConversationUrl;
+  const projectId = normalizeOptionalString(target.projectId);
+  if (projectId) {
+    return `https://gemini.google.com/gem/${encodeURIComponent(projectId)}`;
+  }
+  return 'https://gemini.google.com/app';
+}
+
+function resolveHistoryMaterializationExpectedIdentity(
+  target: HistoryMaterializationTarget,
+): HistoryMaterializationProviderListOptions['expectedUserIdentity'] {
+  const boundIdentityKey = normalizeOptionalString(target.boundIdentityKey);
+  if (!boundIdentityKey) return undefined;
+  if ((target.provider === 'gemini' || target.provider === 'chatgpt') && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(boundIdentityKey)) {
+    return { email: boundIdentityKey.toLowerCase() };
+  }
+  if (target.provider === 'grok' && /^@[A-Za-z0-9_]{2,32}$/.test(boundIdentityKey)) {
+    return { handle: boundIdentityKey };
+  }
+  return undefined;
+}
+
+function normalizeProviderConversationTargetFields(
+  provider: ProviderId,
+  conversationId: string | null | undefined,
+  providerConversationUrl: string | null | undefined,
+): { conversationId: string; providerConversationUrl: string | null } | null {
+  const rawConversationId = normalizeOptionalString(conversationId);
+  const rawProviderConversationUrl = normalizeOptionalString(providerConversationUrl);
+  if (provider !== 'gemini') {
+    if (!rawConversationId) return null;
+    return {
+      conversationId: rawConversationId,
+      providerConversationUrl: rawProviderConversationUrl ?? resolveProviderConversationUrl(provider, rawConversationId),
+    };
+  }
+  const normalizedConversationId = normalizeGeminiConversationId(rawConversationId) ??
+    extractGeminiConversationIdFromProviderConversationUrl(rawProviderConversationUrl);
+  if (!normalizedConversationId) return null;
+  return {
+    conversationId: normalizedConversationId,
+    providerConversationUrl: resolveProviderConversationUrl(provider, normalizedConversationId),
+  };
+}
+
+function normalizeGeminiConversationId(value: string | null): string | null {
+  const raw = normalizeOptionalString(value);
+  if (!raw) return null;
+  const fromUrl = extractGeminiConversationIdFromProviderConversationUrl(raw);
+  if (fromUrl) return fromUrl;
+  const appPathMatch = raw.match(/^\/?app\/([^/?#&]+)/i);
+  const stripped = normalizeOptionalString((appPathMatch?.[1] ?? raw).split(/[?#&]/, 1)[0]);
+  if (!stripped || isIgnoredGeminiConversationId(stripped)) return null;
+  if (!/^[A-Za-z0-9_-]+$/.test(stripped)) return null;
+  return stripped;
+}
+
+function extractGeminiConversationIdFromProviderConversationUrl(value: string | null): string | null {
+  const raw = normalizeOptionalString(value);
+  if (!raw || !/^https?:\/\//i.test(raw)) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.hostname === 'gemini.google.com') {
+      return normalizeGeminiConversationIdFromPathname(parsed.pathname);
+    }
+    for (const param of ['continue', 'followup']) {
+      const nested = extractGeminiConversationIdFromProviderConversationUrl(parsed.searchParams.get(param));
+      if (nested) return nested;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeGeminiConversationIdFromPathname(pathname: string): string | null {
+  const match = pathname.match(/^\/app\/([^/?#&]+)$/i);
+  const conversationId = normalizeOptionalString(match?.[1]);
+  if (!conversationId || isIgnoredGeminiConversationId(conversationId)) return null;
+  if (!/^[A-Za-z0-9_-]+$/.test(conversationId)) return null;
+  return conversationId;
+}
+
 function normalizeMaxItems(value: number | null | undefined): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(0, Math.min(500, Math.trunc(value)));
@@ -2611,14 +2818,13 @@ function isProviderHumanVerificationError(error: unknown): boolean {
 
 function withRuntimeProfileSelection(
   config: ResolvedUserConfig | Record<string, unknown>,
+  provider: ProviderId | null,
   runtimeProfile: string | null,
 ): Record<string, unknown> {
-  if (!runtimeProfile) return config;
-  return {
-    ...config,
-    defaultRuntimeProfile: runtimeProfile,
-    auracallProfile: runtimeProfile,
-  };
+  return resolveRuntimeProfileUserConfig(config, {
+    runtimeProfileId: runtimeProfile,
+    provider,
+  }) as Record<string, unknown>;
 }
 
 function resolveProviderConversationUrl(provider: ProviderId, conversationId: string | null): string | null {

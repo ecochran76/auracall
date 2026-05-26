@@ -166,4 +166,46 @@ describe('project-scoped conversation context normalization', () => {
       await rm(homeDir, { recursive: true, force: true });
     }
   });
+
+  test('getConversationContext can require a live refresh instead of cached fallback', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-context-no-fallback-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    await store.writeConversationContext(cacheContext, 'conversation-ctx', {
+      provider: 'gemini',
+      conversationId: 'conversation-ctx',
+      messages: [{ role: 'assistant', text: 'stale cached context' }],
+    });
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      readConversationContext: vi.fn(async () => {
+        throw new Error('live Gemini context failed');
+      }),
+    };
+    const service = new TestContextLlmService(provider as never, store, cacheContext);
+
+    try {
+      await expect(service.getConversationContext('conversation-ctx', {
+        refresh: true,
+        allowCacheFallback: false,
+        listOptions: {},
+      })).rejects.toThrow('live Gemini context failed');
+
+      await expect(service.getConversationContext('conversation-ctx', {
+        refresh: true,
+        listOptions: {},
+      })).resolves.toMatchObject({
+        messages: [{ role: 'assistant', text: 'stale cached context' }],
+      });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
 });

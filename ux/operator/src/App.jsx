@@ -520,6 +520,8 @@ function flattenConversationEntries(payload) {
     (entry.manifests?.conversations ?? []).map((conversation) => ({
       ...conversation,
       provider: conversation.provider ?? entry.provider,
+      tenantKey: entry.tenantKey ?? null,
+      bindingKey: entry.bindingKey ?? null,
       runtimeProfileId: entry.runtimeProfileId,
       browserProfileId: entry.browserProfileId,
       boundIdentityKey: entry.boundIdentityKey,
@@ -581,6 +583,8 @@ function toSearchRow(entry, item, kind, index) {
     source: "account-mirror",
     kind: kind === "conversations" ? "conversation" : kind.replace(/s$/u, ""),
     provider,
+    tenantKey: entry.tenantKey ?? null,
+    bindingKey: entry.bindingKey ?? null,
     runtimeProfileId,
     browserProfileId: entry.browserProfileId ?? null,
     boundIdentityKey: entry.boundIdentityKey ?? "unbound",
@@ -613,6 +617,8 @@ function flattenSearchCatalogRows(payload) {
       source: row.source ?? "search",
       kind: row.kind ?? row.sourceKind ?? "unknown",
       provider: row.provider ?? "unknown",
+      tenantKey: row.tenantKey ?? null,
+      bindingKey: row.bindingKey ?? null,
       runtimeProfileId: row.runtimeProfileId ?? "unknown",
       browserProfileId: row.browserProfileId ?? null,
       boundIdentityKey: row.tenant ?? "unbound",
@@ -765,13 +771,13 @@ function compareSearchRows(left, right, sort) {
 
 function statusTone(value) {
   const normalized = String(value ?? "").toLowerCase();
-  if (["ok", "healthy", "running", "complete", "enabled", "idle_waiting", "scheduled"].includes(normalized)) {
+  if (["ok", "healthy", "running", "complete", "completed", "enabled", "idle_waiting", "scheduled"].includes(normalized)) {
     return "good";
   }
-  if (["waiting", "delayed", "eligible", "draft", "planned", "unconfigured"].includes(normalized)) {
+  if (["waiting", "delayed", "deferred", "eligible", "draft", "planned", "queued", "completed_with_skips", "unconfigured"].includes(normalized)) {
     return "warn";
   }
-  if (["blocked", "failed", "error", "attention_needed", "attention"].includes(normalized)) {
+  if (["blocked", "failed", "cancelled", "error", "attention_needed", "attention"].includes(normalized)) {
     return "bad";
   }
   return "neutral";
@@ -814,6 +820,16 @@ function liveFollowAccountCatalogRoute(account) {
 function liveFollowAccountCompletionRoute(account) {
   if (!account?.activeCompletionId) return null;
   return `/v1/account-mirrors/completions/${encodeURIComponent(account.activeCompletionId)}`;
+}
+
+function accountMirrorReconciliationsRoute(limit = 10) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return `/v1/account-mirrors/reconciliations?${params.toString()}`;
+}
+
+function accountMirrorReconciliationRoute(campaign) {
+  const id = typeof campaign === "string" ? campaign : campaign?.id;
+  return id ? `/v1/account-mirrors/reconciliations/${encodeURIComponent(id)}` : null;
 }
 
 function findMirrorStatusEntry(status, account) {
@@ -968,6 +984,53 @@ function useApiStatus() {
   }, []);
 
   return state;
+}
+
+function useAccountMirrorReconciliations() {
+  const [state, setState] = useState({
+    payload: null,
+    loading: true,
+    error: null,
+    updatedAt: null,
+  });
+
+  async function load() {
+    setState((current) => ({ ...current, loading: true, error: null }));
+    try {
+      const response = await fetch(accountMirrorReconciliationsRoute(10), { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setState({
+        payload,
+        loading: false,
+        error: null,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error.message || "Unable to load reconciliation campaigns",
+      }));
+    }
+  }
+
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    const guardedLoad = async () => {
+      if (!alive) return;
+      await load();
+    };
+    guardedLoad();
+    timer = window.setInterval(guardedLoad, SEARCH_REFRESH_MS);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  return { ...state, refresh: load };
 }
 
 function useRunRecoveryStatus() {
@@ -1296,6 +1359,236 @@ function ApiKeysSection() {
   );
 }
 
+function ReconciliationCampaignsSection() {
+  const campaignsState = useAccountMirrorReconciliations();
+  const campaigns = campaignsState.payload?.data ?? [];
+  const [selectedCampaignId, setSelectedCampaignId] = useState(null);
+  const [busyAction, setBusyAction] = useState(null);
+  const [actionResult, setActionResult] = useState(null);
+  const selectedCampaign = campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? campaigns[0] ?? null;
+  const selectedTargets = selectedCampaign?.targets ?? [];
+  const selectedMaterialization = selectedCampaign?.metrics?.materialization ?? null;
+
+  async function createCampaign(dryRun) {
+    setBusyAction(dryRun ? "dry-run" : "execute");
+    setActionResult(null);
+    try {
+      const response = await fetch("/v1/account-mirrors/reconciliations", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          dryRun,
+          materializationPolicy: "full_missing_assets",
+          materializationAssetKinds: ["all"],
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setSelectedCampaignId(payload.id);
+      setActionResult({ tone: "ok", message: `${dryRun ? "Planned" : "Started"} ${payload.id}` });
+      await campaignsState.refresh();
+    } catch (error) {
+      setActionResult({ tone: "bad", message: error.message || "Campaign request failed" });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function controlCampaign(campaign, action) {
+    const route = accountMirrorReconciliationRoute(campaign);
+    if (!route) return;
+    setBusyAction(`${action}:${campaign.id}`);
+    setActionResult(null);
+    try {
+      const response = await fetch(route, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setActionResult({ tone: "ok", message: `${statusLabel(action)} ${payload.id}` });
+      await campaignsState.refresh();
+    } catch (error) {
+      setActionResult({ tone: "bad", message: error.message || "Campaign control failed" });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  return (
+    <section className="health-section" aria-label="Reconciliation campaigns">
+      <div className="section-heading">
+        <h2>Reconciliation Campaigns</h2>
+        <span>{campaignsState.loading ? "Loading" : `${formatNumber(campaigns.length)} recent / ${campaignsState.updatedAt ? formatDateTime(campaignsState.updatedAt) : "not loaded"}`}</span>
+      </div>
+      <div className="api-key-actions">
+        <button className="icon-label-button" type="button" disabled={campaignsState.loading || Boolean(busyAction)} onClick={campaignsState.refresh} title="Refresh campaigns">
+          <RefreshCcw size={14} aria-hidden="true" />
+          <span>Refresh</span>
+        </button>
+        <button className="icon-label-button" type="button" disabled={Boolean(busyAction)} onClick={() => createCampaign(true)} title="Plan reconciliation dry run">
+          <ListFilter size={14} aria-hidden="true" />
+          <span>Dry Run</span>
+        </button>
+        <button className="primary-action" type="button" disabled={Boolean(busyAction)} onClick={() => createCampaign(false)} title="Start reconciliation campaign">
+          <Activity size={14} aria-hidden="true" />
+          <span>Start</span>
+        </button>
+        <small>{campaignsState.error ? `Error: ${campaignsState.error}` : "/v1/account-mirrors/reconciliations"}</small>
+      </div>
+      {actionResult ? (
+        <div className={`campaign-result campaign-result-${actionResult.tone}`}>
+          <span className={`status-pill status-${statusTone(actionResult.tone)}`}>{statusLabel(actionResult.tone)}</span>
+          <strong>{actionResult.message}</strong>
+        </div>
+      ) : null}
+      <div className="health-table-wrap">
+        <table className="health-table compact-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Mode</th>
+              <th>Targets</th>
+              <th>Created</th>
+              <th>Route</th>
+              <th>Control</th>
+            </tr>
+          </thead>
+          <tbody>
+            {campaigns.map((campaign) => {
+              const route = accountMirrorReconciliationRoute(campaign);
+              const selected = campaign.id === selectedCampaign?.id;
+              return (
+                <tr
+                  key={campaign.id}
+                  className={selected ? "selectable-row is-selected" : "selectable-row"}
+                  tabIndex="0"
+                  aria-selected={selected}
+                  onClick={() => setSelectedCampaignId(campaign.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedCampaignId(campaign.id);
+                    }
+                  }}
+                >
+                  <td><span className={`status-pill status-${statusTone(campaign.status)}`}>{statusLabel(campaign.status)}</span></td>
+                  <td>{campaign.dryRun ? "dry run" : "execute"}</td>
+                  <td>{formatNumber(campaign.metrics?.selectedTargets)} selected / {formatNumber(campaign.metrics?.totalTargets)} total</td>
+                  <td>{formatDateTime(campaign.createdAt)}</td>
+                  <td>{route ? <RouteChip value={route} label={compactText(campaign.id, 22)} /> : "none"}</td>
+                  <td>
+                    <div className="campaign-controls">
+                      <button className="icon-label-button" type="button" disabled={Boolean(busyAction) || campaign.status === "cancelled" || campaign.status === "completed"} onClick={(event) => {
+                        event.stopPropagation();
+                        controlCampaign(campaign, "pause");
+                      }} title="Pause campaign" aria-label="Pause campaign">
+                        <PanelRightClose size={13} aria-hidden="true" />
+                      </button>
+                      <button className="icon-label-button" type="button" disabled={Boolean(busyAction) || campaign.status !== "paused"} onClick={(event) => {
+                        event.stopPropagation();
+                        controlCampaign(campaign, "resume");
+                      }} title="Resume campaign" aria-label="Resume campaign">
+                        <PanelRightOpen size={13} aria-hidden="true" />
+                      </button>
+                      <button className="icon-label-button" type="button" disabled={Boolean(busyAction) || campaign.status === "paused" || ["cancelled", "completed", "failed"].includes(campaign.status)} onClick={(event) => {
+                        event.stopPropagation();
+                        controlCampaign(campaign, "run_next_pass");
+                      }} title="Run next pass" aria-label="Run next pass">
+                        <ArrowRight size={13} aria-hidden="true" />
+                      </button>
+                      <button className="icon-label-button danger" type="button" disabled={Boolean(busyAction) || ["cancelled", "completed", "completed_with_skips", "failed"].includes(campaign.status)} onClick={(event) => {
+                        event.stopPropagation();
+                        controlCampaign(campaign, "cancel");
+                      }} title="Cancel campaign" aria-label="Cancel campaign">
+                        <Trash2 size={13} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {!campaigns.length ? (
+              <tr>
+                <td colSpan="6">No campaigns found.</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      {selectedCampaign ? (
+        <div className="campaign-detail">
+          <div className="section-heading">
+            <h3>{compactText(selectedCampaign.id, 44)}</h3>
+            <span>{formatNumber(selectedTargets.length)} targets / {selectedCampaign.policy?.materializationPolicy ?? "policy unknown"} / {formatNumber(selectedMaterialization?.materialized)} assets / {formatNumber(selectedMaterialization?.checksummedAssets)} checksums</span>
+          </div>
+          <div className="health-table-wrap">
+            <table className="health-table compact-table">
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Tenant</th>
+                  <th>Binding</th>
+                  <th>Runtime</th>
+                  <th>Eligibility</th>
+                  <th>Execution</th>
+                  <th>Child</th>
+                  <th>Assets</th>
+                  <th>Next</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedTargets.map((target) => {
+                  const materializationMetrics = target.execution?.materializationMetrics ?? null;
+                  const materializedAssets = target.execution?.materializedAssets ?? [];
+                  const materializedCount = materializationMetrics?.materialized ?? materializedAssets.length;
+                  const checksumCount = materializationMetrics?.checksummedAssets ?? materializedAssets.filter((asset) => asset?.checksumSha256).length;
+                  return (
+                    <tr key={target.key}>
+                      <td><ProviderIcon provider={target.provider} embedded /></td>
+                      <td title={target.tenantKey ?? "unbound"}>{compactIdentity(target.tenantKey)}</td>
+                      <td title={target.bindingKey ?? "not reported"}>{compactText(target.bindingKey ?? "not reported", 34)}</td>
+                      <td>{target.runtimeProfileId}</td>
+                      <td>
+                        <span className={`status-pill status-${statusTone(target.state)}`}>{statusLabel(target.state)}</span>
+                        <small>{compactText(target.reason, 90)}</small>
+                      </td>
+                      <td>
+                        <span className={`status-pill status-${statusTone(target.execution?.status)}`}>{statusLabel(target.execution?.status)}</span>
+                        <small>{compactText(target.execution?.reason, 90)}</small>
+                      </td>
+                      <td>
+                        {target.childOperations?.completionId ? (
+                          <RouteChip value={`/v1/account-mirrors/completions/${encodeURIComponent(target.childOperations.completionId)}`} label={compactText(target.childOperations.completionId, 18)} />
+                        ) : "none"}
+                      </td>
+                      <td>
+                        {target.childOperations?.materializationJobId ? compactText(target.childOperations.materializationJobId, 22) : target.execution?.materializationJobStatus ?? "none"}
+                        {materializationMetrics || materializedAssets.length ? (
+                          <small>{formatNumber(materializedCount)} materialized / {formatNumber(checksumCount)} checksums</small>
+                        ) : null}
+                      </td>
+                      <td>{formatDateTime(target.execution?.nextEligibleAt ?? target.nextEligibleAt)}</td>
+                    </tr>
+                  );
+                })}
+                {!selectedTargets.length ? (
+                  <tr>
+                    <td colSpan="9">No target rows recorded.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFollowAccountChange }) {
   const { status, loading, error, updatedAt } = apiStatus;
   const [liveFollowFilter, setLiveFollowFilter] = useState("all");
@@ -1401,6 +1694,7 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
       </section>
 
       <ApiKeysSection />
+      <ReconciliationCampaignsSection />
 
       <section className="health-section" aria-label="Live follow accounts">
         <div className="section-heading">
@@ -1430,6 +1724,8 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
             <thead>
               <tr>
                 <th>Provider</th>
+                <th>Tenant</th>
+                <th>Binding</th>
                 <th>Profile</th>
                 <th>Desired</th>
                 <th>Status</th>
@@ -1444,6 +1740,11 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
                 const accountKey = liveFollowAccountKey(account);
                 const selected = selectedLiveFollowKey === accountKey;
                 const counts = account.metadataCounts ?? {};
+                const assetInventory = account.assetInventory ?? {};
+                const assetState = assetInventory.state ?? "unknown";
+                const scanned = assetInventory.detailScannedThisPass ?? {};
+                const observedCounts = account.metadataCountEvidence?.observedThisPass ?? {};
+                const materializationOutcome = account.materializationOutcome ?? null;
                 const reasonLabel =
                   account.attentionNeeded && account.desiredState !== "unconfigured" ? "attention" : account.statusReason ?? "clear";
                 return (
@@ -1475,6 +1776,8 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
                         <ProviderIcon provider={account.provider} embedded />
                       </button>
                     </td>
+                    <td title={account.tenantKey ?? "unbound"}>{compactIdentity(account.tenantKey)}</td>
+                    <td title={account.bindingKey ?? "not reported"}>{compactText(account.bindingKey ?? "not reported", 34)}</td>
                     <td>{account.runtimeProfileId}</td>
                     <td>
                       <span className={`status-pill status-${statusTone(account.desiredState)}`}>{statusLabel(account.desiredState)}</span>
@@ -1492,8 +1795,20 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
                     </td>
                     <td>{account.mirrorCompleteness ?? "unknown"}</td>
                     <td>
-                      {formatNumber(counts.conversations)} chats /{" "}
-                      {formatNumber((counts.artifacts ?? 0) + (counts.files ?? 0) + (counts.media ?? 0))} files
+                      <div className="status-reason">
+                        <span>
+                          {formatNumber(counts.conversations)} chats
+                          {account.metadataCountEvidence ? ` (${formatNumber(observedCounts.conversations)} observed)` : ""}
+                        </span>
+                        {assetState === "deferred" || assetState === "unknown" ? (
+                          <small>{statusLabel(assetState)} assets / detail {formatNumber(scanned.conversations)} chats</small>
+                        ) : (
+                          <small>{formatNumber((counts.artifacts ?? 0) + (counts.files ?? 0) + (counts.media ?? 0))} assets / {statusLabel(assetState)}</small>
+                        )}
+                        {materializationOutcome ? (
+                          <small>{formatNumber(materializationOutcome.materialized)} materialized / {formatNumber(materializationOutcome.checksumCount)} checksums</small>
+                        ) : null}
+                      </div>
                     </td>
                     <td>{formatDateTime(account.nextAttemptAt)}</td>
                   </tr>
@@ -1501,12 +1816,12 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
               })}
               {!accounts.length ? (
                 <tr>
-                  <td colSpan="8">No live-follow accounts reported yet.</td>
+                  <td colSpan="10">No live-follow accounts reported yet.</td>
                 </tr>
               ) : null}
               {accounts.length > 0 && filteredAccounts.length === 0 ? (
                 <tr>
-                  <td colSpan="8">No accounts match the selected filter.</td>
+                  <td colSpan="10">No accounts match the selected filter.</td>
                 </tr>
               ) : null}
             </tbody>
@@ -1756,7 +2071,8 @@ function SearchInspectorSummary({ row, archiveItem }) {
   ];
   const meta = [
     [source.provider ? <ProviderIcon provider={source.provider} /> : "none", "Provider"],
-    [compactIdentity(row?.boundIdentityKey ?? archiveItem?.boundIdentityKey), "Tenant"],
+    [compactIdentity(row?.tenantKey ?? row?.boundIdentityKey ?? archiveItem?.boundIdentityKey), "Tenant"],
+    [compactText(row?.bindingKey ?? "not reported", 42), "Binding"],
     [compactRuntimeProfile(row?.runtimeProfileId ?? archiveItem?.runtimeProfile), "Runtime"],
     [row?.project ?? archiveItem?.projectId ?? "No project", "Project"],
     [row?.kind ?? archiveItem?.kind ?? "unknown", "Kind"],
@@ -4243,6 +4559,8 @@ function RightPane({
           ...(selectedLiveFollowCompletionRoute
             ? [["Completion", { kind: "route", value: selectedLiveFollowCompletionRoute, label: selectedLiveFollowAccount.activeCompletionId }]]
             : []),
+          ["Tenant key", selectedMirrorStatusEntry?.tenantKey ?? selectedLiveFollowAccount.tenantKey ?? "unbound"],
+          ["Binding key", selectedMirrorStatusEntry?.bindingKey ?? selectedLiveFollowAccount.bindingKey ?? "not reported"],
           ["Desired", statusLabel(selectedLiveFollowAccount.desiredState ?? selectedMirrorStatusEntry?.liveFollow?.state)],
           ["Actual", statusLabel(selectedLiveFollowAccount.actualStatus ?? selectedMirrorStatusEntry?.status)],
           ["Reason", statusLabel(selectedLiveFollowAccount.statusReason ?? selectedMirrorStatusEntry?.reason)],
@@ -4269,6 +4587,8 @@ function RightPane({
             ["Kind", inspectedSearchRow.kind ?? "unknown"],
             ["Provider", inspectedSearchRow.provider ? <ProviderIcon provider={inspectedSearchRow.provider} /> : "none"],
             ["Tenant", inspectedSearchRow.boundIdentityKey ?? "unbound"],
+            ["Tenant key", inspectedSearchRow.tenantKey ?? "unbound"],
+            ["Binding key", inspectedSearchRow.bindingKey ?? "not reported"],
             ["Runtime", inspectedSearchRow.runtimeProfileId ?? "none"],
             ["Project", inspectedSearchRow.project ?? "none"],
             ["Status", statusLabel(inspectedSearchRow.status)],

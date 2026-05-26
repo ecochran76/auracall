@@ -162,6 +162,14 @@ export interface ApiStatusCliSummary {
   api: ApiStatusApiSummary;
   scheduler: ApiStatusSchedulerSummary;
   completions: ApiStatusCompletionControlSummary;
+  proofScope: {
+    enabled: boolean;
+    provider: string | null;
+    runtimeProfileId: string | null;
+    tenantKey: string | null;
+    bindingKey: string | null;
+    globalLiveFollowSuppressed: boolean | null;
+  } | null;
   liveFollow: ApiStatusLiveFollowHealthSummary;
   schedulerDiagnosticsHints: ApiStatusSchedulerDiagnosticsHint[];
   raw: unknown;
@@ -255,6 +263,7 @@ export function summarizeApiStatusPayload(
     api: summarizeApiRuntime(record.api, routes),
     scheduler: schedulerSummary,
     completions,
+    proofScope: summarizeProofScope(record.accountMirrorProofScope),
     liveFollow,
     schedulerDiagnosticsHints: buildSchedulerDiagnosticsHints({
       host: source.host,
@@ -350,6 +359,11 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
       `Latest lazy mirror yield: ${yieldSummary.provider ?? 'unknown'}/${yieldSummary.runtimeProfileId ?? 'unknown'} at ${yieldSummary.completedAt ?? 'unknown'} queued=${yieldSummary.queuedOwnerCommand ?? 'unknown'} remaining=${yieldSummary.remainingDetailSurfaces ?? 'unknown'}`,
     );
   }
+  if (summary.proofScope?.enabled) {
+    lines.push(
+      `Account mirror proof scope: ${summary.proofScope.provider ?? 'any'}/${summary.proofScope.runtimeProfileId ?? 'any'} tenant=${summary.proofScope.tenantKey ?? 'unknown'} binding=${summary.proofScope.bindingKey ?? 'unknown'} suppressed=${formatNullableBoolean(summary.proofScope.globalLiveFollowSuppressed)}`,
+    );
+  }
   lines.push(formatCompletionControlLine(summary.completions));
   lines.push(...formatSchedulerDiagnosticsHintLines(summary.schedulerDiagnosticsHints));
   const targetLine = formatLiveFollowTargetLine(summary.liveFollow.targets);
@@ -396,6 +410,9 @@ function formatApiRuntimeLine(api: ApiStatusApiSummary): string {
 
 function formatLiveFollowTargetLine(targets: ApiStatusLiveFollowHealthSummary['targets']): string | null {
   if (!targets) return null;
+  const deferredAssets = (targets.accounts ?? []).filter((account) =>
+    account.assetInventory?.state === 'deferred' || account.assetInventory?.state === 'unknown'
+  ).length;
   return [
     'Live follow targets:',
     `total=${targets.total}`,
@@ -403,6 +420,7 @@ function formatLiveFollowTargetLine(targets: ApiStatusLiveFollowHealthSummary['t
     `active=${targets.active}`,
     `complete=${targets.complete}`,
     `in_progress=${targets.inProgress}`,
+    `asset_unknown_or_deferred=${deferredAssets}`,
     `attention=${targets.attentionNeeded}`,
   ].join(' ');
 }
@@ -533,6 +551,21 @@ function summarizeApiRuntime(value: unknown, routes: Record<string, unknown>): A
       statusCommand: readString(managedService.statusCommand),
     },
     logTailRoute: readString(routes.apiLogTail),
+  };
+}
+
+function summarizeProofScope(value: unknown): ApiStatusCliSummary['proofScope'] {
+  const scope = isRecord(value) ? value : null;
+  if (!scope) return null;
+  return {
+    enabled: scope.enabled === true,
+    provider: readString(scope.provider),
+    runtimeProfileId: readString(scope.runtimeProfileId),
+    tenantKey: readString(scope.tenantKey),
+    bindingKey: readString(scope.bindingKey),
+    globalLiveFollowSuppressed: typeof scope.globalLiveFollowSuppressed === 'boolean'
+      ? scope.globalLiveFollowSuppressed
+      : null,
   };
 }
 
@@ -670,9 +703,15 @@ function summarizeLiveFollowActualTargets(value: unknown, fallback: Record<strin
 function summarizeLiveFollowTargetAccount(value: unknown) {
   const account = isRecord(value) ? value : {};
   const metadataCounts = isRecord(account.metadataCounts) ? account.metadataCounts : null;
+  const assetInventory = isRecord(account.assetInventory) ? account.assetInventory : null;
+  const materializationOutcome = isRecord(account.materializationOutcome) ? account.materializationOutcome : null;
+  const metadataCountEvidence = isRecord(account.metadataCountEvidence) ? account.metadataCountEvidence : null;
   return {
     provider: readString(account.provider) ?? '',
+    tenantKey: readString(account.tenantKey),
+    bindingKey: readString(account.bindingKey) ?? '',
     runtimeProfileId: readString(account.runtimeProfileId) ?? '',
+    browserProfileId: readString(account.browserProfileId),
     desiredState: readString(account.desiredState) ?? 'unknown',
     desiredEnabled: account.desiredEnabled === true,
     actualStatus: readString(account.actualStatus),
@@ -690,7 +729,22 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
     nextAttemptAt: readString(account.nextAttemptAt),
     providerGuard: summarizeLiveFollowProviderGuard(account.providerGuard),
     mirrorCompleteness: readString(account.mirrorCompleteness),
+    assetInventory: assetInventory
+      ? {
+          state: readString(assetInventory.state) ?? 'unknown',
+          summary: readString(assetInventory.summary),
+          detailScannedThisPass: summarizeDetailScanned(assetInventory.detailScannedThisPass),
+        }
+      : null,
     latestLifecycleEvent: readLatestCompletionLifecycleEvent(account.latestLifecycleEvent),
+    materializationOutcome: materializationOutcome
+      ? {
+          jobStatus: readString(materializationOutcome.jobStatus),
+          conversationsAttempted: readNumber(materializationOutcome.conversationsAttempted) ?? 0,
+          materialized: readNumber(materializationOutcome.materialized) ?? 0,
+          checksumCount: readNumber(materializationOutcome.checksumCount) ?? 0,
+        }
+      : null,
     metadataCounts: metadataCounts
       ? {
           projects: readNumber(metadataCounts.projects) ?? 0,
@@ -700,6 +754,34 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
           media: readNumber(metadataCounts.media) ?? 0,
         }
       : null,
+    metadataCountEvidence: metadataCountEvidence
+      ? {
+          observedThisPass: summarizeMetadataCounts(metadataCountEvidence.observedThisPass),
+          retainedFromCache: summarizeMetadataCounts(metadataCountEvidence.retainedFromCache),
+          mergedTotal: summarizeMetadataCounts(metadataCountEvidence.mergedTotal),
+        }
+      : null,
+  };
+}
+
+function summarizeDetailScanned(value: unknown) {
+  const record = isRecord(value) ? value : null;
+  if (!record) return null;
+  return {
+    projects: readNumber(record.projects) ?? 0,
+    conversations: readNumber(record.conversations) ?? 0,
+    total: readNumber(record.total) ?? 0,
+  };
+}
+
+function summarizeMetadataCounts(value: unknown) {
+  const record = isRecord(value) ? value : {};
+  return {
+    projects: readNumber(record.projects) ?? 0,
+    conversations: readNumber(record.conversations) ?? 0,
+    artifacts: readNumber(record.artifacts) ?? 0,
+    files: readNumber(record.files) ?? 0,
+    media: readNumber(record.media) ?? 0,
   };
 }
 

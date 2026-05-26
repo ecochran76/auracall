@@ -162,12 +162,18 @@ import {
   readApiSchedulerDiagnosticsForCli,
 } from '../src/cli/apiSchedulerDiagnosticsCommand.js';
 import {
+  controlApiMirrorReconciliationForCli,
   controlApiMirrorCompletionForCli,
   formatApiMirrorCompletionListCliSummary,
   formatApiMirrorCompletionCliSummary,
+  formatApiMirrorReconciliationListCliSummary,
+  formatApiMirrorReconciliationCliSummary,
   listApiMirrorCompletionsForCli,
+  listApiMirrorReconciliationsForCli,
   readApiMirrorCompletionForCli,
+  readApiMirrorReconciliationForCli,
   startApiMirrorCompletionForCli,
+  startApiMirrorReconciliationForCli,
 } from '../src/cli/apiMirrorCompletionCommand.js';
 import {
   cancelApiHistoryMaterializationJobForCli,
@@ -1069,10 +1075,30 @@ apiCommand
     '--no-account-mirror-completions-on-start',
     'Do not resume persisted account-mirror completions or reconcile configured live-follow targets at API startup; set scheduler/drain intervals to 0 separately for isolated proof servers.',
   )
+  .option(
+    '--account-mirror-proof-provider <provider>',
+    'Start API serve in scoped account-mirror proof mode for one provider; startup completion resume, live-follow reconciliation, scheduler, and background drain are suppressed.',
+  )
+  .option(
+    '--account-mirror-proof-runtime-profile <profile>',
+    'Runtime profile for --account-mirror-proof-provider scoped proof mode.',
+  )
   .action(async (commandOptions) => {
     const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
     const parentOptions = program.opts?.() ?? {};
-    const accountMirrorCompletionsOnStart = commandOptions.accountMirrorCompletionsOnStart !== false;
+    const accountMirrorProofProvider = normalizeApiServeProofProvider(commandOptions.accountMirrorProofProvider);
+    const accountMirrorProofRuntimeProfile = typeof commandOptions.accountMirrorProofRuntimeProfile === 'string'
+      ? commandOptions.accountMirrorProofRuntimeProfile.trim()
+      : '';
+    const accountMirrorProofScope = accountMirrorProofProvider || accountMirrorProofRuntimeProfile
+      ? {
+          provider: accountMirrorProofProvider,
+          runtimeProfileId: accountMirrorProofRuntimeProfile || null,
+        }
+      : null;
+    const accountMirrorCompletionsOnStart = accountMirrorProofScope
+      ? false
+      : commandOptions.accountMirrorCompletionsOnStart !== false;
     await serveResponsesHttp({
       host: commandOptions.host,
       port: commandOptions.port,
@@ -1081,13 +1107,14 @@ apiCommand
       recoverRunsOnStart: Boolean(commandOptions.recoverRunsOnStart),
       recoverRunsOnStartMaxRuns: commandOptions.recoverRunsOnStartMax,
       recoverRunsOnStartSourceKind: commandOptions.recoverRunsOnStartSource,
-      backgroundDrainIntervalMs: commandOptions.backgroundDrainIntervalMs,
-      accountMirrorSchedulerIntervalMs: commandOptions.accountMirrorSchedulerIntervalMs,
+      backgroundDrainIntervalMs: accountMirrorProofScope ? 0 : commandOptions.backgroundDrainIntervalMs,
+      accountMirrorSchedulerIntervalMs: accountMirrorProofScope ? 0 : commandOptions.accountMirrorSchedulerIntervalMs,
       accountMirrorSchedulerDryRun: commandOptions.accountMirrorSchedulerExecute === undefined
         ? undefined
         : !commandOptions.accountMirrorSchedulerExecute,
       resumeAccountMirrorCompletionsOnStart: accountMirrorCompletionsOnStart,
       reconcileAccountMirrorLiveFollowOnStart: accountMirrorCompletionsOnStart,
+      accountMirrorProofScope,
     });
   });
 
@@ -1759,6 +1786,141 @@ apiCommand
       return;
     }
     console.log(formatApiHistoryMaterializationJobsCliSummary(result));
+  });
+
+apiCommand
+  .command('mirror-reconcile-all')
+  .description('Plan or start a multi-tenant account mirror reconciliation campaign on the local API.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--provider <provider>', 'Restrict planning to one provider.')
+  .option('--runtime-profile <profile>', 'Restrict planning to one runtime profile.')
+  .option('--identity <identity>', 'Restrict planning to one bound or detected identity key.')
+  .option('--include-disabled', 'Include disabled/unconfigured targets in future execution planning.', false)
+  .option('--max-targets <count>', 'Maximum eligible targets selected by the campaign planner.', parseIntOption)
+  .option('--max-active-targets <count>', 'Maximum active targets the campaign may select.', parseIntOption)
+  .option('--materialization-policy <policy>', 'Sweep artifact policy: metadata_only, recent_missing_assets, or full_missing_assets.')
+  .option('--materialization-asset-kind <kind>', 'Sweep materialization asset kind: artifacts, files, media, or all. Repeatable or comma-separated.', collectTrimmedString, [])
+  .option('--materialization-max-items <count>', 'Maximum conversations/assets to pass to each sweep materialization job.', parseIntOption)
+  .option('--dry-run', 'Plan without starting browser work.', true)
+  .option('--no-dry-run', 'Start selected eligible targets instead of only planning.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const campaign = await startApiMirrorReconciliationForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      identity: commandOptions.identity,
+      includeDisabled: commandOptions.includeDisabled,
+      maxTargets: commandOptions.maxTargets,
+      maxActiveTargets: commandOptions.maxActiveTargets,
+      materializationPolicy: commandOptions.materializationPolicy,
+      materializationAssetKinds: commandOptions.materializationAssetKind,
+      materializationMaxItems: commandOptions.materializationMaxItems,
+      dryRun: commandOptions.dryRun,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(campaign, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorReconciliationCliSummary(campaign));
+  });
+
+apiCommand
+  .command('mirror-reconciliations')
+  .description('List persisted account mirror reconciliation campaigns from the local API.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--status <status>', 'Filter by status: active, planned, queued, running, paused, completed, completed_with_skips, cancelled, failed.')
+  .option('--limit <count>', 'Maximum campaign records to read.', parseIntOption, 50)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await listApiMirrorReconciliationsForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      status: commandOptions.status,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorReconciliationListCliSummary(result));
+  });
+
+apiCommand
+  .command('mirror-reconciliation-control')
+  .description('Pause, resume, cancel, or advance an account mirror reconciliation campaign.')
+  .argument('<id>', 'Account mirror reconciliation campaign id.')
+  .argument('<action>', 'Control action: pause, resume, cancel, or run-next-pass.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, action: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const campaign = await controlApiMirrorReconciliationForCli({
+      id,
+      action,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(campaign, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorReconciliationCliSummary(campaign));
+  });
+
+apiCommand
+  .command('mirror-reconciliation-status')
+  .description('Read an account mirror reconciliation campaign from the local API.')
+  .argument('<id>', 'Account mirror reconciliation campaign id.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const campaign = await readApiMirrorReconciliationForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(campaign, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorReconciliationCliSummary(campaign));
   });
 
 apiCommand
@@ -10739,6 +10901,12 @@ function readCliNonEmptyString(value: unknown): string | undefined {
 function readCliPositiveInteger(value: unknown): number | undefined {
   if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) return undefined;
   return value;
+}
+
+function normalizeApiServeProofProvider(value: unknown): 'chatgpt' | 'gemini' | 'grok' | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (value === 'chatgpt' || value === 'gemini' || value === 'grok') return value;
+  throw new Error('Use --account-mirror-proof-provider chatgpt, gemini, or grok.');
 }
 
 

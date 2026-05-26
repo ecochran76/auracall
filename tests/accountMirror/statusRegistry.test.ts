@@ -76,6 +76,8 @@ describe('account mirror status registry', () => {
       expect.arrayContaining([
         expect.objectContaining({
           provider: 'chatgpt',
+          tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+          bindingKey: 'binding:chatgpt:default:default',
           runtimeProfileId: 'default',
           browserProfileId: 'default',
           expectedIdentityKey: 'ecochran76@gmail.com',
@@ -114,6 +116,8 @@ describe('account mirror status registry', () => {
         }),
         expect.objectContaining({
           provider: 'gemini',
+          tenantKey: 'service-account:gemini:ecochran76@gmail.com',
+          bindingKey: 'binding:gemini:default:default',
           runtimeProfileId: 'default',
           limits: expect.objectContaining({
             maxBrowserInteractionsPerMinute: 3,
@@ -128,6 +132,8 @@ describe('account mirror status registry', () => {
         }),
         expect.objectContaining({
           provider: 'grok',
+          tenantKey: null,
+          bindingKey: 'binding:grok:unbound:default',
           runtimeProfileId: 'unbound',
           status: 'blocked',
           reason: 'expected-identity-missing',

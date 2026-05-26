@@ -1,114 +1,125 @@
-import * as fs from 'node:fs/promises';
-import path from 'node:path';
-import CDP from 'chrome-remote-interface';
-import type { Page } from 'puppeteer-core';
-import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
+import * as fs from "node:fs/promises";
+import path from "node:path";
+import CDP from "chrome-remote-interface";
+import type { Page } from "puppeteer-core";
 import {
-  buildBrowserDomSearchExpression,
-  type BrowserDomSearchMatch,
-  type BrowserDomSearchOptions,
-} from '../../../packages/browser-service/src/service/domSearch.js';
+	connectToChromeTarget,
+	openOrReuseChromeTarget,
+} from "../../../packages/browser-service/src/chromeLifecycle.js";
 import {
-  buildGeminiActivityEvidenceExpression,
-  coerceGeminiActivityEvidence,
-  type GeminiActivityEvidence,
-} from './geminiEvidence.js';
-import type { BrowserToolsUiListResult } from '../../../packages/browser-service/src/browserTools.js';
+	buildBrowserDomSearchExpression,
+	type BrowserDomSearchMatch,
+	type BrowserDomSearchOptions,
+} from "../../../packages/browser-service/src/service/domSearch.js";
+import { beginBrowserMutation } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import {
-  armDownloadCapture,
-  navigateAndSettle,
-  pressButton,
-  setInputValue,
-  submitInlineRename,
-  waitForPredicate,
-  waitForDownloadCapture,
-} from '../service/ui.js';
-import type { ChromeClient } from '../types.js';
-import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
-import { providerNavigationAllowed } from './navigationPolicy.js';
+	buildGeminiActivityEvidenceExpression,
+	coerceGeminiActivityEvidence,
+	type GeminiActivityEvidence,
+} from "./geminiEvidence.js";
+import type { BrowserToolsUiListResult } from "../../../packages/browser-service/src/browserTools.js";
+import {
+	armDownloadCapture,
+	navigateAndSettle,
+	pressButton,
+	setInputValue,
+	submitInlineRename,
+	waitForPredicate,
+	waitForDownloadCapture,
+} from "../service/ui.js";
+import type { ChromeClient } from "../types.js";
+import {
+	annotateClientMutationContext,
+	resolveMutationAudit,
+	resolveMutationSource,
+} from "./mutationAudit.js";
+import { providerNavigationAllowed } from "./navigationPolicy.js";
 import type {
-  BrowserProvider,
-  BrowserProviderListOptions,
-  BrowserProviderPromptInput,
-  BrowserProviderPromptProgressEvent,
-  BrowserProviderPromptResult,
-  ProviderUserIdentity,
-} from './types.js';
+	BrowserProvider,
+	BrowserProviderListOptions,
+	BrowserProviderPromptInput,
+	BrowserProviderPromptProgressEvent,
+	BrowserProviderPromptResult,
+	ProviderUserIdentity,
+} from "./types.js";
 import {
-  assertProviderIdentityPreflight,
-  checkProviderIdentityPreflight,
-  providerIdentityPreflightRequested,
-} from './identityPreflight.js';
+	assertProviderIdentityPreflight,
+	checkProviderIdentityPreflight,
+	providerIdentityPreflightRequested,
+} from "./identityPreflight.js";
 import type {
-  Conversation,
-  ConversationArtifact,
-  ConversationContext,
-  ConversationMessage,
-  FileRef,
-  Project,
-  ProjectMemoryMode,
-} from './domain.js';
+	Conversation,
+	ConversationArtifact,
+	ConversationContext,
+	ConversationMessage,
+	FileRef,
+	Project,
+	ProjectMemoryMode,
+} from "./domain.js";
 import {
-  requireBundledServiceBaseUrl,
-  requireBundledServiceCompatibleHosts,
-  requireBundledServiceRouteTemplate,
-  resolveBundledServiceComposerKnownLabels,
-  resolveBundledServiceFeatureDetector,
-  resolveBundledServiceFeatureFlagTokens,
-} from '../../services/registry.js';
-import { GeminiFeatureSchema } from '../llmService/providers/schema.js';
+	requireBundledServiceBaseUrl,
+	requireBundledServiceCompatibleHosts,
+	requireBundledServiceRouteTemplate,
+	resolveBundledServiceComposerKnownLabels,
+	resolveBundledServiceFeatureDetector,
+	resolveBundledServiceFeatureFlagTokens,
+} from "../../services/registry.js";
+import { GeminiFeatureSchema } from "../llmService/providers/schema.js";
 
-const GEMINI_BASE_URL = requireBundledServiceBaseUrl('gemini');
-const GEMINI_APP_URL = requireBundledServiceRouteTemplate('gemini', 'app');
-const GEMINI_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('gemini');
-const GEMINI_GEMS_VIEW_URL = new URL('gems/view', GEMINI_BASE_URL).toString();
-const GEMINI_GEM_CREATE_URL = new URL('gems/create', GEMINI_BASE_URL).toString();
-const GEMINI_FEATURE_DETECTOR = resolveBundledServiceFeatureDetector('gemini', 'gemini-feature-probe-v1');
-const GEMINI_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens('gemini', {
-  search: ['search'],
-  grounding: ['grounding'],
-  deep_research: ['deep research'],
-  personal_intelligence: ['personal intelligence'],
+const GEMINI_BASE_URL = requireBundledServiceBaseUrl("gemini");
+const GEMINI_APP_URL = requireBundledServiceRouteTemplate("gemini", "app");
+const GEMINI_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts("gemini");
+const GEMINI_GEMS_VIEW_URL = new URL("gems/view", GEMINI_BASE_URL).toString();
+const GEMINI_GEM_CREATE_URL = new URL("gems/create", GEMINI_BASE_URL).toString();
+const GEMINI_FEATURE_DETECTOR = resolveBundledServiceFeatureDetector(
+	"gemini",
+	"gemini-feature-probe-v1",
+);
+const GEMINI_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens("gemini", {
+	search: ["search"],
+	grounding: ["grounding"],
+	deep_research: ["deep research"],
+	personal_intelligence: ["personal intelligence"],
 });
-const GEMINI_DISCOVERY_LABELS = resolveBundledServiceComposerKnownLabels('gemini', [
-  'create image',
-  'images',
-  'create music',
-  'music',
-  'write anything',
-  'create video',
-  'videos',
-  'help me learn',
-  'guided learning',
-  'canvas',
-  'deep research',
-  'personal intelligence',
+const GEMINI_DISCOVERY_LABELS = resolveBundledServiceComposerKnownLabels("gemini", [
+	"create image",
+	"images",
+	"create music",
+	"music",
+	"write anything",
+	"create video",
+	"videos",
+	"help me learn",
+	"guided learning",
+	"canvas",
+	"deep research",
+	"personal intelligence",
 ]);
 const GEMINI_TOOLS_BUTTON_SELECTORS = [
-  'button.toolbox-drawer-button',
-  'button.toolbox-drawer-button-with-label',
-  'button[aria-haspopup="menu"] .toolbox-drawer-button-label-icon-text',
-  'button[aria-haspopup="menu"] .toolbox-drawer-button-label-icon-only',
-  'button[aria-label="Tools"] .toolbox-drawer-button-label-icon-only',
-  'button[aria-haspopup="menu"]',
-  'button[aria-label="Tools"]',
+	"button.toolbox-drawer-button",
+	"button.toolbox-drawer-button-with-label",
+	'button[aria-haspopup="menu"] .toolbox-drawer-button-label-icon-text',
+	'button[aria-haspopup="menu"] .toolbox-drawer-button-label-icon-only',
+	'button[aria-label="Tools"] .toolbox-drawer-button-label-icon-only',
+	'button[aria-haspopup="menu"]',
+	'button[aria-label="Tools"]',
 ];
 const GEMINI_TOOLS_DRAWER_ROW_SELECTORS = [
-  'button.toolbox-drawer-item-list-button[role="menuitemcheckbox"]',
-  'button[mat-list-item].toolbox-drawer-item-list-button[role="menuitemcheckbox"]',
-  'button[role="menuitemcheckbox"]',
+	'button.toolbox-drawer-item-list-button[role="menuitemcheckbox"]',
+	'button[mat-list-item].toolbox-drawer-item-list-button[role="menuitemcheckbox"]',
+	'button[role="menuitemcheckbox"]',
 ];
 const GEMINI_PERSONAL_INTELLIGENCE_SELECTORS = [
-  'button[role="switch"][aria-label="Personal Intelligence"]',
-  'button[role="switch"][aria-label*="Personal Intelligence"]',
+	'button[role="switch"][aria-label="Personal Intelligence"]',
+	'button[role="switch"][aria-label*="Personal Intelligence"]',
 ];
 const GEMINI_MODE_PICKER_SELECTORS = [
-  'button[data-test-id="bard-mode-menu-button"]',
-  'button[aria-label="Open mode picker"]',
+	'button[data-test-id="bard-mode-menu-button"]',
+	'button[aria-label="Open mode picker"]',
 ];
 const GEMINI_NEW_CHAT_BUTTON_SELECTORS = [
-  'button[data-test-id="new-chat-button"]',
-  'button[aria-label="New chat"]',
+	'button[data-test-id="new-chat-button"]',
+	'button[aria-label="New chat"]',
 ];
 const GEMINI_GEM_NAME_INPUT_SELECTOR = 'input[aria-label="Input for a Gem name"]';
 const GEMINI_GEM_DESCRIPTION_INPUT_SELECTOR = 'textarea[data-test-id="description-input-field"]';
@@ -116,275 +127,292 @@ const GEMINI_GEM_INSTRUCTIONS_INPUT_SELECTOR = 'div[aria-label="Enter a prompt f
 const GEMINI_GEM_CREATE_BUTTON_SELECTOR = 'button[data-test-id="create-button"]';
 const GEMINI_GEM_START_CHAT_BUTTON_SELECTOR = 'button[data-test-id="new-chat-button"]';
 const GEMINI_GEM_KNOWLEDGE_UPLOAD_TRIGGER_SELECTOR =
-  'button[aria-label*="upload file menu for gem knowledge" i]';
+	'button[aria-label*="upload file menu for gem knowledge" i]';
 const GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR =
-  'button[role="menuitem"][data-test-id="local-images-files-uploader-button"][aria-label*="Upload files" i]';
+	'button[role="menuitem"][data-test-id="local-images-files-uploader-button"][aria-label*="Upload files" i]';
 const _GEMINI_GEM_KNOWLEDGE_HIDDEN_UPLOAD_SELECTORS = [
-  'button[data-test-id="hidden-local-image-upload-button"]',
-  'button[data-test-id="hidden-local-file-upload-button"]',
+	'button[data-test-id="hidden-local-image-upload-button"]',
+	'button[data-test-id="hidden-local-file-upload-button"]',
 ];
 const GEMINI_PROMPT_INPUT_SELECTORS = [
-  'div[role="textbox"][aria-label="Enter a prompt for Gemini"]',
-  'div[role="textbox"][contenteditable="true"]',
-  'textarea[aria-label*="Gemini"]',
+	'div[role="textbox"][aria-label="Enter a prompt for Gemini"]',
+	'div[role="textbox"][contenteditable="true"]',
+	'textarea[aria-label*="Gemini"]',
 ];
 const GEMINI_SEND_BUTTON_SELECTORS = [
-  'button[aria-label="Send message"]',
-  'button[type="submit"][aria-label*="Send"]',
+	'button[aria-label="Send message"]',
+	'button[type="submit"][aria-label*="Send"]',
 ];
 const GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR =
-  'input[data-test-id="edit-title-input"][aria-label="Rename this chat"]';
+	'input[data-test-id="edit-title-input"][aria-label="Rename this chat"]';
 const GEMINI_CONVERSATION_RENAME_SAVE_SELECTOR = 'button[data-test-id="save-button"]';
 
 function resolvePortFromEnv(): number | undefined {
-  const raw = process.env.AURACALL_BROWSER_PORT;
-  if (!raw) return undefined;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) ? parsed : undefined;
+	const raw = process.env.AURACALL_BROWSER_PORT;
+	if (!raw) return undefined;
+	const parsed = Number.parseInt(raw, 10);
+	return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function normalizeWhitespace(value: string): string {
-  return String(value ?? '').replace(/\s+/g, ' ').trim();
+	return String(value ?? "")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 function normalizePromptText(value: string): string {
-  return String(value ?? '')
-    .replace(/\r\n/g, '\n')
-    .replace(/\u00a0/g, ' ')
-    .split('\n')
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .join('\n')
-    .trim();
+	return String(value ?? "")
+		.replace(/\r\n/g, "\n")
+		.replace(/\u00a0/g, " ")
+		.split("\n")
+		.map((line) => line.replace(/\s+/g, " ").trim())
+		.join("\n")
+		.trim();
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function sanitizeGeminiAssistantText(value: string): string {
-  const normalized = normalizePromptText(value);
-  return normalized
-    .replace(/^(?:show thinking\s+)?gemini said(?:\s+|$)/i, '')
-    .replace(/\s+(?:copy prompt|listen|show more options)(?:\s+(?:copy prompt|listen|show more options))*$/i, '')
-    .trim();
+	const normalized = normalizePromptText(value);
+	return normalized
+		.replace(/^(?:show thinking\s+)?gemini said(?:\s+|$)/i, "")
+		.replace(
+			/\s+(?:copy prompt|listen|show more options)(?:\s+(?:copy prompt|listen|show more options))*$/i,
+			"",
+		)
+		.trim();
 }
 
 function sanitizeGeminiUserText(value: string): string {
-  return normalizePromptText(value)
-    .replace(/^you said\s+/i, '')
-    .trim();
+	return normalizePromptText(value)
+		.replace(/^you said\s+/i, "")
+		.trim();
 }
 
 type GeminiFeatureProbe = {
-  detector?: string | null;
-  search?: boolean;
-  grounding?: boolean;
-  deep_research?: boolean;
-  personal_intelligence?: boolean;
-  signed_out?: boolean;
-  modes?: string[] | null;
-  disabled_modes?: string[] | null;
-  toggles?: Record<string, boolean> | null;
-  active_mode?: string | null;
+	detector?: string | null;
+	search?: boolean;
+	grounding?: boolean;
+	deep_research?: boolean;
+	personal_intelligence?: boolean;
+	signed_out?: boolean;
+	modes?: string[] | null;
+	disabled_modes?: string[] | null;
+	toggles?: Record<string, boolean> | null;
+	active_mode?: string | null;
 };
 
 type GeminiDomSearchResult = {
-  totalScanned: number;
-  matched: BrowserDomSearchMatch[];
+	totalScanned: number;
+	matched: BrowserDomSearchMatch[];
 };
 
 function normalizeGeminiDiscoveryLabel(value: string | null | undefined): string {
-  return normalizeWhitespace(value ?? '')
-    .toLowerCase()
-    .replace(/^[^\p{L}\p{N}]+/gu, '')
-    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-    .replace(/(?:\s+new)+$/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+	return normalizeWhitespace(value ?? "")
+		.toLowerCase()
+		.replace(/^[^\p{L}\p{N}]+/gu, "")
+		.replace(/[^\p{L}\p{N}\s]+/gu, " ")
+		.replace(/(?:\s+new)+$/gu, "")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 export function geminiClassNameHasDisabledToolToken(value: string | null | undefined): boolean {
-  const classTokens = new Set(
-    normalizeWhitespace(value ?? '')
-      .split(/\s+/)
-      .filter(Boolean),
-  );
-  return classTokens.has('disabled') || classTokens.has('mdc-list-item--disabled');
+	const classTokens = new Set(
+		normalizeWhitespace(value ?? "")
+			.split(/\s+/)
+			.filter(Boolean),
+	);
+	return classTokens.has("disabled") || classTokens.has("mdc-list-item--disabled");
 }
 
-export function normalizeGeminiFeatureSignature(probe: GeminiFeatureProbe | null | undefined): string | null {
-  if (!probe || typeof probe !== 'object') {
-    return null;
-  }
-  const knownModes = new Set(GEMINI_DISCOVERY_LABELS.map((entry) => normalizeGeminiDiscoveryLabel(entry)).filter(Boolean));
-  const modes = Array.isArray(probe.modes)
-    ? Array.from(
-        new Set(
-          probe.modes
-            .map((entry) => normalizeGeminiDiscoveryLabel(entry))
-            .filter((entry) => Boolean(entry) && knownModes.has(entry)),
-        ),
-      ).sort()
-    : [];
-  const disabledModes = Array.isArray(probe.disabled_modes)
-    ? Array.from(
-        new Set(
-          probe.disabled_modes
-            .map((entry) => normalizeGeminiDiscoveryLabel(entry))
-            .filter((entry) => Boolean(entry) && knownModes.has(entry)),
-        ),
-      ).sort()
-    : [];
-  const toggles = probe.toggles && typeof probe.toggles === 'object'
-    ? Object.fromEntries(
-        Object.entries(probe.toggles)
-          .map(([key, value]) => [normalizeGeminiDiscoveryLabel(key), Boolean(value)] as const)
-          .filter(([key]) => key.length > 0)
-          .sort(([left], [right]) => left.localeCompare(right)),
-      )
-    : undefined;
-  const normalizedActiveMode = normalizeGeminiDiscoveryLabel(probe.active_mode ?? '');
-  const normalized = {
-    detector: normalizeWhitespace(probe.detector ?? '') || GEMINI_FEATURE_DETECTOR,
-    search: typeof probe.search === 'boolean' ? probe.search : undefined,
-    grounding: typeof probe.grounding === 'boolean' ? probe.grounding : undefined,
-    deep_research: typeof probe.deep_research === 'boolean' ? probe.deep_research : undefined,
-    personal_intelligence:
-      typeof probe.personal_intelligence === 'boolean' ? probe.personal_intelligence : undefined,
-    signed_out: typeof probe.signed_out === 'boolean' ? probe.signed_out : undefined,
-    modes,
-    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
-    toggles: toggles && Object.keys(toggles).length > 0 ? toggles : undefined,
-    active_mode:
-      normalizedActiveMode && normalizedActiveMode !== 'open mode picker' ? normalizedActiveMode : undefined,
-  };
-  const parsed = GeminiFeatureSchema.safeParse(normalized);
-  if (!parsed.success) {
-    return null;
-  }
-  const hasAnySignal =
-    normalized.search !== undefined ||
-    normalized.grounding !== undefined ||
-    normalized.deep_research !== undefined ||
-    normalized.personal_intelligence !== undefined ||
-    normalized.signed_out !== undefined ||
-    normalized.modes.length > 0 ||
-    disabledModes.length > 0 ||
-    (normalized.toggles && Object.keys(normalized.toggles).length > 0) ||
-    normalized.active_mode !== undefined;
-  if (!hasAnySignal) {
-    return null;
-  }
-  return JSON.stringify(normalized);
+export function normalizeGeminiFeatureSignature(
+	probe: GeminiFeatureProbe | null | undefined,
+): string | null {
+	if (!probe || typeof probe !== "object") {
+		return null;
+	}
+	const knownModes = new Set(
+		GEMINI_DISCOVERY_LABELS.map((entry) => normalizeGeminiDiscoveryLabel(entry)).filter(Boolean),
+	);
+	const modes = Array.isArray(probe.modes)
+		? Array.from(
+				new Set(
+					probe.modes
+						.map((entry) => normalizeGeminiDiscoveryLabel(entry))
+						.filter((entry) => Boolean(entry) && knownModes.has(entry)),
+				),
+			).sort()
+		: [];
+	const disabledModes = Array.isArray(probe.disabled_modes)
+		? Array.from(
+				new Set(
+					probe.disabled_modes
+						.map((entry) => normalizeGeminiDiscoveryLabel(entry))
+						.filter((entry) => Boolean(entry) && knownModes.has(entry)),
+				),
+			).sort()
+		: [];
+	const toggles =
+		probe.toggles && typeof probe.toggles === "object"
+			? Object.fromEntries(
+					Object.entries(probe.toggles)
+						.map(([key, value]) => [normalizeGeminiDiscoveryLabel(key), Boolean(value)] as const)
+						.filter(([key]) => key.length > 0)
+						.sort(([left], [right]) => left.localeCompare(right)),
+				)
+			: undefined;
+	const normalizedActiveMode = normalizeGeminiDiscoveryLabel(probe.active_mode ?? "");
+	const normalized = {
+		detector: normalizeWhitespace(probe.detector ?? "") || GEMINI_FEATURE_DETECTOR,
+		search: typeof probe.search === "boolean" ? probe.search : undefined,
+		grounding: typeof probe.grounding === "boolean" ? probe.grounding : undefined,
+		deep_research: typeof probe.deep_research === "boolean" ? probe.deep_research : undefined,
+		personal_intelligence:
+			typeof probe.personal_intelligence === "boolean" ? probe.personal_intelligence : undefined,
+		signed_out: typeof probe.signed_out === "boolean" ? probe.signed_out : undefined,
+		modes,
+		disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
+		toggles: toggles && Object.keys(toggles).length > 0 ? toggles : undefined,
+		active_mode:
+			normalizedActiveMode && normalizedActiveMode !== "open mode picker"
+				? normalizedActiveMode
+				: undefined,
+	};
+	const parsed = GeminiFeatureSchema.safeParse(normalized);
+	if (!parsed.success) {
+		return null;
+	}
+	const hasAnySignal =
+		normalized.search !== undefined ||
+		normalized.grounding !== undefined ||
+		normalized.deep_research !== undefined ||
+		normalized.personal_intelligence !== undefined ||
+		normalized.signed_out !== undefined ||
+		normalized.modes.length > 0 ||
+		disabledModes.length > 0 ||
+		(normalized.toggles && Object.keys(normalized.toggles).length > 0) ||
+		normalized.active_mode !== undefined;
+	if (!hasAnySignal) {
+		return null;
+	}
+	return JSON.stringify(normalized);
 }
 
 export function deriveGeminiFeatureProbeFromUiList(
-  uiList: BrowserToolsUiListResult | null | undefined,
+	uiList: BrowserToolsUiListResult | null | undefined,
 ): GeminiFeatureProbe | null {
-  if (!uiList) {
-    return null;
-  }
-  const modes = Array.from(
-    new Set(
-      uiList.sections.menuItems
-        .filter((item) => item.visible !== false)
-        .map((item) => normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? null))
-        .filter(Boolean),
-    ),
-  ).sort();
-  const disabledModes = Array.from(
-    new Set(
-      uiList.sections.menuItems
-        .filter((item) => item.visible !== false && item.disabled === true)
-        .map((item) => normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? null))
-        .filter(Boolean),
-    ),
-  ).sort();
-  const signedOut = uiList.sections.links.some((item) =>
-    item.visible !== false &&
-    normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? item.title ?? null) === 'sign in'
-  );
-  const toggles = Object.fromEntries(
-    uiList.sections.switches
-      .map((item) => {
-        const label = normalizeGeminiDiscoveryLabel(item.ariaLabel ?? item.text ?? null);
-        if (!label || typeof item.checked !== 'boolean') {
-          return null;
-        }
-        return [label, item.checked] as const;
-      })
-      .filter((entry): entry is readonly [string, boolean] => Boolean(entry))
-      .sort(([left], [right]) => left.localeCompare(right)),
-  );
-  if (modes.length === 0 && Object.keys(toggles).length === 0) {
-    return null;
-  }
-  return {
-    detector: GEMINI_FEATURE_DETECTOR,
-    deep_research: modes.includes('deep research'),
-    personal_intelligence: Object.hasOwn(toggles, 'personal intelligence')
-      ? Boolean(toggles['personal intelligence'])
-      : undefined,
-    signed_out: signedOut || undefined,
-    modes,
-    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
-    toggles,
-    active_mode: null,
-  };
+	if (!uiList) {
+		return null;
+	}
+	const modes = Array.from(
+		new Set(
+			uiList.sections.menuItems
+				.filter((item) => item.visible !== false)
+				.map((item) => normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? null))
+				.filter(Boolean),
+		),
+	).sort();
+	const disabledModes = Array.from(
+		new Set(
+			uiList.sections.menuItems
+				.filter((item) => item.visible !== false && item.disabled === true)
+				.map((item) => normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? null))
+				.filter(Boolean),
+		),
+	).sort();
+	const signedOut = uiList.sections.links.some(
+		(item) =>
+			item.visible !== false &&
+			normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? item.title ?? null) ===
+				"sign in",
+	);
+	const toggles = Object.fromEntries(
+		uiList.sections.switches
+			.map((item) => {
+				const label = normalizeGeminiDiscoveryLabel(item.ariaLabel ?? item.text ?? null);
+				if (!label || typeof item.checked !== "boolean") {
+					return null;
+				}
+				return [label, item.checked] as const;
+			})
+			.filter((entry): entry is readonly [string, boolean] => Boolean(entry))
+			.sort(([left], [right]) => left.localeCompare(right)),
+	);
+	if (modes.length === 0 && Object.keys(toggles).length === 0) {
+		return null;
+	}
+	return {
+		detector: GEMINI_FEATURE_DETECTOR,
+		deep_research: modes.includes("deep research"),
+		personal_intelligence: Object.hasOwn(toggles, "personal intelligence")
+			? Boolean(toggles["personal intelligence"])
+			: undefined,
+		signed_out: signedOut || undefined,
+		modes,
+		disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
+		toggles,
+		active_mode: null,
+	};
 }
 
 export function mergeGeminiFeatureProbes(
-  providerProbe: GeminiFeatureProbe | null | undefined,
-  uiListProbe: GeminiFeatureProbe | null | undefined,
+	providerProbe: GeminiFeatureProbe | null | undefined,
+	uiListProbe: GeminiFeatureProbe | null | undefined,
 ): GeminiFeatureProbe | null {
-  if (!providerProbe && !uiListProbe) {
-    return null;
-  }
-  const modes = Array.from(
-    new Set(
-      [...(providerProbe?.modes ?? []), ...(uiListProbe?.modes ?? [])]
-        .map((entry) => normalizeGeminiDiscoveryLabel(entry))
-        .filter(Boolean),
-    ),
-  ).sort();
-  const disabledModes = Array.from(
-    new Set(
-      [...(providerProbe?.disabled_modes ?? []), ...(uiListProbe?.disabled_modes ?? [])]
-        .map((entry) => normalizeGeminiDiscoveryLabel(entry))
-        .filter(Boolean),
-    ),
-  ).sort();
-  const toggles = Object.fromEntries(
-    Object.entries({
-      ...(providerProbe?.toggles ?? {}),
-      ...(uiListProbe?.toggles ?? {}),
-    })
-      .map(([key, value]) => [normalizeGeminiDiscoveryLabel(key), Boolean(value)] as const)
-      .filter(([key]) => key.length > 0)
-      .sort(([left], [right]) => left.localeCompare(right)),
-  );
-  return {
-    detector: normalizeWhitespace(providerProbe?.detector ?? uiListProbe?.detector ?? '') || GEMINI_FEATURE_DETECTOR,
-    search: providerProbe?.search,
-    grounding: providerProbe?.grounding,
-    deep_research:
-      typeof uiListProbe?.deep_research === 'boolean'
-        ? uiListProbe.deep_research
-        : providerProbe?.deep_research ?? modes.includes('deep research'),
-    personal_intelligence:
-      Object.hasOwn(toggles, 'personal intelligence')
-        ? Boolean(toggles['personal intelligence'])
-        : providerProbe?.personal_intelligence ?? uiListProbe?.personal_intelligence,
-    signed_out: uiListProbe?.signed_out ?? providerProbe?.signed_out,
-    modes,
-    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
-    toggles,
-    active_mode: normalizeGeminiDiscoveryLabel(providerProbe?.active_mode ?? uiListProbe?.active_mode ?? '') || null,
-  };
+	if (!providerProbe && !uiListProbe) {
+		return null;
+	}
+	const modes = Array.from(
+		new Set(
+			[...(providerProbe?.modes ?? []), ...(uiListProbe?.modes ?? [])]
+				.map((entry) => normalizeGeminiDiscoveryLabel(entry))
+				.filter(Boolean),
+		),
+	).sort();
+	const disabledModes = Array.from(
+		new Set(
+			[...(providerProbe?.disabled_modes ?? []), ...(uiListProbe?.disabled_modes ?? [])]
+				.map((entry) => normalizeGeminiDiscoveryLabel(entry))
+				.filter(Boolean),
+		),
+	).sort();
+	const toggles = Object.fromEntries(
+		Object.entries({
+			...(providerProbe?.toggles ?? {}),
+			...(uiListProbe?.toggles ?? {}),
+		})
+			.map(([key, value]) => [normalizeGeminiDiscoveryLabel(key), Boolean(value)] as const)
+			.filter(([key]) => key.length > 0)
+			.sort(([left], [right]) => left.localeCompare(right)),
+	);
+	return {
+		detector:
+			normalizeWhitespace(providerProbe?.detector ?? uiListProbe?.detector ?? "") ||
+			GEMINI_FEATURE_DETECTOR,
+		search: providerProbe?.search,
+		grounding: providerProbe?.grounding,
+		deep_research:
+			typeof uiListProbe?.deep_research === "boolean"
+				? uiListProbe.deep_research
+				: (providerProbe?.deep_research ?? modes.includes("deep research")),
+		personal_intelligence: Object.hasOwn(toggles, "personal intelligence")
+			? Boolean(toggles["personal intelligence"])
+			: (providerProbe?.personal_intelligence ?? uiListProbe?.personal_intelligence),
+		signed_out: uiListProbe?.signed_out ?? providerProbe?.signed_out,
+		modes,
+		disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
+		toggles,
+		active_mode:
+			normalizeGeminiDiscoveryLabel(providerProbe?.active_mode ?? uiListProbe?.active_mode ?? "") ||
+			null,
+	};
 }
 
 export async function prepareGeminiToolsDrawerForUiList(page: Page): Promise<void> {
-  const dismissOverlayExpression = `(() => {
+	const dismissOverlayExpression = `(() => {
     const dispatchEscape = () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
@@ -395,10 +423,10 @@ export async function prepareGeminiToolsDrawerForUiList(page: Page): Promise<voi
     dispatchEscape();
     return true;
   })()`;
-  await page.evaluate(dismissOverlayExpression).catch(() => undefined);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+	await page.evaluate(dismissOverlayExpression).catch(() => undefined);
+	await new Promise((resolve) => setTimeout(resolve, 150));
 
-  const drawerReadyExpression = `(() => {
+	const drawerReadyExpression = `(() => {
     const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
     const switchSelectors = ${JSON.stringify(GEMINI_PERSONAL_INTELLIGENCE_SELECTORS)};
     const modeMenus = Array.from(document.querySelectorAll('.gds-mode-switch-menu, [data-test-id="bard-mode-menu-button"][aria-expanded="true"]'))
@@ -410,12 +438,12 @@ export async function prepareGeminiToolsDrawerForUiList(page: Page): Promise<voi
       switchSelectors.some((selector) => Array.from(document.querySelectorAll(selector)).some((node) => visible(node)))
     );
   })()`;
-  const drawerReady = await page.evaluate(drawerReadyExpression);
-  if (drawerReady) {
-    return;
-  }
+	const drawerReady = await page.evaluate(drawerReadyExpression);
+	if (drawerReady) {
+		return;
+	}
 
-  const pointExpression = `(() => {
+	const pointExpression = `(() => {
     const selectors = ${JSON.stringify(GEMINI_TOOLS_BUTTON_SELECTORS)};
     const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
     const visible = (node) => Boolean(node && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
@@ -432,19 +460,20 @@ export async function prepareGeminiToolsDrawerForUiList(page: Page): Promise<voi
     }
     return null;
   })()`;
-  const point = (await page.evaluate(pointExpression)) as { x: number; y: number } | null;
+	const point = (await page.evaluate(pointExpression)) as { x: number; y: number } | null;
 
-  if (!point) {
-    return;
-  }
+	if (!point) {
+		return;
+	}
 
-  await page.mouse.move(point.x, point.y);
-  await page.mouse.down();
-  await page.mouse.up();
-  await new Promise((resolve) => setTimeout(resolve, 200));
+	await page.mouse.move(point.x, point.y);
+	await page.mouse.down();
+	await page.mouse.up();
+	await new Promise((resolve) => setTimeout(resolve, 200));
 
-  await page.waitForFunction(
-    `(() => {
+	await page
+		.waitForFunction(
+			`(() => {
       const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
       const switchSelectors = ${JSON.stringify(GEMINI_PERSONAL_INTELLIGENCE_SELECTORS)};
       const modeMenus = Array.from(document.querySelectorAll('.gds-mode-switch-menu'))
@@ -458,14 +487,16 @@ export async function prepareGeminiToolsDrawerForUiList(page: Page): Promise<voi
         )
       );
     })()`,
-    {
-      timeout: 3000,
-    },
-  ).catch(() => undefined);
+			{
+				timeout: 3000,
+			},
+		)
+		.catch(() => undefined);
 }
 
 export async function cleanupGeminiUiListPreparation(page: Page): Promise<void> {
-  await page.evaluate(`(() => {
+	await page
+		.evaluate(`(() => {
     const active = document.activeElement;
     if (active instanceof HTMLElement) active.blur();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -473,65 +504,68 @@ export async function cleanupGeminiUiListPreparation(page: Page): Promise<void> 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
     return true;
-  })()`).catch(() => undefined);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  })()`)
+		.catch(() => undefined);
+	await new Promise((resolve) => setTimeout(resolve, 150));
 }
 
 async function runGeminiDomSearch(
-  Runtime: ChromeClient['Runtime'],
-  options: BrowserDomSearchOptions,
+	Runtime: ChromeClient["Runtime"],
+	options: BrowserDomSearchOptions,
 ): Promise<GeminiDomSearchResult> {
-  const { result } = await Runtime.evaluate({
-    expression: buildBrowserDomSearchExpression(options),
-    returnByValue: true,
-  });
-  return (result?.value as GeminiDomSearchResult | null | undefined) ?? { totalScanned: 0, matched: [] };
+	const { result } = await Runtime.evaluate({
+		expression: buildBrowserDomSearchExpression(options),
+		returnByValue: true,
+	});
+	return (
+		(result?.value as GeminiDomSearchResult | null | undefined) ?? { totalScanned: 0, matched: [] }
+	);
 }
 
 function buildGeminiDomSearchHasMatchesExpression(options: BrowserDomSearchOptions): string {
-  const searchExpression = buildBrowserDomSearchExpression(options);
-  return `(() => {
+	const searchExpression = buildBrowserDomSearchExpression(options);
+	return `(() => {
     const result = ${searchExpression};
     return Boolean(result && Array.isArray(result.matched) && result.matched.length > 0);
   })()`;
 }
 
 async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolean> {
-  const readRows = async (): Promise<GeminiDomSearchResult> =>
-    runGeminiDomSearch(client.Runtime, {
-      classIncludes: ['toolbox-drawer-item-list-button'],
-      role: ['menuitemcheckbox'],
-      visibleOnly: true,
-      limit: 50,
-      maxScan: 10_000,
-    }).catch(() => ({ totalScanned: 0, matched: [] }));
-  const waitForRows = async (timeoutMs: number): Promise<boolean> => {
-    await waitForPredicate(
-      client.Runtime,
-      buildGeminiDomSearchHasMatchesExpression({
-        classIncludes: ['toolbox-drawer-item-list-button'],
-        role: ['menuitemcheckbox'],
-        visibleOnly: true,
-        limit: 1,
-        maxScan: 10_000,
-      }),
-      {
-        timeoutMs,
-        description: 'Gemini tools drawer rows',
-      },
-    ).catch(() => undefined);
-    const rows = await readRows();
-    return rows.matched.length > 0;
-  };
+	const readRows = async (): Promise<GeminiDomSearchResult> =>
+		runGeminiDomSearch(client.Runtime, {
+			classIncludes: ["toolbox-drawer-item-list-button"],
+			role: ["menuitemcheckbox"],
+			visibleOnly: true,
+			limit: 50,
+			maxScan: 10_000,
+		}).catch(() => ({ totalScanned: 0, matched: [] }));
+	const waitForRows = async (timeoutMs: number): Promise<boolean> => {
+		await waitForPredicate(
+			client.Runtime,
+			buildGeminiDomSearchHasMatchesExpression({
+				classIncludes: ["toolbox-drawer-item-list-button"],
+				role: ["menuitemcheckbox"],
+				visibleOnly: true,
+				limit: 1,
+				maxScan: 10_000,
+			}),
+			{
+				timeoutMs,
+				description: "Gemini tools drawer rows",
+			},
+		).catch(() => undefined);
+		const rows = await readRows();
+		return rows.matched.length > 0;
+	};
 
-  const existingRows = await readRows();
-  if (existingRows.matched.length > 0) {
-    return true;
-  }
-  await pressEscape(client).catch(() => undefined);
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  const programmaticOpen = await client.Runtime.evaluate({
-    expression: `(() => {
+	const existingRows = await readRows();
+	if (existingRows.matched.length > 0) {
+		return true;
+	}
+	await pressEscape(client).catch(() => undefined);
+	await new Promise((resolve) => setTimeout(resolve, 150));
+	const programmaticOpen = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -545,7 +579,7 @@ async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolea
         node.textContent,
       ].map(normalize).filter(Boolean);
       const labelMatches = (node) => labelsFor(node).some((label) => label === 'tools');
-      const candidates = Array.from(document.querySelectorAll(${JSON.stringify(GEMINI_TOOLS_BUTTON_SELECTORS.join(','))}));
+      const candidates = Array.from(document.querySelectorAll(${JSON.stringify(GEMINI_TOOLS_BUTTON_SELECTORS.join(","))}));
       const matched = candidates
         .map((candidate) => {
           if (!(candidate instanceof HTMLElement)) return null;
@@ -578,39 +612,48 @@ async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolea
       target.dispatchEvent(new MouseEvent('click', { ...eventOptions, buttons: 0 }));
       return true;
     })()`,
-    returnByValue: true,
-  }).catch(() => ({ result: { value: false } }));
-  if (Boolean(programmaticOpen.result?.value) && await waitForRows(5_000)) {
-    return true;
-  }
+		returnByValue: true,
+	}).catch(() => ({ result: { value: false } }));
+	if (Boolean(programmaticOpen.result?.value) && (await waitForRows(5_000))) {
+		return true;
+	}
 
-  const coordinateClicked = await clickGeminiFeatureProbeTarget(client, GEMINI_TOOLS_BUTTON_SELECTORS, {
-    requireText: 'tools',
-  }).catch(() => false);
-  if (coordinateClicked && await waitForRows(5_000)) {
-    return true;
-  }
+	const coordinateClicked = await clickGeminiFeatureProbeTarget(
+		client,
+		GEMINI_TOOLS_BUTTON_SELECTORS,
+		{
+			requireText: "tools",
+		},
+	).catch(() => false);
+	if (coordinateClicked && (await waitForRows(5_000))) {
+		return true;
+	}
 
-  const rows = await readRows();
-  return rows.matched.length > 0;
+	const rows = await readRows();
+	return rows.matched.length > 0;
 }
 
-async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityId: string | null | undefined): Promise<void> {
-  const normalizedCapabilityId = normalizeWhitespace(capabilityId ?? '');
-  if (!normalizedCapabilityId) {
-    return;
-  }
-  const labelsByCapabilityId: Record<string, string[]> = {
-    'gemini.media.create_image': ['create image', 'images'],
-    'gemini.media.create_music': ['create music', 'music'],
-    'gemini.media.create_video': ['create video', 'videos'],
-  };
-  const targetLabels = labelsByCapabilityId[normalizedCapabilityId];
-  if (!targetLabels) {
-    throw new Error(`Gemini prompt capability ${normalizedCapabilityId} is not supported by the browser adapter yet.`);
-  }
-  const selectedFromZeroState = await client.Runtime.evaluate({
-    expression: `(() => {
+async function selectGeminiWorkbenchCapability(
+	client: ChromeClient,
+	capabilityId: string | null | undefined,
+): Promise<void> {
+	const normalizedCapabilityId = normalizeWhitespace(capabilityId ?? "");
+	if (!normalizedCapabilityId) {
+		return;
+	}
+	const labelsByCapabilityId: Record<string, string[]> = {
+		"gemini.media.create_image": ["create image", "images"],
+		"gemini.media.create_music": ["create music", "music"],
+		"gemini.media.create_video": ["create video", "videos"],
+	};
+	const targetLabels = labelsByCapabilityId[normalizedCapabilityId];
+	if (!targetLabels) {
+		throw new Error(
+			`Gemini prompt capability ${normalizedCapabilityId} is not supported by the browser adapter yet.`,
+		);
+	}
+	const selectedFromZeroState = await client.Runtime.evaluate({
+		expression: `(() => {
       const targetLabels = ${JSON.stringify(targetLabels)};
       const normalize = (value) =>
         String(value ?? '')
@@ -637,12 +680,12 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
       clickTarget.click();
       return true;
     })()`,
-    returnByValue: true,
-  }).catch(() => ({ result: { value: false } }));
-  if (selectedFromZeroState.result?.value) {
-    const zeroStateSelectionVerified = await waitForPredicate(
-      client.Runtime,
-      `(() => {
+		returnByValue: true,
+	}).catch(() => ({ result: { value: false } }));
+	if (selectedFromZeroState.result?.value) {
+		const zeroStateSelectionVerified = await waitForPredicate(
+			client.Runtime,
+			`(() => {
         const normalize = (value) =>
           String(value ?? '')
             .replace(/\\s+/g, ' ')
@@ -659,22 +702,25 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
           normalize([node.getAttribute('aria-label'), node.getAttribute('title'), node.textContent].filter(Boolean).join(' ')).includes('deselect create image')
         );
       })()`,
-      {
-        timeoutMs: 2_000,
-        description: `Gemini capability ${normalizedCapabilityId} zero-state selection`,
-      },
-    ).then(() => true, () => false);
-    if (zeroStateSelectionVerified) {
-      return;
-    }
-  }
+			{
+				timeoutMs: 2_000,
+				description: `Gemini capability ${normalizedCapabilityId} zero-state selection`,
+			},
+		).then(
+			() => true,
+			() => false,
+		);
+		if (zeroStateSelectionVerified) {
+			return;
+		}
+	}
 
-  const opened = await ensureGeminiToolsDrawerOpen(client);
-  if (!opened) {
-    throw new Error('Gemini tools drawer did not open before capability selection.');
-  }
-  const selected = await client.Runtime.evaluate({
-    expression: `(() => {
+	const opened = await ensureGeminiToolsDrawerOpen(client);
+	if (!opened) {
+		throw new Error("Gemini tools drawer did not open before capability selection.");
+	}
+	const selected = await client.Runtime.evaluate({
+		expression: `(() => {
       const targetLabels = ${JSON.stringify(targetLabels)};
       const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
       const normalize = (value) =>
@@ -705,16 +751,20 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
       }
       return { selected: false, alreadySelected: false, label: targetLabels.join(' | ') };
     })()`,
-    returnByValue: true,
-  });
-  const payload = selected.result?.value as { selected?: boolean; alreadySelected?: boolean; label?: string } | undefined;
-  if (!payload?.selected) {
-    throw new Error(`Gemini workbench capability ${normalizedCapabilityId} was not visible in the tools drawer.`);
-  }
-  if (!payload.alreadySelected) {
-    await waitForPredicate(
-      client.Runtime,
-      `(() => {
+		returnByValue: true,
+	});
+	const payload = selected.result?.value as
+		| { selected?: boolean; alreadySelected?: boolean; label?: string }
+		| undefined;
+	if (!payload?.selected) {
+		throw new Error(
+			`Gemini workbench capability ${normalizedCapabilityId} was not visible in the tools drawer.`,
+		);
+	}
+	if (!payload.alreadySelected) {
+		await waitForPredicate(
+			client.Runtime,
+			`(() => {
         const targetLabels = ${JSON.stringify(targetLabels)};
         const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
         const normalize = (value) =>
@@ -737,132 +787,134 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
           )
         );
       })()`,
-      {
-        timeoutMs: 2_000,
-        description: `Gemini capability ${normalizedCapabilityId} selection`,
-      },
-    ).catch(() => undefined);
-  }
-  await client.Runtime.evaluate({
-    expression: `(() => {
+			{
+				timeoutMs: 2_000,
+				description: `Gemini capability ${normalizedCapabilityId} selection`,
+			},
+		).catch(() => undefined);
+	}
+	await client.Runtime.evaluate({
+		expression: `(() => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
       return true;
     })()`,
-    returnByValue: true,
-  }).catch(() => undefined);
+		returnByValue: true,
+	}).catch(() => undefined);
 }
 
 function _guessMimeType(filePath: string): string {
-  const ext = path.extname(filePath).toLowerCase();
-  switch (ext) {
-    case '.txt':
-    case '.md':
-    case '.log':
-    case '.csv':
-    case '.ts':
-    case '.tsx':
-    case '.js':
-    case '.json':
-    case '.yaml':
-    case '.yml':
-    case '.xml':
-    case '.html':
-    case '.css':
-      return 'text/plain';
-    case '.pdf':
-      return 'application/pdf';
-    case '.doc':
-      return 'application/msword';
-    case '.docx':
-      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    case '.xls':
-      return 'application/vnd.ms-excel';
-    case '.xlsx':
-      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.gif':
-      return 'image/gif';
-    case '.webp':
-      return 'image/webp';
-    default:
-      return 'application/octet-stream';
-  }
+	const ext = path.extname(filePath).toLowerCase();
+	switch (ext) {
+		case ".txt":
+		case ".md":
+		case ".log":
+		case ".csv":
+		case ".ts":
+		case ".tsx":
+		case ".js":
+		case ".json":
+		case ".yaml":
+		case ".yml":
+		case ".xml":
+		case ".html":
+		case ".css":
+			return "text/plain";
+		case ".pdf":
+			return "application/pdf";
+		case ".doc":
+			return "application/msword";
+		case ".docx":
+			return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+		case ".xls":
+			return "application/vnd.ms-excel";
+		case ".xlsx":
+			return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+		case ".png":
+			return "image/png";
+		case ".jpg":
+		case ".jpeg":
+			return "image/jpeg";
+		case ".gif":
+			return "image/gif";
+		case ".webp":
+			return "image/webp";
+		default:
+			return "application/octet-stream";
+	}
 }
 
 function isLikelyImagePath(filePath: string): boolean {
-  return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(path.extname(filePath).toLowerCase());
+	return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"].includes(
+		path.extname(filePath).toLowerCase(),
+	);
 }
 
 export function normalizeGeminiProjectId(value: string | null | undefined): string | null {
-  const trimmed = String(value ?? '').trim();
-  if (!trimmed) return null;
-  const extracted = extractGeminiProjectIdFromUrl(trimmed);
-  if (extracted) return extracted;
-  const normalized = trimmed.replace(/^gem\//i, '').replace(/^\/+|\/+$/g, '');
-  if (!normalized) return null;
-  return /^[a-z0-9_-]{6,}$/i.test(normalized) ? normalized : null;
+	const trimmed = String(value ?? "").trim();
+	if (!trimmed) return null;
+	const extracted = extractGeminiProjectIdFromUrl(trimmed);
+	if (extracted) return extracted;
+	const normalized = trimmed.replace(/^gem\//i, "").replace(/^\/+|\/+$/g, "");
+	if (!normalized) return null;
+	return /^[a-z0-9_-]{6,}$/i.test(normalized) ? normalized : null;
 }
 
 export function normalizeGeminiConversationId(value: string | null | undefined): string | null {
-  const trimmed = String(value ?? '').trim();
-  if (!trimmed) return null;
-  const match = trimmed.match(/\/app\/([^/?#]+)/i);
-  return match?.[1] ?? (trimmed.replace(/^app\//i, '').replace(/^\/+|\/+$/g, '') || null);
+	const trimmed = String(value ?? "").trim();
+	if (!trimmed) return null;
+	const match = trimmed.match(/\/app\/([^/?#]+)/i);
+	return match?.[1] ?? (trimmed.replace(/^app\//i, "").replace(/^\/+|\/+$/g, "") || null);
 }
 
 export function extractGeminiProjectIdFromUrl(url: string): string | null {
-  const match = String(url).match(/\/gem\/([^/?#]+)|\/gems\/edit\/([^/?#]+)/i);
-  return match?.[1] ?? match?.[2] ?? null;
+	const match = String(url).match(/\/gem\/([^/?#]+)|\/gems\/edit\/([^/?#]+)/i);
+	return match?.[1] ?? match?.[2] ?? null;
 }
 
 export function resolveGeminiProjectUrl(projectId: string): string {
-  return new URL(`gem/${projectId}`, GEMINI_BASE_URL).toString();
+	return new URL(`gem/${projectId}`, GEMINI_BASE_URL).toString();
 }
 
 export function resolveGeminiCreateProjectUrl(): string {
-  return GEMINI_GEM_CREATE_URL;
+	return GEMINI_GEM_CREATE_URL;
 }
 
 export function resolveGeminiEditProjectUrl(projectId: string): string {
-  return new URL(`gems/edit/${projectId}`, GEMINI_BASE_URL).toString();
+	return new URL(`gems/edit/${projectId}`, GEMINI_BASE_URL).toString();
 }
 
 export function resolveGeminiConversationUrl(conversationId: string): string {
-  return new URL(`app/${conversationId}`, GEMINI_BASE_URL).toString();
+	return new URL(`app/${conversationId}`, GEMINI_BASE_URL).toString();
 }
 
 function isGeminiUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return GEMINI_COMPATIBLE_HOSTS.includes(parsed.hostname);
-  } catch {
-    return false;
-  }
+	try {
+		const parsed = new URL(url);
+		return GEMINI_COMPATIBLE_HOSTS.includes(parsed.hostname);
+	} catch {
+		return false;
+	}
 }
 
 function geminiConversationRouteExpression(url: string): string | undefined {
-  try {
-    const parsed = new URL(url);
-    const path = parsed.pathname.replace(/\/+$/, '') || '/';
-    if (/^\/app\/[^/]+$/i.test(path)) {
-      return `location.pathname === ${JSON.stringify(path)}`;
-    }
-    if (path === '/app') {
-      return `location.pathname === "/app" || /^\\/app\\/[^/?#]+$/i.test(location.pathname)`;
-    }
-    return undefined;
-  } catch {
-    return undefined;
-  }
+	try {
+		const parsed = new URL(url);
+		const path = parsed.pathname.replace(/\/+$/, "") || "/";
+		if (/^\/app\/[^/]+$/i.test(path)) {
+			return `location.pathname === ${JSON.stringify(path)}`;
+		}
+		if (path === "/app") {
+			return `location.pathname === "/app" || /^\\/app\\/[^/?#]+$/i.test(location.pathname)`;
+		}
+		return undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 export function geminiConversationSurfaceReadyExpression(): string {
-  return `(() => {
+	return `(() => {
     const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
     if (visible(document.querySelector('[data-test-id="all-conversations"]'))) return true;
     if (visible(document.querySelector('button[aria-label="Main menu"]'))) {
@@ -883,271 +935,327 @@ export function geminiConversationSurfaceReadyExpression(): string {
   })()`;
 }
 
-export function classifyGeminiBlockingState(state: {
-  href?: string | null;
-  title?: string | null;
-  bodyText?: string | null;
-} | null | undefined): string | null {
-  const href = normalizeWhitespace(state?.href ?? '').toLowerCase();
-  const title = normalizeWhitespace(state?.title ?? '').toLowerCase();
-  const bodyText = normalizeWhitespace(state?.bodyText ?? '').toLowerCase();
-  const combined = `${title} ${bodyText}`.trim();
-  if (
-    href.includes('google.com/sorry/') ||
-    (combined.includes('our systems have detected unusual traffic') &&
-      combined.includes('this page checks to see if it\'s really you'))
-  ) {
-    return 'Google blocked Gemini with an unusual-traffic interstitial (google.com/sorry).';
-  }
-  return null;
+export function classifyGeminiBlockingState(
+	state:
+		| {
+				href?: string | null;
+				title?: string | null;
+				bodyText?: string | null;
+		  }
+		| null
+		| undefined,
+): string | null {
+	const href = normalizeWhitespace(state?.href ?? "").toLowerCase();
+	const title = normalizeWhitespace(state?.title ?? "").toLowerCase();
+	const bodyText = normalizeWhitespace(state?.bodyText ?? "").toLowerCase();
+	const combined = `${title} ${bodyText}`.trim();
+	if (
+		href.includes("google.com/sorry/") ||
+		(combined.includes("our systems have detected unusual traffic") &&
+			combined.includes("this page checks to see if it's really you"))
+	) {
+		return "Google blocked Gemini with an unusual-traffic interstitial (google.com/sorry).";
+	}
+	if (
+		href.includes("accounts.google.com/") ||
+		href.includes("/signin/") ||
+		/\bchoose an account\b|\buse your google account\b|\bsign in\b.*\bgoogle\b|\bgoogle accounts\b/.test(
+			combined,
+		)
+	) {
+		return "Google account chooser or sign-in gate blocked Gemini.";
+	}
+	if (/recaptcha|g-recaptcha|hcaptcha|captcha/.test(combined)) {
+		return "CAPTCHA or reCAPTCHA challenge blocked Gemini.";
+	}
+	if (
+		/human verification|verify you are human|prove you are human|confirm you are human|anti-bot/.test(
+			combined,
+		)
+	) {
+		return "Human-verification gate blocked Gemini.";
+	}
+	return null;
 }
 
 export function resolveGeminiConfiguredUrl(
-  value: string | null | undefined,
-  fallback: string = GEMINI_APP_URL,
+	value: string | null | undefined,
+	fallback: string = GEMINI_APP_URL,
 ): string {
-  const trimmed = String(value ?? '').trim();
-  if (!trimmed) return fallback;
-  return isGeminiUrl(trimmed) ? trimmed : fallback;
+	const trimmed = String(value ?? "").trim();
+	if (!trimmed) return fallback;
+	return isGeminiUrl(trimmed) ? trimmed : fallback;
 }
 
 export function resolveGeminiConversationRailTargetUrl(
-  options?: Pick<BrowserProviderListOptions, 'configuredUrl'> | null,
-  projectId?: string | null,
+	options?: Pick<BrowserProviderListOptions, "configuredUrl"> | null,
+	projectId?: string | null,
 ): string {
-  const normalizedProjectId = normalizeGeminiProjectId(projectId);
-  if (normalizedProjectId) {
-    return resolveGeminiProjectUrl(normalizedProjectId);
-  }
-  const configuredUrl = resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL);
-  return extractGeminiConversationIdFromUrl(configuredUrl) ? GEMINI_APP_URL : configuredUrl;
+	const normalizedProjectId = normalizeGeminiProjectId(projectId);
+	if (normalizedProjectId) {
+		return resolveGeminiProjectUrl(normalizedProjectId);
+	}
+	const configuredUrl = resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL);
+	if (!isGeminiAppConversationSurfaceUrl(configuredUrl)) {
+		return GEMINI_APP_URL;
+	}
+	return extractGeminiConversationIdFromUrl(configuredUrl) ? GEMINI_APP_URL : configuredUrl;
+}
+
+function isGeminiAppConversationSurfaceUrl(value: string): boolean {
+	try {
+		const parsed = new URL(value);
+		return parsed.pathname === "/app" || parsed.pathname.startsWith("/app/");
+	} catch {
+		return false;
+	}
 }
 
 export function geminiUrlMatchesPreference(
-  candidateUrl: string | null | undefined,
-  preferredUrl: string | null | undefined,
+	candidateUrl: string | null | undefined,
+	preferredUrl: string | null | undefined,
 ): boolean {
-  const candidate = String(candidateUrl ?? '').trim();
-  const preferred = String(preferredUrl ?? '').trim();
-  if (!candidate || !preferred) {
-    return false;
-  }
-  try {
-    const candidateParsed = new URL(candidate);
-    const preferredParsed = new URL(preferred);
-    if (candidateParsed.hostname !== preferredParsed.hostname) {
-      return false;
-    }
-    const normalizePath = (value: string) => value.replace(/\/+$/, '') || '/';
-    const candidatePath = normalizePath(candidateParsed.pathname);
-    const preferredPath = normalizePath(preferredParsed.pathname);
-    if (
-      preferredPath === '/app' &&
-      (candidatePath === '/app' || /^\/app\/[^/]+$/i.test(candidatePath))
-    ) {
-      return candidateParsed.search === preferredParsed.search;
-    }
-    if (candidatePath !== preferredPath) {
-      return false;
-    }
-    return candidateParsed.search === preferredParsed.search;
-  } catch {
-    return candidate === preferred;
-  }
+	const candidate = String(candidateUrl ?? "").trim();
+	const preferred = String(preferredUrl ?? "").trim();
+	if (!candidate || !preferred) {
+		return false;
+	}
+	try {
+		const candidateParsed = new URL(candidate);
+		const preferredParsed = new URL(preferred);
+		if (candidateParsed.hostname !== preferredParsed.hostname) {
+			return false;
+		}
+		const normalizePath = (value: string) => value.replace(/\/+$/, "") || "/";
+		const candidatePath = normalizePath(candidateParsed.pathname);
+		const preferredPath = normalizePath(preferredParsed.pathname);
+		if (
+			preferredPath === "/app" &&
+			(candidatePath === "/app" || /^\/app\/[^/]+$/i.test(candidatePath))
+		) {
+			return candidateParsed.search === preferredParsed.search;
+		}
+		if (candidatePath !== preferredPath) {
+			return false;
+		}
+		return candidateParsed.search === preferredParsed.search;
+	} catch {
+		return candidate === preferred;
+	}
 }
 
 export function selectPreferredGeminiTarget<T extends { url?: string | null }>(
-  targets: T[],
-  preferredUrl?: string,
+	targets: T[],
+	preferredUrl?: string,
 ): T | undefined {
-  if (targets.length === 0) {
-    return undefined;
-  }
-  if (!preferredUrl) {
-    return targets[0];
-  }
-  return targets.find((target) => geminiUrlMatchesPreference(target.url, preferredUrl));
+	if (targets.length === 0) {
+		return undefined;
+	}
+	if (!preferredUrl) {
+		return targets[0];
+	}
+	return targets.find((target) => geminiUrlMatchesPreference(target.url, preferredUrl));
 }
 
 export function canReuseGeminiResolvedTabTarget(
-  tabUrl: string | null | undefined,
-  preferredUrl: string | null | undefined,
+	tabUrl: string | null | undefined,
+	preferredUrl: string | null | undefined,
 ): boolean {
-  const preferred = String(preferredUrl ?? '').trim();
-  if (!preferred) {
-    return true;
-  }
-  const tab = String(tabUrl ?? '').trim();
-  if (!tab) {
-    return true;
-  }
-  return geminiUrlMatchesPreference(tab, preferred);
+	const preferred = String(preferredUrl ?? "").trim();
+	if (!preferred) {
+		return true;
+	}
+	const tab = String(tabUrl ?? "").trim();
+	if (!tab) {
+		return true;
+	}
+	return geminiUrlMatchesPreference(tab, preferred);
 }
 
 export function canReuseGeminiConversationSurfaceForTarget(
-  currentUrl: string | null | undefined,
-  targetUrl: string | null | undefined,
+	currentUrl: string | null | undefined,
+	targetUrl: string | null | undefined,
 ): boolean {
-  const current = String(currentUrl ?? '').trim();
-  const target = String(targetUrl ?? '').trim();
-  if (!current || !target) return false;
-  try {
-    const currentParsed = new URL(current);
-    const targetParsed = new URL(target);
-    if (currentParsed.hostname !== targetParsed.hostname) return false;
-    const normalizePath = (value: string) => value.replace(/\/+$/, '') || '/';
-    const currentPath = normalizePath(currentParsed.pathname);
-    const targetPath = normalizePath(targetParsed.pathname);
-    if (targetPath === '/app') {
-      return currentParsed.search === targetParsed.search &&
-        (currentPath === '/app' || /^\/app\/[^/]+$/i.test(currentPath));
-    }
-    if (/^\/app\/[^/]+$/i.test(targetPath)) {
-      return currentPath === targetPath && currentParsed.search === targetParsed.search;
-    }
-    return currentPath === targetPath && currentParsed.search === targetParsed.search;
-  } catch {
-    return false;
-  }
+	const current = String(currentUrl ?? "").trim();
+	const target = String(targetUrl ?? "").trim();
+	if (!current || !target) return false;
+	try {
+		const currentParsed = new URL(current);
+		const targetParsed = new URL(target);
+		if (currentParsed.hostname !== targetParsed.hostname) return false;
+		const normalizePath = (value: string) => value.replace(/\/+$/, "") || "/";
+		const currentPath = normalizePath(currentParsed.pathname);
+		const targetPath = normalizePath(targetParsed.pathname);
+		if (targetPath === "/app") {
+			return (
+				currentParsed.search === targetParsed.search &&
+				(currentPath === "/app" || /^\/app\/[^/]+$/i.test(currentPath))
+			);
+		}
+		if (/^\/app\/[^/]+$/i.test(targetPath)) {
+			return currentPath === targetPath && currentParsed.search === targetParsed.search;
+		}
+		return currentPath === targetPath && currentParsed.search === targetParsed.search;
+	} catch {
+		return false;
+	}
 }
 
-function resolveGeminiTargetId(target: { id?: string; targetId?: string } | null | undefined): string | undefined {
-  if (!target) return undefined;
-  if (typeof target.id === 'string' && target.id.trim()) return target.id;
-  if (typeof target.targetId === 'string' && target.targetId.trim()) return target.targetId;
-  return undefined;
+function resolveGeminiTargetId(
+	target: { id?: string; targetId?: string } | null | undefined,
+): string | undefined {
+	if (!target) return undefined;
+	if (typeof target.id === "string" && target.id.trim()) return target.id;
+	if (typeof target.targetId === "string" && target.targetId.trim()) return target.targetId;
+	return undefined;
 }
 
 async function connectToGeminiTab(
-  options?: BrowserProviderListOptions,
-  urlOverride?: string,
+	options?: BrowserProviderListOptions,
+	urlOverride?: string,
 ): Promise<{
-  client: ChromeClient;
-  targetId?: string;
-  shouldClose: boolean;
-  host: string;
-  port: number;
-  usedExisting: boolean;
+	client: ChromeClient;
+	targetId?: string;
+	shouldClose: boolean;
+	host: string;
+	port: number;
+	usedExisting: boolean;
 }> {
-  let host = options?.host ?? '127.0.0.1';
-  let port = options?.port ?? resolvePortFromEnv();
-  const preferredUrl = urlOverride ?? options?.configuredUrl ?? GEMINI_APP_URL;
-  const allowDirectTabReuse = canReuseGeminiResolvedTabTarget(options?.tabUrl, preferredUrl);
-  if (options?.tabTargetId && port && allowDirectTabReuse) {
-    try {
-      const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
-      await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-      return { client, targetId: options.tabTargetId, shouldClose: false, host, port, usedExisting: true };
-    } catch {
-      // Resolve again below if the cached target id is stale.
-    }
-  }
+	let host = options?.host ?? "127.0.0.1";
+	let port = options?.port ?? resolvePortFromEnv();
+	const preferredUrl = urlOverride ?? options?.configuredUrl ?? GEMINI_APP_URL;
+	const allowDirectTabReuse = canReuseGeminiResolvedTabTarget(options?.tabUrl, preferredUrl);
+	if (options?.tabTargetId && port && allowDirectTabReuse) {
+		try {
+			const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
+			await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+			return {
+				client,
+				targetId: options.tabTargetId,
+				shouldClose: false,
+				host,
+				port,
+				usedExisting: true,
+			};
+		} catch {
+			// Resolve again below if the cached target id is stale.
+		}
+	}
 
-  const serviceResolver = options?.browserService as
-    | (import('../service/browserService.js').BrowserService & {
-        resolveServiceTarget?: (options: {
-          serviceId: 'gemini';
-          configuredUrl?: string | null;
-          ensurePort?: boolean;
-        }) => Promise<{ host?: string; port?: number; tab?: { targetId?: string; id?: string } | null }>;
-      })
-    | undefined;
+	const serviceResolver = options?.browserService as
+		| (import("../service/browserService.js").BrowserService & {
+				resolveServiceTarget?: (options: {
+					serviceId: "gemini";
+					configuredUrl?: string | null;
+					ensurePort?: boolean;
+				}) => Promise<{
+					host?: string;
+					port?: number;
+					tab?: { targetId?: string; id?: string } | null;
+				}>;
+		  })
+		| undefined;
 
-  let resolvedTargetIdFromService: string | undefined;
-  if (serviceResolver?.resolveServiceTarget) {
-    const target = await serviceResolver.resolveServiceTarget({
-      serviceId: 'gemini',
-      configuredUrl: preferredUrl,
-      ensurePort: true,
-    });
-    host = target.host ?? host;
-    port = target.port ?? port;
-    resolvedTargetIdFromService = resolveGeminiTargetId(target.tab);
-  }
-  if ((!port || !host) && options?.browserService) {
-    const target = await options.browserService.resolveDevToolsTarget({
-      host,
-      port: port ?? undefined,
-      ensurePort: true,
-      launchUrl: preferredUrl,
-    });
-    host = target.host ?? host;
-    port = target.port ?? port;
-  }
-  if (!port) {
-    throw new Error('Missing DevTools port. Launch a Gemini browser session or set AURACALL_BROWSER_PORT.');
-  }
+	let resolvedTargetIdFromService: string | undefined;
+	if (serviceResolver?.resolveServiceTarget) {
+		const target = await serviceResolver.resolveServiceTarget({
+			serviceId: "gemini",
+			configuredUrl: preferredUrl,
+			ensurePort: true,
+		});
+		host = target.host ?? host;
+		port = target.port ?? port;
+		resolvedTargetIdFromService = resolveGeminiTargetId(target.tab);
+	}
+	if ((!port || !host) && options?.browserService) {
+		const target = await options.browserService.resolveDevToolsTarget({
+			host,
+			port: port ?? undefined,
+			ensurePort: true,
+			launchUrl: preferredUrl,
+		});
+		host = target.host ?? host;
+		port = target.port ?? port;
+	}
+	if (!port) {
+		throw new Error(
+			"Missing DevTools port. Launch a Gemini browser session or set AURACALL_BROWSER_PORT.",
+		);
+	}
 
-  const targets = await CDP.List({ host, port });
-  const candidates = targets.filter((target) => target.type === 'page' && isGeminiUrl(target.url ?? ''));
-  const serviceResolved = resolvedTargetIdFromService
-    ? candidates.find((target) => resolveGeminiTargetId(target) === resolvedTargetIdFromService)
-    : undefined;
-  const preferred = selectPreferredGeminiTarget(candidates, preferredUrl);
-  let targetInfo = serviceResolved ?? preferred;
-  let shouldClose = false;
-  let usedExisting = Boolean(resolveGeminiTargetId(targetInfo));
-  if (!targetInfo) {
-    const opened = await openOrReuseChromeTarget(port, preferredUrl, {
-      host,
-      reusePolicy: 'same-origin',
-      compatibleHosts: GEMINI_COMPATIBLE_HOSTS,
-      mutationAudit: resolveMutationAudit(options),
-      mutationSource: resolveMutationSource(options, 'provider:gemini', 'connect-tab'),
-    });
-    targetInfo = opened.target ?? undefined;
-    shouldClose = !opened.reused;
-    usedExisting = opened.reused;
-  }
-  const targetId = resolveGeminiTargetId(targetInfo);
-  if (!targetId) {
-    throw new Error('No Gemini tab found. Launch a Gemini browser session and retry.');
-  }
-  const client = await connectToChromeTarget({ host, port, target: targetId });
-  await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  annotateClientMutationContext(client, options, 'provider:gemini');
-  return { client, targetId, shouldClose, host, port, usedExisting };
+	const targets = await CDP.List({ host, port });
+	const candidates = targets.filter(
+		(target) => target.type === "page" && isGeminiUrl(target.url ?? ""),
+	);
+	const serviceResolved = resolvedTargetIdFromService
+		? candidates.find((target) => resolveGeminiTargetId(target) === resolvedTargetIdFromService)
+		: undefined;
+	const preferred = selectPreferredGeminiTarget(candidates, preferredUrl);
+	let targetInfo = serviceResolved ?? preferred;
+	let shouldClose = false;
+	let usedExisting = Boolean(resolveGeminiTargetId(targetInfo));
+	if (!targetInfo) {
+		const opened = await openOrReuseChromeTarget(port, preferredUrl, {
+			host,
+			reusePolicy: "same-origin",
+			compatibleHosts: GEMINI_COMPATIBLE_HOSTS,
+			navigateReusedTargets: false,
+			mutationAudit: resolveMutationAudit(options),
+			mutationSource: resolveMutationSource(options, "provider:gemini", "connect-tab"),
+		});
+		targetInfo = opened.target ?? undefined;
+		shouldClose = !opened.reused;
+		usedExisting = opened.reused;
+	}
+	const targetId = resolveGeminiTargetId(targetInfo);
+	if (!targetId) {
+		throw new Error("No Gemini tab found. Launch a Gemini browser session and retry.");
+	}
+	const client = await connectToChromeTarget({ host, port, target: targetId });
+	await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+	annotateClientMutationContext(client, options, "provider:gemini");
+	return { client, targetId, shouldClose, host, port, usedExisting };
 }
 
 type GeminiProjectProbe = {
-  id: string;
-  name: string;
-  url?: string | null;
+	id: string;
+	name: string;
+	url?: string | null;
 };
 
 type GeminiConversationProbe = {
-  id: string;
-  title: string;
-  url?: string | null;
-  updatedAt?: string | null;
+	id: string;
+	title: string;
+	url?: string | null;
+	updatedAt?: string | null;
 };
 
 type GeminiConversationContextProbe = {
-  provider: 'gemini';
-  conversationId: string;
-  messages: Array<{
-    role: 'user' | 'assistant';
-    text: string;
-  }>;
-  files?: FileRef[];
-  artifacts?: ConversationContext['artifacts'];
+	provider: "gemini";
+	conversationId: string;
+	messages: Array<{
+		role: "user" | "assistant";
+		text: string;
+	}>;
+	files?: FileRef[];
+	artifacts?: ConversationContext["artifacts"];
 };
 
 type GeminiDeleteTrace = Array<Record<string, unknown>>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function summarizeGeminiDeleteTrace(trace: GeminiDeleteTrace, edgeCount: number = 6): string {
-  if (trace.length <= edgeCount * 2) {
-    return JSON.stringify(trace);
-  }
-  return JSON.stringify([
-    ...trace.slice(0, edgeCount),
-    { phase: 'trace-truncated', omitted: trace.length - edgeCount * 2 },
-    ...trace.slice(-edgeCount),
-  ]);
+	if (trace.length <= edgeCount * 2) {
+		return JSON.stringify(trace);
+	}
+	return JSON.stringify([
+		...trace.slice(0, edgeCount),
+		{ phase: "trace-truncated", omitted: trace.length - edgeCount * 2 },
+		...trace.slice(-edgeCount),
+	]);
 }
 
 const GEMINI_USER_IDENTITY_LABEL_EXPRESSION = `(() => {
@@ -1157,21 +1265,23 @@ const GEMINI_USER_IDENTITY_LABEL_EXPRESSION = `(() => {
   return labels.find((label) => /^Google Account:/i.test(label)) ?? null;
 })()`;
 
-export function extractGeminiIdentityFromLabel(label: string | null | undefined): ProviderUserIdentity | null {
-  const normalized = normalizeWhitespace(label ?? '');
-  if (!normalized) return null;
-  const match = normalized.match(/^Google Account:\s*(.+?)\s*\(([^)]+@[^)]+)\)$/i);
-  if (!match) return null;
-  return {
-    name: normalizeWhitespace(match[1]),
-    email: normalizeWhitespace(match[2]).toLowerCase(),
-    source: 'google-account-label',
-  };
+export function extractGeminiIdentityFromLabel(
+	label: string | null | undefined,
+): ProviderUserIdentity | null {
+	const normalized = normalizeWhitespace(label ?? "");
+	if (!normalized) return null;
+	const match = normalized.match(/^Google Account:\s*(.+?)\s*\(([^)]+@[^)]+)\)$/i);
+	if (!match) return null;
+	return {
+		name: normalizeWhitespace(match[1]),
+		email: normalizeWhitespace(match[2]).toLowerCase(),
+		source: "google-account-label",
+	};
 }
 
 async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const isVisible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -1221,58 +1331,60 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
       }
       return items;
     })()`,
-    returnByValue: true,
-  });
-  const payload = Array.isArray(result?.value) ? (result.value as GeminiProjectProbe[]) : [];
-  return payload
-    .filter((item) => item?.id && item?.name)
-    .map((item) => ({
-      id: item.id,
-      name: item.name,
-      provider: 'gemini' as const,
-      url: item.url ?? undefined,
-    }));
+		returnByValue: true,
+	});
+	const payload = Array.isArray(result?.value) ? (result.value as GeminiProjectProbe[]) : [];
+	return payload
+		.filter((item) => item?.id && item?.name)
+		.map((item) => ({
+			id: item.id,
+			name: item.name,
+			provider: "gemini" as const,
+			url: item.url ?? undefined,
+		}));
 }
 
 async function readGeminiUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
-  const { result } = await client.Runtime.evaluate({
-    expression: GEMINI_USER_IDENTITY_LABEL_EXPRESSION,
-    returnByValue: true,
-  });
-  const immediate = extractGeminiIdentityFromLabel(typeof result?.value === 'string' ? result.value : null);
-  if (immediate) return immediate;
+	const { result } = await client.Runtime.evaluate({
+		expression: GEMINI_USER_IDENTITY_LABEL_EXPRESSION,
+		returnByValue: true,
+	});
+	const immediate = extractGeminiIdentityFromLabel(
+		typeof result?.value === "string" ? result.value : null,
+	);
+	if (immediate) return immediate;
 
-  const waited = await waitForPredicate(client.Runtime, GEMINI_USER_IDENTITY_LABEL_EXPRESSION, {
-    timeoutMs: 5_000,
-    pollMs: 250,
-    description: 'Gemini Google Account identity label',
-  });
-  return extractGeminiIdentityFromLabel(typeof waited.value === 'string' ? waited.value : null);
+	const waited = await waitForPredicate(client.Runtime, GEMINI_USER_IDENTITY_LABEL_EXPRESSION, {
+		timeoutMs: 5_000,
+		pollMs: 250,
+		description: "Gemini Google Account identity label",
+	});
+	return extractGeminiIdentityFromLabel(typeof waited.value === "string" ? waited.value : null);
 }
 
 async function assertGeminiExpectedIdentity(
-  client: ChromeClient,
-  options?: BrowserProviderListOptions,
+	client: ChromeClient,
+	options?: BrowserProviderListOptions,
 ): Promise<void> {
-  if (!providerIdentityPreflightRequested(options)) return;
-  assertProviderIdentityPreflight({
-    providerId: 'gemini',
-    actualIdentity: await readGeminiUserIdentity(client),
-    fallbackIdentity: options?.identityPreflightFallbackIdentity,
-    expectedIdentity: options?.expectedUserIdentity,
-    expectedServiceAccountId: options?.expectedServiceAccountId,
-  });
+	if (!providerIdentityPreflightRequested(options)) return;
+	assertProviderIdentityPreflight({
+		providerId: "gemini",
+		actualIdentity: await readGeminiUserIdentity(client),
+		fallbackIdentity: options?.identityPreflightFallbackIdentity,
+		expectedIdentity: options?.expectedUserIdentity,
+		expectedServiceAccountId: options?.expectedServiceAccountId,
+	});
 }
 
 async function clickGeminiFeatureProbeTarget(
-  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
-  selectors: readonly string[],
-  options: { requireText?: string | null } = {},
+	client: Pick<ChromeClient, "Runtime" | "Input">,
+	selectors: readonly string[],
+	options: { requireText?: string | null } = {},
 ): Promise<boolean> {
-  const located = await client.Runtime.evaluate({
-    expression: `(() => {
+	const located = await client.Runtime.evaluate({
+		expression: `(() => {
       const selectors = ${JSON.stringify(selectors)};
-      const requiredText = ${JSON.stringify(normalizeGeminiDiscoveryLabel(options.requireText ?? ''))};
+      const requiredText = ${JSON.stringify(normalizeGeminiDiscoveryLabel(options.requireText ?? ""))};
       const normalize = (value) =>
         String(value ?? '')
           .replace(/\\s+/g, ' ')
@@ -1317,81 +1429,102 @@ async function clickGeminiFeatureProbeTarget(
       }
       return null;
     })()`,
-    returnByValue: true,
-  });
-  const point = located.result?.value as { x?: number; y?: number } | undefined;
-  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
-    return false;
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
-  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  return true;
+		returnByValue: true,
+	});
+	const point = located.result?.value as { x?: number; y?: number } | undefined;
+	if (typeof point?.x !== "number" || typeof point?.y !== "number") {
+		return false;
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: point.x,
+		y: point.y,
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	return true;
 }
 
-async function readGeminiToolsDrawerProbe(Runtime: ChromeClient['Runtime']): Promise<GeminiFeatureProbe | null> {
-  const [rowSearch, toggleSearch] = await Promise.all([
-    runGeminiDomSearch(Runtime, {
-      classIncludes: ['toolbox-drawer-item-list-button'],
-      role: ['menuitemcheckbox'],
-      visibleOnly: true,
-      limit: 50,
-      maxScan: 10_000,
-    }),
-    runGeminiDomSearch(Runtime, {
-      ariaLabel: ['Personal Intelligence'],
-      role: ['switch'],
-      visibleOnly: true,
-      limit: 10,
-      maxScan: 10_000,
-    }),
-  ]);
-  const modes = Array.from(
-    new Set(
-      rowSearch.matched
-        .map((match) => normalizeGeminiDiscoveryLabel(match.text || match.ariaLabel || null))
-        .filter(Boolean),
-    ),
-  ).sort();
-  const disabledModes = Array.from(
-    new Set(
-      rowSearch.matched
-        .filter((match) => geminiClassNameHasDisabledToolToken(match.className))
-        .map((match) => normalizeGeminiDiscoveryLabel(match.text || match.ariaLabel || null))
-        .filter(Boolean),
-    ),
-  ).sort();
-  const toggles = Object.fromEntries(
-    toggleSearch.matched
-      .map((match) => {
-        const label = normalizeGeminiDiscoveryLabel(match.ariaLabel || match.text || null);
-        if (!label || typeof match.checked !== 'boolean') {
-          return null;
-        }
-        return [label, match.checked] as const;
-      })
-      .filter((entry): entry is readonly [string, boolean] => Boolean(entry))
-      .sort(([left], [right]) => left.localeCompare(right)),
-  );
-  if (modes.length === 0 && Object.keys(toggles).length === 0) {
-    return null;
-  }
-  return {
-    detector: GEMINI_FEATURE_DETECTOR,
-    deep_research: modes.includes('deep research'),
-    personal_intelligence: Object.hasOwn(toggles, 'personal intelligence')
-      ? Boolean(toggles['personal intelligence'])
-      : undefined,
-    modes,
-    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
-    toggles,
-    active_mode: null,
-  };
+async function readGeminiToolsDrawerProbe(
+	Runtime: ChromeClient["Runtime"],
+): Promise<GeminiFeatureProbe | null> {
+	const [rowSearch, toggleSearch] = await Promise.all([
+		runGeminiDomSearch(Runtime, {
+			classIncludes: ["toolbox-drawer-item-list-button"],
+			role: ["menuitemcheckbox"],
+			visibleOnly: true,
+			limit: 50,
+			maxScan: 10_000,
+		}),
+		runGeminiDomSearch(Runtime, {
+			ariaLabel: ["Personal Intelligence"],
+			role: ["switch"],
+			visibleOnly: true,
+			limit: 10,
+			maxScan: 10_000,
+		}),
+	]);
+	const modes = Array.from(
+		new Set(
+			rowSearch.matched
+				.map((match) => normalizeGeminiDiscoveryLabel(match.text || match.ariaLabel || null))
+				.filter(Boolean),
+		),
+	).sort();
+	const disabledModes = Array.from(
+		new Set(
+			rowSearch.matched
+				.filter((match) => geminiClassNameHasDisabledToolToken(match.className))
+				.map((match) => normalizeGeminiDiscoveryLabel(match.text || match.ariaLabel || null))
+				.filter(Boolean),
+		),
+	).sort();
+	const toggles = Object.fromEntries(
+		toggleSearch.matched
+			.map((match) => {
+				const label = normalizeGeminiDiscoveryLabel(match.ariaLabel || match.text || null);
+				if (!label || typeof match.checked !== "boolean") {
+					return null;
+				}
+				return [label, match.checked] as const;
+			})
+			.filter((entry): entry is readonly [string, boolean] => Boolean(entry))
+			.sort(([left], [right]) => left.localeCompare(right)),
+	);
+	if (modes.length === 0 && Object.keys(toggles).length === 0) {
+		return null;
+	}
+	return {
+		detector: GEMINI_FEATURE_DETECTOR,
+		deep_research: modes.includes("deep research"),
+		personal_intelligence: Object.hasOwn(toggles, "personal intelligence")
+			? Boolean(toggles["personal intelligence"])
+			: undefined,
+		modes,
+		disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
+		toggles,
+		active_mode: null,
+	};
 }
 
-async function readGeminiFeatureProbe(Runtime: ChromeClient['Runtime']): Promise<GeminiFeatureProbe | null> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+async function readGeminiFeatureProbe(
+	Runtime: ChromeClient["Runtime"],
+): Promise<GeminiFeatureProbe | null> {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const simplify = (value) =>
         normalize(value)
@@ -1432,7 +1565,7 @@ async function readGeminiFeatureProbe(Runtime: ChromeClient['Runtime']): Promise
       for (const script of Array.from(document.querySelectorAll('script[type="application/json"], script')).slice(0, 20)) {
         addText(bodyCorpus, (script.textContent || '').slice(0, 50000));
       }
-      const pickerButton = document.querySelector(${JSON.stringify(GEMINI_MODE_PICKER_SELECTORS.join(','))});
+      const pickerButton = document.querySelector(${JSON.stringify(GEMINI_MODE_PICKER_SELECTORS.join(","))});
       const activeMode = pickerButton instanceof HTMLElement
         ? simplify(pickerButton.getAttribute('aria-label') || pickerButton.textContent || '')
         : '';
@@ -1491,73 +1624,71 @@ async function readGeminiFeatureProbe(Runtime: ChromeClient['Runtime']): Promise
         active_mode: activeMode || null,
       };
     })()`,
-    returnByValue: true,
-  });
-  return (result?.value as GeminiFeatureProbe | null | undefined) ?? null;
+		returnByValue: true,
+	});
+	return (result?.value as GeminiFeatureProbe | null | undefined) ?? null;
 }
 
 async function readGeminiFeatureSignature(client: ChromeClient): Promise<string | null> {
-  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
-  await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
-  await clickGeminiFeatureProbeTarget(client, GEMINI_NEW_CHAT_BUTTON_SELECTORS).catch(() => false);
-  await waitForPredicate(
-    client.Runtime,
-    `(() => location.pathname === "/app")()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini root composer route',
-    },
-  ).catch(() => undefined);
-  const openedTools = await ensureGeminiToolsDrawerOpen(client).catch(() => false);
-  if (openedTools) {
-    const drawerProbe = await readGeminiToolsDrawerProbe(client.Runtime);
-    const normalizedDrawerSignature = normalizeGeminiFeatureSignature(drawerProbe);
-    if (normalizedDrawerSignature) {
-      await client.Runtime.evaluate({
-        expression: `(() => {
+	await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+	await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+	await clickGeminiFeatureProbeTarget(client, GEMINI_NEW_CHAT_BUTTON_SELECTORS).catch(() => false);
+	await waitForPredicate(client.Runtime, `(() => location.pathname === "/app")()`, {
+		timeoutMs: 5_000,
+		description: "Gemini root composer route",
+	}).catch(() => undefined);
+	const openedTools = await ensureGeminiToolsDrawerOpen(client).catch(() => false);
+	if (openedTools) {
+		const drawerProbe = await readGeminiToolsDrawerProbe(client.Runtime);
+		const normalizedDrawerSignature = normalizeGeminiFeatureSignature(drawerProbe);
+		if (normalizedDrawerSignature) {
+			await client.Runtime.evaluate({
+				expression: `(() => {
           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
           document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
           return true;
         })()`,
-        returnByValue: true,
-      }).catch(() => undefined);
-      return normalizedDrawerSignature;
-    }
-  }
-  const opened = await clickGeminiFeatureProbeTarget(client, GEMINI_MODE_PICKER_SELECTORS).catch(() => false);
-  if (opened) {
-    await waitForPredicate(
-      client.Runtime,
-      `(() => {
+				returnByValue: true,
+			}).catch(() => undefined);
+			return normalizedDrawerSignature;
+		}
+	}
+	const opened = await clickGeminiFeatureProbeTarget(client, GEMINI_MODE_PICKER_SELECTORS).catch(
+		() => false,
+	);
+	if (opened) {
+		await waitForPredicate(
+			client.Runtime,
+			`(() => {
         const roots = document.querySelectorAll('.cdk-overlay-pane, .cdk-overlay-container [role="menu"], .cdk-overlay-container [role="dialog"]');
         return Array.from(roots).some((node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
       })()`,
-      {
-        timeoutMs: 3_000,
-        description: 'Gemini mode picker overlay',
-      },
-    ).catch(() => undefined);
-  }
-  const probe = await readGeminiFeatureProbe(client.Runtime);
-  await client.Runtime.evaluate({
-    expression: `(() => {
+			{
+				timeoutMs: 3_000,
+				description: "Gemini mode picker overlay",
+			},
+		).catch(() => undefined);
+	}
+	const probe = await readGeminiFeatureProbe(client.Runtime);
+	await client.Runtime.evaluate({
+		expression: `(() => {
       const active = document.activeElement;
       if (active instanceof HTMLElement) active.blur();
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
       return true;
     })()`,
-    returnByValue: true,
-  }).catch(() => undefined);
-  return normalizeGeminiFeatureSignature(probe);
+		returnByValue: true,
+	}).catch(() => undefined);
+	return normalizeGeminiFeatureSignature(probe);
 }
 
 async function scrapeGeminiConversations(
-  client: ChromeClient,
-  projectId?: string,
+	client: ChromeClient,
+	projectId?: string,
 ): Promise<Conversation[]> {
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const isVisible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -1568,6 +1699,7 @@ async function scrapeGeminiConversations(
       const rows = Array.from(root.querySelectorAll('[data-test-id="conversation"], a[href*="/app/"]'));
       const items = [];
       const seen = new Set();
+      const ignoredAppRoutes = new Set(['download']);
       for (const row of rows) {
         const anchor = row.matches?.('a[href*="/app/"]')
           ? row
@@ -1578,6 +1710,7 @@ async function scrapeGeminiConversations(
         const match = href.match(/\\/app\\/([^/?#]+)/i);
         if (!match?.[1]) continue;
         const id = match[1];
+        if (ignoredAppRoutes.has(id.toLowerCase())) continue;
         if (seen.has(id)) continue;
         const title = normalize(row.textContent || anchor.textContent || '') || id;
         seen.add(id);
@@ -1590,48 +1723,50 @@ async function scrapeGeminiConversations(
       }
       return items;
     })()`,
-    returnByValue: true,
-  });
-  const payload = Array.isArray(result?.value) ? (result.value as GeminiConversationProbe[]) : [];
-  return payload
-    .filter((item) => item?.id && item?.title)
-    .map((item) => ({
-      id: item.id,
-      title: item.title,
-      provider: 'gemini' as const,
-      projectId,
-      url: item.url ?? undefined,
-      updatedAt: item.updatedAt ?? undefined,
-    }));
+		returnByValue: true,
+	});
+	const payload = Array.isArray(result?.value) ? (result.value as GeminiConversationProbe[]) : [];
+	return payload
+		.filter((item) => item?.id && item?.title)
+		.map((item) => ({
+			id: item.id,
+			title: item.title,
+			provider: "gemini" as const,
+			projectId,
+			url: item.url ?? undefined,
+			updatedAt: item.updatedAt ?? undefined,
+		}));
 }
 
 export function normalizeGeminiConversationHistoryLimit(value: number | null | undefined): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 80;
-  return Math.max(1, Math.min(500, Math.floor(value)));
+	if (typeof value !== "number" || !Number.isFinite(value)) return 80;
+	return Math.max(1, Math.min(500, Math.floor(value)));
 }
 
 export function shouldHydrateGeminiConversationHistory(
-  options: Pick<BrowserProviderListOptions, 'includeHistory'> | null | undefined,
+	options: Pick<BrowserProviderListOptions, "includeHistory"> | null | undefined,
 ): boolean {
-  return options?.includeHistory === true;
+	return options?.includeHistory === true;
 }
 
 async function hydrateGeminiConversationHistory(
-  client: ChromeClient,
-  historyLimit: number,
-  abortSignal?: AbortSignal,
+	client: ChromeClient,
+	historyLimit: number,
+	abortSignal?: AbortSignal,
 ): Promise<void> {
-  const limit = normalizeGeminiConversationHistoryLimit(historyLimit);
-  const maxSteps = Math.max(3, Math.min(24, Math.ceil(limit / 12)));
-  let stableSteps = 0;
-  let previousCount = 0;
-  for (let step = 0; step < maxSteps; step += 1) {
-    if (abortSignal?.aborted) {
-      const reason = abortSignal.reason;
-      throw reason instanceof Error ? reason : new Error('Gemini conversation history hydration was aborted.');
-    }
-    const { result } = await client.Runtime.evaluate({
-      expression: `(() => {
+	const limit = normalizeGeminiConversationHistoryLimit(historyLimit);
+	const maxSteps = Math.max(3, Math.min(24, Math.ceil(limit / 12)));
+	let stableSteps = 0;
+	let previousCount = 0;
+	for (let step = 0; step < maxSteps; step += 1) {
+		if (abortSignal?.aborted) {
+			const reason = abortSignal.reason;
+			throw reason instanceof Error
+				? reason
+				: new Error("Gemini conversation history hydration was aborted.");
+		}
+		const { result } = await client.Runtime.evaluate({
+			expression: `(() => {
         const list = document.querySelector('[data-test-id="all-conversations"]') || document.body;
         if (!list) return { ok: false, count: 0, scrollable: false };
         const count = new Set(Array.from(list.querySelectorAll('a[href*="/app/"]')).map((node) => node.href || node.getAttribute('href') || '')).size;
@@ -1653,170 +1788,257 @@ async function hydrateGeminiConversationHistory(
           moved: scrollRoot.scrollTop !== before,
         };
       })()`,
-      returnByValue: true,
-    });
-    const state = result?.value as { ok?: boolean; count?: number; scrollable?: boolean; moved?: boolean } | undefined;
-    const count = typeof state?.count === 'number' ? state.count : 0;
-    if (!state?.ok || count >= limit) return;
-    stableSteps = count > previousCount ? 0 : stableSteps + 1;
-    previousCount = count;
-    if (!state.scrollable || (!state.moved && stableSteps >= 2)) return;
-    await sleep(500);
-  }
+			returnByValue: true,
+		});
+		const state = result?.value as
+			| { ok?: boolean; count?: number; scrollable?: boolean; moved?: boolean }
+			| undefined;
+		const count = typeof state?.count === "number" ? state.count : 0;
+		if (!state?.ok || count >= limit) return;
+		stableSteps = count > previousCount ? 0 : stableSteps + 1;
+		previousCount = count;
+		if (!state.scrollable || (!state.moved && stableSteps >= 2)) return;
+		await sleep(500);
+	}
 }
 
-async function navigateToGeminiCreatePage(client: Pick<ChromeClient, 'Page' | 'Runtime'>): Promise<void> {
-  const settled = await navigateAndSettle(client, {
-    url: GEMINI_GEM_CREATE_URL,
-    routeExpression: `location.pathname === "/gems/create"`,
-    routeDescription: 'Gemini Gem create route',
-    readyExpression: `Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)})) && Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}))`,
-    readyDescription: 'Gemini Gem create surface',
-    timeoutMs: 20_000,
-    fallbackToLocationAssign: true,
-    mutationAudit: resolveMutationAudit(client),
-    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-create-page'),
-  });
-  if (!settled.ok) {
-    throw new Error(`Gemini Gem create page did not become ready: ${settled.reason ?? settled.phase}`);
-  }
+async function navigateToGeminiCreatePage(
+	client: Pick<ChromeClient, "Page" | "Runtime">,
+): Promise<void> {
+	const settled = await navigateAndSettle(client, {
+		url: GEMINI_GEM_CREATE_URL,
+		routeExpression: `location.pathname === "/gems/create"`,
+		routeDescription: "Gemini Gem create route",
+		readyExpression: `Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)})) && Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}))`,
+		readyDescription: "Gemini Gem create surface",
+		timeoutMs: 20_000,
+		fallbackToLocationAssign: true,
+		mutationAudit: resolveMutationAudit(client),
+		mutationSource: resolveMutationSource(client, "provider:gemini", "navigate-create-page"),
+	});
+	if (!settled.ok) {
+		throw new Error(
+			`Gemini Gem create page did not become ready: ${settled.reason ?? settled.phase}`,
+		);
+	}
 }
 
-async function navigateToGeminiGemsViewPage(client: Pick<ChromeClient, 'Page' | 'Runtime'>): Promise<void> {
-  const settled = await navigateAndSettle(client, {
-    url: GEMINI_GEMS_VIEW_URL,
-    routeExpression: `location.pathname === "/gems/view"`,
-    routeDescription: 'Gemini Gem manager route',
-    readyExpression: `Boolean(document.querySelector('button[data-test-id="open-bots-creation-window"]'))`,
-    readyDescription: 'Gemini Gem manager surface',
-    timeoutMs: 20_000,
-    fallbackToLocationAssign: false,
-    mutationAudit: resolveMutationAudit(client),
-    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-gems-view-page'),
-  });
-  if (!settled.ok) {
-    throw new Error(`Gemini Gem manager page did not become ready: ${settled.reason ?? settled.phase}`);
-  }
+type GeminiReadyNavigationOptions = {
+	forceNavigate?: boolean;
+};
+
+const GEMINI_GEMS_VIEW_ROUTE_EXPRESSION = `location.pathname === "/gems/view"`;
+const GEMINI_GEMS_VIEW_READY_EXPRESSION = `Boolean(document.querySelector('button[data-test-id="open-bots-creation-window"]'))`;
+
+function geminiEditRouteExpression(projectId: string): string {
+	return `location.pathname === ${JSON.stringify(`/gems/edit/${projectId}`)}`;
+}
+
+function geminiEditReadyExpression(): string {
+	return `Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)})) && Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}))`;
+}
+
+async function isCurrentGeminiRouteReady(
+	client: Pick<ChromeClient, "Runtime">,
+	input: {
+		routeExpression: string;
+		routeDescription: string;
+		readyExpression: string;
+		readyDescription: string;
+	},
+): Promise<boolean> {
+	const route = await waitForPredicate(client.Runtime, input.routeExpression, {
+		timeoutMs: 500,
+		description: input.routeDescription,
+	});
+	if (!route.ok) {
+		return false;
+	}
+	const ready = await waitForPredicate(client.Runtime, input.readyExpression, {
+		timeoutMs: 1_000,
+		description: input.readyDescription,
+	});
+	return ready.ok;
+}
+
+async function navigateToGeminiGemsViewPage(
+	client: Pick<ChromeClient, "Page" | "Runtime">,
+	options: GeminiReadyNavigationOptions = {},
+): Promise<void> {
+	if (
+		options.forceNavigate !== true &&
+		(await isCurrentGeminiRouteReady(client, {
+			routeExpression: GEMINI_GEMS_VIEW_ROUTE_EXPRESSION,
+			routeDescription: "current Gemini Gem manager route",
+			readyExpression: GEMINI_GEMS_VIEW_READY_EXPRESSION,
+			readyDescription: "current Gemini Gem manager surface",
+		}))
+	) {
+		return;
+	}
+	const settled = await navigateAndSettle(client, {
+		url: GEMINI_GEMS_VIEW_URL,
+		routeExpression: GEMINI_GEMS_VIEW_ROUTE_EXPRESSION,
+		routeDescription: "Gemini Gem manager route",
+		readyExpression: GEMINI_GEMS_VIEW_READY_EXPRESSION,
+		readyDescription: "Gemini Gem manager surface",
+		timeoutMs: 20_000,
+		fallbackToLocationAssign: false,
+		mutationAudit: resolveMutationAudit(client),
+		mutationSource: resolveMutationSource(client, "provider:gemini", "navigate-gems-view-page"),
+	});
+	if (!settled.ok) {
+		throw new Error(
+			`Gemini Gem manager page did not become ready: ${settled.reason ?? settled.phase}`,
+		);
+	}
 }
 
 async function navigateToGeminiEditPage(
-  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
-  projectId: string,
+	client: Pick<ChromeClient, "Page" | "Runtime">,
+	projectId: string,
+	options: GeminiReadyNavigationOptions = {},
 ): Promise<void> {
-  const settled = await navigateAndSettle(client, {
-    url: resolveGeminiEditProjectUrl(projectId),
-    routeExpression: `location.pathname === ${JSON.stringify(`/gems/edit/${projectId}`)}`,
-    routeDescription: `Gemini Gem edit route for ${projectId}`,
-    readyExpression: `Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)})) && Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}))`,
-    readyDescription: `Gemini Gem edit surface for ${projectId}`,
-    timeoutMs: 20_000,
-    fallbackToLocationAssign: true,
-    mutationAudit: resolveMutationAudit(client),
-    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-edit-page'),
-  });
-  if (!settled.ok) {
-    throw new Error(`Gemini Gem edit page did not become ready: ${settled.reason ?? settled.phase}`);
-  }
+	const routeExpression = geminiEditRouteExpression(projectId);
+	const readyExpression = geminiEditReadyExpression();
+	if (
+		options.forceNavigate !== true &&
+		(await isCurrentGeminiRouteReady(client, {
+			routeExpression,
+			routeDescription: `current Gemini Gem edit route for ${projectId}`,
+			readyExpression,
+			readyDescription: `current Gemini Gem edit surface for ${projectId}`,
+		}))
+	) {
+		return;
+	}
+	const settled = await navigateAndSettle(client, {
+		url: resolveGeminiEditProjectUrl(projectId),
+		routeExpression,
+		routeDescription: `Gemini Gem edit route for ${projectId}`,
+		readyExpression,
+		readyDescription: `Gemini Gem edit surface for ${projectId}`,
+		timeoutMs: 20_000,
+		fallbackToLocationAssign: true,
+		mutationAudit: resolveMutationAudit(client),
+		mutationSource: resolveMutationSource(client, "provider:gemini", "navigate-edit-page"),
+	});
+	if (!settled.ok) {
+		throw new Error(
+			`Gemini Gem edit page did not become ready: ${settled.reason ?? settled.phase}`,
+		);
+	}
 }
 
 async function navigateToGeminiConversationSurface(
-  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
-  url: string,
+	client: Pick<ChromeClient, "Page" | "Runtime">,
+	url: string,
+	options: { mutationAction?: string } = {},
 ): Promise<void> {
-  if (await isCurrentGeminiConversationSurfaceReusable(client, url)) {
-    return;
-  }
-  const routeExpression = geminiConversationRouteExpression(url);
-  const readyExpression = geminiConversationSurfaceReadyExpression();
-  const settled = await navigateAndSettle(client, {
-    url,
-    routeExpression,
-    routeDescription: 'Gemini conversation route',
-    readyExpression,
-    readyDescription: 'Gemini conversation surface',
-    timeoutMs: 20_000,
-    fallbackToLocationAssign: true,
-    mutationAudit: resolveMutationAudit(client),
-    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-conversation-surface'),
-  });
-  if (settled.ok) {
-    return;
-  }
-  await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
-  if (routeExpression) {
-    const routeReady = await waitForPredicate(client.Runtime, routeExpression, {
-      timeoutMs: 5_000,
-      description: 'Gemini conversation route recovery',
-    });
-    if (!routeReady.ok) {
-      const state = await collectGeminiConversationSurfaceState(client.Runtime, 'route-recovery-failed');
-      const blockingReason = classifyGeminiBlockingState(state);
-      if (blockingReason) {
-        throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
-      }
-      throw new Error(
-        `Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
-      );
-    }
-  }
-  const recovered = await waitForPredicate(client.Runtime, readyExpression, {
-    timeoutMs: 8_000,
-    description: 'Gemini conversation surface recovery',
-  });
-  if (!recovered.ok) {
-    const state = await collectGeminiConversationSurfaceState(client.Runtime, 'ready-recovery-failed');
-    const blockingReason = classifyGeminiBlockingState(state);
-    if (blockingReason) {
-      throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
-    }
-    throw new Error(
-      `Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
-    );
-  }
+	if (await isCurrentGeminiConversationSurfaceReusable(client, url)) {
+		return;
+	}
+	const routeExpression = geminiConversationRouteExpression(url);
+	const readyExpression = geminiConversationSurfaceReadyExpression();
+	const settled = await navigateAndSettle(client, {
+		url,
+		routeExpression,
+		routeDescription: "Gemini conversation route",
+		readyExpression,
+		readyDescription: "Gemini conversation surface",
+		timeoutMs: 20_000,
+		fallbackToLocationAssign: true,
+		mutationAudit: resolveMutationAudit(client),
+		mutationSource: resolveMutationSource(
+			client,
+			"provider:gemini",
+			options.mutationAction ?? "navigate-conversation-surface",
+		),
+	});
+	if (settled.ok) {
+		return;
+	}
+	await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+	if (routeExpression) {
+		const routeReady = await waitForPredicate(client.Runtime, routeExpression, {
+			timeoutMs: 5_000,
+			description: "Gemini conversation route recovery",
+		});
+		if (!routeReady.ok) {
+			const state = await collectGeminiConversationSurfaceState(
+				client.Runtime,
+				"route-recovery-failed",
+			);
+			const blockingReason = classifyGeminiBlockingState(state);
+			if (blockingReason) {
+				throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
+			}
+			throw new Error(
+				`Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
+			);
+		}
+	}
+	const recovered = await waitForPredicate(client.Runtime, readyExpression, {
+		timeoutMs: 8_000,
+		description: "Gemini conversation surface recovery",
+	});
+	if (!recovered.ok) {
+		const state = await collectGeminiConversationSurfaceState(
+			client.Runtime,
+			"ready-recovery-failed",
+		);
+		const blockingReason = classifyGeminiBlockingState(state);
+		if (blockingReason) {
+			throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
+		}
+		throw new Error(
+			`Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
+		);
+	}
 }
 
-async function readGeminiLocationHref(
-  Runtime: ChromeClient['Runtime'],
-): Promise<string | null> {
-  const { result } = await Runtime.evaluate({
-    expression: 'location.href',
-    returnByValue: true,
-  });
-  return typeof result?.value === 'string' ? result.value : null;
+async function readGeminiLocationHref(Runtime: ChromeClient["Runtime"]): Promise<string | null> {
+	const { result } = await Runtime.evaluate({
+		expression: "location.href",
+		returnByValue: true,
+	});
+	return typeof result?.value === "string" ? result.value : null;
 }
 
 async function isCurrentGeminiConversationSurfaceReusable(
-  client: Pick<ChromeClient, 'Runtime'>,
-  url: string,
+	client: Pick<ChromeClient, "Runtime">,
+	url: string,
 ): Promise<boolean> {
-  const currentHref = await readGeminiLocationHref(client.Runtime).catch(() => null);
-  if (!canReuseGeminiConversationSurfaceForTarget(currentHref, url)) {
-    return false;
-  }
-  const targetConversationId = extractGeminiConversationIdFromUrl(url);
-  if (targetConversationId) {
-    await isGeminiConversationSurfaceAlreadyReady(client, targetConversationId).catch(() => false);
-  }
-  return true;
+	const currentHref = await readGeminiLocationHref(client.Runtime).catch(() => null);
+	if (!canReuseGeminiConversationSurfaceForTarget(currentHref, url)) {
+		return false;
+	}
+	const targetConversationId = extractGeminiConversationIdFromUrl(url);
+	if (targetConversationId) {
+		await isGeminiConversationSurfaceAlreadyReady(client, targetConversationId).catch(() => false);
+	}
+	return true;
 }
 
 function extractGeminiConversationIdFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    const match = parsed.pathname.match(/^\/app\/([^/?#]+)$/i);
-    return match?.[1] ?? null;
-  } catch {
-    return null;
-  }
+	try {
+		const parsed = new URL(url);
+		const match = parsed.pathname.match(/^\/app\/([^/?#]+)$/i);
+		const conversationId = match?.[1] ?? null;
+		if (!conversationId || conversationId.toLowerCase() === "download") return null;
+		return conversationId;
+	} catch {
+		return null;
+	}
 }
 
 async function isGeminiConversationSurfaceAlreadyReady(
-  client: Pick<ChromeClient, 'Runtime'>,
-  conversationId: string,
+	client: Pick<ChromeClient, "Runtime">,
+	conversationId: string,
 ): Promise<boolean> {
-  const route = `/app/${conversationId}`;
-  const ready = await client.Runtime.evaluate({
-    expression: `(() => {
+	const route = `/app/${conversationId}`;
+	const ready = await client.Runtime.evaluate({
+		expression: `(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       if (location.pathname !== ${JSON.stringify(route)}) return false;
       const hasUser = Array.from(document.querySelectorAll(
@@ -1830,22 +2052,20 @@ async function isGeminiConversationSurfaceAlreadyReady(
       )).some((node) => visible(node));
       return hasUser || hasAssistant || hasCanvas;
     })()`,
-    returnByValue: true,
-  });
-  return ready.result?.value === true;
+		returnByValue: true,
+	});
+	return ready.result?.value === true;
 }
 
-async function readGeminiActiveTabState(
-  Runtime: ChromeClient['Runtime'],
-): Promise<{
-  href: string;
-  title: string;
-  pathname: string;
-  conversationId: string | null;
-  bodyTextLength: number;
+async function readGeminiActiveTabState(Runtime: ChromeClient["Runtime"]): Promise<{
+	href: string;
+	title: string;
+	pathname: string;
+	conversationId: string | null;
+	bodyTextLength: number;
 }> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const bodyText = String(document.body?.innerText || '').replace(/\\s+/g, ' ').trim();
       const match = location.pathname.match(/^\\/app\\/([^/?#]+)/i);
       return {
@@ -1856,27 +2076,30 @@ async function readGeminiActiveTabState(
         bodyTextLength: bodyText.length,
       };
     })()`,
-    returnByValue: true,
-  }).catch(() => ({ result: { value: null } }));
-  const value = isRecord(result?.value) ? result.value : {};
-  return {
-    href: normalizeWhitespace(typeof value.href === 'string' ? value.href : ''),
-    title: normalizeWhitespace(typeof value.title === 'string' ? value.title : ''),
-    pathname: normalizeWhitespace(typeof value.pathname === 'string' ? value.pathname : ''),
-    conversationId:
-      typeof value.conversationId === 'string' && value.conversationId.trim().length > 0
-        ? value.conversationId.trim()
-        : null,
-    bodyTextLength: typeof value.bodyTextLength === 'number' && Number.isFinite(value.bodyTextLength) ? value.bodyTextLength : 0,
-  };
+		returnByValue: true,
+	}).catch(() => ({ result: { value: null } }));
+	const value = isRecord(result?.value) ? result.value : {};
+	return {
+		href: normalizeWhitespace(typeof value.href === "string" ? value.href : ""),
+		title: normalizeWhitespace(typeof value.title === "string" ? value.title : ""),
+		pathname: normalizeWhitespace(typeof value.pathname === "string" ? value.pathname : ""),
+		conversationId:
+			typeof value.conversationId === "string" && value.conversationId.trim().length > 0
+				? value.conversationId.trim()
+				: null,
+		bodyTextLength:
+			typeof value.bodyTextLength === "number" && Number.isFinite(value.bodyTextLength)
+				? value.bodyTextLength
+				: 0,
+	};
 }
 
 async function collectGeminiConversationSurfaceState(
-  Runtime: ChromeClient['Runtime'],
-  phase: string,
+	Runtime: ChromeClient["Runtime"],
+	phase: string,
 ): Promise<Record<string, unknown>> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
@@ -1906,20 +2129,22 @@ async function collectGeminiConversationSurfaceState(
         bodyText: normalize(document.body?.innerText || '').slice(0, 800),
       };
     })()`,
-    returnByValue: true,
-  });
-  return {
-    phase,
-    ...(typeof result?.value === 'object' && result?.value ? (result.value as Record<string, unknown>) : {}),
-  };
+		returnByValue: true,
+	});
+	return {
+		phase,
+		...(typeof result?.value === "object" && result?.value
+			? (result.value as Record<string, unknown>)
+			: {}),
+	};
 }
 
 async function collectGeminiDeleteSurfaceState(
-  Runtime: ChromeClient['Runtime'],
-  phase: string,
+	Runtime: ChromeClient["Runtime"],
+	phase: string,
 ): Promise<Record<string, unknown>> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const deleteButton = document.querySelector('button[data-test-id="delete-button"]');
@@ -1962,21 +2187,23 @@ async function collectGeminiDeleteSurfaceState(
         visibleActionLabels,
       };
     })()`,
-    returnByValue: true,
-  });
-  return {
-    phase,
-    ...(typeof result?.value === 'object' && result?.value ? (result.value as Record<string, unknown>) : {}),
-  };
+		returnByValue: true,
+	});
+	return {
+		phase,
+		...(typeof result?.value === "object" && result?.value
+			? (result.value as Record<string, unknown>)
+			: {}),
+	};
 }
 
 async function waitForGeminiConversationListEntry(
-  Runtime: ChromeClient['Runtime'],
-  conversationId: string,
-  options?: { timeoutMs?: number; description?: string },
+	Runtime: ChromeClient["Runtime"],
+	conversationId: string,
+	options?: { timeoutMs?: number; description?: string },
 ): Promise<Awaited<ReturnType<typeof waitForPredicate>>> {
-  await Runtime.evaluate({
-    expression: `(() => {
+	await Runtime.evaluate({
+		expression: `(() => {
       const list = document.querySelector('[data-test-id="all-conversations"]');
       if (list instanceof HTMLElement) {
         list.scrollTop = 0;
@@ -1984,11 +2211,11 @@ async function waitForGeminiConversationListEntry(
       }
       return { reset: false };
     })()`,
-    returnByValue: true,
-  });
-  return waitForPredicate(
-    Runtime,
-    `(() => {
+		returnByValue: true,
+	});
+	return waitForPredicate(
+		Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -2020,28 +2247,37 @@ async function waitForGeminiConversationListEntry(
       }
       return null;
     })()`,
-    {
-      timeoutMs: options?.timeoutMs ?? 10_000,
-      description:
-        options?.description ?? `Gemini conversation list entry ready for ${conversationId}`,
-    },
-  );
+		{
+			timeoutMs: options?.timeoutMs ?? 10_000,
+			description:
+				options?.description ?? `Gemini conversation list entry ready for ${conversationId}`,
+		},
+	);
 }
 
 async function openGeminiConversationFromRail(
-  client: Pick<ChromeClient, 'Runtime'>,
-  conversationId: string,
+	client: Pick<ChromeClient, "Runtime">,
+	conversationId: string,
 ): Promise<boolean> {
-  await ensureGeminiMainMenuOpen(client).catch(() => undefined);
-  const ready = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
-    timeoutMs: 12_000,
-    description: `Gemini rail conversation entry ready for ${conversationId}`,
-  });
-  if (!ready.ok) {
-    return false;
-  }
-  const clicked = await client.Runtime.evaluate({
-    expression: `(() => {
+	await ensureGeminiMainMenuOpen(client).catch(() => undefined);
+	const ready = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
+		timeoutMs: 12_000,
+		description: `Gemini rail conversation entry ready for ${conversationId}`,
+	});
+	if (!ready.ok) {
+		return false;
+	}
+	const mutationAudit = resolveMutationAudit(client);
+	const fromUrl = mutationAudit ? await readGeminiLocationHref(client.Runtime) : null;
+	const audit = beginBrowserMutation(mutationAudit, {
+		kind: "in-page-click",
+		source: resolveMutationSource(client, "provider:gemini", "rail-conversation-click"),
+		requestedUrl: resolveGeminiConversationUrl(conversationId),
+		fromUrl,
+		toUrl: fromUrl,
+	});
+	const clicked = await client.Runtime.evaluate({
+		expression: `(() => {
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
@@ -2067,74 +2303,94 @@ async function openGeminiConversationFromRail(
       }
       return { clicked: true, href: anchor.href || anchor.getAttribute('href') || '' };
     })()`,
-    returnByValue: true,
-  });
-  if ((clicked.result?.value as { clicked?: boolean } | undefined)?.clicked !== true) {
-    return false;
-  }
-  const routeReady = await waitForPredicate(
-    client.Runtime,
-    `(() => location.pathname === ${JSON.stringify(`/app/${conversationId}`)})()`,
-    {
-      timeoutMs: 12_000,
-      description: `Gemini rail conversation route ready for ${conversationId}`,
-    },
-  );
-  if (!routeReady.ok) {
-    const state = await collectGeminiConversationSurfaceState(client.Runtime, 'rail-open-route-failed');
-    const blockingReason = classifyGeminiBlockingState(state);
-    if (blockingReason) {
-      throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
-    }
-    return false;
-  }
-  return true;
+		returnByValue: true,
+	});
+	if ((clicked.result?.value as { clicked?: boolean } | undefined)?.clicked !== true) {
+		await audit.complete({
+			outcome: "failed",
+			toUrl: mutationAudit ? await readGeminiLocationHref(client.Runtime) : fromUrl,
+			error: "Gemini conversation rail entry click failed.",
+		});
+		return false;
+	}
+	const routeReady = await waitForPredicate(
+		client.Runtime,
+		`(() => location.pathname === ${JSON.stringify(`/app/${conversationId}`)})()`,
+		{
+			timeoutMs: 12_000,
+			description: `Gemini rail conversation route ready for ${conversationId}`,
+		},
+	);
+	if (!routeReady.ok) {
+		const state = await collectGeminiConversationSurfaceState(
+			client.Runtime,
+			"rail-open-route-failed",
+		);
+		const blockingReason = classifyGeminiBlockingState(state);
+		if (blockingReason) {
+			await audit.complete({
+				outcome: "failed",
+				toUrl: mutationAudit ? await readGeminiLocationHref(client.Runtime) : fromUrl,
+				error: blockingReason,
+			});
+			throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
+		}
+		await audit.complete({
+			outcome: "failed",
+			toUrl: mutationAudit ? await readGeminiLocationHref(client.Runtime) : fromUrl,
+			error: routeReady.description ?? "Gemini rail conversation route did not settle.",
+		});
+		return false;
+	}
+	await audit.complete({
+		outcome: "succeeded",
+		toUrl: mutationAudit ? await readGeminiLocationHref(client.Runtime) : fromUrl,
+	});
+	return true;
 }
 
 async function validateGeminiConversationUrlWithClient(
-  client: Pick<ChromeClient, 'Page' | 'Runtime' | 'Runtime'>,
-  conversationId: string,
+	client: Pick<ChromeClient, "Page" | "Runtime" | "Runtime">,
+	conversationId: string,
 ): Promise<void> {
-  const targetUrl = resolveGeminiConversationUrl(conversationId);
-  const settled = await navigateAndSettle(client, {
-    url: targetUrl,
-    routeExpression: `location.pathname === ${JSON.stringify(`/app/${conversationId}`)}`,
-    routeDescription: `Gemini conversation route for ${conversationId}`,
-    readyExpression: `document.readyState === "interactive" || document.readyState === "complete"`,
-    readyDescription: `Gemini conversation document ready for ${conversationId}`,
-    timeoutMs: 12_000,
-    fallbackToLocationAssign: true,
-    mutationAudit: resolveMutationAudit(client),
-    mutationSource: resolveMutationSource(client, 'provider:gemini', 'validate-conversation-url'),
-  });
-  if (!settled.ok) {
-    throw new Error('Conversation URL is invalid or missing.');
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: 'location.href',
-    returnByValue: true,
-  });
-  const href = typeof result?.value === 'string' ? result.value : '';
-  if (!href.includes(`/app/${conversationId}`)) {
-    throw new Error('Conversation URL is invalid or missing.');
-  }
-  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
-  await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
-  const rowReady = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
-    timeoutMs: 8_000,
-    description: `Gemini root conversation list entry visible for ${conversationId}`,
-  });
-  if (!rowReady.ok) {
-    throw new Error('Conversation URL is invalid or missing.');
-  }
+	const targetUrl = resolveGeminiConversationUrl(conversationId);
+	const settled = await navigateAndSettle(client, {
+		url: targetUrl,
+		routeExpression: `location.pathname === ${JSON.stringify(`/app/${conversationId}`)}`,
+		routeDescription: `Gemini conversation route for ${conversationId}`,
+		readyExpression: `document.readyState === "interactive" || document.readyState === "complete"`,
+		readyDescription: `Gemini conversation document ready for ${conversationId}`,
+		timeoutMs: 12_000,
+		fallbackToLocationAssign: true,
+		mutationAudit: resolveMutationAudit(client),
+		mutationSource: resolveMutationSource(client, "provider:gemini", "validate-conversation-url"),
+	});
+	if (!settled.ok) {
+		throw new Error("Conversation URL is invalid or missing.");
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: "location.href",
+		returnByValue: true,
+	});
+	const href = typeof result?.value === "string" ? result.value : "";
+	if (!href.includes(`/app/${conversationId}`)) {
+		throw new Error("Conversation URL is invalid or missing.");
+	}
+	await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+	await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+	const rowReady = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
+		timeoutMs: 8_000,
+		description: `Gemini root conversation list entry visible for ${conversationId}`,
+	});
+	if (!rowReady.ok) {
+		throw new Error("Conversation URL is invalid or missing.");
+	}
 }
 
-async function dismissGeminiPreciseLocationDialog(
-  Runtime: ChromeClient['Runtime'],
-): Promise<void> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { result } = await Runtime.evaluate({
-      expression: `(() => {
+async function dismissGeminiPreciseLocationDialog(Runtime: ChromeClient["Runtime"]): Promise<void> {
+	for (let attempt = 0; attempt < 3; attempt += 1) {
+		const { result } = await Runtime.evaluate({
+			expression: `(() => {
         const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const visible = (node) => {
           if (!(node instanceof Element)) return false;
@@ -2156,18 +2412,20 @@ async function dismissGeminiPreciseLocationDialog(
         }
         return { present: true, clicked };
       })()`,
-      returnByValue: true,
-    });
-    const payload = (result?.value ?? {}) as { present?: boolean; clicked?: number };
-    if (!payload.present) {
-      return;
-    }
-    if ((payload.clicked ?? 0) < 1) {
-      throw new Error('Gemini precise-location dialog is blocking the conversation list, but no visible Dismiss button was found.');
-    }
-    const dismissed = await waitForPredicate(
-      Runtime,
-      `(() => {
+			returnByValue: true,
+		});
+		const payload = (result?.value ?? {}) as { present?: boolean; clicked?: number };
+		if (!payload.present) {
+			return;
+		}
+		if ((payload.clicked ?? 0) < 1) {
+			throw new Error(
+				"Gemini precise-location dialog is blocking the conversation list, but no visible Dismiss button was found.",
+			);
+		}
+		const dismissed = await waitForPredicate(
+			Runtime,
+			`(() => {
         const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const visible = (node) => {
           if (!(node instanceof Element)) return false;
@@ -2178,70 +2436,70 @@ async function dismissGeminiPreciseLocationDialog(
           .filter((node) => visible(node) && normalize(node.textContent || '').includes('use your precise location'));
         return remaining.length === 0 ? { dismissed: true } : null;
       })()`,
-      {
-        timeoutMs: 3_000,
-        description: 'Gemini precise-location dialog dismissed',
-      },
-    );
-    if (dismissed.ok) {
-      return;
-    }
-  }
-  throw new Error('Gemini precise-location dialog remained visible after repeated dismiss attempts.');
+			{
+				timeoutMs: 3_000,
+				description: "Gemini precise-location dialog dismissed",
+			},
+		);
+		if (dismissed.ok) {
+			return;
+		}
+	}
+	throw new Error(
+		"Gemini precise-location dialog remained visible after repeated dismiss attempts.",
+	);
 }
 
-async function ensureGeminiMainMenuOpen(
-  client: Pick<ChromeClient, 'Runtime'>,
-): Promise<void> {
-  const listReady = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+async function ensureGeminiMainMenuOpen(client: Pick<ChromeClient, "Runtime">): Promise<void> {
+	const listReady = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const list = document.querySelector('[data-test-id="all-conversations"]');
       if (!(list instanceof Element)) return null;
       const rect = list.getBoundingClientRect();
       return rect.width > 0 && rect.height > 0 ? { open: true } : null;
     })()`,
-    {
-      timeoutMs: 1_000,
-      description: 'Gemini main menu already open',
-    },
-  );
-  if (listReady.ok) {
-    return;
-  }
-  const opened = await pressButton(client.Runtime, {
-    selector: 'button[aria-label="Main menu"]',
-    interactionStrategies: ['click', 'pointer'],
-    timeoutMs: 5_000,
-  });
-  if (!opened.ok) {
-    throw new Error(opened.reason ?? 'Gemini main menu toggle not found.');
-  }
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+		{
+			timeoutMs: 1_000,
+			description: "Gemini main menu already open",
+		},
+	);
+	if (listReady.ok) {
+		return;
+	}
+	const opened = await pressButton(client.Runtime, {
+		selector: 'button[aria-label="Main menu"]',
+		interactionStrategies: ["click", "pointer"],
+		timeoutMs: 5_000,
+	});
+	if (!opened.ok) {
+		throw new Error(opened.reason ?? "Gemini main menu toggle not found.");
+	}
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const list = document.querySelector('[data-test-id="all-conversations"]');
       if (!(list instanceof Element)) return null;
       const rect = list.getBoundingClientRect();
       return rect.width > 0 && rect.height > 0 ? { open: true } : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini main menu open',
-    },
-  );
-  if (!ready.ok) {
-    throw new Error('Gemini main menu did not open.');
-  }
+		{
+			timeoutMs: 5_000,
+			description: "Gemini main menu open",
+		},
+	);
+	if (!ready.ok) {
+		throw new Error("Gemini main menu did not open.");
+	}
 }
 
 async function setGeminiPrompt(
-  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
-  prompt: string,
+	client: Pick<ChromeClient, "Runtime" | "Input">,
+	prompt: string,
 ): Promise<void> {
-  const normalizedPrompt = normalizePromptText(prompt);
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+	const normalizedPrompt = normalizePromptText(prompt);
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const selectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -2288,16 +2546,16 @@ async function setGeminiPrompt(
       }
       return { ok: false };
     })()`,
-    returnByValue: true,
-  });
-  if (!result?.value?.ok) {
-    throw new Error('Gemini prompt composer did not become ready.');
-  }
+		returnByValue: true,
+	});
+	if (!result?.value?.ok) {
+		throw new Error("Gemini prompt composer did not become ready.");
+	}
 
-  await client.Input.insertText({ text: prompt });
+	await client.Input.insertText({ text: prompt });
 
-  const verified = await client.Runtime.evaluate({
-    expression: `(() => {
+	const verified = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '')
         .replace(/\\r\\n/g, '\\n')
         .replace(/\\u00a0/g, ' ')
@@ -2322,14 +2580,14 @@ async function setGeminiPrompt(
       }
       return { text: '' };
     })()`,
-    returnByValue: true,
-  });
-  if (normalizePromptText(String(verified.result?.value?.text ?? '')) === normalizedPrompt) {
-    return;
-  }
+		returnByValue: true,
+	});
+	if (normalizePromptText(String(verified.result?.value?.text ?? "")) === normalizedPrompt) {
+		return;
+	}
 
-  const fallback = await client.Runtime.evaluate({
-    expression: `(() => {
+	const fallback = await client.Runtime.evaluate({
+		expression: `(() => {
       const text = ${JSON.stringify(prompt)};
       const selectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
       const visible = (node) => {
@@ -2361,16 +2619,18 @@ async function setGeminiPrompt(
       }
       return false;
     })()`,
-    returnByValue: true,
-  });
-  if (!fallback.result?.value) {
-    throw new Error('Gemini prompt text could not be inserted into the composer.');
-  }
+		returnByValue: true,
+	});
+	if (!fallback.result?.value) {
+		throw new Error("Gemini prompt text could not be inserted into the composer.");
+	}
 }
 
-async function clickGeminiSendButton(client: Pick<ChromeClient, 'Runtime' | 'Input'>): Promise<void> {
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+async function clickGeminiSendButton(
+	client: Pick<ChromeClient, "Runtime" | "Input">,
+): Promise<void> {
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const selectors = ${JSON.stringify(GEMINI_SEND_BUTTON_SELECTORS)};
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -2384,37 +2644,37 @@ async function clickGeminiSendButton(client: Pick<ChromeClient, 'Runtime' | 'Inp
       const rect = target.getBoundingClientRect();
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     })()`,
-    returnByValue: true,
-  });
-  const point = (result?.value ?? null) as { x?: number; y?: number } | null;
-  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-    throw new Error('Gemini send button did not become ready.');
-  }
-  await client.Input.dispatchMouseEvent({
-    type: 'mouseMoved',
-    x: Number(point.x),
-    y: Number(point.y),
-    button: 'none',
-  });
-  await client.Input.dispatchMouseEvent({
-    type: 'mousePressed',
-    x: Number(point.x),
-    y: Number(point.y),
-    button: 'left',
-    clickCount: 1,
-  });
-  await client.Input.dispatchMouseEvent({
-    type: 'mouseReleased',
-    x: Number(point.x),
-    y: Number(point.y),
-    button: 'left',
-    clickCount: 1,
-  });
+		returnByValue: true,
+	});
+	const point = (result?.value ?? null) as { x?: number; y?: number } | null;
+	if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+		throw new Error("Gemini send button did not become ready.");
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "left",
+		clickCount: 1,
+	});
 }
 
-async function clickGeminiSendButtonDom(Runtime: ChromeClient['Runtime']): Promise<boolean> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+async function clickGeminiSendButtonDom(Runtime: ChromeClient["Runtime"]): Promise<boolean> {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const selectors = ${JSON.stringify(GEMINI_SEND_BUTTON_SELECTORS)};
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -2437,14 +2697,16 @@ async function clickGeminiSendButtonDom(Runtime: ChromeClient['Runtime']): Promi
       clickTarget.click();
       return true;
     })()`,
-    returnByValue: true,
-  });
-  return Boolean(result?.value);
+		returnByValue: true,
+	});
+	return Boolean(result?.value);
 }
 
-async function pressGeminiComposerEnter(client: Pick<ChromeClient, 'Runtime' | 'Input'>): Promise<boolean> {
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+async function pressGeminiComposerEnter(
+	client: Pick<ChromeClient, "Runtime" | "Input">,
+): Promise<boolean> {
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const selectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -2459,37 +2721,39 @@ async function pressGeminiComposerEnter(client: Pick<ChromeClient, 'Runtime' | '
       target.focus();
       return document.activeElement === target || target.contains(document.activeElement);
     })()`,
-    returnByValue: true,
-  });
-  if (!result?.value) {
-    return false;
-  }
-  await client.Input.dispatchKeyEvent({
-    type: 'keyDown',
-    key: 'Enter',
-    code: 'Enter',
-    windowsVirtualKeyCode: 13,
-    nativeVirtualKeyCode: 13,
-  });
-  await client.Input.dispatchKeyEvent({
-    type: 'keyUp',
-    key: 'Enter',
-    code: 'Enter',
-    windowsVirtualKeyCode: 13,
-    nativeVirtualKeyCode: 13,
-  });
-  return true;
+		returnByValue: true,
+	});
+	if (!result?.value) {
+		return false;
+	}
+	await client.Input.dispatchKeyEvent({
+		type: "keyDown",
+		key: "Enter",
+		code: "Enter",
+		windowsVirtualKeyCode: 13,
+		nativeVirtualKeyCode: 13,
+	});
+	await client.Input.dispatchKeyEvent({
+		type: "keyUp",
+		key: "Enter",
+		code: "Enter",
+		windowsVirtualKeyCode: 13,
+		nativeVirtualKeyCode: 13,
+	});
+	return true;
 }
 
-async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<{
-  href: string;
-  conversationId: string | null;
-  composerText: string;
-  userTexts: string[];
-  assistantTexts: string[];
-} & GeminiActivityEvidence> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+async function readGeminiPromptState(Runtime: ChromeClient["Runtime"]): Promise<
+	{
+		href: string;
+		conversationId: string | null;
+		composerText: string;
+		userTexts: string[];
+		assistantTexts: string[];
+	} & GeminiActivityEvidence
+> {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -2575,476 +2839,520 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
         ...activityEvidence,
       };
     })()`,
-    returnByValue: true,
-  });
-  const value = (result?.value ?? {}) as {
-    href?: string;
-    conversationId?: string | null;
-    composerText?: string;
-    userTexts?: string[];
-    assistantTexts?: string[];
-  };
-  const activityEvidence = coerceGeminiActivityEvidence(value);
-  return {
-    href: typeof value.href === 'string' ? value.href : '',
-    conversationId: typeof value.conversationId === 'string' && value.conversationId.trim() ? value.conversationId : null,
-    composerText: typeof value.composerText === 'string' ? normalizePromptText(value.composerText) : '',
-    userTexts: Array.isArray(value.userTexts) ? value.userTexts.map((entry) => sanitizeGeminiUserText(entry)) : [],
-    assistantTexts: Array.isArray(value.assistantTexts) ? value.assistantTexts.map((entry) => normalizeWhitespace(entry)) : [],
-    ...activityEvidence,
-  };
+		returnByValue: true,
+	});
+	const value = (result?.value ?? {}) as {
+		href?: string;
+		conversationId?: string | null;
+		composerText?: string;
+		userTexts?: string[];
+		assistantTexts?: string[];
+	};
+	const activityEvidence = coerceGeminiActivityEvidence(value);
+	return {
+		href: typeof value.href === "string" ? value.href : "",
+		conversationId:
+			typeof value.conversationId === "string" && value.conversationId.trim()
+				? value.conversationId
+				: null,
+		composerText:
+			typeof value.composerText === "string" ? normalizePromptText(value.composerText) : "",
+		userTexts: Array.isArray(value.userTexts)
+			? value.userTexts.map((entry) => sanitizeGeminiUserText(entry))
+			: [],
+		assistantTexts: Array.isArray(value.assistantTexts)
+			? value.assistantTexts.map((entry) => normalizeWhitespace(entry))
+			: [],
+		...activityEvidence,
+	};
 }
 
 function geminiPromptWasSubmitted(
-  baseline: { href: string; conversationId: string | null; userTexts?: string[] },
-  state: { href: string; conversationId: string | null; composerText: string; userTexts: string[]; isGenerating: boolean },
-  prompt: string,
+	baseline: { href: string; conversationId: string | null; userTexts?: string[] },
+	state: {
+		href: string;
+		conversationId: string | null;
+		composerText: string;
+		userTexts: string[];
+		isGenerating: boolean;
+	},
+	prompt: string,
 ): boolean {
-  if (state.isGenerating) return true;
-  if (state.conversationId && state.conversationId !== baseline.conversationId) return true;
-  if (state.href && state.href !== baseline.href && /^https:\/\/gemini\.google\.com\/app\/[^/?#]+/i.test(state.href)) return true;
+	if (state.isGenerating) return true;
+	if (state.conversationId && state.conversationId !== baseline.conversationId) return true;
+	if (
+		state.href &&
+		state.href !== baseline.href &&
+		/^https:\/\/gemini\.google\.com\/app\/[^/?#]+/i.test(state.href)
+	)
+		return true;
 
-  const normalizedPrompt = sanitizeGeminiUserText(prompt);
-  const baselineUsers = new Set((baseline.userTexts ?? []).map((entry) => sanitizeGeminiUserText(entry)));
-  const submittedUserText = state.userTexts
-    .map((entry) => sanitizeGeminiUserText(entry))
-    .find((entry) => entry && !baselineUsers.has(entry) && (entry === normalizedPrompt || entry.includes(normalizedPrompt)));
-  if (submittedUserText) return true;
+	const normalizedPrompt = sanitizeGeminiUserText(prompt);
+	const baselineUsers = new Set(
+		(baseline.userTexts ?? []).map((entry) => sanitizeGeminiUserText(entry)),
+	);
+	const submittedUserText = state.userTexts
+		.map((entry) => sanitizeGeminiUserText(entry))
+		.find(
+			(entry) =>
+				entry &&
+				!baselineUsers.has(entry) &&
+				(entry === normalizedPrompt || entry.includes(normalizedPrompt)),
+		);
+	if (submittedUserText) return true;
 
-  return normalizePromptText(state.composerText).length === 0;
+	return normalizePromptText(state.composerText).length === 0;
 }
 
-function geminiPromptVisibleInUserHistory(
-  state: { userTexts: string[] },
-  prompt: string,
-): boolean {
-  const normalizedPrompt = sanitizeGeminiUserText(prompt);
-  return state.userTexts
-    .map((entry) => sanitizeGeminiUserText(entry))
-    .some((entry) => entry && (entry === normalizedPrompt || entry.includes(normalizedPrompt)));
+function geminiPromptVisibleInUserHistory(state: { userTexts: string[] }, prompt: string): boolean {
+	const normalizedPrompt = sanitizeGeminiUserText(prompt);
+	return state.userTexts
+		.map((entry) => sanitizeGeminiUserText(entry))
+		.some((entry) => entry && (entry === normalizedPrompt || entry.includes(normalizedPrompt)));
 }
 
 async function waitForGeminiPromptSubmit(
-  Runtime: ChromeClient['Runtime'],
-  baseline: { href: string; conversationId: string | null; userTexts?: string[] },
-  prompt: string,
-  timeoutMs: number,
+	Runtime: ChromeClient["Runtime"],
+	baseline: { href: string; conversationId: string | null; userTexts?: string[] },
+	prompt: string,
+	timeoutMs: number,
 ): Promise<{ submitted: boolean; state: Awaited<ReturnType<typeof readGeminiPromptState>> }> {
-  const deadline = Date.now() + timeoutMs;
-  let state = await readGeminiPromptState(Runtime);
-  while (Date.now() < deadline) {
-    state = await readGeminiPromptState(Runtime);
-    if (geminiPromptWasSubmitted(baseline, state, prompt)) {
-      return { submitted: true, state };
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  return { submitted: false, state };
+	const deadline = Date.now() + timeoutMs;
+	let state = await readGeminiPromptState(Runtime);
+	while (Date.now() < deadline) {
+		state = await readGeminiPromptState(Runtime);
+		if (geminiPromptWasSubmitted(baseline, state, prompt)) {
+			return { submitted: true, state };
+		}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	return { submitted: false, state };
 }
 
 async function submitGeminiPromptWithFallback(
-  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
-  baseline: { href: string; conversationId: string | null; userTexts?: string[] },
-  prompt: string,
-  emitProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void>,
+	client: Pick<ChromeClient, "Runtime" | "Input">,
+	baseline: { href: string; conversationId: string | null; userTexts?: string[] },
+	prompt: string,
+	emitProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void>,
 ): Promise<Awaited<ReturnType<typeof readGeminiPromptState>>> {
-  const attempts: Array<{ name: string; run: () => Promise<boolean> }> = [
-    {
-      name: 'pointer click',
-      run: async () => {
-        await clickGeminiSendButton(client);
-        return true;
-      },
-    },
-    {
-      name: 'DOM click',
-      run: () => clickGeminiSendButtonDom(client.Runtime),
-    },
-    {
-      name: 'Enter key',
-      run: () => pressGeminiComposerEnter(client),
-    },
-  ];
-  let lastState = await readGeminiPromptState(client.Runtime);
-  const attempted: string[] = [];
-  for (const [index, attempt] of attempts.entries()) {
-    attempted.push(attempt.name);
-    const ran = await attempt.run().catch(() => false);
-    await emitProgress?.({
-      phase: 'send_attempted',
-      details: {
-        method: attempt.name,
-        attempt: index + 1,
-        ran,
-      },
-    });
-    if (!ran) continue;
-    const result = await waitForGeminiPromptSubmit(client.Runtime, baseline, prompt, 10_000);
-    lastState = result.state;
-    await emitProgress?.({
-      phase: 'send_attempted',
-      details: {
-        method: attempt.name,
-        attempt: index + 1,
-        ran,
-        submitted: result.submitted,
-        href: lastState.href || null,
-        conversationId: lastState.conversationId ?? null,
-        isGenerating: lastState.isGenerating,
-        hasGeneratedMedia: lastState.hasGeneratedMedia,
-      },
-    });
-    if (result.submitted) {
-      return lastState;
-    }
-  }
-  const composerPreview = normalizePromptText(lastState.composerText).slice(0, 120);
-  throw new Error(
-    `Gemini prompt did not submit after ${attempted.join(', ')}. ` +
-      `composerText=${JSON.stringify(composerPreview)} isGenerating=${lastState.isGenerating}`,
-  );
+	const attempts: Array<{ name: string; run: () => Promise<boolean> }> = [
+		{
+			name: "pointer click",
+			run: async () => {
+				await clickGeminiSendButton(client);
+				return true;
+			},
+		},
+		{
+			name: "DOM click",
+			run: () => clickGeminiSendButtonDom(client.Runtime),
+		},
+		{
+			name: "Enter key",
+			run: () => pressGeminiComposerEnter(client),
+		},
+	];
+	let lastState = await readGeminiPromptState(client.Runtime);
+	const attempted: string[] = [];
+	for (const [index, attempt] of attempts.entries()) {
+		attempted.push(attempt.name);
+		const ran = await attempt.run().catch(() => false);
+		await emitProgress?.({
+			phase: "send_attempted",
+			details: {
+				method: attempt.name,
+				attempt: index + 1,
+				ran,
+			},
+		});
+		if (!ran) continue;
+		const result = await waitForGeminiPromptSubmit(client.Runtime, baseline, prompt, 10_000);
+		lastState = result.state;
+		await emitProgress?.({
+			phase: "send_attempted",
+			details: {
+				method: attempt.name,
+				attempt: index + 1,
+				ran,
+				submitted: result.submitted,
+				href: lastState.href || null,
+				conversationId: lastState.conversationId ?? null,
+				isGenerating: lastState.isGenerating,
+				hasGeneratedMedia: lastState.hasGeneratedMedia,
+			},
+		});
+		if (result.submitted) {
+			return lastState;
+		}
+	}
+	const composerPreview = normalizePromptText(lastState.composerText).slice(0, 120);
+	throw new Error(
+		`Gemini prompt did not submit after ${attempted.join(", ")}. ` +
+			`composerText=${JSON.stringify(composerPreview)} isGenerating=${lastState.isGenerating}`,
+	);
 }
 
 async function waitForGeminiSubmittedPromptResult(
-  Runtime: ChromeClient['Runtime'],
-  baseline: { href: string; conversationId: string | null },
-  initialState: Awaited<ReturnType<typeof readGeminiPromptState>>,
-  prompt: string,
-  timeoutMs: number,
+	Runtime: ChromeClient["Runtime"],
+	baseline: { href: string; conversationId: string | null },
+	initialState: Awaited<ReturnType<typeof readGeminiPromptState>>,
+	prompt: string,
+	timeoutMs: number,
 ): Promise<BrowserProviderPromptResult> {
-  const deadline = Date.now() + timeoutMs;
-  let state = initialState;
-  while (Date.now() < deadline) {
-    const conversationId = state.conversationId ?? baseline.conversationId;
-    if (conversationId && (state.isGenerating || geminiPromptVisibleInUserHistory(state, prompt))) {
-      return {
-        text: '',
-        conversationId,
-        url: state.href || baseline.href,
-      };
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    state = await readGeminiPromptState(Runtime);
-  }
-  throw new Error('Gemini prompt submitted, but no conversation id became available for readback.');
+	const deadline = Date.now() + timeoutMs;
+	let state = initialState;
+	while (Date.now() < deadline) {
+		const conversationId = state.conversationId ?? baseline.conversationId;
+		if (conversationId && (state.isGenerating || geminiPromptVisibleInUserHistory(state, prompt))) {
+			return {
+				text: "",
+				conversationId,
+				url: state.href || baseline.href,
+			};
+		}
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		state = await readGeminiPromptState(Runtime);
+	}
+	throw new Error("Gemini prompt submitted, but no conversation id became available for readback.");
 }
 
 async function waitForGeminiSubmittedMediaPromptResult(
-  Runtime: ChromeClient['Runtime'],
-  baseline: { href: string; conversationId: string | null },
-  initialState: Awaited<ReturnType<typeof readGeminiPromptState>>,
-  prompt: string,
-  timeoutMs: number,
+	Runtime: ChromeClient["Runtime"],
+	baseline: { href: string; conversationId: string | null },
+	initialState: Awaited<ReturnType<typeof readGeminiPromptState>>,
+	prompt: string,
+	timeoutMs: number,
 ): Promise<BrowserProviderPromptResult> {
-  const deadline = Date.now() + timeoutMs;
-  let state = initialState;
-  while (Date.now() < deadline) {
-    const conversationId = state.conversationId ?? baseline.conversationId;
-    const promptVisible = geminiPromptVisibleInUserHistory(state, prompt);
-    if (conversationId && (state.isGenerating || promptVisible || state.href !== baseline.href)) {
-      return {
-        text: '',
-        conversationId,
-        url: state.href || baseline.href,
-      };
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-    state = await readGeminiPromptState(Runtime);
-  }
-  throw new Error('Gemini media prompt submitted, but no conversation id became available for readback.');
+	const deadline = Date.now() + timeoutMs;
+	let state = initialState;
+	while (Date.now() < deadline) {
+		const conversationId = state.conversationId ?? baseline.conversationId;
+		const promptVisible = geminiPromptVisibleInUserHistory(state, prompt);
+		if (conversationId && (state.isGenerating || promptVisible || state.href !== baseline.href)) {
+			return {
+				text: "",
+				conversationId,
+				url: state.href || baseline.href,
+			};
+		}
+		await new Promise((resolve) => setTimeout(resolve, 1_000));
+		state = await readGeminiPromptState(Runtime);
+	}
+	throw new Error(
+		"Gemini media prompt submitted, but no conversation id became available for readback.",
+	);
 }
 
 export function selectNewestGeminiAssistantText(
-  baseline: string[],
-  current: string[],
-  prompt: string,
+	baseline: string[],
+	current: string[],
+	prompt: string,
 ): string | null {
-  const baselineSet = new Set(baseline.map((entry) => normalizePromptText(entry)));
-  const normalizedPrompt = normalizePromptText(prompt);
-  const candidates = current
-    .map((entry) => sanitizeGeminiAssistantText(entry))
-    .filter((entry) => entry && entry !== normalizedPrompt && !baselineSet.has(entry));
-  return candidates.length > 0 ? candidates[candidates.length - 1] : null;
+	const baselineSet = new Set(baseline.map((entry) => normalizePromptText(entry)));
+	const normalizedPrompt = normalizePromptText(prompt);
+	const candidates = current
+		.map((entry) => sanitizeGeminiAssistantText(entry))
+		.filter((entry) => entry && entry !== normalizedPrompt && !baselineSet.has(entry));
+	return candidates.length > 0 ? candidates[candidates.length - 1] : null;
 }
 
 function extractGeminiArtifactFileName(uri: string | null | undefined): string | null {
-  if (typeof uri !== 'string' || !uri.trim()) return null;
-  try {
-    const parsed = new URL(uri);
-    const fromQuery = parsed.searchParams.get('filename');
-    if (typeof fromQuery === 'string' && fromQuery.trim()) {
-      return fromQuery.trim();
-    }
-    const pathname = parsed.pathname || '';
-    const lastSegment = pathname.split('/').filter(Boolean).pop();
-    return typeof lastSegment === 'string' && lastSegment.trim() ? decodeURIComponent(lastSegment.trim()) : null;
-  } catch {
-    return null;
-  }
+	if (typeof uri !== "string" || !uri.trim()) return null;
+	try {
+		const parsed = new URL(uri);
+		const fromQuery = parsed.searchParams.get("filename");
+		if (typeof fromQuery === "string" && fromQuery.trim()) {
+			return fromQuery.trim();
+		}
+		const pathname = parsed.pathname || "";
+		const lastSegment = pathname.split("/").filter(Boolean).pop();
+		return typeof lastSegment === "string" && lastSegment.trim()
+			? decodeURIComponent(lastSegment.trim())
+			: null;
+	} catch {
+		return null;
+	}
 }
 
 function prettifyGeminiArtifactBaseName(fileName: string): string {
-  const trimmed = fileName.trim();
-  if (!trimmed) return '';
-  const withoutExtension = trimmed.replace(/\.[a-z0-9]{1,8}$/i, '').trim();
-  const humanized = withoutExtension.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!humanized || /^(video|track|audio|music)$/i.test(humanized)) return '';
-  return humanized.replace(/\b\p{L}/gu, (match) => match.toUpperCase());
+	const trimmed = fileName.trim();
+	if (!trimmed) return "";
+	const withoutExtension = trimmed.replace(/\.[a-z0-9]{1,8}$/i, "").trim();
+	const humanized = withoutExtension.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+	if (!humanized || /^(video|track|audio|music)$/i.test(humanized)) return "";
+	return humanized.replace(/\b\p{L}/gu, (match) => match.toUpperCase());
 }
 
 export function inferGeminiGeneratedArtifactMediaType(
-  artifact: Pick<ConversationArtifact, 'kind' | 'uri' | 'metadata'>,
-): 'music' | 'video' | null {
-  if (artifact.kind !== 'generated') return null;
-  const metadata = artifact.metadata ?? {};
-  const directType = typeof metadata.mediaType === 'string' ? metadata.mediaType.trim().toLowerCase() : '';
-  if (directType === 'music' || directType === 'video') return directType;
-  const downloadOptions = Array.isArray(metadata.downloadOptions)
-    ? metadata.downloadOptions.filter((entry): entry is string => typeof entry === 'string')
-    : [];
-  const labelCandidates = [
-    typeof metadata.shareLabel === 'string' ? metadata.shareLabel : '',
-    typeof metadata.downloadLabel === 'string' ? metadata.downloadLabel : '',
-    typeof metadata.playLabel === 'string' ? metadata.playLabel : '',
-    typeof metadata.muteLabel === 'string' ? metadata.muteLabel : '',
-    ...downloadOptions,
-  ]
-    .join(' ')
-    .toLowerCase();
-  if (/\b(track|music|song|remix|mp3|audio)\b/.test(labelCandidates)) return 'music';
-  if (/\b(video|movie)\b/.test(labelCandidates)) return 'video';
-  const fileName = extractGeminiArtifactFileName(artifact.uri);
-  if (typeof fileName === 'string' && /\b(track|music|song|remix)\b/i.test(fileName)) return 'music';
-  if (typeof fileName === 'string' && /\.(mp3|m4a|wav|aac|flac|ogg)$/i.test(fileName)) return 'music';
-  return null;
+	artifact: Pick<ConversationArtifact, "kind" | "uri" | "metadata">,
+): "music" | "video" | null {
+	if (artifact.kind !== "generated") return null;
+	const metadata = artifact.metadata ?? {};
+	const directType =
+		typeof metadata.mediaType === "string" ? metadata.mediaType.trim().toLowerCase() : "";
+	if (directType === "music" || directType === "video") return directType;
+	const downloadOptions = Array.isArray(metadata.downloadOptions)
+		? metadata.downloadOptions.filter((entry): entry is string => typeof entry === "string")
+		: [];
+	const labelCandidates = [
+		typeof metadata.shareLabel === "string" ? metadata.shareLabel : "",
+		typeof metadata.downloadLabel === "string" ? metadata.downloadLabel : "",
+		typeof metadata.playLabel === "string" ? metadata.playLabel : "",
+		typeof metadata.muteLabel === "string" ? metadata.muteLabel : "",
+		...downloadOptions,
+	]
+		.join(" ")
+		.toLowerCase();
+	if (/\b(track|music|song|remix|mp3|audio)\b/.test(labelCandidates)) return "music";
+	if (/\b(video|movie)\b/.test(labelCandidates)) return "video";
+	const fileName = extractGeminiArtifactFileName(artifact.uri);
+	if (typeof fileName === "string" && /\b(track|music|song|remix)\b/i.test(fileName))
+		return "music";
+	if (typeof fileName === "string" && /\.(mp3|m4a|wav|aac|flac|ogg)$/i.test(fileName))
+		return "music";
+	return null;
 }
 
 export function normalizeGeminiConversationArtifacts(
-  artifacts: ReadonlyArray<ConversationArtifact> | null | undefined,
+	artifacts: ReadonlyArray<ConversationArtifact> | null | undefined,
 ): ConversationArtifact[] {
-  if (!Array.isArray(artifacts) || artifacts.length === 0) return [];
-  return artifacts.map((artifact, index) => {
-    if (artifact.kind === 'document') {
-      const documentTitle =
-        (typeof artifact.metadata?.documentTitle === 'string' && artifact.metadata.documentTitle.trim()) ||
-        (typeof artifact.metadata?.taskTitle === 'string' && artifact.metadata.taskTitle.trim()) ||
-        '';
-      if (!documentTitle) return artifact;
-      return {
-        ...artifact,
-        title: documentTitle,
-      };
-    }
-    const mediaType = inferGeminiGeneratedArtifactMediaType(artifact);
-    if (!mediaType) return artifact;
-    const fileName =
-      (typeof artifact.metadata?.fileName === 'string' && artifact.metadata.fileName.trim()) ||
-      extractGeminiArtifactFileName(artifact.uri);
-    const titleFromFile = typeof fileName === 'string' ? prettifyGeminiArtifactBaseName(fileName) : '';
-    const fallbackTitle = mediaType === 'music' ? `Generated track ${index + 1}` : `Generated video ${index + 1}`;
-    const currentTitle = typeof artifact.title === 'string' ? artifact.title.trim() : '';
-    const normalizedTitle =
-      titleFromFile ||
-      (!currentTitle || /^generated media\b/i.test(currentTitle) ? fallbackTitle : currentTitle);
-    return {
-      ...artifact,
-      title: normalizedTitle,
-      metadata: {
-        ...(artifact.metadata ?? {}),
-        mediaType,
-        ...(fileName ? { fileName } : {}),
-      },
-    };
-  });
+	if (!Array.isArray(artifacts) || artifacts.length === 0) return [];
+	return artifacts.map((artifact, index) => {
+		if (artifact.kind === "document") {
+			const documentTitle =
+				(typeof artifact.metadata?.documentTitle === "string" &&
+					artifact.metadata.documentTitle.trim()) ||
+				(typeof artifact.metadata?.taskTitle === "string" && artifact.metadata.taskTitle.trim()) ||
+				"";
+			if (!documentTitle) return artifact;
+			return {
+				...artifact,
+				title: documentTitle,
+			};
+		}
+		const mediaType = inferGeminiGeneratedArtifactMediaType(artifact);
+		if (!mediaType) return artifact;
+		const fileName =
+			(typeof artifact.metadata?.fileName === "string" && artifact.metadata.fileName.trim()) ||
+			extractGeminiArtifactFileName(artifact.uri);
+		const titleFromFile =
+			typeof fileName === "string" ? prettifyGeminiArtifactBaseName(fileName) : "";
+		const fallbackTitle =
+			mediaType === "music" ? `Generated track ${index + 1}` : `Generated video ${index + 1}`;
+		const currentTitle = typeof artifact.title === "string" ? artifact.title.trim() : "";
+		const normalizedTitle =
+			titleFromFile ||
+			(!currentTitle || /^generated media\b/i.test(currentTitle) ? fallbackTitle : currentTitle);
+		return {
+			...artifact,
+			title: normalizedTitle,
+			metadata: {
+				...(artifact.metadata ?? {}),
+				mediaType,
+				...(fileName ? { fileName } : {}),
+			},
+		};
+	});
 }
 
 export function normalizeGeminiConversationFiles(
-  files: ReadonlyArray<FileRef> | null | undefined,
+	files: ReadonlyArray<FileRef> | null | undefined,
 ): FileRef[] {
-  if (!Array.isArray(files) || files.length === 0) return [];
-  const normalized: FileRef[] = [];
-  const seen = new Set<string>();
-  for (const file of files) {
-    const remoteUrl = normalizeWhitespace(file.remoteUrl ?? '');
-    const kind = normalizeWhitespace(
-      file.metadata && typeof file.metadata === 'object' && typeof file.metadata.kind === 'string'
-        ? file.metadata.kind
-        : '',
-    ).toLowerCase();
-    const messageIndex =
-      file.metadata && typeof file.metadata === 'object' && typeof file.metadata.messageIndex === 'number'
-        ? String(file.metadata.messageIndex)
-        : '';
-    const key = remoteUrl || [
-      normalizeWhitespace(file.name).toLowerCase(),
-      kind,
-      messageIndex,
-      normalizeWhitespace(file.mimeType ?? '').toLowerCase(),
-      normalizeWhitespace(file.source ?? '').toLowerCase(),
-    ].join('::');
-    if (seen.has(key)) continue;
-    seen.add(key);
-    normalized.push(file);
-  }
-  return normalized;
+	if (!Array.isArray(files) || files.length === 0) return [];
+	const normalized: FileRef[] = [];
+	const seen = new Set<string>();
+	for (const file of files) {
+		const remoteUrl = normalizeWhitespace(file.remoteUrl ?? "");
+		const kind = normalizeWhitespace(
+			file.metadata && typeof file.metadata === "object" && typeof file.metadata.kind === "string"
+				? file.metadata.kind
+				: "",
+		).toLowerCase();
+		const messageIndex =
+			file.metadata &&
+			typeof file.metadata === "object" &&
+			typeof file.metadata.messageIndex === "number"
+				? String(file.metadata.messageIndex)
+				: "";
+		const key =
+			remoteUrl ||
+			[
+				normalizeWhitespace(file.name).toLowerCase(),
+				kind,
+				messageIndex,
+				normalizeWhitespace(file.mimeType ?? "").toLowerCase(),
+				normalizeWhitespace(file.source ?? "").toLowerCase(),
+			].join("::");
+		if (seen.has(key)) continue;
+		seen.add(key);
+		normalized.push(file);
+	}
+	return normalized;
 }
 
 function stripAsciiControlCharacters(value: string): string {
-  return Array.from(value)
-    .filter((char) => {
-      const code = char.charCodeAt(0);
-      return code >= 0x20 && code !== 0x7f;
-    })
-    .join('');
+	return Array.from(value)
+		.filter((char) => {
+			const code = char.charCodeAt(0);
+			return code >= 0x20 && code !== 0x7f;
+		})
+		.join("");
 }
 
 function sanitizeGeminiArtifactFileName(value: string | null | undefined): string {
-  const normalized = stripAsciiControlCharacters(String(value ?? ''))
-    .replace(/[\\/:"*?<>|]+/g, '-')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return normalized.length > 0 ? normalized.slice(0, 160) : 'artifact';
+	const normalized = stripAsciiControlCharacters(String(value ?? ""))
+		.replace(/[\\/:"*?<>|]+/g, "-")
+		.replace(/\s+/g, " ")
+		.trim();
+	return normalized.length > 0 ? normalized.slice(0, 160) : "artifact";
 }
 
 function ensureGeminiArtifactExtension(name: string, fallbackExt: string): string {
-  const trimmed = sanitizeGeminiArtifactFileName(name);
-  if (/\.[a-z0-9]{1,8}$/i.test(trimmed)) {
-    return trimmed;
-  }
-  return `${trimmed}${fallbackExt}`;
+	const trimmed = sanitizeGeminiArtifactFileName(name);
+	if (/\.[a-z0-9]{1,8}$/i.test(trimmed)) {
+		return trimmed;
+	}
+	return `${trimmed}${fallbackExt}`;
 }
 
 function geminiContentTypeToExtension(contentType: string | null | undefined): string {
-  const normalized = String(contentType ?? '').trim().toLowerCase();
-  if (normalized.includes('image/png')) return '.png';
-  if (normalized.includes('image/jpeg')) return '.jpg';
-  if (normalized.includes('image/webp')) return '.webp';
-  if (normalized.includes('image/gif')) return '.gif';
-  if (normalized.includes('video/mp4')) return '.mp4';
-  if (normalized.includes('audio/mpeg')) return '.mp3';
-  if (normalized.includes('audio/mp4')) return '.m4a';
-  if (normalized.includes('text/plain')) return '.txt';
-  return '';
+	const normalized = String(contentType ?? "")
+		.trim()
+		.toLowerCase();
+	if (normalized.includes("image/png")) return ".png";
+	if (normalized.includes("image/jpeg")) return ".jpg";
+	if (normalized.includes("image/webp")) return ".webp";
+	if (normalized.includes("image/gif")) return ".gif";
+	if (normalized.includes("video/mp4")) return ".mp4";
+	if (normalized.includes("audio/mpeg")) return ".mp3";
+	if (normalized.includes("audio/mp4")) return ".m4a";
+	if (normalized.includes("text/plain")) return ".txt";
+	return "";
 }
 
 function extractFilenameFromContentDisposition(value: string | null | undefined): string | null {
-  const normalized = String(value ?? '').trim();
-  if (!normalized) return null;
-  const utfMatch = normalized.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utfMatch?.[1]) {
-    try {
-      return decodeURIComponent(utfMatch[1]);
-    } catch {
-      return utfMatch[1];
-    }
-  }
-  const quotedMatch = normalized.match(/filename="([^"]+)"/i);
-  if (quotedMatch?.[1]) return quotedMatch[1];
-  const plainMatch = normalized.match(/filename=([^;]+)/i);
-  return plainMatch?.[1]?.trim() ?? null;
+	const normalized = String(value ?? "").trim();
+	if (!normalized) return null;
+	const utfMatch = normalized.match(/filename\*=UTF-8''([^;]+)/i);
+	if (utfMatch?.[1]) {
+		try {
+			return decodeURIComponent(utfMatch[1]);
+		} catch {
+			return utfMatch[1];
+		}
+	}
+	const quotedMatch = normalized.match(/filename="([^"]+)"/i);
+	if (quotedMatch?.[1]) return quotedMatch[1];
+	const plainMatch = normalized.match(/filename=([^;]+)/i);
+	return plainMatch?.[1]?.trim() ?? null;
 }
 
 function inferGeminiArtifactMimeType(name: string | null | undefined): string | undefined {
-  const lower = String(name || '').toLowerCase();
-  if (lower.endsWith('.png')) return 'image/png';
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-  if (lower.endsWith('.gif')) return 'image/gif';
-  if (lower.endsWith('.webp')) return 'image/webp';
-  if (lower.endsWith('.mp4')) return 'video/mp4';
-  if (lower.endsWith('.mp3')) return 'audio/mpeg';
-  if (lower.endsWith('.m4a')) return 'audio/mp4';
-  if (lower.endsWith('.txt')) return 'text/plain';
-  return undefined;
+	const lower = String(name || "").toLowerCase();
+	if (lower.endsWith(".png")) return "image/png";
+	if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+	if (lower.endsWith(".gif")) return "image/gif";
+	if (lower.endsWith(".webp")) return "image/webp";
+	if (lower.endsWith(".mp4")) return "video/mp4";
+	if (lower.endsWith(".mp3")) return "audio/mpeg";
+	if (lower.endsWith(".m4a")) return "audio/mp4";
+	if (lower.endsWith(".txt")) return "text/plain";
+	return undefined;
 }
 
 async function configureGeminiDownloadBehaviorWithClient(
-  client: ChromeClient,
-  downloadPath: string,
+	client: ChromeClient,
+	downloadPath: string,
 ): Promise<void> {
-  const cdpClient = client as unknown as {
-    send?: (method: string, params?: Record<string, unknown>) => Promise<unknown>;
-  };
-  if (typeof cdpClient.send !== 'function') {
-    return;
-  }
-  try {
-    await cdpClient.send('Browser.setDownloadBehavior', {
-      behavior: 'allow',
-      downloadPath,
-      eventsEnabled: true,
-    });
-    return;
-  } catch {
-    // Fall back to the older Page domain when Browser.setDownloadBehavior is unavailable.
-  }
-  try {
-    await cdpClient.send('Page.setDownloadBehavior', {
-      behavior: 'allow',
-      downloadPath,
-    });
-  } catch {
-    // Leave downloads unconfigured if the target does not support either method.
-  }
+	const cdpClient = client as unknown as {
+		send?: (method: string, params?: Record<string, unknown>) => Promise<unknown>;
+	};
+	if (typeof cdpClient.send !== "function") {
+		return;
+	}
+	try {
+		await cdpClient.send("Browser.setDownloadBehavior", {
+			behavior: "allow",
+			downloadPath,
+			eventsEnabled: true,
+		});
+		return;
+	} catch {
+		// Fall back to the older Page domain when Browser.setDownloadBehavior is unavailable.
+	}
+	try {
+		await cdpClient.send("Page.setDownloadBehavior", {
+			behavior: "allow",
+			downloadPath,
+		});
+	} catch {
+		// Leave downloads unconfigured if the target does not support either method.
+	}
 }
 
 async function waitForGeminiDownloadedFile(
-  destDir: string,
-  timeoutMs = 20_000,
-  options: { excludeNames?: ReadonlySet<string> } = {},
+	destDir: string,
+	timeoutMs = 20_000,
+	options: { excludeNames?: ReadonlySet<string> } = {},
 ): Promise<string | null> {
-  const deadline = Date.now() + timeoutMs;
-  let lastPath: string | null = null;
-  let lastSize = -1;
-  let stableCount = 0;
-  while (Date.now() < deadline) {
-    const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
-    const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
-    const completed = fileNames.filter((name) =>
-      !name.endsWith('.crdownload') &&
-      !name.endsWith('.tmp') &&
-      !options.excludeNames?.has(name)
-    );
-    if (completed.length > 0) {
-      const candidateName = completed.sort()[0];
-      if (!candidateName) continue;
-      const candidatePath = path.join(destDir, candidateName);
-      const stat = await fs.stat(candidatePath).catch(() => null);
-      if (stat) {
-        if (candidatePath === lastPath && stat.size === lastSize) {
-          stableCount += 1;
-        } else {
-          lastPath = candidatePath;
-          lastSize = stat.size;
-          stableCount = 0;
-        }
-        if (stableCount >= 1) {
-          return candidatePath;
-        }
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  return null;
+	const deadline = Date.now() + timeoutMs;
+	let lastPath: string | null = null;
+	let lastSize = -1;
+	let stableCount = 0;
+	while (Date.now() < deadline) {
+		const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
+		const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+		const completed = fileNames.filter(
+			(name) =>
+				!name.endsWith(".crdownload") && !name.endsWith(".tmp") && !options.excludeNames?.has(name),
+		);
+		if (completed.length > 0) {
+			const candidateName = completed.sort()[0];
+			if (!candidateName) continue;
+			const candidatePath = path.join(destDir, candidateName);
+			const stat = await fs.stat(candidatePath).catch(() => null);
+			if (stat) {
+				if (candidatePath === lastPath && stat.size === lastSize) {
+					stableCount += 1;
+				} else {
+					lastPath = candidatePath;
+					lastSize = stat.size;
+					stableCount = 0;
+				}
+				if (stableCount >= 1) {
+					return candidatePath;
+				}
+			}
+		}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	return null;
 }
 
-const GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR = 'data-auracall-gemini-generated-image-download';
-const GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY = '__auracallGeminiGeneratedImageDownloadCapture';
-const GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY = '__auracallGeminiGeneratedMediaVariantDownloadCapture';
+const GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR = "data-auracall-gemini-generated-image-download";
+const GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY =
+	"__auracallGeminiGeneratedImageDownloadCapture";
+const GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY =
+	"__auracallGeminiGeneratedMediaVariantDownloadCapture";
 
 function inferGeminiMusicDownloadVariantFromLabel(label: string | null | undefined): string | null {
-  const normalized = String(label ?? '').trim().toLowerCase();
-  if (!normalized) return null;
-  if (/\bmp3\b|audio only/.test(normalized)) return 'mp3';
-  if (/cover art|album art|\bvideo\b/.test(normalized)) return 'video_with_album_art';
-  return null;
+	const normalized = String(label ?? "")
+		.trim()
+		.toLowerCase();
+	if (!normalized) return null;
+	if (/\bmp3\b|audio only/.test(normalized)) return "mp3";
+	if (/cover art|album art|\bvideo\b/.test(normalized)) return "video_with_album_art";
+	return null;
 }
 
 function fallbackGeminiMusicVariantExtension(label: string | null | undefined): string {
-  return inferGeminiMusicDownloadVariantFromLabel(label) === 'mp3' ? '.mp3' : '.mp4';
+	return inferGeminiMusicDownloadVariantFromLabel(label) === "mp3" ? ".mp3" : ".mp4";
 }
 
-export function geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel: string): string {
-  return `(async () => {
+export function geminiGeneratedMediaVariantDownloadPointExpression(
+	downloadVariantLabel: string,
+): string {
+	return `(async () => {
     const desired = ${JSON.stringify(downloadVariantLabel)};
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const compact = (value) => normalize(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -3106,105 +3414,132 @@ export function geminiGeneratedMediaVariantDownloadPointExpression(downloadVaria
 }
 
 async function materializeGeminiGeneratedMediaDownloadVariantWithClient(
-  client: ChromeClient,
-  artifact: ConversationArtifact,
-  destDir: string,
-  downloadVariantLabel: string,
+	client: ChromeClient,
+	artifact: ConversationArtifact,
+	destDir: string,
+	downloadVariantLabel: string,
 ): Promise<FileRef | null> {
-  await fs.mkdir(destDir, { recursive: true });
-  const existingNames = new Set(
-    (await fs.readdir(destDir, { withFileTypes: true }).catch(() => []))
-      .filter((entry) => entry.isFile())
-      .map((entry) => entry.name),
-  );
-  await configureGeminiDownloadBehaviorWithClient(client, destDir);
-  await armDownloadCapture(client.Runtime, { stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY });
-  const located = await client.Runtime.evaluate({
-    expression: geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel),
-    awaitPromise: true,
-    returnByValue: true,
-  });
-  const point = isRecord(located.result?.value) ? located.result.value : null;
-  if (point?.ok !== true || typeof point.x !== 'number' || typeof point.y !== 'number') {
-    return null;
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
-  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  const capture = await waitForDownloadCapture(client.Runtime, {
-    stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY,
-    timeoutMs: 1_500,
-    pollMs: 100,
-  });
-  const capturedHref = normalizeWhitespace(capture.href ?? '');
-  const capturedName = normalizeWhitespace(capture.downloadName ?? '');
-  const downloadVariant = inferGeminiMusicDownloadVariantFromLabel(downloadVariantLabel);
-  if (capturedHref) {
-    try {
-      const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(client, capturedHref);
-      const fallbackBaseName =
-        extractFilenameFromContentDisposition(contentDisposition) ||
-        extractGeminiArtifactFileName(capturedHref) ||
-        capturedName ||
-        artifact.title;
-      const fileName = ensureGeminiArtifactExtension(
-        fallbackBaseName,
-        geminiContentTypeToExtension(contentType) || fallbackGeminiMusicVariantExtension(downloadVariantLabel),
-      );
-      const destPath = path.join(destDir, fileName);
-      await fs.writeFile(destPath, buffer);
-      return {
-        id: artifact.id,
-        name: fileName,
-        provider: 'gemini',
-        source: 'conversation',
-        size: buffer.byteLength,
-        mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
-        remoteUrl: capturedHref,
-        localPath: destPath,
-        metadata: {
-          artifactKind: artifact.kind,
-          artifactTitle: artifact.title,
-          materialization: 'generated-media-download-variant-anchor-fetch',
-          ...(artifact.metadata ?? {}),
-          downloadLabel: downloadVariantLabel,
-          ...(downloadVariant ? { downloadVariant } : {}),
-        },
-      };
-    } catch {
-      // Fall through to browser-native download polling.
-    }
-  }
-  const downloadedPath = await waitForGeminiDownloadedFile(destDir, 10_000, { excludeNames: existingNames });
-  if (!downloadedPath) {
-    return null;
-  }
-  const stat = await fs.stat(downloadedPath);
-  const fileName = path.basename(downloadedPath);
-  return {
-    id: artifact.id,
-    name: fileName,
-    provider: 'gemini',
-    source: 'conversation',
-    size: stat.size,
-    mimeType: inferGeminiArtifactMimeType(fileName),
-    remoteUrl: capturedHref || artifact.uri,
-    localPath: downloadedPath,
-    metadata: {
-      artifactKind: artifact.kind,
-      artifactTitle: artifact.title,
-      materialization: capturedHref ? 'generated-media-download-variant-anchor-fetch' : 'generated-media-download-variant',
-      ...(artifact.metadata ?? {}),
-      downloadLabel: downloadVariantLabel,
-      ...(downloadVariant ? { downloadVariant } : {}),
-    },
-  };
+	await fs.mkdir(destDir, { recursive: true });
+	const existingNames = new Set(
+		(await fs.readdir(destDir, { withFileTypes: true }).catch(() => []))
+			.filter((entry) => entry.isFile())
+			.map((entry) => entry.name),
+	);
+	await configureGeminiDownloadBehaviorWithClient(client, destDir);
+	await armDownloadCapture(client.Runtime, {
+		stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY,
+	});
+	const located = await client.Runtime.evaluate({
+		expression: geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel),
+		awaitPromise: true,
+		returnByValue: true,
+	});
+	const point = isRecord(located.result?.value) ? located.result.value : null;
+	if (point?.ok !== true || typeof point.x !== "number" || typeof point.y !== "number") {
+		return null;
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: point.x,
+		y: point.y,
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	const capture = await waitForDownloadCapture(client.Runtime, {
+		stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY,
+		timeoutMs: 1_500,
+		pollMs: 100,
+	});
+	const capturedHref = normalizeWhitespace(capture.href ?? "");
+	const capturedName = normalizeWhitespace(capture.downloadName ?? "");
+	const downloadVariant = inferGeminiMusicDownloadVariantFromLabel(downloadVariantLabel);
+	if (capturedHref) {
+		try {
+			const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(
+				client,
+				capturedHref,
+			);
+			const fallbackBaseName =
+				extractFilenameFromContentDisposition(contentDisposition) ||
+				extractGeminiArtifactFileName(capturedHref) ||
+				capturedName ||
+				artifact.title;
+			const fileName = ensureGeminiArtifactExtension(
+				fallbackBaseName,
+				geminiContentTypeToExtension(contentType) ||
+					fallbackGeminiMusicVariantExtension(downloadVariantLabel),
+			);
+			const destPath = path.join(destDir, fileName);
+			await fs.writeFile(destPath, buffer);
+			return {
+				id: artifact.id,
+				name: fileName,
+				provider: "gemini",
+				source: "conversation",
+				size: buffer.byteLength,
+				mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
+				remoteUrl: capturedHref,
+				localPath: destPath,
+				metadata: {
+					artifactKind: artifact.kind,
+					artifactTitle: artifact.title,
+					materialization: "generated-media-download-variant-anchor-fetch",
+					...(artifact.metadata ?? {}),
+					downloadLabel: downloadVariantLabel,
+					...(downloadVariant ? { downloadVariant } : {}),
+				},
+			};
+		} catch {
+			// Fall through to browser-native download polling.
+		}
+	}
+	const downloadedPath = await waitForGeminiDownloadedFile(destDir, 10_000, {
+		excludeNames: existingNames,
+	});
+	if (!downloadedPath) {
+		return null;
+	}
+	const stat = await fs.stat(downloadedPath);
+	const fileName = path.basename(downloadedPath);
+	return {
+		id: artifact.id,
+		name: fileName,
+		provider: "gemini",
+		source: "conversation",
+		size: stat.size,
+		mimeType: inferGeminiArtifactMimeType(fileName),
+		remoteUrl: capturedHref || artifact.uri,
+		localPath: downloadedPath,
+		metadata: {
+			artifactKind: artifact.kind,
+			artifactTitle: artifact.title,
+			materialization: capturedHref
+				? "generated-media-download-variant-anchor-fetch"
+				: "generated-media-download-variant",
+			...(artifact.metadata ?? {}),
+			downloadLabel: downloadVariantLabel,
+			...(downloadVariant ? { downloadVariant } : {}),
+		},
+	};
 }
 
 export function geminiGeneratedImageDownloadButtonTagExpression(
-  artifact: Pick<ConversationArtifact, 'id' | 'uri' | 'messageIndex'>,
+	artifact: Pick<ConversationArtifact, "id" | "uri" | "messageIndex">,
 ): string {
-  return `(() => {
+	return `(() => {
     const attr = ${JSON.stringify(GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR)};
     const normalize = (value) => String(value || '').trim();
     const visible = (node) => {
@@ -3213,10 +3548,10 @@ export function geminiGeneratedImageDownloadButtonTagExpression(
       return rect.width > 0 && rect.height > 0;
     };
     document.querySelectorAll('button[' + attr + '="true"]').forEach((node) => node.removeAttribute(attr));
-    const expectedUri = normalize(${JSON.stringify(typeof artifact.uri === 'string' ? artifact.uri : '')});
+    const expectedUri = normalize(${JSON.stringify(typeof artifact.uri === "string" ? artifact.uri : "")});
     const expectedMessageIndex = ${JSON.stringify(
-      typeof artifact.messageIndex === 'number' ? artifact.messageIndex : null,
-    )};
+			typeof artifact.messageIndex === "number" ? artifact.messageIndex : null,
+		)};
     const parseArtifactOrdinal = (value) => {
       const match = String(value || '').match(/^(?:gemini-artifact:[^:]+:(?:fallback:)?\\d+:(\\d+))$/);
       if (!match) return null;
@@ -3292,10 +3627,10 @@ export function geminiGeneratedImageDownloadButtonTagExpression(
 }
 
 async function fetchGeminiBinaryWithClient(
-  client: ChromeClient,
-  url: string,
+	client: ChromeClient,
+	url: string,
 ): Promise<{ buffer: Buffer; contentType: string | null; contentDisposition: string | null }> {
-  const expression = `(async () => {
+	const expression = `(async () => {
     const response = await fetch(${JSON.stringify(url)}, { credentials: 'include' });
     if (!response.ok) {
       return { ok: false, status: response.status };
@@ -3315,78 +3650,92 @@ async function fetchGeminiBinaryWithClient(
       base64: btoa(binary),
     };
   })()`;
-  const result = await client.Runtime.evaluate({
-    expression,
-    awaitPromise: true,
-    returnByValue: true,
-  });
-  const value = isRecord(result.result?.value) ? result.result.value : null;
-  if (!value || value.ok !== true || typeof value.base64 !== 'string') {
-    const status = typeof value?.status === 'number' ? ` (status ${value.status})` : '';
-    throw new Error(`Gemini artifact binary fetch failed${status}`);
-  }
-  return {
-    buffer: Buffer.from(value.base64, 'base64'),
-    contentType: typeof value.contentType === 'string' ? value.contentType : null,
-    contentDisposition: typeof value.contentDisposition === 'string' ? value.contentDisposition : null,
-  };
+	const result = await client.Runtime.evaluate({
+		expression,
+		awaitPromise: true,
+		returnByValue: true,
+	});
+	const value = isRecord(result.result?.value) ? result.result.value : null;
+	if (!value || value.ok !== true || typeof value.base64 !== "string") {
+		const status = typeof value?.status === "number" ? ` (status ${value.status})` : "";
+		throw new Error(`Gemini artifact binary fetch failed${status}`);
+	}
+	return {
+		buffer: Buffer.from(value.base64, "base64"),
+		contentType: typeof value.contentType === "string" ? value.contentType : null,
+		contentDisposition:
+			typeof value.contentDisposition === "string" ? value.contentDisposition : null,
+	};
 }
 
 function isGeminiTextLikeFileName(fileName: string): boolean {
-  const extension = path.extname(String(fileName ?? '')).trim().toLowerCase();
-  return new Set([
-    '.txt',
-    '.md',
-    '.markdown',
-    '.json',
-    '.jsonl',
-    '.csv',
-    '.tsv',
-    '.js',
-    '.mjs',
-    '.cjs',
-    '.ts',
-    '.tsx',
-    '.jsx',
-    '.py',
-    '.rb',
-    '.go',
-    '.rs',
-    '.java',
-    '.kt',
-    '.swift',
-    '.html',
-    '.htm',
-    '.css',
-    '.scss',
-    '.less',
-    '.xml',
-    '.yml',
-    '.yaml',
-    '.toml',
-    '.ini',
-    '.cfg',
-    '.conf',
-    '.log',
-    '.sql',
-    '.sh',
-    '.bash',
-    '.zsh',
-    '.ps1',
-  ]).has(extension);
+	const extension = path
+		.extname(String(fileName ?? ""))
+		.trim()
+		.toLowerCase();
+	return new Set([
+		".txt",
+		".md",
+		".markdown",
+		".json",
+		".jsonl",
+		".csv",
+		".tsv",
+		".js",
+		".mjs",
+		".cjs",
+		".ts",
+		".tsx",
+		".jsx",
+		".py",
+		".rb",
+		".go",
+		".rs",
+		".java",
+		".kt",
+		".swift",
+		".html",
+		".htm",
+		".css",
+		".scss",
+		".less",
+		".xml",
+		".yml",
+		".yaml",
+		".toml",
+		".ini",
+		".cfg",
+		".conf",
+		".log",
+		".sql",
+		".sh",
+		".bash",
+		".zsh",
+		".ps1",
+	]).has(extension);
 }
 
 async function pressEscape(client: ChromeClient): Promise<void> {
-  await client.Input.dispatchKeyEvent({ type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
-  await client.Input.dispatchKeyEvent({ type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+	await client.Input.dispatchKeyEvent({
+		type: "keyDown",
+		key: "Escape",
+		code: "Escape",
+		windowsVirtualKeyCode: 27,
+	});
+	await client.Input.dispatchKeyEvent({
+		type: "keyUp",
+		key: "Escape",
+		code: "Escape",
+		windowsVirtualKeyCode: 27,
+	});
 }
 
 async function copyGeminiDeepResearchContentsWithClient(
-  client: ChromeClient,
+	client: ChromeClient,
 ): Promise<{ text: string; documentTitle?: string; taskTitle?: string } | null> {
-  const stateKey = '__auracallGeminiDeepResearchCopyState';
-  const setup = await client.Runtime.evaluate({
-    expression: `(() => {
+	const stateKey = "__auracallGeminiDeepResearchCopyState";
+	const setup = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -3455,20 +3804,22 @@ async function copyGeminiDeepResearchContentsWithClient(
       globalThis[${JSON.stringify(stateKey)}] = state;
       return { ok: true, taskTitle, documentTitle };
     })()`,
-    returnByValue: true,
-  });
-  const setupValue = setup.result?.value;
-  if (!isRecord(setupValue) || setupValue.ok !== true) {
-    return null;
-  }
-  try {
-    const exportClicked = await clickGeminiFeatureProbeTarget(client, ['button[data-test-id="export-menu-button"]']);
-    if (!exportClicked) {
-      return null;
-    }
-    const copyReady = await waitForPredicate(
-      client.Runtime,
-      `(() => {
+		returnByValue: true,
+	});
+	const setupValue = setup.result?.value;
+	if (!isRecord(setupValue) || setupValue.ok !== true) {
+		return null;
+	}
+	try {
+		const exportClicked = await clickGeminiFeatureProbeTarget(client, [
+			'button[data-test-id="export-menu-button"]',
+		]);
+		if (!exportClicked) {
+			return null;
+		}
+		const copyReady = await waitForPredicate(
+			client.Runtime,
+			`(() => {
         const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
         const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
         const button = Array.from(document.querySelectorAll('button[data-test-id="copy-button"], [role="menuitem"][data-test-id="copy-button"]'))
@@ -3480,25 +3831,28 @@ async function copyGeminiDeepResearchContentsWithClient(
           );
         return button ? { ready: true } : null;
       })()`,
-      {
-        timeoutMs: 5_000,
-        description: 'Gemini deep research copy contents menu item',
-      },
-    );
-    if (!copyReady.ok) {
-      return null;
-    }
-    const copyClicked = await clickGeminiFeatureProbeTarget(
-      client,
-      ['button[data-test-id="copy-button"].menu-item-button', '[role="menuitem"][data-test-id="copy-button"]'],
-      { requireText: 'copy contents' },
-    );
-    if (!copyClicked) {
-      return null;
-    }
-    const copied = await waitForPredicate(
-      client.Runtime,
-      `(() => {
+			{
+				timeoutMs: 5_000,
+				description: "Gemini deep research copy contents menu item",
+			},
+		);
+		if (!copyReady.ok) {
+			return null;
+		}
+		const copyClicked = await clickGeminiFeatureProbeTarget(
+			client,
+			[
+				'button[data-test-id="copy-button"].menu-item-button',
+				'[role="menuitem"][data-test-id="copy-button"]',
+			],
+			{ requireText: "copy contents" },
+		);
+		if (!copyClicked) {
+			return null;
+		}
+		const copied = await waitForPredicate(
+			client.Runtime,
+			`(() => {
         const state = globalThis[${JSON.stringify(stateKey)}];
         if (!state || typeof state !== 'object') return null;
         if (typeof state.text !== 'string' || !state.text.trim()) return null;
@@ -3509,22 +3863,23 @@ async function copyGeminiDeepResearchContentsWithClient(
           documentTitle: typeof state.documentTitle === 'string' ? state.documentTitle : '',
         };
       })()`,
-      {
-        timeoutMs: 10_000,
-        description: 'Gemini deep research clipboard contents',
-      },
-    );
-    if (!copied.ok || !isRecord(copied.value) || typeof copied.value.text !== 'string') {
-      return null;
-    }
-    return {
-      text: copied.value.text,
-      documentTitle: typeof copied.value.documentTitle === 'string' ? copied.value.documentTitle : undefined,
-      taskTitle: typeof copied.value.taskTitle === 'string' ? copied.value.taskTitle : undefined,
-    };
-  } finally {
-    await client.Runtime.evaluate({
-      expression: `(() => {
+			{
+				timeoutMs: 10_000,
+				description: "Gemini deep research clipboard contents",
+			},
+		);
+		if (!copied.ok || !isRecord(copied.value) || typeof copied.value.text !== "string") {
+			return null;
+		}
+		return {
+			text: copied.value.text,
+			documentTitle:
+				typeof copied.value.documentTitle === "string" ? copied.value.documentTitle : undefined,
+			taskTitle: typeof copied.value.taskTitle === "string" ? copied.value.taskTitle : undefined,
+		};
+	} finally {
+		await client.Runtime.evaluate({
+			expression: `(() => {
         const state = globalThis[${JSON.stringify(stateKey)}];
         const clipboard = navigator.clipboard;
         if (state && clipboard) {
@@ -3536,19 +3891,19 @@ async function copyGeminiDeepResearchContentsWithClient(
         } catch {}
         return true;
       })()`,
-      returnByValue: true,
-    }).catch(() => undefined);
-  }
+			returnByValue: true,
+		}).catch(() => undefined);
+	}
 }
 
 async function clickGeminiConversationFileChip(
-  client: ChromeClient,
-  fileName: string,
-  _targetOrdinal?: number,
+	client: ChromeClient,
+	fileName: string,
+	_targetOrdinal?: number,
 ): Promise<boolean> {
-  const normalizedName = normalizeWhitespace(fileName).toLowerCase();
-  const located = await client.Runtime.evaluate({
-    expression: `(() => {
+	const normalizedName = normalizeWhitespace(fileName).toLowerCase();
+	const located = await client.Runtime.evaluate({
+		expression: `(() => {
       const targetName = ${JSON.stringify(normalizedName)};
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => {
@@ -3611,27 +3966,42 @@ async function clickGeminiConversationFileChip(
       }
       return null;
     })()`,
-    returnByValue: true,
-  });
-  const point = located.result?.value as { x?: number; y?: number } | undefined;
-  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
-    return false;
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
-  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  return true;
+		returnByValue: true,
+	});
+	const point = located.result?.value as { x?: number; y?: number } | undefined;
+	if (typeof point?.x !== "number" || typeof point?.y !== "number") {
+		return false;
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: point.x,
+		y: point.y,
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	return true;
 }
 
-async function readGeminiConversationFilePreviewState(
-  Runtime: ChromeClient['Runtime'],
-): Promise<{
-  directUrl: string | null;
-  imageUrl: string | null;
-  textContent: string | null;
+async function readGeminiConversationFilePreviewState(Runtime: ChromeClient["Runtime"]): Promise<{
+	directUrl: string | null;
+	imageUrl: string | null;
+	textContent: string | null;
 } | null> {
-  const result = await Runtime.evaluate({
-    expression: `(() => {
+	const result = await Runtime.evaluate({
+		expression: `(() => {
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
@@ -3660,23 +4030,26 @@ async function readGeminiConversationFilePreviewState(
         textContent: textCandidates[0] || null,
       };
     })()`,
-    returnByValue: true,
-  });
-  const value = isRecord(result.result?.value) ? result.result.value : null;
-  if (!value) return null;
-  return {
-    directUrl: typeof value.directUrl === 'string' && value.directUrl.trim() ? value.directUrl.trim() : null,
-    imageUrl: typeof value.imageUrl === 'string' && value.imageUrl.trim() ? value.imageUrl.trim() : null,
-    textContent: typeof value.textContent === 'string' && value.textContent.trim() ? value.textContent : null,
-  };
+		returnByValue: true,
+	});
+	const value = isRecord(result.result?.value) ? result.result.value : null;
+	if (!value) return null;
+	return {
+		directUrl:
+			typeof value.directUrl === "string" && value.directUrl.trim() ? value.directUrl.trim() : null,
+		imageUrl:
+			typeof value.imageUrl === "string" && value.imageUrl.trim() ? value.imageUrl.trim() : null,
+		textContent:
+			typeof value.textContent === "string" && value.textContent.trim() ? value.textContent : null,
+	};
 }
 
 async function captureGeminiVisibleImageToFile(
-  client: Pick<ChromeClient, 'Runtime' | 'Page'>,
-  destPath: string,
+	client: Pick<ChromeClient, "Runtime" | "Page">,
+	destPath: string,
 ): Promise<boolean> {
-  const geometry = await client.Runtime.evaluate({
-    expression: `(() => {
+	const geometry = await client.Runtime.evaluate({
+		expression: `(() => {
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
@@ -3701,43 +4074,48 @@ async function captureGeminiVisibleImageToFile(
         height: rect.height,
       };
     })()`,
-    returnByValue: true,
-  });
-  const value = isRecord(geometry.result?.value) ? geometry.result.value : null;
-  const x = typeof value?.x === 'number' ? value.x : NaN;
-  const y = typeof value?.y === 'number' ? value.y : NaN;
-  const width = typeof value?.width === 'number' ? value.width : NaN;
-  const height = typeof value?.height === 'number' ? value.height : NaN;
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
-    return false;
-  }
-  if (width < 2 || height < 2) {
-    return false;
-  }
-  const screenshot = await client.Page.captureScreenshot({
-    format: 'png',
-    clip: {
-      x,
-      y,
-      width,
-      height,
-      scale: 1,
-    },
-  });
-  if (typeof screenshot.data !== 'string' || !screenshot.data) {
-    return false;
-  }
-  await fs.writeFile(destPath, Buffer.from(screenshot.data, 'base64'));
-  return true;
+		returnByValue: true,
+	});
+	const value = isRecord(geometry.result?.value) ? geometry.result.value : null;
+	const x = typeof value?.x === "number" ? value.x : NaN;
+	const y = typeof value?.y === "number" ? value.y : NaN;
+	const width = typeof value?.width === "number" ? value.width : NaN;
+	const height = typeof value?.height === "number" ? value.height : NaN;
+	if (
+		!Number.isFinite(x) ||
+		!Number.isFinite(y) ||
+		!Number.isFinite(width) ||
+		!Number.isFinite(height)
+	) {
+		return false;
+	}
+	if (width < 2 || height < 2) {
+		return false;
+	}
+	const screenshot = await client.Page.captureScreenshot({
+		format: "png",
+		clip: {
+			x,
+			y,
+			width,
+			height,
+			scale: 1,
+		},
+	});
+	if (typeof screenshot.data !== "string" || !screenshot.data) {
+		return false;
+	}
+	await fs.writeFile(destPath, Buffer.from(screenshot.data, "base64"));
+	return true;
 }
 
 async function readGeminiVisibleConversationUploadFiles(
-  Runtime: ChromeClient['Runtime'],
-  conversationId: string,
-  messages: ConversationMessage[],
+	Runtime: ChromeClient["Runtime"],
+	conversationId: string,
+	messages: ConversationMessage[],
 ): Promise<FileRef[]> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -3807,7 +4185,7 @@ async function readGeminiVisibleConversationUploadFiles(
         if (seenKeys.has(dedupeKey)) return null;
         seenKeys.add(dedupeKey);
         const file = {
-          id: ${JSON.stringify('gemini-conversation-file:')} + ${JSON.stringify(conversationId)} + ':' + ordinal + ':' + name,
+          id: ${JSON.stringify("gemini-conversation-file:")} + ${JSON.stringify(conversationId)} + ':' + ordinal + ':' + name,
           name,
           remoteUrl: remoteUrl || null,
           mimeType: remoteUrl ? 'image/*' : null,
@@ -3817,83 +4195,104 @@ async function readGeminiVisibleConversationUploadFiles(
         return file;
       }).filter(Boolean);
     })()`,
-    returnByValue: true,
-  });
-  const rows = Array.isArray(result?.value) ? result.value : [];
-  let messageIndex: number | undefined;
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === 'user') {
-      messageIndex = index;
-      break;
-    }
-  }
-  return rows
-    .filter((entry): entry is { id: string; name: string; remoteUrl: string | null; mimeType: string | null; kind: string | null } => isRecord(entry))
-    .map((entry) => ({
-      id: typeof entry.id === 'string' ? entry.id : '',
-      name: typeof entry.name === 'string' ? entry.name : '',
-      provider: 'gemini' as const,
-      source: 'conversation' as const,
-      mimeType: typeof entry.mimeType === 'string' ? entry.mimeType : undefined,
-      remoteUrl: typeof entry.remoteUrl === 'string' ? entry.remoteUrl : undefined,
-      metadata: {
-        messageIndex,
-        kind: typeof entry.kind === 'string' ? entry.kind : 'uploaded-file',
-        hasDirectUrl: typeof entry.remoteUrl === 'string' && entry.remoteUrl.length > 0,
-      },
-    }))
-    .filter((entry) => entry.id && entry.name);
+		returnByValue: true,
+	});
+	const rows = Array.isArray(result?.value) ? result.value : [];
+	let messageIndex: number | undefined;
+	for (let index = messages.length - 1; index >= 0; index -= 1) {
+		if (messages[index]?.role === "user") {
+			messageIndex = index;
+			break;
+		}
+	}
+	return rows
+		.filter(
+			(
+				entry,
+			): entry is {
+				id: string;
+				name: string;
+				remoteUrl: string | null;
+				mimeType: string | null;
+				kind: string | null;
+			} => isRecord(entry),
+		)
+		.map((entry) => ({
+			id: typeof entry.id === "string" ? entry.id : "",
+			name: typeof entry.name === "string" ? entry.name : "",
+			provider: "gemini" as const,
+			source: "conversation" as const,
+			mimeType: typeof entry.mimeType === "string" ? entry.mimeType : undefined,
+			remoteUrl: typeof entry.remoteUrl === "string" ? entry.remoteUrl : undefined,
+			metadata: {
+				messageIndex,
+				kind: typeof entry.kind === "string" ? entry.kind : "uploaded-file",
+				hasDirectUrl: typeof entry.remoteUrl === "string" && entry.remoteUrl.length > 0,
+			},
+		}))
+		.filter((entry) => entry.id && entry.name);
 }
 
 async function downloadGeminiConversationFileWithClient(
-  client: ChromeClient,
-  conversationId: string,
-  fileId: string,
-  destPath: string,
-  options: { allowNavigation?: boolean } = {},
+	client: ChromeClient,
+	conversationId: string,
+	fileId: string,
+	destPath: string,
+	options: { allowNavigation?: boolean } = {},
 ): Promise<void> {
-  const refreshed = await readGeminiConversationContextWithClient(client, conversationId, {
-    allowNavigation: options.allowNavigation,
-  });
-  const file = (Array.isArray(refreshed.files) ? refreshed.files : []).find((candidate) => candidate.id === fileId);
-  if (!file) {
-    throw new Error(`Gemini conversation file ${fileId} was not found on ${conversationId}.`);
-  }
-  const directUrl = normalizeWhitespace(file.remoteUrl ?? '');
-  if (directUrl) {
-    try {
-      const { buffer } = await fetchGeminiBinaryWithClient(client, directUrl);
-      await fs.writeFile(destPath, buffer);
-      return;
-    } catch (error) {
-      const isUploadedImage = file.metadata && typeof file.metadata === 'object' && file.metadata.kind === 'uploaded-image';
-      if (!isUploadedImage) {
-        throw error;
-      }
-    }
-  }
-  let targetOrdinal: number | undefined;
-  const ordinalMatch = file.id.match(new RegExp(`^gemini-conversation-file:${conversationId}:(\\d+):`));
-  if (ordinalMatch) {
-    const parsed = Number.parseInt(ordinalMatch[1] ?? '', 10);
-    if (Number.isFinite(parsed)) {
-      targetOrdinal = parsed;
-    }
-  }
-  const clicked = await clickGeminiConversationFileChip(client, file.name, targetOrdinal);
-  if (!clicked) {
-    if (file.metadata && typeof file.metadata === 'object' && file.metadata.kind === 'uploaded-image') {
-      const captured = await captureGeminiVisibleImageToFile(client, destPath);
-      if (captured) {
-        return;
-      }
-    }
-    throw new Error(`Gemini conversation file preview did not open for ${file.name}.`);
-  }
-  try {
-    const preview = await waitForPredicate(
-      client.Runtime,
-      `(() => {
+	const refreshed = await readGeminiConversationContextWithClient(client, conversationId, {
+		allowNavigation: options.allowNavigation,
+	});
+	const file = (Array.isArray(refreshed.files) ? refreshed.files : []).find(
+		(candidate) => candidate.id === fileId,
+	);
+	if (!file) {
+		throw new Error(`Gemini conversation file ${fileId} was not found on ${conversationId}.`);
+	}
+	const directUrl = normalizeWhitespace(file.remoteUrl ?? "");
+	if (directUrl) {
+		try {
+			const { buffer } = await fetchGeminiBinaryWithClient(client, directUrl);
+			await fs.writeFile(destPath, buffer);
+			return;
+		} catch (error) {
+			const isUploadedImage =
+				file.metadata &&
+				typeof file.metadata === "object" &&
+				file.metadata.kind === "uploaded-image";
+			if (!isUploadedImage) {
+				throw error;
+			}
+		}
+	}
+	let targetOrdinal: number | undefined;
+	const ordinalMatch = file.id.match(
+		new RegExp(`^gemini-conversation-file:${conversationId}:(\\d+):`),
+	);
+	if (ordinalMatch) {
+		const parsed = Number.parseInt(ordinalMatch[1] ?? "", 10);
+		if (Number.isFinite(parsed)) {
+			targetOrdinal = parsed;
+		}
+	}
+	const clicked = await clickGeminiConversationFileChip(client, file.name, targetOrdinal);
+	if (!clicked) {
+		if (
+			file.metadata &&
+			typeof file.metadata === "object" &&
+			file.metadata.kind === "uploaded-image"
+		) {
+			const captured = await captureGeminiVisibleImageToFile(client, destPath);
+			if (captured) {
+				return;
+			}
+		}
+		throw new Error(`Gemini conversation file preview did not open for ${file.name}.`);
+	}
+	try {
+		const preview = await waitForPredicate(
+			client.Runtime,
+			`(() => {
         const visible = (node) => {
           if (!(node instanceof Element)) return false;
           const rect = node.getBoundingClientRect();
@@ -3906,344 +4305,446 @@ async function downloadGeminiConversationFileWithClient(
         }
         return { ready: true };
       })()`,
-      { timeoutMs: 5_000 },
-    );
-    if (!preview) {
-      throw new Error(`Gemini conversation file preview did not hydrate for ${file.name}.`);
-    }
-    const previewState = await readGeminiConversationFilePreviewState(client.Runtime);
-    if (previewState?.directUrl) {
-      const { buffer } = await fetchGeminiBinaryWithClient(client, previewState.directUrl);
-      await fs.writeFile(destPath, buffer);
-      return;
-    }
-    if (previewState?.imageUrl) {
-      try {
-        const { buffer } = await fetchGeminiBinaryWithClient(client, previewState.imageUrl);
-        await fs.writeFile(destPath, buffer);
-        return;
-      } catch {
-        const captured = await captureGeminiVisibleImageToFile(client, destPath);
-        if (captured) {
-          return;
-        }
-      }
-    }
-    if (file.metadata && typeof file.metadata === 'object' && file.metadata.kind === 'uploaded-image') {
-      const captured = await captureGeminiVisibleImageToFile(client, destPath);
-      if (captured) {
-        return;
-      }
-    }
-    if (previewState?.textContent && isGeminiTextLikeFileName(file.name)) {
-      const text = previewState.textContent.endsWith('\n') ? previewState.textContent : `${previewState.textContent}\n`;
-      await fs.writeFile(destPath, text, 'utf8');
-      return;
-    }
-    throw new Error(`Gemini conversation file ${file.name} did not expose a downloadable or text-preview surface.`);
-  } finally {
-    await pressEscape(client).catch(() => undefined);
-  }
+			{ timeoutMs: 5_000 },
+		);
+		if (!preview) {
+			throw new Error(`Gemini conversation file preview did not hydrate for ${file.name}.`);
+		}
+		const previewState = await readGeminiConversationFilePreviewState(client.Runtime);
+		if (previewState?.directUrl) {
+			const { buffer } = await fetchGeminiBinaryWithClient(client, previewState.directUrl);
+			await fs.writeFile(destPath, buffer);
+			return;
+		}
+		if (previewState?.imageUrl) {
+			try {
+				const { buffer } = await fetchGeminiBinaryWithClient(client, previewState.imageUrl);
+				await fs.writeFile(destPath, buffer);
+				return;
+			} catch {
+				const captured = await captureGeminiVisibleImageToFile(client, destPath);
+				if (captured) {
+					return;
+				}
+			}
+		}
+		if (
+			file.metadata &&
+			typeof file.metadata === "object" &&
+			file.metadata.kind === "uploaded-image"
+		) {
+			const captured = await captureGeminiVisibleImageToFile(client, destPath);
+			if (captured) {
+				return;
+			}
+		}
+		if (previewState?.textContent && isGeminiTextLikeFileName(file.name)) {
+			const text = previewState.textContent.endsWith("\n")
+				? previewState.textContent
+				: `${previewState.textContent}\n`;
+			await fs.writeFile(destPath, text, "utf8");
+			return;
+		}
+		throw new Error(
+			`Gemini conversation file ${file.name} did not expose a downloadable or text-preview surface.`,
+		);
+	} finally {
+		await pressEscape(client).catch(() => undefined);
+	}
 }
 
 async function materializeGeminiConversationArtifactWithClient(
-  client: ChromeClient,
-  conversationId: string,
-  artifact: ConversationArtifact,
-  destDir: string,
-  options: { allowNavigation?: boolean; downloadVariantLabel?: string | null } = {},
+	client: ChromeClient,
+	conversationId: string,
+	artifact: ConversationArtifact,
+	destDir: string,
+	options: { allowNavigation?: boolean; downloadVariantLabel?: string | null } = {},
 ): Promise<FileRef | null> {
-  const refreshed = await readGeminiConversationContextWithClient(client, conversationId, {
-    allowNavigation: options.allowNavigation,
-  });
-  const resolvedArtifact = normalizeGeminiConversationArtifacts(refreshed.artifacts).find((candidate) => candidate.id === artifact.id) ?? artifact;
+	const directFile = await materializeGeminiArtifactDirectRemoteUrlWithClient(
+		client,
+		artifact,
+		destDir,
+	);
+	if (directFile) return directFile;
+	const refreshed = await readGeminiConversationContextWithClient(client, conversationId, {
+		allowNavigation: options.allowNavigation,
+	});
+	const resolvedArtifact =
+		normalizeGeminiConversationArtifacts(refreshed.artifacts).find(
+			(candidate) => candidate.id === artifact.id,
+		) ?? artifact;
 
-  if (resolvedArtifact.kind === 'document') {
-    try {
-      const copied = await copyGeminiDeepResearchContentsWithClient(client);
-      const contentText =
-        (copied?.text?.trim()) ||
-        (resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === 'string'
-          ? resolvedArtifact.metadata.contentText.trim()
-          : '');
-      if (!contentText) return null;
-      const fileName = ensureGeminiArtifactExtension(
-        copied?.documentTitle || resolvedArtifact.title,
-        '.txt',
-      );
-      const destPath = path.join(destDir, fileName);
-      await fs.writeFile(destPath, contentText.endsWith('\n') ? contentText : `${contentText}\n`, 'utf8');
-      const stat = await fs.stat(destPath);
-      return {
-        id: resolvedArtifact.id,
-        name: fileName,
-        provider: 'gemini',
-        source: 'conversation',
-        size: stat.size,
-        mimeType: 'text/plain',
-        remoteUrl: resolvedArtifact.uri,
-        localPath: destPath,
-        metadata: {
-          artifactKind: resolvedArtifact.kind,
-          artifactTitle: resolvedArtifact.title,
-          materialization: copied?.text ? 'deep-research-copy-contents' : 'document-content-text',
-          ...(resolvedArtifact.metadata ?? {}),
-          ...(copied?.documentTitle ? { documentTitle: copied.documentTitle } : {}),
-          ...(copied?.taskTitle ? { taskTitle: copied.taskTitle } : {}),
-        },
-      };
-    } finally {
-      await pressEscape(client).catch(() => undefined);
-    }
-  }
+	if (resolvedArtifact.kind === "document") {
+		try {
+			const copied = await copyGeminiDeepResearchContentsWithClient(client);
+			const contentText =
+				copied?.text?.trim() ||
+				(resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === "string"
+					? resolvedArtifact.metadata.contentText.trim()
+					: "");
+			if (!contentText) return null;
+			const fileName = ensureGeminiArtifactExtension(
+				copied?.documentTitle || resolvedArtifact.title,
+				".txt",
+			);
+			const destPath = path.join(destDir, fileName);
+			await fs.writeFile(
+				destPath,
+				contentText.endsWith("\n") ? contentText : `${contentText}\n`,
+				"utf8",
+			);
+			const stat = await fs.stat(destPath);
+			return {
+				id: resolvedArtifact.id,
+				name: fileName,
+				provider: "gemini",
+				source: "conversation",
+				size: stat.size,
+				mimeType: "text/plain",
+				remoteUrl: resolvedArtifact.uri,
+				localPath: destPath,
+				metadata: {
+					artifactKind: resolvedArtifact.kind,
+					artifactTitle: resolvedArtifact.title,
+					materialization: copied?.text ? "deep-research-copy-contents" : "document-content-text",
+					...(resolvedArtifact.metadata ?? {}),
+					...(copied?.documentTitle ? { documentTitle: copied.documentTitle } : {}),
+					...(copied?.taskTitle ? { taskTitle: copied.taskTitle } : {}),
+				},
+			};
+		} finally {
+			await pressEscape(client).catch(() => undefined);
+		}
+	}
 
-  if (resolvedArtifact.kind === 'canvas') {
-    const contentText =
-      resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === 'string'
-        ? resolvedArtifact.metadata.contentText.trim()
-        : '';
-    if (!contentText) return null;
-    const fileName = ensureGeminiArtifactExtension(resolvedArtifact.title, '.txt');
-    const destPath = path.join(destDir, fileName);
-    await fs.writeFile(destPath, contentText.endsWith('\n') ? contentText : `${contentText}\n`, 'utf8');
-    const stat = await fs.stat(destPath);
-    return {
-      id: resolvedArtifact.id,
-      name: fileName,
-      provider: 'gemini',
-      source: 'conversation',
-      size: stat.size,
-      mimeType: 'text/plain',
-      remoteUrl: resolvedArtifact.uri,
-      localPath: destPath,
-      metadata: {
-        artifactKind: resolvedArtifact.kind,
-        artifactTitle: resolvedArtifact.title,
-        materialization: 'canvas-content-text',
-        ...(resolvedArtifact.metadata ?? {}),
-      },
-    };
-  }
+	if (resolvedArtifact.kind === "canvas") {
+		const contentText =
+			resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === "string"
+				? resolvedArtifact.metadata.contentText.trim()
+				: "";
+		if (!contentText) return null;
+		const fileName = ensureGeminiArtifactExtension(resolvedArtifact.title, ".txt");
+		const destPath = path.join(destDir, fileName);
+		await fs.writeFile(
+			destPath,
+			contentText.endsWith("\n") ? contentText : `${contentText}\n`,
+			"utf8",
+		);
+		const stat = await fs.stat(destPath);
+		return {
+			id: resolvedArtifact.id,
+			name: fileName,
+			provider: "gemini",
+			source: "conversation",
+			size: stat.size,
+			mimeType: "text/plain",
+			remoteUrl: resolvedArtifact.uri,
+			localPath: destPath,
+			metadata: {
+				artifactKind: resolvedArtifact.kind,
+				artifactTitle: resolvedArtifact.title,
+				materialization: "canvas-content-text",
+				...(resolvedArtifact.metadata ?? {}),
+			},
+		};
+	}
 
-  if (resolvedArtifact.kind === 'generated' || resolvedArtifact.kind === 'image') {
-    const remoteUrl = typeof resolvedArtifact.uri === 'string' ? resolvedArtifact.uri.trim() : '';
-    if (!remoteUrl) return null;
-    const downloadVariantLabel = normalizeWhitespace(options.downloadVariantLabel ?? '');
-    if (
-      resolvedArtifact.kind === 'generated' &&
-      resolvedArtifact.metadata?.mediaType === 'music' &&
-      downloadVariantLabel
-    ) {
-      const variantFile = await materializeGeminiGeneratedMediaDownloadVariantWithClient(
-        client,
-        resolvedArtifact,
-        destDir,
-        downloadVariantLabel,
-      );
-      if (variantFile) {
-        return variantFile;
-      }
-      return null;
-    }
-    if (resolvedArtifact.kind === 'image' && resolvedArtifact.metadata && resolvedArtifact.metadata.hasDownloadButton) {
-      await fs.mkdir(destDir, { recursive: true });
-      await configureGeminiDownloadBehaviorWithClient(client, destDir);
-      const tagged = await client.Runtime.evaluate({
-        expression: geminiGeneratedImageDownloadButtonTagExpression(resolvedArtifact),
-        returnByValue: true,
-      });
-      const taggedValue = isRecord(tagged.result?.value) ? tagged.result.value : null;
-      if (taggedValue?.ok === true) {
-        await armDownloadCapture(client.Runtime, { stateKey: GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY });
-        const clickResult = await client.Runtime.evaluate({
-          expression: `(() => {
+	if (resolvedArtifact.kind === "generated" || resolvedArtifact.kind === "image") {
+		const remoteUrl = typeof resolvedArtifact.uri === "string" ? resolvedArtifact.uri.trim() : "";
+		if (!remoteUrl) return null;
+		const downloadVariantLabel = normalizeWhitespace(options.downloadVariantLabel ?? "");
+		if (
+			resolvedArtifact.kind === "generated" &&
+			resolvedArtifact.metadata?.mediaType === "music" &&
+			downloadVariantLabel
+		) {
+			const variantFile = await materializeGeminiGeneratedMediaDownloadVariantWithClient(
+				client,
+				resolvedArtifact,
+				destDir,
+				downloadVariantLabel,
+			);
+			if (variantFile) {
+				return variantFile;
+			}
+			return null;
+		}
+		if (
+			resolvedArtifact.kind === "image" &&
+			resolvedArtifact.metadata &&
+			resolvedArtifact.metadata.hasDownloadButton
+		) {
+			await fs.mkdir(destDir, { recursive: true });
+			await configureGeminiDownloadBehaviorWithClient(client, destDir);
+			const tagged = await client.Runtime.evaluate({
+				expression: geminiGeneratedImageDownloadButtonTagExpression(resolvedArtifact),
+				returnByValue: true,
+			});
+			const taggedValue = isRecord(tagged.result?.value) ? tagged.result.value : null;
+			if (taggedValue?.ok === true) {
+				await armDownloadCapture(client.Runtime, {
+					stateKey: GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY,
+				});
+				const clickResult = await client.Runtime.evaluate({
+					expression: `(() => {
             const button = document.querySelector(${JSON.stringify(
-              `button[${GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR}="true"]`,
-            )});
+							`button[${GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR}="true"]`,
+						)});
             if (!(button instanceof HTMLElement)) {
               return { ok: false, reason: 'Gemini generated image download button missing before click' };
             }
             button.click();
             return { ok: true };
           })()`,
-          returnByValue: true,
-        });
-        const clicked = isRecord(clickResult.result?.value) ? clickResult.result.value : null;
-        if (clicked?.ok === true) {
-          const capture = await waitForDownloadCapture(client.Runtime, {
-            stateKey: GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY,
-            timeoutMs: 1_500,
-            pollMs: 100,
-          });
-          const capturedHref = normalizeWhitespace(capture.href ?? '');
-          const capturedName = normalizeWhitespace(capture.downloadName ?? '');
-          if (capturedHref) {
-            try {
-              const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(client, capturedHref);
-              const fallbackBaseName =
-                extractFilenameFromContentDisposition(contentDisposition) ||
-                extractGeminiArtifactFileName(capturedHref) ||
-                capturedName ||
-                resolvedArtifact.title;
-              const fileName = ensureGeminiArtifactExtension(
-                fallbackBaseName,
-                geminiContentTypeToExtension(contentType) || '.png',
-              );
-              const destPath = path.join(destDir, fileName);
-              await fs.writeFile(destPath, buffer);
-              return {
-                id: resolvedArtifact.id,
-                name: fileName,
-                provider: 'gemini',
-                source: 'conversation',
-                size: buffer.byteLength,
-                mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
-                remoteUrl: capturedHref,
-                localPath: destPath,
-                metadata: {
-                  artifactKind: resolvedArtifact.kind,
-                  artifactTitle: resolvedArtifact.title,
-                  materialization: 'download-button-anchor-fetch',
-                  ...(resolvedArtifact.metadata ?? {}),
-                },
-              };
-            } catch {
-              // Fall through to filesystem download polling and existing fetch/screenshot fallbacks.
-            }
-          }
-          const downloadedPath = await waitForGeminiDownloadedFile(destDir, 10_000);
-          if (downloadedPath) {
-            const stat = await fs.stat(downloadedPath);
-            const fileName = path.basename(downloadedPath);
-            return {
-              id: resolvedArtifact.id,
-              name: fileName,
-              provider: 'gemini',
-              source: 'conversation',
-              size: stat.size,
-              mimeType: inferGeminiArtifactMimeType(fileName),
-              remoteUrl,
-              localPath: downloadedPath,
-              metadata: {
-                artifactKind: resolvedArtifact.kind,
-                artifactTitle: resolvedArtifact.title,
-                materialization: 'download-button',
-                ...(resolvedArtifact.metadata ?? {}),
-              },
-            };
-          }
-        }
-      }
-    }
-    let fetched: Awaited<ReturnType<typeof fetchGeminiBinaryWithClient>> | null = null;
-    try {
-      fetched = await fetchGeminiBinaryWithClient(client, remoteUrl);
-    } catch (error) {
-      if (resolvedArtifact.kind !== 'image') {
-        throw error;
-      }
-    }
-    if (!fetched && resolvedArtifact.kind === 'image') {
-      const fileName = ensureGeminiArtifactExtension(resolvedArtifact.title, '.png');
-      const destPath = path.join(destDir, fileName);
-      const captured = await captureGeminiVisibleImageToFile(client, destPath);
-      if (captured) {
-        const stat = await fs.stat(destPath);
-        return {
-          id: resolvedArtifact.id,
-          name: fileName,
-          provider: 'gemini',
-          source: 'conversation',
-          size: stat.size,
-          mimeType: 'image/png',
-          remoteUrl,
-          localPath: destPath,
-          metadata: {
-            artifactKind: resolvedArtifact.kind,
-            artifactTitle: resolvedArtifact.title,
-            materialization: 'visible-image-screenshot',
-            ...(resolvedArtifact.metadata ?? {}),
-          },
-        };
-      }
-    }
-    if (!fetched) {
-      return null;
-    }
-    const { buffer, contentType, contentDisposition } = fetched;
-    const fallbackBaseName =
-      extractFilenameFromContentDisposition(contentDisposition) ||
-      extractGeminiArtifactFileName(remoteUrl) ||
-      resolvedArtifact.title;
-    const fileName = ensureGeminiArtifactExtension(
-      fallbackBaseName,
-      geminiContentTypeToExtension(contentType) || (resolvedArtifact.kind === 'image' ? '.png' : '.mp4'),
-    );
-    const destPath = path.join(destDir, fileName);
-    await fs.writeFile(destPath, buffer);
-    return {
-      id: resolvedArtifact.id,
-      name: fileName,
-      provider: 'gemini',
-      source: 'conversation',
-      size: buffer.byteLength,
-      mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
-      remoteUrl,
-      localPath: destPath,
-      metadata: {
-        artifactKind: resolvedArtifact.kind,
-        artifactTitle: resolvedArtifact.title,
-        materialization: resolvedArtifact.kind === 'image' ? 'blob-image-fetch' : 'generated-media-fetch',
-        ...(resolvedArtifact.metadata ?? {}),
-      },
-    };
-  }
+					returnByValue: true,
+				});
+				const clicked = isRecord(clickResult.result?.value) ? clickResult.result.value : null;
+				if (clicked?.ok === true) {
+					const capture = await waitForDownloadCapture(client.Runtime, {
+						stateKey: GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY,
+						timeoutMs: 1_500,
+						pollMs: 100,
+					});
+					const capturedHref = normalizeWhitespace(capture.href ?? "");
+					const capturedName = normalizeWhitespace(capture.downloadName ?? "");
+					if (capturedHref) {
+						try {
+							const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(
+								client,
+								capturedHref,
+							);
+							const fallbackBaseName =
+								extractFilenameFromContentDisposition(contentDisposition) ||
+								extractGeminiArtifactFileName(capturedHref) ||
+								capturedName ||
+								resolvedArtifact.title;
+							const fileName = ensureGeminiArtifactExtension(
+								fallbackBaseName,
+								geminiContentTypeToExtension(contentType) || ".png",
+							);
+							const destPath = path.join(destDir, fileName);
+							await fs.writeFile(destPath, buffer);
+							return {
+								id: resolvedArtifact.id,
+								name: fileName,
+								provider: "gemini",
+								source: "conversation",
+								size: buffer.byteLength,
+								mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
+								remoteUrl: capturedHref,
+								localPath: destPath,
+								metadata: {
+									artifactKind: resolvedArtifact.kind,
+									artifactTitle: resolvedArtifact.title,
+									materialization: "download-button-anchor-fetch",
+									...(resolvedArtifact.metadata ?? {}),
+								},
+							};
+						} catch {
+							// Fall through to filesystem download polling and existing fetch/screenshot fallbacks.
+						}
+					}
+					const downloadedPath = await waitForGeminiDownloadedFile(destDir, 10_000);
+					if (downloadedPath) {
+						const stat = await fs.stat(downloadedPath);
+						const fileName = path.basename(downloadedPath);
+						return {
+							id: resolvedArtifact.id,
+							name: fileName,
+							provider: "gemini",
+							source: "conversation",
+							size: stat.size,
+							mimeType: inferGeminiArtifactMimeType(fileName),
+							remoteUrl,
+							localPath: downloadedPath,
+							metadata: {
+								artifactKind: resolvedArtifact.kind,
+								artifactTitle: resolvedArtifact.title,
+								materialization: "download-button",
+								...(resolvedArtifact.metadata ?? {}),
+							},
+						};
+					}
+				}
+			}
+		}
+		let fetched: Awaited<ReturnType<typeof fetchGeminiBinaryWithClient>> | null = null;
+		try {
+			fetched = await fetchGeminiBinaryWithClient(client, remoteUrl);
+		} catch (error) {
+			if (resolvedArtifact.kind !== "image") {
+				throw error;
+			}
+		}
+		if (!fetched && resolvedArtifact.kind === "image") {
+			const fileName = ensureGeminiArtifactExtension(resolvedArtifact.title, ".png");
+			const destPath = path.join(destDir, fileName);
+			const captured = await captureGeminiVisibleImageToFile(client, destPath);
+			if (captured) {
+				const stat = await fs.stat(destPath);
+				return {
+					id: resolvedArtifact.id,
+					name: fileName,
+					provider: "gemini",
+					source: "conversation",
+					size: stat.size,
+					mimeType: "image/png",
+					remoteUrl,
+					localPath: destPath,
+					metadata: {
+						artifactKind: resolvedArtifact.kind,
+						artifactTitle: resolvedArtifact.title,
+						materialization: "visible-image-screenshot",
+						...(resolvedArtifact.metadata ?? {}),
+					},
+				};
+			}
+		}
+		if (!fetched) {
+			return null;
+		}
+		const { buffer, contentType, contentDisposition } = fetched;
+		const fallbackBaseName =
+			extractFilenameFromContentDisposition(contentDisposition) ||
+			extractGeminiArtifactFileName(remoteUrl) ||
+			resolvedArtifact.title;
+		const fileName = ensureGeminiArtifactExtension(
+			fallbackBaseName,
+			geminiContentTypeToExtension(contentType) ||
+				(resolvedArtifact.kind === "image" ? ".png" : ".mp4"),
+		);
+		const destPath = path.join(destDir, fileName);
+		await fs.writeFile(destPath, buffer);
+		return {
+			id: resolvedArtifact.id,
+			name: fileName,
+			provider: "gemini",
+			source: "conversation",
+			size: buffer.byteLength,
+			mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
+			remoteUrl,
+			localPath: destPath,
+			metadata: {
+				artifactKind: resolvedArtifact.kind,
+				artifactTitle: resolvedArtifact.title,
+				materialization:
+					resolvedArtifact.kind === "image" ? "blob-image-fetch" : "generated-media-fetch",
+				...(resolvedArtifact.metadata ?? {}),
+			},
+		};
+	}
 
-  return null;
+	return null;
+}
+
+async function materializeGeminiArtifactDirectRemoteUrlWithClient(
+	client: ChromeClient,
+	artifact: ConversationArtifact,
+	destDir: string,
+): Promise<FileRef | null> {
+	if (artifact.kind !== "generated" && artifact.kind !== "image") return null;
+	const remoteUrl = normalizeGeminiDirectRemoteArtifactUrl(artifact);
+	if (!remoteUrl) return null;
+	try {
+		const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(
+			client,
+			remoteUrl,
+		);
+		const fallbackBaseName =
+			extractFilenameFromContentDisposition(contentDisposition) ||
+			extractGeminiArtifactFileName(remoteUrl) ||
+			artifact.title;
+		const fileName = ensureGeminiArtifactExtension(
+			fallbackBaseName,
+			geminiContentTypeToExtension(contentType) || (artifact.kind === "image" ? ".png" : ".mp4"),
+		);
+		const destPath = path.join(destDir, fileName);
+		await fs.writeFile(destPath, buffer);
+		return {
+			id: artifact.id,
+			name: fileName,
+			provider: "gemini",
+			source: "conversation",
+			size: buffer.byteLength,
+			mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
+			remoteUrl,
+			localPath: destPath,
+			metadata: {
+				artifactKind: artifact.kind,
+				artifactTitle: artifact.title,
+				materialization: "direct-remote-fetch",
+				...(artifact.metadata ?? {}),
+			},
+		};
+	} catch {
+		return null;
+	}
+}
+
+function normalizeGeminiDirectRemoteArtifactUrl(artifact: ConversationArtifact): string | null {
+	const remoteUrl = normalizeWhitespace(
+		artifact.uri ||
+			(artifact.metadata && typeof artifact.metadata.remoteUrl === "string"
+				? artifact.metadata.remoteUrl
+				: ""),
+	);
+	if (!remoteUrl || remoteUrl.startsWith("blob:") || remoteUrl.startsWith("data:")) return null;
+	try {
+		const parsed = new URL(remoteUrl);
+		if (parsed.protocol !== "https:") return null;
+		if (parsed.hostname === "contribution.usercontent.google.com") return remoteUrl;
+		return null;
+	} catch {
+		return null;
+	}
 }
 
 async function waitForGeminiPromptResponse(
-  Runtime: ChromeClient['Runtime'],
-  baseline: { href: string; conversationId: string | null; assistantTexts: string[] },
-  prompt: string,
-  timeoutMs: number,
+	Runtime: ChromeClient["Runtime"],
+	baseline: { href: string; conversationId: string | null; assistantTexts: string[] },
+	prompt: string,
+	timeoutMs: number,
 ): Promise<BrowserProviderPromptResult> {
-  const deadline = Date.now() + timeoutMs;
-  let stableText: string | null = null;
-  let stableCount = 0;
-  while (Date.now() < deadline) {
-    const state = await readGeminiPromptState(Runtime);
-    const nextText = selectNewestGeminiAssistantText(baseline.assistantTexts, state.assistantTexts, prompt);
-    if (nextText) {
-      if (nextText === stableText) {
-        stableCount += 1;
-      } else {
-        stableText = nextText;
-        stableCount = 1;
-      }
-      if (!state.isGenerating && stableCount >= 2) {
-        return {
-          text: nextText,
-          conversationId: state.conversationId ?? baseline.conversationId,
-          url: state.href || baseline.href,
-        };
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1_250));
-  }
-  throw new Error('Timed out waiting for Gemini assistant response.');
+	const deadline = Date.now() + timeoutMs;
+	let stableText: string | null = null;
+	let stableCount = 0;
+	while (Date.now() < deadline) {
+		const state = await readGeminiPromptState(Runtime);
+		const nextText = selectNewestGeminiAssistantText(
+			baseline.assistantTexts,
+			state.assistantTexts,
+			prompt,
+		);
+		if (nextText) {
+			if (nextText === stableText) {
+				stableCount += 1;
+			} else {
+				stableText = nextText;
+				stableCount = 1;
+			}
+			if (!state.isGenerating && stableCount >= 2) {
+				return {
+					text: nextText,
+					conversationId: state.conversationId ?? baseline.conversationId,
+					url: state.href || baseline.href,
+				};
+			}
+		}
+		await new Promise((resolve) => setTimeout(resolve, 1_250));
+	}
+	throw new Error("Timed out waiting for Gemini assistant response.");
 }
 
 async function readGeminiConversationContextWithClient(
-  client: Pick<ChromeClient, 'Runtime' | 'Page'>,
-  conversationId: string,
-  options: { allowNavigation?: boolean } = {},
+	client: Pick<ChromeClient, "Runtime" | "Page">,
+	conversationId: string,
+	options: { allowNavigation?: boolean } = {},
 ): Promise<GeminiConversationContextProbe> {
-  if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
-    if (options.allowNavigation === false) {
-      const ready = await waitForPredicate(
-        client.Runtime,
-        `(() => {
+	if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
+		if (options.allowNavigation === false) {
+			const ready = await waitForPredicate(
+				client.Runtime,
+				`(() => {
           const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
           if (location.pathname !== ${JSON.stringify(`/app/${conversationId}`)}) return null;
           const hasUser = Array.from(document.querySelectorAll('user-query, user-query-content'))
@@ -4256,28 +4757,34 @@ async function readGeminiConversationContextWithClient(
           )).some((node) => visible(node));
           return hasUser || hasAssistant || hasCanvas ? { ready: true } : null;
         })()`,
-        {
-          timeoutMs: 10_000,
-          description: `Gemini active conversation content ready for ${conversationId}`,
-        },
-      );
-      if (!ready.ok) {
-        const activeState = await readGeminiActiveTabState(client.Runtime);
-        throw new Error(
-          `Gemini conversation content not found on the active tab for ${conversationId}. ` +
-            `activeState=${JSON.stringify(activeState)}`,
-        );
-      }
-    } else {
-      const openedFromRail = await openGeminiConversationFromRail(client, conversationId);
-      if (!openedFromRail) {
-        await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
-      }
-    }
-  }
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+				{
+					timeoutMs: 10_000,
+					description: `Gemini active conversation content ready for ${conversationId}`,
+				},
+			);
+			if (!ready.ok) {
+				const activeState = await readGeminiActiveTabState(client.Runtime);
+				throw new Error(
+					`Gemini conversation content not found on the active tab for ${conversationId}. ` +
+						`activeState=${JSON.stringify(activeState)}`,
+				);
+			}
+		} else {
+			const openedFromRail = await openGeminiConversationFromRail(client, conversationId);
+			if (!openedFromRail) {
+				await navigateToGeminiConversationSurface(
+					client,
+					resolveGeminiConversationUrl(conversationId),
+					{
+						mutationAction: "direct-conversation-fallback",
+					},
+				);
+			}
+		}
+	}
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const hasUser = Array.from(document.querySelectorAll('user-query, user-query-content'))
         .some((node) => visible(node));
@@ -4292,18 +4799,20 @@ async function readGeminiConversationContextWithClient(
       )).some((node) => visible(node));
       return hasUser || hasAssistantText || hasAssistantMedia || hasCanvasSignals ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs: 10_000,
-      description: `Gemini conversation content ready for ${conversationId}`,
-    },
-  );
-  if (!ready.ok) {
-    const activeState = await readGeminiActiveTabState(client.Runtime);
-    throw new Error(`Gemini conversation content not found for ${conversationId}. activeState=${JSON.stringify(activeState)}`);
-  }
-  await waitForPredicate(
-    client.Runtime,
-    `(() => {
+		{
+			timeoutMs: 10_000,
+			description: `Gemini conversation content ready for ${conversationId}`,
+		},
+	);
+	if (!ready.ok) {
+		const activeState = await readGeminiActiveTabState(client.Runtime);
+		throw new Error(
+			`Gemini conversation content not found for ${conversationId}. activeState=${JSON.stringify(activeState)}`,
+		);
+	}
+	await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const hasAssistantText = Array.from(document.querySelectorAll(
         'structured-content-container.model-response-text message-content, structured-content-container.model-response-text .markdown, message-content'
@@ -4316,14 +4825,14 @@ async function readGeminiConversationContextWithClient(
       )).some((node) => visible(node));
       return hasAssistantText || hasAssistantMedia || hasCanvasEditor ? { settled: true } : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: `Gemini conversation response settled for ${conversationId}`,
-    },
-  ).catch(() => undefined);
-  await waitForPredicate(
-    client.Runtime,
-    `(() => {
+		{
+			timeoutMs: 5_000,
+			description: `Gemini conversation response settled for ${conversationId}`,
+		},
+	).catch(() => undefined);
+	await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const hasCanvasChip = Array.from(document.querySelectorAll('[data-test-id="container"], [data-test-id="artifact-text"]'))
         .some((node) => visible(node));
@@ -4333,13 +4842,13 @@ async function readGeminiConversationContextWithClient(
       )).some((node) => visible(node));
       return hasCanvasPanel ? { settled: true } : null;
     })()`,
-    {
-      timeoutMs: 8_000,
-      description: `Gemini canvas surface settled for ${conversationId}`,
-    },
-  ).catch(() => undefined);
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 8_000,
+			description: `Gemini canvas surface settled for ${conversationId}`,
+		},
+	).catch(() => undefined);
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -4543,7 +5052,7 @@ async function readGeminiConversationContextWithClient(
             if (seenArtifactIds.has(dedupeKey)) continue;
             seenArtifactIds.add(dedupeKey);
             const artifactId =
-              ${JSON.stringify('gemini-artifact:')} +
+              ${JSON.stringify("gemini-artifact:")} +
               ${JSON.stringify(conversationId)} +
               ':' + messageIndex +
               ':' + artifactOrdinal;
@@ -4585,7 +5094,7 @@ async function readGeminiConversationContextWithClient(
             const controls = collectMediaControls(container, node);
             const fileName = extractFileNameFromUri(src);
             const artifactId =
-              ${JSON.stringify('gemini-artifact:')} +
+              ${JSON.stringify("gemini-artifact:")} +
               ${JSON.stringify(conversationId)} +
               ':' + messageIndex +
               ':' + artifactOrdinal;
@@ -4702,7 +5211,7 @@ async function readGeminiConversationContextWithClient(
               name = 'uploaded-image-' + (fileOrdinal + 1);
             }
             if (!name) continue;
-            const fileId = ${JSON.stringify('gemini-conversation-file:')} + ${JSON.stringify(conversationId)} + ':' + fileOrdinal + ':' + name;
+            const fileId = ${JSON.stringify("gemini-conversation-file:")} + ${JSON.stringify(conversationId)} + ':' + fileOrdinal + ':' + name;
             const fileKey = imageSrc
               ? normalize(imageSrc)
               : (anchorHref ? normalize(anchorHref + '::' + name) : fileId);
@@ -4761,7 +5270,7 @@ async function readGeminiConversationContextWithClient(
           fallbackName = 'uploaded-image-' + (fallbackImageOrdinal + 1);
         }
         const fallbackFileId =
-          ${JSON.stringify('gemini-conversation-file:')} +
+          ${JSON.stringify("gemini-conversation-file:")} +
           ${JSON.stringify(conversationId)} +
           ':' + fallbackImageOrdinal +
           ':' + fallbackName;
@@ -4793,7 +5302,7 @@ async function readGeminiConversationContextWithClient(
       }
       const canvasSurface = readVisibleCanvasSurface();
       if (canvasSurface && canvasSurface.contentText) {
-        const artifactId = ${JSON.stringify('gemini-canvas:')} + ${JSON.stringify(conversationId)};
+        const artifactId = ${JSON.stringify("gemini-canvas:")} + ${JSON.stringify(conversationId)};
         if (!seenArtifactIds.has(artifactId)) {
           seenArtifactIds.add(artifactId);
           let lastAssistantMessageIndex;
@@ -4807,7 +5316,7 @@ async function readGeminiConversationContextWithClient(
             id: artifactId,
             title: canvasSurface.title || 'Canvas document',
             kind: 'canvas',
-            uri: ${JSON.stringify('gemini://canvas/')} + ${JSON.stringify(conversationId)},
+            uri: ${JSON.stringify("gemini://canvas/")} + ${JSON.stringify(conversationId)},
             messageIndex: lastAssistantMessageIndex,
             metadata: {
               contentText: canvasSurface.contentText,
@@ -4821,7 +5330,7 @@ async function readGeminiConversationContextWithClient(
       }
       const deepResearchSurface = readVisibleDeepResearchSurface();
       if (deepResearchSurface && deepResearchSurface.contentText) {
-        const artifactId = ${JSON.stringify('gemini-document:')} + ${JSON.stringify(conversationId)};
+        const artifactId = ${JSON.stringify("gemini-document:")} + ${JSON.stringify(conversationId)};
         if (!seenArtifactIds.has(artifactId)) {
           seenArtifactIds.add(artifactId);
           let lastAssistantMessageIndex;
@@ -4835,7 +5344,7 @@ async function readGeminiConversationContextWithClient(
             id: artifactId,
             title: deepResearchSurface.documentTitle || deepResearchSurface.taskTitle || 'Deep Research document',
             kind: 'document',
-            uri: ${JSON.stringify('gemini://document/')} + ${JSON.stringify(conversationId)},
+            uri: ${JSON.stringify("gemini://document/")} + ${JSON.stringify(conversationId)},
             messageIndex: lastAssistantMessageIndex,
             metadata: {
               documentTitle: deepResearchSurface.documentTitle || undefined,
@@ -4870,7 +5379,7 @@ async function readGeminiConversationContextWithClient(
             const height = image.naturalHeight || image.height || null;
             artifacts.push({
               id:
-                ${JSON.stringify('gemini-artifact:')} +
+                ${JSON.stringify("gemini-artifact:")} +
                 ${JSON.stringify(conversationId)} +
                 ':fallback:' + responseIndex + ':' + artifactOrdinal,
               title: 'Generated image ' + (artifactOrdinal + 1),
@@ -4907,7 +5416,7 @@ async function readGeminiConversationContextWithClient(
             const fileName = extractFileNameFromUri(src);
             artifacts.push({
               id:
-                ${JSON.stringify('gemini-artifact:')} +
+                ${JSON.stringify("gemini-artifact:")} +
                 ${JSON.stringify(conversationId)} +
                 ':fallback:' + responseIndex + ':' + artifactOrdinal,
               title: 'Generated media ' + (artifactOrdinal + 1),
@@ -4941,43 +5450,47 @@ async function readGeminiConversationContextWithClient(
         artifacts,
       });
     })()`,
-    returnByValue: true,
-  });
-  const rawPayload = typeof result?.value === 'string' ? result.value : null;
-  const payload = rawPayload ? (JSON.parse(rawPayload) as GeminiConversationContextProbe) : null;
-  if (!payload || !Array.isArray(payload.messages) || payload.messages.length === 0) {
-    throw new Error(`Gemini conversation messages not found for ${conversationId}.`);
-  }
-  const uploadedFiles = await readGeminiVisibleConversationUploadFiles(client.Runtime, conversationId, payload.messages);
-  if (uploadedFiles.length > 0) {
-    const existing = Array.isArray(payload.files) ? payload.files : [];
-    const merged = [...existing];
-    const seen = new Set(existing.map((entry) =>
-      normalizeWhitespace(entry.remoteUrl ?? '') || entry.id,
-    ));
-    for (const file of uploadedFiles) {
-      const key = normalizeWhitespace(file.remoteUrl ?? '') || file.id;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(file);
-    }
-    payload.files = merged;
-  }
-  payload.files = normalizeGeminiConversationFiles(payload.files);
-  payload.artifacts = normalizeGeminiConversationArtifacts(payload.artifacts);
-  return payload;
+		returnByValue: true,
+	});
+	const rawPayload = typeof result?.value === "string" ? result.value : null;
+	const payload = rawPayload ? (JSON.parse(rawPayload) as GeminiConversationContextProbe) : null;
+	if (!payload || !Array.isArray(payload.messages) || payload.messages.length === 0) {
+		throw new Error(`Gemini conversation messages not found for ${conversationId}.`);
+	}
+	const uploadedFiles = await readGeminiVisibleConversationUploadFiles(
+		client.Runtime,
+		conversationId,
+		payload.messages,
+	);
+	if (uploadedFiles.length > 0) {
+		const existing = Array.isArray(payload.files) ? payload.files : [];
+		const merged = [...existing];
+		const seen = new Set(
+			existing.map((entry) => normalizeWhitespace(entry.remoteUrl ?? "") || entry.id),
+		);
+		for (const file of uploadedFiles) {
+			const key = normalizeWhitespace(file.remoteUrl ?? "") || file.id;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			merged.push(file);
+		}
+		payload.files = merged;
+	}
+	payload.files = normalizeGeminiConversationFiles(payload.files);
+	payload.artifacts = normalizeGeminiConversationArtifacts(payload.artifacts);
+	return payload;
 }
 
 async function _openGeminiConversationMenu(
-  client: ChromeClient,
-  conversationId: string,
-  trace: GeminiDeleteTrace,
+	client: ChromeClient,
+	conversationId: string,
+	trace: GeminiDeleteTrace,
 ): Promise<void> {
-  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
-  await dismissGeminiPreciseLocationDialog(client.Runtime);
-  await ensureGeminiMainMenuOpen(client);
-  await client.Runtime.evaluate({
-    expression: `(() => {
+	await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+	await dismissGeminiPreciseLocationDialog(client.Runtime);
+	await ensureGeminiMainMenuOpen(client);
+	await client.Runtime.evaluate({
+		expression: `(() => {
       const list = document.querySelector('[data-test-id="all-conversations"]');
       if (list instanceof HTMLElement) {
         list.scrollTop = 0;
@@ -4985,39 +5498,39 @@ async function _openGeminiConversationMenu(
       }
       return { reset: false };
     })()`,
-    returnByValue: true,
-  });
-  const ready = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
-    timeoutMs: 10_000,
-    description: `Gemini conversation row menu ready for ${conversationId}`,
-  });
-  if (!ready.ok) {
-    throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
-  }
-  const rowInfo = (ready.value ?? {}) as { title?: string; x?: number; y?: number; left?: number };
-  const title = normalizeWhitespace(rowInfo.title ?? '');
-  const hoverX = Number.isFinite(rowInfo.x) ? Number(rowInfo.x) : 0;
-  const hoverY = Number.isFinite(rowInfo.y) ? Number(rowInfo.y) : 0;
-  const hoverLeft = Number.isFinite(rowInfo.left) ? Number(rowInfo.left) : 0;
-  if (!title || !Number.isFinite(hoverY)) {
-    throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
-  }
-  await client.Input.dispatchMouseEvent({
-    type: 'mouseMoved',
-    x: hoverLeft + 10,
-    y: hoverY,
-    button: 'none',
-  });
-  await client.Input.dispatchMouseEvent({
-    type: 'mouseMoved',
-    x: hoverX,
-    y: hoverY,
-    button: 'none',
-  });
-  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-hover'));
-  const menuButtonReady = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+		returnByValue: true,
+	});
+	const ready = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
+		timeoutMs: 10_000,
+		description: `Gemini conversation row menu ready for ${conversationId}`,
+	});
+	if (!ready.ok) {
+		throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
+	}
+	const rowInfo = (ready.value ?? {}) as { title?: string; x?: number; y?: number; left?: number };
+	const title = normalizeWhitespace(rowInfo.title ?? "");
+	const hoverX = Number.isFinite(rowInfo.x) ? Number(rowInfo.x) : 0;
+	const hoverY = Number.isFinite(rowInfo.y) ? Number(rowInfo.y) : 0;
+	const hoverLeft = Number.isFinite(rowInfo.left) ? Number(rowInfo.left) : 0;
+	if (!title || !Number.isFinite(hoverY)) {
+		throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: hoverLeft + 10,
+		y: hoverY,
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: hoverX,
+		y: hoverY,
+		button: "none",
+	});
+	trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "after-hover"));
+	const menuButtonReady = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const targetLabel = ${JSON.stringify(`More options for ${title}`)};
       const targetY = ${JSON.stringify(hoverY)};
@@ -5036,17 +5549,17 @@ async function _openGeminiConversationMenu(
         });
       return candidates.length > 0 ? { count: candidates.length } : null;
     })()`,
-    {
-      timeoutMs: 3_000,
-      description: `Gemini conversation action button ready for ${conversationId}`,
-    },
-  );
-  if (!menuButtonReady.ok) {
-    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'menu-button-missing'));
-    throw new Error('conversation-actions-menu-missing');
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 3_000,
+			description: `Gemini conversation action button ready for ${conversationId}`,
+		},
+	);
+	if (!menuButtonReady.ok) {
+		trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "menu-button-missing"));
+		throw new Error("conversation-actions-menu-missing");
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -5071,71 +5584,76 @@ async function _openGeminiConversationMenu(
       if (!match) return { ok: false, reason: 'conversation-actions-menu-missing' };
       return { ok: true, clicked: match.clicked };
     })()`,
-    returnByValue: true,
-  });
-  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string; clicked?: boolean };
-  if (!payload.ok) {
-    throw new Error(payload.reason || `Gemini conversation row menu not found for ${conversationId}.`);
-  }
-  if (!payload.clicked) {
-    throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
-  }
-  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-menu-click'));
+		returnByValue: true,
+	});
+	const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string; clicked?: boolean };
+	if (!payload.ok) {
+		throw new Error(
+			payload.reason || `Gemini conversation row menu not found for ${conversationId}.`,
+		);
+	}
+	if (!payload.clicked) {
+		throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
+	}
+	trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "after-menu-click"));
 }
 
-async function selectGeminiConversationDeleteMenuItem(client: ChromeClient, trace: GeminiDeleteTrace): Promise<void> {
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+async function selectGeminiConversationDeleteMenuItem(
+	client: ChromeClient,
+	trace: GeminiDeleteTrace,
+): Promise<void> {
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const button = document.querySelector('button[data-test-id="delete-button"]');
       const rect = button instanceof HTMLElement ? button.getBoundingClientRect() : null;
       return rect && rect.width > 0 && rect.height > 0
         ? { ready: true }
         : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini conversation delete menu item ready',
-    },
-  );
-  if (!ready.ok) {
-    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'delete-menu-missing'));
-    throw new Error('Gemini conversation delete menu did not open.');
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 5_000,
+			description: "Gemini conversation delete menu item ready",
+		},
+	);
+	if (!ready.ok) {
+		trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "delete-menu-missing"));
+		throw new Error("Gemini conversation delete menu did not open.");
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const deleteNode = document.querySelector('button[data-test-id="delete-button"]');
       if (!(deleteNode instanceof HTMLElement)) return { ok: false, reason: 'delete-menu-item-missing' };
       deleteNode.click();
       return { ok: true };
     })()`,
-    returnByValue: true,
-  });
-  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string };
-  if (!payload.ok) {
-    throw new Error(payload.reason || 'Gemini conversation delete menu item not found.');
-  }
-  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-delete-click'));
+		returnByValue: true,
+	});
+	const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string };
+	if (!payload.ok) {
+		throw new Error(payload.reason || "Gemini conversation delete menu item not found.");
+	}
+	trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "after-delete-click"));
 }
 
 async function openGeminiConversationRenameDialog(client: ChromeClient): Promise<void> {
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const button = document.querySelector('button[data-test-id="rename-button"]');
       const rect = button instanceof HTMLElement ? button.getBoundingClientRect() : null;
       return rect && rect.width > 0 && rect.height > 0 ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini conversation rename menu item ready',
-    },
-  );
-  if (!ready.ok) {
-    throw new Error('Gemini conversation rename menu did not open.');
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 5_000,
+			description: "Gemini conversation rename menu item ready",
+		},
+	);
+	if (!ready.ok) {
+		throw new Error("Gemini conversation rename menu did not open.");
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const button = Array.from(document.querySelectorAll('[role="menuitem"]'))
         .find((node) => node instanceof HTMLElement &&
           node.getAttribute('data-test-id') === 'rename-button' &&
@@ -5145,78 +5663,80 @@ async function openGeminiConversationRenameDialog(client: ChromeClient): Promise
       button.click();
       return { ok: true };
     })()`,
-    returnByValue: true,
-  });
-  if (result?.value?.ok !== true) {
-    throw new Error('Gemini conversation rename menu item not found.');
-  }
-  const dialogReady = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+		returnByValue: true,
+	});
+	if (result?.value?.ok !== true) {
+		throw new Error("Gemini conversation rename menu item not found.");
+	}
+	const dialogReady = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const input = document.querySelector(${JSON.stringify(GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR)});
       const save = document.querySelector(${JSON.stringify(GEMINI_CONVERSATION_RENAME_SAVE_SELECTOR)});
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       return visible(input) && visible(save) ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini conversation rename dialog ready',
-    },
-  );
-  if (!dialogReady.ok) {
-    throw new Error('Gemini conversation rename dialog did not open.');
-  }
+		{
+			timeoutMs: 5_000,
+			description: "Gemini conversation rename dialog ready",
+		},
+	);
+	if (!dialogReady.ok) {
+		throw new Error("Gemini conversation rename dialog did not open.");
+	}
 }
 
 async function renameGeminiConversationOnPage(
-  client: ChromeClient,
-  conversationId: string,
-  newTitle: string,
+	client: ChromeClient,
+	conversationId: string,
+	newTitle: string,
 ): Promise<void> {
-  const normalizedTitle = normalizeWhitespace(newTitle);
-  if (!normalizedTitle) {
-    throw new Error('Gemini conversation title cannot be empty.');
-  }
-  await openGeminiConversationActionsMenuOnConversationPage(client, conversationId);
-  await openGeminiConversationRenameDialog(client);
-  const renamed = await submitInlineRename(
-    client.Runtime,
-    {
-      inputSelector: GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR,
-      value: normalizedTitle,
-      closeSelector: '[role="dialog"], mat-dialog-container',
-      submitStrategy: 'native-then-synthetic',
-      entryStrategy: 'native-input',
-      timeoutMs: 10_000,
-    },
-    {
-      Input: client.Input,
-    },
-  );
-  if (!renamed.ok) {
-    throw new Error(`Gemini conversation rename save failed: ${renamed.reason ?? 'Rename dialog did not submit.'}`);
-  }
-  const dialogClosed = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const normalizedTitle = normalizeWhitespace(newTitle);
+	if (!normalizedTitle) {
+		throw new Error("Gemini conversation title cannot be empty.");
+	}
+	await openGeminiConversationActionsMenuOnConversationPage(client, conversationId);
+	await openGeminiConversationRenameDialog(client);
+	const renamed = await submitInlineRename(
+		client.Runtime,
+		{
+			inputSelector: GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR,
+			value: normalizedTitle,
+			closeSelector: '[role="dialog"], mat-dialog-container',
+			submitStrategy: "native-then-synthetic",
+			entryStrategy: "native-input",
+			timeoutMs: 10_000,
+		},
+		{
+			Input: client.Input,
+		},
+	);
+	if (!renamed.ok) {
+		throw new Error(
+			`Gemini conversation rename save failed: ${renamed.reason ?? "Rename dialog did not submit."}`,
+		);
+	}
+	const dialogClosed = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const dialog = document.querySelector('[role="dialog"], mat-dialog-container');
       const input = document.querySelector(${JSON.stringify(GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR)});
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       return !visible(dialog) && !visible(input) ? { closed: true } : null;
     })()`,
-    {
-      timeoutMs: 10_000,
-      description: 'Gemini conversation rename dialog dismissed',
-    },
-  );
-  if (!dialogClosed.ok) {
-    throw new Error('Gemini conversation rename dialog remained visible after save.');
-  }
-  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
-  await ensureGeminiMainMenuOpen(client);
-  const persisted = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+		{
+			timeoutMs: 10_000,
+			description: "Gemini conversation rename dialog dismissed",
+		},
+	);
+	if (!dialogClosed.ok) {
+		throw new Error("Gemini conversation rename dialog remained visible after save.");
+	}
+	await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+	await ensureGeminiMainMenuOpen(client);
+	const persisted = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const anchor = Array.from(document.querySelectorAll('a[href*="/app/"]'))
@@ -5229,14 +5749,14 @@ async function renameGeminiConversationOnPage(
       const title = normalize(anchor.textContent || anchor.getAttribute('aria-label') || '');
       return title === ${JSON.stringify(normalizedTitle)} ? { title } : null;
     })()`,
-    {
-      timeoutMs: 15_000,
-      description: `Gemini renamed conversation visible in root list for ${conversationId}`,
-    },
-  );
-  if (!persisted.ok) {
-    const { result } = await client.Runtime.evaluate({
-      expression: `(() => {
+		{
+			timeoutMs: 15_000,
+			description: `Gemini renamed conversation visible in root list for ${conversationId}`,
+		},
+	);
+	if (!persisted.ok) {
+		const { result } = await client.Runtime.evaluate({
+			expression: `(() => {
         const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
         const anchor = Array.from(document.querySelectorAll('a[href*="/app/"]'))
           .find((node) =>
@@ -5246,21 +5766,21 @@ async function renameGeminiConversationOnPage(
         if (!(anchor instanceof HTMLAnchorElement)) return null;
         return normalize(anchor.textContent || anchor.getAttribute('aria-label') || '');
       })()`,
-      returnByValue: true,
-    });
-    throw new Error(
-      `Gemini conversation rename did not persist. Expected "${normalizedTitle}", got "${String(result?.value ?? '')}".`,
-    );
-  }
+			returnByValue: true,
+		});
+		throw new Error(
+			`Gemini conversation rename did not persist. Expected "${normalizedTitle}", got "${String(result?.value ?? "")}".`,
+		);
+	}
 }
 
 async function clickGeminiConversationDeleteConfirmations(
-  client: ChromeClient,
-  trace: GeminiDeleteTrace,
+	client: ChromeClient,
+	trace: GeminiDeleteTrace,
 ): Promise<number> {
-  const opened = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const opened = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -5278,18 +5798,18 @@ async function clickGeminiConversationDeleteConfirmations(
         });
       return dialogs.length > 0 ? { count: dialogs.length } : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini conversation delete confirmation dialog ready',
-    },
-  );
-  if (!opened.ok) {
-    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-missing'));
-    throw new Error('Gemini conversation delete confirmation dialog did not open.');
-  }
-  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-open'));
-  let clicked = 0;
-  const clearedPredicate = `(() => {
+		{
+			timeoutMs: 5_000,
+			description: "Gemini conversation delete confirmation dialog ready",
+		},
+	);
+	if (!opened.ok) {
+		trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "confirm-dialog-missing"));
+		throw new Error("Gemini conversation delete confirmation dialog did not open.");
+	}
+	trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "confirm-dialog-open"));
+	let clicked = 0;
+	const clearedPredicate = `(() => {
     const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
     const visible = (node) => {
       if (!(node instanceof Element)) return false;
@@ -5309,9 +5829,9 @@ async function clickGeminiConversationDeleteConfirmations(
     return active.length === 0 ? { cleared: true } : null;
   })()`;
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { result } = await client.Runtime.evaluate({
-      expression: `(() => {
+	for (let attempt = 0; attempt < 3; attempt += 1) {
+		const { result } = await client.Runtime.evaluate({
+			expression: `(() => {
         const button = document.querySelector('button[data-test-id="confirm-button"]');
         if (!(button instanceof HTMLElement)) return null;
         const touchTarget = button.querySelector('.mat-mdc-button-touch-target');
@@ -5319,332 +5839,339 @@ async function clickGeminiConversationDeleteConfirmations(
         if (rect.width <= 0 || rect.height <= 0) return null;
         return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
       })()`,
-      returnByValue: true,
-    });
-    const point = (result?.value ?? null) as { x?: number; y?: number } | null;
-    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-      break;
-    }
-    await client.Input.dispatchMouseEvent({
-      type: 'mouseMoved',
-      x: Number(point.x),
-      y: Number(point.y),
-      button: 'none',
-    });
-    await client.Input.dispatchMouseEvent({
-      type: 'mousePressed',
-      x: Number(point.x),
-      y: Number(point.y),
-      button: 'left',
-      clickCount: 1,
-    });
-    await client.Input.dispatchMouseEvent({
-      type: 'mouseReleased',
-      x: Number(point.x),
-      y: Number(point.y),
-      button: 'left',
-      clickCount: 1,
-    });
-    clicked += 1;
-    const cleared = await waitForPredicate(client.Runtime, clearedPredicate, {
-      timeoutMs: 5_000,
-      description: 'Gemini conversation delete confirmation dismissed',
-    });
-    if (cleared.ok) {
-      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
-      return clicked;
-    }
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+			returnByValue: true,
+		});
+		const point = (result?.value ?? null) as { x?: number; y?: number } | null;
+		if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+			break;
+		}
+		await client.Input.dispatchMouseEvent({
+			type: "mouseMoved",
+			x: Number(point.x),
+			y: Number(point.y),
+			button: "none",
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mousePressed",
+			x: Number(point.x),
+			y: Number(point.y),
+			button: "left",
+			clickCount: 1,
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mouseReleased",
+			x: Number(point.x),
+			y: Number(point.y),
+			button: "left",
+			clickCount: 1,
+		});
+		clicked += 1;
+		const cleared = await waitForPredicate(client.Runtime, clearedPredicate, {
+			timeoutMs: 5_000,
+			description: "Gemini conversation delete confirmation dismissed",
+		});
+		if (cleared.ok) {
+			trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "after-confirm-click"));
+			return clicked;
+		}
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const button = document.querySelector('button[data-test-id="confirm-button"]');
       if (!(button instanceof HTMLElement)) return { ok: false };
       button.click();
       return { ok: true };
     })()`,
-    returnByValue: true,
-  });
-  const payload = (result?.value ?? {}) as { ok?: boolean };
-  if (payload.ok) {
-    clicked += 1;
-    const cleared = await waitForPredicate(client.Runtime, clearedPredicate, {
-      timeoutMs: 5_000,
-      description: 'Gemini conversation delete confirmation dismissed',
-    });
-    if (cleared.ok) {
-      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
-      return clicked;
-    }
-  }
-  if (clicked < 1) {
-    throw new Error('Gemini conversation delete confirmation button not found.');
-  }
-  throw new Error('Gemini conversation delete confirmation remained visible after confirm attempts.');
+		returnByValue: true,
+	});
+	const payload = (result?.value ?? {}) as { ok?: boolean };
+	if (payload.ok) {
+		clicked += 1;
+		const cleared = await waitForPredicate(client.Runtime, clearedPredicate, {
+			timeoutMs: 5_000,
+			description: "Gemini conversation delete confirmation dismissed",
+		});
+		if (cleared.ok) {
+			trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "after-confirm-click"));
+			return clicked;
+		}
+	}
+	if (clicked < 1) {
+		throw new Error("Gemini conversation delete confirmation button not found.");
+	}
+	throw new Error(
+		"Gemini conversation delete confirmation remained visible after confirm attempts.",
+	);
 }
 
 async function waitForGeminiConversationRemoved(
-  client: ChromeClient,
-  conversationId: string,
-  timeoutMs: number = 90_000,
-  trace: GeminiDeleteTrace,
+	client: ChromeClient,
+	conversationId: string,
+	timeoutMs: number = 90_000,
+	trace: GeminiDeleteTrace,
 ): Promise<void> {
-  const freshAbsenceRequired = 2;
-  let consecutiveFreshAbsenceCount = 0;
-  const startedAt = Date.now();
-  const verifierTrace: Array<Record<string, unknown>> = [];
+	const freshAbsenceRequired = 2;
+	let consecutiveFreshAbsenceCount = 0;
+	const startedAt = Date.now();
+	const verifierTrace: Array<Record<string, unknown>> = [];
 
-  const localDisappear = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const localDisappear = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const remaining = Array.from(document.querySelectorAll('a[href*="/app/"]'))
         .some((node) => node instanceof HTMLAnchorElement && node.href.includes('/app/${conversationId}'));
       return remaining ? null : { removed: true };
     })()`,
-    {
-      timeoutMs: 8_000,
-      description: `Gemini conversation ${conversationId} removed from current page`,
-    },
-  );
-  verifierTrace.push({
-    phase: 'current-page',
-    ok: localDisappear.ok,
-    elapsedMs: Date.now() - startedAt,
-    attempts: localDisappear.attempts ?? null,
-  });
+		{
+			timeoutMs: 8_000,
+			description: `Gemini conversation ${conversationId} removed from current page`,
+		},
+	);
+	verifierTrace.push({
+		phase: "current-page",
+		ok: localDisappear.ok,
+		elapsedMs: Date.now() - startedAt,
+		attempts: localDisappear.attempts ?? null,
+	});
 
-  const deadline = Date.now() + timeoutMs;
-  let lastSeen = false;
-  let lastReason = '';
-  let pass = 0;
-  while (Date.now() < deadline) {
-    pass += 1;
-    try {
-      await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
-      await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
-    } catch (error) {
-      lastReason = error instanceof Error ? error.message : String(error);
-      verifierTrace.push({
-        phase: 'fresh-root-error',
-        pass,
-        elapsedMs: Date.now() - startedAt,
-        reason: lastReason,
-      });
-      await new Promise((resolve) => setTimeout(resolve, 5_000));
-      continue;
-    }
-    const check = await client.Runtime.evaluate({
-      expression: `(() => {
+	const deadline = Date.now() + timeoutMs;
+	let lastSeen = false;
+	let lastReason = "";
+	let pass = 0;
+	while (Date.now() < deadline) {
+		pass += 1;
+		try {
+			await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+			await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+		} catch (error) {
+			lastReason = error instanceof Error ? error.message : String(error);
+			verifierTrace.push({
+				phase: "fresh-root-error",
+				pass,
+				elapsedMs: Date.now() - startedAt,
+				reason: lastReason,
+			});
+			await new Promise((resolve) => setTimeout(resolve, 5_000));
+			continue;
+		}
+		const check = await client.Runtime.evaluate({
+			expression: `(() => {
         const remaining = Array.from(document.querySelectorAll('a[href*="/app/"]'))
           .some((node) => node instanceof HTMLAnchorElement && node.href.includes('/app/${conversationId}'));
         return { remaining };
       })()`,
-      returnByValue: true,
-    });
-    lastSeen = Boolean((check.result?.value as { remaining?: boolean } | undefined)?.remaining);
-    if (!lastSeen) {
-      consecutiveFreshAbsenceCount += 1;
-      verifierTrace.push({
-        phase: 'fresh-root',
-        pass,
-        elapsedMs: Date.now() - startedAt,
-        remaining: false,
-        consecutiveFreshAbsenceCount,
-      });
-      if (consecutiveFreshAbsenceCount >= freshAbsenceRequired) {
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 5_000));
-      continue;
-    }
-    consecutiveFreshAbsenceCount = 0;
-    verifierTrace.push({
-      phase: 'fresh-root',
-      pass,
-      elapsedMs: Date.now() - startedAt,
-      remaining: true,
-      consecutiveFreshAbsenceCount,
-    });
-    await new Promise((resolve) => setTimeout(resolve, 5_000));
-  }
-  trace.push(...verifierTrace);
-  const traceSummary = summarizeGeminiDeleteTrace(verifierTrace, 4);
-  if (lastSeen) {
-    throw new Error(`Gemini conversation ${conversationId} still appears in the conversation list after delete. trace=${traceSummary}`);
-  }
-  throw new Error(`${lastReason || `Gemini conversation ${conversationId} delete could not be verified.`} trace=${traceSummary}`);
+			returnByValue: true,
+		});
+		lastSeen = Boolean((check.result?.value as { remaining?: boolean } | undefined)?.remaining);
+		if (!lastSeen) {
+			consecutiveFreshAbsenceCount += 1;
+			verifierTrace.push({
+				phase: "fresh-root",
+				pass,
+				elapsedMs: Date.now() - startedAt,
+				remaining: false,
+				consecutiveFreshAbsenceCount,
+			});
+			if (consecutiveFreshAbsenceCount >= freshAbsenceRequired) {
+				return;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 5_000));
+			continue;
+		}
+		consecutiveFreshAbsenceCount = 0;
+		verifierTrace.push({
+			phase: "fresh-root",
+			pass,
+			elapsedMs: Date.now() - startedAt,
+			remaining: true,
+			consecutiveFreshAbsenceCount,
+		});
+		await new Promise((resolve) => setTimeout(resolve, 5_000));
+	}
+	trace.push(...verifierTrace);
+	const traceSummary = summarizeGeminiDeleteTrace(verifierTrace, 4);
+	if (lastSeen) {
+		throw new Error(
+			`Gemini conversation ${conversationId} still appears in the conversation list after delete. trace=${traceSummary}`,
+		);
+	}
+	throw new Error(
+		`${lastReason || `Gemini conversation ${conversationId} delete could not be verified.`} trace=${traceSummary}`,
+	);
 }
 
 async function createGeminiProjectWithClient(
-  client: ChromeClient,
-  input: {
-    name: string;
-    instructions?: string;
-    modelLabel?: string;
-    files?: string[];
-    memoryMode?: ProjectMemoryMode;
-  },
+	client: ChromeClient,
+	input: {
+		name: string;
+		instructions?: string;
+		modelLabel?: string;
+		files?: string[];
+		memoryMode?: ProjectMemoryMode;
+	},
 ): Promise<Project | null> {
-  if (Array.isArray(input.files) && input.files.length > 0) {
-    throw new Error('Gem knowledge upload during Gemini project creation is not supported yet.');
-  }
-  if (input.modelLabel && input.modelLabel.trim().length > 0) {
-    throw new Error('Gemini Gem creation does not support setting a model label yet.');
-  }
-  if (input.memoryMode) {
-    throw new Error('Gemini Gem creation does not support memory mode selection.');
-  }
+	if (Array.isArray(input.files) && input.files.length > 0) {
+		throw new Error("Gem knowledge upload during Gemini project creation is not supported yet.");
+	}
+	if (input.modelLabel && input.modelLabel.trim().length > 0) {
+		throw new Error("Gemini Gem creation does not support setting a model label yet.");
+	}
+	if (input.memoryMode) {
+		throw new Error("Gemini Gem creation does not support memory mode selection.");
+	}
 
-  await navigateToGeminiCreatePage(client);
+	await navigateToGeminiCreatePage(client);
 
-  const setName = await setInputValue(client.Runtime, {
-    selector: GEMINI_GEM_NAME_INPUT_SELECTOR,
-    value: input.name,
-    timeoutMs: 10_000,
-  });
-  if (!setName) {
-    throw new Error('Gemini Gem name input did not become ready.');
-  }
+	const setName = await setInputValue(client.Runtime, {
+		selector: GEMINI_GEM_NAME_INPUT_SELECTOR,
+		value: input.name,
+		timeoutMs: 10_000,
+	});
+	if (!setName) {
+		throw new Error("Gemini Gem name input did not become ready.");
+	}
 
-  if (typeof input.instructions === 'string' && input.instructions.trim().length > 0) {
-    const trimmedInstructions = input.instructions.trim();
-    const setDescription = await setInputValue(client.Runtime, {
-      selector: GEMINI_GEM_DESCRIPTION_INPUT_SELECTOR,
-      value: trimmedInstructions,
-      timeoutMs: 5_000,
-    });
-    if (!setDescription) {
-      throw new Error('Gemini Gem description input did not become ready.');
-    }
-    const setInstructions = await setInputValue(client.Runtime, {
-      selector: GEMINI_GEM_INSTRUCTIONS_INPUT_SELECTOR,
-      value: trimmedInstructions,
-      timeoutMs: 5_000,
-    });
-    if (!setInstructions) {
-      throw new Error('Gemini Gem instructions input did not become ready.');
-    }
-  }
+	if (typeof input.instructions === "string" && input.instructions.trim().length > 0) {
+		const trimmedInstructions = input.instructions.trim();
+		const setDescription = await setInputValue(client.Runtime, {
+			selector: GEMINI_GEM_DESCRIPTION_INPUT_SELECTOR,
+			value: trimmedInstructions,
+			timeoutMs: 5_000,
+		});
+		if (!setDescription) {
+			throw new Error("Gemini Gem description input did not become ready.");
+		}
+		const setInstructions = await setInputValue(client.Runtime, {
+			selector: GEMINI_GEM_INSTRUCTIONS_INPUT_SELECTOR,
+			value: trimmedInstructions,
+			timeoutMs: 5_000,
+		});
+		if (!setInstructions) {
+			throw new Error("Gemini Gem instructions input did not become ready.");
+		}
+	}
 
-  const beforeHref = String(
-    (
-      await client.Runtime.evaluate({
-        expression: 'location.href',
-        returnByValue: true,
-      })
-    ).result?.value ?? '',
-  );
-  const pressed = await pressGeminiGemSaveButton(client);
-  if (!pressed.ok) {
-    throw new Error(`Gemini Gem save failed: ${pressed.reason ?? 'Save button not clickable.'}`);
-  }
+	const beforeHref = String(
+		(
+			await client.Runtime.evaluate({
+				expression: "location.href",
+				returnByValue: true,
+			})
+		).result?.value ?? "",
+	);
+	const pressed = await pressGeminiGemSaveButton(client);
+	if (!pressed.ok) {
+		throw new Error(`Gemini Gem save failed: ${pressed.reason ?? "Save button not clickable."}`);
+	}
 
-  const routeChanged = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const routeChanged = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const href = location.href;
       if (!href || href === ${JSON.stringify(beforeHref)}) return false;
       return (/\\/gem\\/([^/?#]+)/i.test(href) || /\\/gems\\/edit\\/([^/?#]+)/i.test(href)) && !/\\/gems\\/create(?:[/?#]|$)/i.test(href);
     })()`,
-    {
-      timeoutMs: 20_000,
-      description: `Gemini Gem route changed for ${input.name}`,
-    },
-  );
-  if (!routeChanged.ok) {
-    throw new Error(`Gemini Gem creation could not be verified for "${input.name}".`);
-  }
+		{
+			timeoutMs: 20_000,
+			description: `Gemini Gem route changed for ${input.name}`,
+		},
+	);
+	if (!routeChanged.ok) {
+		throw new Error(`Gemini Gem creation could not be verified for "${input.name}".`);
+	}
 
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => ({ href: location.href, title: document.title || "" }))()`,
-    returnByValue: true,
-  });
-  const payload = (result?.value ?? {}) as { href?: string; title?: string };
-  const createdId = normalizeGeminiProjectId(payload.href ?? '');
-  if (!createdId) {
-    throw new Error(`Gemini Gem creation route resolved without a project id for "${input.name}".`);
-  }
-  await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => ({ href: location.href, title: document.title || "" }))()`,
+		returnByValue: true,
+	});
+	const payload = (result?.value ?? {}) as { href?: string; title?: string };
+	const createdId = normalizeGeminiProjectId(payload.href ?? "");
+	if (!createdId) {
+		throw new Error(`Gemini Gem creation route resolved without a project id for "${input.name}".`);
+	}
+	await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const startChat = document.querySelector(${JSON.stringify(GEMINI_GEM_START_CHAT_BUTTON_SELECTOR)});
       return visible(startChat) ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs: 10_000,
-      description: `Gemini Gem edit surface ready after create for ${input.name}`,
-    },
-  ).catch(() => undefined);
-  return {
-    id: createdId,
-    name: input.name,
-    provider: 'gemini',
-    url: payload.href ? String(payload.href) : resolveGeminiProjectUrl(createdId),
-  };
+		{
+			timeoutMs: 10_000,
+			description: `Gemini Gem edit surface ready after create for ${input.name}`,
+		},
+	).catch(() => undefined);
+	return {
+		id: createdId,
+		name: input.name,
+		provider: "gemini",
+		url: payload.href ? String(payload.href) : resolveGeminiProjectUrl(createdId),
+	};
 }
 
 async function readGeminiPersistedProjectName(
-  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
-  projectId: string,
-  options?: { expectedName?: string; timeoutMs?: number },
+	client: Pick<ChromeClient, "Page" | "Runtime">,
+	projectId: string,
+	options?: { expectedName?: string; timeoutMs?: number },
 ): Promise<string> {
-  await navigateToGeminiEditPage(client, projectId);
-  const expectedName = typeof options?.expectedName === 'string' ? options.expectedName.trim() : '';
-  const predicate = expectedName
-    ? `(() => {
+	await navigateToGeminiEditPage(client, projectId, { forceNavigate: true });
+	const expectedName = typeof options?.expectedName === "string" ? options.expectedName.trim() : "";
+	const predicate = expectedName
+		? `(() => {
         const input = document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)});
         if (!(input instanceof HTMLInputElement)) return null;
         const value = input.value.trim();
         return value === ${JSON.stringify(expectedName)} ? { value } : null;
       })()`
-    : `(() => {
+		: `(() => {
         const input = document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)});
         if (!(input instanceof HTMLInputElement)) return null;
         const value = input.value.trim();
         return value ? { value } : null;
       })()`;
-  const ready = await waitForPredicate(client.Runtime, predicate, {
-    timeoutMs: options?.timeoutMs ?? 15_000,
-    description: expectedName
-      ? `Gemini Gem name persisted as ${expectedName}`
-      : 'Gemini Gem name hydrated',
-  });
-  const value = typeof (ready.value as { value?: string } | undefined)?.value === 'string'
-    ? ((ready.value as { value?: string }).value ?? '').trim()
-    : '';
-  if (!value) {
-    throw new Error('Gemini Gem name input did not expose a persisted name.');
-  }
-  return value;
+	const ready = await waitForPredicate(client.Runtime, predicate, {
+		timeoutMs: options?.timeoutMs ?? 15_000,
+		description: expectedName
+			? `Gemini Gem name persisted as ${expectedName}`
+			: "Gemini Gem name hydrated",
+	});
+	const value =
+		typeof (ready.value as { value?: string } | undefined)?.value === "string"
+			? ((ready.value as { value?: string }).value ?? "").trim()
+			: "";
+	if (!value) {
+		throw new Error("Gemini Gem name input did not expose a persisted name.");
+	}
+	return value;
 }
 
 export function resolveGeminiProjectMenuAriaLabel(projectName: string): string {
-  return `More options for "${projectName}" Gem`;
+	return `More options for "${projectName}" Gem`;
 }
 
 async function openGeminiProjectActionsMenuOnProjectPage(
-  client: ChromeClient,
-  projectId: string,
+	client: ChromeClient,
+	projectId: string,
 ): Promise<void> {
-  await navigateToGeminiConversationSurface(client, resolveGeminiProjectUrl(projectId));
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	await navigateToGeminiConversationSurface(client, resolveGeminiProjectUrl(projectId));
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const onRoute = location.pathname === ${JSON.stringify(`/gem/${projectId}`)};
       const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
       return onRoute && button instanceof HTMLElement && visible(button) ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs: 10_000,
-      description: `Gemini Gem actions button ready for ${projectId}`,
-    },
-  );
-  if (!ready.ok) {
-    throw new Error(`Gemini Gem actions button not ready for ${projectId}.`);
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 10_000,
+			description: `Gemini Gem actions button ready for ${projectId}`,
+		},
+	);
+	if (!ready.ok) {
+		throw new Error(`Gemini Gem actions button not ready for ${projectId}.`);
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
       if (!(button instanceof HTMLElement)) return null;
       button.scrollIntoView({ block: 'center', inline: 'center' });
@@ -5655,52 +6182,57 @@ async function openGeminiProjectActionsMenuOnProjectPage(
         ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
         : null;
     })()`,
-    returnByValue: true,
-  });
-  const point = result?.value as { x?: number; y?: number } | null;
-  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-    throw new Error(`Gemini Gem actions button not clickable for ${projectId}.`);
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(point.x), y: Number(point.y), button: 'none' });
-  await client.Input.dispatchMouseEvent({
-    type: 'mousePressed',
-    x: Number(point.x),
-    y: Number(point.y),
-    button: 'left',
-    clickCount: 1,
-  });
-  await client.Input.dispatchMouseEvent({
-    type: 'mouseReleased',
-    x: Number(point.x),
-    y: Number(point.y),
-    button: 'left',
-    clickCount: 1,
-  });
+		returnByValue: true,
+	});
+	const point = result?.value as { x?: number; y?: number } | null;
+	if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+		throw new Error(`Gemini Gem actions button not clickable for ${projectId}.`);
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "left",
+		clickCount: 1,
+	});
 }
 
 async function openGeminiConversationActionsMenuOnConversationPage(
-  client: ChromeClient,
-  conversationId: string,
+	client: ChromeClient,
+	conversationId: string,
 ): Promise<void> {
-  await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const onRoute = location.pathname === ${JSON.stringify(`/app/${conversationId}`)};
       const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
       return onRoute && button instanceof HTMLElement && visible(button) ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs: 10_000,
-      description: `Gemini conversation actions button ready for ${conversationId}`,
-    },
-  );
-  if (!ready.ok) {
-    throw new Error(`Gemini conversation actions button not ready for ${conversationId}.`);
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 10_000,
+			description: `Gemini conversation actions button ready for ${conversationId}`,
+		},
+	);
+	if (!ready.ok) {
+		throw new Error(`Gemini conversation actions button not ready for ${conversationId}.`);
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
       if (!(button instanceof HTMLElement)) return null;
       button.scrollIntoView({ block: 'center', inline: 'center' });
@@ -5711,55 +6243,62 @@ async function openGeminiConversationActionsMenuOnConversationPage(
         ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
         : null;
     })()`,
-    returnByValue: true,
-  });
-  const point = result?.value as { x?: number; y?: number } | null;
-  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-    throw new Error(`Gemini conversation actions button not clickable for ${conversationId}.`);
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(point.x), y: Number(point.y), button: 'none' });
-  await client.Input.dispatchMouseEvent({
-    type: 'mousePressed',
-    x: Number(point.x),
-    y: Number(point.y),
-    button: 'left',
-    clickCount: 1,
-  });
-  await client.Input.dispatchMouseEvent({
-    type: 'mouseReleased',
-    x: Number(point.x),
-    y: Number(point.y),
-    button: 'left',
-    clickCount: 1,
-  });
+		returnByValue: true,
+	});
+	const point = result?.value as { x?: number; y?: number } | null;
+	if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+		throw new Error(`Gemini conversation actions button not clickable for ${conversationId}.`);
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: Number(point.x),
+		y: Number(point.y),
+		button: "left",
+		clickCount: 1,
+	});
 }
 
 async function _openGeminiProjectMenu(
-  client: ChromeClient,
-  projectId: string,
+	client: ChromeClient,
+	projectId: string,
 ): Promise<{ projectName: string; menuLabel: string }> {
-  const projectName = await readGeminiPersistedProjectName(client, projectId, { timeoutMs: 20_000 });
-  const menuLabel = resolveGeminiProjectMenuAriaLabel(projectName);
-  await navigateToGeminiGemsViewPage(client);
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const projectName = await readGeminiPersistedProjectName(client, projectId, {
+		timeoutMs: 20_000,
+	});
+	const menuLabel = resolveGeminiProjectMenuAriaLabel(projectName);
+	await navigateToGeminiGemsViewPage(client);
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const label = ${JSON.stringify(menuLabel)};
       return Array.from(document.querySelectorAll('button[aria-label],a[aria-label]'))
         .some((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label)
         ? { ready: true }
         : null;
     })()`,
-    {
-      timeoutMs: 10_000,
-      description: `Gemini Gem row menu ready for ${projectName}`,
-    },
-  );
-  if (!ready.ok) {
-    throw new Error(`Gemini Gem row menu not found for "${projectName}".`);
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 10_000,
+			description: `Gemini Gem row menu ready for ${projectName}`,
+		},
+	);
+	if (!ready.ok) {
+		throw new Error(`Gemini Gem row menu not found for "${projectName}".`);
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const projectId = ${JSON.stringify(projectId)};
       const label = ${JSON.stringify(menuLabel)};
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
@@ -5809,57 +6348,72 @@ async function _openGeminiProjectMenu(
         y: rect.top + rect.height / 2,
       };
     })()`,
-    returnByValue: true,
-  });
-  const payload = (result?.value ?? {}) as {
-    ok?: boolean; reason?: string; x?: number; y?: number; rowX?: number | null; rowY?: number | null;
-  };
-  if (!payload.ok) {
-    throw new Error(payload.reason || `Gemini Gem row menu not found for "${projectName}".`);
-  }
-  if (!Number.isFinite(payload.x) || !Number.isFinite(payload.y)) {
-    throw new Error(`Gemini Gem row menu not clickable for "${projectName}".`);
-  }
-  if (Number.isFinite(payload.rowX) && Number.isFinite(payload.rowY)) {
-    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(payload.rowX), y: Number(payload.rowY), button: 'none' });
-    await client.Input.dispatchMouseEvent({
-      type: 'mousePressed',
-      x: Number(payload.rowX),
-      y: Number(payload.rowY),
-      button: 'left',
-      clickCount: 1,
-    });
-    await client.Input.dispatchMouseEvent({
-      type: 'mouseReleased',
-      x: Number(payload.rowX),
-      y: Number(payload.rowY),
-      button: 'left',
-      clickCount: 1,
-    });
-    await new Promise((resolve) => setTimeout(resolve, 150));
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(payload.x), y: Number(payload.y), button: 'none' });
-  await client.Input.dispatchMouseEvent({
-    type: 'mousePressed',
-    x: Number(payload.x),
-    y: Number(payload.y),
-    button: 'left',
-    clickCount: 1,
-  });
-  await client.Input.dispatchMouseEvent({
-    type: 'mouseReleased',
-    x: Number(payload.x),
-    y: Number(payload.y),
-    button: 'left',
-    clickCount: 1,
-  });
-  return { projectName, menuLabel };
+		returnByValue: true,
+	});
+	const payload = (result?.value ?? {}) as {
+		ok?: boolean;
+		reason?: string;
+		x?: number;
+		y?: number;
+		rowX?: number | null;
+		rowY?: number | null;
+	};
+	if (!payload.ok) {
+		throw new Error(payload.reason || `Gemini Gem row menu not found for "${projectName}".`);
+	}
+	if (!Number.isFinite(payload.x) || !Number.isFinite(payload.y)) {
+		throw new Error(`Gemini Gem row menu not clickable for "${projectName}".`);
+	}
+	if (Number.isFinite(payload.rowX) && Number.isFinite(payload.rowY)) {
+		await client.Input.dispatchMouseEvent({
+			type: "mouseMoved",
+			x: Number(payload.rowX),
+			y: Number(payload.rowY),
+			button: "none",
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mousePressed",
+			x: Number(payload.rowX),
+			y: Number(payload.rowY),
+			button: "left",
+			clickCount: 1,
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mouseReleased",
+			x: Number(payload.rowX),
+			y: Number(payload.rowY),
+			button: "left",
+			clickCount: 1,
+		});
+		await new Promise((resolve) => setTimeout(resolve, 150));
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: Number(payload.x),
+		y: Number(payload.y),
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: Number(payload.x),
+		y: Number(payload.y),
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: Number(payload.x),
+		y: Number(payload.y),
+		button: "left",
+		clickCount: 1,
+	});
+	return { projectName, menuLabel };
 }
 
 async function selectGeminiProjectDeleteMenuItem(client: ChromeClient): Promise<void> {
-  const ready = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
@@ -5872,16 +6426,16 @@ async function selectGeminiProjectDeleteMenuItem(client: ChromeClient): Promise<
         ? { ready: true }
         : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini Gem delete menu item ready',
-    },
-  );
-  if (!ready.ok) {
-    throw new Error('Gemini Gem delete menu did not open.');
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 5_000,
+			description: "Gemini Gem delete menu item ready",
+		},
+	);
+	if (!ready.ok) {
+		throw new Error("Gemini Gem delete menu did not open.");
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const deleteNode =
         document.querySelector('button[data-test-id="delete-button"]') ??
         document.querySelector('button[data-test-id="menu-delete-button"]');
@@ -5893,49 +6447,59 @@ async function selectGeminiProjectDeleteMenuItem(client: ChromeClient): Promise<
       if (rect.width <= 0 || rect.height <= 0) return { ok: false, reason: 'delete-menu-item-not-clickable' };
       return { ok: true, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     })()`,
-    returnByValue: true,
-  });
-  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string; x?: number; y?: number };
-  if (!payload.ok) {
-    throw new Error(payload.reason || 'Gemini Gem delete menu item not found.');
-  }
-  const waitForConfirm = async (timeoutMs: number): Promise<boolean> => {
-    const ready = await waitForPredicate(
-      client.Runtime,
-      `(() => {
+		returnByValue: true,
+	});
+	const payload = (result?.value ?? {}) as {
+		ok?: boolean;
+		reason?: string;
+		x?: number;
+		y?: number;
+	};
+	if (!payload.ok) {
+		throw new Error(payload.reason || "Gemini Gem delete menu item not found.");
+	}
+	const waitForConfirm = async (timeoutMs: number): Promise<boolean> => {
+		const ready = await waitForPredicate(
+			client.Runtime,
+			`(() => {
         const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
         const button = document.querySelector('button[data-test-id="confirm-button"]');
         return button instanceof HTMLElement && visible(button) ? { ready: true } : null;
       })()`,
-      {
-        timeoutMs,
-        description: 'Gemini delete confirm button ready',
-      },
-    );
-    return ready.ok;
-  };
-  if (Number.isFinite(payload.x) && Number.isFinite(payload.y)) {
-    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(payload.x), y: Number(payload.y), button: 'none' });
-    await client.Input.dispatchMouseEvent({
-      type: 'mousePressed',
-      x: Number(payload.x),
-      y: Number(payload.y),
-      button: 'left',
-      clickCount: 1,
-    });
-    await client.Input.dispatchMouseEvent({
-      type: 'mouseReleased',
-      x: Number(payload.x),
-      y: Number(payload.y),
-      button: 'left',
-      clickCount: 1,
-    });
-    if (await waitForConfirm(1_500)) {
-      return;
-    }
-  }
-  const fallbackClick = await client.Runtime.evaluate({
-    expression: `(() => {
+			{
+				timeoutMs,
+				description: "Gemini delete confirm button ready",
+			},
+		);
+		return ready.ok;
+	};
+	if (Number.isFinite(payload.x) && Number.isFinite(payload.y)) {
+		await client.Input.dispatchMouseEvent({
+			type: "mouseMoved",
+			x: Number(payload.x),
+			y: Number(payload.y),
+			button: "none",
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mousePressed",
+			x: Number(payload.x),
+			y: Number(payload.y),
+			button: "left",
+			clickCount: 1,
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mouseReleased",
+			x: Number(payload.x),
+			y: Number(payload.y),
+			button: "left",
+			clickCount: 1,
+		});
+		if (await waitForConfirm(1_500)) {
+			return;
+		}
+	}
+	const fallbackClick = await client.Runtime.evaluate({
+		expression: `(() => {
       const button =
         document.querySelector('button[data-test-id="delete-button"]') ??
         document.querySelector('button[data-test-id="menu-delete-button"]');
@@ -5943,19 +6507,19 @@ async function selectGeminiProjectDeleteMenuItem(client: ChromeClient): Promise<
       button.click();
       return true;
     })()`,
-    returnByValue: true,
-  });
-  if (fallbackClick.result?.value === true && await waitForConfirm(2_500)) {
-    return;
-  }
-  throw new Error('Gemini Gem delete menu item did not open the confirmation dialog.');
+		returnByValue: true,
+	});
+	if (fallbackClick.result?.value === true && (await waitForConfirm(2_500))) {
+		return;
+	}
+	throw new Error("Gemini Gem delete menu item did not open the confirmation dialog.");
 }
 
 async function pressGeminiGemSaveButton(
-  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+	client: Pick<ChromeClient, "Runtime" | "Input">,
 ): Promise<{ ok?: boolean; reason?: string }> {
-  const located = await client.Runtime.evaluate({
-    expression: `(() => {
+	const located = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const exact = new Set(['create', 'update chat', 'update gem', 'save', 'update']);
@@ -5977,63 +6541,80 @@ async function pressGeminiGemSaveButton(
         y: rect.top + rect.height / 2,
       };
     })()`,
-    returnByValue: true,
-  });
-  const point = located.result?.value as { x?: number; y?: number } | undefined;
-  if (typeof point?.x === 'number' && typeof point?.y === 'number') {
-    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
-    await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-    await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-    return { ok: true };
-  }
-  const fallback = await pressButton(client.Runtime, {
-    selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,
-    match: {
-      exact: ['Create', 'Update Chat', 'Update Gem', 'Save', 'Update'],
-    },
-    interactionStrategies: ['click', 'pointer'],
-    timeoutMs: 10_000,
-  });
-  if (!fallback.ok) {
-    return fallback;
-  }
-  return { ok: true };
+		returnByValue: true,
+	});
+	const point = located.result?.value as { x?: number; y?: number } | undefined;
+	if (typeof point?.x === "number" && typeof point?.y === "number") {
+		await client.Input.dispatchMouseEvent({
+			type: "mouseMoved",
+			x: point.x,
+			y: point.y,
+			button: "none",
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mousePressed",
+			x: point.x,
+			y: point.y,
+			button: "left",
+			clickCount: 1,
+		});
+		await client.Input.dispatchMouseEvent({
+			type: "mouseReleased",
+			x: point.x,
+			y: point.y,
+			button: "left",
+			clickCount: 1,
+		});
+		return { ok: true };
+	}
+	const fallback = await pressButton(client.Runtime, {
+		selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,
+		match: {
+			exact: ["Create", "Update Chat", "Update Gem", "Save", "Update"],
+		},
+		interactionStrategies: ["click", "pointer"],
+		timeoutMs: 10_000,
+	});
+	if (!fallback.ok) {
+		return fallback;
+	}
+	return { ok: true };
 }
 
-async function openGeminiKnowledgeUploadMenu(
-  Runtime: ChromeClient['Runtime'],
-): Promise<void> {
-  const pressed = await pressButton(Runtime, {
-    selector: GEMINI_GEM_KNOWLEDGE_UPLOAD_TRIGGER_SELECTOR,
-    interactionStrategies: ['click', 'pointer'],
-    timeoutMs: 10_000,
-  });
-  if (!pressed.ok) {
-    throw new Error(`Gemini Gem knowledge upload menu did not open: ${pressed.reason ?? 'upload trigger not clickable.'}`);
-  }
-  const ready = await waitForPredicate(
-    Runtime,
-    `(() => {
+async function openGeminiKnowledgeUploadMenu(Runtime: ChromeClient["Runtime"]): Promise<void> {
+	const pressed = await pressButton(Runtime, {
+		selector: GEMINI_GEM_KNOWLEDGE_UPLOAD_TRIGGER_SELECTOR,
+		interactionStrategies: ["click", "pointer"],
+		timeoutMs: 10_000,
+	});
+	if (!pressed.ok) {
+		throw new Error(
+			`Gemini Gem knowledge upload menu did not open: ${pressed.reason ?? "upload trigger not clickable."}`,
+		);
+	}
+	const ready = await waitForPredicate(
+		Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const items = Array.from(document.querySelectorAll('button[role="menuitem"], [role="menuitem"]'))
         .filter((node) => visible(node));
       return items.length > 0 ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs: 10_000,
-      description: 'Gemini Gem knowledge upload menu ready',
-    },
-  );
-  if (!ready.ok) {
-    throw new Error('Gemini Gem knowledge upload menu item did not become ready.');
-  }
+		{
+			timeoutMs: 10_000,
+			description: "Gemini Gem knowledge upload menu ready",
+		},
+	);
+	if (!ready.ok) {
+		throw new Error("Gemini Gem knowledge upload menu item did not become ready.");
+	}
 }
 
 async function clickFirstGeminiKnowledgeMenuRow(
-  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+	client: Pick<ChromeClient, "Runtime" | "Input">,
 ): Promise<boolean> {
-  const located = await client.Runtime.evaluate({
-    expression: `(() => {
+	const located = await client.Runtime.evaluate({
+		expression: `(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const items = Array.from(document.querySelectorAll('button[role="menuitem"], [role="menuitem"]'))
         .filter((node) => visible(node));
@@ -6046,38 +6627,54 @@ async function clickFirstGeminiKnowledgeMenuRow(
         y: rect.top + rect.height / 2,
       };
     })()`,
-    returnByValue: true,
-  });
-  const point = located.result?.value as { x?: number; y?: number } | undefined;
-  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
-    return false;
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
-  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  return true;
+		returnByValue: true,
+	});
+	const point = located.result?.value as { x?: number; y?: number } | undefined;
+	if (typeof point?.x !== "number" || typeof point?.y !== "number") {
+		return false;
+	}
+	await client.Input.dispatchMouseEvent({ type: "mouseMoved", x: point.x, y: point.y });
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	return true;
 }
 
 async function dispatchGeminiKnowledgeFiles(
-  client: Pick<ChromeClient, 'Page' | 'DOM' | 'Runtime' | 'Input'>,
-  filePaths: string[],
+	client: Pick<ChromeClient, "Page" | "DOM" | "Runtime" | "Input">,
+	filePaths: string[],
 ): Promise<void> {
-  const imageOnly = filePaths.length > 0 && filePaths.every(isLikelyImagePath);
-  await client.Page.enable();
-  await client.DOM.enable();
-  await (client.Page as unknown as {
-    setInterceptFileChooserDialog(params: { enabled: boolean }): Promise<unknown>;
-    fileChooserOpened(callback: (params: { backendNodeId?: number }) => void): void;
-  }).setInterceptFileChooserDialog({ enabled: true });
-  try {
-    const chooserOpened = new Promise<{ backendNodeId?: number }>((resolve) => {
-      (client.Page as unknown as {
-        fileChooserOpened(callback: (params: { backendNodeId?: number }) => void): void;
-      }).fileChooserOpened((params) => resolve(params));
-    });
-    const trustedClick = async (selector: string): Promise<boolean> => {
-      const located = await client.Runtime.evaluate({
-        expression: `(() => {
+	const imageOnly = filePaths.length > 0 && filePaths.every(isLikelyImagePath);
+	await client.Page.enable();
+	await client.DOM.enable();
+	await (
+		client.Page as unknown as {
+			setInterceptFileChooserDialog(params: { enabled: boolean }): Promise<unknown>;
+			fileChooserOpened(callback: (params: { backendNodeId?: number }) => void): void;
+		}
+	).setInterceptFileChooserDialog({ enabled: true });
+	try {
+		const chooserOpened = new Promise<{ backendNodeId?: number }>((resolve) => {
+			(
+				client.Page as unknown as {
+					fileChooserOpened(callback: (params: { backendNodeId?: number }) => void): void;
+				}
+			).fileChooserOpened((params) => resolve(params));
+		});
+		const trustedClick = async (selector: string): Promise<boolean> => {
+			const located = await client.Runtime.evaluate({
+				expression: `(() => {
           const target = document.querySelector(${JSON.stringify(selector)});
           if (!(target instanceof HTMLElement)) return null;
           const rect = target.getBoundingClientRect();
@@ -6089,20 +6686,32 @@ async function dispatchGeminiKnowledgeFiles(
             y: nextRect.top + nextRect.height / 2,
           };
         })()`,
-        returnByValue: true,
-      });
-      const point = located.result?.value as { x?: number; y?: number } | undefined;
-      if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
-        return false;
-      }
-      await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
-      await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-      await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-      return true;
-    };
-    const clickKnowledgeScopedHiddenTrigger = async (selector: string): Promise<boolean> => {
-      const located = await client.Runtime.evaluate({
-        expression: `(() => {
+				returnByValue: true,
+			});
+			const point = located.result?.value as { x?: number; y?: number } | undefined;
+			if (typeof point?.x !== "number" || typeof point?.y !== "number") {
+				return false;
+			}
+			await client.Input.dispatchMouseEvent({ type: "mouseMoved", x: point.x, y: point.y });
+			await client.Input.dispatchMouseEvent({
+				type: "mousePressed",
+				x: point.x,
+				y: point.y,
+				button: "left",
+				clickCount: 1,
+			});
+			await client.Input.dispatchMouseEvent({
+				type: "mouseReleased",
+				x: point.x,
+				y: point.y,
+				button: "left",
+				clickCount: 1,
+			});
+			return true;
+		};
+		const clickKnowledgeScopedHiddenTrigger = async (selector: string): Promise<boolean> => {
+			const located = await client.Runtime.evaluate({
+				expression: `(() => {
           const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
           const matchesScope = (node) => {
             let current = node;
@@ -6125,30 +6734,42 @@ async function dispatchGeminiKnowledgeFiles(
             y: rect.top + Math.max(rect.height, 1) / 2,
           };
         })()`,
-        returnByValue: true,
-      });
-      const point = located.result?.value as { x?: number; y?: number } | undefined;
-      if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
-        return false;
-      }
-      await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
-      await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-      await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-      return true;
-    };
-    const hiddenSelectorOrder = imageOnly
-      ? [
-          GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR,
-          'button[data-test-id="hidden-local-image-upload-button"]',
-          'button[data-test-id="hidden-local-file-upload-button"]',
-        ]
-      : [
-          GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR,
-          'button[data-test-id="hidden-local-file-upload-button"]',
-          'button[data-test-id="hidden-local-image-upload-button"]',
-        ];
-    await client.Runtime.evaluate({
-      expression: `(() => {
+				returnByValue: true,
+			});
+			const point = located.result?.value as { x?: number; y?: number } | undefined;
+			if (typeof point?.x !== "number" || typeof point?.y !== "number") {
+				return false;
+			}
+			await client.Input.dispatchMouseEvent({ type: "mouseMoved", x: point.x, y: point.y });
+			await client.Input.dispatchMouseEvent({
+				type: "mousePressed",
+				x: point.x,
+				y: point.y,
+				button: "left",
+				clickCount: 1,
+			});
+			await client.Input.dispatchMouseEvent({
+				type: "mouseReleased",
+				x: point.x,
+				y: point.y,
+				button: "left",
+				clickCount: 1,
+			});
+			return true;
+		};
+		const hiddenSelectorOrder = imageOnly
+			? [
+					GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR,
+					'button[data-test-id="hidden-local-image-upload-button"]',
+					'button[data-test-id="hidden-local-file-upload-button"]',
+				]
+			: [
+					GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR,
+					'button[data-test-id="hidden-local-file-upload-button"]',
+					'button[data-test-id="hidden-local-image-upload-button"]',
+				];
+		await client.Runtime.evaluate({
+			expression: `(() => {
         const selectors = ${JSON.stringify(hiddenSelectorOrder)};
         for (const selector of selectors) {
           const target = document.querySelector(selector);
@@ -6158,30 +6779,32 @@ async function dispatchGeminiKnowledgeFiles(
         }
         return { ok: false };
       })()`,
-      returnByValue: true,
-    });
-    let chooserPayload: { backendNodeId?: number } | null = null;
-    try {
-      await clickFirstGeminiKnowledgeMenuRow(client).catch(() => false);
-      chooserPayload = await Promise.race([
-        chooserOpened,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('chooser-timeout')), 3_000)),
-      ]);
-    } catch {
-      let activated = false;
-      for (const selector of hiddenSelectorOrder) {
-        const clickedTrusted = await clickKnowledgeScopedHiddenTrigger(selector).catch(() => false);
-        if (clickedTrusted) {
-          activated = true;
-          break;
-        }
-        const clickedGeneric = await trustedClick(selector).catch(() => false);
-        if (clickedGeneric) {
-          activated = true;
-          break;
-        }
-        const clicked = await client.Runtime.evaluate({
-          expression: `(() => {
+			returnByValue: true,
+		});
+		let chooserPayload: { backendNodeId?: number } | null = null;
+		try {
+			await clickFirstGeminiKnowledgeMenuRow(client).catch(() => false);
+			chooserPayload = await Promise.race([
+				chooserOpened,
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error("chooser-timeout")), 3_000),
+				),
+			]);
+		} catch {
+			let activated = false;
+			for (const selector of hiddenSelectorOrder) {
+				const clickedTrusted = await clickKnowledgeScopedHiddenTrigger(selector).catch(() => false);
+				if (clickedTrusted) {
+					activated = true;
+					break;
+				}
+				const clickedGeneric = await trustedClick(selector).catch(() => false);
+				if (clickedGeneric) {
+					activated = true;
+					break;
+				}
+				const clicked = await client.Runtime.evaluate({
+					expression: `(() => {
             const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
             const matchesScope = (node) => {
               let current = node;
@@ -6200,43 +6823,52 @@ async function dispatchGeminiKnowledgeFiles(
             target.click();
             return true;
           })()`,
-          returnByValue: true,
-        });
-        if (clicked.result?.value === true) {
-          activated = true;
-          break;
-        }
-      }
-      if (!activated) {
-        throw new Error('Gemini Gem knowledge Upload file action did not activate.');
-      }
-      chooserPayload = await Promise.race([
-        chooserOpened,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini Gem knowledge file chooser did not open.')), 10_000)),
-      ]);
-    }
-    if (!chooserPayload || !Number.isFinite(chooserPayload.backendNodeId)) {
-      throw new Error('Gemini Gem knowledge file chooser did not expose a backend node.');
-    }
-    await client.DOM.setFileInputFiles({
-      backendNodeId: chooserPayload.backendNodeId,
-      files: [...filePaths],
-    });
-  } finally {
-    await (client.Page as unknown as {
-      setInterceptFileChooserDialog(params: { enabled: boolean }): Promise<unknown>;
-    }).setInterceptFileChooserDialog({ enabled: false }).catch(() => undefined);
-  }
+					returnByValue: true,
+				});
+				if (clicked.result?.value === true) {
+					activated = true;
+					break;
+				}
+			}
+			if (!activated) {
+				throw new Error("Gemini Gem knowledge Upload file action did not activate.");
+			}
+			chooserPayload = await Promise.race([
+				chooserOpened,
+				new Promise<never>((_, reject) =>
+					setTimeout(
+						() => reject(new Error("Gemini Gem knowledge file chooser did not open.")),
+						10_000,
+					),
+				),
+			]);
+		}
+		if (!chooserPayload || !Number.isFinite(chooserPayload.backendNodeId)) {
+			throw new Error("Gemini Gem knowledge file chooser did not expose a backend node.");
+		}
+		await client.DOM.setFileInputFiles({
+			backendNodeId: chooserPayload.backendNodeId,
+			files: [...filePaths],
+		});
+	} finally {
+		await (
+			client.Page as unknown as {
+				setInterceptFileChooserDialog(params: { enabled: boolean }): Promise<unknown>;
+			}
+		)
+			.setInterceptFileChooserDialog({ enabled: false })
+			.catch(() => undefined);
+	}
 }
 
 async function waitForGeminiKnowledgeFilesVisible(
-  Runtime: ChromeClient['Runtime'],
-  fileNames: string[],
-  timeoutMs: number = 30_000,
+	Runtime: ChromeClient["Runtime"],
+	fileNames: string[],
+	timeoutMs: number = 30_000,
 ): Promise<void> {
-  const ready = await waitForPredicate(
-    Runtime,
-    `(() => {
+	const ready = await waitForPredicate(
+		Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const names = ${JSON.stringify(fileNames.map((name) => name.toLowerCase()))};
       const body = normalize(document.body?.innerText || '');
@@ -6264,23 +6896,23 @@ async function waitForGeminiKnowledgeFilesVisible(
         ? { ready: true }
         : null;
     })()`,
-    {
-      timeoutMs,
-      description: `Gemini Gem knowledge files visible: ${fileNames.join(', ')}`,
-    },
-  );
-  if (!ready.ok) {
-    throw new Error(`Gemini Gem knowledge upload did not surface files: ${fileNames.join(', ')}`);
-  }
+		{
+			timeoutMs,
+			description: `Gemini Gem knowledge files visible: ${fileNames.join(", ")}`,
+		},
+	);
+	if (!ready.ok) {
+		throw new Error(`Gemini Gem knowledge upload did not surface files: ${fileNames.join(", ")}`);
+	}
 }
 
 async function waitForGeminiGemSaved(
-  Runtime: ChromeClient['Runtime'],
-  timeoutMs: number = 20_000,
+	Runtime: ChromeClient["Runtime"],
+	timeoutMs: number = 20_000,
 ): Promise<void> {
-  const saved = await waitForPredicate(
-    Runtime,
-    `(() => {
+	const saved = await waitForPredicate(
+		Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const savedBadge = Array.from(document.querySelectorAll('div[role="status"].save-state, div[role="status"], div, span'))
@@ -6290,67 +6922,67 @@ async function waitForGeminiGemSaved(
       }
       return null;
     })()`,
-    {
-      timeoutMs,
-      description: 'Gemini Gem saved',
-    },
-  );
-  if (!saved.ok) {
-    throw new Error('Gemini Gem save did not settle.');
-  }
+		{
+			timeoutMs,
+			description: "Gemini Gem saved",
+		},
+	);
+	if (!saved.ok) {
+		throw new Error("Gemini Gem save did not settle.");
+	}
 }
 
 async function waitForGeminiGemDirty(
-  Runtime: ChromeClient['Runtime'],
-  timeoutMs: number = 10_000,
+	Runtime: ChromeClient["Runtime"],
+	timeoutMs: number = 10_000,
 ): Promise<void> {
-  const dirty = await waitForPredicate(
-    Runtime,
-    `(() => {
+	const dirty = await waitForPredicate(
+		Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const dirtyBadge = Array.from(document.querySelectorAll('div[role="status"].save-state, div[role="status"], div, span'))
         .some((node) => visible(node) && normalize(node.textContent || '') === 'gem not saved');
       return dirtyBadge ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs,
-      description: 'Gemini Gem dirty state visible',
-    },
-  );
-  if (!dirty.ok) {
-    throw new Error('Gemini Gem did not enter an unsaved state.');
-  }
+		{
+			timeoutMs,
+			description: "Gemini Gem dirty state visible",
+		},
+	);
+	if (!dirty.ok) {
+		throw new Error("Gemini Gem did not enter an unsaved state.");
+	}
 }
 
 async function waitForGeminiEditSurfaceReady(
-  Runtime: ChromeClient['Runtime'],
-  projectId: string,
-  timeoutMs: number = 20_000,
+	Runtime: ChromeClient["Runtime"],
+	projectId: string,
+	timeoutMs: number = 20_000,
 ): Promise<void> {
-  const ready = await waitForPredicate(
-    Runtime,
-    `(() => {
+	const ready = await waitForPredicate(
+		Runtime,
+		`(() => {
       const onRoute = location.pathname === ${JSON.stringify(`/gems/edit/${projectId}`)};
       const hasName = Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)}));
       const hasSave = Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}));
       return onRoute && hasName && hasSave ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs,
-      description: `Gemini Gem edit surface settled for ${projectId}`,
-    },
-  );
-  if (!ready.ok) {
-    throw new Error(`Gemini Gem edit surface did not settle for ${projectId}.`);
-  }
+		{
+			timeoutMs,
+			description: `Gemini Gem edit surface settled for ${projectId}`,
+		},
+	);
+	if (!ready.ok) {
+		throw new Error(`Gemini Gem edit surface did not settle for ${projectId}.`);
+	}
 }
 
 async function scrapeGeminiProjectKnowledgeFiles(
-  Runtime: ChromeClient['Runtime'],
+	Runtime: ChromeClient["Runtime"],
 ): Promise<FileRef[]> {
-  const { result } = await Runtime.evaluate({
-    expression: `(() => {
+	const { result } = await Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const rows = Array.from(document.querySelectorAll('button, [role="button"], div, li, span'))
@@ -6419,18 +7051,18 @@ async function scrapeGeminiProjectKnowledgeFiles(
       }
       return items;
     })()`,
-    returnByValue: true,
-  });
-  return Array.isArray(result?.value) ? (result.value as FileRef[]) : [];
+		returnByValue: true,
+	});
+	return Array.isArray(result?.value) ? (result.value as FileRef[]) : [];
 }
 
 async function waitForGeminiProjectKnowledgeHydrated(
-  Runtime: ChromeClient['Runtime'],
-  timeoutMs: number = 8_000,
+	Runtime: ChromeClient["Runtime"],
+	timeoutMs: number = 8_000,
 ): Promise<void> {
-  await waitForPredicate(
-    Runtime,
-    `(() => {
+	await waitForPredicate(
+		Runtime,
+		`(() => {
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const hasPreviewName = Array.from(document.querySelectorAll('[data-test-id="file-name"]'))
         .some((node) => visible(node) && String(node.getAttribute('title') || node.textContent || '').trim().length > 0);
@@ -6440,19 +7072,19 @@ async function waitForGeminiProjectKnowledgeHydrated(
         .some((node) => visible(node));
       return hasPreviewName || hasRemoveButton || hasPreviewChip ? { ready: true } : null;
     })()`,
-    {
-      timeoutMs,
-      description: 'Gemini Gem knowledge list hydrated',
-    },
-  ).catch(() => undefined);
+		{
+			timeoutMs,
+			description: "Gemini Gem knowledge list hydrated",
+		},
+	).catch(() => undefined);
 }
 
 async function clickGeminiKnowledgeRemoveButton(
-  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
-  fileName: string,
+	client: Pick<ChromeClient, "Runtime" | "Input">,
+	fileName: string,
 ): Promise<boolean> {
-  const located = await client.Runtime.evaluate({
-    expression: `(() => {
+	const located = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const targetLabel = ${JSON.stringify(`remove file ${fileName}`.toLowerCase())};
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
@@ -6473,26 +7105,43 @@ async function clickGeminiKnowledgeRemoveButton(
         y: rect.top + rect.height / 2,
       };
     })()`,
-    returnByValue: true,
-  });
-  const point = located.result?.value as { x?: number; y?: number } | undefined;
-  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
-    return false;
-  }
-  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
-  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-  return true;
+		returnByValue: true,
+	});
+	const point = located.result?.value as { x?: number; y?: number } | undefined;
+	if (typeof point?.x !== "number" || typeof point?.y !== "number") {
+		return false;
+	}
+	await client.Input.dispatchMouseEvent({
+		type: "mouseMoved",
+		x: point.x,
+		y: point.y,
+		button: "none",
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		clickCount: 1,
+	});
+	return true;
 }
 
 async function waitForGeminiKnowledgeFileRemoved(
-  Runtime: ChromeClient['Runtime'],
-  fileName: string,
-  timeoutMs: number = 10_000,
+	Runtime: ChromeClient["Runtime"],
+	fileName: string,
+	timeoutMs: number = 10_000,
 ): Promise<void> {
-  const removed = await waitForPredicate(
-    Runtime,
-    `(() => {
+	const removed = await waitForPredicate(
+		Runtime,
+		`(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const name = ${JSON.stringify(fileName.toLowerCase())};
       const previewNames = Array.from(document.querySelectorAll('[data-test-id="file-name"]'))
@@ -6507,20 +7156,20 @@ async function waitForGeminiKnowledgeFileRemoved(
       const hasBodyOnly = body.includes(name) && (hasRemoveButton || hasPreviewName);
       return hasRemoveButton || hasPreviewName || hasBodyOnly ? null : { removed: true };
     })()`,
-    {
-      timeoutMs,
-      description: `Gemini Gem knowledge file removed: ${fileName}`,
-    },
-  );
-  if (!removed.ok) {
-    throw new Error(`Gemini Gem knowledge file removal did not settle for ${fileName}.`);
-  }
+		{
+			timeoutMs,
+			description: `Gemini Gem knowledge file removed: ${fileName}`,
+		},
+	);
+	if (!removed.ok) {
+		throw new Error(`Gemini Gem knowledge file removal did not settle for ${fileName}.`);
+	}
 }
 
 async function clickGeminiDeleteConfirmations(client: ChromeClient): Promise<number> {
-  const opened = await waitForPredicate(
-    client.Runtime,
-    `(() => {
+	const opened = await waitForPredicate(
+		client.Runtime,
+		`(() => {
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
@@ -6530,16 +7179,16 @@ async function clickGeminiDeleteConfirmations(client: ChromeClient): Promise<num
         .filter((node) => visible(node));
       return buttons.length > 0 ? { count: buttons.length } : null;
     })()`,
-    {
-      timeoutMs: 5_000,
-      description: 'Gemini delete confirmation dialog ready',
-    },
-  );
-  if (!opened.ok) {
-    throw new Error('Gemini delete confirmation dialog did not open.');
-  }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
+		{
+			timeoutMs: 5_000,
+			description: "Gemini delete confirmation dialog ready",
+		},
+	);
+	if (!opened.ok) {
+		throw new Error("Gemini delete confirmation dialog did not open.");
+	}
+	const { result } = await client.Runtime.evaluate({
+		expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -6556,493 +7205,536 @@ async function clickGeminiDeleteConfirmations(client: ChromeClient): Promise<num
       }
       return { clicked };
     })()`,
-    returnByValue: true,
-  });
-  const clicked = Number((result?.value as { clicked?: number } | undefined)?.clicked ?? 0);
-  if (clicked < 1) {
-    throw new Error('Gemini delete confirmation button not found.');
-  }
-  return clicked;
+		returnByValue: true,
+	});
+	const clicked = Number((result?.value as { clicked?: number } | undefined)?.clicked ?? 0);
+	if (clicked < 1) {
+		throw new Error("Gemini delete confirmation button not found.");
+	}
+	return clicked;
 }
 
 export function createGeminiAdapter(): Pick<
-  BrowserProvider,
-  | 'capabilities'
-  | 'createProject'
-  | 'deleteConversation'
-  | 'deleteProjectFile'
-  | 'getFeatureSignature'
-  | 'getUserIdentity'
-  | 'listProjects'
-  | 'listConversations'
-  | 'listProjectFiles'
-  | 'downloadConversationFile'
-  | 'materializeConversationArtifact'
-  | 'readActiveConversationArtifacts'
-  | 'readConversationContext'
-  | 'renameConversation'
-  | 'renameProject'
-  | 'runPrompt'
-  | 'selectRemoveProjectItem'
-  | 'pushProjectRemoveConfirmation'
-  | 'uploadProjectFiles'
-  | 'validateConversationUrl'
+	BrowserProvider,
+	| "capabilities"
+	| "createProject"
+	| "deleteConversation"
+	| "deleteProjectFile"
+	| "getFeatureSignature"
+	| "getUserIdentity"
+	| "listProjects"
+	| "listConversations"
+	| "listProjectFiles"
+	| "downloadConversationFile"
+	| "materializeConversationArtifact"
+	| "readActiveConversationArtifacts"
+	| "readConversationContext"
+	| "renameConversation"
+	| "renameProject"
+	| "runPrompt"
+	| "selectRemoveProjectItem"
+	| "pushProjectRemoveConfirmation"
+	| "uploadProjectFiles"
+	| "validateConversationUrl"
 > {
-  return {
-    capabilities: {
-      projects: true,
-      conversations: true,
-    },
-    async getUserIdentity(options?: BrowserProviderListOptions): Promise<ProviderUserIdentity | null> {
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
-      );
-      try {
-        return await readGeminiUserIdentity(client);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        return await readGeminiFeatureSignature(client);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEMS_VIEW_URL);
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await navigateToGeminiGemsViewPage(client);
-        return await scrapeGeminiProjects(client);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
-      const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      const targetUrl = resolveGeminiConversationRailTargetUrl(options, normalizedProjectId);
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await navigateToGeminiConversationSurface(client, targetUrl);
-        await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
-        await ensureGeminiMainMenuOpen(client).catch(() => undefined);
-        if (shouldHydrateGeminiConversationHistory(options)) {
-          await hydrateGeminiConversationHistory(
-            client,
-            normalizeGeminiConversationHistoryLimit(options?.historyLimit),
-            options?.abortSignal,
-          );
-        }
-        return await scrapeGeminiConversations(client, normalizedProjectId ?? undefined);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async runPrompt(
-      input: BrowserProviderPromptInput,
-      options?: BrowserProviderListOptions,
-    ): Promise<BrowserProviderPromptResult> {
-      const targetUrl = resolveGeminiConfiguredUrl(input.targetUrl ?? options?.configuredUrl, GEMINI_APP_URL);
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
-      const emitProgress = async (event: BrowserProviderPromptProgressEvent) => {
-        await input.onProgress?.(event);
-      };
-      try {
-        await emitProgress({
-          phase: 'browser_target_attached',
-          details: {
-            targetId: targetId ?? null,
-            host,
-            port,
-            targetUrl,
-          },
-        });
-        const authPreflight = providerIdentityPreflightRequested(options)
-          ? checkProviderIdentityPreflight({
-              providerId: 'gemini',
-              actualIdentity: await readGeminiUserIdentity(client),
-              fallbackIdentity: options?.identityPreflightFallbackIdentity,
-              expectedIdentity: options?.expectedUserIdentity,
-              expectedServiceAccountId: options?.expectedServiceAccountId,
-            })
-          : null;
-        if (authPreflight) {
-          await emitProgress({
-            phase: 'provider_auth_preflight',
-            details: {
-              ok: authPreflight.ok,
-              reason: authPreflight.reason,
-              expectedServiceAccountId: authPreflight.expectedServiceAccountId,
-              expectedIdentity: authPreflight.expectedIdentity,
-              actualIdentity: authPreflight.actualIdentity,
-            },
-          });
-          if (!authPreflight.ok) {
-            assertProviderIdentityPreflight({
-              providerId: 'gemini',
-              actualIdentity: authPreflight.actualIdentity,
-              expectedIdentity: authPreflight.expectedIdentity,
-              expectedServiceAccountId: authPreflight.expectedServiceAccountId,
-            });
-          }
-        }
-        await navigateToGeminiConversationSurface(client, targetUrl);
-        await emitProgress({
-          phase: 'gemini_surface_ready',
-          details: {
-            targetId: targetId ?? null,
-            targetUrl,
-          },
-        });
-        await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
-        await selectGeminiWorkbenchCapability(client, input.capabilityId);
-        await emitProgress({
-          phase: 'capability_selected',
-          details: {
-            capabilityId: input.capabilityId ?? null,
-            targetId: targetId ?? null,
-          },
-        });
-        const baseline = await readGeminiPromptState(client.Runtime);
-        await emitProgress({
-          phase: 'composer_ready',
-          details: {
-            href: baseline.href || null,
-            conversationId: baseline.conversationId ?? null,
-            targetId: targetId ?? null,
-            isGenerating: baseline.isGenerating,
-            hasGeneratedMedia: baseline.hasGeneratedMedia,
-          },
-        });
-        await setGeminiPrompt(client, input.prompt);
-        await emitProgress({
-          phase: 'prompt_inserted',
-          details: {
-            targetId: targetId ?? null,
-            promptLength: input.prompt.length,
-          },
-        });
-        const submittedState = await submitGeminiPromptWithFallback(client, baseline, input.prompt, emitProgress);
-        await emitProgress({
-          phase: 'submitted_state_observed',
-          details: {
-            href: submittedState.href || null,
-            conversationId: submittedState.conversationId ?? null,
-            targetId: targetId ?? null,
-            isGenerating: submittedState.isGenerating,
-            hasGeneratedMedia: submittedState.hasGeneratedMedia,
-          },
-        });
-        if (input.completionMode === 'prompt_submitted') {
-          let result: BrowserProviderPromptResult;
-          if (
-            input.capabilityId === 'gemini.media.create_image' ||
-            input.capabilityId === 'gemini.media.create_music' ||
-            input.capabilityId === 'gemini.media.create_video'
-          ) {
-            result = await waitForGeminiSubmittedMediaPromptResult(
-              client.Runtime,
-              baseline,
-              submittedState,
-              input.prompt,
-              input.timeoutMs ?? 300_000,
-            );
-          } else {
-            result = await waitForGeminiSubmittedPromptResult(
-              client.Runtime,
-              baseline,
-              submittedState,
-              input.prompt,
-              15_000,
-            );
-          }
-          return { ...result, tabTargetId: targetId ?? null };
-        }
-        const result = await waitForGeminiPromptResponse(
-          client.Runtime,
-          baseline,
-          input.prompt,
-          Math.max(30_000, input.timeoutMs ?? 90_000),
-        );
-        return { ...result, tabTargetId: targetId ?? null };
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async createProject(
-      input: {
-        name: string;
-        instructions?: string;
-        modelLabel?: string;
-        files?: string[];
-        memoryMode?: ProjectMemoryMode;
-      },
-      options?: BrowserProviderListOptions,
-    ): Promise<Project | null> {
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEM_CREATE_URL);
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        return await createGeminiProjectWithClient(client, input);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async readConversationContext(
-      conversationId: string,
-      _projectId?: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<ConversationContext> {
-      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
-      if (!normalizedConversationId) {
-        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiConversationRailTargetUrl(options, _projectId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        return await readGeminiConversationContextWithClient(client, normalizedConversationId, {
-          allowNavigation: options?.preserveActiveTab !== true,
-        });
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async readActiveConversationArtifacts(
-      conversationId: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<ConversationArtifact[]> {
-      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
-      if (!normalizedConversationId) {
-        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
-      }
-      if (!options?.tabTargetId && options?.allowNavigation !== true) {
-        throw new Error('Gemini active artifact read requires the submitted tab target id.');
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        options?.allowNavigation === true && options?.preserveActiveTab !== true
-          ? resolveGeminiConversationUrl(normalizedConversationId)
-          : options?.tabUrl ?? options?.configuredUrl ?? GEMINI_APP_URL,
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
-          throw new Error(
-            `Gemini active artifact read rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
-          );
-        }
-        const context = await readGeminiConversationContextWithClient(client, normalizedConversationId, {
-          allowNavigation: options?.allowNavigation === true && options?.preserveActiveTab !== true,
-        });
-        return normalizeGeminiConversationArtifacts(context.artifacts);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async materializeConversationArtifact(
-      conversationId: string,
-      artifact: ConversationArtifact,
-      destDir: string,
-      _projectId?: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<FileRef | null> {
-      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
-      if (!normalizedConversationId) {
-        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiConversationRailTargetUrl(options, _projectId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
-          throw new Error(
-            `Gemini artifact materialization rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
-          );
-        }
-        return await materializeGeminiConversationArtifactWithClient(
-          client,
-          normalizedConversationId,
-          artifact,
-          destDir,
-          {
-            allowNavigation: options?.preserveActiveTab !== true,
-            downloadVariantLabel: options?.downloadVariantLabel ?? null,
-          },
-        );
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async downloadConversationFile(
-      conversationId: string,
-      fileId: string,
-      destPath: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<void> {
-      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
-      if (!normalizedConversationId) {
-        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiConversationRailTargetUrl(options),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
-          throw new Error(
-            `Gemini conversation file download rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
-          );
-        }
-        await downloadGeminiConversationFileWithClient(client, normalizedConversationId, fileId, destPath, {
-          allowNavigation: providerNavigationAllowed(options),
-        });
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async renameConversation(
-      conversationId: string,
-      newTitle: string,
-      _projectId?: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<void> {
-      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
-      if (!normalizedConversationId) {
-        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiConversationUrl(normalizedConversationId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await renameGeminiConversationOnPage(client, normalizedConversationId, newTitle);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async deleteConversation(
-      conversationId: string,
-      _projectId?: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<void> {
-      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
-      if (!normalizedConversationId) {
-        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiConversationUrl(normalizedConversationId),
-      );
-      const trace: GeminiDeleteTrace = [];
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await openGeminiConversationActionsMenuOnConversationPage(client, normalizedConversationId);
-        await selectGeminiConversationDeleteMenuItem(client, trace);
-        await clickGeminiConversationDeleteConfirmations(client, trace);
-        await waitForGeminiConversationRemoved(client, normalizedConversationId, 90_000, trace);
-      } catch (error) {
-        trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'delete-error'));
-        const traceSummary = summarizeGeminiDeleteTrace(trace, 5);
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`${message} trace=${traceSummary}`);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async validateConversationUrl(
-      conversationId: string,
-      _projectId?: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<void> {
-      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
-      if (!normalizedConversationId) {
-        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
-      }
-      const targetUrl = resolveGeminiConversationUrl(normalizedConversationId);
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await validateGeminiConversationUrlWithClient(client, normalizedConversationId);
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async renameProject(projectId: string, newTitle: string, options?: BrowserProviderListOptions): Promise<void> {
-      const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      if (!normalizedProjectId) {
-        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiEditProjectUrl(normalizedProjectId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await navigateToGeminiEditPage(client, normalizedProjectId);
-        const setName = await setInputValue(client.Runtime, {
-          selector: GEMINI_GEM_NAME_INPUT_SELECTOR,
-          value: newTitle,
-          timeoutMs: 10_000,
-        });
-        if (!setName) {
-          throw new Error('Gemini Gem name input did not become ready for rename.');
-        }
-        await client.Runtime.evaluate({
-          expression: `(() => {
+	return {
+		capabilities: {
+			projects: true,
+			conversations: true,
+		},
+		async getUserIdentity(
+			options?: BrowserProviderListOptions,
+		): Promise<ProviderUserIdentity | null> {
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
+			);
+			try {
+				return await readGeminiUserIdentity(client);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				return await readGeminiFeatureSignature(client);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				GEMINI_GEMS_VIEW_URL,
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await navigateToGeminiGemsViewPage(client);
+				return await scrapeGeminiProjects(client);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async listConversations(
+			projectId?: string,
+			options?: BrowserProviderListOptions,
+		): Promise<Conversation[]> {
+			const normalizedProjectId = normalizeGeminiProjectId(projectId);
+			const targetUrl = resolveGeminiConversationRailTargetUrl(options, normalizedProjectId);
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				targetUrl,
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await navigateToGeminiConversationSurface(client, targetUrl);
+				await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+				await ensureGeminiMainMenuOpen(client).catch(() => undefined);
+				if (shouldHydrateGeminiConversationHistory(options)) {
+					await hydrateGeminiConversationHistory(
+						client,
+						normalizeGeminiConversationHistoryLimit(options?.historyLimit),
+						options?.abortSignal,
+					);
+				}
+				return await scrapeGeminiConversations(client, normalizedProjectId ?? undefined);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async runPrompt(
+			input: BrowserProviderPromptInput,
+			options?: BrowserProviderListOptions,
+		): Promise<BrowserProviderPromptResult> {
+			const targetUrl = resolveGeminiConfiguredUrl(
+				input.targetUrl ?? options?.configuredUrl,
+				GEMINI_APP_URL,
+			);
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				targetUrl,
+			);
+			const emitProgress = async (event: BrowserProviderPromptProgressEvent) => {
+				await input.onProgress?.(event);
+			};
+			try {
+				await emitProgress({
+					phase: "browser_target_attached",
+					details: {
+						targetId: targetId ?? null,
+						host,
+						port,
+						targetUrl,
+					},
+				});
+				const authPreflight = providerIdentityPreflightRequested(options)
+					? checkProviderIdentityPreflight({
+							providerId: "gemini",
+							actualIdentity: await readGeminiUserIdentity(client),
+							fallbackIdentity: options?.identityPreflightFallbackIdentity,
+							expectedIdentity: options?.expectedUserIdentity,
+							expectedServiceAccountId: options?.expectedServiceAccountId,
+						})
+					: null;
+				if (authPreflight) {
+					await emitProgress({
+						phase: "provider_auth_preflight",
+						details: {
+							ok: authPreflight.ok,
+							reason: authPreflight.reason,
+							expectedServiceAccountId: authPreflight.expectedServiceAccountId,
+							expectedIdentity: authPreflight.expectedIdentity,
+							actualIdentity: authPreflight.actualIdentity,
+						},
+					});
+					if (!authPreflight.ok) {
+						assertProviderIdentityPreflight({
+							providerId: "gemini",
+							actualIdentity: authPreflight.actualIdentity,
+							expectedIdentity: authPreflight.expectedIdentity,
+							expectedServiceAccountId: authPreflight.expectedServiceAccountId,
+						});
+					}
+				}
+				await navigateToGeminiConversationSurface(client, targetUrl);
+				await emitProgress({
+					phase: "gemini_surface_ready",
+					details: {
+						targetId: targetId ?? null,
+						targetUrl,
+					},
+				});
+				await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+				await selectGeminiWorkbenchCapability(client, input.capabilityId);
+				await emitProgress({
+					phase: "capability_selected",
+					details: {
+						capabilityId: input.capabilityId ?? null,
+						targetId: targetId ?? null,
+					},
+				});
+				const baseline = await readGeminiPromptState(client.Runtime);
+				await emitProgress({
+					phase: "composer_ready",
+					details: {
+						href: baseline.href || null,
+						conversationId: baseline.conversationId ?? null,
+						targetId: targetId ?? null,
+						isGenerating: baseline.isGenerating,
+						hasGeneratedMedia: baseline.hasGeneratedMedia,
+					},
+				});
+				await setGeminiPrompt(client, input.prompt);
+				await emitProgress({
+					phase: "prompt_inserted",
+					details: {
+						targetId: targetId ?? null,
+						promptLength: input.prompt.length,
+					},
+				});
+				const submittedState = await submitGeminiPromptWithFallback(
+					client,
+					baseline,
+					input.prompt,
+					emitProgress,
+				);
+				await emitProgress({
+					phase: "submitted_state_observed",
+					details: {
+						href: submittedState.href || null,
+						conversationId: submittedState.conversationId ?? null,
+						targetId: targetId ?? null,
+						isGenerating: submittedState.isGenerating,
+						hasGeneratedMedia: submittedState.hasGeneratedMedia,
+					},
+				});
+				if (input.completionMode === "prompt_submitted") {
+					let result: BrowserProviderPromptResult;
+					if (
+						input.capabilityId === "gemini.media.create_image" ||
+						input.capabilityId === "gemini.media.create_music" ||
+						input.capabilityId === "gemini.media.create_video"
+					) {
+						result = await waitForGeminiSubmittedMediaPromptResult(
+							client.Runtime,
+							baseline,
+							submittedState,
+							input.prompt,
+							input.timeoutMs ?? 300_000,
+						);
+					} else {
+						result = await waitForGeminiSubmittedPromptResult(
+							client.Runtime,
+							baseline,
+							submittedState,
+							input.prompt,
+							15_000,
+						);
+					}
+					return { ...result, tabTargetId: targetId ?? null };
+				}
+				const result = await waitForGeminiPromptResponse(
+					client.Runtime,
+					baseline,
+					input.prompt,
+					Math.max(30_000, input.timeoutMs ?? 90_000),
+				);
+				return { ...result, tabTargetId: targetId ?? null };
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async createProject(
+			input: {
+				name: string;
+				instructions?: string;
+				modelLabel?: string;
+				files?: string[];
+				memoryMode?: ProjectMemoryMode;
+			},
+			options?: BrowserProviderListOptions,
+		): Promise<Project | null> {
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				GEMINI_GEM_CREATE_URL,
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				return await createGeminiProjectWithClient(client, input);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async readConversationContext(
+			conversationId: string,
+			_projectId?: string,
+			options?: BrowserProviderListOptions,
+		): Promise<ConversationContext> {
+			const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+			if (!normalizedConversationId) {
+				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiConversationRailTargetUrl(options, _projectId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				return await readGeminiConversationContextWithClient(client, normalizedConversationId, {
+					allowNavigation: options?.preserveActiveTab !== true,
+				});
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async readActiveConversationArtifacts(
+			conversationId: string,
+			options?: BrowserProviderListOptions,
+		): Promise<ConversationArtifact[]> {
+			const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+			if (!normalizedConversationId) {
+				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+			}
+			if (!options?.tabTargetId && options?.allowNavigation !== true) {
+				throw new Error("Gemini active artifact read requires the submitted tab target id.");
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				options?.allowNavigation === true && options?.preserveActiveTab !== true
+					? resolveGeminiConversationUrl(normalizedConversationId)
+					: (options?.tabUrl ?? options?.configuredUrl ?? GEMINI_APP_URL),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
+					throw new Error(
+						`Gemini active artifact read rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
+					);
+				}
+				const context = await readGeminiConversationContextWithClient(
+					client,
+					normalizedConversationId,
+					{
+						allowNavigation:
+							options?.allowNavigation === true && options?.preserveActiveTab !== true,
+					},
+				);
+				return normalizeGeminiConversationArtifacts(context.artifacts);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async materializeConversationArtifact(
+			conversationId: string,
+			artifact: ConversationArtifact,
+			destDir: string,
+			_projectId?: string,
+			options?: BrowserProviderListOptions,
+		): Promise<FileRef | null> {
+			const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+			if (!normalizedConversationId) {
+				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiConversationRailTargetUrl(options, _projectId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
+					throw new Error(
+						`Gemini artifact materialization rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
+					);
+				}
+				return await materializeGeminiConversationArtifactWithClient(
+					client,
+					normalizedConversationId,
+					artifact,
+					destDir,
+					{
+						allowNavigation: options?.preserveActiveTab !== true,
+						downloadVariantLabel: options?.downloadVariantLabel ?? null,
+					},
+				);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async downloadConversationFile(
+			conversationId: string,
+			fileId: string,
+			destPath: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+			if (!normalizedConversationId) {
+				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiConversationRailTargetUrl(options),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
+					throw new Error(
+						`Gemini conversation file download rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
+					);
+				}
+				await downloadGeminiConversationFileWithClient(
+					client,
+					normalizedConversationId,
+					fileId,
+					destPath,
+					{
+						allowNavigation: providerNavigationAllowed(options),
+					},
+				);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async renameConversation(
+			conversationId: string,
+			newTitle: string,
+			_projectId?: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+			if (!normalizedConversationId) {
+				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiConversationUrl(normalizedConversationId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await renameGeminiConversationOnPage(client, normalizedConversationId, newTitle);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async deleteConversation(
+			conversationId: string,
+			_projectId?: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+			if (!normalizedConversationId) {
+				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiConversationUrl(normalizedConversationId),
+			);
+			const trace: GeminiDeleteTrace = [];
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await openGeminiConversationActionsMenuOnConversationPage(client, normalizedConversationId);
+				await selectGeminiConversationDeleteMenuItem(client, trace);
+				await clickGeminiConversationDeleteConfirmations(client, trace);
+				await waitForGeminiConversationRemoved(client, normalizedConversationId, 90_000, trace);
+			} catch (error) {
+				trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, "delete-error"));
+				const traceSummary = summarizeGeminiDeleteTrace(trace, 5);
+				const message = error instanceof Error ? error.message : String(error);
+				throw new Error(`${message} trace=${traceSummary}`);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async validateConversationUrl(
+			conversationId: string,
+			_projectId?: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+			if (!normalizedConversationId) {
+				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+			}
+			const targetUrl = resolveGeminiConversationUrl(normalizedConversationId);
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				targetUrl,
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await validateGeminiConversationUrlWithClient(client, normalizedConversationId);
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async renameProject(
+			projectId: string,
+			newTitle: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedProjectId = normalizeGeminiProjectId(projectId);
+			if (!normalizedProjectId) {
+				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiEditProjectUrl(normalizedProjectId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await navigateToGeminiEditPage(client, normalizedProjectId);
+				const setName = await setInputValue(client.Runtime, {
+					selector: GEMINI_GEM_NAME_INPUT_SELECTOR,
+					value: newTitle,
+					timeoutMs: 10_000,
+				});
+				if (!setName) {
+					throw new Error("Gemini Gem name input did not become ready for rename.");
+				}
+				await client.Runtime.evaluate({
+					expression: `(() => {
             const input = document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)});
             if (!(input instanceof HTMLInputElement)) return false;
             input.focus();
@@ -7052,215 +7744,249 @@ export function createGeminiAdapter(): Pick<
             input.dispatchEvent(new Event('blur', { bubbles: true }));
             return true;
           })()`,
-          returnByValue: true,
-        });
-        const pressed = await pressGeminiGemSaveButton(client);
-        if (!pressed.ok) {
-          throw new Error(`Gemini Gem update failed: ${pressed.reason ?? 'Update button not clickable.'}`);
-        }
-        const persistedName = await readGeminiPersistedProjectName(client, normalizedProjectId, {
-          expectedName: newTitle,
-          timeoutMs: 20_000,
-        });
-        if (persistedName !== newTitle.trim()) {
-          throw new Error(`Gemini Gem rename did not persist. Expected "${newTitle}", got "${persistedName}".`);
-        }
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async uploadProjectFiles(
-      projectId: string,
-      filePaths: string[],
-      options?: BrowserProviderListOptions,
-    ): Promise<void> {
-      const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      if (!normalizedProjectId) {
-        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
-      }
-      if (filePaths.length === 0) return;
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiEditProjectUrl(normalizedProjectId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await navigateToGeminiEditPage(client, normalizedProjectId);
-        await openGeminiKnowledgeUploadMenu(client.Runtime);
-        const fileNames = filePaths.map((filePath) => path.basename(filePath));
-        await dispatchGeminiKnowledgeFiles(client, filePaths);
-        let knowledgeVisible = false;
-        try {
-          await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 8_000);
-          knowledgeVisible = true;
-        } catch {
-          await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
-          const persisted = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
-          const persistedNames = persisted.map((item) => item.name.toLowerCase());
-          if (fileNames.every((name) => persistedNames.includes(name.toLowerCase()))) {
-            knowledgeVisible = true;
-          }
-        }
-        if (!knowledgeVisible) {
-          throw new Error(`Gemini Gem knowledge upload did not surface files: ${fileNames.join(', ')}`);
-        }
-        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
-        const pressed = await pressGeminiGemSaveButton(client);
-        if (!pressed.ok) {
-          throw new Error(`Gemini Gem knowledge save failed: ${pressed.reason ?? 'Save button not clickable.'}`);
-        }
-        await waitForGeminiGemSaved(client.Runtime);
-        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
-        const persistedAfterSave = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
-        const persistedNames = persistedAfterSave.map((item) => item.name.toLowerCase());
-        if (!fileNames.every((name) => persistedNames.includes(name.toLowerCase()))) {
-          const stillOnEditRoute = await client.Runtime.evaluate({
-            expression: `location.pathname === ${JSON.stringify(`/gems/edit/${normalizedProjectId}`)}`,
-            returnByValue: true,
-          });
-          if (stillOnEditRoute.result?.value === true) {
-            await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 10_000);
-          } else {
-            await navigateToGeminiEditPage(client, normalizedProjectId);
-            await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 10_000);
-          }
-        }
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async listProjectFiles(
-      projectId: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<FileRef[]> {
-      const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      if (!normalizedProjectId) {
-        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiEditProjectUrl(normalizedProjectId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await navigateToGeminiEditPage(client, normalizedProjectId);
-        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
-        let files = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
-        if (files.length === 0) {
-          await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 8_000);
-          files = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
-        }
-        return files;
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async deleteProjectFile(
-      projectId: string,
-      fileName: string,
-      options?: BrowserProviderListOptions,
-    ): Promise<void> {
-      const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      if (!normalizedProjectId) {
-        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiEditProjectUrl(normalizedProjectId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await navigateToGeminiEditPage(client, normalizedProjectId);
-        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
-        await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 8_000);
-        const existing = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
-        const matched = existing.find((item) => item.name.toLowerCase() === fileName.toLowerCase());
-        if (!matched) {
-          return;
-        }
-        const clicked = await clickGeminiKnowledgeRemoveButton(client, matched.name);
-        if (!clicked) {
-          throw new Error(`Gemini Gem knowledge remove button not found for ${matched.name}.`);
-        }
-        await waitForGeminiKnowledgeFileRemoved(client.Runtime, matched.name, 10_000);
-        await waitForGeminiGemDirty(client.Runtime, 10_000);
-        const pressed = await pressGeminiGemSaveButton(client);
-        if (!pressed.ok) {
-          throw new Error(`Gemini Gem knowledge delete save failed: ${pressed.reason ?? 'Save button not clickable.'}`);
-        }
-        await waitForGeminiGemSaved(client.Runtime);
-        await navigateToGeminiEditPage(client, normalizedProjectId);
-        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
-        await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 5_000);
-        const persisted = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
-        const stillPresent = persisted.some((item) => item.name.toLowerCase() === matched.name.toLowerCase());
-        if (stillPresent) {
-          throw new Error(`Gemini Gem knowledge file "${matched.name}" still appears after delete.`);
-        }
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-    async selectRemoveProjectItem(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
-      const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      if (!normalizedProjectId) {
-        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
-      }
-      void options;
-      // Gemini keeps delete as one direct-page action chain.
-      // The shared CLI still calls select + confirm as two steps, so Gemini
-      // keeps the full flow in pushProjectRemoveConfirmation(...).
-    },
-    async pushProjectRemoveConfirmation(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
-      const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      if (!normalizedProjectId) {
-        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
-      }
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-        options,
-        resolveGeminiProjectUrl(normalizedProjectId),
-      );
-      try {
-        await assertGeminiExpectedIdentity(client, options);
-        await openGeminiProjectActionsMenuOnProjectPage(client, normalizedProjectId);
-        await selectGeminiProjectDeleteMenuItem(client);
-        await clickGeminiDeleteConfirmations(client);
-        await navigateToGeminiGemsViewPage(client);
-        const deleted = await waitForPredicate(
-          client.Runtime,
-          `(() => {
+					returnByValue: true,
+				});
+				const pressed = await pressGeminiGemSaveButton(client);
+				if (!pressed.ok) {
+					throw new Error(
+						`Gemini Gem update failed: ${pressed.reason ?? "Update button not clickable."}`,
+					);
+				}
+				const persistedName = await readGeminiPersistedProjectName(client, normalizedProjectId, {
+					expectedName: newTitle,
+					timeoutMs: 20_000,
+				});
+				if (persistedName !== newTitle.trim()) {
+					throw new Error(
+						`Gemini Gem rename did not persist. Expected "${newTitle}", got "${persistedName}".`,
+					);
+				}
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async uploadProjectFiles(
+			projectId: string,
+			filePaths: string[],
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedProjectId = normalizeGeminiProjectId(projectId);
+			if (!normalizedProjectId) {
+				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+			}
+			if (filePaths.length === 0) return;
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiEditProjectUrl(normalizedProjectId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await navigateToGeminiEditPage(client, normalizedProjectId);
+				await openGeminiKnowledgeUploadMenu(client.Runtime);
+				const fileNames = filePaths.map((filePath) => path.basename(filePath));
+				await dispatchGeminiKnowledgeFiles(client, filePaths);
+				let knowledgeVisible = false;
+				try {
+					await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 8_000);
+					knowledgeVisible = true;
+				} catch {
+					await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(
+						() => undefined,
+					);
+					const persisted = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+					const persistedNames = persisted.map((item) => item.name.toLowerCase());
+					if (fileNames.every((name) => persistedNames.includes(name.toLowerCase()))) {
+						knowledgeVisible = true;
+					}
+				}
+				if (!knowledgeVisible) {
+					throw new Error(
+						`Gemini Gem knowledge upload did not surface files: ${fileNames.join(", ")}`,
+					);
+				}
+				await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(
+					() => undefined,
+				);
+				const pressed = await pressGeminiGemSaveButton(client);
+				if (!pressed.ok) {
+					throw new Error(
+						`Gemini Gem knowledge save failed: ${pressed.reason ?? "Save button not clickable."}`,
+					);
+				}
+				await waitForGeminiGemSaved(client.Runtime);
+				await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(
+					() => undefined,
+				);
+				const persistedAfterSave = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+				const persistedNames = persistedAfterSave.map((item) => item.name.toLowerCase());
+				if (!fileNames.every((name) => persistedNames.includes(name.toLowerCase()))) {
+					const stillOnEditRoute = await client.Runtime.evaluate({
+						expression: `location.pathname === ${JSON.stringify(`/gems/edit/${normalizedProjectId}`)}`,
+						returnByValue: true,
+					});
+					if (stillOnEditRoute.result?.value === true) {
+						await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 10_000);
+					} else {
+						await navigateToGeminiEditPage(client, normalizedProjectId);
+						await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 10_000);
+					}
+				}
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async listProjectFiles(
+			projectId: string,
+			options?: BrowserProviderListOptions,
+		): Promise<FileRef[]> {
+			const normalizedProjectId = normalizeGeminiProjectId(projectId);
+			if (!normalizedProjectId) {
+				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiEditProjectUrl(normalizedProjectId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await navigateToGeminiEditPage(client, normalizedProjectId);
+				await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(
+					() => undefined,
+				);
+				let files = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+				if (files.length === 0) {
+					await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 8_000);
+					files = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+				}
+				return files;
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async deleteProjectFile(
+			projectId: string,
+			fileName: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedProjectId = normalizeGeminiProjectId(projectId);
+			if (!normalizedProjectId) {
+				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiEditProjectUrl(normalizedProjectId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await navigateToGeminiEditPage(client, normalizedProjectId);
+				await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(
+					() => undefined,
+				);
+				await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 8_000);
+				const existing = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+				const matched = existing.find((item) => item.name.toLowerCase() === fileName.toLowerCase());
+				if (!matched) {
+					return;
+				}
+				const clicked = await clickGeminiKnowledgeRemoveButton(client, matched.name);
+				if (!clicked) {
+					throw new Error(`Gemini Gem knowledge remove button not found for ${matched.name}.`);
+				}
+				await waitForGeminiKnowledgeFileRemoved(client.Runtime, matched.name, 10_000);
+				await waitForGeminiGemDirty(client.Runtime, 10_000);
+				const pressed = await pressGeminiGemSaveButton(client);
+				if (!pressed.ok) {
+					throw new Error(
+						`Gemini Gem knowledge delete save failed: ${pressed.reason ?? "Save button not clickable."}`,
+					);
+				}
+				await waitForGeminiGemSaved(client.Runtime);
+				await navigateToGeminiEditPage(client, normalizedProjectId, { forceNavigate: true });
+				await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(
+					() => undefined,
+				);
+				await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 5_000);
+				const persisted = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+				const stillPresent = persisted.some(
+					(item) => item.name.toLowerCase() === matched.name.toLowerCase(),
+				);
+				if (stillPresent) {
+					throw new Error(
+						`Gemini Gem knowledge file "${matched.name}" still appears after delete.`,
+					);
+				}
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+		async selectRemoveProjectItem(
+			projectId: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedProjectId = normalizeGeminiProjectId(projectId);
+			if (!normalizedProjectId) {
+				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+			}
+			void options;
+			// Gemini keeps delete as one direct-page action chain.
+			// The shared CLI still calls select + confirm as two steps, so Gemini
+			// keeps the full flow in pushProjectRemoveConfirmation(...).
+		},
+		async pushProjectRemoveConfirmation(
+			projectId: string,
+			options?: BrowserProviderListOptions,
+		): Promise<void> {
+			const normalizedProjectId = normalizeGeminiProjectId(projectId);
+			if (!normalizedProjectId) {
+				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+			}
+			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+				options,
+				resolveGeminiProjectUrl(normalizedProjectId),
+			);
+			try {
+				await assertGeminiExpectedIdentity(client, options);
+				await openGeminiProjectActionsMenuOnProjectPage(client, normalizedProjectId);
+				await selectGeminiProjectDeleteMenuItem(client);
+				await clickGeminiDeleteConfirmations(client);
+				await navigateToGeminiGemsViewPage(client, { forceNavigate: true });
+				const deleted = await waitForPredicate(
+					client.Runtime,
+					`(() => {
             const projectId = ${JSON.stringify(normalizedProjectId)};
             return !Array.from(document.querySelectorAll('a[href]'))
               .some((node) => node instanceof HTMLAnchorElement && node.href.includes('/gem/' + projectId))
               ? { deleted: true }
               : null;
           })()`,
-          {
-            timeoutMs: 15_000,
-            description: `Gemini Gem ${normalizedProjectId} removed`,
-          },
-        );
-        if (!deleted.ok) {
-          throw new Error(`Gemini Gem ${normalizedProjectId} still appears in the Gem manager after delete confirmation.`);
-        }
-      } finally {
-        await client.close().catch(() => undefined);
-        if (shouldClose && targetId) {
-          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-        }
-      }
-    },
-  };
+					{
+						timeoutMs: 15_000,
+						description: `Gemini Gem ${normalizedProjectId} removed`,
+					},
+				);
+				if (!deleted.ok) {
+					throw new Error(
+						`Gemini Gem ${normalizedProjectId} still appears in the Gem manager after delete confirmation.`,
+					);
+				}
+			} finally {
+				await client.close().catch(() => undefined);
+				if (shouldClose && targetId) {
+					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+				}
+			}
+		},
+	};
 }

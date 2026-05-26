@@ -60,7 +60,7 @@ export async function reconcileConfiguredAccountMirrorLiveFollow(input: {
       runtimeProfileId: entry.runtimeProfileId,
       status: 'active',
       limit: null,
-    }).find((operation) => operation.mode === 'live_follow');
+    })[0] ?? null;
     if (active) {
       existing.push(active);
       continue;

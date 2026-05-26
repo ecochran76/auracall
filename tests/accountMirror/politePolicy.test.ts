@@ -40,6 +40,24 @@ describe('account mirror polite policy', () => {
     });
   });
 
+  test('ignores prompt-like Grok at-text as detected identity evidence', () => {
+    const decision = evaluateAccountMirrorPoliteness({
+      provider: 'grok',
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      expectedIdentityKey: 'ez86944@gmail.com',
+      detectedIdentityKey: "@google calendar what's on my schedule today?",
+      nowMs: 1_000,
+    });
+
+    expect(decision).toMatchObject({
+      posture: 'eligible',
+      reason: 'eligible',
+      expectedIdentityKey: 'ez86944@gmail.com',
+      detectedIdentityKey: null,
+    });
+  });
+
   test('adds deterministic jitter to routine mirror refreshes', () => {
     const policy = getDefaultAccountMirrorPolitenessPolicy('chatgpt');
     const jitterMs = getAccountMirrorJitterMs({
@@ -86,6 +104,45 @@ describe('account mirror polite policy', () => {
     expect(decision.eligibleAtMs).toBeGreaterThanOrEqual(50_000 + policy.explicitRefreshMinIntervalMs);
   });
 
+  test('operator reconciliation can bypass routine minimum interval without bypassing guards', () => {
+    const decision = evaluateAccountMirrorPoliteness({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-2',
+      browserProfileId: 'wsl-chrome-2',
+      expectedIdentityKey: 'user@example.com',
+      lastAttemptAtMs: 50_000,
+      explicitRefresh: true,
+      ignoreMinimumInterval: true,
+      nowMs: 55_000,
+    });
+
+    expect(decision).toMatchObject({
+      posture: 'eligible',
+      reason: 'eligible',
+      eligibleAtMs: 55_000,
+    });
+
+    expect(evaluateAccountMirrorPoliteness({
+      provider: 'gemini',
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      expectedIdentityKey: 'user@example.com',
+      lastAttemptAtMs: 50_000,
+      explicitRefresh: true,
+      ignoreMinimumInterval: true,
+      nowMs: 55_000,
+      providerGuard: {
+        state: 'manual_clear_required',
+        kind: 'captcha',
+        summary: 'Provider guard requires manual clearance.',
+        detectedAtMs: 50_000,
+      },
+    })).toMatchObject({
+      posture: 'blocked',
+      reason: 'provider-manual-clear-required',
+    });
+  });
+
   test('backs off after failures before considering routine interval freshness', () => {
     const decision = evaluateAccountMirrorPoliteness({
       provider: 'gemini',
@@ -103,6 +160,29 @@ describe('account mirror polite policy', () => {
       reason: 'failure-backoff',
     });
     expect(decision.limits.failureCooldownMs).toBe(4 * 60_000);
+  });
+
+  test('keeps ChatGPT failure backoff short enough for operator-driven reconciliation tests', () => {
+    const policy = getDefaultAccountMirrorPolitenessPolicy('chatgpt');
+    const decision = evaluateAccountMirrorPoliteness({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-3',
+      browserProfileId: 'wsl-chrome-3',
+      expectedIdentityKey: 'user@example.com',
+      lastFailureAtMs: 20_000,
+      consecutiveFailureCount: 4,
+      nowMs: 20_000 + 9 * 60_000,
+      explicitRefresh: true,
+    });
+
+    expect(policy.failureBaseCooldownMs).toBe(2 * 60_000);
+    expect(policy.failureMaxCooldownMs).toBe(10 * 60_000);
+    expect(decision).toMatchObject({
+      posture: 'delay',
+      reason: 'failure-backoff',
+      eligibleAtMs: 20_000 + 10 * 60_000,
+    });
+    expect(decision.limits.failureCooldownMs).toBe(10 * 60_000);
   });
 
   test('applies long hard-stop cooldowns for bot-sensitive provider pages', () => {
@@ -133,10 +213,10 @@ describe('account mirror polite policy', () => {
     });
 
     expect(decision.posture).toBe('eligible');
-    expect(decision.limits.maxPageReadsPerCycle).toBe(12);
-    expect(decision.limits.maxConversationRowsPerCycle).toBe(250);
-    expect(decision.limits.maxArtifactRowsPerCycle).toBe(80);
-    expect(decision.limits.maxBrowserInteractionsPerMinute).toBe(20);
+    expect(decision.limits.maxPageReadsPerCycle).toBe(4);
+    expect(decision.limits.maxConversationRowsPerCycle).toBe(30);
+    expect(decision.limits.maxArtifactRowsPerCycle).toBe(24);
+    expect(decision.limits.maxBrowserInteractionsPerMinute).toBe(30);
   });
 
   test('uses slower Gemini defaults for bot-sensitive live follow', () => {

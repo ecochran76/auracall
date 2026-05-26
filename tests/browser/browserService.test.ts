@@ -26,7 +26,9 @@ function classifiedInstances(instances: ClassifiedBrowserInstance[]): Classified
 }
 
 const sessionMocks = vi.hoisted(() => ({
-  resolveBrowserListTarget: vi.fn(async () => ({ host: '127.0.0.1', port: 9222 })),
+  resolveBrowserListTarget: vi.fn<() => Promise<{ host?: string; port?: number } | undefined>>(
+    async () => ({ host: '127.0.0.1', port: 9222 }),
+  ),
   pruneRegistry: vi.fn(async () => {}),
 }));
 
@@ -88,11 +90,15 @@ vi.mock('../../packages/browser-service/src/processCheck.js', async (importOrigi
   };
 });
 
-vi.mock('../../src/browser/manualLogin.js', () => ({
+const manualLoginMocks = vi.hoisted(() => ({
   launchManualLoginSession: vi.fn(async () => ({
     chrome: { port: 9222, host: '127.0.0.1' },
     port: 9222,
   })),
+}));
+
+vi.mock('../../src/browser/manualLogin.js', () => ({
+  launchManualLoginSession: manualLoginMocks.launchManualLoginSession,
 }));
 
 describe('BrowserService resolveServiceTarget', () => {
@@ -167,6 +173,55 @@ describe('BrowserService resolveServiceTarget', () => {
       reasons: ['match-url'],
     });
     expect(loggerMessages[0]).toContain('[browser-service] Selected tab=chatgpt-1');
+  });
+
+  test('passes resolved browser-family display to managed browser launch', async () => {
+    sessionMocks.resolveBrowserListTarget.mockResolvedValueOnce(undefined);
+    manualLoginMocks.launchManualLoginSession.mockClear();
+    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
+      instance: {
+        pid: 9999,
+        port: 9222,
+        host: '127.0.0.1',
+        profilePath: '/tmp/gemini-profile',
+        profileName: 'Default',
+        type: 'chrome',
+        launchedAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      },
+      tabs: [
+        { targetId: 'gemini-app', url: 'https://gemini.google.com/app', title: 'Gemini', type: 'page' },
+      ],
+    });
+
+    const service = BrowserService.fromConfig(
+      {
+        auracallProfile: 'auracall-gemini-pro',
+        browser: {
+          target: 'gemini',
+          chromePath: '/tmp/chromium-stealthcdp/chrome',
+          display: ':10',
+          manualLoginProfileDir: '/tmp/gemini-profile',
+          chromeProfile: 'Default',
+          debugPort: 45019,
+        },
+      } as unknown as ResolvedUserConfig,
+      'gemini',
+    );
+    const target = await service.resolveServiceTarget({
+      serviceId: 'gemini',
+      configuredUrl: 'https://gemini.google.com/app',
+      ensurePort: true,
+    });
+
+    expect(target.port).toBe(9222);
+    expect(manualLoginMocks.launchManualLoginSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chromePath: '/tmp/chromium-stealthcdp/chrome',
+        display: ':10',
+        userDataDir: '/tmp/gemini-profile',
+      }),
+    );
   });
 
   test('matches Gemini tabs by domain', async () => {

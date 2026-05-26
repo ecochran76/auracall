@@ -187,11 +187,13 @@ export interface ConfigModelDoctorIssue {
     | 'dispatch-pool-mixed-services'
     | 'dispatch-pool-mixed-models'
     | 'dispatch-pool-project-sync-disabled'
-    | 'dispatch-pool-project-bindings-diverge';
+    | 'dispatch-pool-project-bindings-diverge'
+    | 'duplicate-enabled-live-follow-tenant-binding';
   severity: 'warning' | 'info';
   message: string;
   auracallRuntimeProfile?: string;
   browserProfile?: string;
+  service?: ServiceId;
   agent?: string;
   team?: string;
   role?: string;
@@ -517,6 +519,52 @@ function asServiceId(value: unknown): ServiceId | null {
 
 function asNonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeConfigIdentityKey(value: unknown): string | null {
+  return asNonEmptyString(value)?.toLowerCase() ?? null;
+}
+
+function readConfigServiceIdentityKey(service: MutableRecord): string | null {
+  const identity = isRecord(service.identity) ? service.identity : {};
+  return (
+    normalizeConfigIdentityKey(identity.email) ??
+    normalizeConfigIdentityKey(identity.handle) ??
+    normalizeConfigIdentityKey(identity.accountId) ??
+    normalizeConfigIdentityKey(identity.name)
+  );
+}
+
+function readEnabledLiveFollowTenantKey(serviceId: ServiceId, service: MutableRecord): string | null {
+  const liveFollow = isRecord(service.liveFollow) ? service.liveFollow : null;
+  if (liveFollow?.enabled !== true) return null;
+  const identityKey = readConfigServiceIdentityKey(service);
+  return identityKey ? `${serviceId}:${identityKey}` : null;
+}
+
+function collectDuplicateEnabledLiveFollowTenantBindings(
+  runtimeProfiles: Record<string, MutableRuntimeProfile>,
+): Array<{ service: ServiceId; runtimeProfiles: string[] }> {
+  const groups = new Map<string, { service: ServiceId; runtimeProfiles: string[] }>();
+  for (const [runtimeProfileId, runtimeProfile] of Object.entries(runtimeProfiles)) {
+    if (!isRecord(runtimeProfile.services)) continue;
+    for (const serviceId of ['chatgpt', 'gemini', 'grok'] as const) {
+      const service = isRecord(runtimeProfile.services[serviceId]) ? runtimeProfile.services[serviceId] : null;
+      if (!service) continue;
+      const tenantKey = readEnabledLiveFollowTenantKey(serviceId, service);
+      if (!tenantKey) continue;
+      const existing = groups.get(tenantKey) ?? { service: serviceId, runtimeProfiles: [] };
+      existing.runtimeProfiles.push(runtimeProfileId);
+      groups.set(tenantKey, existing);
+    }
+  }
+  return [...groups.values()]
+    .filter((group) => group.runtimeProfiles.length > 1)
+    .map((group) => ({
+      service: group.service,
+      runtimeProfiles: [...group.runtimeProfiles].sort(),
+    }))
+    .sort((left, right) => left.service.localeCompare(right.service) || left.runtimeProfiles[0].localeCompare(right.runtimeProfiles[0]));
 }
 
 function hasConfiguredKnowledge(agent: MutableAgent | null | undefined): boolean {
@@ -1131,6 +1179,15 @@ export function analyzeConfigModelBridgeHealth(
   const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
   const issues: ConfigModelDoctorIssue[] = [];
   const referencedBrowserProfiles = new Set<string>();
+  for (const duplicate of collectDuplicateEnabledLiveFollowTenantBindings(runtimeProfiles)) {
+    issues.push({
+      code: 'duplicate-enabled-live-follow-tenant-binding',
+      severity: 'warning',
+      service: duplicate.service,
+      auracallRuntimeProfile: duplicate.runtimeProfiles[0],
+      message: `Service "${duplicate.service}" has duplicate enabled live-follow tenant bindings across AuraCall runtime profiles (${duplicate.runtimeProfiles.join(', ')}); keep one active binding per tenant unless an operator is intentionally handoff-testing a browser move.`,
+    });
+  }
 
   const globalBrowserServiceScopedDefaults = describeGlobalBrowserServiceScopedDefaults(config);
   if (globalBrowserServiceScopedDefaults.length > 0) {

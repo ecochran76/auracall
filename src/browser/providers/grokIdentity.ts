@@ -155,6 +155,13 @@ export function normalizeGrokIdentityProbe(
     }
   }
 
+  if (handle && !isPlausibleGrokHandle(handle) && !id && !email) {
+    handle = undefined;
+    if (!name) {
+      source = undefined;
+    }
+  }
+
   if (identity.guestAuthCta && !id && !email && !handle && !name) {
     return null;
   }
@@ -170,6 +177,10 @@ export function normalizeGrokIdentityProbe(
     email,
     source,
   };
+}
+
+function isPlausibleGrokHandle(value: string): boolean {
+  return /^@[A-Za-z0-9_]{2,30}$/.test(value.trim());
 }
 
 export function extractGrokIdentityFromSerializedScripts(

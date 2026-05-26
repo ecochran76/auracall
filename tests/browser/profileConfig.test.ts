@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { applyBrowserProfileOverrides } from '../../src/browser/service/profileConfig.js';
+import {
+  applyBrowserProfileOverrides,
+  resolveRuntimeProfileUserConfig,
+} from '../../src/browser/service/profileConfig.js';
 
 describe('applyBrowserProfileOverrides', () => {
   test('does not write null browser urls when service urls are absent', () => {
@@ -302,5 +305,68 @@ describe('applyBrowserProfileOverrides', () => {
     expect(browser.modelStrategy).toBe('select');
     expect(browser.thinkingTime).toBe('light');
     expect(browser.composerTool).toBe('deep-research');
+  });
+
+  test('resolves per-request AuraCall runtime profile browser family before browser launch', () => {
+    const selected = resolveRuntimeProfileUserConfig({
+      auracallProfile: 'default',
+      defaultRuntimeProfile: 'default',
+      engine: 'browser',
+      services: {
+        gemini: { url: 'https://gemini.google.com/app' },
+      },
+      browser: {
+        target: 'grok',
+        chromePath: '/opt/google/chrome/chrome',
+        debugPort: 45011,
+        display: ':0.0',
+        manualLoginProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
+      },
+      browserFamilies: {
+        'gemini-stealthcdp': {
+          chromePath: '/home/test/chromium-stealthcdp/chrome',
+          debugPort: 45019,
+          display: ':10',
+          chromeCookiePath: '/home/test/.auracall/browser-profiles/gemini-stealthcdp/gemini/Default/Cookies',
+          bootstrapCookiePath: '/home/test/.auracall/browser-profiles/gemini-stealthcdp/gemini/Default/Cookies',
+          managedProfileRoot: '/home/test/.auracall/browser-profiles',
+          wslChromePreference: 'wsl',
+        },
+      },
+      profiles: {
+        default: {
+          browserFamily: 'default',
+          defaultService: 'grok',
+        },
+        'auracall-gemini-pro': {
+          browserFamily: 'gemini-stealthcdp',
+          defaultService: 'gemini',
+          services: {
+            gemini: {
+              manualLoginProfileDir: '/home/test/.auracall/browser-profiles/gemini-stealthcdp/gemini',
+            },
+          },
+        },
+      },
+    }, {
+      runtimeProfileId: 'auracall-gemini-pro',
+      provider: 'gemini',
+    }) as Record<string, unknown>;
+
+    expect(selected).toMatchObject({
+      auracallProfile: 'auracall-gemini-pro',
+      defaultRuntimeProfile: 'auracall-gemini-pro',
+      browser: {
+        target: 'gemini',
+        chromePath: '/home/test/chromium-stealthcdp/chrome',
+        debugPort: 45019,
+        display: ':10',
+        manualLoginProfileDir: '/home/test/.auracall/browser-profiles/gemini-stealthcdp/gemini',
+        chromeCookiePath: '/home/test/.auracall/browser-profiles/gemini-stealthcdp/gemini/Default/Cookies',
+        bootstrapCookiePath: '/home/test/.auracall/browser-profiles/gemini-stealthcdp/gemini/Default/Cookies',
+        managedProfileRoot: '/home/test/.auracall/browser-profiles',
+        wslChromePreference: 'wsl',
+      },
+    });
   });
 });

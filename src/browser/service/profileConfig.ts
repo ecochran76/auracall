@@ -1,7 +1,10 @@
 import { resolveSelectedBrowserProfileResolution } from './profileResolution.js';
+import { resolveRuntimeSelection } from '../../config/model.js';
+import type { ResolvedUserConfig } from '../../config.js';
 
 type MutableBrowserConfig = Record<string, unknown>;
 type MutableConfig = Record<string, unknown>;
+type ServiceId = 'chatgpt' | 'gemini' | 'grok';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -11,6 +14,63 @@ function asNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function isServiceId(value: unknown): value is ServiceId {
+  return value === 'chatgpt' || value === 'gemini' || value === 'grok';
+}
+
+function cloneConfig<T extends Record<string, unknown>>(config: T): T {
+  return (typeof structuredClone === 'function'
+    ? structuredClone(config)
+    : JSON.parse(JSON.stringify(config))) as T;
+}
+
+export function resolveRuntimeProfileUserConfig(
+  userConfig: ResolvedUserConfig | Record<string, unknown>,
+  options: {
+    runtimeProfileId?: string | null;
+    provider?: ServiceId | null;
+  },
+): ResolvedUserConfig | Record<string, unknown> {
+  const runtimeProfileId = asNonEmptyString(options.runtimeProfileId);
+  if (!runtimeProfileId) return userConfig;
+
+  const existingBrowser = isRecord(userConfig.browser) ? userConfig.browser : {};
+  if (
+    userConfig.auracallProfile === runtimeProfileId &&
+    (!options.provider || existingBrowser.target === options.provider)
+  ) {
+    return userConfig;
+  }
+
+  const next = cloneConfig(userConfig as Record<string, unknown>);
+  const selection = resolveRuntimeSelection(next, {
+    explicitProfileName: runtimeProfileId,
+  });
+  if (!selection.runtimeProfileId || !selection.runtimeProfile) {
+    return userConfig;
+  }
+
+  next.defaultRuntimeProfile = selection.runtimeProfileId;
+  next.auracallProfile = selection.runtimeProfileId;
+  if (typeof selection.runtimeProfile.engine === 'string') {
+    next.engine = selection.runtimeProfile.engine;
+  }
+
+  next.browser = {
+    ...(isRecord(next.browser) ? next.browser : {}),
+  };
+  if (isServiceId(options.provider)) {
+    (next.browser as MutableBrowserConfig).target = options.provider;
+  }
+  applyBrowserProfileOverrides(next, selection.runtimeProfile, next.browser as MutableBrowserConfig, {
+    overrideExisting: true,
+  });
+  if (isServiceId(options.provider)) {
+    (next.browser as MutableBrowserConfig).target = options.provider;
+  }
+  return next;
 }
 
 export function applyBrowserProfileOverrides(

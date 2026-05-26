@@ -57,6 +57,7 @@ const accountMirrorCompletionOutputShape = {
   materializationRefreshSnapshot: z.boolean().optional(),
   materializationForce: z.boolean().optional(),
   materializationCursor: z.unknown().nullable().optional(),
+  materializationOutcome: z.unknown().nullable().optional(),
   mirrorCompleteness: z.unknown().nullable(),
   error: z.object({
     message: z.string(),
@@ -71,6 +72,7 @@ const accountMirrorCompletionOutputShape = {
       'operator_paused',
       'operator_resumed',
       'operator_cancelled',
+      'campaign_policy_upgraded',
     ]),
     status: z.enum(['queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
     previousStatus: z.enum(['queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).nullable(),
@@ -144,13 +146,16 @@ export function registerAccountMirrorCompletionTools(
     },
     async (rawInput: unknown) => {
       const payload = z.object(accountMirrorCompletionListInputShape).parse(rawInput);
-      const data = service.list({
+      const listed = service.list({
         provider: payload.provider,
         runtimeProfileId: payload.runtimeProfile,
         status: payload.status,
         activeOnly: payload.activeOnly,
         limit: payload.limit,
       });
+      const data = service.refreshMaterializationStatuses
+        ? await service.refreshMaterializationStatuses(listed)
+        : listed;
       return {
         isError: false,
         content: [
@@ -220,7 +225,9 @@ export function registerAccountMirrorCompletionTools(
     },
     async (rawInput: unknown) => {
       const payload = z.object(accountMirrorCompletionStatusInputShape).parse(rawInput);
-      const result = service.read(payload.id);
+      const result = service.refreshMaterializationStatus
+        ? await service.refreshMaterializationStatus(payload.id)
+        : service.read(payload.id);
       if (!result) {
         return {
           isError: true,

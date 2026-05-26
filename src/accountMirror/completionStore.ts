@@ -148,6 +148,7 @@ function parseOperation(value: unknown): AccountMirrorCompletionOperation {
     materializationRefreshSnapshot: readBoolean(value.materializationRefreshSnapshot) ?? (readSweepMode(value.sweepMode) === 'full_sweep'),
     materializationForce: readBoolean(value.materializationForce) ?? false,
     materializationCursor: parseMaterializationCursor(value.materializationCursor),
+    materializationOutcome: parseMaterializationOutcome(value.materializationOutcome),
     mirrorCompleteness: isRecord(value.mirrorCompleteness) ? value.mirrorCompleteness as AccountMirrorCompletionOperation['mirrorCompleteness'] : null,
     error: parseError(value.error),
     lifecycleEvents: parseLifecycleEvents(value.lifecycleEvents),
@@ -239,6 +240,33 @@ function parseMaterializationCursor(value: unknown): AccountMirrorCompletionMate
   };
 }
 
+function parseMaterializationOutcome(value: unknown): AccountMirrorCompletionOperation['materializationOutcome'] {
+  if (!isRecord(value)) return null;
+  const jobId = typeof value.jobId === 'string' && value.jobId.trim() ? value.jobId.trim() : '';
+  if (!jobId) return null;
+  return {
+    jobId,
+    jobStatus: typeof value.jobStatus === 'string' && value.jobStatus.trim() ? value.jobStatus.trim() : 'unknown',
+    completedAt: normalizeIsoString(value.completedAt),
+    conversationsAttempted: Math.max(0, Math.floor(readNumber(value.conversationsAttempted) ?? 0)),
+    materialized: Math.max(0, Math.floor(readNumber(value.materialized) ?? 0)),
+    skipped: Math.max(0, Math.floor(readNumber(value.skipped) ?? 0)),
+    failed: Math.max(0, Math.floor(readNumber(value.failed) ?? 0)),
+    checksumCount: Math.max(0, Math.floor(readNumber(value.checksumCount) ?? 0)),
+    manifestPaths: Array.isArray(value.manifestPaths)
+      ? value.manifestPaths.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      : [],
+    terminalRouteabilityCounts: isRecord(value.terminalRouteabilityCounts)
+      ? Object.fromEntries(
+          Object.entries(value.terminalRouteabilityCounts)
+            .map(([key, count]) => [key, Math.max(0, Math.floor(readNumber(count) ?? 0))] as const)
+            .filter((entry) => entry[1] > 0),
+        )
+      : {},
+    message: typeof value.message === 'string' && value.message.trim() ? value.message.trim() : null,
+  };
+}
+
 function readProvider(value: unknown): AccountMirrorCompletionOperation['provider'] {
   if (value === 'gemini' || value === 'grok') return value;
   return 'chatgpt';
@@ -270,6 +298,7 @@ function readLifecycleEventType(value: unknown): NonNullable<AccountMirrorComple
     || value === 'operator_paused'
     || value === 'operator_resumed'
     || value === 'operator_cancelled'
+    || value === 'campaign_policy_upgraded'
   ) return value;
   return null;
 }

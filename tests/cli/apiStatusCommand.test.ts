@@ -420,7 +420,7 @@ describe('api status CLI helpers', () => {
       'Scheduler diagnostics command 2 (grok/default): "auracall api scheduler-diagnostics --port 18080 --provider grok --runtime-profile default --completion-id acctmirror_running"',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Live follow targets: total=3 enabled=2 active=2 complete=1 in_progress=1 attention=1',
+      'Live follow targets: total=3 enabled=2 active=2 complete=1 in_progress=1 asset_unknown_or_deferred=0 attention=1',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Live follow desired/actual: desired_enabled=2 desired_disabled=0 desired_missing_identity=0 actual_active=2 actual_complete=1 actual_attention=1',
@@ -430,6 +430,109 @@ describe('api status CLI helpers', () => {
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Recent controlled mirror completion: acctmirror_cancelled gemini/default status=cancelled phase=backfill_history',
+    );
+  });
+
+  it('summarizes proof scope and deferred asset inventory from /status', () => {
+    const payload = {
+      ...statusPayload,
+      accountMirrorProofScope: {
+        enabled: true,
+        provider: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        tenantKey: 'gemini:ecochran76@gmail.com',
+        bindingKey: 'runtime:auracall-gemini-pro:gemini',
+        globalLiveFollowSuppressed: true,
+      },
+      liveFollow: {
+        targets: {
+          ...statusPayload.liveFollow.targets,
+          accounts: [
+            {
+              ...statusPayload.liveFollow.targets.accounts[0],
+              provider: 'gemini',
+              runtimeProfileId: 'auracall-gemini-pro',
+              tenantKey: 'gemini:ecochran76@gmail.com',
+              bindingKey: 'runtime:auracall-gemini-pro:gemini',
+              assetInventory: {
+                state: 'deferred',
+                detailScannedThisPass: {
+                  projects: 0,
+                  conversations: 0,
+                  total: 0,
+                },
+              },
+              metadataCountEvidence: {
+                observedThisPass: {
+                  projects: 0,
+                  conversations: 0,
+                  artifacts: 0,
+                  files: 0,
+                  media: 0,
+                },
+                retainedFromCache: {
+                  projects: 0,
+                  conversations: 10,
+                  artifacts: 2,
+                  files: 3,
+                  media: 0,
+                },
+                mergedTotal: {
+                  projects: 0,
+                  conversations: 10,
+                  artifacts: 2,
+                  files: 3,
+                  media: 0,
+                },
+              },
+            },
+            statusPayload.liveFollow.targets.accounts[1],
+          ],
+        },
+      },
+    };
+    const summary = summarizeApiStatusPayload(payload, {
+      host: '127.0.0.1',
+      port: 18080,
+    });
+
+    expect(summary.proofScope).toEqual({
+      enabled: true,
+      provider: 'gemini',
+      runtimeProfileId: 'auracall-gemini-pro',
+      tenantKey: 'gemini:ecochran76@gmail.com',
+      bindingKey: 'runtime:auracall-gemini-pro:gemini',
+      globalLiveFollowSuppressed: true,
+    });
+    expect(summary.liveFollow.targets?.accounts[0]).toMatchObject({
+      provider: 'gemini',
+      runtimeProfileId: 'auracall-gemini-pro',
+      tenantKey: 'gemini:ecochran76@gmail.com',
+      bindingKey: 'runtime:auracall-gemini-pro:gemini',
+      assetInventory: {
+        state: 'deferred',
+        detailScannedThisPass: {
+          conversations: 0,
+          total: 0,
+        },
+      },
+      metadataCountEvidence: {
+        observedThisPass: {
+          conversations: 0,
+        },
+        retainedFromCache: {
+          conversations: 10,
+        },
+        mergedTotal: {
+          conversations: 10,
+        },
+      },
+    });
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Account mirror proof scope: gemini/auracall-gemini-pro tenant=gemini:ecochran76@gmail.com binding=runtime:auracall-gemini-pro:gemini suppressed=true',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Live follow targets: total=3 enabled=2 active=2 complete=1 in_progress=1 asset_unknown_or_deferred=1 attention=1',
     );
   });
 

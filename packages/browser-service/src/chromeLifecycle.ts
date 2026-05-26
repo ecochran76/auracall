@@ -877,19 +877,21 @@ export async function openOrReuseChromeTarget(
     matchingTabLimit?: number;
     blankTabLimit?: number;
     collapseDisposableWindows?: boolean;
-    suppressFocus?: boolean;
-    mutationAudit?: BrowserMutationAuditSink;
-    mutationSource?: string;
-  } = {},
-): Promise<OpenOrReuseChromeTargetResult> {
+	    suppressFocus?: boolean;
+	    navigateReusedTargets?: boolean;
+	    mutationAudit?: BrowserMutationAuditSink;
+	    mutationSource?: string;
+	  } = {},
+	): Promise<OpenOrReuseChromeTargetResult> {
   const logger = options.logger ?? (() => undefined);
   const mutationSource = options.mutationSource ?? 'browser-service:openOrReuseChromeTarget';
   const reusePolicy = options.reusePolicy ?? 'same-origin';
   const compatibleHosts = normalizeCompatibleHosts(options.compatibleHosts);
   const matchingTabLimit = Math.max(1, options.matchingTabLimit ?? 3);
-  const blankTabLimit = Math.max(0, options.blankTabLimit ?? 1);
-  const collapseDisposableWindows = options.collapseDisposableWindows ?? true;
-  const endpoint = await resolveChromeEndpoint(options.host, port, logger);
+	  const blankTabLimit = Math.max(0, options.blankTabLimit ?? 1);
+	  const collapseDisposableWindows = options.collapseDisposableWindows ?? true;
+	  const navigateReusedTargets = options.navigateReusedTargets !== false;
+	  const endpoint = await resolveChromeEndpoint(options.host, port, logger);
   try {
     const pageTargets = (await CDP.List({ host: endpoint.host, port: endpoint.port }))
       .filter((target) => target.type === 'page');
@@ -971,33 +973,34 @@ export async function openOrReuseChromeTarget(
           pageTargets,
           (target) => urlsShareOrigin(target.url ?? '', url),
         );
-        if (sameOriginTarget) {
-          const targetId = resolveTargetId(sameOriginTarget);
-          const audit = beginBrowserMutation(options.mutationAudit, {
-            kind: 'target-open-or-reuse',
-            source: mutationSource,
-            requestedUrl: url,
-            fromUrl: sameOriginTarget.url ?? null,
-            toUrl: url,
-            targetId,
-            reused: true,
-            reason: 'same-origin',
-          });
+	        if (sameOriginTarget) {
+	          const targetId = resolveTargetId(sameOriginTarget);
+	          const targetUrl = navigateReusedTargets ? url : sameOriginTarget.url ?? url;
+	          const audit = beginBrowserMutation(options.mutationAudit, {
+	            kind: 'target-open-or-reuse',
+	            source: mutationSource,
+	            requestedUrl: url,
+	            fromUrl: sameOriginTarget.url ?? null,
+	            toUrl: targetUrl,
+	            targetId,
+	            reused: true,
+	            reason: 'same-origin',
+	          });
           await focusChromeTarget(
             endpoint.host,
-            endpoint.port,
-            targetId,
-            url,
-            true,
-            options.suppressFocus,
-          );
-          await audit.complete({
-            outcome: 'succeeded',
-            targetId,
-            toUrl: url,
-            reused: true,
-            reason: 'same-origin',
-          });
+	            endpoint.port,
+	            targetId,
+	            url,
+	            navigateReusedTargets,
+	            options.suppressFocus,
+	          );
+	          await audit.complete({
+	            outcome: 'succeeded',
+	            targetId,
+	            toUrl: targetUrl,
+	            reused: true,
+	            reason: 'same-origin',
+	          });
           const result = { target: sameOriginTarget, reused: true, reason: 'same-origin' as const };
           await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
             selectedTargetId: targetId,
@@ -1015,33 +1018,34 @@ export async function openOrReuseChromeTarget(
             pageTargets,
             (target) => urlsShareCompatibleHost(target.url ?? '', url, compatibleHosts),
           );
-          if (compatibleHostTarget) {
-            const targetId = resolveTargetId(compatibleHostTarget);
-            const audit = beginBrowserMutation(options.mutationAudit, {
-              kind: 'target-open-or-reuse',
-              source: mutationSource,
-              requestedUrl: url,
-              fromUrl: compatibleHostTarget.url ?? null,
-              toUrl: url,
-              targetId,
-              reused: true,
-              reason: 'compatible-host',
-            });
+	          if (compatibleHostTarget) {
+	            const targetId = resolveTargetId(compatibleHostTarget);
+	            const targetUrl = navigateReusedTargets ? url : compatibleHostTarget.url ?? url;
+	            const audit = beginBrowserMutation(options.mutationAudit, {
+	              kind: 'target-open-or-reuse',
+	              source: mutationSource,
+	              requestedUrl: url,
+	              fromUrl: compatibleHostTarget.url ?? null,
+	              toUrl: targetUrl,
+	              targetId,
+	              reused: true,
+	              reason: 'compatible-host',
+	            });
             await focusChromeTarget(
               endpoint.host,
-              endpoint.port,
-              targetId,
-              url,
-              true,
-              options.suppressFocus,
-            );
-            await audit.complete({
-              outcome: 'succeeded',
-              targetId,
-              toUrl: url,
-              reused: true,
-              reason: 'compatible-host',
-            });
+	              endpoint.port,
+	              targetId,
+	              url,
+	              navigateReusedTargets,
+	              options.suppressFocus,
+	            );
+	            await audit.complete({
+	              outcome: 'succeeded',
+	              targetId,
+	              toUrl: targetUrl,
+	              reused: true,
+	              reason: 'compatible-host',
+	            });
             const result = { target: compatibleHostTarget, reused: true, reason: 'compatible-host' as const };
             await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
               selectedTargetId: targetId,
@@ -1103,10 +1107,11 @@ export async function connectToRemoteChrome(
     serviceTabLimit?: number;
     blankTabLimit?: number;
     collapseDisposableWindows?: boolean;
-    suppressFocus?: boolean;
-    mutationAudit?: BrowserMutationAuditSink;
-    mutationSource?: string;
-  } = {},
+	    suppressFocus?: boolean;
+	    navigateReusedTargets?: boolean;
+	    mutationAudit?: BrowserMutationAuditSink;
+	    mutationSource?: string;
+	  } = {},
 ): Promise<RemoteChromeConnection> {
   const endpoint = await resolveChromeEndpoint(host, port, logger);
   const connectHost = endpoint.host;
@@ -1125,11 +1130,12 @@ export async function connectToRemoteChrome(
         compatibleHosts: options.compatibleHosts,
         matchingTabLimit: options.serviceTabLimit,
         blankTabLimit: options.blankTabLimit,
-        collapseDisposableWindows: options.collapseDisposableWindows,
-        suppressFocus: options.suppressFocus,
-        mutationAudit: options.mutationAudit,
-        mutationSource: options.mutationSource ?? 'browser-service:connectToRemoteChrome',
-      });
+	        collapseDisposableWindows: options.collapseDisposableWindows,
+	        suppressFocus: options.suppressFocus,
+	        navigateReusedTargets: options.navigateReusedTargets,
+	        mutationAudit: options.mutationAudit,
+	        mutationSource: options.mutationSource ?? 'browser-service:connectToRemoteChrome',
+	      });
       const targetId = resolveTargetId(opened.target);
       const client = await CDP({ host: connectHost, port: connectPort, target: targetId });
       logger(

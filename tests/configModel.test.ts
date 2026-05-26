@@ -1515,6 +1515,64 @@ describe('config model helpers', () => {
     });
   });
 
+  it('warns when two enabled live-follow bindings target the same tenant', () => {
+    const config = {
+      defaultRuntimeProfile: 'gemini-a',
+      browserProfiles: {
+        'gemini-stealth': {
+          chromePath: '/usr/bin/google-chrome',
+        },
+        'gemini-rdp': {
+          chromePath: '/usr/bin/google-chrome',
+        },
+      },
+      runtimeProfiles: {
+        'gemini-a': {
+          browserProfile: 'gemini-stealth',
+          services: {
+            gemini: {
+              identity: {
+                email: 'Operator@Example.com',
+              },
+              liveFollow: {
+                enabled: true,
+              },
+            },
+          },
+        },
+        'gemini-b': {
+          browserProfile: 'gemini-rdp',
+          services: {
+            gemini: {
+              identity: {
+                email: 'operator@example.com',
+              },
+              liveFollow: {
+                enabled: true,
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const report = analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'gemini-a' });
+
+    expect(report.ok).toBe(false);
+    expect(report.issues).toContainEqual(
+      expect.objectContaining({
+        code: 'duplicate-enabled-live-follow-tenant-binding',
+        severity: 'warning',
+        service: 'gemini',
+        auracallRuntimeProfile: 'gemini-a',
+        message:
+          'Service "gemini" has duplicate enabled live-follow tenant bindings across AuraCall runtime profiles (gemini-a, gemini-b); keep one active binding per tenant unless an operator is intentionally handoff-testing a browser move.',
+      }),
+    );
+    expect(report.issues.find((issue) => issue.code === 'duplicate-enabled-live-follow-tenant-binding')?.message)
+      .not.toContain('operator@example.com');
+  });
+
   it('surfaces service, project, and conversation defaults when they are misplaced on the top-level browser config', () => {
     const config = {
       defaultRuntimeProfile: 'default',

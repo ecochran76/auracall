@@ -2432,6 +2432,8 @@ describe('http responses adapter', () => {
       entries: [
         {
           provider: 'chatgpt',
+          tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+          bindingKey: 'binding:chatgpt:default:default',
           runtimeProfileId: 'default',
           browserProfileId: 'default',
           boundIdentityKey: 'ecochran76@gmail.com',
@@ -2473,6 +2475,8 @@ describe('http responses adapter', () => {
           object: 'account_mirror_catalog_item',
           generatedAt: '2026-04-29T12:00:00.000Z',
           provider: 'chatgpt',
+          tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+          bindingKey: 'binding:chatgpt:default:default',
           runtimeProfileId: 'default',
           browserProfileId: 'default',
           boundIdentityKey: 'ecochran76@gmail.com',
@@ -2493,6 +2497,8 @@ describe('http responses adapter', () => {
         object: 'account_mirror_catalog_item',
         generatedAt: '2026-04-29T12:00:00.000Z',
         provider: 'chatgpt',
+        tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+        bindingKey: 'binding:chatgpt:default:default',
         runtimeProfileId: 'default',
         browserProfileId: 'default',
         boundIdentityKey: 'ecochran76@gmail.com',
@@ -3376,6 +3382,133 @@ describe('http responses adapter', () => {
       passCount: 0,
       lifecycleEvents: [],
     });
+  });
+
+  it('scopes proof server startup without reconciling unrelated live-follow targets', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-account-mirror-proof-scope-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const config = {
+      model: 'gpt-5.2',
+      browser: {
+        cache: {
+          rootDir: homeDir,
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: { enabled: true },
+            },
+          },
+        },
+        'gemini-pro': {
+          browserProfile: 'gemini-stealthcdp',
+          defaultService: 'gemini',
+          services: {
+            gemini: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: { enabled: true },
+            },
+          },
+        },
+      },
+    };
+    const requestRefresh = vi.fn(() => new Promise<never>(() => {}));
+    const completionStore = createAccountMirrorCompletionStore({ config });
+    await completionStore.writeOperation({
+      object: 'account_mirror_completion',
+      id: 'acctmirror_unrelated_chatgpt_active',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      status: 'queued',
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: null,
+      maxPasses: null,
+      passCount: 0,
+      lastRefresh: null,
+      mirrorCompleteness: null,
+      error: null,
+      lifecycleEvents: [],
+    });
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        backgroundDrainIntervalMs: 60_000,
+        accountMirrorSchedulerIntervalMs: 60_000,
+        accountMirrorSchedulerDryRun: false,
+        accountMirrorProofScope: {
+          provider: 'gemini',
+          runtimeProfileId: 'gemini-pro',
+        },
+      },
+      {
+        config,
+        accountMirrorRefreshService: {
+          requestRefresh,
+        },
+      },
+    );
+
+    try {
+      await delay(50);
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        backgroundDrain: {
+          enabled: false,
+          intervalMs: null,
+        },
+        accountMirrorScheduler: {
+          enabled: false,
+          intervalMs: null,
+        },
+        accountMirrorProofScope: {
+          enabled: true,
+          provider: 'gemini',
+          runtimeProfileId: 'gemini-pro',
+          tenantKey: 'service-account:gemini:operator@example.com',
+          bindingKey: 'binding:gemini:gemini-pro:gemini-stealthcdp',
+          globalLiveFollowSuppressed: true,
+          suppressed: {
+            resumeCompletionsOnStart: true,
+            reconcileLiveFollowOnStart: true,
+            schedulerExecution: true,
+            backgroundDrain: true,
+          },
+        },
+        accountMirrorCompletions: {
+          metrics: {
+            total: 0,
+            active: 0,
+          },
+        },
+        liveFollow: {
+          targets: {
+            total: 1,
+            enabled: 1,
+            accounts: [
+              {
+                provider: 'gemini',
+                runtimeProfileId: 'gemini-pro',
+                activeCompletionId: null,
+              },
+            ],
+          },
+        },
+      });
+      expect(requestRefresh).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
   });
 
   it('reports effective live-follow wake separately from routine mirror eligibility', async () => {

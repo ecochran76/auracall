@@ -32,6 +32,8 @@ const mirrorCompletenessShape = z.object({
 
 const accountMirrorCatalogEntryShape = z.object({
   provider: z.enum(['chatgpt', 'gemini', 'grok']),
+  tenantKey: z.string().nullable(),
+  bindingKey: z.string(),
   runtimeProfileId: z.string(),
   browserProfileId: z.string().nullable(),
   boundIdentityKey: z.string().nullable(),

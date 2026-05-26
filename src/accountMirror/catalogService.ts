@@ -31,6 +31,8 @@ export interface AccountMirrorCatalogItemRequest extends AccountMirrorCatalogReq
 
 export interface AccountMirrorCatalogEntry {
   provider: AccountMirrorProvider;
+  tenantKey?: string | null;
+  bindingKey?: string;
   runtimeProfileId: string;
   browserProfileId: string | null;
   boundIdentityKey: string | null;
@@ -73,6 +75,8 @@ export interface AccountMirrorCatalogItemResult {
   object: 'account_mirror_catalog_item';
   generatedAt: string;
   provider: AccountMirrorProvider;
+  tenantKey?: string | null;
+  bindingKey?: string;
   runtimeProfileId: string;
   browserProfileId: string | null;
   boundIdentityKey: string | null;
@@ -134,6 +138,8 @@ export function createAccountMirrorCatalogService(input: {
         );
         entries.push({
           provider: target.provider,
+          tenantKey: target.tenantKey,
+          bindingKey: target.bindingKey,
           runtimeProfileId: target.runtimeProfileId,
           browserProfileId: target.browserProfileId,
           boundIdentityKey: target.expectedIdentityKey,
@@ -192,6 +198,8 @@ export function createAccountMirrorCatalogService(input: {
                 object: 'account_mirror_catalog_item',
                 generatedAt: now().toISOString(),
                 provider: entry.provider,
+                tenantKey: entry.tenantKey,
+                bindingKey: entry.bindingKey,
                 runtimeProfileId: entry.runtimeProfileId,
                 browserProfileId: entry.browserProfileId,
                 boundIdentityKey: entry.boundIdentityKey,

@@ -143,7 +143,7 @@ export interface BrowserToolsPageProbeResult {
 }
 
 export interface BrowserToolsBlockingState {
-  kind: 'google-sorry' | 'captcha' | 'cloudflare' | 'human-verification';
+  kind: 'google-sorry' | 'captcha' | 'cloudflare' | 'account-auth' | 'human-verification';
   summary: string;
   requiresHuman: boolean;
 }
@@ -429,6 +429,17 @@ export function classifyBrowserToolsBlockingState(input: {
     return {
       kind: 'google-sorry',
       summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+      requiresHuman: true,
+    };
+  }
+  if (
+    url.includes('accounts.google.com') ||
+    url.includes('/signin/') ||
+    /\bchoose an account\b|\buse your google account\b|\bsign in\b.*\bgoogle\b|\bgoogle accounts\b/.test(corpus)
+  ) {
+    return {
+      kind: 'account-auth',
+      summary: 'Google account chooser or sign-in gate detected.',
       requiresHuman: true,
     };
   }

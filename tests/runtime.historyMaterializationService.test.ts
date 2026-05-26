@@ -6,6 +6,7 @@ import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import {
   createHistoryMaterializationService,
   formatHistoryMaterializationFailureReason,
+  resolveHistoryMaterializationProviderListOptions,
   type HistoryMaterializationJob,
   type HistoryMaterializationJobStore,
   type HistoryMediaGenerationMaterializeInput,
@@ -64,6 +65,50 @@ describe('history materialization service', () => {
     });
 
     expect(reason).toBe(message);
+  });
+
+  it('uses the Gemini rail surface for history materialization browser targeting', () => {
+    expect(resolveHistoryMaterializationProviderListOptions({
+      provider: 'gemini',
+      runtimeProfile: 'default',
+      browserProfile: 'default',
+      boundIdentityKey: 'user@example.com',
+      conversationId: '10b7e2a15e2dd77c',
+      providerConversationUrl: 'https://gemini.google.com/app/10b7e2a15e2dd77c',
+      projectId: null,
+    })).toEqual({
+      configuredUrl: 'https://gemini.google.com/app',
+      tabUrl: 'https://gemini.google.com/app/10b7e2a15e2dd77c',
+      projectId: undefined,
+      allowNavigation: true,
+      expectedUserIdentity: { email: 'user@example.com' },
+    });
+
+    expect(resolveHistoryMaterializationProviderListOptions({
+      provider: 'gemini',
+      runtimeProfile: 'default',
+      browserProfile: 'default',
+      boundIdentityKey: 'user@example.com',
+      conversationId: 'project_conv',
+      providerConversationUrl: 'https://gemini.google.com/app/project_conv',
+      projectId: 'project-one',
+    })).toEqual({
+      configuredUrl: 'https://gemini.google.com/gem/project-one',
+      tabUrl: 'https://gemini.google.com/app/project_conv',
+      projectId: 'project-one',
+      allowNavigation: true,
+      expectedUserIdentity: { email: 'user@example.com' },
+    });
+
+    expect(resolveHistoryMaterializationProviderListOptions({
+      provider: 'chatgpt',
+      runtimeProfile: 'default',
+      browserProfile: 'default',
+      boundIdentityKey: 'user@example.com',
+      conversationId: 'conv_direct_1',
+      providerConversationUrl: 'https://chatgpt.com/c/conv_direct_1',
+      projectId: null,
+    }).configuredUrl).toBe('https://chatgpt.com/c/conv_direct_1');
   });
 
   it('persists and runs a direct conversation materialization job', async () => {
@@ -744,6 +789,58 @@ describe('history materialization service', () => {
       attemptCount: 1,
     });
     expect(materializeConversation).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails provider work that exceeds the job timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = createInMemoryHistoryMaterializationJobStore([
+        buildHistoryMaterializationJob({ id: 'hmj_timeout_1', status: 'queued' }),
+      ]);
+      const materializeConversation = vi.fn(() => new Promise<HistoryMaterializationResult>(() => undefined));
+      const service = createHistoryMaterializationService({
+        config: {},
+        catalogService: {
+          readCatalog: vi.fn(),
+          readItem: vi.fn(),
+        },
+        store,
+        now: sequenceNow([
+          '2026-05-22T18:05:00.000Z',
+          '2026-05-22T18:05:01.000Z',
+        ]),
+        schedule: () => undefined,
+        materializeConversation,
+        jobTimeoutMs: 25,
+      });
+
+      const run = service.runJob('hmj_timeout_1');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(materializeConversation).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(25);
+      const completed = await run;
+
+      expect(completed).toMatchObject({
+        status: 'failed',
+        completedAt: '2026-05-22T18:05:01.000Z',
+        error: {
+          type: 'internal_error',
+          statusCode: 500,
+          message: 'History materialization job hmj_timeout_1 timed out after 25ms.',
+        },
+        message: 'History materialization job hmj_timeout_1 timed out after 25ms.',
+      });
+      await expect(service.readJob('hmj_timeout_1')).resolves.toMatchObject({
+        status: 'failed',
+        error: {
+          message: 'History materialization job hmj_timeout_1 timed out after 25ms.',
+        },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('marks interrupted active jobs failed during startup recovery', async () => {
@@ -1828,12 +1925,13 @@ describe('history materialization service', () => {
       reconcile: true,
       refreshSnapshot: true,
       assetKinds: ['all'],
-      maxItems: 1,
+      maxItems: 2,
     });
     if (!scheduled) throw new Error('Expected job to be scheduled.');
     await scheduled();
 
     expect(materializeConversation.mock.calls.map(([target]) => target.conversationId)).toEqual([
+      'gemini_missing_assets',
       'gemini_changed_without_counts',
     ]);
     expect(refreshConversationSnapshot).toHaveBeenCalledWith(
@@ -1846,13 +1944,452 @@ describe('history materialization service', () => {
       result: {
         snapshotRefreshes: [
           {
+            target: { conversationId: 'gemini_missing_assets' },
+            status: 'refreshed',
+          },
+          {
             target: { conversationId: 'gemini_changed_without_counts' },
             status: 'refreshed',
           },
         ],
         metrics: {
-          conversations: 1,
-          materialized: 1,
+          conversations: 2,
+          materialized: 2,
+        },
+      },
+    });
+  });
+
+  it('prioritizes Gemini rows with missing assets over refresh-only app routes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-history-materialize-gemini-candidate-priority-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let scheduled: (() => Promise<void>) | undefined;
+    const readCatalog = vi.fn(async () => ({
+      object: 'account_mirror_catalog' as const,
+      generatedAt: '2026-05-24T14:00:00.000Z',
+      kind: 'conversations' as const,
+      limit: 5,
+      entries: [
+        {
+          provider: 'gemini' as const,
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          boundIdentityKey: 'user@example.com',
+          status: 'eligible' as const,
+          reason: 'eligible' as const,
+          mirrorCompleteness: {
+            state: 'in_progress' as const,
+            summary: 'Progressive backfill.',
+            remainingDetailSurfaces: { projects: 0, conversations: 2, total: 2 },
+            signals: {
+              projectsTruncated: false,
+              conversationsTruncated: true,
+              attachmentInventoryTruncated: false,
+              attachmentCursorPresent: false,
+            },
+          },
+          counts: {
+            projects: 0,
+            conversations: 2,
+            artifacts: 1,
+            files: 0,
+            media: 0,
+          },
+          manifests: {
+            projects: [],
+            conversations: [
+              {
+                id: 'download',
+                title: 'Gemini App Opens in a new window',
+                provider: 'gemini' as const,
+                url: 'https://gemini.google.com/app/download',
+                cachedArtifactCount: 0,
+                cachedFileCount: 0,
+                cachedMediaCount: 0,
+                conversationFreshness: {
+                  object: 'account_mirror_conversation_freshness',
+                  state: 'partial',
+                  assetCompleteness: 'unknown',
+                  assetCounts: { known: 0, local: 0, missingLocal: 0 },
+                },
+              },
+              {
+                id: 'gemini_missing_assets',
+                title: 'Generated image needing local materialization',
+                provider: 'gemini' as const,
+                url: 'https://gemini.google.com/app/gemini_missing_assets',
+                cachedArtifactCount: 1,
+                cachedFileCount: 0,
+                cachedMediaCount: 0,
+                conversationFreshness: {
+                  object: 'account_mirror_conversation_freshness',
+                  state: 'missing_assets',
+                  assetCompleteness: 'partial',
+                  assetCounts: { known: 1, local: 0, missingLocal: 1 },
+                },
+              },
+            ],
+            artifacts: [],
+            files: [],
+            media: [],
+          },
+        },
+      ],
+      metrics: {
+        targets: 1,
+        projects: 0,
+        conversations: 2,
+        artifacts: 1,
+        files: 0,
+        media: 0,
+      },
+    }));
+    const refreshConversationSnapshot = vi.fn(async (target): Promise<HistoryMaterializationSnapshotRefresh> => ({
+      object: 'history_materialization_snapshot_refresh',
+      generatedAt: '2026-05-24T14:00:01.000Z',
+      status: 'refreshed',
+      target,
+      routeabilityState: 'routeable',
+      messageCount: 2,
+      fileCount: 0,
+      sourceCount: 0,
+      artifactCount: 1,
+      error: null,
+      message: 'Conversation snapshot refreshed.',
+    }));
+    const materializeConversation = vi.fn(async (target): Promise<HistoryMaterializationResult> => ({
+      object: 'history_materialization_result',
+      generatedAt: '2026-05-24T14:00:02.000Z',
+      status: 'materialized',
+      target,
+      source: { type: 'reconciliation', provider: 'gemini' },
+      manifestPaths: [`/tmp/${target.conversationId}/artifact-fetch-manifest.json`],
+      entries: [
+        {
+          kind: 'artifact',
+          providerId: `artifact_${target.conversationId}`,
+          title: 'Generated image',
+          status: 'materialized',
+          localPath: `/tmp/${target.conversationId}/image.png`,
+          remoteUrl: null,
+          cacheKey: `gemini:${target.conversationId}`,
+          checksumSha256: 'missing-assets-first',
+          mimeType: 'image/png',
+          size: 12,
+          materializationMethod: 'provider-download',
+          reason: null,
+          archiveItemId: null,
+          assetRoute: null,
+        },
+      ],
+      archiveItems: [],
+      metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+      message: 'Recovered one Gemini image.',
+    }));
+    const service = createHistoryMaterializationService({
+      config: {},
+      catalogService: {
+        readCatalog,
+        readItem: vi.fn(),
+      },
+      generateId: () => 'hmj_gemini_priority_1',
+      now: sequenceNow([
+        '2026-05-24T14:00:00.000Z',
+        '2026-05-24T14:00:01.000Z',
+        '2026-05-24T14:00:02.000Z',
+        '2026-05-24T14:00:03.000Z',
+      ]),
+      schedule: (work) => {
+        scheduled = work;
+      },
+      refreshConversationSnapshot,
+      materializeConversation,
+    });
+
+    await service.createJob({
+      provider: 'gemini',
+      runtimeProfile: 'default',
+      reconcile: true,
+      refreshSnapshot: true,
+      assetKinds: ['artifacts'],
+      maxItems: 1,
+    });
+    if (!scheduled) throw new Error('Expected job to be scheduled.');
+    await scheduled();
+
+    expect(materializeConversation.mock.calls.map(([target]) => target.conversationId)).toEqual([
+      'gemini_missing_assets',
+    ]);
+    expect(refreshConversationSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'gemini_missing_assets',
+        providerConversationUrl: 'https://gemini.google.com/app/gemini_missing_assets',
+      }),
+      expect.objectContaining({ refreshSnapshot: true }),
+      'hmj_gemini_priority_1',
+    );
+  });
+
+  it('canonicalizes Gemini redirect URLs before reconciliation route checks', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-history-materialize-gemini-redirect-url-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let scheduled: (() => Promise<void>) | undefined;
+    const readCatalog = vi.fn(async () => ({
+      object: 'account_mirror_catalog' as const,
+      generatedAt: '2026-05-25T16:40:00.000Z',
+      kind: 'conversations' as const,
+      limit: 5,
+      entries: [
+        {
+          provider: 'gemini' as const,
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          boundIdentityKey: 'user@example.com',
+          status: 'eligible' as const,
+          reason: 'eligible' as const,
+          mirrorCompleteness: {
+            state: 'complete' as const,
+            summary: 'Complete.',
+            remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+            signals: {
+              projectsTruncated: false,
+              conversationsTruncated: false,
+              attachmentInventoryTruncated: false,
+              attachmentCursorPresent: true,
+            },
+          },
+          counts: {
+            projects: 0,
+            conversations: 1,
+            artifacts: 1,
+            files: 0,
+            media: 0,
+          },
+          manifests: {
+            projects: [],
+            conversations: [
+              {
+                id: '23340d1698de29b8&followup=https:',
+                title: 'Redirect-polluted Gemini row',
+                provider: 'gemini' as const,
+                url: 'https://accounts.google.com/ServiceLogin?passive=1209600&continue=https://gemini.google.com/app/23340d1698de29b8&followup=https://gemini.google.com/app/23340d1698de29b8&ec=GAZAkgU',
+                cachedArtifactCount: 1,
+                cachedFileCount: 0,
+                cachedMediaCount: 0,
+                conversationFreshness: {
+                  object: 'account_mirror_conversation_freshness',
+                  state: 'missing_assets',
+                  assetCompleteness: 'partial',
+                  assetCounts: { known: 1, local: 0, missingLocal: 1 },
+                },
+              },
+            ],
+            artifacts: [],
+            files: [],
+            media: [],
+          },
+        },
+      ],
+      metrics: {
+        targets: 1,
+        projects: 0,
+        conversations: 1,
+        artifacts: 1,
+        files: 0,
+        media: 0,
+      },
+    }));
+    const refreshConversationSnapshot = vi.fn(async (target): Promise<HistoryMaterializationSnapshotRefresh> => ({
+      object: 'history_materialization_snapshot_refresh',
+      generatedAt: '2026-05-25T16:40:01.000Z',
+      status: 'refreshed',
+      target,
+      routeabilityState: 'routeable',
+      messageCount: 2,
+      fileCount: 0,
+      sourceCount: 0,
+      artifactCount: 1,
+      error: null,
+      message: 'Conversation snapshot refreshed.',
+    }));
+    const materializeConversation = vi.fn(async (target): Promise<HistoryMaterializationResult> => ({
+      object: 'history_materialization_result',
+      generatedAt: '2026-05-25T16:40:02.000Z',
+      status: 'materialized',
+      target,
+      source: { type: 'reconciliation', provider: 'gemini' },
+      manifestPaths: [`/tmp/${target.conversationId}/artifact-fetch-manifest.json`],
+      entries: [],
+      archiveItems: [],
+      metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+      message: 'Recovered one Gemini image.',
+    }));
+    const service = createHistoryMaterializationService({
+      config: {},
+      catalogService: {
+        readCatalog,
+        readItem: vi.fn(),
+      },
+      generateId: () => 'hmj_gemini_redirect_1',
+      now: sequenceNow([
+        '2026-05-25T16:40:00.000Z',
+        '2026-05-25T16:40:01.000Z',
+        '2026-05-25T16:40:02.000Z',
+        '2026-05-25T16:40:03.000Z',
+      ]),
+      schedule: (work) => {
+        scheduled = work;
+      },
+      refreshConversationSnapshot,
+      materializeConversation,
+    });
+
+    await service.createJob({
+      provider: 'gemini',
+      runtimeProfile: 'default',
+      reconcile: true,
+      refreshSnapshot: true,
+      assetKinds: ['artifacts'],
+      maxItems: 1,
+    });
+    if (!scheduled) throw new Error('Expected job to be scheduled.');
+    await scheduled();
+
+    expect(refreshConversationSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: '23340d1698de29b8',
+        providerConversationUrl: 'https://gemini.google.com/app/23340d1698de29b8',
+      }),
+      expect.objectContaining({ refreshSnapshot: true }),
+      'hmj_gemini_redirect_1',
+    );
+    expect(materializeConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: '23340d1698de29b8',
+        providerConversationUrl: 'https://gemini.google.com/app/23340d1698de29b8',
+      }),
+      expect.any(Object),
+      'hmj_gemini_redirect_1',
+    );
+  });
+
+  it('does not spend reconciliation budget on Gemini static app routes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-history-materialize-gemini-static-route-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let scheduled: (() => Promise<void>) | undefined;
+    const readCatalog = vi.fn(async () => ({
+      object: 'account_mirror_catalog' as const,
+      generatedAt: '2026-05-24T14:10:00.000Z',
+      kind: 'conversations' as const,
+      limit: 5,
+      entries: [
+        {
+          provider: 'gemini' as const,
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          boundIdentityKey: 'user@example.com',
+          status: 'eligible' as const,
+          reason: 'eligible' as const,
+          mirrorCompleteness: {
+            state: 'complete' as const,
+            summary: 'Complete.',
+            remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+            signals: {
+              projectsTruncated: false,
+              conversationsTruncated: false,
+              attachmentInventoryTruncated: false,
+              attachmentCursorPresent: false,
+            },
+          },
+          counts: {
+            projects: 0,
+            conversations: 1,
+            artifacts: 0,
+            files: 0,
+            media: 0,
+          },
+          manifests: {
+            projects: [],
+            conversations: [
+              {
+                id: 'download',
+                title: 'Gemini App Opens in a new window',
+                provider: 'gemini' as const,
+                url: 'https://gemini.google.com/app/download',
+                cachedArtifactCount: 0,
+                cachedFileCount: 0,
+                cachedMediaCount: 0,
+                conversationFreshness: {
+                  object: 'account_mirror_conversation_freshness',
+                  state: 'partial',
+                  assetCompleteness: 'unknown',
+                  assetCounts: { known: 0, local: 0, missingLocal: 0 },
+                },
+              },
+            ],
+            artifacts: [],
+            files: [],
+            media: [],
+          },
+        },
+      ],
+      metrics: {
+        targets: 1,
+        projects: 0,
+        conversations: 1,
+        artifacts: 0,
+        files: 0,
+        media: 0,
+      },
+    }));
+    const materializeConversation = vi.fn(async (target): Promise<HistoryMaterializationResult> => ({
+      object: 'history_materialization_result',
+      generatedAt: '2026-05-24T14:10:02.000Z',
+      status: 'materialized',
+      target,
+      source: { type: 'reconciliation', provider: 'gemini' },
+      manifestPaths: [],
+      entries: [],
+      archiveItems: [],
+      metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 0 },
+      message: 'Unexpected materialization.',
+    }));
+    const service = createHistoryMaterializationService({
+      config: {},
+      catalogService: {
+        readCatalog,
+        readItem: vi.fn(),
+      },
+      generateId: () => 'hmj_gemini_static_route_1',
+      now: sequenceNow([
+        '2026-05-24T14:10:00.000Z',
+        '2026-05-24T14:10:01.000Z',
+        '2026-05-24T14:10:02.000Z',
+      ]),
+      schedule: (work) => {
+        scheduled = work;
+      },
+      materializeConversation,
+    });
+
+    await service.createJob({
+      provider: 'gemini',
+      runtimeProfile: 'default',
+      reconcile: true,
+      refreshSnapshot: true,
+      assetKinds: ['all'],
+      maxItems: 1,
+    });
+    if (!scheduled) throw new Error('Expected job to be scheduled.');
+    await scheduled();
+
+    expect(materializeConversation).not.toHaveBeenCalled();
+    await expect(service.readJob('hmj_gemini_static_route_1')).resolves.toMatchObject({
+      status: 'skipped',
+      result: {
+        metrics: {
+          conversations: 0,
+          materialized: 0,
         },
       },
     });

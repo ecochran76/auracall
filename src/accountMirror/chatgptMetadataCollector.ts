@@ -2,8 +2,7 @@ import type { ResolvedUserConfig } from '../config.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { getAuracallHomeDir } from '../auracallHome.js';
-import { resolveRuntimeSelection } from '../config/model.js';
-import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
+import { resolveRuntimeProfileUserConfig as resolveBrowserRuntimeProfileUserConfig } from '../browser/service/profileConfig.js';
 import { BrowserAutomationClient } from '../browser/client.js';
 import type {
   Conversation,
@@ -72,18 +71,7 @@ export interface AccountMirrorMetadataCollectorResult {
     files: FileRef[];
     media: AccountMirrorMediaManifestEntry[];
   };
-  evidence: {
-    identitySource: string | null;
-    projectSampleIds: string[];
-    conversationSampleIds: string[];
-    truncated: {
-      projects: boolean;
-      conversations: boolean;
-      artifacts: boolean;
-    };
-    projectConversations?: ProjectConversationHistoryCursor | null;
-    attachmentInventory?: AttachmentInventoryCursor | null;
-  };
+  evidence: AccountMirrorMetadataEvidence;
 }
 
 export interface AccountMirrorMetadataCollector {
@@ -394,35 +382,10 @@ function resolveRuntimeProfileUserConfig(
   runtimeProfileId: string,
   provider: AccountMirrorProvider,
 ): ResolvedUserConfig {
-  if (userConfig.auracallProfile === runtimeProfileId && userConfig.browser?.target === provider) {
-    return userConfig;
-  }
-  const next = cloneConfig(userConfig);
-  const selection = resolveRuntimeSelection(next, {
-    explicitProfileName: runtimeProfileId,
-  });
-  if (!selection.runtimeProfileId || !selection.runtimeProfile) {
-    return userConfig;
-  }
-  next.defaultRuntimeProfile = selection.runtimeProfileId;
-  next.auracallProfile = selection.runtimeProfileId;
-  if (typeof selection.runtimeProfile.engine === 'string') {
-    next.engine = selection.runtimeProfile.engine as ResolvedUserConfig['engine'];
-  }
-  next.browser = {
-    ...(isRecord(next.browser) ? next.browser : {}),
-  } as ResolvedUserConfig['browser'];
-  applyBrowserProfileOverrides(next as Record<string, unknown>, selection.runtimeProfile, next.browser, {
-    overrideExisting: true,
-  });
-  next.browser.target = provider;
-  return next;
-}
-
-function cloneConfig(userConfig: ResolvedUserConfig): ResolvedUserConfig {
-  return (typeof structuredClone === 'function'
-    ? structuredClone(userConfig)
-    : JSON.parse(JSON.stringify(userConfig))) as ResolvedUserConfig;
+  return resolveBrowserRuntimeProfileUserConfig(userConfig, {
+    runtimeProfileId,
+    provider,
+  }) as ResolvedUserConfig;
 }
 
 export async function readBoundedProjects(

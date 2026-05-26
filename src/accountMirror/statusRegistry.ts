@@ -15,6 +15,10 @@ import type {
   AccountMirrorProvider,
 } from './politePolicy.js';
 import { evaluateAccountMirrorPoliteness } from './politePolicy.js';
+import {
+  createAccountMirrorBindingKey,
+  createAccountMirrorTenantKey,
+} from './tenantBinding.js';
 
 type MutableRecord = Record<string, unknown>;
 
@@ -48,10 +52,41 @@ export type AccountMirrorMetadataCounts = {
   media: number;
 };
 
+export type AccountMirrorMetadataCountEvidence = {
+  observedThisPass: AccountMirrorMetadataCounts;
+  retainedFromCache: AccountMirrorMetadataCounts;
+  mergedTotal: AccountMirrorMetadataCounts;
+};
+
+export type AccountMirrorDetailScannedEvidence = {
+  projects: number;
+  conversations: number;
+  total: number;
+};
+
+export type AccountMirrorAssetInventoryState =
+  | 'observed'
+  | 'complete'
+  | 'in_progress'
+  | 'deferred'
+  | 'unknown';
+
+export type AccountMirrorAssetInventoryEvidence = {
+  state: AccountMirrorAssetInventoryState;
+  summary: string;
+  detailScannedThisPass: AccountMirrorDetailScannedEvidence;
+  localMaterialized: Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'>;
+  remoteKnownMissingLocal: Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'>;
+  unknownOrDeferred: Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'>;
+};
+
 export type AccountMirrorMetadataEvidence = {
   identitySource: string | null;
   projectSampleIds: string[];
   conversationSampleIds: string[];
+  countEvidence?: AccountMirrorMetadataCountEvidence | null;
+  detailScannedThisPass?: AccountMirrorDetailScannedEvidence | null;
+  assetInventory?: AccountMirrorAssetInventoryEvidence | null;
   attachmentInventory?: {
     nextProjectIndex: number;
     nextConversationIndex: number;
@@ -82,6 +117,7 @@ export type AccountMirrorMetadataEvidence = {
 export type AccountMirrorCompleteness = {
   state: 'none' | 'complete' | 'in_progress' | 'unknown';
   summary: string;
+  assetInventory?: AccountMirrorAssetInventoryEvidence | null;
   remainingDetailSurfaces: {
     projects: number;
     conversations: number;
@@ -97,6 +133,8 @@ export type AccountMirrorCompleteness = {
 
 export type AccountMirrorStatusEntry = {
   provider: AccountMirrorProvider;
+  tenantKey: string | null;
+  bindingKey: string;
   runtimeProfileId: string;
   browserProfileId: string | null;
   expectedIdentityKey: string | null;
@@ -175,6 +213,7 @@ export interface AccountMirrorStatusRegistry {
     provider?: AccountMirrorProvider | null;
     runtimeProfileId?: string | null;
     explicitRefresh?: boolean;
+    ignoreMinimumInterval?: boolean;
   }): AccountMirrorStatusSummary;
   updateState(
     key: {
@@ -215,6 +254,7 @@ export function createAccountMirrorStatusRegistry(input: {
       provider: query.provider ?? null,
       runtimeProfileId: query.runtimeProfileId ?? null,
       explicitRefresh: query.explicitRefresh ?? false,
+      ignoreMinimumInterval: query.ignoreMinimumInterval ?? false,
     });
 
   return {
@@ -260,6 +300,7 @@ export function createAccountMirrorStatusSummary(input: {
   provider?: AccountMirrorProvider | null;
   runtimeProfileId?: string | null;
   explicitRefresh?: boolean;
+  ignoreMinimumInterval?: boolean;
 }): AccountMirrorStatusSummary {
   const states = input.states instanceof Map
     ? input.states
@@ -285,6 +326,7 @@ export function createAccountMirrorStatusSummary(input: {
         queued: state.queued,
         running: state.running,
         explicitRefresh: input.explicitRefresh,
+        ignoreMinimumInterval: input.ignoreMinimumInterval,
         nowMs: input.now.getTime(),
         policy: target.policy ?? undefined,
       });
@@ -355,6 +397,15 @@ function createStatusEntry(
   const metadataEvidence = normalizeMetadataEvidence(state.metadataEvidence);
   return {
     provider: target.provider,
+    tenantKey: createAccountMirrorTenantKey({
+      provider: target.provider,
+      boundIdentityKey: target.expectedIdentityKey,
+    }),
+    bindingKey: createAccountMirrorBindingKey({
+      provider: target.provider,
+      runtimeProfileId: target.runtimeProfileId,
+      browserProfileId: target.browserProfileId,
+    }),
     runtimeProfileId: target.runtimeProfileId,
     browserProfileId: target.browserProfileId,
     expectedIdentityKey: target.expectedIdentityKey,
@@ -382,7 +433,7 @@ function createStatusEntry(
     providerGuard: normalizeProviderGuardForStatus(state.providerGuard),
     metadataCounts,
     metadataEvidence,
-    mirrorCompleteness: deriveMirrorCompleteness(metadataCounts, metadataEvidence),
+    mirrorCompleteness: deriveMirrorCompleteness(target.provider, metadataCounts, metadataEvidence),
     liveFollow: {
       ...target.liveFollow,
       ...(target.liveFollow.state === 'enabled' && !target.expectedIdentityKey
@@ -569,6 +620,9 @@ function normalizeMetadataEvidence(
     identitySource: readString(value.identitySource),
     projectSampleIds: normalizeStringArray(value.projectSampleIds),
     conversationSampleIds: normalizeStringArray(value.conversationSampleIds),
+    countEvidence: normalizeCountEvidence(value.countEvidence),
+    detailScannedThisPass: normalizeDetailScannedEvidence(value.detailScannedThisPass),
+    assetInventory: normalizeAssetInventoryEvidence(value.assetInventory),
     attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
     projectConversations: normalizeProjectConversationEvidence(value.projectConversations),
     truncated: {
@@ -580,6 +634,7 @@ function normalizeMetadataEvidence(
 }
 
 function deriveMirrorCompleteness(
+  provider: AccountMirrorProvider,
   counts: AccountMirrorMetadataCounts,
   evidence: AccountMirrorMetadataEvidence | null,
 ): AccountMirrorCompleteness {
@@ -587,6 +642,7 @@ function deriveMirrorCompleteness(
     return {
       state: 'none',
       summary: 'No mirror snapshot has been collected.',
+      assetInventory: null,
       remainingDetailSurfaces: null,
       signals: {
         projectsTruncated: false,
@@ -607,10 +663,21 @@ function deriveMirrorCompleteness(
     attachmentInventoryTruncated,
     attachmentCursorPresent,
   };
+  const assetInventory = deriveAssetInventoryEvidence(provider, counts, evidence);
+  if (assetInventory.state === 'deferred' || assetInventory.state === 'unknown') {
+    return {
+      state: 'unknown',
+      summary: assetInventory.summary,
+      assetInventory,
+      remainingDetailSurfaces: deriveRemainingDetailSurfaces(counts, cursor),
+      signals,
+    };
+  }
   if (!projectsTruncated && !conversationsTruncated && !attachmentInventoryTruncated) {
     return {
       state: 'complete',
       summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+      assetInventory,
       remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
       signals,
     };
@@ -619,6 +686,7 @@ function deriveMirrorCompleteness(
     return {
       state: 'unknown',
       summary: 'Attachment inventory is truncated and no continuation cursor is available yet.',
+      assetInventory,
       remainingDetailSurfaces: null,
       signals,
     };
@@ -627,24 +695,180 @@ function deriveMirrorCompleteness(
     return {
       state: 'in_progress',
       summary: 'Mirror metadata is still truncated.',
+      assetInventory,
       remainingDetailSurfaces: null,
       signals,
     };
   }
-  const remainingProjects = Math.max(0, counts.projects - cursor.nextProjectIndex);
-  const remainingConversations = Math.max(0, counts.conversations - cursor.nextConversationIndex);
-  const remainingTotal = remainingProjects + remainingConversations;
   return {
     state: 'in_progress',
-    summary: remainingTotal > 0
-      ? `Attachment inventory has ${remainingTotal} detail surfaces remaining.`
+    summary: (deriveRemainingDetailSurfaces(counts, cursor)?.total ?? 0) > 0
+      ? `Attachment inventory has ${deriveRemainingDetailSurfaces(counts, cursor)?.total ?? 0} detail surfaces remaining.`
       : 'Mirror metadata is still marked truncated; another refresh should verify completion.',
-    remainingDetailSurfaces: {
-      projects: remainingProjects,
-      conversations: remainingConversations,
-      total: remainingTotal,
-    },
+    assetInventory,
+    remainingDetailSurfaces: deriveRemainingDetailSurfaces(counts, cursor),
     signals,
+  };
+}
+
+function deriveRemainingDetailSurfaces(
+  counts: AccountMirrorMetadataCounts,
+  cursor: AccountMirrorMetadataEvidence['attachmentInventory'] | null,
+): AccountMirrorCompleteness['remainingDetailSurfaces'] {
+  if (!cursor) return null;
+  const remainingProjects = Math.max(0, counts.projects - cursor.nextProjectIndex);
+  const remainingConversations = Math.max(0, counts.conversations - cursor.nextConversationIndex);
+  return {
+    projects: remainingProjects,
+    conversations: remainingConversations,
+    total: remainingProjects + remainingConversations,
+  };
+}
+
+function deriveAssetInventoryEvidence(
+  provider: AccountMirrorProvider,
+  counts: AccountMirrorMetadataCounts,
+  evidence: AccountMirrorMetadataEvidence,
+): AccountMirrorAssetInventoryEvidence {
+  const detailScanned = evidence.detailScannedThisPass ??
+    detailScannedFromAttachmentInventory(evidence.attachmentInventory);
+  const mergedTotal = evidence.countEvidence?.mergedTotal ?? counts;
+  const localMaterialized = evidence.assetInventory?.localMaterialized ?? zeroAssetCounts();
+  const remoteKnownMissingLocal = evidence.assetInventory?.remoteKnownMissingLocal ??
+    subtractAssetCounts(mergedTotal, localMaterialized);
+  const hasAssets = mergedTotal.artifacts + mergedTotal.files + mergedTotal.media > 0;
+  const hasConversationSurface = mergedTotal.conversations > 0;
+  const conversationDetailUnscanned = provider === 'gemini' &&
+    hasConversationSurface &&
+    detailScanned.conversations <= 0;
+  if (conversationDetailUnscanned) {
+    return {
+      state: 'deferred',
+      summary: 'Conversation asset inventory is deferred because no conversation detail surface was scanned in this pass.',
+      detailScannedThisPass: detailScanned,
+      localMaterialized,
+      remoteKnownMissingLocal: zeroAssetCounts(),
+      unknownOrDeferred: {
+        artifacts: Math.max(mergedTotal.artifacts, hasAssets ? 0 : 1),
+        files: Math.max(mergedTotal.files, hasAssets ? 0 : 1),
+        media: Math.max(mergedTotal.media, hasAssets ? 0 : 1),
+      },
+    };
+  }
+  if (evidence.truncated.artifacts === true) {
+    return {
+      state: 'in_progress',
+      summary: 'Asset inventory is still in progress because detail inventory was truncated.',
+      detailScannedThisPass: detailScanned,
+      localMaterialized,
+      remoteKnownMissingLocal,
+      unknownOrDeferred: zeroAssetCounts(),
+    };
+  }
+  return {
+    state: remoteKnownMissingLocal.artifacts + remoteKnownMissingLocal.files + remoteKnownMissingLocal.media > 0
+      ? 'observed'
+      : 'complete',
+    summary: 'Asset inventory was observed for the scanned provider surfaces.',
+    detailScannedThisPass: detailScanned,
+    localMaterialized,
+    remoteKnownMissingLocal,
+    unknownOrDeferred: zeroAssetCounts(),
+  };
+}
+
+function normalizeCountEvidence(
+  value: AccountMirrorMetadataEvidence['countEvidence'] | null | undefined,
+): AccountMirrorMetadataEvidence['countEvidence'] | null {
+  if (!value || !isRecord(value)) return null;
+  return {
+    observedThisPass: normalizeMetadataCounts(value.observedThisPass),
+    retainedFromCache: normalizeMetadataCounts(value.retainedFromCache),
+    mergedTotal: normalizeMetadataCounts(value.mergedTotal),
+  };
+}
+
+function normalizeDetailScannedEvidence(
+  value: AccountMirrorMetadataEvidence['detailScannedThisPass'] | null | undefined,
+): AccountMirrorMetadataEvidence['detailScannedThisPass'] | null {
+  if (!value || !isRecord(value)) return null;
+  const projects = normalizeCount(value.projects);
+  const conversations = normalizeCount(value.conversations);
+  return {
+    projects,
+    conversations,
+    total: normalizeCount(value.total) || projects + conversations,
+  };
+}
+
+function normalizeAssetInventoryEvidence(
+  value: AccountMirrorMetadataEvidence['assetInventory'] | null | undefined,
+): AccountMirrorMetadataEvidence['assetInventory'] | null {
+  if (!value || !isRecord(value)) return null;
+  const detailScannedThisPass = normalizeDetailScannedEvidence(value.detailScannedThisPass) ??
+    { projects: 0, conversations: 0, total: 0 };
+  return {
+    state: normalizeAssetInventoryState(value.state),
+    summary: readString(value.summary) ?? 'Asset inventory state is unknown.',
+    detailScannedThisPass,
+    localMaterialized: normalizeAssetCounts(value.localMaterialized),
+    remoteKnownMissingLocal: normalizeAssetCounts(value.remoteKnownMissingLocal),
+    unknownOrDeferred: normalizeAssetCounts(value.unknownOrDeferred),
+  };
+}
+
+function normalizeAssetInventoryState(value: unknown): AccountMirrorAssetInventoryState {
+  if (
+    value === 'observed' ||
+    value === 'complete' ||
+    value === 'in_progress' ||
+    value === 'deferred' ||
+    value === 'unknown'
+  ) {
+    return value;
+  }
+  return 'unknown';
+}
+
+function normalizeAssetCounts(
+  value: unknown,
+): Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'> {
+  const record = isRecord(value) ? value : {};
+  return {
+    artifacts: normalizeCount(readNumber(record.artifacts)),
+    files: normalizeCount(readNumber(record.files)),
+    media: normalizeCount(readNumber(record.media)),
+  };
+}
+
+function detailScannedFromAttachmentInventory(
+  value: AccountMirrorMetadataEvidence['attachmentInventory'] | null | undefined,
+): AccountMirrorDetailScannedEvidence {
+  const projects = normalizeCount(value?.scannedProjects);
+  const conversations = normalizeCount(value?.scannedConversations);
+  return {
+    projects,
+    conversations,
+    total: projects + conversations,
+  };
+}
+
+function subtractAssetCounts(
+  left: Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'>,
+  right: Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'>,
+): Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'> {
+  return {
+    artifacts: Math.max(0, normalizeCount(left.artifacts) - normalizeCount(right.artifacts)),
+    files: Math.max(0, normalizeCount(left.files) - normalizeCount(right.files)),
+    media: Math.max(0, normalizeCount(left.media) - normalizeCount(right.media)),
+  };
+}
+
+function zeroAssetCounts(): Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'> {
+  return {
+    artifacts: 0,
+    files: 0,
+    media: 0,
   };
 }
 
@@ -731,6 +955,10 @@ function timestampToIso(value: number | null | undefined): string | null {
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function isRecord(value: unknown): value is MutableRecord {

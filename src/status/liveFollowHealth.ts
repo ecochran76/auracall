@@ -85,7 +85,10 @@ export interface LiveFollowActualTargetRollup {
 
 export interface LiveFollowTargetAccountSummary {
   provider: string;
+  tenantKey: string | null;
+  bindingKey: string;
   runtimeProfileId: string;
+  browserProfileId: string | null;
   desiredState: string;
   desiredEnabled: boolean;
   actualStatus: string | null;
@@ -110,10 +113,25 @@ export interface LiveFollowTargetAccountSummary {
     action: string | null;
   } | null;
   mirrorCompleteness: string | null;
+  assetInventory: {
+    state: string;
+    summary: string | null;
+    detailScannedThisPass: {
+      projects: number;
+      conversations: number;
+      total: number;
+    } | null;
+  } | null;
   latestLifecycleEvent: {
     at: string | null;
     type: string | null;
     message: string | null;
+  } | null;
+  materializationOutcome: {
+    jobStatus: string | null;
+    conversationsAttempted: number;
+    materialized: number;
+    checksumCount: number;
   } | null;
   metadataCounts: {
     projects: number;
@@ -121,6 +139,29 @@ export interface LiveFollowTargetAccountSummary {
     artifacts: number;
     files: number;
     media: number;
+  } | null;
+  metadataCountEvidence: {
+    observedThisPass: {
+      projects: number;
+      conversations: number;
+      artifacts: number;
+      files: number;
+      media: number;
+    };
+    retainedFromCache: {
+      projects: number;
+      conversations: number;
+      artifacts: number;
+      files: number;
+      media: number;
+    };
+    mergedTotal: {
+      projects: number;
+      conversations: number;
+      artifacts: number;
+      files: number;
+      media: number;
+    };
   } | null;
 }
 

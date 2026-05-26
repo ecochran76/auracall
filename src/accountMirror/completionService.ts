@@ -36,6 +36,10 @@ export interface AccountMirrorCompletionControlRequest {
   action: 'pause' | 'resume' | 'cancel';
 }
 
+export interface AccountMirrorCompletionPolicyUpgradeRequest extends AccountMirrorCompletionStartRequest {
+  id: string;
+}
+
 export interface AccountMirrorCompletionLifecycleEvent {
   at: string;
   type:
@@ -44,7 +48,8 @@ export interface AccountMirrorCompletionLifecycleEvent {
     | 'resumed_after_restart'
     | 'operator_paused'
     | 'operator_resumed'
-    | 'operator_cancelled';
+    | 'operator_cancelled'
+    | 'campaign_policy_upgraded';
   status: AccountMirrorCompletionOperation['status'];
   previousStatus: AccountMirrorCompletionOperation['status'] | null;
   processPid: number;
@@ -75,6 +80,20 @@ export interface AccountMirrorCompletionMaterializationCursor {
   };
 }
 
+export interface AccountMirrorCompletionMaterializationOutcome {
+  jobId: string;
+  jobStatus: string;
+  completedAt: string | null;
+  conversationsAttempted: number;
+  materialized: number;
+  skipped: number;
+  failed: number;
+  checksumCount: number;
+  manifestPaths: string[];
+  terminalRouteabilityCounts: Record<string, number>;
+  message: string | null;
+}
+
 export interface AccountMirrorCompletionOperation {
   object: 'account_mirror_completion';
   id: string;
@@ -96,6 +115,7 @@ export interface AccountMirrorCompletionOperation {
   materializationRefreshSnapshot?: boolean;
   materializationForce?: boolean;
   materializationCursor?: AccountMirrorCompletionMaterializationCursor | null;
+  materializationOutcome?: AccountMirrorCompletionMaterializationOutcome | null;
   mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'] | null;
   error: {
     message: string;
@@ -108,7 +128,12 @@ export interface AccountMirrorCompletionService {
   start(request?: AccountMirrorCompletionStartRequest): AccountMirrorCompletionOperation;
   read(id: string): AccountMirrorCompletionOperation | null;
   list(request?: AccountMirrorCompletionListRequest): AccountMirrorCompletionOperation[];
+  refreshMaterializationStatus?(id: string): Promise<AccountMirrorCompletionOperation | null>;
+  refreshMaterializationStatuses?(
+    operations: AccountMirrorCompletionOperation[],
+  ): Promise<AccountMirrorCompletionOperation[]>;
   control(request: AccountMirrorCompletionControlRequest): AccountMirrorCompletionOperation | null;
+  upgradePolicy?(request: AccountMirrorCompletionPolicyUpgradeRequest): AccountMirrorCompletionOperation | null;
   prepareForShutdown?(): AccountMirrorCompletionOperation[];
 }
 
@@ -131,6 +156,25 @@ interface AccountMirrorHistoryMaterializationService {
     maxItems: number | null;
     force: boolean;
   }): Promise<AccountMirrorHistoryMaterializationJobCreateResult>;
+  readJob?(id: string): Promise<AccountMirrorHistoryMaterializationJobReadResult | null>;
+}
+
+interface AccountMirrorHistoryMaterializationJobReadResult {
+  id: string;
+  status: string;
+  completedAt?: string | null;
+  result?: {
+    metrics?: {
+      conversations?: number | null;
+      materialized?: number | null;
+      skipped?: number | null;
+      failed?: number | null;
+    } | null;
+    manifestPaths?: unknown;
+    entries?: unknown;
+    snapshotRefreshes?: unknown;
+    message?: string | null;
+  } | null;
 }
 
 export function createAccountMirrorCompletionService(input: {
@@ -165,8 +209,13 @@ export function createAccountMirrorCompletionService(input: {
     }
   };
   const sleepUntilAttempt = async (id: string, attemptAt: string): Promise<boolean> => {
+    let fallbackAttemptAt: string | null = attemptAt;
     while (shouldContinue(id)) {
-      const delayMs = resolveDelayMs(attemptAt, now());
+      const current = operations.get(id);
+      const currentAttemptAt: string | null = current ? current.nextAttemptAt : fallbackAttemptAt;
+      if (!currentAttemptAt) return true;
+      fallbackAttemptAt = currentAttemptAt;
+      const delayMs = resolveDelayMs(currentAttemptAt, now());
       if (delayMs <= 0) return true;
       await Promise.race([
         sleepImpl(Math.min(delayMs, 60_000)),
@@ -205,22 +254,29 @@ export function createAccountMirrorCompletionService(input: {
   const run = async (id: string) => {
     update(id, { status: 'running', completedAt: null });
     try {
-      const operation = operations.get(id);
-      if (!operation) return;
-      if (operation.nextAttemptAt) {
-        update(id, { status: 'idle_waiting' });
-        if (!(await sleepUntilAttempt(id, operation.nextAttemptAt))) return;
-        update(id, { status: 'running', nextAttemptAt: null });
+      const initialOperation = operations.get(id);
+      if (!initialOperation) return;
+      if (initialOperation.nextAttemptAt) {
+        if (initialOperation.mode === 'bounded') {
+          update(id, { nextAttemptAt: null });
+        } else {
+          update(id, { status: 'idle_waiting' });
+          if (!(await sleepUntilAttempt(id, initialOperation.nextAttemptAt))) return;
+          update(id, { status: 'running', nextAttemptAt: null });
+        }
       }
-      let pass = operation.passCount;
-      while (operation.maxPasses === null || pass < operation.maxPasses) {
+      for (;;) {
+        const operation = operations.get(id);
+        if (!operation) return;
+        let pass = operation.passCount;
+        if (!(operation.maxPasses === null || pass < operation.maxPasses)) break;
         if (!shouldContinue(id)) return;
         if (pass > 0) {
           await input.registry.refreshPersistentState?.();
           if (!shouldContinue(id)) return;
           const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
           if (entry?.mirrorCompleteness.state === 'complete') {
-            if (operation.maxPasses !== null) {
+            if (operation.maxPasses !== null && operation.sweepMode !== 'full_sweep') {
               update(id, {
                 status: 'completed',
                 completedAt: now().toISOString(),
@@ -235,15 +291,18 @@ export function createAccountMirrorCompletionService(input: {
             });
           }
         }
+        const refreshOperation = operations.get(id);
+        if (!refreshOperation) return;
         let refresh: AccountMirrorRefreshResult;
         try {
           if (!shouldContinue(id)) return;
-          const collectorTimeoutMs = resolveCompletionCollectorTimeoutMs(operation);
+          const collectorTimeoutMs = resolveCompletionCollectorTimeoutMs(refreshOperation);
           refresh = await input.refreshService.requestRefresh({
-            provider: operation.provider,
-            runtimeProfileId: operation.runtimeProfileId,
-            sweepMode: operation.sweepMode ?? 'steady_follow',
+            provider: refreshOperation.provider,
+            runtimeProfileId: refreshOperation.runtimeProfileId,
+            sweepMode: refreshOperation.sweepMode ?? 'steady_follow',
             explicitRefresh: true,
+            ignoreMinimumInterval: refreshOperation.mode === 'bounded',
             queueTimeoutMs: 0,
             ...(collectorTimeoutMs ? { collectorTimeoutMs } : {}),
           });
@@ -279,7 +338,12 @@ export function createAccountMirrorCompletionService(input: {
         }
         if (!shouldContinue(id)) return;
         if (refresh.mirrorCompleteness.state === 'complete') {
-          if (operation.maxPasses !== null) {
+          const latest = operations.get(id);
+          if (
+            latest?.maxPasses !== null &&
+            latest?.maxPasses !== undefined &&
+            ((latest.sweepMode ?? 'steady_follow') !== 'full_sweep' || nextPassCount >= latest.maxPasses)
+          ) {
             update(id, {
               status: 'completed',
               completedAt: now().toISOString(),
@@ -356,6 +420,7 @@ export function createAccountMirrorCompletionService(input: {
         materializationRefreshSnapshot: normalizeMaterializationRefreshSnapshot(request.materializationRefreshSnapshot, sweepMode),
         materializationForce: normalizeMaterializationForce(request.materializationForce),
         materializationCursor: null,
+        materializationOutcome: null,
         mirrorCompleteness: null,
         error: null,
         lifecycleEvents: [],
@@ -388,6 +453,18 @@ export function createAccountMirrorCompletionService(input: {
         .filter((operation) => !status || operation.status === status)
         .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
       return limit === null ? results : results.slice(0, limit);
+    },
+    async refreshMaterializationStatus(id: string) {
+      const operation = operations.get(id);
+      if (!operation) return null;
+      return await hydrateMaterializationStatus(operation);
+    },
+    async refreshMaterializationStatuses(inputOperations: AccountMirrorCompletionOperation[]) {
+      const results: AccountMirrorCompletionOperation[] = [];
+      for (const operation of inputOperations) {
+        results.push(await hydrateMaterializationStatus(operation));
+      }
+      return results;
     },
     control(request) {
       const operation = operations.get(request.id);
@@ -437,6 +514,42 @@ export function createAccountMirrorCompletionService(input: {
         }) ?? updated;
       }
       return operation;
+    },
+    upgradePolicy(request) {
+      const operation = operations.get(request.id);
+      if (!operation) return null;
+      if (isTerminalOperation(operation)) return operation;
+      const sweepMode = normalizeSweepMode(request.sweepMode);
+      const previousStatus = operation.status;
+      const nextStatus = operation.status === 'paused'
+        ? 'paused'
+        : (operation.status === 'queued' ? 'queued' : 'running');
+      const updated = update(operation.id, {
+        mode: 'bounded',
+        sweepMode,
+        phase: 'backfill_history',
+        status: nextStatus,
+        completedAt: null,
+        nextAttemptAt: operation.status === 'paused' ? operation.nextAttemptAt : null,
+        maxPasses: resolveUpgradeMaxPasses(operation, request.maxPasses),
+        materializationPolicy: normalizeMaterializationPolicy(request.materializationPolicy, sweepMode),
+        materializationAssetKinds: normalizeMaterializationAssetKinds(request.materializationAssetKinds),
+        materializationMaxItems: normalizeMaterializationMaxItems(request.materializationMaxItems),
+        materializationRefreshSnapshot: normalizeMaterializationRefreshSnapshot(request.materializationRefreshSnapshot, sweepMode),
+        materializationForce: normalizeMaterializationForce(request.materializationForce),
+        error: null,
+      });
+      const evented = appendLifecycleEvent(operation.id, {
+        type: 'campaign_policy_upgraded',
+        status: updated?.status ?? nextStatus,
+        previousStatus,
+        message: 'Upgraded account-mirror completion policy for a reconciliation campaign.',
+      }) ?? updated;
+      wakeSleepers();
+      if (evented && evented.status !== 'paused') {
+        launch(operation.id);
+      }
+      return evented;
     },
     prepareForShutdown() {
       const parked: AccountMirrorCompletionOperation[] = [];
@@ -509,8 +622,81 @@ export function createAccountMirrorCompletionService(input: {
         passCount: operation.passCount,
         request,
       },
+      materializationOutcome: null,
     });
   }
+
+  async function hydrateMaterializationStatus(
+    operation: AccountMirrorCompletionOperation,
+  ): Promise<AccountMirrorCompletionOperation> {
+    const cursor = operation.materializationCursor;
+    if (!cursor || !input.historyMaterializationService?.readJob) return operation;
+    const job = await input.historyMaterializationService.readJob(cursor.jobId).catch(() => null);
+    if (!job) return operation;
+    const outcome = isTerminalMaterializationStatus(job.status)
+      ? summarizeMaterializationOutcome(job)
+      : null;
+    return update(operation.id, {
+      materializationCursor: {
+        ...cursor,
+        jobStatus: job.status || cursor.jobStatus,
+      },
+      materializationOutcome: outcome,
+    }) ?? operation;
+  }
+}
+
+function isTerminalMaterializationStatus(status: string): boolean {
+  return status === 'succeeded' ||
+    status === 'skipped' ||
+    status === 'failed' ||
+    status === 'cancelled';
+}
+
+function summarizeMaterializationOutcome(
+  job: AccountMirrorHistoryMaterializationJobReadResult,
+): AccountMirrorCompletionMaterializationOutcome {
+  const result = job.result ?? null;
+  const metrics = result?.metrics ?? {};
+  const entries = Array.isArray(result?.entries) ? result.entries : [];
+  const snapshotRefreshes = Array.isArray(result?.snapshotRefreshes) ? result.snapshotRefreshes : [];
+  return {
+    jobId: job.id,
+    jobStatus: job.status,
+    completedAt: typeof job.completedAt === 'string' && job.completedAt.trim() ? job.completedAt.trim() : null,
+    conversationsAttempted: normalizeOutcomeCount(metrics.conversations),
+    materialized: normalizeOutcomeCount(metrics.materialized),
+    skipped: normalizeOutcomeCount(metrics.skipped),
+    failed: normalizeOutcomeCount(metrics.failed),
+    checksumCount: entries.filter((entry) => readNestedString(entry, ['checksumSha256'])).length,
+    manifestPaths: Array.isArray(result?.manifestPaths)
+      ? result.manifestPaths.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      : [],
+    terminalRouteabilityCounts: countRouteabilityStates(snapshotRefreshes),
+    message: typeof result?.message === 'string' && result.message.trim() ? result.message.trim() : null,
+  };
+}
+
+function normalizeOutcomeCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function countRouteabilityStates(entries: unknown[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const entry of entries) {
+    const state = readNestedString(entry, ['routeabilityState']) ?? 'unknown';
+    counts[state] = (counts[state] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function readNestedString(value: unknown, path: string[]): string | null {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return null;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return typeof current === 'string' && current.trim().length > 0 ? current.trim() : null;
 }
 
 function shouldQueueMaterialization(operation: AccountMirrorCompletionOperation): boolean {
@@ -615,6 +801,19 @@ function normalizeMaterializationForce(value: boolean | null | undefined): boole
 function normalizeMaxPasses(value: number | null | undefined): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(1, Math.min(500, Math.floor(value)));
+}
+
+function resolveUpgradeMaxPasses(
+  operation: AccountMirrorCompletionOperation,
+  value: number | null | undefined,
+): number {
+  const additionalPasses = normalizeMaxPasses(value) ?? 1;
+  const inFlightBuffer = operation.status === 'running' ? 1 : 0;
+  const requested = operation.passCount + additionalPasses + inFlightBuffer;
+  if (operation.mode === 'bounded' && operation.maxPasses !== null) {
+    return Math.max(operation.maxPasses, requested);
+  }
+  return requested;
 }
 
 function normalizeListLimit(value: number | null | undefined): number | null {

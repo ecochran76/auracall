@@ -43,6 +43,8 @@ describe('mcp account_mirror_status tool', () => {
         entries: [
           {
             provider: 'chatgpt',
+            tenantKey: 'service-account:chatgpt:ecochran76@gmail.com',
+            bindingKey: 'binding:chatgpt:default:default',
             runtimeProfileId: 'default',
             browserProfileId: 'default',
             expectedIdentityKey: 'ecochran76@gmail.com',

@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 
 export type BrowserMutationKind =
-  | 'navigate'
-  | 'reload'
-  | 'location-assign'
-  | 'target-open-or-reuse';
+	  | 'navigate'
+	  | 'reload'
+	  | 'location-assign'
+	  | 'in-page-click'
+	  | 'target-open-or-reuse';
 
 export type BrowserMutationPhase = 'start' | 'complete';
 

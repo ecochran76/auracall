@@ -33,6 +33,7 @@ import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.j
 import { registerAccountMirrorSchedulerHistoryTool } from './tools/accountMirrorSchedulerHistory.js';
 import { registerAccountMirrorSchedulerDiagnosticsTool } from './tools/accountMirrorSchedulerDiagnostics.js';
 import { registerAccountMirrorCompletionTools } from './tools/accountMirrorCompletion.js';
+import { registerAccountMirrorReconciliationTools } from './tools/accountMirrorReconciliation.js';
 import { registerAccountMirrorProviderGuardTools } from './tools/accountMirrorProviderGuard.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
@@ -59,6 +60,8 @@ import { createAccountMirrorPersistence } from '../accountMirror/cachePersistenc
 import { createAccountMirrorCatalogService } from '../accountMirror/catalogService.js';
 import { createAccountMirrorCompletionService } from '../accountMirror/completionService.js';
 import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
+import { createAccountMirrorReconciliationCampaignService } from '../accountMirror/reconciliationCampaignService.js';
+import { createAccountMirrorReconciliationCampaignStore } from '../accountMirror/reconciliationCampaignStore.js';
 import {
   createAgentTeamConfigService,
   type AgentTeamConfigService,
@@ -101,6 +104,7 @@ export interface McpServiceBundle {
   accountMirrorRefreshService: ReturnType<typeof createAccountMirrorRefreshService>;
   accountMirrorCatalogService: ReturnType<typeof createAccountMirrorCatalogService>;
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
+  accountMirrorReconciliationCampaignService: ReturnType<typeof createAccountMirrorReconciliationCampaignService>;
   runArchiveService: ReturnType<typeof createRunArchiveService>;
   archiveMaterializationJobService: ArchiveMaterializationJobService;
   historyMaterializationService: HistoryMaterializationService;
@@ -201,6 +205,9 @@ export async function startMcpServer(): Promise<void> {
   registerAccountMirrorSchedulerDiagnosticsTool(server);
   registerAccountMirrorCompletionTools(server, {
     service: services.accountMirrorCompletionService,
+  });
+  registerAccountMirrorReconciliationTools(server, {
+    service: services.accountMirrorReconciliationCampaignService,
   });
   registerAccountMirrorProviderGuardTools(server, {
     registry: services.accountMirrorStatusRegistry,
@@ -331,6 +338,9 @@ export async function createMcpServicesFromConfig(
   const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
     config: resolvedUserConfig as Record<string, unknown>,
   });
+  const accountMirrorReconciliationCampaignStore = createAccountMirrorReconciliationCampaignStore({
+    config: resolvedUserConfig as Record<string, unknown>,
+  });
   const accountMirrorCompletionService = createAccountMirrorCompletionService({
     registry: accountMirrorStatusRegistry,
     refreshService: accountMirrorRefreshService,
@@ -339,6 +349,13 @@ export async function createMcpServicesFromConfig(
     resumeActiveOperations: true,
     historyMaterializationService,
   });
+  const accountMirrorReconciliationCampaignService = createAccountMirrorReconciliationCampaignService({
+    registry: accountMirrorStatusRegistry,
+    completionService: accountMirrorCompletionService,
+    materializationJobReader: historyMaterializationService,
+    store: accountMirrorReconciliationCampaignStore,
+  });
+  await accountMirrorReconciliationCampaignService.recoverActiveCampaigns?.();
   const projectEnsureService = createProjectEnsure({
     config: resolvedUserConfig as Record<string, unknown>,
     configService: agentTeamConfigService,
@@ -364,6 +381,7 @@ export async function createMcpServicesFromConfig(
     accountMirrorRefreshService,
     accountMirrorCatalogService,
     accountMirrorCompletionService,
+    accountMirrorReconciliationCampaignService,
     historyMaterializationService,
     agentTeamConfigService,
     projectEnsureService,

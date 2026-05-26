@@ -1,466 +1,482 @@
-import http from 'node:http';
-import { createReadStream } from 'node:fs';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { z, ZodError } from 'zod';
-import CDP from 'chrome-remote-interface';
-import type { OptionValues } from 'commander';
-import { MODEL_CONFIGS } from '../oracle/config.js';
-import { getCliVersion } from '../version.js';
-import { getAuracallHomeDir } from '../auracallHome.js';
+import http from "node:http";
+import { createReadStream } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { z, ZodError } from "zod";
+import CDP from "chrome-remote-interface";
+import type { OptionValues } from "commander";
+import { MODEL_CONFIGS } from "../oracle/config.js";
+import { getCliVersion } from "../version.js";
+import { getAuracallHomeDir } from "../auracallHome.js";
 import {
-  createLazyLiveFollowPreflightRunner,
-  readLazyLiveFollowPreflightRun,
-  readPreflightStatusSummary,
-  type LazyLiveFollowPreflightRun,
-  type LazyLiveFollowPreflightRunner,
-  type PreflightStatusSummary,
-} from '../preflightStatus.js';
-import type { ResolvedUserConfig } from '../config.js';
-import { resolveConfig } from '../schema/resolver.js';
+	createLazyLiveFollowPreflightRunner,
+	readLazyLiveFollowPreflightRun,
+	readPreflightStatusSummary,
+	type LazyLiveFollowPreflightRun,
+	type LazyLiveFollowPreflightRunner,
+	type PreflightStatusSummary,
+} from "../preflightStatus.js";
+import type { ResolvedUserConfig } from "../config.js";
+import { resolveConfig } from "../schema/resolver.js";
+import { resolveHostLocalActionExecutionPolicy, type ProjectedAgent } from "../config/model.js";
+import type { EffectiveAgent, EffectiveAgentCatalog } from "../config/agentRegistryCatalog.js";
+import { SEMANTIC_MODEL_SELECTORS } from "../config/modelSelector.js";
 import {
-  resolveHostLocalActionExecutionPolicy,
-  type ProjectedAgent,
-} from '../config/model.js';
-import type { EffectiveAgent, EffectiveAgentCatalog } from '../config/agentRegistryCatalog.js';
-import { SEMANTIC_MODEL_SELECTORS } from '../config/modelSelector.js';
+	agentConfigUpsertInputSchema,
+	agentRegistrySnapshotSchema,
+	createAgentTeamConfigService,
+	teamConfigUpsertInputSchema,
+} from "../config/agentConfigService.js";
+import { readApiKeyDiagnosticsFromEnvFile } from "../config/apiKeyEnvDiagnostics.js";
+import { deleteApiKey, issueApiKey } from "../config/apiKeyIssuer.js";
+import { createAgentRegistryStore, type AgentRegistryStore } from "../config/agentRegistryStore.js";
 import {
-  agentConfigUpsertInputSchema,
-  agentRegistrySnapshotSchema,
-  createAgentTeamConfigService,
-  teamConfigUpsertInputSchema,
-} from '../config/agentConfigService.js';
-import { readApiKeyDiagnosticsFromEnvFile } from '../config/apiKeyEnvDiagnostics.js';
-import { deleteApiKey, issueApiKey } from '../config/apiKeyIssuer.js';
+	inspectTeamRunLinkage,
+	TeamRunInspectionError,
+	type TeamRunInspectionPayload,
+} from "../teams/inspection.js";
+import { createTeamRuntimeBridge, type TeamRuntimeBridge } from "../teams/runtimeBridge.js";
+import { buildBoundedTeamTaskRunSpec } from "../teams/taskRunSpecBuilder.js";
 import {
-  createAgentRegistryStore,
-  type AgentRegistryStore,
-} from '../config/agentRegistryStore.js';
-import {
-  inspectTeamRunLinkage,
-  TeamRunInspectionError,
-  type TeamRunInspectionPayload,
-} from '../teams/inspection.js';
-import { createTeamRuntimeBridge, type TeamRuntimeBridge } from '../teams/runtimeBridge.js';
-import { buildBoundedTeamTaskRunSpec } from '../teams/taskRunSpecBuilder.js';
-import { buildTeamRunExecutionPayload, type TeamRunExecutionPayload } from '../teams/executionPayload.js';
-import { TaskRunSpecSchema } from '../teams/schema.js';
-import type { TaskRunSpec } from '../teams/types.js';
+	buildTeamRunExecutionPayload,
+	type TeamRunExecutionPayload,
+} from "../teams/executionPayload.js";
+import { TaskRunSpecSchema } from "../teams/schema.js";
+import type { TaskRunSpec } from "../teams/types.js";
 import type {
-  ExecutionRequest,
-  ExecutionRequestExtensionHints,
-  ExecutionResponse,
-} from '../runtime/apiTypes.js';
+	ExecutionRequest,
+	ExecutionRequestExtensionHints,
+	ExecutionResponse,
+} from "../runtime/apiTypes.js";
 import {
-  inspectRuntimeRun,
-  type InspectRuntimeRunInput,
-  type RuntimeRunInspectionBrowserDiagnosticsSummary,
-  type RuntimeRunInspectionBrowserDiagnosticsProbeResult,
-  type RuntimeRunInspectionServiceStateProbeResult,
-  type ProbeRuntimeRunBrowserDiagnosticsInput,
-  type ProbeRuntimeRunServiceStateInput,
-  RuntimeRunInspectionError,
-  type RuntimeRunInspectionPayload,
-} from '../runtime/inspection.js';
-import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
-import { createExecutionRuntimeControl } from '../runtime/control.js';
+	inspectRuntimeRun,
+	type InspectRuntimeRunInput,
+	type RuntimeRunInspectionBrowserDiagnosticsSummary,
+	type RuntimeRunInspectionBrowserDiagnosticsProbeResult,
+	type RuntimeRunInspectionServiceStateProbeResult,
+	type ProbeRuntimeRunBrowserDiagnosticsInput,
+	type ProbeRuntimeRunServiceStateInput,
+	RuntimeRunInspectionError,
+	type RuntimeRunInspectionPayload,
+} from "../runtime/inspection.js";
+import type { ExecutionRuntimeControlContract } from "../runtime/contract.js";
+import { createExecutionRuntimeControl } from "../runtime/control.js";
 import {
-  summarizeExecutionRunListItem,
-  type ExecutionRunListItem,
-} from '../runtime/runListSummary.js';
-import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
-import { createLocalRunnerCapabilitySummary } from '../runtime/localRunnerCapabilities.js';
-import { createExecutionRequest } from '../runtime/apiModel.js';
+	summarizeExecutionRunListItem,
+	type ExecutionRunListItem,
+} from "../runtime/runListSummary.js";
+import { createConfiguredExecutionRunAffinity } from "../runtime/configuredAffinity.js";
+import { createLocalRunnerCapabilitySummary } from "../runtime/localRunnerCapabilities.js";
+import { createExecutionRequest } from "../runtime/apiModel.js";
 import {
-  createExecutionResponsesService,
-  createExecutionRequestFromRecord,
-  type ExecutionResponsesServiceDeps,
-} from '../runtime/responsesService.js';
+	createExecutionResponsesService,
+	createExecutionRequestFromRecord,
+	type ExecutionResponsesServiceDeps,
+} from "../runtime/responsesService.js";
 import {
-  createRunArchiveService,
-  type RunArchiveAssetLookupResult,
-  type RunArchiveAssetResult,
-  type RunArchiveEvidenceResult,
-  type RunArchiveItemResult,
-  type RunArchiveListRequest,
-  type RunArchiveListResult,
-  type RunArchiveService,
-} from '../runtime/archiveService.js';
+	createRunArchiveService,
+	type RunArchiveAssetLookupResult,
+	type RunArchiveAssetResult,
+	type RunArchiveEvidenceResult,
+	type RunArchiveItemResult,
+	type RunArchiveListRequest,
+	type RunArchiveListResult,
+	type RunArchiveService,
+} from "../runtime/archiveService.js";
 import {
-  ArchiveMaterializationError,
-  createArchiveMaterializationService,
-  type ArchiveItemMaterializationResult,
-  type ArchiveMaterializationService,
-} from '../runtime/archiveMaterializationService.js';
+	ArchiveMaterializationError,
+	createArchiveMaterializationService,
+	type ArchiveItemMaterializationResult,
+	type ArchiveMaterializationService,
+} from "../runtime/archiveMaterializationService.js";
 import {
-  ArchiveMaterializationJobControlError,
-  createArchiveMaterializationJobService,
-  type ArchiveMaterializationJobCreateResult,
-  type ArchiveMaterializationJobListResult,
-  type ArchiveMaterializationJobService,
-} from '../runtime/archiveMaterializationJobService.js';
+	ArchiveMaterializationJobControlError,
+	createArchiveMaterializationJobService,
+	type ArchiveMaterializationJobCreateResult,
+	type ArchiveMaterializationJobListResult,
+	type ArchiveMaterializationJobService,
+} from "../runtime/archiveMaterializationJobService.js";
 import {
-  createHistoryMaterializationService,
-  HistoryMaterializationError,
-  HistoryMaterializationJobControlError,
-  type HistoryMaterializationJobCreateResult,
-  type HistoryMaterializationJobListResult,
-  type HistoryMaterializationService,
-} from '../runtime/historyMaterializationService.js';
+	createHistoryMaterializationService,
+	HistoryMaterializationError,
+	HistoryMaterializationJobControlError,
+	type HistoryMaterializationJobCreateResult,
+	type HistoryMaterializationJobListResult,
+	type HistoryMaterializationService,
+} from "../runtime/historyMaterializationService.js";
 import {
-  createSearchProjectionService,
-  type SearchProjectionRequest,
-  type SearchProjectionResult,
-  type SearchProjectionService,
-} from '../runtime/searchProjectionService.js';
+	createSearchProjectionService,
+	type SearchProjectionRequest,
+	type SearchProjectionResult,
+	type SearchProjectionService,
+} from "../runtime/searchProjectionService.js";
 import {
-  createResponseBatchExecutionGate,
-  createResponseBatchService,
-  ResponseBatchCreateRequestSchema,
-  type ResponseBatchService,
-} from '../runtime/responseBatchService.js';
+	createResponseBatchExecutionGate,
+	createResponseBatchService,
+	ResponseBatchCreateRequestSchema,
+	type ResponseBatchService,
+} from "../runtime/responseBatchService.js";
 import {
-  normalizeResponseBatchDispatchRequest,
-  resolveResponseBatchDispatchPool,
-} from '../runtime/responseBatchDispatchPool.js';
+	normalizeResponseBatchDispatchRequest,
+	resolveResponseBatchDispatchPool,
+} from "../runtime/responseBatchDispatchPool.js";
 import {
-  createTenantExecutionLimitGate,
-  summarizeTenantExecutionLimits,
-  type TenantExecutionLimitStatusSummary,
-} from '../runtime/tenantExecutionLimits.js';
-import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
-import { readLiveRuntimeRunServiceState } from '../runtime/liveServiceStateRegistry.js';
-import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../runtime/stepOutputContract.js';
+	createTenantExecutionLimitGate,
+	summarizeTenantExecutionLimits,
+	type TenantExecutionLimitStatusSummary,
+} from "../runtime/tenantExecutionLimits.js";
+import { createConfiguredStoredStepExecutor } from "../runtime/configuredExecutor.js";
+import { readLiveRuntimeRunServiceState } from "../runtime/liveServiceStateRegistry.js";
+import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from "../runtime/stepOutputContract.js";
 import {
-  createExecutionRunnerControl,
-  type ExecutionRunnerControlContract,
-} from '../runtime/runnersControl.js';
+	createExecutionRunnerControl,
+	type ExecutionRunnerControlContract,
+} from "../runtime/runnersControl.js";
 import {
-  createExecutionServiceHost,
-  type ExecutionServiceHostOperatorControlInput,
-  type ExecutionServiceHostOperatorControlResult,
-  type ExecutionServiceHostRecoveryDetail,
-  type ExecutionServiceHostRecoverySummary,
-  type ExecutionServiceHostLocalClaimSummary,
-  type ExecutionServiceHostRunnerTopologySummary,
-  type DrainStoredExecutionRunsUntilIdleResult,
-  type ExecutionServiceHost,
-  type ExecutionServiceHostExecutionGate,
-  type ExecutionServiceHostDeps,
-} from '../runtime/serviceHost.js';
-import type { ExecutionRunSourceKind, ExecutionRunStatus, ExecutionRunnerStatus } from '../runtime/types.js';
+	createExecutionServiceHost,
+	type ExecutionServiceHostOperatorControlInput,
+	type ExecutionServiceHostOperatorControlResult,
+	type ExecutionServiceHostRecoveryDetail,
+	type ExecutionServiceHostRecoverySummary,
+	type ExecutionServiceHostLocalClaimSummary,
+	type ExecutionServiceHostRunnerTopologySummary,
+	type DrainStoredExecutionRunsUntilIdleResult,
+	type ExecutionServiceHost,
+	type ExecutionServiceHostExecutionGate,
+	type ExecutionServiceHostDeps,
+} from "../runtime/serviceHost.js";
+import type {
+	ExecutionRunSourceKind,
+	ExecutionRunStatus,
+	ExecutionRunnerStatus,
+} from "../runtime/types.js";
 import {
-  probeChatgptBrowserServiceState,
-  probeGeminiBrowserServiceState,
-  probeGrokBrowserServiceState,
-} from '../browser/liveServiceState.js';
-import { BrowserService } from '../browser/service/browserService.js';
+	probeChatgptBrowserServiceState,
+	probeGeminiBrowserServiceState,
+	probeGrokBrowserServiceState,
+} from "../browser/liveServiceState.js";
+import { BrowserService } from "../browser/service/browserService.js";
 import {
-  acceptDomDriftObservation,
-  listDomDriftObservations,
-  type DomDriftObservationStatus,
-} from '../browser/domDriftObservations.js';
+	acceptDomDriftObservation,
+	listDomDriftObservations,
+	type DomDriftObservationStatus,
+} from "../browser/domDriftObservations.js";
 import {
-  probeBrowserRunDiagnostics,
-  type BrowserDiagnosticsService,
-} from '../browser/liveDiagnostics.js';
+	probeBrowserRunDiagnostics,
+	type BrowserDiagnosticsService,
+} from "../browser/liveDiagnostics.js";
 import {
-  createMediaGenerationService,
-  MediaGenerationExecutionError,
-  type MediaGenerationServiceDeps,
-} from '../media/service.js';
+	createMediaGenerationService,
+	MediaGenerationExecutionError,
+	type MediaGenerationServiceDeps,
+} from "../media/service.js";
 import {
-  createBrowserMediaGenerationExecutor,
-  createBrowserMediaGenerationMaterializer,
-} from '../media/browserExecutor.js';
-import { probeMediaGenerationBrowserDiagnostics } from '../media/browserDiagnostics.js';
-import type { MediaGenerationRequest } from '../media/types.js';
-import { summarizeMediaGenerationStatus } from '../media/statusSummary.js';
+	createBrowserMediaGenerationExecutor,
+	createBrowserMediaGenerationMaterializer,
+} from "../media/browserExecutor.js";
+import { probeMediaGenerationBrowserDiagnostics } from "../media/browserDiagnostics.js";
+import type { MediaGenerationRequest } from "../media/types.js";
+import { summarizeMediaGenerationStatus } from "../media/statusSummary.js";
 import {
-  createWorkbenchCapabilityService,
-  type WorkbenchCapabilityServiceDeps,
-} from '../workbench/service.js';
-import { WorkbenchCapabilityReportRequestSchema } from '../workbench/schema.js';
-import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserDiscovery.js';
-import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
+	createWorkbenchCapabilityService,
+	type WorkbenchCapabilityServiceDeps,
+} from "../workbench/service.js";
+import { WorkbenchCapabilityReportRequestSchema } from "../workbench/schema.js";
+import { createBrowserWorkbenchCapabilityDiscovery } from "../workbench/browserDiscovery.js";
+import { createBrowserWorkbenchCapabilityDiagnostics } from "../workbench/browserDiagnostics.js";
 import {
-  AgentSetupPackageInputSchema,
-  createAgentSetupPackageService,
-  type AgentSetupPackageService,
-} from '../projects/agentSetupPackageService.js';
+	AgentSetupPackageInputSchema,
+	createAgentSetupPackageService,
+	type AgentSetupPackageService,
+} from "../projects/agentSetupPackageService.js";
 import {
-  createProjectEnsureService,
-  ProjectEnsureInputSchema,
-  type ProjectEnsureService,
-} from '../projects/projectEnsureService.js';
+	createProjectEnsureService,
+	ProjectEnsureInputSchema,
+	type ProjectEnsureService,
+} from "../projects/projectEnsureService.js";
 import {
-  createTenantPoolTeamEnsureService,
-  TenantPoolTeamEnsureInputSchema,
-  type TenantPoolTeamEnsureService,
-} from '../projects/tenantPoolTeamEnsureService.js';
-import { readAuraCallRunStatus } from '../runStatus.js';
-import type { AuraCallRunStatus } from '../runStatus.js';
+	createTenantPoolTeamEnsureService,
+	TenantPoolTeamEnsureInputSchema,
+	type TenantPoolTeamEnsureService,
+} from "../projects/tenantPoolTeamEnsureService.js";
+import { readAuraCallRunStatus } from "../runStatus.js";
+import type { AuraCallRunStatus } from "../runStatus.js";
 import {
-  createAccountMirrorStatusRegistry,
-  type AccountMirrorStatusRegistry,
-  type AccountMirrorStatusEntry,
-  type AccountMirrorStatusSummary,
-} from '../accountMirror/statusRegistry.js';
+	createAccountMirrorStatusRegistry,
+	type AccountMirrorStatusRegistry,
+	type AccountMirrorStatusEntry,
+	type AccountMirrorStatusSummary,
+} from "../accountMirror/statusRegistry.js";
 import {
-  clearAccountMirrorProviderGuard,
-  DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
-} from '../accountMirror/providerGuardControl.js';
+	clearAccountMirrorProviderGuard,
+	DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
+} from "../accountMirror/providerGuardControl.js";
 import {
-  AccountMirrorRefreshError,
-  createAccountMirrorRefreshService,
-  type AccountMirrorRefreshResult,
-  type AccountMirrorRefreshService,
-} from '../accountMirror/refreshService.js';
-import { createAccountMirrorPersistence } from '../accountMirror/cachePersistence.js';
+	AccountMirrorRefreshError,
+	createAccountMirrorRefreshService,
+	type AccountMirrorRefreshResult,
+	type AccountMirrorRefreshService,
+} from "../accountMirror/refreshService.js";
+import { createAccountMirrorPersistence } from "../accountMirror/cachePersistence.js";
 import {
-  createAccountMirrorCatalogService,
-  type AccountMirrorCatalogKind,
-  type AccountMirrorCatalogItemResult,
-  type AccountMirrorCatalogResult,
-  type AccountMirrorCatalogService,
-} from '../accountMirror/catalogService.js';
+	createAccountMirrorCatalogService,
+	type AccountMirrorCatalogKind,
+	type AccountMirrorCatalogItemResult,
+	type AccountMirrorCatalogResult,
+	type AccountMirrorCatalogService,
+} from "../accountMirror/catalogService.js";
 import {
-  createAccountMirrorSchedulerPassService,
-  type AccountMirrorSchedulerPassResult,
-  type AccountMirrorSchedulerPassService,
-} from '../accountMirror/schedulerService.js';
+	createAccountMirrorSchedulerPassService,
+	type AccountMirrorSchedulerPassResult,
+	type AccountMirrorSchedulerPassService,
+} from "../accountMirror/schedulerService.js";
 import {
-  createAccountMirrorSchedulerPassLedger,
-  type AccountMirrorSchedulerPassHistory,
-  type AccountMirrorSchedulerPassLedger,
-} from '../accountMirror/schedulerLedger.js';
+	createAccountMirrorSchedulerPassLedger,
+	type AccountMirrorSchedulerPassHistory,
+	type AccountMirrorSchedulerPassLedger,
+} from "../accountMirror/schedulerLedger.js";
 import {
-  summarizeAccountMirrorSchedulerHistory,
-  type AccountMirrorSchedulerCompactHistory,
-} from '../accountMirror/schedulerHistorySummary.js';
+	summarizeAccountMirrorSchedulerHistory,
+	type AccountMirrorSchedulerCompactHistory,
+} from "../accountMirror/schedulerHistorySummary.js";
 import {
-  createAccountMirrorCompletionService,
-  type AccountMirrorCompletionOperation,
-  type AccountMirrorCompletionService,
-} from '../accountMirror/completionService.js';
-import { reconcileConfiguredAccountMirrorLiveFollow } from '../accountMirror/liveFollowReconciler.js';
-import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
-import { createAccountMirrorPreviewSessionStore } from '../accountMirror/previewSessionStore.js';
-import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
+	createAccountMirrorCompletionService,
+	type AccountMirrorCompletionOperation,
+	type AccountMirrorCompletionService,
+} from "../accountMirror/completionService.js";
+import { reconcileConfiguredAccountMirrorLiveFollow } from "../accountMirror/liveFollowReconciler.js";
+import { createAccountMirrorCompletionStore } from "../accountMirror/completionStore.js";
 import {
-  summarizeLiveFollowHealth,
-  type LiveFollowHealthSummary,
-  type LiveFollowTargetAccountSummary,
-  type LiveFollowTargetRollup,
-} from '../status/liveFollowHealth.js';
-import { findChromeProcessUsingUserDataDir, isDevToolsResponsive } from '../../packages/browser-service/src/processCheck.js';
-import { readDevToolsPort } from '../../packages/browser-service/src/profileState.js';
+	AccountMirrorReconciliationError,
+	createAccountMirrorReconciliationCampaignService,
+	type AccountMirrorReconciliationCampaign,
+	type AccountMirrorReconciliationCampaignService,
+} from "../accountMirror/reconciliationCampaignService.js";
+import { createAccountMirrorReconciliationCampaignStore } from "../accountMirror/reconciliationCampaignStore.js";
+import { createAccountMirrorPreviewSessionStore } from "../accountMirror/previewSessionStore.js";
+import type { AccountMirrorProvider } from "../accountMirror/politePolicy.js";
+import {
+	summarizeLiveFollowHealth,
+	type LiveFollowHealthSummary,
+	type LiveFollowTargetAccountSummary,
+	type LiveFollowTargetRollup,
+} from "../status/liveFollowHealth.js";
+import {
+	findChromeProcessUsingUserDataDir,
+	isDevToolsResponsive,
+} from "../../packages/browser-service/src/processCheck.js";
+import { readDevToolsPort } from "../../packages/browser-service/src/profileState.js";
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 const TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS = 5_000;
 
 function scheduleDefaultUserApiServiceRestart(input: ApiServiceRestartRequest): void {
-  setTimeout(() => {
-    const child = spawn('systemctl', ['--user', 'restart', input.unitName], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.unref();
-  }, input.delayMs).unref();
+	setTimeout(() => {
+		const child = spawn("systemctl", ["--user", "restart", input.unitName], {
+			detached: true,
+			stdio: "ignore",
+		});
+		child.unref();
+	}, input.delayMs).unref();
 }
 
 export interface ResponsesHttpServerOptions {
-  host?: string;
-  port?: number;
-  dashboardUrl?: string;
-  publicDashboardUrl?: string;
-  serviceRouting?: ApiServiceRoutingConfig;
-  logger?: (message: string) => void;
-  recoverRunsOnStart?: boolean;
-  recoverRunsOnStartMaxRuns?: number;
-  recoverRunsOnStartSourceKind?: ExecutionRunSourceKind | 'all';
-  backgroundDrainIntervalMs?: number;
-  accountMirrorSchedulerIntervalMs?: number;
-  accountMirrorSchedulerDryRun?: boolean;
-  resumeAccountMirrorCompletionsOnStart?: boolean;
-  reconcileAccountMirrorLiveFollowOnStart?: boolean;
+	host?: string;
+	port?: number;
+	dashboardUrl?: string;
+	publicDashboardUrl?: string;
+	serviceRouting?: ApiServiceRoutingConfig;
+	logger?: (message: string) => void;
+	recoverRunsOnStart?: boolean;
+	recoverRunsOnStartMaxRuns?: number;
+	recoverRunsOnStartSourceKind?: ExecutionRunSourceKind | "all";
+	backgroundDrainIntervalMs?: number;
+	accountMirrorSchedulerIntervalMs?: number;
+	accountMirrorSchedulerDryRun?: boolean;
+	resumeAccountMirrorCompletionsOnStart?: boolean;
+	reconcileAccountMirrorLiveFollowOnStart?: boolean;
+	accountMirrorProofScope?: {
+		provider?: AccountMirrorProvider | null;
+		runtimeProfileId?: string | null;
+	} | null;
 }
 
 export interface ResponsesHttpServerDeps {
-  control?: ExecutionRuntimeControlContract;
-  runnersControl?: ExecutionRunnerControlContract;
-  config?: Record<string, unknown>;
-  now?: () => Date;
-  generateResponseId?: () => string;
-  executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
-  mediaGenerationExecutor?: MediaGenerationServiceDeps['executor'];
-  mediaGenerationMaterializer?: MediaGenerationServiceDeps['materializer'];
-  workbenchCapabilityCatalog?: WorkbenchCapabilityServiceDeps['catalog'];
-  discoverWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps['discoverCapabilities'];
-  diagnoseWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps['diagnoseCapabilities'];
-  createProjectEnsureService?: typeof createProjectEnsureService;
-  projectEnsureService?: ProjectEnsureService;
-  agentSetupPackageService?: AgentSetupPackageService;
-  tenantPoolTeamEnsureService?: TenantPoolTeamEnsureService;
-  createResponseBatchService?: typeof createResponseBatchService;
-  responseBatchService?: ResponseBatchService;
-  runArchiveService?: RunArchiveService;
-  archiveMaterializationService?: ArchiveMaterializationService;
-  archiveMaterializationJobService?: ArchiveMaterializationJobService;
-  historyMaterializationService?: HistoryMaterializationService;
-  searchProjectionService?: SearchProjectionService;
-  executionHost?: ExecutionServiceHost;
-  localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
-  probeRuntimeRunServiceState?: (
-    input: ProbeRuntimeRunServiceStateInput,
-  ) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
-  probeRuntimeRunBrowserDiagnostics?: (
-    input: ProbeRuntimeRunBrowserDiagnosticsInput,
-  ) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
-  probeMediaGenerationBrowserDiagnostics?: typeof probeMediaGenerationBrowserDiagnostics;
-  accountMirrorStatusRegistry?: AccountMirrorStatusRegistry;
-  accountMirrorRefreshService?: AccountMirrorRefreshService;
-  accountMirrorCatalogService?: AccountMirrorCatalogService;
-  accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
-  accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
-  accountMirrorCompletionService?: AccountMirrorCompletionService;
-  agentRegistryStore?: AgentRegistryStore | null;
-  preflightRunner?: LazyLiveFollowPreflightRunner;
-  terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
-  scheduleApiServiceRestart?: (input: ApiServiceRestartRequest) => void;
+	control?: ExecutionRuntimeControlContract;
+	runnersControl?: ExecutionRunnerControlContract;
+	config?: Record<string, unknown>;
+	now?: () => Date;
+	generateResponseId?: () => string;
+	executeStoredRunStep?: ExecutionResponsesServiceDeps["executeStoredRunStep"];
+	mediaGenerationExecutor?: MediaGenerationServiceDeps["executor"];
+	mediaGenerationMaterializer?: MediaGenerationServiceDeps["materializer"];
+	workbenchCapabilityCatalog?: WorkbenchCapabilityServiceDeps["catalog"];
+	discoverWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps["discoverCapabilities"];
+	diagnoseWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps["diagnoseCapabilities"];
+	createProjectEnsureService?: typeof createProjectEnsureService;
+	projectEnsureService?: ProjectEnsureService;
+	agentSetupPackageService?: AgentSetupPackageService;
+	tenantPoolTeamEnsureService?: TenantPoolTeamEnsureService;
+	createResponseBatchService?: typeof createResponseBatchService;
+	responseBatchService?: ResponseBatchService;
+	runArchiveService?: RunArchiveService;
+	archiveMaterializationService?: ArchiveMaterializationService;
+	archiveMaterializationJobService?: ArchiveMaterializationJobService;
+	historyMaterializationService?: HistoryMaterializationService;
+	searchProjectionService?: SearchProjectionService;
+	executionHost?: ExecutionServiceHost;
+	localActionExecutionPolicy?: ExecutionServiceHostDeps["localActionExecutionPolicy"];
+	probeRuntimeRunServiceState?: (
+		input: ProbeRuntimeRunServiceStateInput,
+	) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
+	probeRuntimeRunBrowserDiagnostics?: (
+		input: ProbeRuntimeRunBrowserDiagnosticsInput,
+	) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
+	probeMediaGenerationBrowserDiagnostics?: typeof probeMediaGenerationBrowserDiagnostics;
+	accountMirrorStatusRegistry?: AccountMirrorStatusRegistry;
+	accountMirrorRefreshService?: AccountMirrorRefreshService;
+	accountMirrorCatalogService?: AccountMirrorCatalogService;
+	accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
+	accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
+	accountMirrorCompletionService?: AccountMirrorCompletionService;
+	accountMirrorReconciliationCampaignService?: AccountMirrorReconciliationCampaignService;
+	agentRegistryStore?: AgentRegistryStore | null;
+	preflightRunner?: LazyLiveFollowPreflightRunner;
+	terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
+	scheduleApiServiceRestart?: (input: ApiServiceRestartRequest) => void;
 }
 
 export interface ResponsesHttpServerInstance {
-  port: number;
-  close(): Promise<void>;
+	port: number;
+	close(): Promise<void>;
 }
 
 function composeExecutionGates(
-  ...gates: ExecutionServiceHostExecutionGate[]
+	...gates: ExecutionServiceHostExecutionGate[]
 ): ExecutionServiceHostExecutionGate {
-  return async (record) => {
-    for (const gate of gates) {
-      const result = await gate(record);
-      if (!result.allowed) return result;
-    }
-    return { allowed: true };
-  };
+	return async (record) => {
+		for (const gate of gates) {
+			const result = await gate(record);
+			if (!result.allowed) return result;
+		}
+		return { allowed: true };
+	};
 }
 
 interface ServerOwnedDrainOptions {
-  runId?: string;
-  sourceKind?: ExecutionRunSourceKind;
-  maxRuns?: number;
+	runId?: string;
+	sourceKind?: ExecutionRunSourceKind;
+	maxRuns?: number;
 }
 
 export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {
-  listenPublic?: boolean;
-  cliOptions?: OptionValues;
-  executeStoredRunStep?: ResponsesHttpServerDeps['executeStoredRunStep'];
-  mediaGenerationExecutor?: ResponsesHttpServerDeps['mediaGenerationExecutor'];
-  probeRuntimeRunServiceState?: ResponsesHttpServerDeps['probeRuntimeRunServiceState'];
-  probeRuntimeRunBrowserDiagnostics?: ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'];
-  terminateProcess?: ResponsesHttpServerDeps['terminateProcess'];
+	listenPublic?: boolean;
+	cliOptions?: OptionValues;
+	executeStoredRunStep?: ResponsesHttpServerDeps["executeStoredRunStep"];
+	mediaGenerationExecutor?: ResponsesHttpServerDeps["mediaGenerationExecutor"];
+	probeRuntimeRunServiceState?: ResponsesHttpServerDeps["probeRuntimeRunServiceState"];
+	probeRuntimeRunBrowserDiagnostics?: ResponsesHttpServerDeps["probeRuntimeRunBrowserDiagnostics"];
+	terminateProcess?: ResponsesHttpServerDeps["terminateProcess"];
 }
 
 interface HttpErrorPayload {
-  error: {
-    message: string;
-    type: string;
-  };
+	error: {
+		message: string;
+		type: string;
+	};
 }
 
 class HttpInvalidRequestError extends Error {}
 
 interface HttpModelDescriptor {
-  id: string;
-  object: 'model';
-  created: number;
-  owned_by: string;
-  metadata?: {
-    kind: 'provider_model' | 'agent' | 'semantic_model_selector';
-    provider?: string;
-    service?: string;
-    executionReady?: boolean;
-    agent?: ProjectedAgent;
-    label?: string;
-  };
+	id: string;
+	object: "model";
+	created: number;
+	owned_by: string;
+	metadata?: {
+		kind: "provider_model" | "agent" | "semantic_model_selector";
+		provider?: string;
+		service?: string;
+		executionReady?: boolean;
+		agent?: ProjectedAgent;
+		label?: string;
+	};
 }
 
 interface HttpModelListResponse {
-  object: 'list';
-  data: HttpModelDescriptor[];
+	object: "list";
+	data: HttpModelDescriptor[];
 }
 
 interface HttpChatCompletionMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+	role: "system" | "user" | "assistant";
+	content: string;
 }
 
 interface HttpChatCompletionRequest {
-  model: string;
-  messages: HttpChatCompletionMessage[];
-  stream?: boolean;
-  response_format?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  tools?: Array<Record<string, unknown>>;
-  auracall?: ExecutionRequestExtensionHints;
+	model: string;
+	messages: HttpChatCompletionMessage[];
+	stream?: boolean;
+	response_format?: Record<string, unknown>;
+	metadata?: Record<string, unknown>;
+	tools?: Array<Record<string, unknown>>;
+	auracall?: ExecutionRequestExtensionHints;
 }
 
 interface HttpChatCompletionResponse {
-  id: string;
-  object: 'chat.completion';
-  created: number;
-  model: string;
-  choices: Array<{
-    index: number;
-    message: {
-      role: 'assistant';
-      content: string;
-    };
-    finish_reason: 'stop' | null;
-  }>;
-  usage?: {
-    prompt_tokens: number | null;
-    completion_tokens: number | null;
-    total_tokens: number | null;
-  };
-  metadata?: ExecutionResponse['metadata'];
+	id: string;
+	object: "chat.completion";
+	created: number;
+	model: string;
+	choices: Array<{
+		index: number;
+		message: {
+			role: "assistant";
+			content: string;
+		};
+		finish_reason: "stop" | null;
+	}>;
+	usage?: {
+		prompt_tokens: number | null;
+		completion_tokens: number | null;
+		total_tokens: number | null;
+	};
+	metadata?: ExecutionResponse["metadata"];
 }
 
 interface HttpRecoveryDetailResponse {
-  object: 'recovery_detail';
-  detail: ExecutionServiceHostRecoveryDetail;
+	object: "recovery_detail";
+	detail: ExecutionServiceHostRecoveryDetail;
 }
 
 interface HttpTeamRunInspectionResponse {
-  object: 'team_run_inspection';
-  inspection: TeamRunInspectionPayload;
+	object: "team_run_inspection";
+	inspection: TeamRunInspectionPayload;
 }
 
 interface HttpTeamRunCreateResponse {
-  object: 'team_run';
-  taskRunSpec: TaskRunSpec;
-  execution: TeamRunExecutionPayload;
-  links: {
-    teamInspection: string;
-    runtimeInspection: string;
-    responseReadback: string;
-  };
+	object: "team_run";
+	taskRunSpec: TaskRunSpec;
+	execution: TeamRunExecutionPayload;
+	links: {
+		teamInspection: string;
+		runtimeInspection: string;
+		responseReadback: string;
+	};
 }
 
 interface HttpRuntimeRunInspectionResponse {
-  object: 'runtime_run_inspection';
-  inspection: RuntimeRunInspectionPayload;
+	object: "runtime_run_inspection";
+	inspection: RuntimeRunInspectionPayload;
 }
 
 interface HttpRuntimeRunListResponse {
-  object: 'list';
-  data: ExecutionRunListItem[];
-  count: number;
+	object: "list";
+	data: ExecutionRunListItem[];
+	count: number;
 }
 
 interface HttpRunArchiveResponse extends RunArchiveListResult {}
@@ -474,6528 +490,7537 @@ interface HttpAccountMirrorCatalogItemResponse extends AccountMirrorCatalogItemR
 interface HttpAccountMirrorSchedulerHistoryResponse extends AccountMirrorSchedulerCompactHistory {}
 interface HttpAccountMirrorCompletionResponse extends AccountMirrorCompletionOperation {}
 interface HttpAccountMirrorCompletionListResponse {
-  object: 'list';
-  data: AccountMirrorCompletionOperation[];
-  count: number;
+	object: "list";
+	data: AccountMirrorCompletionOperation[];
+	count: number;
+}
+interface HttpAccountMirrorReconciliationResponse extends AccountMirrorReconciliationCampaign {}
+interface HttpAccountMirrorReconciliationListResponse {
+	object: "list";
+	data: AccountMirrorReconciliationCampaign[];
+	count: number;
 }
 
 interface HttpBrowserProcessTargetSummary {
-  targetId: string | null;
-  type: string | null;
-  url: string | null;
-  title: string | null;
-  isBlankPage: boolean;
+	targetId: string | null;
+	type: string | null;
+	url: string | null;
+	title: string | null;
+	isBlankPage: boolean;
 }
 
 interface HttpBrowserProcessStatusEntry {
-  provider: AccountMirrorProvider;
-  runtimeProfileId: string;
-  managedProfileDir: string;
-  pid: number | null;
-  port: number | null;
-  host: string;
-  processAlive: boolean;
-  devToolsResponsive: boolean;
-  launchCommandHasBlankArg: boolean;
-  openBlankPageCount: number;
-  pageTargetCount: number;
-  targets: HttpBrowserProcessTargetSummary[];
-  error: string | null;
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	managedProfileDir: string;
+	pid: number | null;
+	port: number | null;
+	host: string;
+	processAlive: boolean;
+	devToolsResponsive: boolean;
+	launchCommandHasBlankArg: boolean;
+	openBlankPageCount: number;
+	pageTargetCount: number;
+	targets: HttpBrowserProcessTargetSummary[];
+	error: string | null;
 }
 
 interface HttpBrowserProcessStatusResponse {
-  object: 'browser_process_status';
-  generatedAt: string;
-  metrics: {
-    configuredTargets: number;
-    processesAlive: number;
-    responsiveDevTools: number;
-    launchBlankArg: number;
-    openBlankPages: number;
-  };
-  entries: HttpBrowserProcessStatusEntry[];
+	object: "browser_process_status";
+	generatedAt: string;
+	metrics: {
+		configuredTargets: number;
+		processesAlive: number;
+		responsiveDevTools: number;
+		launchBlankArg: number;
+		openBlankPages: number;
+	};
+	entries: HttpBrowserProcessStatusEntry[];
 }
 
 type AccountMirrorSchedulerWakeReason =
-  | 'startup-cadence'
-  | 'cadence'
-  | 'operator-run-once'
-  | 'operator-resume'
-  | 'media-generation-settled'
-  | 'response-drain-completed';
+	| "startup-cadence"
+	| "cadence"
+	| "operator-run-once"
+	| "operator-resume"
+	| "media-generation-settled"
+	| "response-drain-completed";
 
 type AccountMirrorSchedulerOperatorPosture =
-  | 'disabled'
-  | 'paused'
-  | 'running'
-  | 'scheduled'
-  | 'waiting'
-  | 'ready'
-  | 'healthy'
-  | 'backpressured';
+	| "disabled"
+	| "paused"
+	| "running"
+	| "scheduled"
+	| "waiting"
+	| "ready"
+	| "healthy"
+	| "backpressured";
 
 interface AccountMirrorSchedulerOperatorStatus {
-  posture: AccountMirrorSchedulerOperatorPosture;
-  reason: string;
-  backpressureReason: string | null;
+	posture: AccountMirrorSchedulerOperatorPosture;
+	reason: string;
+	backpressureReason: string | null;
 }
 
 interface AccountMirrorSchedulerForegroundWorkStatus {
-  active: boolean;
-  activeRequestCount: number;
-  drainReservations: number;
-  backgroundDrainScheduled: boolean;
-  backgroundDrainState: HttpStatusResponse['backgroundDrain']['state'];
+	active: boolean;
+	activeRequestCount: number;
+	drainReservations: number;
+	backgroundDrainScheduled: boolean;
+	backgroundDrainState: HttpStatusResponse["backgroundDrain"]["state"];
 }
 
 interface AccountMirrorCompletionStatusSummary {
-  object: 'account_mirror_completion_summary';
-  generatedAt: string;
-  metrics: {
-    total: number;
-    active: number;
-    queued: number;
-    running: number;
-    idle_waiting: number;
-    paused: number;
-    completed: number;
-    blocked: number;
-    failed: number;
-    cancelled: number;
-  };
-  active: AccountMirrorCompletionOperation[];
-  recent: AccountMirrorCompletionOperation[];
+	object: "account_mirror_completion_summary";
+	generatedAt: string;
+	metrics: {
+		total: number;
+		active: number;
+		queued: number;
+		running: number;
+		idle_waiting: number;
+		paused: number;
+		completed: number;
+		blocked: number;
+		failed: number;
+		cancelled: number;
+	};
+	active: AccountMirrorCompletionOperation[];
+	recent: AccountMirrorCompletionOperation[];
 }
 
 interface ApiServiceRoutingConfig {
-  localHostname?: string;
-  externalHostname?: string;
-  localBaseUrl?: string;
-  externalBaseUrl?: string;
-  dashboardPath?: string;
-  debugDashboardPath?: string;
-  accountMirrorPath?: string;
-  proxyTarget?: string;
-  auth?: string;
-  ingress?: string;
+	localHostname?: string;
+	externalHostname?: string;
+	localBaseUrl?: string;
+	externalBaseUrl?: string;
+	dashboardPath?: string;
+	debugDashboardPath?: string;
+	accountMirrorPath?: string;
+	proxyTarget?: string;
+	auth?: string;
+	ingress?: string;
 }
 
 interface ApiAuthKeyPolicy {
-  id: string;
-  secret: string;
-  agents?: string[];
-  teams?: string[];
-  services?: string[];
-  runtimeProfiles?: string[];
+	id: string;
+	secret: string;
+	agents?: string[];
+	teams?: string[];
+	services?: string[];
+	runtimeProfiles?: string[];
 }
 
 interface ApiAuthPolicy {
-  required: boolean;
-  keys: ApiAuthKeyPolicy[];
+	required: boolean;
+	keys: ApiAuthKeyPolicy[];
 }
 
 interface ApiAuthContext {
-  policy: ApiAuthPolicy;
-  key: ApiAuthKeyPolicy | null;
+	policy: ApiAuthPolicy;
+	key: ApiAuthKeyPolicy | null;
 }
 
 type ApiAuthEnv = Record<string, string | undefined>;
 
 interface OperatorDashboardRoutes {
-  dashboardPath: string;
-  debugDashboardPath: string;
-  accountMirrorPath: string;
-  previewSessionPath: string;
-  configPath: string;
-  agentsPath: string;
+	dashboardPath: string;
+	debugDashboardPath: string;
+	accountMirrorPath: string;
+	previewSessionPath: string;
+	configPath: string;
+	agentsPath: string;
 }
 
 interface ApiServiceDiscovery {
-  bind: {
-    host: string;
-    port: number;
-    url: string;
-    localOnly: boolean;
-  };
-  local: {
-    hostname?: string;
-    baseUrl: string;
-    dashboardUrl: string;
-    accountMirrorUrl: string;
-  };
-  external?: {
-    hostname?: string;
-    baseUrl: string;
-    dashboardUrl: string;
-    accountMirrorUrl: string;
-  };
-  routing: {
-    dashboardPath: string;
-    debugDashboardPath: string;
-    accountMirrorPath: string;
-    previewSessionPath: string;
-    configPath: string;
-    agentsPath: string;
-    proxyTarget?: string;
-    auth?: string;
-    ingress?: string;
-  };
+	bind: {
+		host: string;
+		port: number;
+		url: string;
+		localOnly: boolean;
+	};
+	local: {
+		hostname?: string;
+		baseUrl: string;
+		dashboardUrl: string;
+		accountMirrorUrl: string;
+	};
+	external?: {
+		hostname?: string;
+		baseUrl: string;
+		dashboardUrl: string;
+		accountMirrorUrl: string;
+	};
+	routing: {
+		dashboardPath: string;
+		debugDashboardPath: string;
+		accountMirrorPath: string;
+		previewSessionPath: string;
+		configPath: string;
+		agentsPath: string;
+		proxyTarget?: string;
+		auth?: string;
+		ingress?: string;
+	};
 }
 
 interface HttpStatusResponse {
-  object: 'status';
-  ok: true;
-  version: string;
-  mode: 'development';
-  api: {
-    process: {
-      pid: number;
-      ppid: number;
-      uptimeSeconds: number;
-      argv: string[];
-      execPath: string;
-      cwd: string;
-      nodeVersion: string;
-    };
-    managedService: {
-      manager: 'systemd-user';
-      unitName: string;
-      logPath: string;
-      installCommand: string;
-      restartCommand: string;
-      statusCommand: string;
-    };
-  };
-  binding: {
-    host: string;
-    port: number;
-    localOnly: boolean;
-    unauthenticated: boolean;
-  };
-  auth: {
-    required: boolean;
-    scheme: 'none' | 'bearer';
-    keyCount: number;
-    scoped: boolean;
-  };
-  serviceDiscovery: ApiServiceDiscovery;
-  routes: {
-    status: string;
-    recoveryDetailTemplate: string;
-    teamRunsCreate: string;
-    teamRunInspection: string;
-    projectEnsure: string;
-    tenantPoolTeamEnsure: string;
-    agentSetupPackagesCreate: string;
-    agentSetupHandoffsCreate: string;
-    runtimeRunsRecent: string;
-    runtimeRunInspection: string;
-    models: string;
-    chatCompletionsCreate: string;
-    responsesCreate: string;
-    responsesGetTemplate: string;
-    responseBatchesCreate: string;
-    responseBatchesGetTemplate: string;
-    mediaGenerationsCreate: string;
-    mediaGenerationsGetTemplate: string;
-    mediaGenerationsMaterializeTemplate: string;
-    mediaGenerationsStatusTemplate: string;
-    runArchive: string;
-    runArchiveAssetLookup: string;
-    search: string;
-    runArchiveBackfill: string;
-    runArchiveEvidenceCreate: string;
-    runArchiveItemTemplate: string;
-    runArchiveItemAssetTemplate: string;
-    runArchiveItemMaterializeTemplate: string;
-    runArchiveMaterializationsCreate: string;
-    runArchiveMaterializationsList: string;
-    runArchiveMaterializationTemplate: string;
-    historyMaterializationsCreate: string;
-    historyMaterializationsList: string;
-    historyMaterializationTemplate: string;
-    runStatusTemplate: string;
-    apiLogTail: string;
-    preflightRunTemplate: string;
-    preflightRunLogTemplate: string;
-    accountMirrorStatus: string;
-    accountMirrorCatalog: string;
-    accountMirrorCatalogItemTemplate: string;
-    accountMirrorPreviewSessions: string;
-    accountMirrorPreviewSessionTemplate: string;
-    accountMirrorRefresh: string;
-    accountMirrorCompletionsCreate: string;
-    accountMirrorCompletionsList: string;
-    accountMirrorCompletionsGetTemplate: string;
-    accountMirrorCompletionsControlTemplate: string;
-    accountMirrorSchedulerHistory: string;
-    accountMirrorSchedulerDiagnostics: string;
-    browserProcesses: string;
-    browserDomDriftObservations: string;
-    browserDomDriftObservationAcceptTemplate: string;
-    workbenchCapabilitiesList: string;
-    agentRegistryDiagnostics: string;
-    configApiKeys: string;
-    configApiKeyIssue: string;
-    configApiKeyDeleteTemplate: string;
-    configSnapshotExport: string;
-    configSnapshotImport: string;
-    operatorBrowserDashboard: string;
-    operatorDebugDashboard: string;
-    accountMirrorDashboard: string;
-    accountMirrorPreviewSessionDashboard: string;
-    operatorConfigDashboard: string;
-    operatorAgentsDashboard: string;
-    operatorBrowserDashboardUrl?: string;
-    publicOperatorBrowserDashboardUrl?: string;
-    localServiceBaseUrl: string;
-    externalServiceBaseUrl?: string;
-  };
-  compatibility: {
-    openai: true;
-    chatCompletions: boolean;
-    streaming: false;
-    auth: boolean;
-  };
-  preflight: PreflightStatusSummary;
-  recoverySummary?: ExecutionServiceHostRecoverySummary;
-  localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
-  runnerTopology: ExecutionServiceHostRunnerTopologySummary;
-  runner: {
-    id: string | null;
-    hostId: string | null;
-    status: ExecutionRunnerStatus | 'inactive' | 'registering';
-    lastHeartbeatAt: string | null;
-    expiresAt: string | null;
-    lastActivityAt: string | null;
-    lastClaimedRunId: string | null;
-  };
-  backgroundDrain: {
-    enabled: boolean;
-    intervalMs: number | null;
-    state: 'disabled' | 'idle' | 'scheduled' | 'running' | 'paused';
-    paused: boolean;
-    lastTrigger: 'startup-recovery' | 'request-create' | 'background-timer' | null;
-    lastStartedAt: string | null;
-    lastCompletedAt: string | null;
-  };
-  tenantExecutionLimits: TenantExecutionLimitStatusSummary;
-  accountMirrorScheduler: {
-    enabled: boolean;
-    dryRun: boolean;
-    intervalMs: number | null;
-    state: 'disabled' | 'idle' | 'scheduled' | 'running' | 'paused';
-    paused: boolean;
-    lastWakeReason: AccountMirrorSchedulerWakeReason | null;
-    lastWakeAt: string | null;
-    lastStartedAt: string | null;
-    lastCompletedAt: string | null;
-    lastPass: AccountMirrorSchedulerPassResult | null;
-    operatorStatus: AccountMirrorSchedulerOperatorStatus;
-    foregroundWork: AccountMirrorSchedulerForegroundWorkStatus;
-    history: AccountMirrorSchedulerPassHistory;
-  };
-  accountMirrorStatus: AccountMirrorStatusSummary;
-  accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
-  liveFollow: LiveFollowHealthSummary;
-  executionHints: {
-    headerNames: string[];
-    bodyObject: 'auracall';
-  };
-  controlResult?:
-    | {
-        kind: 'background-drain';
-        action: 'pause' | 'resume';
-      }
-    | {
-        kind: 'account-mirror-scheduler';
-        action: 'pause' | 'resume' | 'run-once';
-        dryRun: boolean;
-      }
-    | {
-        kind: 'account-mirror-provider-guard';
-        action: 'clear';
-        provider: AccountMirrorProvider;
-        runtimeProfileId: string;
-        cooldownUntil: string | null;
-      }
-    | {
-        kind: 'account-mirror-completion';
-        action: 'pause' | 'resume' | 'cancel';
-        id: string;
-        status: AccountMirrorCompletionOperation['status'];
-      }
-    | {
-        kind: 'preflight';
-        action: 'run';
-        accepted: boolean;
-        reason: 'started' | 'already-running';
-        id: string;
-        status: string;
-        logPath: string;
-      }
-    | {
-        kind: 'service-control';
-        action: 'restart-api-service';
-        unitName: string;
-        restartCommand: string;
-        scheduled: boolean;
-        dryRun: boolean;
-        delayMs: number;
-      }
-    | ExecutionServiceHostOperatorControlResult;
+	object: "status";
+	ok: true;
+	version: string;
+	mode: "development";
+	api: {
+		process: {
+			pid: number;
+			ppid: number;
+			uptimeSeconds: number;
+			argv: string[];
+			execPath: string;
+			cwd: string;
+			nodeVersion: string;
+		};
+		managedService: {
+			manager: "systemd-user";
+			unitName: string;
+			logPath: string;
+			installCommand: string;
+			restartCommand: string;
+			statusCommand: string;
+		};
+	};
+	binding: {
+		host: string;
+		port: number;
+		localOnly: boolean;
+		unauthenticated: boolean;
+	};
+	auth: {
+		required: boolean;
+		scheme: "none" | "bearer";
+		keyCount: number;
+		scoped: boolean;
+	};
+	serviceDiscovery: ApiServiceDiscovery;
+	routes: {
+		status: string;
+		recoveryDetailTemplate: string;
+		teamRunsCreate: string;
+		teamRunInspection: string;
+		projectEnsure: string;
+		tenantPoolTeamEnsure: string;
+		agentSetupPackagesCreate: string;
+		agentSetupHandoffsCreate: string;
+		runtimeRunsRecent: string;
+		runtimeRunInspection: string;
+		models: string;
+		chatCompletionsCreate: string;
+		responsesCreate: string;
+		responsesGetTemplate: string;
+		responseBatchesCreate: string;
+		responseBatchesGetTemplate: string;
+		mediaGenerationsCreate: string;
+		mediaGenerationsGetTemplate: string;
+		mediaGenerationsMaterializeTemplate: string;
+		mediaGenerationsStatusTemplate: string;
+		runArchive: string;
+		runArchiveAssetLookup: string;
+		search: string;
+		runArchiveBackfill: string;
+		runArchiveEvidenceCreate: string;
+		runArchiveItemTemplate: string;
+		runArchiveItemAssetTemplate: string;
+		runArchiveItemMaterializeTemplate: string;
+		runArchiveMaterializationsCreate: string;
+		runArchiveMaterializationsList: string;
+		runArchiveMaterializationTemplate: string;
+		historyMaterializationsCreate: string;
+		historyMaterializationsList: string;
+		historyMaterializationTemplate: string;
+		runStatusTemplate: string;
+		apiLogTail: string;
+		preflightRunTemplate: string;
+		preflightRunLogTemplate: string;
+		accountMirrorStatus: string;
+		accountMirrorCatalog: string;
+		accountMirrorCatalogItemTemplate: string;
+		accountMirrorPreviewSessions: string;
+		accountMirrorPreviewSessionTemplate: string;
+		accountMirrorRefresh: string;
+		accountMirrorReconciliationsCreate: string;
+		accountMirrorReconciliationsList: string;
+		accountMirrorReconciliationsGetTemplate: string;
+		accountMirrorReconciliationsControlTemplate: string;
+		accountMirrorCompletionsCreate: string;
+		accountMirrorCompletionsList: string;
+		accountMirrorCompletionsGetTemplate: string;
+		accountMirrorCompletionsControlTemplate: string;
+		accountMirrorSchedulerHistory: string;
+		accountMirrorSchedulerDiagnostics: string;
+		browserProcesses: string;
+		browserDomDriftObservations: string;
+		browserDomDriftObservationAcceptTemplate: string;
+		workbenchCapabilitiesList: string;
+		agentRegistryDiagnostics: string;
+		configApiKeys: string;
+		configApiKeyIssue: string;
+		configApiKeyDeleteTemplate: string;
+		configSnapshotExport: string;
+		configSnapshotImport: string;
+		operatorBrowserDashboard: string;
+		operatorDebugDashboard: string;
+		accountMirrorDashboard: string;
+		accountMirrorPreviewSessionDashboard: string;
+		operatorConfigDashboard: string;
+		operatorAgentsDashboard: string;
+		operatorBrowserDashboardUrl?: string;
+		publicOperatorBrowserDashboardUrl?: string;
+		localServiceBaseUrl: string;
+		externalServiceBaseUrl?: string;
+	};
+	compatibility: {
+		openai: true;
+		chatCompletions: boolean;
+		streaming: false;
+		auth: boolean;
+	};
+	preflight: PreflightStatusSummary;
+	recoverySummary?: ExecutionServiceHostRecoverySummary;
+	localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
+	runnerTopology: ExecutionServiceHostRunnerTopologySummary;
+	runner: {
+		id: string | null;
+		hostId: string | null;
+		status: ExecutionRunnerStatus | "inactive" | "registering";
+		lastHeartbeatAt: string | null;
+		expiresAt: string | null;
+		lastActivityAt: string | null;
+		lastClaimedRunId: string | null;
+	};
+	backgroundDrain: {
+		enabled: boolean;
+		intervalMs: number | null;
+		state: "disabled" | "idle" | "scheduled" | "running" | "paused";
+		paused: boolean;
+		lastTrigger: "startup-recovery" | "request-create" | "background-timer" | null;
+		lastStartedAt: string | null;
+		lastCompletedAt: string | null;
+	};
+	tenantExecutionLimits: TenantExecutionLimitStatusSummary;
+	accountMirrorScheduler: {
+		enabled: boolean;
+		dryRun: boolean;
+		intervalMs: number | null;
+		state: "disabled" | "idle" | "scheduled" | "running" | "paused";
+		paused: boolean;
+		lastWakeReason: AccountMirrorSchedulerWakeReason | null;
+		lastWakeAt: string | null;
+		lastStartedAt: string | null;
+		lastCompletedAt: string | null;
+		lastPass: AccountMirrorSchedulerPassResult | null;
+		operatorStatus: AccountMirrorSchedulerOperatorStatus;
+		foregroundWork: AccountMirrorSchedulerForegroundWorkStatus;
+		history: AccountMirrorSchedulerPassHistory;
+	};
+	accountMirrorStatus: AccountMirrorStatusSummary;
+	accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
+	accountMirrorProofScope: AccountMirrorProofScopeStatus;
+	liveFollow: LiveFollowHealthSummary;
+	executionHints: {
+		headerNames: string[];
+		bodyObject: "auracall";
+	};
+	controlResult?:
+		| {
+				kind: "background-drain";
+				action: "pause" | "resume";
+		  }
+		| {
+				kind: "account-mirror-scheduler";
+				action: "pause" | "resume" | "run-once";
+				dryRun: boolean;
+		  }
+		| {
+				kind: "account-mirror-provider-guard";
+				action: "clear";
+				provider: AccountMirrorProvider;
+				runtimeProfileId: string;
+				cooldownUntil: string | null;
+		  }
+		| {
+				kind: "account-mirror-completion";
+				action: "pause" | "resume" | "cancel";
+				id: string;
+				status: AccountMirrorCompletionOperation["status"];
+		  }
+		| {
+				kind: "preflight";
+				action: "run";
+				accepted: boolean;
+				reason: "started" | "already-running";
+				id: string;
+				status: string;
+				logPath: string;
+		  }
+		| {
+				kind: "service-control";
+				action: "restart-api-service";
+				unitName: string;
+				restartCommand: string;
+				scheduled: boolean;
+				dryRun: boolean;
+				delayMs: number;
+		  }
+		| ExecutionServiceHostOperatorControlResult;
+}
+
+interface AccountMirrorProofScopeStatus {
+	object: "account_mirror_proof_scope";
+	enabled: boolean;
+	provider: AccountMirrorProvider | null;
+	runtimeProfileId: string | null;
+	tenantKey: string | null;
+	bindingKey: string | null;
+	browserOperationKey: string | null;
+	globalLiveFollowSuppressed: boolean;
+	suppressed: {
+		resumeCompletionsOnStart: boolean;
+		reconcileLiveFollowOnStart: boolean;
+		schedulerExecution: boolean;
+		backgroundDrain: boolean;
+	};
 }
 
 interface HttpApiLogTailResponse {
-  object: 'api_log_tail';
-  logPath: string;
-  exists: boolean;
-  sizeBytes: number;
-  maxBytes: number;
-  truncated: boolean;
-  content: string;
+	object: "api_log_tail";
+	logPath: string;
+	exists: boolean;
+	sizeBytes: number;
+	maxBytes: number;
+	truncated: boolean;
+	content: string;
 }
 
 interface HttpPreflightRunLogTailResponse {
-  object: 'preflight_run_log_tail';
-  id: string;
-  logPath: string;
-  exists: boolean;
-  sizeBytes: number;
-  maxBytes: number;
-  truncated: boolean;
-  content: string;
+	object: "preflight_run_log_tail";
+	id: string;
+	logPath: string;
+	exists: boolean;
+	sizeBytes: number;
+	maxBytes: number;
+	truncated: boolean;
+	content: string;
 }
 
 export async function createResponsesHttpServer(
-  options: ResponsesHttpServerOptions = {},
-  deps: ResponsesHttpServerDeps = {},
+	options: ResponsesHttpServerOptions = {},
+	deps: ResponsesHttpServerDeps = {},
 ): Promise<ResponsesHttpServerInstance> {
-  const logger = options.logger ?? (() => {});
-  const control = deps.control ?? createExecutionRuntimeControl();
-  const runnersControl = deps.runnersControl ?? createExecutionRunnerControl();
-  const now = deps.now ?? (() => new Date());
-  const boundHost = options.host ?? '127.0.0.1';
-  const recoverRunsOnStart = options.recoverRunsOnStart ?? false;
-  const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
-  const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
-  const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
-  const accountMirrorSchedulerIntervalMs = Math.max(0, options.accountMirrorSchedulerIntervalMs ?? 0);
-  const accountMirrorSchedulerDryRun = options.accountMirrorSchedulerDryRun ?? true;
-  const resumeAccountMirrorCompletionsOnStart = options.resumeAccountMirrorCompletionsOnStart ?? true;
-  const reconcileAccountMirrorLiveFollowOnStart = options.reconcileAccountMirrorLiveFollowOnStart ?? true;
-  const configuredRuntimeConfig = deps.config;
-  const tenantExecutionLimitsStatusCache = new Map<string, {
-    value: TenantExecutionLimitStatusSummary;
-    expiresAtMs: number;
-  }>();
-  const tenantExecutionLimitsStatusRefresh = new Map<string, Promise<TenantExecutionLimitStatusSummary>>();
-  const readTenantExecutionLimitsStatus = async (includeUsage: boolean) => {
-    const cacheKey = includeUsage ? 'usage' : 'configured';
-    const currentMs = Date.now();
-    const cached = tenantExecutionLimitsStatusCache.get(cacheKey);
-    if (cached && cached.expiresAtMs > currentMs) {
-      return cached.value;
-    }
-    let refresh = tenantExecutionLimitsStatusRefresh.get(cacheKey);
-    if (!refresh) {
-      refresh = summarizeTenantExecutionLimits({
-        control,
-        config: configuredRuntimeConfig,
-        now,
-        includeUsage,
-      }).finally(() => {
-        tenantExecutionLimitsStatusRefresh.delete(cacheKey);
-      });
-      tenantExecutionLimitsStatusRefresh.set(cacheKey, refresh);
-    }
-    const value = await refresh;
-    tenantExecutionLimitsStatusCache.set(cacheKey, {
-      value,
-      expiresAtMs: Date.now() + TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS,
-    });
-    return value;
-  };
-  const apiAuthPolicy = readApiAuthPolicy(configuredRuntimeConfig);
-  const agentTeamConfigService = createAgentTeamConfigService({
-    activeConfig: configuredRuntimeConfig ?? null,
-    registryStore: deps.agentRegistryStore,
-  });
-  const projectEnsureService =
-    deps.projectEnsureService ??
-    (deps.createProjectEnsureService ?? createProjectEnsureService)({
-      config: configuredRuntimeConfig ?? {},
-      configService: agentTeamConfigService,
-    });
-  const agentSetupPackageService = deps.agentSetupPackageService ?? createAgentSetupPackageService({
-    projectEnsureService,
-    agentTeamConfigService,
-  });
-  const tenantPoolTeamEnsureService =
-    deps.tenantPoolTeamEnsureService ??
-    createTenantPoolTeamEnsureService({
-      projectEnsureService,
-      agentTeamConfigService,
-    });
-  const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
-  const accountMirrorPersistence = createAccountMirrorPersistence({
-    config: configuredRuntimeConfig,
-  });
-  const accountMirrorStatusRegistry = deps.accountMirrorStatusRegistry ?? createAccountMirrorStatusRegistry({
-    config: configuredRuntimeConfig,
-    now,
-    readPersistentState: accountMirrorPersistence.readState,
-  });
-  const accountMirrorRefreshService = deps.accountMirrorRefreshService ?? createAccountMirrorRefreshService({
-    config: configuredRuntimeConfig,
-    registry: accountMirrorStatusRegistry,
-    persistence: accountMirrorPersistence,
-    now,
-  });
-  let hasForegroundAuraCallExecutionPressure = () => false;
-  const accountMirrorCatalogService = deps.accountMirrorCatalogService ?? createAccountMirrorCatalogService({
-    config: configuredRuntimeConfig,
-    registry: accountMirrorStatusRegistry,
-    persistence: accountMirrorPersistence,
-    now,
-  });
-  const runArchiveService = deps.runArchiveService ?? createRunArchiveService({
-    now,
-  });
-  const archiveMaterializationService = deps.archiveMaterializationService ?? createArchiveMaterializationService({
-    config: resolvedUserConfig ?? {},
-    runArchiveService,
-    now,
-  });
-  let archiveMaterializationJobService = deps.archiveMaterializationJobService;
-  let historyMaterializationService = deps.historyMaterializationService;
-  let searchProjectionService: SearchProjectionService;
-  const accountMirrorSchedulerService = deps.accountMirrorSchedulerService ?? createAccountMirrorSchedulerPassService({
-    registry: accountMirrorStatusRegistry,
-    refreshService: accountMirrorRefreshService,
-    now,
-    shouldYieldToForegroundWork: () => hasForegroundAuraCallExecutionPressure()
-      ? {
-          reason: 'foreground-work',
-          message: 'Foreground AuraCall API or service work is pending; live follow will retry later.',
-        }
-      : null,
-  });
-  const accountMirrorSchedulerLedger = deps.accountMirrorSchedulerLedger ?? createAccountMirrorSchedulerPassLedger({
-    config: configuredRuntimeConfig,
-  });
-  const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
-    config: configuredRuntimeConfig,
-  });
-  const accountMirrorPreviewSessionStore = createAccountMirrorPreviewSessionStore({
-    config: configuredRuntimeConfig,
-  });
-  const initialAccountMirrorCompletions = deps.accountMirrorCompletionService
-    ? []
-    : await accountMirrorCompletionStore.listOperations({ activeOnly: false, limit: null });
-  const accountMirrorCompletionService = deps.accountMirrorCompletionService ?? createAccountMirrorCompletionService({
-    registry: accountMirrorStatusRegistry,
-    refreshService: accountMirrorRefreshService,
-    store: accountMirrorCompletionStore,
-    initialOperations: initialAccountMirrorCompletions,
-    resumeActiveOperations: resumeAccountMirrorCompletionsOnStart,
-    now,
-    historyMaterializationService: {
-      async createJob(request) {
-        if (!historyMaterializationService) {
-          throw new Error('History materialization service is not initialized.');
-        }
-        return historyMaterializationService.createJob(request);
-      },
-    },
-    onPersistError: (error, operation) => {
-      logger(`Account mirror completion ${operation.id} persist failed: ${error instanceof Error ? error.message : String(error)}`);
-    },
-  });
-  const preflightRunner = deps.preflightRunner ?? createLazyLiveFollowPreflightRunner();
-  const scheduleApiServiceRestart = deps.scheduleApiServiceRestart ?? scheduleDefaultUserApiServiceRestart;
-  const reconcileAccountMirrorLiveFollow = async () => {
-    await reconcileConfiguredAccountMirrorLiveFollow({
-      registry: accountMirrorStatusRegistry,
-      completionService: accountMirrorCompletionService,
-    }).catch((error) => {
-      logger(`Account mirror live-follow reconcile failed: ${error instanceof Error ? error.message : String(error)}`);
-    });
-  };
-  if (reconcileAccountMirrorLiveFollowOnStart) {
-    await reconcileAccountMirrorLiveFollow();
-  }
-  const workbenchCapabilityService = createWorkbenchCapabilityService({
-    now,
-    catalog: deps.workbenchCapabilityCatalog,
-    discoverCapabilities: deps.discoverWorkbenchCapabilities,
-    diagnoseCapabilities: deps.diagnoseWorkbenchCapabilities,
-  });
-  const probeMediaGenerationBrowserDiagnosticsImpl =
-    deps.probeMediaGenerationBrowserDiagnostics ?? probeMediaGenerationBrowserDiagnostics;
-  const mediaGenerationService = createMediaGenerationService({
-    now,
-    executor:
-      deps.mediaGenerationExecutor ??
-      (resolvedUserConfig ? createBrowserMediaGenerationExecutor(resolvedUserConfig) : undefined),
-    materializer:
-      deps.mediaGenerationMaterializer ??
-      (resolvedUserConfig ? createBrowserMediaGenerationMaterializer(resolvedUserConfig) : undefined),
-    capabilityReporter: workbenchCapabilityService,
-    runtimeProfile:
-      typeof resolvedUserConfig?.auracallProfile === 'string'
-        ? resolvedUserConfig.auracallProfile
-        : null,
-    onGenerationSettled: () => {
-      scheduleAccountMirrorSchedulerFollowUp(0, 'media-generation-settled');
-    },
-  });
-  const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
-  const createRunAffinity = configuredRuntimeConfig
-    ? (inspection: Parameters<typeof createConfiguredExecutionRunAffinity>[1]) =>
-        createConfiguredExecutionRunAffinity(configuredRuntimeConfig, inspection)
-    : undefined;
-  const runnerHeartbeatIntervalMs = 5_000;
-  const runnerHeartbeatTtlMs = 15_000;
-  let host: ExecutionServiceHost;
-  let responsesService: ReturnType<typeof createExecutionResponsesService>;
-  let responseBatchService: ResponseBatchService;
-  const responseBatchExecutionGate = createResponseBatchExecutionGate({
-    control,
-    now,
-  });
-  const tenantExecutionLimitGate = createTenantExecutionLimitGate({
-    control,
-    config: configuredRuntimeConfig,
-    now,
-  });
-  const executionGate = composeExecutionGates(responseBatchExecutionGate, tenantExecutionLimitGate);
-  let teamRuntimeBridge: TeamRuntimeBridge;
-  const runnerState: HttpStatusResponse['runner'] = {
-    id: null,
-    hostId: null,
-    status: 'inactive',
-    lastHeartbeatAt: null,
-    expiresAt: null,
-    lastActivityAt: null,
-    lastClaimedRunId: null,
-  };
-  const backgroundDrainState: HttpStatusResponse['backgroundDrain'] = {
-    enabled: backgroundDrainIntervalMs > 0,
-    intervalMs: backgroundDrainIntervalMs > 0 ? backgroundDrainIntervalMs : null,
-    state: backgroundDrainIntervalMs > 0 ? 'idle' : 'disabled',
-    paused: false,
-    lastTrigger: null,
-    lastStartedAt: null,
-    lastCompletedAt: null,
-  };
-  const accountMirrorSchedulerState: HttpStatusResponse['accountMirrorScheduler'] = {
-    enabled: accountMirrorSchedulerIntervalMs > 0,
-    dryRun: accountMirrorSchedulerDryRun,
-    intervalMs: accountMirrorSchedulerIntervalMs > 0 ? accountMirrorSchedulerIntervalMs : null,
-    state: accountMirrorSchedulerIntervalMs > 0 ? 'idle' : 'disabled',
-    paused: false,
-    lastWakeReason: null,
-    lastWakeAt: null,
-    lastStartedAt: null,
-    lastCompletedAt: null,
-    lastPass: null,
-    foregroundWork: {
-      active: false,
-      activeRequestCount: 0,
-      drainReservations: 0,
-      backgroundDrainScheduled: false,
-      backgroundDrainState: backgroundDrainState.state,
-    },
-    operatorStatus: {
-      posture: accountMirrorSchedulerIntervalMs > 0 ? 'ready' : 'disabled',
-      reason: accountMirrorSchedulerIntervalMs > 0
-        ? 'account mirror scheduler is enabled and waiting for its first pass'
-        : 'account mirror scheduler is disabled; set --account-mirror-scheduler-interval-ms to enable cadence and live-follow wakes',
-      backpressureReason: null,
-    },
-    history: await accountMirrorSchedulerLedger.readHistory().catch((error) => {
-      logger(error instanceof Error ? error.message : String(error));
-      return {
-        object: 'account_mirror_scheduler_pass_history',
-        version: 1,
-        updatedAt: null,
-        limit: 50,
-        entries: [],
-      };
-    }),
-  };
-  let backgroundDrainPaused = false;
-  let accountMirrorSchedulerPaused = false;
-  let accountMirrorFollowUpAfterNextDrain = false;
-  let foregroundAuraCallWorkCount = 0;
-  let foregroundAuraCallDrainReservations = 0;
-  let runnerHeartbeatTimer: NodeJS.Timeout | null = null;
-  let closed = false;
-  const beginForegroundAuraCallWork = () => {
-    foregroundAuraCallWorkCount += 1;
-    return () => {
-      foregroundAuraCallWorkCount = Math.max(0, foregroundAuraCallWorkCount - 1);
-    };
-  };
-  archiveMaterializationJobService = archiveMaterializationJobService ?? createArchiveMaterializationJobService({
-    materializationService: archiveMaterializationService,
-    now,
-    withForegroundWork: async (work) => {
-      const endForegroundWork = beginForegroundAuraCallWork();
-      try {
-        return await work();
-      } finally {
-        endForegroundWork();
-      }
-    },
-  });
-  await archiveMaterializationJobService.recoverInterruptedJobs();
-  historyMaterializationService = historyMaterializationService ?? createHistoryMaterializationService({
-    config: resolvedUserConfig ?? {},
-    catalogService: accountMirrorCatalogService,
-    runArchiveService,
-    now,
-    withForegroundWork: async (work) => {
-      const endForegroundWork = beginForegroundAuraCallWork();
-      try {
-        return await work();
-      } finally {
-        endForegroundWork();
-      }
-    },
-  });
-  await historyMaterializationService.recoverInterruptedJobs();
-  searchProjectionService = deps.searchProjectionService ?? createSearchProjectionService({
-    accountMirrorCatalogService,
-    runArchiveService,
-    archiveMaterializationJobService,
-    now,
-  });
-  const reserveForegroundAuraCallDrain = () => {
-    foregroundAuraCallDrainReservations += 1;
-    accountMirrorFollowUpAfterNextDrain = true;
-  };
-  const completeForegroundAuraCallDrainReservation = () => {
-    if (foregroundAuraCallDrainReservations > 0) {
-      foregroundAuraCallDrainReservations -= 1;
-    }
-  };
-  hasForegroundAuraCallExecutionPressure = () =>
-    foregroundAuraCallWorkCount > 0 ||
-    foregroundAuraCallDrainReservations > 0 ||
-    backgroundDrainScheduled ||
-    backgroundDrainState.state === 'scheduled' ||
-    backgroundDrainState.state === 'running';
-  const readForegroundAuraCallWorkStatus = (): AccountMirrorSchedulerForegroundWorkStatus => ({
-    active: hasForegroundAuraCallExecutionPressure(),
-    activeRequestCount: foregroundAuraCallWorkCount,
-    drainReservations: foregroundAuraCallDrainReservations,
-    backgroundDrainScheduled,
-    backgroundDrainState: backgroundDrainState.state,
-  });
-  const drainThroughServerHost = (
-    drainOptions: ServerOwnedDrainOptions & { trigger?: HttpStatusResponse['backgroundDrain']['lastTrigger'] } = {},
-  ) => {
-    if (backgroundDrainState.state !== 'disabled') {
-      backgroundDrainState.state = 'scheduled';
-    }
-    return host.drainRunsUntilIdleQueued({
-      runId: drainOptions.runId,
-      sourceKind: drainOptions.sourceKind,
-      maxRuns: drainOptions.maxRuns,
-      executionGate,
-      onStart: () => {
-        if (backgroundDrainState.state !== 'disabled') {
-          backgroundDrainState.state = 'running';
-          backgroundDrainState.lastTrigger = drainOptions.trigger ?? null;
-          backgroundDrainState.lastStartedAt = now().toISOString();
-        }
-      },
-    }).finally(() => {
-      if (backgroundDrainState.state !== 'disabled') {
-        backgroundDrainState.state = closed ? 'disabled' : backgroundDrainPaused ? 'paused' : 'idle';
-        backgroundDrainState.lastCompletedAt = now().toISOString();
-      }
-      completeForegroundAuraCallDrainReservation();
-      if (accountMirrorFollowUpAfterNextDrain && foregroundAuraCallDrainReservations === 0) {
-        accountMirrorFollowUpAfterNextDrain = false;
-        scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
-      }
-    });
-  };
-  let backgroundDrainTimer: NodeJS.Timeout | null = null;
-  let backgroundDrainScheduled = false;
-  const scheduleBackgroundDrain = (delayMs = backgroundDrainIntervalMs) => {
-    if (closed || backgroundDrainIntervalMs <= 0 || backgroundDrainPaused || backgroundDrainScheduled) {
-      if (closed || backgroundDrainIntervalMs <= 0 || backgroundDrainPaused) {
-        return;
-      }
-      if (backgroundDrainScheduled && delayMs === 0 && backgroundDrainTimer) {
-        clearTimeout(backgroundDrainTimer);
-        backgroundDrainTimer = null;
-        backgroundDrainScheduled = false;
-      } else {
-        return;
-      }
-    }
-    backgroundDrainScheduled = true;
-    backgroundDrainTimer = setTimeout(async () => {
-      backgroundDrainScheduled = false;
-      backgroundDrainTimer = null;
-      if (closed) {
-        return;
-      }
-      await drainThroughServerHost({
-        maxRuns: 1,
-        trigger: 'background-timer',
-      }).catch((error) => {
-        logger(error instanceof Error ? error.message : String(error));
-        return null;
-      });
-      scheduleBackgroundDrain(backgroundDrainIntervalMs);
-    }, delayMs);
-  };
-  let accountMirrorSchedulerTimer: NodeJS.Timeout | null = null;
-  let accountMirrorSchedulerScheduled = false;
-  const runAccountMirrorSchedulerPass = async (input: {
-    dryRun: boolean;
-    wakeReason: AccountMirrorSchedulerWakeReason;
-  }) => {
-    if (accountMirrorSchedulerState.state === 'running') {
-      return false;
-    }
-    const wakeAt = now().toISOString();
-    accountMirrorSchedulerState.state = 'running';
-    accountMirrorSchedulerState.lastWakeReason = input.wakeReason;
-    accountMirrorSchedulerState.lastWakeAt = wakeAt;
-    accountMirrorSchedulerState.lastStartedAt = wakeAt;
-    try {
-      accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
-        dryRun: input.dryRun,
-      });
-      accountMirrorSchedulerState.history = await accountMirrorSchedulerLedger
-        .appendPass(accountMirrorSchedulerState.lastPass)
-        .catch((error) => {
-          logger(error instanceof Error ? error.message : String(error));
-          return accountMirrorSchedulerState.history;
-        });
-      await reconcileAccountMirrorLiveFollow();
-    } catch (error) {
-      logger(error instanceof Error ? error.message : String(error));
-    } finally {
-      accountMirrorSchedulerState.lastCompletedAt = now().toISOString();
-      accountMirrorSchedulerState.state = closed
-        ? 'disabled'
-          : accountMirrorSchedulerPaused
-            ? 'paused'
-            : accountMirrorSchedulerIntervalMs > 0
-              ? accountMirrorSchedulerScheduled
-                ? 'scheduled'
-                : 'idle'
-              : 'disabled';
-    }
-    return true;
-  };
-  const scheduleAccountMirrorScheduler = (
-    delayMs = accountMirrorSchedulerIntervalMs,
-    wakeReason: AccountMirrorSchedulerWakeReason = 'cadence',
-  ) => {
-    if (
-      closed ||
-      accountMirrorSchedulerIntervalMs <= 0 ||
-      accountMirrorSchedulerPaused ||
-      accountMirrorSchedulerScheduled ||
-      accountMirrorSchedulerState.state === 'running'
-    ) {
-      return;
-    }
-    accountMirrorSchedulerScheduled = true;
-    accountMirrorSchedulerState.state = 'scheduled';
-    accountMirrorSchedulerTimer = setTimeout(async () => {
-      accountMirrorSchedulerScheduled = false;
-      accountMirrorSchedulerTimer = null;
-      if (closed) {
-        return;
-      }
-      await runAccountMirrorSchedulerPass({
-        dryRun: accountMirrorSchedulerDryRun,
-        wakeReason,
-      });
-      scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs, 'cadence');
-    }, delayMs);
-  };
-  const scheduleAccountMirrorSchedulerFollowUp = (
-    delayMs = 0,
-    wakeReason: AccountMirrorSchedulerWakeReason,
-  ) => {
-    if (
-      closed ||
-      accountMirrorSchedulerIntervalMs <= 0 ||
-      accountMirrorSchedulerPaused ||
-      accountMirrorSchedulerState.state === 'running'
-    ) {
-      return;
-    }
-    if (accountMirrorSchedulerScheduled && accountMirrorSchedulerTimer) {
-      clearTimeout(accountMirrorSchedulerTimer);
-      accountMirrorSchedulerTimer = null;
-      accountMirrorSchedulerScheduled = false;
-    }
-    scheduleAccountMirrorScheduler(delayMs, wakeReason);
-  };
-  const operatorDashboardRoutes = resolveOperatorDashboardRoutes(options.serviceRouting);
-  const server = http.createServer();
-
-  server.on('request', async (req, res) => {
-    try {
-      const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-      const apiAuthContext = authorizeApiRequest(req, apiAuthPolicy, url.pathname, operatorDashboardRoutes);
-      if (!apiAuthContext) {
-        sendJson(res, 401, {
-          error: {
-            message: 'Missing or invalid AuraCall API key.',
-            type: 'authentication_error',
-          },
-        } satisfies HttpErrorPayload);
-        return;
-      }
-
-      if (
-        (req.method === 'GET' || req.method === 'HEAD')
-        && await maybeSendOperatorUxAsset(res, url.pathname, operatorDashboardRoutes, req.method === 'HEAD')
-      ) {
-        return;
-      }
-
-      if (
-        (req.method === 'GET' || req.method === 'HEAD')
-        && matchesRoutePath(url.pathname, operatorDashboardRoutes.debugDashboardPath, '/ops/browser')
-      ) {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'browser', routes: operatorDashboardRoutes }));
-        return;
-      }
-
-      if (req.method === 'GET' && matchesRoutePath(url.pathname, operatorDashboardRoutes.accountMirrorPath, '/account-mirror')) {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
-          activePage: 'account-mirror',
-          routes: operatorDashboardRoutes,
-        }));
-        return;
-      }
-
-      if (
-        req.method === 'GET'
-        && matchesRoutePath(url.pathname, operatorDashboardRoutes.previewSessionPath, '/account-mirror/preview-session')
-      ) {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
-          activePage: 'preview-session',
-          routes: operatorDashboardRoutes,
-        }));
-        return;
-      }
-
-      if (req.method === 'GET' && matchesRoutePath(url.pathname, operatorDashboardRoutes.configPath, '/config')) {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
-          activePage: 'config',
-          routes: operatorDashboardRoutes,
-        }));
-        return;
-      }
-
-      if (req.method === 'GET' && matchesRoutePath(url.pathname, operatorDashboardRoutes.agentsPath, '/agents')) {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
-          activePage: 'agents',
-          routes: operatorDashboardRoutes,
-        }));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/status') {
-        const statusQuery = parseStatusQuery(url.searchParams);
-        await accountMirrorStatusRegistry.refreshPersistentState?.();
-        await syncRunnerStateFromStore();
-        const address = server.address();
-        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
-        const statusSourceKind = statusQuery.sourceKindSummary === 'all'
-          ? undefined
-          : statusQuery.sourceKindSummary ?? 'direct';
-        const statusResponseRecoverySummary = statusQuery.recovery
-          ? await host.summarizeRecoveryState({
-              sourceKind: statusSourceKind,
-            })
-          : undefined;
-        const statusResponseLocalClaimSummary = await host.summarizeLocalClaimState({
-          sourceKind: 'direct',
-        });
-        const runnerTopology = compactRunnerTopologyForStatus(
-          await host.summarizeRunnerTopology(),
-          statusQuery.runnerTopologyMode,
-        );
-        const statusResponse = await createHttpStatusResponse({
-          host: boundHost,
-          port: boundPort,
-          dashboardUrl: options.dashboardUrl,
-          publicDashboardUrl: options.publicDashboardUrl,
-          serviceRouting: options.serviceRouting,
-          recoverySummary: statusResponseRecoverySummary,
-          localClaimSummary: statusResponseLocalClaimSummary,
-          runnerTopology,
-          runner: runnerState,
-          backgroundDrain: backgroundDrainState,
-          tenantExecutionLimits: await readTenantExecutionLimitsStatus(statusQuery.tenantExecutionLimitsMode === 'usage'),
-          accountMirrorScheduler: accountMirrorSchedulerState,
-          accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
-          accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
-          accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
-          preflight: await readPreflightStatusSummary(preflightRunner),
-          auth: apiAuthPolicy,
-        });
-        sendJson(res, 200, statusResponse);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/api/logs/tail') {
-        const address = server.address();
-        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
-        const query = parseApiLogTailQuery(url.searchParams);
-        sendJson(res, 200, await readApiLogTail({ port: boundPort, maxBytes: query.maxBytes }));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/browser/processes') {
-        await accountMirrorStatusRegistry.refreshPersistentState?.();
-        sendJson(res, 200, await readBrowserProcessStatus({
-          status: accountMirrorStatusRegistry.readStatus(),
-          now,
-        }));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/browser/dom-drift-observations') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, await listDomDriftObservations(parseDomDriftObservationQuery(url.searchParams)));
-        return;
-      }
-
-      const domDriftAcceptId = matchDomDriftObservationAcceptRoute(url.pathname);
-      if (req.method === 'POST' && domDriftAcceptId) {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const result = await acceptDomDriftObservation(domDriftAcceptId);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `DOM drift observation ${domDriftAcceptId} was not found.`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, result);
-        return;
-      }
-
-      const preflightRunLogId = matchPreflightRunLogRoute(url.pathname);
-      if (req.method === 'GET' && preflightRunLogId) {
-        const query = parseApiLogTailQuery(url.searchParams);
-        const payload = await readLazyLiveFollowPreflightRunLogTail({
-          id: preflightRunLogId,
-          maxBytes: query.maxBytes,
-          runner: preflightRunner,
-        });
-        if (!payload) {
-          sendJson(res, 404, {
-            error: {
-              message: `Lazy live-follow preflight run ${preflightRunLogId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, payload);
-        return;
-      }
-
-      const preflightRunId = matchPreflightRunRoute(url.pathname);
-      if (req.method === 'GET' && preflightRunId) {
-        const run = await readLazyLiveFollowPreflightRun(preflightRunId, preflightRunner);
-        if (!run) {
-          sendJson(res, 404, {
-            error: {
-              message: `Lazy live-follow preflight run ${preflightRunId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, run);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/status') {
-        const query = parseAccountMirrorStatusQuery(url.searchParams);
-        await accountMirrorStatusRegistry.refreshPersistentState?.();
-        sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/catalog') {
-        const query = parseAccountMirrorCatalogQuery(url.searchParams);
-        const result: HttpAccountMirrorCatalogResponse = await accountMirrorCatalogService.readCatalog(query);
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'GET' && isAccountMirrorCatalogItemAssetRoute(url.pathname)) {
-        const query = parseAccountMirrorCatalogItemAssetQuery(url.pathname, url.searchParams);
-        const result: HttpAccountMirrorCatalogItemResponse | null = await accountMirrorCatalogService.readItem(query);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `Account mirror catalog item ${query.itemId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        const asset = await resolveCachedCatalogItemAsset(result, configuredRuntimeConfig);
-        if (!asset) {
-          sendJson(res, 404, {
-            error: {
-              message: `Account mirror catalog item ${query.itemId} has no cache-owned local asset.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendCachedAsset(res, asset);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname.startsWith('/v1/account-mirrors/catalog/items/')) {
-        const query = parseAccountMirrorCatalogItemQuery(url.pathname, url.searchParams);
-        const result: HttpAccountMirrorCatalogItemResponse | null = await accountMirrorCatalogService.readItem(query);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `Account mirror catalog item ${query.itemId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/archive') {
-        const query = parseRunArchiveQuery(url.searchParams);
-        const result: HttpRunArchiveResponse = await runArchiveService.listItems(query);
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/search') {
-        const query = parseSearchProjectionQuery(url.searchParams);
-        const result: SearchProjectionResult = await searchProjectionService.search(query);
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/archive/assets/lookup') {
-        const query = parseRunArchiveAssetLookupQuery(url.searchParams);
-        const result: HttpRunArchiveAssetLookupResponse = await runArchiveService.lookupAsset(query);
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/archive/backfill') {
-        const result = await runArchiveService.backfillIndex();
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/archive/evidence') {
-        const body = await readRequestBody(req);
-        const payload = parseRunArchiveEvidenceCreateBody(JSON.parse(body || '{}'));
-        const result: HttpRunArchiveEvidenceResponse = await runArchiveService.attachEvidence(payload);
-        sendJson(res, 201, result);
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/archive/materializations') {
-        try {
-          const body = await readRequestBody(req);
-          const payload = parseRunArchiveMaterializationCreateBody(JSON.parse(body || '{}'));
-          const result: ArchiveMaterializationJobCreateResult = await archiveMaterializationJobService.createJob(payload);
-          sendJson(res, 202, result);
-          return;
-        } catch (error) {
-          if (error instanceof ArchiveMaterializationError) {
-            sendJson(res, error.statusCode, {
-              error: {
-                message: error.message,
-                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        }
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/archive/materializations') {
-        const query = parseRunArchiveMaterializationJobListQuery(url.searchParams);
-        const result: ArchiveMaterializationJobListResult = await archiveMaterializationJobService.listJobs(query);
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/materializations') {
-        try {
-          const body = await readRequestBody(req);
-          const payload = parseHistoryMaterializationCreateBody(JSON.parse(body || '{}'));
-          const result: HistoryMaterializationJobCreateResult = await historyMaterializationService.createJob(payload);
-          sendJson(res, 202, result);
-          return;
-        } catch (error) {
-          if (error instanceof HistoryMaterializationError) {
-            sendJson(res, error.statusCode, {
-              error: {
-                message: error.message,
-                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        }
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/materializations') {
-        const query = parseHistoryMaterializationJobListQuery(url.searchParams);
-        const result: HistoryMaterializationJobListResult = await historyMaterializationService.listJobs(query);
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'GET' && isHistoryMaterializationJobRoute(url.pathname)) {
-        const jobId = parseHistoryMaterializationJobId(url.pathname);
-        const result = await historyMaterializationService.readJob(jobId);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `History materialization job ${jobId} was not found.`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'POST' && isHistoryMaterializationJobRoute(url.pathname)) {
-        try {
-          const jobId = parseHistoryMaterializationJobId(url.pathname);
-          const body = await readRequestBody(req);
-          const payload = parseHistoryMaterializationJobControlBody(JSON.parse(body || '{}'));
-          if (payload.action !== 'cancel') {
-            throw new HistoryMaterializationJobControlError(`Unsupported history materialization job action ${payload.action}.`);
-          }
-          const result = await historyMaterializationService.cancelJob(jobId);
-          sendJson(res, 200, result);
-          return;
-        } catch (error) {
-          if (error instanceof HistoryMaterializationJobControlError) {
-            sendJson(res, error.statusCode, {
-              error: {
-                message: error.message,
-                type: error.type,
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        }
-      }
-
-      if (req.method === 'GET' && isRunArchiveMaterializationJobRoute(url.pathname)) {
-        const jobId = parseRunArchiveMaterializationJobId(url.pathname);
-        const result = await archiveMaterializationJobService.readJob(jobId);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `Archive materialization job ${jobId} was not found.`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'POST' && isRunArchiveMaterializationJobRoute(url.pathname)) {
-        try {
-          const jobId = parseRunArchiveMaterializationJobId(url.pathname);
-          const body = await readRequestBody(req);
-          const payload = parseRunArchiveMaterializationJobControlBody(JSON.parse(body || '{}'));
-          if (payload.action !== 'cancel') {
-            throw new ArchiveMaterializationJobControlError(`Unsupported archive materialization job action ${payload.action}.`);
-          }
-          const result = await archiveMaterializationJobService.cancelJob(jobId);
-          sendJson(res, 200, result);
-          return;
-        } catch (error) {
-          if (error instanceof ArchiveMaterializationJobControlError) {
-            sendJson(res, error.statusCode, {
-              error: {
-                message: error.message,
-                type: error.type,
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        }
-      }
-
-      if (req.method === 'POST' && isRunArchiveItemMaterializeRoute(url.pathname)) {
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const itemId = parseRunArchiveItemMaterializeId(url.pathname);
-          const body = await readRequestBody(req);
-          const payload = parseRunArchiveItemMaterializeBody(JSON.parse(body || '{}'));
-          const result: ArchiveItemMaterializationResult = await archiveMaterializationService.materializeItem({
-            archiveItemId: itemId,
-            force: payload.force,
-          });
-          sendJson(res, result.status === 'materialized' || result.status === 'already_materialized' ? 200 : 202, result);
-          return;
-        } catch (error) {
-          if (error instanceof ArchiveMaterializationError) {
-            sendJson(res, error.statusCode, {
-              error: {
-                message: error.message,
-                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          if (isProviderAuthPreflightError(error)) {
-            sendJson(res, 409, {
-              error: {
-                message: error instanceof Error ? error.message : 'Provider browser auth preflight failed.',
-                type: 'provider_auth_conflict',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'GET' && isRunArchiveItemAssetRoute(url.pathname)) {
-        const itemId = parseRunArchiveItemAssetId(url.pathname);
-        const result: HttpRunArchiveAssetResponse | null = await runArchiveService.readAsset(itemId);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `Run archive item ${itemId} has no readable local asset.`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendCachedAsset(res, {
-          path: result.path,
-          mimeType: result.mimeType,
-          size: result.size,
-          fileName: result.fileName,
-        });
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname.startsWith('/v1/archive/items/')) {
-        const itemId = parseRunArchiveItemId(url.pathname);
-        const result: HttpRunArchiveItemResponse | null = await runArchiveService.readItem(itemId);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `Run archive item ${itemId} was not found.`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, result);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/scheduler/history') {
-        const limit = parsePositiveIntegerQuery(url.searchParams.get('limit'));
-        const history = await accountMirrorSchedulerLedger.readHistory();
-        accountMirrorSchedulerState.history = history;
-        sendJson(
-          res,
-          200,
-          summarizeAccountMirrorSchedulerHistory(history, { limit }) satisfies HttpAccountMirrorSchedulerHistoryResponse,
-        );
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/scheduler/diagnostics') {
-        const query = parseAccountMirrorSchedulerDiagnosticsQuery(url.searchParams);
-        const result = createAccountMirrorSchedulerDiagnosticsBundle({
-          query,
-          scheduler: accountMirrorSchedulerState,
-          status: accountMirrorStatusRegistry.readStatus(),
-          completions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
-          readCompletion: (id) => accountMirrorCompletionService.read(id),
-          readBrowserMutations: (provider, runtimeProfileId) => {
-            if (provider !== 'chatgpt' && provider !== 'gemini' && provider !== 'grok') {
-              return null;
-            }
-            const browserConfig = resolvedUserConfig;
-            if (!browserConfig) {
-              return null;
-            }
-            if (
-              runtimeProfileId &&
-              browserConfig.auracallProfile &&
-              runtimeProfileId !== browserConfig.auracallProfile
-            ) {
-              return null;
-            }
-            const items = BrowserService.fromConfig(browserConfig, provider).listRecentBrowserMutations(50);
-            return {
-              total: items.length,
-              items,
-            };
-          },
-          now,
-        });
-        if (!result.ok) {
-          sendJson(res, result.status, {
-            error: {
-              message: result.message,
-              type: result.type,
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, result.bundle);
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/preview-sessions') {
-        const body = await readRequestBody(req);
-        const payload = JSON.parse(body || '{}') as {
-          id?: unknown;
-          name?: unknown;
-          manifest?: unknown;
-        };
-        try {
-          const record = await accountMirrorPreviewSessionStore.writeSession({
-            id: typeof payload.id === 'string' ? payload.id : null,
-            name: typeof payload.name === 'string' ? payload.name : null,
-            manifest: payload.manifest,
-            now: now().toISOString(),
-          });
-          sendJson(res, 201, record);
-          return;
-        } catch (error) {
-          sendJson(res, 400, {
-            error: {
-              message: error instanceof Error ? error.message : 'Invalid preview session manifest.',
-              type: 'invalid_request_error',
-            },
-          });
-          return;
-        }
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/preview-sessions') {
-        const limit = parsePositiveIntegerQuery(url.searchParams.get('limit'));
-        const records = await accountMirrorPreviewSessionStore.listSessions({ limit });
-        sendJson(res, 200, {
-          object: 'list',
-          data: records,
-          count: records.length,
-        });
-        return;
-      }
-
-      const accountMirrorPreviewSessionId = matchAccountMirrorPreviewSessionRoute(url.pathname);
-      if (req.method === 'GET' && accountMirrorPreviewSessionId) {
-        const record = await accountMirrorPreviewSessionStore.readSession(accountMirrorPreviewSessionId);
-        if (!record) {
-          sendJson(res, 404, {
-            error: {
-              message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, record);
-        return;
-      }
-
-      if (req.method === 'PATCH' && accountMirrorPreviewSessionId) {
-        const body = await readRequestBody(req);
-        const payload = JSON.parse(body || '{}') as {
-          name?: unknown;
-        };
-        try {
-          const record = await accountMirrorPreviewSessionStore.renameSession({
-            id: accountMirrorPreviewSessionId,
-            name: typeof payload.name === 'string' ? payload.name : null,
-            now: now().toISOString(),
-          });
-          if (!record) {
-            sendJson(res, 404, {
-              error: {
-                message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
-                type: 'not_found_error',
-              },
-            });
-            return;
-          }
-          sendJson(res, 200, record);
-          return;
-        } catch (error) {
-          sendJson(res, 400, {
-            error: {
-              message: error instanceof Error ? error.message : 'Invalid preview session rename request.',
-              type: 'invalid_request_error',
-            },
-          });
-          return;
-        }
-      }
-
-      if (req.method === 'DELETE' && accountMirrorPreviewSessionId) {
-        const deleted = await accountMirrorPreviewSessionStore.deleteSession(accountMirrorPreviewSessionId);
-        if (!deleted) {
-          sendJson(res, 404, {
-            error: {
-              message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, {
-          object: 'account_mirror_preview_session.deleted',
-          id: accountMirrorPreviewSessionId,
-          deleted: true,
-        });
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/completions') {
-        const body = await readRequestBody(req);
-        const payload = ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
-        const result = accountMirrorCompletionService.start({
-          provider: payload.provider,
-          runtimeProfileId: payload.runtimeProfile,
-          maxPasses: payload.maxPasses,
-          sweepMode: payload.sweepMode ?? payload.sweep_mode,
-          materializationPolicy: payload.materializationPolicy ?? payload.materialization_policy,
-          materializationAssetKinds: payload.materializationAssetKinds ?? payload.materialization_asset_kinds,
-          materializationMaxItems: payload.materializationMaxItems ?? payload.materialization_max_items,
-          materializationRefreshSnapshot: payload.materializationRefreshSnapshot ?? payload.materialization_refresh_snapshot,
-          materializationForce: payload.materializationForce ?? payload.materialization_force,
-        });
-        sendJson(res, 202, result satisfies HttpAccountMirrorCompletionResponse);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/completions') {
-        const query = parseAccountMirrorCompletionListQuery(url.searchParams);
-        const data = accountMirrorCompletionService.list(query);
-        sendJson(res, 200, {
-          object: 'list',
-          data,
-          count: data.length,
-        } satisfies HttpAccountMirrorCompletionListResponse);
-        return;
-      }
-
-      const accountMirrorCompletionId = matchAccountMirrorCompletionRoute(url.pathname);
-      if (req.method === 'GET' && accountMirrorCompletionId) {
-        const result = accountMirrorCompletionService.read(accountMirrorCompletionId);
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `Account mirror completion ${accountMirrorCompletionId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, result satisfies HttpAccountMirrorCompletionResponse);
-        return;
-      }
-
-      if (req.method === 'POST' && accountMirrorCompletionId) {
-        const body = await readRequestBody(req);
-        const payload = ACCOUNT_MIRROR_COMPLETION_CONTROL_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
-        const result = accountMirrorCompletionService.control({
-          id: accountMirrorCompletionId,
-          action: payload.action,
-        });
-        if (!result) {
-          sendJson(res, 404, {
-            error: {
-              message: `Account mirror completion ${accountMirrorCompletionId} was not found.`,
-              type: 'not_found_error',
-            },
-          });
-          return;
-        }
-        sendJson(res, 200, result satisfies HttpAccountMirrorCompletionResponse);
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/refresh') {
-        const body = await readRequestBody(req);
-        const payload = ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
-        try {
-          const result = await accountMirrorRefreshService.requestRefresh({
-            provider: payload.provider,
-            runtimeProfileId: payload.runtimeProfile,
-            explicitRefresh: payload.explicitRefresh,
-            queueTimeoutMs: payload.queueTimeoutMs,
-            queuePollMs: payload.queuePollMs,
-          });
-          sendJson(res, 202, result satisfies HttpAccountMirrorRefreshResponse);
-          return;
-        } catch (error) {
-          if (error instanceof AccountMirrorRefreshError) {
-            sendJson(res, error.statusCode, {
-              error: {
-                message: error.message,
-                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
-                code: error.code,
-                details: error.details,
-              },
-            });
-            return;
-          }
-          throw error;
-        }
-      }
-
-      const recoveryDetailRunId = matchStatusRecoveryDetailRoute(url.pathname);
-      if (req.method === 'GET' && recoveryDetailRunId) {
-        const detail = await host.readRecoveryDetail(recoveryDetailRunId);
-        if (!detail) {
-          sendJson(res, 404, {
-            error: {
-              message: `Recovery detail for run ${recoveryDetailRunId} was not found`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, {
-          object: 'recovery_detail',
-          detail,
-        } satisfies HttpRecoveryDetailResponse);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/team-runs/inspect') {
-        try {
-          const inspection = await inspectTeamRunLinkage({
-            taskRunSpecId: url.searchParams.get('taskRunSpecId'),
-            teamRunId: url.searchParams.get('teamRunId'),
-            runtimeRunId: url.searchParams.get('runtimeRunId'),
-            control,
-          });
-          sendJson(res, 200, {
-            object: 'team_run_inspection',
-            inspection,
-          } satisfies HttpTeamRunInspectionResponse);
-          return;
-        } catch (error) {
-          if (error instanceof TeamRunInspectionError) {
-            sendJson(res, error.status === 'not-found' ? 404 : 400, {
-              error: {
-                message: error.message,
-                type: error.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        }
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/runtime-runs/recent') {
-        const query = parseRuntimeRunListQuery(url.searchParams);
-        const records = await control.listRuns(query);
-        const data = records.map(summarizeExecutionRunListItem);
-        sendJson(res, 200, {
-          object: 'list',
-          data,
-          count: data.length,
-        } satisfies HttpRuntimeRunListResponse);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/runtime-runs/inspect') {
-        try {
-          const runtimeInspectQuery = parseRuntimeInspectionQuery(url.searchParams);
-          const inspection = await inspectRuntimeRun({
-            runId: url.searchParams.get('runId'),
-            runtimeRunId: url.searchParams.get('runtimeRunId'),
-            teamRunId: url.searchParams.get('teamRunId'),
-            taskRunSpecId: url.searchParams.get('taskRunSpecId'),
-            runnerId: url.searchParams.get('runnerId'),
-            includeServiceState: runtimeInspectQuery.probe === 'service-state',
-            includeBrowserDiagnostics: runtimeInspectQuery.diagnostics === 'browser-state',
-            includeSchedulerAuthority: runtimeInspectQuery.authority === 'scheduler',
-            schedulerAuthorityLocalRunnerId: url.searchParams.get('runnerId') ?? runnerState.id,
-            probeServiceState: deps.probeRuntimeRunServiceState,
-            probeBrowserDiagnostics: deps.probeRuntimeRunBrowserDiagnostics,
-            control,
-            runnersControl,
-            createRunAffinity,
-          });
-          sendJson(res, 200, {
-            object: 'runtime_run_inspection',
-            inspection,
-          } satisfies HttpRuntimeRunInspectionResponse);
-          return;
-        } catch (error) {
-          if (error instanceof RuntimeRunInspectionError) {
-            sendJson(res, error.status === 'not-found' ? 404 : 400, {
-              error: {
-                message: error.message,
-                type: error.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/status') {
-        const body = await readRequestBody(req);
-        const payload = STATUS_CONTROL_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
-        let controlResult: HttpStatusResponse['controlResult'];
-        if ('backgroundDrain' in payload) {
-          const action = payload.backgroundDrain.action;
-          if (backgroundDrainIntervalMs <= 0) {
-            sendJson(res, 409, {
-              error: {
-                message: 'background drain is not enabled for this server',
-                type: 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          if (action === 'pause') {
-            backgroundDrainPaused = true;
-            backgroundDrainState.paused = true;
-            if (backgroundDrainTimer) {
-              clearTimeout(backgroundDrainTimer);
-              backgroundDrainTimer = null;
-            }
-            backgroundDrainScheduled = false;
-            if (backgroundDrainState.state !== 'running') {
-              backgroundDrainState.state = 'paused';
-            }
-          } else {
-            backgroundDrainPaused = false;
-            backgroundDrainState.paused = false;
-            if (backgroundDrainState.state !== 'running') {
-              backgroundDrainState.state = 'idle';
-            }
-            scheduleBackgroundDrain(0);
-          }
-          controlResult = {
-            kind: 'background-drain',
-            action,
-          };
-        } else if ('accountMirrorScheduler' in payload) {
-          const action = payload.accountMirrorScheduler.action;
-          if (action === 'pause' || action === 'resume') {
-            if (accountMirrorSchedulerIntervalMs <= 0) {
-              sendJson(res, 409, {
-                error: {
-                  message: 'account mirror scheduler is not enabled for this server',
-                  type: 'invalid_request_error',
-                },
-              } satisfies HttpErrorPayload);
-              return;
-            }
-            if (action === 'pause') {
-              accountMirrorSchedulerPaused = true;
-              accountMirrorSchedulerState.paused = true;
-              if (accountMirrorSchedulerTimer) {
-                clearTimeout(accountMirrorSchedulerTimer);
-                accountMirrorSchedulerTimer = null;
-              }
-              accountMirrorSchedulerScheduled = false;
-              if (accountMirrorSchedulerState.state !== 'running') {
-                accountMirrorSchedulerState.state = 'paused';
-              }
-            } else {
-              accountMirrorSchedulerPaused = false;
-              accountMirrorSchedulerState.paused = false;
-              if (accountMirrorSchedulerState.state !== 'running') {
-                accountMirrorSchedulerState.state = 'idle';
-              }
-              scheduleAccountMirrorScheduler(0, 'operator-resume');
-            }
-            controlResult = {
-              kind: 'account-mirror-scheduler',
-              action,
-              dryRun: accountMirrorSchedulerDryRun,
-            };
-          } else {
-            const requestedDryRun = payload.accountMirrorScheduler.dryRun ?? true;
-            const dryRun = accountMirrorSchedulerDryRun ? true : requestedDryRun;
-            const ran = await runAccountMirrorSchedulerPass({
-              dryRun,
-              wakeReason: 'operator-run-once',
-            });
-            if (!ran) {
-              sendJson(res, 409, {
-                error: {
-                  message: 'account mirror scheduler is already running',
-                  type: 'invalid_request_error',
-                },
-              } satisfies HttpErrorPayload);
-              return;
-            }
-            controlResult = {
-              kind: 'account-mirror-scheduler',
-              action,
-              dryRun,
-            };
-          }
-        } else if ('accountMirrorProviderGuard' in payload) {
-          const guardClear = clearAccountMirrorProviderGuard({
-            registry: accountMirrorStatusRegistry,
-            provider: payload.accountMirrorProviderGuard.provider,
-            runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
-            cooldownMs: payload.accountMirrorProviderGuard.cooldownMs ??
-              DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
-            now,
-          });
-          controlResult = {
-            kind: guardClear.kind,
-            action: guardClear.action,
-            provider: guardClear.provider,
-            runtimeProfileId: guardClear.runtimeProfileId,
-            cooldownUntil: guardClear.cooldownUntil,
-          };
-        } else if ('accountMirrorCompletion' in payload) {
-          const { id, action } = payload.accountMirrorCompletion;
-          const operation = accountMirrorCompletionService.control({ id, action });
-          if (!operation) {
-            sendJson(res, 404, {
-              error: {
-                message: `account mirror completion not found: ${id}`,
-                type: 'not_found_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          controlResult = {
-            kind: 'account-mirror-completion',
-            action,
-            id,
-            status: operation.status,
-          };
-        } else if ('preflight' in payload) {
-          const result = await preflightRunner.start();
-          controlResult = {
-            kind: 'preflight',
-            action: payload.preflight.action,
-            accepted: result.accepted,
-            reason: result.reason,
-            id: result.run.id,
-            status: result.run.status,
-            logPath: result.run.logPath,
-          };
-        } else if ('serviceControl' in payload) {
-          const delayMs = payload.serviceControl.delayMs ?? 750;
-          const unitName = 'auracall-api.service';
-          const dryRun = payload.serviceControl.dryRun ?? false;
-          if (!dryRun) {
-            scheduleApiServiceRestart({ unitName, delayMs });
-          }
-          controlResult = {
-            kind: 'service-control',
-            action: payload.serviceControl.action,
-            unitName,
-            restartCommand: `systemctl --user restart ${unitName}`,
-            scheduled: !dryRun,
-            dryRun,
-            delayMs,
-          };
-        } else {
-          const result = await host.controlOperatorAction(createServiceHostOperatorControlInput(payload));
-          if (!isSuccessfulServiceHostOperatorControlResult(result)) {
-            sendJson(res, result.status === 'not-found' ? 404 : 409, {
-              error: {
-                message: result.reason,
-                type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          controlResult = result;
-        }
-        const address = server.address();
-        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
-        await syncRunnerStateFromStore();
-        const statusResponse = await createHttpStatusResponse({
-          host: boundHost,
-          port: boundPort,
-          dashboardUrl: options.dashboardUrl,
-          publicDashboardUrl: options.publicDashboardUrl,
-          serviceRouting: options.serviceRouting,
-          localClaimSummary: await host.summarizeLocalClaimState({ sourceKind: 'direct' }),
-          runnerTopology: await host.summarizeRunnerTopology(),
-          runner: runnerState,
-          backgroundDrain: backgroundDrainState,
-          tenantExecutionLimits: await readTenantExecutionLimitsStatus(false),
-          accountMirrorScheduler: accountMirrorSchedulerState,
-          accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
-          accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
-          accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
-          preflight: await readPreflightStatusSummary(preflightRunner),
-          controlResult,
-          auth: apiAuthPolicy,
-        });
-        sendJson(res, 200, statusResponse);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/models') {
-        sendJson(res, 200, createHttpModelListResponse(await agentTeamConfigService.effectiveCatalog()));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/config/agents') {
-        sendJson(res, 200, await agentTeamConfigService.list('agent'));
-        return;
-      }
-
-      const configAgentId = matchConfigEntityRoute(url.pathname, 'agents');
-      if (configAgentId && req.method === 'PUT') {
-        const body = await readRequestBody(req);
-        const payload = agentConfigUpsertInputSchema.parse({
-          id: configAgentId,
-          config: JSON.parse(body || '{}'),
-        });
-        sendJson(res, 200, await agentTeamConfigService.upsertAgent(payload));
-        return;
-      }
-      if (configAgentId && req.method === 'DELETE') {
-        sendJson(res, 200, await agentTeamConfigService.deleteAgent(configAgentId));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/config/teams') {
-        sendJson(res, 200, await agentTeamConfigService.list('team'));
-        return;
-      }
-
-      const configTeamId = matchConfigEntityRoute(url.pathname, 'teams');
-      if (configTeamId && req.method === 'PUT') {
-        const body = await readRequestBody(req);
-        const payload = teamConfigUpsertInputSchema.parse({
-          id: configTeamId,
-          config: JSON.parse(body || '{}'),
-        });
-        sendJson(res, 200, await agentTeamConfigService.upsertTeam(payload));
-        return;
-      }
-      if (configTeamId && req.method === 'DELETE') {
-        sendJson(res, 200, await agentTeamConfigService.deleteTeam(configTeamId));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/config/agent-diagnostics') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, await agentTeamConfigService.diagnostics({
-          apiKeys: apiAuthPolicy.keys.map(toAgentConfigApiKeyDiagnosticInput),
-        }));
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/config/api-keys/issue') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const body = await readRequestBody(req);
-        const payload = parseConfigApiKeyIssueRequest(JSON.parse(body || '{}'));
-        sendJson(res, 200, await issueApiKey(agentTeamConfigService, payload));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/config/api-keys') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const envPath = url.searchParams.get('envPath') ?? undefined;
-        const diagnostics = await readApiKeyDiagnosticsFromEnvFile(envPath);
-        sendJson(res, 200, {
-          object: 'auracall_api_key_list',
-          envPath: diagnostics.envPath,
-          exists: diagnostics.exists,
-          apiKeys: diagnostics.apiKeys,
-        });
-        return;
-      }
-
-      const configApiKeyId = matchConfigApiKeyRoute(url.pathname);
-      if (configApiKeyId && req.method === 'DELETE') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, await deleteApiKey({
-          keyId: configApiKeyId,
-          envPath: url.searchParams.get('envPath') ?? undefined,
-        }));
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/config/snapshots/export') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const body = await readRequestBody(req);
-        const payload = parseConfigSnapshotExportRequest(JSON.parse(body || '{}'));
-        sendJson(res, 200, await agentTeamConfigService.exportSnapshot(payload));
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/config/snapshots/import') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const body = await readRequestBody(req);
-        const payload = parseConfigSnapshotImportRequest(JSON.parse(body || '{}'));
-        sendJson(res, 200, await agentTeamConfigService.importSnapshot(payload));
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/v1/workbench-capabilities') {
-        const request = parseWorkbenchCapabilityQuery(url.searchParams);
-        const response = await workbenchCapabilityService.listCapabilities(request);
-        sendJson(res, 200, response);
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/projects/ensure') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const payload = ProjectEnsureInputSchema.parse(JSON.parse(body || '{}'));
-          sendJson(res, 200, await projectEnsureService.ensureProject(payload));
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/tenant-pool-teams/ensure') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const payload = TenantPoolTeamEnsureInputSchema.parse(JSON.parse(body || '{}'));
-          sendJson(res, 200, await tenantPoolTeamEnsureService.ensureTeam(payload));
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/agent-setup-packages') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const payload = AgentSetupPackageInputSchema.parse(JSON.parse(body || '{}'));
-          sendJson(res, 200, await agentSetupPackageService.createPackage(payload));
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/agent-setup-handoffs') {
-        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
-        if (operatorAuthError) {
-          sendJson(res, 403, {
-            error: {
-              message: operatorAuthError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const payload = AgentSetupPackageInputSchema.parse(JSON.parse(body || '{}'));
-          sendJson(res, 200, await agentSetupPackageService.createHandoff(payload));
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/team-runs') {
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const payload = TEAM_RUN_CREATE_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
-          const prebuiltTaskRunSpec = payload.taskRunSpec ?? null;
-          const teamId = (prebuiltTaskRunSpec?.teamId ?? payload.teamId ?? '').trim();
-          const authorizationError = authorizeExecutionSelection(
-            apiAuthContext,
-            { agent: null, team: teamId || null, service: null, runtimeProfile: null },
-            await agentTeamConfigService.effectiveCatalog(),
-          );
-          if (authorizationError) {
-            sendJson(res, 403, {
-              error: {
-                message: authorizationError,
-                type: 'permission_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          const nowIso = now().toISOString();
-          const suffix = createTeamRunIdSuffix();
-          const teamRunId = `teamrun_${teamId}_${suffix}`;
-          const taskRunSpec =
-            prebuiltTaskRunSpec ??
-            buildBoundedTeamTaskRunSpec({
-              nowIso,
-              taskRunSpecId: `taskrun_${teamId}_${suffix}`,
-              teamId,
-              objective: payload.objective ?? '',
-              title: payload.title,
-              promptAppend: payload.promptAppend,
-              structuredContext: payload.structuredContext,
-              responseFormat: payload.responseFormat,
-              outputContract: payload.outputContract,
-              maxTurns: payload.maxTurns,
-              localActionPolicy: payload.localActionPolicy,
-              context: {
-                command: 'auracall api serve',
-              },
-              requestedBy: {
-                kind: 'api',
-                label: 'auracall api serve',
-              },
-              trigger: 'api',
-            });
-          const effectiveRuntimeConfig = await agentTeamConfigService.effectiveConfig();
-          const bridgeResult = await teamRuntimeBridge.executeFromConfigTaskRunSpec({
-            config: effectiveRuntimeConfig,
-            teamId,
-            runId: teamRunId,
-            createdAt: nowIso,
-            trigger: prebuiltTaskRunSpec ? undefined : 'api',
-            requestedBy: prebuiltTaskRunSpec ? undefined : 'auracall api serve',
-            taskRunSpec,
-          });
-          if (backgroundDrainIntervalMs > 0) {
-            reserveForegroundAuraCallDrain();
-            scheduleBackgroundDrain(0);
-          }
-          const execution = buildTeamRunExecutionPayload({
-            teamId,
-            bridgeResult,
-            taskRunSpec,
-          });
-          const address = server.address();
-          const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
-          sendJson(res, 200, {
-            object: 'team_run',
-            taskRunSpec,
-            execution,
-            links: createTeamRunCreateLinks({
-              host: boundHost,
-              port: boundPort,
-              teamRunId: execution.teamRunId,
-              runtimeRunId: execution.runtimeRunId,
-            }),
-          } satisfies HttpTeamRunCreateResponse);
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/chat/completions') {
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const chatRequest = parseChatCompletionRequest(JSON.parse(body || '{}'));
-          if (chatRequest.stream) {
-            sendJson(res, 400, {
-              error: {
-                message: 'Streaming chat completions are not supported by this AuraCall adapter yet.',
-                type: 'invalid_request_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          const catalog = await agentTeamConfigService.effectiveCatalog();
-          const request = hydrateExecutionRequestFromCatalog(createExecutionRequest(
-            mergeExecutionRequestHints(createExecutionRequestFromChatCompletion(chatRequest), req.headers),
-          ), catalog);
-          const authorizationError = authorizeExecutionRequest(
-            apiAuthContext,
-            request,
-            catalog,
-          );
-          if (authorizationError) {
-            sendJson(res, 403, {
-              error: {
-                message: authorizationError,
-                type: 'permission_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          const createdResponse = await responsesService.createResponse(request);
-          await drainThroughServerHost({
-            runId: createdResponse.id,
-            maxRuns: 1,
-            trigger: 'request-create',
-          });
-          scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
-          const response = (await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
-          if (response.status !== 'completed') {
-            sendJson(res, 502, createChatCompletionErrorResponse(response));
-            return;
-          }
-          sendJson(res, 200, createChatCompletionResponse(response, now));
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/responses') {
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const parsedBody = normalizeResponsesApiRequest(JSON.parse(body || '{}'));
-          const catalog = await agentTeamConfigService.effectiveCatalog();
-          const request = hydrateExecutionRequestFromCatalog(
-            createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers)),
-            catalog,
-          );
-          const authorizationError = authorizeExecutionRequest(
-            apiAuthContext,
-            request,
-            catalog,
-          );
-          if (authorizationError) {
-            sendJson(res, 403, {
-              error: {
-                message: authorizationError,
-                type: 'permission_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          const createdResponse = await responsesService.createResponse(request);
-          if (backgroundDrainIntervalMs > 0) {
-            reserveForegroundAuraCallDrain();
-            scheduleBackgroundDrain(0);
-            sendJson(res, 200, createdResponse);
-          } else {
-            await drainThroughServerHost({
-              runId: createdResponse.id,
-              maxRuns: 1,
-              trigger: 'request-create',
-            });
-            scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
-            const drainedResponse = await responsesService.readResponse(createdResponse.id);
-            sendJson(res, 200, drainedResponse ?? createdResponse);
-          }
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/response-batches') {
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const parsedPayload = ResponseBatchCreateRequestSchema.parse(JSON.parse(body || '{}'));
-          const catalog = await agentTeamConfigService.effectiveCatalog();
-          const { dispatchResolution: _ignoredClientDispatchResolution, ...publicPayload } = parsedPayload;
-          const hydratedRequests = parsedPayload.requests.map((request) =>
-            hydrateExecutionRequestFromCatalog(
-              createExecutionRequest(mergeExecutionRequestHints(normalizeResponsesApiRequest(request), req.headers)),
-              catalog,
-            ),
-          );
-          const dispatchRequest = normalizeResponseBatchDispatchRequest({
-            dispatch: publicPayload.dispatch,
-            team: publicPayload.team,
-          });
-          let dispatchResolution = null;
-          if (dispatchRequest) {
-            try {
-              dispatchResolution = await resolveResponseBatchDispatchPool({
-                dispatch: dispatchRequest,
-                requests: hydratedRequests,
-                catalog,
-                control,
-              });
-            } catch (error) {
-              throw new HttpInvalidRequestError(error instanceof Error ? error.message : String(error));
-            }
-          }
-          const payload = dispatchRequest && dispatchResolution
-            ? {
-                ...publicPayload,
-                dispatch: dispatchRequest,
-                dispatchResolution,
-                requests: dispatchResolution.requests,
-              }
-            : {
-                ...publicPayload,
-                requests: hydratedRequests,
-              };
-          for (const request of payload.requests) {
-            const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
-            if (authorizationError) {
-              sendJson(res, 403, {
-                error: {
-                  message: authorizationError,
-                  type: 'permission_error',
-                },
-              } satisfies HttpErrorPayload);
-              return;
-            }
-          }
-          const status = await responseBatchService.createBatch(payload);
-          if (backgroundDrainIntervalMs > 0) {
-            reserveForegroundAuraCallDrain();
-            const initialBatchMaxRuns = Math.max(
-              1,
-              Math.min(status.counts.total, status.limits.maxConcurrentRuns ?? 1),
-            );
-            void drainThroughServerHost({
-              maxRuns: initialBatchMaxRuns,
-              trigger: 'request-create',
-            }).catch((error) => {
-              logger(error instanceof Error ? error.message : String(error));
-              return null;
-            });
-          }
-          sendJson(res, 202, status);
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/media-generations') {
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const parsedBody = JSON.parse(body || '{}') as MediaGenerationRequest & { wait?: unknown };
-          const mediaRequest = {
-            ...parsedBody,
-            source: parsedBody.source ?? 'api',
-          };
-          const createQuery = parseMediaGenerationCreateQuery(url.searchParams);
-          const wait = resolveMediaGenerationWait(createQuery, parsedBody);
-          const response =
-            !wait && mediaGenerationService.createGenerationAsync
-              ? await mediaGenerationService.createGenerationAsync(mediaRequest)
-              : await mediaGenerationService.createGeneration(mediaRequest);
-          sendJson(res, wait && response.status === 'failed' ? 502 : wait ? 200 : 202, response);
-          return;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      const mediaGenerationMaterializeId = matchMediaGenerationMaterializeRoute(url.pathname);
-      if (req.method === 'POST' && mediaGenerationMaterializeId) {
-        const endForegroundWork = beginForegroundAuraCallWork();
-        try {
-          const body = await readRequestBody(req);
-          const payload = parseMediaGenerationMaterializeBody(JSON.parse(body || '{}'));
-          if (!mediaGenerationService.materializeGeneration) {
-            sendJson(res, 501, {
-              error: {
-                message: 'Media generation materialization is not configured for this runtime.',
-                type: 'not_implemented_error',
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          const response = await mediaGenerationService.materializeGeneration(mediaGenerationMaterializeId, {
-            count: payload.count ?? null,
-            compareFullQuality: payload.compareFullQuality ?? true,
-            source: 'api',
-            metadata: payload.metadata ?? null,
-          });
-          sendJson(res, response.status === 'failed' ? 502 : 200, response);
-          return;
-        } catch (error) {
-          if (error instanceof MediaGenerationExecutionError) {
-            sendJson(res, mediaGenerationExecutionErrorStatus(error), {
-              error: {
-                message: error.message,
-                type: error.code,
-              },
-            } satisfies HttpErrorPayload);
-            return;
-          }
-          throw error;
-        } finally {
-          endForegroundWork();
-        }
-      }
-
-      const runStatusId = matchRunStatusRoute(url.pathname);
-      if (req.method === 'GET' && runStatusId) {
-        const runStatusQuery = parseRunStatusQuery(url.searchParams);
-        const response = await readAuraCallRunStatus(runStatusId, {
-          responsesService,
-          mediaGenerationService,
-        });
-        if (!response) {
-          sendJson(res, 404, {
-            error: {
-              message: `Run ${runStatusId} was not found`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        if (runStatusQuery.diagnostics === 'browser-state') {
-          response.browserDiagnostics = await readRunStatusBrowserDiagnostics({
-            status: response,
-            responsesService,
-            mediaGenerationService,
-            probeRuntimeRunBrowserDiagnostics: deps.probeRuntimeRunBrowserDiagnostics,
-            probeMediaGenerationBrowserDiagnostics: probeMediaGenerationBrowserDiagnosticsImpl,
-            control,
-            runnersControl,
-            createRunAffinity,
-          });
-        }
-        sendJson(res, 200, response);
-        return;
-      }
-
-      const mediaGenerationStatusId = matchMediaGenerationStatusRoute(url.pathname);
-      if (req.method === 'GET' && mediaGenerationStatusId) {
-        const runStatusQuery = parseRunStatusQuery(url.searchParams);
-        const response = await mediaGenerationService.readGeneration(mediaGenerationStatusId);
-        if (!response) {
-          sendJson(res, 404, {
-            error: {
-              message: `Media generation ${mediaGenerationStatusId} was not found`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const summary = summarizeMediaGenerationStatus(response);
-        if (runStatusQuery.diagnostics === 'browser-state') {
-          sendJson(res, 200, {
-            ...summary,
-            browserDiagnostics: await probeMediaGenerationBrowserDiagnosticsImpl(response),
-          });
-          return;
-        }
-        sendJson(res, 200, summary);
-        return;
-      }
-
-      const mediaGenerationId = matchMediaGenerationRoute(url.pathname);
-      if (req.method === 'GET' && mediaGenerationId) {
-        const response = await mediaGenerationService.readGeneration(mediaGenerationId);
-        if (!response) {
-          sendJson(res, 404, {
-            error: {
-              message: `Media generation ${mediaGenerationId} was not found`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, response);
-        return;
-      }
-
-      const responseId = matchResponseRoute(url.pathname);
-      if (req.method === 'GET' && responseId) {
-        const response = await responsesService.readResponse(responseId);
-        if (!response) {
-          sendJson(res, 404, {
-            error: {
-              message: `Response ${responseId} was not found`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, response);
-        return;
-      }
-
-      const responseBatchId = matchResponseBatchRoute(url.pathname);
-      if (req.method === 'GET' && responseBatchId) {
-        const status = await responseBatchService.readBatchStatus(responseBatchId);
-        if (!status) {
-          sendJson(res, 404, {
-            error: {
-              message: `Response batch ${responseBatchId} was not found`,
-              type: 'not_found_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        sendJson(res, 200, status);
-        return;
-      }
-
-      sendJson(res, 404, {
-        error: {
-          message: 'Not found',
-          type: 'invalid_request_error',
-        },
-      } satisfies HttpErrorPayload);
-    } catch (error) {
-      logger(error instanceof Error ? error.message : String(error));
-      if (error instanceof SyntaxError || error instanceof ZodError || error instanceof HttpInvalidRequestError) {
-        sendJson(res, 400, {
-          error: {
-            message: error instanceof Error ? error.message : 'Invalid request body',
-            type: 'invalid_request_error',
-          },
-        } satisfies HttpErrorPayload);
-        return;
-      }
-
-      sendJson(res, 500, {
-        error: {
-          message: error instanceof Error ? error.message : 'Internal server error',
-          type: 'server_error',
-        },
-      } satisfies HttpErrorPayload);
-    }
-  });
-
-  await new Promise<void>((resolve) => {
-    server.listen(options.port ?? 0, boundHost, () => resolve());
-  });
-
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    throw new Error('Unable to determine server address');
-  }
-
-  const localRunnerId = `runner:http-responses:${boundHost}:${address.port}`;
-  const localRunnerHostId = `host:http-responses:${boundHost}:${address.port}`;
-  const localRunnerLifecycleOptions = {
-    hostId: localRunnerHostId,
-    heartbeatTtlMs: runnerHeartbeatTtlMs,
-    capabilitySummary: localRunnerCapabilitySummary,
-    baseLabel: 'api serve local runner',
-    heartbeatLabel: 'api serve runner heartbeat',
-    shutdownLabel: 'api serve shutdown',
-  };
-  const updateRunnerState = (
-    runner: {
-      id: string;
-      hostId: string;
-      status: HttpStatusResponse['runner']['status'];
-      lastHeartbeatAt: string;
-      expiresAt: string;
-      lastActivityAt: string | null;
-      lastClaimedRunId: string | null;
-    },
-  ) => {
-    runnerState.id = runner.id;
-    runnerState.hostId = runner.hostId;
-    runnerState.status = runner.status;
-    runnerState.lastHeartbeatAt = runner.lastHeartbeatAt;
-    runnerState.expiresAt = runner.expiresAt;
-    runnerState.lastActivityAt = runner.lastActivityAt;
-    runnerState.lastClaimedRunId = runner.lastClaimedRunId;
-  };
-  const syncRunnerStateFromStore = async () => {
-    if (!runnerState.id) return;
-    const storedRunner = await runnersControl.readRunner(runnerState.id);
-    if (!storedRunner) return;
-    updateRunnerState({
-      id: storedRunner.runner.id,
-      hostId: storedRunner.runner.hostId,
-      status: storedRunner.runner.status,
-      lastHeartbeatAt: storedRunner.runner.lastHeartbeatAt,
-      expiresAt: storedRunner.runner.expiresAt,
-      lastActivityAt: storedRunner.runner.lastActivityAt,
-      lastClaimedRunId: storedRunner.runner.lastClaimedRunId,
-    });
-  };
-  const registerLocalRunner = async () => {
-    const heartbeatAt = now().toISOString();
-    const expiresAt = new Date(now().getTime() + runnerHeartbeatTtlMs).toISOString();
-    runnerState.id = localRunnerId;
-    runnerState.hostId = localRunnerHostId;
-    runnerState.status = 'registering';
-    runnerState.lastHeartbeatAt = heartbeatAt;
-    runnerState.expiresAt = expiresAt;
-    const registeredRunner = await host.registerLocalRunner(localRunnerLifecycleOptions);
-    if (registeredRunner) {
-      updateRunnerState(registeredRunner);
-    }
-  };
-  const heartbeatLocalRunner = async () => {
-    if (closed || !runnerState.id) return;
-    const heartbeatedRunner = await host.heartbeatLocalRunner(localRunnerLifecycleOptions);
-    if (heartbeatedRunner) {
-      updateRunnerState(heartbeatedRunner);
-    }
-  };
-  const scheduleRunnerHeartbeat = () => {
-    if (closed) return;
-    runnerHeartbeatTimer = setTimeout(async () => {
-      runnerHeartbeatTimer = null;
-      try {
-        await heartbeatLocalRunner();
-      } catch (error) {
-        logger(error instanceof Error ? error.message : String(error));
-      } finally {
-        scheduleRunnerHeartbeat();
-      }
-    }, runnerHeartbeatIntervalMs);
-  };
-
-  host =
-    deps.executionHost ??
-    createExecutionServiceHost({
-      control,
-      runnersControl,
-      now: () => now().toISOString(),
-      ownerId: localRunnerId,
-      runnerId: localRunnerId,
-      localActionExecutionPolicy: deps.localActionExecutionPolicy,
-      createRunAffinity,
-      executionGate,
-      executeStoredRunStep: deps.executeStoredRunStep
-        ? async (context) => {
-            const request = createExecutionRequestFromRecord(context.record);
-            return deps.executeStoredRunStep?.(request, context);
-          }
-        : undefined,
-    });
-  teamRuntimeBridge = createTeamRuntimeBridge({
-    control,
-    host,
-    now: () => now().toISOString(),
-    drainAfterCreate: backgroundDrainIntervalMs <= 0,
-  });
-  responsesService = createExecutionResponsesService({
-    control,
-    now,
-    generateResponseId: deps.generateResponseId,
-    executionHost: host,
-    drainAfterCreate: false,
-    executeStoredRunStep: deps.executeStoredRunStep,
-  });
-  responseBatchService =
-    deps.responseBatchService ??
-    (deps.createResponseBatchService ?? createResponseBatchService)({
-      responsesService,
-      now,
-      resolveDispatchPool: async (input) =>
-        resolveResponseBatchDispatchPool({
-          ...input,
-          catalog: await agentTeamConfigService.effectiveCatalog(),
-          control,
-        }),
-    });
-
-  if (!deps.executionHost) {
-    await registerLocalRunner();
-    scheduleRunnerHeartbeat();
-  }
-
-  if (recoverRunsOnStart) {
-    const sourceKind = recoverRunsOnStartSourceKind === 'all' ? undefined : recoverRunsOnStartSourceKind;
-    const recoveryResult = await drainThroughServerHost({
-      sourceKind,
-      maxRuns: recoverRunsOnStartMaxRuns,
-      trigger: 'startup-recovery',
-    });
-    const recoverySummary = await host.summarizeRecoveryState({
-      sourceKind,
-    });
-    logger(
-      createStartupRecoveryLog(recoveryResult, {
-        sourceKind: recoverRunsOnStartSourceKind,
-        maxRuns: recoverRunsOnStartMaxRuns,
-        staleHeartbeatInspectOnlyCount:
-          recoverySummary.attention.metrics.staleHeartbeatInspectOnlyCount,
-        suspiciouslyIdleCount: recoverySummary.activeLeaseHealth.metrics.suspiciousIdleCount,
-      }),
-    );
-  }
-  scheduleBackgroundDrain();
-  scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs, 'startup-cadence');
-
-  return {
-    port: address.port,
-    async close() {
-      closed = true;
-      if (runnerHeartbeatTimer) {
-        clearTimeout(runnerHeartbeatTimer);
-        runnerHeartbeatTimer = null;
-      }
-      if (backgroundDrainTimer) {
-        clearTimeout(backgroundDrainTimer);
-        backgroundDrainTimer = null;
-      }
-      if (accountMirrorSchedulerTimer) {
-        clearTimeout(accountMirrorSchedulerTimer);
-        accountMirrorSchedulerTimer = null;
-      }
-      backgroundDrainPaused = false;
-      accountMirrorSchedulerPaused = false;
-      backgroundDrainState.paused = false;
-      backgroundDrainState.state = 'disabled';
-      accountMirrorSchedulerState.paused = false;
-      accountMirrorSchedulerState.state = 'disabled';
-      cancelActiveAccountMirrorCompletions(accountMirrorCompletionService);
-      await host.waitForDrainQueue().catch(() => null);
-      if (!deps.executionHost && runnerState.id) {
-        const staleRunner = await host.markLocalRunnerStale(localRunnerLifecycleOptions).catch((error) => {
-          const message = error instanceof Error ? error.message : String(error);
-          if (message.includes('revision mismatch')) return null;
-          throw error;
-        });
-        if (staleRunner) {
-          updateRunnerState(staleRunner);
-        }
-      }
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-        server.closeIdleConnections();
-      });
-    },
-  };
+	const logger = options.logger ?? (() => {});
+	const control = deps.control ?? createExecutionRuntimeControl();
+	const runnersControl = deps.runnersControl ?? createExecutionRunnerControl();
+	const now = deps.now ?? (() => new Date());
+	const boundHost = options.host ?? "127.0.0.1";
+	const recoverRunsOnStart = options.recoverRunsOnStart ?? false;
+	const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
+	const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? "direct";
+	const accountMirrorProofScope = normalizeAccountMirrorProofScope(options.accountMirrorProofScope);
+	const backgroundDrainIntervalMs = accountMirrorProofScope
+		? 0
+		: Math.max(0, options.backgroundDrainIntervalMs ?? 0);
+	const accountMirrorSchedulerIntervalMs = accountMirrorProofScope
+		? 0
+		: Math.max(0, options.accountMirrorSchedulerIntervalMs ?? 0);
+	const accountMirrorSchedulerDryRun = options.accountMirrorSchedulerDryRun ?? true;
+	const resumeAccountMirrorCompletionsOnStart = accountMirrorProofScope
+		? false
+		: (options.resumeAccountMirrorCompletionsOnStart ?? true);
+	const reconcileAccountMirrorLiveFollowOnStart = accountMirrorProofScope
+		? false
+		: (options.reconcileAccountMirrorLiveFollowOnStart ?? true);
+	const configuredRuntimeConfig = deps.config;
+	const tenantExecutionLimitsStatusCache = new Map<
+		string,
+		{
+			value: TenantExecutionLimitStatusSummary;
+			expiresAtMs: number;
+		}
+	>();
+	const tenantExecutionLimitsStatusRefresh = new Map<
+		string,
+		Promise<TenantExecutionLimitStatusSummary>
+	>();
+	const readTenantExecutionLimitsStatus = async (includeUsage: boolean) => {
+		const cacheKey = includeUsage ? "usage" : "configured";
+		const currentMs = Date.now();
+		const cached = tenantExecutionLimitsStatusCache.get(cacheKey);
+		if (cached && cached.expiresAtMs > currentMs) {
+			return cached.value;
+		}
+		let refresh = tenantExecutionLimitsStatusRefresh.get(cacheKey);
+		if (!refresh) {
+			refresh = summarizeTenantExecutionLimits({
+				control,
+				config: configuredRuntimeConfig,
+				now,
+				includeUsage,
+			}).finally(() => {
+				tenantExecutionLimitsStatusRefresh.delete(cacheKey);
+			});
+			tenantExecutionLimitsStatusRefresh.set(cacheKey, refresh);
+		}
+		const value = await refresh;
+		tenantExecutionLimitsStatusCache.set(cacheKey, {
+			value,
+			expiresAtMs: Date.now() + TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS,
+		});
+		return value;
+	};
+	const apiAuthPolicy = readApiAuthPolicy(configuredRuntimeConfig);
+	const agentTeamConfigService = createAgentTeamConfigService({
+		activeConfig: configuredRuntimeConfig ?? null,
+		registryStore: deps.agentRegistryStore,
+	});
+	const projectEnsureService =
+		deps.projectEnsureService ??
+		(deps.createProjectEnsureService ?? createProjectEnsureService)({
+			config: configuredRuntimeConfig ?? {},
+			configService: agentTeamConfigService,
+		});
+	const agentSetupPackageService =
+		deps.agentSetupPackageService ??
+		createAgentSetupPackageService({
+			projectEnsureService,
+			agentTeamConfigService,
+		});
+	const tenantPoolTeamEnsureService =
+		deps.tenantPoolTeamEnsureService ??
+		createTenantPoolTeamEnsureService({
+			projectEnsureService,
+			agentTeamConfigService,
+		});
+	const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
+	const accountMirrorPersistence = createAccountMirrorPersistence({
+		config: configuredRuntimeConfig,
+	});
+	const accountMirrorStatusRegistry =
+		deps.accountMirrorStatusRegistry ??
+		createAccountMirrorStatusRegistry({
+			config: configuredRuntimeConfig,
+			now,
+			readPersistentState: accountMirrorPersistence.readState,
+		});
+	const accountMirrorRefreshService =
+		deps.accountMirrorRefreshService ??
+		createAccountMirrorRefreshService({
+			config: configuredRuntimeConfig,
+			registry: accountMirrorStatusRegistry,
+			persistence: accountMirrorPersistence,
+			now,
+		});
+	let hasForegroundAuraCallExecutionPressure = () => false;
+	const accountMirrorCatalogService =
+		deps.accountMirrorCatalogService ??
+		createAccountMirrorCatalogService({
+			config: configuredRuntimeConfig,
+			registry: accountMirrorStatusRegistry,
+			persistence: accountMirrorPersistence,
+			now,
+		});
+	const runArchiveService =
+		deps.runArchiveService ??
+		createRunArchiveService({
+			now,
+		});
+	const archiveMaterializationService =
+		deps.archiveMaterializationService ??
+		createArchiveMaterializationService({
+			config: resolvedUserConfig ?? {},
+			runArchiveService,
+			now,
+		});
+	let archiveMaterializationJobService = deps.archiveMaterializationJobService;
+	let historyMaterializationService = deps.historyMaterializationService;
+	let searchProjectionService: SearchProjectionService;
+	const accountMirrorSchedulerService =
+		deps.accountMirrorSchedulerService ??
+		createAccountMirrorSchedulerPassService({
+			registry: accountMirrorStatusRegistry,
+			refreshService: accountMirrorRefreshService,
+			now,
+			shouldYieldToForegroundWork: () =>
+				hasForegroundAuraCallExecutionPressure()
+					? {
+							reason: "foreground-work",
+							message:
+								"Foreground AuraCall API or service work is pending; live follow will retry later.",
+						}
+					: null,
+		});
+	const accountMirrorSchedulerLedger =
+		deps.accountMirrorSchedulerLedger ??
+		createAccountMirrorSchedulerPassLedger({
+			config: configuredRuntimeConfig,
+		});
+	const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
+		config: configuredRuntimeConfig,
+	});
+	const accountMirrorReconciliationCampaignStore = createAccountMirrorReconciliationCampaignStore({
+		config: configuredRuntimeConfig,
+	});
+	const accountMirrorPreviewSessionStore = createAccountMirrorPreviewSessionStore({
+		config: configuredRuntimeConfig,
+	});
+	const initialAccountMirrorCompletions =
+		deps.accountMirrorCompletionService || accountMirrorProofScope
+			? []
+			: await accountMirrorCompletionStore.listOperations({ activeOnly: false, limit: null });
+	const accountMirrorCompletionService =
+		deps.accountMirrorCompletionService ??
+		createAccountMirrorCompletionService({
+			registry: accountMirrorStatusRegistry,
+			refreshService: accountMirrorRefreshService,
+			store: accountMirrorCompletionStore,
+			initialOperations: initialAccountMirrorCompletions,
+			resumeActiveOperations: resumeAccountMirrorCompletionsOnStart,
+			now,
+			historyMaterializationService: {
+				async createJob(request) {
+					if (!historyMaterializationService) {
+						throw new Error("History materialization service is not initialized.");
+					}
+					return historyMaterializationService.createJob(request);
+				},
+				async readJob(id) {
+					return historyMaterializationService ? historyMaterializationService.readJob(id) : null;
+				},
+			},
+			onPersistError: (error, operation) => {
+				logger(
+					`Account mirror completion ${operation.id} persist failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			},
+		});
+	const accountMirrorReconciliationCampaignService =
+		deps.accountMirrorReconciliationCampaignService ??
+		createAccountMirrorReconciliationCampaignService({
+			registry: accountMirrorStatusRegistry,
+			completionService: accountMirrorCompletionService,
+			materializationJobReader: {
+				async readJob(id) {
+					return historyMaterializationService ? historyMaterializationService.readJob(id) : null;
+				},
+			},
+			store: accountMirrorReconciliationCampaignStore,
+			now,
+		});
+	await accountMirrorReconciliationCampaignService.recoverActiveCampaigns?.();
+	const preflightRunner = deps.preflightRunner ?? createLazyLiveFollowPreflightRunner();
+	const scheduleApiServiceRestart =
+		deps.scheduleApiServiceRestart ?? scheduleDefaultUserApiServiceRestart;
+	const reconcileAccountMirrorLiveFollow = async () => {
+		await reconcileConfiguredAccountMirrorLiveFollow({
+			registry: accountMirrorStatusRegistry,
+			completionService: accountMirrorCompletionService,
+		}).catch((error) => {
+			logger(
+				`Account mirror live-follow reconcile failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		});
+	};
+	if (reconcileAccountMirrorLiveFollowOnStart) {
+		await reconcileAccountMirrorLiveFollow();
+	}
+	const workbenchCapabilityService = createWorkbenchCapabilityService({
+		now,
+		catalog: deps.workbenchCapabilityCatalog,
+		discoverCapabilities: deps.discoverWorkbenchCapabilities,
+		diagnoseCapabilities: deps.diagnoseWorkbenchCapabilities,
+	});
+	const probeMediaGenerationBrowserDiagnosticsImpl =
+		deps.probeMediaGenerationBrowserDiagnostics ?? probeMediaGenerationBrowserDiagnostics;
+	const mediaGenerationService = createMediaGenerationService({
+		now,
+		executor:
+			deps.mediaGenerationExecutor ??
+			(resolvedUserConfig ? createBrowserMediaGenerationExecutor(resolvedUserConfig) : undefined),
+		materializer:
+			deps.mediaGenerationMaterializer ??
+			(resolvedUserConfig
+				? createBrowserMediaGenerationMaterializer(resolvedUserConfig)
+				: undefined),
+		capabilityReporter: workbenchCapabilityService,
+		runtimeProfile:
+			typeof resolvedUserConfig?.auracallProfile === "string"
+				? resolvedUserConfig.auracallProfile
+				: null,
+		onGenerationSettled: () => {
+			scheduleAccountMirrorSchedulerFollowUp(0, "media-generation-settled");
+		},
+	});
+	const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
+	const createRunAffinity = configuredRuntimeConfig
+		? (inspection: Parameters<typeof createConfiguredExecutionRunAffinity>[1]) =>
+				createConfiguredExecutionRunAffinity(configuredRuntimeConfig, inspection)
+		: undefined;
+	const runnerHeartbeatIntervalMs = 5_000;
+	const runnerHeartbeatTtlMs = 15_000;
+	let host: ExecutionServiceHost;
+	let responsesService: ReturnType<typeof createExecutionResponsesService>;
+	let responseBatchService: ResponseBatchService;
+	const responseBatchExecutionGate = createResponseBatchExecutionGate({
+		control,
+		now,
+	});
+	const tenantExecutionLimitGate = createTenantExecutionLimitGate({
+		control,
+		config: configuredRuntimeConfig,
+		now,
+	});
+	const executionGate = composeExecutionGates(responseBatchExecutionGate, tenantExecutionLimitGate);
+	let teamRuntimeBridge: TeamRuntimeBridge;
+	const runnerState: HttpStatusResponse["runner"] = {
+		id: null,
+		hostId: null,
+		status: "inactive",
+		lastHeartbeatAt: null,
+		expiresAt: null,
+		lastActivityAt: null,
+		lastClaimedRunId: null,
+	};
+	const backgroundDrainState: HttpStatusResponse["backgroundDrain"] = {
+		enabled: backgroundDrainIntervalMs > 0,
+		intervalMs: backgroundDrainIntervalMs > 0 ? backgroundDrainIntervalMs : null,
+		state: backgroundDrainIntervalMs > 0 ? "idle" : "disabled",
+		paused: false,
+		lastTrigger: null,
+		lastStartedAt: null,
+		lastCompletedAt: null,
+	};
+	const accountMirrorSchedulerState: HttpStatusResponse["accountMirrorScheduler"] = {
+		enabled: accountMirrorSchedulerIntervalMs > 0,
+		dryRun: accountMirrorSchedulerDryRun,
+		intervalMs: accountMirrorSchedulerIntervalMs > 0 ? accountMirrorSchedulerIntervalMs : null,
+		state: accountMirrorSchedulerIntervalMs > 0 ? "idle" : "disabled",
+		paused: false,
+		lastWakeReason: null,
+		lastWakeAt: null,
+		lastStartedAt: null,
+		lastCompletedAt: null,
+		lastPass: null,
+		foregroundWork: {
+			active: false,
+			activeRequestCount: 0,
+			drainReservations: 0,
+			backgroundDrainScheduled: false,
+			backgroundDrainState: backgroundDrainState.state,
+		},
+		operatorStatus: {
+			posture: accountMirrorSchedulerIntervalMs > 0 ? "ready" : "disabled",
+			reason:
+				accountMirrorSchedulerIntervalMs > 0
+					? "account mirror scheduler is enabled and waiting for its first pass"
+					: "account mirror scheduler is disabled; set --account-mirror-scheduler-interval-ms to enable cadence and live-follow wakes",
+			backpressureReason: null,
+		},
+		history: await accountMirrorSchedulerLedger.readHistory().catch((error) => {
+			logger(error instanceof Error ? error.message : String(error));
+			return {
+				object: "account_mirror_scheduler_pass_history",
+				version: 1,
+				updatedAt: null,
+				limit: 50,
+				entries: [],
+			};
+		}),
+	};
+	let backgroundDrainPaused = false;
+	let accountMirrorSchedulerPaused = false;
+	let accountMirrorFollowUpAfterNextDrain = false;
+	let foregroundAuraCallWorkCount = 0;
+	let foregroundAuraCallDrainReservations = 0;
+	let runnerHeartbeatTimer: NodeJS.Timeout | null = null;
+	let closed = false;
+	const beginForegroundAuraCallWork = () => {
+		foregroundAuraCallWorkCount += 1;
+		return () => {
+			foregroundAuraCallWorkCount = Math.max(0, foregroundAuraCallWorkCount - 1);
+		};
+	};
+	archiveMaterializationJobService =
+		archiveMaterializationJobService ??
+		createArchiveMaterializationJobService({
+			materializationService: archiveMaterializationService,
+			now,
+			withForegroundWork: async (work) => {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					return await work();
+				} finally {
+					endForegroundWork();
+				}
+			},
+		});
+	await archiveMaterializationJobService.recoverInterruptedJobs();
+	historyMaterializationService =
+		historyMaterializationService ??
+		createHistoryMaterializationService({
+			config: resolvedUserConfig ?? {},
+			catalogService: accountMirrorCatalogService,
+			runArchiveService,
+			now,
+			withForegroundWork: async (work) => {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					return await work();
+				} finally {
+					endForegroundWork();
+				}
+			},
+		});
+	await historyMaterializationService.recoverInterruptedJobs();
+	searchProjectionService =
+		deps.searchProjectionService ??
+		createSearchProjectionService({
+			accountMirrorCatalogService,
+			runArchiveService,
+			archiveMaterializationJobService,
+			now,
+		});
+	const reserveForegroundAuraCallDrain = () => {
+		foregroundAuraCallDrainReservations += 1;
+		accountMirrorFollowUpAfterNextDrain = true;
+	};
+	const completeForegroundAuraCallDrainReservation = () => {
+		if (foregroundAuraCallDrainReservations > 0) {
+			foregroundAuraCallDrainReservations -= 1;
+		}
+	};
+	hasForegroundAuraCallExecutionPressure = () =>
+		foregroundAuraCallWorkCount > 0 ||
+		foregroundAuraCallDrainReservations > 0 ||
+		backgroundDrainScheduled ||
+		backgroundDrainState.state === "scheduled" ||
+		backgroundDrainState.state === "running";
+	const readForegroundAuraCallWorkStatus = (): AccountMirrorSchedulerForegroundWorkStatus => ({
+		active: hasForegroundAuraCallExecutionPressure(),
+		activeRequestCount: foregroundAuraCallWorkCount,
+		drainReservations: foregroundAuraCallDrainReservations,
+		backgroundDrainScheduled,
+		backgroundDrainState: backgroundDrainState.state,
+	});
+	const drainThroughServerHost = (
+		drainOptions: ServerOwnedDrainOptions & {
+			trigger?: HttpStatusResponse["backgroundDrain"]["lastTrigger"];
+		} = {},
+	) => {
+		if (backgroundDrainState.state !== "disabled") {
+			backgroundDrainState.state = "scheduled";
+		}
+		return host
+			.drainRunsUntilIdleQueued({
+				runId: drainOptions.runId,
+				sourceKind: drainOptions.sourceKind,
+				maxRuns: drainOptions.maxRuns,
+				executionGate,
+				onStart: () => {
+					if (backgroundDrainState.state !== "disabled") {
+						backgroundDrainState.state = "running";
+						backgroundDrainState.lastTrigger = drainOptions.trigger ?? null;
+						backgroundDrainState.lastStartedAt = now().toISOString();
+					}
+				},
+			})
+			.finally(() => {
+				if (backgroundDrainState.state !== "disabled") {
+					backgroundDrainState.state = closed
+						? "disabled"
+						: backgroundDrainPaused
+							? "paused"
+							: "idle";
+					backgroundDrainState.lastCompletedAt = now().toISOString();
+				}
+				completeForegroundAuraCallDrainReservation();
+				if (accountMirrorFollowUpAfterNextDrain && foregroundAuraCallDrainReservations === 0) {
+					accountMirrorFollowUpAfterNextDrain = false;
+					scheduleAccountMirrorSchedulerFollowUp(0, "response-drain-completed");
+				}
+			});
+	};
+	let backgroundDrainTimer: NodeJS.Timeout | null = null;
+	let backgroundDrainScheduled = false;
+	const scheduleBackgroundDrain = (delayMs = backgroundDrainIntervalMs) => {
+		if (
+			closed ||
+			backgroundDrainIntervalMs <= 0 ||
+			backgroundDrainPaused ||
+			backgroundDrainScheduled
+		) {
+			if (closed || backgroundDrainIntervalMs <= 0 || backgroundDrainPaused) {
+				return;
+			}
+			if (backgroundDrainScheduled && delayMs === 0 && backgroundDrainTimer) {
+				clearTimeout(backgroundDrainTimer);
+				backgroundDrainTimer = null;
+				backgroundDrainScheduled = false;
+			} else {
+				return;
+			}
+		}
+		backgroundDrainScheduled = true;
+		backgroundDrainTimer = setTimeout(async () => {
+			backgroundDrainScheduled = false;
+			backgroundDrainTimer = null;
+			if (closed) {
+				return;
+			}
+			await drainThroughServerHost({
+				maxRuns: 1,
+				trigger: "background-timer",
+			}).catch((error) => {
+				logger(error instanceof Error ? error.message : String(error));
+				return null;
+			});
+			scheduleBackgroundDrain(backgroundDrainIntervalMs);
+		}, delayMs);
+	};
+	let accountMirrorSchedulerTimer: NodeJS.Timeout | null = null;
+	let accountMirrorSchedulerScheduled = false;
+	const runAccountMirrorSchedulerPass = async (input: {
+		dryRun: boolean;
+		wakeReason: AccountMirrorSchedulerWakeReason;
+	}) => {
+		if (accountMirrorSchedulerState.state === "running") {
+			return false;
+		}
+		const wakeAt = now().toISOString();
+		accountMirrorSchedulerState.state = "running";
+		accountMirrorSchedulerState.lastWakeReason = input.wakeReason;
+		accountMirrorSchedulerState.lastWakeAt = wakeAt;
+		accountMirrorSchedulerState.lastStartedAt = wakeAt;
+		try {
+			accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
+				dryRun: input.dryRun,
+			});
+			accountMirrorSchedulerState.history = await accountMirrorSchedulerLedger
+				.appendPass(accountMirrorSchedulerState.lastPass)
+				.catch((error) => {
+					logger(error instanceof Error ? error.message : String(error));
+					return accountMirrorSchedulerState.history;
+				});
+			await reconcileAccountMirrorLiveFollow();
+		} catch (error) {
+			logger(error instanceof Error ? error.message : String(error));
+		} finally {
+			accountMirrorSchedulerState.lastCompletedAt = now().toISOString();
+			accountMirrorSchedulerState.state = closed
+				? "disabled"
+				: accountMirrorSchedulerPaused
+					? "paused"
+					: accountMirrorSchedulerIntervalMs > 0
+						? accountMirrorSchedulerScheduled
+							? "scheduled"
+							: "idle"
+						: "disabled";
+		}
+		return true;
+	};
+	const scheduleAccountMirrorScheduler = (
+		delayMs = accountMirrorSchedulerIntervalMs,
+		wakeReason: AccountMirrorSchedulerWakeReason = "cadence",
+	) => {
+		if (
+			closed ||
+			accountMirrorSchedulerIntervalMs <= 0 ||
+			accountMirrorSchedulerPaused ||
+			accountMirrorSchedulerScheduled ||
+			accountMirrorSchedulerState.state === "running"
+		) {
+			return;
+		}
+		accountMirrorSchedulerScheduled = true;
+		accountMirrorSchedulerState.state = "scheduled";
+		accountMirrorSchedulerTimer = setTimeout(async () => {
+			accountMirrorSchedulerScheduled = false;
+			accountMirrorSchedulerTimer = null;
+			if (closed) {
+				return;
+			}
+			await runAccountMirrorSchedulerPass({
+				dryRun: accountMirrorSchedulerDryRun,
+				wakeReason,
+			});
+			scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs, "cadence");
+		}, delayMs);
+	};
+	const scheduleAccountMirrorSchedulerFollowUp = (
+		delayMs = 0,
+		wakeReason: AccountMirrorSchedulerWakeReason,
+	) => {
+		if (
+			closed ||
+			accountMirrorSchedulerIntervalMs <= 0 ||
+			accountMirrorSchedulerPaused ||
+			accountMirrorSchedulerState.state === "running"
+		) {
+			return;
+		}
+		if (accountMirrorSchedulerScheduled && accountMirrorSchedulerTimer) {
+			clearTimeout(accountMirrorSchedulerTimer);
+			accountMirrorSchedulerTimer = null;
+			accountMirrorSchedulerScheduled = false;
+		}
+		scheduleAccountMirrorScheduler(delayMs, wakeReason);
+	};
+	const operatorDashboardRoutes = resolveOperatorDashboardRoutes(options.serviceRouting);
+	const server = http.createServer();
+
+	server.on("request", async (req, res) => {
+		try {
+			const url = new URL(req.url ?? "/", "http://127.0.0.1");
+			const apiAuthContext = authorizeApiRequest(
+				req,
+				apiAuthPolicy,
+				url.pathname,
+				operatorDashboardRoutes,
+			);
+			if (!apiAuthContext) {
+				sendJson(res, 401, {
+					error: {
+						message: "Missing or invalid AuraCall API key.",
+						type: "authentication_error",
+					},
+				} satisfies HttpErrorPayload);
+				return;
+			}
+
+			if (
+				(req.method === "GET" || req.method === "HEAD") &&
+				(await maybeSendOperatorUxAsset(
+					res,
+					url.pathname,
+					operatorDashboardRoutes,
+					req.method === "HEAD",
+				))
+			) {
+				return;
+			}
+
+			if (
+				(req.method === "GET" || req.method === "HEAD") &&
+				matchesRoutePath(url.pathname, operatorDashboardRoutes.debugDashboardPath, "/ops/browser")
+			) {
+				sendHtml(
+					res,
+					200,
+					createOperatorBrowserDashboardHtml({
+						activePage: "browser",
+						routes: operatorDashboardRoutes,
+					}),
+				);
+				return;
+			}
+
+			if (
+				req.method === "GET" &&
+				matchesRoutePath(url.pathname, operatorDashboardRoutes.accountMirrorPath, "/account-mirror")
+			) {
+				sendHtml(
+					res,
+					200,
+					createOperatorBrowserDashboardHtml({
+						activePage: "account-mirror",
+						routes: operatorDashboardRoutes,
+					}),
+				);
+				return;
+			}
+
+			if (
+				req.method === "GET" &&
+				matchesRoutePath(
+					url.pathname,
+					operatorDashboardRoutes.previewSessionPath,
+					"/account-mirror/preview-session",
+				)
+			) {
+				sendHtml(
+					res,
+					200,
+					createOperatorBrowserDashboardHtml({
+						activePage: "preview-session",
+						routes: operatorDashboardRoutes,
+					}),
+				);
+				return;
+			}
+
+			if (
+				req.method === "GET" &&
+				matchesRoutePath(url.pathname, operatorDashboardRoutes.configPath, "/config")
+			) {
+				sendHtml(
+					res,
+					200,
+					createOperatorBrowserDashboardHtml({
+						activePage: "config",
+						routes: operatorDashboardRoutes,
+					}),
+				);
+				return;
+			}
+
+			if (
+				req.method === "GET" &&
+				matchesRoutePath(url.pathname, operatorDashboardRoutes.agentsPath, "/agents")
+			) {
+				sendHtml(
+					res,
+					200,
+					createOperatorBrowserDashboardHtml({
+						activePage: "agents",
+						routes: operatorDashboardRoutes,
+					}),
+				);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/status") {
+				const statusQuery = parseStatusQuery(url.searchParams);
+				await accountMirrorStatusRegistry.refreshPersistentState?.();
+				await syncRunnerStateFromStore();
+				const address = server.address();
+				const boundPort =
+					address && typeof address !== "string" ? address.port : (options.port ?? 0);
+				const statusSourceKind =
+					statusQuery.sourceKindSummary === "all"
+						? undefined
+						: (statusQuery.sourceKindSummary ?? "direct");
+				const statusResponseRecoverySummary = statusQuery.recovery
+					? await host.summarizeRecoveryState({
+							sourceKind: statusSourceKind,
+						})
+					: undefined;
+				const statusResponseLocalClaimSummary = await host.summarizeLocalClaimState({
+					sourceKind: "direct",
+				});
+				const runnerTopology = compactRunnerTopologyForStatus(
+					await host.summarizeRunnerTopology(),
+					statusQuery.runnerTopologyMode,
+				);
+				const accountMirrorStatus = accountMirrorStatusRegistry.readStatus();
+				const statusResponseAccountMirrorStatus = scopeAccountMirrorStatusForProofScope(
+					accountMirrorStatus,
+					accountMirrorProofScope,
+				);
+				const statusResponse = await createHttpStatusResponse({
+					host: boundHost,
+					port: boundPort,
+					dashboardUrl: options.dashboardUrl,
+					publicDashboardUrl: options.publicDashboardUrl,
+					serviceRouting: options.serviceRouting,
+					recoverySummary: statusResponseRecoverySummary,
+					localClaimSummary: statusResponseLocalClaimSummary,
+					runnerTopology,
+					runner: runnerState,
+					backgroundDrain: backgroundDrainState,
+					tenantExecutionLimits: await readTenantExecutionLimitsStatus(
+						statusQuery.tenantExecutionLimitsMode === "usage",
+					),
+					accountMirrorScheduler: accountMirrorSchedulerState,
+					accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
+					accountMirrorStatus: statusResponseAccountMirrorStatus,
+					accountMirrorCompletions: await createAccountMirrorCompletionStatusSummary(
+						accountMirrorCompletionService,
+						now,
+					),
+					accountMirrorProofScope: createAccountMirrorProofScopeStatus(
+						accountMirrorProofScope,
+						accountMirrorStatus,
+						{
+							resumeAccountMirrorCompletionsOnStart,
+							reconcileAccountMirrorLiveFollowOnStart,
+							accountMirrorSchedulerIntervalMs,
+							backgroundDrainIntervalMs,
+						},
+					),
+					preflight: await readPreflightStatusSummary(preflightRunner),
+					auth: apiAuthPolicy,
+				});
+				sendJson(res, 200, statusResponse);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/api/logs/tail") {
+				const address = server.address();
+				const boundPort =
+					address && typeof address !== "string" ? address.port : (options.port ?? 0);
+				const query = parseApiLogTailQuery(url.searchParams);
+				sendJson(res, 200, await readApiLogTail({ port: boundPort, maxBytes: query.maxBytes }));
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/browser/processes") {
+				await accountMirrorStatusRegistry.refreshPersistentState?.();
+				sendJson(
+					res,
+					200,
+					await readBrowserProcessStatus({
+						status: accountMirrorStatusRegistry.readStatus(),
+						now,
+					}),
+				);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/browser/dom-drift-observations") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(
+					res,
+					200,
+					await listDomDriftObservations(parseDomDriftObservationQuery(url.searchParams)),
+				);
+				return;
+			}
+
+			const domDriftAcceptId = matchDomDriftObservationAcceptRoute(url.pathname);
+			if (req.method === "POST" && domDriftAcceptId) {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const result = await acceptDomDriftObservation(domDriftAcceptId);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `DOM drift observation ${domDriftAcceptId} was not found.`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, result);
+				return;
+			}
+
+			const preflightRunLogId = matchPreflightRunLogRoute(url.pathname);
+			if (req.method === "GET" && preflightRunLogId) {
+				const query = parseApiLogTailQuery(url.searchParams);
+				const payload = await readLazyLiveFollowPreflightRunLogTail({
+					id: preflightRunLogId,
+					maxBytes: query.maxBytes,
+					runner: preflightRunner,
+				});
+				if (!payload) {
+					sendJson(res, 404, {
+						error: {
+							message: `Lazy live-follow preflight run ${preflightRunLogId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, payload);
+				return;
+			}
+
+			const preflightRunId = matchPreflightRunRoute(url.pathname);
+			if (req.method === "GET" && preflightRunId) {
+				const run = await readLazyLiveFollowPreflightRun(preflightRunId, preflightRunner);
+				if (!run) {
+					sendJson(res, 404, {
+						error: {
+							message: `Lazy live-follow preflight run ${preflightRunId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, run);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/status") {
+				const query = parseAccountMirrorStatusQuery(url.searchParams);
+				await accountMirrorStatusRegistry.refreshPersistentState?.();
+				sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/catalog") {
+				const query = parseAccountMirrorCatalogQuery(url.searchParams);
+				const result: HttpAccountMirrorCatalogResponse =
+					await accountMirrorCatalogService.readCatalog(query);
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "GET" && isAccountMirrorCatalogItemAssetRoute(url.pathname)) {
+				const query = parseAccountMirrorCatalogItemAssetQuery(url.pathname, url.searchParams);
+				const result: HttpAccountMirrorCatalogItemResponse | null =
+					await accountMirrorCatalogService.readItem(query);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror catalog item ${query.itemId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				const asset = await resolveCachedCatalogItemAsset(result, configuredRuntimeConfig);
+				if (!asset) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror catalog item ${query.itemId} has no cache-owned local asset.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendCachedAsset(res, asset);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname.startsWith("/v1/account-mirrors/catalog/items/")) {
+				const query = parseAccountMirrorCatalogItemQuery(url.pathname, url.searchParams);
+				const result: HttpAccountMirrorCatalogItemResponse | null =
+					await accountMirrorCatalogService.readItem(query);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror catalog item ${query.itemId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/archive") {
+				const query = parseRunArchiveQuery(url.searchParams);
+				const result: HttpRunArchiveResponse = await runArchiveService.listItems(query);
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/search") {
+				const query = parseSearchProjectionQuery(url.searchParams);
+				const result: SearchProjectionResult = await searchProjectionService.search(query);
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/archive/assets/lookup") {
+				const query = parseRunArchiveAssetLookupQuery(url.searchParams);
+				const result: HttpRunArchiveAssetLookupResponse =
+					await runArchiveService.lookupAsset(query);
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/archive/backfill") {
+				const result = await runArchiveService.backfillIndex();
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/archive/evidence") {
+				const body = await readRequestBody(req);
+				const payload = parseRunArchiveEvidenceCreateBody(JSON.parse(body || "{}"));
+				const result: HttpRunArchiveEvidenceResponse =
+					await runArchiveService.attachEvidence(payload);
+				sendJson(res, 201, result);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/archive/materializations") {
+				try {
+					const body = await readRequestBody(req);
+					const payload = parseRunArchiveMaterializationCreateBody(JSON.parse(body || "{}"));
+					const result: ArchiveMaterializationJobCreateResult =
+						await archiveMaterializationJobService.createJob(payload);
+					sendJson(res, 202, result);
+					return;
+				} catch (error) {
+					if (error instanceof ArchiveMaterializationError) {
+						sendJson(res, error.statusCode, {
+							error: {
+								message: error.message,
+								type: error.statusCode === 404 ? "not_found_error" : "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				}
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/archive/materializations") {
+				const query = parseRunArchiveMaterializationJobListQuery(url.searchParams);
+				const result: ArchiveMaterializationJobListResult =
+					await archiveMaterializationJobService.listJobs(query);
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/account-mirrors/materializations") {
+				try {
+					const body = await readRequestBody(req);
+					const payload = parseHistoryMaterializationCreateBody(JSON.parse(body || "{}"));
+					const result: HistoryMaterializationJobCreateResult =
+						await historyMaterializationService.createJob(payload);
+					sendJson(res, 202, result);
+					return;
+				} catch (error) {
+					if (error instanceof HistoryMaterializationError) {
+						sendJson(res, error.statusCode, {
+							error: {
+								message: error.message,
+								type: error.statusCode === 404 ? "not_found_error" : "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				}
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/materializations") {
+				const query = parseHistoryMaterializationJobListQuery(url.searchParams);
+				const result: HistoryMaterializationJobListResult =
+					await historyMaterializationService.listJobs(query);
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "GET" && isHistoryMaterializationJobRoute(url.pathname)) {
+				const jobId = parseHistoryMaterializationJobId(url.pathname);
+				const result = await historyMaterializationService.readJob(jobId);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `History materialization job ${jobId} was not found.`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "POST" && isHistoryMaterializationJobRoute(url.pathname)) {
+				try {
+					const jobId = parseHistoryMaterializationJobId(url.pathname);
+					const body = await readRequestBody(req);
+					const payload = parseHistoryMaterializationJobControlBody(JSON.parse(body || "{}"));
+					if (payload.action !== "cancel") {
+						throw new HistoryMaterializationJobControlError(
+							`Unsupported history materialization job action ${payload.action}.`,
+						);
+					}
+					const result = await historyMaterializationService.cancelJob(jobId);
+					sendJson(res, 200, result);
+					return;
+				} catch (error) {
+					if (error instanceof HistoryMaterializationJobControlError) {
+						sendJson(res, error.statusCode, {
+							error: {
+								message: error.message,
+								type: error.type,
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				}
+			}
+
+			if (req.method === "GET" && isRunArchiveMaterializationJobRoute(url.pathname)) {
+				const jobId = parseRunArchiveMaterializationJobId(url.pathname);
+				const result = await archiveMaterializationJobService.readJob(jobId);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Archive materialization job ${jobId} was not found.`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "POST" && isRunArchiveMaterializationJobRoute(url.pathname)) {
+				try {
+					const jobId = parseRunArchiveMaterializationJobId(url.pathname);
+					const body = await readRequestBody(req);
+					const payload = parseRunArchiveMaterializationJobControlBody(JSON.parse(body || "{}"));
+					if (payload.action !== "cancel") {
+						throw new ArchiveMaterializationJobControlError(
+							`Unsupported archive materialization job action ${payload.action}.`,
+						);
+					}
+					const result = await archiveMaterializationJobService.cancelJob(jobId);
+					sendJson(res, 200, result);
+					return;
+				} catch (error) {
+					if (error instanceof ArchiveMaterializationJobControlError) {
+						sendJson(res, error.statusCode, {
+							error: {
+								message: error.message,
+								type: error.type,
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				}
+			}
+
+			if (req.method === "POST" && isRunArchiveItemMaterializeRoute(url.pathname)) {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const itemId = parseRunArchiveItemMaterializeId(url.pathname);
+					const body = await readRequestBody(req);
+					const payload = parseRunArchiveItemMaterializeBody(JSON.parse(body || "{}"));
+					const result: ArchiveItemMaterializationResult =
+						await archiveMaterializationService.materializeItem({
+							archiveItemId: itemId,
+							force: payload.force,
+						});
+					sendJson(
+						res,
+						result.status === "materialized" || result.status === "already_materialized"
+							? 200
+							: 202,
+						result,
+					);
+					return;
+				} catch (error) {
+					if (error instanceof ArchiveMaterializationError) {
+						sendJson(res, error.statusCode, {
+							error: {
+								message: error.message,
+								type: error.statusCode === 404 ? "not_found_error" : "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					if (isProviderAuthPreflightError(error)) {
+						sendJson(res, 409, {
+							error: {
+								message:
+									error instanceof Error
+										? error.message
+										: "Provider browser auth preflight failed.",
+								type: "provider_auth_conflict",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "GET" && isRunArchiveItemAssetRoute(url.pathname)) {
+				const itemId = parseRunArchiveItemAssetId(url.pathname);
+				const result: HttpRunArchiveAssetResponse | null =
+					await runArchiveService.readAsset(itemId);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Run archive item ${itemId} has no readable local asset.`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendCachedAsset(res, {
+					path: result.path,
+					mimeType: result.mimeType,
+					size: result.size,
+					fileName: result.fileName,
+				});
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname.startsWith("/v1/archive/items/")) {
+				const itemId = parseRunArchiveItemId(url.pathname);
+				const result: HttpRunArchiveItemResponse | null = await runArchiveService.readItem(itemId);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Run archive item ${itemId} was not found.`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/scheduler/history") {
+				const limit = parsePositiveIntegerQuery(url.searchParams.get("limit"));
+				const history = await accountMirrorSchedulerLedger.readHistory();
+				accountMirrorSchedulerState.history = history;
+				sendJson(
+					res,
+					200,
+					summarizeAccountMirrorSchedulerHistory(history, {
+						limit,
+					}) satisfies HttpAccountMirrorSchedulerHistoryResponse,
+				);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/scheduler/diagnostics") {
+				const query = parseAccountMirrorSchedulerDiagnosticsQuery(url.searchParams);
+				const result = createAccountMirrorSchedulerDiagnosticsBundle({
+					query,
+					scheduler: accountMirrorSchedulerState,
+					status: accountMirrorStatusRegistry.readStatus(),
+					completions: await createAccountMirrorCompletionStatusSummary(
+						accountMirrorCompletionService,
+						now,
+					),
+					readCompletion: (id) => accountMirrorCompletionService.read(id),
+					readBrowserMutations: (provider, runtimeProfileId) => {
+						if (provider !== "chatgpt" && provider !== "gemini" && provider !== "grok") {
+							return null;
+						}
+						const browserConfig = resolvedUserConfig;
+						if (!browserConfig) {
+							return null;
+						}
+						if (
+							runtimeProfileId &&
+							browserConfig.auracallProfile &&
+							runtimeProfileId !== browserConfig.auracallProfile
+						) {
+							return null;
+						}
+						const items = BrowserService.fromConfig(
+							browserConfig,
+							provider,
+						).listRecentBrowserMutations(50);
+						return summarizeAccountMirrorDiagnosticsBrowserMutations(items);
+					},
+					now,
+				});
+				if (!result.ok) {
+					sendJson(res, result.status, {
+						error: {
+							message: result.message,
+							type: result.type,
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, result.bundle);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/account-mirrors/preview-sessions") {
+				const body = await readRequestBody(req);
+				const payload = JSON.parse(body || "{}") as {
+					id?: unknown;
+					name?: unknown;
+					manifest?: unknown;
+				};
+				try {
+					const record = await accountMirrorPreviewSessionStore.writeSession({
+						id: typeof payload.id === "string" ? payload.id : null,
+						name: typeof payload.name === "string" ? payload.name : null,
+						manifest: payload.manifest,
+						now: now().toISOString(),
+					});
+					sendJson(res, 201, record);
+					return;
+				} catch (error) {
+					sendJson(res, 400, {
+						error: {
+							message: error instanceof Error ? error.message : "Invalid preview session manifest.",
+							type: "invalid_request_error",
+						},
+					});
+					return;
+				}
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/preview-sessions") {
+				const limit = parsePositiveIntegerQuery(url.searchParams.get("limit"));
+				const records = await accountMirrorPreviewSessionStore.listSessions({ limit });
+				sendJson(res, 200, {
+					object: "list",
+					data: records,
+					count: records.length,
+				});
+				return;
+			}
+
+			const accountMirrorPreviewSessionId = matchAccountMirrorPreviewSessionRoute(url.pathname);
+			if (req.method === "GET" && accountMirrorPreviewSessionId) {
+				const record = await accountMirrorPreviewSessionStore.readSession(
+					accountMirrorPreviewSessionId,
+				);
+				if (!record) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, record);
+				return;
+			}
+
+			if (req.method === "PATCH" && accountMirrorPreviewSessionId) {
+				const body = await readRequestBody(req);
+				const payload = JSON.parse(body || "{}") as {
+					name?: unknown;
+				};
+				try {
+					const record = await accountMirrorPreviewSessionStore.renameSession({
+						id: accountMirrorPreviewSessionId,
+						name: typeof payload.name === "string" ? payload.name : null,
+						now: now().toISOString(),
+					});
+					if (!record) {
+						sendJson(res, 404, {
+							error: {
+								message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
+								type: "not_found_error",
+							},
+						});
+						return;
+					}
+					sendJson(res, 200, record);
+					return;
+				} catch (error) {
+					sendJson(res, 400, {
+						error: {
+							message:
+								error instanceof Error ? error.message : "Invalid preview session rename request.",
+							type: "invalid_request_error",
+						},
+					});
+					return;
+				}
+			}
+
+			if (req.method === "DELETE" && accountMirrorPreviewSessionId) {
+				const deleted = await accountMirrorPreviewSessionStore.deleteSession(
+					accountMirrorPreviewSessionId,
+				);
+				if (!deleted) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, {
+					object: "account_mirror_preview_session.deleted",
+					id: accountMirrorPreviewSessionId,
+					deleted: true,
+				});
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/account-mirrors/reconciliations") {
+				const body = await readRequestBody(req);
+				const payload = ACCOUNT_MIRROR_RECONCILIATION_REQUEST_SCHEMA.parse(
+					JSON.parse(body || "{}"),
+				);
+				try {
+					const result = await accountMirrorReconciliationCampaignService.create({
+						provider: payload.provider,
+						runtimeProfileId: payload.runtimeProfile,
+						identity: payload.identity,
+						includeDisabled: payload.includeDisabled ?? payload.include_disabled,
+						maxTargets: payload.maxTargets ?? payload.max_targets,
+						maxActiveTargets: payload.maxActiveTargets ?? payload.max_active_targets,
+						materializationPolicy: payload.materializationPolicy ?? payload.materialization_policy,
+						materializationAssetKinds:
+							payload.materializationAssetKinds ?? payload.materialization_asset_kinds,
+						materializationMaxItems:
+							payload.materializationMaxItems ?? payload.materialization_max_items,
+						dryRun: payload.dryRun ?? payload.dry_run,
+					});
+					sendJson(res, 202, result satisfies HttpAccountMirrorReconciliationResponse);
+					return;
+				} catch (error) {
+					if (error instanceof AccountMirrorReconciliationError) {
+						sendJson(res, 409, {
+							error: {
+								message: error.message,
+								type: "invalid_request_error",
+								code: error.code,
+							},
+						});
+						return;
+					}
+					throw error;
+				}
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/reconciliations") {
+				const query = parseAccountMirrorReconciliationListQuery(url.searchParams);
+				const data = await accountMirrorReconciliationCampaignService.list(query);
+				sendJson(res, 200, {
+					object: "list",
+					data,
+					count: data.length,
+				} satisfies HttpAccountMirrorReconciliationListResponse);
+				return;
+			}
+
+			const accountMirrorReconciliationId = matchAccountMirrorReconciliationRoute(url.pathname);
+			if (req.method === "GET" && accountMirrorReconciliationId) {
+				const result = await accountMirrorReconciliationCampaignService.read(
+					accountMirrorReconciliationId,
+				);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror reconciliation campaign ${accountMirrorReconciliationId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, result satisfies HttpAccountMirrorReconciliationResponse);
+				return;
+			}
+
+			if (req.method === "POST" && accountMirrorReconciliationId) {
+				const body = await readRequestBody(req);
+				const payload = ACCOUNT_MIRROR_RECONCILIATION_CONTROL_REQUEST_SCHEMA.parse(
+					JSON.parse(body || "{}"),
+				);
+				const result = await accountMirrorReconciliationCampaignService.control({
+					id: accountMirrorReconciliationId,
+					action: payload.action,
+				});
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror reconciliation campaign ${accountMirrorReconciliationId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, result satisfies HttpAccountMirrorReconciliationResponse);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/account-mirrors/completions") {
+				const body = await readRequestBody(req);
+				const payload = ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA.parse(JSON.parse(body || "{}"));
+				const result = accountMirrorCompletionService.start({
+					provider: payload.provider,
+					runtimeProfileId: payload.runtimeProfile,
+					maxPasses: payload.maxPasses,
+					sweepMode: payload.sweepMode ?? payload.sweep_mode,
+					materializationPolicy: payload.materializationPolicy ?? payload.materialization_policy,
+					materializationAssetKinds:
+						payload.materializationAssetKinds ?? payload.materialization_asset_kinds,
+					materializationMaxItems:
+						payload.materializationMaxItems ?? payload.materialization_max_items,
+					materializationRefreshSnapshot:
+						payload.materializationRefreshSnapshot ?? payload.materialization_refresh_snapshot,
+					materializationForce: payload.materializationForce ?? payload.materialization_force,
+				});
+				sendJson(res, 202, result satisfies HttpAccountMirrorCompletionResponse);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/completions") {
+				const query = parseAccountMirrorCompletionListQuery(url.searchParams);
+				const listed = accountMirrorCompletionService.list(query);
+				const data = accountMirrorCompletionService.refreshMaterializationStatuses
+					? await accountMirrorCompletionService.refreshMaterializationStatuses(listed)
+					: listed;
+				sendJson(res, 200, {
+					object: "list",
+					data,
+					count: data.length,
+				} satisfies HttpAccountMirrorCompletionListResponse);
+				return;
+			}
+
+			const accountMirrorCompletionId = matchAccountMirrorCompletionRoute(url.pathname);
+			if (req.method === "GET" && accountMirrorCompletionId) {
+				const result = accountMirrorCompletionService.refreshMaterializationStatus
+					? await accountMirrorCompletionService.refreshMaterializationStatus(
+							accountMirrorCompletionId,
+						)
+					: accountMirrorCompletionService.read(accountMirrorCompletionId);
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror completion ${accountMirrorCompletionId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, result satisfies HttpAccountMirrorCompletionResponse);
+				return;
+			}
+
+			if (req.method === "POST" && accountMirrorCompletionId) {
+				const body = await readRequestBody(req);
+				const payload = ACCOUNT_MIRROR_COMPLETION_CONTROL_REQUEST_SCHEMA.parse(
+					JSON.parse(body || "{}"),
+				);
+				const result = accountMirrorCompletionService.control({
+					id: accountMirrorCompletionId,
+					action: payload.action,
+				});
+				if (!result) {
+					sendJson(res, 404, {
+						error: {
+							message: `Account mirror completion ${accountMirrorCompletionId} was not found.`,
+							type: "not_found_error",
+						},
+					});
+					return;
+				}
+				sendJson(res, 200, result satisfies HttpAccountMirrorCompletionResponse);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/account-mirrors/refresh") {
+				const body = await readRequestBody(req);
+				const payload = ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA.parse(JSON.parse(body || "{}"));
+				try {
+					const result = await accountMirrorRefreshService.requestRefresh({
+						provider: payload.provider,
+						runtimeProfileId: payload.runtimeProfile,
+						explicitRefresh: payload.explicitRefresh,
+						queueTimeoutMs: payload.queueTimeoutMs,
+						queuePollMs: payload.queuePollMs,
+					});
+					sendJson(res, 202, result satisfies HttpAccountMirrorRefreshResponse);
+					return;
+				} catch (error) {
+					if (error instanceof AccountMirrorRefreshError) {
+						sendJson(res, error.statusCode, {
+							error: {
+								message: error.message,
+								type: error.statusCode === 404 ? "not_found_error" : "invalid_request_error",
+								code: error.code,
+								details: error.details,
+							},
+						});
+						return;
+					}
+					throw error;
+				}
+			}
+
+			const recoveryDetailRunId = matchStatusRecoveryDetailRoute(url.pathname);
+			if (req.method === "GET" && recoveryDetailRunId) {
+				const detail = await host.readRecoveryDetail(recoveryDetailRunId);
+				if (!detail) {
+					sendJson(res, 404, {
+						error: {
+							message: `Recovery detail for run ${recoveryDetailRunId} was not found`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, {
+					object: "recovery_detail",
+					detail,
+				} satisfies HttpRecoveryDetailResponse);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/team-runs/inspect") {
+				try {
+					const inspection = await inspectTeamRunLinkage({
+						taskRunSpecId: url.searchParams.get("taskRunSpecId"),
+						teamRunId: url.searchParams.get("teamRunId"),
+						runtimeRunId: url.searchParams.get("runtimeRunId"),
+						control,
+					});
+					sendJson(res, 200, {
+						object: "team_run_inspection",
+						inspection,
+					} satisfies HttpTeamRunInspectionResponse);
+					return;
+				} catch (error) {
+					if (error instanceof TeamRunInspectionError) {
+						sendJson(res, error.status === "not-found" ? 404 : 400, {
+							error: {
+								message: error.message,
+								type: error.status === "not-found" ? "not_found_error" : "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				}
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/runtime-runs/recent") {
+				const query = parseRuntimeRunListQuery(url.searchParams);
+				const records = await control.listRuns(query);
+				const data = records.map(summarizeExecutionRunListItem);
+				sendJson(res, 200, {
+					object: "list",
+					data,
+					count: data.length,
+				} satisfies HttpRuntimeRunListResponse);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/runtime-runs/inspect") {
+				try {
+					const runtimeInspectQuery = parseRuntimeInspectionQuery(url.searchParams);
+					const inspection = await inspectRuntimeRun({
+						runId: url.searchParams.get("runId"),
+						runtimeRunId: url.searchParams.get("runtimeRunId"),
+						teamRunId: url.searchParams.get("teamRunId"),
+						taskRunSpecId: url.searchParams.get("taskRunSpecId"),
+						runnerId: url.searchParams.get("runnerId"),
+						includeServiceState: runtimeInspectQuery.probe === "service-state",
+						includeBrowserDiagnostics: runtimeInspectQuery.diagnostics === "browser-state",
+						includeSchedulerAuthority: runtimeInspectQuery.authority === "scheduler",
+						schedulerAuthorityLocalRunnerId: url.searchParams.get("runnerId") ?? runnerState.id,
+						probeServiceState: deps.probeRuntimeRunServiceState,
+						probeBrowserDiagnostics: deps.probeRuntimeRunBrowserDiagnostics,
+						control,
+						runnersControl,
+						createRunAffinity,
+					});
+					sendJson(res, 200, {
+						object: "runtime_run_inspection",
+						inspection,
+					} satisfies HttpRuntimeRunInspectionResponse);
+					return;
+				} catch (error) {
+					if (error instanceof RuntimeRunInspectionError) {
+						sendJson(res, error.status === "not-found" ? 404 : 400, {
+							error: {
+								message: error.message,
+								type: error.status === "not-found" ? "not_found_error" : "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/status") {
+				const body = await readRequestBody(req);
+				const payload = STATUS_CONTROL_REQUEST_SCHEMA.parse(JSON.parse(body || "{}"));
+				let controlResult: HttpStatusResponse["controlResult"];
+				if ("backgroundDrain" in payload) {
+					const action = payload.backgroundDrain.action;
+					if (backgroundDrainIntervalMs <= 0) {
+						sendJson(res, 409, {
+							error: {
+								message: "background drain is not enabled for this server",
+								type: "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					if (action === "pause") {
+						backgroundDrainPaused = true;
+						backgroundDrainState.paused = true;
+						if (backgroundDrainTimer) {
+							clearTimeout(backgroundDrainTimer);
+							backgroundDrainTimer = null;
+						}
+						backgroundDrainScheduled = false;
+						if (backgroundDrainState.state !== "running") {
+							backgroundDrainState.state = "paused";
+						}
+					} else {
+						backgroundDrainPaused = false;
+						backgroundDrainState.paused = false;
+						if (backgroundDrainState.state !== "running") {
+							backgroundDrainState.state = "idle";
+						}
+						scheduleBackgroundDrain(0);
+					}
+					controlResult = {
+						kind: "background-drain",
+						action,
+					};
+				} else if ("accountMirrorScheduler" in payload) {
+					const action = payload.accountMirrorScheduler.action;
+					if (action === "pause" || action === "resume") {
+						if (accountMirrorSchedulerIntervalMs <= 0) {
+							sendJson(res, 409, {
+								error: {
+									message: "account mirror scheduler is not enabled for this server",
+									type: "invalid_request_error",
+								},
+							} satisfies HttpErrorPayload);
+							return;
+						}
+						if (action === "pause") {
+							accountMirrorSchedulerPaused = true;
+							accountMirrorSchedulerState.paused = true;
+							if (accountMirrorSchedulerTimer) {
+								clearTimeout(accountMirrorSchedulerTimer);
+								accountMirrorSchedulerTimer = null;
+							}
+							accountMirrorSchedulerScheduled = false;
+							if (accountMirrorSchedulerState.state !== "running") {
+								accountMirrorSchedulerState.state = "paused";
+							}
+						} else {
+							accountMirrorSchedulerPaused = false;
+							accountMirrorSchedulerState.paused = false;
+							if (accountMirrorSchedulerState.state !== "running") {
+								accountMirrorSchedulerState.state = "idle";
+							}
+							scheduleAccountMirrorScheduler(0, "operator-resume");
+						}
+						controlResult = {
+							kind: "account-mirror-scheduler",
+							action,
+							dryRun: accountMirrorSchedulerDryRun,
+						};
+					} else {
+						const requestedDryRun = payload.accountMirrorScheduler.dryRun ?? true;
+						const dryRun = accountMirrorSchedulerDryRun ? true : requestedDryRun;
+						const ran = await runAccountMirrorSchedulerPass({
+							dryRun,
+							wakeReason: "operator-run-once",
+						});
+						if (!ran) {
+							sendJson(res, 409, {
+								error: {
+									message: "account mirror scheduler is already running",
+									type: "invalid_request_error",
+								},
+							} satisfies HttpErrorPayload);
+							return;
+						}
+						controlResult = {
+							kind: "account-mirror-scheduler",
+							action,
+							dryRun,
+						};
+					}
+				} else if ("accountMirrorProviderGuard" in payload) {
+					const guardClear = clearAccountMirrorProviderGuard({
+						registry: accountMirrorStatusRegistry,
+						provider: payload.accountMirrorProviderGuard.provider,
+						runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
+						cooldownMs:
+							payload.accountMirrorProviderGuard.cooldownMs ??
+							DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
+						now,
+					});
+					controlResult = {
+						kind: guardClear.kind,
+						action: guardClear.action,
+						provider: guardClear.provider,
+						runtimeProfileId: guardClear.runtimeProfileId,
+						cooldownUntil: guardClear.cooldownUntil,
+					};
+				} else if ("accountMirrorCompletion" in payload) {
+					const { id, action } = payload.accountMirrorCompletion;
+					const operation = accountMirrorCompletionService.control({ id, action });
+					if (!operation) {
+						sendJson(res, 404, {
+							error: {
+								message: `account mirror completion not found: ${id}`,
+								type: "not_found_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					controlResult = {
+						kind: "account-mirror-completion",
+						action,
+						id,
+						status: operation.status,
+					};
+				} else if ("preflight" in payload) {
+					const result = await preflightRunner.start();
+					controlResult = {
+						kind: "preflight",
+						action: payload.preflight.action,
+						accepted: result.accepted,
+						reason: result.reason,
+						id: result.run.id,
+						status: result.run.status,
+						logPath: result.run.logPath,
+					};
+				} else if ("serviceControl" in payload) {
+					const delayMs = payload.serviceControl.delayMs ?? 750;
+					const unitName = "auracall-api.service";
+					const dryRun = payload.serviceControl.dryRun ?? false;
+					if (!dryRun) {
+						scheduleApiServiceRestart({ unitName, delayMs });
+					}
+					controlResult = {
+						kind: "service-control",
+						action: payload.serviceControl.action,
+						unitName,
+						restartCommand: `systemctl --user restart ${unitName}`,
+						scheduled: !dryRun,
+						dryRun,
+						delayMs,
+					};
+				} else {
+					const result = await host.controlOperatorAction(
+						createServiceHostOperatorControlInput(payload),
+					);
+					if (!isSuccessfulServiceHostOperatorControlResult(result)) {
+						sendJson(res, result.status === "not-found" ? 404 : 409, {
+							error: {
+								message: result.reason,
+								type: result.status === "not-found" ? "not_found_error" : "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					controlResult = result;
+				}
+				const address = server.address();
+				const boundPort =
+					address && typeof address !== "string" ? address.port : (options.port ?? 0);
+				await syncRunnerStateFromStore();
+				const accountMirrorStatus = accountMirrorStatusRegistry.readStatus();
+				const statusResponseAccountMirrorStatus = scopeAccountMirrorStatusForProofScope(
+					accountMirrorStatus,
+					accountMirrorProofScope,
+				);
+				const statusResponse = await createHttpStatusResponse({
+					host: boundHost,
+					port: boundPort,
+					dashboardUrl: options.dashboardUrl,
+					publicDashboardUrl: options.publicDashboardUrl,
+					serviceRouting: options.serviceRouting,
+					localClaimSummary: await host.summarizeLocalClaimState({ sourceKind: "direct" }),
+					runnerTopology: await host.summarizeRunnerTopology(),
+					runner: runnerState,
+					backgroundDrain: backgroundDrainState,
+					tenantExecutionLimits: await readTenantExecutionLimitsStatus(false),
+					accountMirrorScheduler: accountMirrorSchedulerState,
+					accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
+					accountMirrorStatus: statusResponseAccountMirrorStatus,
+					accountMirrorCompletions: await createAccountMirrorCompletionStatusSummary(
+						accountMirrorCompletionService,
+						now,
+					),
+					accountMirrorProofScope: createAccountMirrorProofScopeStatus(
+						accountMirrorProofScope,
+						accountMirrorStatus,
+						{
+							resumeAccountMirrorCompletionsOnStart,
+							reconcileAccountMirrorLiveFollowOnStart,
+							accountMirrorSchedulerIntervalMs,
+							backgroundDrainIntervalMs,
+						},
+					),
+					preflight: await readPreflightStatusSummary(preflightRunner),
+					controlResult,
+					auth: apiAuthPolicy,
+				});
+				sendJson(res, 200, statusResponse);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/models") {
+				sendJson(
+					res,
+					200,
+					createHttpModelListResponse(await agentTeamConfigService.effectiveCatalog()),
+				);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/config/agents") {
+				sendJson(res, 200, await agentTeamConfigService.list("agent"));
+				return;
+			}
+
+			const configAgentId = matchConfigEntityRoute(url.pathname, "agents");
+			if (configAgentId && req.method === "PUT") {
+				const body = await readRequestBody(req);
+				const payload = agentConfigUpsertInputSchema.parse({
+					id: configAgentId,
+					config: JSON.parse(body || "{}"),
+				});
+				sendJson(res, 200, await agentTeamConfigService.upsertAgent(payload));
+				return;
+			}
+			if (configAgentId && req.method === "DELETE") {
+				sendJson(res, 200, await agentTeamConfigService.deleteAgent(configAgentId));
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/config/teams") {
+				sendJson(res, 200, await agentTeamConfigService.list("team"));
+				return;
+			}
+
+			const configTeamId = matchConfigEntityRoute(url.pathname, "teams");
+			if (configTeamId && req.method === "PUT") {
+				const body = await readRequestBody(req);
+				const payload = teamConfigUpsertInputSchema.parse({
+					id: configTeamId,
+					config: JSON.parse(body || "{}"),
+				});
+				sendJson(res, 200, await agentTeamConfigService.upsertTeam(payload));
+				return;
+			}
+			if (configTeamId && req.method === "DELETE") {
+				sendJson(res, 200, await agentTeamConfigService.deleteTeam(configTeamId));
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/config/agent-diagnostics") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(
+					res,
+					200,
+					await agentTeamConfigService.diagnostics({
+						apiKeys: apiAuthPolicy.keys.map(toAgentConfigApiKeyDiagnosticInput),
+					}),
+				);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/config/api-keys/issue") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const body = await readRequestBody(req);
+				const payload = parseConfigApiKeyIssueRequest(JSON.parse(body || "{}"));
+				sendJson(res, 200, await issueApiKey(agentTeamConfigService, payload));
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/config/api-keys") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const envPath = url.searchParams.get("envPath") ?? undefined;
+				const diagnostics = await readApiKeyDiagnosticsFromEnvFile(envPath);
+				sendJson(res, 200, {
+					object: "auracall_api_key_list",
+					envPath: diagnostics.envPath,
+					exists: diagnostics.exists,
+					apiKeys: diagnostics.apiKeys,
+				});
+				return;
+			}
+
+			const configApiKeyId = matchConfigApiKeyRoute(url.pathname);
+			if (configApiKeyId && req.method === "DELETE") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(
+					res,
+					200,
+					await deleteApiKey({
+						keyId: configApiKeyId,
+						envPath: url.searchParams.get("envPath") ?? undefined,
+					}),
+				);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/config/snapshots/export") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const body = await readRequestBody(req);
+				const payload = parseConfigSnapshotExportRequest(JSON.parse(body || "{}"));
+				sendJson(res, 200, await agentTeamConfigService.exportSnapshot(payload));
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/config/snapshots/import") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const body = await readRequestBody(req);
+				const payload = parseConfigSnapshotImportRequest(JSON.parse(body || "{}"));
+				sendJson(res, 200, await agentTeamConfigService.importSnapshot(payload));
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/workbench-capabilities") {
+				const request = parseWorkbenchCapabilityQuery(url.searchParams);
+				const response = await workbenchCapabilityService.listCapabilities(request);
+				sendJson(res, 200, response);
+				return;
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/projects/ensure") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const payload = ProjectEnsureInputSchema.parse(JSON.parse(body || "{}"));
+					sendJson(res, 200, await projectEnsureService.ensureProject(payload));
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/tenant-pool-teams/ensure") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const payload = TenantPoolTeamEnsureInputSchema.parse(JSON.parse(body || "{}"));
+					sendJson(res, 200, await tenantPoolTeamEnsureService.ensureTeam(payload));
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/agent-setup-packages") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const payload = AgentSetupPackageInputSchema.parse(JSON.parse(body || "{}"));
+					sendJson(res, 200, await agentSetupPackageService.createPackage(payload));
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/agent-setup-handoffs") {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const payload = AgentSetupPackageInputSchema.parse(JSON.parse(body || "{}"));
+					sendJson(res, 200, await agentSetupPackageService.createHandoff(payload));
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/team-runs") {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const payload = TEAM_RUN_CREATE_REQUEST_SCHEMA.parse(JSON.parse(body || "{}"));
+					const prebuiltTaskRunSpec = payload.taskRunSpec ?? null;
+					const teamId = (prebuiltTaskRunSpec?.teamId ?? payload.teamId ?? "").trim();
+					const authorizationError = authorizeExecutionSelection(
+						apiAuthContext,
+						{ agent: null, team: teamId || null, service: null, runtimeProfile: null },
+						await agentTeamConfigService.effectiveCatalog(),
+					);
+					if (authorizationError) {
+						sendJson(res, 403, {
+							error: {
+								message: authorizationError,
+								type: "permission_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					const nowIso = now().toISOString();
+					const suffix = createTeamRunIdSuffix();
+					const teamRunId = `teamrun_${teamId}_${suffix}`;
+					const taskRunSpec =
+						prebuiltTaskRunSpec ??
+						buildBoundedTeamTaskRunSpec({
+							nowIso,
+							taskRunSpecId: `taskrun_${teamId}_${suffix}`,
+							teamId,
+							objective: payload.objective ?? "",
+							title: payload.title,
+							promptAppend: payload.promptAppend,
+							structuredContext: payload.structuredContext,
+							responseFormat: payload.responseFormat,
+							outputContract: payload.outputContract,
+							maxTurns: payload.maxTurns,
+							localActionPolicy: payload.localActionPolicy,
+							context: {
+								command: "auracall api serve",
+							},
+							requestedBy: {
+								kind: "api",
+								label: "auracall api serve",
+							},
+							trigger: "api",
+						});
+					const effectiveRuntimeConfig = await agentTeamConfigService.effectiveConfig();
+					const bridgeResult = await teamRuntimeBridge.executeFromConfigTaskRunSpec({
+						config: effectiveRuntimeConfig,
+						teamId,
+						runId: teamRunId,
+						createdAt: nowIso,
+						trigger: prebuiltTaskRunSpec ? undefined : "api",
+						requestedBy: prebuiltTaskRunSpec ? undefined : "auracall api serve",
+						taskRunSpec,
+					});
+					if (backgroundDrainIntervalMs > 0) {
+						reserveForegroundAuraCallDrain();
+						scheduleBackgroundDrain(0);
+					}
+					const execution = buildTeamRunExecutionPayload({
+						teamId,
+						bridgeResult,
+						taskRunSpec,
+					});
+					const address = server.address();
+					const boundPort =
+						address && typeof address !== "string" ? address.port : (options.port ?? 0);
+					sendJson(res, 200, {
+						object: "team_run",
+						taskRunSpec,
+						execution,
+						links: createTeamRunCreateLinks({
+							host: boundHost,
+							port: boundPort,
+							teamRunId: execution.teamRunId,
+							runtimeRunId: execution.runtimeRunId,
+						}),
+					} satisfies HttpTeamRunCreateResponse);
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/chat/completions") {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const chatRequest = parseChatCompletionRequest(JSON.parse(body || "{}"));
+					if (chatRequest.stream) {
+						sendJson(res, 400, {
+							error: {
+								message:
+									"Streaming chat completions are not supported by this AuraCall adapter yet.",
+								type: "invalid_request_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					const catalog = await agentTeamConfigService.effectiveCatalog();
+					const request = hydrateExecutionRequestFromCatalog(
+						createExecutionRequest(
+							mergeExecutionRequestHints(
+								createExecutionRequestFromChatCompletion(chatRequest),
+								req.headers,
+							),
+						),
+						catalog,
+					);
+					const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
+					if (authorizationError) {
+						sendJson(res, 403, {
+							error: {
+								message: authorizationError,
+								type: "permission_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					const createdResponse = await responsesService.createResponse(request);
+					await drainThroughServerHost({
+						runId: createdResponse.id,
+						maxRuns: 1,
+						trigger: "request-create",
+					});
+					scheduleAccountMirrorSchedulerFollowUp(0, "response-drain-completed");
+					const response =
+						(await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
+					if (response.status !== "completed") {
+						sendJson(res, 502, createChatCompletionErrorResponse(response));
+						return;
+					}
+					sendJson(res, 200, createChatCompletionResponse(response, now));
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/responses") {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const parsedBody = normalizeResponsesApiRequest(JSON.parse(body || "{}"));
+					const catalog = await agentTeamConfigService.effectiveCatalog();
+					const request = hydrateExecutionRequestFromCatalog(
+						createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers)),
+						catalog,
+					);
+					const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
+					if (authorizationError) {
+						sendJson(res, 403, {
+							error: {
+								message: authorizationError,
+								type: "permission_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					const createdResponse = await responsesService.createResponse(request);
+					if (backgroundDrainIntervalMs > 0) {
+						reserveForegroundAuraCallDrain();
+						scheduleBackgroundDrain(0);
+						sendJson(res, 200, createdResponse);
+					} else {
+						await drainThroughServerHost({
+							runId: createdResponse.id,
+							maxRuns: 1,
+							trigger: "request-create",
+						});
+						scheduleAccountMirrorSchedulerFollowUp(0, "response-drain-completed");
+						const drainedResponse = await responsesService.readResponse(createdResponse.id);
+						sendJson(res, 200, drainedResponse ?? createdResponse);
+					}
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/response-batches") {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const parsedPayload = ResponseBatchCreateRequestSchema.parse(JSON.parse(body || "{}"));
+					const catalog = await agentTeamConfigService.effectiveCatalog();
+					const { dispatchResolution: _ignoredClientDispatchResolution, ...publicPayload } =
+						parsedPayload;
+					const hydratedRequests = parsedPayload.requests.map((request) =>
+						hydrateExecutionRequestFromCatalog(
+							createExecutionRequest(
+								mergeExecutionRequestHints(normalizeResponsesApiRequest(request), req.headers),
+							),
+							catalog,
+						),
+					);
+					const dispatchRequest = normalizeResponseBatchDispatchRequest({
+						dispatch: publicPayload.dispatch,
+						team: publicPayload.team,
+					});
+					let dispatchResolution = null;
+					if (dispatchRequest) {
+						try {
+							dispatchResolution = await resolveResponseBatchDispatchPool({
+								dispatch: dispatchRequest,
+								requests: hydratedRequests,
+								catalog,
+								control,
+							});
+						} catch (error) {
+							throw new HttpInvalidRequestError(
+								error instanceof Error ? error.message : String(error),
+							);
+						}
+					}
+					const payload =
+						dispatchRequest && dispatchResolution
+							? {
+									...publicPayload,
+									dispatch: dispatchRequest,
+									dispatchResolution,
+									requests: dispatchResolution.requests,
+								}
+							: {
+									...publicPayload,
+									requests: hydratedRequests,
+								};
+					for (const request of payload.requests) {
+						const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
+						if (authorizationError) {
+							sendJson(res, 403, {
+								error: {
+									message: authorizationError,
+									type: "permission_error",
+								},
+							} satisfies HttpErrorPayload);
+							return;
+						}
+					}
+					const status = await responseBatchService.createBatch(payload);
+					if (backgroundDrainIntervalMs > 0) {
+						reserveForegroundAuraCallDrain();
+						const initialBatchMaxRuns = Math.max(
+							1,
+							Math.min(status.counts.total, status.limits.maxConcurrentRuns ?? 1),
+						);
+						void drainThroughServerHost({
+							maxRuns: initialBatchMaxRuns,
+							trigger: "request-create",
+						}).catch((error) => {
+							logger(error instanceof Error ? error.message : String(error));
+							return null;
+						});
+					}
+					sendJson(res, 202, status);
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			if (req.method === "POST" && url.pathname === "/v1/media-generations") {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const parsedBody = JSON.parse(body || "{}") as MediaGenerationRequest & {
+						wait?: unknown;
+					};
+					const mediaRequest = {
+						...parsedBody,
+						source: parsedBody.source ?? "api",
+					};
+					const createQuery = parseMediaGenerationCreateQuery(url.searchParams);
+					const wait = resolveMediaGenerationWait(createQuery, parsedBody);
+					const response =
+						!wait && mediaGenerationService.createGenerationAsync
+							? await mediaGenerationService.createGenerationAsync(mediaRequest)
+							: await mediaGenerationService.createGeneration(mediaRequest);
+					sendJson(res, wait && response.status === "failed" ? 502 : wait ? 200 : 202, response);
+					return;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			const mediaGenerationMaterializeId = matchMediaGenerationMaterializeRoute(url.pathname);
+			if (req.method === "POST" && mediaGenerationMaterializeId) {
+				const endForegroundWork = beginForegroundAuraCallWork();
+				try {
+					const body = await readRequestBody(req);
+					const payload = parseMediaGenerationMaterializeBody(JSON.parse(body || "{}"));
+					if (!mediaGenerationService.materializeGeneration) {
+						sendJson(res, 501, {
+							error: {
+								message: "Media generation materialization is not configured for this runtime.",
+								type: "not_implemented_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					const response = await mediaGenerationService.materializeGeneration(
+						mediaGenerationMaterializeId,
+						{
+							count: payload.count ?? null,
+							compareFullQuality: payload.compareFullQuality ?? true,
+							source: "api",
+							metadata: payload.metadata ?? null,
+						},
+					);
+					sendJson(res, response.status === "failed" ? 502 : 200, response);
+					return;
+				} catch (error) {
+					if (error instanceof MediaGenerationExecutionError) {
+						sendJson(res, mediaGenerationExecutionErrorStatus(error), {
+							error: {
+								message: error.message,
+								type: error.code,
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					throw error;
+				} finally {
+					endForegroundWork();
+				}
+			}
+
+			const runStatusId = matchRunStatusRoute(url.pathname);
+			if (req.method === "GET" && runStatusId) {
+				const runStatusQuery = parseRunStatusQuery(url.searchParams);
+				const response = await readAuraCallRunStatus(runStatusId, {
+					responsesService,
+					mediaGenerationService,
+				});
+				if (!response) {
+					sendJson(res, 404, {
+						error: {
+							message: `Run ${runStatusId} was not found`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				if (runStatusQuery.diagnostics === "browser-state") {
+					response.browserDiagnostics = await readRunStatusBrowserDiagnostics({
+						status: response,
+						responsesService,
+						mediaGenerationService,
+						probeRuntimeRunBrowserDiagnostics: deps.probeRuntimeRunBrowserDiagnostics,
+						probeMediaGenerationBrowserDiagnostics: probeMediaGenerationBrowserDiagnosticsImpl,
+						control,
+						runnersControl,
+						createRunAffinity,
+					});
+				}
+				sendJson(res, 200, response);
+				return;
+			}
+
+			const mediaGenerationStatusId = matchMediaGenerationStatusRoute(url.pathname);
+			if (req.method === "GET" && mediaGenerationStatusId) {
+				const runStatusQuery = parseRunStatusQuery(url.searchParams);
+				const response = await mediaGenerationService.readGeneration(mediaGenerationStatusId);
+				if (!response) {
+					sendJson(res, 404, {
+						error: {
+							message: `Media generation ${mediaGenerationStatusId} was not found`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const summary = summarizeMediaGenerationStatus(response);
+				if (runStatusQuery.diagnostics === "browser-state") {
+					sendJson(res, 200, {
+						...summary,
+						browserDiagnostics: await probeMediaGenerationBrowserDiagnosticsImpl(response),
+					});
+					return;
+				}
+				sendJson(res, 200, summary);
+				return;
+			}
+
+			const mediaGenerationId = matchMediaGenerationRoute(url.pathname);
+			if (req.method === "GET" && mediaGenerationId) {
+				const response = await mediaGenerationService.readGeneration(mediaGenerationId);
+				if (!response) {
+					sendJson(res, 404, {
+						error: {
+							message: `Media generation ${mediaGenerationId} was not found`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, response);
+				return;
+			}
+
+			const responseId = matchResponseRoute(url.pathname);
+			if (req.method === "GET" && responseId) {
+				const response = await responsesService.readResponse(responseId);
+				if (!response) {
+					sendJson(res, 404, {
+						error: {
+							message: `Response ${responseId} was not found`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, response);
+				return;
+			}
+
+			const responseBatchId = matchResponseBatchRoute(url.pathname);
+			if (req.method === "GET" && responseBatchId) {
+				const status = await responseBatchService.readBatchStatus(responseBatchId);
+				if (!status) {
+					sendJson(res, 404, {
+						error: {
+							message: `Response batch ${responseBatchId} was not found`,
+							type: "not_found_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, status);
+				return;
+			}
+
+			sendJson(res, 404, {
+				error: {
+					message: "Not found",
+					type: "invalid_request_error",
+				},
+			} satisfies HttpErrorPayload);
+		} catch (error) {
+			logger(error instanceof Error ? error.message : String(error));
+			if (
+				error instanceof SyntaxError ||
+				error instanceof ZodError ||
+				error instanceof HttpInvalidRequestError
+			) {
+				sendJson(res, 400, {
+					error: {
+						message: error instanceof Error ? error.message : "Invalid request body",
+						type: "invalid_request_error",
+					},
+				} satisfies HttpErrorPayload);
+				return;
+			}
+
+			sendJson(res, 500, {
+				error: {
+					message: error instanceof Error ? error.message : "Internal server error",
+					type: "server_error",
+				},
+			} satisfies HttpErrorPayload);
+		}
+	});
+
+	await new Promise<void>((resolve) => {
+		server.listen(options.port ?? 0, boundHost, () => resolve());
+	});
+
+	const address = server.address();
+	if (!address || typeof address === "string") {
+		throw new Error("Unable to determine server address");
+	}
+
+	const localRunnerId = `runner:http-responses:${boundHost}:${address.port}`;
+	const localRunnerHostId = `host:http-responses:${boundHost}:${address.port}`;
+	const localRunnerLifecycleOptions = {
+		hostId: localRunnerHostId,
+		heartbeatTtlMs: runnerHeartbeatTtlMs,
+		capabilitySummary: localRunnerCapabilitySummary,
+		baseLabel: "api serve local runner",
+		heartbeatLabel: "api serve runner heartbeat",
+		shutdownLabel: "api serve shutdown",
+	};
+	const updateRunnerState = (runner: {
+		id: string;
+		hostId: string;
+		status: HttpStatusResponse["runner"]["status"];
+		lastHeartbeatAt: string;
+		expiresAt: string;
+		lastActivityAt: string | null;
+		lastClaimedRunId: string | null;
+	}) => {
+		runnerState.id = runner.id;
+		runnerState.hostId = runner.hostId;
+		runnerState.status = runner.status;
+		runnerState.lastHeartbeatAt = runner.lastHeartbeatAt;
+		runnerState.expiresAt = runner.expiresAt;
+		runnerState.lastActivityAt = runner.lastActivityAt;
+		runnerState.lastClaimedRunId = runner.lastClaimedRunId;
+	};
+	const syncRunnerStateFromStore = async () => {
+		if (!runnerState.id) return;
+		const storedRunner = await runnersControl.readRunner(runnerState.id);
+		if (!storedRunner) return;
+		updateRunnerState({
+			id: storedRunner.runner.id,
+			hostId: storedRunner.runner.hostId,
+			status: storedRunner.runner.status,
+			lastHeartbeatAt: storedRunner.runner.lastHeartbeatAt,
+			expiresAt: storedRunner.runner.expiresAt,
+			lastActivityAt: storedRunner.runner.lastActivityAt,
+			lastClaimedRunId: storedRunner.runner.lastClaimedRunId,
+		});
+	};
+	const registerLocalRunner = async () => {
+		const heartbeatAt = now().toISOString();
+		const expiresAt = new Date(now().getTime() + runnerHeartbeatTtlMs).toISOString();
+		runnerState.id = localRunnerId;
+		runnerState.hostId = localRunnerHostId;
+		runnerState.status = "registering";
+		runnerState.lastHeartbeatAt = heartbeatAt;
+		runnerState.expiresAt = expiresAt;
+		const registeredRunner = await host.registerLocalRunner(localRunnerLifecycleOptions);
+		if (registeredRunner) {
+			updateRunnerState(registeredRunner);
+		}
+	};
+	const heartbeatLocalRunner = async () => {
+		if (closed || !runnerState.id) return;
+		const heartbeatedRunner = await host.heartbeatLocalRunner(localRunnerLifecycleOptions);
+		if (heartbeatedRunner) {
+			updateRunnerState(heartbeatedRunner);
+		}
+	};
+	const scheduleRunnerHeartbeat = () => {
+		if (closed) return;
+		runnerHeartbeatTimer = setTimeout(async () => {
+			runnerHeartbeatTimer = null;
+			try {
+				await heartbeatLocalRunner();
+			} catch (error) {
+				logger(error instanceof Error ? error.message : String(error));
+			} finally {
+				scheduleRunnerHeartbeat();
+			}
+		}, runnerHeartbeatIntervalMs);
+	};
+
+	host =
+		deps.executionHost ??
+		createExecutionServiceHost({
+			control,
+			runnersControl,
+			now: () => now().toISOString(),
+			ownerId: localRunnerId,
+			runnerId: localRunnerId,
+			localActionExecutionPolicy: deps.localActionExecutionPolicy,
+			createRunAffinity,
+			executionGate,
+			executeStoredRunStep: deps.executeStoredRunStep
+				? async (context) => {
+						const request = createExecutionRequestFromRecord(context.record);
+						return deps.executeStoredRunStep?.(request, context);
+					}
+				: undefined,
+		});
+	teamRuntimeBridge = createTeamRuntimeBridge({
+		control,
+		host,
+		now: () => now().toISOString(),
+		drainAfterCreate: backgroundDrainIntervalMs <= 0,
+	});
+	responsesService = createExecutionResponsesService({
+		control,
+		now,
+		generateResponseId: deps.generateResponseId,
+		executionHost: host,
+		drainAfterCreate: false,
+		executeStoredRunStep: deps.executeStoredRunStep,
+	});
+	responseBatchService =
+		deps.responseBatchService ??
+		(deps.createResponseBatchService ?? createResponseBatchService)({
+			responsesService,
+			now,
+			resolveDispatchPool: async (input) =>
+				resolveResponseBatchDispatchPool({
+					...input,
+					catalog: await agentTeamConfigService.effectiveCatalog(),
+					control,
+				}),
+		});
+
+	if (!deps.executionHost) {
+		await registerLocalRunner();
+		scheduleRunnerHeartbeat();
+	}
+
+	if (recoverRunsOnStart) {
+		const sourceKind =
+			recoverRunsOnStartSourceKind === "all" ? undefined : recoverRunsOnStartSourceKind;
+		const recoveryResult = await drainThroughServerHost({
+			sourceKind,
+			maxRuns: recoverRunsOnStartMaxRuns,
+			trigger: "startup-recovery",
+		});
+		const recoverySummary = await host.summarizeRecoveryState({
+			sourceKind,
+		});
+		logger(
+			createStartupRecoveryLog(recoveryResult, {
+				sourceKind: recoverRunsOnStartSourceKind,
+				maxRuns: recoverRunsOnStartMaxRuns,
+				staleHeartbeatInspectOnlyCount:
+					recoverySummary.attention.metrics.staleHeartbeatInspectOnlyCount,
+				suspiciouslyIdleCount: recoverySummary.activeLeaseHealth.metrics.suspiciousIdleCount,
+			}),
+		);
+	}
+	scheduleBackgroundDrain();
+	scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs, "startup-cadence");
+
+	return {
+		port: address.port,
+		async close() {
+			closed = true;
+			if (runnerHeartbeatTimer) {
+				clearTimeout(runnerHeartbeatTimer);
+				runnerHeartbeatTimer = null;
+			}
+			if (backgroundDrainTimer) {
+				clearTimeout(backgroundDrainTimer);
+				backgroundDrainTimer = null;
+			}
+			if (accountMirrorSchedulerTimer) {
+				clearTimeout(accountMirrorSchedulerTimer);
+				accountMirrorSchedulerTimer = null;
+			}
+			backgroundDrainPaused = false;
+			accountMirrorSchedulerPaused = false;
+			backgroundDrainState.paused = false;
+			backgroundDrainState.state = "disabled";
+			accountMirrorSchedulerState.paused = false;
+			accountMirrorSchedulerState.state = "disabled";
+			cancelActiveAccountMirrorCompletions(accountMirrorCompletionService);
+			await host.waitForDrainQueue().catch(() => null);
+			if (!deps.executionHost && runnerState.id) {
+				const staleRunner = await host
+					.markLocalRunnerStale(localRunnerLifecycleOptions)
+					.catch((error) => {
+						const message = error instanceof Error ? error.message : String(error);
+						if (message.includes("revision mismatch")) return null;
+						throw error;
+					});
+				if (staleRunner) {
+					updateRunnerState(staleRunner);
+				}
+			}
+			await new Promise<void>((resolve, reject) => {
+				server.close((error) => (error ? reject(error) : resolve()));
+				server.closeIdleConnections();
+			});
+		},
+	};
 }
 
 export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}): Promise<void> {
-  const logger = options.logger ?? console.log;
-  const {
-    listenPublic: _unusedListenPublic,
-    cliOptions: _unusedCliOptions,
-    executeStoredRunStep: overrideExecuteStoredRunStep,
-    mediaGenerationExecutor: overrideMediaGenerationExecutor,
-    probeRuntimeRunServiceState: overrideProbeRuntimeRunServiceState,
-    terminateProcess: terminateProcessOverride,
-    ...serverOptions
-  } = options;
-  const resolvedUserConfig = await resolveConfig(options.cliOptions ?? {}, process.cwd(), process.env);
-  const apiConfig = readApiServerConfig(resolvedUserConfig as Record<string, unknown>);
-  serverOptions.host = serverOptions.host ?? apiConfig.host;
-  serverOptions.port = serverOptions.port ?? apiConfig.port;
-  serverOptions.dashboardUrl = serverOptions.dashboardUrl ?? apiConfig.dashboardUrl;
-  serverOptions.publicDashboardUrl = serverOptions.publicDashboardUrl ?? apiConfig.publicDashboardUrl;
-  serverOptions.serviceRouting = serverOptions.serviceRouting ?? apiConfig.routing;
-  serverOptions.accountMirrorSchedulerIntervalMs =
-    serverOptions.accountMirrorSchedulerIntervalMs ?? apiConfig.accountMirrorSchedulerIntervalMs;
-  serverOptions.accountMirrorSchedulerDryRun =
-    serverOptions.accountMirrorSchedulerDryRun ?? apiConfig.accountMirrorSchedulerDryRun;
-  assertResponsesHostAllowed(serverOptions.host, options.listenPublic ?? false);
-  await terminateSamePortApiServeProcesses({
-    port: serverOptions.port,
-    logger,
-    terminateProcess: terminateProcessOverride,
-    includeConfigDerivedPort: options.port === undefined && apiConfig.port === serverOptions.port,
-  });
-  const agentRegistryStore = createAgentRegistryStore();
-  const agentTeamConfigService = createAgentTeamConfigService({
-    activeConfig: resolvedUserConfig as Record<string, unknown>,
-    registryStore: agentRegistryStore,
-  });
-  const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
-    resolvedUserConfig as Record<string, unknown>,
-    {
-      effectiveConfigProvider: () => agentTeamConfigService.effectiveConfig(),
-      logger,
-    },
-  );
-  if (!configuredStoredStepExecutor) {
-    throw new Error('Configured stored-step executor was not created for api serve.');
-  }
-  const server = await createResponsesHttpServer(
-    {
-      ...serverOptions,
-      recoverRunsOnStart: serverOptions.recoverRunsOnStart ?? true,
-      recoverRunsOnStartSourceKind: serverOptions.recoverRunsOnStartSourceKind,
-      backgroundDrainIntervalMs: serverOptions.backgroundDrainIntervalMs ?? DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS,
-      accountMirrorSchedulerIntervalMs: serverOptions.accountMirrorSchedulerIntervalMs ?? 0,
-      accountMirrorSchedulerDryRun: serverOptions.accountMirrorSchedulerDryRun ?? true,
-    },
-    {
-      config: resolvedUserConfig as Record<string, unknown>,
-      agentRegistryStore,
-      now: () => new Date(),
-      localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
-        resolvedUserConfig as Record<string, unknown>,
-      ),
-      executeStoredRunStep:
-        overrideExecuteStoredRunStep ??
-        (async (_request, context) => configuredStoredStepExecutor(context)),
-      mediaGenerationExecutor: overrideMediaGenerationExecutor,
-      probeRuntimeRunServiceState:
-        overrideProbeRuntimeRunServiceState ?? createDefaultRuntimeRunServiceStateProbe(),
-      probeRuntimeRunBrowserDiagnostics:
-        options.probeRuntimeRunBrowserDiagnostics ?? createDefaultRuntimeRunBrowserDiagnosticsProbe(),
-      discoverWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiscovery(
-        resolvedUserConfig as ResolvedUserConfig,
-      ),
-      diagnoseWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiagnostics(
-        resolvedUserConfig as ResolvedUserConfig,
-      ),
-    },
-  );
-  const host = serverOptions.host ?? '127.0.0.1';
-  const bindAddress = `${host}:${server.port}`;
-  const probeUrl = `http://${localProbeHost(host)}:${server.port}`;
-  const localOnly = isLoopbackHost(host);
-  logger(`AuraCall responses server bound on ${bindAddress}`);
-  if (localOnly) {
-    logger('Posture: local development only; bound to loopback and intentionally unauthenticated.');
-  } else {
-    logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
-  }
-  logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
-  logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
-  );
-  logger(`Local probe: curl ${probeUrl}/status`);
-  if (serverOptions.dashboardUrl) {
-    logger(`Operator dashboard: ${serverOptions.dashboardUrl}`);
-  }
-  if (serverOptions.publicDashboardUrl) {
-    logger(`Public operator dashboard: ${serverOptions.publicDashboardUrl}`);
-  }
-  logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
+	const logger = options.logger ?? console.log;
+	const {
+		listenPublic: _unusedListenPublic,
+		cliOptions: _unusedCliOptions,
+		executeStoredRunStep: overrideExecuteStoredRunStep,
+		mediaGenerationExecutor: overrideMediaGenerationExecutor,
+		probeRuntimeRunServiceState: overrideProbeRuntimeRunServiceState,
+		terminateProcess: terminateProcessOverride,
+		...serverOptions
+	} = options;
+	const resolvedUserConfig = await resolveConfig(
+		options.cliOptions ?? {},
+		process.cwd(),
+		process.env,
+	);
+	const apiConfig = readApiServerConfig(resolvedUserConfig as Record<string, unknown>);
+	serverOptions.host = serverOptions.host ?? apiConfig.host;
+	serverOptions.port = serverOptions.port ?? apiConfig.port;
+	serverOptions.dashboardUrl = serverOptions.dashboardUrl ?? apiConfig.dashboardUrl;
+	serverOptions.publicDashboardUrl =
+		serverOptions.publicDashboardUrl ?? apiConfig.publicDashboardUrl;
+	serverOptions.serviceRouting = serverOptions.serviceRouting ?? apiConfig.routing;
+	serverOptions.accountMirrorSchedulerIntervalMs =
+		serverOptions.accountMirrorSchedulerIntervalMs ?? apiConfig.accountMirrorSchedulerIntervalMs;
+	serverOptions.accountMirrorSchedulerDryRun =
+		serverOptions.accountMirrorSchedulerDryRun ?? apiConfig.accountMirrorSchedulerDryRun;
+	assertResponsesHostAllowed(serverOptions.host, options.listenPublic ?? false);
+	await terminateSamePortApiServeProcesses({
+		port: serverOptions.port,
+		logger,
+		terminateProcess: terminateProcessOverride,
+		includeConfigDerivedPort: options.port === undefined && apiConfig.port === serverOptions.port,
+	});
+	const agentRegistryStore = createAgentRegistryStore();
+	const agentTeamConfigService = createAgentTeamConfigService({
+		activeConfig: resolvedUserConfig as Record<string, unknown>,
+		registryStore: agentRegistryStore,
+	});
+	const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
+		resolvedUserConfig as Record<string, unknown>,
+		{
+			effectiveConfigProvider: () => agentTeamConfigService.effectiveConfig(),
+			logger,
+		},
+	);
+	if (!configuredStoredStepExecutor) {
+		throw new Error("Configured stored-step executor was not created for api serve.");
+	}
+	const server = await createResponsesHttpServer(
+		{
+			...serverOptions,
+			recoverRunsOnStart: serverOptions.recoverRunsOnStart ?? true,
+			recoverRunsOnStartSourceKind: serverOptions.recoverRunsOnStartSourceKind,
+			backgroundDrainIntervalMs:
+				serverOptions.backgroundDrainIntervalMs ?? DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS,
+			accountMirrorSchedulerIntervalMs: serverOptions.accountMirrorSchedulerIntervalMs ?? 0,
+			accountMirrorSchedulerDryRun: serverOptions.accountMirrorSchedulerDryRun ?? true,
+		},
+		{
+			config: resolvedUserConfig as Record<string, unknown>,
+			agentRegistryStore,
+			now: () => new Date(),
+			localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
+				resolvedUserConfig as Record<string, unknown>,
+			),
+			executeStoredRunStep:
+				overrideExecuteStoredRunStep ??
+				(async (_request, context) => configuredStoredStepExecutor(context)),
+			mediaGenerationExecutor: overrideMediaGenerationExecutor,
+			probeRuntimeRunServiceState:
+				overrideProbeRuntimeRunServiceState ?? createDefaultRuntimeRunServiceStateProbe(),
+			probeRuntimeRunBrowserDiagnostics:
+				options.probeRuntimeRunBrowserDiagnostics ??
+				createDefaultRuntimeRunBrowserDiagnosticsProbe(),
+			discoverWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiscovery(
+				resolvedUserConfig as ResolvedUserConfig,
+			),
+			diagnoseWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiagnostics(
+				resolvedUserConfig as ResolvedUserConfig,
+			),
+		},
+	);
+	const host = serverOptions.host ?? "127.0.0.1";
+	const bindAddress = `${host}:${server.port}`;
+	const probeUrl = `http://${localProbeHost(host)}:${server.port}`;
+	const localOnly = isLoopbackHost(host);
+	logger(`AuraCall responses server bound on ${bindAddress}`);
+	if (localOnly) {
+		logger("Posture: local development only; bound to loopback and intentionally unauthenticated.");
+	} else {
+		logger(
+			`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`,
+		);
+	}
+	logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? "default"}`);
+	logger(
+		"Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/reconciliations, GET /v1/account-mirrors/reconciliations, GET/POST /v1/account-mirrors/reconciliations/{campaign_id}, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}",
+	);
+	logger(`Local probe: curl ${probeUrl}/status`);
+	if (serverOptions.dashboardUrl) {
+		logger(`Operator dashboard: ${serverOptions.dashboardUrl}`);
+	}
+	if (serverOptions.publicDashboardUrl) {
+		logger(`Public operator dashboard: ${serverOptions.publicDashboardUrl}`);
+	}
+	logger("Leave this terminal running; press Ctrl+C to stop auracall api serve.");
 
-  await new Promise<void>((resolve, reject) => {
-    let closing = false;
-    const cleanupSignalHandlers = () => {
-      process.off('SIGINT', handleSignal);
-      process.off('SIGTERM', handleSignal);
-    };
-    const handleSignal = () => {
-      if (closing) return;
-      closing = true;
-      cleanupSignalHandlers();
-      void server
-        .close()
-        .then(resolve)
-        .catch(reject);
-    };
-    process.once('SIGINT', handleSignal);
-    process.once('SIGTERM', handleSignal);
-  });
+	await new Promise<void>((resolve, reject) => {
+		let closing = false;
+		const cleanupSignalHandlers = () => {
+			process.off("SIGINT", handleSignal);
+			process.off("SIGTERM", handleSignal);
+		};
+		const handleSignal = () => {
+			if (closing) return;
+			closing = true;
+			cleanupSignalHandlers();
+			void server.close().then(resolve).catch(reject);
+		};
+		process.once("SIGINT", handleSignal);
+		process.once("SIGTERM", handleSignal);
+	});
 }
 
 function cancelActiveAccountMirrorCompletions(service: AccountMirrorCompletionService): void {
-  if (service.prepareForShutdown) {
-    service.prepareForShutdown();
-    return;
-  }
-  for (const operation of service.list({ status: 'active', limit: null })) {
-    service.control({ id: operation.id, action: 'cancel' });
-  }
+	if (service.prepareForShutdown) {
+		service.prepareForShutdown();
+		return;
+	}
+	for (const operation of service.list({ status: "active", limit: null })) {
+		service.control({ id: operation.id, action: "cancel" });
+	}
 }
 
 export async function terminateSamePortApiServeProcesses(input: {
-  port?: number | null;
-  logger?: (message: string) => void;
-  terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
-  isProcessAlive?: (pid: number) => boolean;
-  sleep?: (ms: number) => Promise<void>;
-  terminationGraceMs?: number;
-  currentPid?: number;
-  procRoot?: string;
-  operationLockRoot?: string;
-  includeConfigDerivedPort?: boolean;
+	port?: number | null;
+	logger?: (message: string) => void;
+	terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
+	isProcessAlive?: (pid: number) => boolean;
+	sleep?: (ms: number) => Promise<void>;
+	terminationGraceMs?: number;
+	currentPid?: number;
+	procRoot?: string;
+	operationLockRoot?: string;
+	includeConfigDerivedPort?: boolean;
 }): Promise<number[]> {
-  const port = normalizeApiServePort(input.port);
-  if (port === null) return [];
-  const currentPid = input.currentPid ?? process.pid;
-  const procRoot = input.procRoot ?? '/proc';
-  const terminateProcess = input.terminateProcess ?? ((pid, signal) => process.kill(pid, signal));
-  const isProcessAlive = input.isProcessAlive ?? defaultIsProcessAlive;
-  const sleep = input.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const matches = await findSamePortApiServeProcesses({
-    port,
-    currentPid,
-    procRoot,
-    includeConfigDerivedPort: input.includeConfigDerivedPort === true,
-  });
-  const terminatedPids: number[] = [];
-  for (const match of matches) {
-    try {
-      terminateProcess(match.pid, 'SIGTERM');
-      input.logger?.(`Terminated orphan AuraCall api serve process ${match.pid} for port ${port}.`);
-      const exited = await waitForProcessExit(match.pid, {
-        isProcessAlive,
-        sleep,
-        timeoutMs: input.terminationGraceMs ?? 2_000,
-        pollMs: 100,
-      });
-      if (!exited && isProcessAlive(match.pid)) {
-        terminateProcess(match.pid, 'SIGKILL');
-        input.logger?.(`Force-killed orphan AuraCall api serve process ${match.pid} for port ${port}.`);
-      }
-      terminatedPids.push(match.pid);
-    } catch (error) {
-      input.logger?.(
-        `Failed to terminate orphan AuraCall api serve process ${match.pid} for port ${port}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-  const operationLockRoot = input.operationLockRoot ?? path.join(getAuracallHomeDir(), 'browser-operations');
-  await removeBrowserOperationLocksForOwnerPids({
-    ownerPids: terminatedPids,
-    lockRoot: operationLockRoot,
-    logger: input.logger,
-  });
-  await removeStaleBrowserOperationLocks({
-    lockRoot: operationLockRoot,
-    isProcessAlive,
-    logger: input.logger,
-  });
-  return matches.map((match) => match.pid);
+	const port = normalizeApiServePort(input.port);
+	if (port === null) return [];
+	const currentPid = input.currentPid ?? process.pid;
+	const procRoot = input.procRoot ?? "/proc";
+	const terminateProcess = input.terminateProcess ?? ((pid, signal) => process.kill(pid, signal));
+	const isProcessAlive = input.isProcessAlive ?? defaultIsProcessAlive;
+	const sleep = input.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+	const matches = await findSamePortApiServeProcesses({
+		port,
+		currentPid,
+		procRoot,
+		includeConfigDerivedPort: input.includeConfigDerivedPort === true,
+	});
+	const terminatedPids: number[] = [];
+	for (const match of matches) {
+		try {
+			terminateProcess(match.pid, "SIGTERM");
+			input.logger?.(`Terminated orphan AuraCall api serve process ${match.pid} for port ${port}.`);
+			const exited = await waitForProcessExit(match.pid, {
+				isProcessAlive,
+				sleep,
+				timeoutMs: input.terminationGraceMs ?? 2_000,
+				pollMs: 100,
+			});
+			if (!exited && isProcessAlive(match.pid)) {
+				terminateProcess(match.pid, "SIGKILL");
+				input.logger?.(
+					`Force-killed orphan AuraCall api serve process ${match.pid} for port ${port}.`,
+				);
+			}
+			terminatedPids.push(match.pid);
+		} catch (error) {
+			input.logger?.(
+				`Failed to terminate orphan AuraCall api serve process ${match.pid} for port ${port}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
+	const operationLockRoot =
+		input.operationLockRoot ?? path.join(getAuracallHomeDir(), "browser-operations");
+	await removeBrowserOperationLocksForOwnerPids({
+		ownerPids: terminatedPids,
+		lockRoot: operationLockRoot,
+		logger: input.logger,
+	});
+	await removeStaleBrowserOperationLocks({
+		lockRoot: operationLockRoot,
+		isProcessAlive,
+		logger: input.logger,
+	});
+	return matches.map((match) => match.pid);
 }
 
 async function removeBrowserOperationLocksForOwnerPids(input: {
-  ownerPids: number[];
-  lockRoot: string;
-  logger?: (message: string) => void;
+	ownerPids: number[];
+	lockRoot: string;
+	logger?: (message: string) => void;
 }): Promise<number> {
-  const ownerPids = new Set(input.ownerPids);
-  if (ownerPids.size === 0) return 0;
-  let entries: string[];
-  try {
-    entries = await fs.readdir(input.lockRoot);
-  } catch {
-    return 0;
-  }
-  let removed = 0;
-  for (const entry of entries) {
-    if (!entry.endsWith('.json')) continue;
-    const lockPath = path.join(input.lockRoot, entry);
-    try {
-      const raw = await fs.readFile(lockPath, 'utf8');
-      const parsed = JSON.parse(raw) as { ownerPid?: unknown };
-      if (typeof parsed.ownerPid !== 'number' || !ownerPids.has(parsed.ownerPid)) continue;
-      await fs.rm(lockPath, { force: true });
-      removed += 1;
-    } catch {}
-  }
-  if (removed > 0) {
-    input.logger?.(`Removed ${removed} browser operation lock${removed === 1 ? '' : 's'} owned by terminated api serve process.`);
-  }
-  return removed;
+	const ownerPids = new Set(input.ownerPids);
+	if (ownerPids.size === 0) return 0;
+	let entries: string[];
+	try {
+		entries = await fs.readdir(input.lockRoot);
+	} catch {
+		return 0;
+	}
+	let removed = 0;
+	for (const entry of entries) {
+		if (!entry.endsWith(".json")) continue;
+		const lockPath = path.join(input.lockRoot, entry);
+		try {
+			const raw = await fs.readFile(lockPath, "utf8");
+			const parsed = JSON.parse(raw) as { ownerPid?: unknown };
+			if (typeof parsed.ownerPid !== "number" || !ownerPids.has(parsed.ownerPid)) continue;
+			await fs.rm(lockPath, { force: true });
+			removed += 1;
+		} catch {}
+	}
+	if (removed > 0) {
+		input.logger?.(
+			`Removed ${removed} browser operation lock${removed === 1 ? "" : "s"} owned by terminated api serve process.`,
+		);
+	}
+	return removed;
 }
 
 async function removeStaleBrowserOperationLocks(input: {
-  lockRoot: string;
-  isProcessAlive: (pid: number) => boolean;
-  logger?: (message: string) => void;
+	lockRoot: string;
+	isProcessAlive: (pid: number) => boolean;
+	logger?: (message: string) => void;
 }): Promise<number> {
-  let entries: string[];
-  try {
-    entries = await fs.readdir(input.lockRoot);
-  } catch {
-    return 0;
-  }
-  let removed = 0;
-  for (const entry of entries) {
-    if (!entry.endsWith('.json')) continue;
-    const lockPath = path.join(input.lockRoot, entry);
-    try {
-      const raw = await fs.readFile(lockPath, 'utf8');
-      const parsed = JSON.parse(raw) as { ownerPid?: unknown };
-      if (typeof parsed.ownerPid !== 'number' || input.isProcessAlive(parsed.ownerPid)) continue;
-      await fs.rm(lockPath, { force: true });
-      removed += 1;
-    } catch {}
-  }
-  if (removed > 0) {
-    input.logger?.(`Removed ${removed} stale browser operation lock${removed === 1 ? '' : 's'}.`);
-  }
-  return removed;
+	let entries: string[];
+	try {
+		entries = await fs.readdir(input.lockRoot);
+	} catch {
+		return 0;
+	}
+	let removed = 0;
+	for (const entry of entries) {
+		if (!entry.endsWith(".json")) continue;
+		const lockPath = path.join(input.lockRoot, entry);
+		try {
+			const raw = await fs.readFile(lockPath, "utf8");
+			const parsed = JSON.parse(raw) as { ownerPid?: unknown };
+			if (typeof parsed.ownerPid !== "number" || input.isProcessAlive(parsed.ownerPid)) continue;
+			await fs.rm(lockPath, { force: true });
+			removed += 1;
+		} catch {}
+	}
+	if (removed > 0) {
+		input.logger?.(`Removed ${removed} stale browser operation lock${removed === 1 ? "" : "s"}.`);
+	}
+	return removed;
 }
 
 async function findSamePortApiServeProcesses(input: {
-  port: number;
-  currentPid: number;
-  procRoot: string;
-  includeConfigDerivedPort?: boolean;
+	port: number;
+	currentPid: number;
+	procRoot: string;
+	includeConfigDerivedPort?: boolean;
 }): Promise<Array<{ pid: number; commandLine: string }>> {
-  let entries: string[];
-  try {
-    entries = await fs.readdir(input.procRoot);
-  } catch {
-    return [];
-  }
-  const matches: Array<{ pid: number; commandLine: string }> = [];
-  for (const entry of entries) {
-    if (!/^\d+$/.test(entry)) continue;
-    const pid = Number(entry);
-    if (!Number.isSafeInteger(pid) || pid <= 0 || pid === input.currentPid) continue;
-    const commandLine = await readProcCommandLine(input.procRoot, pid);
-    if (!commandLine) continue;
-    if (isSamePortApiServeCommand(commandLine, input.port, input.includeConfigDerivedPort === true)) {
-      matches.push({ pid, commandLine });
-    }
-  }
-  return matches;
+	let entries: string[];
+	try {
+		entries = await fs.readdir(input.procRoot);
+	} catch {
+		return [];
+	}
+	const matches: Array<{ pid: number; commandLine: string }> = [];
+	for (const entry of entries) {
+		if (!/^\d+$/.test(entry)) continue;
+		const pid = Number(entry);
+		if (!Number.isSafeInteger(pid) || pid <= 0 || pid === input.currentPid) continue;
+		const commandLine = await readProcCommandLine(input.procRoot, pid);
+		if (!commandLine) continue;
+		if (
+			isSamePortApiServeCommand(commandLine, input.port, input.includeConfigDerivedPort === true)
+		) {
+			matches.push({ pid, commandLine });
+		}
+	}
+	return matches;
 }
 
 async function readProcCommandLine(procRoot: string, pid: number): Promise<string | null> {
-  try {
-    const raw = await fs.readFile(`${procRoot}/${pid}/cmdline`);
-    return raw.toString('utf8').split('\0').filter(Boolean).join(' ');
-  } catch {
-    return null;
-  }
+	try {
+		const raw = await fs.readFile(`${procRoot}/${pid}/cmdline`);
+		return raw.toString("utf8").split("\0").filter(Boolean).join(" ");
+	} catch {
+		return null;
+	}
 }
 
-function isSamePortApiServeCommand(commandLine: string, port: number, includeConfigDerivedPort = false): boolean {
-  if (!/^node\s+/.test(commandLine)) return false;
-  if (!commandLine.includes('/auracall.js') && !/\bauracall\.js\b/.test(commandLine)) return false;
-  if (!/\bapi\s+serve\b/.test(commandLine)) return false;
-  if (commandLine.includes(`--port ${port}`) || commandLine.includes(`--port=${port}`)) return true;
-  return includeConfigDerivedPort && !/\s--port(?:\s|=)/.test(commandLine);
+function isSamePortApiServeCommand(
+	commandLine: string,
+	port: number,
+	includeConfigDerivedPort = false,
+): boolean {
+	if (!/^node\s+/.test(commandLine)) return false;
+	if (!commandLine.includes("/auracall.js") && !/\bauracall\.js\b/.test(commandLine)) return false;
+	if (!/\bapi\s+serve\b/.test(commandLine)) return false;
+	if (commandLine.includes(`--port ${port}`) || commandLine.includes(`--port=${port}`)) return true;
+	return includeConfigDerivedPort && !/\s--port(?:\s|=)/.test(commandLine);
 }
 
 function normalizeApiServePort(value: number | null | undefined): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-  const port = Math.trunc(value);
-  return port > 0 && port <= 65535 ? port : null;
+	if (typeof value !== "number" || !Number.isFinite(value)) return null;
+	const port = Math.trunc(value);
+	return port > 0 && port <= 65535 ? port : null;
 }
 
-async function waitForProcessExit(pid: number, input: {
-  isProcessAlive: (pid: number) => boolean;
-  sleep: (ms: number) => Promise<void>;
-  timeoutMs: number;
-  pollMs: number;
-}): Promise<boolean> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < input.timeoutMs) {
-    if (!input.isProcessAlive(pid)) return true;
-    await input.sleep(input.pollMs);
-  }
-  return !input.isProcessAlive(pid);
+async function waitForProcessExit(
+	pid: number,
+	input: {
+		isProcessAlive: (pid: number) => boolean;
+		sleep: (ms: number) => Promise<void>;
+		timeoutMs: number;
+		pollMs: number;
+	},
+): Promise<boolean> {
+	const startedAt = Date.now();
+	while (Date.now() - startedAt < input.timeoutMs) {
+		if (!input.isProcessAlive(pid)) return true;
+		await input.sleep(input.pollMs);
+	}
+	return !input.isProcessAlive(pid);
 }
 
 function defaultIsProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 type DefaultRuntimeRunServiceStateProbeDeps = {
-  resolveConfigImpl?: typeof resolveConfig;
-  probeChatgptBrowserServiceStateImpl?: typeof probeChatgptBrowserServiceState;
-  probeGeminiBrowserServiceStateImpl?: typeof probeGeminiBrowserServiceState;
-  probeGrokBrowserServiceStateImpl?: typeof probeGrokBrowserServiceState;
-  readLiveRuntimeRunServiceStateImpl?: typeof readLiveRuntimeRunServiceState;
-  cwd?: string;
-  env?: NodeJS.ProcessEnv;
+	resolveConfigImpl?: typeof resolveConfig;
+	probeChatgptBrowserServiceStateImpl?: typeof probeChatgptBrowserServiceState;
+	probeGeminiBrowserServiceStateImpl?: typeof probeGeminiBrowserServiceState;
+	probeGrokBrowserServiceStateImpl?: typeof probeGrokBrowserServiceState;
+	readLiveRuntimeRunServiceStateImpl?: typeof readLiveRuntimeRunServiceState;
+	cwd?: string;
+	env?: NodeJS.ProcessEnv;
 };
 
 export function createDefaultRuntimeRunServiceStateProbe(
-  deps: DefaultRuntimeRunServiceStateProbeDeps = {},
-): ResponsesHttpServerDeps['probeRuntimeRunServiceState'] {
-  const resolveConfigImpl = deps.resolveConfigImpl ?? resolveConfig;
-  const probeChatgptBrowserServiceStateImpl =
-    deps.probeChatgptBrowserServiceStateImpl ?? probeChatgptBrowserServiceState;
-  const probeGeminiBrowserServiceStateImpl =
-    deps.probeGeminiBrowserServiceStateImpl ?? probeGeminiBrowserServiceState;
-  const probeGrokBrowserServiceStateImpl =
-    deps.probeGrokBrowserServiceStateImpl ?? probeGrokBrowserServiceState;
-  const readLiveRuntimeRunServiceStateImpl =
-    deps.readLiveRuntimeRunServiceStateImpl ?? readLiveRuntimeRunServiceState;
-  const cwd = deps.cwd ?? process.cwd();
-  const env = deps.env ?? process.env;
+	deps: DefaultRuntimeRunServiceStateProbeDeps = {},
+): ResponsesHttpServerDeps["probeRuntimeRunServiceState"] {
+	const resolveConfigImpl = deps.resolveConfigImpl ?? resolveConfig;
+	const probeChatgptBrowserServiceStateImpl =
+		deps.probeChatgptBrowserServiceStateImpl ?? probeChatgptBrowserServiceState;
+	const probeGeminiBrowserServiceStateImpl =
+		deps.probeGeminiBrowserServiceStateImpl ?? probeGeminiBrowserServiceState;
+	const probeGrokBrowserServiceStateImpl =
+		deps.probeGrokBrowserServiceStateImpl ?? probeGrokBrowserServiceState;
+	const readLiveRuntimeRunServiceStateImpl =
+		deps.readLiveRuntimeRunServiceStateImpl ?? readLiveRuntimeRunServiceState;
+	const cwd = deps.cwd ?? process.cwd();
+	const env = deps.env ?? process.env;
 
-  return async ({ inspection, step }) => {
-    if (step.service !== 'chatgpt' && step.service !== 'gemini' && step.service !== 'grok') {
-      return null;
-    }
+	return async ({ inspection, step }) => {
+		if (step.service !== "chatgpt" && step.service !== "gemini" && step.service !== "grok") {
+			return null;
+		}
 
-    let transientLiveState: RuntimeRunInspectionServiceStateProbeResult | null = null;
-    if (step.service === 'gemini' || step.service === 'grok') {
-      const inspectionRunId =
-        typeof inspection?.record?.runId === 'string' && inspection.record.runId.trim().length > 0
-          ? inspection.record.runId.trim()
-          : null;
-      if (inspectionRunId) {
-        transientLiveState = readLiveRuntimeRunServiceStateImpl({
-          runId: inspectionRunId,
-          stepId: step.id,
-          service: step.service,
-        });
-      }
-    }
+		let transientLiveState: RuntimeRunInspectionServiceStateProbeResult | null = null;
+		if (step.service === "gemini" || step.service === "grok") {
+			const inspectionRunId =
+				typeof inspection?.record?.runId === "string" && inspection.record.runId.trim().length > 0
+					? inspection.record.runId.trim()
+					: null;
+			if (inspectionRunId) {
+				transientLiveState = readLiveRuntimeRunServiceStateImpl({
+					runId: inspectionRunId,
+					stepId: step.id,
+					service: step.service,
+				});
+			}
+		}
 
-    const runtimeProfileId =
-      typeof step.runtimeProfileId === 'string' && step.runtimeProfileId.trim().length > 0
-        ? step.runtimeProfileId.trim()
-        : null;
-    const resolvedConfig = await resolveConfigImpl(
-      runtimeProfileId ? { profile: runtimeProfileId } : {},
-      cwd,
-      env,
-    );
+		const runtimeProfileId =
+			typeof step.runtimeProfileId === "string" && step.runtimeProfileId.trim().length > 0
+				? step.runtimeProfileId.trim()
+				: null;
+		const resolvedConfig = await resolveConfigImpl(
+			runtimeProfileId ? { profile: runtimeProfileId } : {},
+			cwd,
+			env,
+		);
 
-    if (runtimeProfileId && resolvedConfig.auracallProfile !== runtimeProfileId) {
-      return null;
-    }
+		if (runtimeProfileId && resolvedConfig.auracallProfile !== runtimeProfileId) {
+			return null;
+		}
 
-    if (step.service === 'chatgpt') {
-      return probeChatgptBrowserServiceStateImpl(resolvedConfig);
-    }
+		if (step.service === "chatgpt") {
+			return probeChatgptBrowserServiceStateImpl(resolvedConfig);
+		}
 
-    if (resolvedConfig.engine !== 'browser') {
-      return null;
-    }
+		if (resolvedConfig.engine !== "browser") {
+			return null;
+		}
 
-    if (step.service === 'gemini') {
-      const geminiState = await probeGeminiBrowserServiceStateImpl(resolvedConfig, {
-        prompt: typeof step.input?.prompt === 'string' ? step.input.prompt : null,
-      });
-      if (geminiState && geminiState.state !== 'unknown') {
-        return geminiState;
-      }
-      if (transientLiveState) {
-        return transientLiveState;
-      }
-      return geminiState;
-    }
+		if (step.service === "gemini") {
+			const geminiState = await probeGeminiBrowserServiceStateImpl(resolvedConfig, {
+				prompt: typeof step.input?.prompt === "string" ? step.input.prompt : null,
+			});
+			if (geminiState && geminiState.state !== "unknown") {
+				return geminiState;
+			}
+			if (transientLiveState) {
+				return transientLiveState;
+			}
+			return geminiState;
+		}
 
-    const grokState = await probeGrokBrowserServiceStateImpl(resolvedConfig);
-    if (grokState && grokState.state !== 'unknown' && grokState.state !== 'thinking') {
-      return grokState;
-    }
-    if (transientLiveState) {
-      return transientLiveState;
-    }
-    return grokState;
-  };
+		const grokState = await probeGrokBrowserServiceStateImpl(resolvedConfig);
+		if (grokState && grokState.state !== "unknown" && grokState.state !== "thinking") {
+			return grokState;
+		}
+		if (transientLiveState) {
+			return transientLiveState;
+		}
+		return grokState;
+	};
 }
 
 type DefaultRuntimeRunBrowserDiagnosticsProbeDeps = {
-  resolveConfigImpl?: typeof resolveConfig;
-  probeBrowserRunDiagnosticsImpl?: typeof probeBrowserRunDiagnostics;
-  cwd?: string;
-  env?: NodeJS.ProcessEnv;
+	resolveConfigImpl?: typeof resolveConfig;
+	probeBrowserRunDiagnosticsImpl?: typeof probeBrowserRunDiagnostics;
+	cwd?: string;
+	env?: NodeJS.ProcessEnv;
 };
 
 export function createDefaultRuntimeRunBrowserDiagnosticsProbe(
-  deps: DefaultRuntimeRunBrowserDiagnosticsProbeDeps = {},
-): ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'] {
-  const resolveConfigImpl = deps.resolveConfigImpl ?? resolveConfig;
-  const probeBrowserRunDiagnosticsImpl = deps.probeBrowserRunDiagnosticsImpl ?? probeBrowserRunDiagnostics;
-  const cwd = deps.cwd ?? process.cwd();
-  const env = deps.env ?? process.env;
+	deps: DefaultRuntimeRunBrowserDiagnosticsProbeDeps = {},
+): ResponsesHttpServerDeps["probeRuntimeRunBrowserDiagnostics"] {
+	const resolveConfigImpl = deps.resolveConfigImpl ?? resolveConfig;
+	const probeBrowserRunDiagnosticsImpl =
+		deps.probeBrowserRunDiagnosticsImpl ?? probeBrowserRunDiagnostics;
+	const cwd = deps.cwd ?? process.cwd();
+	const env = deps.env ?? process.env;
 
-  return async ({ inspection, step }) => {
-    if (step.service !== 'chatgpt' && step.service !== 'gemini' && step.service !== 'grok') {
-      return null;
-    }
-    const runtimeProfileId =
-      typeof step.runtimeProfileId === 'string' && step.runtimeProfileId.trim().length > 0
-        ? step.runtimeProfileId.trim()
-        : null;
-    const resolvedConfig = await resolveConfigImpl(
-      runtimeProfileId ? { profile: runtimeProfileId } : {},
-      cwd,
-      env,
-    );
+	return async ({ inspection, step }) => {
+		if (step.service !== "chatgpt" && step.service !== "gemini" && step.service !== "grok") {
+			return null;
+		}
+		const runtimeProfileId =
+			typeof step.runtimeProfileId === "string" && step.runtimeProfileId.trim().length > 0
+				? step.runtimeProfileId.trim()
+				: null;
+		const resolvedConfig = await resolveConfigImpl(
+			runtimeProfileId ? { profile: runtimeProfileId } : {},
+			cwd,
+			env,
+		);
 
-    if (runtimeProfileId && resolvedConfig.auracallProfile !== runtimeProfileId) {
-      return null;
-    }
+		if (runtimeProfileId && resolvedConfig.auracallProfile !== runtimeProfileId) {
+			return null;
+		}
 
-    if (resolvedConfig.engine !== 'browser') {
-      return null;
-    }
+		if (resolvedConfig.engine !== "browser") {
+			return null;
+		}
 
-    return probeBrowserRunDiagnosticsImpl(resolvedConfig, {
-      service: step.service as BrowserDiagnosticsService,
-      runId: inspection.record.runId,
-      stepId: step.id,
-    });
-  };
+		return probeBrowserRunDiagnosticsImpl(resolvedConfig, {
+			service: step.service as BrowserDiagnosticsService,
+			runId: inspection.record.runId,
+			stepId: step.id,
+		});
+	};
 }
 
 export function assertResponsesHostAllowed(host: string | undefined, listenPublic: boolean): void {
-  if (listenPublic || isLoopbackHost(host ?? '127.0.0.1')) {
-    return;
-  }
-  throw new Error(
-    `Refusing to bind responses server to non-loopback host "${host}". Re-run with --listen-public if you really want an unauthenticated development server on a public interface.`,
-  );
+	if (listenPublic || isLoopbackHost(host ?? "127.0.0.1")) {
+		return;
+	}
+	throw new Error(
+		`Refusing to bind responses server to non-loopback host "${host}". Re-run with --listen-public if you really want an unauthenticated development server on a public interface.`,
+	);
 }
 
-function createHttpModelListResponse(catalog: { agents: Array<ProjectedAgent | EffectiveAgent> }): HttpModelListResponse {
-  const providerModels: HttpModelDescriptor[] = Object.entries(MODEL_CONFIGS).map(([id, config]) => ({
-    id,
-    object: 'model',
-    created: 0,
-    owned_by: config.provider ?? 'other',
-    metadata: {
-      kind: 'provider_model',
-      provider: config.provider ?? 'other',
-    },
-  }));
-  const semanticSelectors: HttpModelDescriptor[] = SEMANTIC_MODEL_SELECTORS.map((selector) => ({
-    id: selector.id,
-    object: 'model',
-    created: 0,
-    owned_by: `auracall:${selector.service}`,
-    metadata: {
-      kind: 'semantic_model_selector',
-      service: selector.service,
-      label: selector.label,
-      executionReady: selector.executionReady,
-    },
-  }));
-  const configuredAgents: HttpModelDescriptor[] = catalog.agents.map((agent) => ({
-    id: `agent:${agent.id}`,
-    object: 'model',
-    created: 0,
-    owned_by: 'auracall:agent',
-    metadata: {
-      kind: 'agent',
-      source: 'source' in agent ? agent.source : 'config',
-      enabled: 'enabled' in agent ? agent.enabled : true,
-      revision: 'revision' in agent ? agent.revision : undefined,
-      service: agent.service ?? agent.defaultService ?? undefined,
-      agent,
-    },
-  }));
-  return {
-    object: 'list',
-    data: [...providerModels, ...semanticSelectors, ...configuredAgents],
-  };
+function createHttpModelListResponse(catalog: {
+	agents: Array<ProjectedAgent | EffectiveAgent>;
+}): HttpModelListResponse {
+	const providerModels: HttpModelDescriptor[] = Object.entries(MODEL_CONFIGS).map(
+		([id, config]) => ({
+			id,
+			object: "model",
+			created: 0,
+			owned_by: config.provider ?? "other",
+			metadata: {
+				kind: "provider_model",
+				provider: config.provider ?? "other",
+			},
+		}),
+	);
+	const semanticSelectors: HttpModelDescriptor[] = SEMANTIC_MODEL_SELECTORS.map((selector) => ({
+		id: selector.id,
+		object: "model",
+		created: 0,
+		owned_by: `auracall:${selector.service}`,
+		metadata: {
+			kind: "semantic_model_selector",
+			service: selector.service,
+			label: selector.label,
+			executionReady: selector.executionReady,
+		},
+	}));
+	const configuredAgents: HttpModelDescriptor[] = catalog.agents.map((agent) => ({
+		id: `agent:${agent.id}`,
+		object: "model",
+		created: 0,
+		owned_by: "auracall:agent",
+		metadata: {
+			kind: "agent",
+			source: "source" in agent ? agent.source : "config",
+			enabled: "enabled" in agent ? agent.enabled : true,
+			revision: "revision" in agent ? agent.revision : undefined,
+			service: agent.service ?? agent.defaultService ?? undefined,
+			agent,
+		},
+	}));
+	return {
+		object: "list",
+		data: [...providerModels, ...semanticSelectors, ...configuredAgents],
+	};
 }
 
 function createHttpStatusResponse(input: {
-  host: string;
-  port: number;
-  dashboardUrl?: string;
-  publicDashboardUrl?: string;
-  serviceRouting?: ApiServiceRoutingConfig;
-  recoverySummary?: ExecutionServiceHostRecoverySummary;
-  localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
-  runnerTopology: ExecutionServiceHostRunnerTopologySummary;
-  runner: HttpStatusResponse['runner'];
-  backgroundDrain: HttpStatusResponse['backgroundDrain'];
-  tenantExecutionLimits: TenantExecutionLimitStatusSummary;
-  accountMirrorScheduler: HttpStatusResponse['accountMirrorScheduler'];
-  accountMirrorSchedulerForegroundWork: AccountMirrorSchedulerForegroundWorkStatus;
-  accountMirrorStatus: AccountMirrorStatusSummary;
-  accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
-  preflight?: PreflightStatusSummary;
-  controlResult?: HttpStatusResponse['controlResult'];
-  auth: ApiAuthPolicy;
+	host: string;
+	port: number;
+	dashboardUrl?: string;
+	publicDashboardUrl?: string;
+	serviceRouting?: ApiServiceRoutingConfig;
+	recoverySummary?: ExecutionServiceHostRecoverySummary;
+	localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
+	runnerTopology: ExecutionServiceHostRunnerTopologySummary;
+	runner: HttpStatusResponse["runner"];
+	backgroundDrain: HttpStatusResponse["backgroundDrain"];
+	tenantExecutionLimits: TenantExecutionLimitStatusSummary;
+	accountMirrorScheduler: HttpStatusResponse["accountMirrorScheduler"];
+	accountMirrorSchedulerForegroundWork: AccountMirrorSchedulerForegroundWorkStatus;
+	accountMirrorStatus: AccountMirrorStatusSummary;
+	accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
+	accountMirrorProofScope: AccountMirrorProofScopeStatus;
+	preflight?: PreflightStatusSummary;
+	controlResult?: HttpStatusResponse["controlResult"];
+	auth: ApiAuthPolicy;
 }): HttpStatusResponse {
-  const accountMirrorScheduler = {
-    ...input.accountMirrorScheduler,
-    foregroundWork: input.accountMirrorSchedulerForegroundWork,
-  };
-  accountMirrorScheduler.operatorStatus = createAccountMirrorSchedulerOperatorStatus(accountMirrorScheduler);
-  const serviceDiscovery = buildApiServiceDiscovery({
-    host: input.host,
-    port: input.port,
-    dashboardUrl: input.dashboardUrl,
-    publicDashboardUrl: input.publicDashboardUrl,
-    serviceRouting: input.serviceRouting,
-  });
-  return {
-    object: 'status',
-    ok: true,
-    version: getCliVersion(),
-    mode: 'development',
-    api: createApiRuntimeStatus(input.port),
-    binding: {
-      host: input.host,
-      port: input.port,
-      localOnly: isLoopbackHost(input.host),
-      unauthenticated: !input.auth.required,
-    },
-    auth: {
-      required: input.auth.required,
-      scheme: input.auth.required ? 'bearer' : 'none',
-      keyCount: input.auth.keys.length,
-      scoped: input.auth.keys.some((key) =>
-        Boolean(key.agents?.length || key.teams?.length || key.services?.length || key.runtimeProfiles?.length),
-      ),
-    },
-    serviceDiscovery,
-    routes: {
-      status: '/status',
-      recoveryDetailTemplate: '/status/recovery/{run_id}',
-      teamRunsCreate: '/v1/team-runs',
-      teamRunInspection:
-        '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
-      projectEnsure: 'POST /v1/projects/ensure',
-      tenantPoolTeamEnsure: 'POST /v1/tenant-pool-teams/ensure',
-      agentSetupPackagesCreate: 'POST /v1/agent-setup-packages',
-      agentSetupHandoffsCreate: 'POST /v1/agent-setup-handoffs',
-      runtimeRunsRecent: '/v1/runtime-runs/recent[?sourceKind=team-run|direct][&status=planned|running|succeeded|failed|cancelled][&limit=25]',
-      runtimeRunInspection:
-        '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',
-      models: '/v1/models',
-      chatCompletionsCreate: '/v1/chat/completions',
-      responsesCreate: '/v1/responses',
-      responsesGetTemplate: '/v1/responses/{response_id}',
-      responseBatchesCreate: '/v1/response-batches',
-      responseBatchesGetTemplate: '/v1/response-batches/{batch_id}',
-      mediaGenerationsCreate: '/v1/media-generations',
-      mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
-      mediaGenerationsMaterializeTemplate: 'POST /v1/media-generations/{media_generation_id}/materialize',
-      mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
-      runArchive: '/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&projectId={provider_project_id}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&fileAvailable=true|false][&assetAvailability=available|unavailable|pending][&q={query}][&limit=50]',
-      runArchiveAssetLookup: '/v1/archive/assets/lookup?checksumSha256={sha256}|cacheKey={cache_key}|providerArtifactId={provider_artifact_id}|artifactId={artifact_id}[&limit=50]',
-      search: '/v1/search[?q={query}][&kind=conversation|artifact|upload|run|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status={status}][&fileAvailable=true|false][&assetAvailability=available|unavailable|pending][&materialization=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&limit=80][&cursor={cursor}]',
-      runArchiveBackfill: '/v1/archive/backfill',
-      runArchiveEvidenceCreate: '/v1/archive/evidence',
-      runArchiveItemTemplate: '/v1/archive/items/{archive_item_id}',
-      runArchiveItemAssetTemplate: '/v1/archive/items/{archive_item_id}/asset',
-      runArchiveItemMaterializeTemplate: '/v1/archive/items/{archive_item_id}/materialize',
-      runArchiveMaterializationsCreate: '/v1/archive/materializations',
-      runArchiveMaterializationsList: '/v1/archive/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&archiveItemId={archive_item_id}][&limit=50]',
-      runArchiveMaterializationTemplate: '/v1/archive/materializations/{job_id}',
-      historyMaterializationsCreate: '/v1/account-mirrors/materializations',
-      historyMaterializationsList: '/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|catalog_item|archive_item|reconciliation][&limit=50]',
-      historyMaterializationTemplate: '/v1/account-mirrors/materializations/{job_id}',
-      runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
-      apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
-      preflightRunTemplate: '/v1/preflight/lazy-live-follow/runs/{run_id}',
-      preflightRunLogTemplate: '/v1/preflight/lazy-live-follow/runs/{run_id}/log[?maxBytes=32768]',
-      accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
-      accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
-      accountMirrorCatalogItemTemplate: '/v1/account-mirrors/catalog/items/{item_id}?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}&kind={kind}',
-      accountMirrorPreviewSessions: '/v1/account-mirrors/preview-sessions',
-      accountMirrorPreviewSessionTemplate: '/v1/account-mirrors/preview-sessions/{preview_session_id}',
-      accountMirrorRefresh: '/v1/account-mirrors/refresh',
-      accountMirrorCompletionsCreate: '/v1/account-mirrors/completions',
-      accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|idle_waiting|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
-      accountMirrorCompletionsGetTemplate: '/v1/account-mirrors/completions/{completion_id}',
-      accountMirrorCompletionsControlTemplate: 'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel"}',
-      accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
-      accountMirrorSchedulerDiagnostics: '/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]',
-      browserProcesses: '/v1/browser/processes',
-      browserDomDriftObservations: '/v1/browser/dom-drift-observations[?service={chatgpt|gemini|grok}&surface={surface}&status=observed|accepted|rejected&limit=50]',
-      browserDomDriftObservationAcceptTemplate: 'POST /v1/browser/dom-drift-observations/{observation_id}/accept',
-      agentRegistryDiagnostics: '/v1/config/agent-diagnostics',
-      configApiKeys: '/v1/config/api-keys',
-      configApiKeyIssue: 'POST /v1/config/api-keys/issue',
-      configApiKeyDeleteTemplate: 'DELETE /v1/config/api-keys/{key_id}',
-      configSnapshotExport: 'POST /v1/config/snapshots/export',
-      configSnapshotImport: 'POST /v1/config/snapshots/import',
-      workbenchCapabilitiesList:
-        '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
-      operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
-      operatorDebugDashboard: serviceDiscovery.routing.debugDashboardPath,
-      accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
-      accountMirrorPreviewSessionDashboard: serviceDiscovery.routing.previewSessionPath,
-      operatorConfigDashboard: serviceDiscovery.routing.configPath,
-      operatorAgentsDashboard: serviceDiscovery.routing.agentsPath,
-      ...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
-      ...(input.publicDashboardUrl ? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl } : {}),
-      localServiceBaseUrl: serviceDiscovery.local.baseUrl,
-      ...(serviceDiscovery.external ? { externalServiceBaseUrl: serviceDiscovery.external.baseUrl } : {}),
-    },
-    compatibility: {
-      openai: true,
-      chatCompletions: true,
-      streaming: false,
-      auth: input.auth.required,
-    },
-    preflight: input.preflight ?? {
-      lazyLiveFollow: null,
-      lazyLiveFollowRun: null,
-      lazyLiveFollowRunHistory: [],
-    },
-    recoverySummary: input.recoverySummary,
-    localClaimSummary: input.localClaimSummary,
-    runnerTopology: input.runnerTopology,
-    runner: input.runner,
-    backgroundDrain: input.backgroundDrain,
-    tenantExecutionLimits: input.tenantExecutionLimits,
-    accountMirrorScheduler,
-    accountMirrorStatus: input.accountMirrorStatus,
-    accountMirrorCompletions: input.accountMirrorCompletions,
-    liveFollow: createLiveFollowHealthSummary(
-      accountMirrorScheduler,
-      input.accountMirrorCompletions,
-      input.accountMirrorStatus,
-    ),
-    executionHints: {
-      headerNames: [
-        'X-AuraCall-Runtime-Profile',
-        'X-AuraCall-Agent',
-        'X-AuraCall-Team',
-        'X-AuraCall-Service',
-      ],
-      bodyObject: 'auracall',
-    },
-    controlResult: input.controlResult,
-  };
+	const accountMirrorScheduler = {
+		...input.accountMirrorScheduler,
+		foregroundWork: input.accountMirrorSchedulerForegroundWork,
+	};
+	accountMirrorScheduler.operatorStatus =
+		createAccountMirrorSchedulerOperatorStatus(accountMirrorScheduler);
+	const serviceDiscovery = buildApiServiceDiscovery({
+		host: input.host,
+		port: input.port,
+		dashboardUrl: input.dashboardUrl,
+		publicDashboardUrl: input.publicDashboardUrl,
+		serviceRouting: input.serviceRouting,
+	});
+	return {
+		object: "status",
+		ok: true,
+		version: getCliVersion(),
+		mode: "development",
+		api: createApiRuntimeStatus(input.port),
+		binding: {
+			host: input.host,
+			port: input.port,
+			localOnly: isLoopbackHost(input.host),
+			unauthenticated: !input.auth.required,
+		},
+		auth: {
+			required: input.auth.required,
+			scheme: input.auth.required ? "bearer" : "none",
+			keyCount: input.auth.keys.length,
+			scoped: input.auth.keys.some((key) =>
+				Boolean(
+					key.agents?.length ||
+						key.teams?.length ||
+						key.services?.length ||
+						key.runtimeProfiles?.length,
+				),
+			),
+		},
+		serviceDiscovery,
+		routes: {
+			status: "/status",
+			recoveryDetailTemplate: "/status/recovery/{run_id}",
+			teamRunsCreate: "/v1/team-runs",
+			teamRunInspection:
+				"/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}",
+			projectEnsure: "POST /v1/projects/ensure",
+			tenantPoolTeamEnsure: "POST /v1/tenant-pool-teams/ensure",
+			agentSetupPackagesCreate: "POST /v1/agent-setup-packages",
+			agentSetupHandoffsCreate: "POST /v1/agent-setup-handoffs",
+			runtimeRunsRecent:
+				"/v1/runtime-runs/recent[?sourceKind=team-run|direct][&status=planned|running|succeeded|failed|cancelled][&limit=25]",
+			runtimeRunInspection:
+				"/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]",
+			models: "/v1/models",
+			chatCompletionsCreate: "/v1/chat/completions",
+			responsesCreate: "/v1/responses",
+			responsesGetTemplate: "/v1/responses/{response_id}",
+			responseBatchesCreate: "/v1/response-batches",
+			responseBatchesGetTemplate: "/v1/response-batches/{batch_id}",
+			mediaGenerationsCreate: "/v1/media-generations",
+			mediaGenerationsGetTemplate: "/v1/media-generations/{media_generation_id}",
+			mediaGenerationsMaterializeTemplate:
+				"POST /v1/media-generations/{media_generation_id}/materialize",
+			mediaGenerationsStatusTemplate:
+				"/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]",
+			runArchive:
+				"/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&projectId={provider_project_id}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&fileAvailable=true|false][&assetAvailability=available|unavailable|pending][&q={query}][&limit=50]",
+			runArchiveAssetLookup:
+				"/v1/archive/assets/lookup?checksumSha256={sha256}|cacheKey={cache_key}|providerArtifactId={provider_artifact_id}|artifactId={artifact_id}[&limit=50]",
+			search:
+				"/v1/search[?q={query}][&kind=conversation|artifact|upload|run|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status={status}][&fileAvailable=true|false][&assetAvailability=available|unavailable|pending][&materialization=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&limit=80][&cursor={cursor}]",
+			runArchiveBackfill: "/v1/archive/backfill",
+			runArchiveEvidenceCreate: "/v1/archive/evidence",
+			runArchiveItemTemplate: "/v1/archive/items/{archive_item_id}",
+			runArchiveItemAssetTemplate: "/v1/archive/items/{archive_item_id}/asset",
+			runArchiveItemMaterializeTemplate: "/v1/archive/items/{archive_item_id}/materialize",
+			runArchiveMaterializationsCreate: "/v1/archive/materializations",
+			runArchiveMaterializationsList:
+				"/v1/archive/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&archiveItemId={archive_item_id}][&limit=50]",
+			runArchiveMaterializationTemplate: "/v1/archive/materializations/{job_id}",
+			historyMaterializationsCreate: "/v1/account-mirrors/materializations",
+			historyMaterializationsList:
+				"/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|catalog_item|archive_item|reconciliation][&limit=50]",
+			historyMaterializationTemplate: "/v1/account-mirrors/materializations/{job_id}",
+			runStatusTemplate: "/v1/runs/{run_id}/status[?diagnostics=browser-state]",
+			apiLogTail: "/v1/api/logs/tail[?maxBytes=32768]",
+			preflightRunTemplate: "/v1/preflight/lazy-live-follow/runs/{run_id}",
+			preflightRunLogTemplate: "/v1/preflight/lazy-live-follow/runs/{run_id}/log[?maxBytes=32768]",
+			accountMirrorStatus:
+				"/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]",
+			accountMirrorCatalog:
+				"/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]",
+			accountMirrorCatalogItemTemplate:
+				"/v1/account-mirrors/catalog/items/{item_id}?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}&kind={kind}",
+			accountMirrorPreviewSessions: "/v1/account-mirrors/preview-sessions",
+			accountMirrorPreviewSessionTemplate:
+				"/v1/account-mirrors/preview-sessions/{preview_session_id}",
+			accountMirrorRefresh: "/v1/account-mirrors/refresh",
+			accountMirrorReconciliationsCreate: "/v1/account-mirrors/reconciliations",
+			accountMirrorReconciliationsList:
+				"/v1/account-mirrors/reconciliations[?status=active|planned|queued|running|idle_waiting|paused|blocked|completed|completed_with_skips|cancelled|failed][&limit=50]",
+			accountMirrorReconciliationsGetTemplate: "/v1/account-mirrors/reconciliations/{campaign_id}",
+			accountMirrorReconciliationsControlTemplate:
+				'POST /v1/account-mirrors/reconciliations/{campaign_id} {"action":"pause|resume|cancel|run_next_pass"}',
+			accountMirrorCompletionsCreate: "/v1/account-mirrors/completions",
+			accountMirrorCompletionsList:
+				"/v1/account-mirrors/completions[?status=active|queued|running|idle_waiting|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]",
+			accountMirrorCompletionsGetTemplate: "/v1/account-mirrors/completions/{completion_id}",
+			accountMirrorCompletionsControlTemplate:
+				'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel"}',
+			accountMirrorSchedulerHistory: "/v1/account-mirrors/scheduler/history[?limit=10]",
+			accountMirrorSchedulerDiagnostics:
+				"/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]",
+			browserProcesses: "/v1/browser/processes",
+			browserDomDriftObservations:
+				"/v1/browser/dom-drift-observations[?service={chatgpt|gemini|grok}&surface={surface}&status=observed|accepted|rejected&limit=50]",
+			browserDomDriftObservationAcceptTemplate:
+				"POST /v1/browser/dom-drift-observations/{observation_id}/accept",
+			agentRegistryDiagnostics: "/v1/config/agent-diagnostics",
+			configApiKeys: "/v1/config/api-keys",
+			configApiKeyIssue: "POST /v1/config/api-keys/issue",
+			configApiKeyDeleteTemplate: "DELETE /v1/config/api-keys/{key_id}",
+			configSnapshotExport: "POST /v1/config/snapshots/export",
+			configSnapshotImport: "POST /v1/config/snapshots/import",
+			workbenchCapabilitiesList:
+				"/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]",
+			operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
+			operatorDebugDashboard: serviceDiscovery.routing.debugDashboardPath,
+			accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
+			accountMirrorPreviewSessionDashboard: serviceDiscovery.routing.previewSessionPath,
+			operatorConfigDashboard: serviceDiscovery.routing.configPath,
+			operatorAgentsDashboard: serviceDiscovery.routing.agentsPath,
+			...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
+			...(input.publicDashboardUrl
+				? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl }
+				: {}),
+			localServiceBaseUrl: serviceDiscovery.local.baseUrl,
+			...(serviceDiscovery.external
+				? { externalServiceBaseUrl: serviceDiscovery.external.baseUrl }
+				: {}),
+		},
+		compatibility: {
+			openai: true,
+			chatCompletions: true,
+			streaming: false,
+			auth: input.auth.required,
+		},
+		preflight: input.preflight ?? {
+			lazyLiveFollow: null,
+			lazyLiveFollowRun: null,
+			lazyLiveFollowRunHistory: [],
+		},
+		recoverySummary: input.recoverySummary,
+		localClaimSummary: input.localClaimSummary,
+		runnerTopology: input.runnerTopology,
+		runner: input.runner,
+		backgroundDrain: input.backgroundDrain,
+		tenantExecutionLimits: input.tenantExecutionLimits,
+		accountMirrorScheduler,
+		accountMirrorStatus: input.accountMirrorStatus,
+		accountMirrorCompletions: input.accountMirrorCompletions,
+		accountMirrorProofScope: input.accountMirrorProofScope,
+		liveFollow: createLiveFollowHealthSummary(
+			accountMirrorScheduler,
+			input.accountMirrorCompletions,
+			input.accountMirrorStatus,
+		),
+		executionHints: {
+			headerNames: [
+				"X-AuraCall-Runtime-Profile",
+				"X-AuraCall-Agent",
+				"X-AuraCall-Team",
+				"X-AuraCall-Service",
+			],
+			bodyObject: "auracall",
+		},
+		controlResult: input.controlResult,
+	};
 }
 
-function createApiRuntimeStatus(port: number): HttpStatusResponse['api'] {
-  return {
-    process: {
-      pid: process.pid,
-      ppid: process.ppid,
-      uptimeSeconds: Math.round(process.uptime()),
-      argv: process.argv,
-      execPath: process.execPath,
-      cwd: process.cwd(),
-      nodeVersion: process.version,
-    },
-    managedService: {
-      manager: 'systemd-user',
-      unitName: 'auracall-api.service',
-      logPath: path.join(getAuracallHomeDir(), 'logs', `api-${port}.log`),
-      installCommand: 'pnpm run install:user-runtime-service',
-      restartCommand: 'systemctl --user restart auracall-api.service',
-      statusCommand: 'systemctl --user status auracall-api.service',
-    },
-  };
+function createApiRuntimeStatus(port: number): HttpStatusResponse["api"] {
+	return {
+		process: {
+			pid: process.pid,
+			ppid: process.ppid,
+			uptimeSeconds: Math.round(process.uptime()),
+			argv: process.argv,
+			execPath: process.execPath,
+			cwd: process.cwd(),
+			nodeVersion: process.version,
+		},
+		managedService: {
+			manager: "systemd-user",
+			unitName: "auracall-api.service",
+			logPath: path.join(getAuracallHomeDir(), "logs", `api-${port}.log`),
+			installCommand: "pnpm run install:user-runtime-service",
+			restartCommand: "systemctl --user restart auracall-api.service",
+			statusCommand: "systemctl --user status auracall-api.service",
+		},
+	};
 }
 
 function parseApiLogTailQuery(params: URLSearchParams): { maxBytes: number } {
-  const raw = params.get('maxBytes');
-  const parsed = raw ? Number.parseInt(raw, 10) : 32_768;
-  const maxBytes = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 262_144) : 32_768;
-  return { maxBytes };
+	const raw = params.get("maxBytes");
+	const parsed = raw ? Number.parseInt(raw, 10) : 32_768;
+	const maxBytes = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 262_144) : 32_768;
+	return { maxBytes };
 }
 
-async function readApiLogTail(input: { port: number; maxBytes: number }): Promise<HttpApiLogTailResponse> {
-  const logPath = path.join(getAuracallHomeDir(), 'logs', `api-${input.port}.log`);
-  const tail = await readBoundedLogTail(logPath, input.maxBytes);
-  return {
-    object: 'api_log_tail',
-    logPath,
-    ...tail,
-  };
+async function readApiLogTail(input: {
+	port: number;
+	maxBytes: number;
+}): Promise<HttpApiLogTailResponse> {
+	const logPath = path.join(getAuracallHomeDir(), "logs", `api-${input.port}.log`);
+	const tail = await readBoundedLogTail(logPath, input.maxBytes);
+	return {
+		object: "api_log_tail",
+		logPath,
+		...tail,
+	};
 }
 
 async function readBrowserProcessStatus(input: {
-  status: AccountMirrorStatusSummary;
-  now: () => Date;
+	status: AccountMirrorStatusSummary;
+	now: () => Date;
 }): Promise<HttpBrowserProcessStatusResponse> {
-  const entries = await Promise.all(
-    Array.from(uniqueBrowserProcessTargets(input.status.entries)).map((target) => readBrowserProcessStatusEntry(target)),
-  );
-  return {
-    object: 'browser_process_status',
-    generatedAt: input.now().toISOString(),
-    metrics: {
-      configuredTargets: entries.length,
-      processesAlive: entries.filter((entry) => entry.processAlive).length,
-      responsiveDevTools: entries.filter((entry) => entry.devToolsResponsive).length,
-      launchBlankArg: entries.filter((entry) => entry.launchCommandHasBlankArg).length,
-      openBlankPages: entries.reduce((total, entry) => total + entry.openBlankPageCount, 0),
-    },
-    entries,
-  };
+	const entries = await Promise.all(
+		Array.from(uniqueBrowserProcessTargets(input.status.entries)).map((target) =>
+			readBrowserProcessStatusEntry(target),
+		),
+	);
+	return {
+		object: "browser_process_status",
+		generatedAt: input.now().toISOString(),
+		metrics: {
+			configuredTargets: entries.length,
+			processesAlive: entries.filter((entry) => entry.processAlive).length,
+			responsiveDevTools: entries.filter((entry) => entry.devToolsResponsive).length,
+			launchBlankArg: entries.filter((entry) => entry.launchCommandHasBlankArg).length,
+			openBlankPages: entries.reduce((total, entry) => total + entry.openBlankPageCount, 0),
+		},
+		entries,
+	};
 }
 
 function* uniqueBrowserProcessTargets(entries: AccountMirrorStatusEntry[]): Iterable<{
-  provider: AccountMirrorProvider;
-  runtimeProfileId: string;
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
 }> {
-  const seen = new Set<string>();
-  for (const entry of entries) {
-    const provider = normalizeBrowserProcessProvider(entry.provider);
-    const runtimeProfileId = typeof entry.runtimeProfileId === 'string' && entry.runtimeProfileId.trim()
-      ? entry.runtimeProfileId.trim()
-      : 'default';
-    if (!provider) continue;
-    const key = `${provider}:${runtimeProfileId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    yield { provider, runtimeProfileId };
-  }
+	const seen = new Set<string>();
+	for (const entry of entries) {
+		const provider = normalizeBrowserProcessProvider(entry.provider);
+		const runtimeProfileId =
+			typeof entry.runtimeProfileId === "string" && entry.runtimeProfileId.trim()
+				? entry.runtimeProfileId.trim()
+				: "default";
+		if (!provider) continue;
+		const key = `${provider}:${runtimeProfileId}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		yield { provider, runtimeProfileId };
+	}
 }
 
 function normalizeBrowserProcessProvider(value: unknown): AccountMirrorProvider | null {
-  return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
+	return value === "chatgpt" || value === "gemini" || value === "grok" ? value : null;
 }
 
 async function readBrowserProcessStatusEntry(input: {
-  provider: AccountMirrorProvider;
-  runtimeProfileId: string;
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
 }): Promise<HttpBrowserProcessStatusEntry> {
-  const managedProfileDir = path.join(getAuracallHomeDir(), 'browser-profiles', input.runtimeProfileId, input.provider);
-  const host = '127.0.0.1';
-  try {
-    const processMatch = await findChromeProcessUsingUserDataDir(managedProfileDir);
-    const port = processMatch?.port ?? await readDevToolsPort(managedProfileDir);
-    const devToolsResponsive = port
-      ? await isDevToolsResponsive({ host, port, attempts: 1, timeoutMs: 750 })
-      : false;
-    const targets = devToolsResponsive && port
-      ? await readDevToolsTargetSummaries({ host, port })
-      : [];
-    return {
-      provider: input.provider,
-      runtimeProfileId: input.runtimeProfileId,
-      managedProfileDir,
-      pid: processMatch?.pid ?? null,
-      port: port ?? null,
-      host,
-      processAlive: Boolean(processMatch),
-      devToolsResponsive,
-      launchCommandHasBlankArg: commandLineHasAboutBlankLaunchArg(processMatch?.commandLine ?? ''),
-      openBlankPageCount: targets.filter((target) => target.isBlankPage).length,
-      pageTargetCount: targets.filter((target) => target.type === 'page').length,
-      targets,
-      error: null,
-    };
-  } catch (error) {
-    return {
-      provider: input.provider,
-      runtimeProfileId: input.runtimeProfileId,
-      managedProfileDir,
-      pid: null,
-      port: null,
-      host,
-      processAlive: false,
-      devToolsResponsive: false,
-      launchCommandHasBlankArg: false,
-      openBlankPageCount: 0,
-      pageTargetCount: 0,
-      targets: [],
-      error: error instanceof Error ? error.message : 'Unknown browser process probe error.',
-    };
-  }
+	const managedProfileDir = path.join(
+		getAuracallHomeDir(),
+		"browser-profiles",
+		input.runtimeProfileId,
+		input.provider,
+	);
+	const host = "127.0.0.1";
+	try {
+		const processMatch = await findChromeProcessUsingUserDataDir(managedProfileDir);
+		const port = processMatch?.port ?? (await readDevToolsPort(managedProfileDir));
+		const devToolsResponsive = port
+			? await isDevToolsResponsive({ host, port, attempts: 1, timeoutMs: 750 })
+			: false;
+		const targets =
+			devToolsResponsive && port ? await readDevToolsTargetSummaries({ host, port }) : [];
+		return {
+			provider: input.provider,
+			runtimeProfileId: input.runtimeProfileId,
+			managedProfileDir,
+			pid: processMatch?.pid ?? null,
+			port: port ?? null,
+			host,
+			processAlive: Boolean(processMatch),
+			devToolsResponsive,
+			launchCommandHasBlankArg: commandLineHasAboutBlankLaunchArg(processMatch?.commandLine ?? ""),
+			openBlankPageCount: targets.filter((target) => target.isBlankPage).length,
+			pageTargetCount: targets.filter((target) => target.type === "page").length,
+			targets,
+			error: null,
+		};
+	} catch (error) {
+		return {
+			provider: input.provider,
+			runtimeProfileId: input.runtimeProfileId,
+			managedProfileDir,
+			pid: null,
+			port: null,
+			host,
+			processAlive: false,
+			devToolsResponsive: false,
+			launchCommandHasBlankArg: false,
+			openBlankPageCount: 0,
+			pageTargetCount: 0,
+			targets: [],
+			error: error instanceof Error ? error.message : "Unknown browser process probe error.",
+		};
+	}
 }
 
 async function readDevToolsTargetSummaries(input: {
-  host: string;
-  port: number;
+	host: string;
+	port: number;
 }): Promise<HttpBrowserProcessTargetSummary[]> {
-  const targets = await CDP.List({ host: input.host, port: input.port }).catch(() => []);
-  return targets.map((target) => {
-    const url = typeof target.url === 'string' ? target.url : null;
-    return {
-      targetId: typeof target.id === 'string' ? target.id : null,
-      type: typeof target.type === 'string' ? target.type : null,
-      url,
-      title: typeof target.title === 'string' ? target.title : null,
-      isBlankPage: target.type === 'page' && isBlankPageUrl(url),
-    };
-  });
+	const targets = await CDP.List({ host: input.host, port: input.port }).catch(() => []);
+	return targets.map((target) => {
+		const url = typeof target.url === "string" ? target.url : null;
+		return {
+			targetId: typeof target.id === "string" ? target.id : null,
+			type: typeof target.type === "string" ? target.type : null,
+			url,
+			title: typeof target.title === "string" ? target.title : null,
+			isBlankPage: target.type === "page" && isBlankPageUrl(url),
+		};
+	});
 }
 
 function commandLineHasAboutBlankLaunchArg(commandLine: string): boolean {
-  return /(^|\s)about:blank(\s|$)/.test(commandLine);
+	return /(^|\s)about:blank(\s|$)/.test(commandLine);
 }
 
 function isBlankPageUrl(url: string | null): boolean {
-  return url === 'about:blank' || url === 'chrome://newtab/' || url === 'chrome://new-tab-page/';
+	return url === "about:blank" || url === "chrome://newtab/" || url === "chrome://new-tab-page/";
 }
 
 async function readLazyLiveFollowPreflightRunLogTail(input: {
-  id: string;
-  maxBytes: number;
-  runner?: Pick<LazyLiveFollowPreflightRunner, 'readRun'>;
+	id: string;
+	maxBytes: number;
+	runner?: Pick<LazyLiveFollowPreflightRunner, "readRun">;
 }): Promise<HttpPreflightRunLogTailResponse | null> {
-  const run = await readLazyLiveFollowPreflightRun(input.id, input.runner);
-  if (!run || !isSafePreflightLogPath(run)) return null;
-  const tail = await readBoundedLogTail(run.logPath, input.maxBytes);
-  return {
-    object: 'preflight_run_log_tail',
-    id: run.id,
-    logPath: run.logPath,
-    ...tail,
-  };
+	const run = await readLazyLiveFollowPreflightRun(input.id, input.runner);
+	if (!run || !isSafePreflightLogPath(run)) return null;
+	const tail = await readBoundedLogTail(run.logPath, input.maxBytes);
+	return {
+		object: "preflight_run_log_tail",
+		id: run.id,
+		logPath: run.logPath,
+		...tail,
+	};
 }
 
-async function readBoundedLogTail(logPath: string, maxBytesInput: number): Promise<{
-  exists: boolean;
-  sizeBytes: number;
-  maxBytes: number;
-  truncated: boolean;
-  content: string;
+async function readBoundedLogTail(
+	logPath: string,
+	maxBytesInput: number,
+): Promise<{
+	exists: boolean;
+	sizeBytes: number;
+	maxBytes: number;
+	truncated: boolean;
+	content: string;
 }> {
-  try {
-    const stat = await fs.stat(logPath);
-    const maxBytes = Math.min(maxBytesInput, stat.size);
-    const start = Math.max(0, stat.size - maxBytes);
-    const handle = await fs.open(logPath, 'r');
-    try {
-      const buffer = Buffer.alloc(maxBytes);
-      const result = await handle.read(buffer, 0, maxBytes, start);
-      return {
-        exists: true,
-        sizeBytes: stat.size,
-        maxBytes: maxBytesInput,
-        truncated: start > 0,
-        content: buffer.subarray(0, result.bytesRead).toString('utf8'),
-      };
-    } finally {
-      await handle.close();
-    }
-  } catch (error) {
-    const code = error instanceof Error && 'code' in error ? String((error as NodeJS.ErrnoException).code) : '';
-    if (code !== 'ENOENT') {
-      throw error;
-    }
-    return {
-      exists: false,
-      sizeBytes: 0,
-      maxBytes: maxBytesInput,
-      truncated: false,
-      content: '',
-    };
-  }
+	try {
+		const stat = await fs.stat(logPath);
+		const maxBytes = Math.min(maxBytesInput, stat.size);
+		const start = Math.max(0, stat.size - maxBytes);
+		const handle = await fs.open(logPath, "r");
+		try {
+			const buffer = Buffer.alloc(maxBytes);
+			const result = await handle.read(buffer, 0, maxBytes, start);
+			return {
+				exists: true,
+				sizeBytes: stat.size,
+				maxBytes: maxBytesInput,
+				truncated: start > 0,
+				content: buffer.subarray(0, result.bytesRead).toString("utf8"),
+			};
+		} finally {
+			await handle.close();
+		}
+	} catch (error) {
+		const code =
+			error instanceof Error && "code" in error
+				? String((error as NodeJS.ErrnoException).code)
+				: "";
+		if (code !== "ENOENT") {
+			throw error;
+		}
+		return {
+			exists: false,
+			sizeBytes: 0,
+			maxBytes: maxBytesInput,
+			truncated: false,
+			content: "",
+		};
+	}
 }
 
 function isSafePreflightLogPath(run: LazyLiveFollowPreflightRun): boolean {
-  const logsDir = path.resolve(getAuracallHomeDir(), 'logs');
-  const logPath = path.resolve(run.logPath);
-  return logPath.startsWith(`${logsDir}${path.sep}`)
-    && path.basename(logPath).startsWith('preflight-lazy-live-follow-')
-    && path.extname(logPath) === '.log';
+	const logsDir = path.resolve(getAuracallHomeDir(), "logs");
+	const logPath = path.resolve(run.logPath);
+	return (
+		logPath.startsWith(`${logsDir}${path.sep}`) &&
+		path.basename(logPath).startsWith("preflight-lazy-live-follow-") &&
+		path.extname(logPath) === ".log"
+	);
 }
 
 function createLiveFollowHealthSummary(
-  scheduler: HttpStatusResponse['accountMirrorScheduler'],
-  completions: AccountMirrorCompletionStatusSummary,
-  status: AccountMirrorStatusSummary,
+	scheduler: HttpStatusResponse["accountMirrorScheduler"],
+	completions: AccountMirrorCompletionStatusSummary,
+	status: AccountMirrorStatusSummary,
 ): LiveFollowHealthSummary {
-  const backpressureReason = scheduler.lastPass?.backpressure.reason ?? scheduler.operatorStatus.backpressureReason;
-  const latestYield = summarizeAccountMirrorSchedulerHistory(scheduler.history, { limit: 10 }).latestYield;
-  return summarizeLiveFollowHealth({
-    schedulerPosture: scheduler.operatorStatus.posture,
-    schedulerState: scheduler.state,
-    backpressureReason: backpressureReason ?? 'unknown',
-    activeCompletions: completions.metrics.active,
-    pausedCompletions: completions.metrics.paused,
-    failedCompletions: completions.metrics.failed,
-    cancelledCompletions: completions.metrics.cancelled,
-    latestYield: latestYield
-      ? {
-          completedAt: latestYield.completedAt,
-          provider: latestYield.provider,
-          runtimeProfileId: latestYield.runtimeProfileId,
-          queuedOwnerCommand: latestYield.queuedWork.ownerCommand,
-          remainingDetailSurfaces: latestYield.remainingDetailSurfaces?.total ?? null,
-        }
-      : null,
-    targets: createLiveFollowTargetRollup(status, completions),
-  });
+	const backpressureReason =
+		scheduler.lastPass?.backpressure.reason ?? scheduler.operatorStatus.backpressureReason;
+	const latestYield = summarizeAccountMirrorSchedulerHistory(scheduler.history, {
+		limit: 10,
+	}).latestYield;
+	return summarizeLiveFollowHealth({
+		schedulerPosture: scheduler.operatorStatus.posture,
+		schedulerState: scheduler.state,
+		backpressureReason: backpressureReason ?? "unknown",
+		activeCompletions: completions.metrics.active,
+		pausedCompletions: completions.metrics.paused,
+		failedCompletions: completions.metrics.failed,
+		cancelledCompletions: completions.metrics.cancelled,
+		latestYield: latestYield
+			? {
+					completedAt: latestYield.completedAt,
+					provider: latestYield.provider,
+					runtimeProfileId: latestYield.runtimeProfileId,
+					queuedOwnerCommand: latestYield.queuedWork.ownerCommand,
+					remainingDetailSurfaces: latestYield.remainingDetailSurfaces?.total ?? null,
+				}
+			: null,
+		targets: createLiveFollowTargetRollup(status, completions),
+	});
 }
 
 interface AccountMirrorSchedulerDiagnosticsQuery {
-  provider: string | null;
-  runtimeProfileId: string | null;
-  completionId: string | null;
+	provider: string | null;
+	runtimeProfileId: string | null;
+	completionId: string | null;
 }
 
 type AccountMirrorSchedulerDiagnosticsResult =
-  | { ok: true; bundle: AccountMirrorSchedulerDiagnosticsBundle }
-  | { ok: false; status: 400 | 404; type: 'invalid_request_error' | 'not_found_error'; message: string };
+	| { ok: true; bundle: AccountMirrorSchedulerDiagnosticsBundle }
+	| {
+			ok: false;
+			status: 400 | 404;
+			type: "invalid_request_error" | "not_found_error";
+			message: string;
+	  };
 
 interface AccountMirrorSchedulerDiagnosticsBundle {
-  object: 'account_mirror_scheduler_diagnostics_bundle';
-  capturedAt: string;
-  scheduler: {
-    state: string;
-    posture: string;
-    reason: string;
-    lastWakeReason: string | null;
-    lastWakeAt: string | null;
-  };
-  target: {
-    provider: string | null;
-    runtimeProfileId: string | null;
-    cachePath: string;
-  };
-  wait: {
-    kind: string | null;
-    label: string | null;
-    nextAttemptAt: string | null;
-    routineEligibleAt: string | null;
-    activeCompletionId: string | null;
-  };
-  completion: ReturnType<typeof compactAccountMirrorSchedulerCompletion> | null;
-  browserMutations: {
-    total: number;
-    items: unknown[];
-  } | null;
-  latestSchedulerEvent: ReturnType<typeof latestAccountMirrorSchedulerDiagnosticsEvent>;
+	object: "account_mirror_scheduler_diagnostics_bundle";
+	capturedAt: string;
+	scheduler: {
+		state: string;
+		posture: string;
+		reason: string;
+		lastWakeReason: string | null;
+		lastWakeAt: string | null;
+	};
+	target: {
+		provider: string | null;
+		runtimeProfileId: string | null;
+		cachePath: string;
+	};
+	wait: {
+		kind: string | null;
+		label: string | null;
+		nextAttemptAt: string | null;
+		routineEligibleAt: string | null;
+		activeCompletionId: string | null;
+	};
+	completion: ReturnType<typeof compactAccountMirrorSchedulerCompletion> | null;
+	browserMutations: {
+		total: number;
+		byKind: Record<string, number>;
+		bySource: Record<string, number>;
+		duplicateSameRouteAttempts: {
+			total: number;
+			items: unknown[];
+		};
+		items: unknown[];
+	} | null;
+	latestSchedulerEvent: ReturnType<typeof latestAccountMirrorSchedulerDiagnosticsEvent>;
 }
 
-function parseAccountMirrorSchedulerDiagnosticsQuery(params: URLSearchParams): AccountMirrorSchedulerDiagnosticsQuery {
-  return {
-    provider: normalizeOptionalQueryString(params.get('provider')),
-    runtimeProfileId: normalizeOptionalQueryString(params.get('runtimeProfile')),
-    completionId: normalizeOptionalQueryString(params.get('completionId')),
-  };
+function summarizeAccountMirrorDiagnosticsBrowserMutations(items: unknown[]): {
+	total: number;
+	byKind: Record<string, number>;
+	bySource: Record<string, number>;
+	duplicateSameRouteAttempts: {
+		total: number;
+		items: unknown[];
+	};
+	items: unknown[];
+} {
+	const records = Array.isArray(items) ? items : [];
+	const completed = records.filter((item) => {
+		const record = isRecord(item) ? item : {};
+		return record.phase === "complete";
+	});
+	const byKind = countBrowserMutationField(completed, "kind");
+	const bySource = countBrowserMutationField(completed, "source");
+	const duplicateSameRouteItems = completed.filter(isDuplicateSameRouteNavigationRecord);
+	return {
+		total: records.length,
+		byKind,
+		bySource,
+		duplicateSameRouteAttempts: {
+			total: duplicateSameRouteItems.length,
+			items: duplicateSameRouteItems,
+		},
+		items: records,
+	};
+}
+
+function countBrowserMutationField(
+	items: unknown[],
+	field: "kind" | "source",
+): Record<string, number> {
+	const counts: Record<string, number> = {};
+	for (const item of items) {
+		const record = isRecord(item) ? item : {};
+		const value =
+			typeof record[field] === "string" && record[field].trim().length > 0
+				? record[field].trim()
+				: "unknown";
+		counts[value] = (counts[value] ?? 0) + 1;
+	}
+	return counts;
+}
+
+function isDuplicateSameRouteNavigationRecord(item: unknown): boolean {
+	const record = isRecord(item) ? item : {};
+	if (record.phase !== "complete" || record.kind !== "navigate") {
+		return false;
+	}
+	const fromUrl = normalizeBrowserMutationComparableUrl(record.fromUrl);
+	const requestedUrl = normalizeBrowserMutationComparableUrl(record.requestedUrl);
+	const toUrl = normalizeBrowserMutationComparableUrl(record.toUrl);
+	return Boolean(fromUrl && requestedUrl && toUrl && fromUrl === requestedUrl && fromUrl === toUrl);
+}
+
+function normalizeBrowserMutationComparableUrl(value: unknown): string | null {
+	const raw = typeof value === "string" ? value.trim() : "";
+	if (!raw) return null;
+	try {
+		const parsed = new URL(raw);
+		const path = parsed.pathname.replace(/\/+$/, "") || "/";
+		return `${parsed.protocol}//${parsed.host}${path}${parsed.search}`;
+	} catch {
+		return raw.replace(/\/+$/, "");
+	}
+}
+
+function parseAccountMirrorSchedulerDiagnosticsQuery(
+	params: URLSearchParams,
+): AccountMirrorSchedulerDiagnosticsQuery {
+	return {
+		provider: normalizeOptionalQueryString(params.get("provider")),
+		runtimeProfileId: normalizeOptionalQueryString(params.get("runtimeProfile")),
+		completionId: normalizeOptionalQueryString(params.get("completionId")),
+	};
 }
 
 function createAccountMirrorSchedulerDiagnosticsBundle(input: {
-  query: AccountMirrorSchedulerDiagnosticsQuery;
-  scheduler: HttpStatusResponse['accountMirrorScheduler'];
-  status: AccountMirrorStatusSummary;
-  completions: AccountMirrorCompletionStatusSummary;
-  readCompletion: (id: string) => AccountMirrorCompletionOperation | null;
-  readBrowserMutations?: (provider: string | null, runtimeProfileId: string | null) => {
-    total: number;
-    items: unknown[];
-  } | null;
-  now: () => Date;
+	query: AccountMirrorSchedulerDiagnosticsQuery;
+	scheduler: HttpStatusResponse["accountMirrorScheduler"];
+	status: AccountMirrorStatusSummary;
+	completions: AccountMirrorCompletionStatusSummary;
+	readCompletion: (id: string) => AccountMirrorCompletionOperation | null;
+	readBrowserMutations?: (
+		provider: string | null,
+		runtimeProfileId: string | null,
+	) => {
+		total: number;
+		byKind: Record<string, number>;
+		bySource: Record<string, number>;
+		duplicateSameRouteAttempts: {
+			total: number;
+			items: unknown[];
+		};
+		items: unknown[];
+	} | null;
+	now: () => Date;
 }): AccountMirrorSchedulerDiagnosticsResult {
-  const scheduler = {
-    ...input.scheduler,
-    operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.scheduler),
-  };
-  const liveFollow = createLiveFollowHealthSummary(scheduler, input.completions, input.status);
-  let completion: AccountMirrorCompletionOperation | null = null;
-  if (input.query.completionId) {
-    completion = input.readCompletion(input.query.completionId);
-    if (!completion) {
-      return {
-        ok: false,
-        status: 404,
-        type: 'not_found_error',
-        message: `Account mirror completion ${input.query.completionId} was not found.`,
-      };
-    }
-  }
-  const provider = input.query.provider ?? completion?.provider ?? null;
-  const runtimeProfileId = input.query.runtimeProfileId ?? completion?.runtimeProfileId ?? null;
-  const account = findLiveFollowDiagnosticsTarget(liveFollow, {
-    provider,
-    runtimeProfileId,
-    completionId: input.query.completionId,
-  });
-  if (!account && !completion && (provider || runtimeProfileId || input.query.completionId)) {
-    return {
-      ok: false,
-      status: 404,
-      type: 'not_found_error',
-      message: `No live-follow scheduler target matched ${provider ?? '*'} / ${runtimeProfileId ?? '*'}${input.query.completionId ? ` / ${input.query.completionId}` : ''}.`,
-    };
-  }
-  const selectedProvider = account?.provider ?? provider ?? null;
-  const selectedRuntimeProfileId = account?.runtimeProfileId ?? runtimeProfileId ?? null;
-  if (!completion && account?.activeCompletionId) {
-    completion = input.readCompletion(account.activeCompletionId);
-  }
-  const wait = account ? classifyAccountMirrorSchedulerDiagnosticsWait(account) : null;
-  return {
-    ok: true,
-    bundle: {
-      object: 'account_mirror_scheduler_diagnostics_bundle',
-      capturedAt: input.now().toISOString(),
-      scheduler: {
-        state: scheduler.state,
-        posture: scheduler.operatorStatus.posture,
-        reason: scheduler.operatorStatus.reason,
-        lastWakeReason: scheduler.lastWakeReason,
-        lastWakeAt: scheduler.lastWakeAt,
-      },
-      target: {
-        provider: selectedProvider,
-        runtimeProfileId: selectedRuntimeProfileId,
-        cachePath: buildAccountMirrorDashboardPath({
-          provider: selectedProvider,
-          runtimeProfileId: selectedRuntimeProfileId,
-        }),
-      },
-      wait: {
-        kind: wait?.kind ?? null,
-        label: wait?.label ?? null,
-        nextAttemptAt: account?.nextAttemptAt ?? null,
-        routineEligibleAt: account?.routineEligibleAt ?? null,
-        activeCompletionId: completion?.id ?? account?.activeCompletionId ?? input.query.completionId ?? null,
-      },
-      completion: completion ? compactAccountMirrorSchedulerCompletion(completion) : null,
-      browserMutations: input.readBrowserMutations?.(selectedProvider, selectedRuntimeProfileId) ?? null,
-      latestSchedulerEvent: latestAccountMirrorSchedulerDiagnosticsEvent(scheduler),
-    },
-  };
+	const scheduler = {
+		...input.scheduler,
+		operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.scheduler),
+	};
+	const liveFollow = createLiveFollowHealthSummary(scheduler, input.completions, input.status);
+	let completion: AccountMirrorCompletionOperation | null = null;
+	if (input.query.completionId) {
+		completion = input.readCompletion(input.query.completionId);
+		if (!completion) {
+			return {
+				ok: false,
+				status: 404,
+				type: "not_found_error",
+				message: `Account mirror completion ${input.query.completionId} was not found.`,
+			};
+		}
+	}
+	const provider = input.query.provider ?? completion?.provider ?? null;
+	const runtimeProfileId = input.query.runtimeProfileId ?? completion?.runtimeProfileId ?? null;
+	const account = findLiveFollowDiagnosticsTarget(liveFollow, {
+		provider,
+		runtimeProfileId,
+		completionId: input.query.completionId,
+	});
+	if (!account && !completion && (provider || runtimeProfileId || input.query.completionId)) {
+		return {
+			ok: false,
+			status: 404,
+			type: "not_found_error",
+			message: `No live-follow scheduler target matched ${provider ?? "*"} / ${runtimeProfileId ?? "*"}${input.query.completionId ? ` / ${input.query.completionId}` : ""}.`,
+		};
+	}
+	const selectedProvider = account?.provider ?? provider ?? null;
+	const selectedRuntimeProfileId = account?.runtimeProfileId ?? runtimeProfileId ?? null;
+	if (!completion && account?.activeCompletionId) {
+		completion = input.readCompletion(account.activeCompletionId);
+	}
+	const wait = account ? classifyAccountMirrorSchedulerDiagnosticsWait(account) : null;
+	return {
+		ok: true,
+		bundle: {
+			object: "account_mirror_scheduler_diagnostics_bundle",
+			capturedAt: input.now().toISOString(),
+			scheduler: {
+				state: scheduler.state,
+				posture: scheduler.operatorStatus.posture,
+				reason: scheduler.operatorStatus.reason,
+				lastWakeReason: scheduler.lastWakeReason,
+				lastWakeAt: scheduler.lastWakeAt,
+			},
+			target: {
+				provider: selectedProvider,
+				runtimeProfileId: selectedRuntimeProfileId,
+				cachePath: buildAccountMirrorDashboardPath({
+					provider: selectedProvider,
+					runtimeProfileId: selectedRuntimeProfileId,
+				}),
+			},
+			wait: {
+				kind: wait?.kind ?? null,
+				label: wait?.label ?? null,
+				nextAttemptAt: account?.nextAttemptAt ?? null,
+				routineEligibleAt: account?.routineEligibleAt ?? null,
+				activeCompletionId:
+					completion?.id ?? account?.activeCompletionId ?? input.query.completionId ?? null,
+			},
+			completion: completion ? compactAccountMirrorSchedulerCompletion(completion) : null,
+			browserMutations:
+				input.readBrowserMutations?.(selectedProvider, selectedRuntimeProfileId) ?? null,
+			latestSchedulerEvent: latestAccountMirrorSchedulerDiagnosticsEvent(scheduler),
+		},
+	};
 }
 
 function findLiveFollowDiagnosticsTarget(
-  liveFollow: LiveFollowHealthSummary,
-  query: { provider: string | null; runtimeProfileId: string | null; completionId: string | null },
+	liveFollow: LiveFollowHealthSummary,
+	query: { provider: string | null; runtimeProfileId: string | null; completionId: string | null },
 ): LiveFollowTargetAccountSummary | null {
-  const accounts = liveFollow.targets?.accounts ?? [];
-  const matched = accounts.find((account) =>
-    (!query.provider || account.provider === query.provider)
-    && (!query.runtimeProfileId || account.runtimeProfileId === query.runtimeProfileId)
-    && (!query.completionId || account.activeCompletionId === query.completionId)
-  );
-  if (matched) {
-    return matched;
-  }
-  if (query.provider || query.runtimeProfileId || query.completionId) {
-    return null;
-  }
-  return accounts.find((account) => account.desiredState === 'enabled') ?? null;
+	const accounts = liveFollow.targets?.accounts ?? [];
+	const matched = accounts.find(
+		(account) =>
+			(!query.provider || account.provider === query.provider) &&
+			(!query.runtimeProfileId || account.runtimeProfileId === query.runtimeProfileId) &&
+			(!query.completionId || account.activeCompletionId === query.completionId),
+	);
+	if (matched) {
+		return matched;
+	}
+	if (query.provider || query.runtimeProfileId || query.completionId) {
+		return null;
+	}
+	return accounts.find((account) => account.desiredState === "enabled") ?? null;
 }
 
-function classifyAccountMirrorSchedulerDiagnosticsWait(account: LiveFollowTargetAccountSummary): { kind: string; label: string } {
-  if (account.latestCompletionError) {
-    return { kind: 'backoff', label: 'backoff' };
-  }
-  if (account.activeCompletionId) {
-    return { kind: 'active', label: 'active' };
-  }
-  const nextAttemptTime = Date.parse(account.nextAttemptAt || '');
-  if (Number.isFinite(nextAttemptTime) && nextAttemptTime > Date.now()) {
-    return { kind: 'retry-delay', label: 'retry delay' };
-  }
-  const routineEligibleTime = Date.parse(account.routineEligibleAt || '');
-  if (Number.isFinite(routineEligibleTime) && routineEligibleTime > Date.now()) {
-    return { kind: 'routine-cadence', label: 'routine cadence' };
-  }
-  return { kind: 'eligible', label: 'eligible' };
+function classifyAccountMirrorSchedulerDiagnosticsWait(account: LiveFollowTargetAccountSummary): {
+	kind: string;
+	label: string;
+} {
+	if (account.latestCompletionError) {
+		return { kind: "backoff", label: "backoff" };
+	}
+	if (account.activeCompletionId) {
+		return { kind: "active", label: "active" };
+	}
+	const nextAttemptTime = Date.parse(account.nextAttemptAt || "");
+	if (Number.isFinite(nextAttemptTime) && nextAttemptTime > Date.now()) {
+		return { kind: "retry-delay", label: "retry delay" };
+	}
+	const routineEligibleTime = Date.parse(account.routineEligibleAt || "");
+	if (Number.isFinite(routineEligibleTime) && routineEligibleTime > Date.now()) {
+		return { kind: "routine-cadence", label: "routine cadence" };
+	}
+	return { kind: "eligible", label: "eligible" };
 }
 
 function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorCompletionOperation): {
-  id: string;
-  provider: string;
-  runtimeProfileId: string;
-  status: string;
-  phase: string;
-  nextAttemptAt: string | null;
-  passCount: number;
-  error: AccountMirrorCompletionOperation['error'];
+	id: string;
+	provider: string;
+	runtimeProfileId: string;
+	status: string;
+	phase: string;
+	nextAttemptAt: string | null;
+	passCount: number;
+	error: AccountMirrorCompletionOperation["error"];
 } {
-  return {
-    id: operation.id,
-    provider: operation.provider,
-    runtimeProfileId: operation.runtimeProfileId,
-    status: operation.status,
-    phase: operation.phase,
-    nextAttemptAt: operation.nextAttemptAt,
-    passCount: operation.passCount,
-    error: operation.error,
-  };
+	return {
+		id: operation.id,
+		provider: operation.provider,
+		runtimeProfileId: operation.runtimeProfileId,
+		status: operation.status,
+		phase: operation.phase,
+		nextAttemptAt: operation.nextAttemptAt,
+		passCount: operation.passCount,
+		error: operation.error,
+	};
 }
 
 function latestAccountMirrorSchedulerDiagnosticsEvent(
-  scheduler: HttpStatusResponse['accountMirrorScheduler'],
+	scheduler: HttpStatusResponse["accountMirrorScheduler"],
 ): {
-  at: string | null;
-  event: string | null;
-  detail: string | null;
-  schedulerDetail: unknown;
+	at: string | null;
+	event: string | null;
+	detail: string | null;
+	schedulerDetail: unknown;
 } | null {
-  const latest = summarizeAccountMirrorSchedulerHistory(scheduler.history, { limit: 1 }).entries[0] ?? null;
-  if (!latest) return null;
-  return {
-    at: latest.completedAt,
-    event: latest.action,
-    detail: `${latest.provider ?? 'unknown'}/${latest.runtimeProfileId ?? 'unknown'} backpressure=${latest.backpressureReason}`,
-    schedulerDetail: latest,
-  };
+	const latest =
+		summarizeAccountMirrorSchedulerHistory(scheduler.history, { limit: 1 }).entries[0] ?? null;
+	if (!latest) return null;
+	return {
+		at: latest.completedAt,
+		event: latest.action,
+		detail: `${latest.provider ?? "unknown"}/${latest.runtimeProfileId ?? "unknown"} backpressure=${latest.backpressureReason}`,
+		schedulerDetail: latest,
+	};
 }
 
-function buildAccountMirrorDashboardPath(input: { provider: string | null; runtimeProfileId: string | null }): string {
-  const params = new URLSearchParams();
-  if (input.provider) params.set('provider', input.provider);
-  if (input.runtimeProfileId) params.set('runtimeProfile', input.runtimeProfileId);
-  params.set('kind', 'all');
-  return `/account-mirror?${params.toString()}`;
+function buildAccountMirrorDashboardPath(input: {
+	provider: string | null;
+	runtimeProfileId: string | null;
+}): string {
+	const params = new URLSearchParams();
+	if (input.provider) params.set("provider", input.provider);
+	if (input.runtimeProfileId) params.set("runtimeProfile", input.runtimeProfileId);
+	params.set("kind", "all");
+	return `/account-mirror?${params.toString()}`;
 }
 
 function normalizeOptionalQueryString(value: string | null): string | null {
-  const trimmed = String(value ?? '').trim();
-  return trimmed.length > 0 ? trimmed : null;
+	const trimmed = String(value ?? "").trim();
+	return trimmed.length > 0 ? trimmed : null;
 }
 
 function createLiveFollowTargetRollup(
-  status: AccountMirrorStatusSummary,
-  completions: AccountMirrorCompletionStatusSummary,
+	status: AccountMirrorStatusSummary,
+	completions: AccountMirrorCompletionStatusSummary,
 ): LiveFollowTargetRollup {
-  const activeOperations = completions.active;
-  const recentOperations = completions.recent;
-  const accounts = status.entries.map((entry): LiveFollowTargetAccountSummary => {
-    const activeOperation = activeOperations.find((candidate) =>
-      candidate.provider === entry.provider && candidate.runtimeProfileId === entry.runtimeProfileId
-    ) ?? null;
-    const recentOperation = activeOperation ?? recentOperations.find((candidate) =>
-      candidate.provider === entry.provider && candidate.runtimeProfileId === entry.runtimeProfileId
-    ) ?? null;
-    return {
-      provider: entry.provider,
-      runtimeProfileId: entry.runtimeProfileId,
-      desiredState: entry.liveFollow.state,
-      desiredEnabled: entry.liveFollow.enabled,
-      actualStatus: activeOperation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status),
-      statusReason: entry.reason,
-      attentionNeeded: isLiveFollowTargetAttentionNeeded(entry, activeOperation, recentOperation),
-      activeCompletionId: activeOperation?.id ?? null,
-      latestCompletionStatus: recentOperation?.status ?? null,
-      latestCompletionError: recentOperation?.error?.message ?? null,
-      phase: activeOperation?.phase ?? recentOperation?.phase ?? null,
-      passCount: activeOperation?.passCount ?? recentOperation?.passCount ?? null,
-      routineEligibleAt: entry.eligibleAt,
-      lastFailureAt: entry.lastFailureAt,
-      consecutiveFailureCount: entry.consecutiveFailureCount,
-      activeCompletionNextAttemptAt: activeOperation?.nextAttemptAt ?? null,
-      nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
-      providerGuard: entry.providerGuard.state === 'clear' ? null : entry.providerGuard,
-      mirrorCompleteness: entry.mirrorCompleteness.state,
-      latestLifecycleEvent: summarizeCompletionLifecycleEvent(activeOperation ?? recentOperation),
-      metadataCounts: entry.metadataCounts,
-    };
-  });
-  return accounts.reduce<LiveFollowTargetRollup>(
-    (acc, account) => {
-      acc.total += 1;
-      acc.desired.total += 1;
-      if (account.desiredState === 'enabled') {
-        acc.enabled += 1;
-        acc.desired.enabled += 1;
-      } else if (account.desiredState === 'disabled') {
-        acc.disabled += 1;
-        acc.desired.disabled += 1;
-      } else if (account.desiredState === 'unconfigured') {
-        acc.unconfigured += 1;
-        acc.desired.unconfigured += 1;
-      } else if (account.desiredState === 'missing_identity') {
-        acc.missingIdentity += 1;
-        acc.desired.missingIdentity += 1;
-      } else if (account.desiredState === 'unsupported') {
-        acc.unsupported += 1;
-        acc.desired.unsupported += 1;
-      }
+	const activeOperations = completions.active;
+	const recentOperations = completions.recent;
+	const accounts = status.entries.map((entry): LiveFollowTargetAccountSummary => {
+		const activeOperation =
+			activeOperations.find(
+				(candidate) =>
+					candidate.provider === entry.provider &&
+					candidate.runtimeProfileId === entry.runtimeProfileId,
+			) ?? null;
+		const recentOperation =
+			activeOperation ??
+			recentOperations.find(
+				(candidate) =>
+					candidate.provider === entry.provider &&
+					candidate.runtimeProfileId === entry.runtimeProfileId,
+			) ??
+			null;
+		return {
+			provider: entry.provider,
+			tenantKey: entry.tenantKey,
+			bindingKey: entry.bindingKey,
+			runtimeProfileId: entry.runtimeProfileId,
+			browserProfileId: entry.browserProfileId,
+			desiredState: entry.liveFollow.state,
+			desiredEnabled: entry.liveFollow.enabled,
+			actualStatus:
+				activeOperation?.status ?? (entry.mirrorState.running ? "refreshing" : entry.status),
+			statusReason: entry.reason,
+			attentionNeeded: isLiveFollowTargetAttentionNeeded(entry, activeOperation, recentOperation),
+			activeCompletionId: activeOperation?.id ?? null,
+			latestCompletionStatus: recentOperation?.status ?? null,
+			latestCompletionError: recentOperation?.error?.message ?? null,
+			phase: activeOperation?.phase ?? recentOperation?.phase ?? null,
+			passCount: activeOperation?.passCount ?? recentOperation?.passCount ?? null,
+			routineEligibleAt: entry.eligibleAt,
+			lastFailureAt: entry.lastFailureAt,
+			consecutiveFailureCount: entry.consecutiveFailureCount,
+			activeCompletionNextAttemptAt: activeOperation?.nextAttemptAt ?? null,
+			nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
+			providerGuard: entry.providerGuard.state === "clear" ? null : entry.providerGuard,
+			mirrorCompleteness: entry.mirrorCompleteness.state,
+			assetInventory: summarizeLiveFollowAssetInventory(entry),
+			latestLifecycleEvent: summarizeCompletionLifecycleEvent(activeOperation ?? recentOperation),
+			materializationOutcome: summarizeLiveFollowMaterializationOutcome(
+				activeOperation ?? recentOperation,
+			),
+			metadataCounts: entry.metadataCounts,
+			metadataCountEvidence: entry.metadataEvidence?.countEvidence ?? null,
+		};
+	});
+	return accounts.reduce<LiveFollowTargetRollup>(
+		(acc, account) => {
+			acc.total += 1;
+			acc.desired.total += 1;
+			if (account.desiredState === "enabled") {
+				acc.enabled += 1;
+				acc.desired.enabled += 1;
+			} else if (account.desiredState === "disabled") {
+				acc.disabled += 1;
+				acc.desired.disabled += 1;
+			} else if (account.desiredState === "unconfigured") {
+				acc.unconfigured += 1;
+				acc.desired.unconfigured += 1;
+			} else if (account.desiredState === "missing_identity") {
+				acc.missingIdentity += 1;
+				acc.desired.missingIdentity += 1;
+			} else if (account.desiredState === "unsupported") {
+				acc.unsupported += 1;
+				acc.desired.unsupported += 1;
+			}
 
-      if (!account.desiredEnabled) {
-        acc.accounts.push(account);
-        return acc;
-      }
+			if (!account.desiredEnabled) {
+				acc.accounts.push(account);
+				return acc;
+			}
 
-      if (account.actualStatus === 'queued') {
-        acc.queued += 1;
-        acc.actual.queued += 1;
-      }
-      if (account.actualStatus === 'running' || account.actualStatus === 'refreshing') {
-        acc.running += 1;
-        acc.actual.running += 1;
-      }
-      if (account.actualStatus === 'paused') {
-        acc.paused += 1;
-        acc.actual.paused += 1;
-      }
-      if (
-        account.actualStatus === 'queued' ||
-        account.actualStatus === 'running' ||
-        account.actualStatus === 'idle_waiting' ||
-        account.actualStatus === 'refreshing' ||
-        account.actualStatus === 'paused'
-      ) {
-        acc.active += 1;
-        acc.actual.active += 1;
-      }
-      if (account.attentionNeeded) {
-        acc.attentionNeeded += 1;
-        acc.actual.attentionNeeded += 1;
-      }
+			if (account.actualStatus === "queued") {
+				acc.queued += 1;
+				acc.actual.queued += 1;
+			}
+			if (account.actualStatus === "running" || account.actualStatus === "refreshing") {
+				acc.running += 1;
+				acc.actual.running += 1;
+			}
+			if (account.actualStatus === "paused") {
+				acc.paused += 1;
+				acc.actual.paused += 1;
+			}
+			if (
+				account.actualStatus === "queued" ||
+				account.actualStatus === "running" ||
+				account.actualStatus === "idle_waiting" ||
+				account.actualStatus === "refreshing" ||
+				account.actualStatus === "paused"
+			) {
+				acc.active += 1;
+				acc.actual.active += 1;
+			}
+			if (account.attentionNeeded) {
+				acc.attentionNeeded += 1;
+				acc.actual.attentionNeeded += 1;
+			}
 
-      if (account.mirrorCompleteness === 'complete') {
-        acc.complete += 1;
-        acc.actual.complete += 1;
-      } else if (account.mirrorCompleteness === 'in_progress') {
-        acc.inProgress += 1;
-        acc.actual.inProgress += 1;
-      } else if (account.mirrorCompleteness === 'none') {
-        acc.none += 1;
-        acc.actual.none += 1;
-      } else {
-        acc.unknown += 1;
-        acc.actual.unknown += 1;
-      }
-      acc.accounts.push(account);
-      return acc;
-    },
-    {
-      total: 0,
-      enabled: 0,
-      disabled: 0,
-      unconfigured: 0,
-      missingIdentity: 0,
-      unsupported: 0,
-      active: 0,
-      queued: 0,
-      running: 0,
-      paused: 0,
-      attentionNeeded: 0,
-      complete: 0,
-      inProgress: 0,
-      none: 0,
-      unknown: 0,
-      desired: {
-        total: 0,
-        enabled: 0,
-        disabled: 0,
-        unconfigured: 0,
-        missingIdentity: 0,
-        unsupported: 0,
-      },
-      actual: {
-        active: 0,
-        queued: 0,
-        running: 0,
-        paused: 0,
-        attentionNeeded: 0,
-        complete: 0,
-        inProgress: 0,
-        none: 0,
-        unknown: 0,
-      },
-      accounts: [],
-    },
-  );
+			if (account.mirrorCompleteness === "complete") {
+				acc.complete += 1;
+				acc.actual.complete += 1;
+			} else if (account.mirrorCompleteness === "in_progress") {
+				acc.inProgress += 1;
+				acc.actual.inProgress += 1;
+			} else if (account.mirrorCompleteness === "none") {
+				acc.none += 1;
+				acc.actual.none += 1;
+			} else {
+				acc.unknown += 1;
+				acc.actual.unknown += 1;
+			}
+			acc.accounts.push(account);
+			return acc;
+		},
+		{
+			total: 0,
+			enabled: 0,
+			disabled: 0,
+			unconfigured: 0,
+			missingIdentity: 0,
+			unsupported: 0,
+			active: 0,
+			queued: 0,
+			running: 0,
+			paused: 0,
+			attentionNeeded: 0,
+			complete: 0,
+			inProgress: 0,
+			none: 0,
+			unknown: 0,
+			desired: {
+				total: 0,
+				enabled: 0,
+				disabled: 0,
+				unconfigured: 0,
+				missingIdentity: 0,
+				unsupported: 0,
+			},
+			actual: {
+				active: 0,
+				queued: 0,
+				running: 0,
+				paused: 0,
+				attentionNeeded: 0,
+				complete: 0,
+				inProgress: 0,
+				none: 0,
+				unknown: 0,
+			},
+			accounts: [],
+		},
+	);
+}
+
+function summarizeLiveFollowAssetInventory(
+	entry: AccountMirrorStatusEntry,
+): LiveFollowTargetAccountSummary["assetInventory"] {
+	const inventory =
+		entry.mirrorCompleteness.assetInventory ?? entry.metadataEvidence?.assetInventory ?? null;
+	if (!inventory) return null;
+	return {
+		state: inventory.state,
+		summary: inventory.summary,
+		detailScannedThisPass: inventory.detailScannedThisPass,
+	};
+}
+
+function summarizeLiveFollowMaterializationOutcome(
+	operation: AccountMirrorCompletionOperation | null,
+): LiveFollowTargetAccountSummary["materializationOutcome"] {
+	const outcome = operation?.materializationOutcome ?? null;
+	if (!outcome) return null;
+	return {
+		jobStatus: outcome.jobStatus,
+		conversationsAttempted: outcome.conversationsAttempted,
+		materialized: outcome.materialized,
+		checksumCount: outcome.checksumCount,
+	};
 }
 
 function isLiveFollowTargetAttentionNeeded(
-  entry: AccountMirrorStatusEntry,
-  activeOperation: AccountMirrorCompletionOperation | null,
-  recentOperation: AccountMirrorCompletionOperation | null,
+	entry: AccountMirrorStatusEntry,
+	activeOperation: AccountMirrorCompletionOperation | null,
+	recentOperation: AccountMirrorCompletionOperation | null,
 ): boolean {
-  if (entry.liveFollow.state === 'missing_identity' || entry.liveFollow.state === 'unsupported') return true;
-  const status = activeOperation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status);
-  if (status === 'paused' || status === 'blocked' || status === 'failed' || status === 'cancelled') return true;
-  if (status === 'queued' || status === 'running' || status === 'idle_waiting' || status === 'refreshing') return false;
-  if (entry.status === 'blocked' || entry.reason === 'failure-backoff' || entry.consecutiveFailureCount > 0) return true;
-  return recentOperation?.status === 'blocked' || recentOperation?.status === 'failed' || recentOperation?.status === 'cancelled';
+	if (entry.liveFollow.state === "missing_identity" || entry.liveFollow.state === "unsupported")
+		return true;
+	const status =
+		activeOperation?.status ?? (entry.mirrorState.running ? "refreshing" : entry.status);
+	if (status === "paused" || status === "blocked" || status === "failed" || status === "cancelled")
+		return true;
+	if (
+		status === "queued" ||
+		status === "running" ||
+		status === "idle_waiting" ||
+		status === "refreshing"
+	)
+		return false;
+	if (
+		entry.status === "blocked" ||
+		entry.reason === "failure-backoff" ||
+		entry.consecutiveFailureCount > 0
+	)
+		return true;
+	return (
+		recentOperation?.status === "blocked" ||
+		recentOperation?.status === "failed" ||
+		recentOperation?.status === "cancelled"
+	);
 }
 
-function summarizeCompletionLifecycleEvent(operation: AccountMirrorCompletionOperation | null): LiveFollowTargetAccountSummary['latestLifecycleEvent'] {
-  const event = operation?.lifecycleEvents?.at(-1);
-  if (!event) return null;
-  return {
-    at: event.at,
-    type: event.type,
-    message: event.message,
-  };
+function summarizeCompletionLifecycleEvent(
+	operation: AccountMirrorCompletionOperation | null,
+): LiveFollowTargetAccountSummary["latestLifecycleEvent"] {
+	const event = operation?.lifecycleEvents?.at(-1);
+	if (!event) return null;
+	return {
+		at: event.at,
+		type: event.type,
+		message: event.message,
+	};
 }
 
-function createAccountMirrorCompletionStatusSummary(
-  service: AccountMirrorCompletionService,
-  now: () => Date,
-): AccountMirrorCompletionStatusSummary {
-  const all = service.list({ limit: 50 });
-  const active = service.list({ status: 'active', limit: 10 });
-  const metrics = all.reduce<AccountMirrorCompletionStatusSummary['metrics']>(
-    (acc, operation) => {
-      acc.total += 1;
-      acc[operation.status] += 1;
-      if (
-        operation.status === 'queued'
-        || operation.status === 'running'
-        || operation.status === 'idle_waiting'
-        || operation.status === 'paused'
-      ) {
-        acc.active += 1;
-      }
-      return acc;
-    },
-    {
-      total: 0,
-      active: 0,
-      queued: 0,
-      running: 0,
-      idle_waiting: 0,
-      paused: 0,
-      completed: 0,
-      blocked: 0,
-      failed: 0,
-      cancelled: 0,
-    },
-  );
-  return {
-    object: 'account_mirror_completion_summary',
-    generatedAt: now().toISOString(),
-    metrics,
-    active,
-    recent: all.slice(0, 10),
-  };
+async function createAccountMirrorCompletionStatusSummary(
+	service: AccountMirrorCompletionService,
+	now: () => Date,
+): Promise<AccountMirrorCompletionStatusSummary> {
+	const all = service.list({ limit: 50 });
+	const active = service.list({ status: "active", limit: 10 });
+	const hydratedAll = service.refreshMaterializationStatuses
+		? await service.refreshMaterializationStatuses(all)
+		: all;
+	const hydratedActive = service.refreshMaterializationStatuses
+		? await service.refreshMaterializationStatuses(active)
+		: active;
+	const metrics = hydratedAll.reduce<AccountMirrorCompletionStatusSummary["metrics"]>(
+		(acc, operation) => {
+			acc.total += 1;
+			acc[operation.status] += 1;
+			if (
+				operation.status === "queued" ||
+				operation.status === "running" ||
+				operation.status === "idle_waiting" ||
+				operation.status === "paused"
+			) {
+				acc.active += 1;
+			}
+			return acc;
+		},
+		{
+			total: 0,
+			active: 0,
+			queued: 0,
+			running: 0,
+			idle_waiting: 0,
+			paused: 0,
+			completed: 0,
+			blocked: 0,
+			failed: 0,
+			cancelled: 0,
+		},
+	);
+	return {
+		object: "account_mirror_completion_summary",
+		generatedAt: now().toISOString(),
+		metrics,
+		active: hydratedActive,
+		recent: hydratedAll.slice(0, 10),
+	};
+}
+
+function normalizeAccountMirrorProofScope(
+	value: ResponsesHttpServerOptions["accountMirrorProofScope"],
+): { provider: AccountMirrorProvider | null; runtimeProfileId: string | null } | null {
+	if (!value) return null;
+	const provider =
+		value.provider === "chatgpt" || value.provider === "gemini" || value.provider === "grok"
+			? value.provider
+			: null;
+	const runtimeProfileId =
+		typeof value.runtimeProfileId === "string" && value.runtimeProfileId.trim()
+			? value.runtimeProfileId.trim()
+			: null;
+	if (!provider && !runtimeProfileId) return null;
+	return { provider, runtimeProfileId };
+}
+
+function createAccountMirrorProofScopeStatus(
+	scope: ReturnType<typeof normalizeAccountMirrorProofScope>,
+	status: AccountMirrorStatusSummary,
+	suppression: {
+		resumeAccountMirrorCompletionsOnStart: boolean;
+		reconcileAccountMirrorLiveFollowOnStart: boolean;
+		accountMirrorSchedulerIntervalMs: number;
+		backgroundDrainIntervalMs: number;
+	},
+): AccountMirrorProofScopeStatus {
+	const entry = scope
+		? (status.entries.find(
+				(candidate) =>
+					(!scope.provider || candidate.provider === scope.provider) &&
+					(!scope.runtimeProfileId || candidate.runtimeProfileId === scope.runtimeProfileId),
+			) ?? null)
+		: null;
+	return {
+		object: "account_mirror_proof_scope",
+		enabled: scope !== null,
+		provider: scope?.provider ?? null,
+		runtimeProfileId: scope?.runtimeProfileId ?? null,
+		tenantKey: entry?.tenantKey ?? null,
+		bindingKey: entry?.bindingKey ?? null,
+		browserOperationKey: entry?.mirrorState.lastDispatcherKey ?? null,
+		globalLiveFollowSuppressed:
+			scope !== null &&
+			!suppression.resumeAccountMirrorCompletionsOnStart &&
+			!suppression.reconcileAccountMirrorLiveFollowOnStart &&
+			suppression.accountMirrorSchedulerIntervalMs <= 0,
+		suppressed: {
+			resumeCompletionsOnStart: !suppression.resumeAccountMirrorCompletionsOnStart,
+			reconcileLiveFollowOnStart: !suppression.reconcileAccountMirrorLiveFollowOnStart,
+			schedulerExecution: suppression.accountMirrorSchedulerIntervalMs <= 0,
+			backgroundDrain: suppression.backgroundDrainIntervalMs <= 0,
+		},
+	};
+}
+
+function scopeAccountMirrorStatusForProofScope(
+	status: AccountMirrorStatusSummary,
+	scope: ReturnType<typeof normalizeAccountMirrorProofScope>,
+): AccountMirrorStatusSummary {
+	if (!scope) return status;
+	const entries = status.entries.filter(
+		(entry) =>
+			(!scope.provider || entry.provider === scope.provider) &&
+			(!scope.runtimeProfileId || entry.runtimeProfileId === scope.runtimeProfileId),
+	);
+	return {
+		...status,
+		entries,
+		metrics: entries.reduce<AccountMirrorStatusSummary["metrics"]>(
+			(acc, entry) => {
+				acc.total += 1;
+				acc[entry.status] += 1;
+				return acc;
+			},
+			{
+				total: 0,
+				eligible: 0,
+				delayed: 0,
+				blocked: 0,
+			},
+		),
+	};
 }
 
 function readApiServerConfig(config: Record<string, unknown>): {
-  host?: string;
-  port?: number;
-  dashboardUrl?: string;
-  publicDashboardUrl?: string;
-  accountMirrorSchedulerIntervalMs?: number;
-  accountMirrorSchedulerDryRun?: boolean;
-  routing?: ApiServiceRoutingConfig;
+	host?: string;
+	port?: number;
+	dashboardUrl?: string;
+	publicDashboardUrl?: string;
+	accountMirrorSchedulerIntervalMs?: number;
+	accountMirrorSchedulerDryRun?: boolean;
+	routing?: ApiServiceRoutingConfig;
 } {
-  const api = config.api;
-  if (!isRecord(api)) return {};
-  const accountMirrorScheduler = isRecord(api.accountMirrorScheduler)
-    ? api.accountMirrorScheduler
-    : null;
-  return {
-    host: readNonEmptyString(api.host),
-    port: readPositiveInteger(api.port),
-    dashboardUrl: readNonEmptyString(api.dashboardUrl),
-    publicDashboardUrl: readNonEmptyString(api.publicDashboardUrl),
-    accountMirrorSchedulerIntervalMs: accountMirrorScheduler
-      ? readNonNegativeInteger(accountMirrorScheduler.intervalMs)
-      : undefined,
-    accountMirrorSchedulerDryRun: accountMirrorScheduler
-      ? readApiAccountMirrorSchedulerDryRun(accountMirrorScheduler)
-      : undefined,
-    routing: readApiServiceRoutingConfig(api.routing),
-  };
+	const api = config.api;
+	if (!isRecord(api)) return {};
+	const accountMirrorScheduler = isRecord(api.accountMirrorScheduler)
+		? api.accountMirrorScheduler
+		: null;
+	return {
+		host: readNonEmptyString(api.host),
+		port: readPositiveInteger(api.port),
+		dashboardUrl: readNonEmptyString(api.dashboardUrl),
+		publicDashboardUrl: readNonEmptyString(api.publicDashboardUrl),
+		accountMirrorSchedulerIntervalMs: accountMirrorScheduler
+			? readNonNegativeInteger(accountMirrorScheduler.intervalMs)
+			: undefined,
+		accountMirrorSchedulerDryRun: accountMirrorScheduler
+			? readApiAccountMirrorSchedulerDryRun(accountMirrorScheduler)
+			: undefined,
+		routing: readApiServiceRoutingConfig(api.routing),
+	};
 }
 
 function readApiAuthPolicy(
-  config: Record<string, unknown> | null | undefined,
-  env: ApiAuthEnv = process.env,
+	config: Record<string, unknown> | null | undefined,
+	env: ApiAuthEnv = process.env,
 ): ApiAuthPolicy {
-  const api = isRecord(config?.api) ? config.api : null;
-  const auth = isRecord(api?.auth) ? api.auth : null;
-  const rawKeys = auth && Array.isArray(auth.keys) ? auth.keys : [];
-  const configKeys = rawKeys.flatMap((entry, index): ApiAuthKeyPolicy[] => {
-    if (!isRecord(entry)) return [];
-    const secret =
-      readNonEmptyString(entry.secret)
-      ?? readNonEmptyString(entry.key)
-      ?? readNonEmptyString(entry.token);
-    if (!secret) return [];
-    return [
-      {
-        id: readNonEmptyString(entry.id) ?? `key-${String(index + 1)}`,
-        secret,
-        agents: readStringList(entry.agents),
-        teams: readStringList(entry.teams),
-        services: readStringList(entry.services),
-        runtimeProfiles: readStringList(entry.runtimeProfiles),
-      },
-    ];
-  });
-  const envKeys = readApiAuthEnvKeys(env);
-  const keys = [...configKeys, ...envKeys];
-  return {
-    required:
-      readBoolean(auth?.required)
-      ?? readBoolean(auth?.enabled)
-      ?? readBoolean(env.AURACALL_API_AUTH_REQUIRED)
-      ?? readBoolean(env.AURACALL_API_AUTH_ENABLED)
-      ?? keys.length > 0,
-    keys,
-  };
+	const api = isRecord(config?.api) ? config.api : null;
+	const auth = isRecord(api?.auth) ? api.auth : null;
+	const rawKeys = auth && Array.isArray(auth.keys) ? auth.keys : [];
+	const configKeys = rawKeys.flatMap((entry, index): ApiAuthKeyPolicy[] => {
+		if (!isRecord(entry)) return [];
+		const secret =
+			readNonEmptyString(entry.secret) ??
+			readNonEmptyString(entry.key) ??
+			readNonEmptyString(entry.token);
+		if (!secret) return [];
+		return [
+			{
+				id: readNonEmptyString(entry.id) ?? `key-${String(index + 1)}`,
+				secret,
+				agents: readStringList(entry.agents),
+				teams: readStringList(entry.teams),
+				services: readStringList(entry.services),
+				runtimeProfiles: readStringList(entry.runtimeProfiles),
+			},
+		];
+	});
+	const envKeys = readApiAuthEnvKeys(env);
+	const keys = [...configKeys, ...envKeys];
+	return {
+		required:
+			readBoolean(auth?.required) ??
+			readBoolean(auth?.enabled) ??
+			readBoolean(env.AURACALL_API_AUTH_REQUIRED) ??
+			readBoolean(env.AURACALL_API_AUTH_ENABLED) ??
+			keys.length > 0,
+		keys,
+	};
 }
 
 function readApiAuthEnvKeys(env: ApiAuthEnv): ApiAuthKeyPolicy[] {
-  const keys: ApiAuthKeyPolicy[] = [];
-  const primarySecret = readNonEmptyString(env.AURACALL_API_KEY);
-  if (primarySecret) {
-    keys.push({
-      id: readNonEmptyString(env.AURACALL_API_KEY_ID) ?? 'env',
-      secret: primarySecret,
-      agents: readDelimitedEnvList(env.AURACALL_API_KEY_AGENTS),
-      teams: readDelimitedEnvList(env.AURACALL_API_KEY_TEAMS),
-      services: readDelimitedEnvList(env.AURACALL_API_KEY_SERVICES),
-      runtimeProfiles: readDelimitedEnvList(env.AURACALL_API_KEY_RUNTIME_PROFILES),
-    });
-  }
+	const keys: ApiAuthKeyPolicy[] = [];
+	const primarySecret = readNonEmptyString(env.AURACALL_API_KEY);
+	if (primarySecret) {
+		keys.push({
+			id: readNonEmptyString(env.AURACALL_API_KEY_ID) ?? "env",
+			secret: primarySecret,
+			agents: readDelimitedEnvList(env.AURACALL_API_KEY_AGENTS),
+			teams: readDelimitedEnvList(env.AURACALL_API_KEY_TEAMS),
+			services: readDelimitedEnvList(env.AURACALL_API_KEY_SERVICES),
+			runtimeProfiles: readDelimitedEnvList(env.AURACALL_API_KEY_RUNTIME_PROFILES),
+		});
+	}
 
-  for (const rawId of readDelimitedEnvList(env.AURACALL_API_KEY_IDS) ?? []) {
-    const suffix = toApiAuthEnvSuffix(rawId);
-    if (!suffix) continue;
-    const secret = readNonEmptyString(env[`AURACALL_API_KEY_${suffix}`]);
-    if (!secret) continue;
-    keys.push({
-      id: readNonEmptyString(env[`AURACALL_API_KEY_${suffix}_ID`]) ?? rawId,
-      secret,
-      agents: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_AGENTS`]),
-      teams: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_TEAMS`]),
-      services: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_SERVICES`]),
-      runtimeProfiles: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_RUNTIME_PROFILES`]),
-    });
-  }
+	for (const rawId of readDelimitedEnvList(env.AURACALL_API_KEY_IDS) ?? []) {
+		const suffix = toApiAuthEnvSuffix(rawId);
+		if (!suffix) continue;
+		const secret = readNonEmptyString(env[`AURACALL_API_KEY_${suffix}`]);
+		if (!secret) continue;
+		keys.push({
+			id: readNonEmptyString(env[`AURACALL_API_KEY_${suffix}_ID`]) ?? rawId,
+			secret,
+			agents: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_AGENTS`]),
+			teams: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_TEAMS`]),
+			services: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_SERVICES`]),
+			runtimeProfiles: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_RUNTIME_PROFILES`]),
+		});
+	}
 
-  return keys;
+	return keys;
 }
 
 function toAgentConfigApiKeyDiagnosticInput(key: ApiAuthKeyPolicy) {
-  return {
-    id: key.id,
-    agents: key.agents,
-    teams: key.teams,
-    services: key.services,
-    runtimeProfiles: key.runtimeProfiles,
-  };
+	return {
+		id: key.id,
+		agents: key.agents,
+		teams: key.teams,
+		services: key.services,
+		runtimeProfiles: key.runtimeProfiles,
+	};
 }
 
 function authorizeOperatorConfigAccess(context: ApiAuthContext): string | null {
-  const key = context.key;
-  if (!context.policy.required || !key) return null;
-  if (key.agents?.length || key.teams?.length || key.services?.length || key.runtimeProfiles?.length) {
-    return 'API key is not authorized for operator config access.';
-  }
-  return null;
+	const key = context.key;
+	if (!context.policy.required || !key) return null;
+	if (
+		key.agents?.length ||
+		key.teams?.length ||
+		key.services?.length ||
+		key.runtimeProfiles?.length
+	) {
+		return "API key is not authorized for operator config access.";
+	}
+	return null;
 }
 
 function readDelimitedEnvList(value: string | undefined): string[] | undefined {
-  const items = (value ?? '')
-    .split(/[,\s]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  return items.length > 0 ? items : undefined;
+	const items = (value ?? "")
+		.split(/[,\s]+/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+	return items.length > 0 ? items : undefined;
 }
 
 function toApiAuthEnvSuffix(value: string): string | null {
-  const suffix = value
-    .trim()
-    .replace(/[^A-Za-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toUpperCase();
-  return suffix || null;
+	const suffix = value
+		.trim()
+		.replace(/[^A-Za-z0-9]+/g, "_")
+		.replace(/^_+|_+$/g, "")
+		.toUpperCase();
+	return suffix || null;
 }
 
 function authorizeApiRequest(
-  req: http.IncomingMessage,
-  policy: ApiAuthPolicy,
-  pathname: string,
-  operatorDashboardRoutes?: OperatorDashboardRoutes,
+	req: http.IncomingMessage,
+	policy: ApiAuthPolicy,
+	pathname: string,
+	operatorDashboardRoutes?: OperatorDashboardRoutes,
 ): ApiAuthContext | null {
-  if (!policy.required || !pathname.startsWith('/v1/')) {
-    return { policy, key: null };
-  }
-  if (operatorDashboardRoutes && isOperatorDashboardApiRequest(req, operatorDashboardRoutes)) {
-    return { policy, key: null };
-  }
-  const token = readBearerToken(req.headers.authorization) ?? readSingleHeader(req.headers['x-auracall-api-key']);
-  if (!token) return null;
-  const key = policy.keys.find((candidate) => candidate.secret === token) ?? null;
-  return key ? { policy, key } : null;
+	if (!policy.required || !pathname.startsWith("/v1/")) {
+		return { policy, key: null };
+	}
+	if (operatorDashboardRoutes && isOperatorDashboardApiRequest(req, operatorDashboardRoutes)) {
+		return { policy, key: null };
+	}
+	const token =
+		readBearerToken(req.headers.authorization) ??
+		readSingleHeader(req.headers["x-auracall-api-key"]);
+	if (!token) return null;
+	const key = policy.keys.find((candidate) => candidate.secret === token) ?? null;
+	return key ? { policy, key } : null;
 }
 
-function isOperatorDashboardApiRequest(req: http.IncomingMessage, routes: OperatorDashboardRoutes): boolean {
-  const host = readSingleHeader(req.headers.host);
-  if (!host) return false;
+function isOperatorDashboardApiRequest(
+	req: http.IncomingMessage,
+	routes: OperatorDashboardRoutes,
+): boolean {
+	const host = readSingleHeader(req.headers.host);
+	if (!host) return false;
 
-  const origin = parseRequestHeaderUrl(req.headers.origin);
-  if (origin && sameHost(origin.host, host)) {
-    return true;
-  }
+	const origin = parseRequestHeaderUrl(req.headers.origin);
+	if (origin && sameHost(origin.host, host)) {
+		return true;
+	}
 
-  const referer = parseRequestHeaderUrl(req.headers.referer ?? req.headers.referrer);
-  if (!referer || !sameHost(referer.host, host)) {
-    return false;
-  }
-  return isOperatorDashboardPath(referer.pathname, routes);
+	const referer = parseRequestHeaderUrl(req.headers.referer ?? req.headers.referrer);
+	if (!referer || !sameHost(referer.host, host)) {
+		return false;
+	}
+	return isOperatorDashboardPath(referer.pathname, routes);
 }
 
 function parseRequestHeaderUrl(value: string | string[] | undefined): URL | null {
-  const header = readSingleHeader(value);
-  if (!header) return null;
-  try {
-    return new URL(header);
-  } catch {
-    return null;
-  }
+	const header = readSingleHeader(value);
+	if (!header) return null;
+	try {
+		return new URL(header);
+	} catch {
+		return null;
+	}
 }
 
 function sameHost(left: string, right: string): boolean {
-  return left.toLowerCase() === right.toLowerCase();
+	return left.toLowerCase() === right.toLowerCase();
 }
 
 function isOperatorDashboardPath(pathname: string, routes: OperatorDashboardRoutes): boolean {
-  const dashboardRoutes = [
-    routes.dashboardPath,
-    routes.debugDashboardPath,
-    routes.accountMirrorPath,
-    routes.previewSessionPath,
-    routes.configPath,
-    routes.agentsPath,
-  ];
-  return dashboardRoutes.some((route) => pathname === route || pathname.startsWith(`${route.replace(/\/+$/, '')}/`));
+	const dashboardRoutes = [
+		routes.dashboardPath,
+		routes.debugDashboardPath,
+		routes.accountMirrorPath,
+		routes.previewSessionPath,
+		routes.configPath,
+		routes.agentsPath,
+	];
+	return dashboardRoutes.some(
+		(route) => pathname === route || pathname.startsWith(`${route.replace(/\/+$/, "")}/`),
+	);
 }
 
 function authorizeExecutionRequest(
-  context: ApiAuthContext,
-  request: ExecutionRequest,
-  catalog: EffectiveAgentCatalog,
+	context: ApiAuthContext,
+	request: ExecutionRequest,
+	catalog: EffectiveAgentCatalog,
 ): string | null {
-  return authorizeExecutionSelection(context, readExecutionAuthorizationSelection(request, catalog), catalog);
+	return authorizeExecutionSelection(
+		context,
+		readExecutionAuthorizationSelection(request, catalog),
+		catalog,
+	);
 }
 
 function authorizeExecutionSelection(
-  context: ApiAuthContext,
-  selection: ExecutionAuthorizationSelection,
-  catalog: EffectiveAgentCatalog,
+	context: ApiAuthContext,
+	selection: ExecutionAuthorizationSelection,
+	catalog: EffectiveAgentCatalog,
 ): string | null {
-  const key = context.key;
-  if (!context.policy.required || !key) return null;
-  const teamAgentIds = (key.teams ?? [])
-    .flatMap((teamId) => catalog.teams.find((team) => team.id === teamId)?.agentIds ?? []);
-  const agentAllowedByTeam = Boolean(
-    selection.agent && teamAgentIds.length > 0 && teamAgentIds.includes(selection.agent),
-  );
-  return (
-    authorizeScopedValue('agent', selection.agent, key.agents, agentAllowedByTeam)
-    ?? authorizeScopedValue('team', selection.team, key.teams, agentAllowedByTeam)
-    ?? authorizeScopedValue('service', selection.service, key.services)
-    ?? authorizeScopedValue('runtime profile', selection.runtimeProfile, key.runtimeProfiles)
-  );
+	const key = context.key;
+	if (!context.policy.required || !key) return null;
+	const teamAgentIds = (key.teams ?? []).flatMap(
+		(teamId) => catalog.teams.find((team) => team.id === teamId)?.agentIds ?? [],
+	);
+	const agentAllowedByTeam = Boolean(
+		selection.agent && teamAgentIds.length > 0 && teamAgentIds.includes(selection.agent),
+	);
+	return (
+		authorizeScopedValue("agent", selection.agent, key.agents, agentAllowedByTeam) ??
+		authorizeScopedValue("team", selection.team, key.teams, agentAllowedByTeam) ??
+		authorizeScopedValue("service", selection.service, key.services) ??
+		authorizeScopedValue("runtime profile", selection.runtimeProfile, key.runtimeProfiles)
+	);
 }
 
 interface ExecutionAuthorizationSelection {
-  agent: string | null;
-  team: string | null;
-  service: string | null;
-  runtimeProfile: string | null;
+	agent: string | null;
+	team: string | null;
+	service: string | null;
+	runtimeProfile: string | null;
 }
 
 function readExecutionAuthorizationSelection(
-  request: ExecutionRequest,
-  catalog: EffectiveAgentCatalog,
+	request: ExecutionRequest,
+	catalog: EffectiveAgentCatalog,
 ): ExecutionAuthorizationSelection {
-  const auracall = request.auracall ?? {};
-  const agent = typeof auracall.agent === 'string' ? auracall.agent : null;
-  const team = typeof auracall.team === 'string' ? auracall.team : null;
-  const catalogAgent = agent ? catalog.agents.find((entry) => entry.id === agent) : null;
-  return {
-    agent,
-    team,
-    service: typeof auracall.service === 'string'
-      ? auracall.service
-      : catalogAgent?.service ?? catalogAgent?.defaultService ?? null,
-    runtimeProfile: typeof auracall.runtimeProfile === 'string'
-      ? auracall.runtimeProfile
-      : catalogAgent?.runtimeProfileId ?? null,
-  };
+	const auracall = request.auracall ?? {};
+	const agent = typeof auracall.agent === "string" ? auracall.agent : null;
+	const team = typeof auracall.team === "string" ? auracall.team : null;
+	const catalogAgent = agent ? catalog.agents.find((entry) => entry.id === agent) : null;
+	return {
+		agent,
+		team,
+		service:
+			typeof auracall.service === "string"
+				? auracall.service
+				: (catalogAgent?.service ?? catalogAgent?.defaultService ?? null),
+		runtimeProfile:
+			typeof auracall.runtimeProfile === "string"
+				? auracall.runtimeProfile
+				: (catalogAgent?.runtimeProfileId ?? null),
+	};
 }
 
 function hydrateExecutionRequestFromCatalog(
-  request: ExecutionRequest,
-  catalog: EffectiveAgentCatalog,
+	request: ExecutionRequest,
+	catalog: EffectiveAgentCatalog,
 ): ExecutionRequest {
-  const auracall = request.auracall ?? {};
-  const agent = typeof auracall.agent === 'string' && auracall.agent.trim().length > 0
-    ? auracall.agent.trim()
-    : null;
-  if (!agent) {
-    return request;
-  }
+	const auracall = request.auracall ?? {};
+	const agent =
+		typeof auracall.agent === "string" && auracall.agent.trim().length > 0
+			? auracall.agent.trim()
+			: null;
+	if (!agent) {
+		return request;
+	}
 
-  const catalogAgent = catalog.agents.find((entry) => entry.id === agent) ?? null;
-  if (!catalogAgent) {
-    return request;
-  }
+	const catalogAgent = catalog.agents.find((entry) => entry.id === agent) ?? null;
+	if (!catalogAgent) {
+		return request;
+	}
 
-  const service = typeof auracall.service === 'string' && auracall.service.trim().length > 0
-    ? auracall.service.trim()
-    : catalogAgent.service ?? catalogAgent.defaultService ?? null;
-  const runtimeProfile =
-    typeof auracall.runtimeProfile === 'string' && auracall.runtimeProfile.trim().length > 0
-      ? auracall.runtimeProfile.trim()
-      : catalogAgent.runtimeProfileId ?? null;
+	const service =
+		typeof auracall.service === "string" && auracall.service.trim().length > 0
+			? auracall.service.trim()
+			: (catalogAgent.service ?? catalogAgent.defaultService ?? null);
+	const runtimeProfile =
+		typeof auracall.runtimeProfile === "string" && auracall.runtimeProfile.trim().length > 0
+			? auracall.runtimeProfile.trim()
+			: (catalogAgent.runtimeProfileId ?? null);
 
-  if (
-    (service === null || service === auracall.service) &&
-    (runtimeProfile === null || runtimeProfile === auracall.runtimeProfile)
-  ) {
-    return request;
-  }
+	if (
+		(service === null || service === auracall.service) &&
+		(runtimeProfile === null || runtimeProfile === auracall.runtimeProfile)
+	) {
+		return request;
+	}
 
-  return createExecutionRequest({
-    ...request,
-    auracall: {
-      ...auracall,
-      agent,
-      ...(service ? { service } : {}),
-      ...(runtimeProfile ? { runtimeProfile } : {}),
-    },
-  });
+	return createExecutionRequest({
+		...request,
+		auracall: {
+			...auracall,
+			agent,
+			...(service ? { service } : {}),
+			...(runtimeProfile ? { runtimeProfile } : {}),
+		},
+	});
 }
 
 function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
-  if (!isRecord(value)) {
-    throw new HttpInvalidRequestError('Chat completion request body must be an object.');
-  }
-  const model = readNonEmptyString(value.model);
-  const messages = Array.isArray(value.messages)
-    ? value.messages.flatMap((message): HttpChatCompletionMessage[] => {
-        if (!isRecord(message)) return [];
-        const role = readNonEmptyString(message.role);
-        if (role !== 'system' && role !== 'user' && role !== 'assistant') return [];
-        const content = normalizeChatMessageContent(message.content);
-        return content === null ? [] : [{ role, content }];
-      })
-    : [];
-  if (!model) {
-    throw new HttpInvalidRequestError('Chat completion request requires a model.');
-  }
-  if (messages.length === 0) {
-    throw new HttpInvalidRequestError('Chat completion request requires at least one string-content message.');
-  }
-  const metadata = isRecord(value.metadata) ? value.metadata : undefined;
-  const responseFormat = isRecord(value.response_format) ? value.response_format : undefined;
-  const tools = Array.isArray(value.tools)
-    ? value.tools.filter((tool): tool is Record<string, unknown> => isRecord(tool))
-    : undefined;
-  return {
-    model,
-    messages,
-    stream: readBoolean(value.stream) ?? false,
-    ...(responseFormat ? { response_format: responseFormat } : {}),
-    ...(metadata ? { metadata } : {}),
-    ...(tools ? { tools } : {}),
-    auracall: isRecord(value.auracall)
-      ? (value.auracall as ExecutionRequestExtensionHints)
-      : undefined,
-  };
+	if (!isRecord(value)) {
+		throw new HttpInvalidRequestError("Chat completion request body must be an object.");
+	}
+	const model = readNonEmptyString(value.model);
+	const messages = Array.isArray(value.messages)
+		? value.messages.flatMap((message): HttpChatCompletionMessage[] => {
+				if (!isRecord(message)) return [];
+				const role = readNonEmptyString(message.role);
+				if (role !== "system" && role !== "user" && role !== "assistant") return [];
+				const content = normalizeChatMessageContent(message.content);
+				return content === null ? [] : [{ role, content }];
+			})
+		: [];
+	if (!model) {
+		throw new HttpInvalidRequestError("Chat completion request requires a model.");
+	}
+	if (messages.length === 0) {
+		throw new HttpInvalidRequestError(
+			"Chat completion request requires at least one string-content message.",
+		);
+	}
+	const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+	const responseFormat = isRecord(value.response_format) ? value.response_format : undefined;
+	const tools = Array.isArray(value.tools)
+		? value.tools.filter((tool): tool is Record<string, unknown> => isRecord(tool))
+		: undefined;
+	return {
+		model,
+		messages,
+		stream: readBoolean(value.stream) ?? false,
+		...(responseFormat ? { response_format: responseFormat } : {}),
+		...(metadata ? { metadata } : {}),
+		...(tools ? { tools } : {}),
+		auracall: isRecord(value.auracall)
+			? (value.auracall as ExecutionRequestExtensionHints)
+			: undefined,
+	};
 }
 
-function createExecutionRequestFromChatCompletion(request: HttpChatCompletionRequest): ExecutionRequest {
-  const instructions = request.messages
-    .filter((message) => message.role === 'system')
-    .map((message) => message.content)
-    .join('\n\n')
-    || null;
-  const inputMessages = request.messages
-    .filter((message) => message.role !== 'system')
-    .map((message) => ({
-      role: message.role,
-      content: message.content,
-    }));
-  const metadata = {
-    ...(request.metadata ?? {}),
-    ...(request.response_format ? { response_format: request.response_format } : {}),
-  };
-  return {
-    model: request.model,
-    input: inputMessages.length > 0 ? inputMessages : request.messages,
-    ...(instructions ? { instructions } : {}),
-    ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
-    ...(request.tools ? { tools: request.tools } : {}),
-    ...(request.auracall ? { auracall: request.auracall } : {}),
-  };
+function createExecutionRequestFromChatCompletion(
+	request: HttpChatCompletionRequest,
+): ExecutionRequest {
+	const instructions =
+		request.messages
+			.filter((message) => message.role === "system")
+			.map((message) => message.content)
+			.join("\n\n") || null;
+	const inputMessages = request.messages
+		.filter((message) => message.role !== "system")
+		.map((message) => ({
+			role: message.role,
+			content: message.content,
+		}));
+	const metadata = {
+		...(request.metadata ?? {}),
+		...(request.response_format ? { response_format: request.response_format } : {}),
+	};
+	return {
+		model: request.model,
+		input: inputMessages.length > 0 ? inputMessages : request.messages,
+		...(instructions ? { instructions } : {}),
+		...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+		...(request.tools ? { tools: request.tools } : {}),
+		...(request.auracall ? { auracall: request.auracall } : {}),
+	};
 }
 
 function normalizeResponsesApiRequest(value: unknown): ExecutionRequest {
-  if (!isRecord(value)) {
-    throw new HttpInvalidRequestError('Responses request body must be a JSON object.');
-  }
-  const metadata = isRecord(value.metadata) ? value.metadata : undefined;
-  const responseFormat = isRecord(value.response_format) ? value.response_format : undefined;
-  const normalized = {
-    ...value,
-    ...(metadata || responseFormat
-      ? {
-          metadata: {
-            ...(metadata ?? {}),
-            ...(responseFormat && !isRecord(metadata?.response_format) ? { response_format: responseFormat } : {}),
-          },
-        }
-      : {}),
-  };
-  return normalized as ExecutionRequest;
+	if (!isRecord(value)) {
+		throw new HttpInvalidRequestError("Responses request body must be a JSON object.");
+	}
+	const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+	const responseFormat = isRecord(value.response_format) ? value.response_format : undefined;
+	const normalized = {
+		...value,
+		...(metadata || responseFormat
+			? {
+					metadata: {
+						...(metadata ?? {}),
+						...(responseFormat && !isRecord(metadata?.response_format)
+							? { response_format: responseFormat }
+							: {}),
+					},
+				}
+			: {}),
+	};
+	return normalized as ExecutionRequest;
 }
 
 function createChatCompletionErrorResponse(response: ExecutionResponse): HttpErrorPayload {
-  return {
-    error: {
-      type: 'auracall_execution_error',
-      message: `AuraCall execution ${response.id} ended with status ${response.status}.`,
-    },
-  };
+	return {
+		error: {
+			type: "auracall_execution_error",
+			message: `AuraCall execution ${response.id} ended with status ${response.status}.`,
+		},
+	};
 }
 
 function createChatCompletionResponse(
-  response: ExecutionResponse,
-  now: () => Date,
+	response: ExecutionResponse,
+	now: () => Date,
 ): HttpChatCompletionResponse {
-  const usage = response.metadata?.executionSummary?.providerUsageSummary;
-  return {
-    id: response.id,
-    object: 'chat.completion',
-    created: Math.floor(now().getTime() / 1000),
-    model: response.model ?? '',
-    choices: [
-      {
-        index: 0,
-        message: {
-          role: 'assistant',
-          content: extractChatCompletionText(response),
-        },
-        finish_reason: response.status === 'completed' ? 'stop' : null,
-      },
-    ],
-    ...(usage
-      ? {
-          usage: {
-            prompt_tokens: usage.inputTokens ?? null,
-            completion_tokens: usage.outputTokens ?? null,
-            total_tokens: usage.totalTokens ?? null,
-          },
-        }
-      : {}),
-    ...(response.metadata ? { metadata: response.metadata } : {}),
-  };
+	const usage = response.metadata?.executionSummary?.providerUsageSummary;
+	return {
+		id: response.id,
+		object: "chat.completion",
+		created: Math.floor(now().getTime() / 1000),
+		model: response.model ?? "",
+		choices: [
+			{
+				index: 0,
+				message: {
+					role: "assistant",
+					content: extractChatCompletionText(response),
+				},
+				finish_reason: response.status === "completed" ? "stop" : null,
+			},
+		],
+		...(usage
+			? {
+					usage: {
+						prompt_tokens: usage.inputTokens ?? null,
+						completion_tokens: usage.outputTokens ?? null,
+						total_tokens: usage.totalTokens ?? null,
+					},
+				}
+			: {}),
+		...(response.metadata ? { metadata: response.metadata } : {}),
+	};
 }
 
 function extractChatCompletionText(response: ExecutionResponse): string {
-  return response.output
-    .flatMap((item) =>
-      item.type === 'message'
-        ? item.content.map((part) => part.text)
-        : [],
-    )
-    .join('\n\n');
+	return response.output
+		.flatMap((item) => (item.type === "message" ? item.content.map((part) => part.text) : []))
+		.join("\n\n");
 }
 
 function normalizeChatMessageContent(value: unknown): string | null {
-  if (typeof value === 'string') return value;
-  if (!Array.isArray(value)) return null;
-  const text = value
-    .flatMap((part): string[] => {
-      if (!isRecord(part)) return [];
-      if (part.type !== 'text') return [];
-      const textValue = readNonEmptyString(part.text);
-      return textValue ? [textValue] : [];
-    })
-    .join('\n');
-  return text.length > 0 ? text : null;
+	if (typeof value === "string") return value;
+	if (!Array.isArray(value)) return null;
+	const text = value
+		.flatMap((part): string[] => {
+			if (!isRecord(part)) return [];
+			if (part.type !== "text") return [];
+			const textValue = readNonEmptyString(part.text);
+			return textValue ? [textValue] : [];
+		})
+		.join("\n");
+	return text.length > 0 ? text : null;
 }
 
 function authorizeScopedValue(
-  label: string,
-  value: string | null,
-  allowed: string[] | undefined,
-  allowedByRelatedScope = false,
+	label: string,
+	value: string | null,
+	allowed: string[] | undefined,
+	allowedByRelatedScope = false,
 ): string | null {
-  if (!allowed?.length) return null;
-  if (allowedByRelatedScope) return null;
-  if (value && allowed.includes(value)) return null;
-  return `API key is not authorized for ${label}${value ? ` "${value}"` : ' selection'}.`;
+	if (!allowed?.length) return null;
+	if (allowedByRelatedScope) return null;
+	if (value && allowed.includes(value)) return null;
+	return `API key is not authorized for ${label}${value ? ` "${value}"` : " selection"}.`;
 }
 
 function readBearerToken(value: string | string[] | undefined): string | null {
-  const header = readSingleHeader(value);
-  if (!header) return null;
-  const match = /^Bearer\s+(.+)$/i.exec(header);
-  return match?.[1]?.trim() || null;
+	const header = readSingleHeader(value);
+	if (!header) return null;
+	const match = /^Bearer\s+(.+)$/i.exec(header);
+	return match?.[1]?.trim() || null;
 }
 
 function readApiAccountMirrorSchedulerDryRun(value: Record<string, unknown>): boolean | undefined {
-  const dryRun = readBoolean(value.dryRun);
-  if (dryRun !== undefined) return dryRun;
-  const execute = readBoolean(value.execute);
-  return execute === undefined ? undefined : !execute;
+	const dryRun = readBoolean(value.dryRun);
+	if (dryRun !== undefined) return dryRun;
+	const execute = readBoolean(value.execute);
+	return execute === undefined ? undefined : !execute;
 }
 
 function readApiServiceRoutingConfig(value: unknown): ApiServiceRoutingConfig | undefined {
-  if (!isRecord(value)) return undefined;
-  const routing: ApiServiceRoutingConfig = {
-    localHostname: readNonEmptyString(value.localHostname),
-    externalHostname: readNonEmptyString(value.externalHostname),
-    localBaseUrl: readNonEmptyString(value.localBaseUrl),
-    externalBaseUrl: readNonEmptyString(value.externalBaseUrl),
-    dashboardPath: readNonEmptyString(value.dashboardPath),
-    debugDashboardPath: readNonEmptyString(value.debugDashboardPath),
-    accountMirrorPath: readNonEmptyString(value.accountMirrorPath),
-    proxyTarget: readNonEmptyString(value.proxyTarget),
-    auth: readNonEmptyString(value.auth),
-    ingress: readNonEmptyString(value.ingress),
-  };
-  return Object.values(routing).some(Boolean) ? routing : undefined;
+	if (!isRecord(value)) return undefined;
+	const routing: ApiServiceRoutingConfig = {
+		localHostname: readNonEmptyString(value.localHostname),
+		externalHostname: readNonEmptyString(value.externalHostname),
+		localBaseUrl: readNonEmptyString(value.localBaseUrl),
+		externalBaseUrl: readNonEmptyString(value.externalBaseUrl),
+		dashboardPath: readNonEmptyString(value.dashboardPath),
+		debugDashboardPath: readNonEmptyString(value.debugDashboardPath),
+		accountMirrorPath: readNonEmptyString(value.accountMirrorPath),
+		proxyTarget: readNonEmptyString(value.proxyTarget),
+		auth: readNonEmptyString(value.auth),
+		ingress: readNonEmptyString(value.ingress),
+	};
+	return Object.values(routing).some(Boolean) ? routing : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 async function resolveCachedCatalogItemAsset(
-  detail: AccountMirrorCatalogItemResult,
-  config: Record<string, unknown> | null | undefined,
+	detail: AccountMirrorCatalogItemResult,
+	config: Record<string, unknown> | null | undefined,
 ): Promise<CachedCatalogItemAsset | null> {
-  const item = isRecord(detail.item) ? detail.item : {};
-  const localPath = readCatalogAssetStringField(item, ['localPath', 'path', 'filePath', 'absolutePath']);
-  const storageRelpath = readCatalogAssetStringField(item, ['assetStorageRelpath', 'storageRelpath']);
-  const rawPath = localPath ?? storageRelpath;
-  if (!rawPath) return null;
-  const resolvedPath = await resolveCacheOwnedAssetPath(rawPath, config);
-  if (!resolvedPath) return null;
-  const stat = await fs.stat(resolvedPath).catch(() => null);
-  if (!stat?.isFile()) return null;
-  return {
-    path: resolvedPath,
-    mimeType: inferCachedAssetMimeType(
-      readCatalogAssetStringField(item, ['mimeType', 'mime', 'contentType']),
-      readCatalogAssetStringField(item, ['name', 'filename', 'fileName', 'title']) ?? resolvedPath,
-    ),
-    size: stat.size,
-  };
+	const item = isRecord(detail.item) ? detail.item : {};
+	const localPath = readCatalogAssetStringField(item, [
+		"localPath",
+		"path",
+		"filePath",
+		"absolutePath",
+	]);
+	const storageRelpath = readCatalogAssetStringField(item, [
+		"assetStorageRelpath",
+		"storageRelpath",
+	]);
+	const rawPath = localPath ?? storageRelpath;
+	if (!rawPath) return null;
+	const resolvedPath = await resolveCacheOwnedAssetPath(rawPath, config);
+	if (!resolvedPath) return null;
+	const stat = await fs.stat(resolvedPath).catch(() => null);
+	if (!stat?.isFile()) return null;
+	return {
+		path: resolvedPath,
+		mimeType: inferCachedAssetMimeType(
+			readCatalogAssetStringField(item, ["mimeType", "mime", "contentType"]),
+			readCatalogAssetStringField(item, ["name", "filename", "fileName", "title"]) ?? resolvedPath,
+		),
+		size: stat.size,
+	};
 }
 
 async function resolveCacheOwnedAssetPath(
-  rawPath: string,
-  config: Record<string, unknown> | null | undefined,
+	rawPath: string,
+	config: Record<string, unknown> | null | undefined,
 ): Promise<string | null> {
-  const roots = resolveCacheAssetRoots(config);
-  const candidates = path.isAbsolute(rawPath)
-    ? [path.normalize(rawPath)]
-    : roots.map((root) => path.resolve(root, rawPath));
-  for (const candidate of candidates) {
-    const normalized = path.normalize(candidate);
-    if (!isPathInsideAnyRoot(normalized, roots)) continue;
-    if (await pathExists(normalized)) return normalized;
-  }
-  return null;
+	const roots = resolveCacheAssetRoots(config);
+	const candidates = path.isAbsolute(rawPath)
+		? [path.normalize(rawPath)]
+		: roots.map((root) => path.resolve(root, rawPath));
+	for (const candidate of candidates) {
+		const normalized = path.normalize(candidate);
+		if (!isPathInsideAnyRoot(normalized, roots)) continue;
+		if (await pathExists(normalized)) return normalized;
+	}
+	return null;
 }
 
 function resolveCacheAssetRoots(config: Record<string, unknown> | null | undefined): string[] {
-  const configuredRoot = readNestedNonEmptyString(config, ['browser', 'cache', 'rootDir']);
-  const roots = [
-    configuredRoot ? path.resolve(configuredRoot) : null,
-    path.join(getAuracallHomeDir(), 'cache'),
-    path.join(getAuracallHomeDir(), 'cache', 'providers'),
-  ].filter((value): value is string => Boolean(value));
-  return Array.from(new Set(roots.map((root) => path.normalize(root))));
+	const configuredRoot = readNestedNonEmptyString(config, ["browser", "cache", "rootDir"]);
+	const roots = [
+		configuredRoot ? path.resolve(configuredRoot) : null,
+		path.join(getAuracallHomeDir(), "cache"),
+		path.join(getAuracallHomeDir(), "cache", "providers"),
+	].filter((value): value is string => Boolean(value));
+	return Array.from(new Set(roots.map((root) => path.normalize(root))));
 }
 
 function isPathInsideAnyRoot(candidate: string, roots: string[]): boolean {
-  return roots.some((root) => {
-    const relative = path.relative(root, candidate);
-    return relative.length > 0 && !relative.startsWith('..') && !path.isAbsolute(relative);
-  });
+	return roots.some((root) => {
+		const relative = path.relative(root, candidate);
+		return relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
+	});
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
-  try {
-    await fs.access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
+	try {
+		await fs.access(targetPath);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 function inferCachedAssetMimeType(configured: string | null, fileName: string): string {
-  if (configured?.includes('/')) return configured;
-  const ext = path.extname(fileName).toLowerCase();
-  const types: Record<string, string> = {
-    '.avif': 'image/avif',
-    '.gif': 'image/gif',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.svg': 'image/svg+xml',
-    '.webp': 'image/webp',
-    '.mp4': 'video/mp4',
-    '.m4v': 'video/mp4',
-    '.mov': 'video/quicktime',
-    '.webm': 'video/webm',
-    '.mp3': 'audio/mpeg',
-    '.m4a': 'audio/mp4',
-    '.ogg': 'audio/ogg',
-    '.wav': 'audio/wav',
-    '.pdf': 'application/pdf',
-    '.md': 'text/markdown; charset=utf-8',
-    '.markdown': 'text/markdown; charset=utf-8',
-    '.txt': 'text/plain; charset=utf-8',
-    '.json': 'application/json; charset=utf-8',
-  };
-  return types[ext] ?? 'application/octet-stream';
+	if (configured?.includes("/")) return configured;
+	const ext = path.extname(fileName).toLowerCase();
+	const types: Record<string, string> = {
+		".avif": "image/avif",
+		".gif": "image/gif",
+		".jpg": "image/jpeg",
+		".jpeg": "image/jpeg",
+		".png": "image/png",
+		".svg": "image/svg+xml",
+		".webp": "image/webp",
+		".mp4": "video/mp4",
+		".m4v": "video/mp4",
+		".mov": "video/quicktime",
+		".webm": "video/webm",
+		".mp3": "audio/mpeg",
+		".m4a": "audio/mp4",
+		".ogg": "audio/ogg",
+		".wav": "audio/wav",
+		".pdf": "application/pdf",
+		".md": "text/markdown; charset=utf-8",
+		".markdown": "text/markdown; charset=utf-8",
+		".txt": "text/plain; charset=utf-8",
+		".json": "application/json; charset=utf-8",
+	};
+	return types[ext] ?? "application/octet-stream";
 }
 
-function readCatalogAssetStringField(item: Record<string, unknown>, fields: string[]): string | null {
-  const direct = readRecordStringField(item, fields);
-  if (direct) return direct;
-  const metadata = item.metadata;
-  return isRecord(metadata) ? readRecordStringField(metadata, fields) : null;
+function readCatalogAssetStringField(
+	item: Record<string, unknown>,
+	fields: string[],
+): string | null {
+	const direct = readRecordStringField(item, fields);
+	if (direct) return direct;
+	const metadata = item.metadata;
+	return isRecord(metadata) ? readRecordStringField(metadata, fields) : null;
 }
 
 function readRecordStringField(item: Record<string, unknown>, fields: string[]): string | null {
-  for (const field of fields) {
-    const value = item[field];
-    if (typeof value === 'string' && value.trim()) return value.trim();
-    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  }
-  return null;
+	for (const field of fields) {
+		const value = item[field];
+		if (typeof value === "string" && value.trim()) return value.trim();
+		if (typeof value === "number" && Number.isFinite(value)) return String(value);
+	}
+	return null;
 }
 
 function readNestedNonEmptyString(
-  value: Record<string, unknown> | null | undefined,
-  segments: string[],
+	value: Record<string, unknown> | null | undefined,
+	segments: string[],
 ): string | null {
-  let current: unknown = value;
-  for (const segment of segments) {
-    if (!isRecord(current)) return null;
-    current = current[segment];
-  }
-  return typeof current === 'string' && current.trim() ? current.trim() : null;
+	let current: unknown = value;
+	for (const segment of segments) {
+		if (!isRecord(current)) return null;
+		current = current[segment];
+	}
+	return typeof current === "string" && current.trim() ? current.trim() : null;
 }
 
 function readNonEmptyString(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
+	if (typeof value !== "string") return undefined;
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function readStringList(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const entries = value.flatMap((entry): string[] => {
-    const normalized = readNonEmptyString(entry);
-    return normalized ? [normalized] : [];
-  });
-  return entries.length > 0 ? [...new Set(entries)] : undefined;
+	if (!Array.isArray(value)) return undefined;
+	const entries = value.flatMap((entry): string[] => {
+		const normalized = readNonEmptyString(entry);
+		return normalized ? [normalized] : [];
+	});
+	return entries.length > 0 ? [...new Set(entries)] : undefined;
 }
 
 function readPositiveInteger(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) return undefined;
-  return value;
+	if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) return undefined;
+	return value;
 }
 
 function readNonNegativeInteger(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) return undefined;
-  return value;
+	if (typeof value !== "number" || !Number.isInteger(value) || value < 0) return undefined;
+	return value;
 }
 
 function readBoolean(value: unknown): boolean | undefined {
-  return typeof value === 'boolean' ? value : undefined;
+	return typeof value === "boolean" ? value : undefined;
 }
 
 function createAccountMirrorSchedulerOperatorStatus(
-  scheduler: HttpStatusResponse['accountMirrorScheduler'],
+	scheduler: HttpStatusResponse["accountMirrorScheduler"],
 ): AccountMirrorSchedulerOperatorStatus {
-  if (!scheduler.enabled) {
-    return {
-      posture: 'disabled',
-      reason:
-        'account mirror scheduler is disabled; set --account-mirror-scheduler-interval-ms to enable cadence and live-follow wakes',
-      backpressureReason: null,
-    };
-  }
-  if (scheduler.paused || scheduler.state === 'paused') {
-    return {
-      posture: 'paused',
-      reason: 'account mirror scheduler is paused by operator control',
-      backpressureReason: null,
-    };
-  }
-  if (scheduler.state === 'running') {
-    return {
-      posture: 'running',
-      reason: 'account mirror scheduler pass is currently running',
-      backpressureReason: null,
-    };
-  }
-  if (scheduler.foregroundWork.active) {
-    return {
-      posture: 'waiting',
-      reason: formatForegroundWorkWaitReason(scheduler.foregroundWork),
-      backpressureReason: 'foreground-work',
-    };
-  }
-  const backpressureReason = scheduler.lastPass?.backpressure?.reason ?? null;
-  if (backpressureReason === 'foreground-work') {
-    return {
-      posture: 'waiting',
-      reason: scheduler.lastPass?.backpressure?.message
-        ?? 'latest scheduler pass yielded to foreground AuraCall work',
-      backpressureReason,
-    };
-  }
-  if (backpressureReason === 'routine-delayed') {
-    return {
-      posture: scheduler.state === 'scheduled' ? 'scheduled' : 'healthy',
-      reason: scheduler.lastPass?.backpressure?.message
-        ? `latest scheduler pass is waiting on routine cadence: ${scheduler.lastPass.backpressure.message}`
-        : 'latest scheduler pass found only routine-delayed targets and is waiting for the next cadence',
-      backpressureReason,
-    };
-  }
-  if (backpressureReason && backpressureReason !== 'none') {
-    return {
-      posture: 'backpressured',
-      reason: scheduler.lastPass?.backpressure?.message ?? `latest pass reported ${backpressureReason}`,
-      backpressureReason,
-    };
-  }
-  if (scheduler.lastPass) {
-    return {
-      posture: 'healthy',
-      reason: 'latest account mirror scheduler pass completed without backpressure',
-      backpressureReason: backpressureReason ?? null,
-    };
-  }
-  if (scheduler.state === 'scheduled') {
-    return {
-      posture: 'scheduled',
-      reason: 'account mirror scheduler has a pass queued on its cadence timer',
-      backpressureReason: null,
-    };
-  }
-  return {
-    posture: 'ready',
-    reason: 'account mirror scheduler is enabled and waiting for its first pass',
-    backpressureReason: null,
-  };
+	if (!scheduler.enabled) {
+		return {
+			posture: "disabled",
+			reason:
+				"account mirror scheduler is disabled; set --account-mirror-scheduler-interval-ms to enable cadence and live-follow wakes",
+			backpressureReason: null,
+		};
+	}
+	if (scheduler.paused || scheduler.state === "paused") {
+		return {
+			posture: "paused",
+			reason: "account mirror scheduler is paused by operator control",
+			backpressureReason: null,
+		};
+	}
+	if (scheduler.state === "running") {
+		return {
+			posture: "running",
+			reason: "account mirror scheduler pass is currently running",
+			backpressureReason: null,
+		};
+	}
+	if (scheduler.foregroundWork.active) {
+		return {
+			posture: "waiting",
+			reason: formatForegroundWorkWaitReason(scheduler.foregroundWork),
+			backpressureReason: "foreground-work",
+		};
+	}
+	const backpressureReason = scheduler.lastPass?.backpressure?.reason ?? null;
+	if (backpressureReason === "foreground-work") {
+		return {
+			posture: "waiting",
+			reason:
+				scheduler.lastPass?.backpressure?.message ??
+				"latest scheduler pass yielded to foreground AuraCall work",
+			backpressureReason,
+		};
+	}
+	if (backpressureReason === "routine-delayed") {
+		return {
+			posture: scheduler.state === "scheduled" ? "scheduled" : "healthy",
+			reason: scheduler.lastPass?.backpressure?.message
+				? `latest scheduler pass is waiting on routine cadence: ${scheduler.lastPass.backpressure.message}`
+				: "latest scheduler pass found only routine-delayed targets and is waiting for the next cadence",
+			backpressureReason,
+		};
+	}
+	if (backpressureReason && backpressureReason !== "none") {
+		return {
+			posture: "backpressured",
+			reason:
+				scheduler.lastPass?.backpressure?.message ?? `latest pass reported ${backpressureReason}`,
+			backpressureReason,
+		};
+	}
+	if (scheduler.lastPass) {
+		return {
+			posture: "healthy",
+			reason: "latest account mirror scheduler pass completed without backpressure",
+			backpressureReason: backpressureReason ?? null,
+		};
+	}
+	if (scheduler.state === "scheduled") {
+		return {
+			posture: "scheduled",
+			reason: "account mirror scheduler has a pass queued on its cadence timer",
+			backpressureReason: null,
+		};
+	}
+	return {
+		posture: "ready",
+		reason: "account mirror scheduler is enabled and waiting for its first pass",
+		backpressureReason: null,
+	};
 }
 
-function formatForegroundWorkWaitReason(status: AccountMirrorSchedulerForegroundWorkStatus): string {
-  const reasons = [
-    status.activeRequestCount > 0 ? `activeRequests=${status.activeRequestCount}` : null,
-    status.drainReservations > 0 ? `pendingDrains=${status.drainReservations}` : null,
-    status.backgroundDrainScheduled ? 'backgroundDrainScheduled=true' : null,
-    status.backgroundDrainState === 'scheduled' || status.backgroundDrainState === 'running'
-      ? `backgroundDrainState=${status.backgroundDrainState}`
-      : null,
-  ].filter(Boolean);
-  return reasons.length > 0
-    ? `foreground AuraCall work is active; live follow is waiting (${reasons.join(' ')})`
-    : 'foreground AuraCall work is active; live follow is waiting';
+function formatForegroundWorkWaitReason(
+	status: AccountMirrorSchedulerForegroundWorkStatus,
+): string {
+	const reasons = [
+		status.activeRequestCount > 0 ? `activeRequests=${status.activeRequestCount}` : null,
+		status.drainReservations > 0 ? `pendingDrains=${status.drainReservations}` : null,
+		status.backgroundDrainScheduled ? "backgroundDrainScheduled=true" : null,
+		status.backgroundDrainState === "scheduled" || status.backgroundDrainState === "running"
+			? `backgroundDrainState=${status.backgroundDrainState}`
+			: null,
+	].filter(Boolean);
+	return reasons.length > 0
+		? `foreground AuraCall work is active; live follow is waiting (${reasons.join(" ")})`
+		: "foreground AuraCall work is active; live follow is waiting";
 }
 
 function createStartupRecoveryLog(
-  result: DrainStoredExecutionRunsUntilIdleResult,
-  options: {
-    sourceKind: string;
-    maxRuns: number;
-    staleHeartbeatInspectOnlyCount?: number;
-    suspiciouslyIdleCount?: number;
-  },
+	result: DrainStoredExecutionRunsUntilIdleResult,
+	options: {
+		sourceKind: string;
+		maxRuns: number;
+		staleHeartbeatInspectOnlyCount?: number;
+		suspiciouslyIdleCount?: number;
+	},
 ): string {
-  const skipCounts: Record<string, number> = {};
-  for (const entry of result.drained) {
-    if (entry.result === 'skipped' && entry.reason) {
-      skipCounts[entry.reason] = (skipCounts[entry.reason] ?? 0) + 1;
-    }
-  }
+	const skipCounts: Record<string, number> = {};
+	for (const entry of result.drained) {
+		if (entry.result === "skipped" && entry.reason) {
+			skipCounts[entry.reason] = (skipCounts[entry.reason] ?? 0) + 1;
+		}
+	}
 
-  const skipSummary = Object.entries(skipCounts)
-    .map(([reason, count]) => `${reason}:${count}`)
-    .join(', ');
+	const skipSummary = Object.entries(skipCounts)
+		.map(([reason, count]) => `${reason}:${count}`)
+		.join(", ");
 
-  const parts: string[] = [
-    `Startup recovery (${options.sourceKind}) completed in ${result.iterations} iteration(s).`,
-    `scanned ${result.drained.length} candidate run(s),`,
-    `${result.executedRunIds.length} executed,`,
-    `${result.expiredLeaseRunIds.length} expired lease(s) reclaimed.`,
-  ];
+	const parts: string[] = [
+		`Startup recovery (${options.sourceKind}) completed in ${result.iterations} iteration(s).`,
+		`scanned ${result.drained.length} candidate run(s),`,
+		`${result.executedRunIds.length} executed,`,
+		`${result.expiredLeaseRunIds.length} expired lease(s) reclaimed.`,
+	];
 
-  if (skipSummary.length > 0) {
-    parts.push(`skips=${skipSummary}`);
-  }
+	if (skipSummary.length > 0) {
+		parts.push(`skips=${skipSummary}`);
+	}
 
-  const deferredByBudget = skipCounts['limit-reached'] ?? 0;
-  const activeLeaseCount = skipCounts['active-lease'] ?? 0;
-  const staleHeartbeatCount = skipCounts['stale-heartbeat'] ?? 0;
-  const strandedCount = skipCounts['stranded-running-no-lease'] ?? 0;
-  const idleCount = skipCounts['no-runnable-step'] ?? 0;
-  parts.push(
-    `metrics=deferred-by-budget:${deferredByBudget}, active-lease:${activeLeaseCount}, stale-heartbeat:${staleHeartbeatCount}, stranded:${strandedCount}, idle:${idleCount}`,
-  );
+	const deferredByBudget = skipCounts["limit-reached"] ?? 0;
+	const activeLeaseCount = skipCounts["active-lease"] ?? 0;
+	const staleHeartbeatCount = skipCounts["stale-heartbeat"] ?? 0;
+	const strandedCount = skipCounts["stranded-running-no-lease"] ?? 0;
+	const idleCount = skipCounts["no-runnable-step"] ?? 0;
+	parts.push(
+		`metrics=deferred-by-budget:${deferredByBudget}, active-lease:${activeLeaseCount}, stale-heartbeat:${staleHeartbeatCount}, stranded:${strandedCount}, idle:${idleCount}`,
+	);
 
-  if (result.executedRunIds.length > 0) {
-    parts.push(`executed=${result.executedRunIds.slice(0, 5).join(',')}`);
-  }
+	if (result.executedRunIds.length > 0) {
+		parts.push(`executed=${result.executedRunIds.slice(0, 5).join(",")}`);
+	}
 
-  const attentionEntries: string[] = [];
-  if ((options.staleHeartbeatInspectOnlyCount ?? 0) > 0) {
-    attentionEntries.push(
-      `stale-heartbeat-inspect-only:${options.staleHeartbeatInspectOnlyCount}`,
-    );
-  }
-  if ((options.suspiciouslyIdleCount ?? 0) > 0) {
-    attentionEntries.push(`suspiciously-idle:${options.suspiciouslyIdleCount}`);
-  }
-  if (attentionEntries.length > 0) {
-    parts.push(`attention=${attentionEntries.join(',')}`);
-  }
+	const attentionEntries: string[] = [];
+	if ((options.staleHeartbeatInspectOnlyCount ?? 0) > 0) {
+		attentionEntries.push(`stale-heartbeat-inspect-only:${options.staleHeartbeatInspectOnlyCount}`);
+	}
+	if ((options.suspiciouslyIdleCount ?? 0) > 0) {
+		attentionEntries.push(`suspiciously-idle:${options.suspiciouslyIdleCount}`);
+	}
+	if (attentionEntries.length > 0) {
+		parts.push(`attention=${attentionEntries.join(",")}`);
+	}
 
-  if (result.drained.length > options.maxRuns) {
-    parts.push(`cap=${options.maxRuns} hits reached`);
-  }
+	if (result.drained.length > options.maxRuns) {
+		parts.push(`cap=${options.maxRuns} hits reached`);
+	}
 
-  return parts.join(' ');
+	return parts.join(" ");
 }
 
 const COMPACT_TEAM_RUN_CREATE_REQUEST_SCHEMA = z.object({
-  teamId: z.string().min(1).optional(),
-  objective: z.string().min(1).optional(),
-  title: z.string().min(1).nullable().optional(),
-  promptAppend: z.string().min(1).nullable().optional(),
-  structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
-  responseFormat: z.enum(['text', 'markdown', 'json']).optional(),
-  outputContract: z.literal(AURACALL_STEP_OUTPUT_CONTRACT_VERSION).nullable().optional(),
-  maxTurns: z.number().int().positive().nullable().optional(),
-  localActionPolicy: z
-    .object({
-      allowedShellCommands: z.array(z.string().min(1)).optional(),
-      allowedCwdRoots: z.array(z.string().min(1)).optional(),
-      mode: z.enum(['allowed', 'approval-required']).optional(),
-    })
-    .nullable()
-    .optional(),
+	teamId: z.string().min(1).optional(),
+	objective: z.string().min(1).optional(),
+	title: z.string().min(1).nullable().optional(),
+	promptAppend: z.string().min(1).nullable().optional(),
+	structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
+	responseFormat: z.enum(["text", "markdown", "json"]).optional(),
+	outputContract: z.literal(AURACALL_STEP_OUTPUT_CONTRACT_VERSION).nullable().optional(),
+	maxTurns: z.number().int().positive().nullable().optional(),
+	localActionPolicy: z
+		.object({
+			allowedShellCommands: z.array(z.string().min(1)).optional(),
+			allowedCwdRoots: z.array(z.string().min(1)).optional(),
+			mode: z.enum(["allowed", "approval-required"]).optional(),
+		})
+		.nullable()
+		.optional(),
 });
 
 const TEAM_RUN_CREATE_REQUEST_SCHEMA = COMPACT_TEAM_RUN_CREATE_REQUEST_SCHEMA.extend({
-  taskRunSpec: TaskRunSpecSchema.optional(),
+	taskRunSpec: TaskRunSpecSchema.optional(),
 }).superRefine((value, ctx) => {
-  if (!value.taskRunSpec) {
-    if (!value.teamId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'teamId is required when taskRunSpec is not provided',
-        path: ['teamId'],
-      });
-    }
-    if (!value.objective) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'objective is required when taskRunSpec is not provided',
-        path: ['objective'],
-      });
-    }
-    return;
-  }
+	if (!value.taskRunSpec) {
+		if (!value.teamId) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "teamId is required when taskRunSpec is not provided",
+				path: ["teamId"],
+			});
+		}
+		if (!value.objective) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "objective is required when taskRunSpec is not provided",
+				path: ["objective"],
+			});
+		}
+		return;
+	}
 
-  if (value.teamId && value.teamId.trim() !== value.taskRunSpec.teamId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'teamId must match taskRunSpec.teamId when both are provided',
-      path: ['teamId'],
-    });
-  }
+	if (value.teamId && value.teamId.trim() !== value.taskRunSpec.teamId) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			message: "teamId must match taskRunSpec.teamId when both are provided",
+			path: ["teamId"],
+		});
+	}
 
-  const compactAssignmentFieldNames = [
-    'objective',
-    'title',
-    'promptAppend',
-    'structuredContext',
-    'responseFormat',
-    'outputContract',
-    'maxTurns',
-    'localActionPolicy',
-  ] as const;
-  const conflictingFields = compactAssignmentFieldNames.filter((field) => value[field] !== undefined);
-  if (conflictingFields.length > 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `taskRunSpec cannot be combined with compact assignment fields: ${conflictingFields.join(', ')}`,
-      path: ['taskRunSpec'],
-    });
-  }
+	const compactAssignmentFieldNames = [
+		"objective",
+		"title",
+		"promptAppend",
+		"structuredContext",
+		"responseFormat",
+		"outputContract",
+		"maxTurns",
+		"localActionPolicy",
+	] as const;
+	const conflictingFields = compactAssignmentFieldNames.filter(
+		(field) => value[field] !== undefined,
+	);
+	if (conflictingFields.length > 0) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			message: `taskRunSpec cannot be combined with compact assignment fields: ${conflictingFields.join(", ")}`,
+			path: ["taskRunSpec"],
+		});
+	}
 });
 
 const ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA = z.object({
-  provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-  runtimeProfile: z.string().trim().min(1).optional(),
-  explicitRefresh: z.boolean().optional(),
-  queueTimeoutMs: z.number().int().nonnegative().optional(),
-  queuePollMs: z.number().int().positive().optional(),
+	provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+	runtimeProfile: z.string().trim().min(1).optional(),
+	explicitRefresh: z.boolean().optional(),
+	queueTimeoutMs: z.number().int().nonnegative().optional(),
+	queuePollMs: z.number().int().positive().optional(),
 });
 
 const ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA = z.object({
-  provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-  runtimeProfile: z.string().trim().min(1).optional(),
-  maxPasses: z.number().int().positive().max(500).optional(),
-  sweepMode: z.enum(['steady_follow', 'full_sweep']).optional(),
-  sweep_mode: z.enum(['steady_follow', 'full_sweep']).optional(),
-  materializationPolicy: z.enum(['metadata_only', 'recent_missing_assets', 'full_missing_assets']).optional(),
-  materialization_policy: z.enum(['metadata_only', 'recent_missing_assets', 'full_missing_assets']).optional(),
-  materializationAssetKinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
-  materialization_asset_kinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
-  materializationMaxItems: z.number().int().positive().max(500).optional(),
-  materialization_max_items: z.number().int().positive().max(500).optional(),
-  materializationRefreshSnapshot: z.boolean().optional(),
-  materialization_refresh_snapshot: z.boolean().optional(),
-  materializationForce: z.boolean().optional(),
-  materialization_force: z.boolean().optional(),
+	provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+	runtimeProfile: z.string().trim().min(1).optional(),
+	maxPasses: z.number().int().positive().max(500).optional(),
+	sweepMode: z.enum(["steady_follow", "full_sweep"]).optional(),
+	sweep_mode: z.enum(["steady_follow", "full_sweep"]).optional(),
+	materializationPolicy: z
+		.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
+		.optional(),
+	materialization_policy: z
+		.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
+		.optional(),
+	materializationAssetKinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+	materialization_asset_kinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+	materializationMaxItems: z.number().int().positive().max(500).optional(),
+	materialization_max_items: z.number().int().positive().max(500).optional(),
+	materializationRefreshSnapshot: z.boolean().optional(),
+	materialization_refresh_snapshot: z.boolean().optional(),
+	materializationForce: z.boolean().optional(),
+	materialization_force: z.boolean().optional(),
+});
+
+const ACCOUNT_MIRROR_RECONCILIATION_REQUEST_SCHEMA = z.object({
+	provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+	runtimeProfile: z.string().trim().min(1).optional(),
+	identity: z.string().trim().min(1).optional(),
+	includeDisabled: z.boolean().optional(),
+	include_disabled: z.boolean().optional(),
+	maxTargets: z.number().int().positive().max(500).optional(),
+	max_targets: z.number().int().positive().max(500).optional(),
+	maxActiveTargets: z.number().int().positive().max(100).optional(),
+	max_active_targets: z.number().int().positive().max(100).optional(),
+	materializationPolicy: z
+		.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
+		.optional(),
+	materialization_policy: z
+		.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
+		.optional(),
+	materializationAssetKinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+	materialization_asset_kinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+	materializationMaxItems: z.number().int().positive().max(500).optional(),
+	materialization_max_items: z.number().int().positive().max(500).optional(),
+	dryRun: z.boolean().optional(),
+	dry_run: z.boolean().optional(),
 });
 
 const ACCOUNT_MIRROR_COMPLETION_CONTROL_REQUEST_SCHEMA = z.object({
-  action: z.enum(['pause', 'resume', 'cancel']),
+	action: z.enum(["pause", "resume", "cancel"]),
+});
+
+const ACCOUNT_MIRROR_RECONCILIATION_CONTROL_REQUEST_SCHEMA = z.object({
+	action: z
+		.enum(["pause", "resume", "cancel", "run_next_pass", "run-next-pass"])
+		.transform((value) => (value === "run-next-pass" ? "run_next_pass" : value)),
 });
 
 const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
-  z.object({
-    backgroundDrain: z.object({
-      action: z.enum(['pause', 'resume']),
-    }),
-  }),
-  z.object({
-    accountMirrorScheduler: z.object({
-      action: z.enum(['pause', 'resume', 'run-once']),
-      dryRun: z.boolean().optional(),
-    }),
-  }),
-  z.object({
-    accountMirrorProviderGuard: z.object({
-      action: z.literal('clear'),
-      provider: z.enum(['chatgpt', 'gemini', 'grok']),
-      runtimeProfile: z.string().trim().min(1).default('default'),
-      cooldownMs: z.number().int().nonnegative().optional(),
-    }),
-  }),
-  z.object({
-    accountMirrorCompletion: z.object({
-      action: z.enum(['pause', 'resume', 'cancel']),
-      id: z.string().min(1),
-    }),
-  }),
-  z.object({
-    preflight: z.object({
-      action: z.literal('run'),
-      name: z.literal('lazy-live-follow').default('lazy-live-follow'),
-    }),
-  }),
-  z.object({
-    serviceControl: z.object({
-      action: z.literal('restart-api-service'),
-      dryRun: z.boolean().optional(),
-      delayMs: z.number().int().min(0).max(10_000).optional(),
-    }),
-  }),
-  z.object({
-    localActionControl: z.object({
-      action: z.literal('resolve-request'),
-      runId: z.string().min(1),
-      requestId: z.string().min(1),
-      resolution: z.enum(['approved', 'rejected', 'cancelled']),
-      note: z.string().min(1).nullable().optional(),
-    }),
-  }),
-  z.object({
-    runControl: z.union([
-      z.object({
-        action: z.literal('cancel-run'),
-        runId: z.string().min(1),
-        note: z.string().min(1).nullable().optional(),
-      }),
-      z.object({
-        action: z.literal('drain-run'),
-        runId: z.string().min(1),
-      }),
-      z.object({
-        action: z.literal('resume-human-escalation'),
-        runId: z.string().min(1),
-        note: z.string().min(1).nullable().optional(),
-        guidance: z.record(z.string(), z.unknown()).nullable().optional(),
-        override: z
-          .object({
-            promptAppend: z.string().min(1).nullable().optional(),
-            structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
-          })
-          .nullable()
-          .optional(),
-      }),
-    ]),
-  }),
-  z.object({
-    leaseRepair: z.object({
-      action: z.literal('repair-stale-heartbeat'),
-      runId: z.string().min(1),
-      force: z.boolean().optional(),
-    }),
-  }),
-  z.object({
-    schedulerControl: z.object({
-      action: z.literal('claim-local-run'),
-      runId: z.string().min(1),
-      schedulerId: z.string().min(1).default('operator'),
-    }),
-  }),
+	z.object({
+		backgroundDrain: z.object({
+			action: z.enum(["pause", "resume"]),
+		}),
+	}),
+	z.object({
+		accountMirrorScheduler: z.object({
+			action: z.enum(["pause", "resume", "run-once"]),
+			dryRun: z.boolean().optional(),
+		}),
+	}),
+	z.object({
+		accountMirrorProviderGuard: z.object({
+			action: z.literal("clear"),
+			provider: z.enum(["chatgpt", "gemini", "grok"]),
+			runtimeProfile: z.string().trim().min(1).default("default"),
+			cooldownMs: z.number().int().nonnegative().optional(),
+		}),
+	}),
+	z.object({
+		accountMirrorCompletion: z.object({
+			action: z.enum(["pause", "resume", "cancel"]),
+			id: z.string().min(1),
+		}),
+	}),
+	z.object({
+		preflight: z.object({
+			action: z.literal("run"),
+			name: z.literal("lazy-live-follow").default("lazy-live-follow"),
+		}),
+	}),
+	z.object({
+		serviceControl: z.object({
+			action: z.literal("restart-api-service"),
+			dryRun: z.boolean().optional(),
+			delayMs: z.number().int().min(0).max(10_000).optional(),
+		}),
+	}),
+	z.object({
+		localActionControl: z.object({
+			action: z.literal("resolve-request"),
+			runId: z.string().min(1),
+			requestId: z.string().min(1),
+			resolution: z.enum(["approved", "rejected", "cancelled"]),
+			note: z.string().min(1).nullable().optional(),
+		}),
+	}),
+	z.object({
+		runControl: z.union([
+			z.object({
+				action: z.literal("cancel-run"),
+				runId: z.string().min(1),
+				note: z.string().min(1).nullable().optional(),
+			}),
+			z.object({
+				action: z.literal("drain-run"),
+				runId: z.string().min(1),
+			}),
+			z.object({
+				action: z.literal("resume-human-escalation"),
+				runId: z.string().min(1),
+				note: z.string().min(1).nullable().optional(),
+				guidance: z.record(z.string(), z.unknown()).nullable().optional(),
+				override: z
+					.object({
+						promptAppend: z.string().min(1).nullable().optional(),
+						structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
+					})
+					.nullable()
+					.optional(),
+			}),
+		]),
+	}),
+	z.object({
+		leaseRepair: z.object({
+			action: z.literal("repair-stale-heartbeat"),
+			runId: z.string().min(1),
+			force: z.boolean().optional(),
+		}),
+	}),
+	z.object({
+		schedulerControl: z.object({
+			action: z.literal("claim-local-run"),
+			runId: z.string().min(1),
+			schedulerId: z.string().min(1).default("operator"),
+		}),
+	}),
 ]);
 
 type StatusControlRequest = z.infer<typeof STATUS_CONTROL_REQUEST_SCHEMA>;
 
 type ServiceHostStatusControlRequest = Exclude<
-  StatusControlRequest,
-  | { backgroundDrain: unknown }
-  | { accountMirrorScheduler: unknown }
-  | { accountMirrorProviderGuard: unknown }
-  | { accountMirrorCompletion: unknown }
-  | { preflight: unknown }
-  | { serviceControl: unknown }
+	StatusControlRequest,
+	| { backgroundDrain: unknown }
+	| { accountMirrorScheduler: unknown }
+	| { accountMirrorProviderGuard: unknown }
+	| { accountMirrorCompletion: unknown }
+	| { preflight: unknown }
+	| { serviceControl: unknown }
 >;
 
-function createServiceHostOperatorControlInput(payload: ServiceHostStatusControlRequest): ExecutionServiceHostOperatorControlInput {
-  if ('leaseRepair' in payload) {
-    return {
-      kind: 'lease-repair',
-      action: payload.leaseRepair.action,
-      runId: payload.leaseRepair.runId,
-      force: payload.leaseRepair.force ?? false,
-    };
-  }
-  if ('localActionControl' in payload) {
-    return {
-      kind: 'local-action-control',
-      action: payload.localActionControl.action,
-      runId: payload.localActionControl.runId,
-      requestId: payload.localActionControl.requestId,
-      resolution: payload.localActionControl.resolution,
-      note: payload.localActionControl.note ?? null,
-    };
-  }
-  if ('schedulerControl' in payload) {
-    return {
-      kind: 'scheduler-control',
-      control: payload.schedulerControl,
-    };
-  }
-  if (!('runControl' in payload)) {
-    throw new HttpInvalidRequestError('unsupported service-host status control payload');
-  }
-  return {
-    kind: 'run-control',
-    control: payload.runControl,
-  };
+function createServiceHostOperatorControlInput(
+	payload: ServiceHostStatusControlRequest,
+): ExecutionServiceHostOperatorControlInput {
+	if ("leaseRepair" in payload) {
+		return {
+			kind: "lease-repair",
+			action: payload.leaseRepair.action,
+			runId: payload.leaseRepair.runId,
+			force: payload.leaseRepair.force ?? false,
+		};
+	}
+	if ("localActionControl" in payload) {
+		return {
+			kind: "local-action-control",
+			action: payload.localActionControl.action,
+			runId: payload.localActionControl.runId,
+			requestId: payload.localActionControl.requestId,
+			resolution: payload.localActionControl.resolution,
+			note: payload.localActionControl.note ?? null,
+		};
+	}
+	if ("schedulerControl" in payload) {
+		return {
+			kind: "scheduler-control",
+			control: payload.schedulerControl,
+		};
+	}
+	if (!("runControl" in payload)) {
+		throw new HttpInvalidRequestError("unsupported service-host status control payload");
+	}
+	return {
+		kind: "run-control",
+		control: payload.runControl,
+	};
 }
 
-function isSuccessfulServiceHostOperatorControlResult(result: ExecutionServiceHostOperatorControlResult): boolean {
-  if (result.kind === 'lease-repair') {
-    return result.status === 'repaired';
-  }
-  if (result.kind === 'local-action-control') {
-    return result.status === 'resolved';
-  }
-  if (result.kind === 'scheduler-control') {
-    return result.status === 'claimed' || result.status === 'reassigned';
-  }
-  return (
-    (result.action === 'cancel-run' && result.status === 'cancelled') ||
-    (result.action === 'resume-human-escalation' && result.status === 'resumed') ||
-    (result.action === 'drain-run' && result.status === 'executed')
-  );
+function isSuccessfulServiceHostOperatorControlResult(
+	result: ExecutionServiceHostOperatorControlResult,
+): boolean {
+	if (result.kind === "lease-repair") {
+		return result.status === "repaired";
+	}
+	if (result.kind === "local-action-control") {
+		return result.status === "resolved";
+	}
+	if (result.kind === "scheduler-control") {
+		return result.status === "claimed" || result.status === "reassigned";
+	}
+	return (
+		(result.action === "cancel-run" && result.status === "cancelled") ||
+		(result.action === "resume-human-escalation" && result.status === "resumed") ||
+		(result.action === "drain-run" && result.status === "executed")
+	);
 }
 
 interface ParsedStatusQuery {
-  recovery: boolean;
-  sourceKindSummary?: ExecutionRunSourceKind | 'all';
-  runnerTopologyMode: 'compact' | 'full';
-  tenantExecutionLimitsMode: 'configured' | 'usage';
+	recovery: boolean;
+	sourceKindSummary?: ExecutionRunSourceKind | "all";
+	runnerTopologyMode: "compact" | "full";
+	tenantExecutionLimitsMode: "configured" | "usage";
 }
 
 interface ParsedRuntimeInspectionQuery {
-  probe?: 'service-state';
-  authority?: 'scheduler';
-  diagnostics?: 'browser-state';
+	probe?: "service-state";
+	authority?: "scheduler";
+	diagnostics?: "browser-state";
 }
 
 interface ParsedRuntimeRunListQuery {
-  limit?: number;
-  status?: ExecutionRunStatus;
-  sourceKind?: ExecutionRunSourceKind;
+	limit?: number;
+	status?: ExecutionRunStatus;
+	sourceKind?: ExecutionRunSourceKind;
 }
 
 interface ParsedRunArchiveQuery extends RunArchiveListRequest {}
 
 interface ParsedRunStatusQuery {
-  diagnostics?: 'browser-state';
+	diagnostics?: "browser-state";
 }
 
 interface ParsedAccountMirrorStatusQuery {
-  provider?: AccountMirrorProvider;
-  runtimeProfileId?: string;
-  explicitRefresh?: boolean;
+	provider?: AccountMirrorProvider;
+	runtimeProfileId?: string;
+	explicitRefresh?: boolean;
 }
 
 interface ParsedAccountMirrorCatalogQuery {
-  provider?: AccountMirrorProvider;
-  runtimeProfileId?: string;
-  kind?: AccountMirrorCatalogKind;
-  limit?: number;
+	provider?: AccountMirrorProvider;
+	runtimeProfileId?: string;
+	kind?: AccountMirrorCatalogKind;
+	limit?: number;
 }
 
 interface ParsedAccountMirrorCatalogItemQuery extends ParsedAccountMirrorCatalogQuery {
-  itemId: string;
+	itemId: string;
 }
 
 interface ParsedDomDriftObservationQuery {
-  service?: string;
-  surface?: string;
-  status?: DomDriftObservationStatus;
-  limit?: number;
+	service?: string;
+	surface?: string;
+	status?: DomDriftObservationStatus;
+	limit?: number;
 }
 
 interface CachedCatalogItemAsset {
-  path: string;
-  mimeType: string;
-  size: number;
-  fileName?: string | null;
+	path: string;
+	mimeType: string;
+	size: number;
+	fileName?: string | null;
 }
 
 interface ApiServiceRestartRequest {
-  unitName: string;
-  delayMs: number;
+	unitName: string;
+	delayMs: number;
 }
 
 interface ParsedAccountMirrorCompletionListQuery {
-  provider?: AccountMirrorProvider;
-  runtimeProfileId?: string;
-  status?: AccountMirrorCompletionOperation['status'] | 'active';
-  activeOnly?: boolean;
-  limit?: number;
+	provider?: AccountMirrorProvider;
+	runtimeProfileId?: string;
+	status?: AccountMirrorCompletionOperation["status"] | "active";
+	activeOnly?: boolean;
+	limit?: number;
+}
+
+interface ParsedAccountMirrorReconciliationListQuery {
+	status?: AccountMirrorReconciliationCampaign["status"] | "active";
+	limit?: number;
 }
 
 interface ParsedMediaGenerationCreateQuery {
-  wait?: boolean;
+	wait?: boolean;
 }
 
 function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
-  const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
-  const parsed = z
-    .object({
-      recovery: z
-        .enum(['0', '1', 'true', 'false'])
-        .transform((value) => value === '1' || value.toLowerCase() === 'true')
-        .optional(),
-      sourceKind: z.enum(['direct', 'team-run', 'all']).optional(),
-      runnerTopology: z.enum(['compact', 'full']).optional(),
-      tenantExecutionLimits: z.enum(['configured', 'usage']).optional(),
-    })
-    .superRefine((value, ctx) => {
-      if (!value.recovery && value.sourceKind !== undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'sourceKind can only be used with recovery=true',
-          path: ['sourceKind'],
-        });
-      }
-    })
-    .parse(raw);
+	const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
+	const parsed = z
+		.object({
+			recovery: z
+				.enum(["0", "1", "true", "false"])
+				.transform((value) => value === "1" || value.toLowerCase() === "true")
+				.optional(),
+			sourceKind: z.enum(["direct", "team-run", "all"]).optional(),
+			runnerTopology: z.enum(["compact", "full"]).optional(),
+			tenantExecutionLimits: z.enum(["configured", "usage"]).optional(),
+		})
+		.superRefine((value, ctx) => {
+			if (!value.recovery && value.sourceKind !== undefined) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "sourceKind can only be used with recovery=true",
+					path: ["sourceKind"],
+				});
+			}
+		})
+		.parse(raw);
 
-  return {
-    recovery: parsed.recovery ?? false,
-    sourceKindSummary: parsed.sourceKind,
-    runnerTopologyMode: parsed.runnerTopology ?? 'compact',
-    tenantExecutionLimitsMode: parsed.tenantExecutionLimits ?? 'configured',
-  };
+	return {
+		recovery: parsed.recovery ?? false,
+		sourceKindSummary: parsed.sourceKind,
+		runnerTopologyMode: parsed.runnerTopology ?? "compact",
+		tenantExecutionLimitsMode: parsed.tenantExecutionLimits ?? "configured",
+	};
 }
 
 function compactRunnerTopologyForStatus(
-  topology: ExecutionServiceHostRunnerTopologySummary,
-  mode: ParsedStatusQuery['runnerTopologyMode'],
+	topology: ExecutionServiceHostRunnerTopologySummary,
+	mode: ParsedStatusQuery["runnerTopologyMode"],
 ): ExecutionServiceHostRunnerTopologySummary {
-  if (mode === 'full') {
-    return {
-      ...topology,
-      metrics: {
-        ...topology.metrics,
-        displayedRunnerCount: topology.runners.length,
-        omittedRunnerCount: 0,
-        omittedStaleRunnerCount: 0,
-        omittedExpiredRunnerCount: 0,
-      },
-    };
-  }
+	if (mode === "full") {
+		return {
+			...topology,
+			metrics: {
+				...topology.metrics,
+				displayedRunnerCount: topology.runners.length,
+				omittedRunnerCount: 0,
+				omittedStaleRunnerCount: 0,
+				omittedExpiredRunnerCount: 0,
+			},
+		};
+	}
 
-  const runners: ExecutionServiceHostRunnerTopologySummary['runners'] = [];
-  const omitted: ExecutionServiceHostRunnerTopologySummary['runners'] = [];
-  for (const runner of topology.runners) {
-    if (
-      runner.selectedAsLocalExecutionOwner ||
-      runner.freshness === 'fresh' ||
-      runner.status === 'active'
-    ) {
-      runners.push(runner);
-    } else {
-      omitted.push(runner);
-    }
-  }
+	const runners: ExecutionServiceHostRunnerTopologySummary["runners"] = [];
+	const omitted: ExecutionServiceHostRunnerTopologySummary["runners"] = [];
+	for (const runner of topology.runners) {
+		if (
+			runner.selectedAsLocalExecutionOwner ||
+			runner.freshness === "fresh" ||
+			runner.status === "active"
+		) {
+			runners.push(runner);
+		} else {
+			omitted.push(runner);
+		}
+	}
 
-  return {
-    ...topology,
-    runners,
-    metrics: {
-      ...topology.metrics,
-      displayedRunnerCount: runners.length,
-      omittedRunnerCount: omitted.length,
-      omittedStaleRunnerCount: omitted.filter((runner) => runner.freshness === 'stale').length,
-      omittedExpiredRunnerCount: omitted.filter((runner) => runner.freshness === 'expired').length,
-    },
-  };
+	return {
+		...topology,
+		runners,
+		metrics: {
+			...topology.metrics,
+			displayedRunnerCount: runners.length,
+			omittedRunnerCount: omitted.length,
+			omittedStaleRunnerCount: omitted.filter((runner) => runner.freshness === "stale").length,
+			omittedExpiredRunnerCount: omitted.filter((runner) => runner.freshness === "expired").length,
+		},
+	};
 }
 
 function parseRuntimeInspectionQuery(searchParams: URLSearchParams): ParsedRuntimeInspectionQuery {
-  const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
-  const parsed = z.object({
-    probe: z.enum(['service-state']).optional(),
-    authority: z.enum(['scheduler']).optional(),
-    diagnostics: z.enum(['browser-state']).optional(),
-  }).parse(raw);
+	const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
+	const parsed = z
+		.object({
+			probe: z.enum(["service-state"]).optional(),
+			authority: z.enum(["scheduler"]).optional(),
+			diagnostics: z.enum(["browser-state"]).optional(),
+		})
+		.parse(raw);
 
-  return {
-    probe: parsed.probe,
-    authority: parsed.authority,
-    diagnostics: parsed.diagnostics,
-  };
+	return {
+		probe: parsed.probe,
+		authority: parsed.authority,
+		diagnostics: parsed.diagnostics,
+	};
 }
 
 function parseRuntimeRunListQuery(searchParams: URLSearchParams): ParsedRuntimeRunListQuery {
-  const raw: Record<string, unknown> = {};
-  if (searchParams.has('limit')) raw.limit = searchParams.get('limit');
-  if (searchParams.has('status')) raw.status = searchParams.get('status');
-  if (searchParams.has('sourceKind')) raw.sourceKind = searchParams.get('sourceKind');
-  const parsed = z.object({
-    limit: z.coerce.number().int().min(0).max(100).optional(),
-    status: z.enum(['planned', 'running', 'succeeded', 'failed', 'cancelled']).optional(),
-    sourceKind: z.enum(['team-run', 'direct']).optional(),
-  }).parse(raw);
-  return {
-    limit: parsed.limit ?? 25,
-    status: parsed.status,
-    sourceKind: parsed.sourceKind,
-  };
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("limit")) raw.limit = searchParams.get("limit");
+	if (searchParams.has("status")) raw.status = searchParams.get("status");
+	if (searchParams.has("sourceKind")) raw.sourceKind = searchParams.get("sourceKind");
+	const parsed = z
+		.object({
+			limit: z.coerce.number().int().min(0).max(100).optional(),
+			status: z.enum(["planned", "running", "succeeded", "failed", "cancelled"]).optional(),
+			sourceKind: z.enum(["team-run", "direct"]).optional(),
+		})
+		.parse(raw);
+	return {
+		limit: parsed.limit ?? 25,
+		status: parsed.status,
+		sourceKind: parsed.sourceKind,
+	};
 }
 
 function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {
-  const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
-  const parsed = z.object({
-    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-    category: z.enum(['research', 'media', 'canvas', 'connector', 'skill', 'app', 'search', 'file', 'other']).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    includeUnavailable: z
-      .enum(['0', '1', 'true', 'false'])
-      .transform((value) => value === '1' || value.toLowerCase() === 'true')
-      .optional(),
-    diagnostics: z.enum(['browser-state']).optional(),
-    entrypoint: z.enum(['grok-imagine', 'imagine']).optional(),
-    discoveryAction: z.enum(['grok-imagine-video-mode']).optional(),
-  }).parse(raw);
-  return WorkbenchCapabilityReportRequestSchema.parse({
-    provider: parsed.provider ?? null,
-    category: parsed.category ?? null,
-    runtimeProfile: parsed.runtimeProfile ?? null,
-    includeUnavailable: parsed.includeUnavailable ?? null,
-    diagnostics: parsed.diagnostics ?? null,
-    entrypoint: parsed.entrypoint === 'imagine' ? 'grok-imagine' : parsed.entrypoint ?? null,
-    discoveryAction: parsed.discoveryAction ?? null,
-  });
+	const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
+	const parsed = z
+		.object({
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			category: z
+				.enum([
+					"research",
+					"media",
+					"canvas",
+					"connector",
+					"skill",
+					"app",
+					"search",
+					"file",
+					"other",
+				])
+				.optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			includeUnavailable: z
+				.enum(["0", "1", "true", "false"])
+				.transform((value) => value === "1" || value.toLowerCase() === "true")
+				.optional(),
+			diagnostics: z.enum(["browser-state"]).optional(),
+			entrypoint: z.enum(["grok-imagine", "imagine"]).optional(),
+			discoveryAction: z.enum(["grok-imagine-video-mode"]).optional(),
+		})
+		.parse(raw);
+	return WorkbenchCapabilityReportRequestSchema.parse({
+		provider: parsed.provider ?? null,
+		category: parsed.category ?? null,
+		runtimeProfile: parsed.runtimeProfile ?? null,
+		includeUnavailable: parsed.includeUnavailable ?? null,
+		diagnostics: parsed.diagnostics ?? null,
+		entrypoint: parsed.entrypoint === "imagine" ? "grok-imagine" : (parsed.entrypoint ?? null),
+		discoveryAction: parsed.discoveryAction ?? null,
+	});
 }
 
-const CONFIG_SNAPSHOT_EXPORT_REQUEST_SCHEMA = z.object({
-  all: z.boolean().optional(),
-  agents: z.array(z.string().trim().min(1)).optional(),
-  teams: z.array(z.string().trim().min(1)).optional(),
-}).refine(
-  (value) => value.all || (value.agents?.length ?? 0) > 0 || (value.teams?.length ?? 0) > 0,
-  'Select at least one agent/team or set all=true.',
-);
+const CONFIG_SNAPSHOT_EXPORT_REQUEST_SCHEMA = z
+	.object({
+		all: z.boolean().optional(),
+		agents: z.array(z.string().trim().min(1)).optional(),
+		teams: z.array(z.string().trim().min(1)).optional(),
+	})
+	.refine(
+		(value) => value.all || (value.agents?.length ?? 0) > 0 || (value.teams?.length ?? 0) > 0,
+		"Select at least one agent/team or set all=true.",
+	);
 
 function parseConfigSnapshotExportRequest(value: unknown) {
-  const parsed = CONFIG_SNAPSHOT_EXPORT_REQUEST_SCHEMA.parse(value);
-  return {
-    agents: parsed.all ? undefined : parsed.agents,
-    teams: parsed.all ? undefined : parsed.teams,
-  };
+	const parsed = CONFIG_SNAPSHOT_EXPORT_REQUEST_SCHEMA.parse(value);
+	return {
+		agents: parsed.all ? undefined : parsed.agents,
+		teams: parsed.all ? undefined : parsed.teams,
+	};
 }
 
 const CONFIG_SNAPSHOT_IMPORT_REQUEST_SCHEMA = z.object({
-  snapshot: agentRegistrySnapshotSchema,
-  dryRun: z.boolean().optional(),
+	snapshot: agentRegistrySnapshotSchema,
+	dryRun: z.boolean().optional(),
 });
 
 function parseConfigSnapshotImportRequest(value: unknown) {
-  return CONFIG_SNAPSHOT_IMPORT_REQUEST_SCHEMA.parse(value);
+	return CONFIG_SNAPSHOT_IMPORT_REQUEST_SCHEMA.parse(value);
 }
 
-const CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA = z.object({
-  agentId: z.string().trim().min(1).optional(),
-  teamId: z.string().trim().min(1).optional(),
-  keyId: z.string().trim().min(1).optional(),
-  services: z.array(z.string().trim().min(1)).optional(),
-  runtimeProfiles: z.array(z.string().trim().min(1)).optional(),
-  apiBaseUrl: z.string().trim().min(1).optional(),
-  envPath: z.string().trim().min(1).optional(),
-  clientEnvPath: z.string().trim().min(1).optional(),
-  overwrite: z.boolean().optional(),
-}).refine(
-  (value) => Boolean(value.agentId || value.teamId),
-  'agentId or teamId is required.',
-);
+const CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA = z
+	.object({
+		agentId: z.string().trim().min(1).optional(),
+		teamId: z.string().trim().min(1).optional(),
+		keyId: z.string().trim().min(1).optional(),
+		services: z.array(z.string().trim().min(1)).optional(),
+		runtimeProfiles: z.array(z.string().trim().min(1)).optional(),
+		apiBaseUrl: z.string().trim().min(1).optional(),
+		envPath: z.string().trim().min(1).optional(),
+		clientEnvPath: z.string().trim().min(1).optional(),
+		overwrite: z.boolean().optional(),
+	})
+	.refine((value) => Boolean(value.agentId || value.teamId), "agentId or teamId is required.");
 
 function parseConfigApiKeyIssueRequest(value: unknown) {
-  return CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA.parse(value);
+	return CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA.parse(value);
 }
 
 function createTeamRunIdSuffix(): string {
-  return randomUUID().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12) || 'run';
+	return (
+		randomUUID()
+			.replace(/[^a-zA-Z0-9_-]/g, "")
+			.slice(0, 12) || "run"
+	);
 }
 
 function parseRunStatusQuery(searchParams: URLSearchParams): ParsedRunStatusQuery {
-  const raw: Record<string, unknown> = {};
-  if (searchParams.has('diagnostics')) {
-    raw.diagnostics = searchParams.get('diagnostics');
-  }
-  return z.object({
-    diagnostics: z.enum(['browser-state']).optional(),
-  }).parse(raw);
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("diagnostics")) {
+		raw.diagnostics = searchParams.get("diagnostics");
+	}
+	return z
+		.object({
+			diagnostics: z.enum(["browser-state"]).optional(),
+		})
+		.parse(raw);
 }
 
-function parseAccountMirrorStatusQuery(searchParams: URLSearchParams): ParsedAccountMirrorStatusQuery {
-  const raw: Record<string, unknown> = {};
-  if (searchParams.has('provider')) {
-    raw.provider = searchParams.get('provider');
-  }
-  if (searchParams.has('runtimeProfile')) {
-    raw.runtimeProfile = searchParams.get('runtimeProfile');
-  }
-  if (searchParams.has('explicitRefresh')) {
-    raw.explicitRefresh = searchParams.get('explicitRefresh');
-  }
-  const parsed = z.object({
-    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    explicitRefresh: z
-      .enum(['0', '1', 'true', 'false'])
-      .transform((value) => value === '1' || value.toLowerCase() === 'true')
-      .optional(),
-  }).parse(raw);
-  return {
-    provider: parsed.provider,
-    runtimeProfileId: parsed.runtimeProfile,
-    explicitRefresh: parsed.explicitRefresh,
-  };
+function parseAccountMirrorStatusQuery(
+	searchParams: URLSearchParams,
+): ParsedAccountMirrorStatusQuery {
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("provider")) {
+		raw.provider = searchParams.get("provider");
+	}
+	if (searchParams.has("runtimeProfile")) {
+		raw.runtimeProfile = searchParams.get("runtimeProfile");
+	}
+	if (searchParams.has("explicitRefresh")) {
+		raw.explicitRefresh = searchParams.get("explicitRefresh");
+	}
+	const parsed = z
+		.object({
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			explicitRefresh: z
+				.enum(["0", "1", "true", "false"])
+				.transform((value) => value === "1" || value.toLowerCase() === "true")
+				.optional(),
+		})
+		.parse(raw);
+	return {
+		provider: parsed.provider,
+		runtimeProfileId: parsed.runtimeProfile,
+		explicitRefresh: parsed.explicitRefresh,
+	};
 }
 
-function parseAccountMirrorCatalogQuery(searchParams: URLSearchParams): ParsedAccountMirrorCatalogQuery {
-  const raw: Record<string, unknown> = {};
-  if (searchParams.has('provider')) {
-    raw.provider = searchParams.get('provider');
-  }
-  if (searchParams.has('runtimeProfile')) {
-    raw.runtimeProfile = searchParams.get('runtimeProfile');
-  }
-  if (searchParams.has('kind')) {
-    raw.kind = searchParams.get('kind');
-  }
-  if (searchParams.has('limit')) {
-    raw.limit = searchParams.get('limit');
-  }
-  const parsed = z.object({
-    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
-    limit: z.coerce.number().int().nonnegative().optional(),
-  }).parse(raw);
-  return {
-    provider: parsed.provider,
-    runtimeProfileId: parsed.runtimeProfile,
-    kind: parsed.kind,
-    limit: parsed.limit,
-  };
+function parseAccountMirrorCatalogQuery(
+	searchParams: URLSearchParams,
+): ParsedAccountMirrorCatalogQuery {
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("provider")) {
+		raw.provider = searchParams.get("provider");
+	}
+	if (searchParams.has("runtimeProfile")) {
+		raw.runtimeProfile = searchParams.get("runtimeProfile");
+	}
+	if (searchParams.has("kind")) {
+		raw.kind = searchParams.get("kind");
+	}
+	if (searchParams.has("limit")) {
+		raw.limit = searchParams.get("limit");
+	}
+	const parsed = z
+		.object({
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			kind: z.enum(["all", "projects", "conversations", "artifacts", "files", "media"]).optional(),
+			limit: z.coerce.number().int().nonnegative().optional(),
+		})
+		.parse(raw);
+	return {
+		provider: parsed.provider,
+		runtimeProfileId: parsed.runtimeProfile,
+		kind: parsed.kind,
+		limit: parsed.limit,
+	};
 }
 
 function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQuery {
-  const raw: Record<string, unknown> = {};
-  for (const key of [
-    'kind',
-    'provider',
-    'runtimeProfile',
-    'projectId',
-    'agent',
-    'team',
-    'responseId',
-    'batchId',
-    'status',
-    'fileAvailable',
-    'assetAvailability',
-    'q',
-    'limit',
-  ]) {
-    if (searchParams.has(key)) {
-      raw[key] = searchParams.get(key);
-    }
-  }
-  const parsed = z.object({
-    kind: z.enum([
-      'all',
-      'response',
-      'response_batch',
-      'team_run',
-      'media_generation',
-      'upload',
-      'generated_artifact',
-      'provider_conversation',
-      'evidence',
-    ]).optional(),
-    provider: z.string().trim().min(1).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    projectId: z.string().trim().min(1).optional(),
-    agent: z.string().trim().min(1).optional(),
-    team: z.string().trim().min(1).optional(),
-    responseId: z.string().trim().min(1).optional(),
-    batchId: z.string().trim().min(1).optional(),
-    status: z.string().trim().min(1).optional(),
-    fileAvailable: z.preprocess(parseOptionalBoolean, z.boolean().optional()),
-    assetAvailability: z.enum(['available', 'unavailable', 'pending']).optional(),
-    q: z.string().trim().min(1).optional(),
-    limit: z.coerce.number().int().nonnegative().optional(),
-  }).parse(raw);
-  return {
-    kind: parsed.kind,
-    provider: parsed.provider,
-    runtimeProfile: parsed.runtimeProfile,
-    projectId: parsed.projectId,
-    agent: parsed.agent,
-    team: parsed.team,
-    responseId: parsed.responseId,
-    batchId: parsed.batchId,
-    status: parsed.status,
-    fileAvailable: parsed.fileAvailable,
-    assetAvailability: parsed.assetAvailability,
-    query: parsed.q,
-    limit: parsed.limit,
-  };
+	const raw: Record<string, unknown> = {};
+	for (const key of [
+		"kind",
+		"provider",
+		"runtimeProfile",
+		"projectId",
+		"agent",
+		"team",
+		"responseId",
+		"batchId",
+		"status",
+		"fileAvailable",
+		"assetAvailability",
+		"q",
+		"limit",
+	]) {
+		if (searchParams.has(key)) {
+			raw[key] = searchParams.get(key);
+		}
+	}
+	const parsed = z
+		.object({
+			kind: z
+				.enum([
+					"all",
+					"response",
+					"response_batch",
+					"team_run",
+					"media_generation",
+					"upload",
+					"generated_artifact",
+					"provider_conversation",
+					"evidence",
+				])
+				.optional(),
+			provider: z.string().trim().min(1).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			projectId: z.string().trim().min(1).optional(),
+			agent: z.string().trim().min(1).optional(),
+			team: z.string().trim().min(1).optional(),
+			responseId: z.string().trim().min(1).optional(),
+			batchId: z.string().trim().min(1).optional(),
+			status: z.string().trim().min(1).optional(),
+			fileAvailable: z.preprocess(parseOptionalBoolean, z.boolean().optional()),
+			assetAvailability: z.enum(["available", "unavailable", "pending"]).optional(),
+			q: z.string().trim().min(1).optional(),
+			limit: z.coerce.number().int().nonnegative().optional(),
+		})
+		.parse(raw);
+	return {
+		kind: parsed.kind,
+		provider: parsed.provider,
+		runtimeProfile: parsed.runtimeProfile,
+		projectId: parsed.projectId,
+		agent: parsed.agent,
+		team: parsed.team,
+		responseId: parsed.responseId,
+		batchId: parsed.batchId,
+		status: parsed.status,
+		fileAvailable: parsed.fileAvailable,
+		assetAvailability: parsed.assetAvailability,
+		query: parsed.q,
+		limit: parsed.limit,
+	};
 }
 
 function parseSearchProjectionQuery(searchParams: URLSearchParams): SearchProjectionRequest {
-  const raw: Record<string, unknown> = {};
-  for (const key of ['q', 'provider', 'runtimeProfile', 'tenant', 'kind', 'status', 'fileAvailable', 'assetAvailability', 'materialization', 'limit', 'cursor']) {
-    if (searchParams.has(key)) {
-      raw[key] = searchParams.get(key);
-    }
-  }
-  const parsed = z.object({
-    q: z.string().trim().min(1).optional(),
-    provider: z.string().trim().min(1).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    tenant: z.string().trim().min(1).optional(),
-    kind: z.string().trim().min(1).optional(),
-    status: z.string().trim().min(1).optional(),
-    fileAvailable: z.preprocess(parseOptionalBoolean, z.boolean().optional()),
-    assetAvailability: z.enum(['available', 'unavailable', 'pending']).optional(),
-    materialization: z.enum(['active', 'terminal', 'queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled']).optional(),
-    limit: z.coerce.number().int().positive().max(500).optional(),
-    cursor: z.string().trim().min(1).optional(),
-  }).parse(raw);
-  return {
-    query: parsed.q,
-    provider: parsed.provider,
-    runtimeProfile: parsed.runtimeProfile,
-    tenant: parsed.tenant,
-    kind: parsed.kind,
-    status: parsed.status,
-    fileAvailable: parsed.fileAvailable,
-    assetAvailability: parsed.assetAvailability,
-    materialization: parsed.materialization,
-    limit: parsed.limit,
-    cursor: parsed.cursor,
-  };
+	const raw: Record<string, unknown> = {};
+	for (const key of [
+		"q",
+		"provider",
+		"runtimeProfile",
+		"tenant",
+		"kind",
+		"status",
+		"fileAvailable",
+		"assetAvailability",
+		"materialization",
+		"limit",
+		"cursor",
+	]) {
+		if (searchParams.has(key)) {
+			raw[key] = searchParams.get(key);
+		}
+	}
+	const parsed = z
+		.object({
+			q: z.string().trim().min(1).optional(),
+			provider: z.string().trim().min(1).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			tenant: z.string().trim().min(1).optional(),
+			kind: z.string().trim().min(1).optional(),
+			status: z.string().trim().min(1).optional(),
+			fileAvailable: z.preprocess(parseOptionalBoolean, z.boolean().optional()),
+			assetAvailability: z.enum(["available", "unavailable", "pending"]).optional(),
+			materialization: z
+				.enum([
+					"active",
+					"terminal",
+					"queued",
+					"running",
+					"succeeded",
+					"skipped",
+					"failed",
+					"cancelled",
+				])
+				.optional(),
+			limit: z.coerce.number().int().positive().max(500).optional(),
+			cursor: z.string().trim().min(1).optional(),
+		})
+		.parse(raw);
+	return {
+		query: parsed.q,
+		provider: parsed.provider,
+		runtimeProfile: parsed.runtimeProfile,
+		tenant: parsed.tenant,
+		kind: parsed.kind,
+		status: parsed.status,
+		fileAvailable: parsed.fileAvailable,
+		assetAvailability: parsed.assetAvailability,
+		materialization: parsed.materialization,
+		limit: parsed.limit,
+		cursor: parsed.cursor,
+	};
 }
 
 function parseOptionalBoolean(value: unknown): unknown {
-  if (typeof value !== 'string') return value;
-  const normalized = value.trim().toLowerCase();
-  if (['true', '1', 'yes'].includes(normalized)) return true;
-  if (['false', '0', 'no'].includes(normalized)) return false;
-  return value;
+	if (typeof value !== "string") return value;
+	const normalized = value.trim().toLowerCase();
+	if (["true", "1", "yes"].includes(normalized)) return true;
+	if (["false", "0", "no"].includes(normalized)) return false;
+	return value;
 }
 
 function parseRunArchiveAssetLookupQuery(searchParams: URLSearchParams) {
-  const raw: Record<string, unknown> = {};
-  for (const key of ['checksumSha256', 'cacheKey', 'providerArtifactId', 'artifactId', 'limit']) {
-    if (searchParams.has(key)) {
-      raw[key] = searchParams.get(key);
-    }
-  }
-  const parsed = z.object({
-    checksumSha256: z.string().trim().min(1).optional(),
-    cacheKey: z.string().trim().min(1).optional(),
-    providerArtifactId: z.string().trim().min(1).optional(),
-    artifactId: z.string().trim().min(1).optional(),
-    limit: z.coerce.number().int().min(0).max(500).optional(),
-  }).parse(raw);
-  if (!parsed.checksumSha256 && !parsed.cacheKey && !parsed.providerArtifactId && !parsed.artifactId) {
-    throw new Error('At least one archive asset lookup key is required.');
-  }
-  return parsed;
+	const raw: Record<string, unknown> = {};
+	for (const key of ["checksumSha256", "cacheKey", "providerArtifactId", "artifactId", "limit"]) {
+		if (searchParams.has(key)) {
+			raw[key] = searchParams.get(key);
+		}
+	}
+	const parsed = z
+		.object({
+			checksumSha256: z.string().trim().min(1).optional(),
+			cacheKey: z.string().trim().min(1).optional(),
+			providerArtifactId: z.string().trim().min(1).optional(),
+			artifactId: z.string().trim().min(1).optional(),
+			limit: z.coerce.number().int().min(0).max(500).optional(),
+		})
+		.parse(raw);
+	if (
+		!parsed.checksumSha256 &&
+		!parsed.cacheKey &&
+		!parsed.providerArtifactId &&
+		!parsed.artifactId
+	) {
+		throw new Error("At least one archive asset lookup key is required.");
+	}
+	return parsed;
 }
 
 function parseRunArchiveEvidenceCreateBody(value: unknown) {
-  return z.object({
-    id: z.string().trim().min(1).optional(),
-    producer: z.string().trim().min(1),
-    schema: z.string().trim().min(1),
-    status: z.enum(['pass', 'fail', 'warning', 'info', 'unknown']).optional(),
-    title: z.string().trim().min(1).optional(),
-    summary: z.string().trim().min(1).optional(),
-    responseId: z.string().trim().min(1).optional(),
-    batchId: z.string().trim().min(1).optional(),
-    archiveItemId: z.string().trim().min(1).optional(),
-    providerConversationId: z.string().trim().min(1).optional(),
-    data: z.unknown().optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
-  }).parse(value);
+	return z
+		.object({
+			id: z.string().trim().min(1).optional(),
+			producer: z.string().trim().min(1),
+			schema: z.string().trim().min(1),
+			status: z.enum(["pass", "fail", "warning", "info", "unknown"]).optional(),
+			title: z.string().trim().min(1).optional(),
+			summary: z.string().trim().min(1).optional(),
+			responseId: z.string().trim().min(1).optional(),
+			batchId: z.string().trim().min(1).optional(),
+			archiveItemId: z.string().trim().min(1).optional(),
+			providerConversationId: z.string().trim().min(1).optional(),
+			data: z.unknown().optional(),
+			metadata: z.record(z.string(), z.unknown()).optional(),
+		})
+		.parse(value);
 }
 
 function parseRunArchiveMaterializationCreateBody(value: unknown) {
-  const parsed = z.object({
-    archiveItemId: z.string().trim().min(1).optional(),
-    archive_item_id: z.string().trim().min(1).optional(),
-    force: z.boolean().optional(),
-  }).parse(value);
-  const archiveItemId = parsed.archiveItemId ?? parsed.archive_item_id;
-  if (!archiveItemId) {
-    throw new ArchiveMaterializationError('Archive item id is required.');
-  }
-  return { archiveItemId, force: parsed.force ?? false };
+	const parsed = z
+		.object({
+			archiveItemId: z.string().trim().min(1).optional(),
+			archive_item_id: z.string().trim().min(1).optional(),
+			force: z.boolean().optional(),
+		})
+		.parse(value);
+	const archiveItemId = parsed.archiveItemId ?? parsed.archive_item_id;
+	if (!archiveItemId) {
+		throw new ArchiveMaterializationError("Archive item id is required.");
+	}
+	return { archiveItemId, force: parsed.force ?? false };
 }
 
 function parseRunArchiveItemMaterializeBody(value: unknown) {
-  const parsed = z.object({
-    force: z.boolean().optional(),
-  }).parse(value);
-  return { force: parsed.force ?? false };
+	const parsed = z
+		.object({
+			force: z.boolean().optional(),
+		})
+		.parse(value);
+	return { force: parsed.force ?? false };
 }
 
 function parseRunArchiveMaterializationJobListQuery(searchParams: URLSearchParams) {
-  const raw: Record<string, unknown> = {};
-  for (const key of ['status', 'archiveItemId', 'limit']) {
-    if (searchParams.has(key)) {
-      raw[key] = searchParams.get(key);
-    }
-  }
-  return z.object({
-    status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled', 'active', 'terminal']).optional(),
-    archiveItemId: z.string().trim().min(1).optional(),
-    limit: z.coerce.number().int().min(0).max(500).optional(),
-  }).parse(raw);
+	const raw: Record<string, unknown> = {};
+	for (const key of ["status", "archiveItemId", "limit"]) {
+		if (searchParams.has(key)) {
+			raw[key] = searchParams.get(key);
+		}
+	}
+	return z
+		.object({
+			status: z
+				.enum([
+					"queued",
+					"running",
+					"succeeded",
+					"skipped",
+					"failed",
+					"cancelled",
+					"active",
+					"terminal",
+				])
+				.optional(),
+			archiveItemId: z.string().trim().min(1).optional(),
+			limit: z.coerce.number().int().min(0).max(500).optional(),
+		})
+		.parse(raw);
 }
 
 function parseRunArchiveMaterializationJobControlBody(value: unknown) {
-  return z.object({
-    action: z.enum(['cancel']),
-  }).parse(value);
+	return z
+		.object({
+			action: z.enum(["cancel"]),
+		})
+		.parse(value);
 }
 
 function parseHistoryMaterializationCreateBody(value: unknown) {
-  const parsed = z.object({
-    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    runtime_profile: z.string().trim().min(1).optional(),
-    browserProfile: z.string().trim().min(1).optional(),
-    browser_profile: z.string().trim().min(1).optional(),
-    boundIdentityKey: z.string().trim().min(1).optional(),
-    bound_identity_key: z.string().trim().min(1).optional(),
-    conversationId: z.string().trim().min(1).optional(),
-    conversation_id: z.string().trim().min(1).optional(),
-    conversationIds: z.array(z.string().trim().min(1)).optional(),
-    conversation_ids: z.array(z.string().trim().min(1)).optional(),
-    providerConversationUrl: z.string().trim().min(1).optional(),
-    provider_conversation_url: z.string().trim().min(1).optional(),
-    projectId: z.string().trim().min(1).optional(),
-    project_id: z.string().trim().min(1).optional(),
-    catalogItemId: z.string().trim().min(1).optional(),
-    catalog_item_id: z.string().trim().min(1).optional(),
-    catalogKind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
-    catalog_kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
-    archiveItemId: z.string().trim().min(1).optional(),
-    archive_item_id: z.string().trim().min(1).optional(),
-    reconcile: z.boolean().optional(),
-    refreshSnapshot: z.boolean().optional(),
-    refresh_snapshot: z.boolean().optional(),
-    reconcileSnapshot: z.boolean().optional(),
-    reconcile_snapshot: z.boolean().optional(),
-    assetKinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
-    asset_kinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
-    maxItems: z.number().int().nonnegative().max(500).optional(),
-    max_items: z.number().int().nonnegative().max(500).optional(),
-    force: z.boolean().optional(),
-  }).parse(value);
-  return {
-    provider: parsed.provider,
-    runtimeProfile: parsed.runtimeProfile ?? parsed.runtime_profile,
-    browserProfile: parsed.browserProfile ?? parsed.browser_profile,
-    boundIdentityKey: parsed.boundIdentityKey ?? parsed.bound_identity_key,
-    conversationId: parsed.conversationId ?? parsed.conversation_id,
-    conversationIds: parsed.conversationIds ?? parsed.conversation_ids,
-    providerConversationUrl: parsed.providerConversationUrl ?? parsed.provider_conversation_url,
-    projectId: parsed.projectId ?? parsed.project_id,
-    catalogItemId: parsed.catalogItemId ?? parsed.catalog_item_id,
-    catalogKind: parsed.catalogKind ?? parsed.catalog_kind,
-    archiveItemId: parsed.archiveItemId ?? parsed.archive_item_id,
-    reconcile: parsed.reconcile ?? false,
-    refreshSnapshot: parsed.refreshSnapshot ?? parsed.refresh_snapshot ?? parsed.reconcileSnapshot ?? parsed.reconcile_snapshot ?? false,
-    assetKinds: parsed.assetKinds ?? parsed.asset_kinds,
-    maxItems: parsed.maxItems ?? parsed.max_items,
-    force: parsed.force ?? false,
-  };
+	const parsed = z
+		.object({
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			runtime_profile: z.string().trim().min(1).optional(),
+			browserProfile: z.string().trim().min(1).optional(),
+			browser_profile: z.string().trim().min(1).optional(),
+			boundIdentityKey: z.string().trim().min(1).optional(),
+			bound_identity_key: z.string().trim().min(1).optional(),
+			conversationId: z.string().trim().min(1).optional(),
+			conversation_id: z.string().trim().min(1).optional(),
+			conversationIds: z.array(z.string().trim().min(1)).optional(),
+			conversation_ids: z.array(z.string().trim().min(1)).optional(),
+			providerConversationUrl: z.string().trim().min(1).optional(),
+			provider_conversation_url: z.string().trim().min(1).optional(),
+			projectId: z.string().trim().min(1).optional(),
+			project_id: z.string().trim().min(1).optional(),
+			catalogItemId: z.string().trim().min(1).optional(),
+			catalog_item_id: z.string().trim().min(1).optional(),
+			catalogKind: z
+				.enum(["all", "projects", "conversations", "artifacts", "files", "media"])
+				.optional(),
+			catalog_kind: z
+				.enum(["all", "projects", "conversations", "artifacts", "files", "media"])
+				.optional(),
+			archiveItemId: z.string().trim().min(1).optional(),
+			archive_item_id: z.string().trim().min(1).optional(),
+			reconcile: z.boolean().optional(),
+			refreshSnapshot: z.boolean().optional(),
+			refresh_snapshot: z.boolean().optional(),
+			reconcileSnapshot: z.boolean().optional(),
+			reconcile_snapshot: z.boolean().optional(),
+			assetKinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+			asset_kinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+			maxItems: z.number().int().nonnegative().max(500).optional(),
+			max_items: z.number().int().nonnegative().max(500).optional(),
+			force: z.boolean().optional(),
+		})
+		.parse(value);
+	return {
+		provider: parsed.provider,
+		runtimeProfile: parsed.runtimeProfile ?? parsed.runtime_profile,
+		browserProfile: parsed.browserProfile ?? parsed.browser_profile,
+		boundIdentityKey: parsed.boundIdentityKey ?? parsed.bound_identity_key,
+		conversationId: parsed.conversationId ?? parsed.conversation_id,
+		conversationIds: parsed.conversationIds ?? parsed.conversation_ids,
+		providerConversationUrl: parsed.providerConversationUrl ?? parsed.provider_conversation_url,
+		projectId: parsed.projectId ?? parsed.project_id,
+		catalogItemId: parsed.catalogItemId ?? parsed.catalog_item_id,
+		catalogKind: parsed.catalogKind ?? parsed.catalog_kind,
+		archiveItemId: parsed.archiveItemId ?? parsed.archive_item_id,
+		reconcile: parsed.reconcile ?? false,
+		refreshSnapshot:
+			parsed.refreshSnapshot ??
+			parsed.refresh_snapshot ??
+			parsed.reconcileSnapshot ??
+			parsed.reconcile_snapshot ??
+			false,
+		assetKinds: parsed.assetKinds ?? parsed.asset_kinds,
+		maxItems: parsed.maxItems ?? parsed.max_items,
+		force: parsed.force ?? false,
+	};
 }
 
 function parseHistoryMaterializationJobListQuery(searchParams: URLSearchParams) {
-  const raw: Record<string, unknown> = {};
-  for (const key of ['status', 'provider', 'runtimeProfile', 'sourceType', 'limit']) {
-    if (searchParams.has(key)) raw[key] = searchParams.get(key);
-  }
-  return z.object({
-    status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled', 'active', 'terminal']).optional(),
-    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    sourceType: z.enum(['conversation', 'catalog_item', 'archive_item', 'reconciliation']).optional(),
-    limit: z.coerce.number().int().min(0).max(500).optional(),
-  }).parse(raw);
+	const raw: Record<string, unknown> = {};
+	for (const key of ["status", "provider", "runtimeProfile", "sourceType", "limit"]) {
+		if (searchParams.has(key)) raw[key] = searchParams.get(key);
+	}
+	return z
+		.object({
+			status: z
+				.enum([
+					"queued",
+					"running",
+					"succeeded",
+					"skipped",
+					"failed",
+					"cancelled",
+					"active",
+					"terminal",
+				])
+				.optional(),
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			sourceType: z
+				.enum(["conversation", "catalog_item", "archive_item", "reconciliation"])
+				.optional(),
+			limit: z.coerce.number().int().min(0).max(500).optional(),
+		})
+		.parse(raw);
 }
 
 function parseHistoryMaterializationJobControlBody(value: unknown) {
-  return z.object({
-    action: z.enum(['cancel']),
-  }).parse(value);
+	return z
+		.object({
+			action: z.enum(["cancel"]),
+		})
+		.parse(value);
 }
 
-function parseDomDriftObservationQuery(searchParams: URLSearchParams): ParsedDomDriftObservationQuery {
-  const raw: Record<string, unknown> = {};
-  if (searchParams.has('service')) {
-    raw.service = searchParams.get('service');
-  }
-  if (searchParams.has('surface')) {
-    raw.surface = searchParams.get('surface');
-  }
-  if (searchParams.has('status')) {
-    raw.status = searchParams.get('status');
-  }
-  if (searchParams.has('limit')) {
-    raw.limit = searchParams.get('limit');
-  }
-  return z.object({
-    service: z.string().trim().min(1).optional(),
-    surface: z.string().trim().min(1).optional(),
-    status: z.enum(['observed', 'accepted', 'rejected']).optional(),
-    limit: z.coerce.number().int().nonnegative().max(500).optional(),
-  }).parse(raw);
+function parseDomDriftObservationQuery(
+	searchParams: URLSearchParams,
+): ParsedDomDriftObservationQuery {
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("service")) {
+		raw.service = searchParams.get("service");
+	}
+	if (searchParams.has("surface")) {
+		raw.surface = searchParams.get("surface");
+	}
+	if (searchParams.has("status")) {
+		raw.status = searchParams.get("status");
+	}
+	if (searchParams.has("limit")) {
+		raw.limit = searchParams.get("limit");
+	}
+	return z
+		.object({
+			service: z.string().trim().min(1).optional(),
+			surface: z.string().trim().min(1).optional(),
+			status: z.enum(["observed", "accepted", "rejected"]).optional(),
+			limit: z.coerce.number().int().nonnegative().max(500).optional(),
+		})
+		.parse(raw);
 }
 
 function parseAccountMirrorCatalogItemQuery(
-  pathname: string,
-  searchParams: URLSearchParams,
+	pathname: string,
+	searchParams: URLSearchParams,
 ): ParsedAccountMirrorCatalogItemQuery {
-  const prefix = '/v1/account-mirrors/catalog/items/';
-  const encodedItemId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
-  const itemId = decodeURIComponent(encodedItemId).trim();
-  if (!itemId) {
-    throw new Error('Account mirror catalog item id is required.');
-  }
-  return {
-    ...parseAccountMirrorCatalogQuery(searchParams),
-    itemId,
-  };
+	const prefix = "/v1/account-mirrors/catalog/items/";
+	const encodedItemId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
+	const itemId = decodeURIComponent(encodedItemId).trim();
+	if (!itemId) {
+		throw new Error("Account mirror catalog item id is required.");
+	}
+	return {
+		...parseAccountMirrorCatalogQuery(searchParams),
+		itemId,
+	};
 }
 
 function isAccountMirrorCatalogItemAssetRoute(pathname: string): boolean {
-  return pathname.startsWith('/v1/account-mirrors/catalog/items/') && pathname.endsWith('/asset');
+	return pathname.startsWith("/v1/account-mirrors/catalog/items/") && pathname.endsWith("/asset");
 }
 
 function isRunArchiveItemAssetRoute(pathname: string): boolean {
-  return pathname.startsWith('/v1/archive/items/') && pathname.endsWith('/asset');
+	return pathname.startsWith("/v1/archive/items/") && pathname.endsWith("/asset");
 }
 
 function isRunArchiveMaterializationJobRoute(pathname: string): boolean {
-  return pathname.startsWith('/v1/archive/materializations/');
+	return pathname.startsWith("/v1/archive/materializations/");
 }
 
 function isHistoryMaterializationJobRoute(pathname: string): boolean {
-  return pathname.startsWith('/v1/account-mirrors/materializations/');
+	return pathname.startsWith("/v1/account-mirrors/materializations/");
 }
 
 function parseRunArchiveMaterializationJobId(pathname: string): string {
-  const prefix = '/v1/archive/materializations/';
-  const jobId = decodeURIComponent(pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '').trim();
-  if (!jobId) {
-    throw new Error('Archive materialization job id is required.');
-  }
-  return jobId;
+	const prefix = "/v1/archive/materializations/";
+	const jobId = decodeURIComponent(
+		pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "",
+	).trim();
+	if (!jobId) {
+		throw new Error("Archive materialization job id is required.");
+	}
+	return jobId;
 }
 
 function parseHistoryMaterializationJobId(pathname: string): string {
-  const prefix = '/v1/account-mirrors/materializations/';
-  const jobId = decodeURIComponent(pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '').trim();
-  if (!jobId) {
-    throw new Error('History materialization job id is required.');
-  }
-  return jobId;
+	const prefix = "/v1/account-mirrors/materializations/";
+	const jobId = decodeURIComponent(
+		pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "",
+	).trim();
+	if (!jobId) {
+		throw new Error("History materialization job id is required.");
+	}
+	return jobId;
 }
 
 function isRunArchiveItemMaterializeRoute(pathname: string): boolean {
-  return pathname.startsWith('/v1/archive/items/') && pathname.endsWith('/materialize');
+	return pathname.startsWith("/v1/archive/items/") && pathname.endsWith("/materialize");
 }
 
 function parseRunArchiveItemAssetId(pathname: string): string {
-  const prefix = '/v1/archive/items/';
-  const suffix = '/asset';
-  const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
-    ? pathname.slice(prefix.length, -suffix.length)
-    : '';
-  const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
-  if (!itemId) {
-    throw new Error('Run archive item id is required.');
-  }
-  return itemId;
+	const prefix = "/v1/archive/items/";
+	const suffix = "/asset";
+	const encodedItemId =
+		pathname.startsWith(prefix) && pathname.endsWith(suffix)
+			? pathname.slice(prefix.length, -suffix.length)
+			: "";
+	const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
+	if (!itemId) {
+		throw new Error("Run archive item id is required.");
+	}
+	return itemId;
 }
 
 function parseRunArchiveItemMaterializeId(pathname: string): string {
-  const prefix = '/v1/archive/items/';
-  const suffix = '/materialize';
-  const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
-    ? pathname.slice(prefix.length, -suffix.length)
-    : '';
-  const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
-  if (!itemId) {
-    throw new Error('Run archive item id is required.');
-  }
-  return itemId;
+	const prefix = "/v1/archive/items/";
+	const suffix = "/materialize";
+	const encodedItemId =
+		pathname.startsWith(prefix) && pathname.endsWith(suffix)
+			? pathname.slice(prefix.length, -suffix.length)
+			: "";
+	const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
+	if (!itemId) {
+		throw new Error("Run archive item id is required.");
+	}
+	return itemId;
 }
 
 function isProviderAuthPreflightError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes('browser auth preflight failed')
-    || message.includes('account_session_drift')
-    || message.includes('expected_identity_missing');
+	const message = error instanceof Error ? error.message : String(error);
+	return (
+		message.includes("browser auth preflight failed") ||
+		message.includes("account_session_drift") ||
+		message.includes("expected_identity_missing")
+	);
 }
 
 function parseRunArchiveItemId(pathname: string): string {
-  const prefix = '/v1/archive/items/';
-  const encodedItemId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
-  const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
-  if (!itemId) {
-    throw new Error('Run archive item id is required.');
-  }
-  return itemId;
+	const prefix = "/v1/archive/items/";
+	const encodedItemId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
+	const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
+	if (!itemId) {
+		throw new Error("Run archive item id is required.");
+	}
+	return itemId;
 }
 
 function decodeRunArchiveItemPathSegment(encodedItemId: string): string {
-  if (encodedItemId.startsWith('b64/')) {
-    return Buffer.from(encodedItemId.slice('b64/'.length), 'base64url').toString('utf8');
-  }
-  return decodeURIComponent(encodedItemId);
+	if (encodedItemId.startsWith("b64/")) {
+		return Buffer.from(encodedItemId.slice("b64/".length), "base64url").toString("utf8");
+	}
+	return decodeURIComponent(encodedItemId);
 }
 
 function parseAccountMirrorCatalogItemAssetQuery(
-  pathname: string,
-  searchParams: URLSearchParams,
+	pathname: string,
+	searchParams: URLSearchParams,
 ): ParsedAccountMirrorCatalogItemQuery {
-  const prefix = '/v1/account-mirrors/catalog/items/';
-  const suffix = '/asset';
-  const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
-    ? pathname.slice(prefix.length, -suffix.length)
-    : '';
-  const itemId = decodeURIComponent(encodedItemId).trim();
-  if (!itemId) {
-    throw new Error('Account mirror catalog item id is required.');
-  }
-  return {
-    ...parseAccountMirrorCatalogQuery(searchParams),
-    itemId,
-  };
+	const prefix = "/v1/account-mirrors/catalog/items/";
+	const suffix = "/asset";
+	const encodedItemId =
+		pathname.startsWith(prefix) && pathname.endsWith(suffix)
+			? pathname.slice(prefix.length, -suffix.length)
+			: "";
+	const itemId = decodeURIComponent(encodedItemId).trim();
+	if (!itemId) {
+		throw new Error("Account mirror catalog item id is required.");
+	}
+	return {
+		...parseAccountMirrorCatalogQuery(searchParams),
+		itemId,
+	};
 }
 
-function parseAccountMirrorCompletionListQuery(searchParams: URLSearchParams): ParsedAccountMirrorCompletionListQuery {
-  const raw: Record<string, unknown> = {};
-  if (searchParams.has('provider')) {
-    raw.provider = searchParams.get('provider');
-  }
-  if (searchParams.has('runtimeProfile')) {
-    raw.runtimeProfile = searchParams.get('runtimeProfile');
-  }
-  if (searchParams.has('status')) {
-    raw.status = searchParams.get('status');
-  }
-  if (searchParams.has('activeOnly')) {
-    raw.activeOnly = searchParams.get('activeOnly');
-  }
-  if (searchParams.has('limit')) {
-    raw.limit = searchParams.get('limit');
-  }
-  const parsed = z.object({
-    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
-    runtimeProfile: z.string().trim().min(1).optional(),
-    status: z.enum(['active', 'queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).optional(),
-    activeOnly: z
-      .enum(['0', '1', 'true', 'false'])
-      .transform((value) => value === '1' || value.toLowerCase() === 'true')
-      .optional(),
-    limit: z.coerce.number().int().positive().optional(),
-  }).parse(raw);
-  return {
-    provider: parsed.provider,
-    runtimeProfileId: parsed.runtimeProfile,
-    status: parsed.status,
-    activeOnly: parsed.activeOnly,
-    limit: parsed.limit,
-  };
+function parseAccountMirrorCompletionListQuery(
+	searchParams: URLSearchParams,
+): ParsedAccountMirrorCompletionListQuery {
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("provider")) {
+		raw.provider = searchParams.get("provider");
+	}
+	if (searchParams.has("runtimeProfile")) {
+		raw.runtimeProfile = searchParams.get("runtimeProfile");
+	}
+	if (searchParams.has("status")) {
+		raw.status = searchParams.get("status");
+	}
+	if (searchParams.has("activeOnly")) {
+		raw.activeOnly = searchParams.get("activeOnly");
+	}
+	if (searchParams.has("limit")) {
+		raw.limit = searchParams.get("limit");
+	}
+	const parsed = z
+		.object({
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			status: z
+				.enum([
+					"active",
+					"queued",
+					"running",
+					"idle_waiting",
+					"paused",
+					"completed",
+					"blocked",
+					"failed",
+					"cancelled",
+				])
+				.optional(),
+			activeOnly: z
+				.enum(["0", "1", "true", "false"])
+				.transform((value) => value === "1" || value.toLowerCase() === "true")
+				.optional(),
+			limit: z.coerce.number().int().positive().optional(),
+		})
+		.parse(raw);
+	return {
+		provider: parsed.provider,
+		runtimeProfileId: parsed.runtimeProfile,
+		status: parsed.status,
+		activeOnly: parsed.activeOnly,
+		limit: parsed.limit,
+	};
+}
+
+function parseAccountMirrorReconciliationListQuery(
+	searchParams: URLSearchParams,
+): ParsedAccountMirrorReconciliationListQuery {
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("status")) {
+		raw.status = searchParams.get("status");
+	}
+	if (searchParams.has("limit")) {
+		raw.limit = searchParams.get("limit");
+	}
+	const parsed = z
+		.object({
+			status: z
+				.enum([
+					"active",
+					"planned",
+					"queued",
+					"running",
+					"idle_waiting",
+					"paused",
+					"blocked",
+					"completed",
+					"completed_with_skips",
+					"cancelled",
+					"failed",
+				])
+				.optional(),
+			limit: z.coerce.number().int().positive().optional(),
+		})
+		.parse(raw);
+	return {
+		status: parsed.status,
+		limit: parsed.limit,
+	};
 }
 
 function parsePositiveIntegerQuery(value: string | null): number | null {
-  if (value === null) {
-    return null;
-  }
-  return z.coerce.number().int().positive().parse(value);
+	if (value === null) {
+		return null;
+	}
+	return z.coerce.number().int().positive().parse(value);
 }
 
-function parseMediaGenerationCreateQuery(searchParams: URLSearchParams): ParsedMediaGenerationCreateQuery {
-  const raw: Record<string, unknown> = {};
-  if (searchParams.has('wait')) {
-    raw.wait = searchParams.get('wait');
-  }
-  return z.object({
-    wait: z
-      .enum(['0', '1', 'true', 'false'])
-      .transform((value) => value === '1' || value.toLowerCase() === 'true')
-      .optional(),
-  }).parse(raw);
+function parseMediaGenerationCreateQuery(
+	searchParams: URLSearchParams,
+): ParsedMediaGenerationCreateQuery {
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("wait")) {
+		raw.wait = searchParams.get("wait");
+	}
+	return z
+		.object({
+			wait: z
+				.enum(["0", "1", "true", "false"])
+				.transform((value) => value === "1" || value.toLowerCase() === "true")
+				.optional(),
+		})
+		.parse(raw);
 }
 
 function resolveMediaGenerationWait(
-  query: ParsedMediaGenerationCreateQuery,
-  body: { wait?: unknown },
+	query: ParsedMediaGenerationCreateQuery,
+	body: { wait?: unknown },
 ): boolean {
-  if (typeof query.wait === 'boolean') return query.wait;
-  if (typeof body.wait === 'boolean') return body.wait;
-  if (typeof body.wait === 'string') {
-    const normalized = body.wait.trim().toLowerCase();
-    if (normalized === 'false' || normalized === '0') return false;
-    if (normalized === 'true' || normalized === '1') return true;
-  }
-  return true;
+	if (typeof query.wait === "boolean") return query.wait;
+	if (typeof body.wait === "boolean") return body.wait;
+	if (typeof body.wait === "string") {
+		const normalized = body.wait.trim().toLowerCase();
+		if (normalized === "false" || normalized === "0") return false;
+		if (normalized === "true" || normalized === "1") return true;
+	}
+	return true;
 }
 
 function parseMediaGenerationMaterializeBody(value: unknown) {
-  const parsed = z.object({
-    count: z.number().int().min(1).max(8).optional(),
-    compareFullQuality: z.boolean().optional(),
-    compare_full_quality: z.boolean().optional(),
-    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-  }).parse(value);
-  return {
-    count: parsed.count,
-    compareFullQuality: parsed.compareFullQuality ?? parsed.compare_full_quality,
-    metadata: parsed.metadata,
-  };
+	const parsed = z
+		.object({
+			count: z.number().int().min(1).max(8).optional(),
+			compareFullQuality: z.boolean().optional(),
+			compare_full_quality: z.boolean().optional(),
+			metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+		})
+		.parse(value);
+	return {
+		count: parsed.count,
+		compareFullQuality: parsed.compareFullQuality ?? parsed.compare_full_quality,
+		metadata: parsed.metadata,
+	};
 }
 
 function mediaGenerationExecutionErrorStatus(error: MediaGenerationExecutionError): number {
-  if (error.code === 'media_generation_not_found') return 404;
-  if (error.code === 'media_materializer_not_implemented') return 501;
-  if (error.code === 'browser_operation_busy') return 409;
-  return 502;
+	if (error.code === "media_generation_not_found") return 404;
+	if (error.code === "media_materializer_not_implemented") return 501;
+	if (error.code === "browser_operation_busy") return 409;
+	return 502;
 }
 
 async function readRunStatusBrowserDiagnostics(input: {
-  status: AuraCallRunStatus;
-  responsesService: ReturnType<typeof createExecutionResponsesService>;
-  mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
-  probeRuntimeRunBrowserDiagnostics: ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'];
-  probeMediaGenerationBrowserDiagnostics: typeof probeMediaGenerationBrowserDiagnostics;
-  control: ExecutionRuntimeControlContract;
-  runnersControl: ExecutionRunnerControlContract;
-  createRunAffinity: InspectRuntimeRunInput['createRunAffinity'];
+	status: AuraCallRunStatus;
+	responsesService: ReturnType<typeof createExecutionResponsesService>;
+	mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
+	probeRuntimeRunBrowserDiagnostics: ResponsesHttpServerDeps["probeRuntimeRunBrowserDiagnostics"];
+	probeMediaGenerationBrowserDiagnostics: typeof probeMediaGenerationBrowserDiagnostics;
+	control: ExecutionRuntimeControlContract;
+	runnersControl: ExecutionRunnerControlContract;
+	createRunAffinity: InspectRuntimeRunInput["createRunAffinity"];
 }): Promise<RuntimeRunInspectionBrowserDiagnosticsSummary> {
-  if (input.status.kind === 'response') {
-    const inspection = await inspectRuntimeRun({
-      runId: input.status.id,
-      includeBrowserDiagnostics: true,
-      probeBrowserDiagnostics: input.probeRuntimeRunBrowserDiagnostics,
-      control: input.control,
-      runnersControl: input.runnersControl,
-      createRunAffinity: input.createRunAffinity,
-    });
-    return inspection.browserDiagnostics ?? createUnavailableRunStatusBrowserDiagnostics(
-      `runtime run ${input.status.id} did not return browser diagnostics`,
-    );
-  }
+	if (input.status.kind === "response") {
+		const inspection = await inspectRuntimeRun({
+			runId: input.status.id,
+			includeBrowserDiagnostics: true,
+			probeBrowserDiagnostics: input.probeRuntimeRunBrowserDiagnostics,
+			control: input.control,
+			runnersControl: input.runnersControl,
+			createRunAffinity: input.createRunAffinity,
+		});
+		return (
+			inspection.browserDiagnostics ??
+			createUnavailableRunStatusBrowserDiagnostics(
+				`runtime run ${input.status.id} did not return browser diagnostics`,
+			)
+		);
+	}
 
-  const mediaGeneration = await input.mediaGenerationService.readGeneration(input.status.id);
-  if (!mediaGeneration) {
-    return createUnavailableRunStatusBrowserDiagnostics(`media generation ${input.status.id} was not found`);
-  }
-  return input.probeMediaGenerationBrowserDiagnostics(mediaGeneration);
+	const mediaGeneration = await input.mediaGenerationService.readGeneration(input.status.id);
+	if (!mediaGeneration) {
+		return createUnavailableRunStatusBrowserDiagnostics(
+			`media generation ${input.status.id} was not found`,
+		);
+	}
+	return input.probeMediaGenerationBrowserDiagnostics(mediaGeneration);
 }
 
 function createUnavailableRunStatusBrowserDiagnostics(
-  reason: string,
-): NonNullable<RuntimeRunInspectionPayload['browserDiagnostics']> {
-  return {
-    probeStatus: 'unavailable',
-    service: null,
-    ownerStepId: null,
-    observedAt: null,
-    source: null,
-    reason,
-    target: null,
-    document: null,
-    visibleCounts: null,
-    providerEvidence: null,
-    screenshot: null,
-  };
+	reason: string,
+): NonNullable<RuntimeRunInspectionPayload["browserDiagnostics"]> {
+	return {
+		probeStatus: "unavailable",
+		service: null,
+		ownerStepId: null,
+		observedAt: null,
+		source: null,
+		reason,
+		target: null,
+		document: null,
+		visibleCounts: null,
+		providerEvidence: null,
+		screenshot: null,
+	};
 }
 
 function createTeamRunCreateLinks(input: {
-  host: string;
-  port: number;
-  teamRunId: string;
-  runtimeRunId: string;
-}): HttpTeamRunCreateResponse['links'] {
-  const baseUrl = `http://${localProbeHost(input.host)}:${input.port}`;
-  return {
-    teamInspection: `${baseUrl}/v1/team-runs/inspect?teamRunId=${encodeURIComponent(input.teamRunId)}`,
-    runtimeInspection: `${baseUrl}/v1/runtime-runs/inspect?runtimeRunId=${encodeURIComponent(input.runtimeRunId)}`,
-    responseReadback: `${baseUrl}/v1/responses/${encodeURIComponent(input.runtimeRunId)}`,
-  };
+	host: string;
+	port: number;
+	teamRunId: string;
+	runtimeRunId: string;
+}): HttpTeamRunCreateResponse["links"] {
+	const baseUrl = `http://${localProbeHost(input.host)}:${input.port}`;
+	return {
+		teamInspection: `${baseUrl}/v1/team-runs/inspect?teamRunId=${encodeURIComponent(input.teamRunId)}`,
+		runtimeInspection: `${baseUrl}/v1/runtime-runs/inspect?runtimeRunId=${encodeURIComponent(input.runtimeRunId)}`,
+		responseReadback: `${baseUrl}/v1/responses/${encodeURIComponent(input.runtimeRunId)}`,
+	};
 }
 
 function localProbeHost(host: string): string {
-  return isLoopbackHost(host) ? host : '127.0.0.1';
+	return isLoopbackHost(host) ? host : "127.0.0.1";
 }
 
 function buildApiServiceDiscovery(input: {
-  host: string;
-  port: number;
-  dashboardUrl?: string;
-  publicDashboardUrl?: string;
-  serviceRouting?: ApiServiceRoutingConfig;
+	host: string;
+	port: number;
+	dashboardUrl?: string;
+	publicDashboardUrl?: string;
+	serviceRouting?: ApiServiceRoutingConfig;
 }): ApiServiceDiscovery {
-  const routing = input.serviceRouting ?? {};
-  const { dashboardPath, debugDashboardPath, accountMirrorPath, previewSessionPath, configPath, agentsPath } = resolveOperatorDashboardRoutes(routing);
-  const bindBaseUrl = formatApiBaseUrl(input.host, input.port);
-  const localBaseUrl = normalizeBaseUrl(routing.localBaseUrl)
-    ?? normalizeBaseUrl(baseUrlFromUrl(input.dashboardUrl))
-    ?? bindBaseUrl;
-  const externalBaseUrl = normalizeBaseUrl(routing.externalBaseUrl)
-    ?? normalizeBaseUrl(baseUrlFromUrl(input.publicDashboardUrl));
-  const localDashboardUrl = normalizeUrl(input.dashboardUrl)
-    ?? joinBaseUrlPath(localBaseUrl, dashboardPath);
-  const externalDashboardUrl = normalizeUrl(input.publicDashboardUrl)
-    ?? (externalBaseUrl ? joinBaseUrlPath(externalBaseUrl, dashboardPath) : undefined);
-  return {
-    bind: {
-      host: input.host,
-      port: input.port,
-      url: bindBaseUrl,
-      localOnly: isLoopbackHost(input.host),
-    },
-    local: {
-      ...(routing.localHostname ? { hostname: routing.localHostname } : {}),
-      baseUrl: localBaseUrl,
-      dashboardUrl: localDashboardUrl,
-      accountMirrorUrl: joinBaseUrlPath(localBaseUrl, accountMirrorPath),
-    },
-    ...(externalBaseUrl
-      ? {
-          external: {
-            ...(routing.externalHostname ? { hostname: routing.externalHostname } : {}),
-            baseUrl: externalBaseUrl,
-            dashboardUrl: externalDashboardUrl ?? joinBaseUrlPath(externalBaseUrl, dashboardPath),
-            accountMirrorUrl: joinBaseUrlPath(externalBaseUrl, accountMirrorPath),
-          },
-        }
-      : {}),
-    routing: {
-      dashboardPath,
-      debugDashboardPath,
-      accountMirrorPath,
-      previewSessionPath,
-      configPath,
-      agentsPath,
-      ...(routing.proxyTarget ? { proxyTarget: routing.proxyTarget } : {}),
-      ...(routing.auth ? { auth: routing.auth } : {}),
-      ...(routing.ingress ? { ingress: routing.ingress } : {}),
-    },
-  };
+	const routing = input.serviceRouting ?? {};
+	const {
+		dashboardPath,
+		debugDashboardPath,
+		accountMirrorPath,
+		previewSessionPath,
+		configPath,
+		agentsPath,
+	} = resolveOperatorDashboardRoutes(routing);
+	const bindBaseUrl = formatApiBaseUrl(input.host, input.port);
+	const localBaseUrl =
+		normalizeBaseUrl(routing.localBaseUrl) ??
+		normalizeBaseUrl(baseUrlFromUrl(input.dashboardUrl)) ??
+		bindBaseUrl;
+	const externalBaseUrl =
+		normalizeBaseUrl(routing.externalBaseUrl) ??
+		normalizeBaseUrl(baseUrlFromUrl(input.publicDashboardUrl));
+	const localDashboardUrl =
+		normalizeUrl(input.dashboardUrl) ?? joinBaseUrlPath(localBaseUrl, dashboardPath);
+	const externalDashboardUrl =
+		normalizeUrl(input.publicDashboardUrl) ??
+		(externalBaseUrl ? joinBaseUrlPath(externalBaseUrl, dashboardPath) : undefined);
+	return {
+		bind: {
+			host: input.host,
+			port: input.port,
+			url: bindBaseUrl,
+			localOnly: isLoopbackHost(input.host),
+		},
+		local: {
+			...(routing.localHostname ? { hostname: routing.localHostname } : {}),
+			baseUrl: localBaseUrl,
+			dashboardUrl: localDashboardUrl,
+			accountMirrorUrl: joinBaseUrlPath(localBaseUrl, accountMirrorPath),
+		},
+		...(externalBaseUrl
+			? {
+					external: {
+						...(routing.externalHostname ? { hostname: routing.externalHostname } : {}),
+						baseUrl: externalBaseUrl,
+						dashboardUrl: externalDashboardUrl ?? joinBaseUrlPath(externalBaseUrl, dashboardPath),
+						accountMirrorUrl: joinBaseUrlPath(externalBaseUrl, accountMirrorPath),
+					},
+				}
+			: {}),
+		routing: {
+			dashboardPath,
+			debugDashboardPath,
+			accountMirrorPath,
+			previewSessionPath,
+			configPath,
+			agentsPath,
+			...(routing.proxyTarget ? { proxyTarget: routing.proxyTarget } : {}),
+			...(routing.auth ? { auth: routing.auth } : {}),
+			...(routing.ingress ? { ingress: routing.ingress } : {}),
+		},
+	};
 }
 
-function resolveOperatorDashboardRoutes(serviceRouting: ApiServiceRoutingConfig | undefined): OperatorDashboardRoutes {
-  const dashboardPath = normalizeRoutePath(serviceRouting?.dashboardPath) ?? '/dashboard';
-  const debugDashboardPath = normalizeRoutePath(serviceRouting?.debugDashboardPath) ?? '/ops/browser';
-  const accountMirrorPath = normalizeRoutePath(serviceRouting?.accountMirrorPath) ?? '/account-mirror';
-  return {
-    dashboardPath,
-    debugDashboardPath,
-    accountMirrorPath,
-    previewSessionPath: joinRoutePath(accountMirrorPath, 'preview-session'),
-    configPath: '/config',
-    agentsPath: '/agents',
-  };
+function resolveOperatorDashboardRoutes(
+	serviceRouting: ApiServiceRoutingConfig | undefined,
+): OperatorDashboardRoutes {
+	const dashboardPath = normalizeRoutePath(serviceRouting?.dashboardPath) ?? "/dashboard";
+	const debugDashboardPath =
+		normalizeRoutePath(serviceRouting?.debugDashboardPath) ?? "/ops/browser";
+	const accountMirrorPath =
+		normalizeRoutePath(serviceRouting?.accountMirrorPath) ?? "/account-mirror";
+	return {
+		dashboardPath,
+		debugDashboardPath,
+		accountMirrorPath,
+		previewSessionPath: joinRoutePath(accountMirrorPath, "preview-session"),
+		configPath: "/config",
+		agentsPath: "/agents",
+	};
 }
 
 function joinRoutePath(basePath: string, childPath: string): string {
-  const normalizedBase = normalizeRoutePath(basePath) ?? '/';
-  const normalizedChild = childPath.replace(/^\/+/, '').replace(/\/+$/, '');
-  return `${normalizedBase.replace(/\/+$/, '')}/${normalizedChild}`;
+	const normalizedBase = normalizeRoutePath(basePath) ?? "/";
+	const normalizedChild = childPath.replace(/^\/+/, "").replace(/\/+$/, "");
+	return `${normalizedBase.replace(/\/+$/, "")}/${normalizedChild}`;
 }
 
 function matchesRoutePath(pathname: string, ...paths: string[]): boolean {
-  return paths.some((path) => pathname === path);
+	return paths.some((path) => pathname === path);
 }
 
 function formatApiBaseUrl(host: string, port: number): string {
-  const normalizedHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
-  return `http://${normalizedHost}:${String(port)}`;
+	const normalizedHost = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+	return `http://${normalizedHost}:${String(port)}`;
 }
 
 function normalizeRoutePath(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+	const trimmed = value?.trim();
+	if (!trimmed) return null;
+	return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
 function normalizeBaseUrl(value: string | null | undefined): string | null {
-  const normalized = normalizeUrl(value);
-  if (!normalized) return null;
-  return normalized.replace(/\/+$/, '');
+	const normalized = normalizeUrl(value);
+	if (!normalized) return null;
+	return normalized.replace(/\/+$/, "");
 }
 
 function normalizeUrl(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  try {
-    return new URL(trimmed).href.replace(/\/+$/, '');
-  } catch {
-    return null;
-  }
+	const trimmed = value?.trim();
+	if (!trimmed) return null;
+	try {
+		return new URL(trimmed).href.replace(/\/+$/, "");
+	} catch {
+		return null;
+	}
 }
 
 function baseUrlFromUrl(value: string | undefined): string | null {
-  const normalized = normalizeUrl(value);
-  if (!normalized) return null;
-  const parsed = new URL(normalized);
-  return parsed.origin;
+	const normalized = normalizeUrl(value);
+	if (!normalized) return null;
+	const parsed = new URL(normalized);
+	return parsed.origin;
 }
 
 function joinBaseUrlPath(baseUrl: string, path: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}${normalizeRoutePath(path) ?? '/'}`;
+	return `${baseUrl.replace(/\/+$/, "")}${normalizeRoutePath(path) ?? "/"}`;
 }
 
 function escapeHtmlAttribute(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
 }
 
 function mergeExecutionRequestHints(
-  request: ExecutionRequest,
-  headers: http.IncomingHttpHeaders,
+	request: ExecutionRequest,
+	headers: http.IncomingHttpHeaders,
 ): ExecutionRequest {
-  const headerHints = extractExecutionRequestHintsFromHeaders(headers);
-  if (
-    !headerHints.runtimeProfile &&
-    !headerHints.agent &&
-    !headerHints.team &&
-    !headerHints.service
-  ) {
-    return request;
-  }
+	const headerHints = extractExecutionRequestHintsFromHeaders(headers);
+	if (
+		!headerHints.runtimeProfile &&
+		!headerHints.agent &&
+		!headerHints.team &&
+		!headerHints.service
+	) {
+		return request;
+	}
 
-  return {
-    ...request,
-    auracall: {
-      ...(request.auracall ?? {}),
-      ...headerHints,
-    },
-  };
+	return {
+		...request,
+		auracall: {
+			...(request.auracall ?? {}),
+			...headerHints,
+		},
+	};
 }
 
 function extractExecutionRequestHintsFromHeaders(
-  headers: http.IncomingHttpHeaders,
+	headers: http.IncomingHttpHeaders,
 ): ExecutionRequestExtensionHints {
-  return {
-    runtimeProfile: readSingleHeader(headers['x-auracall-runtime-profile']),
-    agent: readSingleHeader(headers['x-auracall-agent']),
-    team: readSingleHeader(headers['x-auracall-team']),
-    service: readSingleHeader(headers['x-auracall-service']),
-  };
+	return {
+		runtimeProfile: readSingleHeader(headers["x-auracall-runtime-profile"]),
+		agent: readSingleHeader(headers["x-auracall-agent"]),
+		team: readSingleHeader(headers["x-auracall-team"]),
+		service: readSingleHeader(headers["x-auracall-service"]),
+	};
 }
 
 function readSingleHeader(value: string | string[] | undefined): string | null {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+	if (Array.isArray(value)) return value[0] ?? null;
+	return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
-function asResolvedUserConfig(value: Record<string, unknown> | undefined): ResolvedUserConfig | null {
-  if (!value || typeof value.model !== 'string') {
-    return null;
-  }
-  const browser = value.browser;
-  if (!browser || typeof browser !== 'object' || Array.isArray(browser)) {
-    return null;
-  }
-  return value as ResolvedUserConfig;
+function asResolvedUserConfig(
+	value: Record<string, unknown> | undefined,
+): ResolvedUserConfig | null {
+	if (!value || typeof value.model !== "string") {
+		return null;
+	}
+	const browser = value.browser;
+	if (!browser || typeof browser !== "object" || Array.isArray(browser)) {
+		return null;
+	}
+	return value as ResolvedUserConfig;
 }
 
 function isLoopbackHost(host: string): boolean {
-  const normalized = host.trim().toLowerCase();
-  return normalized === '127.0.0.1' || normalized === 'localhost' || normalized === '::1';
+	const normalized = host.trim().toLowerCase();
+	return normalized === "127.0.0.1" || normalized === "localhost" || normalized === "::1";
 }
 
 function matchResponseRoute(pathname: string): string | null {
-  const match = /^\/v1\/responses\/([^/]+)$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/responses\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchResponseBatchRoute(pathname: string): string | null {
-  const match = /^\/v1\/response-batches\/([^/]+)$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/response-batches\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
-function matchConfigEntityRoute(pathname: string, kind: 'agents' | 'teams'): string | null {
-  const match = new RegExp(`^/v1/config/${kind}/([^/]+)$`).exec(pathname);
-  return match?.[1] ? decodeURIComponent(match[1]) : null;
+function matchConfigEntityRoute(pathname: string, kind: "agents" | "teams"): string | null {
+	const match = new RegExp(`^/v1/config/${kind}/([^/]+)$`).exec(pathname);
+	return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function matchConfigApiKeyRoute(pathname: string): string | null {
-  const match = /^\/v1\/config\/api-keys\/([^/]+)$/.exec(pathname);
-  return match?.[1] ? decodeURIComponent(match[1]) : null;
+	const match = /^\/v1\/config\/api-keys\/([^/]+)$/.exec(pathname);
+	return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function matchMediaGenerationRoute(pathname: string): string | null {
-  const match = /^\/v1\/media-generations\/([^/]+)$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/media-generations\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchMediaGenerationMaterializeRoute(pathname: string): string | null {
-  const match = /^\/v1\/media-generations\/([^/]+)\/materialize$/.exec(pathname);
-  return match?.[1] ? decodeURIComponent(match[1]) : null;
+	const match = /^\/v1\/media-generations\/([^/]+)\/materialize$/.exec(pathname);
+	return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function matchMediaGenerationStatusRoute(pathname: string): string | null {
-  const match = /^\/v1\/media-generations\/([^/]+)\/status$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/media-generations\/([^/]+)\/status$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchRunStatusRoute(pathname: string): string | null {
-  const match = /^\/v1\/runs\/([^/]+)\/status$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/runs\/([^/]+)\/status$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchDomDriftObservationAcceptRoute(pathname: string): string | null {
-  const match = /^\/v1\/browser\/dom-drift-observations\/([^/]+)\/accept$/.exec(pathname);
-  return match?.[1] ? decodeURIComponent(match[1]) : null;
+	const match = /^\/v1\/browser\/dom-drift-observations\/([^/]+)\/accept$/.exec(pathname);
+	return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function matchAccountMirrorCompletionRoute(pathname: string): string | null {
-  const match = /^\/v1\/account-mirrors\/completions\/([^/]+)$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/account-mirrors\/completions\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
+}
+
+function matchAccountMirrorReconciliationRoute(pathname: string): string | null {
+	const match = /^\/v1\/account-mirrors\/reconciliations\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchAccountMirrorPreviewSessionRoute(pathname: string): string | null {
-  const match = /^\/v1\/account-mirrors\/preview-sessions\/([^/]+)$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/account-mirrors\/preview-sessions\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchPreflightRunLogRoute(pathname: string): string | null {
-  const match = /^\/v1\/preflight\/lazy-live-follow\/runs\/([^/]+)\/log$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/preflight\/lazy-live-follow\/runs\/([^/]+)\/log$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchPreflightRunRoute(pathname: string): string | null {
-  const match = /^\/v1\/preflight\/lazy-live-follow\/runs\/([^/]+)$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/v1\/preflight\/lazy-live-follow\/runs\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 function matchStatusRecoveryDetailRoute(pathname: string): string | null {
-  const match = /^\/status\/recovery\/([^/]+)$/.exec(pathname);
-  return match?.[1] ?? null;
+	const match = /^\/status\/recovery\/([^/]+)$/.exec(pathname);
+	return match?.[1] ?? null;
 }
 
 async function readRequestBody(req: http.IncomingMessage): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks).toString('utf8');
+	const chunks: Buffer[] = [];
+	for await (const chunk of req) {
+		chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+	}
+	return Buffer.concat(chunks).toString("utf8");
 }
 
 function sendJson(res: http.ServerResponse, statusCode: number, payload: unknown): void {
-  res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-  res.end(`${JSON.stringify(payload)}\n`);
+	res.writeHead(statusCode, { "Content-Type": "application/json" });
+	res.end(`${JSON.stringify(payload)}\n`);
 }
 
 function sendHtml(res: http.ServerResponse, statusCode: number, html: string): void {
-  res.writeHead(statusCode, {
-    'Content-Type': 'text/html; charset=utf-8',
-    'Cache-Control': 'no-store',
-  });
-  res.end(html);
+	res.writeHead(statusCode, {
+		"Content-Type": "text/html; charset=utf-8",
+		"Cache-Control": "no-store",
+	});
+	res.end(html);
 }
 
 async function maybeSendOperatorUxAsset(
-  res: http.ServerResponse,
-  pathname: string,
-  routes: OperatorDashboardRoutes,
-  headOnly = false,
+	res: http.ServerResponse,
+	pathname: string,
+	routes: OperatorDashboardRoutes,
+	headOnly = false,
 ): Promise<boolean> {
-  const dashboardPath = routes.dashboardPath;
-  if (!matchesDashboardAssetPath(pathname, dashboardPath)) {
-    return false;
-  }
+	const dashboardPath = routes.dashboardPath;
+	if (!matchesDashboardAssetPath(pathname, dashboardPath)) {
+		return false;
+	}
 
-  const assetPath = resolveDashboardAssetPath(pathname, dashboardPath);
-  const distDir = await findOperatorUxDistDir();
-  if (!distDir) {
-    if (assetPath === 'index.html') {
-      sendHtml(res, 200, createMissingOperatorUxHtml());
-      return true;
-    }
-    sendJson(res, 404, {
-      error: {
-        message: 'AuraCall operator UX build assets are not available. Run pnpm run ux:build.',
-        type: 'not_found_error',
-      },
-    } satisfies HttpErrorPayload);
-    return true;
-  }
+	const assetPath = resolveDashboardAssetPath(pathname, dashboardPath);
+	const distDir = await findOperatorUxDistDir();
+	if (!distDir) {
+		if (assetPath === "index.html") {
+			sendHtml(res, 200, createMissingOperatorUxHtml());
+			return true;
+		}
+		sendJson(res, 404, {
+			error: {
+				message: "AuraCall operator UX build assets are not available. Run pnpm run ux:build.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
 
-  const assetFile = path.resolve(distDir, assetPath);
-  const relative = path.relative(distDir, assetFile);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
-    sendJson(res, 404, {
-      error: {
-        message: 'Operator UX asset path is invalid.',
-        type: 'not_found_error',
-      },
-    } satisfies HttpErrorPayload);
-    return true;
-  }
+	const assetFile = path.resolve(distDir, assetPath);
+	const relative = path.relative(distDir, assetFile);
+	if (relative.startsWith("..") || path.isAbsolute(relative)) {
+		sendJson(res, 404, {
+			error: {
+				message: "Operator UX asset path is invalid.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
 
-  let stat: Awaited<ReturnType<typeof fs.stat>>;
-  try {
-    stat = await fs.stat(assetFile);
-  } catch {
-    sendJson(res, 404, {
-      error: {
-        message: 'Operator UX asset was not found.',
-        type: 'not_found_error',
-      },
-    } satisfies HttpErrorPayload);
-    return true;
-  }
-  if (!stat.isFile()) {
-    sendJson(res, 404, {
-      error: {
-        message: 'Operator UX asset was not found.',
-        type: 'not_found_error',
-      },
-    } satisfies HttpErrorPayload);
-    return true;
-  }
+	let stat: Awaited<ReturnType<typeof fs.stat>>;
+	try {
+		stat = await fs.stat(assetFile);
+	} catch {
+		sendJson(res, 404, {
+			error: {
+				message: "Operator UX asset was not found.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
+	if (!stat.isFile()) {
+		sendJson(res, 404, {
+			error: {
+				message: "Operator UX asset was not found.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
 
-  res.writeHead(200, {
-    'Content-Type': getStaticContentType(assetFile),
-    'Content-Length': String(stat.size),
-    'Cache-Control': assetPath === 'index.html' ? 'no-store' : 'public, max-age=31536000, immutable',
-    'X-Content-Type-Options': 'nosniff',
-  });
-  if (headOnly) {
-    res.end();
-    return true;
-  }
-  createReadStream(assetFile).on('error', () => {
-    if (!res.headersSent) {
-      sendJson(res, 404, {
-        error: {
-          message: 'Operator UX asset could not be read.',
-          type: 'not_found_error',
-        },
-      } satisfies HttpErrorPayload);
-      return;
-    }
-    res.destroy();
-  }).pipe(res);
-  return true;
+	res.writeHead(200, {
+		"Content-Type": getStaticContentType(assetFile),
+		"Content-Length": String(stat.size),
+		"Cache-Control":
+			assetPath === "index.html" ? "no-store" : "public, max-age=31536000, immutable",
+		"X-Content-Type-Options": "nosniff",
+	});
+	if (headOnly) {
+		res.end();
+		return true;
+	}
+	createReadStream(assetFile)
+		.on("error", () => {
+			if (!res.headersSent) {
+				sendJson(res, 404, {
+					error: {
+						message: "Operator UX asset could not be read.",
+						type: "not_found_error",
+					},
+				} satisfies HttpErrorPayload);
+				return;
+			}
+			res.destroy();
+		})
+		.pipe(res);
+	return true;
 }
 
 function matchesDashboardAssetPath(pathname: string, dashboardPath: string): boolean {
-  return pathname === dashboardPath
-    || pathname === `${dashboardPath}/`
-    || pathname.startsWith(`${dashboardPath}/assets/`);
+	return (
+		pathname === dashboardPath ||
+		pathname === `${dashboardPath}/` ||
+		pathname.startsWith(`${dashboardPath}/assets/`)
+	);
 }
 
 function resolveDashboardAssetPath(pathname: string, dashboardPath: string): string {
-  if (pathname === dashboardPath || pathname === `${dashboardPath}/`) {
-    return 'index.html';
-  }
-  return decodeURIComponent(pathname.slice(`${dashboardPath}/`.length));
+	if (pathname === dashboardPath || pathname === `${dashboardPath}/`) {
+		return "index.html";
+	}
+	return decodeURIComponent(pathname.slice(`${dashboardPath}/`.length));
 }
 
 async function findOperatorUxDistDir(): Promise<string | null> {
-  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    path.resolve(moduleDir, '../../operator-ux'),
-    path.resolve(process.cwd(), 'dist/operator-ux'),
-  ];
-  for (const candidate of candidates) {
-    try {
-      const stat = await fs.stat(path.join(candidate, 'index.html'));
-      if (stat.isFile()) return candidate;
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return null;
+	const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+	const candidates = [
+		path.resolve(moduleDir, "../../operator-ux"),
+		path.resolve(process.cwd(), "dist/operator-ux"),
+	];
+	for (const candidate of candidates) {
+		try {
+			const stat = await fs.stat(path.join(candidate, "index.html"));
+			if (stat.isFile()) return candidate;
+		} catch {
+			// Try the next candidate.
+		}
+	}
+	return null;
 }
 
 function getStaticContentType(filePath: string): string {
-  switch (path.extname(filePath).toLowerCase()) {
-    case '.html':
-      return 'text/html; charset=utf-8';
-    case '.js':
-      return 'text/javascript; charset=utf-8';
-    case '.css':
-      return 'text/css; charset=utf-8';
-    case '.svg':
-      return 'image/svg+xml';
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.webp':
-      return 'image/webp';
-    case '.ico':
-      return 'image/x-icon';
-    default:
-      return 'application/octet-stream';
-  }
+	switch (path.extname(filePath).toLowerCase()) {
+		case ".html":
+			return "text/html; charset=utf-8";
+		case ".js":
+			return "text/javascript; charset=utf-8";
+		case ".css":
+			return "text/css; charset=utf-8";
+		case ".svg":
+			return "image/svg+xml";
+		case ".png":
+			return "image/png";
+		case ".jpg":
+		case ".jpeg":
+			return "image/jpeg";
+		case ".webp":
+			return "image/webp";
+		case ".ico":
+			return "image/x-icon";
+		default:
+			return "application/octet-stream";
+	}
 }
 
 function createMissingOperatorUxHtml(): string {
-  return `<!doctype html>
+	return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7013,75 +8038,86 @@ function createMissingOperatorUxHtml(): string {
 }
 
 function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset): void {
-  const headers: Record<string, string> = {
-    'Content-Type': asset.mimeType,
-    'Content-Length': String(asset.size),
-    'Cache-Control': 'private, max-age=300',
-    'X-Content-Type-Options': 'nosniff',
-  };
-  const fileName = sanitizeContentDispositionFilename(asset.fileName);
-  if (fileName) {
-    headers['Content-Disposition'] = `attachment; filename="${fileName}"`;
-  }
-  res.writeHead(200, {
-    ...headers,
-  });
-  createReadStream(asset.path).on('error', () => {
-    if (!res.headersSent) {
-      sendJson(res, 404, {
-        error: {
-          message: 'Cached asset could not be read.',
-          type: 'not_found_error',
-        },
-      });
-      return;
-    }
-    res.destroy();
-  }).pipe(res);
+	const headers: Record<string, string> = {
+		"Content-Type": asset.mimeType,
+		"Content-Length": String(asset.size),
+		"Cache-Control": "private, max-age=300",
+		"X-Content-Type-Options": "nosniff",
+	};
+	const fileName = sanitizeContentDispositionFilename(asset.fileName);
+	if (fileName) {
+		headers["Content-Disposition"] = `attachment; filename="${fileName}"`;
+	}
+	res.writeHead(200, {
+		...headers,
+	});
+	createReadStream(asset.path)
+		.on("error", () => {
+			if (!res.headersSent) {
+				sendJson(res, 404, {
+					error: {
+						message: "Cached asset could not be read.",
+						type: "not_found_error",
+					},
+				});
+				return;
+			}
+			res.destroy();
+		})
+		.pipe(res);
 }
 
 function sanitizeContentDispositionFilename(fileName: string | null | undefined): string | null {
-  const trimmed = typeof fileName === 'string' ? fileName.trim() : '';
-  if (!trimmed) return null;
-  return path.basename(trimmed).replace(/["\r\n\\]/g, '_').slice(0, 180) || null;
+	const trimmed = typeof fileName === "string" ? fileName.trim() : "";
+	if (!trimmed) return null;
+	return (
+		path
+			.basename(trimmed)
+			.replace(/["\r\n\\]/g, "_")
+			.slice(0, 180) || null
+	);
 }
 
-function createOperatorBrowserDashboardHtml(input: {
-  activePage?: 'browser' | 'account-mirror' | 'preview-session' | 'config' | 'agents';
-  routes?: OperatorDashboardRoutes;
-} = {}): string {
-  const activePage = input.activePage ?? 'browser';
-  const routes = input.routes ?? resolveOperatorDashboardRoutes(undefined);
-  const dashboardPath = escapeHtmlAttribute(routes.dashboardPath);
-  const debugDashboardPath = escapeHtmlAttribute(routes.debugDashboardPath);
-  const accountMirrorPath = escapeHtmlAttribute(routes.accountMirrorPath);
-  const previewSessionPath = escapeHtmlAttribute(routes.previewSessionPath);
-  const configPath = escapeHtmlAttribute(routes.configPath);
-  const agentsPath = escapeHtmlAttribute(routes.agentsPath);
-  const browserCurrent = activePage === 'browser' ? ' aria-current="page"' : '';
-  const accountMirrorCurrent = activePage === 'account-mirror' ? ' aria-current="page"' : '';
-  const previewSessionCurrent = activePage === 'preview-session' ? ' aria-current="page"' : '';
-  const configCurrent = activePage === 'config' ? ' aria-current="page"' : '';
-  const agentsCurrent = activePage === 'agents' ? ' aria-current="page"' : '';
-  const pageTitle = activePage === 'account-mirror'
-    ? 'AuraCall Account Mirror'
-    : activePage === 'preview-session'
-      ? 'AuraCall Preview Session'
-      : activePage === 'config'
-        ? 'AuraCall Config'
-        : activePage === 'agents'
-          ? 'AuraCall Agents / Teams'
-          : 'AuraCall Browser Ops';
-  const pageDescription = activePage === 'account-mirror'
-    ? 'Read-only account mirror navigation backed by cached provider indexes.'
-    : activePage === 'preview-session'
-      ? 'Cache-only review of selected account mirror preview assets.'
-      : activePage === 'config'
-        ? 'Read-only effective service routing and operator URL discovery.'
-        : activePage === 'agents'
-          ? 'Read-only team and runtime inspection backed by existing API endpoints.'
-          : 'Local operator view. Browser diagnostics run only when requested.';
-  return `<!doctype html>
+function createOperatorBrowserDashboardHtml(
+	input: {
+		activePage?: "browser" | "account-mirror" | "preview-session" | "config" | "agents";
+		routes?: OperatorDashboardRoutes;
+	} = {},
+): string {
+	const activePage = input.activePage ?? "browser";
+	const routes = input.routes ?? resolveOperatorDashboardRoutes(undefined);
+	const dashboardPath = escapeHtmlAttribute(routes.dashboardPath);
+	const debugDashboardPath = escapeHtmlAttribute(routes.debugDashboardPath);
+	const accountMirrorPath = escapeHtmlAttribute(routes.accountMirrorPath);
+	const previewSessionPath = escapeHtmlAttribute(routes.previewSessionPath);
+	const configPath = escapeHtmlAttribute(routes.configPath);
+	const agentsPath = escapeHtmlAttribute(routes.agentsPath);
+	const browserCurrent = activePage === "browser" ? ' aria-current="page"' : "";
+	const accountMirrorCurrent = activePage === "account-mirror" ? ' aria-current="page"' : "";
+	const previewSessionCurrent = activePage === "preview-session" ? ' aria-current="page"' : "";
+	const configCurrent = activePage === "config" ? ' aria-current="page"' : "";
+	const agentsCurrent = activePage === "agents" ? ' aria-current="page"' : "";
+	const pageTitle =
+		activePage === "account-mirror"
+			? "AuraCall Account Mirror"
+			: activePage === "preview-session"
+				? "AuraCall Preview Session"
+				: activePage === "config"
+					? "AuraCall Config"
+					: activePage === "agents"
+						? "AuraCall Agents / Teams"
+						: "AuraCall Browser Ops";
+	const pageDescription =
+		activePage === "account-mirror"
+			? "Read-only account mirror navigation backed by cached provider indexes."
+			: activePage === "preview-session"
+				? "Cache-only review of selected account mirror preview assets."
+				: activePage === "config"
+					? "Read-only effective service routing and operator URL discovery."
+					: activePage === "agents"
+						? "Read-only team and runtime inspection backed by existing API endpoints."
+						: "Local operator view. Browser diagnostics run only when requested.";
+	return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -8150,7 +9186,7 @@ function createOperatorBrowserDashboardHtml(input: {
         return;
       }
       $('configIdentitySummary').innerHTML = '<table><thead><tr>'
-        + '<th>Provider</th><th>Runtime Profile</th><th>Browser Profile</th><th>Expected</th><th>Detected</th><th>Account Level</th><th>Status</th>'
+        + '<th>Provider</th><th>Tenant Key</th><th>Binding Key</th><th>Runtime Profile</th><th>Browser Profile</th><th>Expected</th><th>Detected</th><th>Account Level</th><th>Status</th>'
         + '</tr></thead><tbody>'
         + entries.map((entry) => {
           const expected = entry.expectedIdentityKey || 'missing';
@@ -8158,6 +9194,8 @@ function createOperatorBrowserDashboardHtml(input: {
           const identityClass = !entry.expectedIdentityKey ? 'bad' : (entry.expectedIdentityKey === entry.detectedIdentityKey ? 'ok' : 'warn');
           return '<tr>'
             + '<td>' + escapeHtml(entry.provider || 'unknown') + '</td>'
+            + '<td>' + escapeHtml(entry.tenantKey || 'unbound') + '</td>'
+            + '<td>' + escapeHtml(entry.bindingKey || 'not reported') + '</td>'
             + '<td>' + escapeHtml(entry.runtimeProfileId || 'default') + '</td>'
             + '<td>' + escapeHtml(entry.browserProfileId || 'default') + '</td>'
             + '<td class="' + identityClass + '">' + escapeHtml(expected) + '</td>'
@@ -8184,10 +9222,12 @@ function createOperatorBrowserDashboardHtml(input: {
         + ' active=' + escapeHtml(String(targets.active ?? 0))
         + '</div>'
         + '<table><thead><tr>'
-        + '<th>Provider</th><th>Runtime Profile</th><th>Desired</th><th>Actual</th><th>Phase</th><th>Next Attempt</th><th>Completeness</th><th>Controls</th>'
+        + '<th>Provider</th><th>Tenant Key</th><th>Binding Key</th><th>Runtime Profile</th><th>Desired</th><th>Actual</th><th>Phase</th><th>Next Attempt</th><th>Completeness</th><th>Controls</th>'
         + '</tr></thead><tbody>'
         + accounts.map((account) => '<tr>'
           + '<td>' + escapeHtml(account.provider || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(account.tenantKey || 'unbound') + '</td>'
+          + '<td>' + escapeHtml(account.bindingKey || 'not reported') + '</td>'
           + '<td>' + escapeHtml(account.runtimeProfileId || 'default') + '</td>'
           + '<td>' + escapeHtml(account.desiredState || 'unknown') + '</td>'
           + '<td>' + escapeHtml(account.actualStatus || 'unknown') + '</td>'
@@ -10168,6 +11208,8 @@ function createOperatorBrowserDashboardHtml(input: {
             rows.push({
               rowIndex,
               provider: entry.provider || 'unknown',
+              tenantKey: entry.tenantKey || 'unbound',
+              bindingKey: entry.bindingKey || 'not reported',
               runtimeProfileId: entry.runtimeProfileId || 'unknown',
               boundIdentityKey: entry.boundIdentityKey || 'unbound',
               status: entry.status || 'unknown',
@@ -10949,6 +11991,8 @@ function createOperatorBrowserDashboardHtml(input: {
         'Updated',
         'State',
         'Identity',
+        'Tenant Key',
+        'Binding Key',
         'Actions',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + rows.map(renderMirrorCatalogRow).join('') + '</tbody></table></div>';
     }
@@ -10962,6 +12006,8 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td class="wrap">' + escapeHtml(row.timestamp) + '</td>',
         '<td><div class="badges">' + renderCatalogTranscriptBadge(row) + renderCatalogMaterializationBadge(row) + '</div></td>',
         '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
+        '<td class="wrap">' + escapeHtml(row.tenantKey) + '</td>',
+        '<td class="wrap">' + escapeHtml(row.bindingKey) + '</td>',
         '<td>' + renderCatalogRowActions(row, itemPath) + '</td>',
       ].join('') + '</tr>';
     }
@@ -11445,6 +12491,8 @@ function createOperatorBrowserDashboardHtml(input: {
       const fields = [
         ['Kind', detail.kind || 'unknown'],
         ['Provider', detail.provider || 'unknown'],
+        ['Tenant Key', detail.tenantKey || 'unbound'],
+        ['Binding Key', detail.bindingKey || 'not reported'],
         ['Profile', detail.runtimeProfileId || 'unknown'],
         ['Identity', detail.boundIdentityKey || 'unbound'],
         ['ID', detail.itemId || formatCatalogItemId(item)],
