@@ -1,5 +1,45 @@
 # RUNBOOK
 
+## Turn 166 | 2026-05-27
+
+- Active plan:
+  `docs/dev/plans/0075-2026-05-27-roadmap-governance-hygiene.md`
+- Goal: execute the roadmap governance cleanup and close Plan 0075.
+- Result:
+  - replaced old-checkout absolute roadmap link targets with repo-relative
+    targets.
+  - normalized plans 0064 through 0069 to canonical `State:` headers.
+  - reconciled stale plan state by closing historical Plan 0014 and moving
+    parked response-shape Plan 0020 to `PLANNED`.
+  - refreshed `ROADMAP.md` `Now` to resume the Plan 0063 lazy account mirror
+    service-mode lane from current runtime evidence instead of stale
+    browser-profile proof wording.
+  - hardened `scripts/audit-plan-library.ts` so missing/legacy/invalid plan
+    state headers and stale old-checkout absolute paths fail `plans:audit`.
+- Verification:
+  - `pnpm run plans:audit -- --keep 75`
+  - `pnpm run typecheck`
+  - `rg 'workspace[.]local/oracle' ROADMAP.md docs/dev/plans`
+  - plan-state inventory over `docs/dev/plans/*.md`
+  - ROADMAP `docs/dev/...` link-resolution check
+  - `git diff --check`
+
+## Turn 165 | 2026-05-27
+
+- Active plan:
+  `docs/dev/plans/0075-2026-05-27-roadmap-governance-hygiene.md`
+- Goal: convert the roadmap audit findings into a bounded cleanup plan.
+- Result:
+  - opened Plan 0075 for roadmap governance hygiene.
+  - scoped stale absolute link cleanup, canonical `State:` header
+    normalization, active/parked plan reconciliation, `Now` section refresh,
+    and deterministic plan-audit hardening.
+  - wired Plan 0075 into `ROADMAP.md` as the immediate next action.
+- Verification:
+  - planning-only slice
+  - `pnpm run plans:audit -- --keep 75`
+  - `git diff --check`
+
 ## Turn 164 | 2026-05-26
 
 - Active plan:

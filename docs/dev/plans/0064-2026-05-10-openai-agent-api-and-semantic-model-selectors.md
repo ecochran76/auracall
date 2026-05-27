@@ -1,6 +1,6 @@
 # OpenAI Agent API and Semantic Model Selectors
 
-Status: OPEN
+State: OPEN
 Date: 2026-05-10
 
 ## Context

@@ -1,6 +1,6 @@
 # Browser-Service Reattach Reliability Plan | 0014-2026-04-14
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Current State
@@ -19,7 +19,8 @@ Lane: P01
   - `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`
 - no active browser-service reliability follow-up remains open from this
   incident
-- this remains the live focused reliability slice under the canonical browser-service roadmap
+- this remains historical context under the canonical browser-service roadmap,
+  not a live focused reliability slice
 - the long-running browser-service roadmap is already canonical under:
   - `docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md`
 - the current need is stable canonical placement for the focused reattach reliability track, not a rewrite of its slice breakdown

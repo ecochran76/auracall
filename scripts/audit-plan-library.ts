@@ -27,6 +27,8 @@ type Candidate = {
     hasNonGoals: boolean;
     hasDefinitionOfDone: boolean;
     hasPlanState: boolean;
+    planState: string | null;
+    hasLegacyStatusHeader: boolean;
     mentionsSuperseded: boolean;
     mentionsTemplate: boolean;
   };
@@ -46,7 +48,9 @@ type Report = {
     keepCount: number;
     mergeCount: number;
     retireCount: number;
+    validationErrorCount: number;
   };
+  validationErrors: string[];
   candidates: Candidate[];
 };
 
@@ -57,6 +61,8 @@ const plansDir = join(docsDevDir, 'plans');
 const roadmapPath = join(repoRoot, 'ROADMAP.md');
 const runbookPath = join(repoRoot, 'RUNBOOK.md');
 const agentsPath = join(repoRoot, 'AGENTS.md');
+const validPlanStates = new Set(['PLANNED', 'OPEN', 'CLOSED', 'CANCELLED']);
+const staleWorkspacePath = '/home/ecochran76/workspace.local/oracle';
 
 const jsonMode = process.argv.includes('--json');
 
@@ -126,6 +132,49 @@ function formatDateFromIso(isoDate: string): string {
   return isoDate.slice(0, 10);
 }
 
+function parseCanonicalState(text: string): string | null {
+  return text.match(/^State:\s+([A-Z]+)\s*$/m)?.[1] ?? null;
+}
+
+function hasLegacyStatusHeader(text: string): boolean {
+  const header = text.split(/\r?\n/, 8).join('\n');
+  return /^Status:\s+/m.test(header);
+}
+
+function collectValidationErrors(
+  rawCandidates: Array<{ relPath: string; text: string; contentSignals: Candidate['contentSignals'] }>
+): string[] {
+  const errors: string[] = [];
+
+  if (roadmapText.includes(staleWorkspacePath)) {
+    errors.push(`ROADMAP.md: contains stale absolute workspace path ${staleWorkspacePath}`);
+  }
+
+  for (const candidate of rawCandidates) {
+    if (!candidate.relPath.startsWith('docs/dev/plans/')) {
+      continue;
+    }
+    if (candidate.text.includes(staleWorkspacePath)) {
+      errors.push(`${candidate.relPath}: contains stale absolute workspace path ${staleWorkspacePath}`);
+    }
+    if (candidate.contentSignals.hasLegacyStatusHeader) {
+      errors.push(`${candidate.relPath}: use canonical State: header, not Status:`);
+    }
+    const state = candidate.contentSignals.planState;
+    if (!state) {
+      errors.push(`${candidate.relPath}: missing canonical State: header`);
+      continue;
+    }
+    if (!validPlanStates.has(state)) {
+      errors.push(
+        `${candidate.relPath}: invalid State value "${state}" (expected ${Array.from(validPlanStates).join('/')})`
+      );
+    }
+  }
+
+  return errors;
+}
+
 const roadmapText = readFileSync(roadmapPath, 'utf8');
 const runbookText = readFileSync(runbookPath, 'utf8');
 const agentsText = readFileSync(agentsPath, 'utf8');
@@ -137,6 +186,7 @@ const rawCandidates = walkMarkdownFiles(docsDevDir)
     const basename = relPath.split('/').at(-1) ?? relPath;
     const stats = statSync(absPath);
     const text = readFileSync(absPath, 'utf8');
+    const planState = parseCanonicalState(text);
     const referenceCounts = {
       roadmap: countMentions(roadmapText, relPath),
       runbook: countMentions(runbookText, relPath),
@@ -147,7 +197,9 @@ const rawCandidates = walkMarkdownFiles(docsDevDir)
       hasAcceptanceCriteria: /\bAcceptance Criteria\b/i.test(text),
       hasNonGoals: /\bNon-Goals\b/i.test(text),
       hasDefinitionOfDone: /\bDefinition of Done\b/i.test(text),
-      hasPlanState: /\b(PLANNED|OPEN|CLOSED|CANCELLED)\b/.test(text),
+      hasPlanState: planState !== null && validPlanStates.has(planState),
+      planState,
+      hasLegacyStatusHeader: hasLegacyStatusHeader(text),
       mentionsSuperseded: /\b(superseded|deprecated|historical|maintenance mode)\b/i.test(text),
       mentionsTemplate: /template/i.test(basename),
     };
@@ -156,10 +208,13 @@ const rawCandidates = walkMarkdownFiles(docsDevDir)
       relPath,
       basename,
       stats,
+      text,
       referenceCounts,
       contentSignals,
     };
   });
+
+const validationErrors = collectValidationErrors(rawCandidates);
 
 const sortedByMtime = [...rawCandidates].sort((a, b) => {
   if (b.stats.mtimeMs !== a.stats.mtimeMs) {
@@ -290,12 +345,17 @@ const report: Report = {
     keepCount: candidates.filter((candidate) => candidate.action === 'keep').length,
     mergeCount: mergeCandidates.length,
     retireCount: candidates.filter((candidate) => candidate.action === 'retire').length,
+    validationErrorCount: validationErrors.length,
   },
+  validationErrors,
   candidates,
 };
 
 if (jsonMode) {
   console.log(JSON.stringify(report, null, 2));
+  if (validationErrors.length > 0) {
+    process.exit(1);
+  }
   process.exit(0);
 }
 
@@ -305,6 +365,14 @@ console.log(`Candidates: ${report.summary.candidateCount}`);
 console.log(
   `Actions: keep=${report.summary.keepCount} merge=${report.summary.mergeCount} retire=${report.summary.retireCount}`
 );
+console.log(`Validation errors: ${report.summary.validationErrorCount}`);
+
+if (validationErrors.length > 0) {
+  console.log('\nValidation errors');
+  for (const error of validationErrors) {
+    console.log(`  - ${error}`);
+  }
+}
 
 for (const candidate of candidates) {
   console.log(`\n[${candidate.action.toUpperCase()}] ${candidate.path}`);
@@ -313,4 +381,8 @@ for (const candidate of candidates) {
     console.log(`  proposedPlanPath=${candidate.proposedPlanPath}`);
   }
   console.log(`  reasons=${candidate.reasons.join('; ')}`);
+}
+
+if (validationErrors.length > 0) {
+  process.exitCode = 1;
 }

@@ -1,6 +1,6 @@
 # Plan 0020 | Deterministic Response Shape Contract
 
-State: OPEN
+State: PLANNED
 
 ## Purpose
 
@@ -9,6 +9,10 @@ validate and route without scraping arbitrary prose.
 
 The first slice is intentionally opt-in. Legacy plain-text execution keeps
 working unless a step requests `auracall.step-output.v1`.
+
+This remains a planned/parked contract-normalization lane. It should reopen as
+active implementation only when a new public routing or readback mismatch makes
+the contract the primary next slice.
 
 ## Current State
 

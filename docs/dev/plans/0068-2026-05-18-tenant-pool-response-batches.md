@@ -1,6 +1,6 @@
 # Tenant-Pool Response Batches
 
-Status: OPEN
+State: OPEN
 Date: 2026-05-18
 Lane: P01
 

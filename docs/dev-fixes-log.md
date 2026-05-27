@@ -1,3 +1,10 @@
+- 2026-05-27: Roadmap governance checks should fail on authority drift, not
+  merely rank plan files. Keep top-level bounded plans on canonical `State:`
+  headers with `PLANNED`, `OPEN`, `CLOSED`, or `CANCELLED`; do not use
+  `Status:` in the header. Keep roadmap/plan links repo-relative rather than
+  tied to a prior workstation checkout, and keep `ROADMAP.md` `Now` pointed at
+  the next current action after a governance cleanup closes.
+
 - 2026-05-26: Gemini live-follow hardening now separates target selection from
   surface navigation in code. Browser-service target reuse can select an
   existing same-origin or compatible-host target without `Page.navigate`, and

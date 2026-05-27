@@ -1,6 +1,6 @@
 # DB-Backed Agent Registry
 
-Status: OPEN
+State: OPEN
 Date: 2026-05-10
 
 ## Context

@@ -1,6 +1,6 @@
 # History-Backed Artifact Materialization
 
-Status: CLOSED
+State: CLOSED
 Date: 2026-05-22
 Lane: P01
 

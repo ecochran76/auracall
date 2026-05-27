@@ -1,3 +1,40 @@
+## Turn 316 | 2026-05-27
+
+- Goal: execute and close the roadmap governance cleanup.
+- Result:
+  - replaced stale old-checkout absolute roadmap link targets with
+    repo-relative targets.
+  - normalized plans 0064 through 0069 from `Status:` to `State:`.
+  - closed Plan 0014 as historical reliability context and moved Plan 0020 to
+    `PLANNED` to match the parked response-shape lane.
+  - refreshed `ROADMAP.md` `Now` to resume the Plan 0063 lazy account mirror
+    service-mode lane from current status instead of stale
+    `chatgpt/wsl-chrome-3` proof wording.
+  - hardened `scripts/audit-plan-library.ts` so governance drift fails
+    `plans:audit`.
+- Verification:
+  - `pnpm run plans:audit -- --keep 75`
+  - `pnpm run typecheck`
+  - `rg 'workspace[.]local/oracle' ROADMAP.md docs/dev/plans`
+  - plan-state inventory over `docs/dev/plans/*.md`
+  - ROADMAP `docs/dev/...` link-resolution check
+  - `git diff --check`
+
+## Turn 315 | 2026-05-27
+
+- Goal: turn the roadmap audit into an executable bounded plan.
+- Result:
+  - opened `docs/dev/plans/0075-2026-05-27-roadmap-governance-hygiene.md`.
+  - planned cleanup for stale `/workspace.local/oracle` roadmap links,
+    noncanonical `Status:` plan headers, active/parked plan-state drift,
+    stale `Now` guidance, and deterministic audit-helper gaps.
+  - updated `ROADMAP.md` so Plan 0075 is the immediate next action before the
+    next product slice.
+- Verification:
+  - planning-only slice
+  - `pnpm run plans:audit -- --keep 75`
+  - `git diff --check`
+
 ## Turn 314 | 2026-05-26
 
 - Goal: verify Plan 0071 campaign-owned checksum proof and remove stale

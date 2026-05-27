@@ -13,6 +13,14 @@ Current State:
 - low-signal loose execution pointers now live under
   `docs/dev/plans/legacy-archive/`
 - planning-authority migration is complete
+- roadmap governance hygiene closed in
+  [docs/dev/plans/0075-2026-05-27-roadmap-governance-hygiene.md](docs/dev/plans/0075-2026-05-27-roadmap-governance-hygiene.md):
+  - stale absolute old-checkout links were replaced with repo-relative links,
+    noncanonical `Status:` plan headers were normalized, stale `Now` guidance
+    was removed, and `plans:audit` now fails on missing/legacy state headers
+    or stale absolute workspace paths
+  - this was a docs/tooling cleanup slice only; no provider browser work or
+    product behavior changed
 - the current product sequence is now pruned to one primary active
   implementation lane:
   - lazy account mirror live-follow/service-mode dogfood after the browser-first
@@ -21,10 +29,10 @@ Current State:
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
   - the earlier profile-scoped dispatcher ownership proof is still closed in
-    [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md)
+    [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md)
   - the concrete mismatch reopened and then closed the browser reliability lane
     in
-    [docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md)
+    [docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md](docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md)
   - browser-service mutation audit now covers navigation/reload/target-reuse
     control points, providers and legacy product flows route through those
     helpers, diagnostics can report recent mutation history, and raw mutating
@@ -424,21 +432,21 @@ Current State:
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable
 - open provider-capability follow-through:
-  - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
+  - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
     API, MCP, and browser-backed Gemini/Grok provider paths
     - Grok Imagine browser-first image/video discovery, invocation, status,
       and materialization are closed in
-      [docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md)
+      [docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md](docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md)
     - legacy Gemini `--generate-image` migration and Gemini API image support
       are closed in
-      [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md)
+      [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md)
       - provider API media access is implemented only as an explicit path and
         parked for current dogfooding; browser-first media/workbench behavior
         remains the active priority
     - xAI API image/video execution and Grok edit/reference workflows remain
       deferred until selected by a separate bounded plan
-  - [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md)
+  - [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md)
     is closed for the browser-first Grok Imagine materialization hardening
     slice
     - closed proof: installed runtime can capture multiple visible generated
@@ -448,7 +456,7 @@ Current State:
       gating
     - non-goal remains deferred: xAI API media execution and Grok
       edit/reference workflows
-  - [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md)
+  - [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md)
     is closed for the ChatGPT image-generation follow-up
     - closed proof: installed runtime selected the ChatGPT Create image
       composer tool, preserved the submitted tab target, passively polled until
@@ -457,7 +465,7 @@ Current State:
     - capability reporting now includes `chatgpt.media.create_image` as a
       static workbench capability and can mark it available from live feature
       signatures
-  - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
+  - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
     is closed for the more general discovery/reporting model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,
     ChatGPT business-plan skills, Gemini media tools, and provider add-ons
@@ -467,7 +475,7 @@ Current State:
     - provider-backed invocation beyond the existing media-generation resource
       remains future work and should use a new bounded per-capability plan
 - runtime browser diagnostics are closed in
-  [docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md)
+  [docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md](docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md)
   - `GET /v1/runtime-runs/inspect?...&diagnostics=browser-state`, CLI
     `api inspect-run --diagnostics browser-state`, and MCP `runtime_inspect`
     expose the same bounded active-run browser snapshot
@@ -475,7 +483,7 @@ Current State:
     visible control counts, provider evidence, and a stored PNG screenshot
     path; they do not expose raw CDP or navigate provider pages
 - status browser diagnostics parity is closed in
-  [docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md)
+  [docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md](docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md)
   - `GET /v1/runs/{id}/status?diagnostics=browser-state`,
     `GET /v1/media-generations/{id}/status?diagnostics=browser-state`, MCP
     `run_status`, and MCP `media_generation_status` now expose the same
@@ -483,38 +491,38 @@ Current State:
   - media diagnostics prefer the Gemini prompt-submission `tabTargetId` when
     present and return honest `unavailable` posture for terminal jobs
 - browser control-plane completion is closed in
-  [docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md)
+  [docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md](docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md)
   - product-code browser mutations are now limited by static regression tests
     to approved browser-service control points
   - raw mutating CDP scripts stay available only as explicit guarded
     development escape hatches
 - browser operation queued dispatch is closed in
-  [docs/dev/plans/0056-2026-04-25-browser-operation-queued-dispatch.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0056-2026-04-25-browser-operation-queued-dispatch.md)
+  [docs/dev/plans/0056-2026-04-25-browser-operation-queued-dispatch.md](docs/dev/plans/0056-2026-04-25-browser-operation-queued-dispatch.md)
   - `BrowserOperationDispatcher.acquireQueued(...)` gives future service/API/MCP
     callers an opt-in wait-for-turn primitive under the same browser-service
     dispatcher key
   - existing fail-fast `acquire(...)` semantics remain available for
     hard-stop human/login/operator flows
 - browser-backed media queued dispatch is closed in
-  [docs/dev/plans/0057-2026-04-25-browser-media-queued-dispatch.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0057-2026-04-25-browser-media-queued-dispatch.md)
+  [docs/dev/plans/0057-2026-04-25-browser-media-queued-dispatch.md](docs/dev/plans/0057-2026-04-25-browser-media-queued-dispatch.md)
   - Gemini/Grok browser media generation now opts into
     `acquireQueued(...)` before provider adapters touch CDP
   - media status timelines can show `browser_operation_queued` and
     `browser_operation_acquired`
   - explicit Grok video readback probes use a raw DevTools dispatcher key
 - browser response queued dispatch is closed in
-  [docs/dev/plans/0058-2026-04-25-browser-response-queued-dispatch.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0058-2026-04-25-browser-response-queued-dispatch.md)
+  [docs/dev/plans/0058-2026-04-25-browser-response-queued-dispatch.md](docs/dev/plans/0058-2026-04-25-browser-response-queued-dispatch.md)
   - normal managed browser response/chat execution now uses
     `acquireQueued(...)` at the shared browser execution boundary
   - login/setup/human-verification flows keep fail-fast busy behavior
 - browser operation queue observability is closed in
-  [docs/dev/plans/0059-2026-04-25-browser-operation-queue-observability.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0059-2026-04-25-browser-operation-queue-observability.md)
+  [docs/dev/plans/0059-2026-04-25-browser-operation-queue-observability.md](docs/dev/plans/0059-2026-04-25-browser-operation-queue-observability.md)
   - browser-state diagnostics can report recent browser-operation queue events
     such as `queued`, `acquired`, and `busy-timeout`
   - CLI runtime inspection renders the queue event count and latest queue event
     next to browser mutation diagnostics
 - browser operation queue status proof is closed in
-  [docs/dev/plans/0060-2026-04-25-browser-operation-queue-status-proof.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0060-2026-04-25-browser-operation-queue-status-proof.md)
+  [docs/dev/plans/0060-2026-04-25-browser-operation-queue-status-proof.md](docs/dev/plans/0060-2026-04-25-browser-operation-queue-status-proof.md)
   - generic local API response run status and MCP `run_status` now have
     controlled coverage proving `browserOperationQueue` survives the
     browser-state diagnostics boundary
@@ -523,45 +531,45 @@ Current State:
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is
   also maintenance-only unless a fresh mismatch is reproduced
 - service/runner topology reassessment is closed in
-  [docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md)
+  [docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md](docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md)
 - read-only runner topology/readiness is closed in
-  [docs/dev/plans/0027-2026-04-21-runner-topology-readiness-status.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0027-2026-04-21-runner-topology-readiness-status.md)
+  [docs/dev/plans/0027-2026-04-21-runner-topology-readiness-status.md](docs/dev/plans/0027-2026-04-21-runner-topology-readiness-status.md)
   - `ExecutionServiceHost` owns `summarizeRunnerTopology()`
   - `/status.runnerTopology` exposes bounded local-server runner readiness
     without changing claim authority
   - multi-runner scheduling, background worker pools, reassignment loops, and
     parallel execution remain deferred
 - scheduler-authority preflight is closed in
-  [docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md)
+  [docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md](docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md)
   - topology visibility and candidate ordering are not assignment authority
   - `api serve` remains a local runner, not a fleet scheduler
 - read-only scheduler-authority evaluator is closed in
-  [docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md)
+  [docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md](docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md)
   - `evaluateStoredExecutionRunSchedulerAuthority(...)` returns deterministic
     authority decisions with `mutationAllowed: false`
   - no HTTP surface, scheduler mutation, worker loop, or automatic
     reassignment was added
 - runtime inspection scheduler-authority readback is closed in
-  [docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md)
+  [docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md](docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md)
   - `GET /v1/runtime-runs/inspect?...&authority=scheduler` exposes optional
     read-only `schedulerAuthority`
   - no scheduler mutation, worker loop, lease acquisition, or reassignment was
     added
 - CLI runtime inspection scheduler-authority readback is closed in
-  [docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md)
+  [docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md](docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md)
   - `auracall api inspect-run ... --authority scheduler` renders the same
     read-only evidence for operators
   - no scheduler mutation, worker loop, lease acquisition, or reassignment was
     added
 - scheduler mutation design is closed in
-  [docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md)
+  [docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md](docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md)
   - first mutation target is explicit single-run operator control:
     `schedulerControl.action = "claim-local-run"`
   - v1 is scoped to the server-local runner only
   - no fleet scheduler, worker loop, non-local assignment, parallel execution,
     new HTTP route, or browser dispatcher bypass is authorized
 - scheduler local-claim control is closed in
-  [docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md)
+  [docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md](docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md)
   - `ExecutionServiceHost` now owns `schedulerControl.action = "claim-local-run"`
   - existing `POST /status` maps the scheduler-control payload/result
   - local claims and expired stale/missing-owner reassignments are allowed only
@@ -569,7 +577,7 @@ Current State:
   - no fleet scheduler, worker loop, non-local assignment, parallel execution,
     new HTTP route, or browser dispatcher bypass was added
 - scheduler roadmap checkpoint is closed in
-  [docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md)
+  [docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md](docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md)
   - do not widen into fleet scheduling or background worker loops yet
   - next bounded implementation target is local-owned active lease execution
     through targeted drain
@@ -577,7 +585,7 @@ Current State:
     follow-through should preserve existing service-host, stored-step, and
     browser-dispatcher ownership boundaries
 - local-owned active lease drain is closed in
-  [docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md)
+  [docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md](docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md)
   - `runControl.action = "drain-run"` can now execute a runnable run whose
     active lease is already owned by the configured server-local runner
   - foreign active leases still skip
@@ -586,7 +594,7 @@ Current State:
   - no scheduler loop, non-local assignment, new HTTP route, or browser
     dispatcher bypass was added
 - scheduler local-control phase closeout is closed in
-  [docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md)
+  [docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md](docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md)
   - keep the explicit operator workflow:
     inspect scheduler authority, `claim-local-run`, then targeted `drain-run`
     when immediate execution is desired
@@ -594,7 +602,7 @@ Current State:
   - scheduler mutation work is paused unless a concrete operator workflow
     shows that the two-step control is too noisy or error-prone
 - team-run background-drain parity is closed in
-  [docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md)
+  [docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md](docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md)
   - `TeamRuntimeBridge` can now create a team runtime without draining it
   - HTTP `POST /v1/team-runs` uses no-drain creation when `api serve`
     background drain is enabled, then schedules the existing server-owned
@@ -603,7 +611,7 @@ Current State:
   - no public input shape, scheduler mutation, multi-runner assignment, or
     parallel team execution was added
 - service/runner roadmap checkpoint is closed in
-  [docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md)
+  [docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md](docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md)
   - no fresh route-neutral runtime mutation was found still owned directly by
     HTTP after Plans 0033-0037
   - keep HTTP responsible for transport, listener lifecycle, timer state,
@@ -620,7 +628,7 @@ Current State:
   - keep service/runner implementation paused until a concrete product
     requirement or ownership/readback mismatch justifies the next bounded plan
 - raw DevTools dispatcher fencing is closed in
-  [docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md)
+  [docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md](docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md)
   - `browser-tools --port <port>` now acquires a port-scoped dispatcher lock
     instead of bypassing browser-service ownership
   - managed-profile browser-tools commands still prefer the managed browser
@@ -628,20 +636,20 @@ Current State:
   - legacy direct-CDP verification scripts remained follow-up work after this
     slice
 - direct CDP script guarding is closed in
-  [docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md)
+  [docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md](docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md)
   - legacy direct-CDP scripts under `scripts/` now require
     `--allow-raw-cdp` or `AURACALL_ALLOW_RAW_CDP=1`
   - the guard keeps those scripts usable for development while making raw CDP
     an explicit escape hatch instead of an accidental browser-service bypass
 - browser-service script-family grouping is closed in
-  [docs/dev/plans/0041-2026-04-22-browser-service-script-family.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0041-2026-04-22-browser-service-script-family.md)
+  [docs/dev/plans/0041-2026-04-22-browser-service-script-family.md](docs/dev/plans/0041-2026-04-22-browser-service-script-family.md)
   - browser-service-related development scripts now have thin wrapper copies
     under `scripts/browser-service/`
   - root script paths remain compatible
   - provider-dependent Grok helpers were kept out of `packages/browser-service`
     to preserve package boundaries
 
-Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
+Use [docs/dev/plans/0001-2026-04-14-execution.md](docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 
 - the primary active service/runner orchestration lane
 - bounded config/team-service follow-through required by that lane
@@ -664,7 +672,7 @@ The next configuration/runtime refactor should separate:
 - immutable launch-plan resolution
 
 Execution docs:
-- Repo-wide plan: [docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md)
+- Repo-wide plan: [docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md](docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md)
 
 Current note:
 - Phase 1 is complete enough through commit `196aad27`
@@ -961,16 +969,16 @@ Sequencing rule:
   main planning/implementation track
 
 Execution docs:
-- Repo-wide plan: [docs/dev/plans/0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
-- Target public shape: [docs/dev/config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
-- Input alias policy: [docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
-- Troubleshooting: [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
-- Agent boundary: [docs/dev/plans/0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
-- Team boundary: [docs/dev/plans/0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
-- Team service execution: [docs/dev/plans/0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
-- Task / run spec: [docs/dev/plans/0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
-- Team run data model: [docs/dev/plans/0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
-- Team run review ledger: [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+- Repo-wide plan: [docs/dev/plans/0007-2026-04-14-config-model-refactor.md](docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
+- Target public shape: [docs/dev/config-model-target-shape.md](docs/dev/config-model-target-shape.md)
+- Input alias policy: [docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md](docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
+- Troubleshooting: [docs/dev/config-shape-troubleshooting.md](docs/dev/config-shape-troubleshooting.md)
+- Agent boundary: [docs/dev/plans/0009-2026-04-14-agent-config-boundary.md](docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
+- Team boundary: [docs/dev/plans/0006-2026-04-14-team-config-boundary.md](docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
+- Team service execution: [docs/dev/plans/0004-2026-04-14-team-service-execution.md](docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+- Task / run spec: [docs/dev/plans/0002-2026-04-14-task-run-spec.md](docs/dev/plans/0002-2026-04-14-task-run-spec.md)
+- Team run data model: [docs/dev/plans/0003-2026-04-14-team-run-data-model.md](docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+- Team run review ledger: [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
 
 Next recommendation:
 - keep broader public team execution writes paused on HTTP/MCP surfaces
@@ -1079,7 +1087,7 @@ Current checkpoint:
 
 Current checkpoint:
 - the first bounded public HTTP team execution write is now live under
-  [docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md)
+  [docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md](docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md)
 - `POST /v1/team-runs` constructs one bounded `TaskRunSpec` from request
   fields and executes through the existing
   `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun` chain
@@ -1087,15 +1095,15 @@ Current checkpoint:
   `runtimeRunId`, status, and links for team inspection, runtime inspection,
   and response readback
 - MCP write parity is now live under
-  [docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md)
+  [docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md](docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md)
 - `auracall-mcp` exposes `team_run`, which uses the same bounded input shape
   and task/team/runtime execution path with explicit MCP provenance
 - the completed contract checkpoint is
-  [docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md)
+  [docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md](docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md)
   which selected the live flattened `TaskRunSpec` schema as the first public
   full-spec compatibility target
 - prebuilt flattened `taskRunSpec` input is now live under
-  [docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md)
+  [docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md](docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md)
   for both HTTP `POST /v1/team-runs` and MCP `team_run`
 
 Current sequencing gate:
@@ -1126,21 +1134,21 @@ Primary goals:
 
 Current checkpoint:
 - Review-ledger checkpoint is complete under:
-  - [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+  - [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
   - completed scope:
     - read-only ledger projection
     - `auracall teams review`
     - stored provider reference enrichment
     - durable failure-derived hard-stop observations
 - Completed checkpoint:
-  - [docs/dev/plans/0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
+  - [docs/dev/plans/0016-2026-04-15-passive-provider-observations.md](docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
   - completed scope:
     - stored passive observation seam on the execution path
     - ChatGPT, Gemini, and Grok provider-parity persistence
     - review-ledger projection of stored passive observations
     - live persisted validation of the bounded provider-parity seam
 - Completed checkpoint:
-  - [docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
+  - [docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md](docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
   - completed scope:
     - opt-in read-only runtime-inspection `serviceState` contract
     - default ChatGPT-backed live probe on the managed browser path
@@ -1150,7 +1158,7 @@ Current checkpoint:
       browser-backed runs when DOM/page evidence is absent
     - executor-owned transient Grok `thinking` state for active
       browser-backed runs when DOM/page evidence is absent
-  - [docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
+  - [docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md](docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
   - completed scope:
     - bounded Gemini quality probing recorded as negative evidence on this
       machine/profile
@@ -1183,10 +1191,10 @@ Sequencing rule:
   appears
 
 Execution docs:
-- Team run review ledger: [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
-- Passive provider observations: [docs/dev/plans/0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
-- Runtime inspection service-state probe: [docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
-- Service-state quality follow-up: [docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
+- Team run review ledger: [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+- Passive provider observations: [docs/dev/plans/0016-2026-04-15-passive-provider-observations.md](docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
+- Runtime inspection service-state probe: [docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md](docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
+- Service-state quality follow-up: [docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md](docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
 
 ### Durable State And Account Mirroring
 Status: maintenance
@@ -1244,7 +1252,7 @@ Next recommendation:
   explicitly before implementing more service behavior
 
 Execution docs:
-- Durable ownership checkpoint: [docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+- Durable ownership checkpoint: [docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md](docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
 
 ### External Control Surfaces
 Status: planned
@@ -1295,7 +1303,7 @@ Current note:
   already has inherited Oracle support across both API and web/browser paths
 - the next Gemini move should be a bounded audit/alignment plan, not a broad
   rewrite:
-  - [docs/dev/plans/0013-2026-04-14-gemini-completion.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0013-2026-04-14-gemini-completion.md)
+  - [docs/dev/plans/0013-2026-04-14-gemini-completion.md](docs/dev/plans/0013-2026-04-14-gemini-completion.md)
 
 Sequencing rule:
 - prefer building shared runtime/orchestration layers first, then expanding
@@ -1331,11 +1339,10 @@ Safety note:
 - Primary active lane checkpoint: service mode and runner orchestration remains
   paused after the current single-host bounded local-runner bridge reached a
   coherent ownership checkpoint
-- Immediate next action: continue
+- Immediate next action: resume the lazy account mirror service-mode lane under
   [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
-  by resuming `chatgpt/wsl-chrome-3` for longer background completion first,
-  with provider-media work back to maintenance unless a new concrete
-  browser/provider drift appears
+  by choosing the next bounded installed-runtime proof from current service
+  status, not from stale `chatgpt/wsl-chrome-3` guidance
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
@@ -1354,7 +1361,7 @@ Safety note:
 - Current provider-drift checkpoint:
   - plain `grok` now resolves to current `grok-4.20` text support
   - first-class media generation across CLI, local API, and MCP is closed in
-    [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
+    [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
   - ChatGPT model-selector drift has been repaired for the prompt workbench:
     `wsl-chrome-3` live smoke found `Extended Pro` at
     `button.__composer-pill` and distinguished `Pro - Extended` from
@@ -1406,10 +1413,10 @@ Primary goals:
 - avoid a big-bang rewrite of ChatGPT, Grok, and Gemini at the same time
 
 Execution docs:
-- Repo-wide plan: [docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md)
-- Inventory: [docs/dev/service-volatility-inventory.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-inventory.md)
-- Per-service plan template: [docs/dev/service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md)
-- First pilot plan: [docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
+- Repo-wide plan: [docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md](docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md)
+- Inventory: [docs/dev/service-volatility-inventory.md](docs/dev/service-volatility-inventory.md)
+- Per-service plan template: [docs/dev/service-volatility-service-plan-template.md](docs/dev/service-volatility-service-plan-template.md)
+- First pilot plan: [docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md](docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
 
 Release discipline:
 - no service migration starts without a service-specific plan
@@ -1418,29 +1425,29 @@ Release discipline:
 ## P03 | Existing Long-Running Tracks
 
 ### Browser Service Hardening
-See [docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md).
+See [docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md](docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md).
 
-Current focused reliability slice:
-- [docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md)
-- [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md) (closed)
-- [docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md) (closed)
-- [docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md) (closed)
-- [docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md) (closed)
-- [docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md) (closed)
-- [docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md) (closed)
-- [docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md) (closed)
-- [docs/dev/plans/0041-2026-04-22-browser-service-script-family.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0041-2026-04-22-browser-service-script-family.md) (closed)
-- [docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md) (closed)
-- [docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md) (closed)
-- [docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md) (closed)
-- [docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md) (closed)
-- [docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md) (closed)
-- [docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md) (closed)
-- [docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md) (closed)
-- [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (closed)
-- [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md) (closed)
-- [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md) (closed)
-- [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md) (closed)
+Historical focused reliability slices:
+- [docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md](docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md) (closed)
+- [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md) (closed)
+- [docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md](docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md) (closed)
+- [docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md](docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md) (closed)
+- [docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md](docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md) (closed)
+- [docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md](docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md) (closed)
+- [docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md](docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md) (closed)
+- [docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md](docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md) (closed)
+- [docs/dev/plans/0041-2026-04-22-browser-service-script-family.md](docs/dev/plans/0041-2026-04-22-browser-service-script-family.md) (closed)
+- [docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md](docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md) (closed)
+- [docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md](docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md) (closed)
+- [docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md](docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md) (closed)
+- [docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md](docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md) (closed)
+- [docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md](docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md) (closed)
+- [docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md](docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md) (closed)
+- [docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md](docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md) (closed)
+- [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (closed)
+- [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md) (closed)
+- [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md) (closed)
+- [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md) (closed)
 
 ### Browser Automation Drift Repairs
-See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).
+See [docs/dev/browser-service-upgrade-backlog.md](docs/dev/browser-service-upgrade-backlog.md).

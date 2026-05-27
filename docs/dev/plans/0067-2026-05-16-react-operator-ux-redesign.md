@@ -1,6 +1,6 @@
 # React Operator UX Redesign
 
-Status: OPEN
+State: OPEN
 Date: 2026-05-16
 Lane: P01
 
