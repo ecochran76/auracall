@@ -1,3 +1,29 @@
+## Turn 317 | 2026-05-27
+
+- Goal: audit completed Plan 0063 work and revise its remaining scope.
+- Result:
+  - audited current repo evidence for account-mirror services, API/CLI/MCP
+    tools, fixture smokes, dashboard surfaces, provider collectors, and
+    installed runtime status.
+  - confirmed `auracall-api.service` was active and `/status` on port `18095`
+    reported `liveFollow.severity = healthy`.
+  - recorded current live-follow readback: ten target rows, six enabled
+    targets, six active targets, three running targets, zero target attention,
+    and scheduler posture `waiting` because foreground AuraCall work was
+    active.
+  - identified live-follow count semantics as the next bounded gap:
+    target active/list counts and completion metrics disagree on active
+    operations.
+  - revised Plan 0063 with completed/partial/moved-out audit sections and a
+    2026-05-27 next implementation slice focused on status/count parity.
+  - updated `ROADMAP.md` `Now` to point at the revised Plan 0063 slice.
+- Verification:
+  - repo/account-mirror implementation inventory
+  - `systemctl --user status auracall-api.service --no-pager --lines=20`
+  - `curl --max-time 8 -fsS http://127.0.0.1:18095/status`
+  - `pnpm run plans:audit -- --keep 75`
+  - `git diff --check`
+
 ## Turn 316 | 2026-05-27
 
 - Goal: execute and close the roadmap governance cleanup.

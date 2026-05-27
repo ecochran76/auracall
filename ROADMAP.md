@@ -1341,8 +1341,9 @@ Safety note:
   coherent ownership checkpoint
 - Immediate next action: resume the lazy account mirror service-mode lane under
   [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
-  by choosing the next bounded installed-runtime proof from current service
-  status, not from stale `chatgpt/wsl-chrome-3` guidance
+  with the 2026-05-27 revised slice: reconcile live-follow active/count
+  semantics across `/status`, CLI, MCP, and `/ops/browser`, then prove the
+  installed-runtime readback on port `18095`
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps

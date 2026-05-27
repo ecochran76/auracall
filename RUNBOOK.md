@@ -1,5 +1,33 @@
 # RUNBOOK
 
+## Turn 167 | 2026-05-27
+
+- Active plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: audit completed Plan 0063 work and revise the open plan around the
+  actual remaining service-mode live-follow slice.
+- Result:
+  - audited repo evidence for account-mirror services, API/CLI/MCP tools,
+    fixture smokes, dashboard surfaces, provider collectors, and installed
+    runtime status.
+  - confirmed the local managed API service was active on port `18095` and
+    `/status.liveFollow.severity` reported `healthy`.
+  - recorded current status evidence: ten target rows, six enabled targets,
+    six active targets, three running targets, zero target attention, and
+    scheduler posture `waiting` due foreground work.
+  - identified the next bounded gap: live-follow target/count semantics
+    disagree with completion metrics, so Plan 0063 now focuses the next slice
+    on status/count parity before adding provider scraping breadth.
+  - revised Plan 0063 with completed/partial/moved-out audit sections and a
+    2026-05-27 next implementation slice.
+  - updated `ROADMAP.md` `Now` to point at that revised Plan 0063 slice.
+- Verification:
+  - repo/account-mirror implementation inventory
+  - `systemctl --user status auracall-api.service --no-pager --lines=20`
+  - `curl --max-time 8 -fsS http://127.0.0.1:18095/status`
+  - `pnpm run plans:audit -- --keep 75`
+  - `git diff --check`
+
 ## Turn 166 | 2026-05-27
 
 - Active plan:
