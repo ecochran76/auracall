@@ -1,3 +1,96 @@
+- 2026-05-29: Roadmap review findings should become bounded roadmap
+  reconciliation work instead of informal cleanup. When the roadmap is
+  structurally valid but semantically stale, open a plan that aligns the
+  Current Execution Board, the UX milestone ladder, and `P02 Now/Soon` while
+  preserving closed-plan history and keeping legacy frontend pages frozen.
+
+- 2026-05-29: The greenfield console Runs workbench is a read-only product
+  workflow, not a control surface until state-specific safety contracts are
+  proven. `/console?view=runs` should load recovery-enabled `/status`, recent
+  runtime runs, runtime/team inspection, generic run status where available,
+  and live-follow completions; show active, waiting, attention, completed, and
+  cancelled work in operator language; and keep raw ids, lease details,
+  route templates, and payloads behind technical disclosure or Diagnostics.
+  Legacy `/dashboard`, `/agents`, `/config`, and `/ops/browser` remain frozen
+  for product work.
+
+- 2026-05-29: The greenfield console Overview is the product health command
+  center, not a raw `/status` replacement. `/console` should default to
+  Overview, fetch `/status` plus agent choices/readback, summarize service,
+  agents, providers, live follow, background drain, and runner posture in
+  operator language, and keep route templates, runner ids, raw status payloads,
+  tenant keys, binding keys, and runtime profiles behind technical disclosure
+  or Diagnostics links. Legacy `/dashboard`, `/agents`, `/config`, and
+  `/ops/browser` remain frozen for product work.
+
+- 2026-05-28: ChatGPT tenant keys must preserve same-email Business vs
+  Personal/Pro account context in agent choices. Use the canonical configured
+  service-account id builder for agent-choice tenant keys so qualifiers such as
+  `accountPlanType`, `accountStructure`, and `organizationId` distinguish
+  accounts that share the same email. The Agents console should then present
+  those as separate Provider account choices; Browser binding remains only the
+  execution/browser disambiguator for a selected provider account.
+
+- 2026-05-28: Agent settings should treat provider account as the primary
+  operator choice and browser binding as a disambiguator only when needed. If a
+  provider account has exactly one valid browser binding, the Agents form
+  should auto-select it and show it as read-only. If the same provider account
+  has multiple valid browser bindings, show only those valid bindings in a
+  Browser binding selector. Never offer not-ready bindings as selectable
+  runtime/profile choices in normal agent settings.
+
+- 2026-05-28: Providers and Projects product UX now belongs in the greenfield
+  `/console` app, not in legacy `/config`, `/agents`, or `/ops/browser`.
+  `/console?view=providers` and `/console?view=projects` should remain
+  readback-first until a later plan explicitly adds safe provider/project
+  mutations. Use existing `agent-choices` data for readiness, linked agents,
+  browser binding, and project/default binding context; keep raw tenant,
+  binding, runtime-profile, profile-path, provider ids, and raw row payloads
+  behind technical-detail disclosure.
+
+- 2026-05-28: Treat AuraCall product UX as a greenfield task-oriented operator
+  console, not a debug-dashboard refactor. Future configuration work should
+  follow `docs/dev/aura-call-ux-specification-guide.md`: structured forms,
+  list/detail work surfaces, inspectors for technical detail, plain-language
+  labels, restrained motion, and a hard boundary between product workflows and
+  Diagnostics. Existing frontend pages such as `/dashboard`, `/agents`,
+  `/config`, and `/ops/browser` are frozen legacy/diagnostic surfaces and
+  should be retired through explicit cutover slices rather than extended.
+
+- 2026-05-28: The first greenfield product console route is `/console`, not a
+  repair of `/dashboard` or `/agents`. Keep console assets under `ux/console`,
+  build them into `dist/console-ux`, and serve them separately from the legacy
+  `operator-ux` bundle. Same-origin operator API access should recognize
+  `/console` as an operator UI referer, while the legacy frontend remains
+  unchanged.
+
+- 2026-05-28: Agent catalog readback should describe agents by tenant intent
+  and execution binding separately. Keep `runtimeProfile` as a compatibility
+  execution selector, but expose resolved `tenantKey`, `bindingKey`, and
+  structured `projectBinding` so downstream apps can select an `agentId`
+  without copying provider account/project internals.
+
+- 2026-05-28: Downstream App Intelligence integrations should fetch
+  `GET /v1/config/agent-choices` for AuraCall-owned service, tenant,
+  execution binding, model selector, extras, and project-binding choices
+  instead of recreating provider-specific option logic in each app. The
+  `/agents` operator page is the human configuration surface for these agents;
+  apps should persist `agentId` and use explicit project overrides only for
+  exceptional runs.
+
+- 2026-05-27: Do not keep extending Plan 0063 for general provider-detail
+  breadth after its service-mode live-follow/account-mirror contract is
+  closed. Future saved gallery, materialization, search, or additional
+  provider-detail work should use a new bounded plan unless it directly fixes
+  a live-follow status/readback regression.
+
+- 2026-05-27: Account-mirror completion metrics must be computed from the
+  uncapped operation set, not the first display page. Treat `queued`,
+  `running`, `idle_waiting`, and `paused` as active states everywhere status
+  readback uses "active"; otherwise older persisted active live-follow records
+  can appear in `/status.liveFollow.targets` and the active list while being
+  omitted from `/status.accountMirrorCompletions.metrics.active`.
+
 - 2026-05-27: Roadmap governance checks should fail on authority drift, not
   merely rank plan files. Keep top-level bounded plans on canonical `State:`
   headers with `PLANNED`, `OPEN`, `CLOSED`, or `CANCELLED`; do not use

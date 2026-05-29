@@ -203,7 +203,7 @@ function createInjectedCompletionService(): AccountMirrorCompletionService {
       if (request.provider && request.provider !== currentCompletion.provider) return [];
       if (request.runtimeProfileId && request.runtimeProfileId !== currentCompletion.runtimeProfileId) return [];
       if (request.status && request.status !== 'active' && request.status !== currentCompletion.status) return [];
-      if (request.activeOnly === true && !['queued', 'running', 'paused'].includes(currentCompletion.status)) return [];
+      if (request.activeOnly === true && !['queued', 'running', 'idle_waiting', 'paused'].includes(currentCompletion.status)) return [];
       return [currentCompletion];
     },
     control(request: AccountMirrorCompletionControlRequest) {

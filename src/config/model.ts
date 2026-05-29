@@ -24,6 +24,9 @@ export interface ProjectedRuntimeProfile {
 
 export interface ProjectedAgent {
   id: string;
+  tenantKey: string | null;
+  bindingId: string | null;
+  bindingKey: string | null;
   runtimeProfileId: string | null;
   browserProfileId: string | null;
   defaultService: ServiceId | null;
@@ -32,10 +35,19 @@ export interface ProjectedAgent {
   modelSelector?: string;
   projectId?: string;
   projectName?: string;
+  projectBinding: ProjectedProjectBinding;
   conversationId?: string;
   conversationName?: string;
   hasKnowledge?: true;
   hasPrompting?: true;
+}
+
+export interface ProjectedProjectBinding {
+  mode: 'none' | 'fixed' | 'alias';
+  source: 'none' | 'agent' | 'service';
+  id?: string;
+  providerProjectId?: string;
+  label?: string;
 }
 
 export interface ProjectedTeamMember {
@@ -533,6 +545,88 @@ function readConfigServiceIdentityKey(service: MutableRecord): string | null {
     normalizeConfigIdentityKey(identity.accountId) ??
     normalizeConfigIdentityKey(identity.name)
   );
+}
+
+function readRuntimeProfileServiceConfig(
+  config: OracleConfig | MutableRecord,
+  runtimeProfile: MutableRuntimeProfile | null | undefined,
+  serviceId: ServiceId | null,
+): MutableRecord | null {
+  if (!serviceId) return null;
+  const globalServices = isRecord((config as MutableRecord).services)
+    ? ((config as MutableRecord).services as MutableRecord)
+    : {};
+  const profileServices = isRecord(runtimeProfile?.services)
+    ? (runtimeProfile.services as MutableRecord)
+    : {};
+  const globalService = isRecord(globalServices[serviceId]) ? globalServices[serviceId] as MutableRecord : {};
+  const profileService = isRecord(profileServices[serviceId]) ? profileServices[serviceId] as MutableRecord : {};
+  const merged = { ...globalService, ...profileService };
+  return Object.keys(merged).length > 0 ? merged : null;
+}
+
+function createProjectedTenantKey(serviceId: ServiceId | null, serviceConfig: MutableRecord | null): string | null {
+  if (!serviceId || !serviceConfig) return null;
+  const identityKey = readConfigServiceIdentityKey(serviceConfig);
+  return identityKey ? `service-account:${serviceId}:${identityKey}` : null;
+}
+
+function createProjectedBindingKey(input: {
+  serviceId: ServiceId | null;
+  runtimeProfileId: string | null;
+  browserProfileId: string | null;
+}): string | null {
+  if (!input.serviceId || !input.runtimeProfileId) return null;
+  const runtimeProfileId = input.runtimeProfileId.trim() || 'default';
+  const browserProfileId = input.browserProfileId?.trim() || 'unbound-browser-profile';
+  return `binding:${input.serviceId}:${runtimeProfileId}:${browserProfileId}`;
+}
+
+function readAgentProjectBinding(
+  agent: MutableAgent,
+  serviceConfig: MutableRecord | null,
+): ProjectedProjectBinding {
+  const configured = isRecord(agent.projectBinding) ? agent.projectBinding : null;
+  if (configured) {
+    const mode =
+      configured.mode === 'none' || configured.mode === 'fixed' || configured.mode === 'alias'
+        ? configured.mode
+        : 'fixed';
+    const id = asNonEmptyString(configured.id);
+    const providerProjectId = asNonEmptyString(configured.providerProjectId);
+    const label = asNonEmptyString(configured.label);
+    return {
+      mode,
+      source: 'agent',
+      ...(id ? { id } : {}),
+      ...(providerProjectId ? { providerProjectId } : {}),
+      ...(label ? { label } : {}),
+    };
+  }
+
+  const agentProjectId = asNonEmptyString(agent.projectId);
+  const agentProjectName = asNonEmptyString(agent.projectName);
+  if (agentProjectId || agentProjectName) {
+    return {
+      mode: 'fixed',
+      source: 'agent',
+      ...(agentProjectId ? { providerProjectId: agentProjectId } : {}),
+      ...(agentProjectName ? { label: agentProjectName } : {}),
+    };
+  }
+
+  const serviceProjectId = asNonEmptyString(serviceConfig?.projectId);
+  const serviceProjectName = asNonEmptyString(serviceConfig?.projectName);
+  if (serviceProjectId || serviceProjectName) {
+    return {
+      mode: 'fixed',
+      source: 'service',
+      ...(serviceProjectId ? { providerProjectId: serviceProjectId } : {}),
+      ...(serviceProjectName ? { label: serviceProjectName } : {}),
+    };
+  }
+
+  return { mode: 'none', source: 'none' };
 }
 
 function readEnabledLiveFollowTenantKey(serviceId: ServiceId, service: MutableRecord): string | null {
@@ -1049,6 +1143,16 @@ export function projectConfigModel(
       const runtimeProfile = getAgentRuntimeProfile(config, agent);
       const runtimeDefaultService = asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined);
       const agentService = asServiceId(agent.service);
+      const serviceId = agentService ?? runtimeDefaultService;
+      const serviceConfig = readRuntimeProfileServiceConfig(config, runtimeProfile, serviceId);
+      const explicitTenantKey = asNonEmptyString(agent.tenantKey);
+      const explicitBindingId = asNonEmptyString(agent.bindingId);
+      const browserProfileId = getRuntimeProfileBrowserProfileId(runtimeProfile);
+      const bindingKey = createProjectedBindingKey({
+        serviceId,
+        runtimeProfileId,
+        browserProfileId,
+      });
       const model = asNonEmptyString(agent.model);
       const modelSelector = asNonEmptyString(agent.modelSelector);
       const projectId = asNonEmptyString(agent.projectId);
@@ -1057,14 +1161,18 @@ export function projectConfigModel(
       const conversationName = asNonEmptyString(agent.conversationName);
       return {
         id,
+        tenantKey: explicitTenantKey ?? createProjectedTenantKey(serviceId, serviceConfig),
+        bindingId: explicitBindingId ?? bindingKey,
+        bindingKey,
         runtimeProfileId,
-        browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
+        browserProfileId,
         defaultService: agentService ?? runtimeDefaultService,
         ...(agentService ? { service: agentService } : {}),
         ...(model ? { model } : {}),
         ...(modelSelector ? { modelSelector } : {}),
         ...(projectId ? { projectId } : {}),
         ...(projectName ? { projectName } : {}),
+        projectBinding: readAgentProjectBinding(agent, serviceConfig),
         ...(conversationId ? { conversationId } : {}),
         ...(conversationName ? { conversationName } : {}),
         ...(hasConfiguredKnowledge(agent) ? { hasKnowledge: true as const } : {}),

@@ -18,6 +18,7 @@ import {
   createAgentRegistryStore,
   type AgentRegistryStore,
 } from './agentRegistryStore.js';
+import { createAgentConfigChoices, type AgentConfigChoices } from './agentChoices.js';
 
 type MutableConfig = Record<string, unknown>;
 
@@ -129,6 +130,7 @@ export interface AgentTeamConfigServiceDeps {
 
 export interface AgentTeamConfigService {
   list(kind?: 'agent' | 'team'): Promise<ConfigEntityMutationResult>;
+  choices(): Promise<AgentConfigChoices & { configPath: string; registryPath: string | null }>;
   effectiveConfig(): Promise<MutableConfig>;
   effectiveCatalog(): Promise<EffectiveAgentCatalog>;
   diagnostics(input?: { apiKeys?: AgentConfigApiKeyDiagnosticInput[] }): Promise<AgentConfigDiagnosticsResult>;
@@ -195,6 +197,16 @@ export function createAgentTeamConfigService(
     async list(kind = 'agent') {
       const config = await readProjectionConfig();
       return result('list', kind, null, config);
+    },
+
+    async choices() {
+      const config = await readProjectionConfig();
+      const catalog = await createEffectiveCatalog(config, registryStore);
+      return {
+        ...createAgentConfigChoices(config, catalog.agents),
+        configPath: targetPath,
+        registryPath: registryStore?.dbPath ?? null,
+      };
     },
 
     async effectiveConfig() {

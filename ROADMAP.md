@@ -7,6 +7,19 @@
 Status: in progress
 Lane: P01
 
+Current Priority Snapshot:
+- Active plan:
+  [docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md](docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md)
+- Current work: reconcile roadmap priority text after Plans 0077 through 0080
+  closed the first greenfield `/console` sequence.
+- Next implementation lane after reconciliation: open the downstream
+  `transcribe-audio` App Intelligence integration plan now that AuraCall has a
+  closed agent tenant/binding choices and configuration surface.
+- Completed console sequence: Agents, Providers, Projects, Overview/Health, and
+  read-only Runs workbench.
+- Deferred AuraCall lanes: safe Runs controls, Search/archive, and API Access
+  remain future bounded plans unless explicitly selected.
+
 Current State:
 - canonical active execution authority now lives under
   `docs/dev/plans/0001-2026-04-14-execution.md`
@@ -21,10 +34,12 @@ Current State:
     or stale absolute workspace paths
   - this was a docs/tooling cleanup slice only; no provider browser work or
     product behavior changed
-- the current product sequence is now pruned to one primary active
-  implementation lane:
-  - lazy account mirror live-follow/service-mode dogfood after the browser-first
-    media provider slices reached closure
+- the current roadmap reconciliation lane is open in
+  [docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md](docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md)
+  after Plans 0077 through 0080 closed the first greenfield `/console`
+  sequence; the next implementation lane should be opened as a new bounded
+  `transcribe-audio` App Intelligence integration plan rather than extending
+  Plan 0063 or treating the legacy frontend as a product target
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -45,7 +60,7 @@ Current State:
   - config/browser/provider work stays bounded maintenance or side-track work
     unless explicitly selected as the primary lane; Plans 0061 and 0062 closed
     the current browser-first Grok/ChatGPT media provider slices
-- account-aware agents and lazy account mirroring are now scoped in
+- account-aware agents and lazy account mirroring are now closed in
   [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
   as a service-mode planning lane:
   - default ChatGPT is the first mirror source because it has the richest
@@ -174,6 +189,15 @@ Current State:
     headline live-follow health line now reports current target counts instead
     of historical failed/cancelled completion totals when target rollups are
     available
+  - the 2026-05-27 service-mode count-parity slice is complete: completion
+    metrics now use uncapped operation lists, `idle_waiting` is an active
+    state consistently, and installed port `18095` readback matched six active
+    completions across `/status`, CLI `api status`, MCP `api_status`, and
+    `/ops/browser` with live-follow severity `healthy`
+  - the 2026-05-27 closure audit verified ChatGPT Library/account-file
+    inventory, Grok account-file/media derivation, and Gemini conversation
+    detail inventory through targeted collector/adapter tests; future saved
+    gallery, materialization, or search breadth should use new bounded plans
 - OpenAI-compatible agent API access and semantic model selectors are now scoped
   in
   [docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md](docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md):
@@ -194,6 +218,77 @@ Current State:
     into the same configured-agent `/v1/responses` runtime path and drains
     synchronously before returning; streaming remains deferred until basic
     client dogfooding is proven
+- Agent tenant/binding semantics are now closed in
+  [docs/dev/plans/0076-2026-05-28-agent-tenant-binding-semantics.md](docs/dev/plans/0076-2026-05-28-agent-tenant-binding-semantics.md):
+  - agent identity should be service plus tenant plus role, while
+    `runtimeProfile` is the current execution binding for that tenant
+  - effective agent catalog entries now expose
+    `tenantKey`, `bindingId`, `bindingKey`, and structured `projectBinding`
+    while preserving compatibility with existing `runtimeProfile`-based agents
+  - `GET /v1/config/agent-choices` now exposes services, tenants, execution
+    bindings, model selectors, provider model ids, extras, project bindings,
+    effective agents, and per-agent validation for AuraCall UX and downstream
+    app selection
+  - `/agents` now includes a bounded agent configuration editor backed by the
+    existing config entity APIs, with load/save/duplicate/archive flows and
+    refreshed choices/diagnostics after mutations
+  - downstream apps such as `transcribe-audio` should select `agentId` and use
+    AuraCall readback for valid service/tenant/model/extras/project choices
+- Product UX work must follow
+  [docs/dev/aura-call-ux-specification-guide.md](docs/dev/aura-call-ux-specification-guide.md):
+  - the product frontend should be task-oriented, modern, animated with
+    restraint, and operator-readable by default
+  - raw JSON, route templates, logs, browser processes, and provider ids belong
+    behind inspectors or under Diagnostics
+  - `/dashboard`, `/agents`, `/config`, and `/ops/browser` are legacy or
+    diagnostic surfaces, not the design baseline for future configuration
+    workflows
+  - the next product frontend should start greenfield on a separate surface;
+    existing frontend pages should remain frozen except for narrow operational
+    bug fixes and explicit retirement/cutover notes
+  - product UX development should advance through high-level milestones instead
+    of extending whichever debug page is closest to the current backend
+    endpoint:
+    1. operator shell and navigation baseline:
+       the new console owns the product shell, task-oriented top navigation,
+       persisted panes, right-side inspector, toasts, accessible icon actions,
+       and a visible link boundary to legacy diagnostics.
+    2. Overview and Health command center:
+       first viewport summarizes service readiness, provider account health,
+       active warnings, recent work, and the next operator action in plain
+       language before exposing technical status detail.
+    3. Agents configuration workflow:
+       replace JSON-first agent editing with a list/detail agent editor using
+       structured controls for service, provider account, browser binding,
+       model selector, extras, project binding, validation, duplicate, archive,
+       and save flows.
+    4. Providers and Projects workflows:
+       provide progressive provider-account setup, browser-binding health,
+       capability discovery, project/default binding management, and read-only
+       health tests while keeping raw tenant/binding/provider ids in
+       inspectors.
+    5. Runs workbench:
+       make active work, response batches, team runs, live-follow operations,
+       queue posture, retries, cancellations, and timelines inspectable from a
+       dense table/detail surface before adding any broader launch controls.
+    6. Search and archive workbench:
+       finish the unified all-tenant search table with cursor loading,
+       virtualized rows, normalized facets, saved views, asset previews,
+       transcript inspection, run/evidence panels, and queue-backed
+       materialization controls where the API contract is already explicit.
+    7. API Access workflow:
+       expose API keys, scopes, reachable agents/teams, secret rotation,
+       audit/readback, and copy-on-create behavior as an operator workflow
+       instead of burying key operations in Health diagnostics.
+    8. Diagnostics boundary:
+       consolidate logs, raw payloads, route templates, browser processes,
+       low-level probes, and legacy inline dashboards under Diagnostics links
+       or drawers, with product pages showing only selected technical detail.
+    9. UX release-quality gate:
+       every product page must satisfy the guide's accessibility,
+       performance, responsive-layout, stable-table, reduced-motion,
+       empty/error/loading-state, and raw-detail-disclosure checklist before it
+       is treated as the durable UI for that workflow.
 - Tenant-pool response batches are now scoped in
   [docs/dev/plans/0068-2026-05-18-tenant-pool-response-batches.md](docs/dev/plans/0068-2026-05-18-tenant-pool-response-batches.md):
   - `teams.<id>.type = "dispatch-pool"` defines batch dispatch teams whose
@@ -431,6 +526,42 @@ Current State:
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable
+  - product pages should follow
+    [docs/dev/aura-call-ux-specification-guide.md](docs/dev/aura-call-ux-specification-guide.md):
+    task-oriented navigation, structured forms, list/detail work surfaces,
+    inspectors for technical detail, clear validation, compact status, and
+    diagnostics separated from normal workflows
+  - greenfield config UX Plan 0077 is now closed in
+    [docs/dev/plans/0077-2026-05-28-agents-configuration-ux.md](docs/dev/plans/0077-2026-05-28-agents-configuration-ux.md):
+    - the existing frontend is frozen for product work and should be retired
+      through explicit cutover slices instead of extended
+    - the first replacement workflow is Agents configuration on the separate
+      `/console` product surface, backed by the existing agent choices/config
+      APIs and Plan 0076 tenant/binding/project readback
+  - greenfield Providers/Projects UX Plan 0078 is closed in
+    [docs/dev/plans/0078-2026-05-28-provider-project-console-ux.md](docs/dev/plans/0078-2026-05-28-provider-project-console-ux.md):
+    - `/console?view=providers` and `/console?view=projects` now make
+      provider-account readiness, browser binding health, project/default
+      bindings, and linked agent setup issues visible in operator language
+    - the legacy frontend pages remain frozen; provider/project UX work belongs
+      in `ux/console` and should keep raw tenant, binding, runtime-profile,
+      profile-path, and provider ids behind inspectors or Diagnostics links
+  - greenfield Overview/Health UX Plan 0079 is closed in
+    [docs/dev/plans/0079-2026-05-29-overview-health-console.md](docs/dev/plans/0079-2026-05-29-overview-health-console.md):
+    - `/console` and `/console?view=overview` now default to an operator
+      command center backed by `/status`, agent choices, and agent readback
+    - the first viewport summarizes service reachability, agent readiness,
+      provider readiness, live-follow posture, background drain, runner
+      topology, and a prioritized attention queue while keeping raw status and
+      route details behind disclosure or Diagnostics links
+  - greenfield Runs workbench UX Plan 0080 is closed in
+    [docs/dev/plans/0080-2026-05-29-runs-workbench-console.md](docs/dev/plans/0080-2026-05-29-runs-workbench-console.md):
+    - `/console?view=runs` now makes response runs, team runs, runtime runs,
+      live-follow operations, queue posture, recovery hints, and timelines
+      inspectable from one dense table/detail workflow
+    - the implemented workbench is read-only; launch, retry, cancel, resume,
+      pause, and drain controls remain deferred until a later bounded plan
+      proves state gates and safety contracts
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
@@ -1336,14 +1467,25 @@ Safety note:
 
 ### Now
 
-- Primary active lane checkpoint: service mode and runner orchestration remains
-  paused after the current single-host bounded local-runner bridge reached a
-  coherent ownership checkpoint
-- Immediate next action: resume the lazy account mirror service-mode lane under
-  [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
-  with the 2026-05-27 revised slice: reconcile live-follow active/count
-  semantics across `/status`, CLI, MCP, and `/ops/browser`, then prove the
-  installed-runtime readback on port `18095`
+- Primary active lane checkpoint: Plan 0081 is open to reconcile roadmap
+  priority text after the first greenfield `/console` sequence closed.
+- Immediate next action after Plan 0081 closes: open the next bounded lane for
+  downstream `transcribe-audio` App Intelligence integration now that AuraCall
+  has a closed agent tenant/binding choices and configuration surface.
+- Service mode and runner orchestration remains paused after the current
+  single-host bounded local-runner bridge reached a coherent ownership
+  checkpoint.
+- Supporting UX action: Plan 0078 is closed for Providers and Projects in the
+  greenfield `/console` surface
+  [docs/dev/plans/0078-2026-05-28-provider-project-console-ux.md](docs/dev/plans/0078-2026-05-28-provider-project-console-ux.md);
+  Plan 0079 is closed for the Overview/Health command center in the same
+  surface
+  [docs/dev/plans/0079-2026-05-29-overview-health-console.md](docs/dev/plans/0079-2026-05-29-overview-health-console.md);
+  Plan 0080 is now closed for the read-only Runs workbench in the same
+  greenfield console
+  [docs/dev/plans/0080-2026-05-29-runs-workbench-console.md](docs/dev/plans/0080-2026-05-29-runs-workbench-console.md);
+  continue leaving `/dashboard`, `/agents`, `/config`, and `/ops/browser`
+  frozen as legacy/diagnostic pages.
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
@@ -1354,11 +1496,10 @@ Safety note:
   `?runnerTopology=full` for forensic debugging; defer publish/release work
   until the installed copy has carried normal use for a short period
 - Current lazy-live-follow checkpoint: installed API service on port `18095`
-  recovered and resumed the default ChatGPT live-follow completion
-  `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`; overnight
-  dogfood advanced through pass 55 with one active completion, zero
-  paused/failed/cancelled completions, ordinary `routine-delayed` cooldown,
-  and `/status.liveFollow.severity = healthy`
+  continues to report aligned active counts across metrics, active list, and
+  live-follow target rollup; current severity can move to `attention-needed`
+  when a real provider/account row fails or lacks identity, which is
+  operator-visible state rather than a Plan 0063 count regression
 - Current provider-drift checkpoint:
   - plain `grok` now resolves to current `grok-4.20` text support
   - first-class media generation across CLI, local API, and MCP is closed in
@@ -1375,16 +1516,20 @@ Safety note:
     `Thinking Extended`, `Pro Standard`, and `Pro Extended` from separate
     model/depth controls, so callers can discover Standard Pro/Thinking even
     when the top-level picker only shows the active depth
-  - ChatGPT image generation is closed under Plan 0062; the next bounded
-    implementation target is lazy-live-follow service-mode dogfood under Plan
-    0063
+  - ChatGPT image generation is closed under Plan 0062, and lazy-live-follow
+    service-mode dogfood is closed under Plan 0063
 
 ### Soon
 
-- External control surfaces media-generation parity and auth/audit review,
-  after the bounded media contract is explicit
-- Agent orchestration and local actions, after handoff/artifact routing has a
-  stable runner-owned transport boundary
+- Downstream App Intelligence integration: `transcribe-audio` should consume
+  AuraCall agent choices, tenant/binding readback, and project/model selection
+  rather than recreating provider-specific option logic.
+- Safe Runs controls: launch, retry, cancel, resume, pause, and drain controls
+  need a separate state-gated safety plan before appearing in the greenfield
+  Runs workbench.
+- Search/archive and API Access workflows: select one as the next AuraCall
+  console lane only after the downstream integration checkpoint is opened or
+  explicitly deferred.
 
 ### Later
 

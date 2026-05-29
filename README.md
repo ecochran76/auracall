@@ -249,6 +249,8 @@ Terminology note:
   `http://auracall.localhost/ops/browser`; `/status.routes` advertises both the
   relative dashboard path and any configured canonical dashboard URLs. Current
   endpoints are:
+  - `GET /console` (greenfield product console; Agents, Providers, and
+    Projects workflows start here)
   - `GET /ops/browser`
   - `GET /account-mirror`
   - `GET /account-mirror/preview-session`

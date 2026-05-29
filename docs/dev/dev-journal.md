@@ -1,3 +1,191 @@
+## Turn 325 | 2026-05-29
+
+- Goal: write a bounded plan for the roadmap review findings.
+- Result:
+  - opened
+    `docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md`.
+  - scoped the work as roadmap priority reconciliation, not product code or
+    frontend implementation.
+  - wired the plan into `ROADMAP.md` with a current-priority snapshot.
+  - preserved the next implementation lane as downstream `transcribe-audio`
+    App Intelligence integration after the reconciliation plan closes.
+  - kept `/dashboard`, `/agents`, `/config`, and `/ops/browser` frozen as
+    legacy/diagnostic surfaces.
+- Verification:
+  - `pnpm run plans:audit -- --keep 81`
+  - `git diff --check`
+
+## Turn 324 | 2026-05-29
+
+- Goal: implement the Runs workbench for the next greenfield console milestone.
+- Result:
+  - implemented
+    `docs/dev/plans/0080-2026-05-29-runs-workbench-console.md`.
+  - added `/console?view=runs` to the greenfield console navigation and route
+    parser.
+  - loaded recovery-enabled `/status`, recent runtime runs, and live-follow
+    completion operations with the existing console readback.
+  - rendered a read-only runs table and selected-run inspector for timeline,
+    output, related records, queue context, and recovery posture.
+  - kept mutation controls out of the workbench; safe controls remain deferred
+    to a later bounded plan.
+  - closed Plan 0080 and updated `ROADMAP.md`, `RUNBOOK.md`, and this journal.
+- Verification:
+  - `pnpm run console:build`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "greenfield console"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `agent-browser` desktop and 375px mobile render checks for
+    `/console?view=runs` with no horizontal overflow, raw technical details
+    hidden by default, and no browser console errors.
+  - `pnpm run install:user-runtime-service`
+  - installed local `/console?view=runs` served the new console asset, and
+    external `https://auracall.ecochran.dyndns.org/console?view=runs`
+    preserved the route through Authelia.
+  - `pnpm run plans:audit -- --keep 80`
+  - `git diff --check`
+
+## Turn 323 | 2026-05-29
+
+- Goal: complete Plan 0079 for the greenfield console Overview and Health
+  command center.
+- Result:
+  - opened and closed
+    `docs/dev/plans/0079-2026-05-29-overview-health-console.md`.
+  - implemented `/console` defaulting to `view=overview` and added
+    `/console?view=overview` route-state support.
+  - Overview now fetches `/status`, agent choices, and agent readback to show
+    service reachability, agent readiness, provider readiness, live-follow
+    posture, background drain, runner posture, and a prioritized attention
+    queue.
+  - kept raw status/route/id details behind technical disclosure and
+    Diagnostics links, with legacy frontend pages still frozen.
+- Verification:
+  - `pnpm run console:build`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "greenfield console"`
+  - `pnpm run typecheck`
+  - `pnpm run plans:audit -- --keep 79`
+  - `git diff --check`
+  - `agent-browser` desktop and 375px mobile render checks for
+    `/console?view=overview` with no horizontal overflow, raw technical details
+    hidden by default, and no browser console errors.
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - installed local `/console?view=overview` served the new console asset, and
+    external `https://auracall.ecochran.dyndns.org/console?view=overview`
+    preserved the route through Authelia.
+
+## Turn 322 | 2026-05-28
+
+- Goal: correct the same-email ChatGPT tenant model behind the Agents settings
+  selector.
+- Result:
+  - changed agent-choice tenant keys to use the canonical configured
+    service-account id builder.
+  - same-email ChatGPT Business/workspace and Personal/Pro accounts now retain
+    `accountPlanType`, `accountStructure`, and `organizationId` qualifiers in
+    Provider account choices.
+  - updated greenfield console Provider account labels so account qualifiers
+    are visible before Browser binding is considered.
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts --maxWorkers 1 --testNamePattern "same-email|choices"`
+  - `pnpm run console:build`
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "agent tenant|greenfield console"`
+  - `git diff --check`
+
+## Turn 321 | 2026-05-28
+
+- Goal: tighten Agents settings so provider account and browser binding are not
+  exposed as independent choices when that would misrepresent the tenant model.
+- Result:
+  - updated the greenfield `ux/console` Agents form so Provider account is the
+    primary selector.
+  - auto-selects and shows Browser binding as read-only when the provider
+    account has exactly one valid browser binding.
+  - shows a Browser binding selector only when the same provider account has
+    multiple valid bindings.
+  - removed not-ready bindings from the selectable Agent settings options.
+- Verification:
+  - `pnpm run console:build`
+  - `agent-browser` proof on `/console?view=agents&agent=auto-chatgpt-consult`:
+    Provider account showed `1 browser binding`, no Browser binding select was
+    present, and the binding was read-only.
+  - `agent-browser` proof on `/console?view=agents&agent=auto-gemini-ecochran76`:
+    Provider account showed `2 browser bindings`, Browser binding select was
+    present, and not-ready options were absent.
+
+## Turn 320 | 2026-05-28
+
+- Goal: complete the next greenfield console UX plan after the Agents workflow
+  landed in `/console`.
+- Result:
+  - opened `docs/dev/plans/0078-2026-05-28-provider-project-console-ux.md`.
+  - planned Providers and Projects workflows around provider-account readiness,
+    browser-binding health, project/default binding inventory, and linked
+    agent setup issues.
+  - implemented `/console?view=providers` and `/console?view=projects` in
+    `ux/console` with route-state navigation, search, readiness filters,
+    status metrics, selected-row inspectors, linked-agent handoff back to
+    Agents, and hidden technical detail disclosure.
+  - reinforced that existing frontend pages remain legacy/diagnostic surfaces
+    and should not be changed for product UX work.
+  - closed Plan 0078 with implemented evidence.
+- Verification:
+  - `pnpm run console:build`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "greenfield console|agent tenant"`
+  - `agent-browser` render checks for Providers and Projects at desktop and
+    375px mobile widths, with no page-level horizontal overflow and raw row
+    details hidden by default
+  - `agent-browser` linked-agent click from Providers to selected Agents route
+  - `pnpm run plans:audit -- --keep 78`
+  - `git diff --check`
+
+## Turn 319 | 2026-05-28
+
+- Goal: write the first greenfield frontend replacement plan and make the
+  no-existing-frontend constraint explicit.
+- Result:
+  - opened `docs/dev/plans/0077-2026-05-28-agents-configuration-ux.md`.
+  - scoped the first replacement workflow around greenfield Agents
+    configuration on a separate product console surface.
+  - froze `/dashboard`, `/agents`, `/config`, and `/ops/browser` for product
+    work; future changes there should be narrow operational fixes or explicit
+    retirement/cutover notes, not product UX work.
+  - aligned `ROADMAP.md`, Plan 0067, the UX guide, and fixes log with the
+    greenfield direction.
+  - implemented the new `ux/console` React/Vite app, served it from `/console`,
+    wired status discovery and same-origin operator API access, and closed Plan
+    0077 with implemented evidence.
+- Verification:
+  - `pnpm run build`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "greenfield console|dashboard alias|status reports local and external service discovery|configured route paths|agent tenant|configures AuraCall agents"`
+  - Puppeteer/Chrome render check against
+    `http://127.0.0.1:18111/console?view=agents` at `1440x1000` and `375x900`
+    with no horizontal overflow and no console errors
+  - `pnpm run plans:audit -- --keep 77`
+  - `git diff --check`
+
+## Turn 318 | 2026-05-28
+
+- Goal: review the AuraCall UX specification guide and update the roadmap with
+  specific but high-level product UX development milestones.
+- Result:
+  - treated `docs/dev/aura-call-ux-specification-guide.md` as the reference UX
+    standard and Plan 0067 as the active React operator UX plan.
+  - added a roadmap milestone ladder for product UX: operator shell/navigation,
+    Overview/Health, Agents, Providers/Projects, Runs, Search/archive, API
+    Access, Diagnostics boundary, and release-quality UX gates.
+  - clarified the current supporting UX action so the next config-UX plan
+    starts with Agents/provider-account/project choices instead of extending
+    inline `/config`.
+- Verification:
+  - docs-only roadmap slice
+  - `pnpm run plans:audit -- --keep 76`
+  - `git diff --check`
+
 ## Turn 317 | 2026-05-27
 
 - Goal: audit completed Plan 0063 work and revise its remaining scope.
@@ -34682,3 +34870,117 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `jq empty ~/.auracall/config.json`
   - `DISPLAY=:10 xdpyinfo`
+
+## Turn 318 | 2026-05-27
+
+- Goal: complete the Plan 0063 service-mode count-parity slice and revise the
+  remaining plan around provider-detail work.
+- Change:
+  - `createAccountMirrorCompletionStatusSummary()` now computes metrics from
+    uncapped completion records and lists active completions with an uncapped
+    active query.
+  - live-follow and ops-browser smoke fixtures now classify `idle_waiting` as
+    active alongside `queued`, `running`, and `paused`.
+  - `tests/http.responsesServer.test.ts` now covers a count-parity regression
+    with many older completed operations plus running and idle-waiting active
+    completions.
+  - Plan 0063 now records the count-parity slice as complete and narrows the
+    next implementation slice to one bounded provider-specific detail surface.
+- Live proof:
+  - reinstalled the user runtime/service with
+    `pnpm run install:user-runtime-service`.
+  - installed `auracall-api.service` on port `18095` reported
+    `liveFollow.severity=healthy`, `metrics.active=6`, active list length `6`,
+    five `idle_waiting` completions, one `running` completion,
+    `liveFollow.activeCompletions=6`, and target actual active count `6`.
+  - installed CLI `api status`, `/ops/browser`, and MCP `api_status` readback
+    matched the same active/running/idle-waiting counts.
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "live-follow completion metrics|account mirror completion operations" --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/mcp.apiStatus.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm run typecheck`
+  - `pnpm run plans:audit -- --keep 75`
+  - `pnpm run install:user-runtime-service`
+  - `curl --max-time 8 -fsS http://127.0.0.1:18095/status`
+  - `/home/ecochran76/.local/bin/auracall api status --port 18095 --timeout-ms 30000 --expect-live-follow-severity healthy --expect-completion-active 6 --json`
+  - `/home/ecochran76/.local/bin/auracall api ops-browser-status --port 18095 --timeout-ms 30000 --expect-live-follow-severity healthy --expect-completion-active 6 --json`
+  - MCP `api_status` handler readback against port `18095`
+
+## Turn 319 | 2026-05-27
+
+- Goal: close Plan 0063 after auditing the remaining provider-detail scope.
+- Change:
+  - Plan 0063 is now `CLOSED`.
+  - `ROADMAP.md` now treats future provider-detail breadth as new bounded-plan
+    work instead of extending Plan 0063.
+  - The closure audit records that ChatGPT Library/account files, Grok
+    account-file/media derivation, and Gemini conversation detail inventory are
+    implemented and test-covered.
+- Runtime note:
+  - installed port `18095` still preserves active count parity across
+    completion metrics, active rows, and live-follow target rollup.
+  - current `attention-needed` severity is explainable provider/account state:
+    `chatgpt/wsl-chrome-2` has a metadata collector timeout in
+    failure-backoff, and two Grok rows are unconfigured/missing expected
+    identity.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1 --testNamePattern "ChatGPT library|Grok account-file|Gemini conversation detail|media manifests"`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts --maxWorkers 1 --testNamePattern "Library|listAccountFiles|account files"`
+  - `curl --max-time 8 -fsS http://127.0.0.1:18095/status`
+
+## Turn 322 | 2026-05-28
+
+- Goal: create a durable AuraCall UX specification guide before restarting
+  frontend/config work.
+- Change:
+  - added `docs/dev/aura-call-ux-specification-guide.md`.
+  - specified the product UX standard for task-oriented navigation, page
+    structure, configuration workflows, structured controls, list/detail
+    surfaces, inspectors, visual design, motion, language, accessibility,
+    performance, and diagnostics separation.
+  - updated Plan 0067 and `ROADMAP.md` so the guide is the review contract for
+    future operator UX work.
+- Verification:
+  - `pnpm run plans:audit -- --keep 75`
+  - `git diff --check`
+
+## Turn 321 | 2026-05-28
+
+- Goal: complete Plan 0076 so AuraCall owns agent choices and the basic agent
+  configuration UX for downstream App Intelligence integrations.
+- Change:
+  - added `src/config/agentChoices.ts` to project services, tenant identities,
+    execution bindings, semantic model selectors, provider model ids, extras,
+    project bindings, effective agents, and per-agent validation.
+  - added `AgentTeamConfigService.choices()` and
+    `GET /v1/config/agent-choices`.
+  - updated `/agents` with read-only choices plus a bounded agent config
+    editor that can load, save, duplicate, and archive agents through the
+    existing config entity APIs.
+  - closed Plan 0076 and updated roadmap/runbook/fixes-log authorities.
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts --maxWorkers 1 --testNamePattern "choices|tenants|bindings|projects|agents"`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "agent tenant|agent choices|registry-backed agents|operator dashboard"`
+  - `pnpm run typecheck`
+
+## Turn 320 | 2026-05-28
+
+- Goal: start the agent tenant/binding semantics migration for AuraCall-backed
+  downstream app intelligence profiles.
+- Change:
+  - opened Plan 0076 for tenant-centered agent semantics.
+  - updated `ROADMAP.md` and `RUNBOOK.md` so Plan 0076 Slice 1 is the active
+    implementation checkpoint.
+  - `AgentConfigSchema` now accepts optional `tenantKey`, `bindingId`, and
+    structured `projectBinding`.
+  - effective agent catalog projection now includes resolved `tenantKey`,
+    `bindingId`, `bindingKey`, and `projectBinding` while preserving existing
+    `runtimeProfile` compatibility behavior.
+  - project-binding readback distinguishes agent-owned, service-inherited, and
+    absent bindings.
+- Verification:
+  - `pnpm vitest run tests/config/agentRegistryStore.test.ts tests/schema/resolver.test.ts --maxWorkers 1 --testNamePattern "agent|tenant|binding|project"`
+  - `pnpm run plans:audit -- --keep 75`
+  - `pnpm run typecheck`
+  - `git diff --check`

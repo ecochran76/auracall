@@ -1,6 +1,6 @@
 # Agent Roles And Lazy Account Mirroring Plan | 0063-2026-04-29
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -17,10 +17,10 @@ browser profile and dispatcher paths as normal browser work.
 
 Audit date: 2026-05-27.
 
-This plan remains `OPEN`, but most of the original implementation surface has
-shipped. It is no longer a bootstrap plan for "first lazy mirror"; it is now
-the governing plan for service-mode live follow, account-mirror status, and
-operator-visible cache/catalog diagnostics.
+This plan is `CLOSED`. It is no longer a bootstrap plan for "first lazy
+mirror"; the shipped surface now covers service-mode live follow,
+account-mirror status, operator-visible cache/catalog diagnostics, and the
+first bounded provider-specific detail inventories.
 
 Implemented and repo-backed:
 
@@ -41,34 +41,28 @@ Implemented and repo-backed:
 - The installed local API service is managed by `auracall-api.service`; on
   2026-05-27 it was active on port `18095` and `/status.liveFollow.severity`
   reported `healthy`.
-- Current live `/status` evidence on 2026-05-27 reported ten configured
-  live-follow target rows: six enabled, one disabled, three unconfigured, zero
-  missing identity, and zero unsupported. It also reported six active target
-  rows, three running targets, zero target attention, two complete mirrors,
-  three in-progress mirrors, and one unknown-completeness mirror.
+- Current live `/status` evidence after the 2026-05-27 count-parity fix
+  reported ten configured live-follow target rows: six enabled, one disabled,
+  three unconfigured, zero missing identity, and zero unsupported. It reported
+  six active target rows, one running target, five idle-waiting active
+  completions, zero target attention, two complete mirrors, three in-progress
+  mirrors, and one unknown-completeness mirror.
 - Current scheduler posture was `waiting` because foreground AuraCall work was
-  active (`backpressureReason = foreground-work`), which is an expected
-  low-priority live-follow wait state rather than provider failure.
+  active (`backpressureReason = foreground-work` on the CLI readback), which is
+  an expected low-priority live-follow wait state rather than provider failure.
 
-Remaining in this plan:
+Closed scope:
 
-- Reconcile live-follow count semantics across `/status.liveFollow.targets`,
-  `/status.accountMirrorCompletions`, CLI, MCP, and `/ops/browser`. The
-  2026-05-27 status readback exposed a concrete mismatch: target rollups and
-  the active completion list showed six active operations, while completion
-  metrics reported four active operations, two running, and two idle-waiting.
-  The next slice must define whether `idle_waiting` is active, then make every
-  readback surface count it consistently.
-- Keep current active backfill/steady-follow operations observable from cached
-  status and scheduler diagnostics without requiring raw JSON or provider
-  browser work.
-- Continue provider-specific detail collection only as bounded follow-up:
+- Current active backfill/steady-follow operations are observable from cached
+  status, target-account rows, and scheduler diagnostics without requiring raw
+  JSON or provider browser work.
+- The bounded provider-specific detail surfaces named by this plan now exist:
   ChatGPT Library/account files, Grok account files/media derivation, and
   Gemini/Grok conversation/project detail parity. Saved/Imagine gallery
   scraping remains deferred until there is a stable read-only index.
-- Keep archive/materialization/reconciliation/search UX work out of this plan
-  unless it directly affects live-follow status or cached account-mirror
-  readback. Those surfaces are governed by their own bounded plans.
+- Archive/materialization/reconciliation/search UX work remains out of this
+  plan unless it exposes a direct live-follow status or cached account-mirror
+  readback bug. Those surfaces are governed by their own bounded plans.
 
 ## Proposed Agent Catalog
 
@@ -791,24 +785,37 @@ Completed:
 - `/status.liveFollow`, CLI `api status`, MCP `api_status`, and `/ops/browser`
   expose compact health/target posture rather than requiring operators to
   reconstruct state from raw scheduler and completion internals.
+- Count semantics are now explicit enough for service-mode handoff:
+  `queued`, `running`, `idle_waiting`, and `paused` are active completion
+  states for metrics/list/readback parity; terminal `blocked`, `failed`,
+  `cancelled`, and `completed` records remain counted by status but are not
+  active.
+- `/status.accountMirrorCompletions.metrics.active`,
+  `/status.accountMirrorCompletions.active`, `/status.liveFollow.targets`,
+  CLI `api status`, MCP `api_status`, and `/ops/browser` now derive the same
+  active count from uncapped completion lists, so older persisted active rows
+  cannot disappear from metrics while still appearing in target readback.
 - Fixture smoke coverage exists for scheduler history, completion control,
   completion hydration, live-follow health parity, ops-browser controls,
   provider guard recovery, and preflight run detail.
 - Installed-runtime dogfood has already proven default ChatGPT, Pro ChatGPT
   profiles, default Grok, and Gemini live-follow paths in multiple slices.
 
-Partially complete / needs the next bounded slice:
+Closure audit:
 
-- Count semantics are not yet clean enough for handoff. Current `/status`
-  evidence shows target active/list counts and completion metrics disagree on
-  active live-follow operations.
-- Current active backfills are visible, but the plan needs one fresh
-  readback-oriented proof that CLI, MCP, API, and dashboard agree on the same
-  active/idle/running/waiting definitions without relying on raw JSON.
-- Provider-specific detail collectors should continue only behind bounded
-  acceptance bars. ChatGPT Library/account-file and Grok account-file/media
-  derivation are in scope; broad gallery scraping and unbounded history chasing
-  remain out of scope.
+- Current active backfills are visible through API/CLI/MCP/dashboard summaries;
+  future provider-detail slices must preserve that readback contract rather
+  than reopening this plan.
+- ChatGPT Library/account-file collection is implemented through the provider
+  `listAccountFiles()` path, bounded collector inventory, account-file cache
+  persistence, and regression tests.
+- Grok account-file/media derivation is implemented through the provider
+  `listAccountFiles()` path, bounded collector inventory, media manifest
+  derivation, account-file cache persistence, and regression tests.
+- Gemini/Grok conversation/project detail parity is implemented at the
+  metadata/detail-inventory level now required by this plan. Further gallery,
+  saved-media, materialization, or search UX breadth should use a new bounded
+  plan.
 
 Moved out of this plan:
 
@@ -825,7 +832,7 @@ Moved out of this plan:
 - Agent-local browser identity overrides.
 - Prompt submission as part of background account mirroring.
 
-## Revised Next Implementation Slice | 2026-05-27
+## Completed Count-Parity Slice | 2026-05-27
 
 Primary goal:
 
@@ -849,29 +856,98 @@ Scope:
 - Preserve low-priority semantics: foreground AuraCall work should keep routine
   live follow in a `waiting` posture, not an unhealthy posture.
 
-Acceptance:
+Result:
+
+- `createAccountMirrorCompletionStatusSummary()` now lists all completion
+  records with `limit: null` for metrics and lists all active records with
+  `status: "active", limit: null`, avoiding the previous top-50 cap mismatch.
+- Fixture completion-service stubs in live-follow and ops-browser smokes treat
+  `idle_waiting` as an active state alongside `queued`, `running`, and
+  `paused`.
+- `tests/http.responsesServer.test.ts` includes a regression fixture with 52
+  older completed operations plus one `running` and one `idle_waiting`
+  completion, proving metrics, active list, and live-follow target rollups stay
+  aligned.
+- Installed-runtime readback on port `18095` after reinstall reported:
+  `metrics.active = 6`, active list length `6`, active statuses
+  `idle_waiting x5` plus `running x1`, `liveFollow.activeCompletions = 6`,
+  `/status.liveFollow.targets.actual.active = 6`, and
+  `liveFollow.severity = healthy`.
+- Installed CLI `api status`, installed `/ops/browser`, and MCP `api_status`
+  readback all matched the same active/running/idle-waiting counts on the
+  same service.
+
+Acceptance status:
 
 - A status fixture with `idle_waiting` and `running` completions produces the
   same active/running/idle/waiting counts across API status, CLI status, MCP
-  `api_status`, and `/ops/browser` summary data.
+  `api_status`, and `/ops/browser` summary data. Complete.
 - `/status.liveFollow.targets.actual.active`,
   `/status.accountMirrorCompletions.metrics.active`, and the visible active
   completion list either match exactly or intentionally use separately named
-  fields with documented meanings.
+  fields with documented meanings. Complete.
 - Scheduler diagnostics can be copied from CLI/MCP/dashboard for every current
-  active live-follow target without raw `/status` inspection.
+  active live-follow target without raw `/status` inspection. Current live
+  service has no scheduler diagnostic rows; active target/account rows remain
+  visible in CLI/MCP/dashboard summaries.
 - Installed-runtime status on port `18095` reports healthy or waiting posture
   with no target attention unless the provider guard or identity state truly
-  requires operator action.
+  requires operator action. Complete for enabled live-follow targets.
 
 Validation:
 
-- `pnpm run plans:audit -- --keep 75`
+- `pnpm vitest run tests/http.responsesServer.test.ts -t "live-follow completion metrics|account mirror completion operations" --maxWorkers 1`
+- `pnpm vitest run tests/accountMirror/completionService.test.ts tests/mcp.apiStatus.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
 - `pnpm run smoke:live-follow-health`
-- targeted account-mirror completion/status tests covering the count
-  definitions
-- installed-runtime `/status`, CLI `api status`, and MCP `api_status` readback
-  against port `18095` when the service is reachable
+- `pnpm run typecheck`
+- `pnpm run plans:audit -- --keep 75`
+- `pnpm run install:user-runtime-service`
+- `curl --max-time 8 -fsS http://127.0.0.1:18095/status`
+- `/home/ecochran76/.local/bin/auracall api status --port 18095 --timeout-ms 30000 --expect-live-follow-severity healthy --expect-completion-active 6 --json`
+- `/home/ecochran76/.local/bin/auracall api ops-browser-status --port 18095 --timeout-ms 30000 --expect-live-follow-severity healthy --expect-completion-active 6 --json`
+- MCP `api_status` handler readback against port `18095` with
+  `timeoutMs: 30000`
+
+## Closure Slice | 2026-05-27
+
+Primary goal:
+
+Close Plan 0063 after verifying that the remaining provider-detail surfaces are
+already implemented and covered by tests, while preserving the now-aligned
+service-mode readback contract.
+
+Scope:
+
+- Verify ChatGPT Library/account files, Grok account files/media derivation,
+  and Gemini conversation detail inventory from current tests and code.
+- Confirm live service-mode readback still preserves active count parity.
+- Record the one current enabled-account attention row as a provider timeout
+  state, not as a Plan 0063 readback/count issue.
+- Mark Plan 0063 closed and move future provider-detail breadth to future
+  bounded plans.
+
+Closure evidence:
+
+- `tests/accountMirror/chatgptMetadataCollector.test.ts` targeted tests passed
+  for ChatGPT Library inventory, Grok account-file/media manifests, and Gemini
+  conversation detail inventory.
+- `tests/browser/chatgptAdapter.test.ts` and `tests/browser/llmServiceFiles.test.ts`
+  targeted tests passed for ChatGPT Library normalization and
+  `listAccountFiles` account-file cache behavior.
+- Installed service `/status` on port `18095` continued to report aligned
+  counts: completion metrics active count matched active list length and
+  live-follow target active count. The live severity had moved to
+  `attention-needed` because `chatgpt/wsl-chrome-2` had a real
+  `failure-backoff` timeout and two Grok rows were unconfigured/missing
+  expected identity; this is operator-visible provider/account state, not a
+  count-parity regression.
+
+Validation:
+
+- Targeted provider collector tests for the selected surface
+- Targeted status/readback tests covering the active completion count contract
+- `pnpm run smoke:live-follow-health`
+- Installed-runtime readback against port `18095` when reachable
 
 ## Completed Implementation History | Retrospective
 

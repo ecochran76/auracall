@@ -594,6 +594,7 @@ interface ApiServiceRoutingConfig {
 	externalHostname?: string;
 	localBaseUrl?: string;
 	externalBaseUrl?: string;
+	consolePath?: string;
 	dashboardPath?: string;
 	debugDashboardPath?: string;
 	accountMirrorPath?: string;
@@ -624,6 +625,7 @@ interface ApiAuthContext {
 type ApiAuthEnv = Record<string, string | undefined>;
 
 interface OperatorDashboardRoutes {
+	consolePath: string;
 	dashboardPath: string;
 	debugDashboardPath: string;
 	accountMirrorPath: string;
@@ -652,6 +654,7 @@ interface ApiServiceDiscovery {
 		accountMirrorUrl: string;
 	};
 	routing: {
+		consolePath: string;
 		dashboardPath: string;
 		debugDashboardPath: string;
 		accountMirrorPath: string;
@@ -760,6 +763,7 @@ interface HttpStatusResponse {
 		browserDomDriftObservations: string;
 		browserDomDriftObservationAcceptTemplate: string;
 		workbenchCapabilitiesList: string;
+		agentConfigChoices: string;
 		agentRegistryDiagnostics: string;
 		configApiKeys: string;
 		configApiKeyIssue: string;
@@ -772,6 +776,7 @@ interface HttpStatusResponse {
 		accountMirrorPreviewSessionDashboard: string;
 		operatorConfigDashboard: string;
 		operatorAgentsDashboard: string;
+		operatorConsole: string;
 		operatorBrowserDashboardUrl?: string;
 		publicOperatorBrowserDashboardUrl?: string;
 		localServiceBaseUrl: string;
@@ -1490,6 +1495,18 @@ export async function createResponsesHttpServer(
 						type: "authentication_error",
 					},
 				} satisfies HttpErrorPayload);
+				return;
+			}
+
+			if (
+				(req.method === "GET" || req.method === "HEAD") &&
+				(await maybeSendConsoleUxAsset(
+					res,
+					url.pathname,
+					operatorDashboardRoutes,
+					req.method === "HEAD",
+				))
+			) {
 				return;
 			}
 
@@ -2772,6 +2789,11 @@ export async function createResponsesHttpServer(
 
 			if (req.method === "GET" && url.pathname === "/v1/config/agents") {
 				sendJson(res, 200, await agentTeamConfigService.list("agent"));
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/config/agent-choices") {
+				sendJson(res, 200, await agentTeamConfigService.choices());
 				return;
 			}
 
@@ -4363,6 +4385,7 @@ function createHttpStatusResponse(input: {
 				"/v1/browser/dom-drift-observations[?service={chatgpt|gemini|grok}&surface={surface}&status=observed|accepted|rejected&limit=50]",
 			browserDomDriftObservationAcceptTemplate:
 				"POST /v1/browser/dom-drift-observations/{observation_id}/accept",
+			agentConfigChoices: "/v1/config/agent-choices",
 			agentRegistryDiagnostics: "/v1/config/agent-diagnostics",
 			configApiKeys: "/v1/config/api-keys",
 			configApiKeyIssue: "POST /v1/config/api-keys/issue",
@@ -4377,6 +4400,7 @@ function createHttpStatusResponse(input: {
 			accountMirrorPreviewSessionDashboard: serviceDiscovery.routing.previewSessionPath,
 			operatorConfigDashboard: serviceDiscovery.routing.configPath,
 			operatorAgentsDashboard: serviceDiscovery.routing.agentsPath,
+			operatorConsole: serviceDiscovery.routing.consolePath,
 			...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
 			...(input.publicDashboardUrl
 				? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl }
@@ -5253,8 +5277,8 @@ async function createAccountMirrorCompletionStatusSummary(
 	service: AccountMirrorCompletionService,
 	now: () => Date,
 ): Promise<AccountMirrorCompletionStatusSummary> {
-	const all = service.list({ limit: 50 });
-	const active = service.list({ status: "active", limit: 10 });
+	const all = service.list({ limit: null });
+	const active = service.list({ status: "active", limit: null });
 	const hydratedAll = service.refreshMaterializationStatuses
 		? await service.refreshMaterializationStatuses(all)
 		: all;
@@ -5576,6 +5600,7 @@ function sameHost(left: string, right: string): boolean {
 
 function isOperatorDashboardPath(pathname: string, routes: OperatorDashboardRoutes): boolean {
 	const dashboardRoutes = [
+		routes.consolePath,
 		routes.dashboardPath,
 		routes.debugDashboardPath,
 		routes.accountMirrorPath,
@@ -5880,6 +5905,7 @@ function readApiServiceRoutingConfig(value: unknown): ApiServiceRoutingConfig | 
 		externalHostname: readNonEmptyString(value.externalHostname),
 		localBaseUrl: readNonEmptyString(value.localBaseUrl),
 		externalBaseUrl: readNonEmptyString(value.externalBaseUrl),
+		consolePath: readNonEmptyString(value.consolePath),
 		dashboardPath: readNonEmptyString(value.dashboardPath),
 		debugDashboardPath: readNonEmptyString(value.debugDashboardPath),
 		accountMirrorPath: readNonEmptyString(value.accountMirrorPath),
@@ -7590,6 +7616,7 @@ function buildApiServiceDiscovery(input: {
 }): ApiServiceDiscovery {
 	const routing = input.serviceRouting ?? {};
 	const {
+		consolePath,
 		dashboardPath,
 		debugDashboardPath,
 		accountMirrorPath,
@@ -7634,6 +7661,7 @@ function buildApiServiceDiscovery(input: {
 				}
 			: {}),
 		routing: {
+			consolePath,
 			dashboardPath,
 			debugDashboardPath,
 			accountMirrorPath,
@@ -7650,12 +7678,14 @@ function buildApiServiceDiscovery(input: {
 function resolveOperatorDashboardRoutes(
 	serviceRouting: ApiServiceRoutingConfig | undefined,
 ): OperatorDashboardRoutes {
+	const consolePath = normalizeRoutePath(serviceRouting?.consolePath) ?? "/console";
 	const dashboardPath = normalizeRoutePath(serviceRouting?.dashboardPath) ?? "/dashboard";
 	const debugDashboardPath =
 		normalizeRoutePath(serviceRouting?.debugDashboardPath) ?? "/ops/browser";
 	const accountMirrorPath =
 		normalizeRoutePath(serviceRouting?.accountMirrorPath) ?? "/account-mirror";
 	return {
+		consolePath,
 		dashboardPath,
 		debugDashboardPath,
 		accountMirrorPath,
@@ -7963,6 +7993,95 @@ async function maybeSendOperatorUxAsset(
 	return true;
 }
 
+async function maybeSendConsoleUxAsset(
+	res: http.ServerResponse,
+	pathname: string,
+	routes: OperatorDashboardRoutes,
+	headOnly = false,
+): Promise<boolean> {
+	const consolePath = routes.consolePath;
+	if (!matchesConsoleAssetPath(pathname, consolePath)) {
+		return false;
+	}
+
+	const assetPath = resolveConsoleAssetPath(pathname, consolePath);
+	const distDir = await findConsoleUxDistDir();
+	if (!distDir) {
+		if (assetPath === "index.html") {
+			sendHtml(res, 200, createMissingConsoleUxHtml());
+			return true;
+		}
+		sendJson(res, 404, {
+			error: {
+				message: "AuraCall console build assets are not available. Run pnpm run console:build.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
+
+	const assetFile = path.resolve(distDir, assetPath);
+	const relative = path.relative(distDir, assetFile);
+	if (relative.startsWith("..") || path.isAbsolute(relative)) {
+		sendJson(res, 404, {
+			error: {
+				message: "AuraCall console asset path is invalid.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
+
+	let stat: Awaited<ReturnType<typeof fs.stat>>;
+	try {
+		stat = await fs.stat(assetFile);
+	} catch {
+		sendJson(res, 404, {
+			error: {
+				message: "AuraCall console asset was not found.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
+	if (!stat.isFile()) {
+		sendJson(res, 404, {
+			error: {
+				message: "AuraCall console asset was not found.",
+				type: "not_found_error",
+			},
+		} satisfies HttpErrorPayload);
+		return true;
+	}
+
+	res.writeHead(200, {
+		"Content-Type": getStaticContentType(assetFile),
+		"Content-Length": String(stat.size),
+		"Cache-Control":
+			assetPath === "index.html" ? "no-store" : "public, max-age=31536000, immutable",
+		"X-Content-Type-Options": "nosniff",
+	});
+	if (headOnly) {
+		res.end();
+		return true;
+	}
+	createReadStream(assetFile)
+		.on("error", () => {
+			if (!res.headersSent) {
+				sendJson(res, 404, {
+					error: {
+						message: "AuraCall console asset could not be read.",
+						type: "not_found_error",
+					},
+				} satisfies HttpErrorPayload);
+				return;
+			}
+			res.destroy();
+		})
+		.pipe(res);
+	return true;
+}
+
 function matchesDashboardAssetPath(pathname: string, dashboardPath: string): boolean {
 	return (
 		pathname === dashboardPath ||
@@ -7978,11 +8097,43 @@ function resolveDashboardAssetPath(pathname: string, dashboardPath: string): str
 	return decodeURIComponent(pathname.slice(`${dashboardPath}/`.length));
 }
 
+function matchesConsoleAssetPath(pathname: string, consolePath: string): boolean {
+	return (
+		pathname === consolePath ||
+		pathname === `${consolePath}/` ||
+		pathname.startsWith(`${consolePath}/assets/`)
+	);
+}
+
+function resolveConsoleAssetPath(pathname: string, consolePath: string): string {
+	if (pathname === consolePath || pathname === `${consolePath}/`) {
+		return "index.html";
+	}
+	return decodeURIComponent(pathname.slice(`${consolePath}/`.length));
+}
+
 async function findOperatorUxDistDir(): Promise<string | null> {
 	const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 	const candidates = [
 		path.resolve(moduleDir, "../../operator-ux"),
 		path.resolve(process.cwd(), "dist/operator-ux"),
+	];
+	for (const candidate of candidates) {
+		try {
+			const stat = await fs.stat(path.join(candidate, "index.html"));
+			if (stat.isFile()) return candidate;
+		} catch {
+			// Try the next candidate.
+		}
+	}
+	return null;
+}
+
+async function findConsoleUxDistDir(): Promise<string | null> {
+	const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+	const candidates = [
+		path.resolve(moduleDir, "../../console-ux"),
+		path.resolve(process.cwd(), "dist/console-ux"),
 	];
 	for (const candidate of candidates) {
 		try {
@@ -8032,6 +8183,24 @@ function createMissingOperatorUxHtml(): string {
     <h1>AuraCall Operator</h1>
     <p>The React operator UX build assets are not available in this runtime. Run <code>pnpm run ux:build</code> and restart the API service.</p>
     <p><a href="/ops/browser">Open Browser Ops debug dashboard</a></p>
+  </div>
+</body>
+</html>`;
+}
+
+function createMissingConsoleUxHtml(): string {
+	return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AuraCall Console</title>
+</head>
+<body>
+  <div id="root">
+    <h1>AuraCall Console</h1>
+    <p>The greenfield console build assets are not available in this runtime. Run <code>pnpm run console:build</code> and restart the API service.</p>
+    <p><a href="/ops/browser">Open legacy diagnostics</a></p>
   </div>
 </body>
 </html>`;
@@ -8778,9 +8947,29 @@ function createOperatorBrowserDashboardHtml(
         <div id="agentsTeamsNotice" class="notice" role="status" aria-live="polite">Enter an id to inspect persisted team/runtime state.</div>
         <div class="row" style="margin-bottom: 10px;">
           <button id="loadAgentsDiagnostics" type="button">Refresh Agent Diagnostics</button>
+          <button id="loadAgentChoices" type="button">Refresh Agent Choices</button>
           <span id="agentsDiagnosticsHeadline" class="muted">No agent diagnostics loaded.</span>
         </div>
         <div id="agentsDiagnosticsSummary" class="muted" style="margin-bottom: 10px;">No agent diagnostics loaded.</div>
+        <div id="agentChoicesSummary" class="muted" style="margin-bottom: 10px;">No agent choices loaded.</div>
+        <div class="control-card" style="margin-bottom: 10px;">
+          <div class="control-title"><strong>Agent Configuration</strong></div>
+          <div class="row" style="margin-bottom: 10px;">
+            <label>Agent ID
+              <input id="agentConfigId" placeholder="agent id">
+            </label>
+            <label>Duplicate To
+              <input id="agentConfigDuplicateId" placeholder="new agent id">
+            </label>
+            <button id="loadAgentConfigs" type="button">Load Agents</button>
+            <button id="saveAgentConfig" type="button">Save Agent</button>
+            <button id="duplicateAgentConfig" type="button">Duplicate Agent</button>
+            <button id="archiveAgentConfig" type="button">Archive Agent</button>
+          </div>
+          <textarea id="agentConfigJson" rows="10" style="width: 100%;" spellcheck="false" placeholder='{"runtimeProfile":"default","service":"chatgpt","modelSelector":"chatgpt:pro-extended"}'></textarea>
+          <div id="agentConfigTable" class="muted" style="margin-top: 10px;">No agent configs loaded.</div>
+          <pre id="agentConfigResult">No agent config mutation yet.</pre>
+        </div>
         <div class="row" style="margin-bottom: 10px;">
           <label>Key agent
             <input id="agentApiKeyAgentId" placeholder="agent id">
@@ -9303,6 +9492,249 @@ function createOperatorBrowserDashboardHtml(
         + renderAgentsDiagnosticsSimpleList('Disabled Registry Agents', disabledAgents)
         + renderAgentsDiagnosticsSimpleList('Disabled Registry Teams', disabledTeams)
         + renderAgentsDiagnosticsList('Issues', issues, renderAgentsDiagnosticsIssue);
+    }
+
+    async function loadAgentChoices() {
+      $('agentChoicesSummary').innerHTML = '<span class="muted">Loading agent choices...</span>';
+      try {
+        const payload = await fetchJson('/v1/config/agent-choices');
+        renderAgentChoices(payload);
+        setAgentsTeamsNotice('Agent choices loaded.', payload.validation && payload.validation.ok ? 'ok' : 'warn');
+      } catch (error) {
+        const message = String(error.message || error);
+        $('agentChoicesSummary').innerHTML = '<div class="notice notice-bad">Agent choices failed: ' + escapeHtml(message) + '</div>';
+        setAgentsTeamsNotice('Agent choices failed: ' + message, 'bad');
+      }
+    }
+
+    function renderAgentChoices(payload) {
+      const services = Array.isArray(payload.services) ? payload.services : [];
+      const tenants = Array.isArray(payload.tenants) ? payload.tenants : [];
+      const bindings = Array.isArray(payload.bindings) ? payload.bindings : [];
+      const selectors = Array.isArray(payload.modelSelectors) ? payload.modelSelectors : [];
+      const projects = Array.isArray(payload.projectBindings) ? payload.projectBindings : [];
+      const agentValidation = payload.validation && Array.isArray(payload.validation.agents)
+        ? payload.validation.agents
+        : [];
+      $('agentChoicesSummary').innerHTML = ''
+        + '<h3>Agent Choices</h3>'
+        + '<div class="badges" style="margin-bottom: 8px;">'
+        + renderBadge('services', services.length, services.length ? 'ok' : 'warn')
+        + renderBadge('tenants', tenants.length, tenants.length ? 'ok' : 'warn')
+        + renderBadge('bindings', bindings.length, bindings.length ? 'ok' : 'warn')
+        + renderBadge('selectors', selectors.length, selectors.length ? 'ok' : 'muted')
+        + renderBadge('projects', projects.length, projects.length ? 'ok' : 'muted')
+        + renderBadge('valid agents', agentValidation.filter((agent) => agent.valid).length, payload.validation && payload.validation.ok ? 'ok' : 'warn')
+        + '</div>'
+        + renderAgentChoiceBindings(bindings)
+        + renderAgentChoiceProjects(projects)
+        + renderAgentChoiceValidation(agentValidation)
+        + '<pre>' + escapeHtml(asJson({
+          services,
+          tenants,
+          modelSelectors: selectors,
+          extras: payload.extras || {},
+        })) + '</pre>';
+    }
+
+    function renderAgentChoiceBindings(bindings) {
+      if (!bindings.length) return '<h3>Tenant / Execution Bindings</h3><div class="muted">None.</div>';
+      return '<h3>Tenant / Execution Bindings</h3>'
+        + '<div class="table-wrap"><table><thead><tr>'
+        + '<th>Service</th><th>Tenant</th><th>Runtime Binding</th><th>Browser Profile</th><th>Ready</th>'
+        + '</tr></thead><tbody>'
+        + bindings.map((binding) => '<tr>'
+          + '<td>' + escapeHtml(binding.service || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(binding.tenantKey || 'unresolved') + '</td>'
+          + '<td><code>' + escapeHtml(binding.runtimeProfileId || 'none') + '</code><div class="muted">' + escapeHtml(binding.bindingKey || 'none') + '</div></td>'
+          + '<td>' + escapeHtml(binding.browserProfileId || 'none') + '</td>'
+          + '<td>' + renderStatusText(binding.ready ? 'ready' : 'missing tenant', binding.ready ? 'ok' : 'warn') + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
+
+    function renderAgentChoiceProjects(projects) {
+      if (!projects.length) return '<h3>Project Bindings</h3><div class="muted">None.</div>';
+      return '<h3>Project Bindings</h3>'
+        + '<div class="table-wrap"><table><thead><tr>'
+        + '<th>Service</th><th>Tenant</th><th>Source</th><th>Mode</th><th>Project</th>'
+        + '</tr></thead><tbody>'
+        + projects.map((project) => '<tr>'
+          + '<td>' + escapeHtml(project.service || 'none') + '</td>'
+          + '<td>' + escapeHtml(project.tenantKey || 'unresolved') + '</td>'
+          + '<td>' + escapeHtml(project.source || 'none') + '</td>'
+          + '<td>' + escapeHtml(project.mode || 'none') + '</td>'
+          + '<td>' + escapeHtml(project.providerProjectId || project.id || project.label || 'none') + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
+
+    function renderAgentChoiceValidation(agentValidation) {
+      if (!agentValidation.length) return '<h3>Agent Validation</h3><div class="muted">No agents configured.</div>';
+      return '<h3>Agent Validation</h3>'
+        + '<ul>'
+        + agentValidation.map((agent) => '<li>'
+          + '<strong>' + escapeHtml(agent.agentId || 'unknown') + '</strong> '
+          + renderStatusText(agent.valid ? 'valid' : 'attention', agent.valid ? 'ok' : 'warn')
+          + renderAgentChoiceValidationIssues(agent.issues || [])
+          + '</li>').join('')
+        + '</ul>';
+    }
+
+    function renderAgentChoiceValidationIssues(issues) {
+      if (!Array.isArray(issues) || !issues.length) return '';
+      return '<ul>' + issues.map((issue) => '<li><span class="' + (issue.severity === 'warning' ? 'warn' : 'muted') + '">'
+        + escapeHtml(issue.code || 'issue') + '</span>: ' + escapeHtml(issue.message || '') + '</li>').join('') + '</ul>';
+    }
+
+    async function loadAgentConfigs() {
+      $('agentConfigTable').innerHTML = '<span class="muted">Loading agent configs...</span>';
+      try {
+        const payload = await fetchJson('/v1/config/agents');
+        renderAgentConfigTable(payload.agents || []);
+        $('agentConfigResult').textContent = asJson(payload);
+        setAgentsTeamsNotice('Agent configs loaded.', 'ok');
+      } catch (error) {
+        const message = String(error.message || error);
+        $('agentConfigTable').innerHTML = '<div class="notice notice-bad">Agent config load failed: ' + escapeHtml(message) + '</div>';
+        setAgentsTeamsNotice('Agent config load failed: ' + message, 'bad');
+      }
+    }
+
+    function renderAgentConfigTable(agents) {
+      if (!Array.isArray(agents) || !agents.length) {
+        $('agentConfigTable').innerHTML = '<span class="muted">No agents configured.</span>';
+        return;
+      }
+      $('agentConfigTable').innerHTML = '<div class="table-wrap"><table><thead><tr>'
+        + '<th>Agent</th><th>Service</th><th>Tenant</th><th>Binding</th><th>Project</th><th>Actions</th>'
+        + '</tr></thead><tbody>'
+        + agents.map((agent) => '<tr>'
+          + '<td><code>' + escapeHtml(agent.id || 'unknown') + '</code><div class="muted">' + escapeHtml(agent.source || 'config') + '</div></td>'
+          + '<td>' + escapeHtml(agent.service || agent.defaultService || 'none') + '</td>'
+          + '<td>' + escapeHtml(agent.tenantKey || 'unresolved') + '</td>'
+          + '<td>' + escapeHtml(agent.bindingId || agent.bindingKey || 'none') + '</td>'
+          + '<td>' + escapeHtml(readAgentProjectBindingLabel(agent)) + '</td>'
+          + '<td><button type="button" data-agent-config="' + escapeHtml(JSON.stringify(agent)) + '" onclick="editAgentConfigFromTable(this)">Edit</button></td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
+
+    function readAgentProjectBindingLabel(agent) {
+      const binding = agent && agent.projectBinding ? agent.projectBinding : {};
+      const value = binding.providerProjectId || binding.id || binding.label || agent.projectId || agent.projectName || 'none';
+      return String(value) + ' (' + String(binding.source || 'none') + ')';
+    }
+
+    function editAgentConfigFromTable(button) {
+      try {
+        const agent = JSON.parse(button.dataset.agentConfig || '{}');
+        const config = compactEditableAgentConfig(agent);
+        $('agentConfigId').value = agent.id || '';
+        $('agentConfigJson').value = asJson(config);
+        setAgentsTeamsNotice('Loaded agent ' + (agent.id || 'unknown') + ' for editing.', 'ok');
+      } catch (error) {
+        setAgentsTeamsNotice('Could not load agent config into editor: ' + String(error.message || error), 'bad');
+      }
+    }
+
+    function compactEditableAgentConfig(agent) {
+      const keys = [
+        'runtimeProfile',
+        'runtimeProfileId',
+        'service',
+        'model',
+        'modelSelector',
+        'projectId',
+        'projectName',
+        'projectBinding',
+        'conversationId',
+        'conversationName',
+        'description',
+        'instructions',
+        'prePrompt',
+        'postPrompt',
+        'knowledge',
+        'defaults',
+        'metadata',
+      ];
+      return keys.reduce((acc, key) => {
+        const outputKey = key === 'runtimeProfileId' ? 'runtimeProfile' : key;
+        if (agent[key] !== undefined && acc[outputKey] === undefined) acc[outputKey] = agent[key];
+        return acc;
+      }, compactAgentIdentityOverrides(agent));
+    }
+
+    function compactAgentIdentityOverrides(agent) {
+      const acc = {};
+      if (agent.tenantKey && agent.projectBinding && agent.projectBinding.source === 'agent') {
+        acc.tenantKey = agent.tenantKey;
+      }
+      if (agent.bindingId && agent.bindingId !== agent.bindingKey) {
+        acc.bindingId = agent.bindingId;
+      }
+      return acc;
+    }
+
+    async function saveAgentConfig() {
+      const id = $('agentConfigId').value.trim();
+      if (!id) {
+        setAgentsTeamsNotice('Enter an agent id before saving.', 'warn');
+        return;
+      }
+      let config;
+      try {
+        config = JSON.parse($('agentConfigJson').value || '{}');
+      } catch (error) {
+        setAgentsTeamsNotice('Agent config JSON is invalid: ' + String(error.message || error), 'bad');
+        return;
+      }
+      await mutateAgentConfig(id, config, 'PUT', 'Agent saved.');
+    }
+
+    async function duplicateAgentConfig() {
+      const sourceId = $('agentConfigId').value.trim();
+      const targetId = $('agentConfigDuplicateId').value.trim();
+      if (!sourceId || !targetId) {
+        setAgentsTeamsNotice('Enter source and duplicate target agent ids.', 'warn');
+        return;
+      }
+      let config;
+      try {
+        config = JSON.parse($('agentConfigJson').value || '{}');
+      } catch (error) {
+        setAgentsTeamsNotice('Agent config JSON is invalid: ' + String(error.message || error), 'bad');
+        return;
+      }
+      await mutateAgentConfig(targetId, config, 'PUT', 'Agent duplicated.');
+    }
+
+    async function archiveAgentConfig() {
+      const id = $('agentConfigId').value.trim();
+      if (!id) {
+        setAgentsTeamsNotice('Enter an agent id before archiving.', 'warn');
+        return;
+      }
+      await mutateAgentConfig(id, null, 'DELETE', 'Agent archived.');
+    }
+
+    async function mutateAgentConfig(id, config, method, successMessage) {
+      try {
+        const response = await fetch('/v1/config/agents/' + encodeURIComponent(id), {
+          method,
+          headers: config ? { 'content-type': 'application/json' } : {},
+          body: config ? JSON.stringify(config) : undefined,
+        });
+        const payload = await response.json();
+        $('agentConfigResult').textContent = asJson(payload);
+        if (!response.ok) throw new Error(payload && payload.error ? payload.error.message : 'Request failed.');
+        setAgentsTeamsNotice(successMessage, payload.mutationTarget === 'blocked' ? 'warn' : 'ok');
+        await loadAgentConfigs();
+        await loadAgentChoices();
+        await loadAgentsDiagnostics();
+      } catch (error) {
+        setAgentsTeamsNotice('Agent config mutation failed: ' + String(error.message || error), 'bad');
+      }
     }
 
     function renderAgentsDiagnosticsApiKeys(apiKeys) {
@@ -13491,6 +13923,11 @@ function createOperatorBrowserDashboardHtml(
     $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
     $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
     $('loadAgentsDiagnostics').addEventListener('click', loadAgentsDiagnostics);
+    $('loadAgentChoices').addEventListener('click', loadAgentChoices);
+    $('loadAgentConfigs').addEventListener('click', loadAgentConfigs);
+    $('saveAgentConfig').addEventListener('click', saveAgentConfig);
+    $('duplicateAgentConfig').addEventListener('click', duplicateAgentConfig);
+    $('archiveAgentConfig').addEventListener('click', archiveAgentConfig);
     $('issueAgentApiKey').addEventListener('click', issueAgentApiKey);
     $('downloadAgentSnapshot').addEventListener('click', downloadAgentSnapshot);
     $('dryRunAgentSnapshotImport').addEventListener('click', dryRunAgentSnapshotImport);
@@ -13510,7 +13947,11 @@ function createOperatorBrowserDashboardHtml(
     $('probeRun').addEventListener('click', probeRun);
     initializeMirrorCatalogFiltersFromUrl();
     void initializeMirrorPreviewSession();
-    if (isAgentsTeamsRoute()) void loadAgentsDiagnostics();
+    if (isAgentsTeamsRoute()) {
+      void loadAgentsDiagnostics();
+      void loadAgentChoices();
+      void loadAgentConfigs();
+    }
     refreshStatus();
   </script>
 </body>

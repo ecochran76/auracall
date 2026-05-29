@@ -41,6 +41,11 @@ Remaining:
   pages mature.
 - Keep mutation controls limited to narrow, explicitly validated operator
   workflows until read-only views prove the API contracts.
+- 2026-05-28 product direction update: the current frontend is no longer the
+  product baseline. Keep `/dashboard`, `/agents`, `/config`, and
+  `/ops/browser` available as legacy/diagnostic surfaces, but do not extend
+  them for the new product UX. Greenfield replacement work starts in
+  [docs/dev/plans/0077-2026-05-28-agents-configuration-ux.md](0077-2026-05-28-agents-configuration-ux.md).
 
 ## Product Direction
 
@@ -52,6 +57,13 @@ The durable shell should use:
   tenant config, agents, teams, API keys, and diagnostics
 - animated collapsible left and right panes with persisted widths
 - central viewport for the selected working surface
+
+The product UX standard is now defined in
+[docs/dev/aura-call-ux-specification-guide.md](../aura-call-ux-specification-guide.md).
+Future operator pages should use that guide as the review contract: primary
+screens are task-oriented, technical detail lives in inspectors or
+Diagnostics, structured controls replace JSON-first editing, and the inline
+HTML dashboards remain diagnostic holdovers rather than the design baseline.
 
 Initial route taxonomy:
 

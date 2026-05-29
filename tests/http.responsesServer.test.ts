@@ -25,7 +25,10 @@ import type {
   AccountMirrorCatalogResult,
 } from '../src/accountMirror/catalogService.js';
 import { createAccountMirrorCompletionStore } from '../src/accountMirror/completionStore.js';
-import type { AccountMirrorCompletionOperation } from '../src/accountMirror/completionService.js';
+import type {
+  AccountMirrorCompletionListRequest,
+  AccountMirrorCompletionOperation,
+} from '../src/accountMirror/completionService.js';
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
 import type { AccountMirrorSchedulerPassLedger } from '../src/accountMirror/schedulerLedger.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
@@ -3278,6 +3281,150 @@ describe('http responses adapter', () => {
           activeCompletions: 1,
         },
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('keeps live-follow completion metrics aligned with uncapped active readback', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: { enabled: true },
+            },
+            grok: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: { enabled: true },
+            },
+          },
+        },
+      },
+    };
+    const makeOperation = (
+      id: string,
+      status: AccountMirrorCompletionOperation['status'],
+      provider: AccountMirrorCompletionOperation['provider'] = 'chatgpt',
+      startedAt = '2026-04-30T12:00:00.000Z',
+    ): AccountMirrorCompletionOperation => ({
+      object: 'account_mirror_completion',
+      id,
+      provider,
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: status === 'completed' ? 'steady_follow' : 'backfill_history',
+      status,
+      startedAt,
+      completedAt: status === 'completed' ? '2026-04-30T12:05:00.000Z' : null,
+      nextAttemptAt: status === 'idle_waiting' ? '2026-04-30T12:30:00.000Z' : null,
+      maxPasses: null,
+      passCount: status === 'completed' ? 1 : 3,
+      lastRefresh: null,
+      mirrorCompleteness: status === 'completed' ? completeAccountMirror : {
+        ...completeAccountMirror,
+        state: 'in_progress',
+      },
+      error: null,
+    });
+    const completedOperations = Array.from({ length: 52 }, (_, index) =>
+      makeOperation(
+        `acctmirror_completed_${String(index).padStart(2, '0')}`,
+        'completed',
+        'chatgpt',
+        `2026-04-30T11:${String(index).padStart(2, '0')}:00.000Z`,
+      ),
+    );
+    const running = makeOperation('acctmirror_running_count_parity', 'running', 'chatgpt', '2026-04-29T12:00:00.000Z');
+    const idleWaiting = makeOperation('acctmirror_idle_count_parity', 'idle_waiting', 'grok', '2026-04-29T12:01:00.000Z');
+    const operations = [...completedOperations, running, idleWaiting];
+    const activeStatuses = new Set(['queued', 'running', 'idle_waiting', 'paused']);
+    const list = vi.fn((request: AccountMirrorCompletionListRequest = {}) => {
+      let results = operations
+        .filter((operation) => !request.provider || operation.provider === request.provider)
+        .filter((operation) => !request.runtimeProfileId || operation.runtimeProfileId === request.runtimeProfileId);
+      if (request.status === 'active' || request.activeOnly === true) {
+        results = results.filter((operation) => activeStatuses.has(operation.status));
+      } else if (request.status) {
+        results = results.filter((operation) => operation.status === request.status);
+      }
+      results = [...results].sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+      return request.limit == null ? results : results.slice(0, request.limit);
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        accountMirrorCompletionService: {
+          start: vi.fn(() => running),
+          read: vi.fn((id: string) => operations.find((operation) => operation.id === id) ?? null),
+          list,
+          control: vi.fn(() => running),
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        accountMirrorCompletions: {
+          metrics: {
+            total: number;
+            active: number;
+            running: number;
+            idle_waiting: number;
+          };
+          active: AccountMirrorCompletionOperation[];
+        };
+        liveFollow: {
+          activeCompletions: number;
+          targets: {
+            actual: {
+              active: number;
+              running: number;
+            };
+            accounts: Array<{
+              provider: string;
+              actualStatus: string | null;
+              activeCompletionId: string | null;
+            }>;
+          };
+        };
+      };
+
+      expect(payload.accountMirrorCompletions.metrics).toMatchObject({
+        total: 54,
+        active: 2,
+        running: 1,
+        idle_waiting: 1,
+      });
+      expect(payload.accountMirrorCompletions.active.map((operation) => operation.id).sort()).toEqual([
+        'acctmirror_idle_count_parity',
+        'acctmirror_running_count_parity',
+      ]);
+      expect(payload.liveFollow.activeCompletions).toBe(2);
+      expect(payload.liveFollow.targets.actual.active).toBe(2);
+      expect(payload.liveFollow.targets.actual.running).toBe(1);
+      expect(payload.liveFollow.targets.accounts).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          provider: 'chatgpt',
+          actualStatus: 'running',
+          activeCompletionId: 'acctmirror_running_count_parity',
+        }),
+        expect.objectContaining({
+          provider: 'grok',
+          actualStatus: 'idle_waiting',
+          activeCompletionId: 'acctmirror_idle_count_parity',
+        }),
+      ]));
+      expect(list).toHaveBeenCalledWith({ limit: null });
+      expect(list).toHaveBeenCalledWith({ status: 'active', limit: null });
     } finally {
       await server.close();
     }
@@ -17912,6 +18059,86 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('serves agent tenant and binding choices over HTTP', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-agent-choices-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const activeConfig: Record<string, unknown> = {
+      browserProfiles: { default: {}, consult: {} },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'operator@example.com' },
+            },
+          },
+        },
+        consult: {
+          browserProfile: 'consult',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'consult@example.com' },
+              projectId: 'proj_consult',
+              projectName: 'Consult Project',
+            },
+          },
+        },
+      },
+      agents: {
+        consult: {
+          runtimeProfile: 'consult',
+          service: 'chatgpt',
+          modelSelector: 'chatgpt:pro-extended',
+        },
+      },
+    };
+    await fs.writeFile(path.join(homeDir, 'config.json'), JSON.stringify(activeConfig), 'utf8');
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { config: activeConfig },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/config/agent-choices`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as JsonObject;
+      expect(payload).toMatchObject({
+        object: 'auracall_agent_config_choices',
+        validation: {
+          ok: true,
+        },
+        agents: [
+          expect.objectContaining({
+            id: 'consult',
+            tenantKey: 'service-account:chatgpt:consult@example.com',
+            bindingKey: 'binding:chatgpt:consult:consult',
+            projectBinding: expect.objectContaining({
+              source: 'service',
+              providerProjectId: 'proj_consult',
+            }),
+          }),
+        ],
+      });
+      expect(payload.tenants).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          tenantKey: 'service-account:chatgpt:consult@example.com',
+          bindingKey: 'binding:chatgpt:consult:consult',
+        }),
+      ]));
+      expect(payload.projectBindings).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          source: 'override-ready',
+          providerProjectId: 'proj_consult',
+        }),
+      ]));
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports agent registry and loaded API-key diagnostics over HTTP without secrets', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-agent-diagnostics-'));
     cleanup.push(homeDir);
@@ -18616,6 +18843,7 @@ describe('http responses adapter', () => {
         },
       });
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/dashboard');
+      expect((payload.routes as Record<string, unknown>).operatorConsole).toBe('/console');
       expect((payload.routes as Record<string, unknown>).operatorDebugDashboard).toBe('/ops/browser');
       expect((payload.routes as Record<string, unknown>).accountMirrorDashboard).toBe('/account-mirror');
       expect((payload.routes as Record<string, unknown>).accountMirrorCatalogItemTemplate).toContain(
@@ -18683,6 +18911,7 @@ describe('http responses adapter', () => {
           accountMirrorUrl: 'https://auracall.ecochran.dyndns.org/account-mirror',
         },
         routing: {
+          consolePath: '/console',
           dashboardPath: '/dashboard',
           debugDashboardPath: '/ops/browser',
           accountMirrorPath: '/account-mirror',
@@ -18812,13 +19041,24 @@ describe('http responses adapter', () => {
       expect(html).toContain('agentsDiagnosticsHeadline');
       expect(html).toContain('agentsDiagnosticsSummary');
       expect(html).toContain('loadAgentsDiagnostics');
+      expect(html).toContain('loadAgentChoices');
+      expect(html).toContain('loadAgentConfigs');
       expect(html).toContain('renderAgentsDiagnostics');
+      expect(html).toContain('renderAgentChoices');
+      expect(html).toContain('renderAgentConfigTable');
       expect(html).toContain('renderAgentsDiagnosticsApiKeys');
       expect(html).toContain('renderAgentsDiagnosticsScopeDetail');
       expect(html).toContain('renderAgentsDiagnosticsIssue');
       expect(html).toContain('/v1/config/agent-diagnostics');
+      expect(html).toContain('/v1/config/agent-choices');
+      expect(html).toContain('/v1/config/agents/');
       expect(html).toContain('API Key Reachability');
       expect(html).toContain('Refresh Agent Diagnostics');
+      expect(html).toContain('Refresh Agent Choices');
+      expect(html).toContain('Agent Configuration');
+      expect(html).toContain('Save Agent');
+      expect(html).toContain('Duplicate Agent');
+      expect(html).toContain('Archive Agent');
       expect(html).toContain('Agent diagnostics loaded.');
       expect(html).toContain('agentApiKeyAgentId');
       expect(html).toContain('agentApiKeyTeamId');
@@ -19451,6 +19691,7 @@ describe('http responses adapter', () => {
       const status = await fetch(`http://127.0.0.1:${server.port}/status`);
       const payload = await status.json() as { serviceDiscovery?: { routing?: Record<string, string> }; routes?: Record<string, string> };
       expect(payload.serviceDiscovery?.routing).toMatchObject({
+        consolePath: '/console',
         dashboardPath: '/operator/browser',
         debugDashboardPath: '/operator/debug',
         accountMirrorPath: '/operator/account-mirror',
@@ -19459,6 +19700,7 @@ describe('http responses adapter', () => {
         agentsPath: '/agents',
       });
       expect(payload.routes).toMatchObject({
+        operatorConsole: '/console',
         operatorBrowserDashboard: '/operator/browser',
         operatorDebugDashboard: '/operator/debug',
         accountMirrorDashboard: '/operator/account-mirror',
@@ -19479,6 +19721,34 @@ describe('http responses adapter', () => {
       expect(response.status).toBe(200);
       const html = await response.text();
       expect(html).toContain('AuraCall Operator');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves the greenfield console from a separate route', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/console`);
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('AuraCall Console');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves greenfield console overview, provider, project, and runs route states', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      for (const view of ['overview', 'providers', 'projects', 'runs']) {
+        const response = await fetch(`http://127.0.0.1:${server.port}/console?view=${view}`);
+        expect(response.status).toBe(200);
+        const html = await response.text();
+        expect(html).toContain('AuraCall Console');
+      }
     } finally {
       await server.close();
     }

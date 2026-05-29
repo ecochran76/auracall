@@ -156,6 +156,204 @@ describe('agent and team config service', () => {
     });
   });
 
+  it('projects read-only agent choices for tenants, bindings, selectors, and projects', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-choices-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: { default: {}, consult: {} },
+        services: {
+          chatgpt: {
+            identity: { email: 'operator@example.com' },
+            projectId: 'proj_service',
+            projectName: 'Service Project',
+          },
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          consult: {
+            browserProfile: 'consult',
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                identity: { email: 'consult@example.com' },
+                projectId: 'proj_consult',
+                projectName: 'Consult Project',
+              },
+            },
+          },
+        },
+        agents: {
+          inherited: {
+            runtimeProfile: 'consult',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+          },
+          explicit: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+            tenantKey: 'service-account:chatgpt:explicit@example.com',
+            bindingId: 'chatgpt-explicit-primary',
+            projectBinding: {
+              mode: 'alias',
+              id: 'client-a',
+              label: 'Client A',
+            },
+          },
+        },
+      }),
+      'utf8',
+    );
+    const service = createAgentTeamConfigService({ configPath, registryStore: null });
+
+    const choices = await service.choices();
+
+    expect(choices).toMatchObject({
+      object: 'auracall_agent_config_choices',
+      configPath,
+      registryPath: null,
+      validation: {
+        ok: true,
+      },
+    });
+    expect(choices.tenants).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        tenantKey: 'service-account:chatgpt:consult@example.com',
+        runtimeProfileId: 'consult',
+        browserProfileId: 'consult',
+        bindingKey: 'binding:chatgpt:consult:consult',
+      }),
+    ]));
+    expect(choices.bindings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        service: 'chatgpt',
+        runtimeProfileId: 'consult',
+        tenantKey: 'service-account:chatgpt:consult@example.com',
+        ready: true,
+      }),
+    ]));
+    expect(choices.modelSelectors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'chatgpt:pro-extended',
+        service: 'chatgpt',
+        executionReady: true,
+      }),
+    ]));
+    expect(choices.projectBindings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        service: 'chatgpt',
+        tenantKey: 'service-account:chatgpt:consult@example.com',
+        bindingKey: 'binding:chatgpt:consult:consult',
+        source: 'service',
+        providerProjectId: 'proj_consult',
+      }),
+      expect.objectContaining({
+        service: 'chatgpt',
+        tenantKey: 'service-account:chatgpt:consult@example.com',
+        source: 'override-ready',
+        providerProjectId: 'proj_consult',
+      }),
+      expect.objectContaining({
+        service: 'chatgpt',
+        tenantKey: 'service-account:chatgpt:explicit@example.com',
+        source: 'agent',
+        id: 'client-a',
+      }),
+    ]));
+    expect(choices.agents).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'inherited',
+        tenantKey: 'service-account:chatgpt:consult@example.com',
+        bindingId: 'binding:chatgpt:consult:consult',
+      }),
+      expect.objectContaining({
+        id: 'explicit',
+        tenantKey: 'service-account:chatgpt:explicit@example.com',
+        bindingId: 'chatgpt-explicit-primary',
+      }),
+    ]));
+  });
+
+  it('qualifies same-email ChatGPT tenants by account plan and structure', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-chatgpt-tenants-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: { personal: {}, business: {} },
+        services: {
+          chatgpt: {
+            identity: {
+              email: 'operator@example.com',
+              accountPlanType: 'pro',
+              accountStructure: 'personal',
+            },
+          },
+        },
+        runtimeProfiles: {
+          personal: { browserProfile: 'personal', defaultService: 'chatgpt' },
+          business: {
+            browserProfile: 'business',
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                identity: {
+                  email: 'operator@example.com',
+                  accountPlanType: 'team',
+                  accountStructure: 'workspace',
+                  organizationId: 'org_business',
+                },
+              },
+            },
+          },
+        },
+      }),
+      'utf8',
+    );
+    const service = createAgentTeamConfigService({ configPath, registryStore: null });
+
+    const choices = await service.choices();
+
+    expect(choices.tenants).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        tenantKey: 'service-account:chatgpt:operator@example.com|plan=pro|structure=personal',
+        runtimeProfileId: 'personal',
+        bindingKey: 'binding:chatgpt:personal:personal',
+        identity: expect.objectContaining({
+          email: 'operator@example.com',
+          accountPlanType: 'pro',
+          accountStructure: 'personal',
+        }),
+      }),
+      expect.objectContaining({
+        tenantKey: 'service-account:chatgpt:operator@example.com|org=org_business|plan=team|structure=workspace',
+        runtimeProfileId: 'business',
+        bindingKey: 'binding:chatgpt:business:business',
+        identity: expect.objectContaining({
+          email: 'operator@example.com',
+          accountPlanType: 'team',
+          accountStructure: 'workspace',
+          organizationId: 'org_business',
+        }),
+      }),
+    ]));
+    expect(choices.bindings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        bindingKey: 'binding:chatgpt:personal:personal',
+        tenantKey: 'service-account:chatgpt:operator@example.com|plan=pro|structure=personal',
+        ready: true,
+      }),
+      expect.objectContaining({
+        bindingKey: 'binding:chatgpt:business:business',
+        tenantKey: 'service-account:chatgpt:operator@example.com|org=org_business|plan=team|structure=workspace',
+        ready: true,
+      }),
+    ]));
+  });
+
   it('diagnoses registry overlays, disabled records, and scoped API keys without secrets', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-diagnostics-'));
     cleanup.push(dir);

@@ -221,4 +221,88 @@ describe('effective agent catalog', () => {
       },
     ]);
   });
+
+  it('projects tenant identity separately from the runtime execution binding', () => {
+    const catalog = createEffectiveAgentCatalog({
+      config: {
+        browserProfiles: {
+          default: {},
+          consulting: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                identity: { email: 'operator@example.com' },
+                projectId: 'provider-project-default',
+                projectName: 'Default Project',
+              },
+            },
+          },
+          work: {
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                identity: { email: 'consult@polymerconsultinggroup.com' },
+                projectId: 'provider-project-service',
+                projectName: 'Service Project',
+              },
+            },
+          },
+        },
+        agents: {
+          explicit: {
+            runtimeProfile: 'work',
+            service: 'chatgpt',
+            tenantKey: 'service-account:chatgpt:consult@polymerconsultinggroup.com',
+            bindingId: 'chatgpt-consult-primary',
+            projectBinding: {
+              mode: 'alias',
+              id: 'consulting-main',
+              providerProjectId: 'provider-project-explicit',
+              label: 'Consulting Main',
+            },
+          },
+          inherited: {
+            runtimeProfile: 'default',
+          },
+        },
+      },
+    });
+
+    expect(catalog.agents).toEqual([
+      expect.objectContaining({
+        id: 'explicit',
+        tenantKey: 'service-account:chatgpt:consult@polymerconsultinggroup.com',
+        bindingId: 'chatgpt-consult-primary',
+        bindingKey: 'binding:chatgpt:work:consulting',
+        runtimeProfileId: 'work',
+        browserProfileId: 'consulting',
+        projectBinding: {
+          mode: 'alias',
+          source: 'agent',
+          id: 'consulting-main',
+          providerProjectId: 'provider-project-explicit',
+          label: 'Consulting Main',
+        },
+      }),
+      expect.objectContaining({
+        id: 'inherited',
+        tenantKey: 'service-account:chatgpt:operator@example.com',
+        bindingId: 'binding:chatgpt:default:default',
+        bindingKey: 'binding:chatgpt:default:default',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        projectBinding: {
+          mode: 'fixed',
+          source: 'service',
+          providerProjectId: 'provider-project-default',
+          label: 'Default Project',
+        },
+      }),
+    ]);
+  });
 });

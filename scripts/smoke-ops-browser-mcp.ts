@@ -105,7 +105,7 @@ function createInjectedCompletionService(): AccountMirrorCompletionService {
       if (request.provider && request.provider !== current.provider) return [];
       if (request.runtimeProfileId && request.runtimeProfileId !== current.runtimeProfileId) return [];
       if (request.status && request.status !== 'active' && request.status !== current.status) return [];
-      if (request.activeOnly === true && !['queued', 'running', 'paused'].includes(current.status)) return [];
+      if (request.activeOnly === true && !['queued', 'running', 'idle_waiting', 'paused'].includes(current.status)) return [];
       return [current];
     },
     control(request: AccountMirrorCompletionControlRequest) {

@@ -373,11 +373,21 @@ export const RuntimeProfilesConfigSchema = z.record(z.string(), OracleProfileSch
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const AgentConfigSchema = z.object({
   runtimeProfile: z.string().optional(),
+  tenantKey: z.string().optional(),
+  bindingId: z.string().optional(),
   service: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   model: z.string().optional(),
   modelSelector: z.string().optional(),
   projectId: z.string().optional(),
   projectName: z.string().optional(),
+  projectBinding: z
+    .object({
+      mode: z.enum(['none', 'fixed', 'alias']).optional(),
+      id: z.string().optional(),
+      providerProjectId: z.string().optional(),
+      label: z.string().optional(),
+    })
+    .optional(),
   conversationId: z.string().optional(),
   conversationName: z.string().optional(),
   description: z.string().optional(),
