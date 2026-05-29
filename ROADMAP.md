@@ -9,8 +9,7 @@ Lane: P01
 
 Current Priority Snapshot:
 - Active plan:
-  none. Plan 0082 is closed; select the next bounded plan before resuming
-  feature work.
+  [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md)
 - Latest completed work:
   [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md)
   made AuraCall the source of truth for the agent, tenant, binding, model
@@ -18,7 +17,9 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health, and
   read-only Runs workbench.
-- Deferred AuraCall lanes: safe Runs controls, Search/archive, and API Access
+- Current work: add the first state-gated safe controls to the greenfield Runs
+  workbench without adding launch/retry surfaces or changing legacy pages.
+- Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
 Current State:
@@ -61,6 +62,16 @@ Current State:
     `transcribe-audio-chatgpt-pro-pool` dispatch team with three ready members;
     live provider submit/materialize was skipped because the first-pass queue
     was empty
+- safe Runs controls are now open in
+  [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md):
+  - the target product surface is only the greenfield `/console?view=runs`
+    workbench
+  - first controls are limited to state-gated live-follow pause/resume/cancel,
+    background drain pause/resume, and one local-runner-owned targeted-drain
+    path if backend readback proves eligibility
+  - broad launch and retry controls remain deferred
+  - each exposed action must have a documented state gate, confirmation copy,
+    result readback, and blocked-state reason
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -1488,12 +1499,11 @@ Safety note:
 
 ### Now
 
-- Primary active lane checkpoint: Plan 0082 is open for downstream
-  `transcribe-audio` App Intelligence integration.
-- Immediate next action: audit the `GET /v1/config/agent-choices` contract
-  against transcribe-audio first-pass summary and App Intelligence readiness
-  needs, then implement the transcribe-audio choices consumer without weakening
-  dry-run, preview, approval-token, or materialization gates.
+- Primary active lane checkpoint: Plan 0083 is open for state-gated safe Runs
+  controls in the greenfield `/console?view=runs` workbench.
+- Immediate next action: audit existing control APIs and add a control
+  readiness projection before exposing pause/resume/cancel/drain actions.
+  Launch and broad retry remain deferred.
 - Service mode and runner orchestration remains paused after the current
   single-host bounded local-runner bridge reached a coherent ownership
   checkpoint.
@@ -1543,12 +1553,11 @@ Safety note:
 
 ### Soon
 
-- Safe Runs controls: launch, retry, cancel, resume, pause, and drain controls
-  need a separate state-gated safety plan before appearing in the greenfield
-  Runs workbench.
+- Safe Runs controls follow-through: close Plan 0083 with one proven control
+  family before selecting launch/retry work.
 - Search/archive and API Access workflows: select one as the next AuraCall
-  console lane only after the downstream integration checkpoint is opened or
-  explicitly deferred.
+  console lane only after the safe-control checkpoint is closed or explicitly
+  deferred.
 
 ### Later
 

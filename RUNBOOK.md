@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 182 | 2026-05-29
+
+- Active plan:
+  `docs/dev/plans/0083-2026-05-29-runs-safe-controls.md`
+- Goal: write the next bounded implementation plan after Plan 0082.
+- Result:
+  - opened Plan 0083 for state-gated safe controls in the greenfield
+    `/console?view=runs` workbench.
+  - scoped the first control family to live-follow pause/resume/cancel,
+    background drain pause/resume, and one local-runner-owned targeted-drain
+    path if backend readback proves eligibility.
+  - kept launch, broad retry, provider browser automation, and legacy frontend
+    changes out of scope.
+  - updated `ROADMAP.md` Current Execution Board and `P02 Now/Soon` so the
+    active lane is no longer stale Plan 0082 text.
+- Verification:
+  - `pnpm run plans:audit -- --keep 83`
+  - `git diff --check`
+
 ## Turn 181 | 2026-05-29
 
 - Active plan:

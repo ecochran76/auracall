@@ -151,6 +151,20 @@
     Provider account showed `2 browser bindings`, Browser binding select was
     present, and not-ready options were absent.
 
+## Turn 324 | 2026-05-29
+
+- Goal: write the next bounded plan after closing Plan 0082.
+- Change:
+  - opened Plan 0083 for state-gated safe controls in the greenfield Runs
+    workbench.
+  - updated the roadmap so Plan 0083 is the active lane and Plan 0082 is
+    treated as closed history.
+  - kept launch, broad retry, provider browser automation, and legacy frontend
+    changes deferred.
+- Verification:
+  - `pnpm run plans:audit -- --keep 83`
+  - `git diff --check`
+
 ## Turn 323 | 2026-05-29
 
 - Goal: execute Plan 0082 for the AuraCall-to-transcribe-audio choices
