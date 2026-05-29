@@ -1,3 +1,21 @@
+## Turn 326 | 2026-05-29
+
+- Goal: execute and close Plan 0081.
+- Result:
+  - reconciled the roadmap current-priority snapshot, Current Execution Board,
+    product UX milestone ladder, and `P02 Now/Soon`.
+  - marked the first greenfield `/console` sequence as complete through
+    Agents, Providers, Projects, Overview/Health, and read-only Runs.
+  - kept safe Runs controls, Search/archive, and API Access as explicit future
+    AuraCall lanes.
+  - left the next implementation lane as downstream `transcribe-audio` App
+    Intelligence integration.
+  - closed
+    `docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md`.
+- Verification:
+  - `pnpm run plans:audit -- --keep 81`
+  - `git diff --check`
+
 ## Turn 325 | 2026-05-29
 
 - Goal: write a bounded plan for the roadmap review findings.

@@ -1,6 +1,6 @@
 # Roadmap Priority Reconciliation Plan | 0081-2026-05-29
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -65,7 +65,7 @@ provider automation, runtime behavior, or the frozen legacy frontend pages.
 
 ### Track 1 | Current Priority Snapshot
 
-Status: open.
+Status: complete.
 
 - Add a compact snapshot near the top of `ROADMAP.md` that names:
   - active plan 0081;
@@ -75,9 +75,16 @@ Status: open.
 - Keep the snapshot short enough to scan before the historical initiative
   ledger.
 
+Implemented evidence:
+
+- `ROADMAP.md` now starts the Current Execution Board with a current-priority
+  snapshot that names Plan 0081 as the last closed planning plan, points the
+  next implementation lane at downstream `transcribe-audio` integration, and
+  lists the completed and deferred AuraCall console lanes.
+
 ### Track 2 | Product UX Milestone Reconciliation
 
-Status: open.
+Status: complete.
 
 - Rewrite the high-level product UX milestones so completed work is marked as
   completed, not future-tense.
@@ -86,9 +93,18 @@ Status: open.
   `/console` surface and not in the frozen legacy frontend pages.
 - Clarify that Runs control actions need a later state-gated safety plan.
 
+Implemented evidence:
+
+- The product UX milestone ladder now marks the first greenfield `/console`
+  sequence as complete through Agents, Providers, Projects, Overview/Health,
+  and read-only Runs.
+- The Runs milestone now states that launch, retry, cancel, resume, pause,
+  drain, and other mutation controls remain deferred to a later safe-controls
+  plan.
+
 ### Track 3 | Now/Soon/Later Cleanup
 
-Status: open.
+Status: complete.
 
 - Make `P02 Now` and the Current Execution Board say the same thing.
 - Move the downstream `transcribe-audio` App Intelligence lane into the
@@ -96,9 +112,17 @@ Status: open.
 - Tighten `P02 Soon` so it names realistic next AuraCall lanes instead of
   generic categories.
 
+Implemented evidence:
+
+- `P02 Now` now agrees with the Current Execution Board that Plan 0081 is
+  closed and the immediate next action is opening the downstream
+  `transcribe-audio` App Intelligence integration lane.
+- `P02 Soon` names downstream integration, safe Runs controls, Search/archive,
+  and API Access as explicit follow-up lanes.
+
 ### Track 4 | Validation And Handoff
 
-Status: open.
+Status: complete.
 
 - Run roadmap plan validation after edits.
 - Run whitespace/diff validation for Markdown changes.
@@ -106,6 +130,13 @@ Status: open.
   `docs/dev-fixes-log.md`.
 - Close this plan only after the roadmap reads coherently from top-level
   priority through `Now/Soon/Later`.
+
+Implemented evidence:
+
+- `RUNBOOK.md`, `docs/dev/dev-journal.md`, and `docs/dev-fixes-log.md` record
+  the reconciliation result and validation evidence.
+- Validation passed with `pnpm run plans:audit -- --keep 81` and
+  `git diff --check`.
 
 ## Acceptance Criteria
 
@@ -142,3 +173,16 @@ Status: open.
   pretending they are complete.
 - Validation evidence is recorded.
 - Plan 0081 is updated with implemented evidence and closed.
+
+## Closeout Evidence
+
+- `ROADMAP.md` current-priority snapshot names the completed reconciliation and
+  the next downstream integration lane.
+- `ROADMAP.md` product UX milestone ladder marks the first greenfield console
+  sequence complete through read-only Runs.
+- `P02 Now` and `P02 Soon` now agree with the top execution board.
+- Legacy `/dashboard`, `/agents`, `/config`, and `/ops/browser` remain frozen
+  for product work.
+- Validation:
+  - `pnpm run plans:audit -- --keep 81`
+  - `git diff --check`

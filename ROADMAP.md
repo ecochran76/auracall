@@ -8,11 +8,9 @@ Status: in progress
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan:
+- Last closed planning plan:
   [docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md](docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md)
-- Current work: reconcile roadmap priority text after Plans 0077 through 0080
-  closed the first greenfield `/console` sequence.
-- Next implementation lane after reconciliation: open the downstream
+- Current work: open the downstream
   `transcribe-audio` App Intelligence integration plan now that AuraCall has a
   closed agent tenant/binding choices and configuration surface.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health, and
@@ -34,10 +32,10 @@ Current State:
     or stale absolute workspace paths
   - this was a docs/tooling cleanup slice only; no provider browser work or
     product behavior changed
-- the current roadmap reconciliation lane is open in
+- the current roadmap reconciliation lane is closed in
   [docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md](docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md)
   after Plans 0077 through 0080 closed the first greenfield `/console`
-  sequence; the next implementation lane should be opened as a new bounded
+  sequence; the next implementation lane is a new bounded
   `transcribe-audio` App Intelligence integration plan rather than extending
   Plan 0063 or treating the legacy frontend as a product target
 - supporting maintenance work is allowed only when it directly protects that
@@ -249,28 +247,28 @@ Current State:
   - product UX development should advance through high-level milestones instead
     of extending whichever debug page is closest to the current backend
     endpoint:
-    1. operator shell and navigation baseline:
-       the new console owns the product shell, task-oriented top navigation,
-       persisted panes, right-side inspector, toasts, accessible icon actions,
-       and a visible link boundary to legacy diagnostics.
-    2. Overview and Health command center:
-       first viewport summarizes service readiness, provider account health,
-       active warnings, recent work, and the next operator action in plain
-       language before exposing technical status detail.
-    3. Agents configuration workflow:
-       replace JSON-first agent editing with a list/detail agent editor using
-       structured controls for service, provider account, browser binding,
-       model selector, extras, project binding, validation, duplicate, archive,
-       and save flows.
-    4. Providers and Projects workflows:
-       provide progressive provider-account setup, browser-binding health,
-       capability discovery, project/default binding management, and read-only
-       health tests while keeping raw tenant/binding/provider ids in
-       inspectors.
-    5. Runs workbench:
-       make active work, response batches, team runs, live-follow operations,
-       queue posture, retries, cancellations, and timelines inspectable from a
-       dense table/detail surface before adding any broader launch controls.
+    1. operator shell and navigation baseline: complete for the first
+       greenfield `/console` surface. The console owns product navigation,
+       selected-workflow routing, responsive layout, and the visible boundary
+       to legacy diagnostics.
+    2. Agents configuration workflow: complete for the first greenfield
+       workflow. `/console?view=agents` provides list/detail agent setup using
+       service, provider account, browser binding, model selector, extras,
+       project binding, validation, duplicate/archive, and save flows.
+    3. Providers and Projects workflows: complete for readback-first product
+       UX. `/console?view=providers` and `/console?view=projects` expose
+       provider-account readiness, browser-binding health, project/default
+       binding inventory, linked-agent issues, and inspectors for raw ids.
+    4. Overview and Health command center: complete for the first product
+       command center. `/console` and `/console?view=overview` summarize
+       service readiness, provider account health, active warnings, recent
+       work, and next operator actions before exposing technical status detail.
+    5. Runs workbench: complete for read-only inspection.
+       `/console?view=runs` makes active work, response batches, team runs,
+       runtime runs, live-follow operations, queue posture, recovery hints, and
+       timelines inspectable from a dense table/detail surface. Launch, retry,
+       cancel, resume, pause, drain, and other mutation controls remain
+       deferred to a later safe-controls plan with state gates and tests.
     6. Search and archive workbench:
        finish the unified all-tenant search table with cursor loading,
        virtualized rows, normalized facets, saved views, asset previews,
@@ -1467,11 +1465,11 @@ Safety note:
 
 ### Now
 
-- Primary active lane checkpoint: Plan 0081 is open to reconcile roadmap
-  priority text after the first greenfield `/console` sequence closed.
-- Immediate next action after Plan 0081 closes: open the next bounded lane for
-  downstream `transcribe-audio` App Intelligence integration now that AuraCall
-  has a closed agent tenant/binding choices and configuration surface.
+- Primary active lane checkpoint: Plan 0081 is closed; roadmap priority text is
+  reconciled after the first greenfield `/console` sequence.
+- Immediate next action: open the next bounded lane for downstream
+  `transcribe-audio` App Intelligence integration now that AuraCall has a
+  closed agent tenant/binding choices and configuration surface.
 - Service mode and runner orchestration remains paused after the current
   single-host bounded local-runner bridge reached a coherent ownership
   checkpoint.

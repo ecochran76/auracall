@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 179 | 2026-05-29
+
+- Active plan:
+  `docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md`
+- Goal: execute and close the roadmap priority reconciliation plan.
+- Result:
+  - reconciled the Current Execution Board and `P02 Now` around the same
+    post-Plan-0081 state.
+  - rewrote the product UX milestone ladder so Agents, Providers, Projects,
+    Overview/Health, and read-only Runs are recorded as completed greenfield
+    `/console` milestones.
+  - clarified that launch, retry, cancel, resume, pause, drain, and other Runs
+    mutation controls remain deferred to a later safe-controls plan.
+  - kept the immediate next implementation lane pointed at downstream
+    `transcribe-audio` App Intelligence integration.
+  - closed Plan 0081 with implemented evidence.
+- Verification:
+  - `pnpm run plans:audit -- --keep 81`
+  - `git diff --check`
+
 ## Turn 178 | 2026-05-29
 
 - Active plan:

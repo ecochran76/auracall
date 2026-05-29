@@ -1,3 +1,9 @@
+- 2026-05-29: When closing a roadmap reconciliation plan, update both the top
+  execution board and `P02 Now/Soon`; otherwise a structurally valid roadmap
+  can still leave the next action ambiguous. Completed product UX milestones
+  should be written as completed checkpoints, with deferred controls named as
+  separate future plans.
+
 - 2026-05-29: Roadmap review findings should become bounded roadmap
   reconciliation work instead of informal cleanup. When the roadmap is
   structurally valid but semantically stale, open a plan that aligns the
