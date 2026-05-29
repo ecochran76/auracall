@@ -1,3 +1,9 @@
+- 2026-05-29: Downstream App Intelligence integrations should consume
+  AuraCall's agent-choice contract instead of re-encoding provider execution
+  choices. Keep stable `agentId` / dispatch-team selection in downstream app
+  config, but keep transcript payloads, prompt packets, readout bodies, and
+  private artifact paths out of AuraCall docs/config.
+
 - 2026-05-29: When closing a roadmap reconciliation plan, update both the top
   execution board and `P02 Now/Soon`; otherwise a structurally valid roadmap
   can still leave the next action ambiguous. Completed product UX milestones

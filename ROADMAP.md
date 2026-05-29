@@ -8,11 +8,12 @@ Status: in progress
 Lane: P01
 
 Current Priority Snapshot:
-- Last closed planning plan:
-  [docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md](docs/dev/plans/0081-2026-05-29-roadmap-priority-reconciliation.md)
-- Current work: open the downstream
-  `transcribe-audio` App Intelligence integration plan now that AuraCall has a
-  closed agent tenant/binding choices and configuration surface.
+- Active plan:
+  [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md)
+- Current work: make AuraCall the source of truth for the agent, tenant,
+  binding, model selector, project binding, and dispatch-pool choices consumed
+  by downstream `transcribe-audio` App Intelligence and first-pass readout
+  workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health, and
   read-only Runs workbench.
 - Deferred AuraCall lanes: safe Runs controls, Search/archive, and API Access
@@ -38,6 +39,17 @@ Current State:
   sequence; the next implementation lane is a new bounded
   `transcribe-audio` App Intelligence integration plan rather than extending
   Plan 0063 or treating the legacy frontend as a product target
+- downstream `transcribe-audio` App Intelligence integration is now open in
+  [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md):
+  - AuraCall owns provider execution choices through the
+    `GET /v1/config/agent-choices` contract
+  - `transcribe-audio` should persist stable `agentId` and optional
+    dispatch-pool team ids rather than copying provider-specific
+    tenant/browser/model/project internals
+  - transcript payloads, readout schemas, App Intelligence ledgers,
+    materialization, and quality gates remain in `transcribe-audio`
+  - no raw transcript text, prompt packets, readout bodies, or private
+    transcript paths should be stored in AuraCall docs or config
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -1465,11 +1477,12 @@ Safety note:
 
 ### Now
 
-- Primary active lane checkpoint: Plan 0081 is closed; roadmap priority text is
-  reconciled after the first greenfield `/console` sequence.
-- Immediate next action: open the next bounded lane for downstream
-  `transcribe-audio` App Intelligence integration now that AuraCall has a
-  closed agent tenant/binding choices and configuration surface.
+- Primary active lane checkpoint: Plan 0082 is open for downstream
+  `transcribe-audio` App Intelligence integration.
+- Immediate next action: audit the `GET /v1/config/agent-choices` contract
+  against transcribe-audio first-pass summary and App Intelligence readiness
+  needs, then implement the transcribe-audio choices consumer without weakening
+  dry-run, preview, approval-token, or materialization gates.
 - Service mode and runner orchestration remains paused after the current
   single-host bounded local-runner bridge reached a coherent ownership
   checkpoint.
@@ -1519,9 +1532,6 @@ Safety note:
 
 ### Soon
 
-- Downstream App Intelligence integration: `transcribe-audio` should consume
-  AuraCall agent choices, tenant/binding readback, and project/model selection
-  rather than recreating provider-specific option logic.
 - Safe Runs controls: launch, retry, cancel, resume, pause, and drain controls
   need a separate state-gated safety plan before appearing in the greenfield
   Runs workbench.

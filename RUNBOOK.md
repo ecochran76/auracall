@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 180 | 2026-05-29
+
+- Active plan:
+  `docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md`
+- Goal: open the next bounded downstream `transcribe-audio` App Intelligence
+  integration plan from the current roadmap authority.
+- Result:
+  - opened Plan 0082 for the AuraCall-to-transcribe-audio integration lane.
+  - scoped AuraCall as the source of truth for agent, tenant, binding, model
+    selector, project binding, and dispatch-pool choices.
+  - kept transcript payloads, readout schemas, App Intelligence ledgers,
+    materialization, and quality gates in `transcribe-audio`.
+  - preserved dry-run, preview, approval-token, and no-unattended-write
+    boundaries.
+  - updated `ROADMAP.md` so the Current Execution Board and `P02 Now` point at
+    Plan 0082 as the active lane.
+- Verification:
+  - `pnpm run plans:audit -- --keep 82`
+  - `git diff --check`
+
 ## Turn 179 | 2026-05-29
 
 - Active plan:

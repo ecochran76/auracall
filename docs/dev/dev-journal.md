@@ -1,3 +1,21 @@
+## Turn 327 | 2026-05-29
+
+- Goal: open the downstream `transcribe-audio` App Intelligence integration
+  plan.
+- Result:
+  - opened
+    `docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md`.
+  - scoped the integration around `GET /v1/config/agent-choices`,
+    stable `agentId` selection, optional dispatch-pool team ids, project-bound
+    transcript readiness, and existing transcribe-audio first-pass/App
+    Intelligence gates.
+  - kept raw transcript text, prompt packets, readout bodies, private
+    transcript paths, and transcript-specific prompt templates out of AuraCall.
+  - updated `ROADMAP.md` and `RUNBOOK.md` so Plan 0082 is the active lane.
+- Verification:
+  - `pnpm run plans:audit -- --keep 82`
+  - `git diff --check`
+
 ## Turn 326 | 2026-05-29
 
 - Goal: execute and close Plan 0081.
