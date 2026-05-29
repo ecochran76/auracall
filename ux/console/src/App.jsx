@@ -7,6 +7,8 @@ import {
   Copy,
   ExternalLink,
   Loader2,
+  Pause,
+  Play,
   Plus,
   RefreshCcw,
   Save,
@@ -56,6 +58,8 @@ function App() {
   const [selectedRunKey, setSelectedRunKey] = useState(readParamFromUrl("run"));
   const [selectedRunDetail, setSelectedRunDetail] = useState(null);
   const [selectedRunDetailLoading, setSelectedRunDetailLoading] = useState(false);
+  const [runControlBusy, setRunControlBusy] = useState("");
+  const [runControlResult, setRunControlResult] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState(readAgentFromUrl());
   const [selectedProviderKey, setSelectedProviderKey] = useState(readParamFromUrl("provider"));
   const [selectedProjectKey, setSelectedProjectKey] = useState(readParamFromUrl("project"));
@@ -333,6 +337,38 @@ function App() {
     setNotice("Validation refreshed.");
   };
 
+  const performRunControl = async (action) => {
+    if (!action?.available) return;
+    const confirmed = window.confirm(action.confirmation);
+    if (!confirmed) return;
+    setRunControlBusy(action.action);
+    setRunControlResult(null);
+    setError("");
+    setNotice("");
+    try {
+      const payload = await postJson(action.route, action.payload);
+      setStatusPayload(payload);
+      setRunControlResult({
+        ok: true,
+        action: action.label,
+        message: describeControlResult(payload.controlResult),
+        readback: summarizeControlReadback(payload, action),
+      });
+      await refresh();
+    } catch (requestError) {
+      setRunControlResult({
+        ok: false,
+        action: action.label,
+        message: requestError instanceof Error ? requestError.message : String(requestError),
+        readback: "",
+      });
+      setError(requestError instanceof Error ? requestError.message : String(requestError));
+      await refresh().catch(() => undefined);
+    } finally {
+      setRunControlBusy("");
+    }
+  };
+
   const selectedValidation = form.id ? validationByAgent.get(form.id) : null;
   const fieldErrors = validateForm(form, choices);
   const selectedIssues = selectedValidation?.issues ?? [];
@@ -448,6 +484,8 @@ function App() {
             rows={filteredRunRows}
             selectedRun={selectedRun}
             selectedDetail={selectedRunDetail}
+            controlResult={runControlResult}
+            controlBusy={runControlBusy}
             query={runQuery}
             onQueryChange={setRunQuery}
             kindFilter={runKindFilter}
@@ -456,6 +494,7 @@ function App() {
             onStateFilterChange={setRunStateFilter}
             onSelect={selectRun}
             onRefresh={validateNow}
+            onControl={performRunControl}
             onSwitchView={switchView}
           />
         ) : (
@@ -886,6 +925,8 @@ function RunsPage({
   rows,
   selectedRun,
   selectedDetail,
+  controlResult,
+  controlBusy,
   query,
   onQueryChange,
   kindFilter,
@@ -894,6 +935,7 @@ function RunsPage({
   onStateFilterChange,
   onSelect,
   onRefresh,
+  onControl,
   onSwitchView,
 }) {
   return (
@@ -998,7 +1040,10 @@ function RunsPage({
             runsData={runsData}
             run={selectedRun}
             detail={selectedDetail}
+            controlResult={controlResult}
+            controlBusy={controlBusy}
             loading={detailLoading}
+            onControl={onControl}
             onSwitchView={onSwitchView}
           />
         </aside>
@@ -1007,7 +1052,7 @@ function RunsPage({
   );
 }
 
-function RunsInspector({ runsData, run, detail, loading, onSwitchView }) {
+function RunsInspector({ runsData, run, detail, controlResult, controlBusy, loading, onControl, onSwitchView }) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   if (!run) {
     return (
@@ -1031,6 +1076,8 @@ function RunsInspector({ runsData, run, detail, loading, onSwitchView }) {
   const firstTurn = conversation?.turns?.find((turn) => turn.role === "assistant") ?? conversation?.turns?.[0] ?? null;
   const providerRefs = conversation?.providerConversationRefs ?? run.providerConversationRefs ?? [];
   const detailErrors = detail?.errors ?? [];
+  const rowActions = run.controlActions ?? [];
+  const backgroundActions = runsData.queue.backgroundActions ?? [];
   return (
     <div className="inspector-inner">
       <div className="inspector-card">
@@ -1054,6 +1101,22 @@ function RunsInspector({ runsData, run, detail, loading, onSwitchView }) {
           <Detail label="Current step" value={run.currentStepLabel} />
           <Detail label="Recovery" value={runsData.recovery.summary} />
         </dl>
+      </div>
+
+      <div className="inspector-card">
+        <h3>Controls</h3>
+        {rowActions.length === 0 ? (
+          <p className="muted-line">No state-gated controls are available for this row.</p>
+        ) : (
+          <ControlActionList actions={rowActions} busyAction={controlBusy} onControl={onControl} />
+        )}
+        {controlResult ? (
+          <div className={controlResult.ok ? "control-result success" : "control-result error"}>
+            <strong>{controlResult.action}</strong>
+            <p>{controlResult.message}</p>
+            {controlResult.readback ? <small>{controlResult.readback}</small> : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="inspector-card">
@@ -1121,6 +1184,9 @@ function RunsInspector({ runsData, run, detail, loading, onSwitchView }) {
           <Detail label="Local claim" value={runsData.queue.localClaim} />
           <Detail label="Live follow" value={runsData.queue.liveFollow} />
         </dl>
+        {backgroundActions.length > 0 ? (
+          <ControlActionList actions={backgroundActions} busyAction={controlBusy} onControl={onControl} />
+        ) : null}
       </div>
 
       <div className="inspector-card">
@@ -1687,6 +1753,35 @@ function RunStateChip({ state, label }) {
   return <span className="chip disabled">{label}</span>;
 }
 
+function ControlActionList({ actions, busyAction, onControl }) {
+  return (
+    <div className="control-action-list">
+      {actions.map((action) => (
+        <div className="control-action-row" key={action.action}>
+          <button
+            className={action.action.includes("cancel") ? "ghost-button danger" : "ghost-button"}
+            type="button"
+            onClick={() => onControl(action)}
+            disabled={!action.available || busyAction === action.action}
+            title={action.available ? action.expectedTransition : action.blockedReason}
+          >
+            {controlActionIcon(action.action)}
+            {busyAction === action.action ? "Working" : action.label}
+          </button>
+          <span>{action.available ? action.expectedEvidence : action.blockedReason}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function controlActionIcon(action) {
+  if (action.includes("pause")) return <Pause size={15} aria-hidden="true" />;
+  if (action.includes("resume")) return <Play size={15} aria-hidden="true" />;
+  if (action.includes("cancel")) return <XCircle size={15} aria-hidden="true" />;
+  return <RefreshCcw size={15} aria-hidden="true" />;
+}
+
 function ListPlaceholder() {
   return (
     <div className="placeholder-list" aria-label="Loading agents">
@@ -1716,6 +1811,16 @@ async function fetchJson(path) {
 async function putJson(path, payload) {
   const response = await fetch(path, {
     method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await readError(response));
+  return response.json();
+}
+
+async function postJson(path, payload) {
+  const response = await fetch(path, {
+    method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -2127,8 +2232,11 @@ function inventoryMetrics(rows) {
 }
 
 function buildRunsData({ status, runtimeRuns, completionRuns, agents }) {
-  const runtimeRows = runtimeRuns.map((run) => buildRuntimeRunRow(run, agents));
-  const completionRows = completionRuns.map(buildCompletionRunRow);
+  const controlReadiness = status?.controlReadiness ?? {};
+  const runtimeActionsById = controlReadiness.runtimeRunActionsById ?? {};
+  const completionActionsById = controlReadiness.accountMirrorCompletionActionsById ?? {};
+  const runtimeRows = runtimeRuns.map((run) => buildRuntimeRunRow(run, agents, runtimeActionsById));
+  const completionRows = completionRuns.map((operation) => buildCompletionRunRow(operation, completionActionsById));
   const rows = [...runtimeRows, ...completionRows].sort((left, right) =>
     String(right.updatedAt || right.createdAt).localeCompare(String(left.updatedAt || left.createdAt)),
   );
@@ -2153,6 +2261,7 @@ function buildRunsData({ status, runtimeRuns, completionRuns, agents }) {
     },
     queue: {
       background: background.paused ? "paused" : background.state ?? "unknown",
+      backgroundActions: controlReadiness.backgroundDrain?.actions ?? [],
       runners: `${runnerMetrics.activeRunnerCount ?? 0} active / ${runnerMetrics.totalRunnerCount ?? 0} total`,
       localClaim: `${localClaim.metrics?.selectedCount ?? 0} selected, ${localClaim.metrics?.blockedCount ?? 0} blocked`,
       liveFollow: liveFollowSeverity || status?.accountMirrorScheduler?.operatorStatus?.posture || "unknown",
@@ -2160,7 +2269,7 @@ function buildRunsData({ status, runtimeRuns, completionRuns, agents }) {
   };
 }
 
-function buildRuntimeRunRow(run, agents) {
+function buildRuntimeRunRow(run, agents, actionsByRunId = {}) {
   const kind = run.sourceKind === "team-run" ? "team" : "response";
   const agentIds = agentsForRuntimeRun(run, agents);
   const providerRefs = run.providerConversationSummary?.conversations ?? [];
@@ -2200,6 +2309,7 @@ function buildRuntimeRunRow(run, agents) {
     agentIds,
     providerConversationRefs: providerRefs,
     providerLinks: buildRuntimeProviderLinks(run),
+    controlActions: actionsByRunId[run.runId] ?? [],
     searchable: [
       run.runId,
       run.teamRunId,
@@ -2215,7 +2325,7 @@ function buildRuntimeRunRow(run, agents) {
   };
 }
 
-function buildCompletionRunRow(operation) {
+function buildCompletionRunRow(operation, actionsById = {}) {
   const stateGroup = groupCompletionState(operation.status);
   const title = `${serviceDisplay(operation.provider)} live follow`;
   const completeness = operation.mirrorCompleteness;
@@ -2256,6 +2366,7 @@ function buildCompletionRunRow(operation) {
         href: "/ops/browser",
       },
     ],
+    controlActions: actionsById[operation.id] ?? [],
     searchable: [
       operation.id,
       operation.provider,
@@ -2315,6 +2426,38 @@ function filterRunRows(rows, query, kindFilter, stateFilter) {
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(normalized));
   });
+}
+
+function describeControlResult(result) {
+  if (!result) return "Control accepted; readback refreshed.";
+  if (result.kind === "account-mirror-completion") {
+    return `${result.id} is now ${formatStatus(result.status)}.`;
+  }
+  if (result.kind === "background-drain") {
+    return `Background drain ${result.action} accepted.`;
+  }
+  if (result.action === "drain-run") {
+    return `${result.runId} drain ${result.status}: ${result.reason ?? "readback refreshed"}.`;
+  }
+  return `${result.kind ?? result.action ?? "Control"} accepted.`;
+}
+
+function summarizeControlReadback(payload, action) {
+  if (action.action.startsWith("background-drain")) {
+    const background = payload?.backgroundDrain ?? {};
+    return `backgroundDrain.state=${background.state ?? "unknown"} paused=${String(background.paused === true)}`;
+  }
+  if (action.action.startsWith("completion.")) {
+    const id = action.payload?.accountMirrorCompletion?.id;
+    const operation = [...(payload?.accountMirrorCompletions?.active ?? []), ...(payload?.accountMirrorCompletions?.recent ?? [])]
+      .find((item) => item.id === id);
+    return operation ? `completion.status=${operation.status}` : "completion readback refreshed";
+  }
+  if (action.action === "runtime.drain") {
+    const result = payload?.controlResult ?? {};
+    return `controlResult.status=${result.status ?? "unknown"}`;
+  }
+  return "";
 }
 
 async function loadRunDetail(run) {

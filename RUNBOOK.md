@@ -1,5 +1,33 @@
 # RUNBOOK
 
+## Turn 183 | 2026-05-29
+
+- Active plan:
+  `docs/dev/plans/0083-2026-05-29-runs-safe-controls.md`
+- Goal: execute and close Plan 0083.
+- Result:
+  - added `/status.controlReadiness` as the read-only contract for safe Runs
+    controls, including availability, blocked reason, route/method, payload,
+    expected readback, confirmation copy, provider-browser effect flags, and
+    persistent-write flags.
+  - exposed the first greenfield `/console?view=runs` controls for
+    live-follow pause/resume/cancel, background drain pause/resume, and
+    local-runner eligible targeted drain.
+  - kept launch, broad retry, provider-specific browser automation, and legacy
+    frontend changes out of scope.
+  - closed Plan 0083 and moved `ROADMAP.md` back to a ready-for-next-plan
+    state.
+- Verification:
+  - `env -u OPENAI_API_KEY pnpm vitest run tests/http.responsesServer.test.ts -t "control readiness|controls account mirror completions|pauses and resumes background drain"`
+  - `pnpm run console:build`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - desktop and 375px mobile browser checks for `/console?view=runs`
+  - installed local route check for
+    `http://127.0.0.1:18095/console?view=runs`
+  - `pnpm run plans:audit -- --keep 83`
+  - `git diff --check`
+
 ## Turn 182 | 2026-05-29
 
 - Active plan:

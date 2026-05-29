@@ -6058,6 +6058,119 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('projects state-gated safe run control readiness through /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-control-readiness-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_control_ready_run', '2026-04-08T16:10:00.000Z', 'Ready to drain.');
+
+    const runningCompletion: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_ready_running',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'steady_follow',
+      status: 'running',
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 2,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const completedCompletion: AccountMirrorCompletionOperation = {
+      ...runningCompletion,
+      id: 'acctmirror_ready_completed',
+      status: 'completed',
+      completedAt: '2026-04-30T12:05:00.000Z',
+    };
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, recoverRunsOnStart: false, backgroundDrainIntervalMs: 60_000 },
+      {
+        control,
+        accountMirrorCompletionService: {
+          start: vi.fn(() => runningCompletion),
+          read: vi.fn((id: string) => (id === runningCompletion.id ? runningCompletion : id === completedCompletion.id ? completedCompletion : null)),
+          list: vi.fn(() => [runningCompletion, completedCompletion]),
+          control: vi.fn(() => runningCompletion),
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status?recovery=true&sourceKind=all`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as JsonObject;
+      const readiness = payload.controlReadiness as JsonObject;
+      const backgroundReadiness = readiness.backgroundDrain as JsonObject;
+      const completionActionsById = readiness.accountMirrorCompletionActionsById as Record<string, unknown>;
+      const runtimeActionsById = readiness.runtimeRunActionsById as Record<string, unknown>;
+      expect(readiness).toMatchObject({
+        object: 'run_control_readiness',
+        backgroundDrain: {
+          enabled: true,
+          paused: false,
+        },
+        generatedFrom: {
+          localClaimSourceKind: 'direct',
+        },
+      });
+      expect(backgroundReadiness.actions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: 'background-drain.pause',
+            available: true,
+            route: '/status',
+            payload: { backgroundDrain: { action: 'pause' } },
+          }),
+          expect.objectContaining({
+            action: 'background-drain.resume',
+            available: false,
+            blockedReason: 'background drain is not paused',
+          }),
+        ]),
+      );
+      expect(completionActionsById.acctmirror_ready_running).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: 'completion.pause',
+            available: true,
+            payload: { accountMirrorCompletion: { id: 'acctmirror_ready_running', action: 'pause' } },
+          }),
+          expect.objectContaining({
+            action: 'completion.resume',
+            available: false,
+            blockedReason: 'live-follow status running cannot be resumed',
+          }),
+        ]),
+      );
+      expect(completionActionsById.acctmirror_ready_completed).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: 'completion.cancel',
+            available: false,
+            blockedReason: 'live-follow status completed cannot be cancelled',
+          }),
+        ]),
+      );
+      expect(runtimeActionsById.status_control_ready_run).toEqual([
+        expect.objectContaining({
+          action: 'runtime.drain',
+          available: true,
+          payload: { runControl: { action: 'drain-run', runId: 'status_control_ready_run' } },
+        }),
+      ]);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('repairs only stale-heartbeat leases through POST /status', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-stale-heartbeat-repair-'));
     cleanup.push(homeDir);

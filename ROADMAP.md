@@ -4,21 +4,21 @@
 
 ### Current Execution Board
 
-Status: in progress
+Status: ready for next bounded plan
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan:
+- Latest completed plan:
   [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md)
-- Latest completed work:
+- Previous completed work:
   [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md)
   made AuraCall the source of truth for the agent, tenant, binding, model
   selector, project binding, and dispatch-pool choices consumed by downstream
   `transcribe-audio` first-pass/App Intelligence workflows.
-- Completed console sequence: Agents, Providers, Projects, Overview/Health, and
-  read-only Runs workbench.
-- Current work: add the first state-gated safe controls to the greenfield Runs
-  workbench without adding launch/retry surfaces or changing legacy pages.
+- Completed console sequence: Agents, Providers, Projects, Overview/Health,
+  read-only Runs workbench, and first state-gated Runs controls.
+- Current work: select the next bounded plan before adding broad launch/retry,
+  Search/archive, API Access, or additional control families.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -62,16 +62,17 @@ Current State:
     `transcribe-audio-chatgpt-pro-pool` dispatch team with three ready members;
     live provider submit/materialize was skipped because the first-pass queue
     was empty
-- safe Runs controls are now open in
+- safe Runs controls are now closed in
   [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md):
   - the target product surface is only the greenfield `/console?view=runs`
     workbench
-  - first controls are limited to state-gated live-follow pause/resume/cancel,
-    background drain pause/resume, and one local-runner-owned targeted-drain
-    path if backend readback proves eligibility
+  - first controls are implemented for state-gated live-follow
+    pause/resume/cancel, background drain pause/resume, and one
+    local-runner-owned targeted-drain path when backend readback proves
+    eligibility
   - broad launch and retry controls remain deferred
-  - each exposed action must have a documented state gate, confirmation copy,
-    result readback, and blocked-state reason
+  - each exposed action has a documented state gate, confirmation copy, result
+    readback, and blocked-state reason from `/status.controlReadiness`
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -1499,11 +1500,10 @@ Safety note:
 
 ### Now
 
-- Primary active lane checkpoint: Plan 0083 is open for state-gated safe Runs
+- Primary active lane checkpoint: Plan 0083 is closed for state-gated safe Runs
   controls in the greenfield `/console?view=runs` workbench.
-- Immediate next action: audit existing control APIs and add a control
-  readiness projection before exposing pause/resume/cancel/drain actions.
-  Launch and broad retry remain deferred.
+- Immediate next action: select the next bounded plan. Launch and broad retry
+  remain deferred until a future plan explicitly chooses that control family.
 - Service mode and runner orchestration remains paused after the current
   single-host bounded local-runner bridge reached a coherent ownership
   checkpoint.
@@ -1513,9 +1513,12 @@ Safety note:
   Plan 0079 is closed for the Overview/Health command center in the same
   surface
   [docs/dev/plans/0079-2026-05-29-overview-health-console.md](docs/dev/plans/0079-2026-05-29-overview-health-console.md);
-  Plan 0080 is now closed for the read-only Runs workbench in the same
+  Plan 0080 is closed for the read-only Runs workbench in the same
   greenfield console
   [docs/dev/plans/0080-2026-05-29-runs-workbench-console.md](docs/dev/plans/0080-2026-05-29-runs-workbench-console.md);
+  Plan 0083 is closed for the first state-gated Runs control family in the
+  same workbench
+  [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md);
   continue leaving `/dashboard`, `/agents`, `/config`, and `/ops/browser`
   frozen as legacy/diagnostic pages.
 - Supporting maintenance: bounded config/team-service corrections only when
@@ -1553,11 +1556,9 @@ Safety note:
 
 ### Soon
 
-- Safe Runs controls follow-through: close Plan 0083 with one proven control
-  family before selecting launch/retry work.
 - Search/archive and API Access workflows: select one as the next AuraCall
-  console lane only after the safe-control checkpoint is closed or explicitly
-  deferred.
+  console lane, unless the next bounded plan intentionally extends Runs
+  controls without adding broad launch/retry.
 
 ### Later
 

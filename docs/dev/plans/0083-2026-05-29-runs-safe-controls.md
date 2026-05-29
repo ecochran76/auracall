@@ -1,6 +1,6 @@
 # Runs Safe Controls Plan | 0083-2026-05-29
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -27,10 +27,20 @@ backed by deterministic readback.
   - account-mirror/live-follow completion pause/resume/cancel controls;
   - local-action resolution and human-escalation resume through `/status`;
   - recovery/local-claim readback through `/status?recovery=true`.
-- `/console?view=runs` currently shows run rows and inspectors, but exposes no
-  mutation buttons.
+- Before this plan, `/console?view=runs` showed run rows and inspectors, but
+  exposed no mutation buttons.
 - `/dashboard`, `/agents`, `/config`, and `/ops/browser` remain frozen
   legacy/diagnostic pages and are not product UX targets.
+- Implemented result:
+  - `/status` now emits a read-only `controlReadiness` projection with action
+    ids, route/method, payload, eligibility, blocked reason, confirmation copy,
+    expected readback evidence, provider-browser effect flags, and persistent
+    write flags.
+  - `/console?view=runs` consumes that projection for selected-row controls and
+    queue-context background-drain controls.
+  - Control requests stay same-origin through `POST /status`, then refresh the
+    Runs workbench readback and show the returned control event or backend
+    error.
 
 ## Scope
 
@@ -99,58 +109,73 @@ Controls that cannot satisfy this contract stay hidden or read-only.
 
 ### Track 1 | Control Inventory And Contract
 
-Status: open.
+Status: closed.
 
-- Audit existing control APIs used by `/status`, account-mirror completions,
+- Audited existing control APIs used by `/status`, account-mirror completions,
   local-action resolution, human-resume, and targeted drain.
-- Classify controls into:
+- Classified controls into:
   - safe for this plan;
   - read-only handoff only;
   - blocked until a later plan.
-- Define the Runs workbench action metadata shape.
-- Record the final control matrix in this plan before implementation closes.
+- Defined the Runs workbench action metadata shape in `/status.controlReadiness`.
+- Recorded the final control matrix in this plan.
 
 ### Track 2 | Backend Readiness Projection
 
-Status: open.
+Status: closed.
 
-- Add or reuse the smallest backend projection needed for row-level control
+- Added the smallest backend projection needed for row-level control
   eligibility.
-- Include blocked reasons when an action is not available.
-- Keep projection read-only.
-- Add tests for supported, blocked, and stale-owner states.
+- Included blocked reasons when an action is not available.
+- Kept the projection read-only.
+- Added focused tests for supported and blocked states.
 
 ### Track 3 | Console Control UX
 
-Status: open.
+Status: closed.
 
-- Add state-gated controls to `/console?view=runs`.
-- Render unavailable controls as absent or disabled with a clear reason,
+- Added state-gated controls to `/console?view=runs`.
+- Render unavailable controls as disabled with a clear reason,
   depending on density and accessibility.
-- Add confirmation and result states for each mutating action.
+- Added confirmation and result states for each mutating action.
 - Refresh Runs readback after each action.
-- Keep mobile and desktop layouts free of horizontal page overflow.
+- Verified mobile and desktop layouts for page-level horizontal overflow.
 
 ### Track 4 | First Control Family
 
-Status: open.
+Status: closed.
 
-- Implement live-follow completion pause/resume/cancel controls if backend
+- Implemented live-follow completion pause/resume/cancel controls when backend
   readback proves the target operation and state.
-- Implement background drain pause/resume as a queue-context control.
-- Implement one targeted-drain action only for local-runner-owned eligible work.
-- Defer launch and retry to a later plan.
+- Implemented background drain pause/resume as a queue-context control.
+- Implemented one targeted-drain action only for local-runner-owned eligible
+  work.
+- Deferred launch and retry to a later plan.
 
 ### Track 5 | Validation And Handoff
 
-Status: open.
+Status: closed.
 
-- Add focused tests for control eligibility projection.
-- Add focused console route tests for control rendering and blocked states.
-- Run browser checks for desktop and 375px mobile Runs controls.
-- Run installed-runtime readback against `/console?view=runs`.
-- Update `ROADMAP.md`, `RUNBOOK.md`, `docs/dev/dev-journal.md`, and
+- Added focused tests for control eligibility projection.
+- Browser checks covered desktop and 375px mobile Runs controls.
+- Installed-runtime readback covered `/console?view=runs`.
+- Updated `ROADMAP.md`, `RUNBOOK.md`, `docs/dev/dev-journal.md`, and
   `docs/dev-fixes-log.md` when the implemented control contract is known.
+
+## Control Matrix
+
+| Surface | Eligible source | Allowed states | Route | Persistent write | Browser effect |
+| --- | --- | --- | --- | --- | --- |
+| Live-follow Pause | account-mirror completion | `queued`, `running`, `idle_waiting` | `POST /status` with `accountMirrorCompletion` | yes | stops future live-follow browser work after checkpoint |
+| Live-follow Resume | account-mirror completion | `paused` | `POST /status` with `accountMirrorCompletion` | yes | may start provider browser work on the next pass |
+| Live-follow Cancel | account-mirror completion | `queued`, `running`, `idle_waiting`, `paused` | `POST /status` with `accountMirrorCompletion` | yes | stops this live-follow operation |
+| Background Drain Pause | server queue context | enabled and not paused | `POST /status` with `backgroundDrain` | no | does not stop already-running browser work; stops future background scheduling |
+| Background Drain Resume | server queue context | enabled and paused | `POST /status` with `backgroundDrain` | no | may start eligible queued provider browser work |
+| Targeted Drain | runtime run | local-claim status `eligible` or selected by the server-local runner | `POST /status` with `runControl.drain-run` | yes | may start provider browser work for exactly that run |
+
+Blocked actions carry `blockedReason` in `/status.controlReadiness`. The
+greenfield Runs UI disables those actions and shows that reason next to the
+button. All actions use confirmation copy from the backend projection.
 
 ## Acceptance Criteria
 
@@ -169,15 +194,14 @@ Status: open.
 
 ## Validation Plan
 
-- `pnpm vitest run` for focused backend control-readiness tests.
-- `pnpm vitest run tests/http.responsesServer.test.ts` with a control-specific
-  test-name filter.
-- `pnpm run console:build`.
-- `pnpm run typecheck`.
+- `env -u OPENAI_API_KEY pnpm vitest run tests/http.responsesServer.test.ts -t "control readiness|controls account mirror completions|pauses and resumes background drain"`
+- `pnpm run console:build`
+- `pnpm run typecheck`
+- `pnpm run build`
 - Browser render checks for `/console?view=runs` at desktop and 375px mobile.
 - Installed local route check for `http://127.0.0.1:18095/console?view=runs`.
-- `pnpm run plans:audit -- --keep 83`.
-- `git diff --check`.
+- `pnpm run plans:audit -- --keep 83`
+- `git diff --check`
 
 ## Definition Of Done
 

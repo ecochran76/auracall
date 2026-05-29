@@ -625,6 +625,57 @@ button:disabled {
   justify-self: end;
 }
 
+.control-action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.control-action-row {
+  display: grid;
+  grid-template-columns: minmax(108px, 138px) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.control-action-row .ghost-button {
+  min-width: 0;
+  width: 100%;
+}
+
+.control-action-row span {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.control-result {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.control-result.success {
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+  background: var(--success-soft);
+}
+
+.control-result.error {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+  background: var(--danger-soft);
+}
+
+.control-result p,
+.control-result small {
+  display: block;
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .inventory-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
@@ -1130,6 +1181,10 @@ pre {
   }
 
   .attention-row {
+    grid-template-columns: 1fr;
+  }
+
+  .control-action-row {
     grid-template-columns: 1fr;
   }
 

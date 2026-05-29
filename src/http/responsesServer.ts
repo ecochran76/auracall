@@ -589,6 +589,46 @@ interface AccountMirrorCompletionStatusSummary {
 	recent: AccountMirrorCompletionOperation[];
 }
 
+type HttpRunControlActionId =
+	| "completion.pause"
+	| "completion.resume"
+	| "completion.cancel"
+	| "background-drain.pause"
+	| "background-drain.resume"
+	| "runtime.drain";
+
+interface HttpRunControlReadinessAction {
+	action: HttpRunControlActionId;
+	label: string;
+	available: boolean;
+	blockedReason: string | null;
+	method: "POST";
+	route: "/status";
+	payload: Record<string, unknown>;
+	expectedTransition: string;
+	expectedEvidence: string;
+	startsProviderBrowserWork: boolean;
+	stopsProviderBrowserWork: boolean;
+	writesPersistentState: boolean;
+	confirmation: string;
+}
+
+interface HttpRunControlReadinessResponse {
+	object: "run_control_readiness";
+	backgroundDrain: {
+		state: HttpStatusResponse["backgroundDrain"]["state"];
+		enabled: boolean;
+		paused: boolean;
+		actions: HttpRunControlReadinessAction[];
+	};
+	accountMirrorCompletionActionsById: Record<string, HttpRunControlReadinessAction[]>;
+	runtimeRunActionsById: Record<string, HttpRunControlReadinessAction[]>;
+	generatedFrom: {
+		localRunnerId: string | null;
+		localClaimSourceKind: ExecutionRunSourceKind | "all" | null;
+	};
+}
+
 interface ApiServiceRoutingConfig {
 	localHostname?: string;
 	externalHostname?: string;
@@ -829,6 +869,7 @@ interface HttpStatusResponse {
 	accountMirrorStatus: AccountMirrorStatusSummary;
 	accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
 	accountMirrorProofScope: AccountMirrorProofScopeStatus;
+	controlReadiness: HttpRunControlReadinessResponse;
 	liveFollow: LiveFollowHealthSummary;
 	executionHints: {
 		headerNames: string[];
@@ -4431,6 +4472,11 @@ function createHttpStatusResponse(input: {
 		accountMirrorStatus: input.accountMirrorStatus,
 		accountMirrorCompletions: input.accountMirrorCompletions,
 		accountMirrorProofScope: input.accountMirrorProofScope,
+		controlReadiness: createRunControlReadiness({
+			backgroundDrain: input.backgroundDrain,
+			accountMirrorCompletions: input.accountMirrorCompletions,
+			localClaimSummary: input.localClaimSummary,
+		}),
 		liveFollow: createLiveFollowHealthSummary(
 			accountMirrorScheduler,
 			input.accountMirrorCompletions,
@@ -4446,6 +4492,236 @@ function createHttpStatusResponse(input: {
 			bodyObject: "auracall",
 		},
 		controlResult: input.controlResult,
+	};
+}
+
+function createRunControlReadiness(input: {
+	backgroundDrain: HttpStatusResponse["backgroundDrain"];
+	accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
+	localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
+}): HttpRunControlReadinessResponse {
+	const accountMirrorCompletionActionsById: Record<string, HttpRunControlReadinessAction[]> = {};
+	for (const operation of input.accountMirrorCompletions.recent) {
+		accountMirrorCompletionActionsById[operation.id] = createAccountMirrorCompletionControlActions(operation);
+	}
+	for (const operation of input.accountMirrorCompletions.active) {
+		if (!accountMirrorCompletionActionsById[operation.id]) {
+			accountMirrorCompletionActionsById[operation.id] = createAccountMirrorCompletionControlActions(operation);
+		}
+	}
+
+	const runtimeRunActionsById: Record<string, HttpRunControlReadinessAction[]> = {};
+	const localClaim = input.localClaimSummary ?? null;
+	if (localClaim) {
+		for (const runId of Object.keys(localClaim.statusByRunId)) {
+			runtimeRunActionsById[runId] = [
+				createRuntimeDrainReadinessAction({
+					runId,
+					status: localClaim.statusByRunId[runId] ?? "unavailable",
+					reason: localClaim.reasonsByRunId[runId] ?? null,
+				}),
+			];
+		}
+		for (const runId of localClaim.selectedRunIds) {
+			if (!runtimeRunActionsById[runId]) {
+				runtimeRunActionsById[runId] = [
+					createRuntimeDrainReadinessAction({
+						runId,
+						status: "selected",
+						reason: null,
+					}),
+				];
+			}
+		}
+	}
+
+	return {
+		object: "run_control_readiness",
+		backgroundDrain: {
+			state: input.backgroundDrain.state,
+			enabled: input.backgroundDrain.enabled,
+			paused: input.backgroundDrain.paused,
+			actions: createBackgroundDrainControlActions(input.backgroundDrain),
+		},
+		accountMirrorCompletionActionsById,
+		runtimeRunActionsById,
+		generatedFrom: {
+			localRunnerId: localClaim?.runnerId ?? null,
+			localClaimSourceKind: localClaim?.sourceKind ?? null,
+		},
+	};
+}
+
+function createBackgroundDrainControlActions(
+	backgroundDrain: HttpStatusResponse["backgroundDrain"],
+): HttpRunControlReadinessAction[] {
+	const pauseBlockedReason = !backgroundDrain.enabled
+		? "background drain is not enabled for this server"
+		: backgroundDrain.paused
+			? "background drain is already paused"
+			: null;
+	const resumeBlockedReason = !backgroundDrain.enabled
+		? "background drain is not enabled for this server"
+		: !backgroundDrain.paused && backgroundDrain.state === "running"
+			? "background drain is already running"
+			: !backgroundDrain.paused
+				? "background drain is not paused"
+				: null;
+	return [
+		createRunControlReadinessAction({
+			action: "background-drain.pause",
+			label: "Pause drain",
+			available: pauseBlockedReason === null,
+			blockedReason: pauseBlockedReason,
+			payload: { backgroundDrain: { action: "pause" } },
+			expectedTransition: "background drain state becomes paused after any in-flight drain finishes",
+			expectedEvidence: "controlResult.kind=background-drain and backgroundDrain.paused=true",
+			startsProviderBrowserWork: false,
+			stopsProviderBrowserWork: false,
+			writesPersistentState: false,
+			targetId: "background drain",
+			currentState: backgroundDrain.state,
+			browserEffect: "browser work already in progress may continue; future background drain scheduling stops",
+		}),
+		createRunControlReadinessAction({
+			action: "background-drain.resume",
+			label: "Resume drain",
+			available: resumeBlockedReason === null,
+			blockedReason: resumeBlockedReason,
+			payload: { backgroundDrain: { action: "resume" } },
+			expectedTransition: "background drain leaves paused state and schedules the next local drain",
+			expectedEvidence: "controlResult.kind=background-drain and backgroundDrain.paused=false",
+			startsProviderBrowserWork: true,
+			stopsProviderBrowserWork: false,
+			writesPersistentState: false,
+			targetId: "background drain",
+			currentState: backgroundDrain.state,
+			browserEffect: "eligible queued work may start provider browser work after resume",
+		}),
+	];
+}
+
+function createAccountMirrorCompletionControlActions(
+	operation: AccountMirrorCompletionOperation,
+): HttpRunControlReadinessAction[] {
+	return [
+		createCompletionReadinessAction(operation, "pause"),
+		createCompletionReadinessAction(operation, "resume"),
+		createCompletionReadinessAction(operation, "cancel"),
+	];
+}
+
+function createCompletionReadinessAction(
+	operation: AccountMirrorCompletionOperation,
+	action: "pause" | "resume" | "cancel",
+): HttpRunControlReadinessAction {
+	const blockedReason = accountMirrorCompletionControlBlockedReason(operation.status, action);
+	const label = action === "pause" ? "Pause" : action === "resume" ? "Resume" : "Cancel";
+	return createRunControlReadinessAction({
+		action: `completion.${action}` as HttpRunControlActionId,
+		label,
+		available: blockedReason === null,
+		blockedReason,
+		payload: { accountMirrorCompletion: { id: operation.id, action } },
+		expectedTransition:
+			action === "pause"
+				? "live-follow operation becomes paused"
+				: action === "resume"
+					? "live-follow operation returns to running"
+					: "live-follow operation becomes cancelled",
+		expectedEvidence: "controlResult.kind=account-mirror-completion and refreshed accountMirrorCompletions readback includes the updated status",
+		startsProviderBrowserWork: action === "resume",
+		stopsProviderBrowserWork: action === "pause" || action === "cancel",
+		writesPersistentState: true,
+		targetId: operation.id,
+		currentState: operation.status,
+		browserEffect:
+			action === "resume"
+				? "provider browser work may start again on the next live-follow pass"
+				: action === "pause"
+					? "provider browser work should stop after the current live-follow checkpoint"
+					: "provider browser work should stop for this live-follow operation",
+	});
+}
+
+function accountMirrorCompletionControlBlockedReason(
+	status: AccountMirrorCompletionOperation["status"],
+	action: "pause" | "resume" | "cancel",
+): string | null {
+	if (action === "resume") {
+		return status === "paused" ? null : `live-follow status ${status} cannot be resumed`;
+	}
+	if (action === "pause") {
+		return status === "queued" || status === "running" || status === "idle_waiting"
+			? null
+			: `live-follow status ${status} cannot be paused`;
+	}
+	if (status === "queued" || status === "running" || status === "idle_waiting" || status === "paused") {
+		return null;
+	}
+	return `live-follow status ${status} cannot be cancelled`;
+}
+
+function createRuntimeDrainReadinessAction(input: {
+	runId: string;
+	status: string;
+	reason: string | null;
+}): HttpRunControlReadinessAction {
+	const available = input.status === "selected" || input.status === "eligible";
+	const blockedReason = available
+		? null
+		: input.reason ?? `run is ${input.status}; targeted drain requires server-local runner ownership`;
+	return createRunControlReadinessAction({
+		action: "runtime.drain",
+		label: "Drain now",
+		available,
+		blockedReason,
+		payload: { runControl: { action: "drain-run", runId: input.runId } },
+		expectedTransition: "local service host executes exactly this eligible run or returns a blocked readback error",
+		expectedEvidence: "controlResult.action=drain-run and status=executed with refreshed runtime run readback",
+		startsProviderBrowserWork: true,
+		stopsProviderBrowserWork: false,
+		writesPersistentState: true,
+		targetId: input.runId,
+		currentState: input.status,
+		browserEffect: "eligible run execution may start provider browser work under the local runner",
+	});
+}
+
+function createRunControlReadinessAction(input: {
+	action: HttpRunControlActionId;
+	label: string;
+	available: boolean;
+	blockedReason: string | null;
+	payload: Record<string, unknown>;
+	expectedTransition: string;
+	expectedEvidence: string;
+	startsProviderBrowserWork: boolean;
+	stopsProviderBrowserWork: boolean;
+	writesPersistentState: boolean;
+	targetId: string;
+	currentState: string;
+	browserEffect: string;
+}): HttpRunControlReadinessAction {
+	return {
+		action: input.action,
+		label: input.label,
+		available: input.available,
+		blockedReason: input.blockedReason,
+		method: "POST",
+		route: "/status",
+		payload: input.payload,
+		expectedTransition: input.expectedTransition,
+		expectedEvidence: input.expectedEvidence,
+		startsProviderBrowserWork: input.startsProviderBrowserWork,
+		stopsProviderBrowserWork: input.stopsProviderBrowserWork,
+		writesPersistentState: input.writesPersistentState,
+		confirmation: [
+			`Target: ${input.targetId}.`,
+			`Current state: ${input.currentState}.`,
+			`Expected transition: ${input.expectedTransition}.`,
+			input.browserEffect,
+		].join(" "),
 	};
 }
 

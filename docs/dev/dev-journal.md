@@ -1,3 +1,26 @@
+## Turn 328 | 2026-05-29
+
+- Goal: execute and close the Runs safe-controls plan.
+- Result:
+  - implemented
+    `docs/dev/plans/0083-2026-05-29-runs-safe-controls.md`.
+  - added `/status.controlReadiness` as the backend projection for safe
+    Runs controls and blocked reasons.
+  - wired `/console?view=runs` selected-row controls for live-follow
+    pause/resume/cancel and local-runner eligible targeted drain.
+  - wired queue-context background drain pause/resume controls.
+  - kept legacy frontend pages unchanged and left launch/broad retry deferred.
+- Verification:
+  - `env -u OPENAI_API_KEY pnpm vitest run tests/http.responsesServer.test.ts -t "control readiness|controls account mirror completions|pauses and resumes background drain"`
+  - `pnpm run console:build`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - desktop/mobile browser checks for `/console?view=runs`
+  - installed local route check for
+    `http://127.0.0.1:18095/console?view=runs`
+  - `pnpm run plans:audit -- --keep 83`
+  - `git diff --check`
+
 ## Turn 327 | 2026-05-29
 
 - Goal: open the downstream `transcribe-audio` App Intelligence integration

@@ -17486,6 +17486,13 @@ browser-stage lifecycle observability, not transcript truncation.
   dispatch-pool teams from downstream clients even when `/v1/config/teams` and
   API-key diagnostics can see them.
 
+- 2026-05-29: Greenfield Runs controls should render from backend readiness,
+  not from duplicated frontend state rules. `/status.controlReadiness` is the
+  contract for action availability, blocked reason, confirmation copy,
+  expected readback evidence, browser-work effect, and persistent-write
+  posture; `/console?view=runs` should consume that projection before exposing
+  live-follow, background-drain, or targeted-drain mutations.
+
 - 2026-05-26: Close live-follow artifact inventory from completion readback and
   checksum evidence together. The final Plan 0073 Gemini proof kept metadata
   artifact counts honest as deferred because no conversation detail surface was
