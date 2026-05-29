@@ -17481,6 +17481,11 @@ browser-stage lifecycle observability, not transcript truncation.
   navigation was acceptable only because sources were distinct provider
   operations rather than attach-time or same-route churn.
 
+- 2026-05-29: `agent-choices` must project teams from the effective
+  registry-backed catalog. Returning only file-backed teams hides scoped
+  dispatch-pool teams from downstream clients even when `/v1/config/teams` and
+  API-key diagnostics can see them.
+
 - 2026-05-26: Close live-follow artifact inventory from completion readback and
   checksum evidence together. The final Plan 0073 Gemini proof kept metadata
   artifact counts honest as deferred because no conversation detail surface was

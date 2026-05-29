@@ -151,6 +151,26 @@
     Provider account showed `2 browser bindings`, Browser binding select was
     present, and not-ready options were absent.
 
+## Turn 323 | 2026-05-29
+
+- Goal: execute Plan 0082 for the AuraCall-to-transcribe-audio choices
+  integration.
+- Change:
+  - `agent-choices` now includes effective teams and registry-backed team
+    choices.
+  - `transcribe-audio` now fetches AuraCall choices, records redacted
+    `auracall_readiness`, prefers `AURACALL_AGENT_ID`, and keeps dispatch-pool
+    routing under `AURACALL_DISPATCH_TEAM`.
+  - installed runtime was rebuilt/restarted, and the transcript dispatch-pool
+    registry team was restored for live readback.
+- Verification:
+  - focused AuraCall choices tests, typecheck, build, and diff check passed.
+  - focused transcribe-audio compile/API/batch tests passed.
+  - scoped live choices readback returned the transcript dispatch-pool team
+    with three ready members.
+  - first-pass queue was empty, so live provider submit/materialize was not
+    run.
+
 ## Turn 320 | 2026-05-28
 
 - Goal: complete the next greenfield console UX plan after the Agents workflow

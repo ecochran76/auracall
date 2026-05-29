@@ -5,6 +5,7 @@ import {
   getRuntimeProfileBrowserProfileId,
   projectConfigModel,
   type ProjectedAgent,
+  type ProjectedTeam,
 } from './model.js';
 import { createConfiguredServiceAccountId } from './serviceAccountIdentity.js';
 
@@ -92,6 +93,7 @@ export interface AgentConfigChoices {
   extras: AgentConfigChoiceExtras;
   projectBindings: AgentConfigChoiceProjectBinding[];
   agents: ProjectedAgent[];
+  teams: ProjectedTeam[];
   validation: {
     ok: boolean;
     agents: AgentConfigChoiceAgentValidation[];
@@ -134,6 +136,7 @@ export function createAgentConfigChoices(config: MutableRecord, agents: Projecte
     },
     projectBindings,
     agents,
+    teams: projected.teams,
     validation: {
       ok: validationAgents.every((agent) => agent.valid),
       agents: validationAgents,

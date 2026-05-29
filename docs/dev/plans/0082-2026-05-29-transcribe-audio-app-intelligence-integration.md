@@ -1,6 +1,6 @@
 # Transcribe-Audio App Intelligence Integration Plan | 0082-2026-05-29
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -36,6 +36,16 @@ transcribe-audio config files.
 - `transcribe-audio` also has local App Intelligence run ledgers, preflight
   endpoints, prompt-packet review, send gates, structured-decision validation,
   and human-review gates under `/api/intelligence/...`.
+- Implemented: AuraCall `GET /v1/config/agent-choices` now includes effective
+  teams from the registry-backed catalog, not only file-backed teams.
+- Implemented: `transcribe-audio` has a redacted AuraCall choices readiness
+  reader that records selected agent/team ids, binding readiness,
+  dispatch-pool membership, route links, and secret-free API-key posture.
+- Implemented: first-pass summary prepare/enqueue prefers
+  `AURACALL_AGENT_ID` for single-agent runs and preserves
+  `AURACALL_DISPATCH_TEAM` for dispatch-pool routing.
+- Live readback after reinstall/restart proved the scoped transcribe key can
+  read `transcribe-audio-chatgpt-pro-pool` with three ready members.
 
 ## Scope
 
@@ -98,7 +108,7 @@ run/readback surfaces.
 
 ### Track 1 | Contract Audit
 
-Status: open.
+Status: closed.
 
 - Compare `GET /v1/config/agent-choices` against the transcribe-audio
   requirements for first-pass summaries and App Intelligence model turns.
@@ -109,12 +119,12 @@ Status: open.
   - scoped API key posture;
   - invalid/not-ready browser bindings;
   - related AuraCall run/status links.
-- Document any missing field as an AuraCall contract gap before implementing
-  app-side work.
+- Closed contract gap: effective teams are now projected in
+  `agent-choices`, including registry-backed dispatch-pool teams.
 
 ### Track 2 | Transcribe-Audio Choice Consumer
 
-Status: open.
+Status: closed.
 
 - Add a transcribe-audio AuraCall choices client that reads the configured
   AuraCall base URL and scoped API key from user-scoped config or environment.
@@ -126,7 +136,7 @@ Status: open.
 
 ### Track 3 | First-Pass Summary Batch Integration
 
-Status: open.
+Status: closed.
 
 - Update first-pass summary prepare/enqueue logic to prefer stable AuraCall
   `agentId` and dispatch-pool team ids from the choices contract.
@@ -139,7 +149,7 @@ Status: open.
 
 ### Track 4 | App Intelligence Integration
 
-Status: open.
+Status: closed.
 
 - Connect transcribe-audio App Intelligence provider/model routing to selected
   AuraCall agents where the workflow asks for AuraCall-backed reasoning.
@@ -151,7 +161,7 @@ Status: open.
 
 ### Track 5 | Validation And Handoff
 
-Status: open.
+Status: closed.
 
 - Add focused tests for the AuraCall choices consumer and readiness projection.
 - Add or update tests for first-pass summary manifest preparation using
@@ -166,6 +176,30 @@ Status: open.
   - focused pytest coverage for API/config/batch preparation;
   - readout quality gate for any live materialized smoke.
 - Record the final evidence in both repos when both repos are touched.
+
+## Closeout Evidence
+
+- AuraCall contract:
+  - `agent-choices` now projects `teams` from the effective registry catalog.
+  - Regression coverage verifies registry-backed teams appear in choices.
+- Transcribe-audio consumer:
+  - added `auracall_choices.py`;
+  - first-pass prepare/enqueue manifests include `auracall_readiness`;
+  - `/api/intelligence/config` exposes the same redacted readiness.
+- Installed-runtime proof:
+  - rebuilt and installed the user AuraCall runtime;
+  - restarted `auracall-api.service`;
+  - restored registry team `transcribe-audio-chatgpt-pro-pool` through the
+    operator config API without provider/browser project work;
+  - scoped choices readback returned 48 agents, 15 teams, and the transcript
+    dispatch-pool team with three members;
+  - dry-run prepare wrote
+    `/tmp/auracall-plan-0082-readiness-prepare.json` with
+    `auracall_readiness.ok=true`, no warnings, and no provider submission.
+- Live provider submit/materialize was not run because
+  `transcript_store.py first-pass-summary-queue --format compact-json --limit 5`
+  returned zero queued first-pass items. The existing approval-token and
+  materialization paths remain covered by focused API tests.
 
 ## Acceptance Criteria
 

@@ -18094,6 +18094,16 @@ describe('http responses adapter', () => {
           modelSelector: 'chatgpt:pro-extended',
         },
       },
+      teams: {
+        'consult-pool': {
+          type: 'dispatch-pool',
+          agents: ['consult'],
+          dispatch: {
+            mode: 'next_available',
+          },
+          projectSync: 'none',
+        },
+      },
     };
     await fs.writeFile(path.join(homeDir, 'config.json'), JSON.stringify(activeConfig), 'utf8');
     const server = await createResponsesHttpServer(
@@ -18119,6 +18129,23 @@ describe('http responses adapter', () => {
               source: 'service',
               providerProjectId: 'proj_consult',
             }),
+          }),
+        ],
+        teams: [
+          expect.objectContaining({
+            id: 'consult-pool',
+            type: 'dispatch-pool',
+            agentIds: ['consult'],
+            members: [
+              expect.objectContaining({
+                agentId: 'consult',
+                exists: true,
+                runtimeProfileId: 'consult',
+                browserProfileId: 'consult',
+              }),
+            ],
+            dispatchMode: 'next_available',
+            projectSync: 'none',
           }),
         ],
       });

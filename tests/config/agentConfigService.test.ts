@@ -511,6 +511,20 @@ describe('agent and team config service', () => {
         }),
       ],
     });
+    await expect(service.choices()).resolves.toMatchObject({
+      teams: [
+        expect.objectContaining({
+          id: 'registry-team',
+          agentIds: ['registry-agent'],
+          members: [
+            expect.objectContaining({
+              agentId: 'registry-agent',
+              exists: true,
+            }),
+          ],
+        }),
+      ],
+    });
     expect(JSON.parse(await fs.readFile(configPath, 'utf8'))).toEqual(initialConfig);
   });
 

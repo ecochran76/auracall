@@ -9,11 +9,13 @@ Lane: P01
 
 Current Priority Snapshot:
 - Active plan:
+  none. Plan 0082 is closed; select the next bounded plan before resuming
+  feature work.
+- Latest completed work:
   [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md)
-- Current work: make AuraCall the source of truth for the agent, tenant,
-  binding, model selector, project binding, and dispatch-pool choices consumed
-  by downstream `transcribe-audio` App Intelligence and first-pass readout
-  workflows.
+  made AuraCall the source of truth for the agent, tenant, binding, model
+  selector, project binding, and dispatch-pool choices consumed by downstream
+  `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health, and
   read-only Runs workbench.
 - Deferred AuraCall lanes: safe Runs controls, Search/archive, and API Access
@@ -39,17 +41,26 @@ Current State:
   sequence; the next implementation lane is a new bounded
   `transcribe-audio` App Intelligence integration plan rather than extending
   Plan 0063 or treating the legacy frontend as a product target
-- downstream `transcribe-audio` App Intelligence integration is now open in
+- downstream `transcribe-audio` App Intelligence integration is now closed in
   [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md):
   - AuraCall owns provider execution choices through the
-    `GET /v1/config/agent-choices` contract
-  - `transcribe-audio` should persist stable `agentId` and optional
+    `GET /v1/config/agent-choices` contract, including effective
+    registry-backed teams
+  - `transcribe-audio` now prefers stable `AURACALL_AGENT_ID` and optional
     dispatch-pool team ids rather than copying provider-specific
     tenant/browser/model/project internals
+  - `transcribe-audio` prepare/enqueue manifests and `/api/intelligence/config`
+    expose redacted AuraCall readiness for selected agents/teams without
+    exposing secrets
   - transcript payloads, readout schemas, App Intelligence ledgers,
     materialization, and quality gates remain in `transcribe-audio`
   - no raw transcript text, prompt packets, readout bodies, or private
     transcript paths should be stored in AuraCall docs or config
+  - installed-runtime proof after rebuilding/restarting `auracall-api.service`
+    showed the scoped transcribe key can read the
+    `transcribe-audio-chatgpt-pro-pool` dispatch team with three ready members;
+    live provider submit/materialize was skipped because the first-pass queue
+    was empty
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:

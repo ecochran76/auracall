@@ -202,8 +202,9 @@ export function createAgentTeamConfigService(
     async choices() {
       const config = await readProjectionConfig();
       const catalog = await createEffectiveCatalog(config, registryStore);
+      const effectiveConfig = await createEffectiveAgentConfig(config, registryStore);
       return {
-        ...createAgentConfigChoices(config, catalog.agents),
+        ...createAgentConfigChoices(effectiveConfig, catalog.agents),
         configPath: targetPath,
         registryPath: registryStore?.dbPath ?? null,
       };

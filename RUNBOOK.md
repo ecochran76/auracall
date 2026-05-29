@@ -1,5 +1,31 @@
 # RUNBOOK
 
+## Turn 181 | 2026-05-29
+
+- Active plan:
+  `docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md`
+- Goal: execute and close Plan 0082.
+- Result:
+  - added effective registry-backed `teams` to
+    `GET /v1/config/agent-choices`.
+  - fixed `AgentTeamConfigService.choices()` to project from the effective
+    registry catalog, not only file-backed config.
+  - implemented the `transcribe-audio` AuraCall choices consumer and redacted
+    readiness projection.
+  - first-pass prepare/enqueue now prefers `AURACALL_AGENT_ID` and records
+    `auracall_readiness`; `/api/intelligence/config` exposes the same
+    readiness for the review console.
+  - rebuilt and installed the user AuraCall runtime, restarted
+    `auracall-api.service`, restored the transcript dispatch-pool registry
+    team, and proved scoped readback sees three ready members.
+  - live provider submit/materialize was skipped because the
+    `transcribe-audio` first-pass queue is empty.
+- Verification:
+  - `env -u OPENAI_API_KEY pnpm vitest run tests/config/agentConfigService.test.ts tests/http.responsesServer.test.ts -t "choices|agent tenant and binding choices|writes agents and teams to the registry"`
+  - `env -u OPENAI_API_KEY pnpm run typecheck`
+  - `env -u OPENAI_API_KEY pnpm run build`
+  - `git diff --check`
+
 ## Turn 180 | 2026-05-29
 
 - Active plan:
