@@ -244,6 +244,14 @@
         `materializationMaxItems`, `materializationRefreshSnapshot`, and
         `materializationForce`; absent fields keep the existing metadata-only
         steady-follow default
+      - when configured `liveFollow` policy changes from metadata-only to full
+        retrieval, startup reconciliation should upgrade an active completion
+        in place and report an upgrade instead of starting a duplicate target
+        loop
+      - history materialization jobs should not fail on a wrapper timeout while
+        provider/browser work continues; they remain running until provider
+        work resolves or startup recovery marks an interrupted active job
+        failed after service restart
       - refresh failures persist target status state; startup/status hydration
         must preserve failure-backoff across API and proof-server restarts
       - Gemini explicit-refresh proof retries use practical defaults:

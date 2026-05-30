@@ -49,7 +49,8 @@ export interface AccountMirrorCompletionLifecycleEvent {
     | 'operator_paused'
     | 'operator_resumed'
     | 'operator_cancelled'
-    | 'campaign_policy_upgraded';
+    | 'campaign_policy_upgraded'
+    | 'live_follow_policy_upgraded';
   status: AccountMirrorCompletionOperation['status'];
   previousStatus: AccountMirrorCompletionOperation['status'] | null;
   processPid: number;
@@ -524,14 +525,15 @@ export function createAccountMirrorCompletionService(input: {
       const nextStatus = operation.status === 'paused'
         ? 'paused'
         : (operation.status === 'queued' ? 'queued' : 'running');
+      const liveFollowUpgrade = request.maxPasses === null;
       const updated = update(operation.id, {
-        mode: 'bounded',
+        mode: liveFollowUpgrade ? 'live_follow' : 'bounded',
         sweepMode,
         phase: 'backfill_history',
         status: nextStatus,
         completedAt: null,
         nextAttemptAt: operation.status === 'paused' ? operation.nextAttemptAt : null,
-        maxPasses: resolveUpgradeMaxPasses(operation, request.maxPasses),
+        maxPasses: liveFollowUpgrade ? null : resolveUpgradeMaxPasses(operation, request.maxPasses),
         materializationPolicy: normalizeMaterializationPolicy(request.materializationPolicy, sweepMode),
         materializationAssetKinds: normalizeMaterializationAssetKinds(request.materializationAssetKinds),
         materializationMaxItems: normalizeMaterializationMaxItems(request.materializationMaxItems),
@@ -540,10 +542,12 @@ export function createAccountMirrorCompletionService(input: {
         error: null,
       });
       const evented = appendLifecycleEvent(operation.id, {
-        type: 'campaign_policy_upgraded',
+        type: liveFollowUpgrade ? 'live_follow_policy_upgraded' : 'campaign_policy_upgraded',
         status: updated?.status ?? nextStatus,
         previousStatus,
-        message: 'Upgraded account-mirror completion policy for a reconciliation campaign.',
+        message: liveFollowUpgrade
+          ? 'Upgraded account-mirror completion policy from configured live-follow full artifact retrieval.'
+          : 'Upgraded account-mirror completion policy for a reconciliation campaign.',
       }) ?? updated;
       wakeSleepers();
       if (evented && evented.status !== 'paused') {

@@ -1,6 +1,6 @@
 # Full Live-Follow Artifact Retrieval Plan | 0086-2026-05-30
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -30,11 +30,16 @@ drop through installed-runtime evidence.
   - `chatgpt/wsl-chrome-3`;
   - `gemini/auracall-gemini-pro`;
   - `grok/default`.
-- `chatgpt/wsl-chrome-3` is the best first proof target:
-  - active and error-free;
-  - `145` remote-known missing local assets;
-  - `2` locally materialized assets already proven through run-archive
-    overlay.
+- `chatgpt/wsl-chrome-3` was the first proof target:
+  - active and error-free at baseline;
+  - `145` remote-known missing local assets at baseline;
+  - `2` locally materialized assets at baseline through run-archive overlay;
+  - after the installed full-retrieval run, `24` local materialized artifacts
+    are visible through recovery readback and search/archive reports `24`
+    available artifact rows with local paths and SHA-256 checksums;
+  - remaining recovery readback for the target is `123` remote-known missing
+    local assets, so the target is no longer metadata-only and is making
+    measured catch-up progress.
 - Other ChatGPT targets are not ready for broad execution:
   - `chatgpt/default`, `chatgpt/wsl-chrome-2`, and `chatgpt/wsl-chrome-4`
     are in failure cooldown or page-target/collector timeout states.
@@ -95,7 +100,7 @@ the desired full artifact retrieval behavior.
 
 ### Track 1 | Desired Policy Contract
 
-Status: planned.
+Status: complete.
 
 - Add or verify durable config support for:
   - `liveFollow.sweepMode: full_sweep`;
@@ -108,7 +113,7 @@ Status: planned.
 
 ### Track 2 | Active Completion Upgrade
 
-Status: planned.
+Status: complete.
 
 - Make startup reconciliation or explicit reconciliation able to upgrade an
   existing active metadata-only completion when the configured desired policy is
@@ -126,7 +131,7 @@ Status: planned.
 
 ### Track 3 | First Installed Proof Target
 
-Status: planned.
+Status: complete.
 
 - Use `chatgpt/wsl-chrome-3` as the first proof target.
 - Baseline before upgrade:
@@ -149,7 +154,7 @@ Status: planned.
 
 ### Track 4 | Scale Gate For Remaining Targets
 
-Status: planned.
+Status: complete.
 
 - Do not broaden to `chatgpt/default`, `chatgpt/wsl-chrome-2`, or
   `chatgpt/wsl-chrome-4` until their current cooldown/page-target failures are
@@ -165,18 +170,50 @@ Status: planned.
 
 ## Acceptance Criteria
 
-- Plan 0086 is wired into `ROADMAP.md` and `RUNBOOK.md` as the active bounded
-  plan.
-- Installed config or an equivalent durable policy source can express full
-  artifact retrieval for selected live-follow targets.
-- Existing active metadata-only completions can be upgraded to full retrieval
-  without starting duplicate target loops.
-- `chatgpt/wsl-chrome-3` is upgraded and run through one bounded installed
-  proof pass.
-- Installed readback shows policy, job handoff, materialization outcomes, and
-  before/after recovery counts for the proof target.
-- Remaining targets are left in explicit states: ready for later full
-  retrieval, cooldown/failure blocked, or detail-refresh required.
+- Complete. Plan 0086 is wired into `ROADMAP.md` and `RUNBOOK.md`.
+- Complete. Installed `~/.auracall/config.json` for
+  `profiles["wsl-chrome-3"].services.chatgpt.liveFollow` now expresses:
+  - `sweepMode: full_sweep`;
+  - `materializationPolicy: full_missing_assets`;
+  - `materializationAssetKinds: [all]`;
+  - `materializationMaxItems: 3`;
+  - `materializationRefreshSnapshot: true`;
+  - `materializationForce: false`.
+- Complete. Existing active metadata-only completions are upgraded in place by
+  configured live-follow reconciliation, with a
+  `live_follow_policy_upgraded` lifecycle event and no duplicate target loop.
+- Complete. Installed readback for
+  `acctmirror_completion_ca854a9c-d49f-48e3-b472-91e6966311c4` shows:
+  - `mode: live_follow`;
+  - `sweepMode: full_sweep`;
+  - `materializationPolicy: full_missing_assets`;
+  - `materializationAssetKinds: [all]`;
+  - `materializationMaxItems: 3`;
+  - `materializationRefreshSnapshot: true`.
+- Complete. The first installed proof target materialized real assets through
+  provider-backed history retrieval:
+  - explicit bounded proof job `hmj_57def4c362a14e46bfd1efd741fc6edb`
+    succeeded after the timeout fix with `maxItems=3`, `3` conversations
+    attempted, `3` materialized assets, `1` skipped entry, `4` failed entries,
+    `3` manifest paths, and `3` checksum-bearing entries;
+  - search/archive readback for `chatgpt/wsl-chrome-3` and
+    `eric.cochran@soylei.com` reports `24` available artifact rows with local
+    paths and SHA-256 checksums;
+  - recovery-candidate readback moved from `145` remote-known missing local
+    assets and `2` local materialized assets to `123` remote-known missing
+    local assets and `24` local materialized artifacts.
+- Complete. The history-materialization job runner no longer marks a job
+  failed on a hard wrapper timeout while provider work continues in the
+  background. Jobs remain `running` until provider work settles or startup
+  recovery marks interrupted active jobs failed after service restart.
+- Complete. Remaining targets are explicit:
+  - `chatgpt/wsl-chrome-3`: full-retrieval policy active, incremental catch-up
+    still needed for the remaining `123` remote-known missing local assets;
+  - other ChatGPT targets: still require bounded per-binding proof before
+    broadening retrieval;
+  - Gemini: detail-refresh required before asserting concrete retrievable
+    assets;
+  - Grok blocked targets: no-op until binding/browser readiness is fixed.
 
 ## Validation Plan
 
@@ -202,8 +239,8 @@ Status: planned.
 
 - AuraCall is no longer stuck in metadata-only posture for the selected proof
   target.
-- The installed proof target either reduces missing-local artifact counts or
-  records terminal reasons for attempted assets.
+- The installed proof target reduced missing-local artifact counts and exposed
+  local paths/checksums through search/archive readback.
 - Operators can tell from API, CLI, MCP, and console readback whether a target
   is configured and running full artifact retrieval.
 - The roadmap, runbook, dev journal, and durable fixes log record the final

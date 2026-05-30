@@ -522,6 +522,12 @@ Terminology note:
   `materializationCursor`. Per-service `liveFollow` config can set the same
   sweep/materialization fields for startup reconciliation; ordinary
   `liveFollow.enabled: true` remains metadata-only steady follow by default.
+  Startup reconciliation upgrades an existing active live-follow operation in
+  place when the configured `liveFollow` policy becomes full retrieval; it does
+  not start a duplicate loop for the same provider/runtime target.
+  History-materialization jobs stay `running` until provider work actually
+  settles or the API service restarts, so readback does not mark a job failed
+  while browser retrieval continues in the background.
   Full-sweep completion refreshes use a longer collector timeout than ordinary
   refreshes so conservative provider pacing has room to finish a bounded pass;
   Gemini steady-follow completions also use a wider provider-specific envelope,

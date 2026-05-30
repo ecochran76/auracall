@@ -4,19 +4,18 @@
 
 ### Current Execution Board
 
-Status: executing Plan 0086
+Status: ready for next bounded plan
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan:
-  [docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md](docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md)
 - Latest completed plan:
+  [docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md](docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md)
+- Previous completed plan:
   [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
   made live-follow artifact recovery truthful and operator-actionable across
   API, CLI, MCP, and the greenfield Runs console.
-- Previous completed plan:
-  [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md)
 - Previous completed work:
+  [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md)
   [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md)
   added the first state-gated Runs controls to the greenfield console.
   [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md)
@@ -25,10 +24,13 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: execute Plan 0086 so selected live-follow targets can run full
-  artifact retrieval instead of staying stuck in metadata-only posture. The
-  first proof target is `chatgpt/wsl-chrome-3`, because it is active,
-  error-free, and still reports `145` remote-known missing local assets.
+- Current work: Plan 0086 is closed. `chatgpt/wsl-chrome-3` is no longer stuck
+  in metadata-only live follow: installed readback shows `full_sweep`,
+  `full_missing_assets`, `materializationAssetKinds: [all]`, and
+  `materializationMaxItems: 3`; search/archive readback reports `24`
+  available ChatGPT artifact rows with local paths and SHA-256 checksums; and
+  recovery readback for the proof target dropped from `145` to `123`
+  remote-known missing local assets.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -113,7 +115,7 @@ Current State:
     `remoteKnownMissingLocal` assets; the explicit recovery lane is now closed
     for planner/readback/proof mechanics in
     [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
-    while full live-follow artifact retrieval is now the active follow-up in
+    while full live-follow artifact retrieval is now closed in
     [docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md](docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md).
     - 2026-05-30 closeout: installed
       `auracall api mirror-recovery-candidates --port 18095 --limit 20 --json`
@@ -135,6 +137,15 @@ Current State:
       targets because active completions are classified as `already_active`.
       Plan 0086 must persist full-retrieval policy and upgrade active
       metadata-only completions before broad catch-up is expected.
+    - 2026-05-30 Plan 0086 closeout: configured live-follow reconciliation now
+      upgrades active metadata-only completions in place and emits
+      `live_follow_policy_upgraded`; history materialization no longer uses a
+      hard wrapper timeout that can mark a job failed while provider work keeps
+      materializing in the background. Installed `chatgpt/wsl-chrome-3`
+      readback shows the full-retrieval policy, and search/archive proof
+      reports `24` available artifacts with local paths and checksums. The
+      remaining `123` remote-known missing local assets on that target require
+      continued bounded catch-up, not metadata-only polling.
   - Gemini detail confidence: `auracall-gemini-pro` live follow is running and
     failure-free, but conversation detail and asset inventory remain deferred
     for many conversations; Gemini should get a provider-specific detail and

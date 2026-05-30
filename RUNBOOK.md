@@ -1,5 +1,54 @@
 # RUNBOOK
 
+## Turn 190 | 2026-05-30
+
+- Active plan:
+  `docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md`
+- Goal: execute Plan 0086 so the first live-follow target is no longer stuck in
+  metadata-only artifact posture.
+- Result:
+  - configured `chatgpt/wsl-chrome-3` live follow in
+    `~/.auracall/config.json` for `full_sweep`,
+    `full_missing_assets`, `materializationAssetKinds: [all]`,
+    `materializationMaxItems: 3`, and snapshot refresh.
+  - configured live-follow reconciliation now upgrades an active metadata-only
+    completion in place and records `live_follow_policy_upgraded` instead of
+    starting a duplicate provider/runtime loop.
+  - history materialization no longer fails a job on a hard wrapper timeout
+    while provider/browser work continues in the background; jobs remain
+    running until provider work settles, or startup recovery marks interrupted
+    active jobs failed after service restart.
+  - installed completion
+    `acctmirror_completion_ca854a9c-d49f-48e3-b472-91e6966311c4` now reads
+    `mode=live_follow`, `sweepMode=full_sweep`,
+    `materializationPolicy=full_missing_assets`,
+    `materializationAssetKinds=[all]`, and `materializationMaxItems=3`.
+  - search/archive readback for `chatgpt/wsl-chrome-3` and
+    `eric.cochran@soylei.com` reports `24` available artifact rows with local
+    paths and SHA-256 checksums.
+  - explicit bounded proof job `hmj_57def4c362a14e46bfd1efd741fc6edb`
+    succeeded after the timeout fix with `3` conversations attempted, `3`
+    materialized assets, `1` skipped entry, `4` failed entries, `3` manifest
+    paths, and `3` checksum-bearing entries.
+  - recovery readback for `chatgpt/wsl-chrome-3` dropped from `145` to `123`
+    remote-known missing local assets and rose from `2` to `24` local
+    materialized artifacts.
+  - closed Plan 0086; the remaining target backlog is incremental bounded
+    catch-up, not metadata-only live-follow waiting.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/completionService.test.ts --maxWorkers 1 -t "live-follow|policy upgrade|full-sweep|materialization policy|does not duplicate"`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 -t "zombie|running until it resolves|cancel|interrupted active"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run lint` exited `0` with existing warning-level debt (`200`
+    warnings).
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - `/home/ecochran76/.local/bin/auracall api mirror-completion-status acctmirror_completion_ca854a9c-d49f-48e3-b472-91e6966311c4 --port 18095 --json`
+  - `/home/ecochran76/.local/bin/auracall api search --port 18095 --provider chatgpt --runtime-profile wsl-chrome-3 --tenant eric.cochran@soylei.com --kind artifact --asset-availability available --limit 1 --json`
+  - `/home/ecochran76/.local/bin/auracall api mirror-recovery-candidates --port 18095 --provider chatgpt --runtime-profile wsl-chrome-3 --limit 1 --json`
+
 ## Turn 189 | 2026-05-30
 
 - Active plan:

@@ -670,6 +670,76 @@ describe('account mirror completion service', () => {
     });
   });
 
+  test('live-follow policy upgrade preserves live-follow mode when maxPasses is null', async () => {
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_live_follow_upgrade',
+      provider: 'chatgpt' as const,
+      runtimeProfileId: 'default',
+      mode: 'live_follow' as const,
+      sweepMode: 'steady_follow' as const,
+      phase: 'backfill_history' as const,
+      status: 'idle_waiting' as const,
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:05:00.000Z',
+      maxPasses: null,
+      passCount: 8,
+      lastRefresh: createRefreshResult(),
+      materializationPolicy: 'metadata_only' as const,
+      materializationAssetKinds: ['all' as const],
+      materializationMaxItems: null,
+      materializationRefreshSnapshot: false,
+      materializationForce: false,
+      materializationCursor: null,
+      mirrorCompleteness: completeMirror,
+      error: null,
+      lifecycleEvents: [],
+    };
+    const sleep = vi.fn(() => new Promise<void>(() => {}));
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh: vi.fn(async () => createRefreshResult()),
+      },
+      initialOperations: [initial],
+      resumeActiveOperations: false,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      sleep,
+    });
+
+    const upgraded = service.upgradePolicy?.({
+      id: 'acctmirror_live_follow_upgrade',
+      maxPasses: null,
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+      materializationAssetKinds: ['all'],
+      materializationMaxItems: 25,
+      materializationRefreshSnapshot: true,
+    });
+
+    expect(upgraded).toMatchObject({
+      id: 'acctmirror_live_follow_upgrade',
+      status: 'running',
+      mode: 'live_follow',
+      maxPasses: null,
+      nextAttemptAt: null,
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+      materializationMaxItems: 25,
+      materializationRefreshSnapshot: true,
+      lifecycleEvents: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'live_follow_policy_upgraded',
+          previousStatus: 'idle_waiting',
+        }),
+      ]),
+    });
+  });
+
   test('uses a wider collector timeout for Gemini full-sweep completions', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const service = createAccountMirrorCompletionService({

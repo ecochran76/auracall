@@ -791,56 +791,86 @@ describe('history materialization service', () => {
     expect(materializeConversation).toHaveBeenCalledTimes(1);
   });
 
-  it('fails provider work that exceeds the job timeout', async () => {
-    vi.useFakeTimers();
-    try {
-      const store = createInMemoryHistoryMaterializationJobStore([
-        buildHistoryMaterializationJob({ id: 'hmj_timeout_1', status: 'queued' }),
-      ]);
-      const materializeConversation = vi.fn(() => new Promise<HistoryMaterializationResult>(() => undefined));
-      const service = createHistoryMaterializationService({
-        config: {},
-        catalogService: {
-          readCatalog: vi.fn(),
-          readItem: vi.fn(),
-        },
-        store,
-        now: sequenceNow([
-          '2026-05-22T18:05:00.000Z',
-          '2026-05-22T18:05:01.000Z',
-        ]),
-        schedule: () => undefined,
-        materializeConversation,
-        jobTimeoutMs: 25,
-      });
+  it('keeps provider work running until it resolves instead of timing out into zombie materialization', async () => {
+    const store = createInMemoryHistoryMaterializationJobStore([
+      buildHistoryMaterializationJob({ id: 'hmj_no_zombie_1', status: 'queued' }),
+    ]);
+    let finishMaterializer: (() => void) | undefined;
+    const materializerFinished = new Promise<void>((resolveFinished) => {
+      finishMaterializer = resolveFinished;
+    });
+    const materializeConversation = vi.fn(async (target, _request, jobId): Promise<HistoryMaterializationResult> => {
+      await materializerFinished;
+      return {
+        object: 'history_materialization_result',
+        generatedAt: '2026-05-22T18:05:02.000Z',
+        status: 'materialized',
+        target,
+        source: { type: 'conversation', provider: 'chatgpt', conversationId: 'conv_no_zombie_1' },
+        manifestPaths: ['/tmp/no-zombie-manifest.json'],
+        entries: [
+          {
+            kind: 'artifact',
+            providerId: 'artifact_no_zombie_1',
+            title: 'no-zombie.md',
+            status: 'materialized',
+            localPath: '/tmp/no-zombie.md',
+            remoteUrl: null,
+            cacheKey: null,
+            checksumSha256: 'abc123',
+            mimeType: 'text/markdown',
+            size: 12,
+            materializationMethod: 'download-button',
+            reason: null,
+            archiveItemId: 'history-generated-artifact:chatgpt:default:conv_no_zombie_1:artifact_no_zombie_1',
+            assetRoute: '/v1/archive/items/b64/no-zombie/asset',
+          },
+        ],
+        archiveItems: [],
+        metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+        message: `History materialization job ${jobId} completed after provider work settled.`,
+      };
+    });
+    const service = createHistoryMaterializationService({
+      config: {},
+      catalogService: {
+        readCatalog: vi.fn(),
+        readItem: vi.fn(),
+      },
+      store,
+      now: sequenceNow([
+        '2026-05-22T18:05:00.000Z',
+        '2026-05-22T18:05:01.000Z',
+        '2026-05-22T18:05:02.000Z',
+      ]),
+      schedule: () => undefined,
+      materializeConversation,
+    });
 
-      const run = service.runJob('hmj_timeout_1');
-      await Promise.resolve();
-      await Promise.resolve();
-      expect(materializeConversation).toHaveBeenCalledTimes(1);
+    const run = service.runJob('hmj_no_zombie_1');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(materializeConversation).toHaveBeenCalledTimes(1);
+    await expect(service.readJob('hmj_no_zombie_1')).resolves.toMatchObject({
+      status: 'running',
+      result: null,
+      error: null,
+    });
 
-      await vi.advanceTimersByTimeAsync(25);
-      const completed = await run;
+    finishMaterializer?.();
+    const completed = await run;
 
-      expect(completed).toMatchObject({
-        status: 'failed',
-        completedAt: '2026-05-22T18:05:01.000Z',
-        error: {
-          type: 'internal_error',
-          statusCode: 500,
-          message: 'History materialization job hmj_timeout_1 timed out after 25ms.',
+    expect(completed).toMatchObject({
+      status: 'succeeded',
+      completedAt: '2026-05-22T18:05:01.000Z',
+      result: {
+        metrics: {
+          conversations: 1,
+          materialized: 1,
         },
-        message: 'History materialization job hmj_timeout_1 timed out after 25ms.',
-      });
-      await expect(service.readJob('hmj_timeout_1')).resolves.toMatchObject({
-        status: 'failed',
-        error: {
-          message: 'History materialization job hmj_timeout_1 timed out after 25ms.',
-        },
-      });
-    } finally {
-      vi.useRealTimers();
-    }
+      },
+      error: null,
+    });
   });
 
   it('marks interrupted active jobs failed during startup recovery', async () => {

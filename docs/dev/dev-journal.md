@@ -35259,3 +35259,56 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/mcp.server.test.ts --maxWorkers 1`
   - `pnpm run build`
   - `pnpm run install:user-runtime-service`
+
+## Turn 326 | 2026-05-30
+
+- Goal: execute Plan 0086 and get live follow out of metadata-only artifact
+  retrieval for the first proof target.
+- Baseline:
+  - installed `chatgpt/wsl-chrome-3` completion
+    `acctmirror_completion_ca854a9c-d49f-48e3-b472-91e6966311c4` was active
+    as `steady_follow` plus `metadata_only`.
+  - recovery readback for `chatgpt/wsl-chrome-3` showed `145` remote-known
+    missing local assets and `2` local materialized assets.
+- Change:
+  - configured `~/.auracall/config.json` for
+    `profiles["wsl-chrome-3"].services.chatgpt.liveFollow` with
+    `sweepMode=full_sweep`, `materializationPolicy=full_missing_assets`,
+    `materializationAssetKinds=[all]`, `materializationMaxItems=3`, and
+    `materializationRefreshSnapshot=true`.
+  - configured live-follow reconciliation now upgrades an active same-target
+    metadata-only completion in place, preserves `mode=live_follow`, and emits
+    `live_follow_policy_upgraded`.
+  - history materialization no longer uses a hard wrapper timeout that can mark
+    a job failed while provider/browser work continues to materialize archive
+    rows in the background.
+  - updated README/testing docs, Plan 0086, roadmap, runbook, and fixes log.
+- Installed proof:
+  - rebuilt, installed, and restarted `auracall-api.service`; service returned
+    `active`.
+  - installed completion readback now shows `mode=live_follow`,
+    `sweepMode=full_sweep`, `materializationPolicy=full_missing_assets`,
+    `materializationAssetKinds=[all]`, `materializationMaxItems=3`, and
+    `materializationRefreshSnapshot=true`.
+  - search/archive readback for `chatgpt/wsl-chrome-3` and
+    `eric.cochran@soylei.com` reports `24` available artifact rows with local
+    paths and SHA-256 checksums.
+  - explicit bounded proof job `hmj_57def4c362a14e46bfd1efd741fc6edb`
+    succeeded after the timeout fix with `3` conversations attempted, `3`
+    materialized assets, `1` skipped entry, `4` failed entries, `3` manifest
+    paths, and `3` checksum-bearing entries.
+  - recovery readback for `chatgpt/wsl-chrome-3` now shows `123`
+    remote-known missing local assets and `24` local materialized artifacts.
+  - global installed recovery readback now reports `412` remote-known missing
+    local assets and `6` unknown/deferred assets; remaining work is bounded
+    incremental catch-up and Gemini detail refresh, not metadata-only waiting.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/completionService.test.ts --maxWorkers 1 -t "live-follow|policy upgrade|full-sweep|materialization policy|does not duplicate"`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 -t "zombie|running until it resolves|cancel|interrupted active"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run lint` exited `0` with existing warning-level debt (`200`
+    warnings).
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.

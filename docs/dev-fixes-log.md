@@ -17525,3 +17525,15 @@ browser-stage lifecycle observability, not transcript truncation.
   then prove explicit materialization through durable job/completion/campaign
   ownership with local paths, checksums, and reduced missing-local counts or
   terminal skip/failure reasons.
+
+- 2026-05-30: Configured full-retrieval live follow must upgrade active
+  completions in place. If startup reconciliation sees the same provider and
+  AuraCall runtime profile already active as metadata-only, update that durable
+  operation, preserve `mode=live_follow`, emit `live_follow_policy_upgraded`,
+  and avoid a duplicate browser loop.
+
+- 2026-05-30: Do not implement history-materialization job timeouts as a
+  `Promise.race` unless the provider/browser work is actually cancellable. A
+  hard wrapper timeout can mark the job failed while the provider fetch keeps
+  writing archive rows under the failed job id, which hides real materialized
+  paths/checksums and risks overlapping retrieval jobs.

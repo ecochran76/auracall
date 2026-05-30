@@ -128,6 +128,84 @@ describe('account mirror live-follow reconciler', () => {
     expect(start).not.toHaveBeenCalled();
   });
 
+  test('upgrades an active metadata-only completion when configured live follow asks for full retrieval', async () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config: {
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                identity: { email: 'operator@example.com' },
+                liveFollow: {
+                  enabled: true,
+                  sweepMode: 'full_sweep',
+                  materializationPolicy: 'full_missing_assets',
+                  materializationAssetKinds: ['all'],
+                  materializationMaxItems: 25,
+                  materializationRefreshSnapshot: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    const active = {
+      ...baseOperation,
+      sweepMode: 'steady_follow' as const,
+      materializationPolicy: 'metadata_only' as const,
+      materializationAssetKinds: ['all' as const],
+      materializationMaxItems: null,
+      materializationRefreshSnapshot: false,
+    };
+    const upgraded = {
+      ...active,
+      mode: 'live_follow' as const,
+      status: 'running' as const,
+      sweepMode: 'full_sweep' as const,
+      materializationPolicy: 'full_missing_assets' as const,
+      materializationMaxItems: 25,
+      materializationRefreshSnapshot: true,
+    };
+    const start = vi.fn();
+    const upgradePolicy = vi.fn(() => upgraded);
+
+    const result = await reconcileConfiguredAccountMirrorLiveFollow({
+      registry,
+      completionService: {
+        start,
+        list: vi.fn(() => [active]),
+        read: vi.fn(),
+        control: vi.fn(),
+        upgradePolicy,
+      },
+    });
+
+    expect(start).not.toHaveBeenCalled();
+    expect(upgradePolicy).toHaveBeenCalledWith({
+      id: 'acctmirror_completion_existing',
+      maxPasses: null,
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+      materializationAssetKinds: ['all'],
+      materializationMaxItems: 25,
+      materializationRefreshSnapshot: true,
+    });
+    expect(result.metrics).toMatchObject({
+      enabledTargets: 1,
+      started: 0,
+      existing: 1,
+      upgraded: 1,
+    });
+    expect(result.existing[0]).toMatchObject({
+      id: 'acctmirror_completion_existing',
+      mode: 'live_follow',
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+    });
+  });
+
   test('does not duplicate an active bounded campaign completion for the same target', async () => {
     const registry = createAccountMirrorStatusRegistry({
       config: {

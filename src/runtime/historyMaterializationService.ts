@@ -269,8 +269,6 @@ export function formatHistoryMaterializationFailureReason(input: {
   return geminiRouteabilityReason ?? message;
 }
 
-const DEFAULT_HISTORY_MATERIALIZATION_JOB_TIMEOUT_MS = 10 * 60_000;
-
 export interface HistoryMaterializationServiceDeps {
   config: ResolvedUserConfig | Record<string, unknown>;
   catalogService?: AccountMirrorCatalogService;
@@ -280,7 +278,6 @@ export interface HistoryMaterializationServiceDeps {
   generateId?: () => string;
   schedule?: (work: () => Promise<void>) => void;
   withForegroundWork?: <T>(work: () => Promise<T>) => Promise<T>;
-  jobTimeoutMs?: number | null;
   materializeConversation?: (
     target: HistoryMaterializationTarget,
     request: HistoryMaterializationCreateRequest,
@@ -486,21 +483,17 @@ export function createHistoryMaterializationService(
       await store.upsertJob(running);
       try {
         const result = await withForegroundWork(() =>
-          withHistoryMaterializationJobTimeout(
-            materializeHistoryRequest({
-              request: running.request,
-              jobId: running.id,
-              catalogService,
-              runArchiveService,
-              materializeConversation,
-              refreshConversationSnapshot,
-              recordConversationEvidence,
-              materializeMediaGeneration,
-              now,
-            }),
-            resolveHistoryMaterializationJobTimeoutMs(deps.jobTimeoutMs),
-            running.id,
-          ));
+          materializeHistoryRequest({
+            request: running.request,
+            jobId: running.id,
+            catalogService,
+            runArchiveService,
+            materializeConversation,
+            refreshConversationSnapshot,
+            recordConversationEvidence,
+            materializeMediaGeneration,
+            now,
+          }));
         const completedAt = now().toISOString();
         const completed: HistoryMaterializationJob = {
           ...running,
@@ -554,37 +547,6 @@ export function createHistoryMaterializationService(
   };
 
   return service;
-}
-
-function resolveHistoryMaterializationJobTimeoutMs(value: number | null | undefined): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return DEFAULT_HISTORY_MATERIALIZATION_JOB_TIMEOUT_MS;
-  }
-  return Math.max(1, Math.floor(value));
-}
-
-function withHistoryMaterializationJobTimeout<T>(
-  work: Promise<T>,
-  timeoutMs: number,
-  jobId: string,
-): Promise<T> {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  return new Promise<T>((resolve, reject) => {
-    timeout = setTimeout(() => {
-      timeout = null;
-      reject(new Error(`History materialization job ${jobId} timed out after ${timeoutMs}ms.`));
-    }, timeoutMs);
-    work.then(
-      (value) => {
-        if (timeout) clearTimeout(timeout);
-        resolve(value);
-      },
-      (error) => {
-        if (timeout) clearTimeout(timeout);
-        reject(error);
-      },
-    );
-  });
 }
 
 export function createHistoryMaterializationJobStore(
