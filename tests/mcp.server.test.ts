@@ -115,6 +115,15 @@ describe('mcp server service wiring', () => {
         read: expect.any(Function),
         control: expect.any(Function),
       }),
+      accountMirrorReconciliationCampaignService: expect.objectContaining({
+        create: expect.any(Function),
+        read: expect.any(Function),
+        list: expect.any(Function),
+        control: expect.any(Function),
+      }),
+      accountMirrorArtifactRecoveryPlanner: expect.objectContaining({
+        plan: expect.any(Function),
+      }),
       agentTeamConfigService: expect.objectContaining({
         upsertAgent: expect.any(Function),
       }),

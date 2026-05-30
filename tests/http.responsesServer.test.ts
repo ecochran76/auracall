@@ -24,6 +24,7 @@ import type {
   AccountMirrorCatalogItemResult,
   AccountMirrorCatalogResult,
 } from '../src/accountMirror/catalogService.js';
+import type { AccountMirrorArtifactRecoveryPlanResult } from '../src/accountMirror/artifactRecoveryPlanner.js';
 import { createAccountMirrorCompletionStore } from '../src/accountMirror/completionStore.js';
 import type {
   AccountMirrorCompletionListRequest,
@@ -2703,6 +2704,107 @@ describe('http responses adapter', () => {
         status: 'cancelled',
       });
       expect(cancelJob).toHaveBeenCalledWith('hmj_http_1');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reads bounded account mirror recovery candidates through the API surface', async () => {
+    const planResult: AccountMirrorArtifactRecoveryPlanResult = {
+      object: 'account_mirror_artifact_recovery_plan' as const,
+      generatedAt: '2026-05-30T16:50:00.000Z',
+      query: {
+        provider: 'chatgpt' as const,
+        runtimeProfileId: 'default',
+        tenantKey: null,
+        status: 'eligible' as const,
+        action: null,
+        includeSearchRows: false,
+        limit: 2,
+      },
+      candidates: [{
+        object: 'account_mirror_artifact_recovery_candidate' as const,
+        id: 'status:chatgpt:default:operator@example.com',
+        source: 'account_mirror_status' as const,
+        provider: 'chatgpt',
+        tenantKey: 'operator@example.com',
+        bindingKey: 'binding:chatgpt:default:default',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        status: 'eligible',
+        action: 'queue_history_materialization',
+        reason: 'Target has remote-known missing local assets.',
+        evidenceConfidence: 'high' as const,
+        materializationPolicy: null,
+        assetInventory: null,
+        counts: {
+          remoteKnownMissingLocal: { artifacts: 4, files: 2, media: 0, total: 6 },
+          localMaterialized: { artifacts: 0, files: 0, media: 0, total: 0 },
+          unknownOrDeferred: { artifacts: 0, files: 0, media: 0, total: 0 },
+        },
+        sourceItem: null,
+        createRequest: {
+          provider: 'chatgpt',
+          runtimeProfile: 'default',
+          boundIdentityKey: 'operator@example.com',
+          reconcile: true,
+          assetKinds: ['all' as const],
+          maxItems: 6,
+        },
+      }],
+      omitted: { candidates: 3 },
+      metrics: {
+        total: 4,
+        returned: 1,
+        byStatus: {
+          eligible: 4,
+          needs_detail_refresh: 0,
+          deferred: 0,
+          blocked: 0,
+          unsupported: 0,
+          terminal: 0,
+        },
+        byAction: {
+          queue_history_materialization: 4,
+          refresh_detail_inventory: 0,
+          start_materialization_policy_completion: 0,
+          inspect_archive_materialization: 0,
+          none: 0,
+        },
+        remoteKnownMissingLocal: { artifacts: 4, files: 2, media: 0, total: 6 },
+        unknownOrDeferred: { artifacts: 0, files: 0, media: 0, total: 0 },
+      },
+    };
+    const plan = vi.fn(async () => planResult);
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorArtifactRecoveryPlanner: { plan },
+      },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/recovery-candidates?provider=chatgpt&runtimeProfile=default&status=eligible&includeSearchRows=false&limit=2`,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        object: 'account_mirror_artifact_recovery_plan',
+        omitted: { candidates: 3 },
+        metrics: {
+          total: 4,
+          remoteKnownMissingLocal: { total: 6 },
+        },
+      });
+      expect(plan).toHaveBeenCalledWith({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        tenantKey: undefined,
+        status: 'eligible',
+        action: undefined,
+        includeSearchRows: false,
+        limit: 2,
+      });
     } finally {
       await server.close();
     }

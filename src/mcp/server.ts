@@ -35,6 +35,7 @@ import { registerAccountMirrorSchedulerDiagnosticsTool } from './tools/accountMi
 import { registerAccountMirrorCompletionTools } from './tools/accountMirrorCompletion.js';
 import { registerAccountMirrorReconciliationTools } from './tools/accountMirrorReconciliation.js';
 import { registerAccountMirrorProviderGuardTools } from './tools/accountMirrorProviderGuard.js';
+import { registerAccountMirrorRecoveryTool } from './tools/accountMirrorRecovery.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
@@ -93,6 +94,10 @@ import {
   createSearchProjectionService,
   type SearchProjectionService,
 } from '../runtime/searchProjectionService.js';
+import {
+  createAccountMirrorArtifactRecoveryPlanner,
+  type AccountMirrorArtifactRecoveryPlanner,
+} from '../accountMirror/artifactRecoveryPlanner.js';
 
 export interface McpServiceBundle {
   resolvedUserConfig: ResolvedUserConfig;
@@ -109,6 +114,7 @@ export interface McpServiceBundle {
   archiveMaterializationJobService: ArchiveMaterializationJobService;
   historyMaterializationService: HistoryMaterializationService;
   searchProjectionService: SearchProjectionService;
+  accountMirrorArtifactRecoveryPlanner: AccountMirrorArtifactRecoveryPlanner;
   agentTeamConfigService: AgentTeamConfigService;
   projectEnsureService: ProjectEnsureService;
   tenantPoolTeamEnsureService: TenantPoolTeamEnsureService;
@@ -170,6 +176,9 @@ export async function startMcpServer(): Promise<void> {
   });
   registerSearchProjectionTool(server, {
     service: services.searchProjectionService,
+  });
+  registerAccountMirrorRecoveryTool(server, {
+    planner: services.accountMirrorArtifactRecoveryPlanner,
   });
   registerConfigEntityTools(server, {
     service: services.agentTeamConfigService,
@@ -335,6 +344,10 @@ export async function createMcpServicesFromConfig(
     runArchiveService,
     archiveMaterializationJobService,
   });
+  const accountMirrorArtifactRecoveryPlanner = createAccountMirrorArtifactRecoveryPlanner({
+    registry: accountMirrorStatusRegistry,
+    searchProjectionService,
+  });
   const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
     config: resolvedUserConfig as Record<string, unknown>,
   });
@@ -375,6 +388,7 @@ export async function createMcpServicesFromConfig(
     runArchiveService,
     archiveMaterializationJobService,
     searchProjectionService,
+    accountMirrorArtifactRecoveryPlanner,
     mediaGenerationService,
     workbenchCapabilityReporter,
     accountMirrorStatusRegistry,

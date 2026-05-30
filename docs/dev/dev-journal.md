@@ -1,3 +1,33 @@
+## Turn 331 | 2026-05-30
+
+- Goal: finish Plan 0085 with installed recovery-count reconciliation and
+  greenfield console parity.
+- Result:
+  - added run-archive availability overlay to account-mirror artifact recovery
+    planning so materialized archive evidence reduces missing-local candidate
+    counts.
+  - added an Artifact Recovery panel to `/console?view=runs` that consumes the
+    backend recovery-candidates route.
+  - rebuilt, installed, and restarted the user runtime service on port `18095`.
+  - installed CLI recovery readback reported `8` candidates, `434`
+    remote-known missing local assets, and `6` unknown/deferred assets.
+  - the bounded `chatgpt/wsl-chrome-3` proof target now reports `145`
+    remote-known missing local assets with `2` locally materialized assets,
+    down from `147` remote-known missing local assets before reconciliation.
+  - closed Plan 0085 while leaving remaining fleet catch-up as a future
+    explicit bounded recovery/detail-refresh plan.
+- Verification:
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm vitest run tests/accountMirror/artifactRecoveryPlanner.test.ts tests/cli/apiMirrorRecoveryCommand.test.ts tests/mcp.accountMirrorRecovery.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 -t "recovery candidates|mcp account mirror recovery|shares configured browser media|includes unavailable search rows|classifies remote-known|subtracts materialized"`
+  - `pnpm run lint`
+  - `pnpm run plans:audit -- --keep 85`
+  - `git diff --check`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `/home/ecochran76/.local/bin/auracall api mirror-recovery-candidates --port 18095 --timeout-ms 20000 --limit 20 --json`
+  - `curl -fsS 'http://127.0.0.1:18095/console?view=runs'`
+
 ## Turn 330 | 2026-05-30
 
 - Goal: open the first detailed plan for the roadmap audit concerns.
@@ -35172,3 +35202,42 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm run plans:audit -- --keep 85`
   - `git diff --check`
+
+## Turn 325 | 2026-05-30
+
+- Goal: execute the first Plan 0085 slice for live-follow artifact
+  materialization recovery.
+- Baseline:
+  - installed port `18095` was active and reported live-follow
+    `attention-needed`.
+  - metadata-only live follow had no proof that all retrievable artifacts would
+    catch up automatically.
+  - installed recovery-candidate readback after implementation reported `8`
+    candidates, `436` remote-known missing local assets, and `6`
+    unknown/deferred assets.
+- Change:
+  - added a browser-free account-mirror artifact recovery planner.
+  - exposed recovery candidates through API, CLI, and MCP.
+  - updated endpoint metadata, Plan 0085, roadmap, runbook, and fixes log.
+  - installed the rebuilt user runtime and restarted `auracall-api.service`.
+- Installed proof:
+  - `auracall api mirror-recovery-candidates --port 18095 --limit 20 --json`
+    returned `4` queueable history-materialization candidates, `2` detail
+    refresh candidates, and `2` blocked/no-op candidates.
+  - queued bounded job `hmj_27003a79e9a6416381aa8d37666e215a` for
+    `chatgpt/wsl-chrome-3`, bound identity `eric.cochran@soylei.com`,
+    `assetKinds=[artifacts, files, media]`, and `maxItems=3`.
+  - final poll showed the job `succeeded`, materializing `3` assets from `3`
+    conversations with local paths and SHA-256 checksums.
+  - the same job recorded `4` ChatGPT image binary-fetch failures and `1`
+    skipped entry.
+  - follow-up `chatgpt/wsl-chrome-3` recovery-candidate readback still showed
+    `147` remote-known missing local assets, so result-delta reconciliation
+    into mirror completeness remains open.
+- Verification:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/accountMirror/artifactRecoveryPlanner.test.ts tests/cli/apiMirrorRecoveryCommand.test.ts tests/mcp.accountMirrorRecovery.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "recovery candidates|history materialization"`
+  - `pnpm vitest run tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`

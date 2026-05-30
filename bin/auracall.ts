@@ -134,6 +134,10 @@ import {
   readApiSearchProjectionForCli,
 } from '../src/cli/apiSearchCommand.js';
 import {
+  formatApiMirrorRecoveryCandidatesCliSummary,
+  readApiMirrorRecoveryCandidatesForCli,
+} from '../src/cli/apiMirrorRecoveryCommand.js';
+import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
   cancelApiRunArchiveMaterializationJobForCli,
@@ -1316,6 +1320,46 @@ apiCommand
       return;
     }
     console.log(formatApiSearchProjectionCliSummary(result));
+  });
+
+apiCommand
+  .command('mirror-recovery-candidates')
+  .description('Read bounded account mirror artifact recovery candidates from the local API.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--provider <provider>', 'Filter by provider.')
+  .option('--runtime-profile <profile>', 'Filter by runtime profile.')
+  .option('--tenant <tenant>', 'Filter by bound tenant identity.')
+  .option('--status <status>', 'Filter by eligible, needs_detail_refresh, deferred, blocked, unsupported, or terminal.')
+  .option('--action <action>', 'Filter by queue_history_materialization, refresh_detail_inventory, start_materialization_policy_completion, inspect_archive_materialization, or none.')
+  .option('--include-search-rows <true|false>', 'Include unavailable artifact rows from the search projection.', parseBooleanOption)
+  .option('--limit <count>', 'Maximum candidate rows to read.', parseIntOption, 50)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await readApiMirrorRecoveryCandidatesForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      tenant: commandOptions.tenant,
+      status: commandOptions.status,
+      action: commandOptions.action,
+      includeSearchRows: commandOptions.includeSearchRows,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorRecoveryCandidatesCliSummary(result));
   });
 
 apiCommand

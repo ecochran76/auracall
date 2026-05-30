@@ -55,6 +55,7 @@ function App() {
   const [statusPayload, setStatusPayload] = useState(null);
   const [runtimeRunsPayload, setRuntimeRunsPayload] = useState(null);
   const [completionRunsPayload, setCompletionRunsPayload] = useState(null);
+  const [recoveryCandidatesPayload, setRecoveryCandidatesPayload] = useState(null);
   const [selectedRunKey, setSelectedRunKey] = useState(readParamFromUrl("run"));
   const [selectedRunDetail, setSelectedRunDetail] = useState(null);
   const [selectedRunDetailLoading, setSelectedRunDetailLoading] = useState(false);
@@ -83,18 +84,27 @@ function App() {
     setLoading(true);
     setError("");
     try {
-      const [choicesResponse, agentsResponse, statusResponse, runtimeRunsResponse, completionRunsResponse] = await Promise.all([
+      const [
+        choicesResponse,
+        agentsResponse,
+        statusResponse,
+        runtimeRunsResponse,
+        completionRunsResponse,
+        recoveryCandidatesResponse,
+      ] = await Promise.all([
         fetchJson("/v1/config/agent-choices"),
         fetchJson("/v1/config/agents"),
         fetchJson("/status?recovery=true&sourceKind=all"),
         fetchJson("/v1/runtime-runs/recent?limit=50"),
         fetchJson("/v1/account-mirrors/completions?limit=50"),
+        fetchJson("/v1/account-mirrors/recovery-candidates?limit=20"),
       ]);
       setChoices(choicesResponse);
       setAgentsPayload(agentsResponse);
       setStatusPayload(statusResponse);
       setRuntimeRunsPayload(runtimeRunsResponse);
       setCompletionRunsPayload(completionRunsResponse);
+      setRecoveryCandidatesPayload(recoveryCandidatesResponse);
       const availableAgents = choicesResponse.agents ?? agentsResponse.agents ?? [];
       if (activeView === "agents" && !selectedAgentId && availableAgents.length > 0 && !editingNew) {
         selectAgent(availableAgents[0].id);
@@ -199,9 +209,10 @@ function App() {
       status: statusPayload,
       runtimeRuns: runtimeRunsPayload?.data ?? [],
       completionRuns: completionRunsPayload?.data ?? [],
+      recoveryCandidates: recoveryCandidatesPayload,
       agents,
     }),
-    [statusPayload, runtimeRunsPayload, completionRunsPayload, agents],
+    [statusPayload, runtimeRunsPayload, completionRunsPayload, recoveryCandidatesPayload, agents],
   );
   const filteredRunRows = useMemo(
     () => filterRunRows(runsData.rows, runQuery, runKindFilter, runStateFilter),
@@ -961,6 +972,47 @@ function RunsPage({
         <Metric label="Waiting" value={runsData.metrics.waiting} tone={runsData.metrics.waiting > 0 ? "warning" : "muted"} />
         <Metric label="Needs attention" value={runsData.metrics.attention} tone={runsData.metrics.attention > 0 ? "danger" : "ready"} />
         <Metric label="Completed" value={runsData.metrics.completed} tone="ready" />
+      </section>
+
+      <section className="recovery-panel" aria-label="Artifact recovery posture">
+        <div className="panel-title recovery-title">
+          <div>
+            <h2>Artifact Recovery</h2>
+            <span className="muted-line">{runsData.recoveryCandidates.summary}</span>
+          </div>
+          <RunStateChip
+            state={runsData.recoveryCandidates.remoteMissing > 0 ? "attention" : "completed"}
+            label={runsData.recoveryCandidates.remoteMissing > 0 ? "Missing local assets" : "No missing assets"}
+          />
+        </div>
+        <div className="recovery-grid">
+          <Metric
+            label="Remote missing"
+            value={runsData.recoveryCandidates.remoteMissing}
+            tone={runsData.recoveryCandidates.remoteMissing > 0 ? "danger" : "ready"}
+          />
+          <Metric
+            label="Need detail"
+            value={runsData.recoveryCandidates.unknownDeferred}
+            tone={runsData.recoveryCandidates.unknownDeferred > 0 ? "warning" : "ready"}
+          />
+          <Metric label="Candidates" value={runsData.recoveryCandidates.total} tone="neutral" />
+          <Metric label="Queueable" value={runsData.recoveryCandidates.queueable} tone={runsData.recoveryCandidates.queueable > 0 ? "warning" : "ready"} />
+        </div>
+        {runsData.recoveryCandidates.rows.length > 0 ? (
+          <div className="recovery-candidate-list">
+            {runsData.recoveryCandidates.rows.slice(0, 4).map((candidate) => (
+              <div className="recovery-candidate-row" key={candidate.id}>
+                <div>
+                  <strong>{candidate.providerLabel}</strong>
+                  <small>{candidate.tenantLabel}</small>
+                </div>
+                <span>{candidate.actionLabel}</span>
+                <span>{candidate.missingLabel}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="runs-workspace">
@@ -2231,7 +2283,7 @@ function inventoryMetrics(rows) {
   };
 }
 
-function buildRunsData({ status, runtimeRuns, completionRuns, agents }) {
+function buildRunsData({ status, runtimeRuns, completionRuns, recoveryCandidates, agents }) {
   const controlReadiness = status?.controlReadiness ?? {};
   const runtimeActionsById = controlReadiness.runtimeRunActionsById ?? {};
   const completionActionsById = controlReadiness.accountMirrorCompletionActionsById ?? {};
@@ -2245,6 +2297,7 @@ function buildRunsData({ status, runtimeRuns, completionRuns, agents }) {
   const runnerMetrics = status?.runnerTopology?.metrics ?? {};
   const background = status?.backgroundDrain ?? {};
   const liveFollowSeverity = status?.liveFollow?.severity ?? status?.liveFollow?.summary?.severity ?? "";
+  const recoveryCandidateData = buildRecoveryCandidateData(recoveryCandidates);
   return {
     rows,
     metrics: {
@@ -2259,6 +2312,7 @@ function buildRunsData({ status, runtimeRuns, completionRuns, agents }) {
       summary: `${recovery.metrics?.actionableCount ?? 0} actionable, ${recovery.metrics?.activeLeaseCount ?? 0} active lease`,
       raw: recovery,
     },
+    recoveryCandidates: recoveryCandidateData,
     queue: {
       background: background.paused ? "paused" : background.state ?? "unknown",
       backgroundActions: controlReadiness.backgroundDrain?.actions ?? [],
@@ -2267,6 +2321,49 @@ function buildRunsData({ status, runtimeRuns, completionRuns, agents }) {
       liveFollow: liveFollowSeverity || status?.accountMirrorScheduler?.operatorStatus?.posture || "unknown",
     },
   };
+}
+
+function buildRecoveryCandidateData(payload) {
+  const metrics = payload?.metrics ?? {};
+  const remote = metrics.remoteKnownMissingLocal ?? {};
+  const unknown = metrics.unknownOrDeferred ?? {};
+  const byAction = metrics.byAction ?? {};
+  const rows = Array.isArray(payload?.candidates)
+    ? payload.candidates.map((candidate) => {
+        const missing = candidate?.counts?.remoteKnownMissingLocal ?? {};
+        const provider = candidate?.provider ?? "unknown";
+        const runtimeProfile = candidate?.runtimeProfileId ?? "default";
+        const tenant = candidate?.tenantKey ?? candidate?.bindingKey ?? "unbound";
+        return {
+          id: candidate.id ?? `${provider}:${runtimeProfile}:${tenant}`,
+          providerLabel: `${serviceDisplay(provider)} / ${runtimeProfile}`,
+          tenantLabel: String(tenant).replace(/^service-account:[^:]+:/u, ""),
+          actionLabel: formatRecoveryAction(candidate?.action),
+          missingLabel: `${missing.total ?? 0} missing`,
+        };
+      })
+    : [];
+  const remoteMissing = remote.total ?? 0;
+  const unknownDeferred = unknown.total ?? 0;
+  const queueable = byAction.queue_history_materialization ?? 0;
+  return {
+    total: metrics.total ?? rows.length,
+    returned: metrics.returned ?? rows.length,
+    remoteMissing,
+    unknownDeferred,
+    queueable,
+    rows,
+    summary: `${remoteMissing} remote-known missing local assets; ${unknownDeferred} unknown or deferred.`,
+  };
+}
+
+function formatRecoveryAction(action) {
+  if (action === "queue_history_materialization") return "Queue materialization";
+  if (action === "refresh_detail_inventory") return "Refresh detail";
+  if (action === "start_materialization_policy_completion") return "Start policy pass";
+  if (action === "inspect_archive_materialization") return "Inspect archive";
+  if (action === "none") return "No action";
+  return "Review";
 }
 
 function buildRuntimeRunRow(run, agents, actionsByRunId = {}) {

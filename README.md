@@ -273,6 +273,7 @@ Terminology note:
   - `GET /v1/account-mirrors/status`
   - `GET /v1/account-mirrors/catalog`
   - `GET /v1/account-mirrors/catalog/items/{item_id}`
+  - `GET /v1/account-mirrors/recovery-candidates`
   - `POST /v1/account-mirrors/materializations`
   - `GET /v1/account-mirrors/materializations`
   - `GET /v1/account-mirrors/materializations/{job_id}`
@@ -392,6 +393,13 @@ Terminology note:
   account-mirror manifests when those assets are bound to the provider
   conversation id, so refreshed manifest evidence can drive reconciliation even
   when an older cached transcript row has stale local count fields.
+  Metadata-only live follow is not artifact catch-up. Use
+  `GET /v1/account-mirrors/recovery-candidates`,
+  `auracall api mirror-recovery-candidates`, or MCP
+  `account_mirror_recovery_candidates` to read bounded, browser-free recovery
+  candidates before queuing provider work. Candidate rows classify
+  remote-known missing local assets, unknown/deferred inventory, blocked
+  targets, evidence confidence, and the explicit recovery action to take.
   History-backed materialization is an explicit separate job surface:
   `POST /v1/account-mirrors/materializations` queues a durable
   `history_materialization_job` by provider conversation id, account-mirror

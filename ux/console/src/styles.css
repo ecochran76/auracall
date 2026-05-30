@@ -724,6 +724,59 @@ button:disabled {
   align-items: end;
 }
 
+.recovery-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.recovery-title {
+  margin-bottom: 0;
+}
+
+.recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.recovery-candidate-list {
+  display: grid;
+  gap: 7px;
+}
+
+.recovery-candidate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, max-content) minmax(90px, max-content);
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfd;
+  font-size: 12px;
+}
+
+.recovery-candidate-row strong,
+.recovery-candidate-row small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recovery-candidate-row small,
+.recovery-candidate-row span {
+  color: var(--text-muted);
+}
+
 .compact-field {
   gap: 4px;
 }
@@ -1142,6 +1195,10 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .recovery-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
   .overview-grid {
     grid-template-columns: 1fr;
   }
@@ -1176,6 +1233,8 @@ pre {
   .agent-form fieldset,
   .inventory-command-bar,
   .runs-command-bar,
+  .recovery-grid,
+  .recovery-candidate-row,
   .health-grid {
     grid-template-columns: 1fr;
   }

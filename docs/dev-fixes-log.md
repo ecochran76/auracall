@@ -1,3 +1,10 @@
+- 2026-05-30: Account-mirror artifact recovery candidates must reconcile
+  materialized run-archive evidence, not only the latest metadata inventory
+  counters. If a bounded history materialization job writes local paths,
+  checksums, manifests, and archive/search availability, recovery readback
+  should subtract that proven local availability from remote-known
+  missing-local counts before telling operators what remains to recover.
+
 - 2026-05-29: Downstream App Intelligence integrations should consume
   AuraCall's agent-choice contract instead of re-encoding provider execution
   choices. Keep stable `agentId` / dispatch-team selection in downstream app
@@ -17512,3 +17519,9 @@ browser-stage lifecycle observability, not transcript truncation.
   active runner, retaining the newest `100` stale records and preserving
   `runnerTopology=full` for retained forensic detail instead of letting old
   service-runner records grow without bound.
+
+- 2026-05-30: Metadata-only live follow is not artifact recovery. Before
+  claiming catch-up, expose a bounded browser-free recovery-candidate readback,
+  then prove explicit materialization through durable job/completion/campaign
+  ownership with local paths, checksums, and reduced missing-local counts or
+  terminal skip/failure reasons.

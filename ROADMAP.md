@@ -8,9 +8,12 @@ Status: ready for next bounded plan
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan:
-  [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
+- Active plan: none.
 - Latest completed plan:
+  [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
+  made live-follow artifact recovery truthful and operator-actionable across
+  API, CLI, MCP, and the greenfield Runs console.
+- Previous completed plan:
   [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md)
 - Previous completed work:
   [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md)
@@ -21,9 +24,10 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: execute Plan 0085 to make live-follow artifact recovery
-  truthful and operator-actionable before adding broad launch/retry,
-  Search/archive, API Access, or additional control families.
+- Current work: choose the next bounded follow-up plan. Plan 0085 proved that
+  metadata-only live follow is not artifact catch-up, added bounded recovery
+  candidate readback, executed one explicit installed materialization proof,
+  and reconciled materialized run-archive evidence back into recovery counts.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -91,9 +95,9 @@ Current State:
     `1761` total / `1760` stale to `101` total / `100` stale while preserving
     `runnerTopology=full` for retained runner detail and CLI completion
     readback for protected `/v1/*` routes
-- 2026-05-30 live-follow/materialization audit concerns now supersede the
-  prior "green enough for daily operator use" posture until addressed by
-  bounded follow-up plans:
+- 2026-05-30 live-follow/materialization audit concerns now have their first
+  closed recovery slice, but remaining fleet catch-up still requires bounded
+  follow-up plans:
   - service-health/readback pressure: the first service-health follow-up is
     complete in
     [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md)
@@ -103,13 +107,25 @@ Current State:
     `healthy` after replacement completions enter `idle_waiting`, even while
     historical ChatGPT retry churn, high consecutive-failure counts, and
     pass-count-zero replacement loops remain important operator signals
-  - artifact materialization gap: live-follow completions currently run
-    `materializationPolicy: metadata_only`, durable materialization queues are
-    idle, and several ChatGPT tenants report `remoteKnownMissingLocal` assets
-    with no local materialized files; the explicit recovery lane is now open as
+  - artifact materialization gap: live-follow completions may run
+    `materializationPolicy: metadata_only`, and several tenants still report
+    `remoteKnownMissingLocal` assets; the explicit recovery lane is now closed
+    for planner/readback/proof mechanics in
     [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
-    and should first classify bounded candidates before launching provider
-    materialization work
+    while remaining catch-up stays future explicit work.
+    - 2026-05-30 closeout: installed
+      `auracall api mirror-recovery-candidates --port 18095 --limit 20 --json`
+      returned `8` candidates, `436` remote-known missing local assets, and
+      `6` unknown/deferred assets. API/CLI/MCP planner readback is implemented;
+      bounded execution succeeded once through
+      `hmj_27003a79e9a6416381aa8d37666e215a`, materializing `3` assets with
+      local paths and checksums while recording `4` fetch failures and `1`
+      skip. Run-archive evidence now reconciles into recovery-candidate
+      readback: `chatgpt/wsl-chrome-3` dropped from `147` to `145`
+      remote-known missing local assets, and global installed readback dropped
+      from `436` to `434`. The remaining `434` remote-known missing local
+      assets and `6` unknown/deferred assets are not automatic live-follow
+      catch-up; they require future explicit recovery/detail-refresh work.
   - Gemini detail confidence: `auracall-gemini-pro` live follow is running and
     failure-free, but conversation detail and asset inventory remain deferred
     for many conversations; Gemini should get a provider-specific detail and

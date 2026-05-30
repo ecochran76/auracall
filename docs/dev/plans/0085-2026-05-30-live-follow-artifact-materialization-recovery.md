@@ -1,6 +1,6 @@
 # Live-Follow Artifact Materialization Recovery Plan | 0085-2026-05-30
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -113,7 +113,23 @@ explicit recovery path that:
 
 ### Track 1 | Installed Recovery Baseline
 
-Status: planned.
+Status: complete.
+
+Evidence, 2026-05-30:
+
+- Installed `auracall-api.service` on port `18095` was active before changes.
+- Baseline `/status` reported live-follow severity `attention-needed`, `3`
+  active completions, and all observed live-follow materialization policies as
+  `metadata_only` or absent.
+- Baseline account-mirror inventory showed ChatGPT remote-known missing local
+  assets across multiple runtime profiles:
+  - `wsl-chrome-3`: `71` artifacts and `76` files;
+  - `wsl-chrome-2`: `64` artifacts and `73` files;
+  - `wsl-chrome-4`: `45` artifacts and `36` files;
+  - `default`: `40` artifacts and `31` files.
+- Gemini targets remained deferred/unknown for asset inventory confidence.
+- Direct unauthenticated protected `/v1/*` materialization/search routes
+  returned `401`; installed CLI readback was required for operator proof.
 
 - Capture current installed counts from port `18095`:
   - live-follow target materialization policies;
@@ -129,7 +145,21 @@ Status: planned.
 
 ### Track 2 | Recovery Candidate Planner
 
-Status: planned.
+Status: implemented and installed for readback.
+
+Evidence, 2026-05-30:
+
+- Added a cache-first, browser-free planner that reads account-mirror status
+  plus optional unavailable search-projection rows and emits bounded recovery
+  candidates.
+- Added installed API/CLI/MCP readback:
+  - `GET /v1/account-mirrors/recovery-candidates`;
+  - `auracall api mirror-recovery-candidates`;
+  - MCP `account_mirror_recovery_candidates`.
+- Installed CLI proof on port `18095` returned `8` recovery candidates with
+  `436` remote-known missing local assets and `6` unknown/deferred assets:
+  `4` candidates need `queue_history_materialization`, `2` need detail refresh,
+  and `2` are blocked/no-op.
 
 - Add or tighten a planner that reads cache/search/archive/completion evidence
   and emits bounded recovery candidates.
@@ -148,7 +178,7 @@ Status: planned.
 
 ### Track 3 | Bounded Recovery Execution
 
-Status: planned.
+Status: complete for the bounded proof slice.
 
 - Route eligible candidates into existing explicit work surfaces:
   - history materialization jobs for catalog/conversation rows;
@@ -162,9 +192,32 @@ Status: planned.
 - Keep default live follow metadata-only unless the target config or operator
   request explicitly asks for materialization.
 
+Evidence, 2026-05-30:
+
+- Queued a bounded installed history-materialization job for the smallest
+  explicit proof slice available from the top ChatGPT recovery candidate:
+  `hmj_27003a79e9a6416381aa8d37666e215a`.
+- Request was scoped to `provider=chatgpt`,
+  `runtimeProfile=wsl-chrome-3`, `boundIdentityKey=eric.cochran@soylei.com`,
+  `reconcile=true`, `assetKinds=[artifacts, files, media]`, and `maxItems=3`.
+- The job succeeded: `3` assets materialized from `3` conversations, with `3`
+  manifest paths, `3` materialized entries, `4` failed entries, and `1`
+  skipped entry.
+- Successful entries included local cache paths and SHA-256 checksums; failed
+  image entries reported `ChatGPT artifact binary fetch failed`.
+- Recovery-candidate readback now reconciles run-archive availability evidence
+  back into missing-local counts. After reinstalling and restarting
+  `auracall-api.service`, `chatgpt/wsl-chrome-3` dropped from `147` to `145`
+  remote-known missing local assets and reported `2` locally materialized
+  assets. The global installed recovery posture dropped from `436` to `434`
+  remote-known missing local assets.
+- Full fleet catch-up remains explicit bounded work; this plan proves the
+  planning, execution, and readback contract rather than launching every
+  remaining provider materialization task.
+
 ### Track 4 | Readback And Operator Parity
 
-Status: planned.
+Status: complete.
 
 - Extend readback so API, CLI, MCP, and `/console` can answer:
   - how many assets are remote-known but missing locally;
@@ -178,9 +231,21 @@ Status: planned.
   operator surfaces that show live-follow health, so `healthy` is not confused
   with "all artifacts local."
 
+Evidence, 2026-05-30:
+
+- API, CLI, and MCP can now read the same bounded recovery-candidate posture.
+- `/status` endpoint metadata now advertises the recovery-candidates route.
+- Greenfield `/console?view=runs` now fetches the backend
+  `/v1/account-mirrors/recovery-candidates` route and shows Artifact Recovery
+  readback for remote-known missing assets, unknown/deferred assets,
+  candidate counts, queueable candidates, and top bounded candidate actions.
+- Installed console proof served `/console?view=runs` from port `18095` with
+  bundle `index-BkDhtdX3.js`, and that bundle contains the recovery route and
+  Artifact Recovery panel strings.
+
 ### Track 5 | Installed Proof And Closeout
 
-Status: planned.
+Status: complete.
 
 - Run one bounded recovery proof against the smallest eligible ChatGPT target
   set before any broader campaign.
@@ -234,7 +299,20 @@ Status: planned.
   - `systemctl --user restart auracall-api.service`
   - bounded `/status` and recovery readback checks against
     `http://127.0.0.1:18095`
-  - one bounded materialization proof or terminal-classification proof.
+- one bounded materialization proof or terminal-classification proof.
+
+Installed proof:
+
+- Installed candidate readback is proven.
+- Installed durable job queueing and one bounded materialization success are
+  proven.
+- Run-archive materialization evidence now reconciles into recovery-candidate
+  counts: `chatgpt/wsl-chrome-3` dropped from `147` to `145` remote-known
+  missing local assets, and global installed readback dropped from `436` to
+  `434`.
+- Full catch-up remains intentionally unclaimed. The remaining `434`
+  remote-known missing local assets and `6` unknown/deferred assets require
+  future explicit bounded recovery/detail-refresh work.
 
 ## Definition Of Done
 

@@ -1,5 +1,83 @@
 # RUNBOOK
 
+## Turn 188 | 2026-05-30
+
+- Active plan:
+  `docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md`
+- Goal: finish Plan 0085 by reconciling materialization proof into installed
+  recovery counts and adding greenfield console parity.
+- Result:
+  - recovery-candidate readback now overlays available run-archive evidence
+    onto local materialized counts before reporting missing-local recovery
+    totals.
+  - `chatgpt/wsl-chrome-3` installed readback dropped from `147` to `145`
+    remote-known missing local assets after the bounded job proof.
+  - global installed recovery readback dropped from `436` to `434`
+    remote-known missing local assets while still reporting `6`
+    unknown/deferred assets.
+  - `/console?view=runs` now fetches
+    `/v1/account-mirrors/recovery-candidates` and shows Artifact Recovery
+    posture from the backend planner instead of duplicating recovery rules.
+  - closed Plan 0085; broad catch-up of the remaining candidates is still a
+    future explicit recovery/detail-refresh plan, not an automatic effect of
+    metadata-only live follow.
+- Verification:
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm vitest run tests/accountMirror/artifactRecoveryPlanner.test.ts tests/cli/apiMirrorRecoveryCommand.test.ts tests/mcp.accountMirrorRecovery.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 -t "recovery candidates|mcp account mirror recovery|shares configured browser media|includes unavailable search rows|classifies remote-known|subtracts materialized"`
+  - `pnpm run lint` exited `0` with existing warning-level debt (`200`
+    warnings).
+  - `pnpm run plans:audit -- --keep 85`
+  - `git diff --check`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `/home/ecochran76/.local/bin/auracall api mirror-recovery-candidates --port 18095 --timeout-ms 20000 --limit 20 --json`
+  - `curl -fsS 'http://127.0.0.1:18095/console?view=runs'`
+
+## Turn 187 | 2026-05-30
+
+- Active plan:
+  `docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md`
+- Goal: execute the first Plan 0085 slice and answer whether live follow can
+  now be expected to catch up all retrievable artifacts.
+- Result:
+  - added a browser-free recovery candidate planner for account-mirror artifact
+    materialization recovery.
+  - exposed planner readback through
+    `GET /v1/account-mirrors/recovery-candidates`,
+    `auracall api mirror-recovery-candidates`, and MCP
+    `account_mirror_recovery_candidates`.
+  - rebuilt, installed, and restarted the user runtime service on port `18095`.
+  - installed candidate readback returned `8` candidates, `436`
+    remote-known missing local assets, and `6` unknown/deferred assets.
+  - queued bounded history materialization job
+    `hmj_27003a79e9a6416381aa8d37666e215a` with `maxItems=3` for
+    `chatgpt/wsl-chrome-3` and bound identity
+    `eric.cochran@soylei.com`.
+  - the job succeeded, materializing `3` assets from `3` conversations with
+    local paths and SHA-256 checksums; it also recorded `4` ChatGPT image
+    binary-fetch failures and `1` skipped entry.
+  - follow-up recovery-candidate readback for `chatgpt/wsl-chrome-3` still
+    reported `147` remote-known missing local assets, so result-delta
+    reconciliation remains open.
+- Current answer:
+  - no, metadata-only live follow should not yet be expected to catch up all
+    retrievable artifacts by itself.
+  - the next milestone is terminal proof for the bounded materialization job:
+    local paths/checksums are now proven, but reduced missing-local counts are
+    not; the next slice must reconcile materialization job outcomes back into
+    mirror completeness and recovery-candidate counts.
+- Verification so far:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/accountMirror/artifactRecoveryPlanner.test.ts tests/cli/apiMirrorRecoveryCommand.test.ts tests/mcp.accountMirrorRecovery.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "recovery candidates|history materialization"`
+  - `pnpm vitest run tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `/home/ecochran76/.local/bin/auracall api mirror-recovery-candidates --port 18095 --timeout-ms 20000 --limit 20 --json`
+  - `/home/ecochran76/.local/bin/auracall api history-materialization-create --port 18095 --provider chatgpt --runtime-profile wsl-chrome-3 --bound-identity-key eric.cochran@soylei.com --reconcile --asset-kind all --max-items 3 --json`
+
 ## Turn 186 | 2026-05-30
 
 - Active plan:

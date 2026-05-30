@@ -114,6 +114,12 @@ import {
 	type SearchProjectionService,
 } from "../runtime/searchProjectionService.js";
 import {
+	createAccountMirrorArtifactRecoveryPlanner,
+	type AccountMirrorArtifactRecoveryPlanRequest,
+	type AccountMirrorArtifactRecoveryPlanResult,
+	type AccountMirrorArtifactRecoveryPlanner,
+} from "../accountMirror/artifactRecoveryPlanner.js";
+import {
 	createResponseBatchExecutionGate,
 	createResponseBatchService,
 	ResponseBatchCreateRequestSchema,
@@ -329,6 +335,7 @@ export interface ResponsesHttpServerDeps {
 	archiveMaterializationJobService?: ArchiveMaterializationJobService;
 	historyMaterializationService?: HistoryMaterializationService;
 	searchProjectionService?: SearchProjectionService;
+	accountMirrorArtifactRecoveryPlanner?: AccountMirrorArtifactRecoveryPlanner;
 	executionHost?: ExecutionServiceHost;
 	localActionExecutionPolicy?: ExecutionServiceHostDeps["localActionExecutionPolicy"];
 	probeRuntimeRunServiceState?: (
@@ -784,10 +791,11 @@ interface HttpStatusResponse {
 		runArchiveMaterializationsCreate: string;
 		runArchiveMaterializationsList: string;
 		runArchiveMaterializationTemplate: string;
-		historyMaterializationsCreate: string;
-		historyMaterializationsList: string;
-		historyMaterializationTemplate: string;
-		runStatusTemplate: string;
+			historyMaterializationsCreate: string;
+			historyMaterializationsList: string;
+			historyMaterializationTemplate: string;
+			accountMirrorRecoveryCandidates: string;
+			runStatusTemplate: string;
 		apiLogTail: string;
 		preflightRunTemplate: string;
 		preflightRunLogTemplate: string;
@@ -1095,6 +1103,7 @@ export async function createResponsesHttpServer(
 	let archiveMaterializationJobService = deps.archiveMaterializationJobService;
 	let historyMaterializationService = deps.historyMaterializationService;
 	let searchProjectionService: SearchProjectionService;
+	let accountMirrorArtifactRecoveryPlanner: AccountMirrorArtifactRecoveryPlanner;
 	const accountMirrorSchedulerService =
 		deps.accountMirrorSchedulerService ??
 		createAccountMirrorSchedulerPassService({
@@ -1338,6 +1347,13 @@ export async function createResponsesHttpServer(
 			accountMirrorCatalogService,
 			runArchiveService,
 			archiveMaterializationJobService,
+			now,
+		});
+	accountMirrorArtifactRecoveryPlanner =
+		deps.accountMirrorArtifactRecoveryPlanner ??
+		createAccountMirrorArtifactRecoveryPlanner({
+			registry: accountMirrorStatusRegistry,
+			searchProjectionService,
 			now,
 		});
 	const reserveForegroundAuraCallDrain = () => {
@@ -1831,6 +1847,14 @@ export async function createResponsesHttpServer(
 				const query = parseAccountMirrorCatalogQuery(url.searchParams);
 				const result: HttpAccountMirrorCatalogResponse =
 					await accountMirrorCatalogService.readCatalog(query);
+				sendJson(res, 200, result);
+				return;
+			}
+
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/recovery-candidates") {
+				const query = parseAccountMirrorArtifactRecoveryPlanQuery(url.searchParams);
+				const result: AccountMirrorArtifactRecoveryPlanResult =
+					await accountMirrorArtifactRecoveryPlanner.plan(query);
 				sendJson(res, 200, result);
 				return;
 			}
@@ -3869,7 +3893,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
 	}
 	logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? "default"}`);
 	logger(
-		"Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/reconciliations, GET /v1/account-mirrors/reconciliations, GET/POST /v1/account-mirrors/reconciliations/{campaign_id}, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}",
+			"Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/recovery-candidates, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/reconciliations, GET /v1/account-mirrors/reconciliations, GET/POST /v1/account-mirrors/reconciliations/{campaign_id}, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}",
 	);
 	logger(`Local probe: curl ${probeUrl}/status`);
 	if (serverOptions.dashboardUrl) {
@@ -4412,6 +4436,8 @@ function createHttpStatusResponse(input: {
 			historyMaterializationsList:
 				"/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|catalog_item|archive_item|reconciliation][&limit=50]",
 			historyMaterializationTemplate: "/v1/account-mirrors/materializations/{job_id}",
+			accountMirrorRecoveryCandidates:
+				"/v1/account-mirrors/recovery-candidates[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status=eligible|needs_detail_refresh|deferred|blocked|unsupported|terminal][&action={action}][&includeSearchRows=true|false][&limit=50]",
 			runStatusTemplate: "/v1/runs/{run_id}/status[?diagnostics=browser-state]",
 			apiLogTail: "/v1/api/logs/tail[?maxBytes=32768]",
 			preflightRunTemplate: "/v1/preflight/lazy-live-follow/runs/{run_id}",
@@ -7313,6 +7339,59 @@ function parseSearchProjectionQuery(searchParams: URLSearchParams): SearchProjec
 		materialization: parsed.materialization,
 		limit: parsed.limit,
 		cursor: parsed.cursor,
+	};
+}
+
+function parseAccountMirrorArtifactRecoveryPlanQuery(
+	searchParams: URLSearchParams,
+): AccountMirrorArtifactRecoveryPlanRequest {
+	const raw: Record<string, unknown> = {};
+	for (const key of [
+		"provider",
+		"runtimeProfile",
+		"runtimeProfileId",
+		"tenant",
+		"tenantKey",
+		"status",
+		"action",
+		"includeSearchRows",
+		"limit",
+	]) {
+		if (searchParams.has(key)) {
+			raw[key] = searchParams.get(key);
+		}
+	}
+	const parsed = z
+		.object({
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+			runtimeProfileId: z.string().trim().min(1).optional(),
+			tenant: z.string().trim().min(1).optional(),
+			tenantKey: z.string().trim().min(1).optional(),
+			status: z
+				.enum(["eligible", "needs_detail_refresh", "deferred", "blocked", "unsupported", "terminal"])
+				.optional(),
+			action: z
+				.enum([
+					"queue_history_materialization",
+					"refresh_detail_inventory",
+					"start_materialization_policy_completion",
+					"inspect_archive_materialization",
+					"none",
+				])
+				.optional(),
+			includeSearchRows: z.preprocess(parseOptionalBoolean, z.boolean().optional()),
+			limit: z.coerce.number().int().min(0).max(500).optional(),
+		})
+		.parse(raw);
+	return {
+		provider: parsed.provider,
+		runtimeProfileId: parsed.runtimeProfileId ?? parsed.runtimeProfile,
+		tenantKey: parsed.tenantKey ?? parsed.tenant,
+		status: parsed.status,
+		action: parsed.action,
+		includeSearchRows: parsed.includeSearchRows,
+		limit: parsed.limit,
 	};
 }
 
