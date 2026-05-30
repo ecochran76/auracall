@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 189 | 2026-05-30
+
+- Active plan:
+  `docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md`
+- Goal: plan the next bounded slice so AuraCall is not stuck in metadata-only
+  live-follow mode.
+- Result:
+  - opened Plan 0086 for full live-follow artifact retrieval.
+  - scoped the plan around durable full-retrieval policy, active completion
+    upgrade from metadata-only, one installed proof target, and a scale gate
+    for remaining tenants.
+  - selected `chatgpt/wsl-chrome-3` as the first proof target because it is
+    active, error-free, and still reports `145` remote-known missing local
+    assets.
+  - recorded the root cause: installed config expresses metadata-first
+    live-follow intent, active completions remain `steady_follow` plus
+    `metadata_only`, and dry-run reconciliation does not upgrade active
+    completions.
+  - wired Plan 0086 into `ROADMAP.md` as the active bounded plan.
+- Verification:
+  - `pnpm run plans:audit -- --keep 86`
+  - `git diff --check`
+
 ## Turn 188 | 2026-05-30
 
 - Active plan:

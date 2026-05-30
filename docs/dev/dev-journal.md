@@ -1,3 +1,21 @@
+## Turn 332 | 2026-05-30
+
+- Goal: open the next bounded plan for full live-follow artifact retrieval.
+- Result:
+  - opened
+    `docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md`.
+  - made the root cause explicit: current installed `liveFollow` config is
+    metadata-first, active completions are `steady_follow` plus
+    `metadata_only`, and dry-run reconciliation does not upgrade active
+    completions.
+  - scoped the implementation around durable full-retrieval policy, active
+    completion upgrade, one installed `chatgpt/wsl-chrome-3` proof target, and
+    a scale gate for the remaining ChatGPT/Gemini targets.
+  - wired Plan 0086 into `ROADMAP.md` and `RUNBOOK.md`.
+- Verification:
+  - `pnpm run plans:audit -- --keep 86`
+  - `git diff --check`
+
 ## Turn 331 | 2026-05-30
 
 - Goal: finish Plan 0085 with installed recovery-count reconciliation and

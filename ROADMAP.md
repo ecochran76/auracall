@@ -4,11 +4,12 @@
 
 ### Current Execution Board
 
-Status: ready for next bounded plan
+Status: executing Plan 0086
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan: none.
+- Active plan:
+  [docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md](docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md)
 - Latest completed plan:
   [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
   made live-follow artifact recovery truthful and operator-actionable across
@@ -24,10 +25,10 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: choose the next bounded follow-up plan. Plan 0085 proved that
-  metadata-only live follow is not artifact catch-up, added bounded recovery
-  candidate readback, executed one explicit installed materialization proof,
-  and reconciled materialized run-archive evidence back into recovery counts.
+- Current work: execute Plan 0086 so selected live-follow targets can run full
+  artifact retrieval instead of staying stuck in metadata-only posture. The
+  first proof target is `chatgpt/wsl-chrome-3`, because it is active,
+  error-free, and still reports `145` remote-known missing local assets.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -112,7 +113,8 @@ Current State:
     `remoteKnownMissingLocal` assets; the explicit recovery lane is now closed
     for planner/readback/proof mechanics in
     [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
-    while remaining catch-up stays future explicit work.
+    while full live-follow artifact retrieval is now the active follow-up in
+    [docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md](docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md).
     - 2026-05-30 closeout: installed
       `auracall api mirror-recovery-candidates --port 18095 --limit 20 --json`
       returned `8` candidates, `436` remote-known missing local assets, and
@@ -126,6 +128,13 @@ Current State:
       from `436` to `434`. The remaining `434` remote-known missing local
       assets and `6` unknown/deferred assets are not automatic live-follow
       catch-up; they require future explicit recovery/detail-refresh work.
+    - 2026-05-30 full-retrieval audit: installed config has
+      `liveFollow.mode: metadata-first` for enabled targets but no
+      `sweepMode` or `materializationPolicy`; active completions remain
+      `steady_follow` plus `metadata_only`; dry-run reconciliation selects no
+      targets because active completions are classified as `already_active`.
+      Plan 0086 must persist full-retrieval policy and upgrade active
+      metadata-only completions before broad catch-up is expected.
   - Gemini detail confidence: `auracall-gemini-pro` live follow is running and
     failure-free, but conversation detail and asset inventory remain deferred
     for many conversations; Gemini should get a provider-specific detail and
