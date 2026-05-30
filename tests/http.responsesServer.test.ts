@@ -3356,6 +3356,7 @@ describe('http responses adapter', () => {
       results = [...results].sort((left, right) => right.startedAt.localeCompare(left.startedAt));
       return request.limit == null ? results : results.slice(0, request.limit);
     });
+    const refreshMaterializationStatuses = vi.fn(async (input: AccountMirrorCompletionOperation[]) => input);
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
@@ -3364,6 +3365,7 @@ describe('http responses adapter', () => {
           start: vi.fn(() => running),
           read: vi.fn((id: string) => operations.find((operation) => operation.id === id) ?? null),
           list,
+          refreshMaterializationStatuses,
           control: vi.fn(() => running),
         },
       },
@@ -3379,6 +3381,9 @@ describe('http responses adapter', () => {
             active: number;
             running: number;
             idle_waiting: number;
+          };
+          omitted: {
+            recent: number;
           };
           active: AccountMirrorCompletionOperation[];
         };
@@ -3404,6 +3409,7 @@ describe('http responses adapter', () => {
         running: 1,
         idle_waiting: 1,
       });
+      expect(payload.accountMirrorCompletions.omitted.recent).toBe(44);
       expect(payload.accountMirrorCompletions.active.map((operation) => operation.id).sort()).toEqual([
         'acctmirror_idle_count_parity',
         'acctmirror_running_count_parity',
@@ -3425,6 +3431,15 @@ describe('http responses adapter', () => {
       ]));
       expect(list).toHaveBeenCalledWith({ limit: null });
       expect(list).toHaveBeenCalledWith({ status: 'active', limit: null });
+      expect(refreshMaterializationStatuses).toHaveBeenCalledTimes(2);
+      expect(refreshMaterializationStatuses).toHaveBeenNthCalledWith(1, expect.arrayContaining([
+        expect.objectContaining({ id: 'acctmirror_completed_51' }),
+      ]));
+      expect(refreshMaterializationStatuses.mock.calls[0]?.[0]).toHaveLength(10);
+      expect(refreshMaterializationStatuses).toHaveBeenNthCalledWith(2, expect.arrayContaining([
+        expect.objectContaining({ id: 'acctmirror_running_count_parity' }),
+        expect.objectContaining({ id: 'acctmirror_idle_count_parity' }),
+      ]));
     } finally {
       await server.close();
     }

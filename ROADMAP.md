@@ -8,17 +8,22 @@ Status: ready for next bounded plan
 Lane: P01
 
 Current Priority Snapshot:
+- Active plan: none.
 - Latest completed plan:
-  [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md)
+  [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md)
 - Previous completed work:
+  [docs/dev/plans/0083-2026-05-29-runs-safe-controls.md](docs/dev/plans/0083-2026-05-29-runs-safe-controls.md)
+  added the first state-gated Runs controls to the greenfield console.
   [docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md](docs/dev/plans/0082-2026-05-29-transcribe-audio-app-intelligence-integration.md)
   made AuraCall the source of truth for the agent, tenant, binding, model
   selector, project binding, and dispatch-pool choices consumed by downstream
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: select the next bounded plan before adding broad launch/retry,
-  Search/archive, API Access, or additional control families.
+- Current work: choose the next bounded plan from the remaining
+  live-follow/materialization audit concerns before adding broad launch/retry,
+  Search/archive, API Access, materialization recovery automation, or
+  additional control families.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -73,6 +78,44 @@ Current State:
   - broad launch and retry controls remain deferred
   - each exposed action has a documented state gate, confirmation copy, result
     readback, and blocked-state reason from `/status.controlReadiness`
+- API readback memory and stale-runner compaction is now closed in
+  [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md):
+  - default `/status.accountMirrorCompletions` keeps exact completion metrics
+    but hydrates materialization status only for current active rows and the
+    bounded recent window
+  - completion summaries expose `limits.recent: 10` and
+    `omitted.recent` metadata for capped default readback
+  - stale runner retention is the newest `100` stale runner records, compacted
+    at local API runner registration without removing the active runner
+  - installed runtime proof on port `18095` reduced runner topology from
+    `1761` total / `1760` stale to `101` total / `100` stale while preserving
+    `runnerTopology=full` for retained runner detail and CLI completion
+    readback for protected `/v1/*` routes
+- 2026-05-30 live-follow/materialization audit concerns now supersede the
+  prior "green enough for daily operator use" posture until addressed by
+  bounded follow-up plans:
+  - service-health/readback pressure: the first service-health follow-up is
+    complete in
+    [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md)
+    for bounded completion hydration and stale-runner retention; continue to
+    treat future unbounded status/readback growth as a release blocker
+  - live-follow truthfulness: current target rollups can recover to
+    `healthy` after replacement completions enter `idle_waiting`, even while
+    historical ChatGPT retry churn, high consecutive-failure counts, and
+    pass-count-zero replacement loops remain important operator signals
+  - artifact materialization gap: live-follow completions currently run
+    `materializationPolicy: metadata_only`, durable materialization queues are
+    idle, and several ChatGPT tenants report `remoteKnownMissingLocal` assets
+    with no local materialized files; this needs an explicit recovery lane
+    rather than being inferred from metadata mirroring
+  - Gemini detail confidence: `auracall-gemini-pro` live follow is running and
+    failure-free, but conversation detail and asset inventory remain deferred
+    for many conversations; Gemini should get a provider-specific detail and
+    materialization-confidence slice
+  - operator audit parity: protected `/v1/*` materialization routes can block
+    direct read-only inspection from local curl, so the next operator-facing
+    plan should confirm CLI/MCP/console parity for materialization and
+    reconciliation readback before adding more controls
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -1502,8 +1545,21 @@ Safety note:
 
 - Primary active lane checkpoint: Plan 0083 is closed for state-gated safe Runs
   controls in the greenfield `/console?view=runs` workbench.
-- Immediate next action: select the next bounded plan. Launch and broad retry
-  remain deferred until a future plan explicitly chooses that control family.
+- Immediate next action: execute Plan 0084 for API memory/readback and
+  stale-runner compaction before adding Search/archive, API Access, launch,
+  broad retry, materialization recovery, or more control families.
+- Candidate next plan families, still to be split into detailed plans:
+  - API memory/readback and stale-runner compaction for the installed service:
+    open as Plan 0084
+  - live-follow health semantics that expose retry churn, failure history, and
+    replacement-loop state without regressing current target rollups
+  - explicit artifact recovery for known remote assets missing local
+    materialization evidence
+  - Gemini conversation-detail and asset-inventory confidence
+  - materialization/reconciliation readback parity across API, CLI, MCP, and
+    console operator surfaces
+- Launch and broad retry remain deferred until a future plan explicitly chooses
+  that control family.
 - Service mode and runner orchestration remains paused after the current
   single-host bounded local-runner bridge reached a coherent ownership
   checkpoint.
@@ -1525,16 +1581,16 @@ Safety note:
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
   the execution board deterministic
-- Current transition: user-scoped installed-runtime dogfood is green enough for
-  daily operator use from `~/.local/bin/auracall`; plain `/status` now keeps
-  runner topology readable in long-lived dogfood environments while preserving
-  `?runnerTopology=full` for forensic debugging; defer publish/release work
-  until the installed copy has carried normal use for a short period
+- Current transition: user-scoped installed-runtime dogfood is no longer
+  considered broadly green; `/status` is usable, but API OOM restarts,
+  stale-runner accumulation, live-follow retry churn, and missing local
+  materialization evidence need bounded reliability work before release or
+  additional product-control expansion
 - Current lazy-live-follow checkpoint: installed API service on port `18095`
-  continues to report aligned active counts across metrics, active list, and
-  live-follow target rollup; current severity can move to `attention-needed`
-  when a real provider/account row fails or lacks identity, which is
-  operator-visible state rather than a Plan 0063 count regression
+  still reports aligned active counts across metrics, active list, and
+  live-follow target rollup, but current target health is insufficient by
+  itself; future health readback must also surface failure-history severity,
+  replacement-loop state, and materialization backlog
 - Current provider-drift checkpoint:
   - plain `grok` now resolves to current `grok-4.20` text support
   - first-class media generation across CLI, local API, and MCP is closed in
@@ -1556,9 +1612,10 @@ Safety note:
 
 ### Soon
 
-- Search/archive and API Access workflows: select one as the next AuraCall
-  console lane, unless the next bounded plan intentionally extends Runs
-  controls without adding broad launch/retry.
+- Search/archive and API Access workflows: keep scoped as product-console
+  follow-ups after the current reliability/materialization concerns have an
+  explicit bounded plan path, unless the user intentionally prioritizes one of
+  those workflows over service health.
 
 ### Later
 

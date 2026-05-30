@@ -40,6 +40,16 @@ export interface ExpireExecutionRunnersResult {
   records: ExecutionRunnerStoredRecord[];
 }
 
+export interface CompactStaleExecutionRunnersInput {
+  keepNewest: number;
+}
+
+export interface CompactStaleExecutionRunnersResult {
+  scannedStaleRunnerCount: number;
+  retainedRunnerIds: string[];
+  deletedRunnerIds: string[];
+}
+
 export interface RecordExecutionRunnerActivityInput {
   runnerId: string;
   activityAt: string;
@@ -54,6 +64,7 @@ export interface ExecutionRunnerControlContract {
   heartbeatRunner(input: HeartbeatExecutionRunnerInput): Promise<ExecutionRunnerStoredRecord>;
   markRunnerStale(input: MarkExecutionRunnerStaleInput): Promise<ExecutionRunnerStoredRecord>;
   expireRunners(input: ExpireExecutionRunnersInput): Promise<ExpireExecutionRunnersResult>;
+  compactStaleRunners(input: CompactStaleExecutionRunnersInput): Promise<CompactStaleExecutionRunnersResult>;
   recordRunnerActivity(input: RecordExecutionRunnerActivityInput): Promise<ExecutionRunnerStoredRecord>;
 }
 
@@ -135,6 +146,24 @@ export function createExecutionRunnerControl(
       return {
         expiredRunnerIds,
         records: updatedRecords,
+      };
+    },
+
+    async compactStaleRunners(input) {
+      await store.ensureStorage();
+      const keepNewest = Math.max(0, Math.floor(input.keepNewest));
+      const staleRunners = await store.listRunners({ status: 'stale' });
+      const retainedRunnerIds = staleRunners.slice(0, keepNewest).map((runner) => runner.id);
+      const deletedRunnerIds = staleRunners.slice(keepNewest).map((runner) => runner.id);
+
+      for (const runnerId of deletedRunnerIds) {
+        await store.deleteRunner(runnerId);
+      }
+
+      return {
+        scannedStaleRunnerCount: staleRunners.length,
+        retainedRunnerIds,
+        deletedRunnerIds,
       };
     },
 

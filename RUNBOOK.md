@@ -1,5 +1,64 @@
 # RUNBOOK
 
+## Turn 185 | 2026-05-30
+
+- Active plan:
+  `docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md`
+- Goal: execute and close Plan 0084.
+- Result:
+  - bounded default completion summary hydration so `/status` computes exact
+    account-mirror completion metrics without hydrating every historical
+    materialization record.
+  - added completion summary `limits.recent` and `omitted.recent` metadata.
+  - added stale runner compaction with a retention rule of the newest `100`
+    stale runner records and active-runner preservation.
+  - installed and restarted the user runtime service on port `18095`.
+  - closed Plan 0084 and returned the roadmap to ready-for-next-plan posture.
+- Installed evidence:
+  - baseline default `/status`: `457378` bytes, `10.379518s`, runner topology
+    `1761` total / `1760` stale.
+  - after restart default `/status`: `461530` bytes, `7.214479s`, runner
+    topology `101` total / `100` stale, live follow `healthy` with `6` active
+    completions, and `accountMirrorCompletions.omitted.recent: 2690`.
+  - after restart heavy status:
+    `/status?recovery=true&sourceKind=all&tenantExecutionLimits=usage`
+    returned `542060` bytes in `11.560811s`.
+  - `runnerTopology=full` returned all `101` retained runner rows; direct
+    unauthenticated `/v1/account-mirrors/completions?limit=1` returned `401`,
+    while CLI `auracall api mirror-completions --port 18095 --limit 1 --json`
+    returned one completion row.
+- Verification:
+  - `pnpm vitest run tests/runtime.runnersControl.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "keeps live-follow completion metrics aligned"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run lint` exited `0` with existing warning-level debt (`200`
+    warnings).
+  - `pnpm run plans:audit -- --keep 84`
+  - `git diff --check`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+
+## Turn 184 | 2026-05-30
+
+- Active plan:
+  `docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md`
+- Goal: open the first detailed plan from the live-follow/materialization
+  health audit.
+- Result:
+  - opened Plan 0084 for API readback memory pressure and stale-runner
+    compaction.
+  - scoped the plan around bounded default `/status` and status-consumer
+    readback, stale runner retention, explicit forensic full-read modes, and
+    installed-runtime proof on port `18095`.
+  - kept artifact materialization recovery, provider browser automation,
+    Search/archive, API Access, launch, broad retry, and additional console
+    controls out of scope.
+  - wired Plan 0084 into `ROADMAP.md` as the active reliability slice.
+- Verification:
+  - `pnpm run plans:audit -- --keep 84`
+  - `git diff --check`
+
 ## Turn 183 | 2026-05-29
 
 - Active plan:

@@ -17500,3 +17500,15 @@ browser-stage lifecycle observability, not transcript truncation.
   `materializationOutcome` for job
   `hmj_112116b41db94ec5b9c3bb7c867e35e9`: ten conversations attempted, seven
   assets materialized, zero failures, and seven SHA-256 checksums.
+
+- 2026-05-30: Default `/status` should not hydrate materialization state for
+  every historical account-mirror completion. Keep exact aggregate counts, but
+  hydrate only current active rows and the bounded recent window; expose
+  `limits.recent` and `omitted.recent` so operators can see what the default
+  summary intentionally omits.
+
+- 2026-05-30: Stale execution-runner records need a runtime retention rule.
+  The local API service now compacts stale runner records after registering the
+  active runner, retaining the newest `100` stale records and preserving
+  `runnerTopology=full` for retained forensic detail instead of letting old
+  service-runner records grow without bound.

@@ -35,6 +35,7 @@ export interface ExecutionRunnerRecordStore {
   readRunner(runnerId: string): Promise<ExecutionRunnerRecord | null>;
   readRecord(runnerId: string): Promise<ExecutionRunnerStoredRecord | null>;
   listRunners(options?: ListExecutionRunnerRecordOptions): Promise<ExecutionRunnerRecord[]>;
+  deleteRunner(runnerId: string): Promise<void>;
 }
 
 export function getExecutionRunnersDir(): string {
@@ -153,6 +154,10 @@ export async function listExecutionRunnerRecords(
   return filtered;
 }
 
+export async function deleteExecutionRunnerRecord(runnerId: string): Promise<void> {
+  await fs.rm(getExecutionRunnerDir(runnerId), { recursive: true, force: true });
+}
+
 export function createExecutionRunnerRecordStore(): ExecutionRunnerRecordStore {
   return {
     ensureStorage: ensureExecutionRunnerStorage,
@@ -160,6 +165,7 @@ export function createExecutionRunnerRecordStore(): ExecutionRunnerRecordStore {
     readRunner: readExecutionRunnerRecord,
     readRecord: readExecutionRunnerStoredRecord,
     listRunners: listExecutionRunnerRecords,
+    deleteRunner: deleteExecutionRunnerRecord,
   };
 }
 

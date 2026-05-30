@@ -272,6 +272,8 @@ import { readDevToolsPort } from "../../packages/browser-service/src/profileStat
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 const TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS = 5_000;
+const DEFAULT_STALE_RUNNER_RETENTION = 100;
+const ACCOUNT_MIRROR_COMPLETION_RECENT_STATUS_LIMIT = 10;
 
 function scheduleDefaultUserApiServiceRestart(input: ApiServiceRestartRequest): void {
 	setTimeout(() => {
@@ -573,6 +575,12 @@ interface AccountMirrorSchedulerForegroundWorkStatus {
 interface AccountMirrorCompletionStatusSummary {
 	object: "account_mirror_completion_summary";
 	generatedAt: string;
+	limits: {
+		recent: number;
+	};
+	omitted: {
+		recent: number;
+	};
 	metrics: {
 		total: number;
 		active: number;
@@ -3681,6 +3689,18 @@ export async function createResponsesHttpServer(
 
 	if (!deps.executionHost) {
 		await registerLocalRunner();
+		try {
+			const compaction = await runnersControl.compactStaleRunners({
+				keepNewest: DEFAULT_STALE_RUNNER_RETENTION,
+			});
+			if (compaction.deletedRunnerIds.length > 0) {
+				logger(
+					`Compacted ${compaction.deletedRunnerIds.length} stale execution runner records; retained ${compaction.retainedRunnerIds.length} newest stale runner records.`,
+				);
+			}
+		} catch (error) {
+			logger(error instanceof Error ? error.message : String(error));
+		}
 		scheduleRunnerHeartbeat();
 	}
 
@@ -5555,13 +5575,14 @@ async function createAccountMirrorCompletionStatusSummary(
 ): Promise<AccountMirrorCompletionStatusSummary> {
 	const all = service.list({ limit: null });
 	const active = service.list({ status: "active", limit: null });
-	const hydratedAll = service.refreshMaterializationStatuses
-		? await service.refreshMaterializationStatuses(all)
-		: all;
+	const recent = all.slice(0, ACCOUNT_MIRROR_COMPLETION_RECENT_STATUS_LIMIT);
+	const hydratedRecent = service.refreshMaterializationStatuses
+		? await service.refreshMaterializationStatuses(recent)
+		: recent;
 	const hydratedActive = service.refreshMaterializationStatuses
 		? await service.refreshMaterializationStatuses(active)
 		: active;
-	const metrics = hydratedAll.reduce<AccountMirrorCompletionStatusSummary["metrics"]>(
+	const metrics = all.reduce<AccountMirrorCompletionStatusSummary["metrics"]>(
 		(acc, operation) => {
 			acc.total += 1;
 			acc[operation.status] += 1;
@@ -5591,9 +5612,15 @@ async function createAccountMirrorCompletionStatusSummary(
 	return {
 		object: "account_mirror_completion_summary",
 		generatedAt: now().toISOString(),
+		limits: {
+			recent: ACCOUNT_MIRROR_COMPLETION_RECENT_STATUS_LIMIT,
+		},
+		omitted: {
+			recent: Math.max(0, metrics.total - hydratedRecent.length),
+		},
 		metrics,
 		active: hydratedActive,
-		recent: hydratedAll.slice(0, 10),
+		recent: hydratedRecent,
 	};
 }
 

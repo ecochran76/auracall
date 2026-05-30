@@ -1,3 +1,38 @@
+## Turn 330 | 2026-05-30
+
+- Goal: open the first detailed plan for the roadmap audit concerns.
+- Result:
+  - added
+    `docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md`.
+  - scoped Plan 0084 to API readback memory pressure, stale-runner
+    retention/compaction, bounded default status projections, explicit
+    forensic full-read modes, and installed-runtime proof.
+  - left materialization recovery, provider browser automation,
+    Search/archive, API Access, launch, broad retry, and additional console
+    controls out of scope.
+  - wired Plan 0084 into `ROADMAP.md` and `RUNBOOK.md` as the active plan.
+- Verification:
+  - `pnpm run plans:audit -- --keep 84`
+  - `git diff --check`
+
+## Turn 329 | 2026-05-30
+
+- Goal: record the live-follow and artifact-materialization audit concerns in
+  the roadmap without opening detailed implementation plans yet.
+- Result:
+  - updated `ROADMAP.md` so the next priority is a bounded
+    reliability/materialization plan family rather than Search/archive, API
+    Access, launch, broad retry, or more console controls.
+  - captured the high-level concern areas: API memory/readback pressure,
+    stale-runner accumulation, live-follow failure-history truthfulness,
+    explicit artifact recovery for known remote assets missing local files,
+    Gemini detail/materialization confidence, and operator readback parity.
+  - left detailed plan artifacts to future slices so each concern can get its
+    own scope, acceptance criteria, and validation path.
+- Verification:
+  - `pnpm run plans:audit -- --keep 83`
+  - `git diff --check`
+
 ## Turn 328 | 2026-05-29
 
 - Goal: execute and close the Runs safe-controls plan.
@@ -35076,4 +35111,48 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/config/agentRegistryStore.test.ts tests/schema/resolver.test.ts --maxWorkers 1 --testNamePattern "agent|tenant|binding|project"`
   - `pnpm run plans:audit -- --keep 75`
   - `pnpm run typecheck`
+  - `git diff --check`
+
+## Turn 323 | 2026-05-30
+
+- Goal: execute and close Plan 0084 for API readback memory pressure and
+  stale-runner compaction.
+- Baseline:
+  - installed default `/status` on port `18095`: `457378` bytes,
+    `10.379518s`.
+  - installed heavy
+    `/status?recovery=true&sourceKind=all&tenantExecutionLimits=usage`:
+    `537722` bytes, `16.084951s`.
+  - runner topology before compaction: `1761` total, `1` active, `1760`
+    stale.
+  - completion summary before compaction: `2698` total, `6` active.
+- Change:
+  - default account-mirror completion summary now hydrates materialization
+    status only for the bounded recent window and current active rows while
+    preserving exact aggregate metrics.
+  - completion summaries expose `limits.recent: 10` and `omitted.recent`.
+  - runner control now supports stale-runner compaction; the local API service
+    retains the newest `100` stale runner records after registering the active
+    local runner.
+  - Plan 0084 is closed; roadmap/runbook/fixes-log were updated.
+- Installed proof:
+  - rebuilt and installed the user runtime, then restarted
+    `auracall-api.service`.
+  - default `/status`: `461530` bytes, `7.214479s`, runner topology `101`
+    total / `1` active / `100` stale, live follow `healthy` with `6` active
+    completions, and completion omitted metadata `recent: 2690`.
+  - heavy status: `542060` bytes, `11.560811s`, same bounded runner and
+    completion posture.
+  - `runnerTopology=full` returned all `101` retained runner rows.
+  - protected direct `/v1/account-mirrors/completions?limit=1` returned `401`;
+    CLI `auracall api mirror-completions --port 18095 --limit 1 --json`
+    returned one completion row.
+- Verification:
+  - `pnpm vitest run tests/runtime.runnersControl.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "keeps live-follow completion metrics aligned"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run lint` exited `0` with existing warning-level debt (`200`
+    warnings).
+  - `pnpm run plans:audit -- --keep 84`
   - `git diff --check`

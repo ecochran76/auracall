@@ -172,6 +172,7 @@ describe('runtime runner control', () => {
       async listRunners() {
         return [current.runner];
       },
+      async deleteRunner() {},
       async writeRunner(nextRunner, options) {
         if (shouldSimulateMismatch) {
           shouldSimulateMismatch = false;
@@ -255,5 +256,55 @@ describe('runtime runner control', () => {
     const freshRead = await control.readRunner('runner:fresh');
     expect(expiredRead?.runner.status).toBe('stale');
     expect(freshRead?.runner.status).toBe('active');
+  });
+
+  it('compacts only the oldest stale runner records', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runners-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRunnerControl();
+    await control.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:active',
+        hostId: 'host:wsl-dev-1',
+        status: 'active',
+        startedAt: '2026-04-11T10:00:00.000Z',
+        lastHeartbeatAt: '2026-04-11T10:04:00.000Z',
+        expiresAt: '2026-04-11T10:05:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    for (const [index, lastHeartbeatAt] of [
+      '2026-04-11T10:03:00.000Z',
+      '2026-04-11T10:02:00.000Z',
+      '2026-04-11T10:01:00.000Z',
+    ].entries()) {
+      await control.registerRunner({
+        runner: createExecutionRunnerRecord({
+          id: `runner:stale-${index + 1}`,
+          hostId: 'host:wsl-dev-1',
+          status: 'stale',
+          startedAt: '2026-04-11T10:00:00.000Z',
+          lastHeartbeatAt,
+          expiresAt: lastHeartbeatAt,
+          serviceIds: ['chatgpt'],
+          runtimeProfileIds: ['default'],
+        }),
+      });
+    }
+
+    const compacted = await control.compactStaleRunners({ keepNewest: 1 });
+
+    expect(compacted.scannedStaleRunnerCount).toBe(3);
+    expect(compacted.retainedRunnerIds).toEqual(['runner:stale-1']);
+    expect(compacted.deletedRunnerIds).toEqual(['runner:stale-2', 'runner:stale-3']);
+
+    expect(await control.readRunner('runner:active')).not.toBeNull();
+    expect(await control.readRunner('runner:stale-1')).not.toBeNull();
+    expect(await control.readRunner('runner:stale-2')).toBeNull();
+    expect(await control.readRunner('runner:stale-3')).toBeNull();
   });
 });
