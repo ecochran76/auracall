@@ -8,7 +8,8 @@ Status: ready for next bounded plan
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan: none.
+- Active plan:
+  [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
 - Latest completed plan:
   [docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md](docs/dev/plans/0084-2026-05-30-api-readback-memory-runner-compaction.md)
 - Previous completed work:
@@ -20,10 +21,9 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: choose the next bounded plan from the remaining
-  live-follow/materialization audit concerns before adding broad launch/retry,
-  Search/archive, API Access, materialization recovery automation, or
-  additional control families.
+- Current work: execute Plan 0085 to make live-follow artifact recovery
+  truthful and operator-actionable before adding broad launch/retry,
+  Search/archive, API Access, or additional control families.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -106,8 +106,10 @@ Current State:
   - artifact materialization gap: live-follow completions currently run
     `materializationPolicy: metadata_only`, durable materialization queues are
     idle, and several ChatGPT tenants report `remoteKnownMissingLocal` assets
-    with no local materialized files; this needs an explicit recovery lane
-    rather than being inferred from metadata mirroring
+    with no local materialized files; the explicit recovery lane is now open as
+    [docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md](docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md)
+    and should first classify bounded candidates before launching provider
+    materialization work
   - Gemini detail confidence: `auracall-gemini-pro` live follow is running and
     failure-free, but conversation detail and asset inventory remain deferred
     for many conversations; Gemini should get a provider-specific detail and

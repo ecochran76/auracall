@@ -35156,3 +35156,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     warnings).
   - `pnpm run plans:audit -- --keep 84`
   - `git diff --check`
+
+## Turn 324 | 2026-05-30
+
+- Goal: open the next bounded plan for live-follow artifact materialization
+  recovery.
+- Change:
+  - added
+    `docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md`.
+  - updated `ROADMAP.md` so Plan 0085 is the active lane after Plan 0084.
+  - updated `RUNBOOK.md` with the Plan 0085 opening note.
+  - made the operator expectation explicit: metadata-only live follow is not an
+    artifact catch-up guarantee; recovery requires bounded candidate
+    classification and explicit materialization work.
+- Verification:
+  - `pnpm run plans:audit -- --keep 85`
+  - `git diff --check`

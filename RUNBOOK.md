@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 186 | 2026-05-30
+
+- Active plan:
+  `docs/dev/plans/0085-2026-05-30-live-follow-artifact-materialization-recovery.md`
+- Goal: open the next bounded plan after Plan 0084 for live-follow artifact
+  materialization recovery.
+- Result:
+  - opened Plan 0085 for recovery planning, bounded candidate classification,
+    explicit materialization execution, operator readback parity, and installed
+    proof.
+  - made the key expectation explicit: metadata-only live follow should not be
+    expected to catch up with all retrievable artifacts by itself.
+  - scoped the next work around `remoteKnownMissingLocal` assets, durable
+    materialization jobs, completion/campaign materialization policy, and
+    CLI/MCP/console parity.
+  - kept broad launch/retry, Search/archive expansion, API Access, prompt
+    submission, provider project mutation, and ordinary metadata-only browser
+    downloads out of scope.
+  - wired Plan 0085 into `ROADMAP.md` as the active bounded lane.
+- Verification:
+  - `pnpm run plans:audit -- --keep 85`
+  - `git diff --check`
+
 ## Turn 185 | 2026-05-30
 
 - Active plan:
