@@ -4,13 +4,13 @@
 
 ### Current Execution Board
 
-Status: active bounded plan
+Status: current plan selection needed
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan:
-  [docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md](docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md)
 - Latest completed plan:
+  [docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md](docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md)
+- Previous completed plan:
   [docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md](docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md)
 - Previous completed plan:
   [docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md](docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md)
@@ -30,9 +30,9 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: Plan 0089 is open for a bounded Gemini artifact catch-up
-  batch. Plan 0087 closed the first Gemini conversation-level retrieval proof:
-  installed readback still shows
+- Current work: Plan 0089 is closed and the next active plan has not yet been
+  selected. Plan 0087 closed the first Gemini conversation-level retrieval
+  proof: installed readback still shows
   `gemini/auracall-gemini-pro` project manifests at `0`, with
   `retainedFromCache.projects=0` and no stale Google catalog Gems. The bounded
   selected-conversation run `hmj_19f26f2121ff40a285642beb2bfc96b5`
@@ -51,11 +51,17 @@ Current Priority Snapshot:
     unattended through the installed API path and materialized
     `Before The Tide Returns` with SHA-256
     `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`.
-  Plan 0089 is the bounded next retrieval plan: it must baseline Gemini
-  recovery/search/archive counts, select only canonical conversation targets,
-  run one capped installed API materialization batch, record terminal
-  per-candidate outcomes, and compare before/after artifact counts before any
-  larger Gemini catch-up claim.
+  Plan 0089 then ran one capped installed API catch-up batch for three
+  canonical Gemini conversations. Job
+  `hmj_df40643c30aa45a3b29651e11d379046` reached terminal `succeeded`,
+  materialized two assets, terminally classified one failed file surface, and
+  showed one routeable no-downloadable-assets conversation. Archive rows
+  increased from `1` to `3`; search rows increased from `72` to `74`; search
+  materialized conversation rows increased from `1` to `3`; active history
+  materialization jobs remained `0`. The next scale gate should be another
+  capped selected-conversation batch, not broad Gemini catch-up, because
+  recovery readback is still target-level `needs_detail_refresh` while the
+  active Gemini live-follow completion remains metadata-only/deferred.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -183,11 +189,12 @@ Current State:
     Broad Gemini retrieval can now be planned as a bounded catch-up batch, but
     should still be proven with caps and before/after counts before claiming
     every retrievable Gemini artifact has caught up.
-  - Gemini bounded artifact catch-up: active in
+  - Gemini bounded artifact catch-up: closed in
     [docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md](docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md).
-    This slice should run exactly one capped installed Gemini materialization
-    batch after baseline readback, then use after-counts and terminal
-    per-candidate evidence to decide the next scale gate.
+    This slice ran exactly one capped installed Gemini materialization batch
+    after baseline readback. The recommended next Gemini gate is a repeat
+    capped selected-conversation batch with `maxItems=3` to `5`, using
+    routeable/stale or missing-assets rows with cached asset signals.
   - operator audit parity: protected `/v1/*` materialization routes can block
     direct read-only inspection from local curl, so the next operator-facing
     plan should confirm CLI/MCP/console parity for materialization and

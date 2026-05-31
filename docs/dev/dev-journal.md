@@ -35511,3 +35511,42 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm run plans:audit -- --keep 89`
   - `git diff --check`
+
+## Turn 334 | 2026-05-31
+
+- Goal: execute Plan 0089 as one bounded installed Gemini catch-up batch.
+- Baseline:
+  - `gemini/auracall-gemini-pro` active completion was `idle_waiting`, provider
+    guard `null`, materialization policy `metadata_only`.
+  - search returned `72` rows, archive returned `1` available generated
+    artifact, recovery returned one target-level `needs_detail_refresh`
+    candidate, and history-materialization jobs had `0` active.
+- Execution:
+  - selected canonical routeable/stale or missing-assets conversation ids
+    `ab30a4a92e4b65a9`, `1ab8bb794846c491`, and
+    `59b6f9ac9e510adc`.
+  - installed API job `hmj_df40643c30aa45a3b29651e11d379046` ran with
+    `refreshSnapshot=true`, `assetKinds=[all]`, `maxItems=3`, and
+    `force=true`.
+  - terminal result was `succeeded` with `conversations=3`,
+    `materialized=2`, `skipped=0`, `failed=1`.
+- Evidence:
+  - materialized `uploaded-image-1` from `ab30a4a92e4b65a9` with SHA-256
+    `5bdce033c1e8aa4ab441bfce8fa6825e1e996ce5758a4246268fe0238a648fac`.
+  - materialized `Generated image 1.png` from `1ab8bb794846c491` with SHA-256
+    `d0b8e7d516db5419abfbaa2e6666380c4fd5ec80183817ca3e345b77d6ff1da2`.
+  - `59b6f9ac9e510adc` refreshed routeably but had no downloadable assets in
+    this pass.
+  - search/archive/account-mirror readback agreed on materialization freshness
+    for both materialized conversations.
+- After-counts:
+  - search rows moved `72 -> 74`, materialized conversation rows `1 -> 3`,
+    deferred conversation rows `70 -> 68`.
+  - archive items moved `1 -> 3`, generated artifacts `1 -> 2`, uploads
+    `0 -> 1`.
+  - history-materialization active jobs stayed `0`.
+- Verification:
+  - installed API create/status/search/archive/recovery/jobs readback
+  - `sha256sum` for both materialized files
+  - `pnpm run plans:audit -- --keep 89`
+  - `git diff --check`

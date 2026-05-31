@@ -1,6 +1,6 @@
 # Gemini Bounded Artifact Catch-Up Plan | 0089-2026-05-31
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -101,7 +101,7 @@ or failed with actionable reason.
 
 ### Track 1 | Installed Baseline
 
-Status: planned.
+Status: completed.
 
 - Read active Gemini live-follow completion status and provider guard state.
 - Read account-mirror catalog metrics for projects and conversations.
@@ -117,7 +117,7 @@ Status: planned.
 
 ### Track 2 | Candidate Selection
 
-Status: planned.
+Status: completed.
 
 - Select a capped deterministic batch of valid conversation targets.
 - Prefer candidates with evidence of missing local assets or stale/deferred
@@ -133,7 +133,7 @@ Status: planned.
 
 ### Track 3 | Bounded Retrieval Execution
 
-Status: planned.
+Status: completed.
 
 - Create one installed API history-materialization job for the selected batch.
 - Use `refreshSnapshot=true`, `assetKinds=[all]`, and a conservative item cap.
@@ -144,7 +144,7 @@ Status: planned.
 
 ### Track 4 | Evidence Reconciliation
 
-Status: planned.
+Status: completed.
 
 - For each attempted conversation, record:
   - routeability state;
@@ -164,7 +164,7 @@ Status: planned.
 
 ### Track 5 | Next Scale Gate
 
-Status: planned.
+Status: completed.
 
 - Decide the next Gemini step from the after-counts:
   - repeat another capped batch;
@@ -175,27 +175,27 @@ Status: planned.
 
 ## Acceptance Criteria
 
-- Plan 0089 is wired into `ROADMAP.md`, `RUNBOOK.md`, and
+- [x] Plan 0089 is wired into `ROADMAP.md`, `RUNBOOK.md`, and
   `docs/dev/dev-journal.md`.
-- Installed baseline captures Gemini project count, conversation count,
+- [x] Installed baseline captures Gemini project count, conversation count,
   recovery-candidate counts, artifact availability counts, provider guard
   state, and active materialization job state before execution.
-- Candidate selection includes only canonical Gemini conversation targets and
+- [x] Candidate selection includes only canonical Gemini conversation targets and
   records why each candidate was selected.
-- One bounded installed Gemini materialization batch is created through the
+- [x] One bounded installed Gemini materialization batch is created through the
   normal API path and reaches terminal state, or stops on a documented provider
   guard/human-verification blocker.
-- Every attempted candidate has terminal evidence:
+- [x] Every attempted candidate has terminal evidence:
   - materialized with local path/checksum;
   - no downloadable assets;
   - route miss;
   - skipped/unsupported;
   - failed with actionable reason;
   - or blocked by provider guard with exact unblocker.
-- Search/archive/account-mirror readback agree for materialized targets.
-- Before/after counts show whether available artifacts increased, missing-local
+- [x] Search/archive/account-mirror readback agree for materialized targets.
+- [x] Before/after counts show whether available artifacts increased, missing-local
   counts dropped, or deferred inventory was terminally classified.
-- No Google/third-party Gem URL such as `chess-champ`, `brainstormer`, or
+- [x] No Google/third-party Gem URL such as `chess-champ`, `brainstormer`, or
   `storybook` is visited.
 
 ## Validation Plan
@@ -232,3 +232,139 @@ Status: planned.
 - If any provider guard, CAPTCHA, account chooser, or Google `sorry` page
   appears, automated retries stop and the plan records the exact manual
   clearance needed before continuation.
+
+## Execution Closeout | 2026-05-31
+
+Plan 0089 ran one capped installed Gemini materialization batch and closed the
+first post-health-gate catch-up step.
+
+Baseline readback for `gemini/auracall-gemini-pro`:
+
+- active completion
+  `acctmirror_completion_320f0b3f-3330-4ae4-a4b2-0ccd7d743410` was
+  `idle_waiting`, phase `backfill_history`, pass count `130`, provider guard
+  `null`, and materialization policy `metadata_only`.
+- project count was `0`; conversation count was `71`.
+- live-follow asset inventory was still deferred:
+  `unknownOrDeferred.artifacts=1`, `files=1`, `media=1`; remaining detail
+  surfaces reported `71` conversations.
+- recovery candidates returned one target-level
+  `needs_detail_refresh` candidate with action `refresh_detail_inventory` and
+  `unknownOrDeferred.total=3`.
+- search returned `72` rows: `71` conversations and `1` artifact. Facets showed
+  `pending=70`, `available=2`, and `materialization.succeeded=2`.
+- archive returned `1` generated artifact, file available.
+- history-materialization jobs returned `23` terminal jobs and `0` active
+  jobs.
+
+Candidate selection used valid canonical conversation URLs only and excluded
+the prior proof conversation plus static or terminal-unavailable routes. The
+selected batch was:
+
+- `ab30a4a92e4b65a9` | `Incomplete Message, Hawkeye Shirt` |
+  `https://gemini.google.com/app/ab30a4a92e4b65a9` | stale routeable row with
+  two cached file signals.
+- `1ab8bb794846c491` | `Generate an image of an asphalt secret agent` |
+  `https://gemini.google.com/app/1ab8bb794846c491` | stale routeable row with
+  one cached artifact signal.
+- `59b6f9ac9e510adc` | `AuraCall Memo Creation and Placement` |
+  `https://gemini.google.com/app/59b6f9ac9e510adc` | missing-assets row with
+  one cached artifact signal.
+
+The installed API command created job
+`hmj_df40643c30aa45a3b29651e11d379046`:
+
+```bash
+/home/ecochran76/.local/bin/auracall api history-materialization-create \
+  --provider gemini \
+  --runtime-profile auracall-gemini-pro \
+  --conversation-ids ab30a4a92e4b65a9,1ab8bb794846c491,59b6f9ac9e510adc \
+  --refresh-snapshot \
+  --asset-kind all \
+  --max-items 3 \
+  --force \
+  --json \
+  --timeout-ms 10000
+```
+
+The job advanced through the normal installed API path from `queued` to
+`running` and reached terminal `succeeded` without direct service invocation:
+
+- `startedAt=2026-05-31T13:53:20.042Z`;
+- `completedAt=2026-05-31T13:56:08.585Z`;
+- message: `History reconciliation materialized 2 assets from 3 conversations.`;
+- metrics: `conversations=3`, `materialized=2`, `skipped=0`, `failed=1`.
+
+Per-candidate evidence:
+
+- `ab30a4a92e4b65a9`
+  - snapshot refreshed, routeable, `messageCount=4`, `fileCount=2`,
+    `artifactCount=0`;
+  - materialized upload `uploaded-image-1`;
+  - local path:
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/ab30a4a92e4b65a9/files/gemini-conversation-file-ab30a4a92e4b65a9-0-uploaded-image-1/uploaded-image-1`;
+  - SHA-256:
+    `5bdce033c1e8aa4ab441bfce8fa6825e1e996ce5758a4246268fe0238a648fac`;
+  - one file, `AGENTS.md`, failed terminally because it did not expose a
+    downloadable or text-preview surface.
+- `1ab8bb794846c491`
+  - snapshot refreshed, routeable, `messageCount=2`, `fileCount=0`,
+    `artifactCount=1`;
+  - materialized artifact `Generated image 1`;
+  - local path:
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/1ab8bb794846c491/files/gemini-artifact-1ab8bb794846c491-2-0/Generated image 1.png`;
+  - SHA-256:
+    `d0b8e7d516db5419abfbaa2e6666380c4fd5ec80183817ca3e345b77d6ff1da2`;
+  - MIME/size: `image/png`, `51242` bytes.
+- `59b6f9ac9e510adc`
+  - snapshot refreshed, routeable, `messageCount=2`, `fileCount=0`,
+    `artifactCount=0`;
+  - terminally classified as routeable with no downloadable assets in this
+    bounded pass.
+
+After-counts:
+
+- search returned `74` rows: `71` conversations, `2` artifacts, and `1`
+  upload.
+- search facets moved from `pending=70` / `available=2` to `pending=68` /
+  `available=6`.
+- conversation rows with materialization freshness moved from `1` to `3`;
+  deferred conversation rows moved from `70` to `68`.
+- archive moved from `1` item to `3` items:
+  - generated artifacts: `1` to `2`;
+  - uploads: `0` to `1`;
+  - all `3` archive items are file available.
+- history-materialization jobs moved from `23` terminal / `0` active to `24`
+  terminal / `0` active.
+- recovery candidates remained one target-level `needs_detail_refresh`
+  candidate with `unknownOrDeferred.total=3`; this is expected because the
+  active live-follow completion still has metadata-only/deferred inventory and
+  did not run a completion detail scan during this explicit materialization
+  proof.
+
+Search/archive/account-mirror readback agreed for both materialized targets:
+
+- `catalog:conversations:gemini:auracall-gemini-pro:ab30a4a92e4b65a9`
+  now has `fileAvailable=true`, `materializationStatus=succeeded`, and
+  `assetFreshness.materializationJobId=hmj_df40643c30aa45a3b29651e11d379046`.
+- `catalog:conversations:gemini:auracall-gemini-pro:1ab8bb794846c491`
+  now has the same materialization job id and a materialized archive item id.
+
+No Google/third-party Gem URL such as `chess-champ`, `brainstormer`, or
+`storybook` was used or visited.
+
+Validation:
+
+- live installed `history-materialization-create` and normal API polling to
+  terminal state;
+- post-run search/archive/recovery/history-job readback;
+- local `sha256sum` verification for both materialized files;
+- `pnpm run plans:audit -- --keep 89`;
+- `git diff --check`.
+
+Next scale gate: repeat one more capped selected-conversation batch, preferably
+with `maxItems=3` to `5`, using routeable/stale or missing-assets rows with
+cached asset signals. Do not switch to broad Gemini catch-up yet: recovery
+candidate readback is still target-level deferred because the active Gemini
+live-follow completion remains metadata-only and has not performed a fresh
+detail scan.

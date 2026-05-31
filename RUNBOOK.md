@@ -8139,3 +8139,51 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 89`
   - `git diff --check`
+
+## Turn 221 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md`
+- Goal: execute one capped Gemini artifact catch-up batch through the
+  installed API.
+- Baseline:
+  - Gemini Pro active completion
+    `acctmirror_completion_320f0b3f-3330-4ae4-a4b2-0ccd7d743410` was
+    `idle_waiting`, provider guard `null`, policy `metadata_only`.
+  - search had `72` rows: `71` conversations and `1` artifact; materialized
+    conversation rows `1`, deferred conversation rows `70`.
+  - archive had `1` generated artifact, file available.
+  - recovery candidates had one target-level `needs_detail_refresh` candidate
+    with `unknownOrDeferred.total=3`.
+  - history-materialization jobs had `23` terminal and `0` active.
+- Execution:
+  - selected canonical conversations `ab30a4a92e4b65a9`,
+    `1ab8bb794846c491`, and `59b6f9ac9e510adc`.
+  - created installed API job `hmj_df40643c30aa45a3b29651e11d379046` with
+    `refreshSnapshot=true`, `assetKinds=[all]`, `maxItems=3`, and `force=true`.
+  - the job advanced through normal API polling and reached `succeeded` at
+    `2026-05-31T13:56:08.585Z` with
+    `conversations=3/materialized=2/skipped=0/failed=1`.
+- Evidence:
+  - `ab30a4a92e4b65a9` materialized upload `uploaded-image-1`, SHA-256
+    `5bdce033c1e8aa4ab441bfce8fa6825e1e996ce5758a4246268fe0238a648fac`;
+    `AGENTS.md` failed terminally because Gemini exposed no downloadable or
+    text-preview surface.
+  - `1ab8bb794846c491` materialized `Generated image 1.png`, SHA-256
+    `d0b8e7d516db5419abfbaa2e6666380c4fd5ec80183817ca3e345b77d6ff1da2`.
+  - `59b6f9ac9e510adc` refreshed routeably with no files/artifacts in this
+    bounded pass.
+  - search/archive/account-mirror rows agree on materialization freshness for
+    both materialized conversations.
+- After-counts:
+  - search rows `72 -> 74`; materialized conversation rows `1 -> 3`;
+    deferred conversation rows `70 -> 68`.
+  - archive items `1 -> 3`; generated artifacts `1 -> 2`; uploads `0 -> 1`.
+  - history-materialization jobs `23 -> 24` terminal, still `0` active.
+  - recovery candidate readback remained target-level `needs_detail_refresh`
+    because active Gemini live-follow remains metadata-only/deferred.
+- Verification target:
+  - installed API create/status/search/archive/recovery/jobs readback
+  - `sha256sum` for both materialized files
+  - `pnpm run plans:audit -- --keep 89`
+  - `git diff --check`
