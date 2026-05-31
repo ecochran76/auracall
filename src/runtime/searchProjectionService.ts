@@ -116,6 +116,14 @@ interface NormalizedSearchProjectionRequest {
   cursor: string | null;
 }
 
+interface ConversationMaterializationFreshness {
+  archiveItemId: string;
+  fileAvailable: boolean | null;
+  materializationStatus: ArchiveMaterializationJobStatus | null;
+  assetFreshness: Record<string, unknown>;
+  updatedAt: string | null;
+}
+
 export function createSearchProjectionService(input: {
   accountMirrorCatalogService: AccountMirrorCatalogService;
   runArchiveService: RunArchiveService;
@@ -146,8 +154,12 @@ export function createSearchProjectionService(input: {
         input.archiveMaterializationJobService?.listJobs({ limit: 500 }) ?? Promise.resolve(null),
       ]);
       const materializationJobsByArchiveItemId = latestMaterializationJobsByArchiveItemId(jobs?.jobs ?? []);
+      const archiveFreshnessByConversation = latestArchiveFreshnessByConversation(
+        archive.items,
+        materializationJobsByArchiveItemId,
+      );
       const rows = [
-        ...catalog.entries.flatMap((entry) => rowsFromCatalogEntry(entry)),
+        ...catalog.entries.flatMap((entry) => rowsFromCatalogEntry(entry, archiveFreshnessByConversation)),
         ...archive.items.map((item) => rowFromArchiveItem(item, materializationJobsByArchiveItemId.get(item.id) ?? null)),
       ]
         .filter((row) => matchesSearchRequest(row, normalized))
@@ -191,11 +203,14 @@ export function createSearchProjectionService(input: {
   };
 }
 
-function rowsFromCatalogEntry(entry: AccountMirrorCatalogEntry): SearchProjectionRow[] {
+function rowsFromCatalogEntry(
+  entry: AccountMirrorCatalogEntry,
+  archiveFreshnessByConversation: Map<string, ConversationMaterializationFreshness>,
+): SearchProjectionRow[] {
   const rows: SearchProjectionRow[] = [];
   for (const kind of ['projects', 'conversations', 'artifacts', 'files', 'media'] as const) {
     for (const item of entry.manifests[kind]) {
-      rows.push(rowFromCatalogItem(entry, kind, item));
+      rows.push(rowFromCatalogItem(entry, kind, item, archiveFreshnessByConversation));
     }
   }
   return rows;
@@ -205,6 +220,7 @@ function rowFromCatalogItem(
   entry: AccountMirrorCatalogEntry,
   sourceKind: 'projects' | 'conversations' | 'artifacts' | 'files' | 'media',
   item: unknown,
+  archiveFreshnessByConversation: Map<string, ConversationMaterializationFreshness>,
 ): SearchProjectionRow {
   const itemId = readItemId(item);
   const kind = catalogKindToSearchKind(sourceKind);
@@ -220,6 +236,13 @@ function rowFromCatalogItem(
     kind: sourceKind,
   });
   const url = readString(item, ['url', 'providerUrl', 'conversationUrl', 'href']);
+  const materializationFreshness = sourceKind === 'conversations'
+    ? archiveFreshnessByConversation.get(conversationMaterializationKey({
+        provider,
+        runtimeProfile: runtimeProfileId,
+        conversationId: itemId,
+      }))
+    : null;
   return {
     id: `catalog:${sourceKind}:${provider}:${runtimeProfileId}:${itemId}`,
     object: 'search_result_row',
@@ -251,6 +274,12 @@ function rowFromCatalogItem(
       mirrorReason: entry.reason,
       mirrorCompleteness: entry.mirrorCompleteness,
       ...catalogFreshnessMetadata(conversationFreshness),
+      ...(materializationFreshness ? {
+        fileAvailable: materializationFreshness.fileAvailable,
+        materializationStatus: materializationFreshness.materializationStatus,
+        assetFreshness: materializationFreshness.assetFreshness,
+        materializedArchiveItemId: materializationFreshness.archiveItemId,
+      } : {}),
       raw: item,
     },
   };
@@ -348,6 +377,58 @@ function assetFreshnessFromArchiveItem(
     materializedAt,
     evidenceUpdatedAt: materializationJob?.updatedAt ?? item.updatedAt ?? item.createdAt ?? null,
   };
+}
+
+function latestArchiveFreshnessByConversation(
+  items: RunArchiveItem[],
+  materializationJobsByArchiveItemId: Map<string, ArchiveMaterializationJob>,
+): Map<string, ConversationMaterializationFreshness> {
+  const byConversation = new Map<string, ConversationMaterializationFreshness>();
+  for (const item of items) {
+    if (item.source !== 'account_mirror') continue;
+    if (!item.provider || !item.providerConversationId) continue;
+    if (item.kind !== 'generated_artifact' && item.kind !== 'upload') continue;
+    const materializationJob = materializationJobsByArchiveItemId.get(item.id) ?? null;
+    const materializationStatus = materializationJob?.status ?? materializationStatusFromArchiveItem(item);
+    if (!materializationStatus && item.fileAvailable !== true) continue;
+    const assetFreshness = assetFreshnessFromArchiveItem(item, materializationJob, materializationStatus);
+    const candidate: ConversationMaterializationFreshness = {
+      archiveItemId: item.id,
+      fileAvailable: item.fileAvailable,
+      materializationStatus,
+      assetFreshness,
+      updatedAt: materializationJob?.updatedAt ?? item.updatedAt ?? item.createdAt ?? null,
+    };
+    const key = conversationMaterializationKey({
+      provider: item.provider,
+      runtimeProfile: item.runtimeProfile,
+      conversationId: item.providerConversationId,
+    });
+    const current = byConversation.get(key);
+    if (!current || compareNullableIso(candidate.updatedAt, current.updatedAt) > 0) {
+      byConversation.set(key, candidate);
+    }
+  }
+  return byConversation;
+}
+
+function conversationMaterializationKey(input: {
+  provider: string | null;
+  runtimeProfile: string | null;
+  conversationId: string | null;
+}): string {
+  return [
+    input.provider ?? '',
+    input.runtimeProfile ?? '',
+    input.conversationId ?? '',
+  ].join('\u0000');
+}
+
+function compareNullableIso(left: string | null, right: string | null): number {
+  if (left && right) return left.localeCompare(right);
+  if (left) return 1;
+  if (right) return -1;
+  return 0;
 }
 
 function displayStatusFromArchiveItem(

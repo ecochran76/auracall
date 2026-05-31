@@ -35449,3 +35449,44 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm run plans:audit -- --keep 88`
   - `git diff --check`
+
+## Turn 332 | 2026-05-31
+
+- Goal: execute Plan 0088 and remove the Gemini materialization health gates
+  that kept broad catch-up unsafe.
+- Change:
+  - `historyMaterializationService` now schedules queued jobs on create/reuse
+    and re-dispatches persisted queued jobs during startup recovery.
+  - Gemini candidate normalization now rejects malformed direct targets,
+    Google sign-in redirect rows, static app routes, download/settings/Gem
+    routes, and query/fragment-contaminated conversation ids before provider
+    browser work.
+  - search projection now overlays materialized history-archive freshness onto
+    matching account-mirror conversation rows by provider, AuraCall runtime
+    profile, and conversation id.
+- Installed proof:
+  - built, installed, and restarted the user-scoped runtime; service returned
+    `active`.
+  - created installed API job `hmj_f276983d378c494a83a5d685b683fbf7` for
+    Gemini conversation `8e8e58b57ae544ea` with `maxItems=1`.
+  - the job advanced through the normal API/background path and reached
+    `succeeded` with `conversations=1`, `materialized=1`, `skipped=0`,
+    `failed=0`.
+  - materialized `Before The Tide Returns` to
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/8e8e58b57ae544ea/files/gemini-artifact-8e8e58b57ae544ea-1-0/before_the_tide_returns.mp4`
+    with SHA-256
+    `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`.
+  - installed search readback returned both the artifact row and
+    `catalog:conversations:gemini:auracall-gemini-pro:8e8e58b57ae544ea`
+    with `fileAvailable=true`, `materializationStatus=succeeded`, and
+    `assetFreshness.materializationJobId=hmj_f276983d378c494a83a5d685b683fbf7`.
+  - malformed Gemini sign-in redirect target creation returned HTTP 400 before
+    browser/provider work.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/runtime.searchProjectionService.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
+  - `pnpm exec biome lint src/runtime/historyMaterializationService.ts src/runtime/searchProjectionService.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.searchProjectionService.test.ts`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service`

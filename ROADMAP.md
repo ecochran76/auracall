@@ -4,13 +4,13 @@
 
 ### Current Execution Board
 
-Status: active bounded plan
+Status: current plan selection needed
 Lane: P01
 
 Current Priority Snapshot:
-- Active plan:
-  [docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md](docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md)
 - Latest completed plan:
+  [docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md](docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md)
+- Previous completed plan:
   [docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md](docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md)
 - Previous completed plan:
   [docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md](docs/dev/plans/0086-2026-05-30-full-live-follow-artifact-retrieval.md)
@@ -28,24 +28,30 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: Plan 0088 is open for Gemini materialization health before
-  broad catch-up. Plan 0087 closed the first Gemini conversation-level
-  retrieval proof: installed readback still shows
+- Current work: Plan 0088 is closed and the next active plan has not yet been
+  selected. Plan 0087 closed the first Gemini conversation-level retrieval
+  proof: installed readback still shows
   `gemini/auracall-gemini-pro` project manifests at `0`, with
   `retainedFromCache.projects=0` and no stale Google catalog Gems. The bounded
   selected-conversation run `hmj_19f26f2121ff40a285642beb2bfc96b5`
   refreshed routeable conversation `8e8e58b57ae544ea` and materialized
-  `Before The Tide Returns` as a checksum-bearing local MP4 archive item. The
-  active Plan 0088 gate is to fix the three health concerns before expanding
-  retrieval scale:
-  - API-created history-materialization jobs can remain queued until manually
-    run through the compiled materialization service.
-  - Gemini conversation catalog readback can still include malformed
-    `accounts.google.com/ServiceLogin` rows and static app routes, which must
-    be filtered or cleaned before unattended candidate selection.
-  - archive/search expose materialized artifact freshness, but live-follow
-    conversation rollups can still describe cached conversations with deferred
-    inventory language.
+  `Before The Tide Returns` as a checksum-bearing local MP4 archive item. Plan
+  0088 then fixed the health gates needed before broader Gemini catch-up:
+  - API-created and reused queued history-materialization jobs are now
+    scheduled through the normal API/background path.
+  - Gemini materialization candidates now reject Google sign-in redirect rows,
+    static app/download/settings/Gem routes, and query/fragment-contaminated
+    ids before provider browser work starts.
+  - archive/search materialization freshness now projects back onto matching
+    account-mirror conversation rows, so materialized conversations no longer
+    read as metadata/deferred-only in search readback.
+  - installed proof job `hmj_f276983d378c494a83a5d685b683fbf7` advanced
+    unattended through the installed API path and materialized
+    `Before The Tide Returns` with SHA-256
+    `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`.
+  Broad Gemini catch-up is still not an automatic background assertion; the
+  next retrieval plan should run a bounded batch with before/after artifact
+  counts and provider-guard stop rules.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -165,12 +171,14 @@ Current State:
     [docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md](docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md).
     `auracall-gemini-pro` no longer has project/Gem pollution, and a selected
     routeable conversation now has full local artifact materialization proof.
-  - Gemini materialization health: active in
+  - Gemini materialization health: closed in
     [docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md](docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md).
-    This slice must make queued materialization unattended again, remove
-    malformed Gemini conversation catalog rows, and reconcile archive/search
-    materialization freshness back into conversation rollup language before
-    broad retrieval is expected to catch up every retrievable Gemini artifact.
+    This slice made queued materialization unattended again, rejected malformed
+    Gemini conversation candidates before browser work, and reconciled
+    archive/search materialization freshness back into conversation readback.
+    Broad Gemini retrieval can now be planned as a bounded catch-up batch, but
+    should still be proven with caps and before/after counts before claiming
+    every retrievable Gemini artifact has caught up.
   - operator audit parity: protected `/v1/*` materialization routes can block
     direct read-only inspection from local curl, so the next operator-facing
     plan should confirm CLI/MCP/console parity for materialization and

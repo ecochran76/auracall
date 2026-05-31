@@ -17563,3 +17563,23 @@ browser-stage lifecycle observability, not transcript truncation.
   live-follow conversation rollups still use deferred-inventory language. Treat
   archive/search materialization freshness, queued-job execution, and
   conversation-catalog hygiene as separate gates.
+
+- 2026-05-31: Persisted queued history-materialization jobs are runnable work,
+  not interrupted work. Schedule new queued jobs, reused queued duplicates, and
+  queued jobs recovered at API startup through the same background dispatcher;
+  only jobs that were already `running` at process restart should be marked
+  interrupted.
+
+- 2026-05-31: Gemini history materialization must validate canonical
+  conversation targets before provider browser work. Do not extract nested
+  Gemini app ids from `accounts.google.com/ServiceLogin`, and reject static
+  `/app` routes, downloads/settings/Gem/catalog URLs, and query/fragment
+  contaminated ids before candidate selection.
+
+- 2026-05-31: Conversation-level readback should consume proven
+  history-materialization freshness. When an account-mirror conversation has a
+  matching materialized archive item by provider, AuraCall runtime profile, and
+  conversation id, project `fileAvailable`, `materializationStatus`,
+  `assetFreshness`, and the materialized archive item id onto the conversation
+  row so operators do not read a locally materialized conversation as
+  metadata/deferred-only.

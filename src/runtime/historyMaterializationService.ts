@@ -319,6 +319,7 @@ export function createHistoryMaterializationService(
   });
   const withForegroundWork = deps.withForegroundWork ?? (async (work) => work());
   let queue = Promise.resolve();
+  const scheduledJobIds = new Set<string>();
 
   const materializeConversation = deps.materializeConversation ?? ((target, request, jobId) =>
     materializeConversationTarget({
@@ -365,6 +366,9 @@ export function createHistoryMaterializationService(
       const generatedAt = now().toISOString();
       const active = await findActiveJobForSource(store, sourceKey);
       if (active) {
+        if (active.status === 'queued') {
+          scheduleJob(active.id);
+        }
         return {
           object: 'history_materialization_job_create_result',
           generatedAt,
@@ -389,13 +393,7 @@ export function createHistoryMaterializationService(
         message: 'History materialization job queued.',
       };
       await store.upsertJob(job);
-      schedule(async () => {
-        queue = queue.then(() => service.runJob(job.id)).then(
-          () => undefined,
-          () => undefined,
-        );
-        await queue;
-      });
+      scheduleJob(job.id);
       return {
         object: 'history_materialization_job_create_result',
         generatedAt,
@@ -527,6 +525,18 @@ export function createHistoryMaterializationService(
       let recovered = 0;
       for (const job of jobs) {
         if (!isActiveStatus(job.status)) continue;
+        if (job.status === 'queued') {
+          const timestamp = now().toISOString();
+          await store.upsertJob({
+            ...job,
+            updatedAt: timestamp,
+            error: null,
+            message: 'History materialization job was recovered and re-queued after AuraCall API startup.',
+          });
+          scheduleJob(job.id);
+          recovered += 1;
+          continue;
+        }
         const timestamp = now().toISOString();
         await store.upsertJob({
           ...job,
@@ -545,6 +555,22 @@ export function createHistoryMaterializationService(
       return recovered;
     },
   };
+
+  function scheduleJob(jobId: string): void {
+    if (scheduledJobIds.has(jobId)) return;
+    scheduledJobIds.add(jobId);
+    schedule(async () => {
+      queue = queue.then(() => service.runJob(jobId)).then(
+        () => undefined,
+        () => undefined,
+      );
+      try {
+        await queue;
+      } finally {
+        scheduledJobIds.delete(jobId);
+      }
+    });
+  }
 
   return service;
 }
@@ -816,7 +842,8 @@ async function materializeReconciliation(input: {
         if (!conversationId || !selectedConversationIdSet.has(conversationId) || selectedCatalogTargets.has(conversationId)) {
           continue;
         }
-        selectedCatalogTargets.set(conversationId, targetFromCatalogConversation(entry, item, conversationId));
+        const target = targetFromCatalogConversation(entry, item, conversationId);
+        if (target) selectedCatalogTargets.set(conversationId, target);
       }
     }
   }
@@ -871,8 +898,10 @@ async function materializeReconciliation(input: {
           refreshSnapshot: input.request.refreshSnapshot === true,
         });
         if (priority === null) continue;
+        const target = targetFromCatalogConversation(entry, item, conversationId);
+        if (!target) continue;
         candidates.push({
-          target: targetFromCatalogConversation(entry, item, conversationId),
+          target,
           priority,
           sequence,
         });
@@ -942,17 +971,18 @@ function targetFromCatalogConversation(
   entry: AccountMirrorCatalogEntry,
   item: unknown,
   conversationId: string,
-): HistoryMaterializationTarget {
+): HistoryMaterializationTarget | null {
   const rawProviderConversationUrl = readCatalogStringField(item, ['url', 'href', 'providerConversationUrl']);
   const targetFields = normalizeProviderConversationTargetFields(entry.provider, conversationId, rawProviderConversationUrl);
-  const normalizedConversationId = targetFields?.conversationId ?? conversationId;
+  if (!targetFields) return null;
+  const normalizedConversationId = targetFields.conversationId;
   return {
     provider: entry.provider,
     runtimeProfile: entry.runtimeProfileId,
     browserProfile: entry.browserProfileId,
     boundIdentityKey: entry.boundIdentityKey,
     conversationId: normalizedConversationId,
-    providerConversationUrl: targetFields?.providerConversationUrl ?? resolveProviderConversationUrl(entry.provider, normalizedConversationId),
+    providerConversationUrl: targetFields.providerConversationUrl ?? resolveProviderConversationUrl(entry.provider, normalizedConversationId),
     projectId: readCatalogStringField(item, ['projectId']),
   };
 }
@@ -1937,8 +1967,29 @@ function normalizeCreateRequest(request: HistoryMaterializationCreateRequest): H
   if (normalized.conversationId && !normalized.provider) {
     throw new HistoryMaterializationError('Provider is required when conversationId is provided.');
   }
+  if (normalized.provider === 'gemini' && normalized.conversationId) {
+    const targetFields = normalizeProviderConversationTargetFields(
+      normalized.provider,
+      normalized.conversationId,
+      normalized.providerConversationUrl,
+    );
+    if (!targetFields) {
+      throw new HistoryMaterializationError('Gemini conversation materialization requires a canonical gemini.google.com/app/<conversation-id> target.');
+    }
+    normalized.conversationId = targetFields.conversationId;
+    normalized.providerConversationUrl = targetFields.providerConversationUrl;
+  }
   if (normalized.conversationIds && normalized.conversationIds.length > 0 && !normalized.provider) {
     throw new HistoryMaterializationError('Provider is required when conversationIds are provided.');
+  }
+  if (normalized.provider === 'gemini' && normalized.conversationIds && normalized.conversationIds.length > 0) {
+    const normalizedConversationIds = normalized.conversationIds
+      .map((conversationId) => normalizeGeminiConversationId(conversationId))
+      .filter((conversationId): conversationId is string => Boolean(conversationId));
+    if (normalizedConversationIds.length !== normalized.conversationIds.length) {
+      throw new HistoryMaterializationError('Gemini selected conversation batches require canonical conversation ids.');
+    }
+    normalized.conversationIds = Array.from(new Set(normalizedConversationIds));
   }
   if (
     normalized.conversationIds &&
@@ -2040,17 +2091,20 @@ function targetFromCatalogItem(
     readRecordString(metadata, ['conversationId']) ??
     (detail.kind === 'conversations' ? detail.itemId : null);
   if (!provider || !conversationId) return null;
+  const providerConversationUrl =
+    request.providerConversationUrl ??
+    readCatalogStringField(item, ['url', 'href', 'providerConversationUrl']) ??
+    readRecordString(metadata, ['url', 'href', 'providerConversationUrl']) ??
+    resolveProviderConversationUrl(provider, conversationId);
+  const targetFields = normalizeProviderConversationTargetFields(provider, conversationId, providerConversationUrl);
+  if (!targetFields) return null;
   return {
     provider,
     runtimeProfile: detail.runtimeProfileId,
     browserProfile: detail.browserProfileId,
     boundIdentityKey: detail.boundIdentityKey,
-    conversationId,
-    providerConversationUrl:
-      request.providerConversationUrl ??
-      readCatalogStringField(item, ['url', 'href', 'providerConversationUrl']) ??
-      readRecordString(metadata, ['url', 'href', 'providerConversationUrl']) ??
-      resolveProviderConversationUrl(provider, conversationId),
+    conversationId: targetFields.conversationId,
+    providerConversationUrl: targetFields.providerConversationUrl,
     projectId: request.projectId ?? readCatalogStringField(item, ['projectId']) ?? readRecordString(metadata, ['projectId']),
   };
 }
@@ -2615,8 +2669,9 @@ function normalizeGeminiConversationId(value: string | null): string | null {
   if (!raw) return null;
   const fromUrl = extractGeminiConversationIdFromProviderConversationUrl(raw);
   if (fromUrl) return fromUrl;
+  if (/[?#&]/.test(raw)) return null;
   const appPathMatch = raw.match(/^\/?app\/([^/?#&]+)/i);
-  const stripped = normalizeOptionalString((appPathMatch?.[1] ?? raw).split(/[?#&]/, 1)[0]);
+  const stripped = normalizeOptionalString(appPathMatch?.[1] ?? raw);
   if (!stripped || isIgnoredGeminiConversationId(stripped)) return null;
   if (!/^[A-Za-z0-9_-]+$/.test(stripped)) return null;
   return stripped;
@@ -2628,11 +2683,8 @@ function extractGeminiConversationIdFromProviderConversationUrl(value: string | 
   try {
     const parsed = new URL(raw);
     if (parsed.hostname === 'gemini.google.com') {
+      if (parsed.search || parsed.hash) return null;
       return normalizeGeminiConversationIdFromPathname(parsed.pathname);
-    }
-    for (const param of ['continue', 'followup']) {
-      const nested = extractGeminiConversationIdFromProviderConversationUrl(parsed.searchParams.get(param));
-      if (nested) return nested;
     }
     return null;
   } catch {

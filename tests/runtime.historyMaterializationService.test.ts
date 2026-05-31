@@ -216,6 +216,102 @@ describe('history materialization service', () => {
     );
   });
 
+  it('re-dispatches a persisted queued duplicate instead of leaving it stuck queued', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-history-materialize-redispatch-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const store = createInMemoryHistoryMaterializationJobStore([]);
+    const request = {
+      provider: 'chatgpt' as const,
+      runtimeProfile: 'default',
+      conversationId: 'conv_redispatch_1',
+      assetKinds: ['artifacts' as const],
+    };
+    const firstService = createHistoryMaterializationService({
+      config: {},
+      catalogService: {
+        readCatalog: vi.fn(),
+        readItem: vi.fn(),
+      },
+      store,
+      generateId: () => 'hmj_redispatch_1',
+      now: sequenceNow(['2026-05-22T18:01:00.000Z']),
+      schedule: () => undefined,
+      materializeConversation: vi.fn(),
+    });
+
+    const first = await firstService.createJob(request);
+    expect(first.reused).toBe(false);
+    await expect(firstService.readJob('hmj_redispatch_1')).resolves.toMatchObject({
+      status: 'queued',
+      attemptCount: 0,
+    });
+
+    let scheduled: (() => Promise<void>) | undefined;
+    const materializeConversation = vi.fn(async (target): Promise<HistoryMaterializationResult> => ({
+      object: 'history_materialization_result',
+      generatedAt: '2026-05-22T18:01:03.000Z',
+      status: 'materialized',
+      target,
+      source: { type: 'conversation', provider: 'chatgpt', conversationId: 'conv_redispatch_1' },
+      manifestPaths: ['/tmp/redispatch-manifest.json'],
+      entries: [
+        {
+          kind: 'artifact',
+          providerId: 'artifact_redispatch_1',
+          title: 'redispatch.json',
+          status: 'materialized',
+          localPath: '/tmp/redispatch.json',
+          remoteUrl: null,
+          cacheKey: null,
+          checksumSha256: null,
+          mimeType: 'application/json',
+          size: 2,
+          materializationMethod: 'download-button',
+          reason: null,
+          archiveItemId: 'history-generated-artifact:chatgpt:default:conv_redispatch_1:artifact_redispatch_1',
+          assetRoute: '/v1/archive/items/b64/redispatch/asset',
+        },
+      ],
+      archiveItems: [],
+      metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+      message: 'History materialization redispatched one queued asset.',
+    }));
+    const secondService = createHistoryMaterializationService({
+      config: {},
+      catalogService: {
+        readCatalog: vi.fn(),
+        readItem: vi.fn(),
+      },
+      store,
+      now: sequenceNow([
+        '2026-05-22T18:01:01.000Z',
+        '2026-05-22T18:01:02.000Z',
+        '2026-05-22T18:01:04.000Z',
+      ]),
+      schedule: (work) => {
+        scheduled = work;
+      },
+      materializeConversation,
+    });
+
+    const duplicate = await secondService.createJob(request);
+    expect(duplicate.reused).toBe(true);
+    expect(duplicate.job.status).toBe('queued');
+    if (!scheduled) throw new Error('Expected persisted queued job to be re-dispatched.');
+    await scheduled();
+
+    await expect(secondService.readJob('hmj_redispatch_1')).resolves.toMatchObject({
+      status: 'succeeded',
+      attemptCount: 1,
+      result: {
+        metrics: {
+          materialized: 1,
+        },
+      },
+    });
+    expect(materializeConversation).toHaveBeenCalledTimes(1);
+  });
+
   it('refreshes a provider conversation snapshot before direct materialization when requested', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-history-materialize-refresh-snapshot-'));
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -873,7 +969,7 @@ describe('history materialization service', () => {
     });
   });
 
-  it('marks interrupted active jobs failed during startup recovery', async () => {
+  it('re-dispatches queued jobs and marks running jobs failed during startup recovery', async () => {
     const store = createInMemoryHistoryMaterializationJobStore([
       buildHistoryMaterializationJob({ id: 'hmj_recover_queued', status: 'queued' }),
       buildHistoryMaterializationJob({ id: 'hmj_recover_running', status: 'running' }),
@@ -905,13 +1001,11 @@ describe('history materialization service', () => {
 
     expect(recovered).toBe(2);
     expect(queued).toMatchObject({
-      status: 'failed',
-      completedAt: '2026-05-22T18:06:00.000Z',
-      error: {
-        message: 'History materialization job was interrupted before this AuraCall API process started.',
-        type: 'internal_error',
-        statusCode: 500,
-      },
+      status: 'queued',
+      updatedAt: '2026-05-22T18:06:00.000Z',
+      completedAt: null,
+      error: null,
+      message: 'History materialization job was recovered and re-queued after AuraCall API startup.',
     });
     expect(running).toMatchObject({
       status: 'failed',
@@ -924,16 +1018,23 @@ describe('history materialization service', () => {
     });
     expect(succeeded?.status).toBe('succeeded');
     expect(cancelled?.status).toBe('cancelled');
-    expect(active.metrics.total).toBe(0);
-    expect(terminal.metrics).toMatchObject({
-      total: 4,
+    expect(active.metrics).toMatchObject({
+      total: 1,
       byStatus: {
-        failed: 2,
+        queued: 1,
+      },
+      active: 1,
+      terminal: 0,
+    });
+    expect(terminal.metrics).toMatchObject({
+      total: 3,
+      byStatus: {
+        failed: 1,
         succeeded: 1,
         cancelled: 1,
       },
       active: 0,
-      terminal: 4,
+      terminal: 3,
     });
   });
 
@@ -2160,7 +2261,7 @@ describe('history materialization service', () => {
     );
   });
 
-  it('canonicalizes Gemini redirect URLs before reconciliation route checks', async () => {
+  it('rejects Gemini sign-in redirect rows before reconciliation route checks', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-history-materialize-gemini-redirect-url-'));
     setAuracallHomeDirOverrideForTest(homeDir);
     let scheduled: (() => Promise<void>) | undefined;
@@ -2285,22 +2386,45 @@ describe('history materialization service', () => {
     if (!scheduled) throw new Error('Expected job to be scheduled.');
     await scheduled();
 
-    expect(refreshConversationSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({
-        conversationId: '23340d1698de29b8',
-        providerConversationUrl: 'https://gemini.google.com/app/23340d1698de29b8',
-      }),
-      expect.objectContaining({ refreshSnapshot: true }),
-      'hmj_gemini_redirect_1',
-    );
-    expect(materializeConversation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        conversationId: '23340d1698de29b8',
-        providerConversationUrl: 'https://gemini.google.com/app/23340d1698de29b8',
-      }),
-      expect.any(Object),
-      'hmj_gemini_redirect_1',
-    );
+    expect(refreshConversationSnapshot).not.toHaveBeenCalled();
+    expect(materializeConversation).not.toHaveBeenCalled();
+    await expect(service.readJob('hmj_gemini_redirect_1')).resolves.toMatchObject({
+      status: 'skipped',
+      result: {
+        metrics: {
+          conversations: 0,
+          materialized: 0,
+        },
+      },
+    });
+  });
+
+  it('rejects malformed direct Gemini conversation targets before provider work starts', async () => {
+    const service = createHistoryMaterializationService({
+      config: {},
+      catalogService: {
+        readCatalog: vi.fn(),
+        readItem: vi.fn(),
+      },
+      schedule: () => undefined,
+      materializeConversation: vi.fn(),
+    });
+
+    await expect(service.createJob({
+      provider: 'gemini',
+      runtimeProfile: 'default',
+      conversationId: '23340d1698de29b8&followup=https:',
+      providerConversationUrl: 'https://accounts.google.com/ServiceLogin?continue=https://gemini.google.com/app/23340d1698de29b8',
+      assetKinds: ['artifacts'],
+    })).rejects.toThrow('Gemini conversation materialization requires a canonical gemini.google.com/app/<conversation-id> target.');
+
+    await expect(service.createJob({
+      provider: 'gemini',
+      runtimeProfile: 'default',
+      conversationId: 'download',
+      providerConversationUrl: 'https://gemini.google.com/app/download',
+      assetKinds: ['artifacts'],
+    })).rejects.toThrow('Gemini conversation materialization requires a canonical gemini.google.com/app/<conversation-id> target.');
   });
 
   it('does not spend reconciliation budget on Gemini static app routes', async () => {

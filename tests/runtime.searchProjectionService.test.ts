@@ -567,6 +567,174 @@ describe('search projection service', () => {
     });
   });
 
+  it('projects history materialization freshness onto matching account-mirror conversation rows', async () => {
+    const accountMirrorCatalogService: AccountMirrorCatalogService = {
+      readCatalog: vi.fn(async (): Promise<AccountMirrorCatalogResult> => ({
+        object: 'account_mirror_catalog' as const,
+        generatedAt: '2026-05-31T01:40:00.000Z',
+        kind: 'all' as const,
+        limit: 500,
+        entries: [
+          {
+            provider: 'gemini',
+            runtimeProfileId: 'auracall-gemini-pro',
+            browserProfileId: 'gemini-stealthcdp',
+            boundIdentityKey: 'ecochran76@gmail.com',
+            status: 'eligible',
+            reason: 'minimum-interval',
+            mirrorCompleteness: completeMirror,
+            manifests: {
+              projects: [],
+              conversations: [
+                {
+                  id: '8e8e58b57ae544ea',
+                  title: 'Before the Tide Returns',
+                  provider: 'gemini',
+                  url: 'https://gemini.google.com/app/8e8e58b57ae544ea',
+                  cachedArtifactCount: 1,
+                  conversationFreshness: {
+                    object: 'account_mirror_conversation_freshness',
+                    state: 'unknown',
+                    reasons: ['insufficient_freshness_evidence'],
+                    routeabilityState: 'routeable',
+                    assetCompleteness: 'unknown',
+                    assetCounts: { known: 1, local: 0, missingLocal: 0 },
+                  },
+                },
+                {
+                  id: 'still_deferred',
+                  title: 'Still deferred',
+                  provider: 'gemini',
+                  url: 'https://gemini.google.com/app/still_deferred',
+                  cachedArtifactCount: 1,
+                  conversationFreshness: {
+                    object: 'account_mirror_conversation_freshness',
+                    state: 'unknown',
+                    reasons: ['insufficient_freshness_evidence'],
+                    routeabilityState: 'unknown',
+                    assetCompleteness: 'unknown',
+                    assetCounts: { known: 0, local: 0, missingLocal: 0 },
+                  },
+                },
+              ],
+              artifacts: [],
+              files: [],
+              media: [],
+            },
+            counts: { projects: 0, conversations: 2, artifacts: 0, files: 0, media: 0 },
+          },
+        ],
+        metrics: { targets: 1, projects: 0, conversations: 2, artifacts: 0, files: 0, media: 0 },
+      })),
+      readItem: vi.fn(async () => null),
+    };
+    const runArchiveService = {
+      listItems: vi.fn(async (): Promise<RunArchiveListResult> => ({
+        object: 'run_archive' as const,
+        generatedAt: '2026-05-31T01:40:00.000Z',
+        kind: 'all' as const,
+        limit: 500,
+        items: [
+          {
+            id: 'history-generated-artifact:gemini:auracall-gemini-pro:8e8e58b57ae544ea:artifact_1',
+            object: 'run_archive_item' as const,
+            kind: 'generated_artifact' as const,
+            source: 'account_mirror' as const,
+            createdAt: '2026-05-31T01:33:26.805Z',
+            updatedAt: '2026-05-31T01:33:26.805Z',
+            title: 'Before The Tide Returns',
+            status: 'materialized',
+            runtimeState: null,
+            provider: 'gemini',
+            runtimeProfile: 'auracall-gemini-pro',
+            browserProfile: null,
+            projectId: null,
+            boundIdentityKey: 'ecochran76@gmail.com',
+            agentId: null,
+            teamId: null,
+            responseId: null,
+            batchId: null,
+            batchIndex: null,
+            mediaGenerationId: null,
+            providerConversationId: '8e8e58b57ae544ea',
+            providerConversationUrl: 'https://gemini.google.com/app/8e8e58b57ae544ea',
+            artifactId: 'artifact_1',
+            fileName: 'before_the_tide_returns.mp4',
+            mimeType: 'video/mp4',
+            localPath: '/tmp/before_the_tide_returns.mp4',
+            uri: null,
+            cacheKey: 'sha256:8ef8',
+            checksumSha256: '8ef8',
+            fileAvailable: true,
+            metadata: {
+              historyMaterializationJobId: 'hmj_19f26f2121ff40a285642beb2bfc96b5',
+              materialization: { status: 'materialized', source: 'history-materialization' },
+            },
+            links: { asset: '/v1/archive/items/b64/history/asset' },
+          },
+        ],
+        metrics: {
+          total: 1,
+          byKind: {
+            response: 0,
+            response_batch: 0,
+            team_run: 0,
+            media_generation: 0,
+            upload: 0,
+            generated_artifact: 1,
+            provider_conversation: 0,
+            evidence: 0,
+          },
+        },
+      })),
+      readItem: vi.fn(async () => null),
+      readAsset: vi.fn(async () => null),
+      lookupAsset: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      attachEvidence: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertResponseItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertBatchItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertMediaGenerationItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      backfillIndex: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    } satisfies RunArchiveService;
+    const service = createSearchProjectionService({
+      accountMirrorCatalogService,
+      runArchiveService,
+      now: () => new Date('2026-05-31T01:41:00.000Z'),
+    });
+
+    const result = await service.search({ kind: 'conversation', provider: 'gemini', runtimeProfile: 'auracall-gemini-pro', limit: 10 });
+    const materialized = result.rows.find((row) => row.itemId === '8e8e58b57ae544ea');
+    const deferred = result.rows.find((row) => row.itemId === 'still_deferred');
+
+    expect(materialized).toMatchObject({
+      metadata: {
+        fileAvailable: true,
+        materializationStatus: 'succeeded',
+        materializedArchiveItemId: 'history-generated-artifact:gemini:auracall-gemini-pro:8e8e58b57ae544ea:artifact_1',
+        assetFreshness: {
+          availability: 'available',
+          source: 'history_materialization',
+          materializationJobId: 'hmj_19f26f2121ff40a285642beb2bfc96b5',
+          materializedAt: '2026-05-31T01:33:26.805Z',
+        },
+      },
+    });
+    expect(deferred?.metadata).not.toHaveProperty('assetFreshness');
+    expect(deferred?.metadata).not.toHaveProperty('materializationStatus');
+  });
+
   it('pages rows with opaque cursors', async () => {
     const accountMirrorCatalogService: AccountMirrorCatalogService = {
       readCatalog: vi.fn(async (): Promise<AccountMirrorCatalogResult> => ({

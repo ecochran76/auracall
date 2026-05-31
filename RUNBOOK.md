@@ -8076,3 +8076,39 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 88`
   - `git diff --check`
+
+## Turn 219 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md`
+- Goal: execute the Gemini materialization health plan and prove installed
+  unattended retrieval.
+- Result:
+  - queued history-materialization jobs are now scheduled when created, when a
+    queued duplicate is reused, and when startup recovery finds persisted
+    queued jobs; only persisted running jobs are marked interrupted.
+  - Gemini direct and catalog-derived materialization targets now reject
+    sign-in redirect rows, static app/download/settings/Gem routes, and
+    malformed/query-contaminated ids before provider browser work starts.
+  - search projection overlays matching history-materialization freshness back
+    onto account-mirror conversation rows, preserving deferred language only
+    for conversations with no materialized evidence.
+  - installed job `hmj_f276983d378c494a83a5d685b683fbf7` was created through
+    the normal API path for conversation `8e8e58b57ae544ea`, advanced without
+    direct service invocation, and reached `succeeded`.
+  - the job materialized `Before The Tide Returns` as a local `video/mp4`
+    archive item with SHA-256
+    `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`.
+  - installed search readback now shows both the generated-artifact row and the
+    account-mirror conversation row with
+    `assetFreshness.materializationJobId=hmj_f276983d378c494a83a5d685b683fbf7`.
+  - malformed Gemini sign-in redirect target creation returns HTTP 400 before
+    provider work.
+- Verification target:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/runtime.searchProjectionService.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
+  - `pnpm exec biome lint src/runtime/historyMaterializationService.ts src/runtime/searchProjectionService.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.searchProjectionService.test.ts`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
