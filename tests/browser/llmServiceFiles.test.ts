@@ -7,7 +7,7 @@ import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import type { ResolvedUserConfig } from '../../src/config.js';
 import type { BrowserProviderListOptions } from '../../src/browser/providers/types.js';
 import type { ConversationArtifact, FileRef } from '../../src/browser/providers/domain.js';
-import type { ProviderCacheContext } from '../../src/browser/providers/cache.js';
+import { resolveProviderCachePath, type ProviderCacheContext } from '../../src/browser/providers/cache.js';
 import { JsonCacheStore } from '../../src/browser/llmService/cache/store.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
 import type { CacheStore } from '../../src/browser/llmService/cache/store.js';
@@ -538,6 +538,241 @@ describe('llmService project file cache writes', () => {
           error: 'conversation file fetch failed',
         }),
       ]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('materializeConversationFiles salvages matching cached uploaded files without another provider download', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-files-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const conversationId = 'conversation-123';
+    const fileId = `gemini-conversation-file:${conversationId}:0:AGENTS.md`;
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const { cacheDir } = resolveProviderCachePath(
+      cacheContext,
+      `conversation-attachments/${conversationId}/manifest.json`,
+    );
+    const attachmentsDir = path.join(cacheDir, 'conversation-attachments', conversationId, 'files');
+    const cachedPath = path.join(attachmentsDir, 'cached-agents', 'AGENTS.md');
+    await fs.mkdir(path.dirname(cachedPath), { recursive: true });
+    await fs.writeFile(cachedPath, 'cached uploaded file body', 'utf8');
+    const cachedStat = await fs.stat(cachedPath);
+
+    const store = new JsonCacheStore();
+    await store.writeConversationAttachments(cacheContext, conversationId, [
+      {
+        id: fileId,
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/markdown',
+        size: cachedStat.size,
+        localPath: cachedPath,
+        metadata: { kind: 'uploaded-file', conversationId },
+      },
+    ]);
+    const conversationFiles: FileRef[] = [
+      {
+        id: fileId,
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/markdown',
+        size: cachedStat.size,
+        metadata: { kind: 'uploaded-file', conversationId },
+      },
+    ];
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      listConversationFiles: vi.fn(async () => conversationFiles),
+      downloadConversationFile: vi.fn(async () => {
+        throw new Error('no preview surface');
+      }),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      const result = await service.materializeConversationFiles(conversationId, { listOptions: {} });
+      expect(result.files).toHaveLength(1);
+      expect(provider.downloadConversationFile).not.toHaveBeenCalled();
+      expect(result.files[0]).toEqual(
+        expect.objectContaining({
+          id: fileId,
+          name: 'AGENTS.md',
+          localPath: cachedPath,
+          size: cachedStat.size,
+          checksumSha256: '738f3d34fd0d7c9ca4bda787b1edc85949bd8a086da8365ba46908722e55b2ef',
+          metadata: expect.objectContaining({
+            materializationSource: 'cached-provider-file',
+            cachedProviderFile: true,
+          }),
+        }),
+      );
+      const manifest = JSON.parse(await readFile(result.manifestPath as string, 'utf8')) as {
+        materializedCount: number;
+        entries: Array<{
+          fileId: string;
+          status: string;
+          localPath?: string;
+          size?: number;
+          materializationMethod?: string;
+        }>;
+      };
+      expect(manifest.materializedCount).toBe(1);
+      expect(manifest.entries).toEqual([
+        expect.objectContaining({
+          fileId,
+          status: 'materialized',
+          localPath: cachedPath,
+          size: cachedStat.size,
+          materializationMethod: 'cached-provider-file',
+        }),
+      ]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('materializeConversationFiles does not salvage cache-only files without current provider evidence', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-files-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const conversationId = 'conversation-123';
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    await store.writeConversationAttachments(cacheContext, conversationId, [
+      {
+        id: `gemini-conversation-file:${conversationId}:0:AGENTS.md`,
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        localPath: path.join(homeDir, 'AGENTS.md'),
+        metadata: { kind: 'uploaded-file', conversationId },
+      },
+    ]);
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      listConversationFiles: vi.fn(async () => [] as FileRef[]),
+      downloadConversationFile: vi.fn(async () => undefined),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      const result = await service.materializeConversationFiles(conversationId, { listOptions: {} });
+      expect(result.files).toEqual([]);
+      expect(result.manifestPath).toBeNull();
+      expect(provider.downloadConversationFile).not.toHaveBeenCalled();
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test.each([
+    {
+      name: 'mismatched size',
+      currentFileId: 'conv-file-1',
+      cachedFileId: 'conv-file-1',
+      cachedPath: 'inside',
+      currentSize: 999,
+    },
+    {
+      name: 'missing file',
+      currentFileId: 'conv-file-1',
+      cachedFileId: 'conv-file-1',
+      cachedPath: 'missing',
+      currentSize: 23,
+    },
+    {
+      name: 'mismatched provider file id',
+      currentFileId: 'conv-file-2',
+      cachedFileId: 'conv-file-1',
+      cachedPath: 'inside',
+      currentSize: 23,
+    },
+  ])('materializeConversationFiles preserves terminal failure for $name', async (scenario) => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-files-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const conversationId = 'conversation-123';
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const { cacheDir } = resolveProviderCachePath(
+      cacheContext,
+      `conversation-attachments/${conversationId}/manifest.json`,
+    );
+    const attachmentsDir = path.join(cacheDir, 'conversation-attachments', conversationId, 'files');
+    const cachedPath = scenario.cachedPath === 'inside'
+      ? path.join(attachmentsDir, 'cached-file', 'AGENTS.md')
+      : path.join(attachmentsDir, 'missing-file', 'AGENTS.md');
+    if (scenario.cachedPath === 'inside') {
+      await fs.mkdir(path.dirname(cachedPath), { recursive: true });
+      await fs.writeFile(cachedPath, 'cached uploaded file body', 'utf8');
+    }
+    const store = new JsonCacheStore();
+    await store.writeConversationAttachments(cacheContext, conversationId, [
+      {
+        id: scenario.cachedFileId,
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/markdown',
+        size: 23,
+        localPath: cachedPath,
+        metadata: { kind: 'uploaded-file', conversationId },
+      },
+    ]);
+    const conversationFiles: FileRef[] = [
+      {
+        id: scenario.currentFileId,
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/markdown',
+        size: scenario.currentSize,
+        metadata: { kind: 'uploaded-file', conversationId },
+      },
+    ];
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      listConversationFiles: vi.fn(async () => conversationFiles),
+      downloadConversationFile: vi.fn(async () => {
+        throw new Error('no preview surface');
+      }),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      const result = await service.materializeConversationFiles(conversationId, { listOptions: {} });
+      expect(result.files).toEqual([]);
+      const manifest = JSON.parse(await readFile(result.manifestPath as string, 'utf8')) as {
+        materializedCount: number;
+        entries: Array<{ fileId: string; status: string; error?: string; localPath?: string }>;
+      };
+      expect(manifest.materializedCount).toBe(0);
+      expect(manifest.entries).toEqual([
+        expect.objectContaining({
+          fileId: scenario.currentFileId,
+          status: 'error',
+          error: 'no preview surface',
+        }),
+      ]);
+      expect(manifest.entries[0].localPath).toBeUndefined();
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

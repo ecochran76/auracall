@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveConfiguredServiceAccountId } from '../../config/serviceAccountIdentity.js';
@@ -134,6 +135,7 @@ type ConversationFileFetchManifestEntry = {
   remoteUrl?: string | null;
   mimeType?: string;
   size?: number;
+  materializationMethod?: string;
   error?: string;
 };
 
@@ -145,6 +147,11 @@ type ConversationFileFetchManifest = {
   fileCount: number;
   materializedCount: number;
   entries: ConversationFileFetchManifestEntry[];
+};
+
+type CachedConversationFileSalvageCandidate = {
+  file: FileRef;
+  size: number;
 };
 
 function stableStringify(value: unknown): string {
@@ -200,6 +207,84 @@ function sanitizeConversationFileName(value: string, fallback: string = 'convers
     .replace(/\s+/g, ' ')
     .trim();
   return normalized.length > 0 ? normalized.slice(0, 180) : fallback;
+}
+
+async function calculateSha256(filePath: string): Promise<string> {
+  const content = await fs.readFile(filePath);
+  return createHash('sha256').update(content).digest('hex');
+}
+
+function metadataString(value: Record<string, unknown> | undefined, key: string): string | null {
+  const entry = value?.[key];
+  return typeof entry === 'string' && entry.trim().length > 0 ? entry.trim() : null;
+}
+
+function fileDeclaredSize(file: FileRef): number | null {
+  return typeof file.size === 'number' && Number.isFinite(file.size) && file.size >= 0 ? file.size : null;
+}
+
+async function findCachedConversationFileSalvageCandidate(input: {
+  currentFile: FileRef;
+  cachedFiles: ReadonlyMap<string, FileRef>;
+  conversationId: string;
+  attachmentsDir: string;
+}): Promise<CachedConversationFileSalvageCandidate | null> {
+  const cachedFile = input.cachedFiles.get(input.currentFile.id);
+  if (!cachedFile) return null;
+  if (input.currentFile.source !== 'conversation' || cachedFile.source !== 'conversation') return null;
+  if (input.currentFile.provider !== cachedFile.provider) return null;
+  if (input.currentFile.name !== cachedFile.name) return null;
+
+  const currentKind = metadataString(input.currentFile.metadata, 'kind');
+  const cachedKind = metadataString(cachedFile.metadata, 'kind');
+  if (currentKind !== 'uploaded-file' && cachedKind !== 'uploaded-file') return null;
+  if (currentKind && currentKind !== 'uploaded-file') return null;
+  if (cachedKind && cachedKind !== 'uploaded-file') return null;
+
+  const currentConversationId = metadataString(input.currentFile.metadata, 'conversationId');
+  const cachedConversationId = metadataString(cachedFile.metadata, 'conversationId');
+  if (currentConversationId && currentConversationId !== input.conversationId) return null;
+  if (cachedConversationId && cachedConversationId !== input.conversationId) return null;
+
+  if (!cachedFile.localPath) return null;
+  const resolvedAttachmentsDir = path.resolve(input.attachmentsDir);
+  const resolvedLocalPath = path.resolve(cachedFile.localPath);
+  if (resolvedLocalPath !== resolvedAttachmentsDir && !resolvedLocalPath.startsWith(`${resolvedAttachmentsDir}${path.sep}`)) {
+    return null;
+  }
+
+  let stat: Awaited<ReturnType<typeof fs.stat>>;
+  try {
+    stat = await fs.stat(resolvedLocalPath);
+  } catch {
+    return null;
+  }
+  if (!stat.isFile()) return null;
+
+  const currentSize = fileDeclaredSize(input.currentFile);
+  const cachedSize = fileDeclaredSize(cachedFile);
+  if (currentSize !== null && stat.size !== currentSize) return null;
+  if (cachedSize !== null && stat.size !== cachedSize) return null;
+
+  const checksumSha256 = await calculateSha256(resolvedLocalPath);
+  const file: FileRef = {
+    ...cachedFile,
+    ...input.currentFile,
+    mimeType: input.currentFile.mimeType ?? cachedFile.mimeType,
+    remoteUrl: input.currentFile.remoteUrl ?? cachedFile.remoteUrl,
+    localPath: resolvedLocalPath,
+    size: stat.size,
+    checksumSha256,
+    metadata: {
+      ...cachedFile.metadata,
+      ...input.currentFile.metadata,
+      conversationId: input.conversationId,
+      materialization: 'cached-provider-file',
+      materializationSource: 'cached-provider-file',
+      cachedProviderFile: true,
+    },
+  };
+  return { file, size: stat.size };
 }
 
 export function stripProjectInstructionsPrefixFromConversationContext(
@@ -1070,6 +1155,34 @@ export abstract class LlmService {
     const materialized: FileRef[] = [];
     const manifestEntries: ConversationFileFetchManifestEntry[] = [];
     for (const file of conversationFiles) {
+      const cachedSalvageCandidate = await findCachedConversationFileSalvageCandidate({
+        currentFile: file,
+        cachedFiles: merged,
+        conversationId,
+        attachmentsDir,
+      });
+      if (cachedSalvageCandidate) {
+        const materializedFile: FileRef = {
+          ...cachedSalvageCandidate.file,
+          metadata: {
+            ...cachedSalvageCandidate.file.metadata,
+            cachedProviderFileReason: 'matched-current-provider-detail',
+          },
+        };
+        materialized.push(materializedFile);
+        merged.set(materializedFile.id, materializedFile);
+        manifestEntries.push({
+          fileId: file.id,
+          fileName: file.name,
+          status: 'materialized',
+          localPath: materializedFile.localPath,
+          remoteUrl: materializedFile.remoteUrl ?? null,
+          mimeType: materializedFile.mimeType,
+          size: cachedSalvageCandidate.size,
+          materializationMethod: 'cached-provider-file',
+        });
+        continue;
+      }
       const fileDir = path.join(
         attachmentsDir,
         sanitizeArtifactPathSegment(file.id || file.name || `file-${materialized.length + 1}`),
@@ -1091,10 +1204,12 @@ export abstract class LlmService {
           { action: 'downloadConversationFile' },
         );
         const stat = await fs.stat(destPath);
+        const checksumSha256 = await calculateSha256(destPath);
         const materializedFile: FileRef = {
           ...file,
           size: stat.size,
           localPath: destPath,
+          checksumSha256,
         };
         materialized.push(materializedFile);
         merged.set(materializedFile.id, materializedFile);

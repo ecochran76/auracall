@@ -1,5 +1,43 @@
 # RUNBOOK
 
+## Turn 191 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0090-2026-05-31-gemini-cached-uploaded-file-salvage.md`
+- Goal: execute Plan 0090 so Gemini uploaded text/file attachments can
+  materialize from verified local provider cache instead of staying failed or
+  metadata-only.
+- Result:
+  - added a narrow cached uploaded-file salvage path in
+    `LlmService.materializeConversationFiles`.
+  - salvage requires current provider detail evidence plus matching local cache
+    evidence for provider/source, provider file id, file name, conversation id
+    metadata when present, cache root, readable local file, and declared size
+    when available.
+  - local size and SHA-256 are recomputed from disk before materialization.
+  - file-fetch manifest entries and archive/search metadata mark salvaged files
+    with `cached-provider-file`.
+  - installed proof job `hmj_730bf520b4b746b88d8d3d0ecf44dac5` succeeded for
+    Gemini conversation `ab30a4a92e4b65a9`, materializing `uploaded-image-1`
+    plus cached `AGENTS.md`.
+  - archive/search readback for `AGENTS.md` showed local path
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/ab30a4a92e4b65a9/files/gemini-conversation-file-ab30a4a92e4b65a9-0-AGENTS.md/AGENTS.md`,
+    SHA-256
+    `913744155dc7310f2072ca4d2989f53dbed12e0b757e1d2e0c868b641142ede2`,
+    `fileAvailable=true`, and
+    `metadata.materialization.method=cached-provider-file`.
+- Verification:
+  - `pnpm biome lint src/browser/llmService/llmService.ts src/runtime/historyMaterializationService.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm vitest run tests/browser/llmServiceFiles.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`
+  - `/home/ecochran76/.local/bin/auracall api history-materialization-create --provider gemini --runtime-profile auracall-gemini-pro --browser-profile gemini-stealthcdp --bound-identity-key ecochran76@gmail.com --conversation-id ab30a4a92e4b65a9 --provider-conversation-url https://gemini.google.com/app/ab30a4a92e4b65a9 --refresh-snapshot --asset-kind files --max-items 2 --force --json`
+  - `/home/ecochran76/.local/bin/auracall api archive --kind upload --provider gemini --runtime-profile auracall-gemini-pro --query AGENTS.md --file-available true --limit 5 --json`
+  - `/home/ecochran76/.local/bin/auracall api search --kind upload --provider gemini --runtime-profile auracall-gemini-pro --query AGENTS.md --file-available true --limit 5 --json`
+
 ## Turn 190 | 2026-05-30
 
 - Active plan:

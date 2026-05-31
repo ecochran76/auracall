@@ -2349,6 +2349,7 @@ type FileManifestEntry = {
   remoteUrl?: string | null;
   mimeType?: string;
   size?: number;
+  materializationMethod?: string;
   error?: string;
 };
 
@@ -2384,6 +2385,7 @@ async function readFileManifestEntries(manifestPath: string | null): Promise<Fil
     remoteUrl: readRecordString(entry, ['remoteUrl']),
     mimeType: readRecordString(entry, ['mimeType']) ?? undefined,
     size: readNumber(entry.size) ?? undefined,
+    materializationMethod: readRecordString(entry, ['materializationMethod']) ?? undefined,
     error: readRecordString(entry, ['error']) ?? undefined,
   }));
 }
@@ -2432,7 +2434,7 @@ async function historyEntryFromFileManifest(entry: FileManifestEntry): Promise<H
     checksumSha256,
     mimeType: entry.mimeType ?? null,
     size: readNumber(entry.size),
-    materializationMethod: null,
+    materializationMethod: entry.materializationMethod ?? null,
     reason: entry.status === 'materialized' ? null : entry.error ?? entry.status,
     archiveItemId: null,
     assetRoute: null,

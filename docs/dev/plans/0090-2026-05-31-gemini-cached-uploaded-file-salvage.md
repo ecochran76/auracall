@@ -1,6 +1,6 @@
 # Gemini Cached Uploaded File Salvage Plan | 0090-2026-05-31
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -84,7 +84,7 @@ cache has a provider-id-matching local file with size/checksum evidence.
 
 ### Track 1 | Evidence Contract
 
-Status: planned.
+Status: completed.
 
 - Identify the Gemini file manifest structures that carry:
   - provider file id;
@@ -106,7 +106,7 @@ Status: planned.
 
 ### Track 2 | Implementation
 
-Status: planned.
+Status: completed.
 
 - Add a narrow helper for Gemini uploaded-file cached salvage.
 - Recompute local size and SHA-256 before returning a materialized entry.
@@ -118,7 +118,7 @@ Status: planned.
 
 ### Track 3 | Regression Coverage
 
-Status: planned.
+Status: completed.
 
 - Add a unit or integration-style test for the `AGENTS.md` class:
   - current provider detail reports an uploaded file with no direct URL;
@@ -132,7 +132,20 @@ Status: planned.
 
 ### Track 4 | Installed Proof
 
-Status: planned.
+Status: completed.
+
+Closeout:
+- Implemented cached uploaded-file salvage in `LlmService.materializeConversationFiles`.
+  The path only returns a cached file after the current provider detail pass
+  still reports the uploaded file and the cache agrees on provider, source,
+  conversation id metadata when present, provider file id, file name, cache
+  root, and declared size when available.
+- Salvage recomputes local file size and SHA-256 from disk and writes
+  `materializationMethod: cached-provider-file` into the file-fetch manifest.
+- Archive/search readback now shows `AGENTS.md` from `ab30a4a92e4b65a9` as a
+  materialized upload with `materialization.method=cached-provider-file`,
+  local path, and SHA-256
+  `913744155dc7310f2072ca4d2989f53dbed12e0b757e1d2e0c868b641142ede2`.
 
 - Build, install, and restart the user-scoped runtime if code changes are
   required.

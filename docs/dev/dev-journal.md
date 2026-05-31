@@ -35571,3 +35571,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm run plans:audit -- --keep 90`
   - `git diff --check`
+
+## Turn 336 | 2026-05-31
+
+- Goal: execute Plan 0090 and prove Gemini `AGENTS.md` materializes from a
+  verified cached uploaded-file path.
+- Change:
+  - added cached uploaded-file salvage to
+    `LlmService.materializeConversationFiles`.
+  - added manifest/readback support for `materializationMethod` on file-fetch
+    manifests.
+  - added focused success and negative tests for matching cached upload,
+    cache-only absence of current provider evidence, mismatched size, missing
+    file, and mismatched provider file id.
+  - closed Plan 0090 and updated `ROADMAP.md` and `RUNBOOK.md`.
+- Installed proof:
+  - rebuilt, reinstalled, and restarted `auracall-api.service`.
+  - installed job `hmj_730bf520b4b746b88d8d3d0ecf44dac5` refreshed
+    `gemini/auracall-gemini-pro` conversation `ab30a4a92e4b65a9` and
+    materialized two files.
+  - `AGENTS.md` read back as an available Gemini upload with SHA-256
+    `913744155dc7310f2072ca4d2989f53dbed12e0b757e1d2e0c868b641142ede2`,
+    local path under the Gemini conversation cache, and
+    `materialization.method=cached-provider-file` in archive/search metadata.
+- Verification:
+  - `pnpm biome lint src/browser/llmService/llmService.ts src/runtime/historyMaterializationService.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm vitest run tests/browser/llmServiceFiles.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service`
+  - installed `history-materialization-create` / `history-materialization-status`
+  - installed archive/search readback for `AGENTS.md`

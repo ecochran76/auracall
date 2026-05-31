@@ -17583,3 +17583,13 @@ browser-stage lifecycle observability, not transcript truncation.
   `assetFreshness`, and the materialized archive item id onto the conversation
   row so operators do not read a locally materialized conversation as
   metadata/deferred-only.
+
+- 2026-05-31: Gemini uploaded-file materialization may need a verified cache
+  path rather than another provider download attempt. If the current Gemini
+  detail pass still reports an uploaded file and the identity-scoped
+  conversation cache agrees on provider/source, provider file id, file name,
+  conversation id metadata when present, cache root, readable local file, and
+  declared size when available, materialize from that cached file, recompute
+  SHA-256 from disk, and mark archive/search metadata with
+  `cached-provider-file`. Do not salvage cache-only, missing, wrong-size, or
+  provider-id-mismatched files.
