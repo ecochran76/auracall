@@ -8112,3 +8112,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run install:user-runtime-service`
   - `systemctl --user restart auracall-api.service`
   - `systemctl --user is-active auracall-api.service` returned `active`.
+
+## Turn 220 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md`
+- Goal: open the bounded Gemini artifact catch-up plan after Plan 0088 closed
+  materialization health gates.
+- Current state:
+  - Gemini project/Gem discovery is clean and remains out of scope for catch-up
+    execution.
+  - installed API materialization now advances queued Gemini jobs without
+    direct service invocation.
+  - malformed Gemini targets are rejected before browser work.
+  - materialized Gemini artifacts now project freshness onto matching
+    account-mirror conversation search rows.
+- Plan:
+  - baseline `gemini/auracall-gemini-pro` completion, provider guard,
+    catalog, recovery, search/archive, and active job counts.
+  - select only canonical Gemini conversation targets for one capped batch.
+  - run one installed API materialization batch with `refreshSnapshot=true`,
+    `assetKinds=[all]`, and conservative `maxItems`.
+  - record terminal per-candidate evidence and before/after artifact counts.
+  - stop on CAPTCHA, Google `sorry`, account chooser, provider guard, or
+    browser queue ownership conflict.
+- Verification target:
+  - `pnpm run plans:audit -- --keep 89`
+  - `git diff --check`

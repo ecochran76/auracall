@@ -4,10 +4,12 @@
 
 ### Current Execution Board
 
-Status: current plan selection needed
+Status: active bounded plan
 Lane: P01
 
 Current Priority Snapshot:
+- Active plan:
+  [docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md](docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md)
 - Latest completed plan:
   [docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md](docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md)
 - Previous completed plan:
@@ -28,9 +30,9 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: Plan 0088 is closed and the next active plan has not yet been
-  selected. Plan 0087 closed the first Gemini conversation-level retrieval
-  proof: installed readback still shows
+- Current work: Plan 0089 is open for a bounded Gemini artifact catch-up
+  batch. Plan 0087 closed the first Gemini conversation-level retrieval proof:
+  installed readback still shows
   `gemini/auracall-gemini-pro` project manifests at `0`, with
   `retainedFromCache.projects=0` and no stale Google catalog Gems. The bounded
   selected-conversation run `hmj_19f26f2121ff40a285642beb2bfc96b5`
@@ -49,9 +51,11 @@ Current Priority Snapshot:
     unattended through the installed API path and materialized
     `Before The Tide Returns` with SHA-256
     `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`.
-  Broad Gemini catch-up is still not an automatic background assertion; the
-  next retrieval plan should run a bounded batch with before/after artifact
-  counts and provider-guard stop rules.
+  Plan 0089 is the bounded next retrieval plan: it must baseline Gemini
+  recovery/search/archive counts, select only canonical conversation targets,
+  run one capped installed API materialization batch, record terminal
+  per-candidate outcomes, and compare before/after artifact counts before any
+  larger Gemini catch-up claim.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -179,6 +183,11 @@ Current State:
     Broad Gemini retrieval can now be planned as a bounded catch-up batch, but
     should still be proven with caps and before/after counts before claiming
     every retrievable Gemini artifact has caught up.
+  - Gemini bounded artifact catch-up: active in
+    [docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md](docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md).
+    This slice should run exactly one capped installed Gemini materialization
+    batch after baseline readback, then use after-counts and terminal
+    per-candidate evidence to decide the next scale gate.
   - operator audit parity: protected `/v1/*` materialization routes can block
     direct read-only inspection from local curl, so the next operator-facing
     plan should confirm CLI/MCP/console parity for materialization and

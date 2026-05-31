@@ -35490,3 +35490,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime-service`
   - `systemctl --user restart auracall-api.service`
   - `systemctl --user is-active auracall-api.service`
+
+## Turn 333 | 2026-05-31
+
+- Goal: write the next bounded plan for Gemini artifact catch-up.
+- Change:
+  - added
+    `docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md`
+    as the active P01 plan.
+  - updated `ROADMAP.md` so Plan 0089 is the current work after Plan 0088.
+  - updated `RUNBOOK.md` with the Plan 0089 planning checkpoint.
+- Scope:
+  - baseline installed Gemini completion, provider guard, catalog, recovery,
+    search/archive, and history-materialization job counts.
+  - select a capped batch of canonical Gemini conversation targets only.
+  - run one installed API materialization batch with refresh/detail evidence.
+  - compare before/after artifact and recovery counts before raising scale.
+  - stop automation on CAPTCHA, Google `sorry`, account chooser, provider
+    guard, or browser queue ownership conflict.
+- Verification:
+  - `pnpm run plans:audit -- --keep 89`
+  - `git diff --check`
