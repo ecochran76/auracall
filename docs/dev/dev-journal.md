@@ -35366,3 +35366,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - direct catalog readback for
     `/v1/account-mirrors/catalog?provider=gemini&runtimeProfile=auracall-gemini-pro&kind=projects`
     returned `projectManifestCount=0` and `projectIds=[]`.
+
+## Turn 329 | 2026-05-31
+
+- Goal: open the next bounded Gemini retrieval plan after project/Gem cleanup.
+- Change:
+  - added
+    `docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md`
+    as the active P01 plan.
+  - updated `ROADMAP.md` so Plan 0087 is the current work and the Gemini
+    detail-confidence concern points to the new plan.
+  - updated `RUNBOOK.md` with the Plan 0087 opening checkpoint.
+- Scope:
+  - baseline `gemini/auracall-gemini-pro` status and candidates.
+  - run a bounded conversation-level snapshot refresh/materialization batch.
+  - require terminal routeability/no-asset/skip/failure/materialization
+    evidence without any non-editable Gem cycling.
+- Verification:
+  - `pnpm run plans:audit -- --keep 87`

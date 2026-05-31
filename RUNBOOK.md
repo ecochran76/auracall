@@ -7993,3 +7993,27 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run plans:audit -- --keep 69`
   - targeted Plan 0069 unit/integration tests and static gates recorded in
     `docs/dev/dev-journal.md` Turns 242-261.
+
+## Turn 216 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md`
+- Goal: plan the next bounded Gemini full-retrieval slice after project/Gem
+  discovery and stale project manifests were fixed.
+- Current state:
+  - Gemini project discovery no longer returns Google catalog Gems.
+  - account-mirror project catalog readback for
+    `gemini/auracall-gemini-pro` now reports `projectManifestCount=0`.
+  - active Gemini live follow still retains `71` cached conversations with
+    deferred asset inventory.
+- Plan:
+  - baseline active completion, catalog, recovery candidates, active jobs, and
+    provider guard state.
+  - select one to three conversation candidates.
+  - run bounded Gemini snapshot refresh/materialization with
+    `refreshSnapshot=true`, `assetKinds=[all]`, and conservative `maxItems`.
+  - accept either checksum-bearing materialization or explicit terminal
+    no-asset/skip/failure evidence.
+- Verification target:
+  - `pnpm run plans:audit -- --keep 87`
+  - read-only installed baseline before any provider work.
