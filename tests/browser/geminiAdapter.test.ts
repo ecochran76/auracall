@@ -4,6 +4,7 @@ import {
 	classifyGeminiBlockingState,
 	extractGeminiIdentityFromLabel,
 	geminiUrlMatchesPreference,
+	isEditableGeminiProjectProbe,
 	normalizeGeminiConversationHistoryLimit,
 	resolveGeminiConversationRailTargetUrl,
 	selectPreferredGeminiTarget,
@@ -22,6 +23,12 @@ describe("Gemini browser adapter", () => {
 		expect(shouldHydrateGeminiConversationHistory({ includeHistory: true })).toBe(true);
 		expect(shouldHydrateGeminiConversationHistory({ includeHistory: false })).toBe(false);
 		expect(shouldHydrateGeminiConversationHistory(null)).toBe(false);
+	});
+
+	test("filters Gemini project probes to editable My Gems rows", () => {
+		expect(isEditableGeminiProjectProbe({ editUrl: "https://gemini.google.com/gems/edit/my-gem" })).toBe(true);
+		expect(isEditableGeminiProjectProbe({ editable: true })).toBe(false);
+		expect(isEditableGeminiProjectProbe({ editable: false })).toBe(false);
 	});
 
 	test("reuses an already loaded Gemini conversation tab for root rail reads", () => {

@@ -1221,6 +1221,8 @@ type GeminiProjectProbe = {
 	id: string;
 	name: string;
 	url?: string | null;
+	editable?: boolean | null;
+	editUrl?: string | null;
 };
 
 type GeminiConversationProbe = {
@@ -1308,6 +1310,13 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
         const optionLabel = Array.from(row.querySelectorAll('button[aria-label],a[aria-label]'))
           .map((node) => normalize(node.getAttribute('aria-label') || ''))
           .find((label) => /more options for .* gem/i.test(label));
+        const editLink = Array.from(row.querySelectorAll('a[href*="/gems/edit/"]'))
+          .find((node) => {
+            if (node instanceof HTMLAnchorElement && node.href.includes('/gems/edit/')) return true;
+            return false;
+          });
+        const editable = Boolean(editLink);
+        if (!editable) continue;
         const optionMatch = optionLabel?.match(/more options for "?(.+?)"? gem/i);
         const startLabel = normalize(anchor.getAttribute('aria-label') || '');
         const startMatch = startLabel.match(/start a new conversation with gem:\\s*(.+)$/i);
@@ -1327,7 +1336,13 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
         name = name.replace(/^start a new conversation with gem:\\s*/i, '').replace(/^[A-Z]\\s+(?=[A-Z])/,'').trim();
         if (!name || !isVisible(anchor)) continue;
         seen.add(id);
-        items.push({ id, name, url: href });
+        items.push({
+          id,
+          name,
+          url: href,
+          editable,
+          editUrl: editLink instanceof HTMLAnchorElement ? editLink.href : null,
+        });
       }
       return items;
     })()`,
@@ -1335,13 +1350,21 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
 	});
 	const payload = Array.isArray(result?.value) ? (result.value as GeminiProjectProbe[]) : [];
 	return payload
-		.filter((item) => item?.id && item?.name)
+		.filter((item) => item?.id && item?.name && isEditableGeminiProjectProbe(item))
 		.map((item) => ({
 			id: item.id,
 			name: item.name,
 			provider: "gemini" as const,
 			url: item.url ?? undefined,
 		}));
+}
+
+export function isEditableGeminiProjectProbe(
+	item: Pick<GeminiProjectProbe, "editable" | "editUrl"> | null | undefined,
+): boolean {
+	if (!item) return false;
+	if (typeof item.editUrl === "string" && item.editUrl.trim()) return true;
+	return false;
 }
 
 async function readGeminiUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {

@@ -17537,3 +17537,11 @@ browser-stage lifecycle observability, not transcript truncation.
   hard wrapper timeout can mark the job failed while the provider fetch keeps
   writing archive rows under the failed job id, which hides real materialized
   paths/checksums and risks overlapping retrieval jobs.
+
+- 2026-05-31: Gemini Gem/project discovery must be editability-scoped.
+  Gemini's Gem manager can show Google-made or third-party Gems outside
+  `My Gems`; those catalog rows are not editable and should not be treated as
+  AuraCall project/history targets. Require a concrete `/gems/edit/<id>` link
+  before returning a Gemini project; row action buttons and page section text
+  are not reliable because Gemini can render shared catalog and `My Gems`
+  content under common ancestors.

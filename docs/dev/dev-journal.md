@@ -35312,3 +35312,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime-service`
   - `systemctl --user restart auracall-api.service`
   - `systemctl --user is-active auracall-api.service` returned `active`.
+
+## Turn 327 | 2026-05-31
+
+- Goal: stop Gemini account-mirror/project discovery from exploring
+  Google-made or third-party Gems that are not under `My Gems`.
+- Change:
+  - Gemini Gem/project scraping now requires an editable/user-owned row signal
+    before returning a Gem as an AuraCall project target.
+  - accepted signal is now a concrete `/gems/edit/<id>` edit URL; section text
+    and row action buttons were rejected after live readback showed shared page
+    ancestors and catalog controls can make Google-made Gems look selectable.
+  - README and fixes log now state that Google-made or third-party Gems are not
+    editable and should not be treated as project/history targets.
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1 -t "Gemini project probes|Gemini browser adapter"`
+  - `pnpm run typecheck`
+  - `pnpm exec biome lint src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts README.md docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `pnpm run build && pnpm run install:user-runtime-service && systemctl --user restart auracall-api.service && systemctl --user is-active auracall-api.service`
+    returned `active`.
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-gemini-pro projects --target gemini --refresh --operation-timeout 30`
+    returned `[]`; the Google-provided `chess-champ`, `brainstormer`,
+    `storybook`, and other catalog Gems were no longer returned as project
+    targets.

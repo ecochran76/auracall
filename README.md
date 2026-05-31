@@ -575,11 +575,15 @@ Terminology note:
   Full-sweep refreshes are the mode
   that resume the persisted deep cursor for backfill. Gemini mirror collection
   reads both the left rail and Gem/project conversation histories; project
-  history reads reserve a bounded slice of the row budget, fan it across
-  Gems/projects before deepening one history, hydrate bounded history when
-  requested, cap the number of project histories read in one refresh with a
-  full-sweep continuation cursor, and tolerate an individual Gem route failure
-  with diagnostic evidence rather than aborting the whole sweep.
+  history reads are limited to rows with a concrete `/gems/edit/<id>` link.
+  Google-made or third-party Gems shown elsewhere in Gemini's catalog are not
+  editable and are not treated as AuraCall project targets, even when Gemini
+  renders buttons around them. Project history reads reserve a bounded slice of
+  the row budget, fan it across editable Gems/projects before deepening one
+  history, hydrate bounded history when requested, cap the number of project
+  histories read in one refresh with a full-sweep continuation cursor, and
+  tolerate an individual Gem route failure with diagnostic evidence rather than
+  aborting the whole sweep.
   For isolated materialization or one-provider proof runs, start the API with
   scoped proof mode, for example
   `auracall --profile auracall-gemini-pro api serve --port 18173 --account-mirror-proof-provider gemini --account-mirror-proof-runtime-profile auracall-gemini-pro`.
