@@ -35384,3 +35384,46 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     evidence without any non-editable Gem cycling.
 - Verification:
   - `pnpm run plans:audit -- --keep 87`
+
+## Turn 330 | 2026-05-31
+
+- Goal: execute Plan 0087 and prove a bounded Gemini conversation-level asset
+  retrieval path.
+- Result:
+  - installed baseline for `gemini/auracall-gemini-pro` showed active
+    completion
+    `acctmirror_completion_3c4a84b7-15b2-4db8-8814-b83164302580` in
+    `idle_waiting` with provider guard `clear`.
+  - project/Gem cleanup held: active completion project counts were `0`, and
+    direct project-catalog readback returned no project manifests.
+  - conversation catalog still included malformed sign-in/static app rows, so
+    candidate selection used known routeable conversation
+    `8e8e58b57ae544ea` with provider URL
+    `https://gemini.google.com/app/8e8e58b57ae544ea`.
+  - API-created history-materialization job
+    `hmj_19f26f2121ff40a285642beb2bfc96b5` remained queued after bounded
+    polling; the persisted job was then run once through the compiled
+    `createHistoryMaterializationService().runJob()` path.
+  - terminal job readback reported `status=succeeded`, snapshot refresh
+    `status=refreshed`, `routeabilityState=routeable`, `messageCount=2`,
+    `artifactCount=1`, and materialization metrics
+    `conversations=1/materialized=1/skipped=0/failed=0`.
+  - archive/search readback exposes `Before The Tide Returns` as a
+    `generated_artifact` with `fileAvailable=true`, local MP4 path
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/8e8e58b57ae544ea/files/gemini-artifact-8e8e58b57ae544ea-1-0/before_the_tide_returns.mp4`,
+    checksum
+    `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`,
+    and asset freshness tied to
+    `hmj_19f26f2121ff40a285642beb2bfc96b5`.
+- Follow-up:
+  - audit why API-created history-materialization jobs can stay queued instead
+    of being picked up by background work.
+  - clean Gemini conversation catalog rows that originate from Google sign-in
+    redirects or static app routes.
+  - reconcile successful archive/search materialization freshness into
+    conversation-level live-follow rollup language before claiming broad Gemini
+    catch-up.
+- Verification:
+  - `/home/ecochran76/.local/bin/auracall api history-materialization-jobs --provider gemini --runtime-profile auracall-gemini-pro --json --timeout-ms 10000`
+  - `/home/ecochran76/.local/bin/auracall api archive --provider gemini --runtime-profile auracall-gemini-pro --kind generated_artifact --limit 10 --json --timeout-ms 10000`
+  - `/home/ecochran76/.local/bin/auracall api search --provider gemini --runtime-profile auracall-gemini-pro --limit 10 --json --timeout-ms 10000`

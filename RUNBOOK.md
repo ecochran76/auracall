@@ -8017,3 +8017,35 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 87`
   - read-only installed baseline before any provider work.
+
+## Turn 217 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0087-2026-05-31-gemini-conversation-asset-retrieval.md`
+- Goal: execute the bounded Gemini conversation asset retrieval proof.
+- Result:
+  - installed baseline kept Gemini project/Gem discovery clean:
+    `metadataCounts.projects=0`, `retainedFromCache.projects=0`, and direct
+    project-catalog readback returned no project manifests.
+  - selected real conversation `8e8e58b57ae544ea`, not the malformed
+    `accounts.google.com/ServiceLogin` catalog rows seen in conversation
+    readback.
+  - job `hmj_19f26f2121ff40a285642beb2bfc96b5` reached terminal
+    `succeeded` with routeable snapshot refresh, `messageCount=2`,
+    `artifactCount=1`, and one materialized asset.
+  - archive/search readback now exposes `Before The Tide Returns` as a
+    `video/mp4` generated artifact with local path
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/8e8e58b57ae544ea/files/gemini-artifact-8e8e58b57ae544ea-1-0/before_the_tide_returns.mp4`
+    and SHA-256
+    `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`.
+- Follow-up:
+  - API-created history-materialization jobs can remain queued until run
+    directly through the compiled materialization service.
+  - Gemini conversation catalog cleanup is still needed for malformed sign-in
+    rows and static app routes.
+  - conversation-level live-follow rollups should consume archive/search
+    materialization freshness instead of continuing to read like deferred-only
+    inventory.
+- Verification target:
+  - `pnpm run plans:audit -- --keep 87`
+  - `git diff --check`

@@ -1,6 +1,6 @@
 # Gemini Conversation Asset Retrieval Plan | 0087-2026-05-31
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -100,7 +100,7 @@ concrete per-conversation evidence.
 
 ### Track 1 | Baseline And Candidate Selection
 
-Status: planned.
+Status: completed.
 
 - Read active Gemini completion status and confirm:
   - no project/Gem rows remain;
@@ -116,7 +116,7 @@ Status: planned.
 
 ### Track 2 | Bounded Detail Refresh
 
-Status: planned.
+Status: completed.
 
 - Queue one explicit history-materialization reconciliation or selected
   conversation batch with `refreshSnapshot=true` and a small `maxItems`.
@@ -129,7 +129,7 @@ Status: planned.
 
 ### Track 3 | Retrieval And Evidence Reconciliation
 
-Status: planned.
+Status: completed.
 
 - For each attempted conversation, classify the outcome:
   - materialized;
@@ -150,7 +150,7 @@ Status: planned.
 
 ### Track 4 | Operator Readback And Next Gate
 
-Status: planned.
+Status: completed.
 
 - Confirm CLI/API/MCP/console readback expose the same Gemini posture:
   - remaining deferred conversations;
@@ -166,20 +166,24 @@ Status: planned.
 
 ## Acceptance Criteria
 
-- Plan 0087 is wired into `ROADMAP.md` and `RUNBOOK.md`.
-- Installed baseline proves Gemini project manifests remain empty before
+- [x] Plan 0087 is wired into `ROADMAP.md` and `RUNBOOK.md`.
+- [x] Installed baseline proves Gemini project manifests remain empty before
   retrieval starts.
-- A bounded Gemini detail/materialization run reaches terminal state without
+- [x] A bounded Gemini detail/materialization run reaches terminal state without
   cycling through `chess-champ`, `brainstormer`, `storybook`, or any other
   Google/third-party Gem.
-- At least one selected Gemini conversation receives terminal
+- [x] At least one selected Gemini conversation receives terminal
   conversation-detail evidence.
-- If downloadable assets exist in the selected batch, at least one asset is
+- [x] If downloadable assets exist in the selected batch, at least one asset is
   materialized with local path and checksum evidence; if no assets exist, the
   job records clear terminal skip/no-asset evidence.
-- Account-mirror status no longer treats attempted conversations as unknown
-  deferred inventory without explanation.
-- Provider guard, cooldown, or browser queue blockers are surfaced explicitly
+- [x] Account-mirror status no longer treats attempted conversations as unknown
+  deferred inventory without explanation. Search/archive readback now exposes
+  the materialized artifact with `assetFreshness.status=succeeded`; the
+  remaining live-follow conversation rollup still needs a follow-up to fold
+  successful history materialization back into conversation-level deferred
+  inventory language.
+- [x] Provider guard, cooldown, or browser queue blockers are surfaced explicitly
   if they prevent execution.
 
 ## Validation Plan
@@ -208,3 +212,78 @@ Status: planned.
   against the user-scoped runtime before closeout.
 - If execution is blocked, the blocker has an exact provider/browser/runtime
   unblocker and no additional automated retries are queued.
+
+## Execution Closeout | 2026-05-31
+
+Baseline readback used the installed runtime for
+`gemini/auracall-gemini-pro`. The active completion
+`acctmirror_completion_3c4a84b7-15b2-4db8-8814-b83164302580` was
+`idle_waiting` in `backfill_history` with provider guard `clear`,
+`metadataCounts.projects=0`, `retainedFromCache.projects=0`, and
+`remainingDetailSurfaces.projects=0`. Direct project-catalog readback returned
+`projectManifestCount=0` and no project ids. Conversation catalog readback
+still returned cached conversation rows, including some malformed
+`accounts.google.com/ServiceLogin` rows and static Gemini app routes; those
+rows were not selected for materialization.
+
+The bounded selected-conversation run used:
+
+```bash
+/home/ecochran76/.local/bin/auracall api history-materialization-create \
+  --provider gemini \
+  --runtime-profile auracall-gemini-pro \
+  --conversation-id 8e8e58b57ae544ea \
+  --provider-conversation-url https://gemini.google.com/app/8e8e58b57ae544ea \
+  --refresh-snapshot \
+  --asset-kind all \
+  --max-items 1 \
+  --json \
+  --timeout-ms 10000
+```
+
+The API-created job id was `hmj_19f26f2121ff40a285642beb2bfc96b5`. It stayed
+queued after creation and after a bounded wait, so the same persisted job was
+run once through the compiled history-materialization service. The terminal
+job readback then reported:
+
+- `status=succeeded`, `attemptCount=1`, `startedAt=2026-05-31T01:32:50.683Z`,
+  `completedAt=2026-05-31T01:33:26.823Z`.
+- snapshot refresh `status=refreshed`, `routeabilityState=routeable`,
+  `messageCount=2`, `artifactCount=1`, `fileCount=0`, `sourceCount=0`.
+- result `status=materialized`, `metrics.conversations=1`,
+  `metrics.materialized=1`, `metrics.skipped=0`, `metrics.failed=0`.
+- artifact `Before The Tide Returns` materialized by direct remote fetch:
+  - local path:
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/8e8e58b57ae544ea/files/gemini-artifact-8e8e58b57ae544ea-1-0/before_the_tide_returns.mp4`
+  - checksum:
+    `8ef8f814f7d17908d8186048b3dc8021fae211f4cc1f4aa340059e19cdfdc544`
+  - MIME/type/size: `video/mp4`, `2841216` bytes.
+  - archive item:
+    `history-generated-artifact:gemini:auracall-gemini-pro:8e8e58b57ae544ea:gemini-artifact_8e8e58b57ae544ea_1_0`
+  - asset route:
+    `/v1/archive/items/b64/aGlzdG9yeS1nZW5lcmF0ZWQtYXJ0aWZhY3Q6Z2VtaW5pOmF1cmFjYWxsLWdlbWluaS1wcm86OGU4ZTU4YjU3YWU1NDRlYTpnZW1pbmktYXJ0aWZhY3RfOGU4ZTU4YjU3YWU1NDRlYV8xXzA/asset`
+
+Archive readback for `kind=generated_artifact` returned the same item with
+`fileAvailable=true`, `cacheKey=sha256:8ef8f814...`, and the same local path.
+Search readback returned an artifact row with `assetAvailability=available`,
+`materializationStatus=succeeded`, and
+`assetFreshness.materializationJobId=hmj_19f26f2121ff40a285642beb2bfc96b5`.
+
+No project/Gem target was used during the run, and there was no cycling through
+Google catalog Gems such as `chess-champ`, `brainstormer`, or `storybook`.
+
+Follow-up concerns from the run:
+
+- The API job dispatcher did not advance the created job until the persisted
+  job was run directly through the compiled materialization service. This
+  needs a narrow dispatcher/background-work audit before trusting queued
+  history materialization as an unattended operator path.
+- Gemini conversation catalog readback still includes malformed
+  `accounts.google.com/ServiceLogin` rows and static app routes. Candidate
+  selection must filter those until a catalog-cleanup slice removes them at
+  source.
+- Successful history materialization is visible in archive/search readback,
+  but the live-follow conversation rollup can still use deferred-inventory
+  language for cached conversation rows. The next slice should reconcile
+  materialization freshness back into conversation-level account-mirror
+  readback.

@@ -17554,3 +17554,12 @@ browser-stage lifecycle observability, not transcript truncation.
   fresh project manifest as authoritative; keep the retention merge for
   conversations, artifacts, files, and media where detail inventory can be
   intentionally partial.
+
+- 2026-05-31: Gemini full retrieval needs three separate proof surfaces before
+  broad catch-up can be trusted. A selected conversation can refresh routeably
+  and materialize a checksum-bearing artifact while API-created
+  history-materialization jobs still require dispatcher pickup, conversation
+  catalog readback still contains malformed Google sign-in/static app rows, and
+  live-follow conversation rollups still use deferred-inventory language. Treat
+  archive/search materialization freshness, queued-job execution, and
+  conversation-catalog hygiene as separate gates.
