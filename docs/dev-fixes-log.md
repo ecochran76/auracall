@@ -17545,3 +17545,12 @@ browser-stage lifecycle observability, not transcript truncation.
   before returning a Gemini project; row action buttons and page section text
   are not reliable because Gemini can render shared catalog and `My Gems`
   content under common ancestors.
+
+- 2026-05-31: Account-mirror project manifests must be pruned after complete
+  project scans. The Gemini editability fix stopped live discovery from
+  returning Google catalog Gems, but live follow still retained stale cached
+  project rows because refresh catalog merging always merged projects by id.
+  When project discovery succeeds and `truncated.projects` is false, treat the
+  fresh project manifest as authoritative; keep the retention merge for
+  conversations, artifacts, files, and media where detail inventory can be
+  intentionally partial.

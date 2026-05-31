@@ -35335,3 +35335,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     returned `[]`; the Google-provided `chess-champ`, `brainstormer`,
     `storybook`, and other catalog Gems were no longer returned as project
     targets.
+
+## Turn 328 | 2026-05-31
+
+- Goal: validate bounded Gemini live follow after the editable-Gem discovery
+  fix and close the stale-cache gap found by that validation.
+- Finding:
+  - bounded full-sweep live follow completed one metadata pass and queued
+    history materialization job `hmj_b54ef2af39384caaa7748b9a0871b8bc`.
+  - the pass still reported 12 Gemini projects retained from the account-mirror
+    cache; catalog readback showed stale Google Gem rows including
+    `chess-champ`, `brainstormer`, and `storybook`.
+- Change:
+  - account-mirror refresh merging now replaces project manifests after a
+    successful non-truncated project scan instead of always merging projects by
+    id.
+  - conversation, artifact, file, and media manifest merging remains
+    retention-based because those inventories can be intentionally partial.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts --maxWorkers 1 -t "project manifest|Gemini rows|catalog"`
+  - `pnpm run typecheck`
+  - `pnpm exec biome lint src/accountMirror/refreshService.ts tests/accountMirror/refreshService.test.ts README.md docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `pnpm run build && pnpm run install:user-runtime-service && systemctl --user restart auracall-api.service && systemctl --user is-active auracall-api.service`
+    returned `active`.
+  - active Gemini live-follow operation
+    `acctmirror_completion_3c4a84b7-15b2-4db8-8814-b83164302580` completed a
+    post-install refresh `acctmirror_6e828545-8873-4d62-acfb-cf17bd708197`
+    with `metadataCounts.projects=0`, `retainedFromCache.projects=0`, and
+    `remainingDetailSurfaces.projects=0`.
+  - direct catalog readback for
+    `/v1/account-mirrors/catalog?provider=gemini&runtimeProfile=auracall-gemini-pro&kind=projects`
+    returned `projectManifestCount=0` and `projectIds=[]`.

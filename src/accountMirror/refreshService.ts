@@ -929,8 +929,11 @@ async function mergeCollectionWithPersistedCatalog(input: {
 			retainedCounts: zeroMetadataCounts(),
 		});
 	}
+	const projects = input.collection.evidence.truncated.projects === true
+		? mergeById(existing.projects, input.collection.manifests.projects)
+		: [...input.collection.manifests.projects];
 	const manifests = {
-		projects: mergeById(existing.projects, input.collection.manifests.projects),
+		projects,
 		conversations: mergeConversationsByObservedOrder(
 			existing.conversations,
 			input.collection.manifests.conversations,

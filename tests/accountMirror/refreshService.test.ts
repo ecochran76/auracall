@@ -577,6 +577,134 @@ describe("account mirror refresh service", () => {
 		});
 	});
 
+	test("replaces stale project manifest rows after a complete project scan", async () => {
+		const geminiConfig = {
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "gemini",
+					services: {
+						gemini: {
+							identity: { email: "ecochran76@gmail.com" },
+						},
+					},
+				},
+			},
+		};
+		const evidence = {
+			identitySource: "google-account-label",
+			projectSampleIds: [],
+			conversationSampleIds: [],
+			attachmentInventory: {
+				nextProjectIndex: 0,
+				nextConversationIndex: 0,
+				detailReadLimit: 4,
+				scannedProjects: 0,
+				scannedConversations: 0,
+				yielded: false,
+				yieldCause: null,
+			},
+			projectConversations: {
+				nextProjectIndex: 0,
+				readLimit: 0,
+				scannedProjects: 0,
+				yielded: false,
+			},
+			truncated: {
+				projects: false,
+				conversations: false,
+				artifacts: false,
+			},
+		};
+		const metadataCollector = {
+			collect: vi.fn(async () => ({
+				detectedIdentityKey: "ecochran76@gmail.com",
+				detectedAccountLevel: null,
+				metadataCounts: {
+					projects: 0,
+					conversations: 0,
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+				manifests: {
+					projects: [],
+					conversations: [],
+					artifacts: [],
+					files: [],
+					media: [],
+				},
+				evidence,
+			})),
+		};
+		const persistence: AccountMirrorPersistence = {
+			writeSnapshot: vi.fn(async () => {}),
+			writeState: vi.fn(async () => {}),
+			readCatalog: vi.fn(async () => ({
+				projects: [
+					{
+						id: "chess-champ",
+						name: "Chess champ",
+						provider: "gemini" as const,
+						url: "https://gemini.google.com/gem/chess-champ",
+					},
+					{
+						id: "brainstormer",
+						name: "Brainstormer",
+						provider: "gemini" as const,
+						url: "https://gemini.google.com/gem/brainstormer",
+					},
+				],
+				conversations: [
+					{ id: "gem_conv_1", title: "Cached image chat", provider: "gemini" as const },
+				],
+				artifacts: [],
+				files: [],
+				media: [],
+			})),
+			readState: vi.fn(async () => null),
+			readConversationContext: vi.fn(async () => null),
+		};
+		const service = createAccountMirrorRefreshService({
+			config: geminiConfig,
+			dispatcher: createBrowserOperationDispatcher({
+				now: () => new Date("2026-05-31T00:50:00.000Z"),
+			}),
+			metadataCollector,
+			persistence,
+			now: () => new Date("2026-05-31T00:50:00.000Z"),
+			generateRequestId: () => "acctmirror_project_prune",
+		});
+
+		const result = await service.requestRefresh({
+			provider: "gemini",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+		});
+
+		expect(result.metadataCounts).toMatchObject({
+			projects: 0,
+			conversations: 1,
+		});
+		expect(result.metadataEvidence).toMatchObject({
+			countEvidence: {
+				observedThisPass: expect.objectContaining({ projects: 0 }),
+				retainedFromCache: expect.objectContaining({ projects: 0, conversations: 1 }),
+				mergedTotal: expect.objectContaining({ projects: 0, conversations: 1 }),
+			},
+		});
+		expect(persistence.writeSnapshot).toHaveBeenCalledWith(
+			expect.objectContaining({
+				manifests: expect.objectContaining({
+					projects: [],
+					conversations: [
+						{ id: "gem_conv_1", title: "Cached image chat", provider: "gemini" },
+					],
+				}),
+			}),
+		);
+	});
+
 	test("preserves newly observed conversation order when merging existing cached rows", async () => {
 		const metadataCollector = {
 			collect: vi.fn(async () => ({
