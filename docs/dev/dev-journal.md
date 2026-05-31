@@ -35427,3 +35427,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `/home/ecochran76/.local/bin/auracall api history-materialization-jobs --provider gemini --runtime-profile auracall-gemini-pro --json --timeout-ms 10000`
   - `/home/ecochran76/.local/bin/auracall api archive --provider gemini --runtime-profile auracall-gemini-pro --kind generated_artifact --limit 10 --json --timeout-ms 10000`
   - `/home/ecochran76/.local/bin/auracall api search --provider gemini --runtime-profile auracall-gemini-pro --limit 10 --json --timeout-ms 10000`
+
+## Turn 331 | 2026-05-31
+
+- Goal: write the next bounded plan for Gemini materialization health.
+- Change:
+  - added
+    `docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md`
+    as the active P01 plan.
+  - updated `ROADMAP.md` so Plan 0088 is the current work after Plan 0087.
+  - updated `RUNBOOK.md` with the Plan 0088 planning checkpoint.
+- Scope:
+  - queued history-materialization jobs must advance through the normal
+    API/runtime background path without direct service invocation.
+  - Gemini conversation candidates must reject sign-in redirect rows, static
+    app routes, download pages, and malformed ids before browser work starts.
+  - conversation-level rollups must consume archive/search materialization
+    freshness so materialized conversations do not remain deferred-only in
+    operator readback.
+  - installed proof stays bounded to one to three Gemini conversations.
+- Verification:
+  - `pnpm run plans:audit -- --keep 88`
+  - `git diff --check`

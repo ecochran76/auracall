@@ -8049,3 +8049,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 87`
   - `git diff --check`
+
+## Turn 218 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0088-2026-05-31-gemini-materialization-health.md`
+- Goal: plan the next bounded Gemini slice after Plan 0087 proved selected
+  conversation retrieval but exposed health gaps.
+- Current state:
+  - Gemini project/Gem discovery remains clean.
+  - selected conversation job `hmj_19f26f2121ff40a285642beb2bfc96b5`
+    materialized one checksum-bearing local MP4 artifact.
+  - API-created history-materialization jobs can remain queued until manually
+    run through the compiled service.
+  - Gemini catalog readback can include malformed Google sign-in/static app
+    rows as conversations.
+  - archive/search materialization freshness is ahead of conversation-level
+    live-follow rollup language.
+- Plan:
+  - fix queued job pickup through the normal API/runtime background path.
+  - filter malformed Gemini conversation candidates before provider browser
+    work starts.
+  - reconcile materialized archive/search freshness into conversation-level
+    account-mirror readback.
+  - prove the repaired path with one bounded installed Gemini job.
+- Verification target:
+  - `pnpm run plans:audit -- --keep 88`
+  - `git diff --check`
