@@ -35550,3 +35550,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `sha256sum` for both materialized files
   - `pnpm run plans:audit -- --keep 89`
   - `git diff --check`
+
+## Turn 335 | 2026-05-31
+
+- Goal: open a narrow plan for Gemini uploaded-file cached salvage.
+- Change:
+  - added
+    `docs/dev/plans/0090-2026-05-31-gemini-cached-uploaded-file-salvage.md`
+    as the active P01 plan.
+  - updated `ROADMAP.md` so Plan 0090 is current work after Plan 0089.
+  - updated `RUNBOOK.md` with the Plan 0090 planning checkpoint.
+- Scope:
+  - fix the `AGENTS.md` false-negative from Plan 0089 without running another
+    catch-up batch.
+  - trust existing local cache only when current provider detail and cache
+    evidence agree on provider, identity, conversation id, provider file id,
+    file name, and size.
+  - emit explicit cached-salvage archive/search materialization metadata.
+  - prove through installed API after code changes.
+- Verification:
+  - `pnpm run plans:audit -- --keep 90`
+  - `git diff --check`

@@ -8187,3 +8187,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `sha256sum` for both materialized files
   - `pnpm run plans:audit -- --keep 89`
   - `git diff --check`
+
+## Turn 222 | 2026-05-31
+
+- Active plan:
+  `docs/dev/plans/0090-2026-05-31-gemini-cached-uploaded-file-salvage.md`
+- Goal: open the narrow Gemini cached uploaded-file salvage plan after
+  Plan 0089 exposed the `AGENTS.md` false-negative.
+- Current state:
+  - Plan 0089 job `hmj_df40643c30aa45a3b29651e11d379046` failed
+    `AGENTS.md` because Gemini exposed no download URL or text-preview
+    surface.
+  - current provider detail still identified the attachment by provider file
+    id, name, MIME type, and size.
+  - a matching local cached file exists for the same conversation/provider file
+    id with SHA-256
+    `913744155dc7310f2072ca4d2989f53dbed12e0b757e1d2e0c868b641142ede2`.
+- Plan:
+  - define strict cache-salvage trust preconditions.
+  - implement Gemini uploaded-file cached salvage with recomputed size/checksum
+    and explicit cached materialization metadata.
+  - keep failures terminal for missing, mismatched, or unverified cache files.
+  - prove `AGENTS.md` through the installed API path without broad catch-up.
+- Verification target:
+  - `pnpm run plans:audit -- --keep 90`
+  - `git diff --check`

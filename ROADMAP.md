@@ -4,10 +4,12 @@
 
 ### Current Execution Board
 
-Status: current plan selection needed
+Status: active bounded plan
 Lane: P01
 
 Current Priority Snapshot:
+- Active plan:
+  [docs/dev/plans/0090-2026-05-31-gemini-cached-uploaded-file-salvage.md](docs/dev/plans/0090-2026-05-31-gemini-cached-uploaded-file-salvage.md)
 - Latest completed plan:
   [docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md](docs/dev/plans/0089-2026-05-31-gemini-bounded-artifact-catch-up.md)
 - Previous completed plan:
@@ -30,9 +32,9 @@ Current Priority Snapshot:
   `transcribe-audio` first-pass/App Intelligence workflows.
 - Completed console sequence: Agents, Providers, Projects, Overview/Health,
   read-only Runs workbench, and first state-gated Runs controls.
-- Current work: Plan 0089 is closed and the next active plan has not yet been
-  selected. Plan 0087 closed the first Gemini conversation-level retrieval
-  proof: installed readback still shows
+- Current work: Plan 0090 is open for Gemini cached uploaded-file salvage.
+  Plan 0087 closed the first Gemini conversation-level retrieval proof:
+  installed readback still shows
   `gemini/auracall-gemini-pro` project manifests at `0`, with
   `retainedFromCache.projects=0` and no stale Google catalog Gems. The bounded
   selected-conversation run `hmj_19f26f2121ff40a285642beb2bfc96b5`
@@ -62,6 +64,12 @@ Current Priority Snapshot:
   capped selected-conversation batch, not broad Gemini catch-up, because
   recovery readback is still target-level `needs_detail_refresh` while the
   active Gemini live-follow completion remains metadata-only/deferred.
+  Plan 0090 narrows the next step to the `AGENTS.md` false-negative from
+  Plan 0089: Gemini identified the uploaded text file by stable provider id,
+  name, MIME type, and size, and a matching local cache file exists with
+  checksum evidence, but the live surface no longer exposed a download URL or
+  text preview. The plan should add an auditable cached-file salvage path
+  before running another catch-up batch.
 - Deferred AuraCall lanes: broad retry/launch, Search/archive, and API Access
   remain future bounded plans unless explicitly selected.
 
@@ -195,6 +203,11 @@ Current State:
     after baseline readback. The recommended next Gemini gate is a repeat
     capped selected-conversation batch with `maxItems=3` to `5`, using
     routeable/stale or missing-assets rows with cached asset signals.
+  - Gemini cached uploaded-file salvage: active in
+    [docs/dev/plans/0090-2026-05-31-gemini-cached-uploaded-file-salvage.md](docs/dev/plans/0090-2026-05-31-gemini-cached-uploaded-file-salvage.md).
+    This slice should fix the `AGENTS.md` false-negative by trusting existing
+    local cache only when current provider detail and cache evidence agree on
+    stable identity fields.
   - operator audit parity: protected `/v1/*` materialization routes can block
     direct read-only inspection from local curl, so the next operator-facing
     plan should confirm CLI/MCP/console parity for materialization and
