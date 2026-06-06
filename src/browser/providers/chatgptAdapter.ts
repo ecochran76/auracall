@@ -390,6 +390,10 @@ type ChatgptConversationFileProbe = {
   tileIndex?: number | null;
   name?: string | null;
   label?: string | null;
+  providerFileId?: string | null;
+  mimeType?: string | null;
+  downloadable?: string | null;
+  previewable?: string | null;
 };
 
 type ChatgptConversationDownloadButtonProbe = {
@@ -409,7 +413,17 @@ type ChatgptLibraryItemProbe = {
   text?: string | null;
   testId?: string | null;
   ariaLabel?: string | null;
+  providerFileId?: string | null;
+  libraryFileId?: string | null;
 };
+
+type ChatgptLibraryRouteKind =
+  | 'library_file_detail'
+  | 'library_artifact_detail'
+  | 'library_canvas_detail'
+  | 'conversation_detail'
+  | 'external_or_inline_asset'
+  | 'unknown';
 
 type ChatgptConversationRowTagCandidateProbe = {
   inProjectPanel?: boolean | null;
@@ -1184,6 +1198,22 @@ function resolveChatgptLibraryIdentity(
   probe: ChatgptLibraryItemProbe,
   title: string,
 ): { uuid: string; identity: string; source: string } | null {
+  const providerFileId = normalizeUiText(probe.providerFileId);
+  if (providerFileId) {
+    return {
+      uuid: stableUuidFromText(`chatgpt-library-provider-file:${providerFileId}`),
+      identity: providerFileId,
+      source: 'provider-file-id',
+    };
+  }
+  const libraryFileId = normalizeUiText(probe.libraryFileId);
+  if (libraryFileId) {
+    return {
+      uuid: stableUuidFromText(`chatgpt-library-file:${libraryFileId}`),
+      identity: libraryFileId,
+      source: 'library-file-id',
+    };
+  }
   const candidates = [
     probe.href,
     probe.src,
@@ -1258,6 +1288,26 @@ function inferChatgptLibraryArtifactKind(
   if (/\b(image|png|jpe?g|webp|gif|avif)\b/.test(haystack)) return 'image';
   if (/\b(download|file|pdf|docx?|pptx?|zip|sandbox)\b/.test(haystack)) return 'download';
   return 'document';
+}
+
+function classifyChatgptLibraryRouteKind(value: string | null | undefined): ChatgptLibraryRouteKind {
+  const normalized = normalizeUiText(value);
+  if (!normalized) return 'unknown';
+  if (normalized.startsWith('blob:') || normalized.startsWith('data:')) return 'external_or_inline_asset';
+  try {
+    const parsed = new URL(normalized);
+    const pathname = parsed.pathname.toLowerCase();
+    if (pathname.startsWith('/library/files/')) return 'library_file_detail';
+    if (pathname.startsWith('/library/artifacts/')) return 'library_artifact_detail';
+    if (pathname.startsWith('/library/canvas/')) return 'library_canvas_detail';
+    if (pathname.startsWith('/c/')) return 'conversation_detail';
+    if (parsed.hostname && parsed.hostname !== 'chatgpt.com' && !parsed.hostname.endsWith('.chatgpt.com')) {
+      return 'external_or_inline_asset';
+    }
+  } catch {
+    return 'unknown';
+  }
+  return 'unknown';
 }
 
 export function matchesChatgptDeleteConfirmationProbe(
@@ -1541,6 +1591,42 @@ function listChatgptChromeTargets(host: string, port: number): Promise<Awaited<R
   );
 }
 
+export type ChatgptChromeTarget = Awaited<ReturnType<typeof CDP.List>>[number];
+
+function normalizeChatgptFrameUrl(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    parsed.hash = '';
+    return parsed.href;
+  } catch {
+    return trimmed;
+  }
+}
+
+function isChatgptDeepResearchTarget(target: ChatgptChromeTarget): boolean {
+  if (target.type !== 'iframe') return false;
+  const corpus = normalizeUiText(`${target.title ?? ''} ${target.url ?? ''}`).toLowerCase();
+  return corpus.includes('deep_research') || corpus.includes('deep-research') || corpus.includes('deep research');
+}
+
+export function filterChatgptDeepResearchTargets(
+  targets: ChatgptChromeTarget[],
+  allowedFrameUrls: Set<string>,
+  options: { expectedTargetId?: string | null } = {},
+): ChatgptChromeTarget[] {
+  const expectedTargetId = normalizeUiText(options.expectedTargetId ?? undefined);
+  return targets.filter((target) => {
+    if (!isChatgptDeepResearchTarget(target)) return false;
+    const targetId = resolveChatgptTargetId(target);
+    if (expectedTargetId && targetId !== expectedTargetId) return false;
+    const normalizedUrl = normalizeChatgptFrameUrl(target.url ?? null);
+    return Boolean(normalizedUrl && allowedFrameUrls.has(normalizedUrl));
+  });
+}
+
 export function extractChatgptProjectIdFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
@@ -1758,15 +1844,25 @@ export function normalizeChatgptConversationFileProbes(
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
     const label = normalizeUiText(probe.label);
+    const providerFileId = normalizeUiText(probe.providerFileId);
+    const mimeType = normalizeUiText(probe.mimeType);
+    const downloadable = normalizeUiText(probe.downloadable);
+    const previewable = normalizeUiText(probe.previewable);
     files.push({
       id: `${conversationId}:${turnKey}:${tileIndex}:${name}`,
       name,
       provider: 'chatgpt',
       source: 'conversation',
+      ...(mimeType ? { mimeType } : {}),
+      ...(providerFileId ? { remoteUrl: `chatgpt://file/${encodeURIComponent(providerFileId)}` } : {}),
       metadata: {
         ...(label ? { label } : {}),
         ...(normalizeUiText(probe.turnId) ? { turnId: normalizeUiText(probe.turnId) } : {}),
         ...(normalizeUiText(probe.messageId) ? { messageId: normalizeUiText(probe.messageId) } : {}),
+        ...(providerFileId ? { providerFileId } : {}),
+        ...(downloadable ? { downloadable } : {}),
+        ...(previewable ? { previewable } : {}),
+        ...(providerFileId ? { materializationSurface: 'chatgpt-file-tile-default-action' } : {}),
       },
     });
   }
@@ -1785,7 +1881,11 @@ export function normalizeChatgptLibraryItemProbes(
       normalizeLibraryTitle(probe.text);
     const href = normalizeUiText(probe.href);
     const src = normalizeUiText(probe.src);
-    const uri = href || src || undefined;
+    const providerFileId = normalizeUiText(probe.providerFileId);
+    const libraryFileId = normalizeUiText(probe.libraryFileId);
+    const libraryRouteUrl = href || (libraryFileId ? `https://chatgpt.com/library/files/${encodeURIComponent(libraryFileId)}` : '');
+    const uri = providerFileId ? `chatgpt://file/${encodeURIComponent(providerFileId)}` : libraryRouteUrl || src || undefined;
+    const routeKind = classifyChatgptLibraryRouteKind(libraryRouteUrl || uri);
     const identity = resolveChatgptLibraryIdentity(probe, title);
     if (isChatgptLibraryChromeProbe(probe, title)) continue;
     if (!title || !identity) continue;
@@ -1794,6 +1894,11 @@ export function normalizeChatgptLibraryItemProbes(
       source: 'chatgpt-library',
       libraryIdentity: identity.identity,
       libraryIdentitySource: identity.source,
+      libraryRouteKind: routeKind,
+      ...(libraryRouteUrl ? { libraryRouteUrl } : {}),
+      ...(providerFileId ? { providerFileId } : {}),
+      ...(providerFileId ? { materializationSurface: 'chatgpt-library-file-row-click' } : {}),
+      ...(libraryFileId ? { libraryFileId } : {}),
       artifactId: `chatgpt-library:${identity.uuid}`,
       artifactKind: kind,
       ...(normalizeUiText(probe.subtitle) ? { subtitle: normalizeUiText(probe.subtitle) } : {}),
@@ -6609,23 +6714,46 @@ function normalizeChatgptDeepResearchReportText(value: string | null | undefined
     .trim();
 }
 
+async function readVisibleChatgptDeepResearchFrameUrlsWithClient(client: ChromeClient): Promise<Set<string>> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const style = node.ownerDocument.defaultView.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      return Array.from(document.querySelectorAll('iframe'))
+        .filter(isVisible)
+        .map((node) => normalize(node.src || node.getAttribute('src') || node.getAttribute('title') || ''))
+        .filter((value) => /deep[_ -]?research/i.test(value));
+    })()`,
+    returnByValue: true,
+  });
+  const values = Array.isArray(result?.value) ? result.value : [];
+  return new Set(
+    values
+      .map((value) => normalizeChatgptFrameUrl(typeof value === 'string' ? value : null))
+      .filter((value): value is string => Boolean(value)),
+  );
+}
+
 async function readVisibleChatgptDeepResearchArtifactsFromTargets(
   conversationId: string,
   targetContext?: { host: string; port: number; targetId?: string | null },
   messageIndex?: number,
+  allowedFrameUrls: Set<string> = new Set(),
 ): Promise<ConversationArtifact[]> {
-  if (!targetContext?.port) {
+  if (!targetContext?.port || allowedFrameUrls.size === 0) {
     return [];
   }
   const deadline = Date.now() + 15_000;
   const probes: ChatgptDeepResearchFrameProbe[] = [];
   while (Date.now() < deadline && probes.length === 0) {
     const targets = await CDP.List({ host: targetContext.host, port: targetContext.port }).catch(() => []);
-    const candidates = targets.filter((target) => {
-      if (target.type !== 'iframe') return false;
-      const corpus = normalizeUiText(`${target.title ?? ''} ${target.url ?? ''}`).toLowerCase();
-      return corpus.includes('deep_research') || corpus.includes('deep-research') || corpus.includes('deep research');
-    });
+    const candidates = filterChatgptDeepResearchTargets(targets, allowedFrameUrls);
     for (const target of candidates) {
       const targetId = resolveChatgptTargetId(target);
       if (!targetId) continue;
@@ -6843,10 +6971,12 @@ async function readChatgptConversationContextWithClient(
     if (!payload) {
       payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId, options).catch(() => null);
     }
+    const deepResearchFrameUrls = await readVisibleChatgptDeepResearchFrameUrlsWithClient(client).catch(() => new Set<string>());
     const deepResearchArtifacts = await readVisibleChatgptDeepResearchArtifactsFromTargets(
       conversationId,
       targetContext,
       messages.length,
+      deepResearchFrameUrls,
     );
     const normalizedMessages = messages.map(({ role, text }) => ({ role, text }));
     for (const artifact of deepResearchArtifacts) {
@@ -7109,6 +7239,36 @@ async function readVisibleChatgptConversationFilesWithClient(
         const unique = Array.from(new Set(values));
         return unique.find((value) => value && value !== name && !value.includes(name)) || '';
       };
+      const readReactFileTileMetadata = (tile) => {
+        const reactKey = Object.getOwnPropertyNames(tile)
+          .find((key) => key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$'));
+        let fiber = reactKey ? tile[reactKey] : null;
+        for (let depth = 0; fiber && depth < 8; depth += 1) {
+          const candidates = [fiber.memoizedProps, fiber.pendingProps].filter(Boolean);
+          for (const props of candidates) {
+            if (!props || typeof props !== 'object') continue;
+            const providerFileId = normalize(props.fileId || props.file_id || '');
+            const fileName = normalize(props.file || props.fileName || props.name || '');
+            if (!providerFileId && !fileName) continue;
+            const capabilities = props.capabilities && typeof props.capabilities === 'object'
+              ? props.capabilities
+              : {};
+            return {
+              providerFileId: providerFileId || null,
+              fileName: fileName || null,
+              mimeType: normalize(props.mimeType || props.mime_type || '') || null,
+              downloadable: normalize(capabilities.downloadable || props.downloadable || '') || null,
+              previewable: normalize(
+                typeof capabilities.previewable === 'string'
+                  ? capabilities.previewable
+                  : (props.previewable || ''),
+              ) || null,
+            };
+          }
+          fiber = fiber.return;
+        }
+        return null;
+      };
       const collect = () => {
         const items = [];
         const nodes = Array.from(
@@ -7130,12 +7290,17 @@ async function readVisibleChatgptConversationFilesWithClient(
               '',
             );
             if (!name) return;
+            const reactMetadata = readReactFileTileMetadata(tile);
             items.push({
               turnId: turnId || null,
               messageId: messageId || null,
               tileIndex,
-              name,
+              name: reactMetadata?.fileName || name,
               label: extractLabel(tile, name) || null,
+              providerFileId: reactMetadata?.providerFileId || null,
+              mimeType: reactMetadata?.mimeType || null,
+              downloadable: reactMetadata?.downloadable || null,
+              previewable: reactMetadata?.previewable || null,
             });
           });
         });
@@ -7185,6 +7350,28 @@ async function readChatgptLibraryItemsWithClient(
           .replace(/\\s+/g, ' ')
           .trim();
       };
+      const extractId = (value, prefix) => {
+        const match = String(value || '').match(new RegExp('\\\\b' + prefix + '[A-Za-z0-9_]+\\\\b'));
+        return match ? match[0] : '';
+      };
+      const readLibraryIds = (node, card) => {
+        const haystack = [
+          node.getAttribute?.('data-testid') || '',
+          node.getAttribute?.('aria-label') || '',
+          card.getAttribute?.('data-testid') || '',
+          card.getAttribute?.('aria-label') || '',
+          ...Array.from(card.querySelectorAll?.('[data-testid], [aria-label]') || [])
+            .slice(0, 20)
+            .flatMap((child) => [
+              child.getAttribute?.('data-testid') || '',
+              child.getAttribute?.('aria-label') || '',
+            ]),
+        ].join(' ');
+        return {
+          providerFileId: extractId(haystack, 'file_') || null,
+          libraryFileId: extractId(haystack, 'libfile_') || null,
+        };
+      };
       const collect = () => {
         const candidates = [];
         const nodes = Array.from(document.querySelectorAll([
@@ -7198,7 +7385,7 @@ async function readChatgptLibraryItemsWithClient(
           'img[src]',
         ].join(','))).filter(isVisible);
         for (const node of nodes) {
-          const card = node.closest?.('article, li, [role="listitem"], [data-testid*="card" i], [data-testid*="tile" i], [class*="card" i], [class*="tile" i]') || node;
+          const card = node.closest?.('tr, [role="row"], article, li, [role="listitem"], [data-testid*="row" i], [data-testid*="card" i], [data-testid*="tile" i], [class*="row" i], [class*="card" i], [class*="tile" i]') || node;
           const href = node.href || node.getAttribute?.('href') || card.querySelector?.('a[href]')?.href || '';
           const image = node.matches?.('img[src]') ? node : card.querySelector?.('img[src]');
           const src = image?.src || '';
@@ -7206,6 +7393,7 @@ async function readChatgptLibraryItemsWithClient(
           const text = normalize(card.textContent || node.textContent || '');
           const testId = normalize(node.getAttribute?.('data-testid') || card.getAttribute?.('data-testid') || '');
           const ariaLabel = normalize(node.getAttribute?.('aria-label') || card.getAttribute?.('aria-label') || '');
+          const ids = readLibraryIds(node, card);
           const signal = [href, src, title, text, testId, ariaLabel].join(' ').toLowerCase();
           if (!title && !href && !src) continue;
           if (!/(library|file|artifact|download|sandbox|image|canvas|spreadsheet|\\.pdf|\\.docx?|\\.xlsx?|\\.csv|\\.png|\\.jpe?g|\\.webp|\\.zip)/i.test(signal)) {
@@ -7220,11 +7408,13 @@ async function readChatgptLibraryItemsWithClient(
             text: text || null,
             testId: testId || null,
             ariaLabel: ariaLabel || null,
+            providerFileId: ids.providerFileId,
+            libraryFileId: ids.libraryFileId,
           });
         }
         const seen = new Set();
         return candidates.filter((item) => {
-          const key = [item.href, item.src, item.title, item.text].filter(Boolean).join('|').toLowerCase();
+          const key = [item.providerFileId, item.libraryFileId, item.href, item.src, item.title, item.text].filter(Boolean).join('|').toLowerCase();
           if (!key || seen.has(key)) return false;
           seen.add(key);
           return true;
@@ -7707,6 +7897,507 @@ async function fetchChatgptBinaryWithClient(
   };
 }
 
+function parseChatgptConversationFileRefName(conversationId: string, fileId: string): string | null {
+  const prefix = `${conversationId}:`;
+  if (!fileId.startsWith(prefix)) return null;
+  const rest = fileId.slice(prefix.length);
+  const parts = rest.split(':');
+  if (parts.length < 3) return null;
+  return normalizeUiText(parts.slice(2).join(':')) || null;
+}
+
+function resolveChatgptConversationProviderFileId(fileId: string, file?: FileRef): string | null {
+  const metadata = file?.metadata && typeof file.metadata === 'object' ? file.metadata : null;
+  const metadataFileId =
+    metadata && typeof metadata.providerFileId === 'string' ? normalizeUiText(metadata.providerFileId) : '';
+  if (metadataFileId) return metadataFileId;
+  const remoteUrl = normalizeUiText(file?.remoteUrl);
+  const remoteFileId = extractChatgptArtifactFileId(remoteUrl);
+  if (remoteFileId) return remoteFileId;
+  const direct = fileId.match(/\bfile_[A-Za-z0-9_]+\b/)?.[0];
+  return direct ? normalizeUiText(direct) : null;
+}
+
+async function downloadChatgptConversationFileWithClient(
+  client: ChromeClient,
+  conversationId: string,
+  fileId: string,
+  destPath: string,
+  projectId?: string | null,
+  debugContext?: ChatgptRecoveryDebugContext,
+  options?: BrowserProviderListOptions,
+  file?: FileRef,
+): Promise<void> {
+  const targetProviderFileId = resolveChatgptConversationProviderFileId(fileId, file);
+  const targetName = normalizeUiText(file?.name) || parseChatgptConversationFileRefName(conversationId, fileId);
+  if (!targetProviderFileId && !targetName) {
+    throw new Error(`ChatGPT conversation file ${fileId} lacks a provider file id or visible file name.`);
+  }
+  const normalizedProjectId = normalizeChatgptProjectId(projectId);
+  const captured = await withChatgptBlockingSurfaceRecovery(
+    client,
+    `downloadChatgptConversationFile:${conversationId}:${fileId}`,
+    async () => {
+      await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId, options);
+      const result = await client.Runtime.evaluate({
+        expression: `(async () => {
+          const targetProviderFileId = ${JSON.stringify(targetProviderFileId)};
+          const targetName = ${JSON.stringify(targetName)};
+          const conversationId = ${JSON.stringify(conversationId)};
+          const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const readReactFileTileMetadata = (tile) => {
+            const reactKey = Object.getOwnPropertyNames(tile)
+              .find((key) => key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$'));
+            let fiber = reactKey ? tile[reactKey] : null;
+            for (let depth = 0; fiber && depth < 8; depth += 1) {
+              const candidates = [fiber.memoizedProps, fiber.pendingProps].filter(Boolean);
+              for (const props of candidates) {
+                if (!props || typeof props !== 'object') continue;
+                const providerFileId = normalize(props.fileId || props.file_id || '');
+                const fileName = normalize(props.file || props.fileName || props.name || '');
+                if (providerFileId || fileName) {
+                  return {
+                    providerFileId: providerFileId || null,
+                    fileName: fileName || null,
+                    mimeType: normalize(props.mimeType || props.mime_type || '') || null,
+                  };
+                }
+              }
+              fiber = fiber.return;
+            }
+            return null;
+          };
+          const fileTiles = () => Array.from(
+            document.querySelectorAll(${JSON.stringify(`${CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR} [role="group"][aria-label]`)})
+          ).map((tile) => ({ tile, metadata: readReactFileTileMetadata(tile) }));
+          const findMatch = () => fileTiles().find(({ tile, metadata }) => {
+            const aria = normalize(tile.getAttribute('aria-label'));
+            if (targetProviderFileId && metadata?.providerFileId === targetProviderFileId) return true;
+            return Boolean(targetName && (aria === targetName || metadata?.fileName === targetName));
+          });
+          let match = findMatch();
+          if (!match) {
+            const positions = [0, Math.floor(document.documentElement.scrollHeight * 0.25), Math.floor(document.documentElement.scrollHeight * 0.5), Math.floor(document.documentElement.scrollHeight * 0.75), document.documentElement.scrollHeight];
+            for (const position of positions) {
+              window.scrollTo({ top: position, behavior: 'instant' });
+              await sleep(500);
+              match = findMatch();
+              if (match) break;
+            }
+          }
+          if (!match) {
+            return { ok: false, reason: 'tile_not_found' };
+          }
+          const target = match.tile.querySelector('button[aria-label], button, [role="button"]');
+          if (!target || typeof target.click !== 'function') {
+            return { ok: false, reason: 'tile_button_not_found' };
+          }
+          const originalFetch = window.__auracallOriginalFileFetch || window.fetch.bind(window);
+          window.__auracallOriginalFileFetch = originalFetch;
+          let captured = null;
+          let captureError = null;
+          const capturePromises = [];
+          const matchesTargetUrl = (url) => {
+            const text = String(url || '');
+            if (targetProviderFileId && text.includes(targetProviderFileId)) return true;
+            return /\\/backend-api\\/files\\/download\\//.test(text) || /\\/backend-api\\/estuary\\/content/.test(text);
+          };
+          window.fetch = (...args) => {
+            const input = args[0];
+            const url = typeof input === 'string' ? input : input?.url;
+            const responsePromise = originalFetch(...args);
+            if (matchesTargetUrl(url)) {
+              capturePromises.push(responsePromise.then(async (response) => {
+                if (captured) return;
+                const originalUrl = String(url || '');
+                if (/\\/backend-api\\/files\\/[^/]+\\/simple\\b/.test(originalUrl)) return;
+                const clone = response.clone();
+                const contentType = clone.headers.get('content-type');
+                const bytes = new Uint8Array(await clone.arrayBuffer());
+                if (/application\\/json/i.test(contentType || '')) {
+                  let json = null;
+                  try {
+                    const text = new TextDecoder().decode(bytes);
+                    json = JSON.parse(text);
+                  } catch {
+                    json = null;
+                  }
+                  const downloadUrl = json && typeof json === 'object' && typeof json.download_url === 'string'
+                    ? json.download_url
+                    : null;
+                  if (!downloadUrl) return;
+                  const followResponse = await originalFetch(downloadUrl, { credentials: 'include' });
+                  const followClone = followResponse.clone();
+                  const followBytes = new Uint8Array(await followClone.arrayBuffer());
+                  let followBinary = '';
+                  const followChunkSize = 0x8000;
+                  for (let index = 0; index < followBytes.length; index += followChunkSize) {
+                    followBinary += String.fromCharCode(...followBytes.subarray(index, index + followChunkSize));
+                  }
+                  captured = {
+                    ok: followResponse.ok,
+                    status: followResponse.status,
+                    url: downloadUrl,
+                    contentType: followResponse.headers.get('content-type'),
+                    contentDisposition: followResponse.headers.get('content-disposition'),
+                    byteLength: followBytes.length,
+                    base64: btoa(followBinary),
+                    providerFileId: targetProviderFileId,
+                    fileName: match.metadata?.fileName || targetName || null,
+                    mimeType: match.metadata?.mimeType || null,
+                  };
+                  return;
+                }
+                let binary = '';
+                const chunkSize = 0x8000;
+                for (let index = 0; index < bytes.length; index += chunkSize) {
+                  binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+                }
+                captured = {
+                  ok: response.ok,
+                  status: response.status,
+                  url: originalUrl,
+                  contentType,
+                  contentDisposition: response.headers.get('content-disposition'),
+                  byteLength: bytes.length,
+                  base64: btoa(binary),
+                  providerFileId: targetProviderFileId,
+                  fileName: match.metadata?.fileName || targetName || null,
+                  mimeType: match.metadata?.mimeType || null,
+                };
+              }).catch((error) => {
+                captureError = error && typeof error === 'object' && 'message' in error ? error.message : String(error);
+              }));
+            }
+            return responsePromise;
+          };
+          try {
+            target.click();
+            const deadline = Date.now() + 20_000;
+            while (!captured && Date.now() < deadline) {
+              await Promise.allSettled(capturePromises);
+              if (captured) break;
+              await sleep(250);
+            }
+          } finally {
+            window.fetch = originalFetch;
+            for (const button of Array.from(document.querySelectorAll('[role="dialog"] button[aria-label="Close"], button[aria-label="Close"]'))) {
+              try { button.click(); } catch {}
+            }
+          }
+          if (!captured) {
+            return { ok: false, reason: captureError || 'download_response_not_captured' };
+          }
+          if (!captured.ok) {
+            return { ok: false, reason: 'download_response_not_ok', status: captured.status, url: captured.url };
+          }
+          if (!captured.base64 || captured.byteLength <= 0) {
+            return { ok: false, reason: 'download_response_empty', status: captured.status, url: captured.url };
+          }
+          return { ok: true, ...captured };
+        })()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      const value = isRecord(result.result?.value) ? result.result.value : null;
+      if (!value || value.ok !== true || typeof value.base64 !== 'string') {
+        const reason = typeof value?.reason === 'string' ? value.reason : 'unknown';
+        const status = typeof value?.status === 'number' ? ` (status ${value.status})` : '';
+        throw new Error(`ChatGPT conversation file fetch failed: ${reason}${status}`);
+      }
+      return value;
+    },
+    {
+      debugContext,
+      reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId, options),
+      providerOptions: options,
+    },
+  );
+  await fs.writeFile(destPath, Buffer.from(captured.base64 as string, 'base64'));
+}
+
+async function downloadChatgptAccountLibraryFileWithClient(
+  client: ChromeClient,
+  fileId: string,
+  destPath: string,
+  debugContext?: ChatgptRecoveryDebugContext,
+  options?: BrowserProviderListOptions,
+  file?: FileRef,
+): Promise<void> {
+  const targetProviderFileId = resolveChatgptConversationProviderFileId(fileId, file);
+  const targetName = normalizeUiText(file?.name);
+  if (!targetProviderFileId && !targetName) {
+    throw new Error(`ChatGPT account file ${fileId} lacks a provider file id or visible file name.`);
+  }
+  const captured = await withChatgptBlockingSurfaceRecovery(
+    client,
+    `downloadChatgptAccountLibraryFile:${fileId}`,
+    async () => {
+      await navigateToChatgptUrl(client, CHATGPT_LIBRARY_URL);
+      const result = await client.Runtime.evaluate({
+        expression: `(async () => {
+          const targetProviderFileId = ${JSON.stringify(targetProviderFileId)};
+          const targetName = ${JSON.stringify(targetName)};
+          const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const textKey = (value) => normalize(value).toLowerCase().replace(/\\s+/g, '');
+          const targetNameKey = textKey(targetName || '');
+          const isVisible = (node) => {
+            if (!(node instanceof Element)) return false;
+            const rect = node.getBoundingClientRect();
+            const style = window.getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+          };
+          const cssEscape = (value) => window.CSS?.escape
+            ? CSS.escape(value)
+            : String(value || '').replace(/["\\\\]/g, '\\\\$&');
+          const rowContainers = (node) => {
+            const containers = [];
+            let current = node instanceof Element ? node : null;
+            for (let depth = 0; current && depth < 10; depth += 1) {
+              containers.push(current);
+              current = current.parentElement;
+            }
+            return containers;
+          };
+          const meaningfulButtonText = (button) => {
+            const text = normalize(button.textContent || button.getAttribute('aria-label') || '');
+            if (!text || /^(more actions|open actions|select|download|copy link|share)$/i.test(text)) return '';
+            return text;
+          };
+          const findTitleButtonInRow = (row) => {
+            const buttons = Array.from(row.querySelectorAll('button')).filter(isVisible);
+            return buttons.find((button) => {
+              const text = meaningfulButtonText(button);
+              if (!text) return false;
+              if (!targetNameKey) return true;
+              const candidateKey = textKey(text);
+              const targetStem = targetNameKey.replace(/\\.[^.]+$/, '');
+              return candidateKey === targetNameKey || (targetStem.length > 3 && candidateKey.includes(targetStem));
+            }) || buttons.find((button) => meaningfulButtonText(button)) || null;
+          };
+          const findByProviderId = () => {
+            if (!targetProviderFileId) return null;
+            const selector = '[data-testid*="' + cssEscape(targetProviderFileId) + '"], [aria-label*="' + cssEscape(targetProviderFileId) + '"]';
+            const anchors = Array.from(document.querySelectorAll(selector)).filter(isVisible);
+            for (const anchor of anchors) {
+              for (const container of rowContainers(anchor)) {
+                const button = findTitleButtonInRow(container);
+                if (button) return { row: container, button };
+              }
+            }
+            return null;
+          };
+          const findByName = () => {
+            if (!targetNameKey) return null;
+            const roots = Array.from(document.querySelectorAll('[role="row"], tr, li, [data-testid*="row" i], [data-testid*="file" i], [data-testid*="card" i], [data-testid*="tile" i], div'))
+              .filter((node) => isVisible(node) && textKey(node.textContent || '').includes(targetNameKey.replace(/\\.[^.]+$/, '')));
+            for (const row of roots) {
+              const button = findTitleButtonInRow(row);
+              if (button) return { row, button };
+            }
+            return null;
+          };
+          let match = findByProviderId() || findByName();
+          if (!match) {
+            const positions = [0, Math.floor(document.documentElement.scrollHeight * 0.25), Math.floor(document.documentElement.scrollHeight * 0.5), Math.floor(document.documentElement.scrollHeight * 0.75), document.documentElement.scrollHeight];
+            for (const position of positions) {
+              window.scrollTo({ top: position, behavior: 'instant' });
+              await sleep(500);
+              match = findByProviderId() || findByName();
+              if (match) break;
+            }
+          }
+          if (!match) {
+            return { ok: false, reason: 'library_row_not_found' };
+          }
+          const originalFetch = window.__auracallOriginalFileFetch || window.fetch.bind(window);
+          window.__auracallOriginalFileFetch = originalFetch;
+          let captured = null;
+          let captureError = null;
+          const capturePromises = [];
+          const matchesTargetUrl = (url) => {
+            const text = String(url || '');
+            if (targetProviderFileId && text.includes(targetProviderFileId)) return true;
+            return /\\/backend-api\\/files\\/library\\/files\\//.test(text) ||
+              /\\/backend-api\\/files\\/download\\//.test(text) ||
+              /\\/backend-api\\/estuary\\/content/.test(text);
+          };
+          const encodeBytes = (bytes) => {
+            let binary = '';
+            const chunkSize = 0x8000;
+            for (let index = 0; index < bytes.length; index += chunkSize) {
+              binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+            }
+            return btoa(binary);
+          };
+          const captureDownloadResponse = async (response, originalUrl) => {
+            const clone = response.clone();
+            const contentType = clone.headers.get('content-type');
+            const bytes = new Uint8Array(await clone.arrayBuffer());
+            if (/application\\/json/i.test(contentType || '')) {
+              let json = null;
+              try {
+                const text = new TextDecoder().decode(bytes);
+                json = JSON.parse(text);
+              } catch {
+                json = null;
+              }
+              const downloadUrl = json && typeof json === 'object' && typeof json.download_url === 'string'
+                ? json.download_url
+                : null;
+              if (!downloadUrl) return null;
+              const followResponse = await originalFetch(downloadUrl, { credentials: 'include' });
+              const followClone = followResponse.clone();
+              const followBytes = new Uint8Array(await followClone.arrayBuffer());
+              return {
+                ok: followResponse.ok,
+                status: followResponse.status,
+                url: downloadUrl,
+                contentType: followResponse.headers.get('content-type'),
+                contentDisposition: followResponse.headers.get('content-disposition'),
+                byteLength: followBytes.length,
+                base64: encodeBytes(followBytes),
+                providerFileId: targetProviderFileId,
+                fileName: targetName || null,
+              };
+            }
+            return {
+              ok: response.ok,
+              status: response.status,
+              url: String(originalUrl || ''),
+              contentType,
+              contentDisposition: response.headers.get('content-disposition'),
+              byteLength: bytes.length,
+              base64: encodeBytes(bytes),
+              providerFileId: targetProviderFileId,
+              fileName: targetName || null,
+            };
+          };
+          const tryDirectProviderFileDownload = async () => {
+            if (!targetProviderFileId) return { attempted: false };
+            const directUrl = '/backend-api/files/download/' + encodeURIComponent(targetProviderFileId) + '?inline=true';
+            try {
+              const response = await originalFetch(directUrl, { credentials: 'include' });
+              const value = await captureDownloadResponse(response, directUrl);
+              if (value) return { attempted: true, value };
+              return { attempted: true, reason: 'direct_download_json_missing_url', status: response.status };
+            } catch (error) {
+              return {
+                attempted: true,
+                reason: error && typeof error === 'object' && 'message' in error ? error.message : String(error),
+              };
+            }
+          };
+          window.fetch = (...args) => {
+            const input = args[0];
+            const url = typeof input === 'string' ? input : input?.url;
+            const responsePromise = originalFetch(...args);
+            if (matchesTargetUrl(url)) {
+              capturePromises.push(responsePromise.then(async (response) => {
+                if (captured) return;
+                const originalUrl = String(url || '');
+                captured = await captureDownloadResponse(response, originalUrl);
+              }).catch((error) => {
+                captureError = error && typeof error === 'object' && 'message' in error ? error.message : String(error);
+              }));
+            }
+            return responsePromise;
+          };
+          const clickLibraryDownloadAction = async () => {
+            const menuItemText = (node) => normalize(node.textContent || node.getAttribute?.('aria-label') || '');
+            const visibleMenuItems = () => Array.from(document.querySelectorAll('[role="menuitem"], [role="menuitemradio"], button'))
+              .filter(isVisible)
+              .filter((node) => /^download$/i.test(menuItemText(node)));
+            const directDownload = Array.from(match.row.querySelectorAll('button, [role="menuitem"]'))
+              .filter(isVisible)
+              .find((node) => /^download$/i.test(menuItemText(node)));
+            if (directDownload) {
+              directDownload.click();
+              return true;
+            }
+            const rowButtons = Array.from(match.row.querySelectorAll('button')).filter(isVisible);
+            const menuButton = rowButtons.find((button) => {
+              const label = normalize(button.getAttribute('aria-label') || button.textContent || '');
+              return /^(more actions|open actions|actions|options|menu)$/i.test(label);
+            }) || rowButtons.find((button) => button !== match.button && normalize(button.textContent || '') === '');
+            if (!menuButton || menuButton === match.button) return false;
+            menuButton.click();
+            const deadline = Date.now() + 3_000;
+            while (Date.now() < deadline) {
+              const downloadItem = visibleMenuItems()[0];
+              if (downloadItem) {
+                downloadItem.click();
+                return true;
+              }
+              await sleep(100);
+            }
+            return false;
+          };
+          try {
+            const direct = await tryDirectProviderFileDownload();
+            if (direct.value) {
+              captured = direct.value;
+            }
+            if (!captured) {
+              const clickedDownload = await clickLibraryDownloadAction();
+              if (!clickedDownload) match.button.click();
+              if (direct.attempted && direct.reason) {
+                captureError = 'direct_download_failed:' + direct.reason + (direct.status ? ':status_' + direct.status : '');
+              }
+            }
+            const deadline = Date.now() + 20_000;
+            while (!captured && Date.now() < deadline) {
+              await Promise.allSettled(capturePromises);
+              if (captured) break;
+              await sleep(250);
+            }
+          } finally {
+            window.fetch = originalFetch;
+            for (const button of Array.from(document.querySelectorAll('[role="dialog"] button[aria-label="Close"], button[aria-label="Close"]'))) {
+              try { button.click(); } catch {}
+            }
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          }
+          if (!captured) {
+            return { ok: false, reason: captureError || 'download_response_not_captured' };
+          }
+          if (!captured.ok) {
+            return { ok: false, reason: 'download_response_not_ok', status: captured.status, url: captured.url };
+          }
+          if (!captured.base64 || captured.byteLength <= 0) {
+            return { ok: false, reason: 'download_response_empty', status: captured.status, url: captured.url };
+          }
+          return { ok: true, ...captured };
+        })()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      const value = isRecord(result.result?.value) ? result.result.value : null;
+      if (!value || value.ok !== true || typeof value.base64 !== 'string') {
+        const reason = typeof value?.reason === 'string' ? value.reason : 'unknown';
+        const status = typeof value?.status === 'number' ? ` (status ${value.status})` : '';
+        throw new Error(`ChatGPT account library file fetch failed: ${reason}${status}`);
+      }
+      return value;
+    },
+    {
+      debugContext,
+      reopen: async () => {
+        await navigateToChatgptUrl(client, CHATGPT_LIBRARY_URL);
+        return {
+          action: 'reopen-list',
+          outcome: 'attempted',
+          summary: 'library',
+        };
+      },
+      providerOptions: options,
+    },
+  );
+  await fs.writeFile(destPath, Buffer.from(captured.base64 as string, 'base64'));
+}
+
 async function configureChatgptDownloadBehaviorWithClient(
   client: ChromeClient,
   downloadPath: string,
@@ -7951,15 +8642,22 @@ async function materializeChatgptDeepResearchExportWithClient(
   if ((exportVariant !== 'docx' && exportVariant !== 'pdf') || !exportLabel || !targetContext?.port) {
     return null;
   }
+  const expectedFrameUrl = normalizeChatgptFrameUrl(
+    typeof artifact.metadata?.iframeUrl === 'string' ? artifact.metadata.iframeUrl : null,
+  );
+  const expectedTargetId = normalizeUiText(
+    typeof artifact.metadata?.iframeTargetId === 'string' ? artifact.metadata.iframeTargetId : undefined,
+  );
+  if (!expectedFrameUrl && !expectedTargetId) {
+    throw new Error(`ChatGPT Deep Research ${exportVariant} export missing iframe identity; refresh the conversation context before exporting.`);
+  }
   const deadline = Date.now() + 15_000;
   let lastClickFailureLabels = '';
   while (Date.now() < deadline) {
     const targets = await CDP.List({ host: targetContext.host, port: targetContext.port }).catch(() => []);
-    const candidates = targets.filter((target) => {
-      if (target.type !== 'iframe') return false;
-      const corpus = normalizeUiText(`${target.title ?? ''} ${target.url ?? ''}`).toLowerCase();
-      return corpus.includes('deep_research') || corpus.includes('deep-research') || corpus.includes('deep research');
-    });
+    const candidates = expectedFrameUrl
+      ? filterChatgptDeepResearchTargets(targets, new Set([expectedFrameUrl]), { expectedTargetId })
+      : targets.filter((target) => isChatgptDeepResearchTarget(target) && resolveChatgptTargetId(target) === expectedTargetId);
     if (candidates.length === 0) {
       await sleep(500);
       continue;
@@ -8332,7 +9030,9 @@ export function createChatgptAdapter(): Pick<
   | 'readConversationContext'
   | 'readActiveConversationArtifacts'
   | 'listAccountFiles'
+  | 'downloadAccountFile'
   | 'listConversationFiles'
+  | 'downloadConversationFile'
   | 'materializeConversationArtifact'
   | 'renameConversation'
   | 'deleteConversation'
@@ -8528,6 +9228,39 @@ export function createChatgptAdapter(): Pick<
         await client.close().catch(() => undefined);
       }
     },
+    async downloadConversationFile(
+      conversationId: string,
+      fileId: string,
+      destPath: string,
+      options?: BrowserProviderListOptions,
+      file?: FileRef,
+    ): Promise<void> {
+      const normalizedProjectId = normalizeChatgptProjectId(options?.projectId);
+      const debugContext = resolveChatgptRecoveryDebugContext(options, 'chatgpt-download-conversation-file', {
+        conversationId,
+        projectId: normalizedProjectId ?? null,
+        fileId,
+      });
+      const { client } = await connectToChatgptTab(
+        options,
+        resolveChatgptConversationUrl(conversationId, normalizedProjectId),
+      );
+      try {
+        await assertChatgptExpectedIdentity(client, options);
+        await downloadChatgptConversationFileWithClient(
+          client,
+          conversationId,
+          fileId,
+          destPath,
+          normalizedProjectId,
+          debugContext,
+          options,
+          file,
+        );
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
     async listAccountFiles(options?: BrowserProviderListOptions): Promise<FileRef[]> {
       const { client } = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
       try {
@@ -8539,6 +9272,34 @@ export function createChatgptAdapter(): Pick<
         await navigateToChatgptUrl(client, CHATGPT_LIBRARY_URL);
         const inventory = await readChatgptLibraryItemsWithClient(client);
         return inventory.files;
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
+    async downloadAccountFile(
+      fileId: string,
+      destPath: string,
+      options?: BrowserProviderListOptions,
+      file?: FileRef,
+    ): Promise<void> {
+      const debugContext = resolveChatgptRecoveryDebugContext(options, 'chatgpt-download-account-library-file', {
+        fileId,
+      });
+      const { client } = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
+      try {
+        await assertChatgptExpectedIdentity(client, options);
+        await dismissCreateProjectDialogIfOpen(client.Runtime, {
+          strict: true,
+          source: 'download-account-file',
+        });
+        await downloadChatgptAccountLibraryFileWithClient(
+          client,
+          fileId,
+          destPath,
+          debugContext,
+          options,
+          file,
+        );
       } finally {
         await client.close().catch(() => undefined);
       }

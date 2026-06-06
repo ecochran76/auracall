@@ -19,6 +19,42 @@ export interface BrowserInstance {
   services?: string[];
   tabs?: Array<{ targetId?: string; url?: string; title?: string; type?: string }>;
   lastKnownUrls?: string[];
+  owner?: BrowserInstanceOwner | null;
+  operation?: BrowserInstanceOperation | null;
+  lease?: BrowserInstanceLease | null;
+}
+
+export interface BrowserInstanceOwner {
+  kind: string;
+  id: string | null;
+  provider?: string | null;
+  runtimeProfileId?: string | null;
+  browserProfileId?: string | null;
+  sourceType?: string | null;
+  sourceKey?: string | null;
+  reason?: string | null;
+  acquiredAt: string;
+  heartbeatAt?: string | null;
+}
+
+export interface BrowserInstanceOperation {
+  kind: string;
+  id: string | null;
+  provider?: string | null;
+  runtimeProfileId?: string | null;
+  browserProfileId?: string | null;
+  sourceType?: string | null;
+  sourceKey?: string | null;
+  reason?: string | null;
+}
+
+export interface BrowserInstanceLease {
+  id: string;
+  ownerId?: string | null;
+  acquiredAt: string;
+  heartbeatAt: string;
+  expiresAt?: string | null;
+  cleanupPolicy?: string | null;
 }
 
 export interface BrowserStateRegistry {

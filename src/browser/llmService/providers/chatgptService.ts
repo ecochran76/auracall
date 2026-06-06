@@ -1,7 +1,10 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
 import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../types.js';
-import { BrowserService } from '../../service/browserService.js';
+import {
+  BrowserService,
+  type BrowserProcessOwnerAttribution,
+} from '../../service/browserService.js';
 import { LlmService } from '../llmService.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../providers/types.js';
 import type { Conversation, Project } from '../../providers/domain.js';
@@ -19,10 +22,16 @@ export class ChatgptService extends LlmService {
 
   static create(
     userConfig: ResolvedUserConfig,
-    options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
+    options?: {
+      identityPrompt?: IdentityPrompt;
+      browserProcessOwner?: BrowserProcessOwnerAttribution;
+      browserService?: BrowserService;
+    },
   ): ChatgptService {
     const provider = getProvider('chatgpt') as LlmServiceAdapter;
-    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig, 'chatgpt');
+    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig, 'chatgpt', {
+      browserProcessOwner: options?.browserProcessOwner,
+    });
     return new ChatgptService(userConfig, provider, browserService, options);
   }
 

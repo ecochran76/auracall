@@ -95,6 +95,16 @@ export const ServiceIdentitySchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const ServiceLiveFollowAccountLibrarySchema = z.object({
+  mode: z.enum(['disabled', 'preview_only', 'eligible']).optional(),
+  maxItems: z.number().int().positive().optional(),
+  minIntervalMs: z.number().int().nonnegative().optional(),
+  failureCooldownMs: z.number().int().nonnegative().optional(),
+  maxActiveJobs: z.number().int().positive().optional(),
+  providerWorkTimeoutMs: z.number().int().positive().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ServiceLiveFollowSchema = z.object({
   enabled: z.boolean().optional(),
   mode: z.string().optional(),
@@ -105,6 +115,7 @@ export const ServiceLiveFollowSchema = z.object({
   materializationMaxItems: z.number().int().positive().optional(),
   materializationRefreshSnapshot: z.boolean().optional(),
   materializationForce: z.boolean().optional(),
+  accountLibrary: ServiceLiveFollowAccountLibrarySchema.optional(),
   minIntervalMs: z.number().int().nonnegative().optional(),
   explicitRefreshMinIntervalMs: z.number().int().nonnegative().optional(),
   jitterMaxMs: z.number().int().nonnegative().optional(),

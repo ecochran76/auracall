@@ -1,3 +1,219 @@
+- 2026-06-05: ChatGPT account-library automatic queueing is proven after the
+  cooldown clears and ordinary target work drains. The supervised Plan 0119
+  rerun kept `failureCooldownMs=900000`, temporarily flipped only
+  `chatgpt/wsl-chrome-3` to `eligible`, and showed the first attempt can still
+  be blocked by ordinary reconciliation ownership (`already-running`). After
+  that ordinary job drained, bounded completion
+  `acctmirror_completion_7c75c623-d260-4a91-9abc-09d8e8017899` queued
+  `hmj_9d67f1345a7d4c909c82455caebadd73` as
+  `account_library_reconciliation` with `assetSource=account-library`,
+  `assetKinds=["files"]`, `maxItems=3`, and
+  `providerWorkTimeoutMs=120000`; the job completed `succeeded`. Do not
+  permanently lower cooldown for this path, but require a clean no-active-job
+  target window before automatic-mode smoke.
+
+- 2026-06-05: Post-0117 account-library automatic-mode reruns now distinguish
+  browser isolation from account-library cooldown blockers. Plan 0118 killed
+  retained managed Chrome work including `wsl-chrome-4`, proved clean browser
+  preflight, temporarily flipped only `chatgpt/wsl-chrome-3` to `eligible`,
+  and ran one bounded metadata-only completion. The completion reached the new
+  cursor path and returned `accountLibraryCursor.status=skipped` with
+  `reason="account-library failure cooldown is active until 2026-06-05T14:09:00.065Z"`;
+  config was restored to `preview_only`, active jobs were `0`, and legacy
+  Gemini stayed paused. Treat cooldown as the next rerun gate, not
+  `wsl-chrome-4` process ownership.
+
+- 2026-06-05: Handoff source materialization must be explicit and replayable
+  before target mutation exists. `auracall handoff prepare --dry-run` can now
+  import JSON readbacks, read existing source materialization job ids through
+  the local API, and explicitly create one bounded source job only when
+  `--source-materialization-create` is set and no prior source job evidence
+  was supplied. The packet records source job ids, status, import method,
+  reuse evidence, result availability, and terminal state in
+  `source/materialization-jobs.json`, `ledger.json`, and handoff status.
+  Target upload/submit remains disabled.
+
+- 2026-06-05: Handoff packets need a first-class status readback before
+  source orchestration, approvals, upload, submit, or repair can safely attach
+  provider work. `auracall handoff prepare --dry-run` now writes
+  `ledger.json` beside the packet `run.json` and `events.jsonl`, and
+  `auracall handoff status <id>` reads run, ledger, event count, packet
+  digest, source completeness, analysis selection, and target preview
+  attempts from user-scoped handoff runtime storage. Keep this
+  handoff-specific ledger separate from generic `auracall run status` until
+  later slices intentionally bridge them.
+
+- 2026-06-05: Cross-service handoff should import source materialization
+  readback rather than requiring operators to hand-build source manifests.
+  `auracall handoff prepare --dry-run` now accepts repeatable
+  `--source-materialization-job-json` inputs, imports materialized/duplicate
+  entries into source manifest items, imports failed/skipped entries into
+  omissions, records source materialization job ids in analysis input evidence,
+  and still writes zero-target-mutation submission evidence. Keep
+  materialization creation, polling, browser work, upload, and submit outside
+  this preview-only command until an explicit approval-gated plan owns them.
+
+- 2026-06-05: A clean scheduler foreground-work readback is necessary but not
+  sufficient for ChatGPT account-library automatic-mode smoke. The Plan 0109
+  rerun after Plan 0110 showed `foregroundWork.active=false` for
+  `chatgpt/wsl-chrome-3`, with account-library mode still `preview_only` and
+  active account-library jobs `0`, but the eligible-mode flip stayed blocked
+  because unrelated managed browser processes for `default/chatgpt`,
+  `wsl-chrome-4/chatgpt`, and `gemini-stealthcdp/gemini` were still alive.
+  Clear or explicitly bound those process-isolation gates before mutating
+  `~/.auracall/config.json`.
+
+- 2026-06-04: Account-library automatic-mode preflight needs bounded
+  account-mirror and browser-health readbacks before another enablement try.
+  Plan 0107 proved narrow completion/job readbacks are responsive, but full
+  `/status`, target-scoped `/v1/account-mirrors/status`, and
+  `/v1/browser/processes` timed out. The follow-on Plan 0108 should make those
+  readbacks return target-scoped evidence or explicit bounded failure JSON,
+  without enabling account-library automatic queueing.
+
+- 2026-06-04: `/status` must stay readback-only for account-library
+  catch-up. Plan 0108 found that provider-backed account-library preview
+  collection could turn a status read into browser work and leave a blank
+  managed ChatGPT page. Status now reports account-library mode, active jobs,
+  cooldown, and browser health without running reconciliation preview; preview
+  counts are `null` unless supplied by explicit job/readback surfaces. Targeted
+  account-mirror and browser-process reads apply provider/runtime-profile
+  scope before persistent-state hydration.
+
+- 2026-06-05: Do not flip ChatGPT account-library automatic mode while
+  scheduler diagnostics report foreground AuraCall work pending, even when
+  browser health is idle and active account-library jobs are `0`. Plan 0109
+  aborted before mutating `~/.auracall/config.json` because
+  `chatgpt/wsl-chrome-3` diagnostics still reported
+  `Foreground AuraCall API or service work is pending; live follow will retry later.`
+  after a retry window. The next automatic-mode attempt needs a bounded
+  foreground-work attribution/clearance slice or a clean scheduler diagnostic
+  read before changing `accountLibrary.mode` to `eligible`.
+
+- 2026-06-04: ChatGPT account-library automatic mode needs an isolation proof
+  before leaving `preview_only`. Plan 0102 proved manual account-library job
+  lifecycle and duplicate-source behavior, and Plan 0106 made legacy Gemini
+  live follow inert, but automatic account-library queueing still needs a
+  preflight-first proof that attributes browser work cleanly and drains
+  active jobs back to `0`. Keep the first smoke capped to
+  `chatgpt/wsl-chrome-3`, account-library files, `maxItems=1`, `force=false`,
+  and one active account-library job.
+
+- 2026-06-04: Account-library automatic mode must refuse to start when
+  isolation readback is not clean. Plan 0107 preflight found foreground-work
+  backpressure, an active `wsl-chrome-3` live-follow completion, an existing
+  managed ChatGPT browser process, and timeout of full status,
+  account-mirror-status, and browser-process readback. Even with active
+  account-library materialization jobs at `0`, account-library mode still
+  `preview_only`/disabled, and Gemini paused, this is not enough to flip to
+  eligible mode; keep automatic queueing disabled until the next slice can
+  provide clean browser-health attribution.
+
+- 2026-06-02: Legacy Gemini live-follow completions need resume gates, not
+  only better bounded proof paths. After left-rail retrieval is repaired, an
+  old persisted `live_follow` / `metadata_only` Gemini completion can still be
+  reintroduced by API startup recovery or a plain operator `resume`, bypassing
+  the bounded proof posture and risking `/app` churn. Classify unsafe legacy
+  Gemini completions before launch, keep them `paused`, clear `nextAttemptAt`,
+  and expose `gemini_live_follow_resume_blocked` with
+  `automatic_resume_blocked` or `operator_resume_blocked` lifecycle evidence.
+
+- 2026-06-02: Persisted live-follow completions must obey foreground-work
+  backpressure, not only scheduler-triggered passes. A paused ChatGPT or
+  materialization-focused operator slice can still restart the API, resume a
+  persisted Gemini live-follow completion, and let that completion's own loop
+  open `gemini.google.com/app` / `/gems/view` even when the scheduler would
+  have yielded. Wire the same foreground pressure signal into
+  `createAccountMirrorCompletionService`, defer due live-follow refreshes
+  before `requestRefresh`, and pause active provider completions when a
+  provider-specific live-follow slice is not intentionally in scope.
+
+- 2026-06-02: `liveFollow.accountLibrary` must be preserved by config
+  resolution, not only parsed by status registry. The status-registry and HTTP
+  code can support preview-only account-library readback, but installed config
+  silently discards the nested object unless the composed service live-follow
+  schema includes it. Add a first-class account-library schema under
+  `ServiceLiveFollowSchema` before relying on installed preview/eligible mode.
+
+- 2026-06-02: Live-follow account-library status must explain cooldown and
+  browser/process health gates before any automatic queueing path can be
+  enabled. `accountLibraryCatchup` now reports active account-library job
+  count, cooldown-until time, cooldown-derived next attempt, and safe
+  browser-health observations. A target in account-library failure cooldown
+  reports `status=cooling_down`, and visible browser churn such as open blank
+  page targets blocks catch-up readback without creating materialization jobs.
+
+- 2026-06-01: Broad ChatGPT account-library reconciliation must preserve
+  resolved provider-file identity through the materialization handoff. The
+  first stale-row broad fix resolved stale catalog rows against current
+  ChatGPT Library inventory, but the synthetic catalog-item path rebuilt the
+  original stale file and lost the current `providerFileId`, causing broad
+  materialization to behave as if it still had only stale metadata. Broad
+  reconciliation now passes the resolved `FileRef` directly into
+  account-library catalog-item materialization, and focused coverage proves
+  stale rows can resolve to current inventory and materialize with archive
+  linkage.
+
+- 2026-06-01: ChatGPT account-library materialization must tolerate stale
+  account-mirror catalog rows during explicit selected retrieval. A catalog
+  file row may still have only a stable-hash id and name while the provider
+  account-file cache already has the routeable `providerFileId` and
+  `chatgpt://file/...` handle. For selected account-library jobs, resolve the
+  stale catalog row against the current account-file inventory by stable name
+  before download; do not mark those rows as history-lane retrievable or let
+  live-follow consume them until a separate account-library reconciliation lane
+  is proven.
+
+- 2026-06-01: ChatGPT account-library file retrieval needs its own
+  archive-linked selected path, not a conversation-history shortcut. A
+  `chatgpt://file/<providerFileId>` catalog row can be materialized through the
+  account-library file primitive, write a manifest and checksum, then upsert a
+  run-archive asset route while preserving `providerConversationId` as the
+  synthetic account-library scope. Broad reconciliation and live-follow should
+  remain disabled until installed capped proofs show idempotence.
+
+- 2026-06-01: One-shot browser file utility commands must complete the process
+  after stdout is written. `files list` and `files download` can finish their
+  provider work yet leave CDP/browser handles alive, causing timeout wrappers
+  to report failure after successful output. Use the explicit browser file
+  command exit hook for success paths, with
+  `AURACALL_DISABLE_BROWSER_FILE_FORCE_EXIT=1` only for debugging.
+
+- 2026-06-01: ChatGPT account-library retrieval must use the app-authenticated
+  Library row-click path. Library table rows expose provider file ids in
+  row-level `data-testid` values such as
+  `artifact-checkbox-bridge-file_<file_id>`; title-only collection loses that
+  authority and leaves rows metadata-only. Raw fetches to
+  `/backend-api/files/.../simple` or `/backend-api/files/download/...` can
+  return 401/403 outside the app-triggered flow, while clicking the Library row
+  title captures `/backend-api/files/download/<file_id>?inline=true` and a
+  signed `/backend-api/estuary/content` body. Do not use the model selector for
+  this read-only retrieval path.
+
+- 2026-06-01: History reconciliation must seed candidate family skip state
+  from materialized run-archive assets, not only from catalog freshness. A
+  stale account-mirror catalog row can still say `missingLocal` after the
+  archive/search row has a durable local asset; without the archive-backed
+  family overlay, raised-cap passes can redownload already materialized
+  ChatGPT files or artifacts. Family signatures must also read top-level
+  catalog fields such as `source=conversation`, not only nested metadata.
+
+- 2026-06-01: ChatGPT generated-artifact materialization must normalize
+  same-source sandbox aliases before spending history-materialization budget.
+  If two artifact rows represent the same provider source/content family, pick
+  the durable representative before `maxItems` is applied; do not download both
+  as independent work. A terminal `materialized` result must also have archive
+  item and asset-route linkage, or be reclassified as an explicit duplicate
+  alias with a durable target instead of reading as a standalone materialized
+  entry.
+
+- 2026-06-01: Recovery readback should keep raw remote-known missing-local
+  inventory visible, but must also expose the actionable split. Operators need
+  `retrievableMissingLocal` separately from duplicate aliases, unsupported
+  metadata-only rows, static false positives, and terminal provider-route or
+  download failures; otherwise live follow appears stuck in a flat missing mode
+  even after materialization and terminal classification are working.
+
 - 2026-05-30: Account-mirror artifact recovery candidates must reconcile
   materialized run-archive evidence, not only the latest metadata inventory
   counters. If a bounded history materialization job writes local paths,
@@ -17593,3 +17809,308 @@ browser-stage lifecycle observability, not transcript truncation.
   SHA-256 from disk, and mark archive/search metadata with
   `cached-provider-file`. Do not salvage cache-only, missing, wrong-size, or
   provider-id-mismatched files.
+- 2026-05-31: ChatGPT history reconciliation must not treat `maxItems` as a
+  per-conversation cap during broad catch-up. A Plan 0091
+  `chatgpt/wsl-chrome-3` run repeatedly downloaded the same Deep Research
+  export family, especially `SoyFuze Chemical Composition Dossier`, across
+  duplicate/stale conversation rows. Reconciliation now deduplicates
+  asset-family signatures within a job and carries the remaining asset budget
+  into each target; further broad ChatGPT catch-up still needs catalog hygiene
+  for stale duplicate rows, generated-image false positives, and unsupported
+  conversation-file materialization.
+- 2026-05-31: ChatGPT Deep Research artifact discovery must scope OOPIF targets
+  back to the active conversation page before creating artifact ids. The
+  unsafe path listed all `iframe` DevTools targets for the managed browser
+  port, selected any Deep Research-looking iframe, and stamped it with the
+  requested conversation id. That let one stale Deep Research report become a
+  different `deep-research:<conversationId>:0:*` key for each target. The
+  adapter now harvests only Deep Research iframe URLs embedded in the active
+  page and requires the captured iframe identity before DOCX/PDF export clicks.
+- 2026-05-31: History materialization must skip interactive feature-signature
+  probes. `LlmService.resolveCacheIdentity()` called
+  `provider.getFeatureSignature()` for cache scoping, and ChatGPT's
+  feature-signature probe opens the model control to enumerate model/depth
+  options. That made an otherwise read/fetch materialization pass click the
+  model selector during SoyFuze export downloads. History materialization now
+  sets `skipFeatureSignature=true` in provider list options; identity preflight
+  remains active, but cache feature detection is suppressed for this lane.
+- 2026-06-01: ChatGPT catalog/reconciliation eligibility must reject
+  non-actionable rows before browser work, not after a failed fetch. Plan 0092
+  classified the remaining `chatgpt/wsl-chrome-3` backlog and found
+  `image-dom:*` rows backed by Google favicon/static chrome URLs plus
+  conversation-file rows without retrievable URL/file id. Catalog readback now
+  preserves those rows with `metadata.materializationEligibility.state` and
+  `.reason`, while history reconciliation skips static-image false positives
+  and unsupported conversation files before target selection and asset-family
+  budget accounting.
+- 2026-06-01: ChatGPT duplicate Deep Research protection must work across
+  runs, not only within one reconciliation job. A completion audit found that
+  stale SoyFuze duplicate rows could still spend budget later if the already
+  recovered logical family existed only as complete catalog evidence. History
+  reconciliation now seeds asset-family skip signatures from complete catalog
+  rows before building candidates, so later stale duplicates are skipped
+  independent of catalog ordering.
+- 2026-06-01: ChatGPT full-sweep live follow needs the same large collector
+  budget as other full backfill paths. `chatgpt/wsl-chrome-3` repeatedly timed
+  out before materialization handoff with a `300_000` ms collector timeout even
+  though full-sweep detail inventory can exceed five minutes. ChatGPT
+  full-sweep completions now use `900_000` ms, allowing the pass to queue
+  history-materialization work.
+- 2026-06-01: ChatGPT static-image false-positive guards must cover both
+  catalog rows and provider fetch manifests. A refreshed manifest represented
+  favicon rows with `artifactId` and a Google `/s2/favicons` `uri`, bypassing
+  the earlier `id` / `providerId` classifier. Eligibility now recognizes
+  `artifactId`, and the artifact materializer filters favicon rows before
+  provider fetch work.
+- 2026-06-01: ChatGPT generated downloads can appear as both sandbox text
+  artifacts and actionable DOM download buttons. Under a small `maxItems`
+  budget, the sandbox duplicate can be tried first and skipped even though a
+  retrievable `chatgpt://download-button/...` artifact exists for the same
+  title. ChatGPT materialization now prefers same-title DOM download-button
+  artifacts before applying the materialization budget.
+- 2026-06-01: ChatGPT conversation file tiles can be retrievable without DOM
+  `href` or `download` attributes. The provider file id, MIME type,
+  downloadable state, and previewable state live in React tile metadata, and
+  downloads require the authenticated browser page to click the tile and
+  capture provider responses. Do not treat `/backend-api/files/<id>/simple`
+  JSON or JSON `{download_url}` bodies as materialized files; skip `/simple`,
+  follow signed `download_url`, and verify the final body by size/checksum.
+  Because file tiles can be virtualized, scroll/search for the provider file
+  id before clicking. Preserve the actual provider file id and manifest
+  materialization method in archive metadata instead of overwriting them with
+  synthetic file ids or null methods.
+- 2026-06-01: ChatGPT raised-cap reconciliation can still waste budget on
+  same-source generated-artifact aliases. Plan 0096 materialized
+  `Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut_clean_2page.pdf`
+  and `Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut.pdf` from the
+  same signed content URL/checksum, but only one became a durable archive item.
+  Candidate selection should deduplicate same-source/same-checksum artifact
+  aliases before applying `maxItems`, and history-materialization results
+  should not report a terminal `materialized` entry without an archive item or
+  asset route unless it is explicitly classified as a duplicate of a durable
+  item.
+- 2026-06-01: ChatGPT archive-backed family skips cannot rely only on catalog
+  `source` fields. Some generated artifact catalog rows carry no source or
+  metadata, while the actionable source appears only in provider ids such as
+  `593b562d-...:download:sandbox:/mnt/data/file.zip`. Family signatures now
+  parse those id tokens so already materialized archive-backed rows are not
+  selected again under stale catalog evidence.
+- 2026-06-01: Automatic ChatGPT materialization reconciliation must not spend
+  provider/browser work on refresh-only conversations with zero selected asset
+  evidence. After archive-backed families were skipped, the selector could
+  fall through to stale empty conversations and refresh them despite no
+  artifact/file/media candidates. The selector now skips zero-signature
+  refresh-only rows in automatic reconciliation; explicit conversation-id runs
+  remain available for targeted refresh diagnostics.
+- 2026-06-01: Status-level recovery counts are not sufficient proof of
+  currently retrievable ChatGPT work. A proof server reported `84`
+  retrievable missing local assets while search projection had `0`
+  unavailable artifact/upload rows and automatic materialization skipped with
+  no candidates. Recovery readback must be reconciled with search projection
+  before live-follow caps are raised or account-level `chatgpt-library` rows
+  are treated as materializable backlog.
+- 2026-06-01: ChatGPT account-level `chatgpt-library` rows are not
+  conversation-history materialization candidates. They can look like
+  artifacts/files in account-mirror metadata, but they lack the
+  conversation-backed provider surfaces used by the current history lane.
+  Catalog readback now marks them as `unsupported_account_library_asset`,
+  recovery counts them under `unsupportedMetadataOnly`, and recovery
+  classification buckets are capped to the raw missing-local inventory so
+  operator counts cannot report more classified rows than the target's raw
+  missing count. A separate account-library retrieval plan is required if
+  those rows should become downloadable.
+- 2026-06-01: ChatGPT account-library recovery readback needs its own lane,
+  not just a generic unsupported count. Recovery candidates now expose
+  `accountLibrary` counts with separate inventory authority buckets for stable
+  identity, direct download evidence, browser-detail-needed rows, and rows
+  with no retrieval authority. These counts are read-only evidence: until an
+  explicit account-library job mode exists, `chatgpt-library` rows must still
+  return `createRequest=null` and must not be routed through history
+  materialization or live-follow catch-up.
+- 2026-06-01: ChatGPT account-library stable ids are not download authority.
+  The library collector can produce stable hashes and conversation URLs such
+  as `https://chatgpt.com/c/...`, but those are navigation/detail evidence,
+  not direct asset downloads. The account-library recovery inventory now
+  counts only file/download-like URLs or internal file schemes as
+  `directDownload`; current installed readback has `directDownload=0` and
+  `needsBrowserDetail=152`, so the next Plan 0098 slice must discover the
+  browser-detail surface before any retrieval job is enabled.
+- 2026-06-01: ChatGPT account-library route kind must be explicit before
+  retrieval. Fresh library inventory now records `libraryRouteKind` and
+  `libraryRouteUrl`, and recovery readback splits detail routes into
+  library-file, artifact, canvas, conversation, external/inline, and unknown
+  buckets. ChatGPT `/library/*` and `/c/*` URLs are browser-detail navigation
+  authority, not direct-download evidence, so they must not enqueue
+  history-materialization jobs or count as immediately retrievable assets.
+- 2026-06-01: Broad ChatGPT account-library reconciliation must not select
+  stale stable-hash rows that lack a current provider file id. Installed job
+  `hmj_667837d8f947468494b7587e31d21e0c` failed on catalog item
+  `e112c9ba-ec50-5ae6-81a7-bfbb77f324bd` because the broad selector allowed a
+  stale account-library row without `providerFileId` or `chatgpt://file/...`.
+  Broad reconciliation now selects only route-authorized account-library file
+  rows and skips stale unresolved rows before browser work; selected
+  catalog-item materialization remains the supported path for explicit
+  stale-row resolution.
+- 2026-06-02: Live-follow account-library catch-up needs its own disabled-by-
+  default scheduling contract and timeout state. Do not infer account-library
+  queueing from conversation-history materialization policy. The live-follow
+  status registry now exposes `liveFollow.accountLibrary`, status readback
+  exposes `accountLibraryCatchup`, and account-library reconciliation jobs can
+  carry `providerWorkTimeoutMs` so stale running jobs fail on read/list/recovery
+  instead of remaining active or being reused as duplicate work.
+- 2026-06-02: Live-follow account-library preview must reuse the manual
+  account-library reconciliation selector. Preview readback now comes from the
+  same selector consumed by manual/operator materialization and reports
+  archived-family, unresolved-stale, unsupported/terminal, duplicate-family,
+  eligible, and selected counts. Preview-only status readback must not call
+  materialization `createJob`; automatic account-library queueing remains
+  disabled until scheduler gates and installed proof pass.
+- 2026-06-02: Account-library catch-up status must expose active provider work
+  before any future live-follow queueing is allowed. `/status` now maps active
+  `account_library_reconciliation` materialization jobs back to
+  `accountLibraryCatchup.activeJobId` / `activeJobStatus` and reports the
+  active job state as the catch-up status. This prevents an operator or future
+  scheduler from interpreting a target as merely preview-only or eligible while
+  account-library provider work is already queued or running.
+- 2026-06-02: ChatGPT Library rows with visible download authority are not
+  metadata-only. Rows carrying `providerFileId`, `chatgpt://file/...`, or
+  `materializationSurface=chatgpt-library-file-row-click` represent the
+  Library `Download` action surface and must remain eligible for the
+  account-library retrieval lane. Only stable-hash/title-only library rows
+  without routeable file authority should be annotated as
+  `unsupported_account_library_asset`.
+- 2026-06-02: Account-library preview must not treat account-mirror
+  `delayed` as terminal when cached route-authorized Library rows exist.
+  `delayed` means foreground metadata refresh is waiting on scheduler
+  politeness; it does not invalidate cached `chatgpt://file/...` rows. The
+  preview selector now blocks only `blocked` targets, while delayed cached
+  catalogs can still report eligible account-library candidates without a
+  browser inventory refresh.
+- 2026-06-02: A managed Chrome launch command containing `about:blank` is a
+  diagnostic signal, not by itself an account-library catch-up blocker. The
+  actual gate must inspect live page targets: block when a blank page target
+  remains, the browser process is gone, or DevTools is unresponsive. Installed
+  Plan 0101 proof showed `launchCommandHasBlankArg=true` with
+  `openBlankPageCount=0` and `browserHealth.status=observed`; capped ChatGPT
+  Library file materialization then succeeded without changing automatic
+  live-follow queueing out of `preview_only`.
+- 2026-06-02: Repeating a capped ChatGPT account-library reconciliation request
+  is not the same as re-downloading the same file. Plan 0101 showed a second
+  `maxItems=1` job with the same operator flags selected the next unarchived
+  family and produced a new archive item, while final preview counts advanced
+  from `archivedFamilies=8` to `13`. The remaining health concern is queued
+  job latency and active-source lifecycle clarity before automatic eligible
+  mode, not selector repetition against already archived families.
+- 2026-06-02: Account-library scheduler health, manual file retrieval, and
+  automatic enablement are separate proof gates. Plan 0102 installed proof
+  showed duplicate active source-key creates correctly reuse one running job
+  with `reuseReason="active sourceKey is already running"`, `/status` exposes
+  `accountLibraryCatchup.activeJobScheduler`, and active jobs drain back to
+  `0`. The account-library `download_response_not_captured` failure was fixed
+  by trying ChatGPT's authenticated
+  `/backend-api/files/download/<file_id>?inline=true` endpoint from the page
+  context before falling back to visible row/menu clicks. Installed jobs
+  `hmj_84685715fc4d489683a98e10bdf3598a` and
+  `hmj_3af768aaf46540a88f75993fdd43690c` both succeeded with
+  `materialized=1`, `failed=0`, and different provider ids, proving terminal
+  replay skips archived families. Keep ChatGPT account-library live follow
+  `preview_only` until a separate automatic-mode proof first isolates
+  unrelated provider/browser activity.
+- 2026-06-02: `api scheduler-diagnostics` must use the same local API auth
+  retry helper as other installed CLI API reads. The bare-fetch path returned
+  HTTP 401 against the authenticated user service even though the source
+  command could read diagnostics when auth was supplied. Route scheduler
+  diagnostics through `fetchWithLocalApiAuth` so a first unauthenticated 401
+  retry uses the local `AURACALL_API_KEY` bearer token.
+- 2026-06-02: A paused Gemini live-follow completion is not equivalent to a
+  bounded resume-safety proof. Operator `resume` requeues and launches the
+  same live-follow completion, so Gemini resume-safety checks should create a
+  fresh bounded completion with explicit pass/materialization limits. Plan
+  0103 kept
+  `acctmirror_completion_afdbcd9c-b51e-4144-a31d-54be35e71402` paused, proved
+  one bounded metadata-only pass, then stopped the leftover managed Gemini
+  browser process.
+- 2026-06-02: Bounded Gemini cleanup must be explicit account-mirror lifecycle
+  cleanup, not generic launch `keepBrowser` semantics. The first Plan 0104
+  installed repair proof completed but left Chrome running because runtime
+  `keepBrowser=true` caused `browserLifecycle.status=skipped_keep_browser`.
+  The final fix treats `cleanupManagedBrowserAfterRefresh=true` as
+  authoritative for bounded account-mirror cleanup, records
+  `browserLifecycle.status=terminated`, and still leaves indefinite Gemini
+  live follow paused.
+- 2026-06-02: Google/system Gemini Gems are not editable user-owned projects.
+  The Gemini adapter must reject observed system Gem IDs `chess-champ`,
+  `brainstormer`, and `storybook` before project/editability treatment and
+  must not click through those cards during read-only live-follow metadata
+  collection.
+- 2026-06-02: Gemini live-follow health must be measured by conversation
+  advancement and artifact retrieval, not by shell reachability. Repeatedly
+  navigating to `https://gemini.google.com/app` or `/gems/view` without
+  selecting real historical conversations is route churn. The left live rail is
+  the highest-yield known Gemini history surface and should be the primary
+  traversal path for future bounded Gemini live-follow proof.
+
+- 2026-06-02: Gemini left-rail readiness must require visible conversation
+  anchors, not just the `all-conversations` container. A collapsed Gemini
+  sidebar can expose the rail container while every real `/app/<id>` row is
+  hidden, causing the collector to classify `/app` shell reachability as a
+  zero-candidate pass. Open the sidebar when collapsed, require visible
+  conversation anchors before scraping, and record route-progress evidence so
+  shell-only churn cannot look productive.
+
+- 2026-06-02: Gemini shell-only route churn must not queue materialization from
+  retained metadata. If route progress reaches `/app` but selects no real
+  conversation ids, completion should record
+  `yieldCause=shell_without_conversation_selection` and skip materialization
+  queueing until a bounded pass enters artifact-bearing conversations.
+
+- 2026-06-02: Browser-backed history materialization cleanup must target the
+  actual managed browser profile directory used by the runtime profile, then
+  terminate every Chrome process with that `--user-data-dir`. A request may
+  omit explicit `browserProfile` while the AuraCall runtime profile binds a
+  browser family such as `gemini-stealthcdp`; cleanup must resolve that family
+  and not rely on a default launch context.
+
+- 2026-06-02: Provider browser work timeout must be end-to-end through CLI and
+  HTTP parsing. `history-materialization-create` now exposes
+  `--provider-work-timeout-ms`, the CLI forwards `providerWorkTimeoutMs`, and
+  `POST /v1/account-mirrors/materializations` accepts both camelCase and
+  snake_case timeout fields.
+- 2026-06-05: An idle background-drain cadence timer is not foreground
+  scheduler pressure. `backgroundDrainScheduled=true` with
+  `backgroundDrainState=idle`, `activeRequestCount=0`, and
+  `drainReservations=0` must remain visible in status but must not make
+  `foregroundWork.active=true` or block account-mirror scheduler passes as
+  `foreground-work`. Keep pressure for explicit drain reservations and drain
+  state `scheduled`/`running`.
+- 2026-06-05: Cross-tenant conversation transfer should be modeled as
+  provider-neutral handoff orchestration, not as ChatGPT-specific copying.
+  Source and target endpoints should resolve provider, AuraCall runtime
+  profile, browser profile/account binding, conversation/project refs, and
+  capabilities. App Intelligence should own the deterministic supervisor,
+  ledger, approvals, structured artifact-ranking/context-compaction decisions,
+  and replay log, while AuraCall provider adapters perform bounded source
+  cache/materialization and target upload/submit/readback operations.
+- 2026-06-05: Handoff target mutation must stay impossible in the preview
+  slice. `auracall handoff prepare` requires `--dry-run`, writes
+  `targetMutationAllowed=false`, and records upload/submit attempt counts as
+  zero. Explicit source or target runtime profile typos must fail closed rather
+  than falling back to the active profile, because cross-tenant handoff safety
+  depends on exact endpoint identity.
+- 2026-06-05: Managed browser process isolation needs owner/lease readback, not
+  PID/profile inference alone. When AuraCall browser-backed history
+  materialization resolves or reattaches a managed browser target, stamp the
+  browser registry with the owning job id, provider, AuraCall runtime profile,
+  source type/key, reason, and cleanup policy, then surface those fields in
+  browser-process status.
+- 2026-06-05: A clean account-library automatic-mode rerun can still no-op at
+  the scheduler boundary. If the target completion is due and account-library
+  mode is temporarily `eligible`, advancing `nextAttemptAt` without queueing a
+  materialization job, launching a managed browser, or reporting an explicit
+  bounded blocker is not a pass; the scheduler needs a reasoned readback for
+  that eligibility/no-op path before automatic mode can be trusted.
+- 2026-06-05: Account-library catch-up decisions must be completion-owned and
+  persisted. After a successful live-follow refresh, a configured
+  account-library target now records either queued/reused capped
+  `account_library_reconciliation` work or an `accountLibraryCursor` skip
+  reason plus lifecycle event, and scheduler diagnostics includes that cursor.

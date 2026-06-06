@@ -153,6 +153,17 @@ auracall session <id> --render
 # Generic persisted run status for response/team/media runs
 auracall run status <id> --json
 
+# Prepare a provider-neutral cross-service handoff packet without target mutation
+auracall handoff prepare \
+  --source-provider chatgpt --source-profile default --source-ref "https://chatgpt.com/c/..." \
+  --target-provider gemini --target-profile auracall-gemini-pro \
+  --source-context-json /path/to/context.json \
+  --source-manifest-json /path/to/manifest.json \
+  --source-materialization-job-json /path/to/history-materialization-job.json \
+  --source-materialization-job-id hmj_existing \
+  --dry-run --json
+auracall handoff status <handoff_id> --json
+
 # TUI (interactive, only for humans)
 auracall tui
 ```
@@ -198,6 +209,21 @@ Current browser-mode default posture:
   not an execution error. Use `POST /v1/tenant-pool-teams/ensure` or MCP
   `tenant_pool_team_ensure` as the privileged setup path when the pool should
   ensure per-tenant projects and create the team only if missing.
+- cross-service context handoff starts with `auracall handoff prepare
+  --dry-run`: AuraCall writes a provider-neutral packet under
+  `~/.auracall/handoffs/<handoff_id>/` with source context, manifest,
+  omissions, analysis preview, target submission plan, and explicit
+  zero-target-mutation evidence. Repeatable `--source-materialization-job-json`
+  inputs import existing account-history materialization readbacks into the
+  source manifest and omissions. Repeatable `--source-materialization-job-id`
+  inputs read existing source jobs through the local API; explicit
+  `--source-materialization-create` can create one bounded source job when no
+  prior source job evidence was supplied. `auracall handoff status
+  <handoff_id>` reads the packet ledger back by id, including event count,
+  packet digest, source completeness, source materialization job evidence,
+  analysis selection, and target preview attempts. The first slices are
+  preview-only; live target upload/submit requires a later approval-gated
+  workflow.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 
@@ -463,7 +489,9 @@ Terminology note:
   `{"action":"cancel"}`. CLI parity is
   `auracall api history-materialization-create`,
   `history-materialization-status`, `history-materialization-jobs`, and
-  `history-materialization-cancel`; MCP parity is
+  `history-materialization-cancel`. Use
+  `--provider-work-timeout-ms` (or HTTP `providerWorkTimeoutMs`) to bound
+  browser-backed provider work for explicit proofs; MCP parity is
   `history_materialization_create`, `history_materialization_job`,
   `history_materialization_jobs`, and `history_materialization_cancel`.
   React Search conversation rows and the cache-only Account Mirror catalog page

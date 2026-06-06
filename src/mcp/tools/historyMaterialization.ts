@@ -18,6 +18,7 @@ const historyMaterializationCreateInputShape = {
   catalogKind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
   archiveItemId: z.string().min(1).optional(),
   reconcile: z.boolean().optional(),
+  assetSource: z.enum(['account-library']).optional(),
   refreshSnapshot: z.boolean().optional(),
   assetKinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
   maxItems: z.number().int().nonnegative().max(500).optional(),
@@ -32,7 +33,7 @@ const historyMaterializationListInputShape = {
   status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled', 'active', 'terminal']).optional(),
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   runtimeProfile: z.string().min(1).optional(),
-  sourceType: z.enum(['conversation', 'catalog_item', 'archive_item', 'reconciliation']).optional(),
+  sourceType: z.enum(['conversation', 'catalog_item', 'archive_item', 'reconciliation', 'account_library_reconciliation']).optional(),
   limit: z.number().int().nonnegative().max(500).optional(),
 } satisfies z.ZodRawShape;
 
@@ -61,12 +62,24 @@ const historyMaterializationJobShape = z.object({
     statusCode: z.number(),
   }).nullable(),
   message: z.string(),
+  scheduler: z.object({
+    object: z.literal('history_materialization_job_scheduler'),
+    generatedAt: z.string(),
+    state: z.enum(['queued', 'stale_queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled']),
+    dispatchState: z.enum(['scheduled', 'unscheduled', 'running', 'terminal']),
+    queuedAgeMs: z.number().nullable(),
+    runAgeMs: z.number().nullable(),
+    queuedToStartLatencyMs: z.number().nullable(),
+    stale: z.boolean(),
+    staleReason: z.string().nullable(),
+  }).nullable().optional(),
 });
 
 const historyMaterializationCreateOutputShape = {
   object: z.literal('history_materialization_job_create_result'),
   generatedAt: z.string(),
   reused: z.boolean(),
+  reuseReason: z.string().nullable(),
   job: historyMaterializationJobShape,
 } satisfies z.ZodRawShape;
 
@@ -76,7 +89,7 @@ const historyMaterializationListOutputShape = {
   status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled', 'active', 'terminal']).nullable(),
   provider: z.enum(['chatgpt', 'gemini', 'grok']).nullable(),
   runtimeProfile: z.string().nullable(),
-  sourceType: z.enum(['conversation', 'catalog_item', 'archive_item', 'reconciliation']).nullable(),
+  sourceType: z.enum(['conversation', 'catalog_item', 'archive_item', 'reconciliation', 'account_library_reconciliation']).nullable(),
   limit: z.number(),
   jobs: z.array(historyMaterializationJobShape),
   metrics: z.object({

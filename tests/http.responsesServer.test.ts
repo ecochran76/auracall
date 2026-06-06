@@ -141,6 +141,32 @@ function historyMaterializationJob(status: 'queued' | 'succeeded' | 'cancelled')
   };
 }
 
+function zeroAccountLibraryCounts() {
+  const zero = () => ({ artifacts: 0, files: 0, media: 0, total: 0 });
+  return {
+    remoteKnownMissingLocal: zero(),
+    retrievableMissingLocal: zero(),
+    unsupportedMetadataOnly: zero(),
+    duplicateAliases: zero(),
+    failedTerminal: zero(),
+    inventory: {
+      total: zero(),
+      stableIdentity: zero(),
+      directDownload: zero(),
+      needsBrowserDetail: zero(),
+      unsupportedNoAuthority: zero(),
+      detailRoutes: {
+        libraryFileDetail: zero(),
+        libraryArtifactDetail: zero(),
+        libraryCanvasDetail: zero(),
+        conversationDetail: zero(),
+        externalOrInlineAsset: zero(),
+        unknown: zero(),
+      },
+    },
+  };
+}
+
 describe('http responses adapter', () => {
   const cleanup: string[] = [];
   const originalTempEnv = {
@@ -2592,6 +2618,7 @@ describe('http responses adapter', () => {
       object: 'history_materialization_job_create_result' as const,
       generatedAt: '2026-05-22T20:00:00.000Z',
       reused: false,
+      reuseReason: null,
       job: historyMaterializationJob('queued'),
     }));
     const readJob = vi.fn(async () => historyMaterializationJob('succeeded'));
@@ -2739,8 +2766,14 @@ describe('http responses adapter', () => {
         assetInventory: null,
         counts: {
           remoteKnownMissingLocal: { artifacts: 4, files: 2, media: 0, total: 6 },
+          retrievableMissingLocal: { artifacts: 4, files: 2, media: 0, total: 6 },
           localMaterialized: { artifacts: 0, files: 0, media: 0, total: 0 },
           unknownOrDeferred: { artifacts: 0, files: 0, media: 0, total: 0 },
+          duplicateAliases: { artifacts: 0, files: 0, media: 0, total: 0 },
+          unsupportedMetadataOnly: { artifacts: 0, files: 0, media: 0, total: 0 },
+          staticFalsePositive: { artifacts: 0, files: 0, media: 0, total: 0 },
+          failedTerminal: { artifacts: 0, files: 0, media: 0, total: 0 },
+          accountLibrary: zeroAccountLibraryCounts(),
         },
         sourceItem: null,
         createRequest: {
@@ -2772,6 +2805,12 @@ describe('http responses adapter', () => {
           none: 0,
         },
         remoteKnownMissingLocal: { artifacts: 4, files: 2, media: 0, total: 6 },
+        retrievableMissingLocal: { artifacts: 4, files: 2, media: 0, total: 6 },
+        duplicateAliases: { artifacts: 0, files: 0, media: 0, total: 0 },
+        unsupportedMetadataOnly: { artifacts: 0, files: 0, media: 0, total: 0 },
+        staticFalsePositive: { artifacts: 0, files: 0, media: 0, total: 0 },
+        failedTerminal: { artifacts: 0, files: 0, media: 0, total: 0 },
+        accountLibrary: zeroAccountLibraryCounts(),
         unknownOrDeferred: { artifacts: 0, files: 0, media: 0, total: 0 },
       },
     };
@@ -2815,6 +2854,7 @@ describe('http responses adapter', () => {
       object: 'history_materialization_job_create_result' as const,
       generatedAt: '2026-05-22T20:00:00.000Z',
       reused: false,
+      reuseReason: null,
       job: historyMaterializationJob('queued'),
     }));
     const readJob = vi.fn(async (id: string) => (id === 'hmj_missing' ? null : historyMaterializationJob('succeeded')));
@@ -3547,7 +3587,686 @@ describe('http responses adapter', () => {
     }
   });
 
-  it('can start without launching account mirror completions on startup', async () => {
+  it('reports preview-only ChatGPT account-library catch-up counts without creating jobs', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: {
+                enabled: true,
+                accountLibrary: {
+                  mode: 'preview_only',
+                  maxItems: 3,
+                  providerWorkTimeoutMs: 120_000,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const createJob = vi.fn();
+    const previewAccountLibraryReconciliation = vi.fn(async () => ({
+      object: 'history_account_library_reconciliation_preview' as const,
+      generatedAt: '2026-06-02T12:30:00.000Z',
+      provider: 'chatgpt' as const,
+      runtimeProfile: 'default',
+      maxItems: 3,
+      metrics: {
+        catalogFiles: 7,
+        eligibleCandidates: 2,
+        selectedCandidates: 2,
+        archivedFamilies: 3,
+        unresolvedStale: 1,
+        unsupportedOrTerminal: 1,
+        duplicateFamilies: 0,
+      },
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        accountMirrorCompletionService: {
+          start: vi.fn(),
+          read: vi.fn(() => null),
+          list: vi.fn(() => []),
+          control: vi.fn(() => null),
+        },
+        accountMirrorBrowserProcessStatus: null,
+        historyMaterializationService: {
+          createJob,
+          listJobs: vi.fn(async () => ({
+            object: 'history_materialization_jobs' as const,
+            generatedAt: '2026-06-02T12:30:00.000Z',
+            status: null,
+            provider: null,
+            runtimeProfile: null,
+            sourceType: null,
+            limit: 50,
+            jobs: [],
+            metrics: { total: 0, byStatus: {}, active: 0, terminal: 0 },
+          })),
+          readJob: vi.fn(async () => null),
+          cancelJob: vi.fn(),
+          runJob: vi.fn(),
+          recoverInterruptedJobs: vi.fn(async () => 0),
+          previewAccountLibraryReconciliation,
+        } satisfies HistoryMaterializationService,
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        liveFollow: {
+          targets: {
+            accounts: Array<{
+              provider: string;
+              accountLibraryCatchup: {
+                mode: string;
+                status: string;
+                preview: unknown | null;
+              } | null;
+            }>;
+          };
+        };
+      };
+
+      expect(payload.liveFollow.targets.accounts).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          provider: 'chatgpt',
+          accountLibraryCatchup: expect.objectContaining({
+            mode: 'preview_only',
+            status: 'preview_only',
+            preview: null,
+          }),
+        }),
+      ]));
+      expect(previewAccountLibraryReconciliation).not.toHaveBeenCalled();
+      expect(createJob).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports active account-library materialization jobs as a catch-up gate', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: {
+                enabled: true,
+                accountLibrary: { mode: 'preview_only', maxItems: 1 },
+              },
+            },
+          },
+        },
+      },
+    };
+    const activeJob: HistoryMaterializationJob = {
+      object: 'history_materialization_job',
+      id: 'hmj_account_library_active_gate',
+      source: { type: 'account_library_reconciliation', provider: 'chatgpt' },
+      request: {
+        provider: 'chatgpt',
+        runtimeProfile: 'default',
+        browserProfile: 'wsl-chrome-3',
+        boundIdentityKey: 'operator@example.com',
+        reconcile: true,
+        assetSource: 'account-library',
+        assetKinds: ['files'],
+        maxItems: 1,
+      },
+      sourceKey: 'account-library-active-gate',
+      status: 'running',
+      createdAt: '2026-06-02T12:35:00.000Z',
+      updatedAt: '2026-06-02T12:35:01.000Z',
+      startedAt: '2026-06-02T12:35:01.000Z',
+      completedAt: null,
+      attemptCount: 1,
+      result: null,
+      error: null,
+      message: 'History materialization job is running.',
+      scheduler: {
+        object: 'history_materialization_job_scheduler',
+        generatedAt: '2026-06-02T12:35:02.000Z',
+        state: 'running',
+        dispatchState: 'running',
+        queuedAgeMs: null,
+        runAgeMs: 1000,
+        queuedToStartLatencyMs: 1000,
+        stale: false,
+        staleReason: null,
+      },
+    };
+    const createJob = vi.fn();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        accountMirrorCompletionService: {
+          start: vi.fn(),
+          read: vi.fn(() => null),
+          list: vi.fn(() => []),
+          control: vi.fn(() => null),
+        },
+        accountMirrorBrowserProcessStatus: null,
+        historyMaterializationService: {
+          createJob,
+          listJobs: vi.fn(async () => ({
+            object: 'history_materialization_jobs' as const,
+            generatedAt: '2026-06-02T12:35:02.000Z',
+            status: 'active' as const,
+            provider: null,
+            runtimeProfile: null,
+            sourceType: 'account_library_reconciliation' as const,
+            limit: 500,
+            jobs: [activeJob],
+            metrics: { total: 1, byStatus: { running: 1 }, active: 1, terminal: 0 },
+          })),
+          readJob: vi.fn(async () => activeJob),
+          cancelJob: vi.fn(),
+          runJob: vi.fn(),
+          recoverInterruptedJobs: vi.fn(async () => 0),
+          previewAccountLibraryReconciliation: vi.fn(async () => ({
+            object: 'history_account_library_reconciliation_preview' as const,
+            generatedAt: '2026-06-02T12:35:02.000Z',
+            provider: 'chatgpt' as const,
+            runtimeProfile: 'default',
+            maxItems: 1,
+            metrics: {
+              catalogFiles: 1,
+              eligibleCandidates: 1,
+              selectedCandidates: 1,
+              archivedFamilies: 0,
+              unresolvedStale: 0,
+              unsupportedOrTerminal: 0,
+              duplicateFamilies: 0,
+            },
+          })),
+        } satisfies HistoryMaterializationService,
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        liveFollow: {
+          targets: {
+            accounts: Array<{
+              provider: string;
+              accountLibraryCatchup: {
+                status: string;
+                activeJobId: string | null;
+                activeJobStatus: string | null;
+                activeJobScheduler: {
+                  state: string;
+                  dispatchState: string;
+                  queuedAgeMs: number | null;
+                  runAgeMs: number | null;
+                  queuedToStartLatencyMs: number | null;
+                  stale: boolean;
+                  staleReason: string | null;
+                } | null;
+                activeJobCount: number;
+                reason: string | null;
+              } | null;
+            }>;
+          };
+        };
+      };
+
+      expect(payload.liveFollow.targets.accounts).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          provider: 'chatgpt',
+          accountLibraryCatchup: expect.objectContaining({
+            status: 'running',
+            activeJobId: 'hmj_account_library_active_gate',
+            activeJobStatus: 'running',
+            activeJobScheduler: expect.objectContaining({
+              state: 'running',
+              dispatchState: 'running',
+              runAgeMs: 1000,
+              queuedToStartLatencyMs: 1000,
+              stale: false,
+            }),
+            activeJobCount: 1,
+            reason: 'active account-library materialization job hmj_account_library_active_gate is running',
+          }),
+        }),
+      ]));
+      expect(createJob).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  }, 30_000);
+
+  it('reports account-library failure cooldown before live-follow queueing is eligible', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: {
+                enabled: true,
+                accountLibrary: {
+                  mode: 'eligible',
+                  maxItems: 1,
+                  failureCooldownMs: 600_000,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-06-02T12:00:00.000Z'),
+      initialState: {
+        'chatgpt:default': {
+          detectedIdentityKey: 'operator@example.com',
+          lastAttemptAtMs: Date.parse('2026-06-02T11:55:00.000Z'),
+          lastFailureAtMs: Date.parse('2026-06-02T11:55:00.000Z'),
+          consecutiveFailureCount: 1,
+          metadataCounts: {
+            projects: 1,
+            conversations: 2,
+            artifacts: 0,
+            files: 1,
+            media: 0,
+          },
+        },
+      },
+    });
+    const createJob = vi.fn();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        now: () => new Date('2026-06-02T12:00:00.000Z'),
+        accountMirrorStatusRegistry: registry,
+        accountMirrorCompletionService: {
+          start: vi.fn(),
+          read: vi.fn(() => null),
+          list: vi.fn(() => []),
+          control: vi.fn(() => null),
+        },
+        accountMirrorBrowserProcessStatus: null,
+        historyMaterializationService: {
+          createJob,
+          listJobs: vi.fn(async () => ({
+            object: 'history_materialization_jobs' as const,
+            generatedAt: '2026-06-02T12:00:00.000Z',
+            status: 'active' as const,
+            provider: null,
+            runtimeProfile: null,
+            sourceType: 'account_library_reconciliation' as const,
+            limit: 500,
+            jobs: [],
+            metrics: { total: 0, byStatus: {}, active: 0, terminal: 0 },
+          })),
+          readJob: vi.fn(async () => null),
+          cancelJob: vi.fn(),
+          runJob: vi.fn(),
+          recoverInterruptedJobs: vi.fn(async () => 0),
+          previewAccountLibraryReconciliation: vi.fn(async () => ({
+            object: 'history_account_library_reconciliation_preview' as const,
+            generatedAt: '2026-06-02T12:00:00.000Z',
+            provider: 'chatgpt' as const,
+            runtimeProfile: 'default',
+            maxItems: 1,
+            metrics: {
+              catalogFiles: 0,
+              eligibleCandidates: 0,
+              selectedCandidates: 0,
+              archivedFamilies: 0,
+              unresolvedStale: 0,
+              unsupportedOrTerminal: 0,
+              duplicateFamilies: 0,
+            },
+          })),
+        } satisfies HistoryMaterializationService,
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        liveFollow: {
+          targets: {
+            accounts: Array<{
+              accountLibraryCatchup: {
+                status: string;
+                reason: string | null;
+                cooldownUntil: string | null;
+                nextAttemptAt: string | null;
+                activeJobCount: number;
+              } | null;
+            }>;
+          };
+        };
+      };
+
+      const catchup = payload.liveFollow.targets.accounts[0]?.accountLibraryCatchup;
+      expect(catchup).toEqual(expect.objectContaining({
+        status: 'cooling_down',
+        reason: 'account-library failure cooldown is active until 2026-06-02T12:05:00.000Z',
+        cooldownUntil: '2026-06-02T12:05:00.000Z',
+        nextAttemptAt: '2026-06-02T12:05:00.000Z',
+        activeJobCount: 0,
+      }));
+      expect(createJob).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
+	it('reports account-library browser health pressure as a readback-only queueing gate', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: { email: 'operator@example.com' },
+              liveFollow: {
+                enabled: true,
+                accountLibrary: { mode: 'eligible', maxItems: 1 },
+              },
+            },
+          },
+        },
+      },
+    };
+    const createJob = vi.fn();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        now: () => new Date('2026-06-02T12:10:00.000Z'),
+        accountMirrorBrowserProcessStatus: {
+          object: 'browser_process_status',
+          generatedAt: '2026-06-02T12:10:00.000Z',
+          metrics: {
+            configuredTargets: 1,
+            processesAlive: 1,
+            responsiveDevTools: 1,
+            launchBlankArg: 0,
+            openBlankPages: 1,
+          },
+          entries: [{
+	            provider: 'chatgpt',
+	            runtimeProfileId: 'default',
+	            managedProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+	            owner: null,
+	            operation: null,
+	            lease: null,
+	            pid: 12345,
+            port: 9222,
+            host: '127.0.0.1',
+            processAlive: true,
+            devToolsResponsive: true,
+            launchCommandHasBlankArg: false,
+            openBlankPageCount: 1,
+            pageTargetCount: 2,
+            targets: [],
+            error: null,
+          }],
+        },
+        accountMirrorCompletionService: {
+          start: vi.fn(),
+          read: vi.fn(() => null),
+          list: vi.fn(() => []),
+          control: vi.fn(() => null),
+        },
+        historyMaterializationService: {
+          createJob,
+          listJobs: vi.fn(async () => ({
+            object: 'history_materialization_jobs' as const,
+            generatedAt: '2026-06-02T12:10:00.000Z',
+            status: 'active' as const,
+            provider: null,
+            runtimeProfile: null,
+            sourceType: 'account_library_reconciliation' as const,
+            limit: 500,
+            jobs: [],
+            metrics: { total: 0, byStatus: {}, active: 0, terminal: 0 },
+          })),
+          readJob: vi.fn(async () => null),
+          cancelJob: vi.fn(),
+          runJob: vi.fn(),
+          recoverInterruptedJobs: vi.fn(async () => 0),
+          previewAccountLibraryReconciliation: vi.fn(async () => ({
+            object: 'history_account_library_reconciliation_preview' as const,
+            generatedAt: '2026-06-02T12:10:00.000Z',
+            provider: 'chatgpt' as const,
+            runtimeProfile: 'default',
+            maxItems: 1,
+            metrics: {
+              catalogFiles: 1,
+              eligibleCandidates: 1,
+              selectedCandidates: 1,
+              archivedFamilies: 0,
+              unresolvedStale: 0,
+              unsupportedOrTerminal: 0,
+              duplicateFamilies: 0,
+            },
+          })),
+        } satisfies HistoryMaterializationService,
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        liveFollow: {
+          targets: {
+            accounts: Array<{
+              accountLibraryCatchup: {
+                status: string;
+                reason: string | null;
+                browserHealth: {
+                  status: string;
+                  reason: string | null;
+                  processAlive: boolean;
+                  devToolsResponsive: boolean;
+                  openBlankPageCount: number;
+                  pageTargetCount: number;
+                  pid: number | null;
+                  port: number | null;
+                } | null;
+              } | null;
+            }>;
+          };
+        };
+      };
+
+      expect(payload.liveFollow.targets.accounts[0]?.accountLibraryCatchup).toEqual(
+        expect.objectContaining({
+          status: 'blocked',
+          reason: 'managed browser has 1 open blank page target(s)',
+          browserHealth: expect.objectContaining({
+            status: 'blocked',
+            reason: 'managed browser has 1 open blank page target(s)',
+            processAlive: true,
+            devToolsResponsive: true,
+            openBlankPageCount: 1,
+            pageTargetCount: 2,
+            pid: 12345,
+            port: 9222,
+          }),
+        }),
+      );
+      expect(createJob).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+	  });
+
+	it('does not block account-library catch-up on launch about:blank when no blank page remains', async () => {
+		const config = {
+			model: 'gpt-5.2',
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: 'wsl-chrome-3',
+					defaultService: 'chatgpt',
+					services: {
+						chatgpt: {
+							identity: { email: 'operator@example.com' },
+							liveFollow: {
+								enabled: true,
+								accountLibrary: { mode: 'eligible', maxItems: 1 },
+							},
+						},
+					},
+				},
+			},
+		};
+		const createJob = vi.fn();
+		const server = await createResponsesHttpServer(
+			{ host: '127.0.0.1', port: 0 },
+			{
+				config,
+				now: () => new Date('2026-06-02T12:12:00.000Z'),
+				accountMirrorBrowserProcessStatus: {
+					object: 'browser_process_status',
+					generatedAt: '2026-06-02T12:12:00.000Z',
+					metrics: {
+						configuredTargets: 1,
+						processesAlive: 1,
+						responsiveDevTools: 1,
+						launchBlankArg: 1,
+						openBlankPages: 0,
+					},
+					entries: [{
+							provider: 'chatgpt',
+							runtimeProfileId: 'default',
+							managedProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+							owner: null,
+							operation: null,
+							lease: null,
+							pid: 12345,
+						port: 9222,
+						host: '127.0.0.1',
+						processAlive: true,
+						devToolsResponsive: true,
+						launchCommandHasBlankArg: true,
+						openBlankPageCount: 0,
+						pageTargetCount: 2,
+						targets: [],
+						error: null,
+					}],
+				},
+				accountMirrorCompletionService: {
+					start: vi.fn(),
+					read: vi.fn(() => null),
+					list: vi.fn(() => []),
+					control: vi.fn(() => null),
+				},
+				historyMaterializationService: {
+					createJob,
+					listJobs: vi.fn(async () => ({
+						object: 'history_materialization_jobs' as const,
+						generatedAt: '2026-06-02T12:12:00.000Z',
+						status: 'active' as const,
+						provider: null,
+						runtimeProfile: null,
+						sourceType: 'account_library_reconciliation' as const,
+						limit: 500,
+						jobs: [],
+						metrics: { total: 0, byStatus: {}, active: 0, terminal: 0 },
+					})),
+					readJob: vi.fn(async () => null),
+					cancelJob: vi.fn(),
+					runJob: vi.fn(),
+					recoverInterruptedJobs: vi.fn(async () => 0),
+					previewAccountLibraryReconciliation: vi.fn(async () => ({
+						object: 'history_account_library_reconciliation_preview' as const,
+						generatedAt: '2026-06-02T12:12:00.000Z',
+						provider: 'chatgpt' as const,
+						runtimeProfile: 'default',
+						maxItems: 1,
+						metrics: {
+							catalogFiles: 1,
+							eligibleCandidates: 1,
+							selectedCandidates: 1,
+							archivedFamilies: 0,
+							unresolvedStale: 0,
+							unsupportedOrTerminal: 0,
+							duplicateFamilies: 0,
+						},
+					})),
+				} satisfies HistoryMaterializationService,
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			const payload = await response.json() as {
+				liveFollow: {
+					targets: {
+						accounts: Array<{
+							accountLibraryCatchup: {
+								status: string;
+								reason: string | null;
+								browserHealth: {
+									status: string;
+									reason: string | null;
+									launchCommandHasBlankArg: boolean;
+									openBlankPageCount: number;
+								} | null;
+							} | null;
+						}>;
+					};
+				};
+			};
+
+			expect(payload.liveFollow.targets.accounts[0]?.accountLibraryCatchup).toEqual(
+				expect.objectContaining({
+					status: 'eligible',
+					reason: 'liveFollow.accountLibrary.mode is eligible',
+					browserHealth: expect.objectContaining({
+						status: 'observed',
+						reason: null,
+						launchCommandHasBlankArg: true,
+						openBlankPageCount: 0,
+					}),
+				}),
+			);
+			expect(createJob).not.toHaveBeenCalled();
+		} finally {
+			await server.close();
+		}
+	});
+
+	it('can start without launching account mirror completions on startup', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-account-mirror-startup-isolated-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -4752,6 +5471,89 @@ describe('http responses adapter', () => {
       });
       expect(['startup-cadence', 'cadence']).toContain(payload.accountMirrorScheduler.lastWakeReason);
       expect(['idle', 'scheduled', 'running']).toContain(payload.accountMirrorScheduler.state);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('does not treat an idle background drain cadence timer as foreground scheduler pressure', async () => {
+    const pass: AccountMirrorSchedulerPassResult = {
+      object: 'account_mirror_scheduler_pass',
+      mode: 'execute',
+      action: 'refresh-completed',
+      startedAt: '2026-06-05T01:20:00.000Z',
+      completedAt: '2026-06-05T01:20:01.000Z',
+      selectedTarget: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        status: 'eligible',
+        reason: 'eligible',
+        eligibleAt: '2026-06-05T01:20:00.000Z',
+        mirrorCompleteness: completeAccountMirror,
+      },
+      backpressure: {
+        reason: 'none',
+        message: null,
+      },
+      metrics: {
+        totalTargets: 1,
+        eligibleTargets: 1,
+        delayedTargets: 0,
+        blockedTargets: 0,
+        defaultChatgptEligibleTargets: 1,
+        defaultChatgptDelayedTargets: 0,
+        inProgressEligibleTargets: 0,
+      },
+      refresh: null,
+      error: null,
+    };
+    const runOnce = vi.fn(async () => pass);
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        backgroundDrainIntervalMs: 60_000,
+        accountMirrorSchedulerIntervalMs: 25,
+      },
+      {
+        accountMirrorSchedulerService: {
+          runOnce,
+        },
+        accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
+      },
+    );
+
+    try {
+      await delay(40);
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        accountMirrorScheduler: {
+          operatorStatus: { posture: string; reason: string; backpressureReason: string | null };
+          foregroundWork: {
+            active: boolean;
+            activeRequestCount: number;
+            drainReservations: number;
+            backgroundDrainScheduled: boolean;
+            backgroundDrainState: string;
+          };
+        };
+      };
+      expect(runOnce).toHaveBeenCalledWith({
+        dryRun: true,
+      });
+      expect(payload.accountMirrorScheduler.foregroundWork).toMatchObject({
+        active: false,
+        activeRequestCount: 0,
+        drainReservations: 0,
+        backgroundDrainScheduled: true,
+        backgroundDrainState: 'idle',
+      });
+      expect(payload.accountMirrorScheduler.operatorStatus).toMatchObject({
+        posture: 'healthy',
+        backpressureReason: 'none',
+      });
     } finally {
       await server.close();
     }

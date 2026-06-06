@@ -141,6 +141,14 @@ export class BrowserAutomationClient {
     return this.llmService.listAccountFiles({ listOptions: options });
   }
 
+  async downloadAccountFile(
+    fileId: string,
+    destPath: string,
+    options?: { listOptions?: BrowserProviderListOptions; file?: FileRef },
+  ): Promise<void> {
+    return this.llmService.downloadAccountFile(fileId, destPath, options);
+  }
+
   async listConversationFiles(
     conversationId: string,
     options?: { projectId?: string; listOptions?: BrowserProviderListOptions },

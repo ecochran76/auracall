@@ -103,6 +103,8 @@ import {
 	createHistoryMaterializationService,
 	HistoryMaterializationError,
 	HistoryMaterializationJobControlError,
+	type HistoryAccountLibraryReconciliationPreviewResult,
+	type HistoryMaterializationJob,
 	type HistoryMaterializationJobCreateResult,
 	type HistoryMaterializationJobListResult,
 	type HistoryMaterializationService,
@@ -275,6 +277,12 @@ import {
 	isDevToolsResponsive,
 } from "../../packages/browser-service/src/processCheck.js";
 import { readDevToolsPort } from "../../packages/browser-service/src/profileState.js";
+import {
+	getInstance as getBrowserRegistryInstance,
+	type BrowserInstanceLease,
+	type BrowserInstanceOperation,
+	type BrowserInstanceOwner,
+} from "../browser/service/stateRegistry.js";
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 const TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS = 5_000;
@@ -352,6 +360,7 @@ export interface ResponsesHttpServerDeps {
 	accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
 	accountMirrorCompletionService?: AccountMirrorCompletionService;
 	accountMirrorReconciliationCampaignService?: AccountMirrorReconciliationCampaignService;
+	accountMirrorBrowserProcessStatus?: HttpBrowserProcessStatusResponse | null;
 	agentRegistryStore?: AgentRegistryStore | null;
 	preflightRunner?: LazyLiveFollowPreflightRunner;
 	terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
@@ -522,6 +531,9 @@ interface HttpBrowserProcessStatusEntry {
 	provider: AccountMirrorProvider;
 	runtimeProfileId: string;
 	managedProfileDir: string;
+	owner: BrowserInstanceOwner | null;
+	operation: BrowserInstanceOperation | null;
+	lease: BrowserInstanceLease | null;
 	pid: number | null;
 	port: number | null;
 	host: string;
@@ -1146,6 +1158,14 @@ export async function createResponsesHttpServer(
 			initialOperations: initialAccountMirrorCompletions,
 			resumeActiveOperations: resumeAccountMirrorCompletionsOnStart,
 			now,
+			shouldYieldToForegroundWork: () =>
+				hasForegroundAuraCallExecutionPressure()
+					? {
+							reason: "foreground-work",
+							message:
+								"Foreground AuraCall API or service work is pending; live follow will retry later.",
+						}
+					: null,
 			historyMaterializationService: {
 				async createJob(request) {
 					if (!historyMaterializationService) {
@@ -1331,6 +1351,7 @@ export async function createResponsesHttpServer(
 			catalogService: accountMirrorCatalogService,
 			runArchiveService,
 			now,
+			cleanupManagedBrowserAfterProviderWork: true,
 			withForegroundWork: async (work) => {
 				const endForegroundWork = beginForegroundAuraCallWork();
 				try {
@@ -1354,6 +1375,7 @@ export async function createResponsesHttpServer(
 		createAccountMirrorArtifactRecoveryPlanner({
 			registry: accountMirrorStatusRegistry,
 			searchProjectionService,
+			historyMaterializationService,
 			now,
 		});
 	const reserveForegroundAuraCallDrain = () => {
@@ -1368,7 +1390,6 @@ export async function createResponsesHttpServer(
 	hasForegroundAuraCallExecutionPressure = () =>
 		foregroundAuraCallWorkCount > 0 ||
 		foregroundAuraCallDrainReservations > 0 ||
-		backgroundDrainScheduled ||
 		backgroundDrainState.state === "scheduled" ||
 		backgroundDrainState.state === "running";
 	const readForegroundAuraCallWorkStatus = (): AccountMirrorSchedulerForegroundWorkStatus => ({
@@ -1668,7 +1689,10 @@ export async function createResponsesHttpServer(
 
 			if (req.method === "GET" && url.pathname === "/status") {
 				const statusQuery = parseStatusQuery(url.searchParams);
-				await accountMirrorStatusRegistry.refreshPersistentState?.();
+				await accountMirrorStatusRegistry.refreshPersistentState?.({
+					provider: statusQuery.accountMirrorProvider,
+					runtimeProfileId: statusQuery.accountMirrorRuntimeProfileId,
+				});
 				await syncRunnerStateFromStore();
 				const address = server.address();
 				const boundPort =
@@ -1689,12 +1713,30 @@ export async function createResponsesHttpServer(
 					await host.summarizeRunnerTopology(),
 					statusQuery.runnerTopologyMode,
 				);
-				const accountMirrorStatus = accountMirrorStatusRegistry.readStatus();
+				const accountMirrorStatus = accountMirrorStatusRegistry.readStatus({
+					provider: statusQuery.accountMirrorProvider,
+					runtimeProfileId: statusQuery.accountMirrorRuntimeProfileId,
+				});
 				const statusResponseAccountMirrorStatus = scopeAccountMirrorStatusForProofScope(
 					accountMirrorStatus,
 					accountMirrorProofScope,
 				);
+				const accountLibraryPreviews = await previewAccountLibraryCatchupTargets({
+					status: statusResponseAccountMirrorStatus,
+					service: historyMaterializationService,
+				});
+				const accountLibraryActiveJobs = await readActiveAccountLibraryMaterializationJobs({
+					service: historyMaterializationService,
+				});
+				const accountLibraryBrowserProcessStatus =
+					deps.accountMirrorBrowserProcessStatus === undefined
+						? await readAccountLibraryBrowserProcessStatus({
+								status: statusResponseAccountMirrorStatus,
+								now,
+							})
+						: deps.accountMirrorBrowserProcessStatus;
 				const statusResponse = await createHttpStatusResponse({
+					now,
 					host: boundHost,
 					port: boundPort,
 					dashboardUrl: options.dashboardUrl,
@@ -1711,6 +1753,9 @@ export async function createResponsesHttpServer(
 					accountMirrorScheduler: accountMirrorSchedulerState,
 					accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
 					accountMirrorStatus: statusResponseAccountMirrorStatus,
+					accountMirrorAccountLibraryPreviews: accountLibraryPreviews,
+					accountMirrorAccountLibraryActiveJobs: accountLibraryActiveJobs,
+					accountMirrorBrowserProcessStatus: accountLibraryBrowserProcessStatus,
 					accountMirrorCompletions: await createAccountMirrorCompletionStatusSummary(
 						accountMirrorCompletionService,
 						now,
@@ -1742,12 +1787,13 @@ export async function createResponsesHttpServer(
 			}
 
 			if (req.method === "GET" && url.pathname === "/v1/browser/processes") {
-				await accountMirrorStatusRegistry.refreshPersistentState?.();
+				const query = parseBrowserProcessStatusQuery(url.searchParams);
+				await accountMirrorStatusRegistry.refreshPersistentState?.(query);
 				sendJson(
 					res,
 					200,
 					await readBrowserProcessStatus({
-						status: accountMirrorStatusRegistry.readStatus(),
+						status: accountMirrorStatusRegistry.readStatus(query),
 						now,
 					}),
 				);
@@ -1838,7 +1884,10 @@ export async function createResponsesHttpServer(
 
 			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/status") {
 				const query = parseAccountMirrorStatusQuery(url.searchParams);
-				await accountMirrorStatusRegistry.refreshPersistentState?.();
+				await accountMirrorStatusRegistry.refreshPersistentState?.({
+					provider: query.provider,
+					runtimeProfileId: query.runtimeProfileId,
+				});
 				sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
 				return;
 			}
@@ -2815,7 +2864,22 @@ export async function createResponsesHttpServer(
 					accountMirrorStatus,
 					accountMirrorProofScope,
 				);
+				const accountLibraryPreviews = await previewAccountLibraryCatchupTargets({
+					status: statusResponseAccountMirrorStatus,
+					service: historyMaterializationService,
+				});
+				const accountLibraryActiveJobs = await readActiveAccountLibraryMaterializationJobs({
+					service: historyMaterializationService,
+				});
+				const accountLibraryBrowserProcessStatus =
+					deps.accountMirrorBrowserProcessStatus === undefined
+						? await readAccountLibraryBrowserProcessStatus({
+								status: statusResponseAccountMirrorStatus,
+								now,
+							})
+						: deps.accountMirrorBrowserProcessStatus;
 				const statusResponse = await createHttpStatusResponse({
+					now,
 					host: boundHost,
 					port: boundPort,
 					dashboardUrl: options.dashboardUrl,
@@ -2829,6 +2893,9 @@ export async function createResponsesHttpServer(
 					accountMirrorScheduler: accountMirrorSchedulerState,
 					accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
 					accountMirrorStatus: statusResponseAccountMirrorStatus,
+					accountMirrorAccountLibraryPreviews: accountLibraryPreviews,
+					accountMirrorAccountLibraryActiveJobs: accountLibraryActiveJobs,
+					accountMirrorBrowserProcessStatus: accountLibraryBrowserProcessStatus,
 					accountMirrorCompletions: await createAccountMirrorCompletionStatusSummary(
 						accountMirrorCompletionService,
 						now,
@@ -4332,6 +4399,7 @@ function createHttpModelListResponse(catalog: {
 }
 
 function createHttpStatusResponse(input: {
+	now: () => Date;
 	host: string;
 	port: number;
 	dashboardUrl?: string;
@@ -4346,6 +4414,9 @@ function createHttpStatusResponse(input: {
 	accountMirrorScheduler: HttpStatusResponse["accountMirrorScheduler"];
 	accountMirrorSchedulerForegroundWork: AccountMirrorSchedulerForegroundWorkStatus;
 	accountMirrorStatus: AccountMirrorStatusSummary;
+	accountMirrorAccountLibraryPreviews?: AccountMirrorAccountLibraryPreviewMap | null;
+	accountMirrorAccountLibraryActiveJobs?: AccountMirrorAccountLibraryActiveJobMap | null;
+	accountMirrorBrowserProcessStatus?: HttpBrowserProcessStatusResponse | null;
 	accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
 	accountMirrorProofScope: AccountMirrorProofScopeStatus;
 	preflight?: PreflightStatusSummary;
@@ -4434,7 +4505,7 @@ function createHttpStatusResponse(input: {
 			runArchiveMaterializationTemplate: "/v1/archive/materializations/{job_id}",
 			historyMaterializationsCreate: "/v1/account-mirrors/materializations",
 			historyMaterializationsList:
-				"/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|catalog_item|archive_item|reconciliation][&limit=50]",
+				"/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|catalog_item|archive_item|reconciliation|account_library_reconciliation][&limit=50]",
 			historyMaterializationTemplate: "/v1/account-mirrors/materializations/{job_id}",
 			accountMirrorRecoveryCandidates:
 				"/v1/account-mirrors/recovery-candidates[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status=eligible|needs_detail_refresh|deferred|blocked|unsupported|terminal][&action={action}][&includeSearchRows=true|false][&limit=50]",
@@ -4527,6 +4598,10 @@ function createHttpStatusResponse(input: {
 			accountMirrorScheduler,
 			input.accountMirrorCompletions,
 			input.accountMirrorStatus,
+			input.accountMirrorAccountLibraryPreviews ?? null,
+			input.accountMirrorAccountLibraryActiveJobs ?? null,
+			input.accountMirrorBrowserProcessStatus ?? null,
+			input.now,
 		),
 		executionHints: {
 			headerNames: [
@@ -4871,6 +4946,7 @@ async function readBrowserProcessStatusEntry(input: {
 	);
 	const host = "127.0.0.1";
 	try {
+		const registryInstance = await getBrowserRegistryInstance(managedProfileDir, "Default");
 		const processMatch = await findChromeProcessUsingUserDataDir(managedProfileDir);
 		const port = processMatch?.port ?? (await readDevToolsPort(managedProfileDir));
 		const devToolsResponsive = port
@@ -4879,10 +4955,13 @@ async function readBrowserProcessStatusEntry(input: {
 		const targets =
 			devToolsResponsive && port ? await readDevToolsTargetSummaries({ host, port }) : [];
 		return {
-			provider: input.provider,
-			runtimeProfileId: input.runtimeProfileId,
-			managedProfileDir,
-			pid: processMatch?.pid ?? null,
+				provider: input.provider,
+				runtimeProfileId: input.runtimeProfileId,
+				managedProfileDir,
+				owner: registryInstance?.owner ?? null,
+				operation: registryInstance?.operation ?? null,
+				lease: registryInstance?.lease ?? null,
+				pid: processMatch?.pid ?? null,
 			port: port ?? null,
 			host,
 			processAlive: Boolean(processMatch),
@@ -4895,10 +4974,13 @@ async function readBrowserProcessStatusEntry(input: {
 		};
 	} catch (error) {
 		return {
-			provider: input.provider,
-			runtimeProfileId: input.runtimeProfileId,
-			managedProfileDir,
-			pid: null,
+				provider: input.provider,
+				runtimeProfileId: input.runtimeProfileId,
+				managedProfileDir,
+				owner: null,
+				operation: null,
+				lease: null,
+				pid: null,
 			port: null,
 			host,
 			processAlive: false,
@@ -4916,7 +4998,10 @@ async function readDevToolsTargetSummaries(input: {
 	host: string;
 	port: number;
 }): Promise<HttpBrowserProcessTargetSummary[]> {
-	const targets = await CDP.List({ host: input.host, port: input.port }).catch(() => []);
+	const targets = await withPromiseTimeout(
+		CDP.List({ host: input.host, port: input.port }),
+		1000,
+	).catch(() => []);
 	return targets.map((target) => {
 		const url = typeof target.url === "string" ? target.url : null;
 		return {
@@ -4926,6 +5011,18 @@ async function readDevToolsTargetSummaries(input: {
 			title: typeof target.title === "string" ? target.title : null,
 			isBlankPage: target.type === "page" && isBlankPageUrl(url),
 		};
+	});
+}
+
+function withPromiseTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			reject(new Error(`Operation timed out after ${timeoutMs}ms.`));
+		}, timeoutMs);
+		promise
+			.then(resolve)
+			.catch(reject)
+			.finally(() => clearTimeout(timeout));
 	});
 }
 
@@ -5013,6 +5110,10 @@ function createLiveFollowHealthSummary(
 	scheduler: HttpStatusResponse["accountMirrorScheduler"],
 	completions: AccountMirrorCompletionStatusSummary,
 	status: AccountMirrorStatusSummary,
+	accountLibraryPreviews: AccountMirrorAccountLibraryPreviewMap | null,
+	accountLibraryActiveJobs: AccountMirrorAccountLibraryActiveJobMap | null,
+	accountLibraryBrowserProcessStatus: HttpBrowserProcessStatusResponse | null,
+	now: () => Date,
 ): LiveFollowHealthSummary {
 	const backpressureReason =
 		scheduler.lastPass?.backpressure.reason ?? scheduler.operatorStatus.backpressureReason;
@@ -5036,7 +5137,14 @@ function createLiveFollowHealthSummary(
 					remainingDetailSurfaces: latestYield.remainingDetailSurfaces?.total ?? null,
 				}
 			: null,
-		targets: createLiveFollowTargetRollup(status, completions),
+		targets: createLiveFollowTargetRollup(
+			status,
+			completions,
+			accountLibraryPreviews,
+			accountLibraryActiveJobs,
+			accountLibraryBrowserProcessStatus,
+			now,
+		),
 	});
 }
 
@@ -5195,7 +5303,15 @@ function createAccountMirrorSchedulerDiagnosticsBundle(input: {
 		...input.scheduler,
 		operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.scheduler),
 	};
-	const liveFollow = createLiveFollowHealthSummary(scheduler, input.completions, input.status);
+	const liveFollow = createLiveFollowHealthSummary(
+		scheduler,
+		input.completions,
+		input.status,
+		null,
+		null,
+		null,
+		input.now,
+	);
 	let completion: AccountMirrorCompletionOperation | null = null;
 	if (input.query.completionId) {
 		completion = input.readCompletion(input.query.completionId);
@@ -5314,6 +5430,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 	phase: string;
 	nextAttemptAt: string | null;
 	passCount: number;
+	accountLibraryCursor: AccountMirrorCompletionOperation["accountLibraryCursor"] | null;
 	error: AccountMirrorCompletionOperation["error"];
 } {
 	return {
@@ -5324,6 +5441,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 		phase: operation.phase,
 		nextAttemptAt: operation.nextAttemptAt,
 		passCount: operation.passCount,
+		accountLibraryCursor: operation.accountLibraryCursor ?? null,
 		error: operation.error,
 	};
 }
@@ -5363,9 +5481,90 @@ function normalizeOptionalQueryString(value: string | null): string | null {
 	return trimmed.length > 0 ? trimmed : null;
 }
 
+type AccountMirrorAccountLibraryPreviewMap = Map<string, HistoryAccountLibraryReconciliationPreviewResult>;
+type AccountMirrorAccountLibraryActiveJobMap = Map<
+	string,
+	{
+		primary: HistoryMaterializationJob | null;
+		jobs: HistoryMaterializationJob[];
+		count: number;
+	}
+>;
+type AccountMirrorAccountLibraryActiveJobs = NonNullable<
+	AccountMirrorAccountLibraryActiveJobMap extends Map<string, infer Value> ? Value : never
+>;
+type LiveFollowAccountLibraryCatchupSummary = NonNullable<
+	LiveFollowTargetAccountSummary["accountLibraryCatchup"]
+>;
+type LiveFollowAccountLibraryBrowserHealth = LiveFollowAccountLibraryCatchupSummary["browserHealth"];
+
+async function previewAccountLibraryCatchupTargets(input: {
+	status: AccountMirrorStatusSummary;
+	service: HistoryMaterializationService | null | undefined;
+}): Promise<AccountMirrorAccountLibraryPreviewMap> {
+	const previews: AccountMirrorAccountLibraryPreviewMap = new Map();
+	void input;
+	return previews;
+}
+
+function accountMirrorPreviewKey(provider: string, runtimeProfileId: string): string {
+	return `${provider}:${runtimeProfileId}`;
+}
+
+async function readActiveAccountLibraryMaterializationJobs(input: {
+	service: HistoryMaterializationService | null | undefined;
+}): Promise<AccountMirrorAccountLibraryActiveJobMap> {
+	const activeJobs: AccountMirrorAccountLibraryActiveJobMap = new Map();
+	if (!input.service) return activeJobs;
+	const result = await input.service
+		.listJobs({
+			status: "active",
+			sourceType: "account_library_reconciliation",
+			limit: 500,
+		})
+		.catch(() => null);
+	if (!result) return activeJobs;
+	for (const job of result.jobs) {
+		const provider = job.request.provider;
+		const runtimeProfileId = job.request.runtimeProfile;
+		if (!provider || !runtimeProfileId) continue;
+		const key = accountMirrorPreviewKey(provider, runtimeProfileId);
+		const existing = activeJobs.get(key);
+		if (existing) {
+			existing.jobs.push(job);
+			existing.count = existing.jobs.length;
+			if (!existing.primary || job.status === "running") {
+				existing.primary = job;
+			}
+			continue;
+		}
+		activeJobs.set(key, {
+			primary: job,
+			jobs: [job],
+			count: 1,
+		});
+	}
+	return activeJobs;
+}
+
+async function readAccountLibraryBrowserProcessStatus(input: {
+	status: AccountMirrorStatusSummary;
+	now: () => Date;
+}): Promise<HttpBrowserProcessStatusResponse | null> {
+	const hasConfiguredAccountLibraryTarget = input.status.entries.some(
+		(entry) => entry.liveFollow.accountLibrary.mode !== "disabled",
+	);
+	if (!hasConfiguredAccountLibraryTarget) return null;
+	return readBrowserProcessStatus(input);
+}
+
 function createLiveFollowTargetRollup(
 	status: AccountMirrorStatusSummary,
 	completions: AccountMirrorCompletionStatusSummary,
+	accountLibraryPreviews: AccountMirrorAccountLibraryPreviewMap | null,
+	accountLibraryActiveJobs: AccountMirrorAccountLibraryActiveJobMap | null,
+	accountLibraryBrowserProcessStatus: HttpBrowserProcessStatusResponse | null,
+	now: () => Date,
 ): LiveFollowTargetRollup {
 	const activeOperations = completions.active;
 	const recentOperations = completions.recent;
@@ -5412,6 +5611,13 @@ function createLiveFollowTargetRollup(
 			latestLifecycleEvent: summarizeCompletionLifecycleEvent(activeOperation ?? recentOperation),
 			materializationOutcome: summarizeLiveFollowMaterializationOutcome(
 				activeOperation ?? recentOperation,
+			),
+			accountLibraryCatchup: summarizeLiveFollowAccountLibraryCatchup(
+				entry,
+				accountLibraryPreviews?.get(accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId)) ?? null,
+				accountLibraryActiveJobs?.get(accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId)) ?? null,
+				accountLibraryBrowserProcessStatus,
+				now,
 			),
 			metadataCounts: entry.metadataCounts,
 			metadataCountEvidence: entry.metadataEvidence?.countEvidence ?? null,
@@ -5550,6 +5756,160 @@ function summarizeLiveFollowMaterializationOutcome(
 		materialized: outcome.materialized,
 		checksumCount: outcome.checksumCount,
 	};
+}
+
+function summarizeLiveFollowAccountLibraryCatchup(
+	entry: AccountMirrorStatusEntry,
+	preview: HistoryAccountLibraryReconciliationPreviewResult | null,
+	activeJobs: AccountMirrorAccountLibraryActiveJobs | null,
+	browserProcessStatus: HttpBrowserProcessStatusResponse | null,
+	now: () => Date,
+): LiveFollowTargetAccountSummary["accountLibraryCatchup"] {
+	const desired = entry.liveFollow.accountLibrary;
+	if (!desired) return null;
+	const activeJob = activeJobs?.primary ?? null;
+	const activeJobCount = activeJobs?.count ?? 0;
+	const cooldownUntil = deriveLiveFollowAccountLibraryCooldownUntil(entry);
+	const cooldownActive = Boolean(cooldownUntil && Date.parse(cooldownUntil) > now().getTime());
+	const browserHealth = summarizeLiveFollowAccountLibraryBrowserHealth(
+		entry,
+		browserProcessStatus,
+	);
+	const blockedReason = deriveLiveFollowAccountLibraryBlockedReason({
+		entry,
+		activeJobCount,
+		browserHealth,
+	});
+	const status = activeJob
+		? activeJob.status
+		: desired.mode === "disabled"
+		? "disabled"
+		: desired.mode === "preview_only"
+			? "preview_only"
+			: cooldownActive
+				? "cooling_down"
+			: blockedReason
+				? "blocked"
+				: "eligible";
+	const reason = activeJob
+		? `active account-library materialization job ${activeJob.id} is ${activeJob.status}`
+		: cooldownActive
+			? `account-library failure cooldown is active until ${cooldownUntil}`
+			: blockedReason ?? desired.reason;
+	return {
+		mode: desired.mode,
+		enabled: desired.enabled,
+		status,
+		reason,
+		activeJobId: activeJob?.id ?? null,
+		activeJobStatus: activeJob?.status ?? null,
+		activeJobScheduler: activeJob?.scheduler
+			? {
+					object: activeJob.scheduler.object,
+					generatedAt: activeJob.scheduler.generatedAt,
+					state: activeJob.scheduler.state,
+					dispatchState: activeJob.scheduler.dispatchState,
+					queuedAgeMs: activeJob.scheduler.queuedAgeMs,
+					runAgeMs: activeJob.scheduler.runAgeMs,
+					queuedToStartLatencyMs: activeJob.scheduler.queuedToStartLatencyMs,
+					stale: activeJob.scheduler.stale,
+					staleReason: activeJob.scheduler.staleReason,
+				}
+			: null,
+		activeJobCount,
+		maxItems: desired.maxItems,
+		minIntervalMs: desired.minIntervalMs,
+		failureCooldownMs: desired.failureCooldownMs,
+		cooldownUntil,
+		maxActiveJobs: desired.maxActiveJobs,
+		providerWorkTimeoutMs: desired.providerWorkTimeoutMs,
+		nextAttemptAt: cooldownActive
+			? cooldownUntil
+			: desired.mode === "eligible"
+				? entry.eligibleAt
+				: null,
+		browserHealth,
+		preview: preview
+			? {
+					generatedAt: preview.generatedAt,
+					catalogFiles: preview.metrics.catalogFiles,
+					eligibleCandidates: preview.metrics.eligibleCandidates,
+					selectedCandidates: preview.metrics.selectedCandidates,
+					archivedFamilies: preview.metrics.archivedFamilies,
+					unresolvedStale: preview.metrics.unresolvedStale,
+					unsupportedOrTerminal: preview.metrics.unsupportedOrTerminal,
+					duplicateFamilies: preview.metrics.duplicateFamilies,
+				}
+			: null,
+	};
+}
+
+function deriveLiveFollowAccountLibraryCooldownUntil(entry: AccountMirrorStatusEntry): string | null {
+	const cooldownMs = entry.liveFollow.accountLibrary.failureCooldownMs;
+	if (!cooldownMs || cooldownMs <= 0) return null;
+	const lastFailureAtMs = Date.parse(entry.lastFailureAt ?? "");
+	if (!Number.isFinite(lastFailureAtMs)) return null;
+	return new Date(lastFailureAtMs + cooldownMs).toISOString();
+}
+
+function summarizeLiveFollowAccountLibraryBrowserHealth(
+	entry: AccountMirrorStatusEntry,
+	status: HttpBrowserProcessStatusResponse | null,
+): LiveFollowAccountLibraryBrowserHealth {
+	const browserEntry = status?.entries.find(
+		(candidate) =>
+			candidate.provider === entry.provider &&
+			candidate.runtimeProfileId === entry.runtimeProfileId,
+	);
+	if (!browserEntry) return null;
+	const reason = deriveLiveFollowAccountLibraryBrowserHealthBlockedReason(browserEntry);
+	return {
+		status: reason ? "blocked" : browserEntry.processAlive ? "observed" : "idle",
+		reason,
+		processAlive: browserEntry.processAlive,
+		devToolsResponsive: browserEntry.devToolsResponsive,
+		launchCommandHasBlankArg: browserEntry.launchCommandHasBlankArg,
+		openBlankPageCount: browserEntry.openBlankPageCount,
+		pageTargetCount: browserEntry.pageTargetCount,
+		pid: browserEntry.pid,
+		port: browserEntry.port,
+		error: browserEntry.error,
+	};
+}
+
+function deriveLiveFollowAccountLibraryBrowserHealthBlockedReason(
+	entry: HttpBrowserProcessStatusEntry,
+): string | null {
+	if (entry.error) return `browser process health probe failed: ${entry.error}`;
+	if (entry.processAlive && !entry.devToolsResponsive) {
+		return "managed browser process is running but DevTools is not responsive";
+	}
+	if (entry.openBlankPageCount > 0) {
+		return `managed browser has ${entry.openBlankPageCount} open blank page target(s)`;
+	}
+	return null;
+}
+
+function deriveLiveFollowAccountLibraryBlockedReason(input: {
+	entry: AccountMirrorStatusEntry;
+	activeJobCount: number;
+	browserHealth: LiveFollowAccountLibraryBrowserHealth;
+}): string | null {
+	const { entry, activeJobCount, browserHealth } = input;
+	if (entry.liveFollow.accountLibrary.mode !== "eligible") return null;
+	if (entry.provider !== "chatgpt") return "account-library live-follow catch-up currently supports ChatGPT only";
+	if (entry.liveFollow.state !== "enabled") return entry.liveFollow.reason;
+	if (entry.status !== "eligible") return entry.reason;
+	if (entry.providerGuard.state !== "clear") return entry.providerGuard.summary ?? entry.providerGuard.state;
+	if (entry.mirrorState.running || entry.mirrorState.queued) {
+		return "account mirror provider work is already active for this target";
+	}
+	const maxActiveJobs = entry.liveFollow.accountLibrary.maxActiveJobs;
+	if (maxActiveJobs !== null && activeJobCount >= maxActiveJobs) {
+		return `active account-library materialization jobs reached maxActiveJobs=${maxActiveJobs}`;
+	}
+	if (browserHealth?.reason) return browserHealth.reason;
+	return null;
 }
 
 function isLiveFollowTargetAttentionNeeded(
@@ -6864,6 +7224,13 @@ interface ParsedStatusQuery {
 	sourceKindSummary?: ExecutionRunSourceKind | "all";
 	runnerTopologyMode: "compact" | "full";
 	tenantExecutionLimitsMode: "configured" | "usage";
+	accountMirrorProvider?: AccountMirrorProvider;
+	accountMirrorRuntimeProfileId?: string;
+}
+
+interface ParsedBrowserProcessStatusQuery {
+	provider?: AccountMirrorProvider;
+	runtimeProfileId?: string;
 }
 
 interface ParsedRuntimeInspectionQuery {
@@ -6948,6 +7315,8 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
 			sourceKind: z.enum(["direct", "team-run", "all"]).optional(),
 			runnerTopology: z.enum(["compact", "full"]).optional(),
 			tenantExecutionLimits: z.enum(["configured", "usage"]).optional(),
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
 		})
 		.superRefine((value, ctx) => {
 			if (!value.recovery && value.sourceKind !== undefined) {
@@ -6965,6 +7334,30 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
 		sourceKindSummary: parsed.sourceKind,
 		runnerTopologyMode: parsed.runnerTopology ?? "compact",
 		tenantExecutionLimitsMode: parsed.tenantExecutionLimits ?? "configured",
+		accountMirrorProvider: parsed.provider,
+		accountMirrorRuntimeProfileId: parsed.runtimeProfile,
+	};
+}
+
+function parseBrowserProcessStatusQuery(
+	searchParams: URLSearchParams,
+): ParsedBrowserProcessStatusQuery {
+	const raw: Record<string, unknown> = {};
+	if (searchParams.has("provider")) {
+		raw.provider = searchParams.get("provider");
+	}
+	if (searchParams.has("runtimeProfile")) {
+		raw.runtimeProfile = searchParams.get("runtimeProfile");
+	}
+	const parsed = z
+		.object({
+			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+			runtimeProfile: z.string().trim().min(1).optional(),
+		})
+		.parse(raw);
+	return {
+		provider: parsed.provider,
+		runtimeProfileId: parsed.runtimeProfile,
 	};
 }
 
@@ -7537,6 +7930,8 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 			archiveItemId: z.string().trim().min(1).optional(),
 			archive_item_id: z.string().trim().min(1).optional(),
 			reconcile: z.boolean().optional(),
+			assetSource: z.enum(["account-library"]).optional(),
+			asset_source: z.enum(["account-library"]).optional(),
 			refreshSnapshot: z.boolean().optional(),
 			refresh_snapshot: z.boolean().optional(),
 			reconcileSnapshot: z.boolean().optional(),
@@ -7545,6 +7940,8 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 			asset_kinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
 			maxItems: z.number().int().nonnegative().max(500).optional(),
 			max_items: z.number().int().nonnegative().max(500).optional(),
+			providerWorkTimeoutMs: z.number().int().positive().optional(),
+			provider_work_timeout_ms: z.number().int().positive().optional(),
 			force: z.boolean().optional(),
 		})
 		.parse(value);
@@ -7561,6 +7958,7 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 		catalogKind: parsed.catalogKind ?? parsed.catalog_kind,
 		archiveItemId: parsed.archiveItemId ?? parsed.archive_item_id,
 		reconcile: parsed.reconcile ?? false,
+		assetSource: parsed.assetSource ?? parsed.asset_source,
 		refreshSnapshot:
 			parsed.refreshSnapshot ??
 			parsed.refresh_snapshot ??
@@ -7569,6 +7967,8 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 			false,
 		assetKinds: parsed.assetKinds ?? parsed.asset_kinds,
 		maxItems: parsed.maxItems ?? parsed.max_items,
+		providerWorkTimeoutMs:
+			parsed.providerWorkTimeoutMs ?? parsed.provider_work_timeout_ms,
 		force: parsed.force ?? false,
 	};
 }
@@ -7595,7 +7995,13 @@ function parseHistoryMaterializationJobListQuery(searchParams: URLSearchParams) 
 			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
 			runtimeProfile: z.string().trim().min(1).optional(),
 			sourceType: z
-				.enum(["conversation", "catalog_item", "archive_item", "reconciliation"])
+				.enum([
+					"conversation",
+					"catalog_item",
+					"archive_item",
+					"reconciliation",
+					"account_library_reconciliation",
+				])
 				.optional(),
 			limit: z.coerce.number().int().min(0).max(500).optional(),
 		})
@@ -9477,8 +9883,9 @@ function createOperatorBrowserDashboardHtml(
               <tr>
                 <th>Provider</th>
                 <th>Runtime Profile</th>
-                <th>PID</th>
-                <th>DevTools</th>
+	                <th>PID</th>
+	                <th>Owner</th>
+	                <th>DevTools</th>
                 <th>Launch about:blank</th>
                 <th>Open blank pages</th>
                 <th>Pages</th>
@@ -9486,7 +9893,7 @@ function createOperatorBrowserDashboardHtml(
               </tr>
             </thead>
             <tbody id="browserProcessRows">
-              <tr><td colspan="8" class="muted">No browser process probe loaded.</td></tr>
+	              <tr><td colspan="9" class="muted">No browser process probe loaded.</td></tr>
             </tbody>
           </table>
         </div>
@@ -14236,7 +14643,7 @@ function createOperatorBrowserDashboardHtml(
         'openBlankPages=' + escapeHtml(String(metrics.openBlankPages ?? 0)),
       ].join(' ');
       if (!entries.length) {
-        $('browserProcessRows').innerHTML = '<tr><td colspan="8" class="muted">No configured browser process targets.</td></tr>';
+	        $('browserProcessRows').innerHTML = '<tr><td colspan="9" class="muted">No configured browser process targets.</td></tr>';
         $('browserProcessRaw').textContent = asJson(payload);
         return;
       }
@@ -14251,18 +14658,28 @@ function createOperatorBrowserDashboardHtml(
       const blankArgClass = entry.launchCommandHasBlankArg ? 'warn' : 'ok';
       const openBlankClass = entry.openBlankPageCount > 0 ? 'bad' : 'ok';
       return '<tr>'
-        + '<td>' + escapeHtml(entry.provider || 'unknown') + '</td>'
-        + '<td>' + escapeHtml(entry.runtimeProfileId || 'default') + '</td>'
-        + '<td>' + escapeHtml(entry.pid == null ? 'none' : String(entry.pid)) + '</td>'
-        + '<td>' + devTools + '</td>'
+	        + '<td>' + escapeHtml(entry.provider || 'unknown') + '</td>'
+	        + '<td>' + escapeHtml(entry.runtimeProfileId || 'default') + '</td>'
+	        + '<td>' + escapeHtml(entry.pid == null ? 'none' : String(entry.pid)) + '</td>'
+	        + '<td class="wrap">' + renderBrowserProcessOwner(entry) + '</td>'
+	        + '<td>' + devTools + '</td>'
         + '<td class="' + blankArgClass + '">' + escapeHtml(entry.launchCommandHasBlankArg ? 'yes' : 'no') + '</td>'
         + '<td class="' + openBlankClass + '">' + escapeHtml(String(entry.openBlankPageCount || 0)) + '</td>'
         + '<td>' + escapeHtml(String(entry.pageTargetCount || 0)) + '</td>'
         + '<td class="wrap">' + renderBrowserProcessTargets(entry.targets || [], entry.error) + '</td>'
         + '</tr>';
-    }
+	    }
 
-    function renderBrowserProcessTargets(targets, error) {
+	    function renderBrowserProcessOwner(entry) {
+	      const owner = entry.operation || entry.owner;
+	      if (!owner) return '<span class="muted">unknown</span>';
+	      const id = owner.id ? String(owner.id) : 'unknown';
+	      const source = owner.sourceType ? ' ' + String(owner.sourceType) : '';
+	      const reason = owner.reason ? ' ' + String(owner.reason) : '';
+	      return escapeHtml(String(owner.kind || 'operation') + ':' + id + source + reason);
+	    }
+
+	    function renderBrowserProcessTargets(targets, error) {
       if (error) return '<span class="bad">' + escapeHtml(error) + '</span>';
       const pageTargets = targets.filter((target) => target.type === 'page');
       if (!pageTargets.length) return '<span class="muted">No page targets.</span>';

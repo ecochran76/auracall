@@ -1,7 +1,10 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
 import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../types.js';
-import { BrowserService } from '../../service/browserService.js';
+import {
+  BrowserService,
+  type BrowserProcessOwnerAttribution,
+} from '../../service/browserService.js';
 import { LlmService } from '../llmService.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../providers/types.js';
 import { providerIdentityPreflightRequested } from '../../providers/identityPreflight.js';
@@ -23,10 +26,16 @@ export class GeminiService extends LlmService {
 
   static create(
     userConfig: ResolvedUserConfig,
-    options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
+    options?: {
+      identityPrompt?: IdentityPrompt;
+      browserProcessOwner?: BrowserProcessOwnerAttribution;
+      browserService?: BrowserService;
+    },
   ): GeminiService {
     const provider = getProvider('gemini') as LlmServiceAdapter;
-    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig, 'gemini');
+    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig, 'gemini', {
+      browserProcessOwner: options?.browserProcessOwner,
+    });
     return new GeminiService(userConfig, provider, browserService, options);
   }
 

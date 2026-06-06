@@ -84,6 +84,48 @@ describe("api scheduler-diagnostics CLI helpers", () => {
 		});
 	});
 
+	it("retries scheduler diagnostics with local API auth after 401", async () => {
+		const authorizations: Array<string | null> = [];
+		const fetchImpl = async (_url: string | URL | Request, init?: RequestInit) => {
+			const headers = new Headers(init?.headers);
+			authorizations.push(headers.get("authorization"));
+			if (!headers.has("authorization")) {
+				return new Response(JSON.stringify({ error: { message: "auth required" } }), {
+					status: 401,
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+			return new Response(JSON.stringify(diagnosticsPayload), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			});
+		};
+
+		const previousKey = process.env.AURACALL_API_KEY;
+		process.env.AURACALL_API_KEY = "test_scheduler_diagnostics_key";
+		try {
+			await expect(
+				readApiSchedulerDiagnosticsForCli(
+					{
+						port: 18080,
+						timeoutMs: 1000,
+						provider: "chatgpt",
+					},
+					fetchImpl,
+				),
+			).resolves.toMatchObject({
+				diagnostics: diagnosticsPayload,
+			});
+		} finally {
+			if (previousKey === undefined) {
+				delete process.env.AURACALL_API_KEY;
+			} else {
+				process.env.AURACALL_API_KEY = previousKey;
+			}
+		}
+		expect(authorizations).toEqual([null, "Bearer test_scheduler_diagnostics_key"]);
+	});
+
 	it("formats the compact scheduler diagnostics bundle", () => {
 		const output = formatApiSchedulerDiagnosticsCliSummary({
 			host: "127.0.0.1",

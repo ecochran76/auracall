@@ -705,6 +705,10 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
   const metadataCounts = isRecord(account.metadataCounts) ? account.metadataCounts : null;
   const assetInventory = isRecord(account.assetInventory) ? account.assetInventory : null;
   const materializationOutcome = isRecord(account.materializationOutcome) ? account.materializationOutcome : null;
+  const accountLibraryCatchup = isRecord(account.accountLibraryCatchup) ? account.accountLibraryCatchup : null;
+  const accountLibraryPreview = accountLibraryCatchup && isRecord(accountLibraryCatchup.preview)
+    ? accountLibraryCatchup.preview
+    : null;
   const metadataCountEvidence = isRecord(account.metadataCountEvidence) ? account.metadataCountEvidence : null;
   return {
     provider: readString(account.provider) ?? '',
@@ -745,6 +749,53 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
           checksumCount: readNumber(materializationOutcome.checksumCount) ?? 0,
         }
       : null,
+    accountLibraryCatchup: accountLibraryCatchup
+      ? {
+          mode: readString(accountLibraryCatchup.mode) ?? 'disabled',
+          enabled: accountLibraryCatchup.enabled === true,
+          status: readString(accountLibraryCatchup.status) ?? 'disabled',
+          reason: readString(accountLibraryCatchup.reason),
+          activeJobId: readString(accountLibraryCatchup.activeJobId),
+          activeJobStatus: readString(accountLibraryCatchup.activeJobStatus),
+          activeJobScheduler: summarizeAccountLibraryScheduler(
+            accountLibraryCatchup.activeJobScheduler,
+          ),
+          activeJobCount: readNumber(accountLibraryCatchup.activeJobCount) ?? 0,
+          maxItems: readNumber(accountLibraryCatchup.maxItems),
+          minIntervalMs: readNumber(accountLibraryCatchup.minIntervalMs),
+          failureCooldownMs: readNumber(accountLibraryCatchup.failureCooldownMs),
+          cooldownUntil: readString(accountLibraryCatchup.cooldownUntil),
+          maxActiveJobs: readNumber(accountLibraryCatchup.maxActiveJobs),
+          providerWorkTimeoutMs: readNumber(accountLibraryCatchup.providerWorkTimeoutMs),
+          nextAttemptAt: readString(accountLibraryCatchup.nextAttemptAt),
+          browserHealth: isRecord(accountLibraryCatchup.browserHealth)
+            ? {
+                status: readString(accountLibraryCatchup.browserHealth.status) ?? 'unknown',
+                reason: readString(accountLibraryCatchup.browserHealth.reason),
+                processAlive: accountLibraryCatchup.browserHealth.processAlive === true,
+                devToolsResponsive: accountLibraryCatchup.browserHealth.devToolsResponsive === true,
+                launchCommandHasBlankArg: accountLibraryCatchup.browserHealth.launchCommandHasBlankArg === true,
+                openBlankPageCount: readNumber(accountLibraryCatchup.browserHealth.openBlankPageCount) ?? 0,
+                pageTargetCount: readNumber(accountLibraryCatchup.browserHealth.pageTargetCount) ?? 0,
+                pid: readNumber(accountLibraryCatchup.browserHealth.pid),
+                port: readNumber(accountLibraryCatchup.browserHealth.port),
+                error: readString(accountLibraryCatchup.browserHealth.error),
+              }
+            : null,
+          preview: accountLibraryPreview
+            ? {
+                generatedAt: readString(accountLibraryPreview.generatedAt),
+                catalogFiles: readNumber(accountLibraryPreview.catalogFiles) ?? 0,
+                eligibleCandidates: readNumber(accountLibraryPreview.eligibleCandidates) ?? 0,
+                selectedCandidates: readNumber(accountLibraryPreview.selectedCandidates) ?? 0,
+                archivedFamilies: readNumber(accountLibraryPreview.archivedFamilies) ?? 0,
+                unresolvedStale: readNumber(accountLibraryPreview.unresolvedStale) ?? 0,
+                unsupportedOrTerminal: readNumber(accountLibraryPreview.unsupportedOrTerminal) ?? 0,
+                duplicateFamilies: readNumber(accountLibraryPreview.duplicateFamilies) ?? 0,
+              }
+            : null,
+        }
+      : null,
     metadataCounts: metadataCounts
       ? {
           projects: readNumber(metadataCounts.projects) ?? 0,
@@ -761,6 +812,22 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
           mergedTotal: summarizeMetadataCounts(metadataCountEvidence.mergedTotal),
         }
       : null,
+  };
+}
+
+function summarizeAccountLibraryScheduler(value: unknown) {
+  const scheduler = isRecord(value) ? value : null;
+  if (!scheduler) return null;
+  return {
+    object: readString(scheduler.object) ?? 'history_materialization_job_scheduler',
+    generatedAt: readString(scheduler.generatedAt) ?? '',
+    state: readString(scheduler.state) ?? 'unknown',
+    dispatchState: readString(scheduler.dispatchState) ?? 'unknown',
+    queuedAgeMs: readNumber(scheduler.queuedAgeMs),
+    runAgeMs: readNumber(scheduler.runAgeMs),
+    queuedToStartLatencyMs: readNumber(scheduler.queuedToStartLatencyMs),
+    stale: scheduler.stale === true,
+    staleReason: readString(scheduler.staleReason),
   };
 }
 

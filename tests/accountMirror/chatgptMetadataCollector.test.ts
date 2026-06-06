@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
   allocateConversationReadBudgets,
+  buildGeminiRouteProgressEvidence,
   mapChatgptLibraryFilesToArtifacts,
   mapGeminiConversationArtifactsToMediaManifest,
   mapGrokAccountFilesToMediaManifest,
@@ -16,6 +17,7 @@ import {
   readBoundedProjects,
   readBoundedGrokAccountFileInventory,
   selectAttachmentInventoryCursorForSweep,
+  selectAttachmentInventoryCursorForProviderSweep,
   selectProjectConversationCursorForSweep,
   shouldReadProjectConversationsForAccountMirror,
 } from '../../src/accountMirror/chatgptMetadataCollector.js';
@@ -960,6 +962,84 @@ describe('ChatGPT account mirror metadata collector', () => {
     expect(second.media.map((entry) => entry.conversationId)).toEqual(['gemini_conv_2']);
     expect(third.files.map((file) => file.id)).toEqual(['project-file-gemini_project_1']);
     expect(fourth.truncated).toBe(false);
+  });
+
+  test('keeps Gemini steady-follow on the rail cursor instead of restarting at the shell', () => {
+    const previousEvidence = {
+      identitySource: 'google-account-label',
+      projectSampleIds: [],
+      conversationSampleIds: ['gemini_conv_1', 'gemini_conv_2'],
+      attachmentInventory: {
+        nextProjectIndex: 0,
+        nextConversationIndex: 2,
+        detailReadLimit: 2,
+        scannedProjects: 0,
+        scannedConversations: 1,
+      },
+      truncated: {
+        projects: false,
+        conversations: false,
+        artifacts: true,
+      },
+    };
+
+    expect(
+      selectAttachmentInventoryCursorForProviderSweep('gemini', 'steady_follow', previousEvidence),
+    ).toBe(previousEvidence.attachmentInventory);
+    expect(
+      selectAttachmentInventoryCursorForProviderSweep('chatgpt', 'steady_follow', previousEvidence),
+    ).toBeNull();
+    expect(
+      selectAttachmentInventoryCursorForProviderSweep('gemini', 'full_sweep', previousEvidence),
+    ).toBe(previousEvidence.attachmentInventory);
+  });
+
+  test('classifies Gemini shell-only reads as churn and rail conversation reads as progress', () => {
+    const shellOnly = buildGeminiRouteProgressEvidence({
+      projects: [],
+      conversations: [
+        { id: 'gemini_conv_1', title: 'Historical artifact', provider: 'gemini' },
+      ],
+      inventoryProgress: {
+        scannedProjectIds: [],
+        scannedConversationIds: [],
+        artifactBearingConversationIds: [],
+        fileBearingConversationIds: [],
+      },
+    });
+
+    expect(shellOnly).toMatchObject({
+      strategy: 'gemini-left-rail',
+      routeSequence: ['/app'],
+      appShellVisits: 1,
+      conversationCandidates: 1,
+      selectedConversationIds: [],
+      churnDetected: true,
+      yieldCause: 'shell_without_conversation_selection',
+    });
+
+    const productive = buildGeminiRouteProgressEvidence({
+      projects: [],
+      conversations: [
+        { id: 'gemini_conv_1', title: 'Historical artifact', provider: 'gemini' },
+        { id: 'gemini_conv_2', title: 'Second artifact', provider: 'gemini' },
+      ],
+      inventoryProgress: {
+        scannedProjectIds: [],
+        scannedConversationIds: ['gemini_conv_1'],
+        artifactBearingConversationIds: ['gemini_conv_1'],
+        fileBearingConversationIds: [],
+      },
+    });
+
+    expect(productive).toMatchObject({
+      routeSequence: ['/app', '/app/gemini_conv_1'],
+      selectedConversationIds: ['gemini_conv_1'],
+      artifactBearingConversationIds: ['gemini_conv_1'],
+      materializationAttempts: 1,
+      churnDetected: false,
+      yieldCause: null,
+    });
   });
 
   test('tolerates Grok account-files drift without failing metadata collection', async () => {

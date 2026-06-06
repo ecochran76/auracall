@@ -533,6 +533,210 @@ describe('account mirror catalog service', () => {
       await rm(homeDir, { recursive: true, force: true });
     }
   });
+
+  test('annotates non-actionable ChatGPT materialization rows with explicit eligibility reasons', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-catalog-eligibility-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const persistence = createAccountMirrorPersistence({
+      config,
+      cacheStore: createCacheStore('dual'),
+    });
+    try {
+      await persistence.writeSnapshot({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        detectedAccountLevel: 'Business',
+        requestId: 'acctmirror_materialization_eligibility',
+        startedAt: '2026-06-01T00:00:00.000Z',
+        completedAt: '2026-06-01T00:00:10.000Z',
+        dispatcherKey: 'managed-profile:/tmp/default/chatgpt::service:chatgpt',
+        dispatcherOperationId: 'op_materialization_eligibility',
+        metadataCounts: {
+          projects: 0,
+          conversations: 1,
+          artifacts: 3,
+          files: 4,
+          media: 0,
+        },
+        metadataEvidence: {
+          identitySource: 'profile-menu',
+          projectSampleIds: [],
+          conversationSampleIds: ['conv_eligibility'],
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: false,
+          },
+        },
+        manifests: {
+          projects: [],
+          conversations: [
+            { id: 'conv_eligibility', title: 'Eligibility rows', provider: 'chatgpt' },
+          ],
+          artifacts: [
+            {
+              id: 'image-dom:turn_favicon:0',
+              title: 'Generated image 1',
+              kind: 'image',
+              uri: 'https://www.google.com/s2/favicons?domain=https://www.imagemappro.com&sz=32',
+              metadata: {
+                extraction: 'dom-imagegen-image',
+                conversationId: 'conv_eligibility',
+              },
+            },
+            {
+              id: 'chatgpt-library:library_artifact',
+              title: 'library-only.pdf',
+              kind: 'download',
+              metadata: {
+                source: 'chatgpt-library',
+                artifactKind: 'download',
+                fileId: 'library_artifact',
+                fileSource: 'account',
+              },
+            },
+            {
+              id: 'chatgpt-library:routeable_library_artifact',
+              title: 'routeable-library.pdf',
+              kind: 'download',
+              uri: 'chatgpt://file/file_routeable_library',
+              metadata: {
+                source: 'chatgpt-library',
+                artifactKind: 'download',
+                providerFileId: 'file_routeable_library',
+                materializationSurface: 'chatgpt-library-file-row-click',
+                fileId: 'routeable_library_file',
+                fileSource: 'account',
+              },
+            },
+          ],
+          files: [
+            {
+              id: 'conv_eligibility:turn_1:0:input.pdf',
+              name: 'input.pdf',
+              provider: 'chatgpt',
+              source: 'conversation',
+              metadata: {
+                label: 'PDF',
+                conversationId: 'conv_eligibility',
+              },
+            },
+            {
+              id: 'conv_eligibility:turn_2:0:retrievable.pdf',
+              name: 'retrievable.pdf',
+              provider: 'chatgpt',
+              source: 'conversation',
+              remoteUrl: 'chatgpt://file/file_retrievable',
+              metadata: {
+                label: 'PDF',
+                conversationId: 'conv_eligibility',
+                providerFileId: 'file_retrievable',
+              },
+            },
+            {
+              id: 'library_file',
+              name: 'library-only.pdf',
+              provider: 'chatgpt',
+              source: 'account',
+              metadata: {
+                source: 'chatgpt-library',
+                artifactKind: 'download',
+              },
+            },
+            {
+              id: 'routeable_library_file',
+              name: 'routeable-library.pdf',
+              provider: 'chatgpt',
+              source: 'account',
+              remoteUrl: 'chatgpt://file/file_routeable_library',
+              metadata: {
+                source: 'chatgpt-library',
+                artifactKind: 'download',
+                providerFileId: 'file_routeable_library',
+                materializationSurface: 'chatgpt-library-file-row-click',
+              },
+            },
+          ],
+          media: [],
+        },
+      });
+      const service = createAccountMirrorCatalogService({
+        config,
+        persistence,
+        now: () => new Date('2026-06-01T00:10:00.000Z'),
+      });
+
+      const catalog = await service.readCatalog({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'all',
+      });
+
+      expect(catalog.entries[0]?.manifests.artifacts).toMatchObject([
+        {
+          id: 'image-dom:turn_favicon:0',
+          metadata: {
+            materializationEligibility: {
+              state: 'static_image_false_positive',
+              reason: expect.stringContaining('favicon'),
+            },
+          },
+        },
+        {
+          id: 'chatgpt-library:library_artifact',
+          metadata: {
+            materializationEligibility: {
+              state: 'unsupported_account_library_asset',
+              reason: expect.stringContaining('account-library artifact rows are metadata-only'),
+            },
+          },
+        },
+        {
+          id: 'chatgpt-library:routeable_library_artifact',
+          metadata: expect.not.objectContaining({
+            materializationEligibility: expect.anything(),
+          }),
+        },
+      ]);
+      expect(catalog.entries[0]?.manifests.files).toMatchObject([
+        {
+          id: 'conv_eligibility:turn_1:0:input.pdf',
+          metadata: {
+            materializationEligibility: {
+              state: 'unsupported_conversation_file',
+              reason: expect.stringContaining('do not currently expose a retrievable provider URL'),
+            },
+          },
+        },
+        {
+          id: 'conv_eligibility:turn_2:0:retrievable.pdf',
+          metadata: expect.not.objectContaining({
+            materializationEligibility: expect.anything(),
+          }),
+        },
+        {
+          id: 'library_file',
+          metadata: {
+            materializationEligibility: {
+              state: 'unsupported_account_library_asset',
+              reason: expect.stringContaining('account-library file rows are metadata-only'),
+            },
+          },
+        },
+        {
+          id: 'routeable_library_file',
+          metadata: expect.not.objectContaining({
+            materializationEligibility: expect.anything(),
+          }),
+        },
+      ]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
 });
 
 async function writeSingleConversationSnapshot(

@@ -204,6 +204,39 @@ describe('llmService cache identity resolution', () => {
     });
   });
 
+  test('can skip detected feature signatures for non-interactive cache resolution', async () => {
+    const getFeatureSignature = vi.fn(async () =>
+      JSON.stringify({ detector: 'chatgpt-feature-probe-v1', web_search: true }),
+    );
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+      getFeatureSignature,
+    } satisfies LlmServiceAdapter;
+    const service = new IdentityTestLlmService(
+      ({
+        browser: { cache: {} },
+        auracallProfile: 'default',
+        profiles: {
+          default: {
+            services: {
+              chatgpt: {
+                features: {
+                  deep_research: true,
+                },
+              },
+            },
+          },
+        },
+      } as unknown) as ResolvedUserConfig,
+      provider,
+    );
+
+    const identity = await service.resolveCacheIdentity({ skipFeatureSignature: true });
+    expect(getFeatureSignature).not.toHaveBeenCalled();
+    expect(JSON.parse(identity.featureSignature ?? 'null')).toEqual({ deep_research: true });
+  });
+
   test('reads active runtime profile features from current profiles bridge when legacy auracallProfiles is absent', async () => {
     const provider = {
       id: 'chatgpt',

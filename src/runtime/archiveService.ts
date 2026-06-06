@@ -937,7 +937,10 @@ function buildHistoryMaterializationArchiveItems(
       fileAvailable: file.localPath ? null : false,
       metadata: {
         ...(file.metadata ?? {}),
-        providerFileId: file.id,
+        providerFileId:
+          typeof file.metadata?.providerFileId === 'string' && file.metadata.providerFileId.trim().length > 0
+            ? file.metadata.providerFileId
+            : file.id,
         providerFileSource: file.source,
         historyAssetKind: asset.kind,
         historyMaterializationJobId: input.materializationJobId ?? null,

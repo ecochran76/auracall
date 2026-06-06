@@ -71,6 +71,7 @@ const GEMINI_APP_URL = requireBundledServiceRouteTemplate("gemini", "app");
 const GEMINI_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts("gemini");
 const GEMINI_GEMS_VIEW_URL = new URL("gems/view", GEMINI_BASE_URL).toString();
 const GEMINI_GEM_CREATE_URL = new URL("gems/create", GEMINI_BASE_URL).toString();
+const GOOGLE_SYSTEM_GEM_IDS = new Set(["chess-champ", "brainstormer", "storybook"]);
 const GEMINI_FEATURE_DETECTOR = resolveBundledServiceFeatureDetector(
 	"gemini",
 	"gemini-feature-probe-v1",
@@ -916,7 +917,11 @@ function geminiConversationRouteExpression(url: string): string | undefined {
 export function geminiConversationSurfaceReadyExpression(): string {
 	return `(() => {
     const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
-    if (visible(document.querySelector('[data-test-id="all-conversations"]'))) return true;
+    const conversationList = document.querySelector('[data-test-id="all-conversations"]');
+    if (
+      visible(conversationList) &&
+      Array.from(document.querySelectorAll('a[href*="/app/"]')).some((node) => visible(node))
+    ) return true;
     if (visible(document.querySelector('button[aria-label="Main menu"]'))) {
       const text = String(document.body?.innerText || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       if (text.includes('conversation with gemini') || text.includes('what can we get done')) return true;
@@ -1306,6 +1311,7 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
         if (!match?.[1]) continue;
         const row = anchor.closest('li,div,section,article') || anchor;
         const id = match[1];
+        if (${JSON.stringify(["chess-champ", "brainstormer", "storybook"])}.includes(id)) continue;
         if (seen.has(id)) continue;
         const optionLabel = Array.from(row.querySelectorAll('button[aria-label],a[aria-label]'))
           .map((node) => normalize(node.getAttribute('aria-label') || ''))
@@ -1360,9 +1366,13 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
 }
 
 export function isEditableGeminiProjectProbe(
-	item: Pick<GeminiProjectProbe, "editable" | "editUrl"> | null | undefined,
+	item: Partial<Pick<GeminiProjectProbe, "editable" | "editUrl" | "id" | "url">> | null | undefined,
 ): boolean {
 	if (!item) return false;
+	const id = typeof item.id === "string" ? item.id.trim().toLowerCase() : "";
+	if (id && GOOGLE_SYSTEM_GEM_IDS.has(id)) return false;
+	const url = typeof item.url === "string" ? item.url.trim().toLowerCase() : "";
+	if ([...GOOGLE_SYSTEM_GEM_IDS].some((systemId) => url.includes(`/gem/${systemId}`))) return false;
 	if (typeof item.editUrl === "string" && item.editUrl.trim()) return true;
 	return false;
 }
@@ -2477,42 +2487,54 @@ async function ensureGeminiMainMenuOpen(client: Pick<ChromeClient, "Runtime">): 
 	const listReady = await waitForPredicate(
 		client.Runtime,
 		`(() => {
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
       const list = document.querySelector('[data-test-id="all-conversations"]');
-      if (!(list instanceof Element)) return null;
-      const rect = list.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 ? { open: true } : null;
+      if (!isVisible(list)) return null;
+      const visibleConversationAnchors = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+        .filter((node) => isVisible(node)).length;
+      return visibleConversationAnchors > 0 ? { open: true, visibleConversationAnchors } : null;
     })()`,
 		{
 			timeoutMs: 1_000,
-			description: "Gemini main menu already open",
+			description: "Gemini conversation rail already open",
 		},
 	);
 	if (listReady.ok) {
 		return;
 	}
 	const opened = await pressButton(client.Runtime, {
-		selector: 'button[aria-label="Main menu"]',
+		selector: 'button[aria-label="Open sidebar"], button[aria-label="Main menu"]',
 		interactionStrategies: ["click", "pointer"],
 		timeoutMs: 5_000,
 	});
 	if (!opened.ok) {
-		throw new Error(opened.reason ?? "Gemini main menu toggle not found.");
+		throw new Error(opened.reason ?? "Gemini conversation rail toggle not found.");
 	}
 	const ready = await waitForPredicate(
 		client.Runtime,
 		`(() => {
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
       const list = document.querySelector('[data-test-id="all-conversations"]');
-      if (!(list instanceof Element)) return null;
-      const rect = list.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 ? { open: true } : null;
+      if (!isVisible(list)) return null;
+      const visibleConversationAnchors = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+        .filter((node) => isVisible(node)).length;
+      return visibleConversationAnchors > 0 ? { open: true, visibleConversationAnchors } : null;
     })()`,
 		{
 			timeoutMs: 5_000,
-			description: "Gemini main menu open",
+			description: "Gemini conversation rail open",
 		},
 	);
 	if (!ready.ok) {
-		throw new Error("Gemini main menu did not open.");
+		throw new Error("Gemini conversation rail did not open.");
 	}
 }
 

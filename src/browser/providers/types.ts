@@ -50,6 +50,7 @@ export interface BrowserProviderListOptions {
   expectedUserIdentity?: ProviderUserIdentity | null;
   expectedServiceAccountId?: string | null;
   identityPreflightFallbackIdentity?: ProviderUserIdentity | null;
+  skipFeatureSignature?: boolean;
   abortSignal?: AbortSignal;
 }
 
@@ -214,6 +215,12 @@ export interface BrowserProvider {
     fileId: string,
     options?: BrowserProviderListOptions,
   ) => Promise<void>;
+  downloadAccountFile?: (
+    fileId: string,
+    destPath: string,
+    options?: BrowserProviderListOptions,
+    file?: FileRef,
+  ) => Promise<void>;
   downloadProjectFile?: (projectId: string, fileId: string, destPath: string) => Promise<void>;
   listConversationFiles?: (
     conversationId: string,
@@ -224,6 +231,7 @@ export interface BrowserProvider {
     fileId: string,
     destPath: string,
     options?: BrowserProviderListOptions,
+    file?: FileRef,
   ) => Promise<void>;
   materializeConversationArtifact?: (
     conversationId: string,

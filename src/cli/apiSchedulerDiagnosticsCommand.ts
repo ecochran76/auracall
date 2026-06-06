@@ -1,3 +1,5 @@
+import { fetchWithLocalApiAuth } from './localApiClient.js';
+
 export interface ApiSchedulerDiagnosticsCliOptions {
 	host?: string | null;
 	port?: number | null;
@@ -27,9 +29,7 @@ export async function readApiSchedulerDiagnosticsForCli(
 		appendOptionalSearchParam(url, "provider", options.provider);
 		appendOptionalSearchParam(url, "runtimeProfile", options.runtimeProfile);
 		appendOptionalSearchParam(url, "completionId", options.completionId);
-		const response = await fetchImpl(url, {
-			signal: controller.signal,
-		});
+		const response = await fetchWithLocalApiAuth(url, { signal: controller.signal }, fetchImpl);
 		if (!response.ok) {
 			throw new Error(`AuraCall API scheduler diagnostics returned HTTP ${response.status}.`);
 		}

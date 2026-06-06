@@ -17,9 +17,11 @@ import { recordDomDriftObservation } from '../browser/domDriftObservations.js';
 import type {
   AccountMirrorMetadataCounts,
   AccountMirrorMetadataEvidence,
+  AccountMirrorRouteProgressEvidence,
 } from './statusRegistry.js';
 
 const MAX_DOM_DRIFT_SCREENSHOTS_PER_PROCESS = 3;
+const GEMINI_DETAIL_READ_TIMEOUT_MS = 20_000;
 let domDriftScreenshotsCaptured = 0;
 
 export interface AccountMirrorMetadataCollectorInput {
@@ -51,6 +53,13 @@ export interface AttachmentInventoryCursor {
     kind: string | null;
     operationClass: string | null;
   } | null;
+}
+
+export interface AttachmentInventoryProgress {
+  scannedProjectIds: string[];
+  scannedConversationIds: string[];
+  artifactBearingConversationIds: string[];
+  fileBearingConversationIds: string[];
 }
 
 export interface ProjectConversationHistoryCursor {
@@ -183,7 +192,8 @@ export function createChatgptAccountMirrorMetadataCollector(
       }
       throwIfCollectionAborted(input.abortSignal);
       const conversations = mergeConversationsById([...rootConversations.items, ...projectConversations]);
-      const attachmentCursor = selectAttachmentInventoryCursorForSweep(
+      const attachmentCursor = selectAttachmentInventoryCursorForProviderSweep(
+        input.provider,
         input.sweepMode,
         input.previousEvidence ?? null,
       );
@@ -230,6 +240,9 @@ export function createChatgptAccountMirrorMetadataCollector(
             truncated: false,
             cursor: null,
           };
+      const inventoryProgress = hasAttachmentInventoryProgress(inventory)
+        ? inventory.progress
+        : createAttachmentInventoryProgress();
       return {
         detectedIdentityKey,
         detectedAccountLevel: readAccountLevel(identity),
@@ -261,6 +274,13 @@ export function createChatgptAccountMirrorMetadataCollector(
                 remainingConversationBudget <= 0),
             artifacts: inventory.truncated,
           },
+          routeProgress: input.provider === 'gemini'
+            ? buildGeminiRouteProgressEvidence({
+                projects: projects.items,
+                conversations,
+                inventoryProgress,
+              })
+            : null,
           projectConversations: projectConversationCursor,
           attachmentInventory: inventory.cursor,
         },
@@ -275,6 +295,64 @@ export function selectAttachmentInventoryCursorForSweep(
 ): AttachmentInventoryCursor | null {
   if (sweepMode !== 'full_sweep') return null;
   return previousEvidence?.attachmentInventory ?? null;
+}
+
+export function selectAttachmentInventoryCursorForProviderSweep(
+  provider: AccountMirrorProvider,
+  sweepMode: AccountMirrorMetadataCollectorInput['sweepMode'],
+  previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
+): AttachmentInventoryCursor | null {
+  if (provider === 'gemini') return previousEvidence?.attachmentInventory ?? null;
+  return selectAttachmentInventoryCursorForSweep(sweepMode, previousEvidence);
+}
+
+export function buildGeminiRouteProgressEvidence(input: {
+  projects: readonly Project[];
+  conversations: readonly Conversation[];
+  inventoryProgress: AttachmentInventoryProgress;
+}): AccountMirrorRouteProgressEvidence {
+  const selectedConversationIds = uniqueStrings(input.inventoryProgress.scannedConversationIds);
+  const artifactBearingConversationIds = uniqueStrings(input.inventoryProgress.artifactBearingConversationIds);
+  const fileBearingConversationIds = uniqueStrings(input.inventoryProgress.fileBearingConversationIds);
+  const routeSequence = [
+    ...(input.projects.length > 0 ? ['/gems/view'] : []),
+    '/app',
+    ...selectedConversationIds.map((conversationId) => `/app/${conversationId}`),
+  ];
+  const repeatedRouteVisits = countRepeatedStrings(routeSequence);
+  const churnDetected = routeSequence.includes('/app') && selectedConversationIds.length === 0;
+  return {
+    provider: 'gemini',
+    strategy: 'gemini-left-rail',
+    routeSequence,
+    appShellVisits: routeSequence.filter((route) => route === '/app').length,
+    gemsViewVisits: routeSequence.filter((route) => route === '/gems/view').length,
+    repeatedRouteVisits,
+    conversationCandidates: input.conversations.length,
+    selectedConversationIds,
+    artifactBearingConversationIds,
+    fileBearingConversationIds,
+    materializationAttempts: artifactBearingConversationIds.length + fileBearingConversationIds.length,
+    churnDetected,
+    yieldCause: churnDetected ? 'shell_without_conversation_selection' : null,
+  };
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function countRepeatedStrings(values: readonly string[]): number {
+  const seen = new Set<string>();
+  let repeated = 0;
+  for (const value of values) {
+    if (seen.has(value)) {
+      repeated += 1;
+      continue;
+    }
+    seen.add(value);
+  }
+  return repeated;
 }
 
 export function selectProjectConversationCursorForSweep(
@@ -570,6 +648,7 @@ export async function readBoundedAttachmentInventory(
     pacer?: BrowserInteractionPacer;
     observation?: AccountMirrorDomDriftObservationContext;
     prioritizeConversations?: boolean;
+    providerCallTimeoutMs?: number | null;
   } = 6,
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -577,6 +656,7 @@ export async function readBoundedAttachmentInventory(
   media: AccountMirrorMediaManifestEntry[];
   truncated: boolean;
   cursor: AttachmentInventoryCursor;
+  progress: AttachmentInventoryProgress;
 }> {
   const limit = Math.max(0, Math.floor(maxRows));
   const maxDetailReads = typeof options === 'number'
@@ -588,6 +668,7 @@ export async function readBoundedAttachmentInventory(
   const pacer = typeof options === 'number' ? undefined : options.pacer;
   const observation = typeof options === 'number' ? undefined : options.observation;
   const prioritizeConversations = typeof options === 'number' ? false : options.prioritizeConversations === true;
+  const providerCallTimeoutMs = typeof options === 'number' ? null : options.providerCallTimeoutMs ?? null;
   const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
   if (limit <= 0) {
     return {
@@ -602,10 +683,12 @@ export async function readBoundedAttachmentInventory(
         scannedProjects: 0,
         scannedConversations: 0,
       }),
+      progress: createAttachmentInventoryProgress(),
     };
   }
   const artifacts = new Map<string, ConversationArtifact>();
   const files = new Map<string, FileRef>();
+  const progress = createAttachmentInventoryProgress();
   let remaining = limit;
   let remainingDetailReads = detailReadLimit;
   let truncated = false;
@@ -630,6 +713,7 @@ export async function readBoundedAttachmentInventory(
       if (!project) break;
       remainingDetailReads -= 1;
       scannedProjects += 1;
+      progress.scannedProjectIds.push(project.id);
       await pacer?.beforeInteraction();
       const projectFiles = await safeReadProjectFiles(client, project.id, listOptions, observation);
       for (const file of projectFiles) {
@@ -658,10 +742,27 @@ export async function readBoundedAttachmentInventory(
       if (!conversation) break;
       remainingDetailReads -= 1;
       scannedConversations += 1;
+      progress.scannedConversationIds.push(conversation.id);
       await pacer?.beforeInteraction();
-      const conversationFiles = await safeReadConversationFiles(client, conversation, observation);
+      const conversationFiles = await safeReadConversationFiles(
+        client,
+        conversation,
+        observation,
+        providerCallTimeoutMs,
+      );
       await pacer?.beforeInteraction();
-      const context = await safeReadConversationContext(client, conversation, observation);
+      const context = await safeReadConversationContext(
+        client,
+        conversation,
+        observation,
+        providerCallTimeoutMs,
+      );
+      if (conversationFiles.length > 0) {
+        progress.fileBearingConversationIds.push(conversation.id);
+      }
+      if ((context?.artifacts ?? []).length > 0) {
+        progress.artifactBearingConversationIds.push(conversation.id);
+      }
       for (const file of conversationFiles) {
         if (remaining <= 0) {
           truncated = true;
@@ -710,7 +811,39 @@ export async function readBoundedAttachmentInventory(
         projectIndex >= projects.length && conversationIndex >= conversations.length ? 0 : conversationIndex,
       yielded,
     }),
+    progress,
   };
+}
+
+function createAttachmentInventoryProgress(): AttachmentInventoryProgress {
+  return {
+    scannedProjectIds: [],
+    scannedConversationIds: [],
+    artifactBearingConversationIds: [],
+    fileBearingConversationIds: [],
+  };
+}
+
+function hasAttachmentInventoryProgress(
+  value: unknown,
+): value is { progress: AttachmentInventoryProgress } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'progress' in value &&
+    isAttachmentInventoryProgress((value as { progress?: unknown }).progress)
+  );
+}
+
+function isAttachmentInventoryProgress(value: unknown): value is AttachmentInventoryProgress {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Partial<Record<keyof AttachmentInventoryProgress, unknown>>;
+  return (
+    Array.isArray(record.scannedProjectIds) &&
+    Array.isArray(record.scannedConversationIds) &&
+    Array.isArray(record.artifactBearingConversationIds) &&
+    Array.isArray(record.fileBearingConversationIds)
+  );
 }
 
 export async function readBoundedChatgptDetailInventory(
@@ -818,6 +951,7 @@ export async function readBoundedGeminiDetailInventory(
   media: AccountMirrorMediaManifestEntry[];
   truncated: boolean;
   cursor: AttachmentInventoryCursor;
+  progress: AttachmentInventoryProgress;
 }> {
   const inventory = await readBoundedAttachmentInventory(
     client,
@@ -827,6 +961,7 @@ export async function readBoundedGeminiDetailInventory(
     {
       ...options,
       prioritizeConversations: true,
+      providerCallTimeoutMs: GEMINI_DETAIL_READ_TIMEOUT_MS,
     },
   );
   return {
@@ -984,11 +1119,17 @@ async function safeReadConversationFiles(
   client: Pick<BrowserAutomationClient, 'listConversationFiles'>,
   conversation: Conversation,
   observation?: AccountMirrorDomDriftObservationContext,
+  timeoutMs?: number | null,
 ): Promise<FileRef[]> {
   try {
-    return await client.listConversationFiles(conversation.id, {
+    const read = client.listConversationFiles(conversation.id, {
       projectId: conversation.projectId,
     });
+    return await withProviderCallTimeout(
+      read,
+      timeoutMs,
+      `Conversation file inventory timed out for ${conversation.id}.`,
+    );
   } catch (error) {
     await recordAccountMirrorDomDriftObservation(observation, {
       surface: 'account-mirror-conversation-files',
@@ -1008,12 +1149,18 @@ async function safeReadConversationContext(
   client: Pick<BrowserAutomationClient, 'getConversationContext'>,
   conversation: Conversation,
   observation?: AccountMirrorDomDriftObservationContext,
+  timeoutMs?: number | null,
 ): Promise<{ artifacts?: ConversationArtifact[] } | null> {
   try {
-    return await client.getConversationContext(conversation.id, {
+    const read = client.getConversationContext(conversation.id, {
       projectId: conversation.projectId,
       refresh: true,
     });
+    return await withProviderCallTimeout(
+      read,
+      timeoutMs,
+      `Conversation context inventory timed out for ${conversation.id}.`,
+    );
   } catch (error) {
     await recordAccountMirrorDomDriftObservation(observation, {
       surface: 'account-mirror-conversation-context',
@@ -1027,6 +1174,32 @@ async function safeReadConversationContext(
     });
     return null;
   }
+}
+
+function withProviderCallTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number | null | undefined,
+  message: string,
+): Promise<T> {
+  if (typeof timeoutMs !== 'number' || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return promise;
+  }
+  let timeout: NodeJS.Timeout | null = null;
+  return new Promise<T>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error(message));
+    }, Math.max(1, Math.floor(timeoutMs)));
+    promise.then(
+      (value) => {
+        if (timeout) clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        if (timeout) clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
 }
 
 async function recordAccountMirrorDomDriftObservation(

@@ -149,6 +149,7 @@ function parseOperation(value: unknown): AccountMirrorCompletionOperation {
     materializationForce: readBoolean(value.materializationForce) ?? false,
     materializationCursor: parseMaterializationCursor(value.materializationCursor),
     materializationOutcome: parseMaterializationOutcome(value.materializationOutcome),
+    accountLibraryCursor: parseAccountLibraryCursor(value.accountLibraryCursor),
     mirrorCompleteness: isRecord(value.mirrorCompleteness) ? value.mirrorCompleteness as AccountMirrorCompletionOperation['mirrorCompleteness'] : null,
     error: parseError(value.error),
     lifecycleEvents: parseLifecycleEvents(value.lifecycleEvents),
@@ -216,6 +217,12 @@ function readMaterializationMaxItems(value: unknown): number | null {
   return Math.max(1, Math.min(500, Math.floor(parsed)));
 }
 
+function readPositiveInteger(value: unknown): number | null {
+  const parsed = readNumber(value);
+  if (parsed === null) return null;
+  return Math.max(1, Math.floor(parsed));
+}
+
 function parseMaterializationCursor(value: unknown): AccountMirrorCompletionMaterializationCursor | null {
   if (!isRecord(value) || !isRecord(value.request)) return null;
   const jobId = typeof value.jobId === 'string' ? value.jobId.trim() : '';
@@ -237,6 +244,43 @@ function parseMaterializationCursor(value: unknown): AccountMirrorCompletionMate
       maxItems: readMaterializationMaxItems(value.request.maxItems),
       force: readBoolean(value.request.force) ?? false,
     },
+  };
+}
+
+function parseAccountLibraryCursor(value: unknown): AccountMirrorCompletionOperation['accountLibraryCursor'] {
+  if (!isRecord(value)) return null;
+  const passCount = Math.max(0, Math.floor(readNumber(value.passCount) ?? 0));
+  const status = value.status === 'queued' || value.status === 'reused' ? value.status : 'skipped';
+  const request = isRecord(value.request)
+    ? {
+        provider: readProvider(value.request.provider),
+        runtimeProfile: typeof value.request.runtimeProfile === 'string' && value.request.runtimeProfile.trim()
+          ? value.request.runtimeProfile.trim()
+          : 'default',
+        browserProfile: typeof value.request.browserProfile === 'string' && value.request.browserProfile.trim()
+          ? value.request.browserProfile.trim()
+          : null,
+        boundIdentityKey: typeof value.request.boundIdentityKey === 'string' && value.request.boundIdentityKey.trim()
+          ? value.request.boundIdentityKey.trim()
+          : null,
+        reconcile: true as const,
+        assetSource: value.request.assetSource === 'account-library' ? 'account-library' as const : null,
+        refreshSnapshot: readBoolean(value.request.refreshSnapshot) ?? false,
+        assetKinds: readMaterializationAssetKinds(value.request.assetKinds),
+        maxItems: readMaterializationMaxItems(value.request.maxItems),
+        providerWorkTimeoutMs: readPositiveInteger(value.request.providerWorkTimeoutMs),
+        force: readBoolean(value.request.force) ?? false,
+      }
+    : null;
+  return {
+    jobId: typeof value.jobId === 'string' && value.jobId.trim() ? value.jobId.trim() : null,
+    jobStatus: typeof value.jobStatus === 'string' && value.jobStatus.trim() ? value.jobStatus.trim() : null,
+    reused: readBoolean(value.reused) ?? false,
+    requestedAt: normalizeIsoString(value.requestedAt) ?? new Date(0).toISOString(),
+    passCount,
+    status,
+    reason: typeof value.reason === 'string' ? value.reason : '',
+    request,
   };
 }
 
@@ -299,6 +343,11 @@ function readLifecycleEventType(value: unknown): NonNullable<AccountMirrorComple
     || value === 'operator_resumed'
     || value === 'operator_cancelled'
     || value === 'campaign_policy_upgraded'
+    || value === 'live_follow_policy_upgraded'
+    || value === 'automatic_resume_blocked'
+    || value === 'operator_resume_blocked'
+    || value === 'account_library_catchup_queued'
+    || value === 'account_library_catchup_skipped'
   ) return value;
   return null;
 }

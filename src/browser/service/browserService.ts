@@ -20,6 +20,10 @@ import {
 import {
   listInstancesWithLiveness,
   registerInstance,
+  updateInstance,
+  type BrowserInstanceLease,
+  type BrowserInstanceOperation,
+  type BrowserInstanceOwner,
 } from '../../../packages/browser-service/src/service/stateRegistry.js';
 import {
   collectDiscardedRegistryCandidates,
@@ -45,6 +49,12 @@ type ServiceTargetMatchOptions = {
   logger?: (message: string) => void;
 };
 
+export type BrowserProcessOwnerAttribution = {
+  owner: BrowserInstanceOwner;
+  operation: BrowserInstanceOperation;
+  lease: BrowserInstanceLease;
+};
+
 export type ServiceTargetResolution = {
   host?: string;
   port?: number;
@@ -60,7 +70,11 @@ export class BrowserService extends BrowserServiceCore {
   private readonly userConfig: ResolvedUserConfig;
   private readonly serviceTarget: BrowserProfileTarget;
   private readonly mutationLogKey: string;
-  private constructor(userConfig: ResolvedUserConfig, target: BrowserProfileTarget) {
+  private constructor(
+    userConfig: ResolvedUserConfig,
+    target: BrowserProfileTarget,
+    private readonly browserProcessOwner?: BrowserProcessOwnerAttribution,
+  ) {
     const { resolvedConfig } = resolveUserBrowserLaunchContext(userConfig, target);
     const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
     const deps: BrowserServiceDependencies = {
@@ -78,8 +92,9 @@ export class BrowserService extends BrowserServiceCore {
   static fromConfig(
     userConfig: ResolvedUserConfig,
     target: BrowserProfileTarget = 'chatgpt',
+    options?: { browserProcessOwner?: BrowserProcessOwnerAttribution },
   ): BrowserService {
-    return new BrowserService(userConfig, target);
+    return new BrowserService(userConfig, target, options?.browserProcessOwner);
   }
 
   override getConfig(): ResolvedBrowserConfig {
@@ -181,6 +196,7 @@ export class BrowserService extends BrowserServiceCore {
     if (!matchedByPort && target.port) {
       const pid = await findChromePidUsingUserDataDir(profilePath);
       if (pid) {
+        const now = new Date().toISOString();
         await registerInstance(
           { registryPath: this.registryPath },
           {
@@ -190,13 +206,15 @@ export class BrowserService extends BrowserServiceCore {
             profilePath,
             profileName,
             type: 'chrome',
-            launchedAt: new Date().toISOString(),
-            lastSeenAt: new Date().toISOString(),
+            launchedAt: now,
+            lastSeenAt: now,
             services: options.serviceId ? [options.serviceId] : undefined,
+            ...this.browserProcessOwner,
           },
         );
       }
     }
+    await this.attributeBrowserProcessOwner(profilePath, profileName, options.serviceId);
     const scan = await scanRegisteredInstance(
       { registryPath: this.registryPath },
       profilePath,
@@ -229,6 +247,33 @@ export class BrowserService extends BrowserServiceCore {
       tabSelection,
       discardedRegistryCandidates,
     };
+  }
+
+  private async attributeBrowserProcessOwner(
+    profilePath: string,
+    profileName: string | null | undefined,
+    serviceId: ServiceTargetMatchOptions['serviceId'],
+  ): Promise<void> {
+    if (!this.browserProcessOwner) return;
+    const now = new Date().toISOString();
+    await updateInstance(
+      { registryPath: this.registryPath },
+      profilePath,
+      profileName,
+      {
+        owner: {
+          ...this.browserProcessOwner.owner,
+          heartbeatAt: now,
+        },
+        operation: this.browserProcessOwner.operation,
+        lease: {
+          ...this.browserProcessOwner.lease,
+          heartbeatAt: now,
+        },
+        lastSeenAt: now,
+        services: serviceId ? [serviceId] : undefined,
+      },
+    );
   }
 
   override async resolveDevToolsTarget(options: {

@@ -1,14 +1,52 @@
 import type {
-  AccountMirrorAssetInventoryEvidence,
-  AccountMirrorStatusEntry,
-  AccountMirrorStatusRegistry,
-} from './statusRegistry.js';
-import type { AccountMirrorProvider } from './politePolicy.js';
+  HistoryMaterializationJob,
+  HistoryMaterializationService,
+} from '../runtime/historyMaterializationService.js';
 import type {
   SearchProjectionRequest,
   SearchProjectionRow,
   SearchProjectionService,
 } from '../runtime/searchProjectionService.js';
+import type { AccountMirrorProvider } from './politePolicy.js';
+import type {
+  AccountMirrorAssetInventoryEvidence,
+  AccountMirrorStatusEntry,
+  AccountMirrorStatusRegistry,
+} from './statusRegistry.js';
+
+type AssetKindField = 'artifacts' | 'files' | 'media';
+
+interface AssetCounts {
+  artifacts: number;
+  files: number;
+  media: number;
+  total: number;
+}
+
+interface AccountLibraryInventoryCounts {
+  total: AssetCounts;
+  stableIdentity: AssetCounts;
+  directDownload: AssetCounts;
+  needsBrowserDetail: AssetCounts;
+  unsupportedNoAuthority: AssetCounts;
+  detailRoutes: {
+    libraryFileDetail: AssetCounts;
+    libraryArtifactDetail: AssetCounts;
+    libraryCanvasDetail: AssetCounts;
+    conversationDetail: AssetCounts;
+    externalOrInlineAsset: AssetCounts;
+    unknown: AssetCounts;
+  };
+}
+
+interface AccountLibraryRecoveryCounts {
+  remoteKnownMissingLocal: AssetCounts;
+  retrievableMissingLocal: AssetCounts;
+  unsupportedMetadataOnly: AssetCounts;
+  duplicateAliases: AssetCounts;
+  failedTerminal: AssetCounts;
+  inventory: AccountLibraryInventoryCounts;
+}
 
 export type AccountMirrorArtifactRecoveryCandidateStatus =
   | 'eligible'
@@ -57,6 +95,7 @@ export interface AccountMirrorArtifactRecoveryCandidate {
       media: number;
       total: number;
     };
+    retrievableMissingLocal: AssetCounts;
     localMaterialized: {
       artifacts: number;
       files: number;
@@ -69,6 +108,11 @@ export interface AccountMirrorArtifactRecoveryCandidate {
       media: number;
       total: number;
     };
+    duplicateAliases: AssetCounts;
+    unsupportedMetadataOnly: AssetCounts;
+    staticFalsePositive: AssetCounts;
+    failedTerminal: AssetCounts;
+    accountLibrary: AccountLibraryRecoveryCounts;
   };
   sourceItem: {
     id: string | null;
@@ -117,6 +161,12 @@ export interface AccountMirrorArtifactRecoveryPlanResult {
       media: number;
       total: number;
     };
+    retrievableMissingLocal: AssetCounts;
+    duplicateAliases: AssetCounts;
+    unsupportedMetadataOnly: AssetCounts;
+    staticFalsePositive: AssetCounts;
+    failedTerminal: AssetCounts;
+    accountLibrary: AccountLibraryRecoveryCounts;
     unknownOrDeferred: {
       artifacts: number;
       files: number;
@@ -133,6 +183,7 @@ export interface AccountMirrorArtifactRecoveryPlanner {
 export function createAccountMirrorArtifactRecoveryPlanner(input: {
   registry: AccountMirrorStatusRegistry;
   searchProjectionService?: SearchProjectionService | null;
+  historyMaterializationService?: Pick<HistoryMaterializationService, 'listJobs'> | null;
   now?: () => Date;
 }): AccountMirrorArtifactRecoveryPlanner {
   const now = input.now ?? (() => new Date());
@@ -147,9 +198,14 @@ export function createAccountMirrorArtifactRecoveryPlanner(input: {
       const materializedOverlay = input.searchProjectionService
         ? await readMaterializedArchiveOverlay(input.searchProjectionService, normalized)
         : new Map<string, AccountMirrorArtifactRecoveryCandidate['counts']['localMaterialized']>();
+      const classificationOverlay = await readRecoveryClassificationOverlay({
+        searchProjectionService: input.searchProjectionService ?? null,
+        historyMaterializationService: input.historyMaterializationService ?? null,
+        request: normalized,
+      });
       const statusCandidates = status.entries
         .filter((entry) => !normalized.tenantKey || entry.tenantKey === normalized.tenantKey)
-        .flatMap((entry) => candidateFromStatusEntry(entry, materializedOverlay));
+        .flatMap((entry) => candidateFromStatusEntry(entry, materializedOverlay, classificationOverlay));
       const searchCandidates = normalized.includeSearchRows && input.searchProjectionService
         ? await candidatesFromSearch(input.searchProjectionService, normalized)
         : [];
@@ -179,6 +235,7 @@ type NormalizedAccountMirrorArtifactRecoveryPlanRequest = Required<
 function candidateFromStatusEntry(
   entry: AccountMirrorStatusEntry,
   materializedOverlay: Map<string, AccountMirrorArtifactRecoveryCandidate['counts']['localMaterialized']>,
+  classificationOverlay: Map<string, RecoveryClassificationCounts>,
 ): AccountMirrorArtifactRecoveryCandidate[] {
   const inventory = entry.mirrorCompleteness.assetInventory ?? entry.metadataEvidence?.assetInventory ?? null;
   if (!inventory) {
@@ -194,14 +251,27 @@ function candidateFromStatusEntry(
   }
 
   const adjustedInventory = applyMaterializedOverlay(entry, inventory, materializedOverlay);
-  const remoteTotal = sumAssetCounts(adjustedInventory.remoteKnownMissingLocal);
+  const rawClassification = classificationOverlay.get(materializedOverlayKey({
+    provider: entry.provider,
+    runtimeProfileId: entry.runtimeProfileId,
+    tenantKey: entry.tenantKey ?? entry.expectedIdentityKey ?? entry.detectedIdentityKey,
+  })) ?? zeroRecoveryClassificationCounts();
+  const classification = capRecoveryClassificationCounts(rawClassification, adjustedInventory.remoteKnownMissingLocal);
+  const retrievableMissingLocal = classifyRetrievableMissing(adjustedInventory.remoteKnownMissingLocal, classification);
+  const remoteTotal = sumAssetCounts(retrievableMissingLocal);
   const unknownTotal = sumAssetCounts(adjustedInventory.unknownOrDeferred);
-  if (remoteTotal <= 0 && unknownTotal <= 0) return [];
+  const nonActionableTotal = sumAssetCounts(classification.duplicateAliases) +
+    sumAssetCounts(classification.unsupportedMetadataOnly) +
+    sumAssetCounts(classification.staticFalsePositive) +
+    sumAssetCounts(classification.failedTerminal);
+  if (remoteTotal <= 0 && unknownTotal <= 0 && nonActionableTotal <= 0) return [];
 
   if (entry.status === 'blocked') {
     return [createStatusCandidate({
       entry,
       inventory: adjustedInventory,
+      classification,
+      retrievableMissingLocal,
       status: 'blocked',
       action: 'none',
       reason: entry.reason || 'Account mirror target is blocked before recovery planning.',
@@ -218,11 +288,26 @@ function candidateFromStatusEntry(
     return [createStatusCandidate({
       entry,
       inventory: adjustedInventory,
+      classification,
+      retrievableMissingLocal,
       status: 'eligible',
       action,
       reason: materializationPolicy
-        ? `Target has ${remoteTotal} remote-known missing local assets and materialization policy ${materializationPolicy}.`
-        : `Target has ${remoteTotal} remote-known missing local assets; live follow is metadata-only until explicit recovery work is queued.`,
+        ? `Target has ${remoteTotal} retrievable missing local assets and materialization policy ${materializationPolicy}.`
+        : `Target has ${remoteTotal} retrievable missing local assets; live follow is metadata-only until explicit recovery work is queued.`,
+      confidence: recoveryConfidence(inventory),
+    })];
+  }
+
+  if (nonActionableTotal > 0) {
+    return [createStatusCandidate({
+      entry,
+      inventory: adjustedInventory,
+      classification,
+      retrievableMissingLocal,
+      status: classificationOnlyStatus(classification),
+      action: 'none',
+      reason: `Target has no currently retrievable missing local assets; ${nonActionableTotal} remaining rows are classified as duplicate, unsupported/static, or terminal failed work.`,
       confidence: recoveryConfidence(inventory),
     })];
   }
@@ -230,6 +315,8 @@ function candidateFromStatusEntry(
   return [createStatusCandidate({
     entry,
     inventory: adjustedInventory,
+    classification,
+    retrievableMissingLocal,
     status: 'needs_detail_refresh',
     action: 'refresh_detail_inventory',
     reason: `Target has ${unknownTotal} unknown or deferred asset counts and needs provider detail inventory before materialization.`,
@@ -240,14 +327,18 @@ function candidateFromStatusEntry(
 function createStatusCandidate(input: {
   entry: AccountMirrorStatusEntry;
   inventory: AccountMirrorAssetInventoryEvidence | null;
+  classification?: RecoveryClassificationCounts | null;
+  retrievableMissingLocal?: Partial<Record<AssetKindField, number>> | null;
   status: AccountMirrorArtifactRecoveryCandidateStatus;
   action: AccountMirrorArtifactRecoveryCandidateAction;
   reason: string;
   confidence: AccountMirrorArtifactRecoveryCandidate['evidenceConfidence'];
 }): AccountMirrorArtifactRecoveryCandidate {
   const remote = totalAssetCounts(input.inventory?.remoteKnownMissingLocal);
+  const retrievable = totalAssetCounts(input.retrievableMissingLocal ?? remote);
   const local = totalAssetCounts(input.inventory?.localMaterialized);
   const unknown = totalAssetCounts(input.inventory?.unknownOrDeferred);
+  const classification = input.classification ?? zeroRecoveryClassificationCounts();
   return {
     object: 'account_mirror_artifact_recovery_candidate',
     id: `status:${input.entry.provider}:${input.entry.runtimeProfileId}:${input.entry.tenantKey ?? input.entry.bindingKey}`,
@@ -265,8 +356,14 @@ function createStatusCandidate(input: {
     assetInventory: input.inventory,
     counts: {
       remoteKnownMissingLocal: remote,
+      retrievableMissingLocal: retrievable,
       localMaterialized: local,
       unknownOrDeferred: unknown,
+      duplicateAliases: totalAssetCounts(classification.duplicateAliases),
+      unsupportedMetadataOnly: totalAssetCounts(classification.unsupportedMetadataOnly),
+      staticFalsePositive: totalAssetCounts(classification.staticFalsePositive),
+      failedTerminal: totalAssetCounts(classification.failedTerminal),
+      accountLibrary: totalAccountLibraryRecoveryCounts(classification.accountLibrary),
     },
     sourceItem: null,
     createRequest: input.action === 'queue_history_materialization' || input.action === 'refresh_detail_inventory'
@@ -277,10 +374,440 @@ function createStatusCandidate(input: {
           reconcile: true,
           refreshSnapshot: input.action === 'refresh_detail_inventory',
           assetKinds: ['all'],
-          maxItems: Math.max(1, Math.min(25, remote.total || unknown.total || 1)),
+          maxItems: Math.max(1, Math.min(25, retrievable.total || unknown.total || 1)),
         }
       : null,
   };
+}
+
+interface RecoveryClassificationCounts {
+  duplicateAliases: AssetCounts;
+  unsupportedMetadataOnly: AssetCounts;
+  staticFalsePositive: AssetCounts;
+  failedTerminal: AssetCounts;
+  accountLibrary: AccountLibraryRecoveryCounts;
+}
+
+async function readRecoveryClassificationOverlay(input: {
+  searchProjectionService: SearchProjectionService | null;
+  historyMaterializationService: Pick<HistoryMaterializationService, 'listJobs'> | null;
+  request: NormalizedAccountMirrorArtifactRecoveryPlanRequest;
+}): Promise<Map<string, RecoveryClassificationCounts>> {
+  const overlay = new Map<string, RecoveryClassificationCounts>();
+  if (input.searchProjectionService) {
+    const [artifactRows, uploadRows] = await Promise.all([
+      input.searchProjectionService.search(classificationCatalogSearchRequest(input.request, 'artifact')),
+      input.searchProjectionService.search(classificationCatalogSearchRequest(input.request, 'upload')),
+    ]);
+    for (const row of artifactRows.rows) addCatalogClassificationRow(overlay, row);
+    for (const row of uploadRows.rows) addCatalogClassificationRow(overlay, row);
+  }
+  if (input.historyMaterializationService) {
+    const jobs = await input.historyMaterializationService.listJobs({
+      status: 'terminal',
+      provider: input.request.provider,
+      runtimeProfile: input.request.runtimeProfileId,
+      limit: 500,
+    });
+    for (const job of jobs.jobs) addHistoryMaterializationClassification(overlay, job, input.request);
+  }
+  return overlay;
+}
+
+function classificationCatalogSearchRequest(
+  request: NormalizedAccountMirrorArtifactRecoveryPlanRequest,
+  kind: 'artifact' | 'upload',
+): SearchProjectionRequest {
+  return {
+    provider: request.provider,
+    runtimeProfile: request.runtimeProfileId,
+    tenant: request.tenantKey,
+    kind,
+    limit: 500,
+  };
+}
+
+function addCatalogClassificationRow(
+  overlay: Map<string, RecoveryClassificationCounts>,
+  row: SearchProjectionRow,
+): void {
+  if (row.source !== 'account_mirror') return;
+  if (!row.provider || !row.runtimeProfileId || !row.tenant) return;
+  const field = row.kind === 'upload' || row.sourceKind === 'files' ? 'files'
+    : row.kind === 'artifact' || row.sourceKind === 'artifacts' ? 'artifacts'
+      : row.kind === 'media' || row.sourceKind === 'media' ? 'media'
+        : null;
+  if (!field) return;
+  const state = readMaterializationEligibilityState(row);
+  if (
+    state !== 'unsupported_conversation_file' &&
+    state !== 'unsupported_account_library_asset' &&
+    state !== 'static_image_false_positive'
+  ) {
+    return;
+  }
+  const key = materializedOverlayKey({
+    provider: row.provider,
+    runtimeProfileId: row.runtimeProfileId,
+    tenantKey: row.tenant,
+  });
+  const counts = getRecoveryClassificationCounts(overlay, key);
+  if (state === 'unsupported_conversation_file' || state === 'unsupported_account_library_asset') {
+    incrementAssetCount(counts.unsupportedMetadataOnly, field);
+  }
+  if (state === 'unsupported_account_library_asset') {
+    addAccountLibraryClassificationRow(counts.accountLibrary, row, field);
+  }
+  if (state === 'static_image_false_positive') incrementAssetCount(counts.staticFalsePositive, field);
+}
+
+function addHistoryMaterializationClassification(
+  overlay: Map<string, RecoveryClassificationCounts>,
+  job: HistoryMaterializationJob,
+  request: NormalizedAccountMirrorArtifactRecoveryPlanRequest,
+): void {
+  if (!job.result) return;
+  const provider = job.request.provider ?? job.result.target?.provider ?? (job.source.type === 'reconciliation' ? job.source.provider : null);
+  const runtimeProfileId = job.request.runtimeProfile ?? job.result.target?.runtimeProfile ?? null;
+  const tenantKey = job.request.boundIdentityKey ?? job.result.target?.boundIdentityKey ?? null;
+  if (request.provider && provider !== request.provider) return;
+  if (request.runtimeProfileId && runtimeProfileId !== request.runtimeProfileId) return;
+  if (request.tenantKey && normalizeTenantKey(tenantKey) !== normalizeTenantKey(request.tenantKey)) return;
+  const key = materializedOverlayKey({ provider, runtimeProfileId, tenantKey });
+  const counts = getRecoveryClassificationCounts(overlay, key);
+  for (const entry of job.result.entries) {
+    const field = entry.kind === 'file' ? 'files' : entry.kind === 'artifact' ? 'artifacts' : 'media';
+    if (entry.status === 'duplicate') incrementAssetCount(counts.duplicateAliases, field);
+    if (entry.status === 'failed') incrementAssetCount(counts.failedTerminal, field);
+  }
+}
+
+function readMaterializationEligibilityState(row: SearchProjectionRow): string | null {
+  const raw = row.metadata.raw;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const metadata = (raw as Record<string, unknown>).metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const eligibility = (metadata as Record<string, unknown>).materializationEligibility;
+  if (!eligibility || typeof eligibility !== 'object' || Array.isArray(eligibility)) return null;
+  const state = (eligibility as Record<string, unknown>).state;
+  return typeof state === 'string' && state.trim() ? state.trim() : null;
+}
+
+function getRecoveryClassificationCounts(
+  overlay: Map<string, RecoveryClassificationCounts>,
+  key: string,
+): RecoveryClassificationCounts {
+  const current = overlay.get(key);
+  if (current) return current;
+  const next = zeroRecoveryClassificationCounts();
+  overlay.set(key, next);
+  return next;
+}
+
+function zeroRecoveryClassificationCounts(): RecoveryClassificationCounts {
+  return {
+    duplicateAliases: zeroAssetCountsWithTotal(),
+    unsupportedMetadataOnly: zeroAssetCountsWithTotal(),
+    staticFalsePositive: zeroAssetCountsWithTotal(),
+    failedTerminal: zeroAssetCountsWithTotal(),
+    accountLibrary: zeroAccountLibraryRecoveryCounts(),
+  };
+}
+
+function capRecoveryClassificationCounts(
+  classification: RecoveryClassificationCounts,
+  remoteKnownMissingLocal: Partial<Record<AssetKindField, number>> | null | undefined,
+): RecoveryClassificationCounts {
+  const remaining = totalAssetCounts(remoteKnownMissingLocal);
+  const duplicateAliases = takeClassificationCounts(classification.duplicateAliases, remaining);
+  const staticFalsePositive = takeClassificationCounts(classification.staticFalsePositive, remaining);
+  const failedTerminal = takeClassificationCounts(classification.failedTerminal, remaining);
+  const unsupportedMetadataOnly = takeClassificationCounts(classification.unsupportedMetadataOnly, remaining);
+  const accountLibraryRemoteKnownMissingLocal = capAssetCounts(classification.accountLibrary.remoteKnownMissingLocal, remoteKnownMissingLocal);
+  const accountLibraryUnsupportedMetadataOnly = capAssetCounts(
+    classification.accountLibrary.unsupportedMetadataOnly,
+    accountLibraryRemoteKnownMissingLocal,
+  );
+  return {
+    duplicateAliases,
+    unsupportedMetadataOnly,
+    staticFalsePositive,
+    failedTerminal,
+    accountLibrary: {
+      ...classification.accountLibrary,
+      remoteKnownMissingLocal: accountLibraryRemoteKnownMissingLocal,
+      unsupportedMetadataOnly: accountLibraryUnsupportedMetadataOnly,
+    },
+  };
+}
+
+function takeClassificationCounts(
+  requested: AssetCounts,
+  remaining: AssetCounts,
+): AssetCounts {
+  const next = {
+    artifacts: Math.min(requested.artifacts, remaining.artifacts),
+    files: Math.min(requested.files, remaining.files),
+    media: Math.min(requested.media, remaining.media),
+    total: 0,
+  };
+  next.total = next.artifacts + next.files + next.media;
+  remaining.artifacts -= next.artifacts;
+  remaining.files -= next.files;
+  remaining.media -= next.media;
+  remaining.total = remaining.artifacts + remaining.files + remaining.media;
+  return next;
+}
+
+function addAccountLibraryClassificationRow(
+  counts: AccountLibraryRecoveryCounts,
+  row: SearchProjectionRow,
+  field: AssetKindField,
+): void {
+  incrementAssetCount(counts.remoteKnownMissingLocal, field);
+  incrementAssetCount(counts.unsupportedMetadataOnly, field);
+  incrementAssetCount(counts.inventory.total, field);
+  const authority = classifyAccountLibraryAuthority(row);
+  if (authority.stableIdentity) incrementAssetCount(counts.inventory.stableIdentity, field);
+  if (authority.directDownload) {
+    incrementAssetCount(counts.inventory.directDownload, field);
+  } else if (authority.stableIdentity) {
+    incrementAssetCount(counts.inventory.needsBrowserDetail, field);
+  } else {
+    incrementAssetCount(counts.inventory.unsupportedNoAuthority, field);
+  }
+  incrementAccountLibraryRouteKind(counts.inventory, row, field);
+}
+
+function classifyAccountLibraryAuthority(row: SearchProjectionRow): {
+  stableIdentity: boolean;
+  directDownload: boolean;
+} {
+  const raw = readSearchRowRawRecord(row);
+  const metadata = readRecordField(raw, 'metadata');
+  const stableIdentity = Boolean(
+    normalizeString(row.itemId) ??
+    readStringField(raw, 'id', 'artifactId', 'fileId', 'providerFileId', 'libraryIdentity') ??
+    readStringField(metadata, 'id', 'artifactId', 'fileId', 'providerFileId', 'libraryIdentity'),
+  );
+  const directDownload = Boolean(
+    readDirectDownloadEvidence(raw) ??
+    readDirectDownloadEvidence(metadata) ??
+    filterDirectDownloadLocation(readStringField(row.links, 'asset', 'download')),
+  );
+  return { stableIdentity, directDownload };
+}
+
+function incrementAccountLibraryRouteKind(
+  counts: AccountLibraryInventoryCounts,
+  row: SearchProjectionRow,
+  field: AssetKindField,
+): void {
+  const raw = readSearchRowRawRecord(row);
+  const metadata = readRecordField(raw, 'metadata');
+  const routeKind = readStringField(metadata, 'libraryRouteKind') ?? classifyAccountLibraryRouteKind(
+    readStringField(metadata, 'libraryRouteUrl') ??
+    readStringField(raw, 'remoteUrl', 'uri', 'url', 'href') ??
+    readStringField(metadata, 'remoteUrl', 'uri', 'url', 'href'),
+  );
+  switch (routeKind) {
+    case 'library_file_detail':
+      incrementAssetCount(counts.detailRoutes.libraryFileDetail, field);
+      break;
+    case 'library_artifact_detail':
+      incrementAssetCount(counts.detailRoutes.libraryArtifactDetail, field);
+      break;
+    case 'library_canvas_detail':
+      incrementAssetCount(counts.detailRoutes.libraryCanvasDetail, field);
+      break;
+    case 'conversation_detail':
+      incrementAssetCount(counts.detailRoutes.conversationDetail, field);
+      break;
+    case 'external_or_inline_asset':
+      incrementAssetCount(counts.detailRoutes.externalOrInlineAsset, field);
+      break;
+    default:
+      incrementAssetCount(counts.detailRoutes.unknown, field);
+      break;
+  }
+}
+
+function classifyAccountLibraryRouteKind(value: string | null): string {
+  if (!value) return 'unknown';
+  const normalized = value.trim();
+  if (!normalized) return 'unknown';
+  if (normalized.startsWith('blob:') || normalized.startsWith('data:')) return 'external_or_inline_asset';
+  try {
+    const parsed = new URL(normalized);
+    const pathname = parsed.pathname.toLowerCase();
+    if (pathname.startsWith('/library/files/')) return 'library_file_detail';
+    if (pathname.startsWith('/library/artifacts/')) return 'library_artifact_detail';
+    if (pathname.startsWith('/library/canvas/')) return 'library_canvas_detail';
+    if (pathname.startsWith('/c/')) return 'conversation_detail';
+    if (parsed.hostname && parsed.hostname !== 'chatgpt.com' && !parsed.hostname.endsWith('.chatgpt.com')) {
+      return 'external_or_inline_asset';
+    }
+  } catch {
+    return 'unknown';
+  }
+  return 'unknown';
+}
+
+function readSearchRowRawRecord(row: SearchProjectionRow): Record<string, unknown> | null {
+  return readRecordField({ raw: row.metadata.raw }, 'raw');
+}
+
+function readRecordField(record: Record<string, unknown> | null, key: string): Record<string, unknown> | null {
+  if (!record) return null;
+  const value = record[key];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function readStringField(record: Record<string, unknown> | null, ...keys: string[]): string | null {
+  if (!record) return null;
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value !== 'string') continue;
+    const normalized = value.trim();
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function readDirectDownloadEvidence(record: Record<string, unknown> | null): string | null {
+  const location = readStringField(
+    record,
+    'uri',
+    'remoteUrl',
+    'url',
+    'href',
+    'downloadUrl',
+    'sourceUrl',
+  );
+  return filterDirectDownloadLocation(location);
+}
+
+function filterDirectDownloadLocation(value: string | null): string | null {
+  if (!value) return null;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  if (normalized.startsWith('chatgpt://file/')) return normalized;
+  if (normalized.startsWith('sandbox:')) return normalized;
+  if (normalized.startsWith('blob:')) return normalized;
+  try {
+    const parsed = new URL(normalized);
+    const hostname = parsed.hostname.toLowerCase();
+    const pathname = parsed.pathname.toLowerCase();
+    if (hostname === 'chatgpt.com' || hostname.endsWith('.chatgpt.com')) {
+      const routeKind = classifyAccountLibraryRouteKind(normalized);
+      if (routeKind !== 'unknown') return null;
+    }
+    if (pathname.includes('/download') || pathname.includes('/files/') || pathname.includes('/attachments/')) {
+      return normalized;
+    }
+    if (hostname.includes('oaiusercontent.com') || hostname.includes('oaistatic.com')) return normalized;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function capAssetCounts(
+  requested: AssetCounts,
+  maximum: Partial<Record<AssetKindField, number>> | null | undefined,
+): AssetCounts {
+  const cap = totalAssetCounts(maximum);
+  const next = {
+    artifacts: Math.min(requested.artifacts, cap.artifacts),
+    files: Math.min(requested.files, cap.files),
+    media: Math.min(requested.media, cap.media),
+    total: 0,
+  };
+  next.total = next.artifacts + next.files + next.media;
+  return next;
+}
+
+function zeroAccountLibraryRecoveryCounts(): AccountLibraryRecoveryCounts {
+  return {
+    remoteKnownMissingLocal: zeroAssetCountsWithTotal(),
+    retrievableMissingLocal: zeroAssetCountsWithTotal(),
+    unsupportedMetadataOnly: zeroAssetCountsWithTotal(),
+    duplicateAliases: zeroAssetCountsWithTotal(),
+    failedTerminal: zeroAssetCountsWithTotal(),
+    inventory: {
+      total: zeroAssetCountsWithTotal(),
+      stableIdentity: zeroAssetCountsWithTotal(),
+      directDownload: zeroAssetCountsWithTotal(),
+      needsBrowserDetail: zeroAssetCountsWithTotal(),
+      unsupportedNoAuthority: zeroAssetCountsWithTotal(),
+      detailRoutes: {
+        libraryFileDetail: zeroAssetCountsWithTotal(),
+        libraryArtifactDetail: zeroAssetCountsWithTotal(),
+        libraryCanvasDetail: zeroAssetCountsWithTotal(),
+        conversationDetail: zeroAssetCountsWithTotal(),
+        externalOrInlineAsset: zeroAssetCountsWithTotal(),
+        unknown: zeroAssetCountsWithTotal(),
+      },
+    },
+  };
+}
+
+function totalAccountLibraryRecoveryCounts(
+  counts: AccountLibraryRecoveryCounts,
+): AccountLibraryRecoveryCounts {
+  return {
+    remoteKnownMissingLocal: totalAssetCounts(counts.remoteKnownMissingLocal),
+    retrievableMissingLocal: totalAssetCounts(counts.retrievableMissingLocal),
+    unsupportedMetadataOnly: totalAssetCounts(counts.unsupportedMetadataOnly),
+    duplicateAliases: totalAssetCounts(counts.duplicateAliases),
+    failedTerminal: totalAssetCounts(counts.failedTerminal),
+    inventory: {
+      total: totalAssetCounts(counts.inventory.total),
+      stableIdentity: totalAssetCounts(counts.inventory.stableIdentity),
+      directDownload: totalAssetCounts(counts.inventory.directDownload),
+      needsBrowserDetail: totalAssetCounts(counts.inventory.needsBrowserDetail),
+      unsupportedNoAuthority: totalAssetCounts(counts.inventory.unsupportedNoAuthority),
+      detailRoutes: {
+        libraryFileDetail: totalAssetCounts(counts.inventory.detailRoutes.libraryFileDetail),
+        libraryArtifactDetail: totalAssetCounts(counts.inventory.detailRoutes.libraryArtifactDetail),
+        libraryCanvasDetail: totalAssetCounts(counts.inventory.detailRoutes.libraryCanvasDetail),
+        conversationDetail: totalAssetCounts(counts.inventory.detailRoutes.conversationDetail),
+        externalOrInlineAsset: totalAssetCounts(counts.inventory.detailRoutes.externalOrInlineAsset),
+        unknown: totalAssetCounts(counts.inventory.detailRoutes.unknown),
+      },
+    },
+  };
+}
+
+function zeroAssetCountsWithTotal(): AssetCounts {
+  return { artifacts: 0, files: 0, media: 0, total: 0 };
+}
+
+function incrementAssetCount(counts: AssetCounts, field: AssetKindField): void {
+  counts[field] += 1;
+  counts.total = counts.artifacts + counts.files + counts.media;
+}
+
+function classifyRetrievableMissing(
+  remoteKnownMissingLocal: Partial<Record<AssetKindField, number>> | null | undefined,
+  classification: RecoveryClassificationCounts,
+): AssetCounts {
+  const nonActionable = addAssetCounts(
+    addAssetCounts(classification.duplicateAliases, classification.unsupportedMetadataOnly),
+    addAssetCounts(classification.staticFalsePositive, classification.failedTerminal),
+  );
+  return totalAssetCounts(subtractAssetCounts(remoteKnownMissingLocal, nonActionable));
+}
+
+function classificationOnlyStatus(
+  classification: RecoveryClassificationCounts,
+): AccountMirrorArtifactRecoveryCandidateStatus {
+  if (sumAssetCounts(classification.failedTerminal) > 0) return 'terminal';
+  if (sumAssetCounts(classification.unsupportedMetadataOnly) > 0 || sumAssetCounts(classification.staticFalsePositive) > 0) {
+    return 'unsupported';
+  }
+  return 'terminal';
 }
 
 async function readMaterializedArchiveOverlay(
@@ -413,8 +940,14 @@ function candidateFromSearchRow(row: SearchProjectionRow): AccountMirrorArtifact
     assetInventory: null,
     counts: {
       remoteKnownMissingLocal: { artifacts: 1, files: 0, media: 0, total: 1 },
+      retrievableMissingLocal: { artifacts: 1, files: 0, media: 0, total: 1 },
       localMaterialized: { artifacts: 0, files: 0, media: 0, total: 0 },
       unknownOrDeferred: { artifacts: 0, files: 0, media: 0, total: 0 },
+      duplicateAliases: { artifacts: 0, files: 0, media: 0, total: 0 },
+      unsupportedMetadataOnly: { artifacts: 0, files: 0, media: 0, total: 0 },
+      staticFalsePositive: { artifacts: 0, files: 0, media: 0, total: 0 },
+      failedTerminal: { artifacts: 0, files: 0, media: 0, total: 0 },
+      accountLibrary: zeroAccountLibraryRecoveryCounts(),
     },
     sourceItem: {
       id: row.itemId,
@@ -548,6 +1081,19 @@ function subtractAssetCounts(
   };
 }
 
+function addAssetCounts(
+  left: Partial<Record<'artifacts' | 'files' | 'media', number>> | null | undefined,
+  right: Partial<Record<'artifacts' | 'files' | 'media', number>> | null | undefined,
+) {
+  const leftCounts = totalAssetCounts(left);
+  const rightCounts = totalAssetCounts(right);
+  return {
+    artifacts: leftCounts.artifacts + rightCounts.artifacts,
+    files: leftCounts.files + rightCounts.files,
+    media: leftCounts.media + rightCounts.media,
+  };
+}
+
 function sumAssetCounts(value: Partial<Record<'artifacts' | 'files' | 'media', number>> | null | undefined): number {
   return totalAssetCounts(value).total;
 }
@@ -572,6 +1118,12 @@ function summarizeCandidates(
     none: 0,
   };
   const remoteKnownMissingLocal = { artifacts: 0, files: 0, media: 0, total: 0 };
+  const retrievableMissingLocal = { artifacts: 0, files: 0, media: 0, total: 0 };
+  const duplicateAliases = { artifacts: 0, files: 0, media: 0, total: 0 };
+  const unsupportedMetadataOnly = { artifacts: 0, files: 0, media: 0, total: 0 };
+  const staticFalsePositive = { artifacts: 0, files: 0, media: 0, total: 0 };
+  const failedTerminal = { artifacts: 0, files: 0, media: 0, total: 0 };
+  const accountLibrary = zeroAccountLibraryRecoveryCounts();
   const unknownOrDeferred = { artifacts: 0, files: 0, media: 0, total: 0 };
   for (const candidate of candidates) {
     byStatus[candidate.status] += 1;
@@ -580,6 +1132,42 @@ function summarizeCandidates(
     remoteKnownMissingLocal.files += candidate.counts.remoteKnownMissingLocal.files;
     remoteKnownMissingLocal.media += candidate.counts.remoteKnownMissingLocal.media;
     remoteKnownMissingLocal.total += candidate.counts.remoteKnownMissingLocal.total;
+    retrievableMissingLocal.artifacts += candidate.counts.retrievableMissingLocal.artifacts;
+    retrievableMissingLocal.files += candidate.counts.retrievableMissingLocal.files;
+    retrievableMissingLocal.media += candidate.counts.retrievableMissingLocal.media;
+    retrievableMissingLocal.total += candidate.counts.retrievableMissingLocal.total;
+    duplicateAliases.artifacts += candidate.counts.duplicateAliases.artifacts;
+    duplicateAliases.files += candidate.counts.duplicateAliases.files;
+    duplicateAliases.media += candidate.counts.duplicateAliases.media;
+    duplicateAliases.total += candidate.counts.duplicateAliases.total;
+    unsupportedMetadataOnly.artifacts += candidate.counts.unsupportedMetadataOnly.artifacts;
+    unsupportedMetadataOnly.files += candidate.counts.unsupportedMetadataOnly.files;
+    unsupportedMetadataOnly.media += candidate.counts.unsupportedMetadataOnly.media;
+    unsupportedMetadataOnly.total += candidate.counts.unsupportedMetadataOnly.total;
+    staticFalsePositive.artifacts += candidate.counts.staticFalsePositive.artifacts;
+    staticFalsePositive.files += candidate.counts.staticFalsePositive.files;
+    staticFalsePositive.media += candidate.counts.staticFalsePositive.media;
+    staticFalsePositive.total += candidate.counts.staticFalsePositive.total;
+    failedTerminal.artifacts += candidate.counts.failedTerminal.artifacts;
+    failedTerminal.files += candidate.counts.failedTerminal.files;
+    failedTerminal.media += candidate.counts.failedTerminal.media;
+    failedTerminal.total += candidate.counts.failedTerminal.total;
+    addIntoAssetCounts(accountLibrary.remoteKnownMissingLocal, candidate.counts.accountLibrary.remoteKnownMissingLocal);
+    addIntoAssetCounts(accountLibrary.retrievableMissingLocal, candidate.counts.accountLibrary.retrievableMissingLocal);
+    addIntoAssetCounts(accountLibrary.unsupportedMetadataOnly, candidate.counts.accountLibrary.unsupportedMetadataOnly);
+    addIntoAssetCounts(accountLibrary.duplicateAliases, candidate.counts.accountLibrary.duplicateAliases);
+    addIntoAssetCounts(accountLibrary.failedTerminal, candidate.counts.accountLibrary.failedTerminal);
+    addIntoAssetCounts(accountLibrary.inventory.total, candidate.counts.accountLibrary.inventory.total);
+    addIntoAssetCounts(accountLibrary.inventory.stableIdentity, candidate.counts.accountLibrary.inventory.stableIdentity);
+    addIntoAssetCounts(accountLibrary.inventory.directDownload, candidate.counts.accountLibrary.inventory.directDownload);
+    addIntoAssetCounts(accountLibrary.inventory.needsBrowserDetail, candidate.counts.accountLibrary.inventory.needsBrowserDetail);
+    addIntoAssetCounts(accountLibrary.inventory.unsupportedNoAuthority, candidate.counts.accountLibrary.inventory.unsupportedNoAuthority);
+    addIntoAssetCounts(accountLibrary.inventory.detailRoutes.libraryFileDetail, candidate.counts.accountLibrary.inventory.detailRoutes.libraryFileDetail);
+    addIntoAssetCounts(accountLibrary.inventory.detailRoutes.libraryArtifactDetail, candidate.counts.accountLibrary.inventory.detailRoutes.libraryArtifactDetail);
+    addIntoAssetCounts(accountLibrary.inventory.detailRoutes.libraryCanvasDetail, candidate.counts.accountLibrary.inventory.detailRoutes.libraryCanvasDetail);
+    addIntoAssetCounts(accountLibrary.inventory.detailRoutes.conversationDetail, candidate.counts.accountLibrary.inventory.detailRoutes.conversationDetail);
+    addIntoAssetCounts(accountLibrary.inventory.detailRoutes.externalOrInlineAsset, candidate.counts.accountLibrary.inventory.detailRoutes.externalOrInlineAsset);
+    addIntoAssetCounts(accountLibrary.inventory.detailRoutes.unknown, candidate.counts.accountLibrary.inventory.detailRoutes.unknown);
     unknownOrDeferred.artifacts += candidate.counts.unknownOrDeferred.artifacts;
     unknownOrDeferred.files += candidate.counts.unknownOrDeferred.files;
     unknownOrDeferred.media += candidate.counts.unknownOrDeferred.media;
@@ -591,8 +1179,22 @@ function summarizeCandidates(
     byStatus,
     byAction,
     remoteKnownMissingLocal,
+    retrievableMissingLocal,
+    duplicateAliases,
+    unsupportedMetadataOnly,
+    staticFalsePositive,
+    failedTerminal,
+    accountLibrary: totalAccountLibraryRecoveryCounts(accountLibrary),
     unknownOrDeferred,
   };
+}
+
+function addIntoAssetCounts(target: AssetCounts, source: Partial<Record<AssetKindField, number>> | null | undefined): void {
+  const counts = totalAssetCounts(source);
+  target.artifacts += counts.artifacts;
+  target.files += counts.files;
+  target.media += counts.media;
+  target.total = target.artifacts + target.files + target.media;
 }
 
 function compareCandidates(left: AccountMirrorArtifactRecoveryCandidate, right: AccountMirrorArtifactRecoveryCandidate): number {

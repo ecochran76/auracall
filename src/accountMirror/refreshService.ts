@@ -5,6 +5,7 @@ import type { ResolvedUserConfig } from "../config.js";
 import type { ConversationArtifact, FileRef } from "../browser/providers/domain.js";
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
 import { listChromeTargets } from "../../packages/browser-service/src/chromeLifecycle.js";
+import { findChromePidUsingUserDataDir } from "../../packages/browser-service/src/processCheck.js";
 import {
 	createFileBackedBrowserOperationDispatcher,
 	formatBrowserOperationBusyResult,
@@ -53,6 +54,19 @@ export interface AccountMirrorRefreshRequest {
 	queueTimeoutMs?: number;
 	queuePollMs?: number;
 	collectorTimeoutMs?: number;
+	cleanupManagedBrowserAfterRefresh?: boolean;
+}
+
+export interface AccountMirrorRefreshBrowserLifecycle {
+	cleanupRequested: boolean;
+	status:
+		| "not_requested"
+		| "not_running"
+		| "terminated"
+		| "failed";
+	managedProfileDir: string | null;
+	pid: number | null;
+	message: string | null;
 }
 
 export interface AccountMirrorRefreshResult {
@@ -75,6 +89,7 @@ export interface AccountMirrorRefreshResult {
 	detectedIdentityKey: string | null;
 	detectedAccountLevel: string | null;
 	mirrorStatus: AccountMirrorStatusSummary;
+	browserLifecycle?: AccountMirrorRefreshBrowserLifecycle | null;
 }
 
 export class AccountMirrorRefreshError extends Error {
@@ -116,6 +131,13 @@ export function createAccountMirrorRefreshService(input: {
 	metadataCollector?: AccountMirrorMetadataCollector;
 	persistence?: AccountMirrorPersistence;
 	providerGuardCensus?: AccountMirrorProviderGuardCensus;
+	findManagedBrowserPid?: (managedProfileDir: string) => Promise<number | null>;
+	terminateManagedBrowserProcess?: (input: {
+		pid: number;
+		managedProfileDir: string;
+		provider: AccountMirrorProvider;
+		runtimeProfileId: string;
+	}) => Promise<void>;
 	now?: () => Date;
 	generateRequestId?: () => string;
 }): AccountMirrorRefreshService {
@@ -142,6 +164,8 @@ export function createAccountMirrorRefreshService(input: {
 			config: input.config,
 		});
 	const providerGuardCensus = input.providerGuardCensus ?? detectProviderGuardWithTargetCensus;
+	const findManagedBrowserPid = input.findManagedBrowserPid ?? findChromePidUsingUserDataDir;
+	const terminateManagedBrowserProcess = input.terminateManagedBrowserProcess ?? terminateManagedBrowserProcessByPid;
 	const generateRequestId = input.generateRequestId ?? (() => `acctmirror_${randomUUID()}`);
 
 	return {
@@ -395,6 +419,15 @@ export function createAccountMirrorRefreshService(input: {
 					runtimeProfileId,
 					explicitRefresh: true,
 				});
+				const browserLifecycle = await cleanupManagedBrowserAfterRefresh({
+					request,
+					config: input.config,
+					provider,
+					runtimeProfileId,
+					managedProfileDir,
+					findManagedBrowserPid,
+					terminateManagedBrowserProcess,
+				});
 				return {
 					object: "account_mirror_refresh",
 					requestId,
@@ -425,6 +458,7 @@ export function createAccountMirrorRefreshService(input: {
 					detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
 					detectedAccountLevel: collectionWithPriorManifests.detectedAccountLevel,
 					mirrorStatus,
+					browserLifecycle,
 				};
 			} catch (error) {
 				const completedAt = now();
@@ -512,6 +546,69 @@ export function createAccountMirrorRefreshService(input: {
 			}
 		},
 	};
+}
+
+async function cleanupManagedBrowserAfterRefresh(input: {
+	request: AccountMirrorRefreshRequest;
+	config: Record<string, unknown> | null | undefined;
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	managedProfileDir: string;
+	findManagedBrowserPid: (managedProfileDir: string) => Promise<number | null>;
+	terminateManagedBrowserProcess: (input: {
+		pid: number;
+		managedProfileDir: string;
+		provider: AccountMirrorProvider;
+		runtimeProfileId: string;
+	}) => Promise<void>;
+}): Promise<AccountMirrorRefreshBrowserLifecycle | null> {
+	if (input.request.cleanupManagedBrowserAfterRefresh !== true) {
+		return null;
+	}
+	const pid = await input.findManagedBrowserPid(input.managedProfileDir);
+	if (!pid) {
+		return {
+			cleanupRequested: true,
+			status: "not_running",
+			managedProfileDir: input.managedProfileDir,
+			pid: null,
+			message: "No managed browser process was found after account-mirror refresh.",
+		};
+	}
+	try {
+		await input.terminateManagedBrowserProcess({
+			pid,
+			managedProfileDir: input.managedProfileDir,
+			provider: input.provider,
+			runtimeProfileId: input.runtimeProfileId,
+		});
+		return {
+			cleanupRequested: true,
+			status: "terminated",
+			managedProfileDir: input.managedProfileDir,
+			pid,
+			message: "Terminated managed browser process after bounded account-mirror refresh.",
+		};
+	} catch (error) {
+		return {
+			cleanupRequested: true,
+			status: "failed",
+			managedProfileDir: input.managedProfileDir,
+			pid,
+			message: error instanceof Error ? error.message : String(error),
+		};
+	}
+}
+
+async function terminateManagedBrowserProcessByPid(input: { pid: number }): Promise<void> {
+	process.kill(input.pid, "SIGTERM");
+	await new Promise((resolve) => setTimeout(resolve, 1500));
+	try {
+		process.kill(input.pid, 0);
+		process.kill(input.pid, "SIGKILL");
+	} catch {
+		// already stopped
+	}
 }
 
 async function recordAccountMirrorRefreshDomDriftObservation(input: {

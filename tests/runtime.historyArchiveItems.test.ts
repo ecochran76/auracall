@@ -75,6 +75,9 @@ describe('history materialization archive items', () => {
       },
       metadata: {
         historyMaterializationJobId: 'hmj_archive_1',
+        materialization: {
+          method: 'download-button',
+        },
       },
     });
 

@@ -133,6 +133,55 @@ export interface LiveFollowTargetAccountSummary {
     materialized: number;
     checksumCount: number;
   } | null;
+  accountLibraryCatchup: {
+    mode: string;
+    enabled: boolean;
+    status: string;
+    reason: string | null;
+    activeJobId: string | null;
+    activeJobStatus: string | null;
+    activeJobScheduler: {
+      object: string;
+      generatedAt: string;
+      state: string;
+      dispatchState: string;
+      queuedAgeMs: number | null;
+      runAgeMs: number | null;
+      queuedToStartLatencyMs: number | null;
+      stale: boolean;
+      staleReason: string | null;
+    } | null;
+    activeJobCount: number;
+    maxItems: number | null;
+    minIntervalMs: number | null;
+    failureCooldownMs: number | null;
+    cooldownUntil: string | null;
+    maxActiveJobs: number | null;
+    providerWorkTimeoutMs: number | null;
+    nextAttemptAt: string | null;
+    browserHealth: {
+      status: string;
+      reason: string | null;
+      processAlive: boolean;
+      devToolsResponsive: boolean;
+      launchCommandHasBlankArg: boolean;
+      openBlankPageCount: number;
+      pageTargetCount: number;
+      pid: number | null;
+      port: number | null;
+      error: string | null;
+    } | null;
+    preview: {
+      generatedAt: string | null;
+      catalogFiles: number;
+      eligibleCandidates: number;
+      selectedCandidates: number;
+      archivedFamilies: number;
+      unresolvedStale: number;
+      unsupportedOrTerminal: number;
+      duplicateFamilies: number;
+    } | null;
+  } | null;
   metadataCounts: {
     projects: number;
     conversations: number;

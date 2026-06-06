@@ -1,3 +1,997 @@
+## Turn 367 | 2026-06-06
+
+- Goal: plan the next Plan 0114 cross-service handoff implementation slice.
+- Planned:
+  - opened
+    `docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md`.
+  - scoped the slice to phases 4-7 of Plan 0114: deterministic analysis input,
+    schema-backed App Intelligence decision V2 validation, target package
+    preview, package digest, and status readback.
+  - kept upload, submit, approvals, target readback, repair, and live model
+    worker execution out of scope.
+  - updated Plan 0114 slice numbering to avoid collision with existing
+    account-library plans 0118 and 0119.
+- Decision:
+  - Plan 0120 is the next bounded implementation slice for the handoff thread.
+
+## Turn 366 | 2026-06-05
+
+- Goal: rerun the ChatGPT account-library automatic-mode smoke after the Plan
+  0118 cooldown cleared, without changing the permanent cooldown.
+- Executed:
+  - opened
+    `docs/dev/plans/0119-2026-06-05-account-library-cooldown-clear-rerun.md`.
+  - backed up user runtime config, disabled non-target live-follow, restarted
+    the API, killed retained managed browsers, and proved clean browser
+    preflight.
+  - temporarily flipped only `chatgpt/wsl-chrome-3` account-library mode to
+    `eligible`.
+- Result:
+  - first attempt
+    `acctmirror_completion_1ed1c4dd-6b00-4c15-b693-cc7bc4dff6b6` blocked on
+    `already-running` because ordinary reconciliation job
+    `hmj_d2c0f30e71bc466bb5a0c03a631e60e7` owned the target browser; that job
+    drained as `skipped`.
+  - second attempt
+    `acctmirror_completion_7c75c623-d260-4a91-9abc-09d8e8017899` completed one
+    pass and queued account-library job
+    `hmj_9d67f1345a7d4c909c82455caebadd73`.
+  - the job ran as `account_library_reconciliation` for
+    `chatgpt/wsl-chrome-3`, `assetSource=account-library`,
+    `assetKinds=["files"]`, `maxItems=3`, `providerWorkTimeoutMs=120000`, and
+    completed `succeeded`.
+  - restored original config, proved `wsl-chrome-3` back to `preview_only`,
+    active jobs `0`, no live managed browser processes, and legacy Gemini still
+    paused.
+- Decision:
+  - Plan 0119 closes as **Automatic Account-Library Queue Proven**.
+
+## Turn 365 | 2026-06-05
+
+- Goal: rerun Plan 0109 after Plan 0117 so account-library automatic mode
+  produces either queue/reuse evidence or an explicit cursor blocker.
+- Executed:
+  - opened
+    `docs/dev/plans/0118-2026-06-05-post-0117-account-library-automatic-rerun.md`
+    and wired it into `ROADMAP.md` and `RUNBOOK.md`.
+  - backed up user runtime config, disabled non-target live-follow, restarted
+    the API, killed retained managed Chrome work including `wsl-chrome-4`, and
+    cleared stale DevTools markers.
+  - proved clean browser preflight with `processesAlive=0`,
+    `responsiveDevTools=0`, `launchBlankArg=0`, `openBlankPages=0`, and
+    `live=[]`.
+  - temporarily flipped only `chatgpt/wsl-chrome-3` account-library mode to
+    `eligible` and started bounded metadata-only completion
+    `acctmirror_completion_d7bd7cbd-4ae4-4ac4-b35e-f051adfde4f5`.
+- Result:
+  - the completion completed one pass and persisted
+    `accountLibraryCursor.status=skipped`.
+  - blocker evidence was
+    `account-library failure cooldown is active until 2026-06-05T14:09:00.065Z`.
+  - restored original config, restarted the API, proved `wsl-chrome-3` back to
+    `preview_only`, active jobs `0`, no live browser processes, and legacy
+    Gemini still paused.
+- Decision:
+  - Plan 0118 closes as **Automatic Account-Library Smoke Blocked With
+    Evidence**.
+  - this was not a `wsl-chrome-4` blocker after cleanup; the next rerun should
+    wait for cooldown clearance and reuse the same isolated bounded path.
+
+## Turn 364 | 2026-06-05
+
+- Goal: execute Plan 0116, the handoff source job orchestration slice under
+  the Plan 0114 end-to-end handoff blueprint.
+- Implemented:
+  - opened
+    `docs/dev/plans/0116-2026-06-05-handoff-source-job-orchestration.md` and
+    wired it into `ROADMAP.md` and `RUNBOOK.md`.
+  - `auracall handoff prepare --dry-run` now accepts repeatable
+    `--source-materialization-job-id` inputs and reads those jobs through the
+    local API before considering create.
+  - added explicit `--source-materialization-create` plus bounded source
+    materialization options for asset kind, max items, provider work timeout,
+    force, API host/port, and API timeout.
+  - create is skipped when JSON/job-id source evidence was supplied; otherwise
+    one bounded source materialization job can be created and imported.
+  - packet/status now persist `source/materialization-jobs.json`, ledger source
+    job evidence, source job metrics, import method, reuse evidence, result
+    availability, and terminal state.
+  - target upload/submit remains disabled.
+- Validation so far:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - `pnpm exec biome lint src/handoff/service.ts src/cli/handoffCommand.ts
+    tests/cli/handoffCommand.test.ts bin/auracall.ts` passed.
+  - `pnpm tsx bin/auracall.ts handoff prepare --help` showed the source job
+    orchestration options.
+  - `pnpm tsx bin/auracall.ts handoff status --help` passed.
+  - `pnpm run plans:audit -- --keep 116` passed with zero validation errors.
+  - `git diff --check` passed.
+  - `pnpm run build` passed.
+- Decision:
+  - Plan 0116 closes as **Handoff Source Job Orchestration Installed**.
+  - Plan 0114 remains active; the next implementation slice should install
+    analysis decision schema V2.
+
+## Turn 363 | 2026-06-05
+
+- Goal: execute Plan 0115, the handoff run ledger/status slice under the
+  Plan 0114 end-to-end handoff blueprint.
+- Implemented:
+  - opened
+    `docs/dev/plans/0115-2026-06-05-handoff-run-ledger-and-status.md` and
+    wired it into `ROADMAP.md` and `RUNBOOK.md`.
+  - `auracall handoff prepare --dry-run` now writes `ledger.json` beside the
+    packet `run.json` and `events.jsonl`.
+  - added handoff status readback from packet id, including run, ledger,
+    event count, packet digest, source completeness, analysis, target
+    submission plan, skipped submission result, and skipped target readback.
+  - registered `auracall handoff status <id> --json` with a human-readable
+    summary.
+  - README documents the handoff status command and preview-only posture.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - `pnpm exec biome lint src/handoff/service.ts src/cli/handoffCommand.ts
+    tests/cli/handoffCommand.test.ts bin/auracall.ts` passed.
+  - `pnpm tsx bin/auracall.ts handoff status --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff prepare --help` passed.
+  - `pnpm run plans:audit -- --keep 115` passed with zero validation errors.
+  - `git diff --check` passed.
+  - `pnpm run build` passed.
+- Decision:
+  - Plan 0115 closes as **Handoff Run Ledger And Status Installed**.
+  - Plan 0114 remains active; the next implementation slice should add source
+    job orchestration.
+
+## Turn 362 | 2026-06-05
+
+- Goal: plan the cross-tenant/cross-service handoff workflow end to end.
+- Planned:
+  - opened
+    `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`.
+  - wired Plan 0114 into `ROADMAP.md` as the active P01 handoff blueprint and
+    logged the turn in `RUNBOOK.md`.
+  - defined the product contract around preview, approve-upload,
+    approve-submit, and repair modes.
+  - split the workflow into source discovery/cache/verification, analysis,
+    target discovery/package/approval/upload/submit/readback, and repair.
+  - assigned App Intelligence ownership of deterministic ledger, approvals,
+    structured decision validation, target mutation gates, replay, and repair
+    state while keeping provider adapters bounded to provider-native
+    capabilities.
+  - decomposed implementation into follow-on slices 0115 through 0121, with
+    ledger/status first on the critical path.
+
+## Turn 361 | 2026-06-05
+
+- Goal: close Plan 0112 by connecting dry-run handoff preparation to existing
+  source history materialization readbacks without creating provider work or
+  target mutation.
+- Implemented:
+  - added repeatable `--source-materialization-job-json` support to
+    `auracall handoff prepare --dry-run`.
+  - handoff preparation imports bare `history_materialization_job` readbacks
+    and create-result wrappers into source manifest items and omissions.
+  - imported job ids are written into analysis/input evidence, while target
+    submission/upload evidence remains zero-mutation.
+  - README, ROADMAP, RUNBOOK, and Plan 0112 now describe the installed
+    preview-only readback import path.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - `pnpm exec biome lint src/handoff/service.ts src/cli/handoffCommand.ts
+    tests/cli/handoffCommand.test.ts bin/auracall.ts` passed.
+  - `pnpm run plans:audit -- --keep 112` passed with zero validation errors.
+  - `git diff --check` passed.
+  - `pnpm tsx bin/auracall.ts handoff prepare --help` showed the repeatable
+    readback import option.
+  - `pnpm run build` passed.
+
+## Turn 360 | 2026-06-05
+
+- Goal: rerun Plan 0109's guarded preflight after Plan 0110 fixed false
+  foreground-work attribution.
+- Executed:
+  - installed `/status` and scheduler diagnostics for `chatgpt/wsl-chrome-3`
+    no longer reported foreground-work waiting.
+  - `foregroundWork.active=false`, `activeRequestCount=0`,
+    `drainReservations=0`, `backgroundDrainScheduled=true`, and
+    `backgroundDrainState=idle`.
+  - `chatgpt/wsl-chrome-3` stayed `preview_only`/disabled with active
+    account-library jobs `0` and browser health idle.
+  - a bounded wait let an unrelated `wsl-chrome-4` running completion drain,
+    but managed browser processes for `default/chatgpt`, `wsl-chrome-4/chatgpt`,
+    and `gemini-stealthcdp/gemini` remained alive.
+  - final validation saw ordinary `chatgpt/wsl-chrome-3` live-follow provider
+    work start on cadence; account-library mode still read `preview_only` and
+    active account-library materialization jobs stayed `0`.
+- Decision:
+  - rerun closed as no-go before config mutation.
+  - the old foreground blocker is fixed; the remaining blocker is process
+    isolation before the first automatic account-library eligible-mode smoke.
+
+## Turn 359 | 2026-06-05
+
+- Goal: fix the foreground-work attribution blocker that made Plan 0109 abort
+  before any account-library automatic-mode config mutation.
+- Planned:
+  - opened
+    `docs/dev/plans/0110-2026-06-05-scheduler-foreground-work-attribution.md`.
+  - wired Plan 0110 into `ROADMAP.md` and `RUNBOOK.md`.
+  - kept the slice scoped to scheduler foreground-pressure semantics; no
+    account-library mode flip and no Gemini resume.
+- Diagnosis:
+  - installed scheduler diagnostics for `chatgpt/wsl-chrome-3` still reported
+    foreground-work waiting.
+  - full installed status narrowed the source to
+    `backgroundDrainScheduled=true` while `backgroundDrainState=idle`,
+    `activeRequestCount=0`, and `drainReservations=0`.
+- Implemented:
+  - changed `hasForegroundAuraCallExecutionPressure` so a future idle
+    background-drain cadence timer stays visible in status but does not make
+    `foregroundWork.active=true`.
+  - preserved foreground pressure for active request work, explicit drain
+    reservations, and drain state `scheduled`/`running`.
+  - added a regression test for the idle scheduled cadence timer shape.
+- Validation:
+  - focused HTTP scheduler status test passed.
+  - `pnpm run typecheck`, `pnpm run build`, `pnpm run plans:audit -- --keep
+    110`, and `git diff --check` passed.
+  - installed runtime/service install passed and `auracall-api.service`
+    restarted on PID `81296`.
+- Installed proof:
+  - scheduler status now reports `posture=scheduled`,
+    `backpressureReason=null`, and `foregroundWork.active=false` while the
+    idle cadence timer remains visible as `backgroundDrainScheduled=true`.
+  - scheduler diagnostics for `chatgpt/wsl-chrome-3` no longer report
+    foreground-work waiting.
+  - ordinary ChatGPT live-follow provider work started once the false guard
+    was removed; account-library automatic mode stayed `preview_only`, active
+    account-library jobs stayed `0`, and legacy Gemini stayed paused.
+- Decision:
+  - Plan 0110 closes as **Scheduler Foreground Attribution Fixed**.
+
+## Turn 358 | 2026-06-05
+
+- Goal: plan and execute the next bounded slice after Plan 0108.
+- Planned:
+  - opened
+    `docs/dev/plans/0109-2026-06-05-chatgpt-account-library-automatic-mode-capped-smoke.md`.
+  - wired Plan 0109 into `ROADMAP.md` as the active P01 plan.
+  - wired Plan 0109 into `RUNBOOK.md` with hard preflight and restore gates.
+- Boundary:
+  - any account-library mode flip is user-scoped runtime state under
+    `~/.auracall/config.json`, not a tracked repo config change.
+  - only `chatgpt/wsl-chrome-3` may be changed, only temporarily, and only if
+    preflight attribution is clean.
+  - final state must restore account-library mode to `preview_only`, active
+    account-library jobs to `0`, and Gemini inertness.
+- Executed:
+  - re-ran installed preflight after a retry window.
+  - scheduler diagnostics still reported foreground AuraCall work pending for
+    `chatgpt/wsl-chrome-3`, so the smoke aborted before config mutation.
+  - scoped `/status` and `/v1/browser/processes` were responsive; browser
+    health was idle, active account-library jobs were `0`, and no managed
+    ChatGPT/Gemini browser process was present.
+  - legacy Gemini remained paused with `gemini_live_follow_resume_blocked`.
+  - `~/.auracall/config.json` still reported account-library mode
+    `preview_only`.
+- Decision:
+  - Plan 0109 closes as **Automatic Account-Library Smoke No-Go**.
+  - do not flip account-library to `eligible` until the scheduler foreground
+    attribution guard is clean or explicitly diagnosed and bounded.
+
+## Turn 357 | 2026-06-04
+
+- Goal: plan and execute the next bounded slice after Plan 0107.
+- Planned:
+  - opened
+    `docs/dev/plans/0108-2026-06-04-account-mirror-readback-latency-attribution.md`.
+  - wired Plan 0108 into `ROADMAP.md` as the active P01 plan.
+  - wired Plan 0108 into `RUNBOOK.md`.
+- Boundary:
+  - this slice is readback-only. It must not enable account-library automatic
+    mode or rerun the Plan 0107 automatic smoke.
+  - fix or bound the account-mirror/browser readbacks that timed out during
+    Plan 0107 preflight.
+- Implemented:
+  - scoped account-mirror persistent-state refresh by provider/runtime profile.
+  - scoped browser-process readbacks for `/v1/browser/processes`.
+  - bounded DevTools target-list enumeration.
+  - kept `/status` readback-only by removing account-library provider-backed
+    preview collection; account-library catch-up now reports `preview=null`
+    on status.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/statusRegistry.test.ts` passed.
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t
+    "account-library|browser process diagnostics"` passed.
+  - `pnpm run typecheck` passed.
+  - `pnpm run build` passed.
+  - `pnpm run install:user-runtime-service` passed.
+- Installed proof:
+  - installed API service PID `71949` returned scoped `/status`,
+    `/v1/account-mirrors/status`, and `/v1/browser/processes` reads within 20
+    seconds for `chatgpt/wsl-chrome-3`.
+  - the target remained account-library `preview_only` with enabled false,
+    active account-library jobs returned `0`, and no ChatGPT managed browser
+    process was launched after the final status read.
+  - legacy Gemini completion stayed `paused` with
+    `gemini_live_follow_resume_blocked`; no managed Gemini process was
+    present.
+- Decision:
+  - Plan 0108 closes as **Account-Mirror Readback Latency Bounded**.
+  - the automatic-mode smoke remains a future bounded slice.
+
+## Turn 356 | 2026-06-04
+
+- Goal: write and execute the next bounded plan after auditing Plan 0106.
+- Planned:
+  - opened
+    `docs/dev/plans/0107-2026-06-04-chatgpt-account-library-automatic-mode-isolation.md`.
+  - wired Plan 0107 into `ROADMAP.md` as the active P01 plan.
+  - wired Plan 0107 into `RUNBOOK.md` with the preflight-first boundary.
+- Executed:
+  - installed service preflight found `auracall-api.service` active at PID
+    `74408`.
+  - ChatGPT scheduler diagnostics for `wsl-chrome-3` reported
+    foreground-work backpressure and active completion
+    `acctmirror_completion_dde169ad-2899-4858-a89c-f689a5aa9b84`.
+  - the active completion remained `idle_waiting`, `passCount=87`, with
+    account-library mode still `preview_only` and enabled false.
+  - account-library active materialization jobs for `chatgpt/wsl-chrome-3`
+    returned `0`.
+  - process scan showed an existing managed ChatGPT browser process for
+    `wsl-chrome-3/chatgpt`; full `/status`, `/v1/account-mirrors/status`, and
+    `/v1/browser/processes` timed out, so browser attribution was not clean.
+  - Gemini remained paused with `gemini_live_follow_resume_blocked`.
+- Decision:
+  - Plan 0107 closes as **ChatGPT Account-Library Automatic Mode Remains
+    Preview-Only**.
+  - the automatic smoke was not run because the preflight guard failed.
+- Boundary:
+  - the automatic smoke must refresh installed readback before changing mode.
+  - the smoke is capped to `chatgpt/wsl-chrome-3`, account-library files,
+    `maxItems=1`, `force=false`, and one active account-library job.
+  - if attribution is not clean or active jobs do not drain to `0`, keep
+    `preview_only`.
+
+## Turn 355 | 2026-06-02
+
+- Goal: execute and close Plan 0106, the Gemini automatic resume gating slice.
+- Implemented:
+  - `createAccountMirrorCompletionService` now blocks startup recovery for
+    unsafe legacy Gemini live-follow completions before `launch`.
+  - `control({ action: 'resume' })` now blocks plain operator resume for the
+    same legacy Gemini shape.
+  - blocked completions stay `paused`, clear `nextAttemptAt`, report
+    `error.code=gemini_live_follow_resume_blocked`, and append either
+    `automatic_resume_blocked` or `operator_resume_blocked`.
+  - safe Gemini paths remain available for bounded work, capped upgraded
+    retrieval policy, or live-follow operations with productive left-rail
+    route-progress evidence.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts` passed with
+    28 tests.
+  - `pnpm run typecheck` passed.
+  - `pnpm run build` passed.
+  - `pnpm run install:user-runtime-service` passed.
+- Installed proof:
+  - `auracall-api.service` restarted on the installed runtime as PID `74408`.
+  - legacy Gemini completion
+    `acctmirror_completion_afdbcd9c-b51e-4144-a31d-54be35e71402` remained
+    `status=paused`, `mode=live_follow`, `materializationPolicy=metadata_only`,
+    and `passCount=10` after startup.
+  - scheduler diagnostics stayed on ChatGPT completion
+    `acctmirror_completion_445ecb7e-f853-4bab-8672-c08b16c46109` with
+    `browserMutations.total=0`.
+  - installed operator resume returned `status=paused`, `nextAttemptAt=null`,
+    `error.code=gemini_live_follow_resume_blocked`, and
+    `operator_resume_blocked`.
+  - post-resume process scan showed no managed Gemini browser process.
+- Decision: Plan 0106 closes as **Gemini Automatic Resume Gated**. The old
+  indefinite Gemini completion remains inert until a future plan upgrades or
+  replaces it with bounded rail-retrieval policy.
+
+## Turn 354 | 2026-06-02
+
+- Goal: execute and close Plan 0105, the Gemini left-rail artifact
+  live-follow repair.
+- Implemented:
+  - fixed Gemini collapsed-left-rail false readiness by requiring visible
+    `/app/<conversation_id>` anchors before treating the shell as ready.
+  - kept Gemini steady-follow on the attachment/detail cursor so bounded
+    passes advance into real conversations instead of resetting to shell-only
+    metadata.
+  - added route-progress evidence for shell visits, selected conversation ids,
+    artifact/file-bearing conversation ids, materialization attempts, and
+    shell-only churn.
+  - blocked Gemini materialization queueing when a refresh only reached the
+    `/app` shell.
+  - made history materialization cleanup terminate every managed Chrome
+    process for the resolved Gemini managed browser profile directory.
+  - exposed `--provider-work-timeout-ms` and preserved
+    `providerWorkTimeoutMs` through the HTTP parser.
+- Installed proof:
+  - completion `acctmirror_completion_c96ff20c-c1d2-4299-8209-f5ab76652351`
+    selected four real Gemini left-rail conversations, reported
+    `conversationCandidates=67`, `selectedConversationIds=4`,
+    `artifactBearingConversationIds=3`, `materializationAttempts=3`, and
+    `churnDetected=false`.
+  - materialization job `hmj_e4b7007b8ff142438c77d41449dc1ff3` materialized
+    `Midnight At The Harbor` from conversation `62dd6ff9d85218b1` as
+    `midnight_at_the_harbor.mp4`, checksum
+    `81384741e358b6a3f618085bf459130614320a38eb192671cefac17d33460807`.
+  - post-terminal `pgrep` scan showed no managed Gemini browser process.
+  - zero-item timeout proof `hmj_4f39d63352734b56b7d4c9ae37d672e4` preserved
+    `providerWorkTimeoutMs=45000` and reached terminal `skipped` without
+    opening Gemini.
+- Validation:
+  - `pnpm vitest run tests/cli/apiHistoryMaterializationCommand.test.ts
+    --maxWorkers 1`
+  - focused Gemini/account-mirror route progress and cleanup tests passed
+    earlier in the slice.
+  - focused Biome lint and `pnpm exec tsc --noEmit` passed.
+  - `pnpm run build`, `pnpm run install:user-runtime`, and
+    `pnpm run install:user-api-service` passed.
+- Decision: Plan 0105 closes as **Bounded Rail Retrieval Enabled**. The old
+  indefinite Gemini completion
+  `acctmirror_completion_afdbcd9c-b51e-4144-a31d-54be35e71402` remains paused.
+
+## Turn 353 | 2026-06-02
+
+- Goal: plan the next Gemini repair after clarifying that timeout/pausing does
+  not solve the live-follow problem.
+- Result:
+  - opened
+    `docs/dev/plans/0105-2026-06-02-gemini-left-rail-artifact-live-follow.md`.
+  - wired Plan 0105 into `ROADMAP.md` and `RUNBOOK.md`.
+- Planning correction:
+  - Plan 0104 solved containment, cleanup, and system-Gem filtering, but not
+    productive Gemini history traversal.
+  - live follow is supposed to run; the failure was repeated `/app` shell
+    navigation without entering real conversations or retrieving artifacts.
+  - Plan 0105 makes the Gemini left live rail the primary history discovery
+    surface and treats `/app` reachability as shell attach, not progress.
+- Acceptance target:
+  - bounded installed proof must select real left-rail conversations and report
+    truthful artifact/materialization outcome, or report a precise
+    blocked/yield reason for why rail traversal could not advance.
+
+## Turn 352 | 2026-06-02
+
+- Goal: execute and close Plan 0104, the Gemini live-follow repair slice.
+- Implemented:
+  - `createAccountMirrorCompletionService` requests
+    `cleanupManagedBrowserAfterRefresh=true` on the final pass of bounded
+    Gemini completions.
+  - `createAccountMirrorRefreshService` records `browserLifecycle` evidence
+    and terminates the managed browser when bounded cleanup is requested.
+  - bounded cleanup is authoritative even if the runtime profile has
+    `keepBrowser=true`; the first installed proof exposed that
+    `keepBrowser` was otherwise defeating cleanup.
+  - Gemini adapter system-Gem filtering now rejects `chess-champ`,
+    `brainstormer`, and `storybook` before treating Gems as editable projects.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts
+    tests/accountMirror/refreshService.test.ts
+    tests/browser/geminiAdapter.test.ts --maxWorkers 1` passed with 45 tests.
+  - focused Biome lint and `pnpm exec tsc --noEmit` passed.
+  - `pnpm run build`, `pnpm run install:user-runtime`, and
+    `pnpm run install:user-api-service` passed; `auracall-api.service` is
+    active.
+- Installed proof:
+  - old indefinite Gemini completion
+    `acctmirror_completion_afdbcd9c-b51e-4144-a31d-54be35e71402` remained
+    paused at `passCount=10`.
+  - bounded completion
+    `acctmirror_completion_21a7a85d-4f30-48fd-b5df-3ed478dcd085` completed one
+    `steady_follow` / `metadata_only` pass with `projects=0`,
+    `conversations=71`, and no artifacts/files/media.
+  - proof readback reported
+    `lastRefresh.browserLifecycle.status=terminated`, `pid=2327`, and
+    `cleanupRequested=true`; post-terminal process scan showed no managed
+    Gemini browser process.
+  - scheduler diagnostics before and after proof showed no active completions
+    and `browserMutations.total=0`.
+- Decision: Plan 0104 closes as **Bounded-Only Enabled**. Explicit bounded
+  Gemini one-pass work is repaired; indefinite automatic Gemini live follow
+  remains paused until a separate plan narrows resume semantics.
+
+## Turn 351 | 2026-06-02
+
+- Goal: plan the bounded Gemini live-follow resume-safety slice.
+- Result:
+  - opened
+    `docs/dev/plans/0103-2026-06-02-gemini-live-follow-resume-safety.md`.
+  - wired Plan 0103 into `ROADMAP.md` as the active P01 plan.
+  - recorded Plan 0103 in `RUNBOOK.md`.
+- Scope:
+  - recheck installed containment and active completion state before any
+    Gemini browser work;
+  - keep the existing indefinite Gemini live-follow completion paused during
+    discovery;
+  - audit completion-control resume semantics;
+  - run at most one bounded Gemini steady-follow metadata-only pass if gates
+    are clean;
+  - verify Gemini does not cycle through Google/system Gems such as
+    `chess-champ`, `brainstormer`, or `storybook`;
+  - decide whether Gemini stays paused, is cancelled, or is safely re-enabled.
+- Non-goal:
+  - do not resume the existing long-lived Gemini completion as the first
+    action.
+
+## Turn 350 | 2026-06-02
+
+- Goal: hunt down unexpected Gemini `/app` and `/gems/view` browser churn.
+- Root cause:
+  - AuraCall API PID `18774` owned the Gemini managed Chromium PID `32153`
+    under
+    `/home/ecochran76/.auracall/browser-profiles/gemini-stealthcdp/gemini`.
+  - DevTools on port `45019` showed live targets at
+    `https://gemini.google.com/app` and `https://gemini.google.com/gems/view`.
+  - the source was persisted live-follow completion
+    `acctmirror_completion_afdbcd9c-b51e-4144-a31d-54be35e71402` for
+    `gemini/auracall-gemini-pro`, which repeatedly resumed after API restarts
+    and woke its own completion loop outside the account-mirror scheduler's
+    foreground-work backpressure gate.
+- Implemented:
+  - added completion-level foreground backpressure to live-follow refreshes so
+    resumed completions defer before provider browser work when foreground
+    AuraCall work is active.
+  - wired the HTTP API host's existing foreground pressure signal into the
+    completion service.
+  - paused the active Gemini live-follow completion by operator control rather
+    than editing runtime config.
+- Installed proof:
+  - focused completion/scheduler regression tests passed.
+  - `pnpm exec tsc --noEmit`, `pnpm run build`, targeted Biome lint, and
+    `git diff --check` passed.
+  - user runtime and `auracall-api.service` were reinstalled/restarted; service
+    PID `30880` is active.
+  - installed runtime JS contains the new `shouldYieldToForegroundWork` hook.
+  - Gemini completion remains `status=paused`, `passCount=10`, with last
+    refresh ending at `2026-06-02T22:06:29.785Z`.
+  - process scan at `2026-06-02 17:11:29 CDT` showed no managed Gemini browser
+    process or `gemini.google.com` target after restart.
+- Decision:
+  - Gemini churn was AuraCall live-follow, not external browser use.
+  - leave the Gemini completion paused until a bounded Gemini-specific live
+    follow slice is intentionally resumed.
+
+## Turn 349 | 2026-06-02
+
+- Goal: plan the end-to-end next ChatGPT Library proof slice.
+- Result:
+  - opened
+    `docs/dev/plans/0101-2026-06-02-chatgpt-library-capped-materialization-proof.md`.
+  - wired Plan 0101 into `ROADMAP.md` as the active P01 plan.
+  - recorded Plan 0101 in `RUNBOOK.md`.
+- Scope:
+  - clear the `chatgpt/wsl-chrome-3` browser-health blocker;
+  - snapshot selected account-library preview candidates;
+  - run capped installed account-library proof at `maxItems=1`, then
+    `maxItems=3` only if clean;
+  - verify archive/search/idempotence and active-job drain;
+  - keep automatic account-library live-follow queueing disabled or
+    preview-only unless explicitly rescoped.
+- Current blocker:
+  - `/status` browser health reports the managed browser was launched with an
+    `about:blank` argument.
+
+## Turn 348 | 2026-06-02
+
+- Goal: install and prove the ChatGPT Library download eligibility correction.
+- Implemented:
+  - route-authorized ChatGPT Library rows are no longer annotated as
+    `unsupported_account_library_asset`.
+  - account-library preview now treats `blocked` catalog targets as terminal
+    but still allows `delayed` cached catalog entries to produce candidates.
+  - rebuilt, reinstalled the user runtime/API service, and restarted
+    `auracall-api.service`.
+- Installed proof:
+  - installed CLI version `0.1.1`; user service active.
+  - catalog readback for Mason's Library row
+    `d4670fc4-15d9-5ca7-b48f-026a8e33f87a` reported
+    `remoteUrl=chatgpt://file/file_00000000730071fbaf48666ad6bf5ca3`,
+    `materializationSurface=chatgpt-library-file-row-click`, and no
+    `materializationEligibility` block.
+  - the stable-hash duplicate row
+    `d7e7b360-4a37-5d81-9293-ffaf1c94e05a` still correctly reports
+    `unsupported_account_library_asset`.
+  - installed catalog reported `24` route-authorized
+    `chatgpt-library-file-row-click` rows without unsupported eligibility.
+  - `/status` for `chatgpt/wsl-chrome-3` reported preview-only account-library
+    catch-up with `eligibleCandidates=26`, `selectedCandidates=3`,
+    `archivedFamilies=8`, `unresolvedStale=11`, `unsupportedOrTerminal=12`,
+    and `duplicateFamilies=3`.
+- Remaining:
+  - automatic account-library queueing remains disabled by `preview_only` mode
+    and currently blocked by browser health because the managed browser was
+    launched with an `about:blank` argument.
+
+## Turn 347 | 2026-06-02
+
+- Goal: complete Plan 0100 installed proof and close the live-follow
+  account-library scheduling slice.
+- Implemented:
+  - added `ServiceLiveFollowAccountLibrarySchema` so installed config preserves
+    `liveFollow.accountLibrary`.
+  - rebuilt, reinstalled the user runtime/API service, and restarted
+    `auracall-api.service`.
+  - configured `chatgpt/wsl-chrome-3` as account-library `preview_only` in
+    user-scoped runtime config.
+- Installed proof:
+  - installed CLI version `0.1.1`; service PID `80768`.
+  - `/status` reported preview-only account-library catch-up with
+    `activeJobCount=0`, browser health `idle`, `catalogFiles=60`,
+    `eligibleCandidates=0`, `selectedCandidates=0`, and
+    `unsupportedOrTerminal=60`.
+  - proof job `hmj_c06476c35bd448d7acba18e5b958a23e` (`maxItems=1`) skipped
+    with `materialized=0`, `failed=0`, and `entries=0`.
+  - proof job `hmj_87e4c71ee43e425fb8c488afdb9193c2` (`maxItems=3`) skipped
+    with `materialized=0`, `failed=0`, and `entries=0`.
+  - active account-library jobs returned to `0`.
+- Decision:
+  - Plan 0100 closes in preview-only mode; automatic account-library queueing
+    is not enabled.
+
+## Turn 346 | 2026-06-02
+
+- Goal: execute the Plan 0100 cooldown and browser/service health-gate
+  readback milestone.
+- Implemented:
+  - `accountLibraryCatchup` now carries active job count, cooldown timestamp,
+    cooldown-derived next attempt time, and browser-health readback.
+  - cooldown targets report `status=cooling_down` before any eligible queue
+    decision.
+  - browser-health readback uses existing safe process/DevTools/page
+    observations and can block on blank page churn.
+  - automatic account-library queueing remains disabled/preview-only; status
+    paths do not call materialization `createJob`.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "account-library"`
+    passed.
+  - `pnpm exec tsc --noEmit` passed.
+  - focused Biome lint exited 0 with existing unrelated HTTP test warnings.
+- Remaining:
+  - installed readback and bounded queue proof remain open in Plan 0100.
+
+## Turn 345 | 2026-06-02
+
+- Goal: plan the next Plan 0100 milestone after account-library preview and
+  active-job status readback.
+- Result:
+  - documented the next readback-only scheduler-health slice in Plan 0100.
+  - updated the roadmap with cooldown, active-count, and browser/service
+    health-gate readback as the next milestone.
+  - recorded the runbook entry for the planning slice.
+- Boundary:
+  - automatic account-library catch-up remains disabled/preview-only.
+  - no retired frontend files are in scope.
+
+## Turn 344 | 2026-06-02
+
+- Goal: write the next bounded plan after manual/operator ChatGPT
+  account-library retrieval closed.
+- Result:
+  - opened
+    `docs/dev/plans/0100-2026-06-02-live-follow-account-library-scheduling.md`.
+  - made Plan 0100 the active roadmap plan.
+  - scoped the work to live-follow account-library scheduling policy, candidate
+    preview, per-target caps, provider-work timeout/recovery, scheduler health
+    gates, installed proof, and a final disabled/preview-only/eligible
+    decision.
+- Guardrails:
+  - automatic account-library catch-up stays disabled or preview-only until
+    installed proof passes.
+  - account-library rows remain separate from conversation-history recovery.
+  - no retired frontend changes.
+
+## Turn 343 | 2026-06-01
+
+- Goal: close Plan 0098/0099 after proving broad ChatGPT account-library
+  materialization in the installed runtime.
+- Implemented:
+  - broad account-library reconciliation resolves stale catalog rows against
+    the current ChatGPT Library account-file inventory.
+  - unresolved stale rows are skipped before download work.
+  - resolved provider files now survive the synthetic catalog-item handoff into
+    `materializeAccountFiles`.
+- Verification:
+  - focused account-library Vitest passed with 7 tests.
+  - `pnpm exec tsc --noEmit` passed.
+  - focused Biome lint passed.
+  - `pnpm run build`, `pnpm run install:user-runtime`, and
+    `pnpm run install:user-api-service` passed.
+  - installed `maxItems=1` job `hmj_ccaea15cb28242feb56ae4c9b52424ff`
+    materialized 1 account-library file with archive linkage.
+  - installed `maxItems=3` job `hmj_cf164b2171d34df79bd625fe7e2b45d8`
+    materialized 3 account-library files with archive linkage.
+  - active `chatgpt/wsl-chrome-3` history materialization jobs returned to
+    `0`.
+- Conclusion:
+  - Plans 0098 and 0099 are closed for manual/operator account-library
+    retrieval.
+  - live-follow account-library catch-up remains manual/operator-only until
+    explicit automatic scheduling caps and timeout/retry guards are planned
+    and proven.
+
+## Turn 342 | 2026-06-01
+
+- Goal: execute Plan 0099 through local implementation and installed capped
+  proof.
+- Implemented:
+  - explicit `assetSource=account-library` reconciliation request mode.
+  - runtime source type `account_library_reconciliation`.
+  - CLI/API/MCP request/list schema support for the new source mode.
+  - route-authorized broad selector for ChatGPT account-library files.
+  - archive-backed family skip before applying `maxItems`.
+  - stale-unresolved-row skip before provider/browser work.
+- Installed proof:
+  - job `hmj_667837d8f947468494b7587e31d21e0c` exposed the stale-row bug by
+    selecting `e112c9ba-ec50-5ae6-81a7-bfbb77f324bd` without a current
+    provider file id.
+  - after the selector fix, `hmj_59c041b7597b4d9598a77345d5314a00`
+    (`maxItems=1`) and `hmj_c826d88112c348ad939ea0f43a3b9d29`
+    (`maxItems=3`) both reached terminal `skipped` with no entries and no
+    failures.
+  - active jobs returned to `0`.
+  - recovery readback still reports history-lane
+    `retrievableMissingLocal.total=0` and `createRequest=null`.
+- Conclusion:
+  - broad account-library reconciliation now exists and is safe in current
+    installed state, but it did not materialize a new broad candidate because
+    no current unarchived `chatgpt://file` account-library rows were selected.
+  - live-follow account-library catch-up remains manual/operator-only.
+
+## Turn 341 | 2026-06-01
+
+- Goal: turn the remaining Plan 0098 ChatGPT account-library work into a
+  bounded reconciliation plan.
+- Result:
+  - opened
+    `docs/dev/plans/0099-2026-06-01-chatgpt-account-library-reconciliation.md`.
+  - made Plan 0099 the active roadmap plan while retaining Plan 0098 as the
+    parent account-library retrieval lane.
+  - scoped the next slice to explicit account-library reconciliation,
+    route-authorized candidate selection, archive-backed idempotence,
+    installed `maxItems=1` and `maxItems=3` proof, and the live-follow
+    manual/preview/eligible decision.
+- Boundary:
+  - selected account-library materialization is proven, but broad
+    reconciliation is not.
+  - history-lane recovery must remain at `retrievableMissingLocal.total=0`
+    with `createRequest=null` for account-library rows.
+  - live-follow account-library catch-up remains disabled until capped proof
+    passes.
+
+## Turn 340 | 2026-06-01
+
+- Goal: execute the installed proof slice for Plan 0098.
+- Result:
+  - selected account-library materialization now resolves stale
+    account-mirror catalog rows against the current ChatGPT account-file
+    inventory when the catalog row lacks a `providerFileId`.
+  - rebuilt/reinstalled the user runtime and restarted
+    `auracall-api.service`.
+  - installed selected CLI rerun exited `0`, proving the post-success hang is
+    fixed in the installed wrapper path.
+  - installed archive-linked job
+    `hmj_e3a49eca13f64788a4065f9adeaf9b9a` materialized stale catalog item
+    `325dcf29-906e-55c2-a5e3-797c5c50e2e0` by resolving current account-file
+    row `c3584433-36a3-5919-a347-bfea83f07343`.
+  - archive item
+    `history-file:chatgpt:eric.cochran_soylei.com:account-library:c3584433-36a3-5919-a347-bfea83f07343`
+    has an asset route that returned HTTP `200`, 492,700 bytes, PDF prefix
+    `%PDF-1.7`, and SHA-256
+    `6629baf1bbfcb550b0e94e6338688e312fd7a99e2c09172c29f05c893955a25e`.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "account-library"`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `pnpm run install:user-api-service`
+  - installed API status showed fresh `auracall-api.service` PID `47918`.
+  - active `chatgpt/wsl-chrome-3` history materialization jobs returned to
+    `0`.
+- Open:
+  - Plan 0098 still needs an explicit account-library reconciliation lane and
+    capped installed proofs for `maxItems=1` and `maxItems=3`.
+  - live-follow account-library catch-up remains disabled/not eligible.
+
+## Turn 339 | 2026-06-01
+
+- Goal: implement the next Plan 0098 slice after selected ChatGPT
+  account-library download proof.
+- Result:
+  - added `materializeAccountFiles` to the LLM service so selected
+    account-library files can be downloaded with cache rows, SHA-256 checksums,
+    local paths, and a manifest.
+  - added selected ChatGPT account-library catalog-item materialization through
+    the history-materialization service without treating account-library rows
+    as history-lane recovery candidates.
+  - account-library materialization now upserts run-archive items and carries
+    archive item ids and asset routes in focused runtime coverage.
+  - fixed the post-success CLI lifecycle source issue for `files list` and
+    `files download` by explicitly exiting completed one-shot browser file
+    commands after stdout is written.
+- Verification:
+  - `pnpm vitest run tests/browser/llmServiceFiles.test.ts -t "materializeAccountFiles"`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "account-library"`
+  - `pnpm exec tsc --noEmit`
+- Open:
+  - installed user-runtime proof is still required for the CLI lifecycle fix
+    and real archive-linked account-library materialization.
+  - broad account-library reconciliation and live-follow eligibility remain
+    open under Plan 0098.
+
+## Turn 338 | 2026-06-01
+
+- Goal: execute the Plan 0098 selected ChatGPT account-library retrieval slice.
+- Result:
+  - ChatGPT Library row collection now reads provider file ids from row-level
+    `data-testid`/ARIA evidence instead of title-only text.
+  - account-library rows now carry `chatgpt://file/<providerFileId>` handles
+    and `chatgpt-library-file-row-click` materialization-surface metadata.
+  - added provider/service/browser-client support for `downloadAccountFile`.
+  - added `auracall files download <fileId> --out <path>` for selected
+    account-file retrieval proof and operator use.
+  - installed selected proof downloaded
+    `file_00000000fa5871fbaa5ba6f3e05d99f6` to
+    `/tmp/auracall-chatgpt-library-proof.pdf`.
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts -t normalizeChatgptLibraryItemProbes`
+  - `pnpm exec tsc --noEmit`
+  - focused `pnpm exec biome lint ...`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - installed list proof wrote 50 rows with `providerFileId` and
+    `chatgpt://file/...` handles.
+  - selected proof file verified as 492,700 byte, 10-page PDF with SHA-256
+    `6629baf1bbfcb550b0e94e6338688e312fd7a99e2c09172c29f05c893955a25e`.
+- Open:
+  - Plan 0098 remains open for archive-linked account-library materialization
+    jobs and capped reconciliation proof.
+  - installed list/download commands can hang after writing output/success;
+    fix CLI/browser lifecycle before unattended scheduler/live-follow use.
+
+## Turn 337 | 2026-06-01
+
+- Goal: execute the first Plan 0098 slice by splitting account-library
+  recovery from history materialization readback.
+- Result:
+  - recovery candidates now include a read-only `accountLibrary` recovery
+    bucket on each candidate and in aggregate metrics.
+  - account-library inventory authority is split into `stableIdentity`,
+    `directDownload`, `needsBrowserDetail`, and `unsupportedNoAuthority`.
+  - account-level `chatgpt-library` rows still do not create history
+    materialization requests, preserving the Plan 0097
+    `retrievableMissingLocal=0` history-lane truth.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/artifactRecoveryPlanner.test.ts`
+  - `pnpm vitest run tests/mcp.accountMirrorRecovery.test.ts tests/http.responsesServer.test.ts -t "recovery candidates"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - installed read-only proof on server `18097` reported
+    `accountLibrary.inventory.total=152`, `stableIdentity=152`,
+    `directDownload=0`, `needsBrowserDetail=152`,
+    `unsupportedNoAuthority=0`,
+    `accountLibrary.remoteKnownMissingLocal.total=120`,
+    `accountLibrary.retrievableMissingLocal.total=0`,
+    `createRequest=null`, and active history-materialization jobs `0`.
+- Open:
+  - retrieval-surface discovery and explicit account-library job mode remain
+    open under Plan 0098.
+
+## Turn 336 | 2026-06-01
+
+- Goal: open the next bounded plan for ChatGPT account-library retrieval.
+- Result:
+  - added
+    `docs/dev/plans/0098-2026-06-01-chatgpt-account-library-retrieval.md`.
+  - updated `ROADMAP.md` so Plan 0098 is the active P01 plan.
+  - updated `RUNBOOK.md` with the plan-opening turn.
+  - kept Plan 0097 as the completed baseline: history materialization has no
+    current retrievable missing-local backlog for `chatgpt/wsl-chrome-3`.
+- Plan intent:
+  - account-level `chatgpt-library` rows need a separate retrieval lane.
+  - recovery readback must keep history and account-library counts separate.
+  - live-follow account-library catch-up remains disabled until bounded
+    installed proof demonstrates routeable archive materialization and
+    idempotence.
+
+## Turn 335 | 2026-06-01
+
+- Goal: raise the ChatGPT materialization cap under explicit operator
+  instruction and audit whether Plan 0097 is ready for live-follow catch-up.
+- Result:
+  - cap-10 job `hmj_409703ca757843c6830e46f60989db68` succeeded with
+    `conversations=3`, `materialized=10`, `skipped=0`, and `failed=0`.
+  - active jobs returned to `0`.
+  - recovery readback moved from `93` to `90` retrievable missing assets, not
+    by the full ten materialized entries.
+  - the mismatch showed stale catalog rows were still spending budget on
+    already archived families.
+  - reconciliation now seeds skip signatures from materialized run-archive
+    assets and reads top-level catalog `source` fields when computing family
+    signatures.
+  - follow-up cap-10 job `hmj_7dbcf7f1cb8c495eb5ae25e221a1ee49` also
+    succeeded with `materialized=10` and `failed=0`, confirming retrieval
+    health while exposing the top-level source signature gap that is now fixed
+    and installed.
+- Verification:
+  - focused history-materialization archive-family regression test passed.
+  - focused recovery/materialization suites passed.
+  - `pnpm run typecheck`
+  - focused `biome lint`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+- Open:
+  - Plan 0097 should stay open for one final installed observation against the
+    now-installed archive-backed family skip before live-follow cap defaults
+    are raised.
+
+## Turn 333 | 2026-06-01
+
+- Goal: execute the open ChatGPT materialization plan through the duplicate
+  artifact/archive-linkage fix and installed proof.
+- Result:
+  - implemented ChatGPT same-source sandbox alias grouping before
+    materialization budget selection.
+  - enforced the history-materialization archive linkage invariant so terminal
+    materialized entries either have an archive item and asset route or become
+    explicit duplicate aliases.
+  - preserved artifact materialization method in fetch manifests and result
+    readback.
+  - installed proof job `hmj_b723f1ae9961480aa62216e03f5a8863` succeeded for
+    the Mason duplicate conversation with four routeable materialized assets
+    and no base-alias budget spend.
+  - capped reconciliation proof `hmj_244032853e0343e9a933049e8e1c401e`
+    succeeded at `maxItems=3` with one routeable materialized PDF and no
+    failures.
+  - capped reconciliation proof `hmj_c9426dc2d9684dada145cdb50a84a009`
+    succeeded at `maxItems=5` with four routeable materialized files and one
+    terminal `tile_not_found` file failure.
+- Verification:
+  - focused vitest suites passed.
+  - focused biome lint passed.
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+- Open:
+  - recovery candidates still report a flat `118` missing-local count, so
+    operator readback classification is not truthful enough yet.
+  - Plan 0097 remains open until recovery readback separates retrievable
+    missing work from duplicate aliases, unsupported/static rows, and terminal
+    failures.
+
+## Turn 334 | 2026-06-01
+
+- Goal: complete Plan 0097 recovery readback classification.
+- Result:
+  - recovery candidates now expose retrievable missing, duplicate alias,
+    unsupported metadata-only, static false-positive, and terminal failed
+    count buckets.
+  - catalog eligibility annotations feed unsupported/static buckets.
+  - terminal history-materialization jobs feed duplicate/failed buckets.
+  - installed recovery proof on port `18084` split raw
+    `remoteKnownMissingLocal.total=118` into `retrievableMissingLocal.total=93`,
+    `unsupportedMetadataOnly.total=3`, `staticFalsePositive.total=3`,
+    `failedTerminal.total=19`, and `duplicateAliases.total=0`.
+- Verification:
+  - recovery planner unit tests passed.
+  - recovery API/CLI/MCP focused tests passed.
+  - broader focused materialization/recovery suite passed.
+  - `pnpm run typecheck`
+  - focused `biome lint`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+- Open:
+  - run the final Plan 0097 acceptance audit before closing the plan or
+    recommending cap increases.
+
 ## Turn 332 | 2026-05-30
 
 - Goal: open the next bounded plan for full live-follow artifact retrieval.
@@ -35604,3 +36598,989 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `systemctl --user is-active auracall-api.service`
   - installed `history-materialization-create` / `history-materialization-status`
   - installed archive/search readback for `AGENTS.md`
+
+## 2026-05-31 | Plan 0091 Opened
+
+- Focus: bounded ChatGPT artifact materialization catch-up for
+  `chatgpt/wsl-chrome-3`.
+- Current state:
+  - Plan 0090 is closed after Gemini cached uploaded-file salvage materialized
+    `AGENTS.md` with `cached-provider-file` evidence.
+  - installed recovery candidates still report `422` remote-known missing
+    local assets and `6` unknown/deferred assets.
+  - `chatgpt/wsl-chrome-3` is the largest clean actionable target with `133`
+    remote-known missing local assets, high confidence, no unknown/deferred
+    assets, and `full_missing_assets`.
+  - broad `/status --json` currently aborts, so proof must come from dedicated
+    recovery, archive/search, and history-materialization job surfaces.
+- Next action: execute one capped installed-runtime catch-up pass for
+  `chatgpt/wsl-chrome-3`, then classify the remaining backlog by terminal
+  outcomes and before/after missing-local counts.
+
+## 2026-05-31 | Plan 0091 Closed
+
+- Focus: execute bounded ChatGPT materialization catch-up for
+  `chatgpt/wsl-chrome-3`.
+- Result:
+  - initial policy-completion path was cancelled because active live-follow
+    reconciliation upgraded the bounded operation into unbounded posture before
+    materialization.
+  - direct scoped job `hmj_232d2976d4c847838f5e7d46d04d9b29` exposed an unsafe
+    repeated-download loop for duplicate ChatGPT Deep Research rows.
+  - stopped `auracall-api.service` to halt the loop after the running-job
+    cancel endpoint returned HTTP 409.
+  - patched reconciliation to deduplicate asset-family signatures and carry
+    remaining asset budget into each target.
+  - installed proof job `hmj_7305d6ad022249ceaf8016ec920df832` reached
+    terminal `skipped` with four bounded entries and no repeated SoyFuze
+    downloads.
+- Counts:
+  - `chatgpt/wsl-chrome-3` remote-known missing local assets moved
+    `133 -> 132`.
+  - local materialized assets moved `25 -> 26`.
+  - active history-materialization jobs returned to `0`.
+- Next action: open a ChatGPT catalog-hygiene plan before another catch-up
+  batch.
+
+## 2026-05-31 | ChatGPT Deep Research Loop Root Cause
+
+- Focus: make the Plan 0091 repeated-download bug explicit.
+- Root cause:
+  - the reconciliation layer used `maxItems` as a conversation-target cap, not
+    a shared asset budget, so the broad job could keep opening more candidate
+    conversations after already downloading the same logical asset family.
+  - the ChatGPT adapter's Deep Research helper listed every DevTools `iframe`
+    target on the managed browser port. It did not prove that a Deep
+    Research OOPIF belonged to the active conversation tab before building
+    artifact ids from the requested conversation id.
+  - result: the same stale `SoyFuze Chemical Composition Dossier` report could
+    be cached as `deep-research:<different-conversation-id>:0:{markdown,docx,pdf}`
+    across unrelated rows.
+- Fix:
+  - reconciliation already dedupes asset-family signatures and carries the
+    remaining asset budget.
+  - ChatGPT Deep Research discovery now filters OOPIF targets to iframe URLs
+    embedded in the active page and export clicks require the captured iframe
+    identity.
+- Read-only interaction note:
+  - history materialization read/context paths do not call prompt-submission
+    model selection, but `LlmService.resolveCacheIdentity()` still used to call
+    provider feature-signature detection.
+  - ChatGPT feature-signature detection opened the model control to enumerate
+    visible model/depth options, which explains the observed model clicking
+    during the SoyFuze download loop.
+  - history materialization now passes `skipFeatureSignature=true`, preserving
+    identity preflight while suppressing that interactive model-control probe.
+
+## 2026-05-31 | Plan 0091 Post-Fix Smoke
+
+- Focus: prove the installed history-materialization path no longer repeats
+  SoyFuze downloads or opens the model-selector feature probe during a bounded
+  read/fetch pass.
+- Smoke:
+  - ran installed job `hmj_6dee6359cc264789a495047d27c167ca` for
+    `chatgpt/wsl-chrome-3`, `eric.cochran@soylei.com`, `reconcile=true`,
+    `refreshSnapshot=true`, `assetKinds=[artifacts]`, and `maxItems=1`.
+  - job reached terminal `skipped` after refreshing conversation
+    `6a170520-131c-83ea-93b7-4a6b6c70d4b4` and attempting exactly one
+    favicon/static-image artifact.
+- Evidence:
+  - active history-materialization jobs returned to `0`.
+  - recovery counts stayed at `132` remote-known missing local assets and
+    `26` local materialized assets.
+  - no new `SoyFuze Chemical Composition Dossier` files were written after
+    the proof start.
+  - service-log scan from the pre-run byte offset had no model-selector,
+    feature-signature, SoyFuze, or Deep Research hits.
+- Next action: keep broad catch-up paused until ChatGPT catalog hygiene
+  separates stale Deep Research duplicates, generated-image false positives,
+  and unsupported conversation-file rows.
+
+## 2026-05-31 | Plan 0092 Opened
+
+- Focus: open the next bounded ChatGPT materialization-health plan before any
+  larger `chatgpt/wsl-chrome-3` catch-up.
+- Current state:
+  - Plan 0091 closed the immediate repeated SoyFuze download and model-selector
+    interaction defects.
+  - post-fix smoke `hmj_6dee6359cc264789a495047d27c167ca` proved the patched
+    installed path does not repeat SoyFuze downloads or log model-selector /
+    feature-signature hits during a capped artifact pass.
+  - the same smoke selected a favicon/static-image row as the next
+    generated-image materialization candidate, so the backlog is still not
+    safe for broad catch-up.
+- Plan:
+  - added
+    `docs/dev/plans/0092-2026-05-31-chatgpt-catalog-hygiene-and-asset-eligibility.md`.
+  - wired Plan 0092 into `ROADMAP.md` and `RUNBOOK.md`.
+  - scope is readback classification and eligibility tightening for stale Deep
+    Research duplicate families, static-image false positives, and unsupported
+    ChatGPT conversation files.
+- Next action: run Track 1 read-only backlog classification for
+  `chatgpt/wsl-chrome-3`.
+
+## 2026-06-01 | Plan 0092 Classification And Eligibility Guards
+
+- Focus: execute the first implementation slice of Plan 0092 so the
+  `chatgpt/wsl-chrome-3` backlog is no longer treated as a flat retrievable
+  queue.
+- Classification:
+  - recovery candidate readback still showed one eligible target with `132`
+    remote-known missing local assets and `26` local materialized assets.
+  - catalog readback showed `30` conversations, `76` artifact rows, and `82`
+    file rows before archive overlay.
+  - `69` account-library files were mirrored as file inventory and `69`
+    corresponding account-library artifact rows; these explain most
+    target-level count pressure but are not conversation-history
+    reconciliation targets.
+  - `3` `image-dom:*` generated-image rows were actually Google favicon/static
+    chrome URLs.
+  - `13` ChatGPT conversation-file rows had no retrievable provider URL,
+    cache key, or provider file id.
+  - `3` SoyFuze Deep Research rows shared one logical report family and remain
+    covered by family-signature dedupe.
+- Fix:
+  - catalog readback now annotates non-actionable ChatGPT rows with
+    `metadata.materializationEligibility.state` and `.reason`.
+  - history reconciliation now skips ChatGPT static-image false positives and
+    unsupported conversation-file rows before candidate selection and
+    asset-family budget accounting.
+  - legitimate `image-dom:*` generated images remain eligible when they expose
+    a usable materializable location such as a blob/backend artifact URL.
+- Validation:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/accountMirror/catalogService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
+- Installed proof:
+  - rebuilt, reinstalled, and restarted the user-scoped `auracall-api.service`.
+  - catalog readback showed `3` `static_image_false_positive` artifact rows
+    and `13` `unsupported_conversation_file` rows annotated with explicit
+    materialization eligibility reasons.
+  - early installed smokes proved two planner gaps before the final fix:
+    refresh-backed reconciliation still allowed non-actionable rows, and
+    `kind=conversations` / low-limit catalog reads omitted the artifact/file
+    manifests needed for eligibility classification.
+  - final proof job `hmj_596774a0d81b4d82bf2bef831c232990` reached terminal
+    `succeeded`, skipped the favicon/static-image class, selected the
+    retrievable Deep Research markdown artifact
+    `deep-research:6a09ccc6-6d2c-83ea-82c1-ed33c2150935:0:markdown`, and
+    materialized it with SHA-256
+    `76cc6e2faf9a4157e778544a4becdb1056baf5c52e299935e23da5157d0378c8`.
+  - active history-materialization jobs returned to `0`.
+  - service-log scan from offset `1149188` had no model-selector,
+    feature-signature, model-control, or model-picker hits.
+- Completion audit:
+  - found one remaining gap: stale duplicate Deep Research family rows could
+    still be selected on a later run if the already-materialized logical family
+    only existed as complete catalog evidence.
+  - history reconciliation now seeds the asset-family skip set from complete
+    catalog rows before building candidates, avoiding catalog-order dependence.
+  - added regression coverage for a stale SoyFuze-like duplicate row that is
+    skipped because a later catalog row proves the same family complete.
+  - reran the targeted suite: `43` tests passed across
+    `tests/runtime.historyMaterializationService.test.ts` and
+    `tests/accountMirror/catalogService.test.ts`.
+  - reran focused browser regressions: `100` tests passed across
+    `tests/browser/chatgptAdapter.test.ts` and
+    `tests/browser/llmServiceIdentity.test.ts`.
+  - rebuilt, reinstalled, and restarted `auracall-api.service`.
+  - follow-up installed proof job `hmj_323fbf35352044799e28989e08400313`
+    reached terminal `skipped`, did not select stale SoyFuze duplicate rows,
+    refreshed conversation `6a092419-33c0-83ea-bca8-27c694312842`, skipped one
+    non-downloadable sandbox DOCX artifact, wrote no new SoyFuze files, logged
+    no model-selector / feature-signature hits after byte offset `1151339`,
+    and left active history-materialization jobs at `0`.
+- Next action: Plan 0092 is closed. Treat broader ChatGPT catch-up as a new
+  scale decision because recovery counts still include account-library
+  duplication and unsupported conversation-file rows.
+
+## 2026-06-01 | Plan 0093 Opened
+
+- Focus: plan the next bounded milestone for live-follow full artifact
+  retrieval readiness instead of assuming live follow will automatically drain
+  missing artifacts.
+- Baseline:
+  - installed API status showed live follow severity `attention-needed`,
+    scheduler posture `waiting`, and `5` active completions.
+  - active history-materialization jobs were `0`.
+  - `chatgpt/wsl-chrome-3` active completion
+    `acctmirror_completion_72225192-3e7c-4f64-bb2e-fa20b1f7a300` was
+    `idle_waiting` with `statusReason=failure-backoff`.
+  - latest `chatgpt/wsl-chrome-3` failure was
+    `Account mirror metadata collector timed out for chatgpt/wsl-chrome-3`.
+  - target metadata counts remained `30` conversations, `76` artifacts, `82`
+    files, and `0` media.
+  - asset inventory was still `in_progress` and
+    `materializationOutcome=null`.
+- Plan:
+  - added
+    `docs/dev/plans/0093-2026-06-01-live-follow-full-artifact-retrieval-readiness.md`.
+  - wired Plan 0093 into `ROADMAP.md` and `RUNBOOK.md`.
+  - tracks cover installed baseline/config audit, timeout root cause, scoped
+    bounded full-retrieval policy, queue/materialization proof, and regression
+    guard checks for Plan 0091/0092 failure classes.
+- Next action: execute Track 1 read-only live-follow policy/state audit for
+  `chatgpt/wsl-chrome-3`.
+
+## 2026-06-01 | Plan 0093 Executed
+
+- Focus: prove whether `chatgpt/wsl-chrome-3` live follow can drive full
+  artifact retrieval instead of staying metadata-only.
+- Baseline/config:
+  - installed config was already bounded full-retrieval capable:
+    `full_sweep`, `full_missing_assets`, `assetKinds=[all]`,
+    `materializationMaxItems=3`, `materializationRefreshSnapshot=true`, and
+    `materializationForce=false`.
+  - recovery readback showed `133` remote-known missing local assets:
+    `50` artifacts, `83` files, and `0` media.
+- Fixes:
+  - widened ChatGPT full-sweep collector timeout from `300_000` ms to
+    `900_000` ms.
+  - static-image eligibility now recognizes manifest rows keyed by
+    `artifactId`, not only `id` or `providerId`.
+  - ChatGPT artifact materialization skips static favicon rows before browser
+    fetch work.
+  - ChatGPT artifact selection prefers same-title DOM download-button artifacts
+    over sandbox download duplicates before `maxItems` is applied.
+- Installed proof:
+  - proof job `hmj_13c5108693104ae0833942a49fac3993` reached terminal
+    `succeeded` with `conversations=3`, `materialized=1`, `skipped=2`, and
+    `failed=0`.
+  - materialized artifact provider id
+    `download-dom:485b1113-c7d9-4b6d-a9fc-3461ca4493e4:0`.
+  - local DOCX path:
+    `/home/ecochran76/.auracall/cache/providers/chatgpt/eric.cochran@soylei.com/conversation-attachments/6a092419-33c0-83ea-bca8-27c694312842/files/download-dom-485b1113-c7d9-4b6d-a9fc-3461ca4493e4-0/Earthline_PCG_Mutual_Confidentiality_Agreement_revised.docx`.
+  - SHA-256:
+    `7a7f8de11b1ca3f537f694397018db3112d9e490d0f718db55146f9de65f1c71`.
+  - active history-materialization jobs returned to `0`.
+  - cancelled stale duplicate live-follow completion
+    `acctmirror_completion_72225192-3e7c-4f64-bb2e-fa20b1f7a300`; remaining
+    active `chatgpt/wsl-chrome-3` live-follow completion is
+    `acctmirror_completion_dde169ad-2899-4858-a89c-f689a5aa9b84`.
+- Validation:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/browser/llmServiceFiles.test.ts tests/accountMirror/catalogService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/browser/llmServiceFiles.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/browser/llmService/llmService.ts tests/browser/llmServiceFiles.test.ts src/runtime/historyMaterializationService.ts src/accountMirror/catalogService.ts tests/runtime.historyMaterializationService.test.ts tests/accountMirror/catalogService.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - installed runtime rebuild/restart of `auracall-api.service`
+  - service-log scan from byte offset `1157773` found no
+    feature-signature/model-selector/SoyFuze/Deep Research hits.
+  - no new SoyFuze / Chemical Composition Dossier files appeared after
+    `2026-05-31 21:34:16`.
+- Conclusion:
+  - Plan 0093 is closed. `chatgpt/wsl-chrome-3` live follow can now catch up
+    eligible retrievable artifacts under the bounded full-retrieval policy.
+    ChatGPT conversation-file rows remain intentionally unsupported until a
+    separate file-fetch implementation exists.
+
+## 2026-06-01 | Plan 0094 Opened
+
+- Focus: plan ChatGPT conversation-file fetch as the next bounded milestone
+  after Plan 0093.
+- Context:
+  - Plan 0093 proved generated artifact retrieval for
+    `chatgpt/wsl-chrome-3`.
+  - ChatGPT conversation-file rows still terminate as explicitly skipped
+    metadata-only rows.
+  - initial audit target is conversation
+    `6a092419-33c0-83ea-bca8-27c694312842`, with file rows
+    `Earthline - ISU Mutual Confidentiality Agreement.pdf` and
+    `docx-skill(1).zip`.
+- Plan:
+  - added
+    `docs/dev/plans/0094-2026-06-01-chatgpt-conversation-file-fetch.md`.
+  - wired Plan 0094 into `ROADMAP.md` and `RUNBOOK.md`.
+  - tracks cover file surface audit, ChatGPT provider retrieval contract,
+    history-materialization/archive integration, eligibility and budget
+    semantics, and installed proof.
+- Next action: execute Track 1 read-only file-surface audit before writing
+  provider fetch code.
+
+## 2026-06-01 | Plan 0094 Executed
+
+- Focus: make ChatGPT conversation-file rows retrievable through the same
+  history-materialization/archive path used for generated artifacts.
+- File surface audit:
+  - ChatGPT file tiles do not expose durable `href` or `download` attributes.
+  - React tile metadata exposes provider file id, MIME type, downloadable
+    state, and previewable state.
+  - target conversation
+    `6a092419-33c0-83ea-bca8-27c694312842` exposed
+    `file_000000004a0c71f89172ec251ae22c52` for the PDF and
+    `file_00000000270c71fbb8653af5f007a921` for the ZIP.
+- Fixes:
+  - ChatGPT file discovery now records provider file ids and
+    `chatgpt://file/<providerFileId>` remote URLs.
+  - ChatGPT `downloadConversationFile` scopes to the selected conversation,
+    scrolls/searches virtualized file tiles, captures authenticated download
+    responses, skips `/simple` metadata, follows JSON `download_url`, and
+    writes the signed content body.
+  - file-fetch manifests now record materialization method, and archive/search
+    rows preserve provider file ids plus method metadata.
+- Installed proof:
+  - false-start job `hmj_73216adb0f49427696e0d8bb55ba087c` exposed missing
+    virtualized tile search.
+  - false-start job `hmj_fc29ea50c03e4296ab54e9c4dacfa267` exposed JSON
+    metadata-stub capture.
+  - `hmj_01f43d3485984d61ba2ba62059a89f6d` materialized both audited files:
+    PDF SHA-256
+    `e5a22b52330b24428b653684a9cbe9d2c1a1accd9f817989235ddb1d767e952a` and ZIP
+    SHA-256
+    `6eaab4a76ae855163e84ef38e79e2bbc674cf55a61450ee74668f4cba07c6a39`.
+  - final proof `hmj_b63d3d35fc554a30bd846e694a6fc23b` confirmed archive
+    metadata method `chatgpt-file-tile-default-action`, provider file id
+    `file_000000004a0c71f89172ec251ae22c52`, a 7-page PDF body, and active
+    history-materialization jobs at `0`.
+- Validation:
+  - `pnpm exec biome lint src/browser/llmService/llmService.ts src/runtime/historyMaterializationService.ts src/runtime/archiveService.ts tests/browser/llmServiceFiles.test.ts tests/runtime.historyArchiveItems.test.ts`
+  - `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - restarted `auracall-api.service`
+  - proof log scan found no feature-signature/model-selector/model-control,
+    SoyFuze / Chemical Composition Dossier, or static favicon hits.
+- Conclusion:
+  - Plan 0094 is closed. ChatGPT conversation files with provider file ids are
+    retrievable and materialize into checksum-bearing archive/search assets.
+    The next scale gate should be a small live-follow observation or capped
+    catch-up pass, not broad multi-tenant file retrieval.
+
+## 2026-06-01 | Plan 0095 Opened
+
+- Focus: plan the post-file-fetch live-follow/recovery health gate for
+  `chatgpt/wsl-chrome-3`.
+- Context:
+  - Plan 0093 proved bounded generated artifact retrieval.
+  - Plan 0094 proved ChatGPT conversation-file retrieval and archive metadata
+    projection.
+  - the next step should test installed behavior under a small observation or
+    capped proof window, not broad catch-up.
+- Plan:
+  - added
+    `docs/dev/plans/0095-2026-06-01-chatgpt-live-follow-post-file-fetch-observation.md`.
+  - wired Plan 0095 into `ROADMAP.md` and `RUNBOOK.md`.
+  - tracks cover installed baseline, observation-versus-capped-proof decision,
+    candidate/result audit, regression guard scan, and closeout decision.
+- Next action: execute Track 1 read-only installed baseline before enqueueing
+  any new provider work.
+
+## 2026-06-01 | Plan 0095 Executed
+
+- Focus: verify `chatgpt/wsl-chrome-3` live-follow/recovery health after
+  ChatGPT conversation-file fetch landed.
+- Baseline:
+  - scoped `chatgpt/wsl-chrome-3` was `idle_waiting` in `backfill_history`,
+    pass count `19`, with no latest failure.
+  - active completion:
+    `acctmirror_completion_dde169ad-2899-4858-a89c-f689a5aa9b84`.
+  - active history-materialization jobs were `0`.
+  - recovery readback stayed eligible under `full_missing_assets` with `121`
+    remote-known missing local assets: `50` artifacts and `71` files.
+- Observation:
+  - did not enqueue duplicate provider work.
+  - used the active completion's recent capped outcome,
+    `hmj_ff2d7546059f42d38ebc7f6d89ad183b`.
+  - the job ran `reconcile=true`, `assetKinds=[artifacts, files, media]`,
+    `maxItems=3`, `force=false`, and succeeded with `conversations=3`,
+    `materialized=1`, `skipped=0`, `failed=0`.
+- Result:
+  - materialized ChatGPT conversation file
+    `resp_dc3501c9c2b4412db047ed54995f33bb_step_1-auracall-request.txt`.
+  - provider file id:
+    `file_0000000022c8720c8e43e32bdc51da70`.
+  - method: `chatgpt-file-tile-default-action`.
+  - size: `138994` bytes.
+  - SHA-256:
+    `c6d811db58b23658e0100ce091f72dd7b69c356c035e18ab5ccccb32718157f0`.
+  - archive readback exposed an asset route and materialized metadata.
+- Regression checks:
+  - Plan 0093 generated DOCX archive row still reads as available with
+    SHA-256
+    `7a7f8de11b1ca3f537f694397018db3112d9e490d0f718db55146f9de65f1c71`.
+  - Plan 0094 PDF archive row still reads as available with SHA-256
+    `e5a22b52330b24428b653684a9cbe9d2c1a1accd9f817989235ddb1d767e952a`.
+  - log scan found no feature-signature/model-selector/model-control,
+    SoyFuze / Chemical Composition Dossier, static favicon, `/simple`, or
+    `download_url` stub-saving hits.
+- Conclusion:
+  - Plan 0095 is closed. `chatgpt/wsl-chrome-3` live-follow/recovery is
+    healthy under the existing capped policy after file-fetch support. Continue
+    with another capped `maxItems=3` observation/catch-up window before any
+    broader scale decision.
+
+## 2026-06-01 | Plan 0096 Opened
+
+- Focus: run one raised-cap `chatgpt/wsl-chrome-3` catch-up pass after Plan
+  0095 proved the `maxItems=3` window healthy.
+- Scope:
+  - one installed reconciliation job only;
+  - `assetKinds=[all]`;
+  - `maxItems=5`;
+  - `force=false`;
+  - snapshot refresh enabled.
+- Non-goal:
+  - no broad multi-tenant catch-up and no permanent policy change.
+- Next action: collect fresh installed baseline, queue the single raised-cap
+  job, and audit terminal results plus regression logs.
+
+## 2026-06-01 | Plan 0096 Executed
+
+- Focus: execute one raised-cap `chatgpt/wsl-chrome-3` pass at `maxItems=5`.
+- Pre-pass baseline:
+  - active history-materialization jobs: `0`.
+  - active completion
+    `acctmirror_completion_dde169ad-2899-4858-a89c-f689a5aa9b84` was
+    `idle_waiting`, `backfill_history`, pass count `20`.
+  - recovery reported `121` remote-known missing local assets: `50`
+    artifacts and `71` files.
+- Raised-cap job:
+  - `hmj_afb9cc1b8d7441f28215350ce034a66b`.
+  - request: `reconcile=true`, `assetKinds=[artifacts, files, media]`,
+    `maxItems=5`, `force=false`, `refreshSnapshot=true`.
+  - terminal result: `succeeded`, `conversations=3`, `materialized=5`,
+    `skipped=0`, `failed=0`.
+- Valid materializations:
+  - `2026-05-27-cochran-full-cv.pdf`, SHA-256
+    `89db8cc12b32f813f6b058eb3d4967ebfbe2d8f3f4098401d31811efba920e89`.
+  - `Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut_clean_2page.pdf`,
+    SHA-256
+    `7275c5d08508b22855a8ad36bc06d7cc6e3476f5ab84620814381b09b037e767`.
+  - `Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut_revised_MYAP.pdf`,
+    SHA-256
+    `2af143990726fe561aa02a36756f180738c2bc706c466361943801cb9a1f4221`.
+  - `_AHS 2026-2027 Application for Acceleration (for courses at AHS) .pdf`,
+    SHA-256
+    `4dce14d2273a7d295d6ff5280dfacbde769761ec4a3e422ee2a8f925d89eef86`.
+- Issue found:
+  - `Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut.pdf` materialized
+    the same body as the clean 2-page PDF, with the same SHA-256
+    `7275c5d08508b22855a8ad36bc06d7cc6e3476f5ab84620814381b09b037e767`, but
+    had no archive item and no asset route.
+  - post-pass recovery moved only from `121` to `120` missing local assets;
+    artifacts remained at `50` missing.
+- Regression checks:
+  - active history-materialization jobs returned to `0`.
+  - log scan found no feature-signature/model-selector/model-control, SoyFuze
+    / Chemical Composition Dossier, static favicon, `/simple`, or
+    `download_url` stub-saving hits.
+- Conclusion:
+  - Plan 0096 is closed as pass-completed-with-issue. The next bounded slice
+    should fix same-source/same-checksum artifact deduplication before
+    budgeting and require durable archive linkage for materialized terminal
+    entries before raising the cap again.
+
+## 2026-06-01 | Plan 0097 Opened
+
+- Focus: make ChatGPT materialization complete and truthful for
+  `chatgpt/wsl-chrome-3` before broader catch-up.
+- Context:
+  - Plan 0096's raised-cap pass proved no SoyFuze/model-selector/static
+    favicon/metadata-stub regressions at `maxItems=5`.
+  - the same pass exposed a correctness blocker: two Mason PreCalculus
+    artifact names resolved to the same SHA-256 body, both spent budget, and
+    one terminal materialized entry lacked archive item and asset route
+    linkage.
+- Scope:
+  - classify the current installed backlog by true retrievable work,
+    duplicate alias, unsupported metadata-only row, static false positive,
+    failed route, and already materialized local asset;
+  - normalize ChatGPT candidate identity before budget selection;
+  - enforce archive/search linkage or duplicate-alias classification for
+    terminal materialization results;
+  - prove fixes with selected-conversation and capped installed runs.
+- Guardrail:
+  - no broad multi-tenant catch-up and no cap above `5` while Plan 0097 is
+    open.
+- Next action: execute Track 1 installed inventory and recovery-truth
+  baseline before implementation.
+
+## 2026-06-01 | Plan 0097 Final Observation Kept Open
+
+- Focus: finish the raised-cap ChatGPT materialization audit after archive
+  family signature fixes.
+- Implemented:
+  - ChatGPT reconciliation family signatures now parse source tokens from
+    provider ids such as `:download:sandbox:` when catalog rows lack `source`
+    or metadata.
+  - automatic reconciliation now skips refresh-only zero-asset conversations
+    instead of spending materialization budget after archive-backed families
+    are skipped.
+- Installed proof:
+  - baseline recovery on proof server `18089` still reported `84`
+    retrievable missing local assets.
+  - search projection reported `0` unavailable artifact rows and `0`
+    unavailable upload rows.
+  - job `hmj_bfcf83058fd94c59bee86940474761e1` skipped immediately with
+    `conversations=0`, `materialized=0`, `failed=0`, and `entries=0`.
+- Issue:
+  - proof server `18089` then created unexpected unbound job
+    `hmj_5211f07520f84a8dbe4466e6166cbe47` with `maxItems=3`; it stayed
+    running with no entries or snapshot output and could not be cancelled
+    once running, so the server was stopped.
+- Conclusion:
+  - Plan 0097 remains open. Retrieval and repeat-download guards are healthier,
+    but recovery readback is still not truthful enough to raise live-follow
+    defaults.
+
+## 2026-06-01 | Plan 0097 Closed
+
+- Focus: close the recovery readback truth gap for
+  `chatgpt/wsl-chrome-3`.
+- Root cause:
+  - account-level `chatgpt-library` artifact/file rows were counted as
+    retrievable history-materialization backlog even though the current
+    history lane only retrieves conversation-backed assets.
+- Implemented:
+  - catalog readback annotates account-level `chatgpt-library` artifacts and
+    files as `unsupported_account_library_asset`.
+  - recovery readback counts that state under `unsupportedMetadataOnly`.
+  - recovery classification buckets are capped to the raw missing-local
+    inventory so non-actionable classifications cannot exceed the target's
+    raw missing count.
+- Installed proof:
+  - proof server `18092`;
+  - recovery reported `remoteKnownMissingLocal.total=109`,
+    `retrievableMissingLocal.total=0`,
+    `unsupportedMetadataOnly.total=87`,
+    `staticFalsePositive.total=3`, and `failedTerminal.total=19`;
+  - the recovery candidate was `terminal` / `none` with `createRequest=null`;
+  - active history-materialization jobs were `0`.
+- Conclusion:
+  - Plan 0097 is closed. Next bounded work, if desired, is a separate
+    ChatGPT account-library retrieval design for making `chatgpt-library` rows
+    downloadable rather than metadata-only.
+
+## 2026-06-01 | Plan 0098 Route-Kind Contract
+
+- Focus: advance ChatGPT account-library retrieval without reopening the
+  history-materialization lane.
+- Implemented:
+  - the ChatGPT library collector now records `metadata.libraryRouteKind` and
+    `metadata.libraryRouteUrl` for account-library rows.
+  - recovery readback now splits `accountLibrary.inventory.detailRoutes` into
+    library file detail, artifact detail, canvas detail, conversation detail,
+    external/inline asset, and unknown buckets.
+  - ChatGPT `/library/*` and `/c/*` URLs are no longer direct-download
+    evidence; they require browser-detail discovery before retrieval.
+- Boundary:
+  - account-library rows still produce `createRequest=null`.
+  - no live-follow cap raise or account-library catch-up is authorized yet.
+  - installed route-kind counts require a fresh read-only library inventory
+    pass; cached rows without route metadata can remain `unknown`.
+- Installed proof:
+  - proof server `18102` reported history-lane
+    `retrievableMissingLocal.total=0`.
+  - account-library recovery reported `remoteKnownMissingLocal.total=122`,
+    `inventory.total=154`, `directDownload=0`, `needsBrowserDetail=154`,
+    `detailRoutes.conversationDetail=10`, and `detailRoutes.unknown=144`.
+  - first candidate remained `terminal` / `none` with `createRequest=null`.
+  - active history-materialization jobs were `0`.
+- Next action:
+  - run final type/build/install/readback checks, then plan the selected
+    browser-detail proof for one routeable account-library row.
+
+## 2026-06-02 | Plan 0100 Account-Library Scheduling Contract Slice
+
+- Focus: execute the first Plan 0100 implementation slice without enabling
+  automatic account-library catch-up.
+- Implemented:
+  - added explicit `liveFollow.accountLibrary` desired-state fields with
+    default-disabled behavior.
+  - exposed `accountLibraryCatchup` in live-follow target status and preserved
+    it through CLI status normalization.
+  - added `providerWorkTimeoutMs` to account-library reconciliation requests.
+  - stale running account-library reconciliation jobs now fail on read/list
+    readback and startup recovery once their timeout has elapsed.
+  - active-source reuse checks recover timed-out account-library jobs before
+    deciding whether to reuse an existing job.
+- Validation:
+  - targeted tests passed:
+    `pnpm vitest run tests/accountMirror/statusRegistry.test.ts
+    tests/runtime.historyMaterializationService.test.ts -t
+    "account-library live-follow scheduling|stale running account-library"`.
+  - `pnpm exec tsc --noEmit` passed.
+  - broader runtime materialization test run still has an unrelated isolated
+    failure in `uses freshness evidence to skip complete rows and refresh
+    changed rows without asset counts`.
+- Remaining:
+  - candidate preview counts, scheduler gates, installed proof, and final
+    mode decision remain open in Plan 0100.
+
+## 2026-06-02 | Plan 0100 Account-Library Preview Slice
+
+- Focus: add live-follow preview counts without enabling automatic
+  account-library queueing.
+- Implemented:
+  - factored ChatGPT account-library reconciliation selection into a shared
+    preview builder.
+  - manual/operator account-library materialization now consumes the preview's
+    selected candidates.
+  - live-follow status now reports `accountLibraryCatchup.preview` for
+    configured ChatGPT account-library targets.
+  - preview metrics include catalog files considered, eligible candidates,
+    selected candidates, archived-family skips, unresolved stale skips,
+    unsupported/terminal skips, and duplicate-family skips.
+  - preview-only status readback does not call materialization `createJob`.
+- Validation:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t
+    "skips archived ChatGPT account-library|skips stale unresolved ChatGPT
+    account-library"` passed.
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "reports
+    preview-only ChatGPT account-library"` passed.
+  - `pnpm exec tsc --noEmit` passed.
+- Remaining:
+  - scheduler health gates, cooldown/active-job status, installed proof, and
+    final enablement decision remain open.
+
+## 2026-06-02 | Plan 0100 Account-Library Active-Job Gate Slice
+
+- Focus: make live-follow status explain the active-job gate for
+  account-library catch-up.
+- Implemented:
+  - `/status` now reads active `account_library_reconciliation`
+    materialization jobs and maps them by provider/runtime profile.
+  - `accountLibraryCatchup` now reports `activeJobId`, `activeJobStatus`, and
+    an active-job reason when a target already has account-library provider
+    work queued or running.
+  - preview-only status still does not call materialization `createJob`.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t
+    "account-library"` passed with preview-only and active-job gate tests.
+  - `pnpm exec tsc --noEmit` passed.
+- Remaining:
+  - cooldown status, browser/process health guard, installed readback, and
+    final mode decision remain open.
+
+## 2026-06-02 | ChatGPT Library Download Eligibility Correction
+
+- Focus: correct the account-library eligibility annotation after operator
+  evidence showed ChatGPT Library rows expose a `Download` menu action.
+- Implemented:
+  - route-authorized ChatGPT Library rows are no longer annotated as
+    `unsupported_account_library_asset` when they carry `providerFileId`,
+    `chatgpt://file/...`, or
+    `materializationSurface=chatgpt-library-file-row-click`.
+  - stable-hash/title-only Library rows without routeable file authority still
+    remain unsupported.
+  - catalog coverage now asserts both cases in the same fixture.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts -t
+    "eligibility"` passed.
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts -t "Library row file
+    ids"` passed.
+
+## 2026-06-02 | Plan 0101 ChatGPT Library Capped Materialization Proof
+
+- Focus: prove capped installed ChatGPT Library file materialization for
+  `chatgpt/wsl-chrome-3` while keeping account-library live follow
+  `preview_only`.
+- Implemented:
+  - account-library browser health no longer blocks solely on
+    `launchCommandHasBlankArg=true`; an actual blank page target or DevTools
+    failure still blocks.
+  - focused HTTP coverage asserts `launchCommandHasBlankArg=true` with
+    `openBlankPageCount=0` remains non-blocking and diagnostic.
+- Installed proof:
+  - `/status` after install/restart reported `browserHealth.status=observed`,
+    `reason=null`, `processAlive=true`, `devToolsResponsive=true`,
+    `launchCommandHasBlankArg=true`, `openBlankPageCount=0`,
+    `activeJobCount=0`, and preview counts
+    `catalogFiles=60`, `eligibleCandidates=26`, `selectedCandidates=3`,
+    `archivedFamilies=8`, `unresolvedStale=11`,
+    `unsupportedOrTerminal=12`, `duplicateFamilies=3`.
+  - `hmj_0391838191ce4bfebe5f5001ecb68cee` (`maxItems=1`) succeeded with
+    one `chatgpt-library-file-row-click` materialization,
+    `failed=0`, `skipped=0`, `duplicateAliases=0`; local size/checksum were
+    `152683` bytes and
+    `4dce14d2273a7d295d6ff5280dfacbde769761ec4a3e422ee2a8f925d89eef86`.
+  - `hmj_02ccb145fd024c85a56919aad71ca731` (`maxItems=1` follow-up) queued
+    for about 98 seconds, then selected the next unarchived family and
+    succeeded with `materialized=1`, `failed=0`, `skipped=0`,
+    `duplicateAliases=0`.
+  - `hmj_d1cf6ea905864ff9b3259e026d95cff5` (`maxItems=3`) succeeded with
+    `materialized=3`, `failed=0`, `skipped=0`, `duplicateAliases=0`; all
+    three local files matched job-reported size and SHA-256.
+  - final `/status` reported `mode=preview_only`, `activeJobCount=0`,
+    `browserHealth.status=observed`, `openBlankPageCount=0`,
+    `eligibleCandidates=21`, and `archivedFamilies=13`.
+- Decision:
+  - Plan 0101 is closed.
+  - Manual/operator account-library materialization is proven for capped
+    route-authorized ChatGPT Library files.
+  - Automatic account-library live-follow queueing remains preview-only until
+    a separate scheduler-health plan resolves queued-job latency and
+    active-source lifecycle expectations.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "does not block account-library catch-up on launch about:blank"` passed.
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "reports preview-only ChatGPT account-library catch-up counts"` passed.
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts -t
+    "eligibility"` passed.
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t
+    "delayed cached catalog|account-library"` passed after refreshing older
+    selected-catalog test mocks for the current preview/archive contract.
+  - `pnpm exec biome lint src/http/responsesServer.ts tests/http.responsesServer.test.ts tests/runtime.historyMaterializationService.test.ts` passed with existing `noNonNullAssertion` warnings.
+  - `pnpm exec tsc --noEmit` passed.
+  - `pnpm run build` passed.
+  - `pnpm run install:user-runtime` and `pnpm run install:user-api-service` passed.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `pnpm run plans:audit -- --keep 101` passed with `Validation errors: 0`.
+  - `git diff --check` passed.
+
+## 2026-06-02 | Plan 0102 ChatGPT Account-Library Scheduler Health Planning
+
+- Focus: open the scheduler/job lifecycle hardening slice required before
+  automatic ChatGPT account-library queueing can move beyond `preview_only`.
+- Planned:
+  - audit the Plan 0101 queued-latency observation where
+    `hmj_02ccb145fd024c85a56919aad71ca731` spent about 98 seconds queued
+    before starting;
+  - make queued age, start latency, scheduler state, active-source reuse, and
+    stale queued reason visible through job/status readback;
+  - prove duplicate active requests reuse or re-dispatch one active source
+    instead of creating hidden browser work;
+  - prove terminal replay with the same flags skips archived families before
+    browser work and advances to unarchived candidates;
+  - keep `chatgpt/wsl-chrome-3` account-library live follow `preview_only`
+    until installed scheduler-health proof passes.
+- Artifacts:
+  - opened
+    `docs/dev/plans/0102-2026-06-02-chatgpt-account-library-scheduler-health.md`;
+  - wired Plan 0102 into `ROADMAP.md` as the active plan and into `RUNBOOK.md`
+    Turn 226.
+
+## 2026-06-02 | Plan 0102 Scheduler Diagnostics And Manual Materialization Proof
+
+- Focus: execute the account-library scheduler-health slice without enabling
+  automatic ChatGPT account-library queueing.
+- Implemented:
+  - history materialization jobs now carry scheduler diagnostics for queued,
+    stale queued, running, and terminal states.
+  - duplicate active source-key creates now return `reuseReason`.
+  - `/status` projects active account-library scheduler diagnostics through
+    `accountLibraryCatchup.activeJobScheduler`.
+  - ChatGPT account-library file fetch now attempts the row-menu `Download`
+    action before falling back to row-title click capture.
+  - ChatGPT account-library file fetch now first attempts authenticated
+    `/backend-api/files/download/<file_id>?inline=true` capture from the page
+    context, then falls back to UI capture.
+- Installed proof:
+  - `hmj_c92fb4d717504e539f982ab4e9817ba0` duplicate create returned
+    `reused=true`, `reuseReason="active sourceKey is already running"`, and
+    `queuedToStartLatencyMs=93`.
+  - `/status` while active reported `activeJobCount=1`,
+    `activeJobScheduler.state=running`, `dispatchState=running`,
+    `runAgeMs=36875`, `queuedToStartLatencyMs=93`, and `stale=false`.
+  - post-terminal `/status` returned `activeJobCount=0` and
+    `activeJobScheduler=null`.
+  - after the direct backend capture fix,
+    `hmj_84685715fc4d489683a98e10bdf3598a` succeeded with `materialized=1`,
+    `failed=0`, provider id `86252cdb-9827-5faa-880a-b962936e12c7`, size
+    `64339`, and checksum
+    `240dc883402f537c5fbe62106baedeb4aa9e536b3dee11a085514bf38329be36`.
+  - same-flags replay `hmj_3af768aaf46540a88f75993fdd43690c` succeeded with
+    `materialized=1`, `failed=0`, and different provider id
+    `cb2c2ccf-5069-520d-a4ea-c9a1e6234339`, proving terminal replay skips the
+    archived family.
+  - final `/status` reported `mode=preview_only`, `activeJobCount=0`,
+    `activeJobScheduler=null`, `eligibleCandidates=19`, and
+    `archivedFamilies=15`.
+- Decision:
+  - Plan 0102 is closed.
+  - keep `chatgpt/wsl-chrome-3` account-library live follow `preview_only`.
+  - automatic account-library queueing needs a separate provider-isolation
+    slice because the operator observed unrelated Gemini `/app`
+    launching/refreshing during continuation, although recent AuraCall API
+    logs showed no Gemini or `/app/` entries.
+
+## 2026-06-02 | Plan 0103 Gemini Resume-Safety Proof
+
+- Focus: execute the bounded Gemini safety proof without resuming the old
+  indefinite live-follow completion.
+- Implemented:
+  - `api scheduler-diagnostics` now uses `fetchWithLocalApiAuth`, fixing the
+    local API HTTP 401 path for authenticated installed services.
+  - added regression coverage proving scheduler diagnostics retries with the
+    local API bearer token after a 401.
+- Installed/runtime proof:
+  - old completion `acctmirror_completion_afdbcd9c-b51e-4144-a31d-54be35e71402`
+    remained `status=paused`, `mode=live_follow`, `passCount=10`.
+  - bounded completion `acctmirror_completion_95f9e4af-cd01-402f-bc5c-0141a1e3a927`
+    completed one `gemini/auracall-gemini-pro` `steady_follow` /
+    `metadata_only` pass with `projects=0`, `conversations=71`,
+    `artifacts=0`, `files=0`, and `media=0`.
+  - DevTools targets showed Gemini `/app` and `/gems/view`, but did not show
+    `/gem/chess-champ`, `/gem/brainstormer`, or `/gem/storybook`.
+  - managed Gemini browser PID `79889` was stopped after the bounded pass
+    reached terminal state; follow-up process scan showed no managed Gemini
+    browser process.
+- Decision:
+  - Plan 0103 is closed.
+  - Gemini live follow remains **Paused**; future Gemini work should start
+    from explicit bounded completions until resume semantics are narrowed.
+- Verification:
+  - `pnpm vitest run tests/cli/apiSchedulerDiagnosticsCommand.test.ts --maxWorkers 1`
+    passed.
+  - `pnpm exec biome lint src/cli/apiSchedulerDiagnosticsCommand.ts
+    tests/cli/apiSchedulerDiagnosticsCommand.test.ts` passed.
+  - `pnpm exec tsc --noEmit` passed.
+  - `pnpm run build` passed.
+  - `pnpm run install:user-runtime` passed.
+  - `pnpm run install:user-api-service` passed; `systemctl --user restart
+    auracall-api.service` completed and `systemctl --user is-active
+    auracall-api.service` returned `active`.
+  - installed `auracall api scheduler-diagnostics --provider gemini
+    --runtime-profile auracall-gemini-pro --json --timeout-ms 30000` returned
+    `providerGuard=null`, `browserMutations=null`, and the old completion
+    still `status=paused`.
+
+## 2026-06-02 | Plan 0104 Gemini Live-Follow Repair Planning
+
+- Focus: open the implementation slice that can move Gemini from paused proof
+  state toward repaired bounded live-follow behavior.
+- Planned:
+  - preserve Plan 0103's constraint that old live-follow completion
+    `acctmirror_completion_afdbcd9c-b51e-4144-a31d-54be35e71402` stays paused
+    during repair.
+  - add explicit bounded Gemini resume/refresh semantics instead of using
+    indefinite operator `resume`.
+  - make terminal bounded Gemini browser cleanup automatic unless an explicit
+    debug/keep-browser flag is in effect.
+  - harden read-only Gemini navigation so live-follow metadata checks do not
+    use model selectors, edit surfaces, or non-owned Gem click-through.
+  - add fixture coverage for Google/system Gems including `chess-champ`,
+    `brainstormer`, and `storybook`.
+  - prove provider isolation and scheduler diagnostics before browser launch.
+- Artifacts:
+  - opened
+    `docs/dev/plans/0104-2026-06-02-gemini-live-follow-repair.md`;
+  - wired Plan 0104 into `ROADMAP.md` as the active plan and into
+    `RUNBOOK.md` Turn 246.
+
+## 2026-06-05 | Plan 0111 Cross-Service Handoff Planning
+
+- Focus: reframe the requested conversation/context transfer as a
+  provider-neutral, cross-tenant/cross-service handoff workflow instead of a
+  ChatGPT-only copy path.
+- Planned:
+  - model source and target as provider/runtime-profile/account-binding
+    endpoints with provider-native refs under a normalized contract;
+  - write handoff packets under user-scoped AuraCall runtime state with
+    context JSON, materialized files/artifacts, provenance, omissions,
+    analysis decisions, target preview, target submission evidence, and
+    readback proof;
+  - use App Intelligence as the deterministic supervisor for phases, ledger,
+    approvals, structured analysis decisions, and replay logs;
+  - make the first implementation slice dry-run/source-only so target
+    providers are not mutated until source completeness and analysis gates are
+    proven.
+- Artifacts:
+  - opened
+    `docs/dev/plans/0111-2026-06-05-cross-service-context-handoff.md`;
+  - wired Plan 0111 into `ROADMAP.md` as the active plan and into
+    `RUNBOOK.md` Turn 255.
+
+## 2026-06-05 | Plan 0111 Dry-Run Packet Builder
+
+- Focus: install the first provider-neutral handoff implementation slice
+  without target mutation.
+- Implemented:
+  - `src/handoff/service.ts` writes handoff packets with source context,
+    manifest, omissions, analysis preview, compact context, target primer,
+    target submission plan, skipped submission result, and skipped readback.
+  - `src/cli/handoffCommand.ts` exposes the CLI helper and summary formatter.
+  - `auracall handoff prepare` is registered as a top-level command and
+    requires `--dry-run`.
+  - explicit source/target runtime profile misses fail closed.
+  - README documents the preview-only command.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome lint src/handoff/service.ts src/cli/handoffCommand.ts
+    tests/cli/handoffCommand.test.ts bin/auracall.ts`;
+  - `pnpm tsx bin/auracall.ts handoff prepare --help`.
+- Decision:
+  - Plan 0111 closes.
+  - the next slice should invoke bounded source cache/materialization jobs and
+    import their manifests into the packet before any approval-gated target
+    submission work.
+
+## 2026-06-05 | Plan 0113 Browser Process Owner Attribution
+
+- Focus: make foreground/process-isolation follow-up checks answer which
+  AuraCall job owns a managed browser process instead of relying on PID/profile
+  inference.
+- Implemented:
+  - browser registry entries now preserve optional `owner`, `operation`, and
+    `lease` metadata.
+  - history materialization browser work stamps owner attribution on managed
+    browser launch or reattach.
+  - browser-process status readbacks include owner/operation/lease metadata,
+    and the ops browser-process table renders a compact owner summary.
+- Validation:
+  - focused registry/browser-service/browser-process HTTP tests passed.
+  - TypeScript, focused lint, build, and `git diff --check` passed.
+- Decision:
+  - Plan 0113 closes as a supporting slice while Plan 0112 handoff
+    source-materialization work remains active.
+
+## 2026-06-05 | Plan 0109 Second Rerun
+
+- Focus: kill retained `wsl-chrome-4/chatgpt` browser work and rerun the
+  guarded ChatGPT account-library automatic-mode smoke for `wsl-chrome-3`.
+- Actions:
+  - paused the active `wsl-chrome-4` completion and made process isolation
+    clean with non-target live-follow temporarily disabled;
+  - removed stale `DevToolsActivePort` markers and verified browser status at
+    `processesAlive=0`, `responsiveDevTools=0`, `launchBlankArg=0`, and
+    `openBlankPages=0`;
+  - backed up user config, flipped only `wsl-chrome-3` account-library mode to
+    `eligible`, restarted the API, and watched one bounded scheduler boundary.
+- Outcome:
+  - the target completion stayed `idle_waiting` with `passCount=99`;
+  - `nextAttemptAt` advanced from `2026-06-05T03:47:08.775Z` to
+    `2026-06-05T03:55:55.547Z`;
+  - no account-library/history materialization job was created and no managed
+    browser launched.
+- Restore:
+  - restored original `~/.auracall/config.json` from backup;
+  - final readbacks showed `preview_only`, active jobs `0`, no live managed
+    browser process, and active API service.
+- Decision:
+  - Plan 0109 remains no-go because the scheduler advanced without launch or
+    an explicit bounded blocker.
+
+## 2026-06-05 | Plan 0117 Account-Library Scheduler No-Op Observability
+
+- Focus: install the supporting fix for the Plan 0109 second-rerun failure mode.
+- Implemented:
+  - add a completion-owned post-refresh account-library catch-up decision;
+  - queue/reuse capped ChatGPT account-library file reconciliation when
+    `liveFollow.accountLibrary.mode=eligible`;
+  - persist lifecycle evidence for skip, queue, or reuse outcomes;
+  - expose `completion.accountLibraryCursor` in scheduler diagnostics.
+- Installed proof:
+  - after rebuild/install/restart, `wsl-chrome-3` remained `preview_only`;
+  - completion `acctmirror_completion_dde169ad-2899-4858-a89c-f689a5aa9b84`
+    reached `passCount=101` with
+    `accountLibraryCursor.status=skipped` and reason
+    `liveFollow.accountLibrary.mode is preview_only`;
+  - active history materialization jobs returned `0`.
+- Decision:
+  - Plan 0117 closes. The Plan 0109 no-op path now has completion-owned
+    account-library evidence.
+
+## 2026-06-05 | Plan 0118 Post-0117 Account-Library Automatic Rerun
+
+- Focus: rerun the Plan 0109 automatic account-library smoke with Plan 0117's
+  cursor evidence installed.
+- Planned:
+  - isolate runtime by disabling non-target live-follow and terminating retained
+    managed browser processes;
+  - flip only `wsl-chrome-3` account-library mode to `eligible`;
+  - start one bounded metadata-only `chatgpt/wsl-chrome-3` completion so
+    account-library catch-up is the only materialization source;
+  - restore original user config after terminal evidence.

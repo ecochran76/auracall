@@ -29,6 +29,27 @@ describe("Gemini browser adapter", () => {
 		expect(isEditableGeminiProjectProbe({ editUrl: "https://gemini.google.com/gems/edit/my-gem" })).toBe(true);
 		expect(isEditableGeminiProjectProbe({ editable: true })).toBe(false);
 		expect(isEditableGeminiProjectProbe({ editable: false })).toBe(false);
+		expect(
+			isEditableGeminiProjectProbe({
+				id: "chess-champ",
+				url: "https://gemini.google.com/gem/chess-champ",
+				editUrl: "https://gemini.google.com/gems/edit/chess-champ",
+			}),
+		).toBe(false);
+		expect(
+			isEditableGeminiProjectProbe({
+				id: "brainstormer",
+				url: "https://gemini.google.com/gem/brainstormer",
+				editUrl: "https://gemini.google.com/gems/edit/brainstormer",
+			}),
+		).toBe(false);
+		expect(
+			isEditableGeminiProjectProbe({
+				id: "storybook",
+				url: "https://gemini.google.com/gem/storybook",
+				editUrl: "https://gemini.google.com/gems/edit/storybook",
+			}),
+		).toBe(false);
 	});
 
 	test("reuses an already loaded Gemini conversation tab for root rail reads", () => {

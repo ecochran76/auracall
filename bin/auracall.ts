@@ -188,6 +188,12 @@ import {
   readApiHistoryMaterializationJobForCli,
 } from '../src/cli/apiHistoryMaterializationCommand.js';
 import {
+  formatHandoffPrepareCliSummary,
+  formatHandoffStatusCliSummary,
+  prepareHandoffForCli,
+  readHandoffStatusForCli,
+} from '../src/cli/handoffCommand.js';
+import {
   clearApiMirrorProviderGuardForCli,
   formatApiMirrorProviderGuardClearCliSummary,
 } from '../src/cli/apiMirrorProviderGuardCommand.js';
@@ -1700,9 +1706,11 @@ apiCommand
   .option('--catalog-kind <kind>', 'Catalog kind for item lookup: conversations, artifacts, files, media, projects, or all.')
   .option('--archive-item-id <id>', 'Resolve provider conversation evidence from a run archive item.')
   .option('--reconcile', 'Run a bounded reconciliation pass over cached account-mirror conversation rows.', false)
+  .option('--asset-source <source>', 'Restrict reconciliation to a non-history source such as account-library.')
   .option('--refresh-snapshot', 'Refresh the provider conversation snapshot before materializing artifacts.', false)
   .option('--asset-kind <kind>', 'Asset kind to fetch: artifacts, files, media, or all. Repeatable or comma-separated.', collectTrimmedString, [])
   .option('--max-items <count>', 'Maximum assets or reconciliation conversations to process.', parseIntOption)
+  .option('--provider-work-timeout-ms <ms>', 'Provider browser work timeout in milliseconds.', parseIntOption)
   .option('--force', 'Refresh through the provider even when related local evidence already exists.', false)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
@@ -1728,9 +1736,11 @@ apiCommand
       catalogKind: commandOptions.catalogKind,
       archiveItemId: commandOptions.archiveItemId,
       reconcile: commandOptions.reconcile,
+      assetSource: commandOptions.assetSource,
       refreshSnapshot: commandOptions.refreshSnapshot,
       assetKinds: commandOptions.assetKind,
       maxItems: commandOptions.maxItems,
+      providerWorkTimeoutMs: commandOptions.providerWorkTimeoutMs,
       force: commandOptions.force,
     });
     if (commandOptions.json) {
@@ -1738,6 +1748,105 @@ apiCommand
       return;
     }
     console.log(formatApiHistoryMaterializationJobCliSummary(result));
+  });
+
+const handoffCommand = program
+  .command('handoff')
+  .description('Prepare cross-service context handoff packets.');
+
+handoffCommand
+  .command('prepare')
+  .description('Prepare a dry-run cross-tenant/cross-service handoff packet.')
+  .requiredOption('--source-provider <provider>', 'Source provider: chatgpt, gemini, or grok.')
+  .option('--source-profile <profile>', 'Source AuraCall runtime profile.')
+  .requiredOption('--source-ref <ref>', 'Source conversation, project, or provider-native reference.')
+  .option('--source-project-ref <ref>', 'Optional source project reference.')
+  .requiredOption('--target-provider <provider>', 'Target provider: chatgpt, gemini, or grok.')
+  .option('--target-profile <profile>', 'Target AuraCall runtime profile.')
+  .option('--target-ref <ref>', 'Optional target conversation reference.')
+  .option('--target-project-ref <ref>', 'Optional target project reference.')
+  .option('--source-context-json <path>', 'Existing cached source context JSON to include in the packet.')
+  .option('--source-manifest-json <path>', 'Existing source file/artifact manifest JSON to include in the packet.')
+  .option('--source-omissions-json <path>', 'Existing source omissions JSON to include in the packet.')
+  .option('--source-materialization-job-json <path>', 'Existing source history materialization job readback JSON to import. Repeatable.', collectTrimmedString, [])
+  .option('--source-materialization-job-id <id>', 'Existing source history materialization job id to read from the local API. Repeatable.', collectTrimmedString, [])
+  .option('--source-materialization-create', 'Explicitly create one bounded source materialization job when no source job evidence was supplied.', false)
+  .option('--source-materialization-asset-kind <kind>', 'Source materialization asset kind: artifacts, files, media, or all. Repeatable or comma-separated.', collectTrimmedString, [])
+  .option('--source-materialization-max-items <count>', 'Maximum source materialization items to process.', parseIntOption)
+  .option('--source-materialization-provider-work-timeout-ms <ms>', 'Provider browser work timeout for explicit source materialization.', parseIntOption)
+  .option('--source-materialization-force', 'Force explicit source materialization through the provider.', false)
+  .option('--host <address>', 'Local API host for source materialization orchestration (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port for source materialization orchestration (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'Local API timeout for source materialization orchestration.', parseIntOption, 10000)
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--handoff-id <id>', 'Deterministic handoff id for repeatable dry-run tests.')
+  .option('--max-selected-artifacts <count>', 'Maximum manifest items to select for the target seed.', parseIntOption)
+  .option('--dry-run', 'Required in Plan 0111: write preview artifacts without target mutation.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const resolvedConfig = await resolveConfig(
+      { ...parentOptions, ...commandOptions, profile: commandOptions.sourceProfile ?? parentOptions.profile },
+      process.cwd(),
+      process.env,
+    );
+    const apiConfig = readCliApiConfig(resolvedConfig);
+    const result = await prepareHandoffForCli({
+      config: resolvedConfig as unknown as Record<string, unknown>,
+      sourceProvider: commandOptions.sourceProvider,
+      sourceProfile: commandOptions.sourceProfile ?? resolvedConfig.auracallProfile ?? null,
+      sourceRef: commandOptions.sourceRef,
+      sourceProjectRef: commandOptions.sourceProjectRef,
+      targetProvider: commandOptions.targetProvider,
+      targetProfile: commandOptions.targetProfile,
+      targetRef: commandOptions.targetRef,
+      targetProjectRef: commandOptions.targetProjectRef,
+      sourceContextJson: commandOptions.sourceContextJson,
+      sourceManifestJson: commandOptions.sourceManifestJson,
+      sourceOmissionsJson: commandOptions.sourceOmissionsJson,
+      sourceMaterializationJobJson: commandOptions.sourceMaterializationJobJson,
+      sourceMaterializationJobId: commandOptions.sourceMaterializationJobId,
+      sourceMaterializationCreate: commandOptions.sourceMaterializationCreate,
+      sourceMaterializationAssetKind: commandOptions.sourceMaterializationAssetKind,
+      sourceMaterializationMaxItems: commandOptions.sourceMaterializationMaxItems,
+      sourceMaterializationProviderWorkTimeoutMs: commandOptions.sourceMaterializationProviderWorkTimeoutMs,
+      sourceMaterializationForce: commandOptions.sourceMaterializationForce,
+      apiHost: commandOptions.host ?? apiConfig.host,
+      apiPort: commandOptions.port ?? apiConfig.port,
+      apiTimeoutMs: commandOptions.timeoutMs,
+      outputDir: commandOptions.outputDir,
+      handoffId: commandOptions.handoffId,
+      dryRun: commandOptions.dryRun,
+      maxSelectedArtifacts: commandOptions.maxSelectedArtifacts,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffPrepareCliSummary(result));
+  });
+
+handoffCommand
+  .command('status')
+  .description('Read a prepared handoff packet status from the handoff ledger.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await readHandoffStatusForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+    });
+    if (!result) {
+      console.error(`Handoff packet not found: ${id}`);
+      process.exitCode = 1;
+      return;
+    }
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffStatusCliSummary(result));
   });
 
 apiCommand
@@ -2979,21 +3088,78 @@ filesCommand
       identityPrompt: promptForCacheIdentity,
     });
     const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+		const files = await llmService.listAccountFiles({ listOptions });
+		if (files.length === 0) {
+			console.log('No account files found.');
+			exitAfterCompletedBrowserFileCommand();
+			return;
+		}
+		if (!process.stdout.isTTY) {
+			console.log(JSON.stringify(files, null, 2));
+			exitAfterCompletedBrowserFileCommand();
+			return;
+		}
+		for (const file of files) {
+			const suffix = typeof file.size === 'number' ? ` (${file.size} B)` : '';
+			console.log(`${file.id}\t${file.name}${suffix}`);
+		}
+		console.log(chalk.dim(`Listed ${files.length} account file(s).`));
+		exitAfterCompletedBrowserFileCommand();
+	});
+
+filesCommand
+  .command('download <fileId>')
+  .alias('get')
+  .description('Download an account-level file by file id.')
+  .requiredOption('-o, --out <path>', 'Destination file path or directory.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (fileId, commandOptions) => {
+    const parentOptions = filesCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const requestedFileId = String(fileId || '').trim();
+    if (!requestedFileId) {
+      throw new Error('Provide an account file id to download.');
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
     const files = await llmService.listAccountFiles({ listOptions });
-    if (files.length === 0) {
-      console.log('No account files found.');
-      return;
+    const file = files.find((candidate) => {
+      const metadata = candidate.metadata && typeof candidate.metadata === 'object' ? candidate.metadata : {};
+      const providerFileId =
+        typeof metadata.providerFileId === 'string' ? metadata.providerFileId.trim() : '';
+      return candidate.id === requestedFileId ||
+        candidate.remoteUrl === requestedFileId ||
+        providerFileId === requestedFileId;
+    });
+    if (!file) {
+      throw new Error(`Account file ${requestedFileId} was not found in the current ${target} account file list.`);
     }
-    if (!process.stdout.isTTY) {
-      console.log(JSON.stringify(files, null, 2));
-      return;
+    const output = path.resolve(String(commandOptions.out));
+    let destPath = output;
+    try {
+      const stat = await fs.stat(output);
+      if (stat.isDirectory()) {
+        const safeName = (file.name || requestedFileId).replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim() || requestedFileId;
+        destPath = path.join(output, safeName);
+      }
+    } catch {
+      // Treat a missing output path as a file path.
     }
-    for (const file of files) {
-      const suffix = typeof file.size === 'number' ? ` (${file.size} B)` : '';
-      console.log(`${file.id}\t${file.name}${suffix}`);
-    }
-    console.log(chalk.dim(`Listed ${files.length} account file(s).`));
-  });
+		await fs.mkdir(path.dirname(destPath), { recursive: true });
+		await llmService.downloadAccountFile(file.id, destPath, { listOptions, file });
+		console.log(`Downloaded account file ${file.id} to ${destPath}.`);
+		exitAfterCompletedBrowserFileCommand();
+	});
 
 filesCommand
   .command('remove <fileId...>')
@@ -10780,17 +10946,27 @@ async function closeSessionLogStream(stream: NodeJS.WritableStream): Promise<voi
 }
 
 function exitAfterCompletedInlineBrowserWait(sessionMode: SessionMode): void {
-  if (sessionMode !== 'browser') {
-    return;
-  }
-  if (process.env.AURACALL_DISABLE_BROWSER_WAIT_FORCE_EXIT === '1') {
+	if (sessionMode !== 'browser') {
+		return;
+	}
+	if (process.env.AURACALL_DISABLE_BROWSER_WAIT_FORCE_EXIT === '1') {
     return;
   }
   // Browser/CDP/notifier libraries can leave non-critical handles alive after
   // the session is durably completed and the log stream is flushed. Inline
   // browser --wait is a one-shot CLI contract, so exit explicitly instead of
-  // letting those handles turn a successful run into a caller-side timeout.
-  process.exit(process.exitCode ?? 0);
+	// letting those handles turn a successful run into a caller-side timeout.
+	process.exit(process.exitCode ?? 0);
+}
+
+function exitAfterCompletedBrowserFileCommand(): void {
+	if (process.env.AURACALL_DISABLE_BROWSER_FILE_FORCE_EXIT === '1') {
+		return;
+	}
+	// Account-file list/download commands are one-shot browser utility commands.
+	// CDP handles may remain open after the operation has completed and stdout
+	// has been flushed, so exit explicitly to preserve CLI completion semantics.
+	process.exit(process.exitCode ?? 0);
 }
 
 async function launchDetachedSession(sessionId: string): Promise<boolean> {

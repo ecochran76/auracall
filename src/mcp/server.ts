@@ -337,6 +337,7 @@ export async function createMcpServicesFromConfig(
     config: resolvedUserConfig as Record<string, unknown>,
     catalogService: accountMirrorCatalogService,
     runArchiveService,
+    cleanupManagedBrowserAfterProviderWork: true,
   });
   await historyMaterializationService.recoverInterruptedJobs();
   const searchProjectionService = createSearchProjectionService({
@@ -347,6 +348,7 @@ export async function createMcpServicesFromConfig(
   const accountMirrorArtifactRecoveryPlanner = createAccountMirrorArtifactRecoveryPlanner({
     registry: accountMirrorStatusRegistry,
     searchProjectionService,
+    historyMaterializationService,
   });
   const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
     config: resolvedUserConfig as Record<string, unknown>,

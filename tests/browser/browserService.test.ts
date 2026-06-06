@@ -175,6 +175,92 @@ describe('BrowserService resolveServiceTarget', () => {
     expect(loggerMessages[0]).toContain('[browser-service] Selected tab=chatgpt-1');
   });
 
+  test('stamps browser process owner attribution after resolving a managed target', async () => {
+    stateRegistryMocks.updateInstance.mockClear();
+    stateRegistryMocks.listInstancesWithLiveness.mockReset();
+    stateRegistryMocks.listInstancesWithLiveness.mockImplementation(async () => []);
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce(classifiedInstances([
+      {
+        instance: browserInstance({
+          profilePath: '/tmp/profile',
+          profileName: 'Default',
+        }),
+        alive: true,
+        liveness: 'live',
+        actualPid: 9999,
+      },
+    ]));
+    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
+      instance: browserInstance({
+        profilePath: '/tmp/profile',
+        profileName: 'Default',
+      }),
+      tabs: [{ targetId: 'chatgpt-1', url: 'https://chatgpt.com/', title: 'ChatGPT', type: 'page' }],
+    });
+    const service = BrowserService.fromConfig(baseConfig, 'chatgpt', {
+      browserProcessOwner: {
+        owner: {
+          kind: 'history_materialization_job',
+          id: 'hmj_owner_test',
+          provider: 'chatgpt',
+          runtimeProfileId: 'wsl-chrome-3',
+          browserProfileId: 'wsl-chrome-3',
+          sourceType: 'account_library_reconciliation',
+          sourceKey: 'source-key',
+          reason: 'account-library-file-materialization',
+          acquiredAt: '2026-06-05T02:00:00.000Z',
+          heartbeatAt: '2026-06-05T02:00:00.000Z',
+        },
+        operation: {
+          kind: 'history_materialization_job',
+          id: 'hmj_owner_test',
+          provider: 'chatgpt',
+          runtimeProfileId: 'wsl-chrome-3',
+          browserProfileId: 'wsl-chrome-3',
+          sourceType: 'account_library_reconciliation',
+          sourceKey: 'source-key',
+          reason: 'account-library-file-materialization',
+        },
+        lease: {
+          id: 'history_materialization_job:hmj_owner_test:chatgpt:wsl-chrome-3',
+          ownerId: 'hmj_owner_test',
+          acquiredAt: '2026-06-05T02:00:00.000Z',
+          heartbeatAt: '2026-06-05T02:00:00.000Z',
+          expiresAt: null,
+          cleanupPolicy: 'history-materialization-provider-work',
+        },
+      },
+    });
+
+    await service.resolveServiceTarget({
+      serviceId: 'chatgpt',
+      configuredUrl: 'https://chatgpt.com/',
+      ensurePort: true,
+    });
+
+    expect(stateRegistryMocks.updateInstance).toHaveBeenCalledWith(
+      expect.objectContaining({ registryPath: expect.stringContaining('browser-state.json') }),
+      '/tmp/profile',
+      'Default',
+      expect.objectContaining({
+        owner: expect.objectContaining({
+          id: 'hmj_owner_test',
+          heartbeatAt: expect.any(String),
+        }),
+        operation: expect.objectContaining({
+          sourceType: 'account_library_reconciliation',
+        }),
+        lease: expect.objectContaining({
+          ownerId: 'hmj_owner_test',
+          heartbeatAt: expect.any(String),
+        }),
+        services: ['chatgpt'],
+      }),
+    );
+    stateRegistryMocks.listInstancesWithLiveness.mockReset();
+    stateRegistryMocks.listInstancesWithLiveness.mockImplementation(async () => []);
+  });
+
   test('passes resolved browser-family display to managed browser launch', async () => {
     sessionMocks.resolveBrowserListTarget.mockResolvedValueOnce(undefined);
     manualLoginMocks.launchManualLoginSession.mockClear();

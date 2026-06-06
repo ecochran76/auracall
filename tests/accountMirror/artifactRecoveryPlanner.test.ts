@@ -255,7 +255,11 @@ describe('account mirror artifact recovery planner', () => {
       searchProjectionService: { search } satisfies SearchProjectionService,
     });
 
-    const result = await planner.plan({ provider: 'chatgpt', runtimeProfileId: 'wsl-chrome-3' });
+    const result = await planner.plan({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-3',
+      includeSearchRows: false,
+    });
 
     expect(result.metrics.remoteKnownMissingLocal).toEqual({
       artifacts: 3,
@@ -273,6 +277,399 @@ describe('account mirror artifact recovery planner', () => {
       maxItems: 3,
     });
   });
+
+  it('separates retrievable recovery work from unsupported, static, duplicate, and terminal failed rows', async () => {
+    const registry = registryWithEntries([
+      statusEntry({
+        provider: 'chatgpt',
+        runtimeProfileId: 'wsl-chrome-3',
+        tenantKey: 'service-account:chatgpt:operator@example.com',
+        expectedIdentityKey: 'operator@example.com',
+        assetInventory: assetInventory({
+          remoteKnownMissingLocal: { artifacts: 4, files: 4, media: 0 },
+          detailScannedThisPass: { projects: 0, conversations: 1, total: 1 },
+        }),
+      }),
+    ]);
+    const search = vi.fn(async (request) => ({
+      object: 'search_results' as const,
+      generatedAt: '2026-06-01T16:30:00.000Z',
+      query: {
+        q: null,
+        provider: request?.provider ?? 'chatgpt',
+        runtimeProfile: request?.runtimeProfile ?? 'wsl-chrome-3',
+        tenant: null,
+        kind: String(request?.kind ?? 'artifact'),
+        status: null,
+        fileAvailable: null,
+        assetAvailability: request?.assetAvailability ?? null,
+        materialization: null,
+        limit: 500,
+        cursor: null,
+      },
+      rows: request?.assetAvailability === 'available'
+        ? []
+        : request?.kind === 'artifact'
+          ? [
+              searchRow({
+                id: 'catalog:static_favicon',
+                source: 'account_mirror',
+                sourceKind: 'artifacts',
+                kind: 'artifact',
+                tenant: 'operator@example.com',
+                eligibilityState: 'static_image_false_positive',
+              }),
+            ]
+          : [
+              searchRow({
+                id: 'catalog:unsupported_file',
+                source: 'account_mirror',
+                sourceKind: 'files',
+                kind: 'upload',
+                tenant: 'operator@example.com',
+                eligibilityState: 'unsupported_conversation_file',
+              }),
+            ],
+      nextCursor: null,
+      metrics: { total: 0, returned: 0 },
+      facets: {
+        providers: [],
+        tenants: [],
+        runtimeProfiles: [],
+        kinds: [],
+        statuses: [],
+        assetAvailability: [],
+        materialization: [],
+      },
+    }));
+    const listJobs = vi.fn(async () => ({
+      object: 'history_materialization_jobs' as const,
+      generatedAt: '2026-06-01T16:30:00.000Z',
+      status: 'terminal' as const,
+      provider: 'chatgpt' as const,
+      runtimeProfile: 'wsl-chrome-3',
+      sourceType: null,
+      limit: 500,
+      jobs: [{
+        object: 'history_materialization_job' as const,
+        id: 'hmj_recent',
+        source: { type: 'reconciliation' as const, provider: 'chatgpt' as const },
+        request: {
+          provider: 'chatgpt' as const,
+          runtimeProfile: 'wsl-chrome-3',
+          boundIdentityKey: 'operator@example.com',
+        },
+        sourceKey: 'hmj_recent',
+        status: 'succeeded' as const,
+        createdAt: '2026-06-01T16:00:00.000Z',
+        updatedAt: '2026-06-01T16:01:00.000Z',
+        startedAt: '2026-06-01T16:00:00.000Z',
+        completedAt: '2026-06-01T16:01:00.000Z',
+        attemptCount: 1,
+        result: {
+          object: 'history_materialization_result' as const,
+          generatedAt: '2026-06-01T16:01:00.000Z',
+          status: 'materialized' as const,
+          target: null,
+          source: { type: 'reconciliation' as const, provider: 'chatgpt' as const },
+          manifestPaths: [],
+          entries: [
+            {
+              kind: 'artifact' as const,
+              providerId: 'artifact_alias',
+              title: 'duplicate.pdf',
+              status: 'duplicate' as const,
+              localPath: null,
+              remoteUrl: null,
+              cacheKey: null,
+              checksumSha256: null,
+              mimeType: null,
+              size: null,
+              materializationMethod: null,
+              reason: 'already_materialized_alias:archive_1',
+              archiveItemId: 'archive_1',
+              assetRoute: '/asset/archive_1',
+            },
+            {
+              kind: 'file' as const,
+              providerId: 'file_missing_tile',
+              title: 'missing.docx',
+              status: 'failed' as const,
+              localPath: null,
+              remoteUrl: 'chatgpt://file/file_1',
+              cacheKey: null,
+              checksumSha256: null,
+              mimeType: null,
+              size: null,
+              materializationMethod: null,
+              reason: 'ChatGPT conversation file fetch failed: tile_not_found',
+              archiveItemId: null,
+              assetRoute: null,
+            },
+          ],
+          archiveItems: [],
+          metrics: { conversations: 1, materialized: 0, duplicateAliases: 1, skipped: 0, failed: 1 },
+          message: 'test',
+        },
+        error: null,
+        message: 'test',
+      }],
+      metrics: {
+        total: 1,
+        byStatus: { succeeded: 1 },
+        active: 0,
+        terminal: 1,
+      },
+    }));
+
+    const planner = createAccountMirrorArtifactRecoveryPlanner({
+      registry,
+      searchProjectionService: { search } satisfies SearchProjectionService,
+      historyMaterializationService: { listJobs },
+    });
+
+    const result = await planner.plan({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-3',
+      includeSearchRows: false,
+    });
+
+    expect(result.candidates[0]?.counts).toMatchObject({
+      remoteKnownMissingLocal: { artifacts: 4, files: 4, total: 8 },
+      retrievableMissingLocal: { artifacts: 2, files: 2, total: 4 },
+      duplicateAliases: { artifacts: 1, files: 0, total: 1 },
+      staticFalsePositive: { artifacts: 1, files: 0, total: 1 },
+      unsupportedMetadataOnly: { artifacts: 0, files: 1, total: 1 },
+      failedTerminal: { artifacts: 0, files: 1, total: 1 },
+    });
+    expect(result.metrics.retrievableMissingLocal).toMatchObject({
+      artifacts: 2,
+      files: 2,
+      total: 4,
+    });
+    expect(result.candidates[0]?.reason).toContain('4 retrievable missing local assets');
+    expect(result.candidates[0]?.createRequest).toMatchObject({
+      maxItems: 4,
+    });
+  });
+
+  it('does not treat ChatGPT account-library metadata rows as retrievable history materialization work', async () => {
+    const registry = registryWithEntries([
+      statusEntry({
+        provider: 'chatgpt',
+        runtimeProfileId: 'wsl-chrome-3',
+        tenantKey: 'service-account:chatgpt:operator@example.com',
+        expectedIdentityKey: 'operator@example.com',
+        assetInventory: assetInventory({
+          remoteKnownMissingLocal: { artifacts: 1, files: 1, media: 0 },
+          detailScannedThisPass: { projects: 0, conversations: 1, total: 1 },
+        }),
+      }),
+    ]);
+    const search = vi.fn(async (request) => ({
+      object: 'search_results' as const,
+      generatedAt: '2026-06-01T17:50:00.000Z',
+      query: {
+        q: null,
+        provider: request?.provider ?? 'chatgpt',
+        runtimeProfile: request?.runtimeProfile ?? 'wsl-chrome-3',
+        tenant: null,
+        kind: String(request?.kind ?? 'artifact'),
+        status: null,
+        fileAvailable: null,
+        assetAvailability: request?.assetAvailability ?? null,
+        materialization: null,
+        limit: 500,
+        cursor: null,
+      },
+      rows: request?.assetAvailability === 'available'
+        ? []
+        : [
+            searchRow({
+              id: request?.kind === 'artifact' ? 'catalog:library_artifact' : 'catalog:library_file',
+              source: 'account_mirror',
+              sourceKind: request?.kind === 'artifact' ? 'artifacts' : 'files',
+              kind: request?.kind === 'artifact' ? 'artifact' : 'upload',
+              tenant: 'operator@example.com',
+              eligibilityState: 'unsupported_account_library_asset',
+            }),
+          ],
+      nextCursor: null,
+      metrics: { total: 0, returned: 0 },
+      facets: {
+        providers: [],
+        tenants: [],
+        runtimeProfiles: [],
+        kinds: [],
+        statuses: [],
+        assetAvailability: [],
+        materialization: [],
+      },
+    }));
+
+    const planner = createAccountMirrorArtifactRecoveryPlanner({
+      registry,
+      searchProjectionService: { search } satisfies SearchProjectionService,
+    });
+
+    const result = await planner.plan({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-3',
+      includeSearchRows: false,
+    });
+
+    expect(result.metrics.retrievableMissingLocal.total).toBe(0);
+    expect(result.metrics.unsupportedMetadataOnly).toMatchObject({
+      artifacts: 1,
+      files: 1,
+      total: 2,
+    });
+    expect(result.metrics.accountLibrary).toMatchObject({
+      remoteKnownMissingLocal: { artifacts: 1, files: 1, total: 2 },
+      retrievableMissingLocal: { artifacts: 0, files: 0, total: 0 },
+      unsupportedMetadataOnly: { artifacts: 1, files: 1, total: 2 },
+      inventory: {
+        total: { artifacts: 1, files: 1, total: 2 },
+        stableIdentity: { artifacts: 1, files: 1, total: 2 },
+        directDownload: { artifacts: 0, files: 0, total: 0 },
+        needsBrowserDetail: { artifacts: 1, files: 1, total: 2 },
+        unsupportedNoAuthority: { artifacts: 0, files: 0, total: 0 },
+        detailRoutes: {
+          unknown: { artifacts: 1, files: 1, total: 2 },
+        },
+      },
+    });
+    expect(result.candidates[0]?.counts.accountLibrary).toMatchObject({
+      remoteKnownMissingLocal: { artifacts: 1, files: 1, total: 2 },
+      unsupportedMetadataOnly: { artifacts: 1, files: 1, total: 2 },
+    });
+    expect(result.candidates[0]).toMatchObject({
+      status: 'unsupported',
+      action: 'none',
+      createRequest: null,
+    });
+  });
+
+  it('splits ChatGPT account-library browser-detail route kinds without marking them retrievable', async () => {
+    const registry = registryWithEntries([
+      statusEntry({
+        provider: 'chatgpt',
+        runtimeProfileId: 'wsl-chrome-3',
+        tenantKey: 'service-account:chatgpt:operator@example.com',
+        expectedIdentityKey: 'operator@example.com',
+        assetInventory: assetInventory({
+          remoteKnownMissingLocal: { artifacts: 3, files: 1, media: 0 },
+          detailScannedThisPass: { projects: 0, conversations: 1, total: 1 },
+        }),
+      }),
+    ]);
+    const search = vi.fn(async (request) => ({
+      object: 'search_results' as const,
+      generatedAt: '2026-06-01T18:15:00.000Z',
+      query: {
+        q: null,
+        provider: request?.provider ?? 'chatgpt',
+        runtimeProfile: request?.runtimeProfile ?? 'wsl-chrome-3',
+        tenant: null,
+        kind: String(request?.kind ?? 'artifact'),
+        status: null,
+        fileAvailable: null,
+        assetAvailability: request?.assetAvailability ?? null,
+        materialization: null,
+        limit: 500,
+        cursor: null,
+      },
+      rows: request?.assetAvailability === 'available'
+        ? []
+        : request?.kind === 'artifact'
+          ? [
+              searchRow({
+                id: 'catalog:library_file_detail_artifact',
+                source: 'account_mirror',
+                sourceKind: 'artifacts',
+                kind: 'artifact',
+                tenant: 'operator@example.com',
+                eligibilityState: 'unsupported_account_library_asset',
+                libraryRouteKind: 'library_file_detail',
+                remoteUrl: 'https://chatgpt.com/library/files/123e4567-e89b-12d3-a456-426614174000',
+              }),
+              searchRow({
+                id: 'catalog:library_artifact_detail',
+                source: 'account_mirror',
+                sourceKind: 'artifacts',
+                kind: 'artifact',
+                tenant: 'operator@example.com',
+                eligibilityState: 'unsupported_account_library_asset',
+                libraryRouteKind: 'library_artifact_detail',
+                remoteUrl: 'https://chatgpt.com/library/artifacts/223e4567-e89b-12d3-a456-426614174111',
+              }),
+              searchRow({
+                id: 'catalog:conversation_detail',
+                source: 'account_mirror',
+                sourceKind: 'artifacts',
+                kind: 'artifact',
+                tenant: 'operator@example.com',
+                eligibilityState: 'unsupported_account_library_asset',
+                libraryRouteKind: 'conversation_detail',
+                remoteUrl: 'https://chatgpt.com/c/6a0bcbbd-009c-83ea-b817-5b86181927f1',
+              }),
+            ]
+          : [
+              searchRow({
+                id: 'catalog:library_file_detail_file',
+                source: 'account_mirror',
+                sourceKind: 'files',
+                kind: 'upload',
+                tenant: 'operator@example.com',
+                eligibilityState: 'unsupported_account_library_asset',
+                libraryRouteKind: 'library_file_detail',
+                remoteUrl: 'https://chatgpt.com/library/files/123e4567-e89b-12d3-a456-426614174000',
+              }),
+            ],
+      nextCursor: null,
+      metrics: { total: 0, returned: 0 },
+      facets: {
+        providers: [],
+        tenants: [],
+        runtimeProfiles: [],
+        kinds: [],
+        statuses: [],
+        assetAvailability: [],
+        materialization: [],
+      },
+    }));
+
+    const planner = createAccountMirrorArtifactRecoveryPlanner({
+      registry,
+      searchProjectionService: { search } satisfies SearchProjectionService,
+    });
+
+    const result = await planner.plan({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-3',
+      includeSearchRows: false,
+    });
+
+    expect(result.metrics.retrievableMissingLocal.total).toBe(0);
+    expect(result.metrics.accountLibrary).toMatchObject({
+      remoteKnownMissingLocal: { artifacts: 3, files: 1, total: 4 },
+      retrievableMissingLocal: { artifacts: 0, files: 0, total: 0 },
+      inventory: {
+        needsBrowserDetail: { artifacts: 3, files: 1, total: 4 },
+        directDownload: { artifacts: 0, files: 0, total: 0 },
+        detailRoutes: {
+          libraryFileDetail: { artifacts: 1, files: 1, total: 2 },
+          libraryArtifactDetail: { artifacts: 1, files: 0, total: 1 },
+          conversationDetail: { artifacts: 1, files: 0, total: 1 },
+        },
+      },
+    });
+    expect(result.candidates[0]).toMatchObject({
+      status: 'unsupported',
+      action: 'none',
+      createRequest: null,
+    });
+  });
 });
 
 function searchRow(input: {
@@ -281,6 +678,9 @@ function searchRow(input: {
   sourceKind: string;
   kind: string;
   tenant: string;
+  eligibilityState?: string;
+  libraryRouteKind?: string;
+  remoteUrl?: string;
 }) {
   return {
     id: input.id,
@@ -302,7 +702,22 @@ function searchRow(input: {
     itemId: input.id,
     counts: { messages: null, files: input.kind === 'upload' ? 1 : 0, artifacts: input.kind === 'artifact' ? 1 : 0 },
     links: {},
-    metadata: { fileAvailable: true },
+    metadata: {
+      fileAvailable: input.source === 'run_archive' ? true : null,
+      raw: input.eligibilityState
+        ? {
+            ...(input.remoteUrl ? { remoteUrl: input.remoteUrl } : {}),
+            metadata: {
+              materializationEligibility: {
+                state: input.eligibilityState,
+                reason: 'test classification',
+              },
+              ...(input.libraryRouteKind ? { libraryRouteKind: input.libraryRouteKind } : {}),
+              ...(input.remoteUrl ? { libraryRouteUrl: input.remoteUrl } : {}),
+            },
+          }
+        : {},
+    },
   };
 }
 
@@ -421,6 +836,17 @@ function statusEntry(input: {
       materializationMaxItems: null,
       materializationRefreshSnapshot: null,
       materializationForce: null,
+      accountLibrary: {
+        configured: false,
+        mode: 'disabled',
+        enabled: false,
+        reason: 'liveFollow.accountLibrary.mode is not configured',
+        maxItems: null,
+        minIntervalMs: null,
+        failureCooldownMs: null,
+        maxActiveJobs: null,
+        providerWorkTimeoutMs: null,
+      },
     },
     limits: {
       minIntervalMs: 0,

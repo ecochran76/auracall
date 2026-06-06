@@ -16,9 +16,11 @@ export interface ApiHistoryMaterializationCreateCliOptions {
   catalogKind?: string | null;
   archiveItemId?: string | null;
   reconcile?: boolean | null;
+  assetSource?: string | null;
   refreshSnapshot?: boolean | null;
   assetKinds?: string[] | null;
   maxItems?: number | null;
+  providerWorkTimeoutMs?: number | null;
   force?: boolean | null;
 }
 
@@ -66,9 +68,11 @@ export async function createApiHistoryMaterializationJobForCli(
         catalogKind: normalizeOptionalString(options.catalogKind),
         archiveItemId: normalizeOptionalString(options.archiveItemId),
         reconcile: options.reconcile === true,
+        assetSource: normalizeAssetSource(options.assetSource),
         refreshSnapshot: options.refreshSnapshot === true,
         assetKinds: normalizeAssetKinds(options.assetKinds),
         maxItems: normalizeOptionalNumber(options.maxItems),
+        providerWorkTimeoutMs: normalizeOptionalNumber(options.providerWorkTimeoutMs),
         force: options.force === true,
       }),
       signal: controller.signal,
@@ -175,6 +179,10 @@ export function formatApiHistoryMaterializationJobCliSummary(payload: unknown): 
   if (typeof record.reused === 'boolean') {
     lines.push(`Reused active job: ${record.reused ? 'yes' : 'no'}`);
   }
+  const reuseReason = readString(record.reuseReason);
+  if (reuseReason) lines.push(`Reuse reason: ${reuseReason}`);
+  const schedulerLine = formatSchedulerDiagnostics(job.scheduler);
+  if (schedulerLine) lines.push(schedulerLine);
   const targetText = [
     readString(target.provider),
     readString(target.runtimeProfile),
@@ -204,11 +212,38 @@ export function formatApiHistoryMaterializationJobsCliSummary(payload: unknown):
   ];
   for (const job of jobs.slice(0, 25)) {
     if (!isRecord(job)) continue;
+    const scheduler = isRecord(job.scheduler) ? job.scheduler : {};
+    const schedulerState = readString(scheduler.state);
+    const dispatchState = readString(scheduler.dispatchState);
+    const schedulerSuffix = schedulerState
+      ? ` scheduler=${schedulerState}${dispatchState ? `/${dispatchState}` : ''}`
+      : '';
     lines.push(
-      `- ${readString(job.id) ?? 'unknown'} status=${readString(job.status) ?? 'unknown'} source=${formatSource(job.source)} updated=${readString(job.updatedAt) ?? 'unknown'}`,
+      `- ${readString(job.id) ?? 'unknown'} status=${readString(job.status) ?? 'unknown'} source=${formatSource(job.source)} updated=${readString(job.updatedAt) ?? 'unknown'}${schedulerSuffix}`,
     );
   }
   return lines.join('\n');
+}
+
+function formatSchedulerDiagnostics(value: unknown): string | null {
+  const scheduler = isRecord(value) ? value : {};
+  const state = readString(scheduler.state);
+  const dispatchState = readString(scheduler.dispatchState);
+  if (!state && !dispatchState) return null;
+  const parts = [
+    `state=${state ?? 'unknown'}`,
+    `dispatch=${dispatchState ?? 'unknown'}`,
+  ];
+  const queuedAgeMs = readNumber(scheduler.queuedAgeMs);
+  const runAgeMs = readNumber(scheduler.runAgeMs);
+  const queuedToStartLatencyMs = readNumber(scheduler.queuedToStartLatencyMs);
+  if (queuedAgeMs !== null) parts.push(`queuedAgeMs=${queuedAgeMs}`);
+  if (runAgeMs !== null) parts.push(`runAgeMs=${runAgeMs}`);
+  if (queuedToStartLatencyMs !== null) parts.push(`queuedToStartLatencyMs=${queuedToStartLatencyMs}`);
+  if (scheduler.stale === true) parts.push('stale=yes');
+  const staleReason = readString(scheduler.staleReason);
+  if (staleReason) parts.push(`staleReason=${staleReason}`);
+  return `Scheduler: ${parts.join(' ')}`;
 }
 
 function formatSource(value: unknown): string {
@@ -218,6 +253,7 @@ function formatSource(value: unknown): string {
   if (type === 'catalog_item') return `${type}:${readString(source.catalogItemId) ?? 'unknown'}`;
   if (type === 'archive_item') return `${type}:${readString(source.archiveItemId) ?? 'unknown'}`;
   if (type === 'reconciliation') return `${type}:${readString(source.provider) ?? 'all'}`;
+  if (type === 'account_library_reconciliation') return `${type}:${readString(source.provider) ?? 'all'}`;
   return type;
 }
 
@@ -255,6 +291,11 @@ function normalizeAssetKinds(value: string[] | null | undefined): string[] | und
     .map((entry) => entry.trim())
     .filter((entry) => entry === 'artifacts' || entry === 'files' || entry === 'media' || entry === 'all');
   return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
+}
+
+function normalizeAssetSource(value: string | null | undefined): string | undefined {
+  const normalized = normalizeOptionalString(value);
+  return normalized === 'account-library' ? normalized : undefined;
 }
 
 function normalizeStringList(value: string[] | null | undefined): string[] | undefined {

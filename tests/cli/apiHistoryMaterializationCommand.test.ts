@@ -24,6 +24,7 @@ describe('api history materialization CLI helpers', () => {
           refreshSnapshot: true,
           assetKinds: ['artifacts', 'files'],
           maxItems: 2,
+          providerWorkTimeoutMs: 30000,
           force: true,
         });
         return new Response(JSON.stringify({
@@ -47,6 +48,7 @@ describe('api history materialization CLI helpers', () => {
       refreshSnapshot: true,
       assetKinds: ['artifacts,files'],
       maxItems: 2,
+      providerWorkTimeoutMs: 30000,
       force: true,
     }, fetchImpl as never);
     expect(formatApiHistoryMaterializationJobCliSummary(created)).toContain(

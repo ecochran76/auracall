@@ -46,15 +46,24 @@ export interface AccountMirrorCompletionLifecycleEvent {
     | 'started'
     | 'parked_for_shutdown'
     | 'resumed_after_restart'
+    | 'automatic_resume_blocked'
     | 'operator_paused'
     | 'operator_resumed'
+    | 'operator_resume_blocked'
     | 'operator_cancelled'
     | 'campaign_policy_upgraded'
-    | 'live_follow_policy_upgraded';
+    | 'live_follow_policy_upgraded'
+    | 'account_library_catchup_queued'
+    | 'account_library_catchup_skipped';
   status: AccountMirrorCompletionOperation['status'];
   previousStatus: AccountMirrorCompletionOperation['status'] | null;
   processPid: number;
   message: string;
+}
+
+export interface AccountMirrorCompletionBackpressure {
+  reason: 'foreground-work';
+  message: string | null;
 }
 
 export type AccountMirrorCompletionSweepMode = 'steady_follow' | 'full_sweep';
@@ -79,6 +88,31 @@ export interface AccountMirrorCompletionMaterializationCursor {
     maxItems: number | null;
     force: boolean;
   };
+}
+
+type AccountMirrorHistoryMaterializationCreateRequest = {
+  provider: AccountMirrorProvider;
+  runtimeProfile: string;
+  browserProfile?: string | null;
+  boundIdentityKey?: string | null;
+  reconcile: true;
+  assetSource?: 'account-library' | null;
+  refreshSnapshot: boolean;
+  assetKinds: AccountMirrorCompletionMaterializationAssetKind[];
+  maxItems: number | null;
+  providerWorkTimeoutMs?: number | null;
+  force: boolean;
+};
+
+export interface AccountMirrorCompletionAccountLibraryCursor {
+  jobId: string | null;
+  jobStatus: string | null;
+  reused: boolean;
+  requestedAt: string;
+  passCount: number;
+  status: 'queued' | 'reused' | 'skipped';
+  reason: string;
+  request: AccountMirrorHistoryMaterializationCreateRequest | null;
 }
 
 export interface AccountMirrorCompletionMaterializationOutcome {
@@ -117,6 +151,7 @@ export interface AccountMirrorCompletionOperation {
   materializationForce?: boolean;
   materializationCursor?: AccountMirrorCompletionMaterializationCursor | null;
   materializationOutcome?: AccountMirrorCompletionMaterializationOutcome | null;
+  accountLibraryCursor?: AccountMirrorCompletionAccountLibraryCursor | null;
   mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'] | null;
   error: {
     message: string;
@@ -141,6 +176,7 @@ export interface AccountMirrorCompletionService {
 interface AccountMirrorHistoryMaterializationJobCreateResult {
   generatedAt?: string;
   reused?: boolean;
+  reuseReason?: string | null;
   job: {
     id: string;
     status: string;
@@ -148,15 +184,7 @@ interface AccountMirrorHistoryMaterializationJobCreateResult {
 }
 
 interface AccountMirrorHistoryMaterializationService {
-  createJob(request: {
-    provider: AccountMirrorProvider;
-    runtimeProfile: string;
-    reconcile: true;
-    refreshSnapshot: boolean;
-    assetKinds: AccountMirrorCompletionMaterializationAssetKind[];
-    maxItems: number | null;
-    force: boolean;
-  }): Promise<AccountMirrorHistoryMaterializationJobCreateResult>;
+  createJob(request: AccountMirrorHistoryMaterializationCreateRequest): Promise<AccountMirrorHistoryMaterializationJobCreateResult>;
   readJob?(id: string): Promise<AccountMirrorHistoryMaterializationJobReadResult | null>;
 }
 
@@ -188,6 +216,8 @@ export function createAccountMirrorCompletionService(input: {
   generateId?: () => string;
   sleep?: (ms: number) => Promise<void>;
   historyMaterializationService?: AccountMirrorHistoryMaterializationService | null;
+  shouldYieldToForegroundWork?: () => AccountMirrorCompletionBackpressure | null;
+  foregroundRetryDelayMs?: number;
   onPersistError?: (error: unknown, operation: AccountMirrorCompletionOperation) => void;
 }): AccountMirrorCompletionService {
   const now = input.now ?? (() => new Date());
@@ -225,6 +255,7 @@ export function createAccountMirrorCompletionService(input: {
     }
     return false;
   };
+  const foregroundRetryDelayMs = normalizeForegroundRetryDelayMs(input.foregroundRetryDelayMs);
 
   for (const operation of input.initialOperations ?? []) {
     operations.set(operation.id, normalizeLifecycleEvents(operation));
@@ -249,6 +280,9 @@ export function createAccountMirrorCompletionService(input: {
     activeRuns.add(id);
     void run(id).finally(() => {
       activeRuns.delete(id);
+      if (operations.get(id)?.status === 'queued') {
+        launch(id);
+      }
     });
   };
 
@@ -294,6 +328,20 @@ export function createAccountMirrorCompletionService(input: {
         }
         const refreshOperation = operations.get(id);
         if (!refreshOperation) return;
+        if (refreshOperation.mode === 'live_follow') {
+          const foregroundBackpressure = input.shouldYieldToForegroundWork?.() ?? null;
+          if (foregroundBackpressure) {
+            const nextAttemptAt = new Date(now().getTime() + foregroundRetryDelayMs).toISOString();
+            update(id, {
+              status: 'idle_waiting',
+              nextAttemptAt,
+              error: null,
+            });
+            if (!(await sleepUntilAttempt(id, nextAttemptAt))) return;
+            update(id, { status: 'running', nextAttemptAt: null });
+            continue;
+          }
+        }
         let refresh: AccountMirrorRefreshResult;
         try {
           if (!shouldContinue(id)) return;
@@ -305,6 +353,9 @@ export function createAccountMirrorCompletionService(input: {
             explicitRefresh: true,
             ignoreMinimumInterval: refreshOperation.mode === 'bounded',
             queueTimeoutMs: 0,
+            ...(shouldCleanupManagedBrowserAfterRefresh(refreshOperation, pass)
+              ? { cleanupManagedBrowserAfterRefresh: true }
+              : {}),
             ...(collectorTimeoutMs ? { collectorTimeoutMs } : {}),
           });
         } catch (error) {
@@ -336,6 +387,9 @@ export function createAccountMirrorCompletionService(input: {
         });
         if (refreshed && shouldQueueMaterialization(refreshed)) {
           await queueCompletionMaterialization(refreshed);
+        }
+        if (refreshed) {
+          await decideAccountLibraryCatchup(refreshed);
         }
         if (!shouldContinue(id)) return;
         if (refresh.mirrorCompleteness.state === 'complete') {
@@ -385,6 +439,10 @@ export function createAccountMirrorCompletionService(input: {
   if (input.resumeActiveOperations) {
     for (const operation of operations.values()) {
       if (isRunnableOperation(operation)) {
+        if (shouldBlockGeminiResume(operation)) {
+          blockGeminiResume(operation, 'automatic');
+          continue;
+        }
         appendLifecycleEvent(operation.id, {
           type: 'resumed_after_restart',
           status: 'running',
@@ -422,6 +480,7 @@ export function createAccountMirrorCompletionService(input: {
         materializationForce: normalizeMaterializationForce(request.materializationForce),
         materializationCursor: null,
         materializationOutcome: null,
+        accountLibraryCursor: null,
         mirrorCompleteness: null,
         error: null,
         lifecycleEvents: [],
@@ -485,6 +544,9 @@ export function createAccountMirrorCompletionService(input: {
       }
       if (request.action === 'resume') {
         if (operation.status !== 'paused') return operation;
+        if (shouldBlockGeminiResume(operation)) {
+          return blockGeminiResume(operation, 'operator');
+        }
         const resumed = update(operation.id, {
           status: 'queued',
           completedAt: null,
@@ -539,6 +601,7 @@ export function createAccountMirrorCompletionService(input: {
         materializationMaxItems: normalizeMaterializationMaxItems(request.materializationMaxItems),
         materializationRefreshSnapshot: normalizeMaterializationRefreshSnapshot(request.materializationRefreshSnapshot, sweepMode),
         materializationForce: normalizeMaterializationForce(request.materializationForce),
+        accountLibraryCursor: operation.accountLibraryCursor ?? null,
         error: null,
       });
       const evented = appendLifecycleEvent(operation.id, {
@@ -648,6 +711,145 @@ export function createAccountMirrorCompletionService(input: {
       materializationOutcome: outcome,
     }) ?? operation;
   }
+
+  async function decideAccountLibraryCatchup(
+    operation: AccountMirrorCompletionOperation,
+  ): Promise<AccountMirrorCompletionOperation | null> {
+    if (operation.lastRefresh?.status !== 'completed') {
+      return recordAccountLibraryCatchupSkip(operation, 'latest refresh did not complete');
+    }
+    if (operation.accountLibraryCursor?.passCount === operation.passCount) {
+      return recordAccountLibraryCatchupSkip(operation, 'account-library catch-up already evaluated for this pass');
+    }
+    if (!input.historyMaterializationService) {
+      return recordAccountLibraryCatchupSkip(operation, 'history materialization service is not configured');
+    }
+    await input.registry.refreshPersistentState?.({
+      provider: operation.provider,
+      runtimeProfileId: operation.runtimeProfileId,
+    });
+    const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
+    if (!entry) {
+      return recordAccountLibraryCatchupSkip(operation, 'account mirror status target was not found');
+    }
+    const desired = entry.liveFollow.accountLibrary;
+    if (!desired.configured || desired.mode === 'disabled') {
+      return null;
+    }
+    if (desired.mode !== 'eligible') {
+      return recordAccountLibraryCatchupSkip(
+        operation,
+        `liveFollow.accountLibrary.mode is ${desired.mode}`,
+      );
+    }
+    const cooldownUntil = deriveAccountLibraryCooldownUntil(entry);
+    if (cooldownUntil && Date.parse(cooldownUntil) > now().getTime()) {
+      return recordAccountLibraryCatchupSkip(
+        operation,
+        `account-library failure cooldown is active until ${cooldownUntil}`,
+      );
+    }
+    const request: AccountMirrorHistoryMaterializationCreateRequest = {
+      provider: operation.provider,
+      runtimeProfile: operation.runtimeProfileId,
+      browserProfile: entry.browserProfileId,
+      boundIdentityKey: entry.detectedIdentityKey,
+      reconcile: true,
+      assetSource: 'account-library',
+      refreshSnapshot: false,
+      assetKinds: ['files'],
+      maxItems: desired.maxItems,
+      providerWorkTimeoutMs: desired.providerWorkTimeoutMs,
+      force: false,
+    };
+    try {
+      const result = await input.historyMaterializationService.createJob(request);
+      return recordAccountLibraryCatchupJob(operation, request, result);
+    } catch (error) {
+      return recordAccountLibraryCatchupSkip(
+        operation,
+        `account-library materialization job create failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  function recordAccountLibraryCatchupJob(
+    operation: AccountMirrorCompletionOperation,
+    request: AccountMirrorHistoryMaterializationCreateRequest,
+    result: AccountMirrorHistoryMaterializationJobCreateResult,
+  ): AccountMirrorCompletionOperation | null {
+    const status = result.reused === true ? 'reused' : 'queued';
+    const reason = result.reused === true
+      ? result.reuseReason ?? `reused account-library materialization job ${result.job.id}`
+      : `queued account-library materialization job ${result.job.id}`;
+    update(operation.id, {
+      accountLibraryCursor: {
+        jobId: result.job.id,
+        jobStatus: result.job.status,
+        reused: result.reused === true,
+        requestedAt: result.generatedAt ?? now().toISOString(),
+        passCount: operation.passCount,
+        status,
+        reason,
+        request,
+      },
+    });
+    return appendLifecycleEvent(operation.id, {
+      type: 'account_library_catchup_queued',
+      status: operations.get(operation.id)?.status ?? operation.status,
+      previousStatus: operation.status,
+      message: reason,
+    });
+  }
+
+  function recordAccountLibraryCatchupSkip(
+    operation: AccountMirrorCompletionOperation,
+    reason: string,
+  ): AccountMirrorCompletionOperation | null {
+    update(operation.id, {
+      accountLibraryCursor: {
+        jobId: null,
+        jobStatus: null,
+        reused: false,
+        requestedAt: now().toISOString(),
+        passCount: operation.passCount,
+        status: 'skipped',
+        reason,
+        request: null,
+      },
+    });
+    return appendLifecycleEvent(operation.id, {
+      type: 'account_library_catchup_skipped',
+      status: operations.get(operation.id)?.status ?? operation.status,
+      previousStatus: operation.status,
+      message: reason,
+    });
+  }
+
+  function blockGeminiResume(
+    operation: AccountMirrorCompletionOperation,
+    source: 'automatic' | 'operator',
+  ): AccountMirrorCompletionOperation {
+    const updated = update(operation.id, {
+      status: 'paused',
+      completedAt: null,
+      nextAttemptAt: null,
+      error: {
+        message: 'Gemini live-follow resume is blocked until the completion is upgraded or replaced with bounded left-rail retrieval policy.',
+        code: 'gemini_live_follow_resume_blocked',
+      },
+    }) ?? operation;
+    return appendLifecycleEvent(operation.id, {
+      type: source === 'automatic' ? 'automatic_resume_blocked' : 'operator_resume_blocked',
+      status: 'paused',
+      previousStatus: operation.status,
+      message: source === 'automatic'
+        ? 'Blocked automatic startup resume for legacy Gemini live-follow completion.'
+        : 'Blocked operator resume for legacy Gemini live-follow completion.',
+    }) ?? updated;
+  }
 }
 
 function isTerminalMaterializationStatus(status: string): boolean {
@@ -708,7 +910,46 @@ function shouldQueueMaterialization(operation: AccountMirrorCompletionOperation)
   if (operation.materializationPolicy === 'metadata_only') return false;
   if (!operation.materializationPolicy && operation.sweepMode !== 'full_sweep') return false;
   if (operation.materializationCursor?.passCount === operation.passCount) return false;
+  if (operation.provider === 'gemini' && isGeminiShellOnlyRouteChurn(operation)) return false;
   return true;
+}
+
+function deriveAccountLibraryCooldownUntil(entry: AccountMirrorStatusEntry): string | null {
+  const cooldownMs = entry.liveFollow.accountLibrary.failureCooldownMs;
+  if (!cooldownMs || cooldownMs <= 0) return null;
+  const lastFailureAtMs = Date.parse(entry.lastFailureAt ?? '');
+  if (!Number.isFinite(lastFailureAtMs)) return null;
+  return new Date(lastFailureAtMs + cooldownMs).toISOString();
+}
+
+function shouldBlockGeminiResume(operation: AccountMirrorCompletionOperation): boolean {
+  if (operation.provider !== 'gemini') return false;
+  if (operation.mode !== 'live_follow') return false;
+  if (operation.maxPasses !== null) return false;
+  if (hasProductiveGeminiRouteProgress(operation)) return false;
+  const policy = operation.materializationPolicy ?? 'metadata_only';
+  if (policy === 'metadata_only') return true;
+  return operation.materializationMaxItems == null;
+}
+
+function hasProductiveGeminiRouteProgress(operation: AccountMirrorCompletionOperation): boolean {
+  const routeProgress = operation.lastRefresh?.metadataEvidence?.routeProgress;
+  return (
+    routeProgress?.provider === 'gemini' &&
+    routeProgress.strategy === 'gemini-left-rail' &&
+    routeProgress.churnDetected !== true &&
+    routeProgress.selectedConversationIds.length > 0
+  );
+}
+
+function isGeminiShellOnlyRouteChurn(operation: AccountMirrorCompletionOperation): boolean {
+  const routeProgress = operation.lastRefresh?.metadataEvidence?.routeProgress;
+  return (
+    routeProgress?.provider === 'gemini' &&
+    routeProgress.strategy === 'gemini-left-rail' &&
+    routeProgress.churnDetected === true &&
+    routeProgress.selectedConversationIds.length === 0
+  );
 }
 
 function normalizeLifecycleEvents(operation: AccountMirrorCompletionOperation): AccountMirrorCompletionOperation {
@@ -807,6 +1048,11 @@ function normalizeMaxPasses(value: number | null | undefined): number | null {
   return Math.max(1, Math.min(500, Math.floor(value)));
 }
 
+function normalizeForegroundRetryDelayMs(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 60_000;
+  return Math.max(1_000, Math.min(300_000, Math.floor(value)));
+}
+
 function resolveUpgradeMaxPasses(
   operation: AccountMirrorCompletionOperation,
   value: number | null | undefined,
@@ -863,8 +1109,20 @@ function resolveCompletionCollectorTimeoutMs(operation: AccountMirrorCompletionO
   if (operation.provider === 'gemini') {
     return operation.sweepMode === 'full_sweep' ? 900_000 : 300_000;
   }
-  if (operation.sweepMode === 'full_sweep') return 300_000;
+  if (operation.provider === 'chatgpt' && operation.sweepMode === 'full_sweep') return 900_000;
   return undefined;
+}
+
+function shouldCleanupManagedBrowserAfterRefresh(
+  operation: AccountMirrorCompletionOperation,
+  currentPassCount: number,
+): boolean {
+  return (
+    operation.provider === 'gemini' &&
+    operation.mode === 'bounded' &&
+    operation.maxPasses !== null &&
+    currentPassCount + 1 >= operation.maxPasses
+  );
 }
 
 function sleep(ms: number): Promise<void> {

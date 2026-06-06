@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createAccountMirrorRecoveryCandidatesToolHandler } from '../src/mcp/tools/accountMirrorRecovery.js';
 import type {
   AccountMirrorArtifactRecoveryPlanResult,
   AccountMirrorArtifactRecoveryPlanner,
 } from '../src/accountMirror/artifactRecoveryPlanner.js';
+import { createAccountMirrorRecoveryCandidatesToolHandler } from '../src/mcp/tools/accountMirrorRecovery.js';
 
 describe('mcp account mirror recovery tool', () => {
   it('plans recovery candidates through the shared planner', async () => {
@@ -36,8 +36,14 @@ describe('mcp account mirror recovery tool', () => {
         assetInventory: null,
         counts: {
           remoteKnownMissingLocal: { artifacts: 1, files: 0, media: 0, total: 1 },
+          retrievableMissingLocal: { artifacts: 1, files: 0, media: 0, total: 1 },
           localMaterialized: { artifacts: 0, files: 0, media: 0, total: 0 },
           unknownOrDeferred: { artifacts: 0, files: 0, media: 0, total: 0 },
+          duplicateAliases: { artifacts: 0, files: 0, media: 0, total: 0 },
+          unsupportedMetadataOnly: { artifacts: 0, files: 0, media: 0, total: 0 },
+          staticFalsePositive: { artifacts: 0, files: 0, media: 0, total: 0 },
+          failedTerminal: { artifacts: 0, files: 0, media: 0, total: 0 },
+          accountLibrary: zeroAccountLibraryCounts(),
         },
         sourceItem: null,
         createRequest: null,
@@ -62,6 +68,12 @@ describe('mcp account mirror recovery tool', () => {
           none: 0,
         },
         remoteKnownMissingLocal: { artifacts: 1, files: 0, media: 0, total: 1 },
+        retrievableMissingLocal: { artifacts: 1, files: 0, media: 0, total: 1 },
+        duplicateAliases: { artifacts: 0, files: 0, media: 0, total: 0 },
+        unsupportedMetadataOnly: { artifacts: 0, files: 0, media: 0, total: 0 },
+        staticFalsePositive: { artifacts: 0, files: 0, media: 0, total: 0 },
+        failedTerminal: { artifacts: 0, files: 0, media: 0, total: 0 },
+        accountLibrary: zeroAccountLibraryCounts(),
         unknownOrDeferred: { artifacts: 0, files: 0, media: 0, total: 0 },
       },
     };
@@ -94,3 +106,29 @@ describe('mcp account mirror recovery tool', () => {
     });
   });
 });
+
+function zeroAccountLibraryCounts() {
+  const zero = () => ({ artifacts: 0, files: 0, media: 0, total: 0 });
+  return {
+    remoteKnownMissingLocal: zero(),
+    retrievableMissingLocal: zero(),
+    unsupportedMetadataOnly: zero(),
+    duplicateAliases: zero(),
+    failedTerminal: zero(),
+    inventory: {
+      total: zero(),
+      stableIdentity: zero(),
+      directDownload: zero(),
+      needsBrowserDetail: zero(),
+      unsupportedNoAuthority: zero(),
+      detailRoutes: {
+        libraryFileDetail: zero(),
+        libraryArtifactDetail: zero(),
+        libraryCanvasDetail: zero(),
+        conversationDetail: zero(),
+        externalOrInlineAsset: zero(),
+        unknown: zero(),
+      },
+    },
+  };
+}

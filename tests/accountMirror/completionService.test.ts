@@ -229,6 +229,132 @@ describe('account mirror completion service', () => {
     });
   });
 
+  test('blocks unsafe legacy Gemini live-follow startup resume', async () => {
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_legacy_gemini',
+      provider: 'gemini' as const,
+      runtimeProfileId: 'auracall-gemini-pro',
+      mode: 'live_follow' as const,
+      phase: 'steady_follow' as const,
+      status: 'queued' as const,
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: null,
+      maxPasses: null,
+      passCount: 10,
+      lastRefresh: {
+        ...createRefreshResult(),
+        provider: 'gemini' as const,
+        runtimeProfileId: 'auracall-gemini-pro',
+        metadataCounts: {
+          projects: 0,
+          conversations: 71,
+          artifacts: 0,
+          files: 0,
+          media: 0,
+        },
+      },
+      materializationPolicy: 'metadata_only' as const,
+      mirrorCompleteness: completeMirror,
+      error: null,
+      lifecycleEvents: [],
+    };
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const sleep = vi.fn(() => new Promise<void>(() => {}));
+
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      initialOperations: [initial],
+      resumeActiveOperations: true,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      sleep,
+    });
+
+    await Promise.resolve();
+
+    expect(requestRefresh).not.toHaveBeenCalled();
+    expect(sleep).not.toHaveBeenCalled();
+    expect(service.read('acctmirror_legacy_gemini')).toMatchObject({
+      status: 'paused',
+      passCount: 10,
+      error: {
+        code: 'gemini_live_follow_resume_blocked',
+      },
+      lifecycleEvents: [
+        {
+          type: 'automatic_resume_blocked',
+          status: 'paused',
+          previousStatus: 'queued',
+        },
+      ],
+    });
+  });
+
+  test('blocks unsafe legacy Gemini live-follow operator resume', async () => {
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_paused_legacy_gemini',
+      provider: 'gemini' as const,
+      runtimeProfileId: 'auracall-gemini-pro',
+      mode: 'live_follow' as const,
+      phase: 'steady_follow' as const,
+      status: 'paused' as const,
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: null,
+      maxPasses: null,
+      passCount: 10,
+      lastRefresh: {
+        ...createRefreshResult(),
+        provider: 'gemini' as const,
+        runtimeProfileId: 'auracall-gemini-pro',
+      },
+      materializationPolicy: 'metadata_only' as const,
+      mirrorCompleteness: completeMirror,
+      error: null,
+      lifecycleEvents: [],
+    };
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      initialOperations: [initial],
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+    });
+
+    expect(service.control({
+      id: 'acctmirror_paused_legacy_gemini',
+      action: 'resume',
+    })).toMatchObject({
+      status: 'paused',
+      error: {
+        code: 'gemini_live_follow_resume_blocked',
+      },
+      lifecycleEvents: [
+        {
+          type: 'operator_resume_blocked',
+          status: 'paused',
+          previousStatus: 'paused',
+        },
+      ],
+    });
+    await Promise.resolve();
+
+    expect(requestRefresh).not.toHaveBeenCalled();
+  });
+
   test('lists persisted and active operations with filters', async () => {
     const active = {
       object: 'account_mirror_completion' as const,
@@ -336,8 +462,10 @@ describe('account mirror completion service', () => {
     expect(service.read('acctmirror_control')?.lifecycleEvents?.map((event) => event.type)).toEqual([
       'started',
       'operator_paused',
+      'account_library_catchup_skipped',
       'operator_resumed',
     ]);
+    await waitFor(() => requestRefresh.mock.calls.length === 2);
     expect(requestRefresh).toHaveBeenCalledTimes(2);
 
     expect(service.control({ id: 'acctmirror_control', action: 'cancel' })).toMatchObject({
@@ -445,7 +573,7 @@ describe('account mirror completion service', () => {
       provider: 'chatgpt',
       runtimeProfileId: 'default',
       sweepMode: 'full_sweep',
-      collectorTimeoutMs: 300_000,
+      collectorTimeoutMs: 900_000,
     }));
     expect(createJob).toHaveBeenCalledWith({
       provider: 'chatgpt',
@@ -471,6 +599,428 @@ describe('account mirror completion service', () => {
           maxItems: 2,
         },
       },
+    });
+  });
+
+  test('eligible account-library live follow queues capped file reconciliation after a refresh pass', async () => {
+    const eligibleConfig = {
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+              },
+              liveFollow: {
+                enabled: true,
+                materializationPolicy: 'metadata_only',
+                accountLibrary: {
+                  mode: 'eligible',
+                  maxItems: 3,
+                  providerWorkTimeoutMs: 120_000,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const createJob = vi.fn(async () => ({
+      object: 'history_materialization_job_create_result' as const,
+      generatedAt: '2026-06-05T04:00:02.000Z',
+      reused: false,
+      reuseReason: null,
+      job: {
+        object: 'history_materialization_job' as const,
+        id: 'hmj_account_library_1',
+        status: 'queued',
+      },
+    }));
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config: eligibleConfig,
+        now: () => new Date('2026-06-05T04:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      historyMaterializationService: {
+        createJob,
+      },
+      now: () => new Date('2026-06-05T04:00:00.000Z'),
+      generateId: () => 'acctmirror_account_library_queue',
+    });
+
+    service.start({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      maxPasses: 1,
+      sweepMode: 'steady_follow',
+      materializationPolicy: 'metadata_only',
+    });
+
+    await waitFor(() => service.read('acctmirror_account_library_queue')?.status === 'completed');
+
+    expect(createJob).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'chatgpt',
+      runtimeProfile: 'default',
+      browserProfile: 'wsl-chrome-3',
+      reconcile: true,
+      assetSource: 'account-library',
+      refreshSnapshot: false,
+      assetKinds: ['files'],
+      maxItems: 3,
+      providerWorkTimeoutMs: 120_000,
+      force: false,
+    }));
+    expect(service.read('acctmirror_account_library_queue')).toMatchObject({
+      accountLibraryCursor: {
+        jobId: 'hmj_account_library_1',
+        jobStatus: 'queued',
+        reused: false,
+        passCount: 1,
+        status: 'queued',
+        reason: 'queued account-library materialization job hmj_account_library_1',
+        request: expect.objectContaining({
+          assetSource: 'account-library',
+          assetKinds: ['files'],
+          maxItems: 3,
+        }),
+      },
+      lifecycleEvents: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'account_library_catchup_queued',
+          message: 'queued account-library materialization job hmj_account_library_1',
+        }),
+      ]),
+    });
+  });
+
+  test('eligible account-library live follow records reused active reconciliation jobs', async () => {
+    const eligibleConfig = {
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+              },
+              liveFollow: {
+                enabled: true,
+                materializationPolicy: 'metadata_only',
+                accountLibrary: {
+                  mode: 'eligible',
+                  maxItems: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const createJob = vi.fn(async () => ({
+      object: 'history_materialization_job_create_result' as const,
+      generatedAt: '2026-06-05T04:02:02.000Z',
+      reused: true,
+      reuseReason: 'active sourceKey is already running',
+      job: {
+        object: 'history_materialization_job' as const,
+        id: 'hmj_account_library_active',
+        status: 'running',
+      },
+    }));
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config: eligibleConfig,
+        now: () => new Date('2026-06-05T04:02:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh: vi.fn(async () => createRefreshResult()),
+      },
+      historyMaterializationService: {
+        createJob,
+      },
+      now: () => new Date('2026-06-05T04:02:00.000Z'),
+      generateId: () => 'acctmirror_account_library_reuse',
+    });
+
+    service.start({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      maxPasses: 1,
+      materializationPolicy: 'metadata_only',
+    });
+
+    await waitFor(() => service.read('acctmirror_account_library_reuse')?.status === 'completed');
+
+    expect(service.read('acctmirror_account_library_reuse')).toMatchObject({
+      accountLibraryCursor: {
+        jobId: 'hmj_account_library_active',
+        jobStatus: 'running',
+        reused: true,
+        passCount: 1,
+        status: 'reused',
+        reason: 'active sourceKey is already running',
+      },
+      lifecycleEvents: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'account_library_catchup_queued',
+          message: 'active sourceKey is already running',
+        }),
+      ]),
+    });
+  });
+
+  test('eligible account-library live follow skips duplicate catch-up evaluation for the same pass', async () => {
+    const eligibleConfig = {
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+              },
+              liveFollow: {
+                enabled: true,
+                materializationPolicy: 'metadata_only',
+                accountLibrary: {
+                  mode: 'eligible',
+                  maxItems: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_account_library_duplicate_pass',
+      provider: 'chatgpt' as const,
+      runtimeProfileId: 'default',
+      mode: 'bounded' as const,
+      sweepMode: 'steady_follow' as const,
+      phase: 'backfill_history' as const,
+      status: 'queued' as const,
+      startedAt: '2026-06-05T04:06:00.000Z',
+      completedAt: null,
+      nextAttemptAt: null,
+      maxPasses: 1,
+      passCount: 0,
+      lastRefresh: null,
+      materializationPolicy: 'metadata_only' as const,
+      accountLibraryCursor: {
+        jobId: 'hmj_account_library_prior',
+        jobStatus: 'queued',
+        reused: false,
+        requestedAt: '2026-06-05T04:05:00.000Z',
+        passCount: 1,
+        status: 'queued' as const,
+        reason: 'queued account-library materialization job hmj_account_library_prior',
+        request: {
+          provider: 'chatgpt' as const,
+          runtimeProfile: 'default',
+          browserProfile: 'wsl-chrome-3',
+          boundIdentityKey: 'ecochran76@gmail.com',
+          reconcile: true as const,
+          assetSource: 'account-library' as const,
+          refreshSnapshot: false,
+          assetKinds: ['files' as const],
+          maxItems: 1,
+          providerWorkTimeoutMs: null,
+          force: false,
+        },
+      },
+      mirrorCompleteness: null,
+      error: null,
+      lifecycleEvents: [],
+    };
+    const createJob = vi.fn();
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config: eligibleConfig,
+        now: () => new Date('2026-06-05T04:06:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh: vi.fn(async () => createRefreshResult()),
+      },
+      historyMaterializationService: {
+        createJob,
+      },
+      initialOperations: [initial],
+      resumeActiveOperations: true,
+      now: () => new Date('2026-06-05T04:06:00.000Z'),
+    });
+
+    await waitFor(() => service.read('acctmirror_account_library_duplicate_pass')?.status === 'completed');
+
+    expect(createJob).not.toHaveBeenCalled();
+    expect(service.read('acctmirror_account_library_duplicate_pass')).toMatchObject({
+      passCount: 1,
+      accountLibraryCursor: {
+        jobId: null,
+        jobStatus: null,
+        reused: false,
+        passCount: 1,
+        status: 'skipped',
+        reason: 'account-library catch-up already evaluated for this pass',
+        request: null,
+      },
+      lifecycleEvents: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'account_library_catchup_skipped',
+          message: 'account-library catch-up already evaluated for this pass',
+        }),
+      ]),
+    });
+  });
+
+  test('preview-only account-library live follow records a skip reason after refresh', async () => {
+    const previewConfig = {
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+              },
+              liveFollow: {
+                enabled: true,
+                materializationPolicy: 'metadata_only',
+                accountLibrary: {
+                  mode: 'preview_only',
+                  maxItems: 3,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const createJob = vi.fn();
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config: previewConfig,
+        now: () => new Date('2026-06-05T04:04:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh: vi.fn(async () => createRefreshResult()),
+      },
+      historyMaterializationService: {
+        createJob,
+      },
+      now: () => new Date('2026-06-05T04:04:00.000Z'),
+      generateId: () => 'acctmirror_account_library_preview_skip',
+    });
+
+    service.start({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      maxPasses: 1,
+      materializationPolicy: 'metadata_only',
+    });
+
+    await waitFor(() => service.read('acctmirror_account_library_preview_skip')?.status === 'completed');
+
+    expect(createJob).not.toHaveBeenCalled();
+    expect(service.read('acctmirror_account_library_preview_skip')).toMatchObject({
+      accountLibraryCursor: {
+        jobId: null,
+        jobStatus: null,
+        reused: false,
+        passCount: 1,
+        status: 'skipped',
+        reason: 'liveFollow.accountLibrary.mode is preview_only',
+        request: null,
+      },
+      lifecycleEvents: expect.arrayContaining([
+        expect.objectContaining({
+          type: 'account_library_catchup_skipped',
+          message: 'liveFollow.accountLibrary.mode is preview_only',
+        }),
+      ]),
+    });
+  });
+
+  test('does not queue Gemini materialization when the refresh only reached the app shell', async () => {
+    const requestRefresh = vi.fn(async (): Promise<AccountMirrorRefreshResult> => ({
+      ...createRefreshResult(),
+      provider: 'gemini',
+      runtimeProfileId: 'auracall-gemini-pro',
+      metadataEvidence: {
+        identitySource: 'google-account-label',
+        projectSampleIds: [],
+        conversationSampleIds: [],
+        routeProgress: {
+          provider: 'gemini',
+          strategy: 'gemini-left-rail',
+          routeSequence: ['/app'],
+          appShellVisits: 1,
+          gemsViewVisits: 0,
+          repeatedRouteVisits: 0,
+          conversationCandidates: 0,
+          selectedConversationIds: [],
+          artifactBearingConversationIds: [],
+          fileBearingConversationIds: [],
+          materializationAttempts: 0,
+          churnDetected: true,
+          yieldCause: 'shell_without_conversation_selection',
+        },
+        truncated: {
+          projects: false,
+          conversations: false,
+          artifacts: false,
+        },
+      },
+    }));
+    const createJob = vi.fn(async () => ({
+      generatedAt: '2026-04-30T12:00:02.000Z',
+      reused: false,
+      job: {
+        id: 'hmj_should_not_queue',
+        status: 'queued',
+      },
+    }));
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      historyMaterializationService: {
+        createJob,
+      },
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      generateId: () => 'acctmirror_gemini_shell_churn',
+    });
+
+    service.start({
+      provider: 'gemini',
+      runtimeProfileId: 'auracall-gemini-pro',
+      maxPasses: 1,
+      sweepMode: 'steady_follow',
+      materializationPolicy: 'full_missing_assets',
+      materializationMaxItems: 1,
+    });
+
+    await waitFor(() => service.read('acctmirror_gemini_shell_churn')?.status === 'completed');
+
+    expect(createJob).not.toHaveBeenCalled();
+    expect(service.read('acctmirror_gemini_shell_churn')).toMatchObject({
+      status: 'completed',
+      materializationCursor: null,
+      materializationOutcome: null,
     });
   });
 
@@ -649,7 +1199,7 @@ describe('account mirror completion service', () => {
       provider: 'chatgpt',
       runtimeProfileId: 'default',
       sweepMode: 'full_sweep',
-      collectorTimeoutMs: 300_000,
+      collectorTimeoutMs: 900_000,
     }));
     expect(createJob).toHaveBeenCalledWith({
       provider: 'chatgpt',
@@ -686,9 +1236,9 @@ describe('account mirror completion service', () => {
       maxPasses: null,
       passCount: 8,
       lastRefresh: createRefreshResult(),
-      materializationPolicy: 'metadata_only' as const,
+      materializationPolicy: 'recent_missing_assets' as const,
       materializationAssetKinds: ['all' as const],
-      materializationMaxItems: null,
+      materializationMaxItems: 5,
       materializationRefreshSnapshot: false,
       materializationForce: false,
       materializationCursor: null,
@@ -767,6 +1317,38 @@ describe('account mirror completion service', () => {
     expect(requestRefresh).toHaveBeenCalledWith(expect.objectContaining({
       provider: 'gemini',
       runtimeProfileId: 'auracall-gemini-pro',
+      sweepMode: 'full_sweep',
+      collectorTimeoutMs: 900_000,
+    }));
+  });
+
+  test('uses a wider collector timeout for ChatGPT full-sweep completions', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      generateId: () => 'acctmirror_chatgpt_full_sweep',
+    });
+
+    service.start({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      maxPasses: 1,
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'metadata_only',
+    });
+
+    await waitFor(() => service.read('acctmirror_chatgpt_full_sweep')?.status === 'completed');
+
+    expect(requestRefresh).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
       sweepMode: 'full_sweep',
       collectorTimeoutMs: 900_000,
     }));
@@ -1009,6 +1591,68 @@ describe('account mirror completion service', () => {
       nextAttemptAt: '2026-04-30T12:13:00.000Z',
       passCount: 5,
       phase: 'steady_follow',
+    });
+  });
+
+  test('defers due live-follow completion refreshes while foreground work is active', async () => {
+    let nowMs = Date.parse('2026-04-30T12:00:00.000Z');
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_foreground_deferred',
+      provider: 'gemini' as const,
+      runtimeProfileId: 'auracall-gemini-pro',
+      mode: 'live_follow' as const,
+      sweepMode: 'steady_follow' as const,
+      phase: 'steady_follow' as const,
+      status: 'idle_waiting' as const,
+      startedAt: '2026-04-30T11:55:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:00:00.000Z',
+      maxPasses: null,
+      passCount: 4,
+      lastRefresh: createRefreshResult(),
+      materializationPolicy: 'recent_missing_assets' as const,
+      materializationAssetKinds: ['all' as const],
+      materializationMaxItems: 5,
+      materializationRefreshSnapshot: false,
+      materializationForce: false,
+      materializationCursor: null,
+      mirrorCompleteness: completeMirror,
+      error: null,
+      lifecycleEvents: [],
+    };
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const sleep = vi.fn((ms: number) => {
+      nowMs += ms;
+      return new Promise<void>(() => {});
+    });
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date(nowMs),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      initialOperations: [initial],
+      resumeActiveOperations: true,
+      now: () => new Date(nowMs),
+      sleep,
+      foregroundRetryDelayMs: 5_000,
+      shouldYieldToForegroundWork: () => ({
+        reason: 'foreground-work',
+        message: 'Foreground AuraCall API work is pending.',
+      }),
+    });
+
+    await waitFor(() => service.read('acctmirror_foreground_deferred')?.nextAttemptAt === '2026-04-30T12:00:05.000Z');
+
+    expect(requestRefresh).not.toHaveBeenCalled();
+    expect(sleep).toHaveBeenCalledWith(5_000);
+    expect(service.read('acctmirror_foreground_deferred')).toMatchObject({
+      status: 'idle_waiting',
+      passCount: 4,
+      nextAttemptAt: '2026-04-30T12:00:05.000Z',
     });
   });
 
@@ -1338,6 +1982,38 @@ describe('account mirror completion service', () => {
         state: 'complete',
       },
     });
+  });
+
+  test('requests managed browser cleanup for the final bounded Gemini refresh', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      generateId: () => 'acctmirror_gemini_bounded_cleanup',
+    });
+
+    service.start({
+      provider: 'gemini',
+      runtimeProfileId: 'auracall-gemini-pro',
+      maxPasses: 1,
+      sweepMode: 'steady_follow',
+      materializationPolicy: 'metadata_only',
+    });
+
+    await waitFor(() => service.read('acctmirror_gemini_bounded_cleanup')?.status === 'completed');
+
+    expect(requestRefresh).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'gemini',
+      runtimeProfileId: 'auracall-gemini-pro',
+      sweepMode: 'steady_follow',
+      cleanupManagedBrowserAfterRefresh: true,
+    }));
   });
 });
 

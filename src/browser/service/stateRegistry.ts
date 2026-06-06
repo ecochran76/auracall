@@ -2,10 +2,15 @@ import path from 'node:path';
 import { getAuracallHomeDir } from '../../auracallHome.js';
 import {
   findActiveInstance as findActiveInstanceCore,
+  getInstance as getInstanceCore,
   pruneRegistry as pruneRegistryCore,
   registerInstance as registerInstanceCore,
   unregisterInstance as unregisterInstanceCore,
+  updateInstance as updateInstanceCore,
   type BrowserInstance,
+  type BrowserInstanceLease,
+  type BrowserInstanceOperation,
+  type BrowserInstanceOwner,
   type BrowserStateRegistry,
 } from '../../../packages/browser-service/src/service/stateRegistry.js';
 
@@ -17,7 +22,13 @@ function getRegistryOptions(): RegistryOptions {
   return { registryPath: path.join(getAuracallHomeDir(), 'browser-state.json') };
 }
 
-export type { BrowserInstance, BrowserStateRegistry };
+export type {
+  BrowserInstance,
+  BrowserInstanceLease,
+  BrowserInstanceOperation,
+  BrowserInstanceOwner,
+  BrowserStateRegistry,
+};
 
 export async function registerInstance(instance: BrowserInstance): Promise<void> {
   await registerInstanceCore(getRegistryOptions(), instance);
@@ -32,6 +43,21 @@ export async function findActiveInstance(
   profileName?: string | null,
 ): Promise<BrowserInstance | null> {
   return findActiveInstanceCore(getRegistryOptions(), profilePath, profileName);
+}
+
+export async function getInstance(
+  profilePath: string,
+  profileName?: string | null,
+): Promise<BrowserInstance | null> {
+  return getInstanceCore(getRegistryOptions(), profilePath, profileName);
+}
+
+export async function updateInstance(
+  profilePath: string,
+  profileName: string | null | undefined,
+  updates: Partial<BrowserInstance>,
+): Promise<void> {
+  await updateInstanceCore(getRegistryOptions(), profilePath, profileName, updates);
 }
 
 export async function pruneRegistry(): Promise<void> {

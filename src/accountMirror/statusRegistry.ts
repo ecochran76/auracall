@@ -80,6 +80,22 @@ export type AccountMirrorAssetInventoryEvidence = {
   unknownOrDeferred: Pick<AccountMirrorMetadataCounts, 'artifacts' | 'files' | 'media'>;
 };
 
+export type AccountMirrorRouteProgressEvidence = {
+  provider: AccountMirrorProvider;
+  strategy: 'gemini-left-rail' | 'unknown';
+  routeSequence: string[];
+  appShellVisits: number;
+  gemsViewVisits: number;
+  repeatedRouteVisits: number;
+  conversationCandidates: number;
+  selectedConversationIds: string[];
+  artifactBearingConversationIds: string[];
+  fileBearingConversationIds: string[];
+  materializationAttempts: number;
+  churnDetected: boolean;
+  yieldCause: string | null;
+};
+
 export type AccountMirrorMetadataEvidence = {
   identitySource: string | null;
   projectSampleIds: string[];
@@ -87,6 +103,7 @@ export type AccountMirrorMetadataEvidence = {
   countEvidence?: AccountMirrorMetadataCountEvidence | null;
   detailScannedThisPass?: AccountMirrorDetailScannedEvidence | null;
   assetInventory?: AccountMirrorAssetInventoryEvidence | null;
+  routeProgress?: AccountMirrorRouteProgressEvidence | null;
   attachmentInventory?: {
     nextProjectIndex: number;
     nextConversationIndex: number;
@@ -189,6 +206,21 @@ export type AccountMirrorLiveFollowDesiredState = {
   materializationMaxItems: number | null;
   materializationRefreshSnapshot: boolean | null;
   materializationForce: boolean | null;
+  accountLibrary: AccountMirrorLiveFollowAccountLibraryDesiredState;
+};
+
+export type AccountMirrorLiveFollowAccountLibraryMode = 'disabled' | 'preview_only' | 'eligible';
+
+export type AccountMirrorLiveFollowAccountLibraryDesiredState = {
+  configured: boolean;
+  mode: AccountMirrorLiveFollowAccountLibraryMode;
+  enabled: boolean;
+  reason: string;
+  maxItems: number | null;
+  minIntervalMs: number | null;
+  failureCooldownMs: number | null;
+  maxActiveJobs: number | null;
+  providerWorkTimeoutMs: number | null;
 };
 
 export type AccountMirrorStatusSummary = {
@@ -208,7 +240,10 @@ export type AccountMirrorStatusRegistrySnapshot = {
 };
 
 export interface AccountMirrorStatusRegistry {
-  refreshPersistentState?(): Promise<void>;
+  refreshPersistentState?(input?: {
+    provider?: AccountMirrorProvider | null;
+    runtimeProfileId?: string | null;
+  }): Promise<void>;
   readStatus(input?: {
     provider?: AccountMirrorProvider | null;
     runtimeProfileId?: string | null;
@@ -258,9 +293,15 @@ export function createAccountMirrorStatusRegistry(input: {
     });
 
   return {
-    async refreshPersistentState() {
+    async refreshPersistentState(query = {}) {
       if (!input.readPersistentState) return;
-      const targets = discoverConfiguredAccountMirrorTargets(input.config);
+      const targets = discoverConfiguredAccountMirrorTargets(input.config).filter((target) => {
+        if (query.provider && target.provider !== query.provider) return false;
+        if (query.runtimeProfileId && target.runtimeProfileId !== query.runtimeProfileId) {
+          return false;
+        }
+        return true;
+      });
       for (const target of targets) {
         const state = await input.readPersistentState({
           provider: target.provider,
@@ -489,6 +530,7 @@ function readLiveFollowDesiredState(
   const materializationMaxItems = liveFollow ? readPositiveInteger(liveFollow.materializationMaxItems) : null;
   const materializationRefreshSnapshot = liveFollow ? readBoolean(liveFollow.materializationRefreshSnapshot) : null;
   const materializationForce = liveFollow ? readBoolean(liveFollow.materializationForce) : null;
+  const accountLibrary = readLiveFollowAccountLibraryDesiredState(liveFollow);
   const common = {
     mode,
     priority,
@@ -498,6 +540,7 @@ function readLiveFollowDesiredState(
     materializationMaxItems,
     materializationRefreshSnapshot,
     materializationForce,
+    accountLibrary,
   };
   if (enabled === false) {
     return {
@@ -524,6 +567,64 @@ function readLiveFollowDesiredState(
     reason: 'liveFollow.enabled is true',
     ...common,
   };
+}
+
+function readLiveFollowAccountLibraryDesiredState(
+  liveFollow: MutableRecord | null,
+): AccountMirrorLiveFollowAccountLibraryDesiredState {
+  const accountLibrary = liveFollow && isRecord(liveFollow.accountLibrary)
+    ? liveFollow.accountLibrary
+    : null;
+  const mode = readLiveFollowAccountLibraryMode(accountLibrary?.mode);
+  const maxItems = readPositiveInteger(accountLibrary?.maxItems);
+  const minIntervalMs = readNonNegativeInteger(accountLibrary?.minIntervalMs);
+  const failureCooldownMs = readNonNegativeInteger(accountLibrary?.failureCooldownMs);
+  const maxActiveJobs = readPositiveInteger(accountLibrary?.maxActiveJobs);
+  const providerWorkTimeoutMs = readPositiveInteger(accountLibrary?.providerWorkTimeoutMs);
+  if (!accountLibrary || mode === 'disabled') {
+    return {
+      configured: accountLibrary !== null,
+      mode: 'disabled',
+      enabled: false,
+      reason: accountLibrary
+        ? 'liveFollow.accountLibrary.mode is disabled'
+        : 'liveFollow.accountLibrary.mode is not configured',
+      maxItems,
+      minIntervalMs,
+      failureCooldownMs,
+      maxActiveJobs,
+      providerWorkTimeoutMs,
+    };
+  }
+  if (mode === 'preview_only') {
+    return {
+      configured: true,
+      mode,
+      enabled: false,
+      reason: 'liveFollow.accountLibrary.mode is preview_only',
+      maxItems,
+      minIntervalMs,
+      failureCooldownMs,
+      maxActiveJobs,
+      providerWorkTimeoutMs,
+    };
+  }
+  return {
+    configured: true,
+    mode,
+    enabled: true,
+    reason: 'liveFollow.accountLibrary.mode is eligible',
+    maxItems,
+    minIntervalMs,
+    failureCooldownMs,
+    maxActiveJobs,
+    providerWorkTimeoutMs,
+  };
+}
+
+function readLiveFollowAccountLibraryMode(value: unknown): AccountMirrorLiveFollowAccountLibraryMode {
+  if (value === 'preview_only' || value === 'eligible') return value;
+  return 'disabled';
 }
 
 function readSweepMode(value: unknown): AccountMirrorCompletionSweepMode | null {
@@ -554,6 +655,10 @@ function readMaterializationAssetKinds(value: unknown): AccountMirrorCompletionM
 
 function readPositiveInteger(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
+}
+
+function readNonNegativeInteger(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
 }
 
 function readBoolean(value: unknown): boolean | null {

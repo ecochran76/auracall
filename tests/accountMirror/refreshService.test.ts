@@ -989,6 +989,89 @@ describe("account mirror refresh service", () => {
 		);
 	});
 
+	test("terminates the managed Gemini browser when bounded refresh cleanup is requested", async () => {
+		const geminiConfig = {
+			...config,
+			runtimeProfiles: {
+				...config.runtimeProfiles,
+				default: {
+					...config.runtimeProfiles.default,
+					keepBrowser: true,
+					defaultService: "gemini",
+					services: {
+						...config.runtimeProfiles.default.services,
+						gemini: {
+							identity: {
+								email: "ecochran76@gmail.com",
+							},
+						},
+					},
+				},
+			},
+		};
+		const findManagedBrowserPid = vi.fn(async () => 4242);
+		const terminateManagedBrowserProcess = vi.fn(async () => {});
+		const service = createAccountMirrorRefreshService({
+			config: geminiConfig,
+			dispatcher: createBrowserOperationDispatcher(),
+			metadataCollector: {
+				collect: vi.fn(async () => ({
+					detectedIdentityKey: "ecochran76@gmail.com",
+					detectedAccountLevel: null,
+					metadataCounts: {
+						projects: 0,
+						conversations: 0,
+						artifacts: 0,
+						files: 0,
+						media: 0,
+					},
+					manifests: {
+						projects: [],
+						conversations: [],
+						artifacts: [],
+						files: [],
+						media: [],
+					},
+					evidence: {
+						identitySource: "profile-menu",
+						projectSampleIds: [],
+						conversationSampleIds: [],
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: false,
+						},
+					},
+				})),
+			},
+			persistence: createNoopPersistence(),
+			findManagedBrowserPid,
+			terminateManagedBrowserProcess,
+			generateRequestId: () => "acctmirror_gemini_cleanup",
+		});
+
+		const result = await service.requestRefresh({
+			provider: "gemini",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+			cleanupManagedBrowserAfterRefresh: true,
+		});
+
+		expect(findManagedBrowserPid).toHaveBeenCalledWith(expect.stringContaining("gemini"));
+		expect(terminateManagedBrowserProcess).toHaveBeenCalledWith(expect.objectContaining({
+			pid: 4242,
+			provider: "gemini",
+			runtimeProfileId: "default",
+			managedProfileDir: expect.stringContaining("gemini"),
+		}));
+		expect(result.browserLifecycle).toMatchObject({
+			cleanupRequested: true,
+			status: "terminated",
+			pid: 4242,
+			managedProfileDir: expect.stringContaining("gemini"),
+		});
+	});
+
 	test("reports dispatcher busy instead of bypassing the browser control plane", async () => {
 		const dispatcher = createBrowserOperationDispatcher({
 			now: () => new Date("2026-04-29T12:00:00.000Z"),

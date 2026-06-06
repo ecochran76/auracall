@@ -443,7 +443,7 @@ Current limits:
     `catalogItemId`, an `archiveItemId`, a selected `conversationIds` batch, or
     `reconcile: true`
   - accepts `assetKinds` (`artifacts`, `files`, `media`, or `all`),
-    `maxItems`, `force`, and `refreshSnapshot`
+    `maxItems`, `providerWorkTimeoutMs`, `force`, and `refreshSnapshot`
   - returns `object = "history_materialization_job_create_result"` with a
     durable `history_materialization_job`
   - account-mirror catalog and catalog-item reads remain cache-only; this route
@@ -500,7 +500,8 @@ Current limits:
     `{"action":"cancel"}`; running jobs are not cooperatively abortable yet
   - CLI parity is `auracall api history-materialization-create`,
     `history-materialization-status`, `history-materialization-jobs`, and
-    `history-materialization-cancel`
+    `history-materialization-cancel`; the create command accepts
+    `--provider-work-timeout-ms` for bounded browser-backed provider work
   - MCP parity is `history_materialization_create`,
     `history_materialization_job`, `history_materialization_jobs`, and
     `history_materialization_cancel`

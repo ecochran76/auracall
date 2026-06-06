@@ -130,12 +130,13 @@ export function createAccountMirrorCatalogService(input: {
           files: [],
           media: [],
         };
-        const manifests = await hydrateCatalogManifestsWithConversationSummaries(
+        const hydratedManifests = await hydrateCatalogManifestsWithConversationSummaries(
           persistence,
           target,
           filterCatalogKind(rawCatalog, kind),
           rawCatalog,
         );
+        const manifests = annotateMaterializationEligibility(target.provider, hydratedManifests);
         entries.push({
           provider: target.provider,
           tenantKey: target.tenantKey,
@@ -216,6 +217,156 @@ export function createAccountMirrorCatalogService(input: {
       return null;
     },
   };
+}
+
+function annotateMaterializationEligibility(
+  provider: AccountMirrorProvider,
+  manifests: AccountMirrorCatalogEntry['manifests'],
+): AccountMirrorCatalogEntry['manifests'] {
+  if (provider !== 'chatgpt') return manifests;
+  return {
+    ...manifests,
+    artifacts: manifests.artifacts.map((item) =>
+      annotateCatalogItemMaterializationEligibility(item, classifyChatgptArtifactMaterializationEligibility(item)),
+    ),
+    files: manifests.files.map((item) =>
+      annotateCatalogItemMaterializationEligibility(item, classifyChatgptFileMaterializationEligibility(item)),
+    ),
+  };
+}
+
+function annotateCatalogItemMaterializationEligibility(
+  item: unknown,
+  eligibility: { state: string; reason: string | null } | null,
+): unknown {
+  if (!eligibility || !isRecord(item)) return item;
+  const metadata = readCatalogRecordField(item, 'metadata') ?? {};
+  return {
+    ...item,
+    metadata: {
+      ...metadata,
+      materializationEligibility: eligibility,
+    },
+  };
+}
+
+function classifyChatgptArtifactMaterializationEligibility(item: unknown): { state: string; reason: string | null } | null {
+  if (isUnsupportedChatgptAccountLibraryCatalogItem(item)) {
+    return {
+      state: 'unsupported_account_library_asset',
+      reason: 'ChatGPT account-library artifact rows are metadata-only in the current history-materialization lane and need a separate account-library retrieval path.',
+    };
+  }
+  if (!isChatgptStaticImageFalsePositiveCatalogItem(item)) return null;
+  return {
+    state: 'static_image_false_positive',
+    reason: 'ChatGPT DOM image probe resolved to static chrome such as a favicon, not a generated-image binary.',
+  };
+}
+
+function classifyChatgptFileMaterializationEligibility(item: unknown): { state: string; reason: string | null } | null {
+  if (isUnsupportedChatgptAccountLibraryCatalogItem(item)) {
+    return {
+      state: 'unsupported_account_library_asset',
+      reason: 'ChatGPT account-library file rows are metadata-only in the current history-materialization lane and need a separate account-library retrieval path.',
+    };
+  }
+  if (!isUnsupportedChatgptConversationFileCatalogItem(item)) return null;
+  return {
+    state: 'unsupported_conversation_file',
+    reason: 'ChatGPT conversation-file rows are visible in metadata but do not currently expose a retrievable provider URL or file id.',
+  };
+}
+
+function isUnsupportedChatgptAccountLibraryCatalogItem(item: unknown): boolean {
+  if (!isRecord(item)) return false;
+  const metadata = readCatalogRecordField(item, 'metadata');
+  const source = readCatalogStringField(metadata, ['source']) ?? readCatalogStringField(item, ['source']);
+  if (source !== 'chatgpt-library') return false;
+  if (readMaterializableChatgptAccountLibraryLocation(item, metadata)) return false;
+  return !(
+    readCatalogStringField(item, ['conversationId']) ??
+    readCatalogStringField(metadata, ['conversationId'])
+  );
+}
+
+function readMaterializableChatgptAccountLibraryLocation(
+  item: Record<string, unknown>,
+  metadata: Record<string, unknown> | null,
+): string | null {
+  const providerFileId =
+    readCatalogStringField(metadata, ['providerFileId', 'fileId']) ??
+    readCatalogStringField(item, ['providerFileId', 'fileId']);
+  if (providerFileId?.startsWith('file_')) return providerFileId;
+  const location = readMaterializableAssetLocation(item, metadata);
+  if (location?.startsWith('chatgpt://file/')) return location;
+  const surface = readCatalogStringField(metadata, ['materializationSurface']);
+  return surface === 'chatgpt-library-file-row-click' && providerFileId ? providerFileId : null;
+}
+
+function isUnsupportedChatgptConversationFileCatalogItem(item: unknown): boolean {
+  if (!isRecord(item)) return false;
+  const metadata = readCatalogRecordField(item, 'metadata');
+  const source = readCatalogStringField(metadata, ['source', 'fileSource']);
+  if (source === 'chatgpt-library') return false;
+  if (readMaterializableAssetLocation(item, metadata)) return false;
+  return Boolean(
+    readCatalogStringField(item, ['conversationId']) ??
+    readCatalogStringField(metadata, ['conversationId']),
+  );
+}
+
+function isChatgptStaticImageFalsePositiveCatalogItem(item: unknown): boolean {
+  if (!isRecord(item)) return false;
+  const metadata = readCatalogRecordField(item, 'metadata');
+  const id = readCatalogStringField(item, ['id', 'providerId', 'artifactId']) ?? '';
+  const extraction = readCatalogStringField(metadata, ['extraction']);
+  if (!id.startsWith('image-dom:') && extraction !== 'dom-imagegen-image') return false;
+  const location = readMaterializableAssetLocation(item, metadata);
+  if (!location) return true;
+  return isStaticChromeImageUrl(location);
+}
+
+function readMaterializableAssetLocation(item: unknown, metadata: Record<string, unknown> | null): string | null {
+  return readCatalogStringField(item, [
+    'uri',
+    'remoteUrl',
+    'url',
+    'href',
+    'downloadUrl',
+    'sourceUrl',
+    'cacheKey',
+    'fileId',
+    'providerFileId',
+  ]) ?? readCatalogStringField(metadata, [
+    'uri',
+    'remoteUrl',
+    'url',
+    'href',
+    'downloadUrl',
+    'sourceUrl',
+    'cacheKey',
+    'fileId',
+    'providerFileId',
+  ]);
+}
+
+function isStaticChromeImageUrl(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized.startsWith('blob:')) return false;
+  if (normalized.startsWith('chatgpt://')) return false;
+  if (normalized.startsWith('sandbox:')) return false;
+  if (normalized.startsWith('sediment://')) return false;
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.hostname === 'www.google.com' && parsed.pathname === '/s2/favicons') return true;
+    if (parsed.pathname.includes('/favicon')) return true;
+    if (parsed.pathname.endsWith('/favicon.ico')) return true;
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 async function hydrateCatalogManifestsWithConversationSummaries(

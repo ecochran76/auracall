@@ -1,6 +1,9 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import type { IdentityPrompt } from '../types.js';
-import type { BrowserService } from '../../service/browserService.js';
+import type {
+  BrowserProcessOwnerAttribution,
+  BrowserService,
+} from '../../service/browserService.js';
 import { ChatgptService } from './chatgptService.js';
 import { GeminiService } from './geminiService.js';
 import { GrokService } from './grokService.js';
@@ -10,7 +13,11 @@ import type { LlmService } from '../llmService.js';
 export function createLlmService(
   providerId: ProviderId,
   userConfig: ResolvedUserConfig,
-  options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
+  options?: {
+    identityPrompt?: IdentityPrompt;
+    browserProcessOwner?: BrowserProcessOwnerAttribution;
+    browserService?: BrowserService;
+  },
 ): LlmService {
   if (providerId === 'gemini') {
     return GeminiService.create(userConfig, options);

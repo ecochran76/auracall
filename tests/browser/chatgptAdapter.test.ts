@@ -8,6 +8,7 @@ import {
   extractChatgptProjectIdFromUrl,
   extractChatgptProjectSourceName,
   extractChatgptConversationSourcesFromPayload,
+  filterChatgptDeepResearchTargets,
   findChatgptProjectByName,
   findChatgptProjectSourceName,
   buildChatgptCreateProjectDialogStateExpressionForTest,
@@ -78,6 +79,42 @@ describe('isChatgptTargetReusableForPreferredUrl', () => {
   });
 });
 
+describe('filterChatgptDeepResearchTargets', () => {
+  test('keeps only Deep Research iframe targets embedded in the active page', () => {
+    const activeFrameUrl = 'https://chatgpt.com/backend-api/deep_research/report-active?token=1';
+    const staleFrameUrl = 'https://chatgpt.com/backend-api/deep_research/report-stale?token=2';
+    const targets = [
+      {
+        type: 'iframe',
+        id: 'active-frame',
+        title: 'Deep Research',
+        url: activeFrameUrl,
+      },
+      {
+        type: 'iframe',
+        id: 'stale-frame',
+        title: 'Deep Research',
+        url: staleFrameUrl,
+      },
+      {
+        type: 'page',
+        id: 'page-target',
+        title: 'ChatGPT',
+        url: 'https://chatgpt.com/c/6a09ccc6-7576-439e-896e-10f9feae6ab5',
+      },
+    ] as Parameters<typeof filterChatgptDeepResearchTargets>[0];
+
+    expect(filterChatgptDeepResearchTargets(targets, new Set([activeFrameUrl])).map((target) => target.id)).toEqual([
+      'active-frame',
+    ]);
+    expect(
+      filterChatgptDeepResearchTargets(targets, new Set([activeFrameUrl]), {
+        expectedTargetId: 'stale-frame',
+      }),
+    ).toEqual([]);
+  });
+});
+
 describe('normalizeChatgptLibraryItemProbes', () => {
   test('uses provider UUIDs and dedupes duplicated library entries', () => {
     const inventory = normalizeChatgptLibraryItemProbes([
@@ -113,6 +150,8 @@ describe('normalizeChatgptLibraryItemProbes', () => {
       metadata: {
         source: 'chatgpt-library',
         libraryIdentitySource: 'provider-uuid',
+        libraryRouteKind: 'library_file_detail',
+        libraryRouteUrl: 'https://chatgpt.com/library/files/123e4567-e89b-12d3-a456-426614174000',
         artifactId: 'chatgpt-library:123e4567-e89b-12d3-a456-426614174000',
         artifactKind: 'download',
       },
@@ -152,6 +191,61 @@ describe('normalizeChatgptLibraryItemProbes', () => {
     expect(first.artifacts[0]).toMatchObject({
       id: `chatgpt-library:${first.files[0]?.id}`,
       kind: 'canvas',
+      metadata: {
+        libraryRouteKind: 'library_canvas_detail',
+        libraryRouteUrl: 'https://chatgpt.com/library/canvas/local-route',
+      },
+    });
+  });
+
+  test('uses ChatGPT Library row file ids for account-file retrieval', () => {
+    const inventory = normalizeChatgptLibraryItemProbes([
+      {
+        title: '2026-05-15 GreenKey whitepaper.pdf',
+        testId: 'artifact-checkbox-bridge-file_00000000fa5871fbaa5ba6f3e05d99f6',
+        ariaLabel: 'Select 2026-05-15 GreenKey whitepaper.pdf',
+        providerFileId: 'file_00000000fa5871fbaa5ba6f3e05d99f6',
+        libraryFileId: 'libfile_ea646b8add488191959d6333f4a6ef9b',
+      },
+    ]);
+
+    expect(inventory.files).toHaveLength(1);
+    expect(inventory.files[0]?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(inventory.files[0]).toMatchObject({
+      name: '2026-05-15 GreenKey whitepaper.pdf',
+      provider: 'chatgpt',
+      source: 'account',
+      remoteUrl: 'chatgpt://file/file_00000000fa5871fbaa5ba6f3e05d99f6',
+      mimeType: 'application/pdf',
+      metadata: {
+        source: 'chatgpt-library',
+        libraryIdentity: 'file_00000000fa5871fbaa5ba6f3e05d99f6',
+        libraryIdentitySource: 'provider-file-id',
+        libraryRouteKind: 'library_file_detail',
+        libraryRouteUrl: 'https://chatgpt.com/library/files/libfile_ea646b8add488191959d6333f4a6ef9b',
+        providerFileId: 'file_00000000fa5871fbaa5ba6f3e05d99f6',
+        libraryFileId: 'libfile_ea646b8add488191959d6333f4a6ef9b',
+        materializationSurface: 'chatgpt-library-file-row-click',
+      },
+    });
+  });
+
+  test('classifies conversation links as detail routes rather than downloads', () => {
+    const inventory = normalizeChatgptLibraryItemProbes([
+      {
+        title: 'File creation request',
+        href: 'https://chatgpt.com/c/6a0bcbbd-009c-83ea-b817-5b86181927f1',
+        kind: 'download',
+      },
+    ]);
+
+    expect(inventory.files[0]).toMatchObject({
+      name: 'File creation request',
+      remoteUrl: 'https://chatgpt.com/c/6a0bcbbd-009c-83ea-b817-5b86181927f1',
+      metadata: {
+        libraryRouteKind: 'conversation_detail',
+        libraryRouteUrl: 'https://chatgpt.com/c/6a0bcbbd-009c-83ea-b817-5b86181927f1',
+      },
     });
   });
 
@@ -975,6 +1069,42 @@ describe('normalizeChatgptConversationFileProbes', () => {
           label: 'Document',
           turnId: '1411ca60-9384-407a-a39a-ce9b772c737a',
           messageId: '1411ca60-9384-407a-a39a-ce9b772c737a',
+        },
+      },
+    ]);
+  });
+
+  test('marks React-backed ChatGPT file tiles as retrievable provider files', () => {
+    expect(
+      normalizeChatgptConversationFileProbes('6a092419-33c0-83ea-bca8-27c694312842', [
+        {
+          turnId: '3e6c04a6-29d0-45f6-b37c-f33353965543',
+          messageId: '3e6c04a6-29d0-45f6-b37c-f33353965543',
+          tileIndex: 0,
+          name: 'Earthline - ISU Mutual Confidentiality Agreement.pdf',
+          label: 'PDF',
+          providerFileId: 'file_000000004a0c71f89172ec251ae22c52',
+          mimeType: 'application/pdf',
+          downloadable: 'default-only',
+          previewable: 'default-only',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: '6a092419-33c0-83ea-bca8-27c694312842:3e6c04a6-29d0-45f6-b37c-f33353965543:0:Earthline - ISU Mutual Confidentiality Agreement.pdf',
+        name: 'Earthline - ISU Mutual Confidentiality Agreement.pdf',
+        provider: 'chatgpt',
+        source: 'conversation',
+        mimeType: 'application/pdf',
+        remoteUrl: 'chatgpt://file/file_000000004a0c71f89172ec251ae22c52',
+        metadata: {
+          label: 'PDF',
+          turnId: '3e6c04a6-29d0-45f6-b37c-f33353965543',
+          messageId: '3e6c04a6-29d0-45f6-b37c-f33353965543',
+          providerFileId: 'file_000000004a0c71f89172ec251ae22c52',
+          downloadable: 'default-only',
+          previewable: 'default-only',
+          materializationSurface: 'chatgpt-file-tile-default-action',
         },
       },
     ]);

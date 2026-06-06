@@ -16,6 +16,7 @@ describe('mcp history materialization tools', () => {
       object: 'history_materialization_job_create_result' as const,
       generatedAt: '2026-05-22T20:30:00.000Z',
       reused: false,
+      reuseReason: null,
       job: historyJob('queued'),
     }));
     const handler = createHistoryMaterializationCreateToolHandler({

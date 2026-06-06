@@ -112,6 +112,17 @@ describe('account mirror status registry', () => {
             materializationMaxItems: null,
             materializationRefreshSnapshot: null,
             materializationForce: null,
+            accountLibrary: {
+              configured: false,
+              mode: 'disabled',
+              enabled: false,
+              reason: 'liveFollow.accountLibrary.mode is not configured',
+              maxItems: null,
+              minIntervalMs: null,
+              failureCooldownMs: null,
+              maxActiveJobs: null,
+              providerWorkTimeoutMs: null,
+            },
           },
         }),
         expect.objectContaining({
@@ -184,6 +195,55 @@ describe('account mirror status registry', () => {
       materializationMaxItems: 25,
       materializationRefreshSnapshot: true,
       materializationForce: true,
+    });
+  });
+
+  test('projects account-library live-follow scheduling separately from history materialization', () => {
+    const status = createAccountMirrorStatusSummary({
+      config: {
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                identity: {
+                  email: 'operator@example.com',
+                },
+                liveFollow: {
+                  enabled: true,
+                  materializationPolicy: 'metadata_only',
+                  accountLibrary: {
+                    mode: 'preview_only',
+                    maxItems: 3,
+                    minIntervalMs: 3_600_000,
+                    failureCooldownMs: 900_000,
+                    maxActiveJobs: 1,
+                    providerWorkTimeoutMs: 120_000,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      now: new Date('2026-06-02T12:00:00.000Z'),
+    });
+
+    expect(status.entries[0]?.liveFollow).toMatchObject({
+      configured: true,
+      enabled: true,
+      materializationPolicy: 'metadata_only',
+      accountLibrary: {
+        configured: true,
+        mode: 'preview_only',
+        enabled: false,
+        reason: 'liveFollow.accountLibrary.mode is preview_only',
+        maxItems: 3,
+        minIntervalMs: 3_600_000,
+        failureCooldownMs: 900_000,
+        maxActiveJobs: 1,
+        providerWorkTimeoutMs: 120_000,
+      },
     });
   });
 
@@ -506,6 +566,47 @@ describe('account mirror status registry', () => {
           total: 0,
         },
       },
+    });
+  });
+
+  test('scopes persisted mirror state refresh to the requested target', async () => {
+    const refreshedTargets: Array<{ provider: string; runtimeProfileId: string }> = [];
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+      readPersistentState: async (target) => {
+        refreshedTargets.push({
+          provider: target.provider,
+          runtimeProfileId: target.runtimeProfileId,
+        });
+        return {
+          detectedIdentityKey: target.boundIdentityKey,
+          lastSuccessAtMs: Date.parse('2026-04-29T10:00:00.000Z'),
+        };
+      },
+    });
+
+    await registry.refreshPersistentState?.({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-2',
+    });
+
+    expect(refreshedTargets).toEqual([
+      {
+        provider: 'chatgpt',
+        runtimeProfileId: 'wsl-chrome-2',
+      },
+    ]);
+    expect(
+      registry.readStatus({
+        provider: 'chatgpt',
+        runtimeProfileId: 'wsl-chrome-2',
+        explicitRefresh: true,
+      }).entries[0],
+    ).toMatchObject({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-2',
+      detectedIdentityKey: 'consult@polymerconsultinggroup.com',
     });
   });
 });

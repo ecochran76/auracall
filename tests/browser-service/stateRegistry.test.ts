@@ -48,9 +48,69 @@ describe('stateRegistry (package)', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
-  });
+	  });
 
-  test('prunes dead instances', async () => {
+	  test('preserves browser process owner and lease metadata', async () => {
+	    const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-registry-'));
+	    const registryPath = path.join(dir, 'browser-state.json');
+	    try {
+	      await registry.registerInstance(
+	        { registryPath },
+	        {
+	          pid: 1234,
+	          port: 9222,
+	          host: '127.0.0.1',
+	          profilePath: '/tmp/profile',
+	          profileName: 'Default',
+	          type: 'chrome',
+	          launchedAt: '2026-06-05T02:00:00.000Z',
+	          lastSeenAt: '2026-06-05T02:00:00.000Z',
+	          owner: {
+	            kind: 'history_materialization_job',
+	            id: 'hmj_owner_test',
+	            provider: 'chatgpt',
+	            runtimeProfileId: 'wsl-chrome-3',
+	            browserProfileId: 'wsl-chrome-3',
+	            sourceType: 'account_library_reconciliation',
+	            sourceKey: 'source-key',
+	            reason: 'account-library-file-materialization',
+	            acquiredAt: '2026-06-05T02:00:00.000Z',
+	            heartbeatAt: '2026-06-05T02:00:00.000Z',
+	          },
+	          operation: {
+	            kind: 'history_materialization_job',
+	            id: 'hmj_owner_test',
+	            provider: 'chatgpt',
+	            runtimeProfileId: 'wsl-chrome-3',
+	            browserProfileId: 'wsl-chrome-3',
+	            sourceType: 'account_library_reconciliation',
+	            sourceKey: 'source-key',
+	            reason: 'account-library-file-materialization',
+	          },
+	          lease: {
+	            id: 'history_materialization_job:hmj_owner_test:chatgpt:wsl-chrome-3',
+	            ownerId: 'hmj_owner_test',
+	            acquiredAt: '2026-06-05T02:00:00.000Z',
+	            heartbeatAt: '2026-06-05T02:00:00.000Z',
+	            expiresAt: null,
+	            cleanupPolicy: 'history-materialization-provider-work',
+	          },
+	        },
+	      );
+	      await registry.updateInstance({ registryPath }, '/tmp/profile', 'Default', {
+	        lastSeenAt: '2026-06-05T02:01:00.000Z',
+	      });
+	      const instance = await registry.getInstance({ registryPath }, '/tmp/profile', 'Default');
+	      expect(instance?.owner?.id).toBe('hmj_owner_test');
+	      expect(instance?.operation?.sourceType).toBe('account_library_reconciliation');
+	      expect(instance?.lease?.cleanupPolicy).toBe('history-materialization-provider-work');
+	      expect(instance?.lastSeenAt).toBe('2026-06-05T02:01:00.000Z');
+	    } finally {
+	      await rm(dir, { recursive: true, force: true });
+	    }
+	  });
+
+	  test('prunes dead instances', async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-registry-'));
     const registryPath = path.join(dir, 'browser-state.json');
     try {
