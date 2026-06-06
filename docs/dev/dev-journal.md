@@ -1,3 +1,28 @@
+## Turn 368 | 2026-06-06
+
+- Goal: tidy the worktree with structured commits, push the baseline, then
+  execute Plan 0120.
+- Baseline:
+  - committed the existing accumulated work as
+    `cfa75991 Install pending handoff and materialization slices`.
+  - pushed `main` to `origin/main`.
+- Implemented:
+  - added `auracall.handoff-analysis-input.v1` and
+    `auracall.handoff-analysis-decision.v2`.
+  - added host-owned analysis decision validation and validation report output.
+  - added target package preview assembly with upload manifest, primer,
+    compact context, selected-file staging, stable package digest, and package
+    omissions for unavailable local files.
+  - extended handoff prepare/status summaries and JSON readback with analysis
+    schema validity and target package metrics.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 16 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - focused Biome lint, handoff help commands, plan audit, diff check, and
+    build all passed.
+- Decision:
+  - Plan 0120 closes as **Handoff Analysis Package Preview Installed**.
+
 ## Turn 367 | 2026-06-06
 
 - Goal: plan the next Plan 0114 cross-service handoff implementation slice.

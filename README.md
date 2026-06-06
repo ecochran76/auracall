@@ -212,18 +212,20 @@ Current browser-mode default posture:
 - cross-service context handoff starts with `auracall handoff prepare
   --dry-run`: AuraCall writes a provider-neutral packet under
   `~/.auracall/handoffs/<handoff_id>/` with source context, manifest,
-  omissions, analysis preview, target submission plan, and explicit
-  zero-target-mutation evidence. Repeatable `--source-materialization-job-json`
-  inputs import existing account-history materialization readbacks into the
-  source manifest and omissions. Repeatable `--source-materialization-job-id`
-  inputs read existing source jobs through the local API; explicit
+  omissions, source materialization evidence, schema-validated analysis input
+  and decision artifacts, target package preview files, upload manifest,
+  package digest, target submission plan, and explicit zero-target-mutation
+  evidence. Repeatable `--source-materialization-job-json` inputs import
+  existing account-history materialization readbacks into the source manifest
+  and omissions. Repeatable `--source-materialization-job-id` inputs read
+  existing source jobs through the local API; explicit
   `--source-materialization-create` can create one bounded source job when no
   prior source job evidence was supplied. `auracall handoff status
   <handoff_id>` reads the packet ledger back by id, including event count,
   packet digest, source completeness, source materialization job evidence,
-  analysis selection, and target preview attempts. The first slices are
-  preview-only; live target upload/submit requires a later approval-gated
-  workflow.
+  analysis schema validity, package digest, package file metrics, and target
+  preview attempts. The first slices are preview-only; live target
+  upload/submit requires a later approval-gated workflow.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

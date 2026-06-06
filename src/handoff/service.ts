@@ -23,8 +23,25 @@ export type HandoffPhase =
 export const HANDOFF_PACKET_SCHEMA = "auracall.handoff-packet.v1";
 export const HANDOFF_RUN_SCHEMA = "auracall.handoff-run.v1";
 export const HANDOFF_LEDGER_SCHEMA = "auracall.handoff-ledger.v1";
-export const HANDOFF_ANALYSIS_SCHEMA = "auracall.handoff-analysis-decision.v1";
+export const HANDOFF_ANALYSIS_INPUT_SCHEMA = "auracall.handoff-analysis-input.v1";
+export const HANDOFF_ANALYSIS_SCHEMA = "auracall.handoff-analysis-decision.v2";
+export const HANDOFF_ANALYSIS_VALIDATION_SCHEMA = "auracall.handoff-analysis-validation-report.v1";
+export const HANDOFF_TARGET_PACKAGE_SCHEMA = "auracall.handoff-target-package.v1";
+export const HANDOFF_TARGET_UPLOAD_MANIFEST_SCHEMA = "auracall.handoff-target-upload-manifest.v1";
 export const HANDOFF_SUBMISSION_PLAN_SCHEMA = "auracall.handoff-submission-plan.v1";
+
+export const HANDOFF_ANALYSIS_OMISSION_WARNING_PREFIXES = [
+	"source_context_not_provided",
+	"source_omissions_present",
+	"selected_item_missing_local_file:",
+	"selected_file_budget_exceeded",
+	"prompt_budget_exceeded",
+] as const;
+
+export type HandoffApprovalRecommendation =
+	| "preview_only"
+	| "request_upload_approval"
+	| "request_submit_approval";
 
 export interface HandoffEndpointCapabilities {
 	readConversationContext: boolean;
@@ -115,6 +132,49 @@ export interface HandoffCompleteness {
 	retryableOmissionCount: number;
 }
 
+export interface HandoffAnalysisInput {
+	object: typeof HANDOFF_ANALYSIS_INPUT_SCHEMA;
+	generatedAt: string;
+	source: HandoffEndpoint;
+	target: HandoffEndpoint;
+	refs: {
+		context: "source/context.json";
+		manifest: "source/manifest.json";
+		omissions: "source/omissions.json";
+		sourceMaterializationJobs: "source/materialization-jobs.json";
+	};
+	sourceCompleteness: HandoffCompleteness;
+	sourceMaterializationJobIds: string[];
+	budgets: {
+		maxPromptTokens: number;
+		maxSelectedFileBytes: number;
+		maxSelectedFiles: number;
+	};
+	manifestItems: HandoffAnalysisManifestItemRef[];
+	omissions: HandoffAnalysisOmissionRef[];
+	operatorPriorities: {
+		maxSelectedArtifacts: number;
+	};
+}
+
+export interface HandoffAnalysisManifestItemRef {
+	id: string;
+	kind: HandoffManifestItem["kind"];
+	title: string | null;
+	hasLocalPath: boolean;
+	hasChecksum: boolean;
+	mimeType: string | null;
+	sizeBytes: number | null;
+	importanceHint: number | null;
+}
+
+export interface HandoffAnalysisOmissionRef {
+	id: string;
+	kind: string;
+	retryable: boolean;
+	reason: string;
+}
+
 export interface HandoffAnalysisDecision {
 	object: typeof HANDOFF_ANALYSIS_SCHEMA;
 	generatedAt: string;
@@ -132,7 +192,77 @@ export interface HandoffAnalysisDecision {
 		summary: string;
 	};
 	targetPrimer: string;
+	omissionWarnings: string[];
+	budgetFit: {
+		fits: boolean;
+		estimatedPromptTokens: number;
+		selectedFileBytes: number;
+	};
+	approvalRecommendation: HandoffApprovalRecommendation;
+}
+
+export interface HandoffAnalysisValidationReport {
+	object: typeof HANDOFF_ANALYSIS_VALIDATION_SCHEMA;
+	generatedAt: string;
+	schemaValid: boolean;
+	errors: string[];
 	warnings: string[];
+	selectedManifestItemIds: string[];
+	budgetFit: HandoffAnalysisDecision["budgetFit"];
+}
+
+export interface HandoffTargetPackage {
+	object: typeof HANDOFF_TARGET_PACKAGE_SCHEMA;
+	generatedAt: string;
+	packageDigest: string;
+	targetMutationAllowed: false;
+	analysisDecisionRef: "analysis/decision.json";
+	analysisValidationRef: "analysis/validation-report.json";
+	compactContextRef: "target/compact-context.json";
+	primerRef: "target/primer.md";
+	uploadManifestRef: "target/upload-manifest.json";
+	submissionPlanRef: "target/submission-plan.json";
+	selectedFileCount: number;
+	selectedTotalBytes: number;
+	packageOmissionCount: number;
+	zeroTargetMutationEvidence: {
+		uploadAttemptCount: 0;
+		submitAttemptCount: 0;
+	};
+}
+
+export interface HandoffTargetUploadManifest {
+	object: typeof HANDOFF_TARGET_UPLOAD_MANIFEST_SCHEMA;
+	generatedAt: string;
+	packageDigest: string;
+	targetMutationAllowed: false;
+	items: HandoffTargetUploadManifestItem[];
+	omissions: HandoffTargetPackageOmission[];
+}
+
+export interface HandoffTargetUploadManifestItem {
+	sourceManifestItemId: string;
+	packetPath: string;
+	filename: string;
+	mimeType: string | null;
+	sizeBytes: number;
+	checksumSha256: string;
+}
+
+export interface HandoffTargetPackageOmission {
+	sourceManifestItemId: string;
+	reason: string;
+	retryable: boolean;
+}
+
+interface HandoffSelectedFileCopy {
+	item: HandoffManifestItem;
+	sourcePath: string;
+	targetPath: string;
+	relativePath: string;
+	filename: string;
+	sizeBytes: number;
+	checksumSha256: string;
 }
 
 export interface HandoffSubmissionPlan {
@@ -143,9 +273,11 @@ export interface HandoffSubmissionPlan {
 	target: HandoffEndpoint;
 	selectedManifestItemIds: string[];
 	selectedFileCount: number;
-	selectedTotalBytes: number | null;
-	primerRef: string;
-	compactContextRef: string;
+	selectedTotalBytes: number;
+	packageDigest: string | null;
+	primerRef: "target/primer.md";
+	compactContextRef: "target/compact-context.json";
+	uploadManifestRef: "target/upload-manifest.json";
 	requiredApproval: "target-submit";
 	zeroTargetMutationEvidence: {
 		submitTargetPhaseSkipped: true;
@@ -171,9 +303,13 @@ export interface HandoffRunRecord {
 		sourceContext: string;
 		sourceManifest: string;
 		sourceOmissions: string;
+		analysisInput: string;
 		analysisDecision: string;
+		analysisValidation: string;
 		compactContext: string;
 		targetPrimer: string;
+		targetPackage: string;
+		targetUploadManifest: string;
 		targetSubmissionPlan: string;
 	};
 }
@@ -226,7 +362,10 @@ export interface HandoffPrepareResult {
 	packetPath: string;
 	run: HandoffRunRecord;
 	sourceCompleteness: HandoffCompleteness;
+	analysisInput: HandoffAnalysisInput;
 	analysis: HandoffAnalysisDecision;
+	analysisValidation: HandoffAnalysisValidationReport;
+	targetPackage: HandoffTargetPackage;
 	submissionPlan: HandoffSubmissionPlan;
 }
 
@@ -241,13 +380,19 @@ export interface HandoffStatusResult {
 	sourceMaterializationJobs: HandoffSourceMaterializationJobsReport | null;
 	sourceCompleteness: HandoffCompleteness;
 	analysis: HandoffAnalysisDecision | null;
+	analysisValidation: HandoffAnalysisValidationReport | null;
 	target: {
+		package: HandoffTargetPackage | null;
+		uploadManifest: HandoffTargetUploadManifest | null;
 		submissionPlan: HandoffSubmissionPlan | null;
 		submissionResult: unknown | null;
 		readback: unknown | null;
 		mutationAllowed: boolean;
 		uploadAttemptCount: number;
 		submitAttemptCount: number;
+		packageDigest: string | null;
+		selectedFileCount: number;
+		selectedTotalBytes: number;
 	};
 }
 
@@ -295,6 +440,17 @@ export async function prepareCrossServiceHandoffPacket(
 		...importedReadback.omissions,
 	]);
 	const completeness = summarizeCompleteness(sourceContext, manifestItems, omissions);
+	const analysisInput = buildAnalysisInput({
+		generatedAt,
+		source,
+		target,
+		sourceContext,
+		manifestItems,
+		omissions,
+		sourceMaterializationJobIds: importedReadback.jobIds,
+		sourceCompleteness: completeness,
+		maxSelectedArtifacts: request.maxSelectedArtifacts,
+	});
 	const analysis = buildAnalysisDecision({
 		generatedAt,
 		source,
@@ -304,12 +460,31 @@ export async function prepareCrossServiceHandoffPacket(
 		omissions,
 		sourceMaterializationJobIds: importedReadback.jobIds,
 		maxSelectedArtifacts: request.maxSelectedArtifacts,
+		budgets: analysisInput.budgets,
+	});
+	const analysisValidation = validateHandoffAnalysisDecision({
+		generatedAt,
+		decision: analysis,
+		manifestItems,
+		omissions,
+		budgets: analysisInput.budgets,
+	});
+	if (!analysisValidation.schemaValid) {
+		throw new Error(
+			`Handoff analysis decision failed validation: ${analysisValidation.errors.join("; ")}`,
+		);
+	}
+	const targetPackageInput = await buildTargetPackage({
+		packetPath,
+		generatedAt,
+		analysis,
+		manifestItems,
 	});
 	const submissionPlan = buildSubmissionPlan({
 		generatedAt,
 		target,
 		analysis,
-		manifestItems,
+		targetPackage: targetPackageInput.targetPackage,
 	});
 	const run = buildRunRecord({
 		id: handoffId,
@@ -327,7 +502,12 @@ export async function prepareCrossServiceHandoffPacket(
 		omissions,
 		sourceMaterializationJobIds: importedReadback.jobIds,
 		sourceMaterializationJobs,
+		analysisInput,
 		analysis,
+		analysisValidation,
+		targetPackage: targetPackageInput.targetPackage,
+		uploadManifest: targetPackageInput.uploadManifest,
+		selectedFileCopies: targetPackageInput.selectedFileCopies,
 		submissionPlan,
 	});
 
@@ -337,7 +517,10 @@ export async function prepareCrossServiceHandoffPacket(
 		packetPath,
 		run,
 		sourceCompleteness: completeness,
+		analysisInput,
 		analysis,
+		analysisValidation,
+		targetPackage: targetPackageInput.targetPackage,
 		submissionPlan,
 	};
 }
@@ -379,6 +562,15 @@ export async function readHandoffStatus(input: {
 	const analysis = normalizeAnalysisDecision(
 		await readJsonIfExists(path.join(packetPath, "analysis", "decision.json")),
 	);
+	const analysisValidation = normalizeAnalysisValidationReport(
+		await readJsonIfExists(path.join(packetPath, "analysis", "validation-report.json")),
+	);
+	const targetPackage = normalizeTargetPackage(
+		await readJsonIfExists(path.join(packetPath, "target", "package.json")),
+	);
+	const uploadManifest = normalizeTargetUploadManifest(
+		await readJsonIfExists(path.join(packetPath, "target", "upload-manifest.json")),
+	);
 	const submissionPlan = normalizeSubmissionPlan(
 		await readJsonIfExists(path.join(packetPath, "target", "submission-plan.json")),
 	);
@@ -396,6 +588,9 @@ export async function readHandoffStatus(input: {
 			manifest,
 			omissions: omissionsJson,
 			analysis,
+			analysisValidation,
+			targetPackage,
+			uploadManifest,
 			submissionPlan,
 			submissionResult,
 			readback,
@@ -406,7 +601,10 @@ export async function readHandoffStatus(input: {
 		sourceMaterializationJobs,
 		sourceCompleteness,
 		analysis,
+		analysisValidation,
 		target: {
+			package: targetPackage,
+			uploadManifest,
 			submissionPlan,
 			submissionResult,
 			readback,
@@ -415,6 +613,10 @@ export async function readHandoffStatus(input: {
 			),
 			uploadAttemptCount: readAttemptCount(submissionResult, "uploadAttemptCount"),
 			submitAttemptCount: readAttemptCount(submissionResult, "submitAttemptCount"),
+			packageDigest: targetPackage?.packageDigest ?? submissionPlan?.packageDigest ?? null,
+			selectedFileCount: targetPackage?.selectedFileCount ?? submissionPlan?.selectedFileCount ?? 0,
+			selectedTotalBytes:
+				targetPackage?.selectedTotalBytes ?? submissionPlan?.selectedTotalBytes ?? 0,
 		},
 	};
 }
@@ -782,6 +984,61 @@ function summarizeCompleteness(
 	};
 }
 
+function buildAnalysisInput(input: {
+	generatedAt: string;
+	source: HandoffEndpoint;
+	target: HandoffEndpoint;
+	sourceContext: HandoffSourceContext;
+	manifestItems: HandoffManifestItem[];
+	omissions: HandoffOmission[];
+	sourceMaterializationJobIds: string[];
+	sourceCompleteness: HandoffCompleteness;
+	maxSelectedArtifacts?: number | null;
+}): HandoffAnalysisInput {
+	const maxSelectedArtifacts =
+		typeof input.maxSelectedArtifacts === "number" && Number.isFinite(input.maxSelectedArtifacts)
+			? Math.max(0, Math.trunc(input.maxSelectedArtifacts))
+			: 10;
+	return {
+		object: HANDOFF_ANALYSIS_INPUT_SCHEMA,
+		generatedAt: input.generatedAt,
+		source: input.source,
+		target: input.target,
+		refs: {
+			context: "source/context.json",
+			manifest: "source/manifest.json",
+			omissions: "source/omissions.json",
+			sourceMaterializationJobs: "source/materialization-jobs.json",
+		},
+		sourceCompleteness: input.sourceCompleteness,
+		sourceMaterializationJobIds: input.sourceMaterializationJobIds,
+		budgets: {
+			maxPromptTokens: 32000,
+			maxSelectedFileBytes: 50 * 1024 * 1024,
+			maxSelectedFiles: maxSelectedArtifacts,
+		},
+		manifestItems: input.manifestItems.map((item) => ({
+			id: item.id,
+			kind: item.kind,
+			title: item.title,
+			hasLocalPath: Boolean(item.localPath),
+			hasChecksum: Boolean(item.checksumSha256),
+			mimeType: item.mimeType,
+			sizeBytes: item.sizeBytes,
+			importanceHint: item.importanceHint,
+		})),
+		omissions: input.omissions.map((item) => ({
+			id: item.id,
+			kind: item.kind,
+			retryable: item.retryable,
+			reason: item.reason,
+		})),
+		operatorPriorities: {
+			maxSelectedArtifacts,
+		},
+	};
+}
+
 function buildAnalysisDecision(input: {
 	generatedAt: string;
 	source: HandoffEndpoint;
@@ -791,6 +1048,7 @@ function buildAnalysisDecision(input: {
 	omissions: HandoffOmission[];
 	sourceMaterializationJobIds: string[];
 	maxSelectedArtifacts?: number | null;
+	budgets: HandoffAnalysisInput["budgets"];
 }): HandoffAnalysisDecision {
 	const maxSelectedArtifacts =
 		typeof input.maxSelectedArtifacts === "number" && Number.isFinite(input.maxSelectedArtifacts)
@@ -803,9 +1061,18 @@ function buildAnalysisDecision(input: {
 			return rightScore - leftScore || left.id.localeCompare(right.id);
 		})
 		.slice(0, maxSelectedArtifacts);
-	const warnings = [
+	const selectedFileBytes = selected.reduce((total, item) => total + (item.sizeBytes ?? 0), 0);
+	const estimatedPromptTokens = estimatePromptTokens(input.sourceContext, input.manifestItems);
+	const omissionWarnings = [
 		...(input.sourceContext.status === "not_cached" ? ["source_context_not_provided"] : []),
 		...(input.omissions.length > 0 ? ["source_omissions_present"] : []),
+		...selected
+			.filter((item) => !item.localPath)
+			.map((item) => `selected_item_missing_local_file:${item.id}`),
+		...(selectedFileBytes > input.budgets.maxSelectedFileBytes
+			? ["selected_file_budget_exceeded"]
+			: []),
+		...(estimatedPromptTokens > input.budgets.maxPromptTokens ? ["prompt_budget_exceeded"] : []),
 	];
 	return {
 		object: HANDOFF_ANALYSIS_SCHEMA,
@@ -830,22 +1097,218 @@ function buildAnalysisDecision(input: {
 			`Selected artifacts: ${selected.length}`,
 			"Use the attached compact context JSON and selected files as the authoritative starting point.",
 		].join("\n"),
-		warnings,
+		omissionWarnings,
+		budgetFit: {
+			fits:
+				selectedFileBytes <= input.budgets.maxSelectedFileBytes &&
+				estimatedPromptTokens <= input.budgets.maxPromptTokens,
+			estimatedPromptTokens,
+			selectedFileBytes,
+		},
+		approvalRecommendation: "preview_only",
 	};
+}
+
+export function validateHandoffAnalysisDecision(input: {
+	generatedAt?: string;
+	decision: unknown;
+	manifestItems: HandoffManifestItem[];
+	omissions: HandoffOmission[];
+	budgets: HandoffAnalysisInput["budgets"];
+}): HandoffAnalysisValidationReport {
+	const errors: string[] = [];
+	const warnings: string[] = [];
+	const decision = isRecord(input.decision) ? input.decision : {};
+	if (decision.object !== HANDOFF_ANALYSIS_SCHEMA) {
+		errors.push(`decision.object must be ${HANDOFF_ANALYSIS_SCHEMA}`);
+	}
+	const selectedManifestItemIds = Array.isArray(decision.selectedManifestItemIds)
+		? decision.selectedManifestItemIds
+				.map((id) => normalizeOptionalString(id))
+				.filter((id): id is string => Boolean(id))
+		: [];
+	if (!Array.isArray(decision.selectedManifestItemIds)) {
+		errors.push("selectedManifestItemIds must be an array");
+	}
+	const manifestById = new Map(input.manifestItems.map((item) => [item.id, item]));
+	for (const id of selectedManifestItemIds) {
+		const item = manifestById.get(id);
+		if (!item) {
+			errors.push(`selected manifest item does not exist: ${id}`);
+			continue;
+		}
+		if (
+			!item.localPath &&
+			!hasOmissionForSelectedItem(id, input.omissions, decision.omissionWarnings)
+		) {
+			errors.push(`selected manifest item lacks local file and omission warning: ${id}`);
+		}
+	}
+	if (typeof decision.targetPrimer !== "string" || decision.targetPrimer.trim().length === 0) {
+		errors.push("targetPrimer must be a non-empty string");
+	}
+	if (!isRecord(decision.compactContext)) {
+		errors.push("compactContext must be an object");
+	}
+	const approvalRecommendation = normalizeOptionalString(decision.approvalRecommendation);
+	if (!isAllowedApprovalRecommendation(approvalRecommendation)) {
+		errors.push("approvalRecommendation is not allowed");
+	}
+	const omissionWarnings = Array.isArray(decision.omissionWarnings)
+		? decision.omissionWarnings
+				.map((warning) => normalizeOptionalString(warning))
+				.filter((warning): warning is string => Boolean(warning))
+		: [];
+	if (!Array.isArray(decision.omissionWarnings)) {
+		errors.push("omissionWarnings must be an array");
+	}
+	for (const warning of omissionWarnings) {
+		if (!isValidOmissionWarning(warning, input.omissions, selectedManifestItemIds, manifestById)) {
+			errors.push(`omission warning has no matching omission or policy limit: ${warning}`);
+		}
+	}
+	const budgetFit = normalizeBudgetFit(decision.budgetFit);
+	if (budgetFit.selectedFileBytes > input.budgets.maxSelectedFileBytes) {
+		errors.push("selected file bytes exceed analysis budget");
+	}
+	if (budgetFit.estimatedPromptTokens > input.budgets.maxPromptTokens) {
+		errors.push("estimated prompt tokens exceed analysis budget");
+	}
+	if (budgetFit.fits === false) {
+		warnings.push("budget_fit_false");
+	}
+	return {
+		object: HANDOFF_ANALYSIS_VALIDATION_SCHEMA,
+		generatedAt: input.generatedAt ?? new Date().toISOString(),
+		schemaValid: errors.length === 0,
+		errors,
+		warnings,
+		selectedManifestItemIds,
+		budgetFit,
+	};
+}
+
+async function buildTargetPackage(input: {
+	packetPath: string;
+	generatedAt: string;
+	analysis: HandoffAnalysisDecision;
+	manifestItems: HandoffManifestItem[];
+}): Promise<{
+	targetPackage: HandoffTargetPackage;
+	uploadManifest: HandoffTargetUploadManifest;
+	selectedFileCopies: HandoffSelectedFileCopy[];
+}> {
+	const selectedItems = input.manifestItems.filter((item) =>
+		input.analysis.selectedManifestItemIds.includes(item.id),
+	);
+	const selectedFilesDir = path.join(input.packetPath, "target", "selected-files");
+	const selectedFileCopies: HandoffSelectedFileCopy[] = [];
+	const omissions: HandoffTargetPackageOmission[] = [];
+	for (const item of selectedItems) {
+		if (!item.localPath) {
+			omissions.push({
+				sourceManifestItemId: item.id,
+				reason: "selected manifest item has no localPath",
+				retryable: true,
+			});
+			continue;
+		}
+		const sourcePath = path.resolve(item.localPath);
+		let stat: Awaited<ReturnType<typeof fs.stat>>;
+		try {
+			stat = await fs.stat(sourcePath);
+		} catch {
+			omissions.push({
+				sourceManifestItemId: item.id,
+				reason: "selected local file is unavailable",
+				retryable: true,
+			});
+			continue;
+		}
+		if (!stat.isFile()) {
+			omissions.push({
+				sourceManifestItemId: item.id,
+				reason: "selected local path is not a file",
+				retryable: true,
+			});
+			continue;
+		}
+		const filename = buildSelectedFileName(item, selectedFileCopies.length);
+		const relativePath = `target/selected-files/${filename}`;
+		const targetPath = path.join(selectedFilesDir, filename);
+		const checksumSha256 = await hashFile(sourcePath);
+		selectedFileCopies.push({
+			item,
+			sourcePath,
+			targetPath,
+			relativePath,
+			filename,
+			sizeBytes: stat.size,
+			checksumSha256,
+		});
+	}
+	const digestSeed = {
+		object: HANDOFF_TARGET_PACKAGE_SCHEMA,
+		decision: {
+			selectedManifestItemIds: input.analysis.selectedManifestItemIds,
+			compactContext: input.analysis.compactContext,
+			targetPrimer: input.analysis.targetPrimer,
+			approvalRecommendation: input.analysis.approvalRecommendation,
+		},
+		selectedFiles: selectedFileCopies.map((copy) => ({
+			sourceManifestItemId: copy.item.id,
+			filename: copy.filename,
+			mimeType: copy.item.mimeType,
+			sizeBytes: copy.sizeBytes,
+			checksumSha256: copy.checksumSha256,
+		})),
+		omissions,
+	};
+	const packageDigest = buildPacketDigest(stableJson(digestSeed));
+	const uploadManifest: HandoffTargetUploadManifest = {
+		object: HANDOFF_TARGET_UPLOAD_MANIFEST_SCHEMA,
+		generatedAt: input.generatedAt,
+		packageDigest,
+		targetMutationAllowed: false,
+		items: selectedFileCopies.map((copy) => ({
+			sourceManifestItemId: copy.item.id,
+			packetPath: copy.relativePath,
+			filename: copy.filename,
+			mimeType: copy.item.mimeType,
+			sizeBytes: copy.sizeBytes,
+			checksumSha256: copy.checksumSha256,
+		})),
+		omissions,
+	};
+	const selectedTotalBytes = selectedFileCopies.reduce((total, copy) => total + copy.sizeBytes, 0);
+	const targetPackage: HandoffTargetPackage = {
+		object: HANDOFF_TARGET_PACKAGE_SCHEMA,
+		generatedAt: input.generatedAt,
+		packageDigest,
+		targetMutationAllowed: false,
+		analysisDecisionRef: "analysis/decision.json",
+		analysisValidationRef: "analysis/validation-report.json",
+		compactContextRef: "target/compact-context.json",
+		primerRef: "target/primer.md",
+		uploadManifestRef: "target/upload-manifest.json",
+		submissionPlanRef: "target/submission-plan.json",
+		selectedFileCount: selectedFileCopies.length,
+		selectedTotalBytes,
+		packageOmissionCount: omissions.length,
+		zeroTargetMutationEvidence: {
+			uploadAttemptCount: 0,
+			submitAttemptCount: 0,
+		},
+	};
+	return { targetPackage, uploadManifest, selectedFileCopies };
 }
 
 function buildSubmissionPlan(input: {
 	generatedAt: string;
 	target: HandoffEndpoint;
 	analysis: HandoffAnalysisDecision;
-	manifestItems: HandoffManifestItem[];
+	targetPackage: HandoffTargetPackage;
 }): HandoffSubmissionPlan {
-	const selected = input.manifestItems.filter((item) =>
-		input.analysis.selectedManifestItemIds.includes(item.id),
-	);
-	const sizes = selected
-		.map((item) => item.sizeBytes)
-		.filter((value): value is number => typeof value === "number");
 	return {
 		object: HANDOFF_SUBMISSION_PLAN_SCHEMA,
 		generatedAt: input.generatedAt,
@@ -853,11 +1316,12 @@ function buildSubmissionPlan(input: {
 		targetMutationAllowed: false,
 		target: input.target,
 		selectedManifestItemIds: input.analysis.selectedManifestItemIds,
-		selectedFileCount: selected.filter((item) => item.localPath).length,
-		selectedTotalBytes:
-			sizes.length === selected.length ? sizes.reduce((total, value) => total + value, 0) : null,
-		primerRef: "analysis/target-primer.md",
-		compactContextRef: "analysis/compact-context.json",
+		selectedFileCount: input.targetPackage.selectedFileCount,
+		selectedTotalBytes: input.targetPackage.selectedTotalBytes,
+		packageDigest: input.targetPackage.packageDigest,
+		primerRef: "target/primer.md",
+		compactContextRef: "target/compact-context.json",
+		uploadManifestRef: "target/upload-manifest.json",
 		requiredApproval: "target-submit",
 		zeroTargetMutationEvidence: {
 			submitTargetPhaseSkipped: true,
@@ -899,9 +1363,13 @@ function buildRunRecord(input: {
 			sourceContext: "source/context.json",
 			sourceManifest: "source/manifest.json",
 			sourceOmissions: "source/omissions.json",
+			analysisInput: "analysis/input.json",
 			analysisDecision: "analysis/decision.json",
-			compactContext: "analysis/compact-context.json",
-			targetPrimer: "analysis/target-primer.md",
+			analysisValidation: "analysis/validation-report.json",
+			compactContext: "target/compact-context.json",
+			targetPrimer: "target/primer.md",
+			targetPackage: "target/package.json",
+			targetUploadManifest: "target/upload-manifest.json",
 			targetSubmissionPlan: "target/submission-plan.json",
 		},
 	};
@@ -916,7 +1384,12 @@ async function writePacket(
 		omissions: HandoffOmission[];
 		sourceMaterializationJobIds: string[];
 		sourceMaterializationJobs: HandoffSourceMaterializationJobsReport;
+		analysisInput: HandoffAnalysisInput;
 		analysis: HandoffAnalysisDecision;
+		analysisValidation: HandoffAnalysisValidationReport;
+		targetPackage: HandoffTargetPackage;
+		uploadManifest: HandoffTargetUploadManifest;
+		selectedFileCopies: HandoffSelectedFileCopy[];
 		submissionPlan: HandoffSubmissionPlan;
 	},
 ): Promise<void> {
@@ -953,21 +1426,32 @@ async function writePacket(
 		omissionsRef: "source/omissions.json",
 		sourceMaterializationJobIds: input.sourceMaterializationJobIds,
 	});
+	await writeJson(path.join(packetPath, "analysis", "input.json"), input.analysisInput);
 	await writeJson(path.join(packetPath, "analysis", "selected-target-seed.json"), {
 		object: "auracall.handoff-selected-target-seed.v1",
 		generatedAt: input.run.createdAt,
 		selectedManifestItemIds: input.analysis.selectedManifestItemIds,
 	});
 	await writeJson(
-		path.join(packetPath, "analysis", "compact-context.json"),
+		path.join(packetPath, "target", "compact-context.json"),
 		input.analysis.compactContext,
 	);
 	await fs.writeFile(
-		path.join(packetPath, "analysis", "target-primer.md"),
+		path.join(packetPath, "target", "primer.md"),
 		`${input.analysis.targetPrimer}\n`,
 		"utf8",
 	);
 	await writeJson(path.join(packetPath, "analysis", "decision.json"), input.analysis);
+	await writeJson(
+		path.join(packetPath, "analysis", "validation-report.json"),
+		input.analysisValidation,
+	);
+	for (const copy of input.selectedFileCopies) {
+		await fs.mkdir(path.dirname(copy.targetPath), { recursive: true });
+		await fs.copyFile(copy.sourcePath, copy.targetPath);
+	}
+	await writeJson(path.join(packetPath, "target", "upload-manifest.json"), input.uploadManifest);
+	await writeJson(path.join(packetPath, "target", "package.json"), input.targetPackage);
 	await writeJson(path.join(packetPath, "target", "submission-plan.json"), input.submissionPlan);
 	await writeJson(path.join(packetPath, "target", "submission-result.json"), {
 		object: "auracall.handoff-submission-result.v1",
@@ -1101,6 +1585,21 @@ function normalizeAnalysisDecision(value: unknown): HandoffAnalysisDecision | nu
 	return value as unknown as HandoffAnalysisDecision;
 }
 
+function normalizeAnalysisValidationReport(value: unknown): HandoffAnalysisValidationReport | null {
+	if (!isRecord(value) || value.object !== HANDOFF_ANALYSIS_VALIDATION_SCHEMA) return null;
+	return value as unknown as HandoffAnalysisValidationReport;
+}
+
+function normalizeTargetPackage(value: unknown): HandoffTargetPackage | null {
+	if (!isRecord(value) || value.object !== HANDOFF_TARGET_PACKAGE_SCHEMA) return null;
+	return value as unknown as HandoffTargetPackage;
+}
+
+function normalizeTargetUploadManifest(value: unknown): HandoffTargetUploadManifest | null {
+	if (!isRecord(value) || value.object !== HANDOFF_TARGET_UPLOAD_MANIFEST_SCHEMA) return null;
+	return value as unknown as HandoffTargetUploadManifest;
+}
+
 function normalizeSubmissionPlan(value: unknown): HandoffSubmissionPlan | null {
 	if (!isRecord(value) || value.object !== HANDOFF_SUBMISSION_PLAN_SCHEMA) return null;
 	return value as unknown as HandoffSubmissionPlan;
@@ -1129,6 +1628,112 @@ function readAttemptCount(
 ): number {
 	if (!isRecord(value)) return 0;
 	return normalizeNumber(value[key]) ?? 0;
+}
+
+function estimatePromptTokens(
+	sourceContext: HandoffSourceContext,
+	manifestItems: HandoffManifestItem[],
+): number {
+	const sourceText = JSON.stringify(sourceContext.payload);
+	const manifestText = JSON.stringify(
+		manifestItems.map((item) => ({
+			id: item.id,
+			title: item.title,
+			kind: item.kind,
+			sizeBytes: item.sizeBytes,
+		})),
+	);
+	return Math.ceil((sourceText.length + manifestText.length) / 4);
+}
+
+function normalizeBudgetFit(value: unknown): HandoffAnalysisDecision["budgetFit"] {
+	const record = isRecord(value) ? value : {};
+	return {
+		fits: record.fits !== false,
+		estimatedPromptTokens: normalizeNumber(record.estimatedPromptTokens) ?? 0,
+		selectedFileBytes: normalizeNumber(record.selectedFileBytes) ?? 0,
+	};
+}
+
+function isAllowedApprovalRecommendation(
+	value: string | null,
+): value is HandoffApprovalRecommendation {
+	return (
+		value === "preview_only" ||
+		value === "request_upload_approval" ||
+		value === "request_submit_approval"
+	);
+}
+
+function hasOmissionForSelectedItem(
+	id: string,
+	omissions: HandoffOmission[],
+	warnings: unknown,
+): boolean {
+	if (omissions.some((omission) => omission.id === id || omission.sourceRef === id)) return true;
+	if (!Array.isArray(warnings)) return false;
+	return warnings.some((warning) => warning === `selected_item_missing_local_file:${id}`);
+}
+
+function isValidOmissionWarning(
+	warning: string,
+	omissions: HandoffOmission[],
+	selectedIds: string[],
+	manifestById: Map<string, HandoffManifestItem>,
+): boolean {
+	if (warning === "source_omissions_present") return omissions.length > 0;
+	if (warning === "source_context_not_provided") return true;
+	if (warning === "selected_file_budget_exceeded" || warning === "prompt_budget_exceeded") {
+		return true;
+	}
+	const missingPrefix = "selected_item_missing_local_file:";
+	if (warning.startsWith(missingPrefix)) {
+		const id = warning.slice(missingPrefix.length);
+		const item = manifestById.get(id);
+		return selectedIds.includes(id) && Boolean(item) && !item?.localPath;
+	}
+	return false;
+}
+
+function buildSelectedFileName(item: HandoffManifestItem, index: number): string {
+	const title = item.title ?? path.basename(item.localPath ?? "") ?? item.id;
+	const safeBase = sanitizeFileNameSegment(title) || sanitizeFileNameSegment(item.id) || "file";
+	const safeId = sanitizeFileNameSegment(item.id) || "item";
+	const ext = path.extname(safeBase);
+	const stem = ext ? safeBase.slice(0, -ext.length) : safeBase;
+	return `${String(index + 1).padStart(3, "0")}-${stem}-${safeId}${ext}`.replace(/\s+/g, "_");
+}
+
+function sanitizeFileNameSegment(value: string): string {
+	return Array.from(value)
+		.map((char) => {
+			const code = char.charCodeAt(0);
+			if (code < 32) return "_";
+			return '<>:"/\\|?*'.includes(char) ? "_" : char;
+		})
+		.join("")
+		.trim();
+}
+
+async function hashFile(filePath: string): Promise<string> {
+	const hash = createHash("sha256");
+	const content = await fs.readFile(filePath);
+	hash.update(content);
+	return hash.digest("hex");
+}
+
+function stableJson(value: unknown): string {
+	return JSON.stringify(sortForStableJson(value));
+}
+
+function sortForStableJson(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map((entry) => sortForStableJson(entry));
+	if (!isRecord(value)) return value;
+	const sorted: MutableRecord = {};
+	for (const key of Object.keys(value).sort()) {
+		sorted[key] = sortForStableJson(value[key]);
+	}
+	return sorted;
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

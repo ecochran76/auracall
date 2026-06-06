@@ -1,5 +1,42 @@
 # RUNBOOK
 
+## Turn 264 | 2026-06-06
+
+- Active plan:
+  `docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: execute Plan 0120 after tidying and pushing the pre-existing dirty
+  worktree baseline.
+- Execution:
+  - committed and pushed the pre-0120 accumulated baseline as
+    `cfa75991 Install pending handoff and materialization slices`.
+  - upgraded handoff analysis from deterministic placeholder to
+    `auracall.handoff-analysis-decision.v2` plus
+    `auracall.handoff-analysis-input.v1`.
+  - added host-owned validation reports at `analysis/validation-report.json`.
+  - added target package preview artifacts:
+    `target/package.json`, `target/upload-manifest.json`,
+    `target/submission-plan.json`, `target/primer.md`,
+    `target/compact-context.json`, and staged `target/selected-files/`.
+  - missing selected local files are recorded as package omissions rather than
+    target upload attempts.
+  - `handoff status` now reports analysis schema validity, package digest,
+    selected package file count/bytes, and zero target mutation counters.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 16 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - `pnpm exec biome lint src/handoff/service.ts
+    src/cli/handoffCommand.ts tests/cli/handoffCommand.test.ts
+    bin/auracall.ts` passed.
+  - `pnpm tsx bin/auracall.ts handoff prepare --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff status --help` passed.
+  - `pnpm run plans:audit -- --keep 120` passed with zero validation errors.
+  - `git diff --check` passed.
+  - `pnpm run build` passed.
+- Decision:
+  - Plan 0120 closes as **Handoff Analysis Package Preview Installed**.
+
 ## Turn 263 | 2026-06-06
 
 - Active plan:

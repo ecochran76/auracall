@@ -1,3 +1,15 @@
+- 2026-06-06: Handoff analysis output must be schema-validated before any
+  target package can be treated as replayable. `auracall handoff prepare
+  --dry-run` now writes `analysis/input.json`,
+  `auracall.handoff-analysis-decision.v2`, and
+  `analysis/validation-report.json`; host validation rejects unknown selected
+  manifest ids, missing local selected files without an explicit warning,
+  malformed approval recommendations, budget overflow, and unsupported
+  omission warnings. The target package is still preview-only: selected files
+  are staged under `target/selected-files/` only when the source local file
+  exists, missing files become `target/upload-manifest.json` omissions, and
+  upload/submit attempt counters stay at `0`.
+
 - 2026-06-05: ChatGPT account-library automatic queueing is proven after the
   cooldown clears and ordinary target work drains. The supervised Plan 0119
   rerun kept `failureCooldownMs=900000`, temporarily flipped only

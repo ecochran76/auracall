@@ -9,9 +9,9 @@ Lane: P01
 
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
-- Active implementation plan:
-  [docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md](docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md)
 - Latest completed plan:
+  [docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md](docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md)
+- Previous completed plan:
   [docs/dev/plans/0119-2026-06-05-account-library-cooldown-clear-rerun.md](docs/dev/plans/0119-2026-06-05-account-library-cooldown-clear-rerun.md)
 - Previous completed plan:
   [docs/dev/plans/0118-2026-06-05-post-0117-account-library-automatic-rerun.md](docs/dev/plans/0118-2026-06-05-post-0117-account-library-automatic-rerun.md)
@@ -177,9 +177,9 @@ Lane: P01
 - Plan 0114 is open as **End-To-End Cross-Service Handoff**. App Intelligence
   owns the deterministic supervisor, run ledger, decision validation,
   approvals, target mutation gates, replay log, and repair state; provider
-  adapters own bounded source/target capabilities. The next implementation
-  slice should start with the handoff run ledger and status surface before
-  adding source job orchestration.
+  adapters own bounded source/target capabilities. The current preview path
+  covers source job orchestration plus schema-validated analysis/package
+  assembly; the next implementation slice is approval-gated target upload.
 - Plan 0115 is closed as **Handoff Run Ledger And Status Installed**.
   `auracall handoff prepare --dry-run` now writes `ledger.json`, and
   `auracall handoff status <id>` reads run, ledger, event count, packet
@@ -191,11 +191,13 @@ Lane: P01
   materialization jobs before explicit create, can create one bounded source
   job when requested and no prior source evidence exists, persists source job
   evidence in packet/status, and keeps target mutation disabled.
-- Plan 0120 is open as **Handoff Analysis Package Preview** under Plan 0114.
-  The slice installs schema-backed App Intelligence analysis decision V2,
-  deterministic analysis input assembly, target package preview artifacts,
-  stable package digest, and status readback while preserving preview-only
-  zero target upload/submit behavior.
+- Plan 0120 is closed as **Handoff Analysis Package Preview Installed**.
+  `auracall handoff prepare --dry-run` now writes
+  `auracall.handoff-analysis-input.v1`, schema-validated
+  `auracall.handoff-analysis-decision.v2`,
+  `analysis/validation-report.json`, target package artifacts,
+  `target/upload-manifest.json`, a stable package digest, and status readback
+  while preserving preview-only zero target upload/submit behavior.
 - Plan 0107 is closed as **ChatGPT Account-Library Automatic
   Mode Remains Preview-Only**. The preflight found
   foreground-work backpressure, active `wsl-chrome-3` live-follow completion

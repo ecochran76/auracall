@@ -169,6 +169,9 @@ export function formatHandoffPrepareCliSummary(result: HandoffPrepareResult): st
 		`Local materialized: ${result.sourceCompleteness.localMaterializedCount}`,
 		`Omissions: ${result.sourceCompleteness.omissionCount}`,
 		`Selected target seed items: ${result.analysis.selectedManifestItemIds.length}`,
+		`Analysis schema valid: ${result.analysisValidation.schemaValid ? "true" : "false"}`,
+		`Target package digest: ${result.targetPackage.packageDigest}`,
+		`Target package files: ${result.targetPackage.selectedFileCount}`,
 		"Target mutation: skipped_dry_run",
 	].join("\n");
 }
@@ -188,6 +191,10 @@ export function formatHandoffStatusCliSummary(result: HandoffStatusResult): stri
 		`Local materialized: ${result.sourceCompleteness.localMaterializedCount}`,
 		`Omissions: ${result.sourceCompleteness.omissionCount}`,
 		`Selected target seed items: ${result.analysis?.selectedManifestItemIds.length ?? 0}`,
+		`Analysis schema valid: ${result.analysisValidation?.schemaValid ? "true" : "false"}`,
+		`Target package digest: ${result.target.packageDigest ?? "missing"}`,
+		`Target package files: ${result.target.selectedFileCount}`,
+		`Target package bytes: ${result.target.selectedTotalBytes}`,
 		`Source materialization jobs: ${result.sourceMaterializationJobs?.metrics.total ?? 0}`,
 		`Target mutation allowed: ${result.target.mutationAllowed ? "true" : "false"}`,
 		`Target upload attempts: ${result.target.uploadAttemptCount}`,

@@ -1,6 +1,6 @@
 # Handoff Analysis Package Preview Plan | 0120-2026-06-06
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -22,15 +22,21 @@ target upload and zero target submit.
 - Plan 0114 remains the active end-to-end cross-service handoff blueprint.
 - Plan 0115 installed `ledger.json`, `events.jsonl`, and `handoff status`.
 - Plan 0116 installed source materialization job import/read/create evidence.
-- `auracall handoff prepare --dry-run` currently writes:
+- Plan 0120 installed the preview-safe analysis/package contract for phases
+  4-7.
+- `auracall handoff prepare --dry-run` now writes:
   - source context, manifest, omissions, and materialization job evidence;
-  - deterministic analysis preview;
-  - compact context and target primer placeholders;
-  - target submission plan with `targetMutationAllowed=false`.
-- The current analysis schema is `auracall.handoff-analysis-decision.v1`; Plan
-  0114 requires `auracall.handoff-analysis-decision.v2`.
-- There is no explicit `analysis/input.json`, schema validation report,
-  selected-file staging, `target/package.json`, or stable target package digest.
+  - `analysis/input.json` with packet-relative refs and budgets;
+  - schema-validated `auracall.handoff-analysis-decision.v2`;
+  - `analysis/validation-report.json`;
+  - `target/package.json`, `target/upload-manifest.json`,
+    `target/submission-plan.json`, `target/primer.md`,
+    `target/compact-context.json`, and staged `target/selected-files/` where
+    selected local files exist.
+- Missing selected local files are recorded as package omissions, not upload
+  attempts.
+- `handoff status` reports analysis schema validity, target package digest,
+  selected file count/bytes, and zero upload/submit counters.
 
 ## Scope
 
@@ -78,7 +84,7 @@ target upload and zero target submit.
 
 ### Track 1 | Analysis Input And Decision Schema
 
-Status: planned.
+Status: completed.
 
 - Define typed analysis input and v2 decision structures in the handoff service
   layer.
@@ -96,7 +102,7 @@ Acceptance evidence:
 
 ### Track 2 | Target Package Preview
 
-Status: planned.
+Status: completed.
 
 - Build target package artifacts from the validated decision.
 - Stage selected local files under `target/selected-files/` or record explicit
@@ -114,7 +120,7 @@ Acceptance evidence:
 
 ### Track 3 | Status, Docs, And Validation
 
-Status: planned.
+Status: completed.
 
 - Extend `handoff status` summary and JSON readback with analysis validation
   and package metrics.
@@ -152,7 +158,7 @@ Acceptance evidence:
 
 ## Exit Criteria
 
-Close only when the current code can prepare a provider-neutral dry-run handoff
-packet whose analysis decision is v2-schema-validated, whose target package is
-digest-addressed and replayable, and whose status readback proves no target
-upload or submit was attempted.
+Closed as **Handoff Analysis Package Preview Installed**. Current code prepares
+a provider-neutral dry-run handoff packet whose analysis decision is
+v2-schema-validated, whose target package is digest-addressed and replayable,
+and whose status readback proves no target upload or submit was attempted.

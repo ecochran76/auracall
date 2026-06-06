@@ -9,7 +9,11 @@ import {
 	prepareHandoffForCli,
 	readHandoffStatusForCli,
 } from "../../src/cli/handoffCommand.js";
-import { prepareCrossServiceHandoffPacket } from "../../src/handoff/service.js";
+import {
+	HANDOFF_ANALYSIS_SCHEMA,
+	prepareCrossServiceHandoffPacket,
+	validateHandoffAnalysisDecision,
+} from "../../src/handoff/service.js";
 
 const tempRoots: string[] = [];
 
@@ -24,6 +28,10 @@ describe("handoff prepare CLI helpers", () => {
 	test("writes a provider-neutral dry-run handoff packet with zero target mutation", async () => {
 		const root = await tempRoot("auracall-handoff-service-");
 		setAuracallHomeDirOverrideForTest(root);
+		const artifactPath = path.join(root, "artifact-a.pdf");
+		const filePath = path.join(root, "file-b.csv");
+		await writeFile(artifactPath, "artifact-a", "utf8");
+		await writeFile(filePath, "file-b", "utf8");
 
 		const result = await prepareCrossServiceHandoffPacket({
 			config: fixtureConfig(),
@@ -45,8 +53,8 @@ describe("handoff prepare CLI helpers", () => {
 						id: "artifact_a",
 						kind: "artifact",
 						title: "Important artifact",
-						localPath: "/tmp/artifact-a.pdf",
-						sizeBytes: 42,
+						localPath: artifactPath,
+						sizeBytes: 10,
 						checksumSha256: "a".repeat(64),
 						importanceHint: 10,
 					},
@@ -54,8 +62,8 @@ describe("handoff prepare CLI helpers", () => {
 						id: "file_b",
 						kind: "file",
 						title: "Less important file",
-						localPath: "/tmp/file-b.csv",
-						sizeBytes: 12,
+						localPath: filePath,
+						sizeBytes: 6,
 						checksumSha256: "b".repeat(64),
 						importanceHint: 1,
 					},
@@ -105,16 +113,40 @@ describe("handoff prepare CLI helpers", () => {
 			targetMutationAllowed: false,
 			selectedManifestItemIds: ["artifact_a"],
 			selectedFileCount: 1,
-			selectedTotalBytes: 42,
+			selectedTotalBytes: 10,
+			packageDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
 			zeroTargetMutationEvidence: {
 				submitTargetPhaseSkipped: true,
 				uploadAttemptCount: 0,
 				submitAttemptCount: 0,
 			},
 		});
+		expect(result.analysis).toMatchObject({
+			object: "auracall.handoff-analysis-decision.v2",
+			schemaValid: true,
+			approvalRecommendation: "preview_only",
+			budgetFit: {
+				fits: true,
+				selectedFileBytes: 10,
+			},
+		});
+		expect(result.analysisValidation.schemaValid).toBe(true);
+		expect(result.targetPackage).toMatchObject({
+			object: "auracall.handoff-target-package.v1",
+			targetMutationAllowed: false,
+			selectedFileCount: 1,
+			selectedTotalBytes: 10,
+			packageOmissionCount: 0,
+		});
 
 		const runJson = JSON.parse(await readFile(path.join(result.packetPath, "run.json"), "utf8"));
 		expect(runJson.phases.preview_target).toBe("completed");
+		expect(runJson.artifacts).toMatchObject({
+			analysisInput: "analysis/input.json",
+			analysisValidation: "analysis/validation-report.json",
+			targetPackage: "target/package.json",
+			targetUploadManifest: "target/upload-manifest.json",
+		});
 		const ledgerJson = JSON.parse(
 			await readFile(path.join(result.packetPath, "ledger.json"), "utf8"),
 		);
@@ -133,6 +165,26 @@ describe("handoff prepare CLI helpers", () => {
 			await readFile(path.join(result.packetPath, "target", "submission-plan.json"), "utf8"),
 		);
 		expect(submissionPlan.targetMutationAllowed).toBe(false);
+		const validationReport = JSON.parse(
+			await readFile(path.join(result.packetPath, "analysis", "validation-report.json"), "utf8"),
+		);
+		expect(validationReport).toMatchObject({
+			object: "auracall.handoff-analysis-validation-report.v1",
+			schemaValid: true,
+			errors: [],
+		});
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(result.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		expect(uploadManifest.items).toEqual([
+			expect.objectContaining({
+				sourceManifestItemId: "artifact_a",
+				packetPath: expect.stringMatching(/^target\/selected-files\//),
+				sizeBytes: 10,
+				checksumSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+			}),
+		]);
+		expect(uploadManifest.omissions).toEqual([]);
 		const events = await readFile(path.join(result.packetPath, "events.jsonl"), "utf8");
 		expect(events).toContain('"phase":"discover_source"');
 		expect(events).toContain('"phase":"preview_target"');
@@ -392,9 +444,11 @@ describe("handoff prepare CLI helpers", () => {
 		expect(result.analysis.selectedManifestItemIds).toEqual(["hmj_fixture:entry_1"]);
 		expect(result.submissionPlan).toMatchObject({
 			targetMutationAllowed: false,
-			selectedFileCount: 1,
-			selectedTotalBytes: 4096,
+			selectedFileCount: 0,
+			selectedTotalBytes: 0,
+			packageDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
 		});
+		expect(result.targetPackage.packageOmissionCount).toBe(1);
 
 		const manifest = JSON.parse(
 			await readFile(path.join(result.packetPath, "source", "manifest.json"), "utf8"),
@@ -421,6 +475,18 @@ describe("handoff prepare CLI helpers", () => {
 			submitTargetPhaseSkipped: true,
 			uploadAttemptCount: 0,
 			submitAttemptCount: 0,
+		});
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(result.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		expect(uploadManifest).toMatchObject({
+			items: [],
+			omissions: [
+				expect.objectContaining({
+					sourceManifestItemId: "hmj_fixture:entry_1",
+					reason: "selected local file is unavailable",
+				}),
+			],
 		});
 	});
 
@@ -476,7 +542,7 @@ describe("handoff prepare CLI helpers", () => {
 			omissionCount: 2,
 			retryableOmissionCount: 1,
 		});
-		expect(result.analysis.warnings).toContain("source_omissions_present");
+		expect(result.analysis.omissionWarnings).toContain("source_omissions_present");
 
 		const omissions = JSON.parse(
 			await readFile(path.join(result.packetPath, "source", "omissions.json"), "utf8"),
@@ -499,6 +565,8 @@ describe("handoff prepare CLI helpers", () => {
 
 	test("reads a prepared handoff packet status by id from the handoff ledger", async () => {
 		const root = await tempRoot("auracall-handoff-status-");
+		const selectedPath = path.join(root, "selected.txt");
+		await writeFile(selectedPath, "selected fixture", "utf8");
 		await prepareCrossServiceHandoffPacket({
 			config: fixtureConfig(),
 			outputRoot: root,
@@ -514,8 +582,8 @@ describe("handoff prepare CLI helpers", () => {
 					{
 						id: "selected",
 						kind: "file",
-						localPath: "/tmp/selected.txt",
-						sizeBytes: 17,
+						localPath: selectedPath,
+						sizeBytes: 16,
 						checksumSha256: "d".repeat(64),
 					},
 				],
@@ -550,13 +618,64 @@ describe("handoff prepare CLI helpers", () => {
 				mutationAllowed: false,
 				uploadAttemptCount: 0,
 				submitAttemptCount: 0,
+				packageDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+				selectedFileCount: 1,
+				selectedTotalBytes: 16,
 			},
 		});
 		expect(status?.packetDigest).toMatch(/^[a-f0-9]{64}$/);
+		expect(status?.analysisValidation).toMatchObject({
+			schemaValid: true,
+			errors: [],
+		});
 		expect(status).not.toBeNull();
 		if (!status) throw new Error("Expected handoff status fixture to exist.");
 		expect(formatHandoffStatusCliSummary(status)).toContain("Target mutation allowed: false");
+		expect(formatHandoffStatusCliSummary(status)).toContain("Analysis schema valid: true");
+		expect(formatHandoffStatusCliSummary(status)).toContain("Target package files: 1");
 		expect(formatHandoffStatusCliSummary(status)).toContain("Events: 6");
+	});
+
+	test("builds a stable target package digest for repeated dry-run preparation", async () => {
+		const root = await tempRoot("auracall-handoff-digest-");
+		const selectedPath = path.join(root, "digest.txt");
+		await writeFile(selectedPath, "digest fixture", "utf8");
+		const baseRequest = {
+			config: fixtureConfig(),
+			outputRoot: root,
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "stable digest" }] },
+			sourceManifest: {
+				items: [
+					{
+						id: "digest_selected",
+						kind: "file",
+						title: "Digest source",
+						localPath: selectedPath,
+						sizeBytes: 14,
+						checksumSha256: "f".repeat(64),
+						importanceHint: 5,
+					},
+				],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		} as const;
+
+		const first = await prepareCrossServiceHandoffPacket({
+			...baseRequest,
+			handoffId: "digest-one",
+		});
+		const second = await prepareCrossServiceHandoffPacket({
+			...baseRequest,
+			handoffId: "digest-two",
+		});
+
+		expect(first.targetPackage.packageDigest).toMatch(/^[a-f0-9]{64}$/);
+		expect(second.targetPackage.packageDigest).toBe(first.targetPackage.packageDigest);
 	});
 
 	test("returns null for missing handoff status ids", async () => {
@@ -568,6 +687,99 @@ describe("handoff prepare CLI helpers", () => {
 				outputDir: root,
 			}),
 		).resolves.toBeNull();
+	});
+
+	test("validates analysis decision v2 and rejects invalid selected ids", () => {
+		const report = validateHandoffAnalysisDecision({
+			generatedAt: "2026-06-05T12:00:00.000Z",
+			decision: analysisDecisionFixture({
+				selectedManifestItemIds: ["missing"],
+			}),
+			manifestItems: [manifestItemFixture({ id: "existing" })],
+			omissions: [],
+			budgets: analysisBudgetsFixture(),
+		});
+
+		expect(report.schemaValid).toBe(false);
+		expect(report.errors).toContain("selected manifest item does not exist: missing");
+	});
+
+	test("validates analysis decision v2 and rejects missing local selected files without omission warning", () => {
+		const report = validateHandoffAnalysisDecision({
+			generatedAt: "2026-06-05T12:00:00.000Z",
+			decision: analysisDecisionFixture({
+				selectedManifestItemIds: ["no_local"],
+				omissionWarnings: [],
+			}),
+			manifestItems: [manifestItemFixture({ id: "no_local", localPath: null })],
+			omissions: [],
+			budgets: analysisBudgetsFixture(),
+		});
+
+		expect(report.schemaValid).toBe(false);
+		expect(report.errors).toContain(
+			"selected manifest item lacks local file and omission warning: no_local",
+		);
+	});
+
+	test("validates analysis decision v2 and rejects malformed approval recommendation", () => {
+		const report = validateHandoffAnalysisDecision({
+			generatedAt: "2026-06-05T12:00:00.000Z",
+			decision: analysisDecisionFixture({
+				approvalRecommendation: "upload_now",
+			}),
+			manifestItems: [manifestItemFixture({ id: "selected" })],
+			omissions: [],
+			budgets: analysisBudgetsFixture(),
+		});
+
+		expect(report.schemaValid).toBe(false);
+		expect(report.errors).toContain("approvalRecommendation is not allowed");
+	});
+
+	test("validates analysis decision v2 and rejects budget overflow", () => {
+		const report = validateHandoffAnalysisDecision({
+			generatedAt: "2026-06-05T12:00:00.000Z",
+			decision: analysisDecisionFixture({
+				budgetFit: {
+					fits: false,
+					estimatedPromptTokens: 200,
+					selectedFileBytes: 200,
+				},
+			}),
+			manifestItems: [manifestItemFixture({ id: "selected", sizeBytes: 200 })],
+			omissions: [],
+			budgets: {
+				maxPromptTokens: 100,
+				maxSelectedFileBytes: 100,
+				maxSelectedFiles: 1,
+			},
+		});
+
+		expect(report.schemaValid).toBe(false);
+		expect(report.errors).toEqual(
+			expect.arrayContaining([
+				"selected file bytes exceed analysis budget",
+				"estimated prompt tokens exceed analysis budget",
+			]),
+		);
+	});
+
+	test("validates analysis decision v2 and rejects omission warnings with no matching omission", () => {
+		const report = validateHandoffAnalysisDecision({
+			generatedAt: "2026-06-05T12:00:00.000Z",
+			decision: analysisDecisionFixture({
+				omissionWarnings: ["source_omissions_present"],
+			}),
+			manifestItems: [manifestItemFixture({ id: "selected" })],
+			omissions: [],
+			budgets: analysisBudgetsFixture(),
+		});
+
+		expect(report.schemaValid).toBe(false);
+		expect(report.errors).toContain(
+			"omission warning has no matching omission or policy limit: source_omissions_present",
+		);
 	});
 
 	test("fails closed when an explicit source runtime profile is missing", async () => {
@@ -687,5 +899,82 @@ function materializationCreateResultFixture(): Record<string, unknown> {
 		reused: true,
 		reuseReason: "active sourceKey is already running",
 		job: materializationJobFixture({ id: "hmj_created", status: "succeeded" }),
+	};
+}
+
+function manifestItemFixture(
+	overrides: Partial<{
+		id: string;
+		localPath: string | null;
+		sizeBytes: number | null;
+	}> = {},
+): {
+	id: string;
+	kind: "file";
+	title: string;
+	localPath: string | null;
+	archiveItemId: null;
+	sourceRef: null;
+	mimeType: string;
+	sizeBytes: number | null;
+	checksumSha256: string;
+	materializationMethod: null;
+	importanceHint: number;
+} {
+	return {
+		id: overrides.id ?? "selected",
+		kind: "file",
+		title: "Selected file",
+		localPath: Object.hasOwn(overrides, "localPath")
+			? (overrides.localPath ?? null)
+			: "/tmp/selected.txt",
+		archiveItemId: null,
+		sourceRef: null,
+		mimeType: "text/plain",
+		sizeBytes: Object.hasOwn(overrides, "sizeBytes") ? (overrides.sizeBytes ?? null) : 10,
+		checksumSha256: "e".repeat(64),
+		materializationMethod: null,
+		importanceHint: 1,
+	};
+}
+
+function analysisBudgetsFixture(): {
+	maxPromptTokens: number;
+	maxSelectedFileBytes: number;
+	maxSelectedFiles: number;
+} {
+	return {
+		maxPromptTokens: 32000,
+		maxSelectedFileBytes: 50 * 1024 * 1024,
+		maxSelectedFiles: 10,
+	};
+}
+
+function analysisDecisionFixture(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+	return {
+		object: HANDOFF_ANALYSIS_SCHEMA,
+		generatedAt: "2026-06-05T12:00:00.000Z",
+		decisionSource: "deterministic-dry-run",
+		schemaValid: true,
+		sourceMaterializationJobIds: [],
+		selectedManifestItemIds: ["selected"],
+		compactContext: {
+			sourceProvider: "chatgpt",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			messageCount: 1,
+			materializedItemCount: 1,
+			omissionCount: 0,
+			summary: "fixture",
+		},
+		targetPrimer: "Fixture primer",
+		omissionWarnings: [],
+		budgetFit: {
+			fits: true,
+			estimatedPromptTokens: 10,
+			selectedFileBytes: 10,
+		},
+		approvalRecommendation: "preview_only",
+		...overrides,
 	};
 }
