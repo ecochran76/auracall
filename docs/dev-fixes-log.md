@@ -1,3 +1,9 @@
+- 2026-06-07: Provider-native handoff upload needs manifest-validated file
+  evidence before live provider/browser attachment code exists. The native file
+  upload runner now receives selected packet files with package digest and
+  metadata, writes native provider file ids or retryable failed-upload rows,
+  and blocks submit approval after failed target upload evidence.
+
 - 2026-06-07: Provider-native handoff submit/readback should be adapter-backed
   and approval-guarded, not a parallel mutation path. The provider-native
   prompt adapter now validates the existing submit approval guard, submits the

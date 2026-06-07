@@ -304,6 +304,7 @@ export interface HandoffUploadResult {
 	uploadedFileCount: number;
 	failedFileCount: number;
 	rows: HandoffUploadResultRow[];
+	failedRows: HandoffUploadFailureRow[];
 	omissions: HandoffTargetPackageOmission[];
 }
 
@@ -318,6 +319,20 @@ export interface HandoffUploadResultRow {
 	targetRuntimeProfileId: string;
 	providerFileId: string;
 	status: "uploaded";
+}
+
+export interface HandoffUploadFailureRow {
+	sourceManifestItemId: string;
+	packetPath: string;
+	filename: string;
+	mimeType: string | null;
+	sizeBytes: number;
+	checksumSha256: string;
+	targetProvider: HandoffProvider;
+	targetRuntimeProfileId: string;
+	status: "failed";
+	error: string;
+	retryable: boolean;
 }
 
 interface HandoffSelectedFileCopy {
@@ -354,7 +369,12 @@ export interface HandoffSubmissionPlan {
 export interface HandoffSubmissionResult {
 	object: typeof HANDOFF_SUBMISSION_RESULT_SCHEMA;
 	generatedAt: string;
-	status: "skipped_dry_run" | "upload_completed" | "upload_skipped_no_files" | "submitted";
+	status:
+		| "skipped_dry_run"
+		| "upload_completed"
+		| "upload_skipped_no_files"
+		| "upload_failed"
+		| "submitted";
 	packageDigest: string | null;
 	uploadAttemptCount: number;
 	submitAttemptCount: 0 | 1;
@@ -758,6 +778,42 @@ export interface HandoffProviderNativePromptRunner {
 	submit(input: HandoffProviderNativePromptInput): Promise<HandoffProviderNativePromptResult>;
 }
 
+export interface HandoffProviderNativeUploadFileInput {
+	sourceManifestItemId: string;
+	packetPath: string;
+	absolutePath: string;
+	filename: string;
+	mimeType: string | null;
+	sizeBytes: number;
+	checksumSha256: string;
+}
+
+export interface HandoffProviderNativeUploadInput {
+	provider: HandoffProvider;
+	runtimeProfileId: string;
+	browserProfileId: string | null;
+	conversationRef: string | null;
+	projectRef: string | null;
+	packageDigest: string;
+	files: HandoffProviderNativeUploadFileInput[];
+}
+
+export interface HandoffProviderNativeUploadFileResult {
+	sourceManifestItemId: string;
+	status: "uploaded" | "failed";
+	providerFileId?: string | null;
+	error?: string | null;
+	retryable?: boolean | null;
+}
+
+export interface HandoffProviderNativeUploadResult {
+	files: HandoffProviderNativeUploadFileResult[];
+}
+
+export interface HandoffProviderNativeUploadRunner {
+	upload(input: HandoffProviderNativeUploadInput): Promise<HandoffProviderNativeUploadResult>;
+}
+
 export async function prepareCrossServiceHandoffPacket(
 	request: HandoffPrepareRequest,
 ): Promise<HandoffPrepareResult> {
@@ -1079,6 +1135,9 @@ export async function approveHandoffTargetSubmit(
 			`Target upload result is stale for package digest ${packet.targetPackage.packageDigest}.`,
 		);
 	}
+	if (uploadResult.status === "failed") {
+		throw new Error("Target submit approval requires a successful target upload result.");
+	}
 	const guard = await buildSubmitGuard(packet.packetPath, packet.targetPackage, uploadResult);
 	const actor = normalizeOptionalString(input.actor) ?? "operator";
 	const approval: HandoffSubmitApproval = {
@@ -1162,6 +1221,7 @@ export async function uploadHandoffTargetPackage(
 		uploadedFileCount: rows.length,
 		failedFileCount: 0,
 		rows,
+		failedRows: [],
 		omissions: uploadManifest.omissions,
 	};
 	const submissionResult: HandoffSubmissionResult = {
@@ -1210,6 +1270,9 @@ export async function submitHandoffTargetPackage(
 		throw new Error(
 			`Target upload result is stale for package digest ${packet.targetPackage.packageDigest}.`,
 		);
+	}
+	if (uploadResult.status === "failed") {
+		throw new Error("Target submit requires a successful target upload result.");
 	}
 	const guard = await buildSubmitGuard(packet.packetPath, packet.targetPackage, uploadResult);
 	if (
@@ -1540,12 +1603,182 @@ const packetTargetAdapter: HandoffTargetAdapter = {
 
 export function createProviderNativeHandoffTargetAdapter(
 	runner: HandoffProviderNativePromptRunner,
+	uploadRunner?: HandoffProviderNativeUploadRunner | null,
 ): HandoffTargetAdapter {
 	return {
-		id: "provider_native_prompt_adapter",
-		upload: (input) => packetTargetAdapter.upload(input),
+		id: uploadRunner ? "provider_native_file_prompt_adapter" : "provider_native_prompt_adapter",
+		upload: uploadRunner
+			? (input) => uploadHandoffWithProviderNativeFiles(input, uploadRunner)
+			: (input) => packetTargetAdapter.upload(input),
 		submit: (input) => submitHandoffWithProviderNativePrompt(input, runner),
 	};
+}
+
+async function uploadHandoffWithProviderNativeFiles(
+	input: HandoffTargetAdapterContext,
+	runner: HandoffProviderNativeUploadRunner,
+): Promise<HandoffUploadTargetResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const approval = normalizeUploadApproval(
+		await readJsonIfExists(path.join(packet.packetPath, "approvals", "upload.json")),
+	);
+	if (!approval) {
+		throw new Error("Target upload requires an explicit upload approval.");
+	}
+	if (approval.packageDigest !== packet.targetPackage.packageDigest) {
+		throw new Error(
+			`Upload approval is stale for package digest ${packet.targetPackage.packageDigest}.`,
+		);
+	}
+	const uploadManifest = packet.uploadManifest;
+	const files: HandoffProviderNativeUploadFileInput[] = uploadManifest.items.map((item) => ({
+		sourceManifestItemId: item.sourceManifestItemId,
+		packetPath: item.packetPath,
+		absolutePath: path.join(packet.packetPath, item.packetPath),
+		filename: item.filename,
+		mimeType: item.mimeType,
+		sizeBytes: item.sizeBytes,
+		checksumSha256: item.checksumSha256,
+	}));
+	const nativeResult =
+		files.length > 0
+			? await runner.upload({
+					provider: packet.run.target.provider,
+					runtimeProfileId: packet.run.target.runtimeProfileId,
+					browserProfileId: packet.run.target.browserProfileId,
+					conversationRef: packet.run.target.conversationRef,
+					projectRef: packet.run.target.projectRef,
+					packageDigest: packet.targetPackage.packageDigest,
+					files,
+				})
+			: { files: [] };
+	const resultById = validateProviderNativeUploadResult(nativeResult, files);
+	const rows: HandoffUploadResultRow[] = [];
+	const failedRows: HandoffUploadFailureRow[] = [];
+	for (const file of files) {
+		const result = resultById.get(file.sourceManifestItemId);
+		if (result?.status === "uploaded") {
+			const providerFileId = normalizeOptionalString(result.providerFileId);
+			if (!providerFileId) {
+				throw new Error(
+					`Provider-native upload result for ${file.sourceManifestItemId} is missing providerFileId.`,
+				);
+			}
+			rows.push({
+				sourceManifestItemId: file.sourceManifestItemId,
+				packetPath: file.packetPath,
+				filename: file.filename,
+				mimeType: file.mimeType,
+				sizeBytes: file.sizeBytes,
+				checksumSha256: file.checksumSha256,
+				targetProvider: packet.run.target.provider,
+				targetRuntimeProfileId: packet.run.target.runtimeProfileId,
+				providerFileId,
+				status: "uploaded",
+			});
+			continue;
+		}
+		failedRows.push({
+			sourceManifestItemId: file.sourceManifestItemId,
+			packetPath: file.packetPath,
+			filename: file.filename,
+			mimeType: file.mimeType,
+			sizeBytes: file.sizeBytes,
+			checksumSha256: file.checksumSha256,
+			targetProvider: packet.run.target.provider,
+			targetRuntimeProfileId: packet.run.target.runtimeProfileId,
+			status: "failed",
+			error:
+				normalizeOptionalString(result?.error) ??
+				"Provider-native upload runner did not report a successful upload.",
+			retryable: result?.retryable !== false,
+		});
+	}
+	const status =
+		failedRows.length > 0 ? "failed" : rows.length > 0 ? "uploaded" : "skipped_no_files";
+	const uploadResult: HandoffUploadResult = {
+		object: HANDOFF_UPLOAD_RESULT_SCHEMA,
+		generatedAt: input.generatedAt,
+		status,
+		packageDigest: packet.targetPackage.packageDigest,
+		target: packet.run.target,
+		uploadAttemptCount: rows.length + failedRows.length,
+		submitAttemptCount: 0,
+		uploadedFileCount: rows.length,
+		failedFileCount: failedRows.length,
+		rows,
+		failedRows,
+		omissions: uploadManifest.omissions,
+	};
+	const submissionResult: HandoffSubmissionResult = {
+		object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
+		generatedAt: input.generatedAt,
+		status:
+			status === "failed"
+				? "upload_failed"
+				: rows.length > 0
+					? "upload_completed"
+					: "upload_skipped_no_files",
+		packageDigest: packet.targetPackage.packageDigest,
+		uploadAttemptCount: uploadResult.uploadAttemptCount,
+		submitAttemptCount: 0,
+		uploadResultRef: "target/upload-result.json",
+	};
+	await writeJson(path.join(packet.packetPath, "target", "upload-result.json"), uploadResult);
+	await writeJson(
+		path.join(packet.packetPath, "target", "submission-result.json"),
+		submissionResult,
+	);
+	return {
+		object: "auracall.handoff.upload-target.result",
+		generatedAt: input.generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		approval,
+		uploadResult,
+		submissionResult,
+	};
+}
+
+function validateProviderNativeUploadResult(
+	result: HandoffProviderNativeUploadResult,
+	files: HandoffProviderNativeUploadFileInput[],
+): Map<string, HandoffProviderNativeUploadFileResult> {
+	if (!isRecord(result) || !Array.isArray(result.files)) {
+		throw new Error("Provider-native upload runner returned an invalid upload result.");
+	}
+	const expectedIds = new Set(files.map((file) => file.sourceManifestItemId));
+	const resultById = new Map<string, HandoffProviderNativeUploadFileResult>();
+	for (const entry of result.files) {
+		if (!isRecord(entry)) {
+			throw new Error("Provider-native upload runner returned an invalid file result.");
+		}
+		const sourceManifestItemId = normalizeOptionalString(entry.sourceManifestItemId);
+		if (!sourceManifestItemId || !expectedIds.has(sourceManifestItemId)) {
+			throw new Error(
+				`Provider-native upload runner returned an unknown manifest item id: ${sourceManifestItemId ?? "missing"}.`,
+			);
+		}
+		if (resultById.has(sourceManifestItemId)) {
+			throw new Error(
+				`Provider-native upload runner returned duplicate manifest item id: ${sourceManifestItemId}.`,
+			);
+		}
+		const status = normalizeOptionalString(entry.status);
+		if (status !== "uploaded" && status !== "failed") {
+			throw new Error(
+				`Provider-native upload runner returned invalid status for ${sourceManifestItemId}.`,
+			);
+		}
+		resultById.set(sourceManifestItemId, {
+			sourceManifestItemId,
+			status,
+			providerFileId: normalizeOptionalString(entry.providerFileId),
+			error: normalizeOptionalString(entry.error),
+			retryable: entry.retryable === false ? false : entry.retryable === true ? true : null,
+		});
+	}
+	return resultById;
 }
 
 async function submitHandoffWithProviderNativePrompt(
@@ -1569,6 +1802,9 @@ async function submitHandoffWithProviderNativePrompt(
 		throw new Error(
 			`Target upload result is stale for package digest ${packet.targetPackage.packageDigest}.`,
 		);
+	}
+	if (uploadResult.status === "failed") {
+		throw new Error("Target submit requires a successful target upload result.");
 	}
 	const guard = await buildSubmitGuard(packet.packetPath, packet.targetPackage, uploadResult);
 	if (
@@ -2719,6 +2955,9 @@ function normalizeUploadResult(value: unknown): HandoffUploadResult | null {
 		uploadedFileCount: normalizeNumber(value.uploadedFileCount) ?? 0,
 		failedFileCount: normalizeNumber(value.failedFileCount) ?? 0,
 		rows: Array.isArray(value.rows) ? value.rows.map(normalizeUploadResultRow) : [],
+		failedRows: Array.isArray(value.failedRows)
+			? value.failedRows.map(normalizeUploadFailureRow)
+			: [],
 		omissions: normalizeTargetPackageOmissions(value.omissions),
 	};
 }
@@ -2739,6 +2978,23 @@ function normalizeUploadResultRow(value: unknown): HandoffUploadResultRow {
 	};
 }
 
+function normalizeUploadFailureRow(value: unknown): HandoffUploadFailureRow {
+	const record = isRecord(value) ? value : {};
+	return {
+		sourceManifestItemId: normalizeOptionalString(record.sourceManifestItemId) ?? "unknown",
+		packetPath: normalizeOptionalString(record.packetPath) ?? "",
+		filename: normalizeOptionalString(record.filename) ?? "file",
+		mimeType: normalizeOptionalString(record.mimeType),
+		sizeBytes: normalizeNumber(record.sizeBytes) ?? 0,
+		checksumSha256: normalizeSha256(record.checksumSha256) ?? "",
+		targetProvider: normalizeHandoffProvider(record.targetProvider),
+		targetRuntimeProfileId: normalizeOptionalString(record.targetRuntimeProfileId) ?? "",
+		status: "failed",
+		error: normalizeOptionalString(record.error) ?? "Provider-native upload failed.",
+		retryable: record.retryable !== false,
+	};
+}
+
 function normalizeSubmissionResult(value: unknown): HandoffSubmissionResult | null {
 	if (!isRecord(value)) return null;
 	const status = normalizeOptionalString(value.status);
@@ -2746,6 +3002,7 @@ function normalizeSubmissionResult(value: unknown): HandoffSubmissionResult | nu
 		status !== "skipped_dry_run" &&
 		status !== "upload_completed" &&
 		status !== "upload_skipped_no_files" &&
+		status !== "upload_failed" &&
 		status !== "submitted"
 	) {
 		return null;
@@ -2916,6 +3173,13 @@ function buildUploadSetDigest(uploadResult: HandoffUploadResult): string {
 			providerFileId: row.providerFileId,
 			status: row.status,
 		})),
+		failedRows: uploadResult.failedRows.map((row) => ({
+			sourceManifestItemId: row.sourceManifestItemId,
+			checksumSha256: row.checksumSha256,
+			error: row.error,
+			retryable: row.retryable,
+			status: row.status,
+		})),
 		omissions: uploadResult.omissions.map((omission) => ({
 			sourceManifestItemId: omission.sourceManifestItemId,
 			reason: omission.reason,
@@ -2956,7 +3220,11 @@ function buildResumePlanFromStatus(status: HandoffStatusResult): HandoffResumePl
 			currentStage: "upload_approved",
 			nextAction: "upload",
 			command: `${baseCommand} upload ${status.run.id}`,
-			reasons: ["target package is upload-approved but no current upload result exists"],
+			reasons: [
+				status.target.uploadStatus === "failed"
+					? "target upload failed and can be retried without repeating source phases"
+					: "target package is upload-approved but no current upload result exists",
+			],
 			requiredApprovals: [],
 		});
 	}

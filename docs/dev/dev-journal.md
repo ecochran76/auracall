@@ -1,3 +1,26 @@
+## Turn 376 | 2026-06-07
+
+- Goal: continue Plan 0114 by wiring provider-native selected-file upload
+  evidence behind the live recovery adapter contract.
+- Implemented:
+  - opened
+    `docs/dev/plans/0129-2026-06-07-handoff-provider-native-file-upload-proof.md`.
+  - added provider-native upload runner input/result contracts.
+  - extended `createProviderNativeHandoffTargetAdapter(...)` with an optional
+    native upload runner.
+  - passed selected upload-manifest files to the runner with packet-relative
+    paths, absolute paths, metadata, and package digest.
+  - wrote native provider file ids and retryable failed-upload rows to
+    `target/upload-result.json`.
+  - made failed upload evidence block submit approval and submit.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build all passed.
+- Decision:
+  - Plan 0129 closes as **Handoff Provider-Native File Upload Proof
+    Installed**.
+
 ## Turn 375 | 2026-06-07
 
 - Goal: continue Plan 0114 by wiring the first provider-native submit/readback

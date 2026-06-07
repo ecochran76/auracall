@@ -1,5 +1,32 @@
 # RUNBOOK
 
+## Turn 272 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0129-2026-06-07-handoff-provider-native-file-upload-proof.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: continue Plan 0114 by wiring provider-native selected-file upload
+  evidence behind the live recovery adapter contract.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0129-2026-06-07-handoff-provider-native-file-upload-proof.md`.
+  - added provider-native upload runner input/result contracts.
+  - extended `createProviderNativeHandoffTargetAdapter(...)` with an optional
+    native upload runner.
+  - passed selected packet files to the runner with packet-relative paths,
+    absolute paths, metadata, and package digest.
+  - persisted native provider file ids and retryable failed-upload rows in
+    `target/upload-result.json`.
+  - blocked submit approval and submit after failed target upload evidence.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build passed.
+- Decision:
+  - Plan 0129 closes as **Handoff Provider-Native File Upload Proof
+    Installed**.
+
 ## Turn 271 | 2026-06-07
 
 - Active plan:

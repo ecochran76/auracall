@@ -377,9 +377,17 @@ Model output never directly mutates target services.
 
 ### Slice 0129 | Provider-Native File Upload Proof
 
-- Attach the first real provider-native file upload or prompt attachment path.
-- Prove one bounded approved handoff with selected file transfer, submit, and
-  readback evidence.
+- Attach a provider-native file upload runner behind the target adapter
+  contract.
+- Prove approved selected-file transfer into provider file ids, successful
+  submit/readback, and failed-upload retry gating with fixture evidence.
+
+### Slice 0130 | Live Provider Upload Adapter Proof
+
+- Implement the first live provider upload or prompt attachment adapter using
+  the provider/browser surface rather than fixture runners.
+- Prove one bounded approved handoff against a real target profile with
+  selected file transfer, submit, readback, and replayable provider evidence.
 
 ## Critical Path
 

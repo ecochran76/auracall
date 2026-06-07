@@ -32,6 +32,7 @@ import {
 	uploadHandoffTargetPackage,
 	type HandoffTargetAdapter,
 	type HandoffProviderNativePromptInput,
+	type HandoffProviderNativeUploadInput,
 	validateHandoffAnalysisDecision,
 } from "../../src/handoff/service.js";
 
@@ -1545,6 +1546,239 @@ describe("handoff prepare CLI helpers", () => {
 			responseSummary: "Provider-native fixture accepted the handoff.",
 			responseExcerpt: "The target conversation received the compact context.",
 		});
+	});
+
+	test("provider-native file prompt adapter uploads selected files and submits native file ids", async () => {
+		const root = await tempRoot("auracall-handoff-provider-native-file-");
+		const selectedPath = path.join(root, "provider-native-file.txt");
+		await writeFile(selectedPath, "provider native file fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "provider-native-file-fixture",
+			sourceProvider: "gemini",
+			sourceRuntimeProfile: "target-gemini",
+			sourceRef: "https://gemini.google.com/app/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			targetRef: "https://chatgpt.com/c/provider-native-file-target",
+			sourceContext: { messages: [{ role: "user", content: "native file" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "native_file_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-07T13:00:00.000Z",
+		});
+		const uploadInputs: HandoffProviderNativeUploadInput[] = [];
+		const promptInputs: HandoffProviderNativePromptInput[] = [];
+		const nativeAdapter = createProviderNativeHandoffTargetAdapter(
+			{
+				async submit(input) {
+					promptInputs.push(input);
+					return {
+						targetConversationRef: "https://chatgpt.com/c/provider-native-file-target",
+						providerMessageId: "provider-native-file-message",
+					};
+				},
+			},
+			{
+				async upload(input) {
+					uploadInputs.push(input);
+					return {
+						files: [
+							{
+								sourceManifestItemId: "native_file_selected",
+								status: "uploaded",
+								providerFileId: "chatgpt-file-native-1",
+							},
+						],
+					};
+				},
+			},
+		);
+		await approveHandoffUploadForCli({
+			handoffId: "provider-native-file-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		const uploadRecovery = await recoverHandoffLive({
+			handoffId: "provider-native-file-fixture",
+			outputRoot: root,
+			generatedAt: "2026-06-07T13:01:00.000Z",
+			targetAdapter: nativeAdapter,
+		});
+
+		expect(uploadRecovery).toMatchObject({
+			recovery: {
+				status: "recovered",
+				executor: "provider_native_file_prompt_adapter",
+				executedAction: "upload",
+			},
+			afterResumePlan: {
+				nextAction: "approve_submit",
+			},
+		});
+		expect(uploadInputs).toEqual([
+			expect.objectContaining({
+				provider: "chatgpt",
+				runtimeProfileId: "target-pro",
+				packageDigest: prepared.targetPackage.packageDigest,
+					files: [
+						expect.objectContaining({
+							sourceManifestItemId: "native_file_selected",
+							packetPath: "target/selected-files/001-Selected_file-native_file_selected",
+							absolutePath: path.join(
+								root,
+								"provider-native-file-fixture",
+								"target",
+								"selected-files",
+								"001-Selected_file-native_file_selected",
+							),
+						}),
+					],
+			}),
+		]);
+		const uploadJson = JSON.parse(
+			await readFile(
+				path.join(root, "provider-native-file-fixture", "target", "upload-result.json"),
+				"utf8",
+			),
+		);
+		expect(uploadJson).toMatchObject({
+			status: "uploaded",
+			uploadedFileCount: 1,
+			failedFileCount: 0,
+			rows: [
+				expect.objectContaining({
+					sourceManifestItemId: "native_file_selected",
+					providerFileId: "chatgpt-file-native-1",
+					status: "uploaded",
+				}),
+			],
+			failedRows: [],
+		});
+
+		await approveHandoffSubmitForCli({
+			handoffId: "provider-native-file-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		const submitRecovery = await recoverHandoffLive({
+			handoffId: "provider-native-file-fixture",
+			outputRoot: root,
+			generatedAt: "2026-06-07T13:02:00.000Z",
+			targetAdapter: nativeAdapter,
+		});
+
+		expect(promptInputs).toEqual([
+			expect.objectContaining({
+				uploadedProviderFileIds: ["chatgpt-file-native-1"],
+			}),
+		]);
+		expect(submitRecovery).toMatchObject({
+			recovery: {
+				status: "recovered",
+				executor: "provider_native_file_prompt_adapter",
+				executedAction: "submit",
+			},
+			afterResumePlan: {
+				nextAction: "complete",
+			},
+		});
+	});
+
+	test("provider-native file upload failures are recorded and block submit approval", async () => {
+		const root = await tempRoot("auracall-handoff-provider-native-file-fail-");
+		const selectedPath = path.join(root, "provider-native-file-fail.txt");
+		await writeFile(selectedPath, "provider native file failure fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "provider-native-file-fail-fixture",
+			sourceProvider: "gemini",
+			sourceRuntimeProfile: "target-gemini",
+			sourceRef: "https://gemini.google.com/app/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: { messages: [{ role: "user", content: "native file fail" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "native_file_failed", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-07T13:10:00.000Z",
+		});
+		const nativeAdapter = createProviderNativeHandoffTargetAdapter(
+			{
+				async submit() {
+					throw new Error("submit should not run after failed native upload");
+				},
+			},
+			{
+				async upload() {
+					return {
+						files: [
+							{
+								sourceManifestItemId: "native_file_failed",
+								status: "failed",
+								error: "target provider rejected the file",
+								retryable: true,
+							},
+						],
+					};
+				},
+			},
+		);
+		await approveHandoffUploadForCli({
+			handoffId: "provider-native-file-fail-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		const uploadRecovery = await recoverHandoffLive({
+			handoffId: "provider-native-file-fail-fixture",
+			outputRoot: root,
+			generatedAt: "2026-06-07T13:11:00.000Z",
+			targetAdapter: nativeAdapter,
+		});
+
+		expect(uploadRecovery).toMatchObject({
+			recovery: {
+				status: "recovered",
+				executor: "provider_native_file_prompt_adapter",
+				executedAction: "upload",
+			},
+			afterResumePlan: {
+				nextAction: "upload",
+				reasons: ["target upload failed and can be retried without repeating source phases"],
+			},
+		});
+		const uploadJson = JSON.parse(
+			await readFile(
+				path.join(root, "provider-native-file-fail-fixture", "target", "upload-result.json"),
+				"utf8",
+			),
+		);
+		expect(uploadJson).toMatchObject({
+			status: "failed",
+			uploadedFileCount: 0,
+			failedFileCount: 1,
+			rows: [],
+			failedRows: [
+				expect.objectContaining({
+					sourceManifestItemId: "native_file_failed",
+					status: "failed",
+					error: "target provider rejected the file",
+					retryable: true,
+				}),
+			],
+		});
+
+		await expect(
+			approveHandoffSubmitForCli({
+				handoffId: "provider-native-file-fail-fixture",
+				outputDir: root,
+				packageDigest: prepared.targetPackage.packageDigest,
+			}),
+		).rejects.toThrow("Target submit approval requires a successful target upload result.");
 	});
 
 	test("repairs missing derived handoff readback state", async () => {

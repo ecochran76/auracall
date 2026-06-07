@@ -10,6 +10,8 @@ Lane: P01
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
 - Latest completed plan:
+  [docs/dev/plans/0129-2026-06-07-handoff-provider-native-file-upload-proof.md](docs/dev/plans/0129-2026-06-07-handoff-provider-native-file-upload-proof.md)
+- Previous completed plan:
   [docs/dev/plans/0128-2026-06-07-handoff-provider-native-submit-readback-proof.md](docs/dev/plans/0128-2026-06-07-handoff-provider-native-submit-readback-proof.md)
 - Previous completed plan:
   [docs/dev/plans/0127-2026-06-07-handoff-provider-native-adapter-composition.md](docs/dev/plans/0127-2026-06-07-handoff-provider-native-adapter-composition.md)
