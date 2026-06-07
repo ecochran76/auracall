@@ -10,12 +10,14 @@ import {
 	formatHandoffApproveSubmitCliSummary,
 	formatHandoffExportCliSummary,
 	formatHandoffPrepareCliSummary,
+	formatHandoffRecoverLiveCliSummary,
 	formatHandoffRepairCliSummary,
 	formatHandoffResumeCliSummary,
 	formatHandoffStatusCliSummary,
 	formatHandoffSubmitCliSummary,
 	prepareHandoffForCli,
 	readHandoffStatusForCli,
+	recoverLiveHandoffForCli,
 	repairHandoffForCli,
 	resumeHandoffForCli,
 	submitHandoffForCli,
@@ -1175,6 +1177,170 @@ describe("handoff prepare CLI helpers", () => {
 			await readFile(path.join(root, "resume-fixture", "target", "resume-plan.json"), "utf8"),
 		);
 		expect(planJson.object).toBe("auracall.handoff-resume-plan.v1");
+	});
+
+	test("blocks live recovery until the resume plan has an approved executable action", async () => {
+		const root = await tempRoot("auracall-handoff-live-recovery-blocked-");
+		const selectedPath = path.join(root, "live-blocked.txt");
+		await writeFile(selectedPath, "live blocked fixture", "utf8");
+		await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "live-recovery-blocked",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "recover" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "live_blocked_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-07T12:00:00.000Z",
+		});
+
+		const recovery = await recoverLiveHandoffForCli({
+			handoffId: "live-recovery-blocked",
+			outputDir: root,
+		});
+
+		expect(recovery).toMatchObject({
+			object: "auracall.handoff.live-recovery.result",
+			recovery: {
+				object: "auracall.handoff-live-recovery.v1",
+				status: "blocked",
+				executor: "packet_target_adapter",
+				executedAction: null,
+				blockers: [
+					"live recovery requires an approved executable next action; current next action is approve_upload",
+				],
+			},
+			beforeResumePlan: {
+				nextAction: "approve_upload",
+			},
+			afterResumePlan: null,
+		});
+		expect(formatHandoffRecoverLiveCliSummary(recovery)).toContain("Recovery status: blocked");
+		const recoveryJson = JSON.parse(
+			await readFile(
+				path.join(root, "live-recovery-blocked", "target", "live-recovery.json"),
+				"utf8",
+			),
+		);
+		expect(recoveryJson).toMatchObject({
+			object: "auracall.handoff-live-recovery.v1",
+			status: "blocked",
+			resultRefs: {
+				uploadResult: null,
+				submissionResult: null,
+				readback: null,
+			},
+		});
+	});
+
+	test("live recovery executes approved upload and then approved submit from resume state", async () => {
+		const root = await tempRoot("auracall-handoff-live-recovery-");
+		const selectedPath = path.join(root, "live.txt");
+		await writeFile(selectedPath, "live recovery fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "live-recovery-fixture",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			targetRef: "https://gemini.google.com/app/live-target",
+			sourceContext: { messages: [{ role: "user", content: "recover live" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "live_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-07T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "live-recovery-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		const uploadRecovery = await recoverLiveHandoffForCli({
+			handoffId: "live-recovery-fixture",
+			outputDir: root,
+		});
+		expect(uploadRecovery).toMatchObject({
+			recovery: {
+				status: "recovered",
+				executedAction: "upload",
+				resultRefs: {
+					uploadResult: "target/upload-result.json",
+					submissionResult: "target/submission-result.json",
+					readback: null,
+				},
+			},
+			beforeResumePlan: {
+				nextAction: "upload",
+			},
+			afterResumePlan: {
+				nextAction: "approve_submit",
+			},
+		});
+		expect(formatHandoffRecoverLiveCliSummary(uploadRecovery)).toContain(
+			"Executed action: upload",
+		);
+
+		await approveHandoffSubmitForCli({
+			handoffId: "live-recovery-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		const submitRecovery = await recoverLiveHandoffForCli({
+			handoffId: "live-recovery-fixture",
+			outputDir: root,
+		});
+
+		expect(submitRecovery).toMatchObject({
+			recovery: {
+				status: "recovered",
+				executedAction: "submit",
+				resultRefs: {
+					uploadResult: "target/upload-result.json",
+					submissionResult: "target/submission-result.json",
+					readback: "target/readback.json",
+				},
+			},
+			beforeResumePlan: {
+				nextAction: "submit",
+			},
+			afterResumePlan: {
+				nextAction: "complete",
+			},
+		});
+		const recoveryJson = JSON.parse(
+			await readFile(
+				path.join(root, "live-recovery-fixture", "target", "live-recovery.json"),
+				"utf8",
+			),
+		);
+		expect(recoveryJson).toMatchObject({
+			object: "auracall.handoff-live-recovery.v1",
+			status: "recovered",
+			executedAction: "submit",
+			adapterNotes: expect.arrayContaining([
+				"Recovery executes only the current approved resume-plan action.",
+			]),
+		});
+		const status = await readHandoffStatusForCli({
+			handoffId: "live-recovery-fixture",
+			outputDir: root,
+		});
+		expect(status).toMatchObject({
+			target: {
+				submitStatus: "submitted",
+				readbackStatus: "readback_cached",
+				targetConversationRef: "https://gemini.google.com/app/live-target",
+			},
+		});
 	});
 
 	test("repairs missing derived handoff readback state", async () => {

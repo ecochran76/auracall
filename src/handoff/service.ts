@@ -36,6 +36,7 @@ export const HANDOFF_TARGET_READBACK_SCHEMA = "auracall.handoff-target-readback.
 export const HANDOFF_RESUME_PLAN_SCHEMA = "auracall.handoff-resume-plan.v1";
 export const HANDOFF_REPAIR_REPORT_SCHEMA = "auracall.handoff-repair-report.v1";
 export const HANDOFF_MANUAL_EXPORT_SCHEMA = "auracall.handoff-manual-export.v1";
+export const HANDOFF_LIVE_RECOVERY_SCHEMA = "auracall.handoff-live-recovery.v1";
 
 export const HANDOFF_ANALYSIS_OMISSION_WARNING_PREFIXES = [
 	"source_context_not_provided",
@@ -643,6 +644,25 @@ export interface HandoffManualExport {
 	};
 }
 
+export interface HandoffLiveRecovery {
+	object: typeof HANDOFF_LIVE_RECOVERY_SCHEMA;
+	generatedAt: string;
+	runId: string;
+	packetPath: string;
+	status: "recovered" | "blocked" | "noop";
+	executor: "packet_target_adapter";
+	executedAction: "upload" | "submit" | null;
+	beforeResumePlanRef: "target/resume-plan.json";
+	afterResumePlanRef: "target/resume-plan.json" | null;
+	blockers: string[];
+	resultRefs: {
+		uploadResult: "target/upload-result.json" | null;
+		submissionResult: "target/submission-result.json" | null;
+		readback: "target/readback.json" | null;
+	};
+	adapterNotes: string[];
+}
+
 export interface HandoffResumeRequest {
 	handoffId: string;
 	outputRoot?: string | null;
@@ -684,6 +704,22 @@ export interface HandoffExportResult {
 	packetPath: string;
 	runId: string;
 	exportBundle: HandoffManualExport;
+}
+
+export interface HandoffLiveRecoveryRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffLiveRecoveryResult {
+	object: "auracall.handoff.live-recovery.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	recovery: HandoffLiveRecovery;
+	beforeResumePlan: HandoffResumePlan;
+	afterResumePlan: HandoffResumePlan | null;
 }
 
 export async function prepareCrossServiceHandoffPacket(
@@ -1349,6 +1385,106 @@ export async function exportHandoffManualBundle(
 		packetPath: packet.packetPath,
 		runId: packet.run.id,
 		exportBundle,
+	};
+}
+
+export async function recoverHandoffLive(
+	input: HandoffLiveRecoveryRequest,
+): Promise<HandoffLiveRecoveryResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const before = await buildHandoffResumePlan({
+		handoffId: packet.run.id,
+		outputRoot: input.outputRoot,
+		generatedAt,
+	});
+	const beforeResumePlan = before.resumePlan;
+	let afterResumePlan: HandoffResumePlan | null = null;
+	let status: HandoffLiveRecovery["status"] = "blocked";
+	let executedAction: HandoffLiveRecovery["executedAction"] = null;
+	let resultRefs: HandoffLiveRecovery["resultRefs"] = {
+		uploadResult: null,
+		submissionResult: null,
+		readback: null,
+	};
+	const blockers: string[] = [];
+
+	if (beforeResumePlan.nextAction === "upload") {
+		await uploadHandoffTargetPackage({
+			handoffId: packet.run.id,
+			outputRoot: input.outputRoot,
+			generatedAt,
+		});
+		status = "recovered";
+		executedAction = "upload";
+		resultRefs = {
+			uploadResult: "target/upload-result.json",
+			submissionResult: "target/submission-result.json",
+			readback: null,
+		};
+	} else if (beforeResumePlan.nextAction === "submit") {
+		await submitHandoffTargetPackage({
+			handoffId: packet.run.id,
+			outputRoot: input.outputRoot,
+			generatedAt,
+		});
+		status = "recovered";
+		executedAction = "submit";
+		resultRefs = {
+			uploadResult: "target/upload-result.json",
+			submissionResult: "target/submission-result.json",
+			readback: "target/readback.json",
+		};
+	} else if (beforeResumePlan.nextAction === "complete") {
+		status = "noop";
+		blockers.push("handoff is already complete");
+		resultRefs = {
+			uploadResult: beforeResumePlan.refs.uploadResult,
+			submissionResult: beforeResumePlan.refs.submissionResult,
+			readback: beforeResumePlan.refs.readback,
+		};
+	} else {
+		blockers.push(
+			`live recovery requires an approved executable next action; current next action is ${beforeResumePlan.nextAction}`,
+		);
+	}
+
+	if (status === "recovered") {
+		const after = await buildHandoffResumePlan({
+			handoffId: packet.run.id,
+			outputRoot: input.outputRoot,
+			generatedAt,
+		});
+		afterResumePlan = after.resumePlan;
+	}
+
+	const recovery: HandoffLiveRecovery = {
+		object: HANDOFF_LIVE_RECOVERY_SCHEMA,
+		generatedAt,
+		runId: packet.run.id,
+		packetPath: packet.packetPath,
+		status,
+		executor: "packet_target_adapter",
+		executedAction,
+		beforeResumePlanRef: "target/resume-plan.json",
+		afterResumePlanRef: afterResumePlan ? "target/resume-plan.json" : null,
+		blockers,
+		resultRefs,
+		adapterNotes: [
+			"Recovery executes only the current approved resume-plan action.",
+			"Provider-native upload and submit adapters can replace packet_target_adapter behind this contract.",
+			"Upload and submit approvals remain validated by package, prompt, compact-context, and uploaded-file-set digests.",
+		],
+	};
+	await writeJson(path.join(packet.packetPath, "target", "live-recovery.json"), recovery);
+	return {
+		object: "auracall.handoff.live-recovery.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		recovery,
+		beforeResumePlan,
+		afterResumePlan,
 	};
 }
 

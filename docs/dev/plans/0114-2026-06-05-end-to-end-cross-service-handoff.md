@@ -355,8 +355,17 @@ Model output never directly mutates target services.
 
 ### Slice 0126 | Live Provider Recovery
 
-- Bridge deterministic resume plans to live provider recovery where permitted.
+- Bridge deterministic resume plans to an explicit live recovery action where
+  permitted.
+- Write replayable live recovery evidence for blocked or executed recovery
+  attempts.
 - Keep approval gates explicit for any live target mutation.
+
+### Slice 0127 | Provider-Native Handoff Adapters
+
+- Attach provider-native upload, submit, and readback adapters behind the live
+  recovery contract.
+- Keep provider-specific browser heuristics outside the handoff state machine.
 
 ## Critical Path
 

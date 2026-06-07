@@ -170,6 +170,7 @@ auracall handoff submit <handoff_id> --json
 auracall handoff resume <handoff_id> --json
 auracall handoff repair <handoff_id> --json
 auracall handoff export <handoff_id> --json
+auracall handoff recover-live <handoff_id> --json
 # The console Handoffs view can run the same status/resume/repair/export actions
 open http://127.0.0.1:<api_port>/console?view=handoffs&handoff=<handoff_id>
 
@@ -249,7 +250,12 @@ Current browser-mode default posture:
   `target/manual-handoff-export.json` for manual target completion. The local
   API exposes matching `/v1/handoffs/<handoff_id>/...` operator endpoints, and
   `/console?view=handoffs&handoff=<handoff_id>` provides a browser console
-  surface for status, resume, repair, and export actions.
+  surface for status, resume, repair, export, and live recovery actions.
+  `auracall handoff recover-live <handoff_id>` and
+  `POST /v1/handoffs/<handoff_id>/recover-live` execute only the current
+  approved resume-plan target action and write `target/live-recovery.json`;
+  missing or stale approvals leave a blocked recovery artifact instead of
+  bypassing the gate.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

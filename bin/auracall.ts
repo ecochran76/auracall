@@ -195,6 +195,7 @@ import {
   formatHandoffApproveSubmitCliSummary,
   formatHandoffApproveUploadCliSummary,
   formatHandoffPrepareCliSummary,
+  formatHandoffRecoverLiveCliSummary,
   formatHandoffRepairCliSummary,
   formatHandoffResumeCliSummary,
   formatHandoffStatusCliSummary,
@@ -202,6 +203,7 @@ import {
   formatHandoffUploadCliSummary,
   prepareHandoffForCli,
   readHandoffStatusForCli,
+  recoverLiveHandoffForCli,
   repairHandoffForCli,
   resumeHandoffForCli,
   submitHandoffForCli,
@@ -1995,6 +1997,24 @@ handoffCommand
       return;
     }
     console.log(formatHandoffExportCliSummary(result));
+  });
+
+handoffCommand
+  .command('recover-live')
+  .description('Execute the current approved handoff resume action and write live recovery evidence.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await recoverLiveHandoffForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffRecoverLiveCliSummary(result));
   });
 
 apiCommand

@@ -619,6 +619,10 @@ function HandoffsPage({
             {busy === "export" ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Archive size={16} aria-hidden="true" />}
             Export
           </button>
+          <button className="primary-button" type="button" onClick={() => onAction("recover-live")} disabled={Boolean(busy)}>
+            {busy === "recover-live" ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
+            Recover Live
+          </button>
         </div>
       </section>
 
@@ -2098,6 +2102,7 @@ function summarizeHandoffPayload(payload) {
     };
   }
   const resumePlan = payload.resumePlan ?? null;
+  const recovery = payload.recovery ?? null;
   const report = payload.report ?? null;
   const exportBundle = payload.exportBundle ?? null;
   const target = payload.target ?? {};
@@ -2105,13 +2110,16 @@ function summarizeHandoffPayload(payload) {
   return {
     title: payload.runId ?? payload.run?.id ?? "Handoff packet",
     subtitle: payload.packetPath ?? "Packet path unavailable",
-    stage: resumePlan?.currentStage ?? target.submitStatus ?? target.uploadStatus ?? "unknown",
-    nextAction: resumePlan?.nextAction ?? (target.readbackStatus === "readback_cached" ? "complete" : "unknown"),
+    stage: recovery?.status ?? resumePlan?.currentStage ?? target.submitStatus ?? target.uploadStatus ?? "unknown",
+    nextAction:
+      payload.afterResumePlan?.nextAction ??
+      resumePlan?.nextAction ??
+      (target.readbackStatus === "readback_cached" ? "complete" : "unknown"),
     fileCount,
     readback: exportBundle?.readbackStatus ?? target.readbackStatus ?? "unknown",
     resumePlanRef: report?.resumePlanRef ?? resumePlan?.refs?.manualExport ?? "target/resume-plan.json",
     repairReportRef: report ? "repair/report.json" : "missing",
-    exportRef: exportBundle ? "target/manual-handoff-export.json" : resumePlan?.refs?.manualExport ?? "missing",
+    exportRef: recovery ? "target/live-recovery.json" : exportBundle ? "target/manual-handoff-export.json" : resumePlan?.refs?.manualExport ?? "missing",
     providerMessageId: exportBundle?.providerMessageId ?? target.providerMessageId ?? "missing",
   };
 }

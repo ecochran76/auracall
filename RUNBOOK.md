@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 269 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0126-2026-06-07-handoff-live-provider-recovery.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: continue Plan 0114 with an explicit approval-gated recovery bridge from
+  deterministic resume plans to target-side execution.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0126-2026-06-07-handoff-live-provider-recovery.md`.
+  - added `auracall handoff recover-live <id>`.
+  - added `POST /v1/handoffs/{id}/recover-live`.
+  - added the console `Recover Live` action.
+  - added `target/live-recovery.json` for blocked, no-op, and executed
+    recovery attempts.
+  - kept recovery executable only for current approved `upload` or `submit`
+    resume-plan actions.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build passed.
+- Decision:
+  - Plan 0126 closes as **Handoff Live Provider Recovery Installed**.
+
 ## Turn 268 | 2026-06-07
 
 - Active plan:

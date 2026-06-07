@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
 import { createResponsesHttpServer } from "../src/http/responsesServer.js";
 import {
+	approveHandoffTargetSubmit,
 	approveHandoffTargetUpload,
 	prepareCrossServiceHandoffPacket,
 	uploadHandoffTargetPackage,
@@ -59,6 +60,7 @@ describe("http handoff operator API", () => {
 			};
 			expect(rootStatus.routes.handoffStatusTemplate).toContain("/v1/handoffs/");
 			expect(rootStatus.routes.handoffExportTemplate).toContain("/v1/handoffs/");
+			expect(rootStatus.routes.handoffRecoverLiveTemplate).toContain("/v1/handoffs/");
 
 			const base = `http://127.0.0.1:${server.port}/v1/handoffs/${encodeURIComponent(prepared.run.id)}`;
 			const statusResponse = await fetch(
@@ -110,6 +112,24 @@ describe("http handoff operator API", () => {
 				),
 			);
 			expect(exportJson.object).toBe("auracall.handoff-manual-export.v1");
+
+			await approveHandoffTargetSubmit({
+				handoffId: prepared.run.id,
+				outputRoot,
+				packageDigest: prepared.targetPackage.packageDigest,
+			});
+			const liveRecoveryResponse = await postJson(`${base}/recover-live`, { outputDir: outputRoot });
+			expect(liveRecoveryResponse).toMatchObject({
+				object: "auracall.handoff.live-recovery.result",
+				recovery: {
+					object: "auracall.handoff-live-recovery.v1",
+					status: "recovered",
+					executedAction: "submit",
+				},
+				afterResumePlan: {
+					nextAction: "complete",
+				},
+			});
 		} finally {
 			await server.close();
 		}

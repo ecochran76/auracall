@@ -10,6 +10,8 @@ Lane: P01
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
 - Latest completed plan:
+  [docs/dev/plans/0126-2026-06-07-handoff-live-provider-recovery.md](docs/dev/plans/0126-2026-06-07-handoff-live-provider-recovery.md)
+- Previous completed plan:
   [docs/dev/plans/0125-2026-06-07-handoff-console-operator-ux.md](docs/dev/plans/0125-2026-06-07-handoff-console-operator-ux.md)
 - Previous completed plan:
   [docs/dev/plans/0124-2026-06-07-handoff-repair-resume-export.md](docs/dev/plans/0124-2026-06-07-handoff-repair-resume-export.md)

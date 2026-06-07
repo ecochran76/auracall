@@ -1,3 +1,24 @@
+## Turn 373 | 2026-06-07
+
+- Goal: continue Plan 0114 with an explicit approval-gated recovery bridge from
+  deterministic resume plans to target-side execution.
+- Implemented:
+  - opened
+    `docs/dev/plans/0126-2026-06-07-handoff-live-provider-recovery.md`.
+  - added `auracall handoff recover-live <id>`.
+  - added `POST /v1/handoffs/{id}/recover-live`.
+  - added the console `Recover Live` action.
+  - added `target/live-recovery.json` with status, executor, executed action,
+    blockers, result refs, and adapter notes.
+  - blocked recovery unless the current resume plan is an approved executable
+    `upload` or `submit` step.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build all passed.
+- Decision:
+  - Plan 0126 closes as **Handoff Live Provider Recovery Installed**.
+
 ## Turn 372 | 2026-06-07
 
 - Goal: continue Plan 0114 with a console/API operator surface for packet-owned

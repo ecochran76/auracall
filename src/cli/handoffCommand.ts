@@ -12,6 +12,7 @@ import {
 	prepareCrossServiceHandoffPacket,
 	readHandoffStatus,
 	readJsonInputFile,
+	recoverHandoffLive,
 	repairHandoffPacket,
 	submitHandoffTargetPackage,
 	uploadHandoffTargetPackage,
@@ -21,6 +22,7 @@ import {
 	type HandoffSourceMaterializationImportMethod,
 	type HandoffPrepareResult,
 	type HandoffProvider,
+	type HandoffLiveRecoveryResult,
 	type HandoffRepairResult,
 	type HandoffResumeResult,
 	type HandoffSubmitTargetResult,
@@ -100,6 +102,11 @@ export interface HandoffRepairCliOptions {
 }
 
 export interface HandoffExportCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+}
+
+export interface HandoffRecoverLiveCliOptions {
 	handoffId: string;
 	outputDir?: string | null;
 }
@@ -276,6 +283,15 @@ export async function exportHandoffForCli(
 	});
 }
 
+export async function recoverLiveHandoffForCli(
+	options: HandoffRecoverLiveCliOptions,
+): Promise<HandoffLiveRecoveryResult> {
+	return recoverHandoffLive({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+	});
+}
+
 export function formatHandoffPrepareCliSummary(result: HandoffPrepareResult): string {
 	return [
 		`Handoff packet: ${result.run.id}`,
@@ -411,6 +427,20 @@ export function formatHandoffExportCliSummary(result: HandoffExportResult): stri
 		`Selected files: ${result.exportBundle.selectedFiles.length}`,
 		`Uploaded provider files: ${result.exportBundle.uploadedProviderFileIds.length}`,
 		`Readback status: ${result.exportBundle.readbackStatus}`,
+	].join("\n");
+}
+
+export function formatHandoffRecoverLiveCliSummary(result: HandoffLiveRecoveryResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Recovery status: ${result.recovery.status}`,
+		`Executor: ${result.recovery.executor}`,
+		`Executed action: ${result.recovery.executedAction ?? "none"}`,
+		`Before next action: ${result.beforeResumePlan.nextAction}`,
+		`After next action: ${result.afterResumePlan?.nextAction ?? "none"}`,
+		`Blockers: ${result.recovery.blockers.length}`,
+		`Live recovery: target/live-recovery.json`,
 	].join("\n");
 }
 

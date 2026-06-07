@@ -119,6 +119,7 @@ import {
 	buildHandoffResumePlan,
 	exportHandoffManualBundle,
 	readHandoffStatus,
+	recoverHandoffLive,
 	repairHandoffPacket,
 } from "../handoff/service.js";
 import {
@@ -841,6 +842,7 @@ interface HttpStatusResponse {
 		handoffResumeTemplate: string;
 		handoffRepairTemplate: string;
 		handoffExportTemplate: string;
+		handoffRecoverLiveTemplate: string;
 		agentConfigChoices: string;
 		agentRegistryDiagnostics: string;
 		configApiKeys: string;
@@ -3173,6 +3175,17 @@ export async function createResponsesHttpServer(
 						);
 						return;
 					}
+					if (handoffRoute.action === "recover-live") {
+						sendJson(
+							res,
+							200,
+							await recoverHandoffLive({
+								handoffId: handoffRoute.id,
+								outputRoot,
+							}),
+						);
+						return;
+					}
 				}
 			}
 
@@ -4636,6 +4649,8 @@ function createHttpStatusResponse(input: {
 			handoffResumeTemplate: 'POST /v1/handoffs/{handoff_id}/resume {"outputDir":"optional"}',
 			handoffRepairTemplate: 'POST /v1/handoffs/{handoff_id}/repair {"outputDir":"optional"}',
 			handoffExportTemplate: 'POST /v1/handoffs/{handoff_id}/export {"outputDir":"optional"}',
+			handoffRecoverLiveTemplate:
+				'POST /v1/handoffs/{handoff_id}/recover-live {"outputDir":"optional"}',
 			operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
 			operatorDebugDashboard: serviceDiscovery.routing.debugDashboardPath,
 			accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
@@ -8700,12 +8715,14 @@ function matchResponseBatchRoute(pathname: string): string | null {
 
 function matchHandoffOperatorRoute(
 	pathname: string,
-): { id: string; action: "status" | "resume" | "repair" | "export" } | null {
-	const match = /^\/v1\/handoffs\/([^/]+)\/(status|resume|repair|export)$/.exec(pathname);
+): { id: string; action: "status" | "resume" | "repair" | "export" | "recover-live" } | null {
+	const match = /^\/v1\/handoffs\/([^/]+)\/(status|resume|repair|export|recover-live)$/.exec(
+		pathname,
+	);
 	if (!match?.[1] || !match[2]) return null;
 	return {
 		id: decodeURIComponent(match[1]),
-		action: match[2] as "status" | "resume" | "repair" | "export",
+		action: match[2] as "status" | "resume" | "repair" | "export" | "recover-live",
 	};
 }
 
