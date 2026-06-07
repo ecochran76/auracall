@@ -183,6 +183,7 @@ describe("account mirror refresh service", () => {
 			expectedIdentityKey: "ecochran76@gmail.com",
 			sweepMode: "steady_follow",
 			shouldYield: expect.any(Function),
+			onIdentityVerified: expect.any(Function),
 			limits: {
 				maxPageReadsPerCycle: 4,
 				maxConversationRowsPerCycle: 30,
@@ -697,9 +698,7 @@ describe("account mirror refresh service", () => {
 			expect.objectContaining({
 				manifests: expect.objectContaining({
 					projects: [],
-					conversations: [
-						{ id: "gem_conv_1", title: "Cached image chat", provider: "gemini" },
-					],
+					conversations: [{ id: "gem_conv_1", title: "Cached image chat", provider: "gemini" }],
 				}),
 			}),
 		);
@@ -1058,12 +1057,14 @@ describe("account mirror refresh service", () => {
 		});
 
 		expect(findManagedBrowserPid).toHaveBeenCalledWith(expect.stringContaining("gemini"));
-		expect(terminateManagedBrowserProcess).toHaveBeenCalledWith(expect.objectContaining({
-			pid: 4242,
-			provider: "gemini",
-			runtimeProfileId: "default",
-			managedProfileDir: expect.stringContaining("gemini"),
-		}));
+		expect(terminateManagedBrowserProcess).toHaveBeenCalledWith(
+			expect.objectContaining({
+				pid: 4242,
+				provider: "gemini",
+				runtimeProfileId: "default",
+				managedProfileDir: expect.stringContaining("gemini"),
+			}),
+		);
 		expect(result.browserLifecycle).toMatchObject({
 			cleanupRequested: true,
 			status: "terminated",
@@ -1218,6 +1219,214 @@ describe("account mirror refresh service", () => {
 		});
 	});
 
+	test("repairs stale malformed identity mismatch after provider-app identity proof", async () => {
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-06-07T13:04:07.494Z"),
+			initialState: {
+				"chatgpt:wsl-chrome-2": {
+					detectedIdentityKey: "consulting pcg pro",
+					lastFailureAtMs: Date.parse("2026-05-31T08:02:50.016Z"),
+					consecutiveFailureCount: 179,
+					metadataCounts: {
+						projects: 6,
+						conversations: 68,
+						artifacts: 64,
+						files: 73,
+						media: 0,
+					},
+					metadataEvidence: {
+						identitySource: "auth-session",
+						projectSampleIds: [],
+						conversationSampleIds: ["conv_old"],
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: true,
+						},
+					},
+				},
+			},
+		});
+		const persistence = createNoopPersistence();
+		const service = createAccountMirrorRefreshService({
+			config,
+			registry,
+			dispatcher: createBrowserOperationDispatcher({
+				now: () => new Date("2026-06-07T13:04:07.494Z"),
+			}),
+			metadataCollector: {
+				collect: vi.fn(async () => ({
+					detectedIdentityKey: "consult@polymerconsultinggroup.com",
+					detectedIdentitySource: "provider-app",
+					detectedIdentityObservedAtMs: Date.parse("2026-06-07T13:04:07.494Z"),
+					detectedIdentityConfidence: "authoritative",
+					detectedAccountLevel: "Pro",
+					metadataCounts: {
+						projects: 0,
+						conversations: 1,
+						artifacts: 0,
+						files: 0,
+						media: 0,
+					},
+					manifests: {
+						projects: [],
+						conversations: [{ id: "conv_new", title: "Current", provider: "chatgpt" as const }],
+						artifacts: [],
+						files: [],
+						media: [],
+					},
+					evidence: {
+						identitySource: "auth-session",
+						projectSampleIds: [],
+						conversationSampleIds: ["conv_new"],
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: false,
+						},
+					},
+				})),
+			},
+			persistence,
+			now: () => new Date("2026-06-07T13:04:07.494Z"),
+			generateRequestId: () => "acctmirror_identity_repair",
+		});
+
+		const result = await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			explicitRefresh: true,
+			ignoreMinimumInterval: true,
+		});
+
+		expect(result).toMatchObject({
+			status: "completed",
+			detectedIdentityKey: "consult@polymerconsultinggroup.com",
+		});
+		const entry = registry.readStatus({
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			explicitRefresh: true,
+			ignoreMinimumInterval: true,
+		}).entries[0];
+		expect(entry).toMatchObject({
+			detectedIdentityKey: "consult@polymerconsultinggroup.com",
+			status: "eligible",
+			reason: "eligible",
+			lastFailureAt: null,
+			consecutiveFailureCount: 0,
+			identityEvidence: expect.objectContaining({
+				source: "provider-app",
+				confidence: "authoritative",
+				recheckable: false,
+				repairStatus: "stale_mismatch_repaired",
+				previousDetectedIdentityKey: "consulting pcg pro",
+				currentDetectedIdentityKey: "consult@polymerconsultinggroup.com",
+				repair: expect.objectContaining({
+					status: "stale_mismatch_repaired",
+					requestId: "acctmirror_identity_repair",
+				}),
+			}),
+		});
+		expect(persistence.writeState).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				state: expect.objectContaining({
+					detectedIdentityKey: "consult@polymerconsultinggroup.com",
+					detectedIdentitySource: "provider-app",
+					detectedIdentityConfidence: "authoritative",
+					lastFailureAtMs: null,
+					consecutiveFailureCount: 0,
+					identityMismatchRepair: expect.objectContaining({
+						status: "stale_mismatch_repaired",
+						previousDetectedIdentityKey: "consulting pcg pro",
+					}),
+				}),
+			}),
+		);
+	});
+
+	test("keeps verified provider-app identity repair when later metadata collection times out", async () => {
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-06-07T13:04:07.494Z"),
+			initialState: {
+				"chatgpt:wsl-chrome-2": {
+					detectedIdentityKey: "consulting pcg pro",
+					lastFailureAtMs: Date.parse("2026-05-31T08:02:50.016Z"),
+					consecutiveFailureCount: 179,
+				},
+			},
+		});
+		const persistence = createNoopPersistence();
+		const service = createAccountMirrorRefreshService({
+			config,
+			registry,
+			dispatcher: createBrowserOperationDispatcher({
+				now: () => new Date("2026-06-07T13:04:07.494Z"),
+			}),
+			metadataCollector: {
+				collect: vi.fn(async (input: AccountMirrorMetadataCollectorInput) => {
+					await input.onIdentityVerified?.({
+						detectedIdentityKey: "consult@polymerconsultinggroup.com",
+						detectedIdentitySource: "provider-app",
+						detectedIdentityObservedAtMs: Date.parse("2026-06-07T13:04:07.494Z"),
+						detectedIdentityConfidence: "authoritative",
+						detectedAccountLevel: "Pro",
+					});
+					await new Promise(() => {});
+					throw new Error("unreachable");
+				}),
+			},
+			persistence,
+			now: () => new Date("2026-06-07T13:04:07.494Z"),
+			generateRequestId: () => "acctmirror_identity_timeout_repair",
+		});
+
+		await expect(
+			service.requestRefresh({
+				provider: "chatgpt",
+				runtimeProfileId: "wsl-chrome-2",
+				explicitRefresh: true,
+				ignoreMinimumInterval: true,
+				collectorTimeoutMs: 1,
+			}),
+		).rejects.toThrow("Account mirror metadata collector timed out for chatgpt/wsl-chrome-2.");
+
+		expect(
+			registry.readStatus({
+				provider: "chatgpt",
+				runtimeProfileId: "wsl-chrome-2",
+				explicitRefresh: true,
+				ignoreMinimumInterval: true,
+			}).entries[0],
+		).toMatchObject({
+			detectedIdentityKey: "consult@polymerconsultinggroup.com",
+			status: "delayed",
+			reason: "failure-backoff",
+			identityEvidence: expect.objectContaining({
+				source: "provider-app",
+				confidence: "authoritative",
+				recheckable: false,
+				repairStatus: "stale_mismatch_repaired",
+				previousDetectedIdentityKey: "consulting pcg pro",
+				currentDetectedIdentityKey: "consult@polymerconsultinggroup.com",
+			}),
+		});
+		expect(persistence.writeState).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				state: expect.objectContaining({
+					detectedIdentityKey: "consult@polymerconsultinggroup.com",
+					detectedIdentitySource: "provider-app",
+					identityMismatchRepair: expect.objectContaining({
+						status: "stale_mismatch_repaired",
+						requestId: "acctmirror_identity_timeout_repair",
+					}),
+				}),
+			}),
+		);
+	});
+
 	test("fails fast when the collector detects the wrong ChatGPT identity", async () => {
 		const registry = createAccountMirrorStatusRegistry({
 			config,
@@ -1262,6 +1471,12 @@ describe("account mirror refresh service", () => {
 			detectedIdentityKey: "wrong@example.com",
 			status: "blocked",
 			reason: "identity-mismatch",
+			identityEvidence: expect.objectContaining({
+				source: "provider-app",
+				confidence: "authoritative",
+				recheckable: false,
+				repairStatus: "current_mismatch_confirmed",
+			}),
 		});
 	});
 

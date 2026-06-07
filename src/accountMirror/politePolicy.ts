@@ -20,6 +20,20 @@ export type AccountMirrorDelayReason =
 	| "minimum-interval"
 	| "failure-backoff";
 
+export type AccountMirrorIdentityEvidenceSource =
+	| "provider-app"
+	| "chrome-google"
+	| "display-name-plan"
+	| "configured"
+	| "legacy"
+	| "unknown";
+
+export type AccountMirrorIdentityEvidenceConfidence =
+	| "authoritative"
+	| "diagnostic"
+	| "legacy"
+	| "unknown";
+
 export type AccountMirrorProviderGuardKind =
 	| "google-sorry"
 	| "captcha"
@@ -59,6 +73,9 @@ export interface AccountMirrorPolitenessInput {
 	browserProfileId: string | null;
 	expectedIdentityKey?: string | null;
 	detectedIdentityKey?: string | null;
+	detectedIdentitySource?: AccountMirrorIdentityEvidenceSource | string | null;
+	detectedIdentityObservedAtMs?: number | null;
+	detectedIdentityConfidence?: AccountMirrorIdentityEvidenceConfidence | string | null;
 	lastAttemptAtMs?: number | null;
 	lastSuccessAtMs?: number | null;
 	lastFailureAtMs?: number | null;
@@ -82,6 +99,15 @@ export interface AccountMirrorPolitenessDecision {
 	browserProfileId: string | null;
 	expectedIdentityKey: string | null;
 	detectedIdentityKey: string | null;
+	identityEvidence: {
+		source: AccountMirrorIdentityEvidenceSource;
+		confidence: AccountMirrorIdentityEvidenceConfidence;
+		observedAtMs: number | null;
+		recheckable: boolean;
+		repairStatus: "none" | "stale_mismatch_recheck" | "current_mismatch";
+		previousDetectedIdentityKey: string | null;
+		currentDetectedIdentityKey: string | null;
+	};
 	eligibleAtMs: number | null;
 	delayMs: number;
 	limits: {
@@ -100,6 +126,7 @@ export interface AccountMirrorPolitenessDecision {
 
 const HOUR_MS = 60 * 60_000;
 const MINUTE_MS = 60_000;
+const IDENTITY_MISMATCH_RECHECK_AFTER_MS = 12 * HOUR_MS;
 
 const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolitenessPolicy> = {
 	chatgpt: {
@@ -206,6 +233,7 @@ function createDecision(
 	const nowMs = input.nowMs ?? Date.now();
 	const failureCooldownMs = getFailureCooldownMs(policy, input.consecutiveFailureCount ?? 0);
 	const delayMs = eligibleAtMs === null ? 0 : Math.max(0, eligibleAtMs - nowMs);
+	const identityEvidence = classifyIdentityEvidence(input, nowMs);
 	return {
 		posture:
 			reason === "eligible"
@@ -227,6 +255,7 @@ function createDecision(
 			input.provider,
 			input.detectedIdentityKey,
 		),
+		identityEvidence,
 		eligibleAtMs,
 		delayMs,
 		limits: {
@@ -242,6 +271,89 @@ function createDecision(
 			maxArtifactRowsPerCycle: policy.maxArtifactRowsPerCycle,
 		},
 	};
+}
+
+function classifyIdentityEvidence(
+	input: AccountMirrorPolitenessInput,
+	nowMs: number,
+): AccountMirrorPolitenessDecision["identityEvidence"] {
+	const previousDetectedIdentityKey = normalizeAccountMirrorProviderIdentityKey(
+		input.provider,
+		input.detectedIdentityKey,
+	);
+	const source = normalizeIdentityEvidenceSource(input.detectedIdentitySource);
+	const confidence = normalizeIdentityEvidenceConfidence(input.detectedIdentityConfidence, source);
+	const observedAtMs = normalizeTimestamp(input.detectedIdentityObservedAtMs);
+	const expectedIdentityKey = normalizeAccountMirrorProviderIdentityKey(
+		input.provider,
+		input.expectedIdentityKey,
+	);
+	const mismatch = Boolean(
+		expectedIdentityKey &&
+			previousDetectedIdentityKey &&
+			previousDetectedIdentityKey !== expectedIdentityKey,
+	);
+	const authoritative = source === "provider-app" && confidence === "authoritative";
+	const stale = observedAtMs === null || nowMs - observedAtMs >= IDENTITY_MISMATCH_RECHECK_AFTER_MS;
+	const malformed = isMalformedProviderIdentityKey(input.provider, previousDetectedIdentityKey);
+	const recheckable = mismatch && (!authoritative || stale || malformed);
+	return {
+		source,
+		confidence,
+		observedAtMs,
+		recheckable,
+		repairStatus: mismatch ? (recheckable ? "stale_mismatch_recheck" : "current_mismatch") : "none",
+		previousDetectedIdentityKey,
+		currentDetectedIdentityKey: previousDetectedIdentityKey,
+	};
+}
+
+function normalizeIdentityEvidenceSource(
+	value: AccountMirrorPolitenessInput["detectedIdentitySource"],
+): AccountMirrorIdentityEvidenceSource {
+	switch (value) {
+		case "provider-app":
+		case "chrome-google":
+		case "display-name-plan":
+		case "configured":
+		case "legacy":
+		case "unknown":
+			return value;
+		default:
+			return value ? "legacy" : "unknown";
+	}
+}
+
+function normalizeIdentityEvidenceConfidence(
+	value: AccountMirrorPolitenessInput["detectedIdentityConfidence"],
+	source: AccountMirrorIdentityEvidenceSource,
+): AccountMirrorIdentityEvidenceConfidence {
+	switch (value) {
+		case "authoritative":
+		case "diagnostic":
+		case "legacy":
+		case "unknown":
+			return value;
+		default:
+			if (source === "provider-app" || source === "configured") return "authoritative";
+			if (source === "chrome-google" || source === "display-name-plan") return "diagnostic";
+			if (source === "legacy") return "legacy";
+			return "unknown";
+	}
+}
+
+function isMalformedProviderIdentityKey(
+	provider: AccountMirrorProvider,
+	value: string | null,
+): boolean {
+	if (!value) return false;
+	if (
+		(provider === "chatgpt" || provider === "gemini") &&
+		!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+	) {
+		return true;
+	}
+	return false;
 }
 
 export function evaluateAccountMirrorPoliteness(
@@ -263,7 +375,12 @@ export function evaluateAccountMirrorPoliteness(
 		return createDecision(input, policy, "expected-identity-missing", null, zeroJitter);
 	}
 
-	if (detectedIdentityKey && detectedIdentityKey !== expectedIdentityKey) {
+	const identityEvidence = classifyIdentityEvidence(input, nowMs);
+	if (
+		detectedIdentityKey &&
+		detectedIdentityKey !== expectedIdentityKey &&
+		!identityEvidence.recheckable
+	) {
 		return createDecision(input, policy, "identity-mismatch", null, zeroJitter);
 	}
 

@@ -11029,6 +11029,122 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     isolation; it is scheduler/account-library eligibility observability when
     a due completion advances without launch or an explicit bounded blocker.
 
+## Turn 277 | 2026-06-07
+
+- Supporting handoff plan:
+  `docs/dev/plans/0134-2026-06-07-handoff-source-materialization-queue-unblock.md`
+- Goal: remove the Plan 0133 source-materialization queue blocker so stale
+  provider work does not require an API restart before the next queued source
+  recovery job can run.
+- Implemented:
+  - readback stale-running recovery now detaches the matching scheduled
+    process-local queue slot;
+  - late provider completions check the stored job before writing terminal
+    results and return the existing terminal stale record when recovery already
+    completed the job;
+  - startup interrupted-job recovery reads the persisted jobs directly instead
+    of pre-consuming readback stale-timeout recovery;
+  - refresh-only stale conversation candidates are no longer dropped after
+    selection when `refreshSnapshot=true` and asset signatures are absent.
+- Validation:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts`
+    passed with `52` tests.
+- Remaining source-depth work:
+  - implement ChatGPT project `Sources` tab file materialization for direct
+    project-source uploads.
+
+## Turn 278 | 2026-06-07
+
+- Supporting handoff plan:
+  `docs/dev/plans/0135-2026-06-07-chatgpt-project-sources-materialization.md`
+- Implemented:
+  - ChatGPT project source listing already exists through
+    `llmService.listProjectFiles()` and provider `listProjectFiles()`;
+  - ChatGPT project `Sources` row extraction now preserves backend `file_...`
+    ids, hrefs, DOM/action evidence, MIME/type/size hints, and metadata-only
+    row evidence without guessing downloadability;
+  - `llmService.materializeProjectFiles()` writes a project file-fetch
+    manifest, downloads rows with provider ids through
+    `downloadProjectFile()`, retains visible source rows in project-knowledge
+    cache, and records deterministic errors for non-downloadable rows;
+  - history materialization accepts `provider + projectId +
+    assetKinds=["files"]` as a `project_sources` job source;
+  - API, CLI, and MCP source-type filters/readback support
+    `sourceType=project_sources`;
+  - handoff import treats project-source materialization readbacks as ordinary
+    source manifest items and deterministic omissions.
+- Validation:
+  - targeted Vitest suite passed with `220` tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - focused Biome lint on changed source/test files passed.
+  - `pnpm run build` passed;
+  - `pnpm run plans:audit -- --keep 135` passed with `Validation errors: 0`;
+  - user runtime service install/restart completed and
+    `auracall-api.service` returned `active`;
+  - live project-source smoke job
+    `hmj_5927c197d6d6453bb23b90f980e14619` completed `skipped` with
+    `materialized=0`, `failed=3`, and active materialization jobs returned
+    `0`.
+- Live evidence:
+  - source `project_sources/chatgpt/g-p-687f9c5cc35c8191a25e6127785b86f8`;
+  - manifest
+    `/home/ecochran76/.auracall/cache/providers/chatgpt/ecochran76@gmail.com/project-knowledge/g-p-687f9c5cc35c8191a25e6127785b86f8/file-fetch-manifest.json`;
+  - visible rows `SoyLei Knowledge - Main 20251208.md`, `SIP-1111.md`, and
+    `SIP-1119.md` were recorded as failed because the current ChatGPT DOM did
+    not expose backend provider file ids for them.
+- Refreshed handoff packet:
+  - prepared dry-run packet
+    `/tmp/auracall-plan0135-project-source-import/handoffs/plan0135-project-source-import`;
+  - imported project-source job
+    `hmj_5927c197d6d6453bb23b90f980e14619` by API readback;
+  - source context stayed hydrated with `15` messages, `16` files, `23`
+    sources, and `1` artifact;
+  - source completeness is `partial` with `manifestItemCount=3`,
+    `localMaterializedCount=3`, `checksumCount=3`, `omissionCount=20`, and
+    `retryableOmissionCount=0`;
+  - target package digest is
+    `6876fc1565d469e70c1a7a1e18c2f6cea47856ecdbdb7da37ca0be3bb7342d12` and
+    `targetMutationAllowed=false`.
+- Refreshed target completion:
+  - recorded digest-bound upload and submit approvals with actor `codex`;
+  - target upload completed with `2` uploaded files and `0` failures;
+  - target submit completed with `submitAttemptCount=1`;
+  - cached readback points at
+    `https://chatgpt.com/c/6a250296-65d4-83ea-930b-c5658ed7435a` and provider
+    message id `handoff-message-dbd77d872c589e1d37711316b7f7c191`;
+  - final handoff status readback is `complete`;
+  - API status was healthy and active history-materialization jobs were `0`.
+- Decision:
+  - Plan 0135 closes with the refreshed packet submitted and cached target
+    readback complete.
+
+## 2026-06-07 | Plan 0137 Oracle Identity Mismatch Self-Healing
+
+- Completed live-follow supporting plan:
+  `docs/dev/plans/0137-2026-06-07-oracle-identity-mismatch-self-healing.md`
+- Goal: fix the Oracle/account-mirror bug where a stale persisted
+  `identity-mismatch` blocks live follow even after current provider-app
+  identity proof matches the configured expected account.
+- Starting evidence:
+  - `wsl-chrome-2` is configured for ChatGPT
+    `consult@polymerconsultinggroup.com`;
+  - live `profile identity-smoke` reads the ChatGPT auth-session as
+    `consult@polymerconsultinggroup.com` and passes preflight;
+  - API status reported `blocked / identity-mismatch` from a
+    `2026-05-31T08:02:50.016Z` persisted status record whose
+    `detectedIdentityKey` is `consulting pcg pro`.
+- Closeout:
+  - stale/malformed identity mismatch state is now recheckable and repairable;
+  - ChatGPT provider-app auth-session email is the canonical detected identity;
+  - current authoritative provider-app email mismatches still hard-block;
+  - live `chatgpt/wsl-chrome-2` status reports provider-app authoritative
+    identity evidence for `consult@polymerconsultinggroup.com` with
+    `repairStatus=stale_mismatch_repaired`;
+  - retained merged mirror counts are preserved at
+    `projects=6/conversations=68/artifacts=64/files=73/media=0`;
+  - active history-materialization jobs and active mirror-completion operations
+    returned `0`.
+
 ## Turn 262 | 2026-06-05
 
 - Active supporting plan:

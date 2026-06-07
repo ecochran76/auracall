@@ -1,174 +1,88 @@
-import http from "node:http";
-import { createReadStream } from "node:fs";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
+import fs from "node:fs/promises";
+import http from "node:http";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { z, ZodError } from "zod";
 import CDP from "chrome-remote-interface";
 import type { OptionValues } from "commander";
-import { MODEL_CONFIGS } from "../oracle/config.js";
-import { getCliVersion } from "../version.js";
-import { getAuracallHomeDir } from "../auracallHome.js";
+import { ZodError, z } from "zod";
 import {
-	createLazyLiveFollowPreflightRunner,
-	readLazyLiveFollowPreflightRun,
-	readPreflightStatusSummary,
-	type LazyLiveFollowPreflightRun,
-	type LazyLiveFollowPreflightRunner,
-	type PreflightStatusSummary,
-} from "../preflightStatus.js";
-import type { ResolvedUserConfig } from "../config.js";
-import { resolveConfig } from "../schema/resolver.js";
-import { resolveHostLocalActionExecutionPolicy, type ProjectedAgent } from "../config/model.js";
-import type { EffectiveAgent, EffectiveAgentCatalog } from "../config/agentRegistryCatalog.js";
-import { SEMANTIC_MODEL_SELECTORS } from "../config/modelSelector.js";
+	findChromeProcessUsingUserDataDir,
+	isDevToolsResponsive,
+} from "../../packages/browser-service/src/processCheck.js";
+import { readDevToolsPort } from "../../packages/browser-service/src/profileState.js";
 import {
-	agentConfigUpsertInputSchema,
-	agentRegistrySnapshotSchema,
-	createAgentTeamConfigService,
-	teamConfigUpsertInputSchema,
-} from "../config/agentConfigService.js";
-import { readApiKeyDiagnosticsFromEnvFile } from "../config/apiKeyEnvDiagnostics.js";
-import { deleteApiKey, issueApiKey } from "../config/apiKeyIssuer.js";
-import { createAgentRegistryStore, type AgentRegistryStore } from "../config/agentRegistryStore.js";
-import {
-	inspectTeamRunLinkage,
-	TeamRunInspectionError,
-	type TeamRunInspectionPayload,
-} from "../teams/inspection.js";
-import { createTeamRuntimeBridge, type TeamRuntimeBridge } from "../teams/runtimeBridge.js";
-import { buildBoundedTeamTaskRunSpec } from "../teams/taskRunSpecBuilder.js";
-import {
-	buildTeamRunExecutionPayload,
-	type TeamRunExecutionPayload,
-} from "../teams/executionPayload.js";
-import { TaskRunSpecSchema } from "../teams/schema.js";
-import type { TaskRunSpec } from "../teams/types.js";
-import type {
-	ExecutionRequest,
-	ExecutionRequestExtensionHints,
-	ExecutionResponse,
-} from "../runtime/apiTypes.js";
-import {
-	inspectRuntimeRun,
-	type InspectRuntimeRunInput,
-	type RuntimeRunInspectionBrowserDiagnosticsSummary,
-	type RuntimeRunInspectionBrowserDiagnosticsProbeResult,
-	type RuntimeRunInspectionServiceStateProbeResult,
-	type ProbeRuntimeRunBrowserDiagnosticsInput,
-	type ProbeRuntimeRunServiceStateInput,
-	RuntimeRunInspectionError,
-	type RuntimeRunInspectionPayload,
-} from "../runtime/inspection.js";
-import type { ExecutionRuntimeControlContract } from "../runtime/contract.js";
-import { createExecutionRuntimeControl } from "../runtime/control.js";
-import {
-	summarizeExecutionRunListItem,
-	type ExecutionRunListItem,
-} from "../runtime/runListSummary.js";
-import { createConfiguredExecutionRunAffinity } from "../runtime/configuredAffinity.js";
-import { createLocalRunnerCapabilitySummary } from "../runtime/localRunnerCapabilities.js";
-import { createExecutionRequest } from "../runtime/apiModel.js";
-import {
-	createExecutionResponsesService,
-	createExecutionRequestFromRecord,
-	type ExecutionResponsesServiceDeps,
-} from "../runtime/responsesService.js";
-import {
-	createRunArchiveService,
-	type RunArchiveAssetLookupResult,
-	type RunArchiveAssetResult,
-	type RunArchiveEvidenceResult,
-	type RunArchiveItemResult,
-	type RunArchiveListRequest,
-	type RunArchiveListResult,
-	type RunArchiveService,
-} from "../runtime/archiveService.js";
-import {
-	ArchiveMaterializationError,
-	createArchiveMaterializationService,
-	type ArchiveItemMaterializationResult,
-	type ArchiveMaterializationService,
-} from "../runtime/archiveMaterializationService.js";
-import {
-	ArchiveMaterializationJobControlError,
-	createArchiveMaterializationJobService,
-	type ArchiveMaterializationJobCreateResult,
-	type ArchiveMaterializationJobListResult,
-	type ArchiveMaterializationJobService,
-} from "../runtime/archiveMaterializationJobService.js";
-import {
-	createHistoryMaterializationService,
-	HistoryMaterializationError,
-	HistoryMaterializationJobControlError,
-	type HistoryAccountLibraryReconciliationPreviewResult,
-	type HistoryMaterializationJob,
-	type HistoryMaterializationJobCreateResult,
-	type HistoryMaterializationJobListResult,
-	type HistoryMaterializationService,
-} from "../runtime/historyMaterializationService.js";
-import {
-	createSearchProjectionService,
-	type SearchProjectionRequest,
-	type SearchProjectionResult,
-	type SearchProjectionService,
-} from "../runtime/searchProjectionService.js";
-import {
-	buildHandoffResumePlan,
-	exportHandoffManualBundle,
-	readHandoffStatus,
-	recoverHandoffLive,
-	repairHandoffPacket,
-} from "../handoff/service.js";
-import { createChatgptBrowserHandoffTargetAdapter } from "../handoff/chatgptBrowserAdapter.js";
-import {
-	createAccountMirrorArtifactRecoveryPlanner,
+	type AccountMirrorArtifactRecoveryPlanner,
 	type AccountMirrorArtifactRecoveryPlanRequest,
 	type AccountMirrorArtifactRecoveryPlanResult,
-	type AccountMirrorArtifactRecoveryPlanner,
+	createAccountMirrorArtifactRecoveryPlanner,
 } from "../accountMirror/artifactRecoveryPlanner.js";
+import { createAccountMirrorPersistence } from "../accountMirror/cachePersistence.js";
 import {
-	createResponseBatchExecutionGate,
-	createResponseBatchService,
-	ResponseBatchCreateRequestSchema,
-	type ResponseBatchService,
-} from "../runtime/responseBatchService.js";
+	type AccountMirrorCatalogItemResult,
+	type AccountMirrorCatalogKind,
+	type AccountMirrorCatalogResult,
+	type AccountMirrorCatalogService,
+	createAccountMirrorCatalogService,
+} from "../accountMirror/catalogService.js";
 import {
-	normalizeResponseBatchDispatchRequest,
-	resolveResponseBatchDispatchPool,
-} from "../runtime/responseBatchDispatchPool.js";
+	type AccountMirrorCompletionOperation,
+	type AccountMirrorCompletionService,
+	createAccountMirrorCompletionService,
+} from "../accountMirror/completionService.js";
+import { createAccountMirrorCompletionStore } from "../accountMirror/completionStore.js";
+import { reconcileConfiguredAccountMirrorLiveFollow } from "../accountMirror/liveFollowReconciler.js";
+import type { AccountMirrorProvider } from "../accountMirror/politePolicy.js";
+import { createAccountMirrorPreviewSessionStore } from "../accountMirror/previewSessionStore.js";
 import {
-	createTenantExecutionLimitGate,
-	summarizeTenantExecutionLimits,
-	type TenantExecutionLimitStatusSummary,
-} from "../runtime/tenantExecutionLimits.js";
-import { createConfiguredStoredStepExecutor } from "../runtime/configuredExecutor.js";
-import { readLiveRuntimeRunServiceState } from "../runtime/liveServiceStateRegistry.js";
-import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from "../runtime/stepOutputContract.js";
+	clearAccountMirrorProviderGuard,
+	DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
+} from "../accountMirror/providerGuardControl.js";
 import {
-	createExecutionRunnerControl,
-	type ExecutionRunnerControlContract,
-} from "../runtime/runnersControl.js";
+	type AccountMirrorReconciliationCampaign,
+	type AccountMirrorReconciliationCampaignService,
+	AccountMirrorReconciliationError,
+	createAccountMirrorReconciliationCampaignService,
+} from "../accountMirror/reconciliationCampaignService.js";
+import { createAccountMirrorReconciliationCampaignStore } from "../accountMirror/reconciliationCampaignStore.js";
 import {
-	createExecutionServiceHost,
-	type ExecutionServiceHostOperatorControlInput,
-	type ExecutionServiceHostOperatorControlResult,
-	type ExecutionServiceHostRecoveryDetail,
-	type ExecutionServiceHostRecoverySummary,
-	type ExecutionServiceHostLocalClaimSummary,
-	type ExecutionServiceHostRunnerTopologySummary,
-	type DrainStoredExecutionRunsUntilIdleResult,
-	type ExecutionServiceHost,
-	type ExecutionServiceHostExecutionGate,
-	type ExecutionServiceHostDeps,
-} from "../runtime/serviceHost.js";
-import type {
-	ExecutionRunSourceKind,
-	ExecutionRunStatus,
-	ExecutionRunnerStatus,
-} from "../runtime/types.js";
+	AccountMirrorRefreshError,
+	type AccountMirrorRefreshResult,
+	type AccountMirrorRefreshService,
+	createAccountMirrorRefreshService,
+} from "../accountMirror/refreshService.js";
+import {
+	type AccountMirrorSchedulerCompactHistory,
+	summarizeAccountMirrorSchedulerHistory,
+} from "../accountMirror/schedulerHistorySummary.js";
+import {
+	type AccountMirrorSchedulerPassHistory,
+	type AccountMirrorSchedulerPassLedger,
+	createAccountMirrorSchedulerPassLedger,
+} from "../accountMirror/schedulerLedger.js";
+import {
+	type AccountMirrorSchedulerPassResult,
+	type AccountMirrorSchedulerPassService,
+	createAccountMirrorSchedulerPassService,
+} from "../accountMirror/schedulerService.js";
+import {
+	type AccountMirrorStatusEntry,
+	type AccountMirrorStatusRegistry,
+	type AccountMirrorStatusSummary,
+	createAccountMirrorStatusRegistry,
+} from "../accountMirror/statusRegistry.js";
+import { getAuracallHomeDir } from "../auracallHome.js";
+import {
+	acceptDomDriftObservation,
+	type DomDriftObservationStatus,
+	listDomDriftObservations,
+} from "../browser/domDriftObservations.js";
+import {
+	type BrowserDiagnosticsService,
+	probeBrowserRunDiagnostics,
+} from "../browser/liveDiagnostics.js";
 import {
 	probeChatgptBrowserServiceState,
 	probeGeminiBrowserServiceState,
@@ -176,37 +90,57 @@ import {
 } from "../browser/liveServiceState.js";
 import { BrowserService } from "../browser/service/browserService.js";
 import {
-	acceptDomDriftObservation,
-	listDomDriftObservations,
-	type DomDriftObservationStatus,
-} from "../browser/domDriftObservations.js";
+	type BrowserInstanceLease,
+	type BrowserInstanceOperation,
+	type BrowserInstanceOwner,
+	getInstance as getBrowserRegistryInstance,
+} from "../browser/service/stateRegistry.js";
 import {
-	probeBrowserRunDiagnostics,
-	type BrowserDiagnosticsService,
-} from "../browser/liveDiagnostics.js";
+	agentConfigUpsertInputSchema,
+	agentRegistrySnapshotSchema,
+	createAgentTeamConfigService,
+	teamConfigUpsertInputSchema,
+} from "../config/agentConfigService.js";
+import type { EffectiveAgent, EffectiveAgentCatalog } from "../config/agentRegistryCatalog.js";
+import { type AgentRegistryStore, createAgentRegistryStore } from "../config/agentRegistryStore.js";
+import { readApiKeyDiagnosticsFromEnvFile } from "../config/apiKeyEnvDiagnostics.js";
+import { deleteApiKey, issueApiKey } from "../config/apiKeyIssuer.js";
+import { type ProjectedAgent, resolveHostLocalActionExecutionPolicy } from "../config/model.js";
+import { SEMANTIC_MODEL_SELECTORS } from "../config/modelSelector.js";
+import type { ResolvedUserConfig } from "../config.js";
+import { createChatgptBrowserHandoffTargetAdapter } from "../handoff/chatgptBrowserAdapter.js";
+import {
+	buildHandoffResumePlan,
+	exportHandoffManualBundle,
+	readHandoffStatus,
+	recoverHandoffLive,
+	repairHandoffPacket,
+} from "../handoff/service.js";
+import { probeMediaGenerationBrowserDiagnostics } from "../media/browserDiagnostics.js";
+import {
+	createBrowserMediaGenerationExecutor,
+	createBrowserMediaGenerationMaterializer,
+} from "../media/browserExecutor.js";
 import {
 	createMediaGenerationService,
 	MediaGenerationExecutionError,
 	type MediaGenerationServiceDeps,
 } from "../media/service.js";
-import {
-	createBrowserMediaGenerationExecutor,
-	createBrowserMediaGenerationMaterializer,
-} from "../media/browserExecutor.js";
-import { probeMediaGenerationBrowserDiagnostics } from "../media/browserDiagnostics.js";
-import type { MediaGenerationRequest } from "../media/types.js";
 import { summarizeMediaGenerationStatus } from "../media/statusSummary.js";
+import type { MediaGenerationRequest } from "../media/types.js";
+import { MODEL_CONFIGS } from "../oracle/config.js";
 import {
-	createWorkbenchCapabilityService,
-	type WorkbenchCapabilityServiceDeps,
-} from "../workbench/service.js";
-import { WorkbenchCapabilityReportRequestSchema } from "../workbench/schema.js";
-import { createBrowserWorkbenchCapabilityDiscovery } from "../workbench/browserDiscovery.js";
-import { createBrowserWorkbenchCapabilityDiagnostics } from "../workbench/browserDiagnostics.js";
+	createLazyLiveFollowPreflightRunner,
+	type LazyLiveFollowPreflightRun,
+	type LazyLiveFollowPreflightRunner,
+	type PreflightStatusSummary,
+	readLazyLiveFollowPreflightRun,
+	readPreflightStatusSummary,
+} from "../preflightStatus.js";
 import {
 	AgentSetupPackageInputSchema,
-	createAgentSetupPackageService,
 	type AgentSetupPackageService,
+	createAgentSetupPackageService,
 } from "../projects/agentSetupPackageService.js";
 import {
 	createProjectEnsureService,
@@ -218,79 +152,145 @@ import {
 	TenantPoolTeamEnsureInputSchema,
 	type TenantPoolTeamEnsureService,
 } from "../projects/tenantPoolTeamEnsureService.js";
-import { readAuraCallRunStatus } from "../runStatus.js";
 import type { AuraCallRunStatus } from "../runStatus.js";
+import { readAuraCallRunStatus } from "../runStatus.js";
+import { createExecutionRequest } from "../runtime/apiModel.js";
+import type {
+	ExecutionRequest,
+	ExecutionRequestExtensionHints,
+	ExecutionResponse,
+} from "../runtime/apiTypes.js";
 import {
-	createAccountMirrorStatusRegistry,
-	type AccountMirrorStatusRegistry,
-	type AccountMirrorStatusEntry,
-	type AccountMirrorStatusSummary,
-} from "../accountMirror/statusRegistry.js";
+	ArchiveMaterializationJobControlError,
+	type ArchiveMaterializationJobCreateResult,
+	type ArchiveMaterializationJobListResult,
+	type ArchiveMaterializationJobService,
+	createArchiveMaterializationJobService,
+} from "../runtime/archiveMaterializationJobService.js";
 import {
-	clearAccountMirrorProviderGuard,
-	DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
-} from "../accountMirror/providerGuardControl.js";
+	type ArchiveItemMaterializationResult,
+	ArchiveMaterializationError,
+	type ArchiveMaterializationService,
+	createArchiveMaterializationService,
+} from "../runtime/archiveMaterializationService.js";
 import {
-	AccountMirrorRefreshError,
-	createAccountMirrorRefreshService,
-	type AccountMirrorRefreshResult,
-	type AccountMirrorRefreshService,
-} from "../accountMirror/refreshService.js";
-import { createAccountMirrorPersistence } from "../accountMirror/cachePersistence.js";
+	createRunArchiveService,
+	type RunArchiveAssetLookupResult,
+	type RunArchiveAssetResult,
+	type RunArchiveEvidenceResult,
+	type RunArchiveItemResult,
+	type RunArchiveListRequest,
+	type RunArchiveListResult,
+	type RunArchiveService,
+} from "../runtime/archiveService.js";
+import { createConfiguredExecutionRunAffinity } from "../runtime/configuredAffinity.js";
+import { createConfiguredStoredStepExecutor } from "../runtime/configuredExecutor.js";
+import type { ExecutionRuntimeControlContract } from "../runtime/contract.js";
+import { createExecutionRuntimeControl } from "../runtime/control.js";
 import {
-	createAccountMirrorCatalogService,
-	type AccountMirrorCatalogKind,
-	type AccountMirrorCatalogItemResult,
-	type AccountMirrorCatalogResult,
-	type AccountMirrorCatalogService,
-} from "../accountMirror/catalogService.js";
+	createHistoryMaterializationService,
+	type HistoryAccountLibraryReconciliationPreviewResult,
+	HistoryMaterializationError,
+	type HistoryMaterializationJob,
+	HistoryMaterializationJobControlError,
+	type HistoryMaterializationJobCreateResult,
+	type HistoryMaterializationJobListResult,
+	type HistoryMaterializationService,
+} from "../runtime/historyMaterializationService.js";
 import {
-	createAccountMirrorSchedulerPassService,
-	type AccountMirrorSchedulerPassResult,
-	type AccountMirrorSchedulerPassService,
-} from "../accountMirror/schedulerService.js";
+	type InspectRuntimeRunInput,
+	inspectRuntimeRun,
+	type ProbeRuntimeRunBrowserDiagnosticsInput,
+	type ProbeRuntimeRunServiceStateInput,
+	type RuntimeRunInspectionBrowserDiagnosticsProbeResult,
+	type RuntimeRunInspectionBrowserDiagnosticsSummary,
+	RuntimeRunInspectionError,
+	type RuntimeRunInspectionPayload,
+	type RuntimeRunInspectionServiceStateProbeResult,
+} from "../runtime/inspection.js";
+import { readLiveRuntimeRunServiceState } from "../runtime/liveServiceStateRegistry.js";
+import { createLocalRunnerCapabilitySummary } from "../runtime/localRunnerCapabilities.js";
 import {
-	createAccountMirrorSchedulerPassLedger,
-	type AccountMirrorSchedulerPassHistory,
-	type AccountMirrorSchedulerPassLedger,
-} from "../accountMirror/schedulerLedger.js";
+	normalizeResponseBatchDispatchRequest,
+	resolveResponseBatchDispatchPool,
+} from "../runtime/responseBatchDispatchPool.js";
 import {
-	summarizeAccountMirrorSchedulerHistory,
-	type AccountMirrorSchedulerCompactHistory,
-} from "../accountMirror/schedulerHistorySummary.js";
+	createResponseBatchExecutionGate,
+	createResponseBatchService,
+	ResponseBatchCreateRequestSchema,
+	type ResponseBatchService,
+} from "../runtime/responseBatchService.js";
 import {
-	createAccountMirrorCompletionService,
-	type AccountMirrorCompletionOperation,
-	type AccountMirrorCompletionService,
-} from "../accountMirror/completionService.js";
-import { reconcileConfiguredAccountMirrorLiveFollow } from "../accountMirror/liveFollowReconciler.js";
-import { createAccountMirrorCompletionStore } from "../accountMirror/completionStore.js";
+	createExecutionRequestFromRecord,
+	createExecutionResponsesService,
+	type ExecutionResponsesServiceDeps,
+} from "../runtime/responsesService.js";
 import {
-	AccountMirrorReconciliationError,
-	createAccountMirrorReconciliationCampaignService,
-	type AccountMirrorReconciliationCampaign,
-	type AccountMirrorReconciliationCampaignService,
-} from "../accountMirror/reconciliationCampaignService.js";
-import { createAccountMirrorReconciliationCampaignStore } from "../accountMirror/reconciliationCampaignStore.js";
-import { createAccountMirrorPreviewSessionStore } from "../accountMirror/previewSessionStore.js";
-import type { AccountMirrorProvider } from "../accountMirror/politePolicy.js";
+	type ExecutionRunListItem,
+	summarizeExecutionRunListItem,
+} from "../runtime/runListSummary.js";
 import {
-	summarizeLiveFollowHealth,
+	createExecutionRunnerControl,
+	type ExecutionRunnerControlContract,
+} from "../runtime/runnersControl.js";
+import {
+	createSearchProjectionService,
+	type SearchProjectionRequest,
+	type SearchProjectionResult,
+	type SearchProjectionService,
+} from "../runtime/searchProjectionService.js";
+import {
+	createExecutionServiceHost,
+	type DrainStoredExecutionRunsUntilIdleResult,
+	type ExecutionServiceHost,
+	type ExecutionServiceHostDeps,
+	type ExecutionServiceHostExecutionGate,
+	type ExecutionServiceHostLocalClaimSummary,
+	type ExecutionServiceHostOperatorControlInput,
+	type ExecutionServiceHostOperatorControlResult,
+	type ExecutionServiceHostRecoveryDetail,
+	type ExecutionServiceHostRecoverySummary,
+	type ExecutionServiceHostRunnerTopologySummary,
+} from "../runtime/serviceHost.js";
+import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from "../runtime/stepOutputContract.js";
+import {
+	createTenantExecutionLimitGate,
+	summarizeTenantExecutionLimits,
+	type TenantExecutionLimitStatusSummary,
+} from "../runtime/tenantExecutionLimits.js";
+import type {
+	ExecutionRunnerStatus,
+	ExecutionRunSourceKind,
+	ExecutionRunStatus,
+} from "../runtime/types.js";
+import { resolveConfig } from "../schema/resolver.js";
+import {
 	type LiveFollowHealthSummary,
 	type LiveFollowTargetAccountSummary,
 	type LiveFollowTargetRollup,
+	summarizeLiveFollowHealth,
 } from "../status/liveFollowHealth.js";
 import {
-	findChromeProcessUsingUserDataDir,
-	isDevToolsResponsive,
-} from "../../packages/browser-service/src/processCheck.js";
-import { readDevToolsPort } from "../../packages/browser-service/src/profileState.js";
+	buildTeamRunExecutionPayload,
+	type TeamRunExecutionPayload,
+} from "../teams/executionPayload.js";
 import {
-	getInstance as getBrowserRegistryInstance,
-	type BrowserInstanceLease,
-	type BrowserInstanceOperation,
-	type BrowserInstanceOwner,
-} from "../browser/service/stateRegistry.js";
+	inspectTeamRunLinkage,
+	TeamRunInspectionError,
+	type TeamRunInspectionPayload,
+} from "../teams/inspection.js";
+import { createTeamRuntimeBridge, type TeamRuntimeBridge } from "../teams/runtimeBridge.js";
+import { TaskRunSpecSchema } from "../teams/schema.js";
+import { buildBoundedTeamTaskRunSpec } from "../teams/taskRunSpecBuilder.js";
+import type { TaskRunSpec } from "../teams/types.js";
+import { getCliVersion } from "../version.js";
+import { createBrowserWorkbenchCapabilityDiagnostics } from "../workbench/browserDiagnostics.js";
+import { createBrowserWorkbenchCapabilityDiscovery } from "../workbench/browserDiscovery.js";
+import { WorkbenchCapabilityReportRequestSchema } from "../workbench/schema.js";
+import {
+	createWorkbenchCapabilityService,
+	type WorkbenchCapabilityServiceDeps,
+} from "../workbench/service.js";
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 const TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS = 5_000;
@@ -811,11 +811,11 @@ interface HttpStatusResponse {
 		runArchiveMaterializationsCreate: string;
 		runArchiveMaterializationsList: string;
 		runArchiveMaterializationTemplate: string;
-			historyMaterializationsCreate: string;
-			historyMaterializationsList: string;
-			historyMaterializationTemplate: string;
-			accountMirrorRecoveryCandidates: string;
-			runStatusTemplate: string;
+		historyMaterializationsCreate: string;
+		historyMaterializationsList: string;
+		historyMaterializationTemplate: string;
+		accountMirrorRecoveryCandidates: string;
+		runStatusTemplate: string;
 		apiLogTail: string;
 		preflightRunTemplate: string;
 		preflightRunLogTemplate: string;
@@ -2578,8 +2578,10 @@ export async function createResponsesHttpServer(
 						provider: payload.provider,
 						runtimeProfileId: payload.runtimeProfile,
 						explicitRefresh: payload.explicitRefresh,
+						ignoreMinimumInterval: payload.ignoreMinimumInterval ?? payload.ignore_minimum_interval,
 						queueTimeoutMs: payload.queueTimeoutMs,
 						queuePollMs: payload.queuePollMs,
+						collectorTimeoutMs: payload.collectorTimeoutMs,
 					});
 					sendJson(res, 202, result satisfies HttpAccountMirrorRefreshResponse);
 					return;
@@ -4059,7 +4061,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
 	}
 	logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? "default"}`);
 	logger(
-			"Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/recovery-candidates, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/reconciliations, GET /v1/account-mirrors/reconciliations, GET/POST /v1/account-mirrors/reconciliations/{campaign_id}, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}",
+		"Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/recovery-candidates, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/reconciliations, GET /v1/account-mirrors/reconciliations, GET/POST /v1/account-mirrors/reconciliations/{campaign_id}, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}",
 	);
 	logger(`Local probe: curl ${probeUrl}/status`);
 	if (serverOptions.dashboardUrl) {
@@ -4728,11 +4730,13 @@ function createRunControlReadiness(input: {
 }): HttpRunControlReadinessResponse {
 	const accountMirrorCompletionActionsById: Record<string, HttpRunControlReadinessAction[]> = {};
 	for (const operation of input.accountMirrorCompletions.recent) {
-		accountMirrorCompletionActionsById[operation.id] = createAccountMirrorCompletionControlActions(operation);
+		accountMirrorCompletionActionsById[operation.id] =
+			createAccountMirrorCompletionControlActions(operation);
 	}
 	for (const operation of input.accountMirrorCompletions.active) {
 		if (!accountMirrorCompletionActionsById[operation.id]) {
-			accountMirrorCompletionActionsById[operation.id] = createAccountMirrorCompletionControlActions(operation);
+			accountMirrorCompletionActionsById[operation.id] =
+				createAccountMirrorCompletionControlActions(operation);
 		}
 	}
 
@@ -4800,14 +4804,16 @@ function createBackgroundDrainControlActions(
 			available: pauseBlockedReason === null,
 			blockedReason: pauseBlockedReason,
 			payload: { backgroundDrain: { action: "pause" } },
-			expectedTransition: "background drain state becomes paused after any in-flight drain finishes",
+			expectedTransition:
+				"background drain state becomes paused after any in-flight drain finishes",
 			expectedEvidence: "controlResult.kind=background-drain and backgroundDrain.paused=true",
 			startsProviderBrowserWork: false,
 			stopsProviderBrowserWork: false,
 			writesPersistentState: false,
 			targetId: "background drain",
 			currentState: backgroundDrain.state,
-			browserEffect: "browser work already in progress may continue; future background drain scheduling stops",
+			browserEffect:
+				"browser work already in progress may continue; future background drain scheduling stops",
 		}),
 		createRunControlReadinessAction({
 			action: "background-drain.resume",
@@ -4855,7 +4861,8 @@ function createCompletionReadinessAction(
 				: action === "resume"
 					? "live-follow operation returns to running"
 					: "live-follow operation becomes cancelled",
-		expectedEvidence: "controlResult.kind=account-mirror-completion and refreshed accountMirrorCompletions readback includes the updated status",
+		expectedEvidence:
+			"controlResult.kind=account-mirror-completion and refreshed accountMirrorCompletions readback includes the updated status",
 		startsProviderBrowserWork: action === "resume",
 		stopsProviderBrowserWork: action === "pause" || action === "cancel",
 		writesPersistentState: true,
@@ -4882,7 +4889,12 @@ function accountMirrorCompletionControlBlockedReason(
 			? null
 			: `live-follow status ${status} cannot be paused`;
 	}
-	if (status === "queued" || status === "running" || status === "idle_waiting" || status === "paused") {
+	if (
+		status === "queued" ||
+		status === "running" ||
+		status === "idle_waiting" ||
+		status === "paused"
+	) {
 		return null;
 	}
 	return `live-follow status ${status} cannot be cancelled`;
@@ -4896,15 +4908,18 @@ function createRuntimeDrainReadinessAction(input: {
 	const available = input.status === "selected" || input.status === "eligible";
 	const blockedReason = available
 		? null
-		: input.reason ?? `run is ${input.status}; targeted drain requires server-local runner ownership`;
+		: (input.reason ??
+			`run is ${input.status}; targeted drain requires server-local runner ownership`);
 	return createRunControlReadinessAction({
 		action: "runtime.drain",
 		label: "Drain now",
 		available,
 		blockedReason,
 		payload: { runControl: { action: "drain-run", runId: input.runId } },
-		expectedTransition: "local service host executes exactly this eligible run or returns a blocked readback error",
-		expectedEvidence: "controlResult.action=drain-run and status=executed with refreshed runtime run readback",
+		expectedTransition:
+			"local service host executes exactly this eligible run or returns a blocked readback error",
+		expectedEvidence:
+			"controlResult.action=drain-run and status=executed with refreshed runtime run readback",
 		startsProviderBrowserWork: true,
 		stopsProviderBrowserWork: false,
 		writesPersistentState: true,
@@ -5060,13 +5075,13 @@ async function readBrowserProcessStatusEntry(input: {
 		const targets =
 			devToolsResponsive && port ? await readDevToolsTargetSummaries({ host, port }) : [];
 		return {
-				provider: input.provider,
-				runtimeProfileId: input.runtimeProfileId,
-				managedProfileDir,
-				owner: registryInstance?.owner ?? null,
-				operation: registryInstance?.operation ?? null,
-				lease: registryInstance?.lease ?? null,
-				pid: processMatch?.pid ?? null,
+			provider: input.provider,
+			runtimeProfileId: input.runtimeProfileId,
+			managedProfileDir,
+			owner: registryInstance?.owner ?? null,
+			operation: registryInstance?.operation ?? null,
+			lease: registryInstance?.lease ?? null,
+			pid: processMatch?.pid ?? null,
 			port: port ?? null,
 			host,
 			processAlive: Boolean(processMatch),
@@ -5079,13 +5094,13 @@ async function readBrowserProcessStatusEntry(input: {
 		};
 	} catch (error) {
 		return {
-				provider: input.provider,
-				runtimeProfileId: input.runtimeProfileId,
-				managedProfileDir,
-				owner: null,
-				operation: null,
-				lease: null,
-				pid: null,
+			provider: input.provider,
+			runtimeProfileId: input.runtimeProfileId,
+			managedProfileDir,
+			owner: null,
+			operation: null,
+			lease: null,
+			pid: null,
 			port: null,
 			host,
 			processAlive: false,
@@ -5586,7 +5601,10 @@ function normalizeOptionalQueryString(value: string | null): string | null {
 	return trimmed.length > 0 ? trimmed : null;
 }
 
-type AccountMirrorAccountLibraryPreviewMap = Map<string, HistoryAccountLibraryReconciliationPreviewResult>;
+type AccountMirrorAccountLibraryPreviewMap = Map<
+	string,
+	HistoryAccountLibraryReconciliationPreviewResult
+>;
 type AccountMirrorAccountLibraryActiveJobMap = Map<
 	string,
 	{
@@ -5601,7 +5619,8 @@ type AccountMirrorAccountLibraryActiveJobs = NonNullable<
 type LiveFollowAccountLibraryCatchupSummary = NonNullable<
 	LiveFollowTargetAccountSummary["accountLibraryCatchup"]
 >;
-type LiveFollowAccountLibraryBrowserHealth = LiveFollowAccountLibraryCatchupSummary["browserHealth"];
+type LiveFollowAccountLibraryBrowserHealth =
+	LiveFollowAccountLibraryCatchupSummary["browserHealth"];
 
 async function previewAccountLibraryCatchupTargets(input: {
 	status: AccountMirrorStatusSummary;
@@ -5699,6 +5718,7 @@ function createLiveFollowTargetRollup(
 			actualStatus:
 				activeOperation?.status ?? (entry.mirrorState.running ? "refreshing" : entry.status),
 			statusReason: entry.reason,
+			identityEvidence: entry.identityEvidence,
 			attentionNeeded: isLiveFollowTargetAttentionNeeded(entry, activeOperation, recentOperation),
 			activeCompletionId: activeOperation?.id ?? null,
 			latestCompletionStatus: recentOperation?.status ?? null,
@@ -5719,8 +5739,12 @@ function createLiveFollowTargetRollup(
 			),
 			accountLibraryCatchup: summarizeLiveFollowAccountLibraryCatchup(
 				entry,
-				accountLibraryPreviews?.get(accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId)) ?? null,
-				accountLibraryActiveJobs?.get(accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId)) ?? null,
+				accountLibraryPreviews?.get(
+					accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId),
+				) ?? null,
+				accountLibraryActiveJobs?.get(
+					accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId),
+				) ?? null,
 				accountLibraryBrowserProcessStatus,
 				now,
 			),
@@ -5876,10 +5900,7 @@ function summarizeLiveFollowAccountLibraryCatchup(
 	const activeJobCount = activeJobs?.count ?? 0;
 	const cooldownUntil = deriveLiveFollowAccountLibraryCooldownUntil(entry);
 	const cooldownActive = Boolean(cooldownUntil && Date.parse(cooldownUntil) > now().getTime());
-	const browserHealth = summarizeLiveFollowAccountLibraryBrowserHealth(
-		entry,
-		browserProcessStatus,
-	);
+	const browserHealth = summarizeLiveFollowAccountLibraryBrowserHealth(entry, browserProcessStatus);
 	const blockedReason = deriveLiveFollowAccountLibraryBlockedReason({
 		entry,
 		activeJobCount,
@@ -5888,19 +5909,19 @@ function summarizeLiveFollowAccountLibraryCatchup(
 	const status = activeJob
 		? activeJob.status
 		: desired.mode === "disabled"
-		? "disabled"
-		: desired.mode === "preview_only"
-			? "preview_only"
-			: cooldownActive
-				? "cooling_down"
-			: blockedReason
-				? "blocked"
-				: "eligible";
+			? "disabled"
+			: desired.mode === "preview_only"
+				? "preview_only"
+				: cooldownActive
+					? "cooling_down"
+					: blockedReason
+						? "blocked"
+						: "eligible";
 	const reason = activeJob
 		? `active account-library materialization job ${activeJob.id} is ${activeJob.status}`
 		: cooldownActive
 			? `account-library failure cooldown is active until ${cooldownUntil}`
-			: blockedReason ?? desired.reason;
+			: (blockedReason ?? desired.reason);
 	return {
 		mode: desired.mode,
 		enabled: desired.enabled,
@@ -5949,7 +5970,9 @@ function summarizeLiveFollowAccountLibraryCatchup(
 	};
 }
 
-function deriveLiveFollowAccountLibraryCooldownUntil(entry: AccountMirrorStatusEntry): string | null {
+function deriveLiveFollowAccountLibraryCooldownUntil(
+	entry: AccountMirrorStatusEntry,
+): string | null {
 	const cooldownMs = entry.liveFollow.accountLibrary.failureCooldownMs;
 	if (!cooldownMs || cooldownMs <= 0) return null;
 	const lastFailureAtMs = Date.parse(entry.lastFailureAt ?? "");
@@ -6002,10 +6025,12 @@ function deriveLiveFollowAccountLibraryBlockedReason(input: {
 }): string | null {
 	const { entry, activeJobCount, browserHealth } = input;
 	if (entry.liveFollow.accountLibrary.mode !== "eligible") return null;
-	if (entry.provider !== "chatgpt") return "account-library live-follow catch-up currently supports ChatGPT only";
+	if (entry.provider !== "chatgpt")
+		return "account-library live-follow catch-up currently supports ChatGPT only";
 	if (entry.liveFollow.state !== "enabled") return entry.liveFollow.reason;
 	if (entry.status !== "eligible") return entry.reason;
-	if (entry.providerGuard.state !== "clear") return entry.providerGuard.summary ?? entry.providerGuard.state;
+	if (entry.providerGuard.state !== "clear")
+		return entry.providerGuard.summary ?? entry.providerGuard.state;
 	if (entry.mirrorState.running || entry.mirrorState.queued) {
 		return "account mirror provider work is already active for this target";
 	}
@@ -7107,8 +7132,11 @@ const ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA = z.object({
 	provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
 	runtimeProfile: z.string().trim().min(1).optional(),
 	explicitRefresh: z.boolean().optional(),
+	ignoreMinimumInterval: z.boolean().optional(),
+	ignore_minimum_interval: z.boolean().optional(),
 	queueTimeoutMs: z.number().int().nonnegative().optional(),
 	queuePollMs: z.number().int().positive().optional(),
+	collectorTimeoutMs: z.number().int().positive().optional(),
 });
 
 const ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA = z.object({
@@ -7893,7 +7921,14 @@ function parseAccountMirrorArtifactRecoveryPlanQuery(
 			tenant: z.string().trim().min(1).optional(),
 			tenantKey: z.string().trim().min(1).optional(),
 			status: z
-				.enum(["eligible", "needs_detail_refresh", "deferred", "blocked", "unsupported", "terminal"])
+				.enum([
+					"eligible",
+					"needs_detail_refresh",
+					"deferred",
+					"blocked",
+					"unsupported",
+					"terminal",
+				])
 				.optional(),
 			action: z
 				.enum([
@@ -8098,8 +8133,7 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 			false,
 		assetKinds: parsed.assetKinds ?? parsed.asset_kinds,
 		maxItems: parsed.maxItems ?? parsed.max_items,
-		providerWorkTimeoutMs:
-			parsed.providerWorkTimeoutMs ?? parsed.provider_work_timeout_ms,
+		providerWorkTimeoutMs: parsed.providerWorkTimeoutMs ?? parsed.provider_work_timeout_ms,
 		force: parsed.force ?? false,
 	};
 }

@@ -39,6 +39,7 @@ import {
 	createChatgptAccountMirrorMetadataCollector,
 	type AccountMirrorMetadataCollector,
 	type AccountMirrorMetadataCollectorResult,
+	type AccountMirrorVerifiedIdentityEvidence,
 } from "./chatgptMetadataCollector.js";
 import {
 	createAccountMirrorPersistence,
@@ -59,11 +60,7 @@ export interface AccountMirrorRefreshRequest {
 
 export interface AccountMirrorRefreshBrowserLifecycle {
 	cleanupRequested: boolean;
-	status:
-		| "not_requested"
-		| "not_running"
-		| "terminated"
-		| "failed";
+	status: "not_requested" | "not_running" | "terminated" | "failed";
 	managedProfileDir: string | null;
 	pid: number | null;
 	message: string | null;
@@ -165,7 +162,8 @@ export function createAccountMirrorRefreshService(input: {
 		});
 	const providerGuardCensus = input.providerGuardCensus ?? detectProviderGuardWithTargetCensus;
 	const findManagedBrowserPid = input.findManagedBrowserPid ?? findChromePidUsingUserDataDir;
-	const terminateManagedBrowserProcess = input.terminateManagedBrowserProcess ?? terminateManagedBrowserProcessByPid;
+	const terminateManagedBrowserProcess =
+		input.terminateManagedBrowserProcess ?? terminateManagedBrowserProcessByPid;
 	const generateRequestId = input.generateRequestId ?? (() => `acctmirror_${randomUUID()}`);
 
 	return {
@@ -219,7 +217,6 @@ export function createAccountMirrorRefreshService(input: {
 					lastRefreshRequestId: requestId,
 					lastQueuedAtMs: queuedAt.getTime(),
 					lastAttemptAtMs: queuedAt.getTime(),
-					detectedIdentityKey: target.expectedIdentityKey,
 					lastDispatcherBlockedBy: null,
 				},
 			);
@@ -313,6 +310,9 @@ export function createAccountMirrorRefreshService(input: {
 			);
 
 			let collection: AccountMirrorMetadataCollectorResult;
+			const verifiedIdentityRef: { current: AccountMirrorVerifiedIdentityEvidence | null } = {
+				current: null,
+			};
 			let latestYieldCause: AccountMirrorYieldCause | null = null;
 			const collectorAbort = new AbortController();
 			try {
@@ -339,6 +339,9 @@ export function createAccountMirrorRefreshService(input: {
 							maxBrowserInteractionsPerMinute: target.limits.maxBrowserInteractionsPerMinute,
 						},
 						previousEvidence: target.metadataEvidence,
+						onIdentityVerified: (evidence) => {
+							verifiedIdentityRef.current = evidence;
+						},
 						abortSignal: collectorAbort.signal,
 						shouldYield: () => {
 							const cause = getAccountMirrorYieldCause(acquired);
@@ -367,9 +370,27 @@ export function createAccountMirrorRefreshService(input: {
 						queued: false,
 						running: false,
 						detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
+						detectedIdentitySource: collection.detectedIdentitySource ?? "provider-app",
+						detectedIdentityObservedAtMs:
+							collection.detectedIdentityObservedAtMs ?? completedAt.getTime(),
+						detectedIdentityConfidence: collection.detectedIdentityConfidence ?? "authoritative",
+						identityMismatchLastCheckedAtMs: target.identityEvidence.recheckable
+							? completedAt.getTime()
+							: undefined,
+						identityMismatchRepair: createIdentityMismatchRepairState({
+							target,
+							currentDetectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
+							requestId,
+							checkedAtMs: completedAt.getTime(),
+							source: collection.detectedIdentitySource ?? "provider-app",
+						}),
 						lastSuccessAtMs: completedAt.getTime(),
+						lastFailureAtMs: null,
 						lastCompletedAtMs: completedAt.getTime(),
 						consecutiveFailureCount: 0,
+						providerCooldownUntilMs: null,
+						providerHardStopAtMs: null,
+						providerGuard: null,
 						metadataCounts: collectionWithPriorManifests.metadataCounts,
 						metadataEvidence: collectionWithPriorManifests.evidence,
 					},
@@ -400,14 +421,30 @@ export function createAccountMirrorRefreshService(input: {
 					updatedAt: completedAt,
 					state: {
 						detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
+						detectedIdentitySource: collection.detectedIdentitySource ?? "provider-app",
+						detectedIdentityObservedAtMs:
+							collection.detectedIdentityObservedAtMs ?? completedAt.getTime(),
+						detectedIdentityConfidence: collection.detectedIdentityConfidence ?? "authoritative",
+						identityMismatchLastCheckedAtMs: target.identityEvidence.recheckable
+							? completedAt.getTime()
+							: undefined,
+						identityMismatchRepair: createIdentityMismatchRepairState({
+							target,
+							currentDetectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
+							requestId,
+							checkedAtMs: completedAt.getTime(),
+							source: collection.detectedIdentitySource ?? "provider-app",
+						}),
 						lastAttemptAtMs: queuedAt.getTime(),
 						lastSuccessAtMs: completedAt.getTime(),
+						lastFailureAtMs: null,
 						lastCompletedAtMs: completedAt.getTime(),
 						lastRefreshRequestId: requestId,
 						lastStartedAtMs: startedAt.getTime(),
 						lastDispatcherKey: acquired.operation.key,
 						lastDispatcherOperationId: acquired.operation.id,
 						consecutiveFailureCount: 0,
+						providerCooldownUntilMs: null,
 						providerGuard: null,
 						providerHardStopAtMs: null,
 						metadataCounts: collectionWithPriorManifests.metadataCounts,
@@ -463,6 +500,16 @@ export function createAccountMirrorRefreshService(input: {
 			} catch (error) {
 				const completedAt = now();
 				const isIdentityMismatch = error instanceof AccountMirrorIdentityMismatchError;
+				const verifiedIdentity = verifiedIdentityRef.current;
+				const verifiedIdentityRepair =
+					!isIdentityMismatch && verifiedIdentity
+						? createVerifiedIdentityRepairState({
+								target,
+								verifiedIdentity,
+								requestId,
+								checkedAtMs: completedAt.getTime(),
+							})
+						: null;
 				const providerGuard = isIdentityMismatch
 					? null
 					: extractProviderGuard(error, completedAt.getTime());
@@ -482,7 +529,31 @@ export function createAccountMirrorRefreshService(input: {
 					{
 						queued: false,
 						running: false,
-						detectedIdentityKey: isIdentityMismatch ? error.detectedIdentityKey : undefined,
+						detectedIdentityKey: isIdentityMismatch
+							? error.detectedIdentityKey
+							: verifiedIdentity?.detectedIdentityKey,
+						detectedIdentitySource: isIdentityMismatch
+							? "provider-app"
+							: verifiedIdentity?.detectedIdentitySource,
+						detectedIdentityObservedAtMs: isIdentityMismatch
+							? completedAt.getTime()
+							: verifiedIdentity?.detectedIdentityObservedAtMs,
+						detectedIdentityConfidence: isIdentityMismatch
+							? "authoritative"
+							: verifiedIdentity?.detectedIdentityConfidence,
+						identityMismatchLastCheckedAtMs:
+							isIdentityMismatch || verifiedIdentityRepair ? completedAt.getTime() : undefined,
+						identityMismatchRepair: isIdentityMismatch
+							? {
+									status: "current_mismatch_confirmed",
+									previousDetectedIdentityKey: target.detectedIdentityKey,
+									currentDetectedIdentityKey: error.detectedIdentityKey,
+									repairedAtMs: null,
+									checkedAtMs: completedAt.getTime(),
+									source: "provider-app",
+									requestId,
+								}
+							: verifiedIdentityRepair,
 						lastFailureAtMs: completedAt.getTime(),
 						lastCompletedAtMs: completedAt.getTime(),
 						consecutiveFailureCount: failureCount,
@@ -499,7 +570,32 @@ export function createAccountMirrorRefreshService(input: {
 					state: {
 						detectedIdentityKey: isIdentityMismatch
 							? error.detectedIdentityKey
-							: target.detectedIdentityKey,
+							: (verifiedIdentity?.detectedIdentityKey ?? target.detectedIdentityKey),
+						detectedIdentitySource: isIdentityMismatch
+							? "provider-app"
+							: (verifiedIdentity?.detectedIdentitySource ?? target.identityEvidence.source),
+						detectedIdentityObservedAtMs: isIdentityMismatch
+							? completedAt.getTime()
+							: (verifiedIdentity?.detectedIdentityObservedAtMs ??
+								parseIsoTimestampMs(target.identityEvidence.observedAt)),
+						detectedIdentityConfidence: isIdentityMismatch
+							? "authoritative"
+							: (verifiedIdentity?.detectedIdentityConfidence ??
+								target.identityEvidence.confidence),
+						identityMismatchLastCheckedAtMs:
+							isIdentityMismatch || verifiedIdentityRepair ? completedAt.getTime() : undefined,
+						identityMismatchRepair: isIdentityMismatch
+							? {
+									status: "current_mismatch_confirmed",
+									previousDetectedIdentityKey: target.detectedIdentityKey,
+									currentDetectedIdentityKey: error.detectedIdentityKey,
+									repairedAtMs: null,
+									checkedAtMs: completedAt.getTime(),
+									source: "provider-app",
+									requestId,
+								}
+							: (verifiedIdentityRepair ??
+								createIdentityMismatchRepairStateFromStatus(target.identityEvidence.repair)),
 						lastAttemptAtMs: queuedAt.getTime(),
 						lastFailureAtMs: completedAt.getTime(),
 						lastCompletedAtMs: completedAt.getTime(),
@@ -546,6 +642,68 @@ export function createAccountMirrorRefreshService(input: {
 			}
 		},
 	};
+}
+
+function createIdentityMismatchRepairState(input: {
+	target: AccountMirrorStatusEntry;
+	currentDetectedIdentityKey: string | null;
+	requestId: string;
+	checkedAtMs: number;
+	source: string | null | undefined;
+}): AccountMirrorStatusState["identityMismatchRepair"] {
+	if (!input.target.identityEvidence.recheckable) {
+		return createIdentityMismatchRepairStateFromStatus(input.target.identityEvidence.repair);
+	}
+	return {
+		status: "stale_mismatch_repaired",
+		previousDetectedIdentityKey: input.target.detectedIdentityKey,
+		currentDetectedIdentityKey: input.currentDetectedIdentityKey,
+		repairedAtMs: input.checkedAtMs,
+		checkedAtMs: input.checkedAtMs,
+		source: input.source ?? "provider-app",
+		requestId: input.requestId,
+	};
+}
+
+function createVerifiedIdentityRepairState(input: {
+	target: AccountMirrorStatusEntry;
+	verifiedIdentity: AccountMirrorVerifiedIdentityEvidence;
+	requestId: string;
+	checkedAtMs: number;
+}): AccountMirrorStatusState["identityMismatchRepair"] {
+	if (!input.target.identityEvidence.recheckable) {
+		return createIdentityMismatchRepairStateFromStatus(input.target.identityEvidence.repair);
+	}
+	return {
+		status: "stale_mismatch_repaired",
+		previousDetectedIdentityKey: input.target.detectedIdentityKey,
+		currentDetectedIdentityKey: input.verifiedIdentity.detectedIdentityKey,
+		repairedAtMs: input.checkedAtMs,
+		checkedAtMs: input.checkedAtMs,
+		source: input.verifiedIdentity.detectedIdentitySource,
+		requestId: input.requestId,
+	};
+}
+
+function createIdentityMismatchRepairStateFromStatus(
+	repair: AccountMirrorStatusEntry["identityEvidence"]["repair"],
+): AccountMirrorStatusState["identityMismatchRepair"] {
+	if (!repair) return null;
+	return {
+		status: repair.status,
+		previousDetectedIdentityKey: repair.previousDetectedIdentityKey,
+		currentDetectedIdentityKey: repair.currentDetectedIdentityKey,
+		repairedAtMs: parseIsoTimestampMs(repair.repairedAt),
+		checkedAtMs: parseIsoTimestampMs(repair.checkedAt),
+		source: repair.source,
+		requestId: repair.requestId,
+	};
+}
+
+function parseIsoTimestampMs(value: string | null | undefined): number | null {
+	if (!value) return null;
+	const parsed = Date.parse(value);
+	return Number.isFinite(parsed) ? parsed : null;
 }
 
 async function cleanupManagedBrowserAfterRefresh(input: {
@@ -1026,9 +1184,10 @@ async function mergeCollectionWithPersistedCatalog(input: {
 			retainedCounts: zeroMetadataCounts(),
 		});
 	}
-	const projects = input.collection.evidence.truncated.projects === true
-		? mergeById(existing.projects, input.collection.manifests.projects)
-		: [...input.collection.manifests.projects];
+	const projects =
+		input.collection.evidence.truncated.projects === true
+			? mergeById(existing.projects, input.collection.manifests.projects)
+			: [...input.collection.manifests.projects];
 	const manifests = {
 		projects,
 		conversations: mergeConversationsByObservedOrder(
@@ -1288,6 +1447,9 @@ function createConfigBackedAccountMirrorMetadataCollector(
 			});
 			return {
 				detectedIdentityKey: input.expectedIdentityKey,
+				detectedIdentitySource: "configured",
+				detectedIdentityObservedAtMs: Date.now(),
+				detectedIdentityConfidence: "authoritative",
 				detectedAccountLevel: null,
 				metadataCounts,
 				manifests: {

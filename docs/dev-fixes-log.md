@@ -18275,3 +18275,36 @@ browser-stage lifecycle observability, not transcript truncation.
   account-library target now records either queued/reused capped
   `account_library_reconciliation` work or an `accountLibraryCursor` skip
   reason plus lifecycle event, and scheduler diagnostics includes that cursor.
+- 2026-06-06: Running history materialization stale recovery must cover
+  ordinary reconciliation jobs, not only account-library jobs with an explicit
+  provider timeout. Readback should mark any over-threshold running job
+  terminal, preserve explicit account-library timeout wording where applicable,
+  and run managed-browser cleanup so stale jobs cannot keep browser leases
+  indefinitely.
+- 2026-06-07: Readback stale-running recovery can mark a history
+  materialization job terminal while its original in-process provider promise
+  still owns the serialized work queue. If a follow-up job stays `queued` with
+  `dispatchState=scheduled` after the previous provider work timed out, restart
+  the API or add an abort/queue-unblock repair before assuming the follow-up
+  job itself is malformed.
+- 2026-06-07: Stale-running readback must detach any matching in-process
+  provider-work queue slot and guard against late completion overwrites. A job
+  marked terminal by stale recovery is authoritative; delayed provider promise
+  resolution should return the current terminal job instead of writing a
+  succeeded/failed result over it.
+- 2026-06-07: ChatGPT project-source handoff proof must distinguish source
+  inventory from handoff-ready context. A project URL may expose visible
+  conversation and file inventories while conversation file downloads still
+  fail as `tile_not_found`; target mutation should stay blocked until the
+  packet has real materialized files or deterministic non-downloadable
+  omissions.
+- 2026-06-07: Account-mirror identity mismatch must be self-healing when the
+  persisted detected identity is stale or malformed. A cached display-name/plan
+  label such as `consulting pcg pro` must not permanently block a target whose
+  current provider-app auth session proves the configured email; Chrome/Google
+  browser identity is diagnostic only, while provider-app identity is the
+  authority for ChatGPT live-follow.
+- 2026-06-07: Account-mirror identity proof must be persisted as soon as the
+  provider-app identity is verified. Later non-identity failures such as
+  metadata collector timeouts must not erase that proof or recreate ambiguity
+  about whether a stale identity-mismatch latch repaired.

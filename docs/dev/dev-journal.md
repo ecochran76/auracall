@@ -37966,3 +37966,180 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - start one bounded metadata-only `chatgpt/wsl-chrome-3` completion so
     account-library catch-up is the only materialization source;
   - restore original user config after terminal evidence.
+
+## 2026-06-06 | Plan 0122 Live-Follow Stale Materialization Recovery
+
+- Focus: repair live-follow materialization recovery after ordinary
+  `chatgpt/wsl-chrome-3` reconciliation job
+  `hmj_69d02e4bdc9f48e1ad91c412d6a4e39f` stayed `running` for many hours and
+  kept a managed browser lease while scheduler diagnostics still reported
+  `stale=false`.
+- Implemented:
+  - generalized readback stale-running recovery from account-library-only jobs
+    to all running history materialization jobs;
+  - kept explicit account-library provider-timeout wording for jobs that carry
+    `providerWorkTimeoutMs`;
+  - added a 30-minute default running stale threshold for ordinary jobs without
+    an explicit timeout;
+  - made readback recovery invoke managed-browser cleanup in the installed
+    service path.
+- Installed proof:
+  - rebuilt, installed, and restarted `auracall-api.service`;
+  - readback converted `hmj_69d02e4bdc9f48e1ad91c412d6a4e39f` to `failed`
+    with `History materialization job exceeded running stale threshold
+    (1800000ms).`;
+  - active `chatgpt/wsl-chrome-3` materialization jobs returned `0`;
+  - process scan found no `wsl-chrome-3` or `wsl-chrome-4` managed Chrome
+    processes.
+- Rerun outcome:
+  - temporarily flipped only `wsl-chrome-3` account-library mode to
+    `eligible` from a backed-up config;
+  - queued capped account-library reconciliation job
+    `hmj_2b8b215db3794a5980181f3a455e4e6f`;
+  - the job succeeded with `materialized=3`, `skipped=0`, and `failed=0`;
+  - restored the original config, proving final mode `preview_only`, active
+    jobs `0`, and no managed Chrome processes for the watched profiles.
+
+## 2026-06-07 | Plan 0133 Original Source Cache Proof
+
+- Focus: prove the original ChatGPT Business SoyLei source ref before any
+  SoyLei Pro target mutation in the cross-tenant handoff flow.
+- Progress:
+  - verified the `default` ChatGPT source identity as
+    `ecochran76@gmail.com`, Business/team/workspace, preflight `ok=true`;
+  - identified the original ref as a SoyLei project URL with `Chats` and
+    `Sources` tabs, not a direct `/c/<conversation-id>` URL;
+  - extracted 10 visible project conversation URLs from the live DOM;
+  - built a dry-run handoff packet with source completeness `partial` and
+    target mutation disabled.
+- Live materialization outcome:
+  - broad project-conversation materialization failed at the `180000ms`
+    running stale threshold;
+  - a narrowed single-conversation job was recovered by restarting
+    `auracall-api.service` and startup recovery re-dispatching the queued job;
+  - the recovered job finished `skipped` with five failed source file downloads
+    due to `tile_not_found`.
+- Current blocker:
+  - source cache has inventory evidence and one older local DOCX attachment,
+    but it does not yet have a complete compacted context plus selected source
+    files suitable for SoyLei Pro submission.
+  - target upload/submit approval remains blocked until the ChatGPT
+    conversation file fetch path can materialize provider file refs or report a
+    deterministic non-downloadable reason.
+
+## 2026-06-07 | Plan 0134 Handoff Source Materialization Queue Unblock
+
+- Focus: remove the generic queue blocker found during Plan 0133, where
+  stale-running readback could mark a history materialization job `failed` while
+  the original in-process provider promise still blocked the serialized queue.
+- Implemented:
+  - stale-running readback detaches the scheduled process-local queue slot for
+    the stale job so later source materialization work can run without an API
+    restart;
+  - late provider work now checks the stored job before writing completion
+    state, so a stale terminal record cannot be overwritten by a delayed
+    success/failure;
+  - startup interrupted-job recovery no longer pre-scans stale timeouts before
+    its own recovery loop;
+  - refresh-only stale conversation candidates stay eligible during
+    `refreshSnapshot=true` reconciliation even when current asset-family
+    signatures are missing.
+- Validation:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts`
+    passed with `52` tests.
+- Decision:
+  - Plan 0134 closes. The next handoff source-depth slice should target
+    ChatGPT project `Sources` tab file materialization.
+
+## 2026-06-07 | Plan 0137 Oracle Identity Mismatch Self-Healing
+
+- Focus: live-follow status/oracle self-healing for stale identity mismatch
+  state.
+- Diagnosis: `chatgpt/wsl-chrome-2` currently proves the expected ChatGPT
+  provider app identity `consult@polymerconsultinggroup.com`, but API status
+  remains blocked because persisted account-mirror state from
+  `2026-05-31T08:02:50.016Z` stores
+  `detectedIdentityKey="consulting pcg pro"`.
+- Plan written:
+  `docs/dev/plans/0137-2026-06-07-oracle-identity-mismatch-self-healing.md`.
+- Required fix: stale/malformed detected identity state must trigger a narrow
+  provider-app identity recheck and repair path, not a permanent hard block;
+  current authoritative provider-app account drift must remain a hard stop.
+- Closeout: Plan 0137 is implemented and installed. Live
+  `chatgpt/wsl-chrome-2` status now reports provider-app authoritative
+  identity evidence for `consult@polymerconsultinggroup.com` with
+  `repairStatus=stale_mismatch_repaired`, previous key `consulting pcg pro`,
+  and retained merged mirror counts
+  `projects=6/conversations=68/artifacts=64/files=73/media=0`.
+- Validation: targeted account-mirror/status/API/CLI tests passed,
+  `pnpm exec tsc --noEmit --pretty false` passed, focused Biome lint passed
+  with only existing warning-level debt in the broader HTTP test file,
+  `pnpm run build` passed, user runtime install/restart left
+  `auracall-api.service` active, and active materialization/completion queues
+  returned `0`.
+
+## 2026-06-07 | Plan 0135 ChatGPT Project Sources Materialization
+
+- Focus: implement the next source-depth slice after the Plan 0133 handoff and
+  Plan 0134 queue unblock.
+- Implemented:
+  - `llmService.listProjectFiles()` and the ChatGPT adapter can open/list
+    project `Sources` rows and cache project knowledge;
+  - project source row extraction now preserves backend `file_...` ids, hrefs,
+    DOM/action evidence, MIME/type/size hints, and metadata-only row evidence;
+  - ChatGPT `downloadProjectFile()` uses the authenticated provider-file route
+    only when an explicit provider file id exists;
+  - `llmService.materializeProjectFiles()` writes project file-fetch manifests,
+    downloads provider-id rows, retains visible source rows in the project
+    cache, and records deterministic non-downloadable row errors;
+  - history materialization accepts `provider + projectId +
+    assetKinds=["files"]` as a `project_sources` source and archives successful
+    files through the existing history materialization archive path;
+  - API, CLI, and MCP source-type filters/readback accept
+    `sourceType=project_sources`;
+  - handoff imports project-source materialization readbacks as ordinary source
+    manifest items and deterministic omissions.
+- Validation:
+  - targeted Vitest suite passed with `220` tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - focused Biome lint passed on changed source/test files;
+  - `pnpm run build` passed;
+  - `pnpm run plans:audit -- --keep 135` passed with `Validation errors: 0`;
+  - installed runtime restart left `auracall-api.service` active and API
+    status healthy.
+- Live proof:
+  - project-source materialization job
+    `hmj_5927c197d6d6453bb23b90f980e14619` ran against
+    `project_sources/chatgpt/g-p-687f9c5cc35c8191a25e6127785b86f8`;
+  - it completed `skipped` with `materialized=0` and `failed=3`;
+  - rows `SoyLei Knowledge - Main 20251208.md`, `SIP-1111.md`, and
+    `SIP-1119.md` were recorded as failed with
+    `ChatGPT project source lacks a provider file id.`;
+  - active materialization jobs returned `0` after completion.
+- Packet refresh:
+  - first refresh attempt proved the project-source entries imported, but also
+    showed `ChatGPT project source lacks a provider file id.` was still treated
+    retryable;
+  - updated handoff omission classification so provider-id-missing
+    project-source rows are terminal non-retryable omissions;
+  - focused `tests/cli/handoffCommand.test.ts` passed with `36` tests;
+  - corrected dry-run packet
+    `/tmp/auracall-plan0135-project-source-import/handoffs/plan0135-project-source-import`
+    now has `manifestItemCount=3`, `localMaterializedCount=3`,
+    `checksumCount=3`, `omissionCount=20`, and `retryableOmissionCount=0`;
+  - package digest is
+    `6876fc1565d469e70c1a7a1e18c2f6cea47856ecdbdb7da37ca0be3bb7342d12` with
+    target mutation disabled.
+- Refreshed target completion:
+  - recorded upload approval and submit approval against package digest
+    `6876fc1565d469e70c1a7a1e18c2f6cea47856ecdbdb7da37ca0be3bb7342d12`;
+  - upload completed with `uploadedFileCount=2` and `uploadFailureCount=0`;
+  - submit completed with `submitAttemptCount=1`;
+  - target readback is cached for
+    `https://chatgpt.com/c/6a250296-65d4-83ea-930b-c5658ed7435a` with provider
+    message id `handoff-message-dbd77d872c589e1d37711316b7f7c191`;
+  - status readback for `plan0135-project-source-import` returned `complete`;
+  - API status was healthy and active materialization jobs returned `0`.
+- Decision:
+  - Plan 0135 closes with the refreshed packet submitted to the SoyLei target
+    and cached readback complete.

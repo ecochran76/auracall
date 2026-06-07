@@ -11,7 +11,9 @@ Lane: P01
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
 - Completed supporting plan:
   [docs/dev/plans/0136-2026-06-07-handoff-tranche-review-and-commit.md](docs/dev/plans/0136-2026-06-07-handoff-tranche-review-and-commit.md)
-- Latest completed plan:
+- Latest completed live-follow supporting plan:
+  [docs/dev/plans/0137-2026-06-07-oracle-identity-mismatch-self-healing.md](docs/dev/plans/0137-2026-06-07-oracle-identity-mismatch-self-healing.md)
+- Previous completed plan:
   [docs/dev/plans/0135-2026-06-07-chatgpt-project-sources-materialization.md](docs/dev/plans/0135-2026-06-07-chatgpt-project-sources-materialization.md)
 - Previous completed plan:
   [docs/dev/plans/0134-2026-06-07-handoff-source-materialization-queue-unblock.md](docs/dev/plans/0134-2026-06-07-handoff-source-materialization-queue-unblock.md)
