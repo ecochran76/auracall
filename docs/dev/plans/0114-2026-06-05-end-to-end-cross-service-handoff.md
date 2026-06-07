@@ -370,10 +370,16 @@ Model output never directly mutates target services.
 
 ### Slice 0128 | Provider-Native Browser Adapter Proof
 
-- Wire the first real provider-native browser adapter to the target adapter
+- Wire the first provider-native submit/readback adapter to the target adapter
   contract.
-- Prove one bounded same-provider or cross-provider handoff through the adapter
-  with explicit approvals and readback evidence.
+- Prove an approved same-provider or cross-provider handoff submit/readback
+  through the adapter contract.
+
+### Slice 0129 | Provider-Native File Upload Proof
+
+- Attach the first real provider-native file upload or prompt attachment path.
+- Prove one bounded approved handoff with selected file transfer, submit, and
+  readback evidence.
 
 ## Critical Path
 

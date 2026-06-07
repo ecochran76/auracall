@@ -1,3 +1,24 @@
+## Turn 375 | 2026-06-07
+
+- Goal: continue Plan 0114 by wiring the first provider-native submit/readback
+  adapter behind the live recovery contract.
+- Implemented:
+  - opened
+    `docs/dev/plans/0128-2026-06-07-handoff-provider-native-submit-readback-proof.md`.
+  - added provider-native prompt runner input/result contracts.
+  - added `createProviderNativeHandoffTargetAdapter(...)`.
+  - kept upload delegated to `packet_target_adapter`.
+  - made submit call the prompt runner after existing approval guard validation.
+  - persisted provider-native conversation ref, message id, response summary,
+    and response excerpt into target submission/readback artifacts.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build all passed.
+- Decision:
+  - Plan 0128 closes as **Handoff Provider-Native Submit Readback Proof
+    Installed**.
+
 ## Turn 374 | 2026-06-07
 
 - Goal: continue Plan 0114 by making live recovery adapter-backed before

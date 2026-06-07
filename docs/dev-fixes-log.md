@@ -1,3 +1,9 @@
+- 2026-06-07: Provider-native handoff submit/readback should be adapter-backed
+  and approval-guarded, not a parallel mutation path. The provider-native
+  prompt adapter now validates the existing submit approval guard, submits the
+  approved primer and compact context through a runner, and writes provider
+  conversation/message readback evidence into the normal target artifacts.
+
 - 2026-06-07: Handoff provider-native work should attach behind the live
   recovery contract instead of embedding browser heuristics in the handoff
   state machine. `recoverHandoffLive` now uses a `HandoffTargetAdapter`,

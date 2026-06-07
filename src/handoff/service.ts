@@ -735,6 +735,29 @@ export interface HandoffTargetAdapter {
 	submit(input: HandoffTargetAdapterContext): Promise<HandoffSubmitTargetResult>;
 }
 
+export interface HandoffProviderNativePromptInput {
+	provider: HandoffProvider;
+	runtimeProfileId: string;
+	browserProfileId: string | null;
+	conversationRef: string | null;
+	projectRef: string | null;
+	prompt: string;
+	compactContext: unknown;
+	uploadedProviderFileIds: string[];
+	packageDigest: string;
+}
+
+export interface HandoffProviderNativePromptResult {
+	targetConversationRef: string | null;
+	providerMessageId: string | null;
+	responseSummary?: string | null;
+	responseExcerpt?: string | null;
+}
+
+export interface HandoffProviderNativePromptRunner {
+	submit(input: HandoffProviderNativePromptInput): Promise<HandoffProviderNativePromptResult>;
+}
+
 export async function prepareCrossServiceHandoffPacket(
 	request: HandoffPrepareRequest,
 ): Promise<HandoffPrepareResult> {
@@ -1514,6 +1537,133 @@ const packetTargetAdapter: HandoffTargetAdapter = {
 			generatedAt: input.generatedAt,
 		}),
 };
+
+export function createProviderNativeHandoffTargetAdapter(
+	runner: HandoffProviderNativePromptRunner,
+): HandoffTargetAdapter {
+	return {
+		id: "provider_native_prompt_adapter",
+		upload: (input) => packetTargetAdapter.upload(input),
+		submit: (input) => submitHandoffWithProviderNativePrompt(input, runner),
+	};
+}
+
+async function submitHandoffWithProviderNativePrompt(
+	input: HandoffTargetAdapterContext,
+	runner: HandoffProviderNativePromptRunner,
+): Promise<HandoffSubmitTargetResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const approval = normalizeSubmitApproval(
+		await readJsonIfExists(path.join(packet.packetPath, "approvals", "submit.json")),
+	);
+	if (!approval) {
+		throw new Error("Target submit requires an explicit submit approval.");
+	}
+	const uploadResult = normalizeUploadResult(
+		await readJsonIfExists(path.join(packet.packetPath, "target", "upload-result.json")),
+	);
+	if (!uploadResult) {
+		throw new Error("Target submit requires a completed target upload result.");
+	}
+	if (uploadResult.packageDigest !== packet.targetPackage.packageDigest) {
+		throw new Error(
+			`Target upload result is stale for package digest ${packet.targetPackage.packageDigest}.`,
+		);
+	}
+	const guard = await buildSubmitGuard(packet.packetPath, packet.targetPackage, uploadResult);
+	if (
+		approval.packageDigest !== packet.targetPackage.packageDigest ||
+		approval.primerDigest !== guard.primerDigest ||
+		approval.compactContextDigest !== guard.compactContextDigest ||
+		approval.uploadSetDigest !== guard.uploadSetDigest
+	) {
+		throw new Error(`Submit approval is stale for package digest ${packet.targetPackage.packageDigest}.`);
+	}
+	const [primer, compactContext] = await Promise.all([
+		fs.readFile(path.join(packet.packetPath, "target", "primer.md"), "utf8"),
+		readJsonIfExists(path.join(packet.packetPath, "target", "compact-context.json")),
+	]);
+	const uploadedProviderFileIds = uploadResult.rows.map((row) => row.providerFileId);
+	const promptDigest = buildPacketDigest({
+		packageDigest: packet.targetPackage.packageDigest,
+		primerDigest: guard.primerDigest,
+		compactContextDigest: guard.compactContextDigest,
+		uploadSetDigest: guard.uploadSetDigest,
+		adapter: "provider_native_prompt_adapter",
+	});
+	const nativeResult = await runner.submit({
+		provider: packet.run.target.provider,
+		runtimeProfileId: packet.run.target.runtimeProfileId,
+		browserProfileId: packet.run.target.browserProfileId,
+		conversationRef: packet.run.target.conversationRef,
+		projectRef: packet.run.target.projectRef,
+		prompt: primer.trimEnd(),
+		compactContext,
+		uploadedProviderFileIds,
+		packageDigest: packet.targetPackage.packageDigest,
+	});
+	const targetConversationRef =
+		normalizeOptionalString(nativeResult.targetConversationRef) ??
+		packet.run.target.conversationRef ??
+		`provider-native-handoff-${buildPacketDigest({
+			runId: packet.run.id,
+			target: packet.run.target.accountBindingKey,
+			packageDigest: packet.targetPackage.packageDigest,
+		}).slice(0, 24)}`;
+	const providerMessageId =
+		normalizeOptionalString(nativeResult.providerMessageId) ??
+		`provider-native-message-${buildPacketDigest({
+			targetConversationRef,
+			promptDigest,
+		}).slice(0, 32)}`;
+	const submissionResult: HandoffSubmissionResult = {
+		object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
+		generatedAt: input.generatedAt,
+		status: "submitted",
+		packageDigest: packet.targetPackage.packageDigest,
+		uploadAttemptCount: uploadResult.uploadAttemptCount,
+		submitAttemptCount: 1,
+		uploadResultRef: "target/upload-result.json",
+		submitApprovalRef: "approvals/submit.json",
+		promptDigest,
+		primerDigest: guard.primerDigest,
+		compactContextDigest: guard.compactContextDigest,
+		uploadSetDigest: guard.uploadSetDigest,
+		targetConversationRef,
+		providerMessageId,
+		readbackRef: "target/readback.json",
+		uploadedProviderFileIds,
+	};
+	const readback: HandoffTargetReadback = {
+		object: HANDOFF_TARGET_READBACK_SCHEMA,
+		generatedAt: input.generatedAt,
+		status: "readback_cached",
+		packageDigest: packet.targetPackage.packageDigest,
+		target: packet.run.target,
+		targetConversationRef,
+		providerMessageId,
+		responseSummary:
+			normalizeOptionalString(nativeResult.responseSummary) ??
+			"Provider-native target readback cached for the approved handoff submit.",
+		responseExcerpt:
+			normalizeOptionalString(nativeResult.responseExcerpt) ??
+			`Provider-native handoff ${packet.run.id} submitted with ${uploadedProviderFileIds.length} uploaded file reference(s).`,
+		compactContextRef: "target/compact-context.json",
+		primerRef: "target/primer.md",
+		submissionResultRef: "target/submission-result.json",
+	};
+	await writeJson(path.join(packet.packetPath, "target", "submission-result.json"), submissionResult);
+	await writeJson(path.join(packet.packetPath, "target", "readback.json"), readback);
+	return {
+		object: "auracall.handoff.submit-target.result",
+		generatedAt: input.generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		approval,
+		submissionResult,
+		readback,
+	};
+}
 
 export function normalizeHandoffProvider(value: unknown): HandoffProvider {
 	const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";

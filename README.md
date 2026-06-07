@@ -258,7 +258,10 @@ Current browser-mode default posture:
   bypassing the gate. The live recovery path is adapter-backed: the default
   operator executor remains the packet-owned target adapter, and provider-native
   upload/submit/readback adapters attach behind the same approval-validated
-  contract.
+  contract. The first provider-native adapter seam submits the approved primer
+  and compact context through a prompt runner and writes provider-native
+  conversation/message readback evidence; native file attachment remains a
+  provider-specific follow-on.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

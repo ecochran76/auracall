@@ -25,11 +25,13 @@ import {
 } from "../../src/cli/handoffCommand.js";
 import {
 	HANDOFF_ANALYSIS_SCHEMA,
+	createProviderNativeHandoffTargetAdapter,
 	prepareCrossServiceHandoffPacket,
 	recoverHandoffLive,
 	submitHandoffTargetPackage,
 	uploadHandoffTargetPackage,
 	type HandoffTargetAdapter,
+	type HandoffProviderNativePromptInput,
 	validateHandoffAnalysisDecision,
 } from "../../src/handoff/service.js";
 
@@ -1431,6 +1433,117 @@ describe("handoff prepare CLI helpers", () => {
 			object: "auracall.handoff-live-recovery.v1",
 			executor: "provider_native_fixture_adapter",
 			executedAction: "submit",
+		});
+	});
+
+	test("provider-native prompt adapter submits target primer and caches readback", async () => {
+		const root = await tempRoot("auracall-handoff-provider-native-prompt-");
+		const selectedPath = path.join(root, "provider-native.txt");
+		await writeFile(selectedPath, "provider native fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "provider-native-prompt-fixture",
+			sourceProvider: "gemini",
+			sourceRuntimeProfile: "target-gemini",
+			sourceRef: "https://gemini.google.com/app/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			targetRef: "https://chatgpt.com/c/provider-native-target",
+			sourceContext: { messages: [{ role: "user", content: "native prompt" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "native_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-07T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "provider-native-prompt-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		const uploadRecovery = await recoverHandoffLive({
+			handoffId: "provider-native-prompt-fixture",
+			outputRoot: root,
+			generatedAt: "2026-06-07T12:01:00.000Z",
+			targetAdapter: createProviderNativeHandoffTargetAdapter({
+				async submit() {
+					throw new Error("submit should not run during upload recovery");
+				},
+			}),
+		});
+		expect(uploadRecovery.recovery.executedAction).toBe("upload");
+		const promptInputs: HandoffProviderNativePromptInput[] = [];
+		const nativeAdapter = createProviderNativeHandoffTargetAdapter({
+			async submit(input) {
+				promptInputs.push(input);
+				return {
+					targetConversationRef: "https://chatgpt.com/c/provider-native-target",
+					providerMessageId: "provider-native-message-fixture",
+					responseSummary: "Provider-native fixture accepted the handoff.",
+					responseExcerpt: "The target conversation received the compact context.",
+				};
+			},
+		});
+		await approveHandoffSubmitForCli({
+			handoffId: "provider-native-prompt-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		const submitRecovery = await recoverHandoffLive({
+			handoffId: "provider-native-prompt-fixture",
+			outputRoot: root,
+			generatedAt: "2026-06-07T12:02:00.000Z",
+			targetAdapter: nativeAdapter,
+		});
+
+		expect(promptInputs).toEqual([
+			expect.objectContaining({
+				provider: "chatgpt",
+				runtimeProfileId: "target-pro",
+				conversationRef: "https://chatgpt.com/c/provider-native-target",
+				projectRef: null,
+				packageDigest: prepared.targetPackage.packageDigest,
+				uploadedProviderFileIds: [expect.stringMatching(/^handoff-file-[a-f0-9]{32}$/)],
+			}),
+		]);
+		expect(promptInputs[0]?.prompt).toContain("You are receiving a compact");
+		expect(promptInputs[0]?.compactContext).toMatchObject({
+			sourceProvider: "gemini",
+			targetProvider: "chatgpt",
+		});
+		expect(submitRecovery).toMatchObject({
+			recovery: {
+				status: "recovered",
+				executor: "provider_native_prompt_adapter",
+				executedAction: "submit",
+			},
+			afterResumePlan: {
+				nextAction: "complete",
+			},
+		});
+		const submissionJson = JSON.parse(
+			await readFile(
+				path.join(root, "provider-native-prompt-fixture", "target", "submission-result.json"),
+				"utf8",
+			),
+		);
+		expect(submissionJson).toMatchObject({
+			status: "submitted",
+			targetConversationRef: "https://chatgpt.com/c/provider-native-target",
+			providerMessageId: "provider-native-message-fixture",
+			uploadedProviderFileIds: [expect.stringMatching(/^handoff-file-[a-f0-9]{32}$/)],
+		});
+		const readbackJson = JSON.parse(
+			await readFile(
+				path.join(root, "provider-native-prompt-fixture", "target", "readback.json"),
+				"utf8",
+			),
+		);
+		expect(readbackJson).toMatchObject({
+			status: "readback_cached",
+			responseSummary: "Provider-native fixture accepted the handoff.",
+			responseExcerpt: "The target conversation received the compact context.",
 		});
 	});
 
