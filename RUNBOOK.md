@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 270 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0127-2026-06-07-handoff-provider-native-adapter-composition.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: continue Plan 0114 by making live recovery adapter-backed before
+  provider-specific browser heuristics are wired.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0127-2026-06-07-handoff-provider-native-adapter-composition.md`.
+  - added the `HandoffTargetAdapter` contract.
+  - routed `recoverHandoffLive` through the selected target adapter.
+  - preserved `packet_target_adapter` as the default CLI/HTTP/console executor.
+  - recorded adapter ids in `target/live-recovery.json`.
+  - proved injected provider-native adapter execution with approval-gated
+    upload and submit tests.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build passed.
+- Decision:
+  - Plan 0127 closes as **Handoff Provider-Native Adapter Composition
+    Installed**.
+
 ## Turn 269 | 2026-06-07
 
 - Active plan:

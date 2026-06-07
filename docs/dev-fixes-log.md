@@ -1,3 +1,10 @@
+- 2026-06-07: Handoff provider-native work should attach behind the live
+  recovery contract instead of embedding browser heuristics in the handoff
+  state machine. `recoverHandoffLive` now uses a `HandoffTargetAdapter`,
+  preserves `packet_target_adapter` as the default operator executor, records
+  the selected adapter id in `target/live-recovery.json`, and has fixture
+  coverage for injected provider-native upload and submit execution.
+
 - 2026-06-07: Handoff live recovery must execute only the current approved
   resume-plan action. `auracall handoff recover-live <id>`,
   `POST /v1/handoffs/<id>/recover-live`, and the console `Recover Live` action

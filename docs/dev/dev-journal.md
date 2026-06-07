@@ -1,3 +1,24 @@
+## Turn 374 | 2026-06-07
+
+- Goal: continue Plan 0114 by making live recovery adapter-backed before
+  provider-specific browser heuristics are wired.
+- Implemented:
+  - opened
+    `docs/dev/plans/0127-2026-06-07-handoff-provider-native-adapter-composition.md`.
+  - added the `HandoffTargetAdapter` contract.
+  - routed `recoverHandoffLive` through a selected target adapter.
+  - preserved `packet_target_adapter` as the default operator executor.
+  - recorded the selected adapter id in `target/live-recovery.json`.
+  - added fixture coverage proving a non-default provider-native adapter can
+    execute approved upload and submit behind the same resume-plan gate.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build all passed.
+- Decision:
+  - Plan 0127 closes as **Handoff Provider-Native Adapter Composition
+    Installed**.
+
 ## Turn 373 | 2026-06-07
 
 - Goal: continue Plan 0114 with an explicit approval-gated recovery bridge from

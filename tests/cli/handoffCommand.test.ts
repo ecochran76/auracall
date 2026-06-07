@@ -26,6 +26,10 @@ import {
 import {
 	HANDOFF_ANALYSIS_SCHEMA,
 	prepareCrossServiceHandoffPacket,
+	recoverHandoffLive,
+	submitHandoffTargetPackage,
+	uploadHandoffTargetPackage,
+	type HandoffTargetAdapter,
 	validateHandoffAnalysisDecision,
 } from "../../src/handoff/service.js";
 
@@ -1340,6 +1344,93 @@ describe("handoff prepare CLI helpers", () => {
 				readbackStatus: "readback_cached",
 				targetConversationRef: "https://gemini.google.com/app/live-target",
 			},
+		});
+	});
+
+	test("live recovery can execute through an injected provider-native target adapter", async () => {
+		const root = await tempRoot("auracall-handoff-provider-adapter-");
+		const selectedPath = path.join(root, "provider-adapter.txt");
+		await writeFile(selectedPath, "provider adapter fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "provider-adapter-fixture",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			targetRef: "https://chatgpt.com/c/target",
+			sourceContext: { messages: [{ role: "user", content: "adapter" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "adapter_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-07T12:00:00.000Z",
+		});
+		const calls: string[] = [];
+		const providerNativeAdapter: HandoffTargetAdapter = {
+			id: "provider_native_fixture_adapter",
+			async upload(input) {
+				calls.push(`upload:${input.handoffId}:${input.generatedAt}`);
+				return uploadHandoffTargetPackage(input);
+			},
+			async submit(input) {
+				calls.push(`submit:${input.handoffId}:${input.generatedAt}`);
+				return submitHandoffTargetPackage(input);
+			},
+		};
+
+		await approveHandoffUploadForCli({
+			handoffId: "provider-adapter-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		const uploadRecovery = await recoverHandoffLive({
+			handoffId: "provider-adapter-fixture",
+			outputRoot: root,
+			generatedAt: "2026-06-07T12:01:00.000Z",
+			targetAdapter: providerNativeAdapter,
+		});
+
+		expect(uploadRecovery.recovery).toMatchObject({
+			status: "recovered",
+			executor: "provider_native_fixture_adapter",
+			executedAction: "upload",
+		});
+		expect(uploadRecovery.afterResumePlan?.nextAction).toBe("approve_submit");
+
+		await approveHandoffSubmitForCli({
+			handoffId: "provider-adapter-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		const submitRecovery = await recoverHandoffLive({
+			handoffId: "provider-adapter-fixture",
+			outputRoot: root,
+			generatedAt: "2026-06-07T12:02:00.000Z",
+			targetAdapter: providerNativeAdapter,
+		});
+
+		expect(calls).toEqual([
+			"upload:provider-adapter-fixture:2026-06-07T12:01:00.000Z",
+			"submit:provider-adapter-fixture:2026-06-07T12:02:00.000Z",
+		]);
+		expect(submitRecovery.recovery).toMatchObject({
+			status: "recovered",
+			executor: "provider_native_fixture_adapter",
+			executedAction: "submit",
+		});
+		expect(submitRecovery.afterResumePlan?.nextAction).toBe("complete");
+		const recoveryJson = JSON.parse(
+			await readFile(
+				path.join(root, "provider-adapter-fixture", "target", "live-recovery.json"),
+				"utf8",
+			),
+		);
+		expect(recoveryJson).toMatchObject({
+			object: "auracall.handoff-live-recovery.v1",
+			executor: "provider_native_fixture_adapter",
+			executedAction: "submit",
 		});
 	});
 

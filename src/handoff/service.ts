@@ -650,7 +650,7 @@ export interface HandoffLiveRecovery {
 	runId: string;
 	packetPath: string;
 	status: "recovered" | "blocked" | "noop";
-	executor: "packet_target_adapter";
+	executor: string;
 	executedAction: "upload" | "submit" | null;
 	beforeResumePlanRef: "target/resume-plan.json";
 	afterResumePlanRef: "target/resume-plan.json" | null;
@@ -710,6 +710,7 @@ export interface HandoffLiveRecoveryRequest {
 	handoffId: string;
 	outputRoot?: string | null;
 	generatedAt?: string;
+	targetAdapter?: HandoffTargetAdapter | null;
 }
 
 export interface HandoffLiveRecoveryResult {
@@ -720,6 +721,18 @@ export interface HandoffLiveRecoveryResult {
 	recovery: HandoffLiveRecovery;
 	beforeResumePlan: HandoffResumePlan;
 	afterResumePlan: HandoffResumePlan | null;
+}
+
+export interface HandoffTargetAdapterContext {
+	handoffId: string;
+	outputRoot?: string | null;
+	generatedAt: string;
+}
+
+export interface HandoffTargetAdapter {
+	id: string;
+	upload(input: HandoffTargetAdapterContext): Promise<HandoffUploadTargetResult>;
+	submit(input: HandoffTargetAdapterContext): Promise<HandoffSubmitTargetResult>;
 }
 
 export async function prepareCrossServiceHandoffPacket(
@@ -1393,6 +1406,12 @@ export async function recoverHandoffLive(
 ): Promise<HandoffLiveRecoveryResult> {
 	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
 	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const targetAdapter = input.targetAdapter ?? packetTargetAdapter;
+	const adapterContext: HandoffTargetAdapterContext = {
+		handoffId: packet.run.id,
+		outputRoot: input.outputRoot,
+		generatedAt,
+	};
 	const before = await buildHandoffResumePlan({
 		handoffId: packet.run.id,
 		outputRoot: input.outputRoot,
@@ -1410,11 +1429,7 @@ export async function recoverHandoffLive(
 	const blockers: string[] = [];
 
 	if (beforeResumePlan.nextAction === "upload") {
-		await uploadHandoffTargetPackage({
-			handoffId: packet.run.id,
-			outputRoot: input.outputRoot,
-			generatedAt,
-		});
+		await targetAdapter.upload(adapterContext);
 		status = "recovered";
 		executedAction = "upload";
 		resultRefs = {
@@ -1423,11 +1438,7 @@ export async function recoverHandoffLive(
 			readback: null,
 		};
 	} else if (beforeResumePlan.nextAction === "submit") {
-		await submitHandoffTargetPackage({
-			handoffId: packet.run.id,
-			outputRoot: input.outputRoot,
-			generatedAt,
-		});
+		await targetAdapter.submit(adapterContext);
 		status = "recovered";
 		executedAction = "submit";
 		resultRefs = {
@@ -1464,7 +1475,7 @@ export async function recoverHandoffLive(
 		runId: packet.run.id,
 		packetPath: packet.packetPath,
 		status,
-		executor: "packet_target_adapter",
+		executor: targetAdapter.id,
 		executedAction,
 		beforeResumePlanRef: "target/resume-plan.json",
 		afterResumePlanRef: afterResumePlan ? "target/resume-plan.json" : null,
@@ -1472,7 +1483,7 @@ export async function recoverHandoffLive(
 		resultRefs,
 		adapterNotes: [
 			"Recovery executes only the current approved resume-plan action.",
-			"Provider-native upload and submit adapters can replace packet_target_adapter behind this contract.",
+			"Provider-native upload and submit adapters attach behind this contract.",
 			"Upload and submit approvals remain validated by package, prompt, compact-context, and uploaded-file-set digests.",
 		],
 	};
@@ -1487,6 +1498,22 @@ export async function recoverHandoffLive(
 		afterResumePlan,
 	};
 }
+
+const packetTargetAdapter: HandoffTargetAdapter = {
+	id: "packet_target_adapter",
+	upload: (input) =>
+		uploadHandoffTargetPackage({
+			handoffId: input.handoffId,
+			outputRoot: input.outputRoot,
+			generatedAt: input.generatedAt,
+		}),
+	submit: (input) =>
+		submitHandoffTargetPackage({
+			handoffId: input.handoffId,
+			outputRoot: input.outputRoot,
+			generatedAt: input.generatedAt,
+		}),
+};
 
 export function normalizeHandoffProvider(value: unknown): HandoffProvider {
 	const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";

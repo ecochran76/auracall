@@ -363,9 +363,17 @@ Model output never directly mutates target services.
 
 ### Slice 0127 | Provider-Native Handoff Adapters
 
-- Attach provider-native upload, submit, and readback adapters behind the live
-  recovery contract.
+- Add a target adapter contract behind the live recovery action.
+- Attach provider-native upload, submit, and readback adapters through that
+  contract.
 - Keep provider-specific browser heuristics outside the handoff state machine.
+
+### Slice 0128 | Provider-Native Browser Adapter Proof
+
+- Wire the first real provider-native browser adapter to the target adapter
+  contract.
+- Prove one bounded same-provider or cross-provider handoff through the adapter
+  with explicit approvals and readback evidence.
 
 ## Critical Path
 
