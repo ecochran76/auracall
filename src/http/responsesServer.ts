@@ -116,6 +116,12 @@ import {
 	type SearchProjectionService,
 } from "../runtime/searchProjectionService.js";
 import {
+	buildHandoffResumePlan,
+	exportHandoffManualBundle,
+	readHandoffStatus,
+	repairHandoffPacket,
+} from "../handoff/service.js";
+import {
 	createAccountMirrorArtifactRecoveryPlanner,
 	type AccountMirrorArtifactRecoveryPlanRequest,
 	type AccountMirrorArtifactRecoveryPlanResult,
@@ -831,6 +837,10 @@ interface HttpStatusResponse {
 		browserDomDriftObservations: string;
 		browserDomDriftObservationAcceptTemplate: string;
 		workbenchCapabilitiesList: string;
+		handoffStatusTemplate: string;
+		handoffResumeTemplate: string;
+		handoffRepairTemplate: string;
+		handoffExportTemplate: string;
 		agentConfigChoices: string;
 		agentRegistryDiagnostics: string;
 		configApiKeys: string;
@@ -3096,6 +3106,76 @@ export async function createResponsesHttpServer(
 				return;
 			}
 
+			const handoffRoute = matchHandoffOperatorRoute(url.pathname);
+			if (handoffRoute) {
+				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+				if (operatorAuthError) {
+					sendJson(res, 403, {
+						error: {
+							message: operatorAuthError,
+							type: "permission_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				const outputRootFromQuery = url.searchParams.get("outputDir");
+				if (req.method === "GET" && handoffRoute.action === "status") {
+					const status = await readHandoffStatus({
+						handoffId: handoffRoute.id,
+						outputRoot: outputRootFromQuery,
+					});
+					if (!status) {
+						sendJson(res, 404, {
+							error: {
+								message: `Handoff packet ${handoffRoute.id} was not found`,
+								type: "not_found_error",
+							},
+						} satisfies HttpErrorPayload);
+						return;
+					}
+					sendJson(res, 200, status);
+					return;
+				}
+				if (req.method === "POST") {
+					const body = await readRequestBody(req);
+					const payload = parseHandoffOperatorRequestBody(JSON.parse(body || "{}"));
+					const outputRoot = payload.outputDir ?? outputRootFromQuery;
+					if (handoffRoute.action === "resume") {
+						sendJson(
+							res,
+							200,
+							await buildHandoffResumePlan({
+								handoffId: handoffRoute.id,
+								outputRoot,
+							}),
+						);
+						return;
+					}
+					if (handoffRoute.action === "repair") {
+						sendJson(
+							res,
+							200,
+							await repairHandoffPacket({
+								handoffId: handoffRoute.id,
+								outputRoot,
+							}),
+						);
+						return;
+					}
+					if (handoffRoute.action === "export") {
+						sendJson(
+							res,
+							200,
+							await exportHandoffManualBundle({
+								handoffId: handoffRoute.id,
+								outputRoot,
+							}),
+						);
+						return;
+					}
+				}
+			}
+
 			if (req.method === "POST" && url.pathname === "/v1/projects/ensure") {
 				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
 				if (operatorAuthError) {
@@ -4552,6 +4632,10 @@ function createHttpStatusResponse(input: {
 			configSnapshotImport: "POST /v1/config/snapshots/import",
 			workbenchCapabilitiesList:
 				"/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]",
+			handoffStatusTemplate: "/v1/handoffs/{handoff_id}/status[?outputDir={path}]",
+			handoffResumeTemplate: 'POST /v1/handoffs/{handoff_id}/resume {"outputDir":"optional"}',
+			handoffRepairTemplate: 'POST /v1/handoffs/{handoff_id}/repair {"outputDir":"optional"}',
+			handoffExportTemplate: 'POST /v1/handoffs/{handoff_id}/export {"outputDir":"optional"}',
 			operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
 			operatorDebugDashboard: serviceDiscovery.routing.debugDashboardPath,
 			accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
@@ -7526,6 +7610,14 @@ function parseConfigApiKeyIssueRequest(value: unknown) {
 	return CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA.parse(value);
 }
 
+const HANDOFF_OPERATOR_REQUEST_SCHEMA = z.object({
+	outputDir: z.string().trim().min(1).optional(),
+});
+
+function parseHandoffOperatorRequestBody(value: unknown): { outputDir?: string } {
+	return HANDOFF_OPERATOR_REQUEST_SCHEMA.parse(value);
+}
+
 function createTeamRunIdSuffix(): string {
 	return (
 		randomUUID()
@@ -8604,6 +8696,17 @@ function matchResponseRoute(pathname: string): string | null {
 function matchResponseBatchRoute(pathname: string): string | null {
 	const match = /^\/v1\/response-batches\/([^/]+)$/.exec(pathname);
 	return match?.[1] ?? null;
+}
+
+function matchHandoffOperatorRoute(
+	pathname: string,
+): { id: string; action: "status" | "resume" | "repair" | "export" } | null {
+	const match = /^\/v1\/handoffs\/([^/]+)\/(status|resume|repair|export)$/.exec(pathname);
+	if (!match?.[1] || !match[2]) return null;
+	return {
+		id: decodeURIComponent(match[1]),
+		action: match[2] as "status" | "resume" | "repair" | "export",
+	};
 }
 
 function matchConfigEntityRoute(pathname: string, kind: "agents" | "teams"): string | null {

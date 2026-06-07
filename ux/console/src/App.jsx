@@ -43,6 +43,7 @@ const NAV_ITEMS = [
   "Providers",
   "Projects",
   "Runs",
+  "Handoffs",
   "Search",
   "API Access",
   "Diagnostics",
@@ -70,6 +71,10 @@ function App() {
   const [runQuery, setRunQuery] = useState("");
   const [runKindFilter, setRunKindFilter] = useState("all");
   const [runStateFilter, setRunStateFilter] = useState("all");
+  const [handoffId, setHandoffId] = useState(readParamFromUrl("handoff"));
+  const [handoffOutputDir, setHandoffOutputDir] = useState("");
+  const [handoffPayload, setHandoffPayload] = useState(null);
+  const [handoffBusy, setHandoffBusy] = useState("");
   const [providerReadinessFilter, setProviderReadinessFilter] = useState("all");
   const [projectReadinessFilter, setProjectReadinessFilter] = useState("all");
   const [form, setForm] = useState(EMPTY_FORM);
@@ -390,6 +395,7 @@ function App() {
     if (view !== "providers") next.provider = null;
     if (view !== "projects") next.project = null;
     if (view !== "runs") next.run = null;
+    if (view !== "handoffs") next.handoff = null;
     updateUrl(next);
   };
   const selectProvider = (providerKey) => {
@@ -410,6 +416,34 @@ function App() {
     setSelectedRunKey(runKey);
     setActiveView("runs");
     updateUrl({ view: "runs", run: runKey, agent: null, provider: null, project: null });
+  };
+  const performHandoffAction = async (action) => {
+    const id = handoffId.trim();
+    if (!id) {
+      setError("Enter a handoff id first.");
+      return;
+    }
+    setHandoffBusy(action);
+    setError("");
+    setNotice("");
+    try {
+      const query = handoffOutputDir.trim()
+        ? `?outputDir=${encodeURIComponent(handoffOutputDir.trim())}`
+        : "";
+      const endpoint = `/v1/handoffs/${encodeURIComponent(id)}/${action}`;
+      const payload =
+        action === "status"
+          ? await fetchJson(`${endpoint}${query}`)
+          : await postJson(endpoint, handoffOutputDir.trim() ? { outputDir: handoffOutputDir.trim() } : {});
+      setHandoffPayload(payload);
+      setNotice(`Handoff ${action} completed.`);
+      setActiveView("handoffs");
+      updateUrl({ view: "handoffs", handoff: id, agent: null, provider: null, project: null, run: null });
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : String(requestError));
+    } finally {
+      setHandoffBusy("");
+    }
   };
 
   return (
@@ -508,6 +542,16 @@ function App() {
             onControl={performRunControl}
             onSwitchView={switchView}
           />
+        ) : activeView === "handoffs" ? (
+          <HandoffsPage
+            handoffId={handoffId}
+            outputDir={handoffOutputDir}
+            payload={handoffPayload}
+            busy={handoffBusy}
+            onHandoffIdChange={setHandoffId}
+            onOutputDirChange={setHandoffOutputDir}
+            onAction={performHandoffAction}
+          />
         ) : (
           <AgentsPage
             loading={loading}
@@ -537,6 +581,109 @@ function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function HandoffsPage({
+  handoffId,
+  outputDir,
+  payload,
+  busy,
+  onHandoffIdChange,
+  onOutputDirChange,
+  onAction,
+}) {
+  const summary = summarizeHandoffPayload(payload);
+  return (
+    <>
+      <section className="page-header">
+        <div>
+          <h1>Handoffs</h1>
+          <p>Inspect cross-service handoff packets and operate resume, repair, and manual export artifacts.</p>
+          <span className="freshness">Local packet state</span>
+        </div>
+        <div className="header-actions">
+          <button className="ghost-button" type="button" onClick={() => onAction("status")} disabled={Boolean(busy)}>
+            {busy === "status" ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <RefreshCcw size={16} aria-hidden="true" />}
+            Status
+          </button>
+          <button className="ghost-button" type="button" onClick={() => onAction("resume")} disabled={Boolean(busy)}>
+            {busy === "resume" ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
+            Resume
+          </button>
+          <button className="ghost-button" type="button" onClick={() => onAction("repair")} disabled={Boolean(busy)}>
+            {busy === "repair" ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <RefreshCcw size={16} aria-hidden="true" />}
+            Repair
+          </button>
+          <button className="primary-button" type="button" onClick={() => onAction("export")} disabled={Boolean(busy)}>
+            {busy === "export" ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Archive size={16} aria-hidden="true" />}
+            Export
+          </button>
+        </div>
+      </section>
+
+      <section className="workspace two-column">
+        <aside className="agent-list" aria-label="Handoff query">
+          <div className="command-bar stacked">
+            <label className="field-label">
+              Handoff id
+              <input
+                value={handoffId}
+                onChange={(event) => onHandoffIdChange(event.target.value)}
+                placeholder="handoff_..."
+              />
+            </label>
+            <label className="field-label">
+              Output directory
+              <input
+                value={outputDir}
+                onChange={(event) => onOutputDirChange(event.target.value)}
+                placeholder="optional packet root"
+              />
+            </label>
+          </div>
+          <div className="list-scroll">
+            <EmptyState
+              title="Packet-owned operator flow"
+              detail="Use status first, then resume, repair, or export from the current handoff packet state."
+            />
+          </div>
+        </aside>
+
+        <section className="editor-panel" aria-label="Handoff operator result">
+          <div className="inspector-inner">
+            <div className="inspector-card">
+              <div className="inspector-title">
+                <Archive size={18} aria-hidden="true" />
+                <div>
+                  <h2>{summary.title}</h2>
+                  <p>{summary.subtitle}</p>
+                </div>
+              </div>
+            </div>
+            <div className="status-strip compact" aria-label="Handoff result summary">
+              <Metric label="Stage" value={summary.stage} />
+              <Metric label="Next" value={summary.nextAction} tone={summary.nextAction === "complete" ? "ready" : "warning"} />
+              <Metric label="Files" value={summary.fileCount} />
+              <Metric label="Readback" value={summary.readback} tone={summary.readback === "readback_cached" ? "ready" : "muted"} />
+            </div>
+            <div className="inspector-card">
+              <h3>Artifacts</h3>
+              <dl className="details-list">
+                <Detail label="Resume plan" value={summary.resumePlanRef} />
+                <Detail label="Repair report" value={summary.repairReportRef} />
+                <Detail label="Manual export" value={summary.exportRef} />
+                <Detail label="Provider message" value={summary.providerMessageId} />
+              </dl>
+            </div>
+            <div className="inspector-card">
+              <h3>Raw response</h3>
+              <pre>{payload ? JSON.stringify(payload, null, 2) : "No handoff response loaded."}</pre>
+            </div>
+          </div>
+        </section>
+      </section>
+    </>
   );
 }
 
@@ -1904,7 +2051,14 @@ function readParamFromUrl(key) {
 
 function readViewFromUrl() {
   const view = readParamFromUrl("view");
-  return view === "overview" || view === "providers" || view === "projects" || view === "agents" || view === "runs" ? view : "overview";
+  return view === "overview" ||
+    view === "providers" ||
+    view === "projects" ||
+    view === "agents" ||
+    view === "runs" ||
+    view === "handoffs"
+    ? view
+    : "overview";
 }
 
 function updateUrl(updates) {
@@ -1924,7 +2078,42 @@ function navItemToView(item) {
   if (item === "Providers") return "providers";
   if (item === "Projects") return "projects";
   if (item === "Runs") return "runs";
+  if (item === "Handoffs") return "handoffs";
   return "";
+}
+
+function summarizeHandoffPayload(payload) {
+  if (!payload) {
+    return {
+      title: "No handoff loaded",
+      subtitle: "Enter a handoff id and run a status or operator action.",
+      stage: "unknown",
+      nextAction: "unknown",
+      fileCount: 0,
+      readback: "unknown",
+      resumePlanRef: "missing",
+      repairReportRef: "missing",
+      exportRef: "missing",
+      providerMessageId: "missing",
+    };
+  }
+  const resumePlan = payload.resumePlan ?? null;
+  const report = payload.report ?? null;
+  const exportBundle = payload.exportBundle ?? null;
+  const target = payload.target ?? {};
+  const fileCount = exportBundle?.selectedFiles?.length ?? target.selectedFileCount ?? 0;
+  return {
+    title: payload.runId ?? payload.run?.id ?? "Handoff packet",
+    subtitle: payload.packetPath ?? "Packet path unavailable",
+    stage: resumePlan?.currentStage ?? target.submitStatus ?? target.uploadStatus ?? "unknown",
+    nextAction: resumePlan?.nextAction ?? (target.readbackStatus === "readback_cached" ? "complete" : "unknown"),
+    fileCount,
+    readback: exportBundle?.readbackStatus ?? target.readbackStatus ?? "unknown",
+    resumePlanRef: report?.resumePlanRef ?? resumePlan?.refs?.manualExport ?? "target/resume-plan.json",
+    repairReportRef: report ? "repair/report.json" : "missing",
+    exportRef: exportBundle ? "target/manual-handoff-export.json" : resumePlan?.refs?.manualExport ?? "missing",
+    providerMessageId: exportBundle?.providerMessageId ?? target.providerMessageId ?? "missing",
+  };
 }
 
 function agentToForm(agent) {

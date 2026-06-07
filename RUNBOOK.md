@@ -1,5 +1,33 @@
 # RUNBOOK
 
+## Turn 268 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0125-2026-06-07-handoff-console-operator-ux.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: continue Plan 0114 with a console/API operator surface for packet-owned
+  handoff recovery artifacts after Plan 0124.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0125-2026-06-07-handoff-console-operator-ux.md`.
+  - added local operator endpoints for handoff status, resume, repair, and
+    manual export.
+  - advertised those handoff operator routes from `/status`.
+  - added the console `Handoffs` view for packet id, optional output
+    directory, status/resume/repair/export actions, summary metrics, and raw
+    JSON output.
+  - kept live provider recovery out of scope for the next bounded handoff
+    automation slice.
+- Validation:
+  - `pnpm vitest run tests/http.handoffOperator.test.ts
+    tests/cli/handoffCommand.test.ts` passed with 29 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - focused Biome lint, console build, plan audit, diff check, and build
+    passed.
+- Decision:
+  - Plan 0125 closes as **Handoff Console Operator UX Installed**.
+
 ## Turn 267 | 2026-06-07
 
 - Active plan:

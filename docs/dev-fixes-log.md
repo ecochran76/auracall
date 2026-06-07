@@ -1,3 +1,11 @@
+- 2026-06-07: Handoff operator UX needs a local API bridge because the browser
+  console cannot read packet files directly. The local server now exposes
+  operator-authorized `/v1/handoffs/<id>/status`, `/resume`, `/repair`, and
+  `/export` endpoints, advertises them from `/status`, and the console
+  `Handoffs` view can run those deterministic packet-owned actions with an
+  optional output root. Live provider recovery remains a separate approval-gated
+  slice.
+
 - 2026-06-07: Handoff repair/resume must be packet-owned instead of inferred
   from chat history. `auracall handoff resume <id>` now writes
   `target/resume-plan.json` with the next safe operator action, `auracall

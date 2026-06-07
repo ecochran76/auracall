@@ -346,9 +346,15 @@ Model output never directly mutates target services.
 - Support resuming from target package, upload, submit, or readback.
 - Add final export bundle for manual handoff if provider automation is blocked.
 
-### Slice 0125 | Console Operator UX And Live Recovery
+### Slice 0125 | Console Operator UX
 
-- Add console/operator surfaces for resume, repair, and export artifacts.
+- Add local API and console/operator surfaces for status, resume, repair, and
+  export artifacts.
+- Keep provider mutation disabled; operate only packet-owned deterministic
+  artifacts.
+
+### Slice 0126 | Live Provider Recovery
+
 - Bridge deterministic resume plans to live provider recovery where permitted.
 - Keep approval gates explicit for any live target mutation.
 
