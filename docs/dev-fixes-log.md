@@ -1,3 +1,12 @@
+- 2026-06-07: Handoff submit must use a separate approval from upload and must
+  fail closed when target prompt inputs drift. `auracall handoff
+  approve-submit <id>` now records `target_submit` approval under
+  `approvals/submit.json`, bound to package, primer, compact-context, and
+  uploaded-file-set digests. `auracall handoff submit <id>` requires that
+  current approval and writes deterministic `target/submission-result.json` and
+  `target/readback.json`; status reports submit/readback evidence. Live target
+  provider mutation remains outside the deterministic default path.
+
 - 2026-06-07: Handoff target upload approval must be bound to the exact target
   package digest. `auracall handoff approve-upload <id>` now records
   `auracall.handoff-approval.v1` under `approvals/upload.json` and rejects a

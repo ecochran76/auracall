@@ -1,3 +1,30 @@
+## Turn 370 | 2026-06-07
+
+- Goal: plan and execute the next Plan 0114 cross-service handoff slice after
+  Plan 0121.
+- Implemented:
+  - opened
+    `docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md`
+    because `0122` is occupied by the live-follow recovery lane.
+  - added separate `target_submit` approval under `approvals/submit.json`.
+  - bound submit approval to package, primer, compact context, and
+    uploaded-file-set digests.
+  - added `auracall handoff approve-submit <id>`.
+  - added `auracall handoff submit <id>` deterministic submit/readback.
+  - wrote `target/submission-result.json` with prompt digest, target
+    conversation ref, provider message id, uploaded provider file ids, and
+    `submitAttemptCount=1`.
+  - wrote `target/readback.json` with cached readback status, summary, excerpt,
+    and packet refs.
+  - extended handoff status with submit/readback metrics.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 24 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - focused Biome lint, handoff submit approval/submit/status help commands,
+    plan audit, diff check, and build all passed.
+- Decision:
+  - Plan 0123 closes as **Handoff Target Submit And Readback Installed**.
+
 ## Turn 369 | 2026-06-07
 
 - Goal: plan and execute the next Plan 0114 cross-service handoff slice after

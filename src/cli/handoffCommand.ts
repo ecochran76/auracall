@@ -5,15 +5,19 @@ import {
 	type ApiHistoryMaterializationStatusCliOptions,
 } from "./apiHistoryMaterializationCommand.js";
 import {
+	approveHandoffTargetSubmit,
 	approveHandoffTargetUpload,
 	prepareCrossServiceHandoffPacket,
 	readHandoffStatus,
 	readJsonInputFile,
+	submitHandoffTargetPackage,
 	uploadHandoffTargetPackage,
+	type HandoffApproveSubmitResult,
 	type HandoffApproveUploadResult,
 	type HandoffSourceMaterializationImportMethod,
 	type HandoffPrepareResult,
 	type HandoffProvider,
+	type HandoffSubmitTargetResult,
 	type HandoffStatusResult,
 	type HandoffUploadTargetResult,
 } from "../handoff/service.js";
@@ -62,7 +66,19 @@ export interface HandoffApproveUploadCliOptions {
 	packageDigest?: string | null;
 }
 
+export interface HandoffApproveSubmitCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+	actor?: string | null;
+	packageDigest?: string | null;
+}
+
 export interface HandoffUploadCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+}
+
+export interface HandoffSubmitCliOptions {
 	handoffId: string;
 	outputDir?: string | null;
 }
@@ -183,10 +199,30 @@ export async function approveHandoffUploadForCli(
 	});
 }
 
+export async function approveHandoffSubmitForCli(
+	options: HandoffApproveSubmitCliOptions,
+): Promise<HandoffApproveSubmitResult> {
+	return approveHandoffTargetSubmit({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+		actor: options.actor,
+		packageDigest: options.packageDigest,
+	});
+}
+
 export async function uploadHandoffForCli(
 	options: HandoffUploadCliOptions,
 ): Promise<HandoffUploadTargetResult> {
 	return uploadHandoffTargetPackage({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+	});
+}
+
+export async function submitHandoffForCli(
+	options: HandoffSubmitCliOptions,
+): Promise<HandoffSubmitTargetResult> {
+	return submitHandoffTargetPackage({
 		handoffId: options.handoffId,
 		outputRoot: options.outputDir,
 	});
@@ -235,6 +271,11 @@ export function formatHandoffStatusCliSummary(result: HandoffStatusResult): stri
 		`Target upload status: ${result.target.uploadStatus}`,
 		`Target uploaded files: ${result.target.uploadedFileCount}`,
 		`Target upload failures: ${result.target.uploadFailureCount}`,
+		`Target submit approved: ${result.target.submitApproved ? "true" : "false"}`,
+		`Target submit status: ${result.target.submitStatus}`,
+		`Target readback status: ${result.target.readbackStatus}`,
+		`Target conversation ref: ${result.target.targetConversationRef ?? "missing"}`,
+		`Target provider message id: ${result.target.providerMessageId ?? "missing"}`,
 		`Source materialization jobs: ${result.sourceMaterializationJobs?.metrics.total ?? 0}`,
 		`Target mutation allowed: ${result.target.mutationAllowed ? "true" : "false"}`,
 		`Target upload attempts: ${result.target.uploadAttemptCount}`,
@@ -253,6 +294,19 @@ export function formatHandoffApproveUploadCliSummary(result: HandoffApproveUploa
 	].join("\n");
 }
 
+export function formatHandoffApproveSubmitCliSummary(result: HandoffApproveSubmitResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Approval: target_submit`,
+		`Actor: ${result.approval.actor}`,
+		`Package digest: ${result.approval.packageDigest}`,
+		`Primer digest: ${result.approval.primerDigest}`,
+		`Compact context digest: ${result.approval.compactContextDigest}`,
+		`Upload set digest: ${result.approval.uploadSetDigest}`,
+	].join("\n");
+}
+
 export function formatHandoffUploadCliSummary(result: HandoffUploadTargetResult): string {
 	return [
 		`Handoff packet: ${result.runId}`,
@@ -262,6 +316,19 @@ export function formatHandoffUploadCliSummary(result: HandoffUploadTargetResult)
 		`Uploaded files: ${result.uploadResult.uploadedFileCount}`,
 		`Upload failures: ${result.uploadResult.failedFileCount}`,
 		`Submit attempts: ${result.submissionResult.submitAttemptCount}`,
+	].join("\n");
+}
+
+export function formatHandoffSubmitCliSummary(result: HandoffSubmitTargetResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Submit status: ${result.submissionResult.status}`,
+		`Package digest: ${result.submissionResult.packageDigest ?? "missing"}`,
+		`Submit attempts: ${result.submissionResult.submitAttemptCount}`,
+		`Target conversation ref: ${result.submissionResult.targetConversationRef ?? "missing"}`,
+		`Target provider message id: ${result.submissionResult.providerMessageId ?? "missing"}`,
+		`Readback status: ${result.readback.status}`,
 	].join("\n");
 }
 

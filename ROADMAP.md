@@ -10,6 +10,8 @@ Lane: P01
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
 - Latest completed plan:
+  [docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md](docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md)
+- Previous completed plan:
   [docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md](docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md)
 - Previous completed plan:
   [docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md](docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md)
@@ -179,9 +181,10 @@ Lane: P01
 - Plan 0114 is open as **End-To-End Cross-Service Handoff**. App Intelligence
   owns the deterministic supervisor, run ledger, decision validation,
   approvals, target mutation gates, replay log, and repair state; provider
-  adapters own bounded source/target capabilities. The current preview path
-  covers source job orchestration plus schema-validated analysis/package
-  assembly; the next implementation slice is approval-gated target upload.
+  adapters own bounded source/target capabilities. The current deterministic
+  path covers source job orchestration, schema-validated analysis/package
+  assembly, approval-gated upload, and approval-gated submit/readback; the next
+  bounded implementation slice is repair/resume and operator UX.
 - Plan 0115 is closed as **Handoff Run Ledger And Status Installed**.
   `auracall handoff prepare --dry-run` now writes `ledger.json`, and
   `auracall handoff status <id>` reads run, ledger, event count, packet
@@ -206,6 +209,13 @@ Lane: P01
   result rows from the staged package, and status reports approval/upload
   metrics while target submit/readback remain disabled. The next implementation
   slice is target submit and readback.
+- Plan 0123 is closed as **Handoff Target Submit And Readback Installed**.
+  `auracall handoff approve-submit <id>` records a separate submit approval
+  bound to package, primer, compact context, and uploaded-file-set digests.
+  `auracall handoff submit <id>` writes deterministic
+  `target/submission-result.json` and `target/readback.json`, and status now
+  reports submit/readback evidence without live provider mutation by default.
+  The next bounded handoff slice is repair/resume and operator UX.
 - Plan 0107 is closed as **ChatGPT Account-Library Automatic
   Mode Remains Preview-Only**. The preflight found
   foreground-work backpressure, active `wsl-chrome-3` live-follow completion

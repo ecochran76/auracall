@@ -4,11 +4,15 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import {
+	approveHandoffSubmitForCli,
 	approveHandoffUploadForCli,
+	formatHandoffApproveSubmitCliSummary,
 	formatHandoffPrepareCliSummary,
 	formatHandoffStatusCliSummary,
+	formatHandoffSubmitCliSummary,
 	prepareHandoffForCli,
 	readHandoffStatusForCli,
+	submitHandoffForCli,
 	uploadHandoffForCli,
 } from "../../src/cli/handoffCommand.js";
 import {
@@ -874,6 +878,220 @@ describe("handoff prepare CLI helpers", () => {
 			uploadAttemptCount: 0,
 			submitAttemptCount: 0,
 		});
+	});
+
+	test("requires submit approval after target upload", async () => {
+		const root = await tempRoot("auracall-handoff-submit-no-approval-");
+		const selectedPath = path.join(root, "submit.txt");
+		await writeFile(selectedPath, "submit fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "submit-no-approval",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "submit" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "submit_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "submit-no-approval",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await uploadHandoffForCli({
+			handoffId: "submit-no-approval",
+			outputDir: root,
+		});
+
+		await expect(
+			submitHandoffForCli({
+				handoffId: "submit-no-approval",
+				outputDir: root,
+			}),
+		).rejects.toThrow("Target submit requires an explicit submit approval.");
+	});
+
+	test("records submit approval and deterministic target submit readback", async () => {
+		const root = await tempRoot("auracall-handoff-submit-approved-");
+		const selectedPath = path.join(root, "submit.txt");
+		await writeFile(selectedPath, "submit fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "submit-approved",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			targetRef: "https://gemini.google.com/app/target",
+			sourceContext: { messages: [{ role: "user", content: "submit" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "submit_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "submit-approved",
+			outputDir: root,
+			actor: "tester",
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		const upload = await uploadHandoffForCli({
+			handoffId: "submit-approved",
+			outputDir: root,
+		});
+		const approval = await approveHandoffSubmitForCli({
+			handoffId: "submit-approved",
+			outputDir: root,
+			actor: "tester",
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		expect(approval.approval).toMatchObject({
+			object: "auracall.handoff-approval.v1",
+			kind: "target_submit",
+			packageDigest: prepared.targetPackage.packageDigest,
+			primerDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+			compactContextDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+			uploadSetDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+		});
+		expect(formatHandoffApproveSubmitCliSummary(approval)).toContain("Approval: target_submit");
+
+		const submit = await submitHandoffForCli({
+			handoffId: "submit-approved",
+			outputDir: root,
+		});
+
+		expect(submit.submissionResult).toMatchObject({
+			object: "auracall.handoff-submission-result.v1",
+			status: "submitted",
+			packageDigest: prepared.targetPackage.packageDigest,
+			uploadAttemptCount: 1,
+			submitAttemptCount: 1,
+			uploadResultRef: "target/upload-result.json",
+			submitApprovalRef: "approvals/submit.json",
+			targetConversationRef: "https://gemini.google.com/app/target",
+			providerMessageId: expect.stringMatching(/^handoff-message-[a-f0-9]{32}$/),
+			readbackRef: "target/readback.json",
+			uploadedProviderFileIds: [upload.uploadResult.rows[0]?.providerFileId],
+		});
+		expect(submit.readback).toMatchObject({
+			object: "auracall.handoff-target-readback.v1",
+			status: "readback_cached",
+			targetConversationRef: "https://gemini.google.com/app/target",
+			providerMessageId: submit.submissionResult.providerMessageId,
+		});
+		expect(formatHandoffSubmitCliSummary(submit)).toContain("Submit status: submitted");
+
+		const status = await readHandoffStatusForCli({
+			handoffId: "submit-approved",
+			outputDir: root,
+		});
+		expect(status).toMatchObject({
+			target: {
+				uploadApproved: true,
+				submitApproved: true,
+				uploadStatus: "uploaded",
+				submitStatus: "submitted",
+				readbackStatus: "readback_cached",
+				uploadAttemptCount: 1,
+				submitAttemptCount: 1,
+				targetConversationRef: "https://gemini.google.com/app/target",
+				providerMessageId: submit.submissionResult.providerMessageId,
+			},
+		});
+		expect(status).not.toBeNull();
+		if (!status) throw new Error("Expected submit-approved status fixture to exist.");
+		expect(formatHandoffStatusCliSummary(status)).toContain("Target submit approved: true");
+		expect(formatHandoffStatusCliSummary(status)).toContain("Target readback status: readback_cached");
+	});
+
+	test("rejects stale submit approval when target prompt artifacts change", async () => {
+		const root = await tempRoot("auracall-handoff-submit-stale-");
+		const selectedPath = path.join(root, "submit.txt");
+		await writeFile(selectedPath, "submit fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "submit-stale",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "submit" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "submit_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "submit-stale",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await uploadHandoffForCli({
+			handoffId: "submit-stale",
+			outputDir: root,
+		});
+		await approveHandoffSubmitForCli({
+			handoffId: "submit-stale",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await writeFile(path.join(root, "submit-stale", "target", "primer.md"), "changed\n", "utf8");
+
+		await expect(
+			submitHandoffForCli({
+				handoffId: "submit-stale",
+				outputDir: root,
+			}),
+		).rejects.toThrow("Submit approval is stale");
+	});
+
+	test("rejects submit approval package digest mismatches", async () => {
+		const root = await tempRoot("auracall-handoff-submit-digest-mismatch-");
+		const selectedPath = path.join(root, "submit.txt");
+		await writeFile(selectedPath, "submit fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "submit-digest-mismatch",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "submit" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "submit_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "submit-digest-mismatch",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await uploadHandoffForCli({
+			handoffId: "submit-digest-mismatch",
+			outputDir: root,
+		});
+
+		await expect(
+			approveHandoffSubmitForCli({
+				handoffId: "submit-digest-mismatch",
+				outputDir: root,
+				packageDigest: "0".repeat(64),
+			}),
+		).rejects.toThrow(prepared.targetPackage.packageDigest);
 	});
 
 	test("returns null for missing handoff status ids", async () => {

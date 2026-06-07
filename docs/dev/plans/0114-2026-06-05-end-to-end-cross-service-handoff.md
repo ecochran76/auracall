@@ -334,13 +334,13 @@ Model output never directly mutates target services.
   failure evidence.
 - Do not submit prompt in this slice unless a separate submit approval exists.
 
-### Slice 0122 | Target Submit And Readback
+### Slice 0123 | Target Submit And Readback
 
 - Add approval-gated target submit.
 - Read back target conversation/response.
 - Persist final result, target context refs, and repair state.
 
-### Slice 0123 | Repair, Resume, And Operator UX
+### Slice 0124 | Repair, Resume, And Operator UX
 
 - Add `handoff resume`, `handoff repair`, and console/operator surfaces.
 - Support resuming from target package, upload, submit, or readback.

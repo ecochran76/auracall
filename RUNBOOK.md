@@ -1,5 +1,38 @@
 # RUNBOOK
 
+## Turn 266 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: plan and execute the next cross-service handoff slice after Plan 0121.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md`.
+  - added `target_submit` approval under `approvals/submit.json`.
+  - added digest guards for package, primer, compact context, and uploaded
+    file set.
+  - added `auracall handoff approve-submit <id>`.
+  - added approval-gated deterministic `auracall handoff submit <id>`.
+  - added deterministic `target/submission-result.json` and
+    `target/readback.json`.
+  - extended `handoff status` with submit approval, submit status, readback
+    status, target conversation ref, provider message id, and submit attempts.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 24 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - `pnpm exec biome lint src/handoff/service.ts src/cli/handoffCommand.ts
+    tests/cli/handoffCommand.test.ts bin/auracall.ts` passed.
+  - `pnpm tsx bin/auracall.ts handoff approve-submit --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff submit --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff status --help` passed.
+  - `pnpm run plans:audit -- --keep 123` passed with zero validation errors.
+  - `git diff --check` passed.
+  - `pnpm run build` passed.
+- Decision:
+  - Plan 0123 closes as **Handoff Target Submit And Readback Installed**.
+
 ## Turn 265 | 2026-06-07
 
 - Active plan:
@@ -91,8 +124,8 @@
 - Decision:
   - Plan 0120 is the active implementation plan under Plan 0114.
   - parent Plan 0114 slice numbering is updated so analysis/package preview is
-    0120, approval/upload is 0121, submit/readback is 0122, and repair/UX is
-    0123.
+    0120, approval/upload is 0121, submit/readback is 0123 because 0122 is
+    occupied by live-follow recovery, and repair/UX is 0124.
 
 ## Turn 262 | 2026-06-05
 

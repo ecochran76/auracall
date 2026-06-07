@@ -32,6 +32,7 @@ export const HANDOFF_SUBMISSION_PLAN_SCHEMA = "auracall.handoff-submission-plan.
 export const HANDOFF_APPROVAL_SCHEMA = "auracall.handoff-approval.v1";
 export const HANDOFF_UPLOAD_RESULT_SCHEMA = "auracall.handoff-upload-result.v1";
 export const HANDOFF_SUBMISSION_RESULT_SCHEMA = "auracall.handoff-submission-result.v1";
+export const HANDOFF_TARGET_READBACK_SCHEMA = "auracall.handoff-target-readback.v1";
 
 export const HANDOFF_ANALYSIS_OMISSION_WARNING_PREFIXES = [
 	"source_context_not_provided",
@@ -272,6 +273,22 @@ export interface HandoffUploadApproval {
 	status: "approved";
 }
 
+export interface HandoffSubmitApproval {
+	object: typeof HANDOFF_APPROVAL_SCHEMA;
+	kind: "target_submit";
+	runId: string;
+	actor: string;
+	approvedAt: string;
+	packageDigest: string;
+	primerDigest: string;
+	compactContextDigest: string;
+	uploadSetDigest: string;
+	target: HandoffEndpoint;
+	submissionPlanRef: "target/submission-plan.json";
+	uploadResultRef: "target/upload-result.json";
+	status: "approved";
+}
+
 export interface HandoffUploadResult {
 	object: typeof HANDOFF_UPLOAD_RESULT_SCHEMA;
 	generatedAt: string;
@@ -333,11 +350,35 @@ export interface HandoffSubmissionPlan {
 export interface HandoffSubmissionResult {
 	object: typeof HANDOFF_SUBMISSION_RESULT_SCHEMA;
 	generatedAt: string;
-	status: "skipped_dry_run" | "upload_completed" | "upload_skipped_no_files";
+	status: "skipped_dry_run" | "upload_completed" | "upload_skipped_no_files" | "submitted";
 	packageDigest: string | null;
 	uploadAttemptCount: number;
-	submitAttemptCount: 0;
+	submitAttemptCount: 0 | 1;
 	uploadResultRef: "target/upload-result.json" | null;
+	submitApprovalRef?: "approvals/submit.json";
+	promptDigest?: string;
+	primerDigest?: string;
+	compactContextDigest?: string;
+	uploadSetDigest?: string;
+	targetConversationRef?: string;
+	providerMessageId?: string;
+	readbackRef?: "target/readback.json";
+	uploadedProviderFileIds?: string[];
+}
+
+export interface HandoffTargetReadback {
+	object: typeof HANDOFF_TARGET_READBACK_SCHEMA;
+	generatedAt: string;
+	status: "skipped_dry_run" | "readback_cached";
+	packageDigest?: string;
+	target: HandoffEndpoint;
+	targetConversationRef?: string;
+	providerMessageId?: string;
+	responseSummary?: string;
+	responseExcerpt?: string;
+	compactContextRef?: "target/compact-context.json";
+	primerRef?: "target/primer.md";
+	submissionResultRef?: "target/submission-result.json";
 }
 
 export interface HandoffRunRecord {
@@ -378,9 +419,9 @@ export interface HandoffRunLedger {
 	mode: "preview";
 	approvalPolicy: {
 		upload: "not_allowed_preview" | "explicit_approval_required";
-		submit: "not_allowed_preview";
+		submit: "not_allowed_preview" | "explicit_approval_required";
 	};
-	approvalEvents: HandoffUploadApproval[];
+	approvalEvents: Array<HandoffUploadApproval | HandoffSubmitApproval>;
 	eventCount: number;
 	sourceMaterializationJobs: HandoffSourceMaterializationJobEvidence[];
 	targetMutationAllowed: false;
@@ -441,8 +482,9 @@ export interface HandoffStatusResult {
 		submissionPlan: HandoffSubmissionPlan | null;
 		submissionResult: HandoffSubmissionResult | null;
 		uploadApproval: HandoffUploadApproval | null;
+		submitApproval: HandoffSubmitApproval | null;
 		uploadResult: HandoffUploadResult | null;
-		readback: unknown | null;
+		readback: HandoffTargetReadback | null;
 		mutationAllowed: boolean;
 		uploadAttemptCount: number;
 		submitAttemptCount: number;
@@ -451,9 +493,15 @@ export interface HandoffStatusResult {
 		selectedTotalBytes: number;
 		uploadApproved: boolean;
 		uploadApprovalDigest: string | null;
+		submitApproved: boolean;
+		submitApprovalDigest: string | null;
 		uploadedFileCount: number;
 		uploadFailureCount: number;
 		uploadStatus: HandoffUploadResult["status"] | "not_uploaded";
+		submitStatus: HandoffSubmissionResult["status"] | "not_submitted";
+		readbackStatus: HandoffTargetReadback["status"] | "missing";
+		targetConversationRef: string | null;
+		providerMessageId: string | null;
 	};
 }
 
@@ -473,6 +521,22 @@ export interface HandoffApproveUploadResult {
 	approval: HandoffUploadApproval;
 }
 
+export interface HandoffApproveSubmitRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	actor?: string | null;
+	packageDigest?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffApproveSubmitResult {
+	object: "auracall.handoff.approve-submit.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	approval: HandoffSubmitApproval;
+}
+
 export interface HandoffUploadTargetRequest {
 	handoffId: string;
 	outputRoot?: string | null;
@@ -487,6 +551,22 @@ export interface HandoffUploadTargetResult {
 	approval: HandoffUploadApproval;
 	uploadResult: HandoffUploadResult;
 	submissionResult: HandoffSubmissionResult;
+}
+
+export interface HandoffSubmitTargetRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffSubmitTargetResult {
+	object: "auracall.handoff.submit-target.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	approval: HandoffSubmitApproval;
+	submissionResult: HandoffSubmissionResult;
+	readback: HandoffTargetReadback;
 }
 
 export async function prepareCrossServiceHandoffPacket(
@@ -673,10 +753,15 @@ export async function readHandoffStatus(input: {
 	const uploadApproval = normalizeUploadApproval(
 		await readJsonIfExists(path.join(packetPath, "approvals", "upload.json")),
 	);
+	const submitApproval = normalizeSubmitApproval(
+		await readJsonIfExists(path.join(packetPath, "approvals", "submit.json")),
+	);
 	const uploadResult = normalizeUploadResult(
 		await readJsonIfExists(path.join(packetPath, "target", "upload-result.json")),
 	);
-	const readback = await readJsonIfExists(path.join(packetPath, "target", "readback.json"));
+	const readback = normalizeTargetReadback(
+		await readJsonIfExists(path.join(packetPath, "target", "readback.json")),
+	);
 	const normalizedSubmissionResult = normalizeSubmissionResult(submissionResult);
 	return {
 		object: "auracall.handoff.status.result",
@@ -708,6 +793,7 @@ export async function readHandoffStatus(input: {
 			submissionPlan,
 			submissionResult: normalizedSubmissionResult,
 			uploadApproval,
+			submitApproval,
 			uploadResult,
 			readback,
 			mutationAllowed: Boolean(
@@ -724,9 +810,20 @@ export async function readHandoffStatus(input: {
 				Boolean(targetPackage) &&
 				uploadApproval?.packageDigest === targetPackage?.packageDigest,
 			uploadApprovalDigest: uploadApproval?.packageDigest ?? null,
+				submitApproved:
+					submitApproval !== null &&
+					targetPackage !== null &&
+					uploadResult !== null &&
+					submitApproval.packageDigest === targetPackage.packageDigest &&
+					submitApproval.uploadSetDigest === buildUploadSetDigest(uploadResult),
+			submitApprovalDigest: submitApproval?.packageDigest ?? null,
 			uploadedFileCount: uploadResult?.uploadedFileCount ?? 0,
 			uploadFailureCount: uploadResult?.failedFileCount ?? 0,
 			uploadStatus: uploadResult?.status ?? "not_uploaded",
+			submitStatus: normalizedSubmissionResult?.status ?? "not_submitted",
+			readbackStatus: readback?.status ?? "missing",
+			targetConversationRef: normalizedSubmissionResult?.targetConversationRef ?? null,
+			providerMessageId: normalizedSubmissionResult?.providerMessageId ?? null,
 		},
 	};
 }
@@ -764,6 +861,67 @@ export async function approveHandoffTargetUpload(
 	await writeJson(path.join(packet.packetPath, "ledger.json"), ledger);
 	return {
 		object: "auracall.handoff.approve-upload.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		approval,
+	};
+}
+
+export async function approveHandoffTargetSubmit(
+	input: HandoffApproveSubmitRequest,
+): Promise<HandoffApproveSubmitResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const expectedDigest = normalizeOptionalString(input.packageDigest);
+	if (expectedDigest && expectedDigest !== packet.targetPackage.packageDigest) {
+		throw new Error(
+			`Submit approval package digest mismatch: expected ${packet.targetPackage.packageDigest}, got ${expectedDigest}.`,
+		);
+	}
+	const uploadResult = normalizeUploadResult(
+		await readJsonIfExists(path.join(packet.packetPath, "target", "upload-result.json")),
+	);
+	if (!uploadResult) {
+		throw new Error("Target submit approval requires a completed target upload result.");
+	}
+	if (uploadResult.packageDigest !== packet.targetPackage.packageDigest) {
+		throw new Error(
+			`Target upload result is stale for package digest ${packet.targetPackage.packageDigest}.`,
+		);
+	}
+	const guard = await buildSubmitGuard(packet.packetPath, packet.targetPackage, uploadResult);
+	const actor = normalizeOptionalString(input.actor) ?? "operator";
+	const approval: HandoffSubmitApproval = {
+		object: HANDOFF_APPROVAL_SCHEMA,
+		kind: "target_submit",
+		runId: packet.run.id,
+		actor,
+		approvedAt: generatedAt,
+		packageDigest: packet.targetPackage.packageDigest,
+		primerDigest: guard.primerDigest,
+		compactContextDigest: guard.compactContextDigest,
+		uploadSetDigest: guard.uploadSetDigest,
+		target: packet.run.target,
+		submissionPlanRef: "target/submission-plan.json",
+		uploadResultRef: "target/upload-result.json",
+		status: "approved",
+	};
+	await fs.mkdir(path.join(packet.packetPath, "approvals"), { recursive: true });
+	await writeJson(path.join(packet.packetPath, "approvals", "submit.json"), approval);
+	const uploadApproval = normalizeUploadApproval(
+		await readJsonIfExists(path.join(packet.packetPath, "approvals", "upload.json")),
+	);
+	const ledger = buildRunLedger(packet.run, packet.ledger?.sourceMaterializationJobs ?? []);
+	if (uploadApproval) {
+		ledger.approvalPolicy.upload = "explicit_approval_required";
+		ledger.approvalEvents.push(uploadApproval);
+	}
+	ledger.approvalPolicy.submit = "explicit_approval_required";
+	ledger.approvalEvents.push(approval);
+	await writeJson(path.join(packet.packetPath, "ledger.json"), ledger);
+	return {
+		object: "auracall.handoff.approve-submit.result",
 		generatedAt,
 		packetPath: packet.packetPath,
 		runId: packet.run.id,
@@ -839,6 +997,100 @@ export async function uploadHandoffTargetPackage(
 		approval,
 		uploadResult,
 		submissionResult,
+	};
+}
+
+export async function submitHandoffTargetPackage(
+	input: HandoffSubmitTargetRequest,
+): Promise<HandoffSubmitTargetResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const approval = normalizeSubmitApproval(
+		await readJsonIfExists(path.join(packet.packetPath, "approvals", "submit.json")),
+	);
+	if (!approval) {
+		throw new Error("Target submit requires an explicit submit approval.");
+	}
+	const uploadResult = normalizeUploadResult(
+		await readJsonIfExists(path.join(packet.packetPath, "target", "upload-result.json")),
+	);
+	if (!uploadResult) {
+		throw new Error("Target submit requires a completed target upload result.");
+	}
+	if (uploadResult.packageDigest !== packet.targetPackage.packageDigest) {
+		throw new Error(
+			`Target upload result is stale for package digest ${packet.targetPackage.packageDigest}.`,
+		);
+	}
+	const guard = await buildSubmitGuard(packet.packetPath, packet.targetPackage, uploadResult);
+	if (
+		approval.packageDigest !== packet.targetPackage.packageDigest ||
+		approval.primerDigest !== guard.primerDigest ||
+		approval.compactContextDigest !== guard.compactContextDigest ||
+		approval.uploadSetDigest !== guard.uploadSetDigest
+	) {
+		throw new Error(`Submit approval is stale for package digest ${packet.targetPackage.packageDigest}.`);
+	}
+	const promptDigest = buildPacketDigest({
+		packageDigest: packet.targetPackage.packageDigest,
+		primerDigest: guard.primerDigest,
+		compactContextDigest: guard.compactContextDigest,
+		uploadSetDigest: guard.uploadSetDigest,
+	});
+	const targetConversationRef =
+		packet.run.target.conversationRef ??
+		`handoff-target-${buildPacketDigest({
+			runId: packet.run.id,
+			target: packet.run.target.accountBindingKey,
+			packageDigest: packet.targetPackage.packageDigest,
+		}).slice(0, 24)}`;
+	const providerMessageId = `handoff-message-${buildPacketDigest({
+		targetConversationRef,
+		promptDigest,
+	}).slice(0, 32)}`;
+	const uploadedProviderFileIds = uploadResult.rows.map((row) => row.providerFileId);
+	const submissionResult: HandoffSubmissionResult = {
+		object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
+		generatedAt,
+		status: "submitted",
+		packageDigest: packet.targetPackage.packageDigest,
+		uploadAttemptCount: uploadResult.uploadAttemptCount,
+		submitAttemptCount: 1,
+		uploadResultRef: "target/upload-result.json",
+		submitApprovalRef: "approvals/submit.json",
+		promptDigest,
+		primerDigest: guard.primerDigest,
+		compactContextDigest: guard.compactContextDigest,
+		uploadSetDigest: guard.uploadSetDigest,
+		targetConversationRef,
+		providerMessageId,
+		readbackRef: "target/readback.json",
+		uploadedProviderFileIds,
+	};
+	const readback: HandoffTargetReadback = {
+		object: HANDOFF_TARGET_READBACK_SCHEMA,
+		generatedAt,
+		status: "readback_cached",
+		packageDigest: packet.targetPackage.packageDigest,
+		target: packet.run.target,
+		targetConversationRef,
+		providerMessageId,
+		responseSummary: "Deterministic target readback cached for the approved handoff submit.",
+		responseExcerpt: `Approved handoff ${packet.run.id} submitted with ${uploadedProviderFileIds.length} uploaded file reference(s).`,
+		compactContextRef: "target/compact-context.json",
+		primerRef: "target/primer.md",
+		submissionResultRef: "target/submission-result.json",
+	};
+	await writeJson(path.join(packet.packetPath, "target", "submission-result.json"), submissionResult);
+	await writeJson(path.join(packet.packetPath, "target", "readback.json"), readback);
+	return {
+		object: "auracall.handoff.submit-target.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		approval,
+		submissionResult,
+		readback,
 	};
 }
 
@@ -1684,9 +1936,10 @@ async function writePacket(
 		uploadResultRef: null,
 	});
 	await writeJson(path.join(packetPath, "target", "readback.json"), {
-		object: "auracall.handoff-target-readback.v1",
+		object: HANDOFF_TARGET_READBACK_SCHEMA,
 		generatedAt: input.run.createdAt,
 		status: "skipped_dry_run",
+		target: input.run.target,
 	});
 }
 
@@ -1849,6 +2102,34 @@ function normalizeUploadApproval(value: unknown): HandoffUploadApproval | null {
 	};
 }
 
+function normalizeSubmitApproval(value: unknown): HandoffSubmitApproval | null {
+	if (!isRecord(value) || value.object !== HANDOFF_APPROVAL_SCHEMA) return null;
+	if (value.kind !== "target_submit" || value.status !== "approved") return null;
+	const target = isRecord(value.target) ? (value.target as unknown as HandoffEndpoint) : null;
+	const packageDigest = normalizeOptionalString(value.packageDigest);
+	const primerDigest = normalizeSha256(value.primerDigest);
+	const compactContextDigest = normalizeSha256(value.compactContextDigest);
+	const uploadSetDigest = normalizeSha256(value.uploadSetDigest);
+	if (!target || !packageDigest || !primerDigest || !compactContextDigest || !uploadSetDigest) {
+		return null;
+	}
+	return {
+		object: HANDOFF_APPROVAL_SCHEMA,
+		kind: "target_submit",
+		runId: normalizeOptionalString(value.runId) ?? "",
+		actor: normalizeOptionalString(value.actor) ?? "operator",
+		approvedAt: normalizeOptionalString(value.approvedAt) ?? new Date(0).toISOString(),
+		packageDigest,
+		primerDigest,
+		compactContextDigest,
+		uploadSetDigest,
+		target,
+		submissionPlanRef: "target/submission-plan.json",
+		uploadResultRef: "target/upload-result.json",
+		status: "approved",
+	};
+}
+
 function normalizeUploadResult(value: unknown): HandoffUploadResult | null {
 	if (!isRecord(value) || value.object !== HANDOFF_UPLOAD_RESULT_SCHEMA) return null;
 	const status = normalizeOptionalString(value.status);
@@ -1893,21 +2174,71 @@ function normalizeSubmissionResult(value: unknown): HandoffSubmissionResult | nu
 	if (
 		status !== "skipped_dry_run" &&
 		status !== "upload_completed" &&
-		status !== "upload_skipped_no_files"
+		status !== "upload_skipped_no_files" &&
+		status !== "submitted"
 	) {
 		return null;
 	}
+	const uploadedProviderFileIds = Array.isArray(value.uploadedProviderFileIds)
+		? value.uploadedProviderFileIds
+				.map((entry) => normalizeOptionalString(entry))
+				.filter((entry): entry is string => Boolean(entry))
+		: undefined;
 	return {
 		object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
 		generatedAt: normalizeOptionalString(value.generatedAt) ?? new Date(0).toISOString(),
 		status,
 		packageDigest: normalizeOptionalString(value.packageDigest),
 		uploadAttemptCount: normalizeNumber(value.uploadAttemptCount) ?? 0,
-		submitAttemptCount: 0,
+		submitAttemptCount: status === "submitted" ? 1 : 0,
 		uploadResultRef:
 			normalizeOptionalString(value.uploadResultRef) === "target/upload-result.json"
 				? "target/upload-result.json"
 				: null,
+		submitApprovalRef:
+			normalizeOptionalString(value.submitApprovalRef) === "approvals/submit.json"
+				? "approvals/submit.json"
+				: undefined,
+		promptDigest: normalizeSha256(value.promptDigest) ?? undefined,
+		primerDigest: normalizeSha256(value.primerDigest) ?? undefined,
+		compactContextDigest: normalizeSha256(value.compactContextDigest) ?? undefined,
+		uploadSetDigest: normalizeSha256(value.uploadSetDigest) ?? undefined,
+		targetConversationRef: normalizeOptionalString(value.targetConversationRef) ?? undefined,
+		providerMessageId: normalizeOptionalString(value.providerMessageId) ?? undefined,
+		readbackRef:
+			normalizeOptionalString(value.readbackRef) === "target/readback.json"
+				? "target/readback.json"
+				: undefined,
+		uploadedProviderFileIds,
+	};
+}
+
+function normalizeTargetReadback(value: unknown): HandoffTargetReadback | null {
+	if (!isRecord(value) || value.object !== HANDOFF_TARGET_READBACK_SCHEMA) return null;
+	const status = normalizeOptionalString(value.status);
+	if (status !== "skipped_dry_run" && status !== "readback_cached") return null;
+	const target = isRecord(value.target) ? (value.target as unknown as HandoffEndpoint) : null;
+	if (!target) return null;
+	return {
+		object: HANDOFF_TARGET_READBACK_SCHEMA,
+		generatedAt: normalizeOptionalString(value.generatedAt) ?? new Date(0).toISOString(),
+		status,
+		packageDigest: normalizeOptionalString(value.packageDigest) ?? undefined,
+		target,
+		targetConversationRef: normalizeOptionalString(value.targetConversationRef) ?? undefined,
+		providerMessageId: normalizeOptionalString(value.providerMessageId) ?? undefined,
+		responseSummary: normalizeOptionalString(value.responseSummary) ?? undefined,
+		responseExcerpt: normalizeOptionalString(value.responseExcerpt) ?? undefined,
+		compactContextRef:
+			normalizeOptionalString(value.compactContextRef) === "target/compact-context.json"
+				? "target/compact-context.json"
+				: undefined,
+		primerRef:
+			normalizeOptionalString(value.primerRef) === "target/primer.md" ? "target/primer.md" : undefined,
+		submissionResultRef:
+			normalizeOptionalString(value.submissionResultRef) === "target/submission-result.json"
+				? "target/submission-result.json"
+				: undefined,
 	};
 }
 
@@ -1980,6 +2311,46 @@ async function readPreparedHandoffPacket(
 		throw new Error(`Handoff packet ${normalizedId} has mismatched target package digest.`);
 	}
 	return { packetPath, run, ledger, targetPackage, uploadManifest };
+}
+
+async function buildSubmitGuard(
+	packetPath: string,
+	targetPackage: HandoffTargetPackage,
+	uploadResult: HandoffUploadResult,
+): Promise<{
+	packageDigest: string;
+	primerDigest: string;
+	compactContextDigest: string;
+	uploadSetDigest: string;
+}> {
+	const [primerDigest, compactContextDigest] = await Promise.all([
+		hashFile(path.join(packetPath, "target", "primer.md")),
+		hashFile(path.join(packetPath, "target", "compact-context.json")),
+	]);
+	return {
+		packageDigest: targetPackage.packageDigest,
+		primerDigest,
+		compactContextDigest,
+		uploadSetDigest: buildUploadSetDigest(uploadResult),
+	};
+}
+
+function buildUploadSetDigest(uploadResult: HandoffUploadResult): string {
+	return buildPacketDigest({
+		packageDigest: uploadResult.packageDigest,
+		status: uploadResult.status,
+		rows: uploadResult.rows.map((row) => ({
+			sourceManifestItemId: row.sourceManifestItemId,
+			checksumSha256: row.checksumSha256,
+			providerFileId: row.providerFileId,
+			status: row.status,
+		})),
+		omissions: uploadResult.omissions.map((omission) => ({
+			sourceManifestItemId: omission.sourceManifestItemId,
+			reason: omission.reason,
+			retryable: omission.retryable,
+		})),
+	});
 }
 
 function estimatePromptTokens(

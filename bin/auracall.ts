@@ -188,13 +188,17 @@ import {
   readApiHistoryMaterializationJobForCli,
 } from '../src/cli/apiHistoryMaterializationCommand.js';
 import {
+  approveHandoffSubmitForCli,
   approveHandoffUploadForCli,
+  formatHandoffApproveSubmitCliSummary,
   formatHandoffApproveUploadCliSummary,
   formatHandoffPrepareCliSummary,
   formatHandoffStatusCliSummary,
+  formatHandoffSubmitCliSummary,
   formatHandoffUploadCliSummary,
   prepareHandoffForCli,
   readHandoffStatusForCli,
+  submitHandoffForCli,
   uploadHandoffForCli,
 } from '../src/cli/handoffCommand.js';
 import {
@@ -1891,6 +1895,46 @@ handoffCommand
       return;
     }
     console.log(formatHandoffUploadCliSummary(result));
+  });
+
+handoffCommand
+  .command('approve-submit')
+  .description('Record explicit approval for deterministic target submit and readback.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--actor <actor>', 'Approval actor recorded in the handoff ledger.', 'operator')
+  .option('--package-digest <digest>', 'Expected target package digest; mismatches fail closed.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await approveHandoffSubmitForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+      actor: commandOptions.actor,
+      packageDigest: commandOptions.packageDigest,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffApproveSubmitCliSummary(result));
+  });
+
+handoffCommand
+  .command('submit')
+  .description('Run approval-gated deterministic target submit and cached readback.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await submitHandoffForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffSubmitCliSummary(result));
   });
 
 apiCommand
