@@ -340,7 +340,8 @@ export function formatHandoffPrepareCliSummary(result: HandoffPrepareResult): st
 export function formatHandoffStatusCliSummary(result: HandoffStatusResult): string {
 	return [
 		`Handoff packet: ${result.run.id}`,
-		`Status: ${result.run.status}`,
+		`Status: ${result.status}`,
+		`Packet status: ${result.run.status}`,
 		`Packet path: ${result.packetPath}`,
 		`Packet digest: ${result.packetDigest}`,
 		`Events: ${result.eventCount}`,

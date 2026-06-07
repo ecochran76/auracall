@@ -1,14 +1,9 @@
-import fs from "node:fs/promises";
 import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
-import type { ResolvedUserConfig } from "../../config.js";
-import { resolveConfiguredServiceAccountId } from "../../config/serviceAccountIdentity.js";
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from "../../config/model.js";
-import type {
-	BrowserProviderActiveMediaMaterializationInput,
-	BrowserProviderListOptions,
-	ProviderUserIdentity,
-} from "../providers/types.js";
+import { resolveConfiguredServiceAccountId } from "../../config/serviceAccountIdentity.js";
+import type { ResolvedUserConfig } from "../../config.js";
 import {
 	appendChatgptMutationRecord,
 	CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
@@ -18,22 +13,25 @@ import {
 	CHATGPT_POST_COMMIT_JITTER_MAX_MS,
 	CHATGPT_RATE_LIMIT_AUTO_WAIT_MAX_MS,
 	CHATGPT_RATE_LIMIT_COOLDOWN_MS,
+	type ChatgptRateLimitGuardState,
 	extractChatgptRateLimitSummary,
 	getChatgptMutationBudgetWaitMs,
 	getChatgptPostCommitQuietWaitMs,
 	isChatgptRateLimitMessage,
 	readChatgptRateLimitGuardState,
-	type ChatgptRateLimitGuardState,
 	writeChatgptRateLimitGuardState,
 } from "../chatgptRateLimitGuard.js";
+import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
 import {
-	readSimpleProviderGuardState,
-	type SimpleProviderGuardState,
-	writeSimpleProviderGuardState,
-} from "../simpleProviderGuard.js";
+	matchConversationByTitle,
+	matchProjectByName,
+	PROVIDER_CACHE_TTL_MS,
+	resolveProviderCacheKey,
+	resolveProviderCachePath,
+} from "../providers/cache.js";
 import type {
-	ConversationArtifact,
 	Conversation,
+	ConversationArtifact,
 	ConversationContext,
 	ConversationMessage,
 	ConversationSource,
@@ -42,15 +40,19 @@ import type {
 	ProjectMemoryMode,
 	ProviderId,
 } from "../providers/domain.js";
-import {
-	matchConversationByTitle,
-	matchProjectByName,
-	resolveProviderCacheKey,
-	PROVIDER_CACHE_TTL_MS,
-	resolveProviderCachePath,
-} from "../providers/cache.js";
+import type {
+	BrowserProviderActiveMediaMaterializationInput,
+	BrowserProviderListOptions,
+	ProviderUserIdentity,
+} from "../providers/types.js";
 import type { BrowserService } from "../service/browserService.js";
-import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
+import {
+	readSimpleProviderGuardState,
+	type SimpleProviderGuardState,
+	writeSimpleProviderGuardState,
+} from "../simpleProviderGuard.js";
+import type { CachedConversationContextEntry, CacheStore } from "./cache/store.js";
+import { type CacheStoreKind, createCacheStore } from "./cache/store.js";
 import type {
 	CacheContext,
 	CacheIdentity,
@@ -59,13 +61,11 @@ import type {
 	IdentityPrompt,
 	LlmCapabilities,
 	LlmServiceAdapter,
+	ProjectListResult,
 	PromptInput,
 	PromptPlan,
 	PromptResult,
-	ProjectListResult,
 } from "./types.js";
-import type { CacheStore, CachedConversationContextEntry } from "./cache/store.js";
-import { createCacheStore, type CacheStoreKind } from "./cache/store.js";
 
 const DEFAULT_HISTORY_LIMIT = 2000;
 const CHATGPT_RATE_LIMIT_RETRY_BASE_MS = 2_000;
@@ -166,6 +166,15 @@ type AccountFileFetchManifestEntry = {
 
 type AccountFileFetchManifest = {
 	provider: ProviderId;
+	generatedAt: string;
+	fileCount: number;
+	materializedCount: number;
+	entries: AccountFileFetchManifestEntry[];
+};
+
+type ProjectFileFetchManifest = {
+	provider: ProviderId;
+	projectId: string;
 	generatedAt: string;
 	fileCount: number;
 	materializedCount: number;
@@ -372,6 +381,15 @@ function sanitizeConversationFileName(
 async function calculateSha256(filePath: string): Promise<string> {
 	const content = await fs.readFile(filePath);
 	return createHash("sha256").update(content).digest("hex");
+}
+
+async function pathExists(filePath: string): Promise<boolean> {
+	try {
+		await fs.access(filePath);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 function metadataString(value: Record<string, unknown> | undefined, key: string): string | null {
@@ -1119,6 +1137,152 @@ export abstract class LlmService {
 		}
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		return this.refreshProjectKnowledgeCache(projectId, listOptions);
+	}
+
+	async materializeProjectFiles(
+		projectId: string,
+		options?: {
+			listOptions?: BrowserProviderListOptions;
+			maxItems?: number | null;
+			files?: FileRef[] | null;
+		},
+	): Promise<{ projectFiles: FileRef[]; files: FileRef[]; manifestPath: string | null }> {
+		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+		const projectFiles = limitItems(
+			Array.isArray(options?.files)
+				? options.files
+				: await this.listProjectFiles(projectId, { listOptions }),
+			options?.maxItems,
+		);
+		if (projectFiles.length === 0) {
+			return { projectFiles: [], files: [], manifestPath: null };
+		}
+		const cacheContext = await this.resolveCacheContext(listOptions);
+		const { cacheDir } = resolveProviderCachePath(
+			cacheContext,
+			`project-knowledge/${projectId}/manifest.json`,
+		);
+		const filesDir = path.join(cacheDir, "project-knowledge", projectId, "files");
+		const manifestPath = path.join(
+			cacheDir,
+			"project-knowledge",
+			projectId,
+			"file-fetch-manifest.json",
+		);
+		await fs.mkdir(filesDir, { recursive: true });
+		const existing = await this.cacheStore.readProjectKnowledge(cacheContext, projectId);
+		const merged = new Map(existing.items.map((item) => [item.id, item]));
+		const materialized: FileRef[] = [];
+		const manifestEntries: AccountFileFetchManifestEntry[] = [];
+		for (const file of projectFiles) {
+			const existingLocal =
+				file.localPath && (await pathExists(file.localPath)) ? file.localPath : null;
+			const fileDir = path.join(
+				filesDir,
+				sanitizeArtifactPathSegment(
+					file.id || file.name || `project-file-${materialized.length + 1}`,
+				),
+			);
+			await fs.mkdir(fileDir, { recursive: true });
+			const destPath = path.join(
+				fileDir,
+				sanitizeConversationFileName(
+					file.name || file.id || `project-file-${materialized.length + 1}`,
+					"project-file",
+				),
+			);
+			try {
+				if (existingLocal) {
+					const stat = await fs.stat(existingLocal);
+					const checksumSha256 = file.checksumSha256 ?? (await calculateSha256(existingLocal));
+					const materializedFile: FileRef = {
+						...file,
+						size: file.size ?? stat.size,
+						localPath: existingLocal,
+						checksumSha256,
+						metadata: {
+							...file.metadata,
+							projectSourceMaterialization: "existing-local-file",
+						},
+					};
+					materialized.push(materializedFile);
+					merged.set(materializedFile.id, materializedFile);
+					manifestEntries.push({
+						fileId: file.id,
+						fileName: file.name,
+						status: "materialized",
+						localPath: existingLocal,
+						remoteUrl: file.remoteUrl ?? null,
+						mimeType: materializedFile.mimeType,
+						size: materializedFile.size,
+						materializationMethod: "existing-local-file",
+					});
+					continue;
+				}
+				if (!this.provider.downloadProjectFile) {
+					throw new Error("project_source_download_unsupported");
+				}
+				await this.withRetry(
+					() =>
+						this.provider.downloadProjectFile?.(
+							projectId,
+							file.id,
+							destPath,
+							listOptions,
+						) as Promise<void>,
+					{ action: "downloadProjectFile" },
+				);
+				const stat = await fs.stat(destPath);
+				const checksumSha256 = await calculateSha256(destPath);
+				const materializedFile: FileRef = {
+					...file,
+					size: stat.size,
+					localPath: destPath,
+					checksumSha256,
+				};
+				materialized.push(materializedFile);
+				merged.set(materializedFile.id, materializedFile);
+				manifestEntries.push({
+					fileId: file.id,
+					fileName: file.name,
+					status: "materialized",
+					localPath: destPath,
+					remoteUrl: file.remoteUrl ?? null,
+					mimeType: materializedFile.mimeType,
+					size: stat.size,
+					materializationMethod:
+						typeof file.metadata?.materializationSurface === "string"
+							? file.metadata.materializationSurface
+							: "project-source-download",
+				});
+			} catch (error) {
+				manifestEntries.push({
+					fileId: file.id,
+					fileName: file.name,
+					status: "error",
+					remoteUrl: file.remoteUrl ?? null,
+					mimeType: file.mimeType,
+					error: normalizeArtifactFetchError(error),
+				});
+			}
+		}
+		if (materialized.length > 0) {
+			await this.cacheStore.writeProjectKnowledge(
+				cacheContext,
+				projectId,
+				Array.from(merged.values()),
+			);
+		}
+		const manifest: ProjectFileFetchManifest = {
+			provider: this.providerId,
+			projectId,
+			generatedAt: new Date().toISOString(),
+			fileCount: projectFiles.length,
+			materializedCount: materialized.length,
+			entries: manifestEntries,
+		};
+		await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+		return { projectFiles, files: materialized, manifestPath };
 	}
 
 	async listAccountFiles(options?: {

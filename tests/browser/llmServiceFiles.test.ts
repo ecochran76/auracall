@@ -1,25 +1,25 @@
-import os from "node:os";
-import path from "node:path";
 import * as fs from "node:fs/promises";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
-import type { ResolvedUserConfig } from "../../src/config.js";
-import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
-import type { ConversationArtifact, FileRef } from "../../src/browser/providers/domain.js";
-import {
-	resolveProviderCachePath,
-	type ProviderCacheContext,
-} from "../../src/browser/providers/cache.js";
+import { CHATGPT_URL, GEMINI_URL } from "../../src/browser/constants.js";
+import type { CacheStore } from "../../src/browser/llmService/cache/store.js";
 import { JsonCacheStore } from "../../src/browser/llmService/cache/store.js";
 import { LlmService } from "../../src/browser/llmService/llmService.js";
-import type { CacheStore } from "../../src/browser/llmService/cache/store.js";
 import type {
 	LlmServiceAdapter,
 	PromptInput,
 	PromptResult,
 } from "../../src/browser/llmService/types.js";
-import { CHATGPT_URL, GEMINI_URL } from "../../src/browser/constants.js";
+import {
+	type ProviderCacheContext,
+	resolveProviderCachePath,
+} from "../../src/browser/providers/cache.js";
+import type { ConversationArtifact, FileRef } from "../../src/browser/providers/domain.js";
+import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
+import type { ResolvedUserConfig } from "../../src/config.js";
 
 class TestLlmService extends LlmService {
 	constructor(
@@ -133,6 +133,114 @@ describe("llmService project file cache writes", () => {
 		try {
 			const result = await service.listProjectFiles("project-123", { listOptions: {} });
 			expect(result).toEqual(files);
+			const cached = await store.readProjectKnowledge(cacheContext, "project-123");
+			expect(cached.items).toEqual(files);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("materializeProjectFiles downloads provider project files and writes a fetch manifest", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-files-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const files: FileRef[] = [
+			{
+				id: "file_project_123",
+				name: "spec.md",
+				provider: "chatgpt",
+				source: "project",
+				remoteUrl: "chatgpt://file/file_project_123",
+				metadata: { materializationSurface: "chatgpt-project-source-provider-file" },
+			},
+		];
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listProjectFiles: vi.fn(async () => files),
+			downloadProjectFile: vi.fn(async (_projectId: string, _fileId: string, destPath: string) => {
+				await fs.writeFile(destPath, "project source body", "utf8");
+			}),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			const result = await service.materializeProjectFiles("project-123", { listOptions: {} });
+			expect(provider.downloadProjectFile).toHaveBeenCalledWith(
+				"project-123",
+				"file_project_123",
+				expect.stringContaining("spec.md"),
+				{},
+			);
+			expect(result.files).toHaveLength(1);
+			expect(result.files[0]?.localPath).toEqual(expect.stringContaining("spec.md"));
+			expect(result.files[0]?.checksumSha256).toMatch(/^[a-f0-9]{64}$/);
+			expect(result.manifestPath).toEqual(expect.stringContaining("file-fetch-manifest.json"));
+			const manifest = JSON.parse(await readFile(result.manifestPath as string, "utf8")) as {
+				materializedCount: number;
+				entries: Array<Record<string, unknown>>;
+			};
+			expect(manifest.materializedCount).toBe(1);
+			expect(manifest.entries[0]).toMatchObject({
+				fileId: "file_project_123",
+				fileName: "spec.md",
+				status: "materialized",
+				materializationMethod: "chatgpt-project-source-provider-file",
+			});
+			const cached = await store.readProjectKnowledge(cacheContext, "project-123");
+			expect(cached.items[0]?.localPath).toEqual(result.files[0]?.localPath);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("materializeProjectFiles records unsupported project rows as manifest errors", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-files-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const files: FileRef[] = [
+			{
+				id: "policy.pdf",
+				name: "policy.pdf",
+				provider: "chatgpt",
+				source: "project",
+				metadata: { materializationSurface: "chatgpt-project-source-row" },
+			},
+		];
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listProjectFiles: vi.fn(async () => files),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			const result = await service.materializeProjectFiles("project-123", { listOptions: {} });
+			expect(result.files).toEqual([]);
+			expect(result.manifestPath).toEqual(expect.stringContaining("file-fetch-manifest.json"));
+			const manifest = JSON.parse(await readFile(result.manifestPath as string, "utf8")) as {
+				materializedCount: number;
+				entries: Array<Record<string, unknown>>;
+			};
+			expect(manifest.materializedCount).toBe(0);
+			expect(manifest.entries[0]).toMatchObject({
+				fileId: "policy.pdf",
+				fileName: "policy.pdf",
+				status: "error",
+				error: "project_source_download_unsupported",
+			});
 			const cached = await store.readProjectKnowledge(cacheContext, "project-123");
 			expect(cached.items).toEqual(files);
 		} finally {

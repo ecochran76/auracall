@@ -4604,7 +4604,7 @@ function createHttpStatusResponse(input: {
 			runArchiveMaterializationTemplate: "/v1/archive/materializations/{job_id}",
 			historyMaterializationsCreate: "/v1/account-mirrors/materializations",
 			historyMaterializationsList:
-				"/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|catalog_item|archive_item|reconciliation|account_library_reconciliation][&limit=50]",
+				"/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|project_sources|catalog_item|archive_item|reconciliation|account_library_reconciliation][&limit=50]",
 			historyMaterializationTemplate: "/v1/account-mirrors/materializations/{job_id}",
 			accountMirrorRecoveryCandidates:
 				"/v1/account-mirrors/recovery-candidates[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status=eligible|needs_detail_refresh|deferred|blocked|unsupported|terminal][&action={action}][&includeSearchRows=true|false][&limit=50]",
@@ -8128,6 +8128,7 @@ function parseHistoryMaterializationJobListQuery(searchParams: URLSearchParams) 
 			sourceType: z
 				.enum([
 					"conversation",
+					"project_sources",
 					"catalog_item",
 					"archive_item",
 					"reconciliation",

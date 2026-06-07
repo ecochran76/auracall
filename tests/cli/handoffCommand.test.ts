@@ -1,9 +1,9 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
-import type { ResolvedUserConfig } from "../../src/config.js";
 import {
 	approveHandoffSubmitForCli,
 	approveHandoffUploadForCli,
@@ -24,16 +24,17 @@ import {
 	submitHandoffForCli,
 	uploadHandoffForCli,
 } from "../../src/cli/handoffCommand.js";
+import type { ResolvedUserConfig } from "../../src/config.js";
 import {
-	HANDOFF_ANALYSIS_SCHEMA,
 	createProviderNativeHandoffTargetAdapter,
+	HANDOFF_ANALYSIS_SCHEMA,
+	type HandoffProviderNativePromptInput,
+	type HandoffProviderNativeUploadInput,
+	type HandoffTargetAdapter,
 	prepareCrossServiceHandoffPacket,
 	recoverHandoffLive,
 	submitHandoffTargetPackage,
 	uploadHandoffTargetPackage,
-	type HandoffTargetAdapter,
-	type HandoffProviderNativePromptInput,
-	type HandoffProviderNativeUploadInput,
 	validateHandoffAnalysisDecision,
 } from "../../src/handoff/service.js";
 
@@ -210,6 +211,83 @@ describe("handoff prepare CLI helpers", () => {
 		const events = await readFile(path.join(result.packetPath, "events.jsonl"), "utf8");
 		expect(events).toContain('"phase":"discover_source"');
 		expect(events).toContain('"phase":"preview_target"');
+	});
+
+	test("dedupes selected local files with the same checksum", async () => {
+		const root = await tempRoot("auracall-handoff-dedupe-");
+		const duplicateA = path.join(root, "source-a.txt");
+		const duplicateB = path.join(root, "source-b.txt");
+		const projectIndex = path.join(root, "project-index.txt");
+		const duplicateBody = "same source file body";
+		await writeFile(duplicateA, duplicateBody, "utf8");
+		await writeFile(duplicateB, duplicateBody, "utf8");
+		await writeFile(projectIndex, "project index", "utf8");
+		const duplicateChecksum = createHash("sha256").update(duplicateBody).digest("hex");
+		const projectIndexChecksum = createHash("sha256").update("project index").digest("hex");
+
+		const result = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			handoffId: "dedupe-local-files",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "source-business",
+			sourceContext: {
+				messages: [{ role: "user", content: "hydrate with deduped files" }],
+			},
+			sourceManifest: {
+				items: [
+					{
+						id: "duplicate_alias_a",
+						kind: "file",
+						title: "Duplicate source file",
+						localPath: duplicateA,
+						sizeBytes: duplicateBody.length,
+						checksumSha256: duplicateChecksum,
+						importanceHint: 5,
+					},
+					{
+						id: "duplicate_alias_b",
+						kind: "file",
+						title: "Duplicate source file",
+						localPath: duplicateB,
+						sizeBytes: duplicateBody.length,
+						checksumSha256: duplicateChecksum,
+						importanceHint: 3,
+					},
+					{
+						id: "project_index",
+						kind: "file",
+						title: "Project index",
+						localPath: projectIndex,
+						sizeBytes: "project index".length,
+						checksumSha256: projectIndexChecksum,
+						importanceHint: 1,
+					},
+				],
+			},
+			maxSelectedArtifacts: 3,
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+
+		expect(result.analysis.selectedManifestItemIds).toEqual(["duplicate_alias_a", "project_index"]);
+		expect(result.targetPackage.selectedFileCount).toBe(2);
+		expect(result.targetPackage.selectedTotalBytes).toBe(
+			duplicateBody.length + "project index".length,
+		);
+		expect(result.submissionPlan.selectedManifestItemIds).toEqual([
+			"duplicate_alias_a",
+			"project_index",
+		]);
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(result.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		expect(
+			uploadManifest.items.map(
+				(item: { sourceManifestItemId: string }) => item.sourceManifestItemId,
+			),
+		).toEqual(["duplicate_alias_a", "project_index"]);
 	});
 
 	test("represents multiple provider pairs without provider-specific top-level fields", async () => {
@@ -533,7 +611,7 @@ describe("handoff prepare CLI helpers", () => {
 					job: {
 						object: "history_materialization_job",
 						id: "hmj_partial",
-						source: { provider: "chatgpt" },
+						source: { type: "project_sources", provider: "chatgpt", projectId: "g-p-source" },
 						request: {},
 						status: "failed",
 						result: {
@@ -545,10 +623,35 @@ describe("handoff prepare CLI helpers", () => {
 									reason: "download timeout",
 								},
 								{
+									kind: "file",
+									providerId: "file_404",
+									status: "failed",
+									reason: "ChatGPT conversation file fetch failed: tile_not_found",
+								},
+								{
+									kind: "file",
+									providerId: "file_404",
+									status: "failed",
+									reason:
+										"ChatGPT conversation file fetch failed: download_response_not_ok (status 404)",
+								},
+								{
 									kind: "media",
 									providerId: "media_skipped",
 									status: "skipped",
 									reason: "unsupported media surface",
+								},
+								{
+									kind: "file",
+									providerId: "project_source_row",
+									status: "failed",
+									reason: "project_source_download_unsupported",
+								},
+								{
+									kind: "file",
+									providerId: "project_source_without_provider_id",
+									status: "failed",
+									reason: "ChatGPT project source lacks a provider file id.",
 								},
 							],
 						},
@@ -561,7 +664,7 @@ describe("handoff prepare CLI helpers", () => {
 		expect(result.sourceCompleteness).toMatchObject({
 			state: "partial",
 			manifestItemCount: 0,
-			omissionCount: 2,
+			omissionCount: 5,
 			retryableOmissionCount: 1,
 		});
 		expect(result.analysis.omissionWarnings).toContain("source_omissions_present");
@@ -577,9 +680,27 @@ describe("handoff prepare CLI helpers", () => {
 				retryable: true,
 			}),
 			expect.objectContaining({
-				id: "hmj_partial:entry_2",
+				id: "hmj_partial:entry_3",
+				sourceRef: "file_404",
+				reason: "ChatGPT conversation file fetch failed: download_response_not_ok (status 404)",
+				retryable: false,
+			}),
+			expect.objectContaining({
+				id: "hmj_partial:entry_4",
 				sourceRef: "media_skipped",
 				reason: "unsupported media surface",
+				retryable: false,
+			}),
+			expect.objectContaining({
+				id: "hmj_partial:entry_5",
+				sourceRef: "project_source_row",
+				reason: "project_source_download_unsupported",
+				retryable: false,
+			}),
+			expect.objectContaining({
+				id: "hmj_partial:entry_6",
+				sourceRef: "project_source_without_provider_id",
+				reason: "ChatGPT project source lacks a provider file id.",
 				retryable: false,
 			}),
 		]);
@@ -620,6 +741,7 @@ describe("handoff prepare CLI helpers", () => {
 
 		expect(status).toMatchObject({
 			object: "auracall.handoff.status.result",
+			status: "preview_ready",
 			packetPath: path.join(root, "status-fixture"),
 			eventCount: 6,
 			run: {
@@ -846,6 +968,93 @@ describe("handoff prepare CLI helpers", () => {
 		});
 	});
 
+	test("ignores stale target result files after package digest changes", async () => {
+		const root = await tempRoot("auracall-handoff-stale-target-result-");
+		const selectedPath = path.join(root, "stale-target.txt");
+		await writeFile(selectedPath, "stale target fixture", "utf8");
+		const sourceManifest = {
+			items: [
+				manifestItemFixture({
+					id: "stale_target_file",
+					localPath: selectedPath,
+					sizeBytes: 20,
+				}),
+			],
+		};
+		const first = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "stale-target-result",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "first context" }] },
+			sourceManifest,
+			maxSelectedArtifacts: 1,
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "stale-target-result",
+			outputDir: root,
+			packageDigest: first.targetPackage.packageDigest,
+		});
+		await uploadHandoffForCli({
+			handoffId: "stale-target-result",
+			outputDir: root,
+		});
+
+		const packagePath = path.join(root, "stale-target-result", "target", "package.json");
+		const packageJson = JSON.parse(await readFile(packagePath, "utf8"));
+		packageJson.packageDigest = "f".repeat(64);
+		await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
+		const uploadManifestPath = path.join(
+			root,
+			"stale-target-result",
+			"target",
+			"upload-manifest.json",
+		);
+		const uploadManifestJson = JSON.parse(await readFile(uploadManifestPath, "utf8"));
+		uploadManifestJson.packageDigest = "f".repeat(64);
+		await writeFile(uploadManifestPath, `${JSON.stringify(uploadManifestJson, null, 2)}\n`, "utf8");
+		const submissionPlanPath = path.join(
+			root,
+			"stale-target-result",
+			"target",
+			"submission-plan.json",
+		);
+		const submissionPlanJson = JSON.parse(await readFile(submissionPlanPath, "utf8"));
+		submissionPlanJson.packageDigest = "f".repeat(64);
+		await writeFile(submissionPlanPath, `${JSON.stringify(submissionPlanJson, null, 2)}\n`, "utf8");
+
+		const status = await readHandoffStatusForCli({
+			handoffId: "stale-target-result",
+			outputDir: root,
+		});
+		expect(status).toMatchObject({
+			status: "preview_ready",
+			target: {
+				packageDigest: "f".repeat(64),
+				uploadApproved: false,
+				uploadStatus: "not_uploaded",
+				uploadedFileCount: 0,
+				submitStatus: "not_submitted",
+				readbackStatus: "missing",
+			},
+		});
+		expect(status).not.toBeNull();
+		if (!status) throw new Error("Expected stale target status fixture to exist.");
+		const resume = await resumeHandoffForCli({
+			handoffId: "stale-target-result",
+			outputDir: root,
+		});
+		expect(resume.resumePlan).toMatchObject({
+			currentStage: "package_ready",
+			nextAction: "approve_upload",
+		});
+	});
+
 	test("keeps package omissions out of target upload attempts", async () => {
 		const root = await tempRoot("auracall-handoff-upload-omissions-");
 		const prepared = await prepareCrossServiceHandoffPacket({
@@ -1025,8 +1234,13 @@ describe("handoff prepare CLI helpers", () => {
 		});
 		expect(status).not.toBeNull();
 		if (!status) throw new Error("Expected submit-approved status fixture to exist.");
+		expect(status.status).toBe("complete");
 		expect(formatHandoffStatusCliSummary(status)).toContain("Target submit approved: true");
-		expect(formatHandoffStatusCliSummary(status)).toContain("Target readback status: readback_cached");
+		expect(formatHandoffStatusCliSummary(status)).toContain(
+			"Target readback status: readback_cached",
+		);
+		expect(formatHandoffStatusCliSummary(status)).toContain("Status: complete");
+		expect(formatHandoffStatusCliSummary(status)).toContain("Packet status: preview_ready");
 	});
 
 	test("rejects stale submit approval when target prompt artifacts change", async () => {
@@ -1140,9 +1354,7 @@ describe("handoff prepare CLI helpers", () => {
 			requiredApprovals: ["target_upload"],
 			command: expect.stringContaining(prepared.targetPackage.packageDigest),
 		});
-		expect(formatHandoffResumeCliSummary(beforeApproval)).toContain(
-			"Next action: approve_upload",
-		);
+		expect(formatHandoffResumeCliSummary(beforeApproval)).toContain("Next action: approve_upload");
 
 		await approveHandoffUploadForCli({
 			handoffId: "resume-fixture",
@@ -1293,9 +1505,7 @@ describe("handoff prepare CLI helpers", () => {
 				nextAction: "approve_submit",
 			},
 		});
-		expect(formatHandoffRecoverLiveCliSummary(uploadRecovery)).toContain(
-			"Executed action: upload",
-		);
+		expect(formatHandoffRecoverLiveCliSummary(uploadRecovery)).toContain("Executed action: upload");
 
 		await approveHandoffSubmitForCli({
 			handoffId: "live-recovery-fixture",
@@ -1683,19 +1893,19 @@ describe("handoff prepare CLI helpers", () => {
 				provider: "chatgpt",
 				runtimeProfileId: "target-pro",
 				packageDigest: prepared.targetPackage.packageDigest,
-					files: [
-						expect.objectContaining({
-							sourceManifestItemId: "native_file_selected",
-							packetPath: "target/selected-files/001-Selected_file-native_file_selected",
-							absolutePath: path.join(
-								root,
-								"provider-native-file-fixture",
-								"target",
-								"selected-files",
-								"001-Selected_file-native_file_selected",
-							),
-						}),
-					],
+				files: [
+					expect.objectContaining({
+						sourceManifestItemId: "native_file_selected",
+						packetPath: "target/selected-files/001-Selected_file-native_file_selected",
+						absolutePath: path.join(
+							root,
+							"provider-native-file-fixture",
+							"target",
+							"selected-files",
+							"001-Selected_file-native_file_selected",
+						),
+					}),
+				],
 			}),
 		]);
 		const uploadJson = JSON.parse(

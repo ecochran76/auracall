@@ -1,3 +1,73 @@
+- 2026-06-07: Real-source handoff proof must gate target mutation on source
+  completeness. Plan 0133 uses the original ChatGPT Business source ref as a
+  bounded cache/import proof and forbids SoyLei target submission for empty,
+  synthetic, or materially incomplete source packets.
+  Live proof found the source ref is a SoyLei project URL, not a direct
+  conversation URL: the project page exposes concrete `/c/` conversation URLs,
+  broad source materialization failed at the `180000ms` stale threshold, and
+  the narrowed single-conversation job needed API restart/startup recovery
+  before finishing `skipped` with five `tile_not_found` file-fetch failures.
+  After installing the ChatGPT conversation-file direct-download fallback, a
+  widened retry materialized one source DOCX and converted the rest of the
+  first-conversation failures into provider HTTP 404 evidence. The follow-up
+  recovered the hydrated conversation context from cache (`15` messages),
+  approved upload/submit against package digest
+  `0b903f5a67f1dd79f21066db45a72905ba65822f7ba60261da75633932748565`,
+  and completed the SoyLei Pro target handoff at
+  `https://chatgpt.com/c/6a250296-65d4-83ea-930b-c5658ed7435a`.
+
+- 2026-06-07: ChatGPT project `Sources` rows need their own materialization
+  evidence path, not a synthetic project index fallback. Project-source rows
+  should preserve backend `file_...` ids, hrefs, DOM/action evidence, and
+  MIME/size hints where available; `provider + projectId +
+  assetKinds=["files"]` should run as a `project_sources`
+  history-materialization source; successful provider-id rows should archive
+  like ordinary source files; and rows without provider ids should become
+  deterministic non-downloadable omissions instead of guessed downloads. The
+  live original Business project-source smoke
+  `hmj_5927c197d6d6453bb23b90f980e14619` proved this boundary for
+  `SoyLei Knowledge - Main 20251208.md`, `SIP-1111.md`, and `SIP-1119.md`:
+  all three visible rows lacked provider file ids and were recorded as terminal
+  non-downloadable evidence. Handoff omission import must also classify the
+  live ChatGPT wording `ChatGPT project source lacks a provider file id.` as
+  non-retryable, not only the normalized
+  `project_source_download_unsupported` reason.
+
+- 2026-06-07: When source evidence changes after a target handoff has already
+  been submitted, treat the refreshed packet as a new package. Recompute the
+  package digest, require fresh upload and submit approvals, rerun upload, and
+  cache a new target readback instead of reusing old approval files. The
+  Plan 0135 refreshed packet moved from package digest
+  `0b903f5a67f1dd79f21066db45a72905ba65822f7ba60261da75633932748565` to
+  `6876fc1565d469e70c1a7a1e18c2f6cea47856ecdbdb7da37ca0be3bb7342d12` after
+  importing project-source omissions, then completed with two uploaded target
+  files and cached readback.
+
+- 2026-06-07: Handoff packet builders should classify provider-file HTTP
+  404/410-style materialization failures as deterministic source omissions.
+  Once the authenticated direct-download path proves a provider ref is not
+  served, keeping that omission retryable obscures the real gate and can block
+  otherwise useful cross-tenant handoffs.
+
+- 2026-06-07: A source context wrapper with `payload` metadata is not a
+  substitute for the provider conversation context payload. Before target
+  mutation, verify `messageCount` from the actual cached conversation context
+  (`messages`/`turns`) and use that payload for compact-context generation.
+
+- 2026-06-07: Handoff status must distinguish immutable packet creation status
+  from effective lifecycle status. `run.status=preview_ready` is still the
+  packet record, but status readback should derive `complete` from current
+  upload, submit, and readback artifacts. Target upload/submit/readback files
+  whose package digest does not match the current package must be ignored as
+  stale so resume cannot skip required upload after source omissions or compact
+  context change the package digest.
+
+- 2026-06-07: Handoff analysis selection must dedupe local files by checksum
+  or path before target packaging. ChatGPT project conversations can expose the
+  same local source file through multiple provider aliases; selecting both
+  aliases doubles upload bytes and creates duplicate target attachments without
+  adding source value.
+
 - 2026-06-07: ChatGPT browser prompt attachments are sufficient for the first
   live handoff target proof. A synthetic packet targeting SoyLei
   `wsl-chrome-3` uploaded one selected file, submitted through

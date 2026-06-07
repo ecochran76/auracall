@@ -165,6 +165,16 @@ export interface HistoryAccountLibraryListInput {
 	jobId?: string | null;
 }
 
+export interface HistoryProjectSourcesMaterializeInput {
+	provider: ProviderId;
+	runtimeProfile: string | null;
+	browserProfile: string | null;
+	boundIdentityKey: string | null;
+	projectId: string;
+	jobId: string;
+	maxItems: number | null;
+}
+
 export interface HistoryMaterializationProviderListOptions {
 	configuredUrl?: string;
 	tabUrl?: string;
@@ -205,6 +215,7 @@ export interface HistoryMaterializationJob {
 		| { type: "conversation"; provider: ProviderId; conversationId: string }
 		| { type: "catalog_item"; catalogItemId: string; catalogKind: AccountMirrorCatalogKind | null }
 		| { type: "archive_item"; archiveItemId: string }
+		| { type: "project_sources"; provider: ProviderId; projectId: string }
 		| { type: "reconciliation"; provider: ProviderId | null }
 		| { type: "account_library_reconciliation"; provider: ProviderId | null };
 	request: HistoryMaterializationCreateRequest;
@@ -274,6 +285,8 @@ export interface HistoryMaterializationJobListResult {
 		terminal: number;
 	};
 }
+
+const DEFAULT_RUNNING_STALE_THRESHOLD_MS = 30 * 60_000;
 
 export interface HistoryAccountLibraryReconciliationPreviewResult {
 	object: "history_account_library_reconciliation_preview";
@@ -378,6 +391,11 @@ export interface HistoryMaterializationServiceDeps {
 		manifestPath: string | null;
 	}>;
 	listAccountLibraryFiles?: (input: HistoryAccountLibraryListInput) => Promise<FileRef[]>;
+	materializeProjectSources?: (input: HistoryProjectSourcesMaterializeInput) => Promise<{
+		projectFiles: FileRef[];
+		files: FileRef[];
+		manifestPath: string | null;
+	}>;
 }
 
 export interface HistoryMaterializationJobStore {
@@ -471,6 +489,13 @@ export function createHistoryMaterializationService(
 				config: deps.config,
 				request,
 			}));
+	const materializeProjectSources =
+		deps.materializeProjectSources ??
+		((request) =>
+			materializeProjectSourcesTarget({
+				config: deps.config,
+				request,
+			}));
 
 	const service: HistoryMaterializationService = {
 		async createJob(request) {
@@ -481,7 +506,7 @@ export function createHistoryMaterializationService(
 			const active = await findActiveJobForSource(
 				store,
 				sourceKey,
-				recoverTimedOutAccountLibraryJob,
+				recoverStaleRunningJob,
 			);
 			if (active) {
 				if (active.status === "queued") {
@@ -528,7 +553,7 @@ export function createHistoryMaterializationService(
 			const runtimeProfile = normalizeOptionalString(request.runtimeProfile);
 			const sourceType = request.sourceType ?? null;
 			const limit = normalizeListLimit(request.limit);
-			const allJobs = await recoverTimedOutAccountLibraryJobs(await store.listJobs());
+			const allJobs = await recoverStaleRunningJobs(await store.listJobs());
 			const filtered = allJobs.filter(
 				(job) =>
 					matchesStatusFilter(job, status) &&
@@ -552,7 +577,7 @@ export function createHistoryMaterializationService(
 
 		async readJob(id) {
 			const job = await store.readJob(id.trim());
-			return withSchedulerDiagnostics(await recoverTimedOutAccountLibraryJob(job));
+			return withSchedulerDiagnostics(await recoverStaleRunningJob(job));
 		},
 
 		async cancelJob(id) {
@@ -623,9 +648,14 @@ export function createHistoryMaterializationService(
 						materializeMediaGeneration,
 						materializeAccountLibraryFiles,
 						listAccountLibraryFiles,
+						materializeProjectSources,
 						now,
 					}),
 				);
+				const current = await store.readJob(running.id);
+				if (current && !isActiveStatus(current.status)) {
+					return withSchedulerDiagnostics(current);
+				}
 				const completedAt = now().toISOString();
 				const completed: HistoryMaterializationJob = {
 					...running,
@@ -639,6 +669,10 @@ export function createHistoryMaterializationService(
 				await store.upsertJob(completed);
 				return withSchedulerDiagnostics(completed);
 			} catch (error) {
+				const current = await store.readJob(running.id);
+				if (current && !isActiveStatus(current.status)) {
+					return withSchedulerDiagnostics(current);
+				}
 				const completedAt = now().toISOString();
 				const failed: HistoryMaterializationJob = {
 					...running,
@@ -659,7 +693,7 @@ export function createHistoryMaterializationService(
 		},
 
 		async recoverInterruptedJobs() {
-			const jobs = await recoverTimedOutAccountLibraryJobs(await store.listJobs());
+			const jobs = await store.listJobs();
 			let recovered = 0;
 			for (const job of jobs) {
 				if (!isActiveStatus(job.status)) continue;
@@ -735,37 +769,44 @@ export function createHistoryMaterializationService(
 		};
 	}
 
-	async function recoverTimedOutAccountLibraryJobs(
+	async function recoverStaleRunningJobs(
 		jobs: HistoryMaterializationJob[],
 	): Promise<HistoryMaterializationJob[]> {
 		const results: HistoryMaterializationJob[] = [];
 		for (const job of jobs) {
-			results.push((await recoverTimedOutAccountLibraryJob(job)) ?? job);
+			results.push((await recoverStaleRunningJob(job)) ?? job);
 		}
 		return results;
 	}
 
-	async function recoverTimedOutAccountLibraryJob(
+	async function recoverStaleRunningJob(
 		job: HistoryMaterializationJob | null,
 	): Promise<HistoryMaterializationJob | null> {
-		if (!job || !canAccountLibraryJobTimeout(job)) return job;
+		if (!job || !canRunningJobTimeout(job)) return job;
 		const timestampDate = now();
-		if (!isTimedOutAccountLibraryJob(job, timestampDate)) return job;
+		if (!isTimedOutRunningJob(job, timestampDate)) return job;
 		const timestamp = timestampDate.toISOString();
-		const timeoutMs = normalizeProviderWorkTimeoutMs(job.request.providerWorkTimeoutMs);
+		const timeoutMs = resolveRunningStaleThresholdMs(job);
+		const message = formatRunningTimeoutMessage(job, timeoutMs);
 		const failed: HistoryMaterializationJob = {
 			...job,
 			status: "failed",
 			updatedAt: timestamp,
 			completedAt: timestamp,
 			error: {
-				message: `Account-library materialization job exceeded provider-work timeout (${timeoutMs}ms).`,
+				message,
 				type: "internal_error",
 				statusCode: 500,
 			},
-			message: `Account-library materialization job exceeded provider-work timeout (${timeoutMs}ms).`,
+			message,
 		};
 		await store.upsertJob(failed);
+		if (scheduledJobIds.delete(job.id)) {
+			queue = Promise.resolve();
+		}
+		if (cleanupBrowserBackedProviderWork) {
+			await cleanupHistoryMaterializationManagedBrowser(deps.config, job.request);
+		}
 		return failed;
 	}
 
@@ -822,6 +863,11 @@ async function materializeHistoryRequest(input: {
 		manifestPath: string | null;
 	}>;
 	listAccountLibraryFiles: (request: HistoryAccountLibraryListInput) => Promise<FileRef[]>;
+	materializeProjectSources: (request: HistoryProjectSourcesMaterializeInput) => Promise<{
+		projectFiles: FileRef[];
+		files: FileRef[];
+		manifestPath: string | null;
+	}>;
 	now: () => Date;
 }): Promise<HistoryMaterializationResult> {
 	const request = input.request;
@@ -830,6 +876,21 @@ async function materializeHistoryRequest(input: {
 			return materializeAccountLibraryReconciliation(input);
 		}
 		return materializeReconciliation(input);
+	}
+	if (
+		request.provider &&
+		request.projectId &&
+		!request.conversationId &&
+		!request.catalogItemId &&
+		!request.archiveItemId
+	) {
+		return materializeProjectSources({
+			request,
+			jobId: input.jobId,
+			runArchiveService: input.runArchiveService,
+			materializeProjectSources: input.materializeProjectSources,
+			now: input.now,
+		});
 	}
 	if (request.archiveItemId) {
 		const detail = await input.runArchiveService.readItem(request.archiveItemId);
@@ -946,8 +1007,104 @@ async function materializeHistoryRequest(input: {
 		});
 	}
 	throw new HistoryMaterializationError(
-		"Provide conversationId with provider, conversationIds with provider, catalogItemId, archiveItemId, or reconcile=true.",
+		"Provide conversationId with provider, projectId with provider, conversationIds with provider, catalogItemId, archiveItemId, or reconcile=true.",
 	);
+}
+
+async function materializeProjectSources(input: {
+	request: HistoryMaterializationCreateRequest;
+	jobId: string;
+	runArchiveService: RunArchiveService;
+	materializeProjectSources: (request: HistoryProjectSourcesMaterializeInput) => Promise<{
+		projectFiles: FileRef[];
+		files: FileRef[];
+		manifestPath: string | null;
+	}>;
+	now: () => Date;
+}): Promise<HistoryMaterializationResult> {
+	const provider = input.request.provider;
+	const projectId = input.request.projectId;
+	if (!provider || !projectId) {
+		throw new HistoryMaterializationError("Project source materialization requires provider and projectId.");
+	}
+	const maxItems = normalizeMaxItems(input.request.maxItems);
+	const materialized = await input.materializeProjectSources({
+		provider,
+		runtimeProfile: input.request.runtimeProfile ?? null,
+		browserProfile: input.request.browserProfile ?? null,
+		boundIdentityKey: input.request.boundIdentityKey ?? null,
+		projectId,
+		jobId: input.jobId,
+		maxItems,
+	});
+	const manifestEntries = await readFileManifestEntries(materialized.manifestPath);
+	const entries = await Promise.all(
+		manifestEntries.map((entry) => historyEntryFromFileManifest(entry)),
+	);
+	const archiveAssets: RunArchiveHistoryMaterializationAsset[] = [];
+	for (const file of materialized.files) {
+		const manifestEntry = findFileManifestForFile(manifestEntries, file);
+		archiveAssets.push({
+			kind: "file",
+			file,
+			artifactId: manifestEntry?.fileId ?? file.id,
+			title: manifestEntry?.fileName ?? file.name,
+			manifestPath: materialized.manifestPath,
+			materializationMethod:
+				manifestEntry?.materializationMethod ??
+				readRecordString(file.metadata, ["materialization", "materializationSource"]) ??
+				"project-source",
+		});
+	}
+	if (archiveAssets.length > 0 && !input.runArchiveService.upsertHistoryMaterializationItems) {
+		throw new Error("History materialization archive upsert is not configured.");
+	}
+	const archiveTarget = projectSourcesTargetFromRequest(input.request);
+	const archiveItems =
+		archiveAssets.length > 0
+			? ((
+					await input.runArchiveService.upsertHistoryMaterializationItems?.({
+						provider,
+						runtimeProfile: input.request.runtimeProfile ?? null,
+						browserProfile: input.request.browserProfile ?? null,
+						projectId,
+						boundIdentityKey: input.request.boundIdentityKey ?? null,
+						providerConversationId: archiveTarget.conversationId,
+						providerConversationUrl: archiveTarget.providerConversationUrl,
+						materializationJobId: input.jobId,
+						assets: archiveAssets,
+					})
+				)?.items ?? [])
+			: [];
+	applyArchiveLinks(entries, archiveItems);
+	const generatedAt = input.now().toISOString();
+	const metrics = summarizeEntries(entries, 1);
+	return {
+		object: "history_materialization_result",
+		generatedAt,
+		status: metrics.materialized > 0 ? "materialized" : "skipped",
+		target: archiveTarget,
+		source: sourceFromCreateRequest(input.request),
+		manifestPaths: materialized.manifestPath ? [materialized.manifestPath] : [],
+		entries,
+		archiveItems,
+		metrics,
+		phases: {
+			snapshotRefresh: null,
+			materialization: {
+				status: metrics.materialized > 0 ? "materialized" : "skipped",
+				generatedAt,
+				manifestPaths: materialized.manifestPath ? [materialized.manifestPath] : [],
+				entries: entries.length,
+				archiveItems: archiveItems.length,
+				metrics,
+			},
+		},
+		message:
+			metrics.materialized > 0
+				? `Project source materialization downloaded ${metrics.materialized} file${metrics.materialized === 1 ? "" : "s"} for project ${projectId}.`
+				: `Project source materialization found no downloadable files for project ${projectId}.`,
+	};
 }
 
 async function materializeAccountLibraryReconciliation(input: {
@@ -1284,6 +1441,57 @@ async function materializeAccountLibraryFilesTarget(input: {
 		listOptions,
 		files: [file],
 		maxItems: 1,
+	});
+}
+
+async function materializeProjectSourcesTarget(input: {
+	config: ResolvedUserConfig | Record<string, unknown>;
+	request: HistoryProjectSourcesMaterializeInput;
+}): Promise<{ projectFiles: FileRef[]; files: FileRef[]; manifestPath: string | null }> {
+	const llmService = createLlmService(
+		input.request.provider,
+		withRuntimeProfileSelection(
+			input.config,
+			input.request.provider,
+			input.request.runtimeProfile,
+		) as ResolvedUserConfig,
+		{
+			browserProcessOwner: createHistoryMaterializationBrowserProcessOwner({
+				request: {
+					provider: input.request.provider,
+					runtimeProfile: input.request.runtimeProfile,
+					browserProfile: input.request.browserProfile,
+					boundIdentityKey: input.request.boundIdentityKey,
+					projectId: input.request.projectId,
+					assetKinds: ["files"],
+				},
+				jobId: input.request.jobId,
+				provider: input.request.provider,
+				runtimeProfile: input.request.runtimeProfile,
+				browserProfile: input.request.browserProfile,
+				reason: "project-source-materialization",
+			}),
+		},
+	);
+	const projectUrl = resolveProviderProjectUrl(input.request.provider, input.request.projectId);
+	const listOptions: HistoryMaterializationProviderListOptions = {
+		...(projectUrl ? { configuredUrl: projectUrl, tabUrl: projectUrl } : {}),
+		projectId: input.request.projectId,
+		allowNavigation: true,
+		expectedUserIdentity: resolveHistoryMaterializationExpectedIdentity({
+			provider: input.request.provider,
+			runtimeProfile: input.request.runtimeProfile,
+			browserProfile: input.request.browserProfile,
+			boundIdentityKey: input.request.boundIdentityKey,
+			conversationId: `project:${input.request.projectId}`,
+			providerConversationUrl: projectUrl,
+			projectId: input.request.projectId,
+		}),
+		skipFeatureSignature: true,
+	};
+	return llmService.materializeProjectFiles(input.request.projectId, {
+		listOptions,
+		maxItems: input.request.maxItems,
 	});
 }
 
@@ -1756,9 +1964,6 @@ async function materializeReconciliation(input: {
 		for (const candidate of candidates) {
 			if (consumedTargetBudget >= maxTargets) break;
 			if (remainingAssetBudget <= 0) break;
-			if (candidate.assetFamilySignatures.length === 0 && candidate.priority > 1) {
-				continue;
-			}
 			if (
 				candidate.assetFamilySignatures.length > 0 &&
 				candidate.assetFamilySignatures.every((signature) =>
@@ -3091,14 +3296,32 @@ function normalizeCreateRequest(
 		normalized.assetKinds = ["files"];
 	}
 	if (
+		normalized.provider &&
+		normalized.projectId &&
 		!normalized.conversationId &&
 		(!normalized.conversationIds || normalized.conversationIds.length === 0) &&
 		!normalized.catalogItemId &&
 		!normalized.archiveItemId &&
 		normalized.reconcile !== true
 	) {
+		const selectedKinds = normalizeAssetKinds(normalized.assetKinds);
+		if (selectedKinds.some((kind) => kind !== "files")) {
+			throw new HistoryMaterializationError(
+				"Project source materialization currently supports assetKinds=[files] only.",
+			);
+		}
+		normalized.assetKinds = ["files"];
+	}
+	if (
+		!normalized.conversationId &&
+		!normalized.projectId &&
+		(!normalized.conversationIds || normalized.conversationIds.length === 0) &&
+		!normalized.catalogItemId &&
+		!normalized.archiveItemId &&
+		normalized.reconcile !== true
+	) {
 		throw new HistoryMaterializationError(
-			"Provide conversationId, conversationIds, catalogItemId, archiveItemId, or reconcile=true.",
+			"Provide conversationId, projectId, conversationIds, catalogItemId, archiveItemId, or reconcile=true.",
 		);
 	}
 	return normalized;
@@ -3118,6 +3341,9 @@ function sourceFromCreateRequest(
 	if (request.conversationIds && request.conversationIds.length > 0) {
 		return { type: "reconciliation", provider: request.provider ?? null };
 	}
+	if (request.provider && request.projectId && !request.conversationId) {
+		return { type: "project_sources", provider: request.provider, projectId: request.projectId };
+	}
 	if (request.reconcile === true && request.assetSource === "account-library")
 		return { type: "account_library_reconciliation", provider: request.provider ?? null };
 	if (request.reconcile === true)
@@ -3130,6 +3356,25 @@ function sourceFromCreateRequest(
 		};
 	}
 	throw new HistoryMaterializationError("History materialization source is incomplete.");
+}
+
+function projectSourcesTargetFromRequest(
+	request: HistoryMaterializationCreateRequest,
+): HistoryMaterializationTarget {
+	const provider = request.provider;
+	const projectId = request.projectId;
+	if (!provider || !projectId) {
+		throw new HistoryMaterializationError("Project source target requires provider and projectId.");
+	}
+	return {
+		provider,
+		runtimeProfile: request.runtimeProfile ?? null,
+		browserProfile: request.browserProfile ?? null,
+		boundIdentityKey: request.boundIdentityKey ?? null,
+		conversationId: `project:${projectId}`,
+		providerConversationUrl: resolveProviderProjectUrl(provider, projectId),
+		projectId,
+	};
 }
 
 function sourceKeyFromCreateRequest(request: HistoryMaterializationCreateRequest): string {
@@ -4417,19 +4662,37 @@ function isActiveStatus(status: HistoryMaterializationJobStatus): boolean {
 	return status === "queued" || status === "running";
 }
 
-function canAccountLibraryJobTimeout(job: HistoryMaterializationJob): boolean {
-	if (job.status !== "running") return false;
-	if (job.source.type !== "account_library_reconciliation") return false;
-	const timeoutMs = normalizeProviderWorkTimeoutMs(job.request.providerWorkTimeoutMs);
-	return timeoutMs !== null;
+function canRunningJobTimeout(job: HistoryMaterializationJob): boolean {
+	return job.status === "running";
 }
 
-function isTimedOutAccountLibraryJob(job: HistoryMaterializationJob, now: Date): boolean {
-	const timeoutMs = normalizeProviderWorkTimeoutMs(job.request.providerWorkTimeoutMs);
-	if (!timeoutMs) return false;
+function resolveRunningStaleThresholdMs(job: HistoryMaterializationJob): number {
+	return (
+		normalizeProviderWorkTimeoutMs(job.request.providerWorkTimeoutMs) ??
+		DEFAULT_RUNNING_STALE_THRESHOLD_MS
+	);
+}
+
+function isTimedOutRunningJob(job: HistoryMaterializationJob, now: Date): boolean {
+	if (!canRunningJobTimeout(job)) return false;
+	const timeoutMs = resolveRunningStaleThresholdMs(job);
 	const startedAtMs = Date.parse(job.startedAt ?? job.updatedAt);
 	if (!Number.isFinite(startedAtMs)) return false;
 	return now.getTime() - startedAtMs >= timeoutMs;
+}
+
+function usesAccountLibraryProviderWorkTimeout(job: HistoryMaterializationJob): boolean {
+	return (
+		job.source.type === "account_library_reconciliation" &&
+		normalizeProviderWorkTimeoutMs(job.request.providerWorkTimeoutMs) !== null
+	);
+}
+
+function formatRunningTimeoutMessage(job: HistoryMaterializationJob, timeoutMs: number): string {
+	if (usesAccountLibraryProviderWorkTimeout(job)) {
+		return `Account-library materialization job exceeded provider-work timeout (${timeoutMs}ms).`;
+	}
+	return `History materialization job exceeded running stale threshold (${timeoutMs}ms).`;
 }
 
 function summarizeHistoryMaterializationJobScheduler(
@@ -4460,12 +4723,14 @@ function summarizeHistoryMaterializationJobScheduler(
 		!options.scheduled &&
 		queuedAgeMs !== null &&
 		queuedAgeMs >= queuedStaleThresholdMs;
-	const runningTimedOut = isTimedOutAccountLibraryJob(job, now);
+	const runningTimedOut = isTimedOutRunningJob(job, now);
 	const stale = staleQueued || runningTimedOut;
 	const staleReason = staleQueued
 		? `queued account-library materialization job has not been scheduled by this API process for ${queuedAgeMs}ms (threshold ${queuedStaleThresholdMs}ms)`
 		: runningTimedOut
-			? `running account-library materialization job exceeded provider-work timeout (${normalizeProviderWorkTimeoutMs(job.request.providerWorkTimeoutMs)}ms)`
+			? usesAccountLibraryProviderWorkTimeout(job)
+				? `running account-library materialization job exceeded provider-work timeout (${resolveRunningStaleThresholdMs(job)}ms)`
+				: `running history materialization job exceeded stale threshold (${resolveRunningStaleThresholdMs(job)}ms)`
 			: null;
 	const dispatchState = terminal
 		? "terminal"
@@ -4738,6 +5003,13 @@ function resolveProviderConversationUrl(
 		return `https://gemini.google.com/app/${encodeURIComponent(conversationId)}`;
 	if (provider === "chatgpt") return `https://chatgpt.com/c/${encodeURIComponent(conversationId)}`;
 	if (provider === "grok") return `https://grok.com/chat/${encodeURIComponent(conversationId)}`;
+	return null;
+}
+
+function resolveProviderProjectUrl(provider: ProviderId, projectId: string | null): string | null {
+	if (!projectId) return null;
+	if (provider === "chatgpt") return `https://chatgpt.com/g/${encodeURIComponent(projectId)}/project`;
+	if (provider === "gemini") return `https://gemini.google.com/gem/${encodeURIComponent(projectId)}`;
 	return null;
 }
 

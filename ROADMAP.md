@@ -9,7 +9,15 @@ Lane: P01
 
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
+- Completed supporting plan:
+  [docs/dev/plans/0136-2026-06-07-handoff-tranche-review-and-commit.md](docs/dev/plans/0136-2026-06-07-handoff-tranche-review-and-commit.md)
 - Latest completed plan:
+  [docs/dev/plans/0135-2026-06-07-chatgpt-project-sources-materialization.md](docs/dev/plans/0135-2026-06-07-chatgpt-project-sources-materialization.md)
+- Previous completed plan:
+  [docs/dev/plans/0134-2026-06-07-handoff-source-materialization-queue-unblock.md](docs/dev/plans/0134-2026-06-07-handoff-source-materialization-queue-unblock.md)
+- Previous completed plan:
+  [docs/dev/plans/0133-2026-06-07-handoff-original-source-cache-proof.md](docs/dev/plans/0133-2026-06-07-handoff-original-source-cache-proof.md)
+- Previous completed plan:
   [docs/dev/plans/0132-2026-06-07-handoff-chatgpt-live-target-proof.md](docs/dev/plans/0132-2026-06-07-handoff-chatgpt-live-target-proof.md)
 - Previous completed plan:
   [docs/dev/plans/0131-2026-06-07-handoff-chatgpt-browser-recovery-surface.md](docs/dev/plans/0131-2026-06-07-handoff-chatgpt-browser-recovery-surface.md)
@@ -31,6 +39,8 @@ Lane: P01
   [docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md](docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md)
 - Previous completed plan:
   [docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md](docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md)
+- Completed live-follow supporting plan:
+  [docs/dev/plans/0122-2026-06-06-live-follow-stale-materialization-recovery.md](docs/dev/plans/0122-2026-06-06-live-follow-stale-materialization-recovery.md)
 - Previous completed plan:
   [docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md](docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md)
 - Previous completed plan:
@@ -127,10 +137,13 @@ Lane: P01
   during the guarded Plan 0109 rerun: browser-state and browser-process status
   now expose optional `owner`, `operation`, and `lease` metadata for history
   materialization browser work, including job id, provider, AuraCall runtime
-  profile, source type/key, reason, and cleanup policy. Future Plan 0109 reruns
-  can distinguish ordinary live-follow/materialization browser work from
-  account-library automatic-mode work instead of inferring ownership from PID
-  and profile alone.
+  profile, source type/key, reason, and cleanup policy. Plan 0122 closed the
+  stale-running recovery gap for ordinary history reconciliation jobs and
+  proved the follow-on capped `chatgpt/wsl-chrome-3` account-library rerun:
+  stuck job `hmj_69d02e4bdc9f48e1ad91c412d6a4e39f` was recovered to terminal
+  `failed`, active target jobs returned `0`, and capped account-library job
+  `hmj_2b8b215db3794a5980181f3a455e4e6f` succeeded with 3 files
+  materialized before config restore to `preview_only`.
 - Plan 0109 is closed as **Automatic Account-Library Smoke No-Go**. The smoke
   did not mutate user-scoped config because preflight scheduler diagnostics
   still reported foreground AuraCall work pending after a retry window. Scoped
@@ -201,8 +214,45 @@ Lane: P01
   approvals, target mutation gates, replay log, and repair state; provider
   adapters own bounded source/target capabilities. The current deterministic
   path covers source job orchestration, schema-validated analysis/package
-  assembly, approval-gated upload, and approval-gated submit/readback; the next
-  bounded implementation slice is repair/resume and operator UX.
+  assembly, approval-gated upload, approval-gated submit/readback, explicit
+  ChatGPT browser recovery selection, and a live SoyLei ChatGPT target proof.
+  Plan 0133 closed the original ChatGPT Business source cache/import proof and
+  executed the real-source SoyLei ChatGPT Pro target handoff. The source ref
+  resolved to a SoyLei project URL; the selected conversation cache provided
+  `15` messages, `16` conversation files, `23` source refs, and `1` artifact.
+  The widened materialization retry produced the Fresh Roof source DOCX,
+  duplicate aliases were deduped by checksum/path, provider-file HTTP 404s
+  were classified as deterministic omissions, and the approved ChatGPT browser
+  recovery path uploaded two selected attachments and submitted the handoff to
+  SoyLei target conversation
+  `https://chatgpt.com/c/6a250296-65d4-83ea-930b-c5658ed7435a` with cached
+  readback. Plan 0135 closed the project-source depth slice: ChatGPT project
+  `Sources` rows now retain backend `file_...` ids, hrefs, DOM/action
+  evidence, MIME/size hints where exposed; `provider=chatgpt` plus `projectId`
+  can create `project_sources` history-materialization jobs; successful
+  project source files archive through the existing materialization path; and
+  non-downloadable rows become deterministic omissions imported by handoff
+  packets. The live original Business project-source smoke
+  `hmj_5927c197d6d6453bb23b90f980e14619` completed `skipped` with
+  `materialized=0` and `failed=3` for visible rows
+  `SoyLei Knowledge - Main 20251208.md`, `SIP-1111.md`, and `SIP-1119.md`;
+  each lacked a backend provider file id in the current ChatGPT DOM. The next
+  bounded action imported that readback into dry-run packet
+  `/tmp/auracall-plan0135-project-source-import/handoffs/plan0135-project-source-import`:
+  source completeness is still `partial`, but now has `manifestItemCount=3`,
+  `omissionCount=20`, and `retryableOmissionCount=0`. New package digest is
+  `6876fc1565d469e70c1a7a1e18c2f6cea47856ecdbdb7da37ca0be3bb7342d12`.
+  Fresh digest-bound upload and submit approvals were recorded, target upload
+  completed with `uploadedFileCount=2` and `uploadFailureCount=0`, target submit
+  completed with provider message id
+  `handoff-message-dbd77d872c589e1d37711316b7f7c191`, and final status for
+  refreshed packet `plan0135-project-source-import` is `complete` with cached
+  readback at `https://chatgpt.com/c/6a250296-65d4-83ea-930b-c5658ed7435a`.
+  Plan 0136 closed the review/cleanup/commit tranche for Plans 0133-0135:
+  the active dirty worktree was audited, separate Plan 0137 account-mirror
+  work was kept out of the handoff checkpoint, formatter-owned churn was
+  retained rather than manually unwound, targeted validation passed, and the
+  handoff code/docs landed as one coherent local commit.
 - Plan 0115 is closed as **Handoff Run Ledger And Status Installed**.
   `auracall handoff prepare --dry-run` now writes `ledger.json`, and
   `auracall handoff status <id>` reads run, ledger, event count, packet

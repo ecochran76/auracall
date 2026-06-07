@@ -491,6 +491,7 @@ export interface HandoffPrepareResult {
 export interface HandoffStatusResult {
 	object: "auracall.handoff.status.result";
 	generatedAt: string;
+	status: HandoffEffectiveStatus;
 	packetPath: string;
 	packetDigest: string;
 	eventCount: number;
@@ -528,6 +529,14 @@ export interface HandoffStatusResult {
 		providerMessageId: string | null;
 	};
 }
+
+export type HandoffEffectiveStatus =
+	| "preview_ready"
+	| "upload_approved"
+	| "uploaded"
+	| "submit_approved"
+	| "submitted"
+	| "complete";
 
 export interface HandoffApproveUploadRequest {
 	handoffId: string;
@@ -1020,9 +1029,45 @@ export async function readHandoffStatus(input: {
 		await readJsonIfExists(path.join(packetPath, "target", "readback.json")),
 	);
 	const normalizedSubmissionResult = normalizeSubmissionResult(submissionResult);
+	const currentUploadResult =
+		uploadResult && targetPackage && uploadResult.packageDigest === targetPackage.packageDigest
+			? uploadResult
+			: null;
+	const currentSubmissionResult =
+		normalizedSubmissionResult &&
+		targetPackage &&
+		normalizedSubmissionResult.packageDigest === targetPackage.packageDigest
+			? normalizedSubmissionResult
+			: null;
+	const currentReadback =
+		readback && targetPackage && readback.packageDigest === targetPackage.packageDigest
+			? readback
+			: null;
+	const uploadApproved =
+		Boolean(uploadApproval) &&
+		Boolean(targetPackage) &&
+		uploadApproval?.packageDigest === targetPackage?.packageDigest;
+	const submitApproved =
+		submitApproval !== null &&
+		targetPackage !== null &&
+		currentUploadResult !== null &&
+		submitApproval.packageDigest === targetPackage.packageDigest &&
+		submitApproval.uploadSetDigest === buildUploadSetDigest(currentUploadResult);
+	const uploadStatus = currentUploadResult?.status ?? "not_uploaded";
+	const submitStatus = currentSubmissionResult?.status ?? "not_submitted";
+	const readbackStatus = currentReadback?.status ?? "missing";
+	const effectiveStatus = deriveHandoffEffectiveStatus({
+		runStatus: run.status,
+		uploadApproved,
+		submitApproved,
+		uploadStatus,
+		submitStatus,
+		readbackStatus,
+	});
 	return {
 		object: "auracall.handoff.status.result",
 		generatedAt: input.generatedAt ?? new Date().toISOString(),
+		status: effectiveStatus,
 		packetPath,
 		packetDigest: buildPacketDigest({
 			run,
@@ -1048,39 +1093,31 @@ export async function readHandoffStatus(input: {
 			package: targetPackage,
 			uploadManifest,
 			submissionPlan,
-			submissionResult: normalizedSubmissionResult,
+			submissionResult: currentSubmissionResult,
 			uploadApproval,
 			submitApproval,
-			uploadResult,
-			readback,
+			uploadResult: currentUploadResult,
+			readback: currentReadback,
 			mutationAllowed: Boolean(
 				(submissionPlan as { targetMutationAllowed?: unknown } | null)?.targetMutationAllowed,
 			),
-			uploadAttemptCount: normalizedSubmissionResult?.uploadAttemptCount ?? 0,
-			submitAttemptCount: normalizedSubmissionResult?.submitAttemptCount ?? 0,
+			uploadAttemptCount: currentSubmissionResult?.uploadAttemptCount ?? 0,
+			submitAttemptCount: currentSubmissionResult?.submitAttemptCount ?? 0,
 			packageDigest: targetPackage?.packageDigest ?? submissionPlan?.packageDigest ?? null,
 			selectedFileCount: targetPackage?.selectedFileCount ?? submissionPlan?.selectedFileCount ?? 0,
 			selectedTotalBytes:
 				targetPackage?.selectedTotalBytes ?? submissionPlan?.selectedTotalBytes ?? 0,
-			uploadApproved:
-				Boolean(uploadApproval) &&
-				Boolean(targetPackage) &&
-				uploadApproval?.packageDigest === targetPackage?.packageDigest,
+			uploadApproved,
 			uploadApprovalDigest: uploadApproval?.packageDigest ?? null,
-				submitApproved:
-					submitApproval !== null &&
-					targetPackage !== null &&
-					uploadResult !== null &&
-					submitApproval.packageDigest === targetPackage.packageDigest &&
-					submitApproval.uploadSetDigest === buildUploadSetDigest(uploadResult),
+			submitApproved,
 			submitApprovalDigest: submitApproval?.packageDigest ?? null,
-			uploadedFileCount: uploadResult?.uploadedFileCount ?? 0,
-			uploadFailureCount: uploadResult?.failedFileCount ?? 0,
-			uploadStatus: uploadResult?.status ?? "not_uploaded",
-			submitStatus: normalizedSubmissionResult?.status ?? "not_submitted",
-			readbackStatus: readback?.status ?? "missing",
-			targetConversationRef: normalizedSubmissionResult?.targetConversationRef ?? null,
-			providerMessageId: normalizedSubmissionResult?.providerMessageId ?? null,
+			uploadedFileCount: currentUploadResult?.uploadedFileCount ?? 0,
+			uploadFailureCount: currentUploadResult?.failedFileCount ?? 0,
+			uploadStatus,
+			submitStatus,
+			readbackStatus,
+			targetConversationRef: currentSubmissionResult?.targetConversationRef ?? null,
+			providerMessageId: currentSubmissionResult?.providerMessageId ?? null,
 		},
 	};
 }
@@ -1293,7 +1330,9 @@ export async function submitHandoffTargetPackage(
 		approval.compactContextDigest !== guard.compactContextDigest ||
 		approval.uploadSetDigest !== guard.uploadSetDigest
 	) {
-		throw new Error(`Submit approval is stale for package digest ${packet.targetPackage.packageDigest}.`);
+		throw new Error(
+			`Submit approval is stale for package digest ${packet.targetPackage.packageDigest}.`,
+		);
 	}
 	const promptDigest = buildPacketDigest({
 		packageDigest: packet.targetPackage.packageDigest,
@@ -1345,7 +1384,10 @@ export async function submitHandoffTargetPackage(
 		primerRef: "target/primer.md",
 		submissionResultRef: "target/submission-result.json",
 	};
-	await writeJson(path.join(packet.packetPath, "target", "submission-result.json"), submissionResult);
+	await writeJson(
+		path.join(packet.packetPath, "target", "submission-result.json"),
+		submissionResult,
+	);
 	await writeJson(path.join(packet.packetPath, "target", "readback.json"), readback);
 	return {
 		object: "auracall.handoff.submit-target.result",
@@ -1410,7 +1452,12 @@ export async function repairHandoffPacket(
 	if (!readback) {
 		await writeJson(
 			readbackPath,
-			buildRepairReadback(generatedAt, packet.run.target, packet.targetPackage, repairedSubmissionResult),
+			buildRepairReadback(
+				generatedAt,
+				packet.run.target,
+				packet.targetPackage,
+				repairedSubmissionResult,
+			),
 		);
 		repairedRefs.push("target/readback.json");
 	}
@@ -1474,7 +1521,9 @@ export async function exportHandoffManualBundle(
 			normalizedReadback?.targetConversationRef ??
 			null,
 		providerMessageId:
-			normalizedSubmissionResult?.providerMessageId ?? normalizedReadback?.providerMessageId ?? null,
+			normalizedSubmissionResult?.providerMessageId ??
+			normalizedReadback?.providerMessageId ??
+			null,
 		readbackStatus: normalizedReadback?.status ?? "missing",
 		operatorInstructions: [
 			"Open the target conversation or project for the recorded target endpoint.",
@@ -1489,7 +1538,10 @@ export async function exportHandoffManualBundle(
 			readback: "target/readback.json",
 		},
 	};
-	await writeJson(path.join(packet.packetPath, "target", "manual-handoff-export.json"), exportBundle);
+	await writeJson(
+		path.join(packet.packetPath, "target", "manual-handoff-export.json"),
+		exportBundle,
+	);
 	return {
 		object: "auracall.handoff.export.result",
 		generatedAt,
@@ -1825,7 +1877,9 @@ async function submitHandoffWithProviderNativePrompt(
 		approval.compactContextDigest !== guard.compactContextDigest ||
 		approval.uploadSetDigest !== guard.uploadSetDigest
 	) {
-		throw new Error(`Submit approval is stale for package digest ${packet.targetPackage.packageDigest}.`);
+		throw new Error(
+			`Submit approval is stale for package digest ${packet.targetPackage.packageDigest}.`,
+		);
 	}
 	const [primer, compactContext] = await Promise.all([
 		fs.readFile(path.join(packet.packetPath, "target", "primer.md"), "utf8"),
@@ -1911,7 +1965,10 @@ async function submitHandoffWithProviderNativePrompt(
 		primerRef: "target/primer.md",
 		submissionResultRef: "target/submission-result.json",
 	};
-	await writeJson(path.join(packet.packetPath, "target", "submission-result.json"), submissionResult);
+	await writeJson(
+		path.join(packet.packetPath, "target", "submission-result.json"),
+		submissionResult,
+	);
 	await writeJson(path.join(packet.packetPath, "target", "readback.json"), readback);
 	return {
 		object: "auracall.handoff.submit-target.result",
@@ -2235,17 +2292,30 @@ function normalizeMaterializationEntry(
 		};
 	}
 	if (status === "failed" || status === "skipped") {
+		const reason =
+			normalizeOptionalString(record.reason) ?? `history materialization entry ${status}`;
 		return {
 			id: entryId,
 			kind,
 			sourceRef: normalizeOptionalString(
 				record.remoteUrl ?? record.providerId ?? record.assetRoute,
 			),
-			reason: normalizeOptionalString(record.reason) ?? `history materialization entry ${status}`,
-			retryable: status === "failed",
+			reason,
+			retryable: status === "failed" && isRetryableSourceMaterializationOmission(reason),
 		};
 	}
 	return null;
+}
+
+function isRetryableSourceMaterializationOmission(reason: string): boolean {
+	const normalized = reason.toLowerCase();
+	if (/\bstatus\s+(?:404|410)\b/.test(normalized)) return false;
+	if (/\b(?:http|provider)\s+(?:404|410)\b/.test(normalized)) return false;
+	if (normalized.includes("project_source_download_unsupported")) return false;
+	if (normalized.includes("lacks a provider file id")) return false;
+	if (normalized.includes("not found")) return false;
+	if (normalized.includes("gone")) return false;
+	return true;
 }
 
 function mergeManifestItems(items: HandoffManifestItem[]): HandoffManifestItem[] {
@@ -2259,9 +2329,24 @@ function mergeManifestItems(items: HandoffManifestItem[]): HandoffManifestItem[]
 function mergeOmissions(items: HandoffOmission[]): HandoffOmission[] {
 	const byId = new Map<string, HandoffOmission>();
 	for (const item of items) {
-		byId.set(item.id, item);
+		const key = omissionMergeKey(item);
+		const previous = byId.get(key);
+		byId.set(key, previous ? preferSourceOmissionEvidence(previous, item) : item);
 	}
 	return Array.from(byId.values());
+}
+
+function omissionMergeKey(item: HandoffOmission): string {
+	return item.sourceRef ? `source:${item.sourceRef}` : `id:${item.id}`;
+}
+
+function preferSourceOmissionEvidence(
+	previous: HandoffOmission,
+	next: HandoffOmission,
+): HandoffOmission {
+	if (previous.retryable && !next.retryable) return next;
+	if (!previous.retryable && next.retryable) return previous;
+	return next;
 }
 
 function summarizeCompleteness(
@@ -2357,13 +2442,13 @@ function buildAnalysisDecision(input: {
 		typeof input.maxSelectedArtifacts === "number" && Number.isFinite(input.maxSelectedArtifacts)
 			? Math.max(0, Math.trunc(input.maxSelectedArtifacts))
 			: 10;
-	const selected = [...input.manifestItems]
-		.sort((left, right) => {
+	const selected = dedupeManifestItemsForSelection(
+		[...input.manifestItems].sort((left, right) => {
 			const rightScore = right.importanceHint ?? (right.localPath ? 1 : 0);
 			const leftScore = left.importanceHint ?? (left.localPath ? 1 : 0);
 			return rightScore - leftScore || left.id.localeCompare(right.id);
-		})
-		.slice(0, maxSelectedArtifacts);
+		}),
+	).slice(0, maxSelectedArtifacts);
 	const selectedFileBytes = selected.reduce((total, item) => total + (item.sizeBytes ?? 0), 0);
 	const estimatedPromptTokens = estimatePromptTokens(input.sourceContext, input.manifestItems);
 	const omissionWarnings = [
@@ -2410,6 +2495,26 @@ function buildAnalysisDecision(input: {
 		},
 		approvalRecommendation: "preview_only",
 	};
+}
+
+function dedupeManifestItemsForSelection(items: HandoffManifestItem[]): HandoffManifestItem[] {
+	const seen = new Set<string>();
+	const selected: HandoffManifestItem[] = [];
+	for (const item of items) {
+		const key = manifestSelectionDedupeKey(item);
+		if (key) {
+			if (seen.has(key)) continue;
+			seen.add(key);
+		}
+		selected.push(item);
+	}
+	return selected;
+}
+
+function manifestSelectionDedupeKey(item: HandoffManifestItem): string | null {
+	if (!item.localPath) return null;
+	if (item.checksumSha256) return `sha256:${item.checksumSha256}`;
+	return `path:${path.resolve(item.localPath)}`;
 }
 
 export function validateHandoffAnalysisDecision(input: {
@@ -3085,12 +3190,34 @@ function normalizeTargetReadback(value: unknown): HandoffTargetReadback | null {
 				? "target/compact-context.json"
 				: undefined,
 		primerRef:
-			normalizeOptionalString(value.primerRef) === "target/primer.md" ? "target/primer.md" : undefined,
+			normalizeOptionalString(value.primerRef) === "target/primer.md"
+				? "target/primer.md"
+				: undefined,
 		submissionResultRef:
 			normalizeOptionalString(value.submissionResultRef) === "target/submission-result.json"
 				? "target/submission-result.json"
 				: undefined,
 	};
+}
+
+function deriveHandoffEffectiveStatus(input: {
+	runStatus: HandoffRunRecord["status"];
+	uploadApproved: boolean;
+	submitApproved: boolean;
+	uploadStatus: HandoffUploadResult["status"] | "not_uploaded";
+	submitStatus: HandoffSubmissionResult["status"] | "not_submitted";
+	readbackStatus: HandoffTargetReadback["status"] | "missing";
+}): HandoffEffectiveStatus {
+	if (input.submitStatus === "submitted" && input.readbackStatus === "readback_cached") {
+		return "complete";
+	}
+	if (input.submitStatus === "submitted") return "submitted";
+	if (input.submitApproved) return "submit_approved";
+	if (input.uploadStatus === "uploaded" || input.uploadStatus === "skipped_no_files") {
+		return "uploaded";
+	}
+	if (input.uploadApproved) return "upload_approved";
+	return input.runStatus;
 }
 
 function normalizeTargetPackageOmissions(value: unknown): HandoffTargetPackageOmission[] {
@@ -3233,7 +3360,8 @@ function buildResumePlanFromStatus(status: HandoffStatusResult): HandoffResumePl
 		return buildResumePlan(status, {
 			currentStage: "package_ready",
 			nextAction: "approve_upload",
-			command: `${baseCommand} approve-upload ${status.run.id} --package-digest ${status.target.packageDigest ?? ""}`.trim(),
+			command:
+				`${baseCommand} approve-upload ${status.run.id} --package-digest ${status.target.packageDigest ?? ""}`.trim(),
 			reasons: ["target upload approval is missing or stale"],
 			requiredApprovals: ["target_upload"],
 		});
@@ -3255,7 +3383,8 @@ function buildResumePlanFromStatus(status: HandoffStatusResult): HandoffResumePl
 		return buildResumePlan(status, {
 			currentStage: "uploaded",
 			nextAction: "approve_submit",
-			command: `${baseCommand} approve-submit ${status.run.id} --package-digest ${status.target.packageDigest ?? ""}`.trim(),
+			command:
+				`${baseCommand} approve-submit ${status.run.id} --package-digest ${status.target.packageDigest ?? ""}`.trim(),
 			reasons: ["target submit approval is missing or stale"],
 			requiredApprovals: ["target_submit"],
 		});

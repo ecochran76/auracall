@@ -1,5 +1,119 @@
 # RUNBOOK
 
+## Turn 279 | 2026-06-07
+
+- Active supporting plan:
+  `docs/dev/plans/0136-2026-06-07-handoff-tranche-review-and-commit.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: review and clean up the Plan 0133-0135 inter-tenant handoff tranche,
+  reduce formatter churn where worthwhile, rerun validation, and commit the
+  code/docs as one coherent local checkpoint.
+- Starting audit:
+  - recent commits are all handoff-related:
+    `ad1c5c6f`, `1e448507`, `0b06248c`, `f47b9f62`, and `7f6e8c26`;
+  - the dirty worktree contains source, test, roadmap/runbook/journal/fixes
+    updates plus untracked Plans 0122 and 0133-0135;
+  - largest formatter-heavy diffs before cleanup are
+    `src/browser/providers/chatgptAdapter.ts` and
+    `tests/browser/chatgptAdapter.test.ts`;
+  - `git diff --check` is clean before the cleanup pass.
+- Planned gate:
+  - audit changed files for tranche ownership;
+  - reduce avoidable formatter churn only when it improves reviewability
+    without semantic risk;
+  - rerun focused Vitest, TypeScript, focused Biome lint, build, plan audit,
+    and diff hygiene;
+  - update closeout evidence and create one truthful local commit.
+- Result:
+  - audited the dirty worktree and identified separate Plan 0137
+    account-mirror/status work outside the handoff tranche;
+  - retained formatter-owned churn in `chatgptAdapter.ts` and its focused test
+    rather than manually unwinding broad import/order/quote/indent
+    normalization;
+  - focused Vitest passed with `6` files and `220` tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - focused Biome lint passed on the changed handoff/history materialization
+    source and test files;
+  - `pnpm run build` passed;
+  - `pnpm run plans:audit -- --keep 136` passed with `Validation errors: 0`;
+  - `git diff --check` passed.
+- Decision:
+  - Plan 0136 closes as **Handoff Tranche Reviewed And Committed**.
+
+## Turn 276 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0133-2026-06-07-handoff-original-source-cache-proof.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: prove the original ChatGPT Business source ref can be cached/imported
+  and packaged before any SoyLei ChatGPT Pro target mutation.
+- Implemented:
+  - opened
+    `docs/dev/plans/0133-2026-06-07-handoff-original-source-cache-proof.md`.
+  - wired Plan 0133 into the P01 roadmap current execution board.
+  - verified default ChatGPT source identity as `ecochran76@gmail.com`,
+    Business/team/workspace, preflight `ok=true`.
+  - loaded the original SoyLei project URL and captured visible project
+    conversation URLs from the `Chats` tab.
+  - prepared dry-run packet `plan0133-original-source-cache-proof` with
+    source completeness `partial`.
+- Evidence:
+  - direct project-URL source materialization returned HTTP 400.
+  - broad job `hmj_aadb916b43404416b222a674696d6d95` failed at the
+    `180000ms` stale-running threshold.
+  - narrowed job `hmj_8753bada894844368b1c14c769849ac9` initially remained
+    queued with `dispatchState=scheduled` because the prior in-process provider
+    work still blocked the serialized queue after readback marked it failed.
+  - restarting `auracall-api.service` recovered the narrowed job through API
+    startup recovery; it ran and finished `skipped` with `conversations=1`,
+    `materialized=0`, and `failed=5`.
+  - all five source file downloads failed as `ChatGPT conversation file fetch
+    failed: tile_not_found`.
+  - installed a ChatGPT conversation file direct-download fallback using the
+    authenticated provider-file endpoint already used by account-library
+    downloads.
+  - forced retry `hmj_443eb4120d354f3e808335fd127e78bd` changed the first
+    five source-file failures from `tile_not_found` to HTTP 404 evidence.
+  - widened forced retry `hmj_f920baa4cb004d9682d0f27237e2882a` succeeded
+    with `conversations=1`, `materialized=1`, `duplicateAliases=1`, and
+    `failed=14`.
+  - the materialized source file is `2026-05-26 Fresh Roof Sample.docx`,
+    checksum
+    `3f39f1a7497eb46a74515871a84cbd3e6fb3b71fd9ffe368a714d9f6f20484f3`.
+  - handoff analysis selection now dedupes local files by checksum/path, so the
+    duplicate Fresh Roof provider alias is not selected twice for target
+    upload.
+  - found the hydrated source context cache for conversation
+    `69a3ad88-b4f4-8331-8574-c8cae0ac5806` and regenerated the packet with
+    `messageCount=15`, `files=16`, `sources=23`, and `artifacts=1`.
+  - classified provider-file HTTP 404/410-style materialization failures as
+    deterministic source omissions instead of retryable gaps.
+  - regenerated packet digest
+    `ff8598665a6d412d09a48b174cfde2ca49348604b2954fd528c4e281f7f92067`;
+    package digest
+    `0b903f5a67f1dd79f21066db45a72905ba65822f7ba60261da75633932748565`.
+- Target execution:
+  - approved upload and submit for package digest
+    `0b903f5a67f1dd79f21066db45a72905ba65822f7ba60261da75633932748565`.
+  - `handoff recover-live --target-adapter chatgpt-browser` uploaded two
+    selected attachments with `failedFileCount=0`.
+  - submit recovery completed with `submitAttemptCount=1` and target
+    conversation
+    `https://chatgpt.com/c/6a250296-65d4-83ea-930b-c5658ed7435a`.
+  - readback is `readback_cached` with excerpt `Submitted 2 selected
+    attachment(s) through ChatGPT browser mode.`
+  - status readback now reports effective `status=complete` while retaining
+    immutable packet `run.status=preview_ready`; stale upload/submit/readback
+    files are ignored when their package digest does not match the current
+    package.
+- Decision:
+  - Plan 0133 closes as **Original Source Cache Proof Installed**.
+  - remaining follow-up is project Sources-tab file materialization and
+    stale-attempt omission dedupe; the requested real-source SoyLei target
+    handoff itself is complete.
+
 ## Turn 275 | 2026-06-07
 
 - Active plan:
@@ -10985,3 +11099,41 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     target mutation;
   - prove either terminal account-library reconciliation job evidence or an
     explicit `accountLibraryCursor` blocker.
+
+## Turn 264 | 2026-06-06
+
+- Supporting live-follow plan:
+  `docs/dev/plans/0122-2026-06-06-live-follow-stale-materialization-recovery.md`
+- Goal: recover an ordinary `chatgpt/wsl-chrome-3` history reconciliation job
+  that stayed `running` for many hours, owned a managed browser lease, and did
+  not report stale diagnostics because stale-running recovery only handled
+  explicit account-library timeouts.
+- Implemented:
+  - all running history materialization jobs now have readback stale recovery;
+  - jobs without explicit `providerWorkTimeoutMs` use a 30-minute default
+    running stale threshold;
+  - account-library jobs with explicit provider timeouts keep the existing
+    account-library timeout message;
+  - readback recovery runs managed-browser cleanup in the installed service
+    path.
+- Validation:
+  - focused stale-running history materialization tests passed;
+  - TypeScript, focused Biome lint, production build, and user runtime install
+    passed;
+  - installed readback converted
+    `hmj_69d02e4bdc9f48e1ad91c412d6a4e39f` to terminal `failed` with the
+    30-minute stale-threshold message;
+  - active `chatgpt/wsl-chrome-3` materialization jobs returned `0`, and no
+    `wsl-chrome-3` or `wsl-chrome-4` managed Chrome process remained.
+- Rerun:
+  - backed up `~/.auracall/config.json` to
+    `~/.auracall/config.plan0109-live-follow-rerun-20260606T204330-0500.json`;
+  - temporarily set only `wsl-chrome-3` account-library mode to `eligible`;
+  - queued capped account-library reconciliation job
+    `hmj_2b8b215db3794a5980181f3a455e4e6f` with `maxItems=3` and
+    `providerWorkTimeoutMs=120000`;
+  - job succeeded with `materialized=3`, `skipped=0`, and `failed=0`.
+- Restore:
+  - restored original config, restarted `auracall-api.service`, and confirmed
+    `wsl-chrome-3` account-library mode is back to `preview_only`, active jobs
+    are `0`, and no watched managed Chrome processes are live.

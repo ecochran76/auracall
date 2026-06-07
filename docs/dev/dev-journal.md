@@ -1,3 +1,100 @@
+## 2026-06-07 | Plan 0136 Handoff Tranche Review And Commit
+
+- Focus: turn the completed Plan 0133-0135 inter-tenant handoff code/docs into
+  one coherent validated local commit instead of leaving a large dirty
+  worktree.
+- Starting state:
+  - Plans 0133, 0134, and 0135 are closed with recorded source cache/import,
+    stale queue-unblock, project-source materialization, refreshed packet, and
+    cached target readback evidence;
+  - the active diff is large, especially
+    `src/browser/providers/chatgptAdapter.ts` and
+    `tests/browser/chatgptAdapter.test.ts`, so formatter churn should be
+    reviewed before commit;
+  - `git diff --check` is clean before the cleanup pass.
+- Planned validation:
+  - focused ChatGPT adapter, browser file, history materialization, handoff
+    CLI, API history materialization, and MCP history materialization tests;
+  - TypeScript, focused Biome lint, build, `pnpm run plans:audit -- --keep
+    136`, `git diff --check`, and final `git status --short`;
+  - one truthful local commit for the Plan 0133-0135 handoff tranche after the
+    validation gate passes.
+- Closeout:
+  - audited the dirty worktree and kept separate Plan 0137 account-mirror/status
+    changes out of the handoff checkpoint;
+  - retained formatter-owned churn in `src/browser/providers/chatgptAdapter.ts`
+    and `tests/browser/chatgptAdapter.test.ts` rather than manually unwinding
+    thousands of style-only lines;
+  - focused Vitest passed with `6` files and `220` tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - focused Biome lint passed on the changed handoff/history materialization
+    source and test files;
+  - `pnpm run build` passed;
+  - `pnpm run plans:audit -- --keep 136` passed with `Validation errors: 0`;
+  - `git diff --check` passed;
+  - Plan 0136 closes as the local commit tranche for Plans 0133-0135.
+
+## Turn 380 | 2026-06-07
+
+- Goal: continue Plan 0114 after the live SoyLei target proof by opening the
+  original source cache/import proof for
+  `https://chatgpt.com/g/g-p-687f9c5cc35c8191a25e6127785b86f8/`.
+- Implemented:
+  - opened
+    `docs/dev/plans/0133-2026-06-07-handoff-original-source-cache-proof.md`.
+  - wired Plan 0133 into the P01 roadmap current execution board and runbook.
+  - verified default ChatGPT Business source identity.
+  - loaded the original SoyLei project URL and captured visible project
+    conversation URLs from the `Chats` tab.
+  - prepared dry-run packet `plan0133-original-source-cache-proof` with
+    source completeness `partial`.
+- Evidence:
+  - direct project-URL materialization failed HTTP 400.
+  - broad source job `hmj_aadb916b43404416b222a674696d6d95` failed at
+    `180000ms`.
+  - narrowed source job `hmj_8753bada894844368b1c14c769849ac9` initially
+    remained queued until an `auracall-api.service` restart triggered startup
+    recovery.
+  - the recovered narrowed job finished `skipped` with `conversations=1`,
+    `materialized=0`, and `failed=5`; all failed entries reported
+    `ChatGPT conversation file fetch failed: tile_not_found`.
+  - added ChatGPT conversation file direct-download fallback through the
+    authenticated provider-file endpoint.
+  - forced retry `hmj_443eb4120d354f3e808335fd127e78bd` moved the first five
+    failed file refs from `tile_not_found` to HTTP 404 evidence.
+  - widened retry `hmj_f920baa4cb004d9682d0f27237e2882a` succeeded with one
+    materialized source file, one duplicate alias, and fourteen failed source
+    file refs.
+  - materialized source file:
+    `2026-05-26 Fresh Roof Sample.docx`
+    (`3f39f1a7497eb46a74515871a84cbd3e6fb3b71fd9ffe368a714d9f6f20484f3`,
+    `21637649` bytes).
+  - handoff analysis selection now dedupes local files by checksum/path, so the
+    duplicate Fresh Roof provider alias does not create duplicate target upload
+    rows.
+  - regenerated the packet from the hydrated context cache for conversation
+    `69a3ad88-b4f4-8331-8574-c8cae0ac5806`, raising source context evidence
+    to `messageCount=15`, `files=16`, `sources=23`, and `artifacts=1`.
+  - classified ChatGPT provider-file HTTP 404/410-style materialization
+    failures as deterministic source omissions in handoff packaging.
+  - regenerated package digest
+    `0b903f5a67f1dd79f21066db45a72905ba65822f7ba60261da75633932748565`.
+- Target execution:
+  - approved upload and submit for the regenerated package digest.
+  - live recovery with `--target-adapter chatgpt-browser` uploaded two selected
+    files with zero upload failures.
+  - submit recovery completed with target conversation
+    `https://chatgpt.com/c/6a250296-65d4-83ea-930b-c5658ed7435a`.
+  - final resume plan is `currentStage=complete`, `nextAction=complete`, with
+    readback `status=readback_cached`.
+  - status readback now reports effective `status=complete` separately from
+    packet `run.status=preview_ready`, and ignores stale target result files
+    whose package digest no longer matches the regenerated packet.
+- Decision:
+  - Plan 0133 closes as the real-source ChatGPT Business to SoyLei ChatGPT Pro
+    handoff proof. Follow-up remains for project Sources-tab materialization
+    and stale-attempt omission dedupe.
+
 ## Turn 379 | 2026-06-07
 
 - Goal: prove the explicit ChatGPT browser handoff target adapter with a real
