@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
+import type { ResolvedUserConfig } from "../../src/config.js";
 import {
 	approveHandoffSubmitForCli,
 	approveHandoffUploadForCli,
@@ -1350,6 +1351,65 @@ describe("handoff prepare CLI helpers", () => {
 		});
 	});
 
+	test("CLI live recovery selects the explicit ChatGPT browser target adapter", async () => {
+		const root = await tempRoot("auracall-handoff-chatgpt-browser-adapter-select-");
+		const selectedPath = path.join(root, "chatgpt-browser-adapter.txt");
+		await writeFile(selectedPath, "chatgpt browser adapter fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "chatgpt-browser-adapter-select",
+			sourceProvider: "gemini",
+			sourceRuntimeProfile: "target-gemini",
+			sourceRef: "https://gemini.google.com/app/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			targetRef: "https://chatgpt.com/c/target",
+			sourceContext: { messages: [{ role: "user", content: "adapter select" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "chatgpt_adapter_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-07T12:00:00.000Z",
+		});
+		const calls: string[] = [];
+		const adapter: HandoffTargetAdapter = {
+			id: "chatgpt_browser_fixture_adapter",
+			async upload(input) {
+				calls.push(`upload:${input.handoffId}`);
+				return uploadHandoffTargetPackage(input);
+			},
+			async submit(input) {
+				calls.push(`submit:${input.handoffId}`);
+				return submitHandoffTargetPackage(input);
+			},
+		};
+		await approveHandoffUploadForCli({
+			handoffId: "chatgpt-browser-adapter-select",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		const recovery = await recoverLiveHandoffForCli({
+			handoffId: "chatgpt-browser-adapter-select",
+			outputDir: root,
+			targetAdapter: "chatgpt-browser",
+			config: fixtureResolvedUserConfig(),
+			targetAdapterFactory: () => adapter,
+		});
+
+		expect(calls).toEqual(["upload:chatgpt-browser-adapter-select"]);
+		expect(recovery).toMatchObject({
+			recovery: {
+				status: "recovered",
+				executor: "chatgpt_browser_fixture_adapter",
+				executedAction: "upload",
+			},
+			afterResumePlan: {
+				nextAction: "approve_submit",
+			},
+		});
+	});
+
 	test("live recovery can execute through an injected provider-native target adapter", async () => {
 		const root = await tempRoot("auracall-handoff-provider-adapter-");
 		const selectedPath = path.join(root, "provider-adapter.txt");
@@ -2072,6 +2132,16 @@ function fixtureConfig(): Record<string, unknown> {
 			},
 		},
 	};
+}
+
+function fixtureResolvedUserConfig(): ResolvedUserConfig {
+	return {
+		model: "gpt-5.1-pro",
+		browser: {
+			target: "chatgpt",
+		},
+		runtimeProfiles: fixtureConfig().runtimeProfiles,
+	} as ResolvedUserConfig;
 }
 
 function materializationJobFixture(

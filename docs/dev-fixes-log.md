@@ -1,3 +1,10 @@
+- 2026-06-07: Provider-specific handoff target adapters should be selected
+  explicitly from operator surfaces, not inferred from target provider. The
+  ChatGPT browser recovery path now requires `--target-adapter
+  chatgpt-browser` or API/console `targetAdapter=chatgpt-browser`, keeps
+  `packet_target_adapter` as the default, and fails closed when resolved
+  browser-capable config is unavailable.
+
 - 2026-06-07: ChatGPT handoff attachment should reuse the existing browser
   prompt path instead of inventing a standalone pre-submit upload surface.
   `PromptInput` now carries browser attachments, `ChatgptService.runPrompt`

@@ -2004,11 +2004,20 @@ handoffCommand
   .description('Execute the current approved handoff resume action and write live recovery evidence.')
   .argument('<id>', 'Handoff packet id.')
   .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--target-adapter <adapter>', 'Target adapter to execute: packet or chatgpt-browser.', 'packet')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
     const result = await recoverLiveHandoffForCli({
       handoffId: id,
       outputDir: commandOptions.outputDir,
+      targetAdapter: commandOptions.targetAdapter,
+      config: userConfig,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));

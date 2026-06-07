@@ -1,5 +1,32 @@
 # RUNBOOK
 
+## Turn 274 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0131-2026-06-07-handoff-chatgpt-browser-recovery-surface.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: continue Plan 0114 by making the ChatGPT browser target adapter
+  explicitly selectable from operator handoff recovery surfaces.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0131-2026-06-07-handoff-chatgpt-browser-recovery-surface.md`.
+  - added `auracall handoff recover-live <id> --target-adapter
+    chatgpt-browser`.
+  - added API `targetAdapter` support for
+    `POST /v1/handoffs/{id}/recover-live`.
+  - added a console Handoffs target-adapter selector and passed it only for
+    live recovery.
+  - kept `packet_target_adapter` as the default executor and fail-closed
+    browser-config validation for explicit ChatGPT browser recovery.
+- Validation:
+  - focused handoff CLI and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build passed.
+- Decision:
+  - Plan 0131 closes as **Handoff ChatGPT Browser Recovery Surface
+    Installed**.
+
 ## Turn 273 | 2026-06-07
 
 - Active plan:

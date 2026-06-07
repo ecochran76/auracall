@@ -389,7 +389,15 @@ Model output never directly mutates target services.
 - Prove selected packet files flow into ChatGPT browser attachments with the
   approved primer and compact context while preserving host-owned approvals.
 
-### Slice 0131 | Live Provider Upload Adapter Proof
+### Slice 0131 | ChatGPT Browser Recovery Surface
+
+- Expose the ChatGPT browser target adapter through CLI, HTTP, and console
+  handoff recovery controls.
+- Preserve `packet_target_adapter` as the default executor.
+- Fail closed when ChatGPT browser recovery is requested without
+  browser-capable resolved AuraCall config.
+
+### Slice 0132 | Live Provider Upload Adapter Proof
 
 - Run one bounded approved handoff against a real target profile with selected
   file transfer, submit, readback, and replayable provider evidence.

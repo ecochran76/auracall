@@ -73,6 +73,7 @@ function App() {
   const [runStateFilter, setRunStateFilter] = useState("all");
   const [handoffId, setHandoffId] = useState(readParamFromUrl("handoff"));
   const [handoffOutputDir, setHandoffOutputDir] = useState("");
+  const [handoffTargetAdapter, setHandoffTargetAdapter] = useState("packet");
   const [handoffPayload, setHandoffPayload] = useState(null);
   const [handoffBusy, setHandoffBusy] = useState("");
   const [providerReadinessFilter, setProviderReadinessFilter] = useState("all");
@@ -431,10 +432,12 @@ function App() {
         ? `?outputDir=${encodeURIComponent(handoffOutputDir.trim())}`
         : "";
       const endpoint = `/v1/handoffs/${encodeURIComponent(id)}/${action}`;
+      const body = handoffOutputDir.trim() ? { outputDir: handoffOutputDir.trim() } : {};
+      if (action === "recover-live") body.targetAdapter = handoffTargetAdapter;
       const payload =
         action === "status"
           ? await fetchJson(`${endpoint}${query}`)
-          : await postJson(endpoint, handoffOutputDir.trim() ? { outputDir: handoffOutputDir.trim() } : {});
+          : await postJson(endpoint, body);
       setHandoffPayload(payload);
       setNotice(`Handoff ${action} completed.`);
       setActiveView("handoffs");
@@ -546,10 +549,12 @@ function App() {
           <HandoffsPage
             handoffId={handoffId}
             outputDir={handoffOutputDir}
+            targetAdapter={handoffTargetAdapter}
             payload={handoffPayload}
             busy={handoffBusy}
             onHandoffIdChange={setHandoffId}
             onOutputDirChange={setHandoffOutputDir}
+            onTargetAdapterChange={setHandoffTargetAdapter}
             onAction={performHandoffAction}
           />
         ) : (
@@ -587,10 +592,12 @@ function App() {
 function HandoffsPage({
   handoffId,
   outputDir,
+  targetAdapter,
   payload,
   busy,
   onHandoffIdChange,
   onOutputDirChange,
+  onTargetAdapterChange,
   onAction,
 }) {
   const summary = summarizeHandoffPayload(payload);
@@ -644,6 +651,13 @@ function HandoffsPage({
                 onChange={(event) => onOutputDirChange(event.target.value)}
                 placeholder="optional packet root"
               />
+            </label>
+            <label className="field compact-field">
+              <span>Target adapter</span>
+              <select value={targetAdapter} onChange={(event) => onTargetAdapterChange(event.target.value)}>
+                <option value="packet">Packet</option>
+                <option value="chatgpt-browser">ChatGPT browser</option>
+              </select>
             </label>
           </div>
           <div className="list-scroll">

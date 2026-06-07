@@ -171,7 +171,8 @@ auracall handoff resume <handoff_id> --json
 auracall handoff repair <handoff_id> --json
 auracall handoff export <handoff_id> --json
 auracall handoff recover-live <handoff_id> --json
-# The console Handoffs view can run the same status/resume/repair/export actions
+auracall handoff recover-live <handoff_id> --target-adapter chatgpt-browser --json
+# The console Handoffs view can run the same status/resume/repair/export/recover actions
 open http://127.0.0.1:<api_port>/console?view=handoffs&handoff=<handoff_id>
 
 # TUI (interactive, only for humans)
@@ -258,9 +259,13 @@ Current browser-mode default posture:
   bypassing the gate. The live recovery path is adapter-backed: the default
   operator executor remains the packet-owned target adapter, and provider-native
   upload/submit/readback adapters attach behind the same approval-validated
-  contract. The first provider-native adapter seam submits the approved primer
-  and compact context through a prompt runner and writes provider-native
-  conversation/message readback evidence. The provider-native file seam can now
+  contract. `--target-adapter chatgpt-browser` and API/console
+  `targetAdapter=chatgpt-browser` explicitly select the ChatGPT browser prompt
+  attachment adapter; invalid browser-adapter requests fail closed instead of
+  falling back to packet recovery. The first provider-native adapter seam
+  submits the approved primer and compact context through a prompt runner and
+  writes provider-native conversation/message readback evidence. The
+  provider-native file seam can now
   pass selected packet files to an upload runner, persist native provider file
   ids, record retryable failed-upload rows, and block submit approval after a
   failed upload. The first provider-specific adapter is ChatGPT browser prompt

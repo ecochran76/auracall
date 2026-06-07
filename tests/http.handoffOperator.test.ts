@@ -130,6 +130,20 @@ describe("http handoff operator API", () => {
 					nextAction: "complete",
 				},
 			});
+
+			const chatgptBrowserResponse = await fetch(`${base}/recover-live`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ outputDir: outputRoot, targetAdapter: "chatgpt-browser" }),
+			});
+			expect(chatgptBrowserResponse.status).toBe(400);
+			const chatgptBrowserPayload = (await chatgptBrowserResponse.json()) as {
+				error?: { message?: string; type?: string };
+			};
+			expect(chatgptBrowserPayload.error).toMatchObject({
+				type: "invalid_request_error",
+				message: "ChatGPT browser handoff recovery requires a browser-capable AuraCall config.",
+			});
 		} finally {
 			await server.close();
 		}

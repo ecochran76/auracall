@@ -10,6 +10,8 @@ Lane: P01
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
 - Latest completed plan:
+  [docs/dev/plans/0131-2026-06-07-handoff-chatgpt-browser-recovery-surface.md](docs/dev/plans/0131-2026-06-07-handoff-chatgpt-browser-recovery-surface.md)
+- Previous completed plan:
   [docs/dev/plans/0130-2026-06-07-handoff-chatgpt-prompt-attachment-adapter.md](docs/dev/plans/0130-2026-06-07-handoff-chatgpt-prompt-attachment-adapter.md)
 - Previous completed plan:
   [docs/dev/plans/0129-2026-06-07-handoff-provider-native-file-upload-proof.md](docs/dev/plans/0129-2026-06-07-handoff-provider-native-file-upload-proof.md)

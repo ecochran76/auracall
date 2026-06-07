@@ -27,8 +27,11 @@ import {
 	type HandoffResumeResult,
 	type HandoffSubmitTargetResult,
 	type HandoffStatusResult,
+	type HandoffTargetAdapter,
 	type HandoffUploadTargetResult,
 } from "../handoff/service.js";
+import type { ResolvedUserConfig } from "../config.js";
+import { createChatgptBrowserHandoffTargetAdapter } from "../handoff/chatgptBrowserAdapter.js";
 
 type MutableRecord = Record<string, unknown>;
 
@@ -109,7 +112,12 @@ export interface HandoffExportCliOptions {
 export interface HandoffRecoverLiveCliOptions {
 	handoffId: string;
 	outputDir?: string | null;
+	targetAdapter?: HandoffRecoverLiveTargetAdapterName | null;
+	config?: ResolvedUserConfig | null;
+	targetAdapterFactory?: ((config: ResolvedUserConfig) => HandoffTargetAdapter) | null;
 }
+
+export type HandoffRecoverLiveTargetAdapterName = "packet" | "chatgpt-browser";
 
 export interface HandoffMaterializationClient {
 	readJob(options: ApiHistoryMaterializationStatusCliOptions): Promise<unknown>;
@@ -286,10 +294,27 @@ export async function exportHandoffForCli(
 export async function recoverLiveHandoffForCli(
 	options: HandoffRecoverLiveCliOptions,
 ): Promise<HandoffLiveRecoveryResult> {
+	const targetAdapter = resolveHandoffRecoverLiveTargetAdapter(options);
 	return recoverHandoffLive({
 		handoffId: options.handoffId,
 		outputRoot: options.outputDir,
+		targetAdapter,
 	});
+}
+
+function resolveHandoffRecoverLiveTargetAdapter(
+	options: HandoffRecoverLiveCliOptions,
+): HandoffTargetAdapter | null {
+	const adapterName = options.targetAdapter ?? "packet";
+	if (adapterName === "packet") return null;
+	if (adapterName !== "chatgpt-browser") {
+		throw new Error(`Unsupported handoff target adapter: ${adapterName}`);
+	}
+	if (!options.config) {
+		throw new Error("ChatGPT browser handoff recovery requires resolved AuraCall config.");
+	}
+	const factory = options.targetAdapterFactory ?? createChatgptBrowserHandoffTargetAdapter;
+	return factory(options.config);
 }
 
 export function formatHandoffPrepareCliSummary(result: HandoffPrepareResult): string {

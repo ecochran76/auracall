@@ -122,6 +122,7 @@ import {
 	recoverHandoffLive,
 	repairHandoffPacket,
 } from "../handoff/service.js";
+import { createChatgptBrowserHandoffTargetAdapter } from "../handoff/chatgptBrowserAdapter.js";
 import {
 	createAccountMirrorArtifactRecoveryPlanner,
 	type AccountMirrorArtifactRecoveryPlanRequest,
@@ -3176,12 +3177,17 @@ export async function createResponsesHttpServer(
 						return;
 					}
 					if (handoffRoute.action === "recover-live") {
+						const targetAdapter = resolveHandoffRecoverLiveTargetAdapter(
+							payload.targetAdapter,
+							resolvedUserConfig,
+						);
 						sendJson(
 							res,
 							200,
 							await recoverHandoffLive({
 								handoffId: handoffRoute.id,
 								outputRoot,
+								targetAdapter,
 							}),
 						);
 						return;
@@ -7627,10 +7633,28 @@ function parseConfigApiKeyIssueRequest(value: unknown) {
 
 const HANDOFF_OPERATOR_REQUEST_SCHEMA = z.object({
 	outputDir: z.string().trim().min(1).optional(),
+	targetAdapter: z.enum(["packet", "chatgpt-browser"]).optional(),
 });
 
-function parseHandoffOperatorRequestBody(value: unknown): { outputDir?: string } {
+function parseHandoffOperatorRequestBody(value: unknown): {
+	outputDir?: string;
+	targetAdapter?: "packet" | "chatgpt-browser";
+} {
 	return HANDOFF_OPERATOR_REQUEST_SCHEMA.parse(value);
+}
+
+function resolveHandoffRecoverLiveTargetAdapter(
+	targetAdapter: "packet" | "chatgpt-browser" | undefined,
+	resolvedUserConfig: ResolvedUserConfig | null,
+) {
+	const adapterName = targetAdapter ?? "packet";
+	if (adapterName === "packet") return null;
+	if (!resolvedUserConfig) {
+		throw new HttpInvalidRequestError(
+			"ChatGPT browser handoff recovery requires a browser-capable AuraCall config.",
+		);
+	}
+	return createChatgptBrowserHandoffTargetAdapter(resolvedUserConfig);
 }
 
 function createTeamRunIdSuffix(): string {

@@ -1,3 +1,31 @@
+## Turn 378 | 2026-06-07
+
+- Goal: continue Plan 0114 by exposing the ChatGPT browser handoff adapter
+  through normal recovery controls instead of leaving it as an import-only
+  factory.
+- Implemented:
+  - opened
+    `docs/dev/plans/0131-2026-06-07-handoff-chatgpt-browser-recovery-surface.md`.
+  - added CLI `--target-adapter packet|chatgpt-browser` to
+    `handoff recover-live`, with `packet` remaining the default.
+  - added API request-body `targetAdapter` support for recover-live and a
+    fail-closed browser-config check for explicit ChatGPT browser recovery.
+  - added a console Handoffs target-adapter selector.
+  - added tests for explicit adapter dispatch and API fail-closed behavior.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts
+    tests/http.handoffOperator.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - focused `pnpm exec biome lint` on the touched handoff, HTTP, console, bin,
+    and test files;
+  - `pnpm run console:build`;
+  - `pnpm run plans:audit -- --keep 131`;
+  - `git diff --check`;
+  - `pnpm run build`.
+- Next:
+  - use the explicit ChatGPT browser selector for the bounded live
+    target-profile proof.
+
 ## Turn 377 | 2026-06-07
 
 - Goal: continue Plan 0114 by wiring the first provider-specific handoff
