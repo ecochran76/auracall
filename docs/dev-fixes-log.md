@@ -1,3 +1,10 @@
+- 2026-06-07: ChatGPT handoff attachment should reuse the existing browser
+  prompt path instead of inventing a standalone pre-submit upload surface.
+  `PromptInput` now carries browser attachments, `ChatgptService.runPrompt`
+  forwards them to `runBrowserMode`, and the ChatGPT handoff adapter stages
+  selected packet files before submit recovery attaches them with the approved
+  primer and compact context JSON.
+
 - 2026-06-07: Provider-native handoff upload needs manifest-validated file
   evidence before live provider/browser attachment code exists. The native file
   upload runner now receives selected packet files with package digest and

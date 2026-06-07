@@ -263,8 +263,11 @@ Current browser-mode default posture:
   conversation/message readback evidence. The provider-native file seam can now
   pass selected packet files to an upload runner, persist native provider file
   ids, record retryable failed-upload rows, and block submit approval after a
-  failed upload; live provider/browser attachment remains a provider-specific
-  follow-on.
+  failed upload. The first provider-specific adapter is ChatGPT browser prompt
+  attachment: selected files are staged by the upload recovery step, then the
+  submit recovery step sends the approved primer, compact context JSON, and
+  selected attachments through the existing ChatGPT browser prompt path. A
+  target-profile live smoke remains the follow-on proof.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

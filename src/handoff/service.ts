@@ -764,7 +764,19 @@ export interface HandoffProviderNativePromptInput {
 	prompt: string;
 	compactContext: unknown;
 	uploadedProviderFileIds: string[];
+	uploadedFiles: HandoffProviderNativePromptFileInput[];
 	packageDigest: string;
+}
+
+export interface HandoffProviderNativePromptFileInput {
+	sourceManifestItemId: string;
+	packetPath: string;
+	absolutePath: string;
+	filename: string;
+	mimeType: string | null;
+	sizeBytes: number;
+	checksumSha256: string;
+	providerFileId: string;
 }
 
 export interface HandoffProviderNativePromptResult {
@@ -1820,6 +1832,16 @@ async function submitHandoffWithProviderNativePrompt(
 		readJsonIfExists(path.join(packet.packetPath, "target", "compact-context.json")),
 	]);
 	const uploadedProviderFileIds = uploadResult.rows.map((row) => row.providerFileId);
+	const uploadedFiles: HandoffProviderNativePromptFileInput[] = uploadResult.rows.map((row) => ({
+		sourceManifestItemId: row.sourceManifestItemId,
+		packetPath: row.packetPath,
+		absolutePath: path.join(packet.packetPath, row.packetPath),
+		filename: row.filename,
+		mimeType: row.mimeType,
+		sizeBytes: row.sizeBytes,
+		checksumSha256: row.checksumSha256,
+		providerFileId: row.providerFileId,
+	}));
 	const promptDigest = buildPacketDigest({
 		packageDigest: packet.targetPackage.packageDigest,
 		primerDigest: guard.primerDigest,
@@ -1836,6 +1858,7 @@ async function submitHandoffWithProviderNativePrompt(
 		prompt: primer.trimEnd(),
 		compactContext,
 		uploadedProviderFileIds,
+		uploadedFiles,
 		packageDigest: packet.targetPackage.packageDigest,
 	});
 	const targetConversationRef =

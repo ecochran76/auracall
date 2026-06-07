@@ -77,6 +77,7 @@ export class ChatgptService extends LlmService {
     const listOptions = await this.buildListOptions(options, { ensurePort: false });
     const result = await runBrowserMode({
       prompt: input.prompt,
+      attachments: input.attachments,
       completionMode: 'prompt_submitted',
       skipBrowserExecutionOperation: true,
       config: {

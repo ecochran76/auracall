@@ -1,3 +1,25 @@
+## Turn 377 | 2026-06-07
+
+- Goal: continue Plan 0114 by wiring the first provider-specific handoff
+  adapter through ChatGPT browser prompt attachments.
+- Implemented:
+  - opened
+    `docs/dev/plans/0130-2026-06-07-handoff-chatgpt-prompt-attachment-adapter.md`.
+  - extended `PromptInput` and `ChatgptService.runPrompt(...)` to pass browser
+    attachments to `runBrowserMode(...)`.
+  - added `createChatgptBrowserHandoffTargetAdapter(...)`.
+  - staged selected handoff files as ChatGPT prompt attachments during upload
+    recovery.
+  - submitted the approved primer, compact context JSON, and selected files
+    through the existing ChatGPT browser prompt path during submit recovery.
+- Validation:
+  - focused ChatGPT service, handoff CLI, and HTTP tests passed.
+  - TypeScript, focused Biome lint, console build, plan audit, diff check, and
+    build all passed.
+- Decision:
+  - Plan 0130 closes as **Handoff ChatGPT Prompt Attachment Adapter
+    Installed**.
+
 ## Turn 376 | 2026-06-07
 
 - Goal: continue Plan 0114 by wiring provider-native selected-file upload
