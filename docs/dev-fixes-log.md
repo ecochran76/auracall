@@ -1,3 +1,9 @@
+- 2026-06-07: ChatGPT browser prompt attachments are sufficient for the first
+  live handoff target proof. A synthetic packet targeting SoyLei
+  `wsl-chrome-3` uploaded one selected file, submitted through
+  `--target-adapter chatgpt-browser`, cached readback, and completed the
+  resume plan without needing a separate ChatGPT file-manager upload surface.
+
 - 2026-06-07: Provider-specific handoff target adapters should be selected
   explicitly from operator surfaces, not inferred from target provider. The
   ChatGPT browser recovery path now requires `--target-adapter

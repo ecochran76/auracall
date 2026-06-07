@@ -1,3 +1,31 @@
+## Turn 379 | 2026-06-07
+
+- Goal: prove the explicit ChatGPT browser handoff target adapter with a real
+  SoyLei ChatGPT Pro target mutation.
+- Implemented:
+  - opened and closed
+    `docs/dev/plans/0132-2026-06-07-handoff-chatgpt-live-target-proof.md`.
+  - verified `wsl-chrome-3` identity smoke for
+    `eric.cochran@soylei.com`, plan type `pro`, preflight `ok=true`.
+  - prepared synthetic packet `plan0132-chatgpt-live-proof` targeting
+    `chatgpt/wsl-chrome-3`.
+  - approved upload and submit with package digest
+    `085d77917832440ea4b740a022410e87f41155ae067f6c4e1e976b1b676b1dd2`.
+  - ran upload and submit recovery through `--target-adapter
+    chatgpt-browser`.
+- Evidence:
+  - upload result `status=uploaded`, `uploadedFileCount=1`, provider file id
+    `chatgpt-prompt-attachment-ba61af1c5b160dbc496d49c7e506614e`;
+  - submission result `status=submitted`, `uploadAttemptCount=1`,
+    `submitAttemptCount=1`;
+  - readback `status=readback_cached`, target conversation
+    `https://chatgpt.com/c/6a24f299-85b0-83ea-b2ee-388297774fca`;
+  - resume plan `currentStage=complete`, `nextAction=complete`.
+- Next:
+  - move from synthetic-source proof to the original source conversation:
+    cache/import source context, files, artifacts, and omissions, then run the
+    same proven target adapter into SoyLei ChatGPT Pro.
+
 ## Turn 378 | 2026-06-07
 
 - Goal: continue Plan 0114 by exposing the ChatGPT browser handoff adapter

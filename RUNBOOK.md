@@ -1,5 +1,39 @@
 # RUNBOOK
 
+## Turn 275 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0132-2026-06-07-handoff-chatgpt-live-target-proof.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: prove the ChatGPT browser handoff target adapter against the live
+  SoyLei ChatGPT Pro profile after Plan 0131 exposed the selector.
+- Implemented:
+  - opened and closed
+    `docs/dev/plans/0132-2026-06-07-handoff-chatgpt-live-target-proof.md`.
+  - verified `wsl-chrome-3` ChatGPT identity as
+    `eric.cochran@soylei.com`, plan type `pro`, preflight `ok=true`.
+  - prepared synthetic packet `plan0132-chatgpt-live-proof` with one selected
+    text attachment and target profile `wsl-chrome-3`.
+  - recorded upload and submit approvals for package digest
+    `085d77917832440ea4b740a022410e87f41155ae067f6c4e1e976b1b676b1dd2`.
+  - ran `recover-live --target-adapter chatgpt-browser` for upload and submit.
+- Evidence:
+  - upload result `status=uploaded`, `uploadedFileCount=1`, provider file id
+    `chatgpt-prompt-attachment-ba61af1c5b160dbc496d49c7e506614e`.
+  - submission result `status=submitted`, `uploadAttemptCount=1`,
+    `submitAttemptCount=1`.
+  - readback `status=readback_cached`, target conversation
+    `https://chatgpt.com/c/6a24f299-85b0-83ea-b2ee-388297774fca`.
+  - resume plan `currentStage=complete`, `nextAction=complete`.
+- Validation:
+  - live CLI proof commands passed.
+  - plan audit and diff check passed.
+- Decision:
+  - Plan 0132 closes as **Handoff ChatGPT Live Target Proof Installed**.
+  - Next bounded slice is full source-conversation cache/import and handoff
+    proof using the original ChatGPT Business source ref.
+
 ## Turn 274 | 2026-06-07
 
 - Active plan:

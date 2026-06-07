@@ -404,6 +404,15 @@ Model output never directly mutates target services.
 - Record whether ChatGPT prompt attachment is sufficient or whether another
   provider-specific upload surface is required.
 
+### Slice 0133 | Full Source Conversation Handoff Proof
+
+- Cache or import the requested source ChatGPT Business conversation context,
+  files, artifacts, and omissions.
+- Run the handoff analysis/package path from real source evidence instead of a
+  synthetic source packet.
+- Submit the compacted context and selected files to the SoyLei ChatGPT Pro
+  target lane with the proven ChatGPT browser adapter.
+
 ## Critical Path
 
 1. Ledger/status must land before orchestration so every provider action has a
