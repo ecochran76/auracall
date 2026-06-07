@@ -10,6 +10,8 @@ Lane: P01
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
 - Latest completed plan:
+  [docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md](docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md)
+- Previous completed plan:
   [docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md](docs/dev/plans/0120-2026-06-06-handoff-analysis-package-preview.md)
 - Previous completed plan:
   [docs/dev/plans/0119-2026-06-05-account-library-cooldown-clear-rerun.md](docs/dev/plans/0119-2026-06-05-account-library-cooldown-clear-rerun.md)
@@ -198,6 +200,12 @@ Lane: P01
   `analysis/validation-report.json`, target package artifacts,
   `target/upload-manifest.json`, a stable package digest, and status readback
   while preserving preview-only zero target upload/submit behavior.
+- Plan 0121 is closed as **Handoff Approval And Target Upload Installed**.
+  `auracall handoff approve-upload <id>` records digest-guarded upload
+  approval, `auracall handoff upload <id>` writes deterministic target upload
+  result rows from the staged package, and status reports approval/upload
+  metrics while target submit/readback remain disabled. The next implementation
+  slice is target submit and readback.
 - Plan 0107 is closed as **ChatGPT Account-Library Automatic
   Mode Remains Preview-Only**. The preflight found
   foreground-work backpressure, active `wsl-chrome-3` live-follow completion

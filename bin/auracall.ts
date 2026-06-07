@@ -188,10 +188,14 @@ import {
   readApiHistoryMaterializationJobForCli,
 } from '../src/cli/apiHistoryMaterializationCommand.js';
 import {
+  approveHandoffUploadForCli,
+  formatHandoffApproveUploadCliSummary,
   formatHandoffPrepareCliSummary,
   formatHandoffStatusCliSummary,
+  formatHandoffUploadCliSummary,
   prepareHandoffForCli,
   readHandoffStatusForCli,
+  uploadHandoffForCli,
 } from '../src/cli/handoffCommand.js';
 import {
   clearApiMirrorProviderGuardForCli,
@@ -1847,6 +1851,46 @@ handoffCommand
       return;
     }
     console.log(formatHandoffStatusCliSummary(result));
+  });
+
+handoffCommand
+  .command('approve-upload')
+  .description('Record explicit approval for target upload without submitting the handoff.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--actor <actor>', 'Approval actor recorded in the handoff ledger.', 'operator')
+  .option('--package-digest <digest>', 'Expected target package digest; mismatches fail closed.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await approveHandoffUploadForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+      actor: commandOptions.actor,
+      packageDigest: commandOptions.packageDigest,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffApproveUploadCliSummary(result));
+  });
+
+handoffCommand
+  .command('upload')
+  .description('Run approval-gated target upload from a prepared handoff package without submit.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await uploadHandoffForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffUploadCliSummary(result));
   });
 
 apiCommand

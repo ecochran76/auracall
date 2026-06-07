@@ -1,3 +1,26 @@
+## Turn 369 | 2026-06-07
+
+- Goal: plan and execute the next Plan 0114 cross-service handoff slice after
+  Plan 0120.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md`.
+  - added upload approval artifacts with package digest, actor, target
+    endpoint, selected file count, and selected bytes.
+  - added stale approval rejection on package digest mismatch.
+  - added deterministic target upload simulation from
+    `target/upload-manifest.json`.
+  - added target upload result rows with deterministic provider file ids and
+    preserved `submitAttemptCount=0`.
+  - extended handoff status with approval and upload metrics.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 20 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - focused Biome lint, handoff approval/upload/status help commands, plan
+    audit, diff check, and build all passed.
+- Decision:
+  - Plan 0121 closes as **Handoff Approval And Target Upload Installed**.
+
 ## Turn 368 | 2026-06-06
 
 - Goal: tidy the worktree with structured commits, push the baseline, then

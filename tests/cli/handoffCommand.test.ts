@@ -4,10 +4,12 @@ import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import {
+	approveHandoffUploadForCli,
 	formatHandoffPrepareCliSummary,
 	formatHandoffStatusCliSummary,
 	prepareHandoffForCli,
 	readHandoffStatusForCli,
+	uploadHandoffForCli,
 } from "../../src/cli/handoffCommand.js";
 import {
 	HANDOFF_ANALYSIS_SCHEMA,
@@ -676,6 +678,202 @@ describe("handoff prepare CLI helpers", () => {
 
 		expect(first.targetPackage.packageDigest).toMatch(/^[a-f0-9]{64}$/);
 		expect(second.targetPackage.packageDigest).toBe(first.targetPackage.packageDigest);
+	});
+
+	test("requires upload approval before target upload", async () => {
+		const root = await tempRoot("auracall-handoff-upload-no-approval-");
+		const selectedPath = path.join(root, "upload.txt");
+		await writeFile(selectedPath, "upload fixture", "utf8");
+		await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "upload-no-approval",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "upload" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "upload_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+
+		await expect(
+			uploadHandoffForCli({
+				handoffId: "upload-no-approval",
+				outputDir: root,
+			}),
+		).rejects.toThrow("Target upload requires an explicit upload approval.");
+	});
+
+	test("rejects stale upload approval package digests", async () => {
+		const root = await tempRoot("auracall-handoff-upload-stale-");
+		const selectedPath = path.join(root, "upload.txt");
+		await writeFile(selectedPath, "upload fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "upload-stale",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "upload" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "upload_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+
+		await expect(
+			approveHandoffUploadForCli({
+				handoffId: "upload-stale",
+				outputDir: root,
+				actor: "tester",
+				packageDigest: "0".repeat(64),
+			}),
+		).rejects.toThrow(prepared.targetPackage.packageDigest);
+	});
+
+	test("records upload approval and deterministic target upload rows without submit", async () => {
+		const root = await tempRoot("auracall-handoff-upload-approved-");
+		const selectedPath = path.join(root, "upload.txt");
+		await writeFile(selectedPath, "upload fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "upload-approved",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "upload" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "upload_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		const approval = await approveHandoffUploadForCli({
+			handoffId: "upload-approved",
+			outputDir: root,
+			actor: "tester",
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		expect(approval.approval).toMatchObject({
+			object: "auracall.handoff-approval.v1",
+			kind: "target_upload",
+			actor: "tester",
+			packageDigest: prepared.targetPackage.packageDigest,
+			selectedFileCount: 1,
+		});
+
+		const firstUpload = await uploadHandoffForCli({
+			handoffId: "upload-approved",
+			outputDir: root,
+		});
+		const secondUpload = await uploadHandoffForCli({
+			handoffId: "upload-approved",
+			outputDir: root,
+		});
+
+		expect(firstUpload.uploadResult).toMatchObject({
+			object: "auracall.handoff-upload-result.v1",
+			status: "uploaded",
+			packageDigest: prepared.targetPackage.packageDigest,
+			uploadAttemptCount: 1,
+			uploadedFileCount: 1,
+			failedFileCount: 0,
+			submitAttemptCount: 0,
+			rows: [
+				expect.objectContaining({
+					sourceManifestItemId: "upload_selected",
+					targetProvider: "gemini",
+					targetRuntimeProfileId: "target-gemini",
+					providerFileId: expect.stringMatching(/^handoff-file-[a-f0-9]{32}$/),
+					status: "uploaded",
+				}),
+			],
+		});
+		expect(secondUpload.uploadResult.rows[0]?.providerFileId).toBe(
+			firstUpload.uploadResult.rows[0]?.providerFileId,
+		);
+		expect(firstUpload.submissionResult).toMatchObject({
+			status: "upload_completed",
+			uploadAttemptCount: 1,
+			submitAttemptCount: 0,
+			uploadResultRef: "target/upload-result.json",
+		});
+
+		const status = await readHandoffStatusForCli({
+			handoffId: "upload-approved",
+			outputDir: root,
+		});
+		expect(status).toMatchObject({
+			target: {
+				uploadApproved: true,
+				uploadApprovalDigest: prepared.targetPackage.packageDigest,
+				uploadStatus: "uploaded",
+				uploadedFileCount: 1,
+				uploadFailureCount: 0,
+				uploadAttemptCount: 1,
+				submitAttemptCount: 0,
+			},
+		});
+	});
+
+	test("keeps package omissions out of target upload attempts", async () => {
+		const root = await tempRoot("auracall-handoff-upload-omissions-");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "upload-omissions",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "upload" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "missing_local", localPath: "/missing/upload.txt" })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		expect(prepared.targetPackage.packageOmissionCount).toBe(1);
+		await approveHandoffUploadForCli({
+			handoffId: "upload-omissions",
+			outputDir: root,
+			actor: "tester",
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+
+		const upload = await uploadHandoffForCli({
+			handoffId: "upload-omissions",
+			outputDir: root,
+		});
+
+		expect(upload.uploadResult).toMatchObject({
+			status: "skipped_no_files",
+			uploadAttemptCount: 0,
+			uploadedFileCount: 0,
+			failedFileCount: 0,
+			submitAttemptCount: 0,
+			rows: [],
+			omissions: [
+				expect.objectContaining({
+					sourceManifestItemId: "missing_local",
+				}),
+			],
+		});
+		expect(upload.submissionResult).toMatchObject({
+			status: "upload_skipped_no_files",
+			uploadAttemptCount: 0,
+			submitAttemptCount: 0,
+		});
 	});
 
 	test("returns null for missing handoff status ids", async () => {

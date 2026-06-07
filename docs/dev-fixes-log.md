@@ -1,3 +1,11 @@
+- 2026-06-07: Handoff target upload approval must be bound to the exact target
+  package digest. `auracall handoff approve-upload <id>` now records
+  `auracall.handoff-approval.v1` under `approvals/upload.json` and rejects a
+  mismatched `--package-digest`; `auracall handoff upload <id>` requires that
+  approval before writing deterministic `target/upload-result.json` rows.
+  Package omissions do not produce upload attempts, and target submit remains
+  at `0` until a later submit/readback slice owns that mutation.
+
 - 2026-06-06: Handoff analysis output must be schema-validated before any
   target package can be treated as replayable. `auracall handoff prepare
   --dry-run` now writes `analysis/input.json`,

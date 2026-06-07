@@ -163,6 +163,8 @@ auracall handoff prepare \
   --source-materialization-job-id hmj_existing \
   --dry-run --json
 auracall handoff status <handoff_id> --json
+auracall handoff approve-upload <handoff_id> --actor ecochran76 --package-digest <digest>
+auracall handoff upload <handoff_id> --json
 
 # TUI (interactive, only for humans)
 auracall tui
@@ -224,8 +226,11 @@ Current browser-mode default posture:
   <handoff_id>` reads the packet ledger back by id, including event count,
   packet digest, source completeness, source materialization job evidence,
   analysis schema validity, package digest, package file metrics, and target
-  preview attempts. The first slices are preview-only; live target
-  upload/submit requires a later approval-gated workflow.
+  preview attempts. `auracall handoff approve-upload <handoff_id>` records an
+  explicit upload approval for the current package digest, and
+  `auracall handoff upload <handoff_id>` writes deterministic target upload
+  result rows for staged files while keeping target submit attempts at `0`.
+  Live target submit requires a later approval-gated workflow.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

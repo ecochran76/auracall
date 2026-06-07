@@ -29,6 +29,9 @@ export const HANDOFF_ANALYSIS_VALIDATION_SCHEMA = "auracall.handoff-analysis-val
 export const HANDOFF_TARGET_PACKAGE_SCHEMA = "auracall.handoff-target-package.v1";
 export const HANDOFF_TARGET_UPLOAD_MANIFEST_SCHEMA = "auracall.handoff-target-upload-manifest.v1";
 export const HANDOFF_SUBMISSION_PLAN_SCHEMA = "auracall.handoff-submission-plan.v1";
+export const HANDOFF_APPROVAL_SCHEMA = "auracall.handoff-approval.v1";
+export const HANDOFF_UPLOAD_RESULT_SCHEMA = "auracall.handoff-upload-result.v1";
+export const HANDOFF_SUBMISSION_RESULT_SCHEMA = "auracall.handoff-submission-result.v1";
 
 export const HANDOFF_ANALYSIS_OMISSION_WARNING_PREFIXES = [
 	"source_context_not_provided",
@@ -255,6 +258,47 @@ export interface HandoffTargetPackageOmission {
 	retryable: boolean;
 }
 
+export interface HandoffUploadApproval {
+	object: typeof HANDOFF_APPROVAL_SCHEMA;
+	kind: "target_upload";
+	runId: string;
+	actor: string;
+	approvedAt: string;
+	packageDigest: string;
+	target: HandoffEndpoint;
+	uploadManifestRef: "target/upload-manifest.json";
+	selectedFileCount: number;
+	selectedTotalBytes: number;
+	status: "approved";
+}
+
+export interface HandoffUploadResult {
+	object: typeof HANDOFF_UPLOAD_RESULT_SCHEMA;
+	generatedAt: string;
+	status: "uploaded" | "skipped_no_files" | "failed";
+	packageDigest: string;
+	target: HandoffEndpoint;
+	uploadAttemptCount: number;
+	submitAttemptCount: 0;
+	uploadedFileCount: number;
+	failedFileCount: number;
+	rows: HandoffUploadResultRow[];
+	omissions: HandoffTargetPackageOmission[];
+}
+
+export interface HandoffUploadResultRow {
+	sourceManifestItemId: string;
+	packetPath: string;
+	filename: string;
+	mimeType: string | null;
+	sizeBytes: number;
+	checksumSha256: string;
+	targetProvider: HandoffProvider;
+	targetRuntimeProfileId: string;
+	providerFileId: string;
+	status: "uploaded";
+}
+
 interface HandoffSelectedFileCopy {
 	item: HandoffManifestItem;
 	sourcePath: string;
@@ -284,6 +328,16 @@ export interface HandoffSubmissionPlan {
 		uploadAttemptCount: 0;
 		submitAttemptCount: 0;
 	};
+}
+
+export interface HandoffSubmissionResult {
+	object: typeof HANDOFF_SUBMISSION_RESULT_SCHEMA;
+	generatedAt: string;
+	status: "skipped_dry_run" | "upload_completed" | "upload_skipped_no_files";
+	packageDigest: string | null;
+	uploadAttemptCount: number;
+	submitAttemptCount: 0;
+	uploadResultRef: "target/upload-result.json" | null;
 }
 
 export interface HandoffRunRecord {
@@ -323,10 +377,10 @@ export interface HandoffRunLedger {
 	packetPath: string;
 	mode: "preview";
 	approvalPolicy: {
-		upload: "not_allowed_preview";
+		upload: "not_allowed_preview" | "explicit_approval_required";
 		submit: "not_allowed_preview";
 	};
-	approvalEvents: unknown[];
+	approvalEvents: HandoffUploadApproval[];
 	eventCount: number;
 	sourceMaterializationJobs: HandoffSourceMaterializationJobEvidence[];
 	targetMutationAllowed: false;
@@ -385,7 +439,9 @@ export interface HandoffStatusResult {
 		package: HandoffTargetPackage | null;
 		uploadManifest: HandoffTargetUploadManifest | null;
 		submissionPlan: HandoffSubmissionPlan | null;
-		submissionResult: unknown | null;
+		submissionResult: HandoffSubmissionResult | null;
+		uploadApproval: HandoffUploadApproval | null;
+		uploadResult: HandoffUploadResult | null;
 		readback: unknown | null;
 		mutationAllowed: boolean;
 		uploadAttemptCount: number;
@@ -393,7 +449,44 @@ export interface HandoffStatusResult {
 		packageDigest: string | null;
 		selectedFileCount: number;
 		selectedTotalBytes: number;
+		uploadApproved: boolean;
+		uploadApprovalDigest: string | null;
+		uploadedFileCount: number;
+		uploadFailureCount: number;
+		uploadStatus: HandoffUploadResult["status"] | "not_uploaded";
 	};
+}
+
+export interface HandoffApproveUploadRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	actor?: string | null;
+	packageDigest?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffApproveUploadResult {
+	object: "auracall.handoff.approve-upload.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	approval: HandoffUploadApproval;
+}
+
+export interface HandoffUploadTargetRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffUploadTargetResult {
+	object: "auracall.handoff.upload-target.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	approval: HandoffUploadApproval;
+	uploadResult: HandoffUploadResult;
+	submissionResult: HandoffSubmissionResult;
 }
 
 export async function prepareCrossServiceHandoffPacket(
@@ -577,7 +670,14 @@ export async function readHandoffStatus(input: {
 	const submissionResult = await readJsonIfExists(
 		path.join(packetPath, "target", "submission-result.json"),
 	);
+	const uploadApproval = normalizeUploadApproval(
+		await readJsonIfExists(path.join(packetPath, "approvals", "upload.json")),
+	);
+	const uploadResult = normalizeUploadResult(
+		await readJsonIfExists(path.join(packetPath, "target", "upload-result.json")),
+	);
 	const readback = await readJsonIfExists(path.join(packetPath, "target", "readback.json"));
+	const normalizedSubmissionResult = normalizeSubmissionResult(submissionResult);
 	return {
 		object: "auracall.handoff.status.result",
 		generatedAt: input.generatedAt ?? new Date().toISOString(),
@@ -606,18 +706,139 @@ export async function readHandoffStatus(input: {
 			package: targetPackage,
 			uploadManifest,
 			submissionPlan,
-			submissionResult,
+			submissionResult: normalizedSubmissionResult,
+			uploadApproval,
+			uploadResult,
 			readback,
 			mutationAllowed: Boolean(
 				(submissionPlan as { targetMutationAllowed?: unknown } | null)?.targetMutationAllowed,
 			),
-			uploadAttemptCount: readAttemptCount(submissionResult, "uploadAttemptCount"),
-			submitAttemptCount: readAttemptCount(submissionResult, "submitAttemptCount"),
+			uploadAttemptCount: normalizedSubmissionResult?.uploadAttemptCount ?? 0,
+			submitAttemptCount: normalizedSubmissionResult?.submitAttemptCount ?? 0,
 			packageDigest: targetPackage?.packageDigest ?? submissionPlan?.packageDigest ?? null,
 			selectedFileCount: targetPackage?.selectedFileCount ?? submissionPlan?.selectedFileCount ?? 0,
 			selectedTotalBytes:
 				targetPackage?.selectedTotalBytes ?? submissionPlan?.selectedTotalBytes ?? 0,
+			uploadApproved:
+				Boolean(uploadApproval) &&
+				Boolean(targetPackage) &&
+				uploadApproval?.packageDigest === targetPackage?.packageDigest,
+			uploadApprovalDigest: uploadApproval?.packageDigest ?? null,
+			uploadedFileCount: uploadResult?.uploadedFileCount ?? 0,
+			uploadFailureCount: uploadResult?.failedFileCount ?? 0,
+			uploadStatus: uploadResult?.status ?? "not_uploaded",
 		},
+	};
+}
+
+export async function approveHandoffTargetUpload(
+	input: HandoffApproveUploadRequest,
+): Promise<HandoffApproveUploadResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const expectedDigest = normalizeOptionalString(input.packageDigest);
+	if (expectedDigest && expectedDigest !== packet.targetPackage.packageDigest) {
+		throw new Error(
+			`Upload approval package digest mismatch: expected ${packet.targetPackage.packageDigest}, got ${expectedDigest}.`,
+		);
+	}
+	const actor = normalizeOptionalString(input.actor) ?? "operator";
+	const approval: HandoffUploadApproval = {
+		object: HANDOFF_APPROVAL_SCHEMA,
+		kind: "target_upload",
+		runId: packet.run.id,
+		actor,
+		approvedAt: generatedAt,
+		packageDigest: packet.targetPackage.packageDigest,
+		target: packet.run.target,
+		uploadManifestRef: "target/upload-manifest.json",
+		selectedFileCount: packet.targetPackage.selectedFileCount,
+		selectedTotalBytes: packet.targetPackage.selectedTotalBytes,
+		status: "approved",
+	};
+	await fs.mkdir(path.join(packet.packetPath, "approvals"), { recursive: true });
+	await writeJson(path.join(packet.packetPath, "approvals", "upload.json"), approval);
+	const ledger = buildRunLedger(packet.run, packet.ledger?.sourceMaterializationJobs ?? []);
+	ledger.approvalPolicy.upload = "explicit_approval_required";
+	ledger.approvalEvents = [approval];
+	await writeJson(path.join(packet.packetPath, "ledger.json"), ledger);
+	return {
+		object: "auracall.handoff.approve-upload.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		approval,
+	};
+}
+
+export async function uploadHandoffTargetPackage(
+	input: HandoffUploadTargetRequest,
+): Promise<HandoffUploadTargetResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const approval = normalizeUploadApproval(
+		await readJsonIfExists(path.join(packet.packetPath, "approvals", "upload.json")),
+	);
+	if (!approval) {
+		throw new Error("Target upload requires an explicit upload approval.");
+	}
+	if (approval.packageDigest !== packet.targetPackage.packageDigest) {
+		throw new Error(
+			`Upload approval is stale for package digest ${packet.targetPackage.packageDigest}.`,
+		);
+	}
+	const uploadManifest = packet.uploadManifest;
+	const rows: HandoffUploadResultRow[] = uploadManifest.items.map((item) => ({
+		sourceManifestItemId: item.sourceManifestItemId,
+		packetPath: item.packetPath,
+		filename: item.filename,
+		mimeType: item.mimeType,
+		sizeBytes: item.sizeBytes,
+		checksumSha256: item.checksumSha256,
+		targetProvider: packet.run.target.provider,
+		targetRuntimeProfileId: packet.run.target.runtimeProfileId,
+		providerFileId: buildDeterministicProviderFileId(
+			packet.targetPackage.packageDigest,
+			item.sourceManifestItemId,
+			item.checksumSha256,
+		),
+		status: "uploaded",
+	}));
+	const uploadResult: HandoffUploadResult = {
+		object: HANDOFF_UPLOAD_RESULT_SCHEMA,
+		generatedAt,
+		status: rows.length > 0 ? "uploaded" : "skipped_no_files",
+		packageDigest: packet.targetPackage.packageDigest,
+		target: packet.run.target,
+		uploadAttemptCount: rows.length,
+		submitAttemptCount: 0,
+		uploadedFileCount: rows.length,
+		failedFileCount: 0,
+		rows,
+		omissions: uploadManifest.omissions,
+	};
+	const submissionResult: HandoffSubmissionResult = {
+		object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
+		generatedAt,
+		status: rows.length > 0 ? "upload_completed" : "upload_skipped_no_files",
+		packageDigest: packet.targetPackage.packageDigest,
+		uploadAttemptCount: rows.length,
+		submitAttemptCount: 0,
+		uploadResultRef: "target/upload-result.json",
+	};
+	await writeJson(path.join(packet.packetPath, "target", "upload-result.json"), uploadResult);
+	await writeJson(
+		path.join(packet.packetPath, "target", "submission-result.json"),
+		submissionResult,
+	);
+	return {
+		object: "auracall.handoff.upload-target.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		approval,
+		uploadResult,
+		submissionResult,
 	};
 }
 
@@ -1454,11 +1675,13 @@ async function writePacket(
 	await writeJson(path.join(packetPath, "target", "package.json"), input.targetPackage);
 	await writeJson(path.join(packetPath, "target", "submission-plan.json"), input.submissionPlan);
 	await writeJson(path.join(packetPath, "target", "submission-result.json"), {
-		object: "auracall.handoff-submission-result.v1",
+		object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
 		generatedAt: input.run.createdAt,
 		status: "skipped_dry_run",
+		packageDigest: input.targetPackage.packageDigest,
 		uploadAttemptCount: 0,
 		submitAttemptCount: 0,
+		uploadResultRef: null,
 	});
 	await writeJson(path.join(packetPath, "target", "readback.json"), {
 		object: "auracall.handoff-target-readback.v1",
@@ -1605,6 +1828,102 @@ function normalizeSubmissionPlan(value: unknown): HandoffSubmissionPlan | null {
 	return value as unknown as HandoffSubmissionPlan;
 }
 
+function normalizeUploadApproval(value: unknown): HandoffUploadApproval | null {
+	if (!isRecord(value) || value.object !== HANDOFF_APPROVAL_SCHEMA) return null;
+	if (value.kind !== "target_upload" || value.status !== "approved") return null;
+	const target = isRecord(value.target) ? (value.target as unknown as HandoffEndpoint) : null;
+	const packageDigest = normalizeOptionalString(value.packageDigest);
+	if (!target || !packageDigest) return null;
+	return {
+		object: HANDOFF_APPROVAL_SCHEMA,
+		kind: "target_upload",
+		runId: normalizeOptionalString(value.runId) ?? "",
+		actor: normalizeOptionalString(value.actor) ?? "operator",
+		approvedAt: normalizeOptionalString(value.approvedAt) ?? new Date(0).toISOString(),
+		packageDigest,
+		target,
+		uploadManifestRef: "target/upload-manifest.json",
+		selectedFileCount: normalizeNumber(value.selectedFileCount) ?? 0,
+		selectedTotalBytes: normalizeNumber(value.selectedTotalBytes) ?? 0,
+		status: "approved",
+	};
+}
+
+function normalizeUploadResult(value: unknown): HandoffUploadResult | null {
+	if (!isRecord(value) || value.object !== HANDOFF_UPLOAD_RESULT_SCHEMA) return null;
+	const status = normalizeOptionalString(value.status);
+	if (status !== "uploaded" && status !== "skipped_no_files" && status !== "failed") return null;
+	const target = isRecord(value.target) ? (value.target as unknown as HandoffEndpoint) : null;
+	const packageDigest = normalizeOptionalString(value.packageDigest);
+	if (!target || !packageDigest) return null;
+	return {
+		object: HANDOFF_UPLOAD_RESULT_SCHEMA,
+		generatedAt: normalizeOptionalString(value.generatedAt) ?? new Date(0).toISOString(),
+		status,
+		packageDigest,
+		target,
+		uploadAttemptCount: normalizeNumber(value.uploadAttemptCount) ?? 0,
+		submitAttemptCount: 0,
+		uploadedFileCount: normalizeNumber(value.uploadedFileCount) ?? 0,
+		failedFileCount: normalizeNumber(value.failedFileCount) ?? 0,
+		rows: Array.isArray(value.rows) ? value.rows.map(normalizeUploadResultRow) : [],
+		omissions: normalizeTargetPackageOmissions(value.omissions),
+	};
+}
+
+function normalizeUploadResultRow(value: unknown): HandoffUploadResultRow {
+	const record = isRecord(value) ? value : {};
+	return {
+		sourceManifestItemId: normalizeOptionalString(record.sourceManifestItemId) ?? "unknown",
+		packetPath: normalizeOptionalString(record.packetPath) ?? "",
+		filename: normalizeOptionalString(record.filename) ?? "file",
+		mimeType: normalizeOptionalString(record.mimeType),
+		sizeBytes: normalizeNumber(record.sizeBytes) ?? 0,
+		checksumSha256: normalizeSha256(record.checksumSha256) ?? "",
+		targetProvider: normalizeHandoffProvider(record.targetProvider),
+		targetRuntimeProfileId: normalizeOptionalString(record.targetRuntimeProfileId) ?? "",
+		providerFileId: normalizeOptionalString(record.providerFileId) ?? "",
+		status: "uploaded",
+	};
+}
+
+function normalizeSubmissionResult(value: unknown): HandoffSubmissionResult | null {
+	if (!isRecord(value)) return null;
+	const status = normalizeOptionalString(value.status);
+	if (
+		status !== "skipped_dry_run" &&
+		status !== "upload_completed" &&
+		status !== "upload_skipped_no_files"
+	) {
+		return null;
+	}
+	return {
+		object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
+		generatedAt: normalizeOptionalString(value.generatedAt) ?? new Date(0).toISOString(),
+		status,
+		packageDigest: normalizeOptionalString(value.packageDigest),
+		uploadAttemptCount: normalizeNumber(value.uploadAttemptCount) ?? 0,
+		submitAttemptCount: 0,
+		uploadResultRef:
+			normalizeOptionalString(value.uploadResultRef) === "target/upload-result.json"
+				? "target/upload-result.json"
+				: null,
+	};
+}
+
+function normalizeTargetPackageOmissions(value: unknown): HandoffTargetPackageOmission[] {
+	if (!Array.isArray(value)) return [];
+	return value.map((entry, index) => {
+		const record = isRecord(entry) ? entry : {};
+		return {
+			sourceManifestItemId:
+				normalizeOptionalString(record.sourceManifestItemId) ?? `omission_${index + 1}`,
+			reason: normalizeOptionalString(record.reason) ?? "No package omission reason was provided.",
+			retryable: record.retryable === true,
+		};
+	});
+}
+
 function normalizeSourceContextForStatus(value: unknown, sourceRef: string): HandoffSourceContext {
 	if (isRecord(value) && value.object === "handoff_source_context") {
 		return {
@@ -1622,12 +1941,45 @@ function normalizeSourceContextForStatus(value: unknown, sourceRef: string): Han
 	return normalizeSourceContext(value, sourceRef);
 }
 
-function readAttemptCount(
-	value: unknown,
-	key: "uploadAttemptCount" | "submitAttemptCount",
-): number {
-	if (!isRecord(value)) return 0;
-	return normalizeNumber(value[key]) ?? 0;
+async function readPreparedHandoffPacket(
+	handoffId: string,
+	outputRoot?: string | null,
+): Promise<{
+	packetPath: string;
+	run: HandoffRunRecord;
+	ledger: HandoffRunLedger | null;
+	targetPackage: HandoffTargetPackage;
+	uploadManifest: HandoffTargetUploadManifest;
+}> {
+	const normalizedId = normalizeHandoffId(handoffId);
+	if (!normalizedId) throw new Error("A handoff id is required.");
+	const packetPath = path.resolve(
+		outputRoot ?? path.join(getAuracallHomeDir(), "handoffs"),
+		normalizedId,
+	);
+	const run = await readJsonIfExists(path.join(packetPath, "run.json"));
+	if (!isHandoffRunRecord(run)) {
+		throw new Error(`Handoff packet not found: ${normalizedId}`);
+	}
+	const ledger = normalizeHandoffLedger(
+		await readJsonIfExists(path.join(packetPath, "ledger.json")),
+	);
+	const targetPackage = normalizeTargetPackage(
+		await readJsonIfExists(path.join(packetPath, "target", "package.json")),
+	);
+	if (!targetPackage) {
+		throw new Error(`Handoff packet ${normalizedId} has no target package.`);
+	}
+	const uploadManifest = normalizeTargetUploadManifest(
+		await readJsonIfExists(path.join(packetPath, "target", "upload-manifest.json")),
+	);
+	if (!uploadManifest) {
+		throw new Error(`Handoff packet ${normalizedId} has no target upload manifest.`);
+	}
+	if (uploadManifest.packageDigest !== targetPackage.packageDigest) {
+		throw new Error(`Handoff packet ${normalizedId} has mismatched target package digest.`);
+	}
+	return { packetPath, run, ledger, targetPackage, uploadManifest };
 }
 
 function estimatePromptTokens(
@@ -1724,6 +2076,19 @@ async function hashFile(filePath: string): Promise<string> {
 
 function stableJson(value: unknown): string {
 	return JSON.stringify(sortForStableJson(value));
+}
+
+function buildDeterministicProviderFileId(
+	packageDigest: string,
+	sourceManifestItemId: string,
+	checksumSha256: string,
+): string {
+	const digest = buildPacketDigest({
+		packageDigest,
+		sourceManifestItemId,
+		checksumSha256,
+	}).slice(0, 32);
+	return `handoff-file-${digest}`;
 }
 
 function sortForStableJson(value: unknown): unknown {

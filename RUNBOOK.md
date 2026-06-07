@@ -1,5 +1,37 @@
 # RUNBOOK
 
+## Turn 265 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: plan and execute the next cross-service handoff slice after Plan 0120.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md`.
+  - added `auracall.handoff-approval.v1` under `approvals/upload.json`.
+  - added digest-guarded `auracall handoff approve-upload <id>`.
+  - added approval-gated `auracall handoff upload <id>` with deterministic
+    `target/upload-result.json` rows.
+  - updated `target/submission-result.json` with upload result refs while
+    keeping submit attempts at `0`.
+  - extended `handoff status` with approval and upload metrics.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 20 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - `pnpm exec biome lint src/handoff/service.ts
+    src/cli/handoffCommand.ts tests/cli/handoffCommand.test.ts
+    bin/auracall.ts` passed.
+  - `pnpm tsx bin/auracall.ts handoff approve-upload --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff upload --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff status --help` passed.
+  - `pnpm run plans:audit -- --keep 121` passed with zero validation errors.
+  - `git diff --check` passed.
+  - `pnpm run build` passed.
+- Decision:
+  - Plan 0121 closes as **Handoff Approval And Target Upload Installed**.
+
 ## Turn 264 | 2026-06-06
 
 - Active plan:

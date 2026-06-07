@@ -5,13 +5,17 @@ import {
 	type ApiHistoryMaterializationStatusCliOptions,
 } from "./apiHistoryMaterializationCommand.js";
 import {
+	approveHandoffTargetUpload,
 	prepareCrossServiceHandoffPacket,
 	readHandoffStatus,
 	readJsonInputFile,
+	uploadHandoffTargetPackage,
+	type HandoffApproveUploadResult,
 	type HandoffSourceMaterializationImportMethod,
 	type HandoffPrepareResult,
 	type HandoffProvider,
 	type HandoffStatusResult,
+	type HandoffUploadTargetResult,
 } from "../handoff/service.js";
 
 type MutableRecord = Record<string, unknown>;
@@ -47,6 +51,18 @@ export interface HandoffPrepareCliOptions {
 }
 
 export interface HandoffStatusCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+}
+
+export interface HandoffApproveUploadCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+	actor?: string | null;
+	packageDigest?: string | null;
+}
+
+export interface HandoffUploadCliOptions {
 	handoffId: string;
 	outputDir?: string | null;
 }
@@ -156,6 +172,26 @@ export async function readHandoffStatusForCli(
 	});
 }
 
+export async function approveHandoffUploadForCli(
+	options: HandoffApproveUploadCliOptions,
+): Promise<HandoffApproveUploadResult> {
+	return approveHandoffTargetUpload({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+		actor: options.actor,
+		packageDigest: options.packageDigest,
+	});
+}
+
+export async function uploadHandoffForCli(
+	options: HandoffUploadCliOptions,
+): Promise<HandoffUploadTargetResult> {
+	return uploadHandoffTargetPackage({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+	});
+}
+
 export function formatHandoffPrepareCliSummary(result: HandoffPrepareResult): string {
 	return [
 		`Handoff packet: ${result.run.id}`,
@@ -195,10 +231,37 @@ export function formatHandoffStatusCliSummary(result: HandoffStatusResult): stri
 		`Target package digest: ${result.target.packageDigest ?? "missing"}`,
 		`Target package files: ${result.target.selectedFileCount}`,
 		`Target package bytes: ${result.target.selectedTotalBytes}`,
+		`Target upload approved: ${result.target.uploadApproved ? "true" : "false"}`,
+		`Target upload status: ${result.target.uploadStatus}`,
+		`Target uploaded files: ${result.target.uploadedFileCount}`,
+		`Target upload failures: ${result.target.uploadFailureCount}`,
 		`Source materialization jobs: ${result.sourceMaterializationJobs?.metrics.total ?? 0}`,
 		`Target mutation allowed: ${result.target.mutationAllowed ? "true" : "false"}`,
 		`Target upload attempts: ${result.target.uploadAttemptCount}`,
 		`Target submit attempts: ${result.target.submitAttemptCount}`,
+	].join("\n");
+}
+
+export function formatHandoffApproveUploadCliSummary(result: HandoffApproveUploadResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Approval: target_upload`,
+		`Actor: ${result.approval.actor}`,
+		`Package digest: ${result.approval.packageDigest}`,
+		`Approved files: ${result.approval.selectedFileCount}`,
+	].join("\n");
+}
+
+export function formatHandoffUploadCliSummary(result: HandoffUploadTargetResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Upload status: ${result.uploadResult.status}`,
+		`Package digest: ${result.uploadResult.packageDigest}`,
+		`Uploaded files: ${result.uploadResult.uploadedFileCount}`,
+		`Upload failures: ${result.uploadResult.failedFileCount}`,
+		`Submit attempts: ${result.submissionResult.submitAttemptCount}`,
 	].join("\n");
 }
 
