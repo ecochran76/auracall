@@ -167,6 +167,9 @@ auracall handoff approve-upload <handoff_id> --actor ecochran76 --package-digest
 auracall handoff upload <handoff_id> --json
 auracall handoff approve-submit <handoff_id> --actor ecochran76 --package-digest <digest>
 auracall handoff submit <handoff_id> --json
+auracall handoff resume <handoff_id> --json
+auracall handoff repair <handoff_id> --json
+auracall handoff export <handoff_id> --json
 
 # TUI (interactive, only for humans)
 auracall tui
@@ -237,7 +240,11 @@ Current browser-mode default posture:
   `auracall handoff submit <handoff_id>` writes deterministic
   `target/submission-result.json` and `target/readback.json` artifacts. Live
   target provider mutation remains outside the default deterministic handoff
-  workflow.
+  workflow. `auracall handoff resume <handoff_id>` writes the next safe
+  operator action to `target/resume-plan.json`, `auracall handoff repair
+  <handoff_id>` restores missing derived result/readback state where possible,
+  and `auracall handoff export <handoff_id>` writes
+  `target/manual-handoff-export.json` for manual target completion.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

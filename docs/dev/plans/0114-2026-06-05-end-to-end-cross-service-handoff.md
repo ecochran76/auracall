@@ -340,11 +340,17 @@ Model output never directly mutates target services.
 - Read back target conversation/response.
 - Persist final result, target context refs, and repair state.
 
-### Slice 0124 | Repair, Resume, And Operator UX
+### Slice 0124 | Repair, Resume, And Manual Export
 
-- Add `handoff resume`, `handoff repair`, and console/operator surfaces.
+- Add `handoff resume`, `handoff repair`, and manual export bundle.
 - Support resuming from target package, upload, submit, or readback.
 - Add final export bundle for manual handoff if provider automation is blocked.
+
+### Slice 0125 | Console Operator UX And Live Recovery
+
+- Add console/operator surfaces for resume, repair, and export artifacts.
+- Bridge deterministic resume plans to live provider recovery where permitted.
+- Keep approval gates explicit for any live target mutation.
 
 ## Critical Path
 

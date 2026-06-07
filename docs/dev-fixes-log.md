@@ -1,3 +1,11 @@
+- 2026-06-07: Handoff repair/resume must be packet-owned instead of inferred
+  from chat history. `auracall handoff resume <id>` now writes
+  `target/resume-plan.json` with the next safe operator action, `auracall
+  handoff repair <id>` restores missing derived submission/readback state when
+  packet evidence is sufficient and writes `repair/report.json`, and
+  `auracall handoff export <id>` writes a deterministic manual completion
+  bundle under `target/manual-handoff-export.json`.
+
 - 2026-06-07: Handoff submit must use a separate approval from upload and must
   fail closed when target prompt inputs drift. `auracall handoff
   approve-submit <id>` now records `target_submit` approval under

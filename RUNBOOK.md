@@ -1,5 +1,35 @@
 # RUNBOOK
 
+## Turn 267 | 2026-06-07
+
+- Active plan:
+  `docs/dev/plans/0124-2026-06-07-handoff-repair-resume-export.md`
+- Parent plan:
+  `docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md`
+- Goal: continue Plan 0114 with the repair/resume/operator UX slice after
+  Plan 0123.
+- Implemented:
+  - opened and wired
+    `docs/dev/plans/0124-2026-06-07-handoff-repair-resume-export.md`.
+  - added `auracall handoff resume <id>` and `target/resume-plan.json`.
+  - added `auracall handoff repair <id>` and `repair/report.json`.
+  - added `auracall handoff export <id>` and
+    `target/manual-handoff-export.json`.
+  - kept the slice deterministic, local, and provider-neutral.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 27 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - `pnpm exec biome lint src/handoff/service.ts src/cli/handoffCommand.ts
+    tests/cli/handoffCommand.test.ts bin/auracall.ts` passed.
+  - `pnpm tsx bin/auracall.ts handoff resume --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff repair --help` passed.
+  - `pnpm tsx bin/auracall.ts handoff export --help` passed.
+  - `pnpm run plans:audit -- --keep 124` passed with zero validation errors.
+  - `git diff --check` passed.
+  - `pnpm run build` passed.
+- Decision:
+  - Plan 0124 closes as **Handoff Repair Resume Export Installed**.
+
 ## Turn 266 | 2026-06-07
 
 - Active plan:

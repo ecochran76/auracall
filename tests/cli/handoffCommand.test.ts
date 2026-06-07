@@ -6,12 +6,18 @@ import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import {
 	approveHandoffSubmitForCli,
 	approveHandoffUploadForCli,
+	exportHandoffForCli,
 	formatHandoffApproveSubmitCliSummary,
+	formatHandoffExportCliSummary,
 	formatHandoffPrepareCliSummary,
+	formatHandoffRepairCliSummary,
+	formatHandoffResumeCliSummary,
 	formatHandoffStatusCliSummary,
 	formatHandoffSubmitCliSummary,
 	prepareHandoffForCli,
 	readHandoffStatusForCli,
+	repairHandoffForCli,
+	resumeHandoffForCli,
 	submitHandoffForCli,
 	uploadHandoffForCli,
 } from "../../src/cli/handoffCommand.js";
@@ -1092,6 +1098,204 @@ describe("handoff prepare CLI helpers", () => {
 				packageDigest: "0".repeat(64),
 			}),
 		).rejects.toThrow(prepared.targetPackage.packageDigest);
+	});
+
+	test("writes resume plans for the next safe handoff action", async () => {
+		const root = await tempRoot("auracall-handoff-resume-");
+		const selectedPath = path.join(root, "resume.txt");
+		await writeFile(selectedPath, "resume fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "resume-fixture",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "resume" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "resume_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+
+		const beforeApproval = await resumeHandoffForCli({
+			handoffId: "resume-fixture",
+			outputDir: root,
+		});
+		expect(beforeApproval.resumePlan).toMatchObject({
+			currentStage: "package_ready",
+			nextAction: "approve_upload",
+			requiredApprovals: ["target_upload"],
+			command: expect.stringContaining(prepared.targetPackage.packageDigest),
+		});
+		expect(formatHandoffResumeCliSummary(beforeApproval)).toContain(
+			"Next action: approve_upload",
+		);
+
+		await approveHandoffUploadForCli({
+			handoffId: "resume-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await uploadHandoffForCli({
+			handoffId: "resume-fixture",
+			outputDir: root,
+		});
+		const afterUpload = await resumeHandoffForCli({
+			handoffId: "resume-fixture",
+			outputDir: root,
+		});
+		expect(afterUpload.resumePlan).toMatchObject({
+			currentStage: "uploaded",
+			nextAction: "approve_submit",
+			requiredApprovals: ["target_submit"],
+		});
+
+		await approveHandoffSubmitForCli({
+			handoffId: "resume-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await submitHandoffForCli({
+			handoffId: "resume-fixture",
+			outputDir: root,
+		});
+		const complete = await resumeHandoffForCli({
+			handoffId: "resume-fixture",
+			outputDir: root,
+		});
+		expect(complete.resumePlan).toMatchObject({
+			currentStage: "complete",
+			nextAction: "complete",
+			command: null,
+		});
+		const planJson = JSON.parse(
+			await readFile(path.join(root, "resume-fixture", "target", "resume-plan.json"), "utf8"),
+		);
+		expect(planJson.object).toBe("auracall.handoff-resume-plan.v1");
+	});
+
+	test("repairs missing derived handoff readback state", async () => {
+		const root = await tempRoot("auracall-handoff-repair-");
+		const selectedPath = path.join(root, "repair.txt");
+		await writeFile(selectedPath, "repair fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "repair-fixture",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "repair" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "repair_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "repair-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await uploadHandoffForCli({
+			handoffId: "repair-fixture",
+			outputDir: root,
+		});
+		await approveHandoffSubmitForCli({
+			handoffId: "repair-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await submitHandoffForCli({
+			handoffId: "repair-fixture",
+			outputDir: root,
+		});
+		await rm(path.join(root, "repair-fixture", "target", "readback.json"), { force: true });
+
+		const repair = await repairHandoffForCli({
+			handoffId: "repair-fixture",
+			outputDir: root,
+		});
+
+		expect(repair.report).toMatchObject({
+			object: "auracall.handoff-repair-report.v1",
+			status: "repaired",
+			repairedRefs: ["target/readback.json"],
+			blockers: [],
+			resumePlanRef: "target/resume-plan.json",
+		});
+		expect(repair.resumePlan.nextAction).toBe("complete");
+		expect(formatHandoffRepairCliSummary(repair)).toContain("Repair status: repaired");
+		const readbackJson = JSON.parse(
+			await readFile(path.join(root, "repair-fixture", "target", "readback.json"), "utf8"),
+		);
+		expect(readbackJson).toMatchObject({
+			object: "auracall.handoff-target-readback.v1",
+			status: "readback_cached",
+			responseSummary: "Repaired cached readback from existing target submission result.",
+		});
+	});
+
+	test("writes a manual handoff export bundle for operator completion", async () => {
+		const root = await tempRoot("auracall-handoff-export-");
+		const selectedPath = path.join(root, "export.txt");
+		await writeFile(selectedPath, "export fixture", "utf8");
+		const prepared = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "export-fixture",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "gemini",
+			targetRuntimeProfile: "target-gemini",
+			sourceContext: { messages: [{ role: "user", content: "export" }] },
+			sourceManifest: {
+				items: [manifestItemFixture({ id: "export_selected", localPath: selectedPath })],
+			},
+			generatedAt: "2026-06-05T12:00:00.000Z",
+		});
+		await approveHandoffUploadForCli({
+			handoffId: "export-fixture",
+			outputDir: root,
+			packageDigest: prepared.targetPackage.packageDigest,
+		});
+		await uploadHandoffForCli({
+			handoffId: "export-fixture",
+			outputDir: root,
+		});
+
+		const exported = await exportHandoffForCli({
+			handoffId: "export-fixture",
+			outputDir: root,
+		});
+
+		expect(exported.exportBundle).toMatchObject({
+			object: "auracall.handoff-manual-export.v1",
+			packageDigest: prepared.targetPackage.packageDigest,
+			selectedFiles: [expect.objectContaining({ sourceManifestItemId: "export_selected" })],
+			uploadedProviderFileIds: [expect.stringMatching(/^handoff-file-[a-f0-9]{32}$/)],
+			readbackStatus: "skipped_dry_run",
+		});
+		expect(exported.exportBundle.primer).toContain("You are receiving a compact");
+		expect(formatHandoffExportCliSummary(exported)).toContain(
+			"Manual export: target/manual-handoff-export.json",
+		);
+		const exportJson = JSON.parse(
+			await readFile(
+				path.join(root, "export-fixture", "target", "manual-handoff-export.json"),
+				"utf8",
+			),
+		);
+		expect(exportJson.operatorInstructions).toEqual(
+			expect.arrayContaining([
+				"Open the target conversation or project for the recorded target endpoint.",
+			]),
+		);
 	});
 
 	test("returns null for missing handoff status ids", async () => {

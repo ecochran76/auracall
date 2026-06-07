@@ -33,6 +33,9 @@ export const HANDOFF_APPROVAL_SCHEMA = "auracall.handoff-approval.v1";
 export const HANDOFF_UPLOAD_RESULT_SCHEMA = "auracall.handoff-upload-result.v1";
 export const HANDOFF_SUBMISSION_RESULT_SCHEMA = "auracall.handoff-submission-result.v1";
 export const HANDOFF_TARGET_READBACK_SCHEMA = "auracall.handoff-target-readback.v1";
+export const HANDOFF_RESUME_PLAN_SCHEMA = "auracall.handoff-resume-plan.v1";
+export const HANDOFF_REPAIR_REPORT_SCHEMA = "auracall.handoff-repair-report.v1";
+export const HANDOFF_MANUAL_EXPORT_SCHEMA = "auracall.handoff-manual-export.v1";
 
 export const HANDOFF_ANALYSIS_OMISSION_WARNING_PREFIXES = [
 	"source_context_not_provided",
@@ -569,6 +572,120 @@ export interface HandoffSubmitTargetResult {
 	readback: HandoffTargetReadback;
 }
 
+export type HandoffResumeNextAction =
+	| "approve_upload"
+	| "upload"
+	| "approve_submit"
+	| "submit"
+	| "complete"
+	| "repair_required";
+
+export interface HandoffResumePlan {
+	object: typeof HANDOFF_RESUME_PLAN_SCHEMA;
+	generatedAt: string;
+	runId: string;
+	packetPath: string;
+	currentStage:
+		| "package_ready"
+		| "upload_approved"
+		| "uploaded"
+		| "submit_approved"
+		| "submitted"
+		| "complete"
+		| "repair_required";
+	nextAction: HandoffResumeNextAction;
+	command: string | null;
+	reasons: string[];
+	requiredApprovals: Array<"target_upload" | "target_submit">;
+	refs: {
+		package: "target/package.json" | null;
+		uploadApproval: "approvals/upload.json" | null;
+		uploadResult: "target/upload-result.json" | null;
+		submitApproval: "approvals/submit.json" | null;
+		submissionResult: "target/submission-result.json" | null;
+		readback: "target/readback.json" | null;
+		manualExport: "target/manual-handoff-export.json" | null;
+	};
+}
+
+export interface HandoffRepairReport {
+	object: typeof HANDOFF_REPAIR_REPORT_SCHEMA;
+	generatedAt: string;
+	runId: string;
+	packetPath: string;
+	status: "ok" | "repaired" | "blocked";
+	repairedRefs: string[];
+	blockers: string[];
+	resumePlanRef: "target/resume-plan.json";
+}
+
+export interface HandoffManualExport {
+	object: typeof HANDOFF_MANUAL_EXPORT_SCHEMA;
+	generatedAt: string;
+	runId: string;
+	packetPath: string;
+	target: HandoffEndpoint;
+	packageDigest: string;
+	primer: string;
+	compactContext: unknown;
+	selectedFiles: HandoffTargetUploadManifestItem[];
+	uploadedProviderFileIds: string[];
+	targetConversationRef: string | null;
+	providerMessageId: string | null;
+	readbackStatus: HandoffTargetReadback["status"] | "missing";
+	operatorInstructions: string[];
+	refs: {
+		primer: "target/primer.md";
+		compactContext: "target/compact-context.json";
+		uploadManifest: "target/upload-manifest.json";
+		submissionResult: "target/submission-result.json";
+		readback: "target/readback.json";
+	};
+}
+
+export interface HandoffResumeRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffResumeResult {
+	object: "auracall.handoff.resume.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	resumePlan: HandoffResumePlan;
+}
+
+export interface HandoffRepairRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffRepairResult {
+	object: "auracall.handoff.repair.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	report: HandoffRepairReport;
+	resumePlan: HandoffResumePlan;
+}
+
+export interface HandoffExportRequest {
+	handoffId: string;
+	outputRoot?: string | null;
+	generatedAt?: string;
+}
+
+export interface HandoffExportResult {
+	object: "auracall.handoff.export.result";
+	generatedAt: string;
+	packetPath: string;
+	runId: string;
+	exportBundle: HandoffManualExport;
+}
+
 export async function prepareCrossServiceHandoffPacket(
 	request: HandoffPrepareRequest,
 ): Promise<HandoffPrepareResult> {
@@ -1091,6 +1208,147 @@ export async function submitHandoffTargetPackage(
 		approval,
 		submissionResult,
 		readback,
+	};
+}
+
+export async function buildHandoffResumePlan(
+	input: HandoffResumeRequest,
+): Promise<HandoffResumeResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const status = await readHandoffStatus({
+		handoffId: packet.run.id,
+		outputRoot: input.outputRoot,
+		generatedAt,
+	});
+	if (!status) {
+		throw new Error(`Handoff packet not found: ${packet.run.id}`);
+	}
+	const resumePlan = buildResumePlanFromStatus(status);
+	await writeJson(path.join(packet.packetPath, "target", "resume-plan.json"), resumePlan);
+	return {
+		object: "auracall.handoff.resume.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		resumePlan,
+	};
+}
+
+export async function repairHandoffPacket(
+	input: HandoffRepairRequest,
+): Promise<HandoffRepairResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const repairedRefs: string[] = [];
+	const blockers: string[] = [];
+	const submissionResultPath = path.join(packet.packetPath, "target", "submission-result.json");
+	const readbackPath = path.join(packet.packetPath, "target", "readback.json");
+	const submissionResult = normalizeSubmissionResult(await readJsonIfExists(submissionResultPath));
+	const readback = normalizeTargetReadback(await readJsonIfExists(readbackPath));
+	if (!submissionResult) {
+		await writeJson(submissionResultPath, {
+			object: HANDOFF_SUBMISSION_RESULT_SCHEMA,
+			generatedAt,
+			status: "skipped_dry_run",
+			packageDigest: packet.targetPackage.packageDigest,
+			uploadAttemptCount: 0,
+			submitAttemptCount: 0,
+			uploadResultRef: null,
+		});
+		repairedRefs.push("target/submission-result.json");
+	}
+	const repairedSubmissionResult =
+		submissionResult ?? normalizeSubmissionResult(await readJsonIfExists(submissionResultPath));
+	if (!readback) {
+		await writeJson(
+			readbackPath,
+			buildRepairReadback(generatedAt, packet.run.target, packet.targetPackage, repairedSubmissionResult),
+		);
+		repairedRefs.push("target/readback.json");
+	}
+	if (!packet.targetPackage.packageDigest) {
+		blockers.push("target package digest is missing");
+	}
+	const resume = await buildHandoffResumePlan({
+		handoffId: packet.run.id,
+		outputRoot: input.outputRoot,
+		generatedAt,
+	});
+	const report: HandoffRepairReport = {
+		object: HANDOFF_REPAIR_REPORT_SCHEMA,
+		generatedAt,
+		runId: packet.run.id,
+		packetPath: packet.packetPath,
+		status: blockers.length > 0 ? "blocked" : repairedRefs.length > 0 ? "repaired" : "ok",
+		repairedRefs,
+		blockers,
+		resumePlanRef: "target/resume-plan.json",
+	};
+	await writeJson(path.join(packet.packetPath, "repair", "report.json"), report);
+	return {
+		object: "auracall.handoff.repair.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		report,
+		resumePlan: resume.resumePlan,
+	};
+}
+
+export async function exportHandoffManualBundle(
+	input: HandoffExportRequest,
+): Promise<HandoffExportResult> {
+	const packet = await readPreparedHandoffPacket(input.handoffId, input.outputRoot);
+	const generatedAt = input.generatedAt ?? new Date().toISOString();
+	const [primer, compactContextJson, uploadResult, submissionResult, readback] = await Promise.all([
+		fs.readFile(path.join(packet.packetPath, "target", "primer.md"), "utf8"),
+		readJsonIfExists(path.join(packet.packetPath, "target", "compact-context.json")),
+		readJsonIfExists(path.join(packet.packetPath, "target", "upload-result.json")),
+		readJsonIfExists(path.join(packet.packetPath, "target", "submission-result.json")),
+		readJsonIfExists(path.join(packet.packetPath, "target", "readback.json")),
+	]);
+	const normalizedUploadResult = normalizeUploadResult(uploadResult);
+	const normalizedSubmissionResult = normalizeSubmissionResult(submissionResult);
+	const normalizedReadback = normalizeTargetReadback(readback);
+	const exportBundle: HandoffManualExport = {
+		object: HANDOFF_MANUAL_EXPORT_SCHEMA,
+		generatedAt,
+		runId: packet.run.id,
+		packetPath: packet.packetPath,
+		target: packet.run.target,
+		packageDigest: packet.targetPackage.packageDigest,
+		primer: primer.trimEnd(),
+		compactContext: compactContextJson,
+		selectedFiles: packet.uploadManifest.items,
+		uploadedProviderFileIds: normalizedUploadResult?.rows.map((row) => row.providerFileId) ?? [],
+		targetConversationRef:
+			normalizedSubmissionResult?.targetConversationRef ??
+			normalizedReadback?.targetConversationRef ??
+			null,
+		providerMessageId:
+			normalizedSubmissionResult?.providerMessageId ?? normalizedReadback?.providerMessageId ?? null,
+		readbackStatus: normalizedReadback?.status ?? "missing",
+		operatorInstructions: [
+			"Open the target conversation or project for the recorded target endpoint.",
+			"Submit the primer text with the compact context and attach the selected files when provider automation is unavailable.",
+			"Record the target conversation ref and provider message id back into the handoff packet before closeout.",
+		],
+		refs: {
+			primer: "target/primer.md",
+			compactContext: "target/compact-context.json",
+			uploadManifest: "target/upload-manifest.json",
+			submissionResult: "target/submission-result.json",
+			readback: "target/readback.json",
+		},
+	};
+	await writeJson(path.join(packet.packetPath, "target", "manual-handoff-export.json"), exportBundle);
+	return {
+		object: "auracall.handoff.export.result",
+		generatedAt,
+		packetPath: packet.packetPath,
+		runId: packet.run.id,
+		exportBundle,
 	};
 }
 
@@ -2351,6 +2609,141 @@ function buildUploadSetDigest(uploadResult: HandoffUploadResult): string {
 			retryable: omission.retryable,
 		})),
 	});
+}
+
+function buildResumePlanFromStatus(status: HandoffStatusResult): HandoffResumePlan {
+	const baseCommand = `auracall handoff`;
+	const packageReady = Boolean(status.target.package);
+	const uploadApproved = status.target.uploadApproved;
+	const uploaded =
+		status.target.uploadStatus === "uploaded" || status.target.uploadStatus === "skipped_no_files";
+	const submitApproved = status.target.submitApproved;
+	const submitted = status.target.submitStatus === "submitted";
+	const readbackCached = status.target.readbackStatus === "readback_cached";
+	if (!packageReady) {
+		return buildResumePlan(status, {
+			currentStage: "repair_required",
+			nextAction: "repair_required",
+			command: `${baseCommand} repair ${status.run.id}`,
+			reasons: ["target package is missing"],
+			requiredApprovals: [],
+		});
+	}
+	if (!uploadApproved) {
+		return buildResumePlan(status, {
+			currentStage: "package_ready",
+			nextAction: "approve_upload",
+			command: `${baseCommand} approve-upload ${status.run.id} --package-digest ${status.target.packageDigest ?? ""}`.trim(),
+			reasons: ["target upload approval is missing or stale"],
+			requiredApprovals: ["target_upload"],
+		});
+	}
+	if (!uploaded) {
+		return buildResumePlan(status, {
+			currentStage: "upload_approved",
+			nextAction: "upload",
+			command: `${baseCommand} upload ${status.run.id}`,
+			reasons: ["target package is upload-approved but no current upload result exists"],
+			requiredApprovals: [],
+		});
+	}
+	if (!submitApproved) {
+		return buildResumePlan(status, {
+			currentStage: "uploaded",
+			nextAction: "approve_submit",
+			command: `${baseCommand} approve-submit ${status.run.id} --package-digest ${status.target.packageDigest ?? ""}`.trim(),
+			reasons: ["target submit approval is missing or stale"],
+			requiredApprovals: ["target_submit"],
+		});
+	}
+	if (!submitted) {
+		return buildResumePlan(status, {
+			currentStage: "submit_approved",
+			nextAction: "submit",
+			command: `${baseCommand} submit ${status.run.id}`,
+			reasons: ["target submit approval exists but no submitted result exists"],
+			requiredApprovals: [],
+		});
+	}
+	if (!readbackCached) {
+		return buildResumePlan(status, {
+			currentStage: "submitted",
+			nextAction: "repair_required",
+			command: `${baseCommand} repair ${status.run.id}`,
+			reasons: ["target submit result exists but cached readback is missing"],
+			requiredApprovals: [],
+		});
+	}
+	return buildResumePlan(status, {
+		currentStage: "complete",
+		nextAction: "complete",
+		command: null,
+		reasons: ["target submit and readback are complete"],
+		requiredApprovals: [],
+	});
+}
+
+function buildResumePlan(
+	status: HandoffStatusResult,
+	input: {
+		currentStage: HandoffResumePlan["currentStage"];
+		nextAction: HandoffResumeNextAction;
+		command: string | null;
+		reasons: string[];
+		requiredApprovals: Array<"target_upload" | "target_submit">;
+	},
+): HandoffResumePlan {
+	return {
+		object: HANDOFF_RESUME_PLAN_SCHEMA,
+		generatedAt: status.generatedAt,
+		runId: status.run.id,
+		packetPath: status.packetPath,
+		currentStage: input.currentStage,
+		nextAction: input.nextAction,
+		command: input.command,
+		reasons: input.reasons,
+		requiredApprovals: input.requiredApprovals,
+		refs: {
+			package: status.target.package ? "target/package.json" : null,
+			uploadApproval: status.target.uploadApproval ? "approvals/upload.json" : null,
+			uploadResult: status.target.uploadResult ? "target/upload-result.json" : null,
+			submitApproval: status.target.submitApproval ? "approvals/submit.json" : null,
+			submissionResult: status.target.submissionResult ? "target/submission-result.json" : null,
+			readback: status.target.readback ? "target/readback.json" : null,
+			manualExport: null,
+		},
+	};
+}
+
+function buildRepairReadback(
+	generatedAt: string,
+	target: HandoffEndpoint,
+	targetPackage: HandoffTargetPackage,
+	submissionResult: HandoffSubmissionResult | null,
+): HandoffTargetReadback {
+	if (submissionResult?.status === "submitted") {
+		return {
+			object: HANDOFF_TARGET_READBACK_SCHEMA,
+			generatedAt,
+			status: "readback_cached",
+			packageDigest: targetPackage.packageDigest,
+			target,
+			targetConversationRef: submissionResult.targetConversationRef,
+			providerMessageId: submissionResult.providerMessageId,
+			responseSummary: "Repaired cached readback from existing target submission result.",
+			responseExcerpt: `Repaired readback for provider message ${submissionResult.providerMessageId ?? "unknown"}.`,
+			compactContextRef: "target/compact-context.json",
+			primerRef: "target/primer.md",
+			submissionResultRef: "target/submission-result.json",
+		};
+	}
+	return {
+		object: HANDOFF_TARGET_READBACK_SCHEMA,
+		generatedAt,
+		status: "skipped_dry_run",
+		packageDigest: targetPackage.packageDigest,
+		target,
+	};
 }
 
 function estimatePromptTokens(

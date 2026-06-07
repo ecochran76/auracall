@@ -7,16 +7,22 @@ import {
 import {
 	approveHandoffTargetSubmit,
 	approveHandoffTargetUpload,
+	buildHandoffResumePlan,
+	exportHandoffManualBundle,
 	prepareCrossServiceHandoffPacket,
 	readHandoffStatus,
 	readJsonInputFile,
+	repairHandoffPacket,
 	submitHandoffTargetPackage,
 	uploadHandoffTargetPackage,
 	type HandoffApproveSubmitResult,
 	type HandoffApproveUploadResult,
+	type HandoffExportResult,
 	type HandoffSourceMaterializationImportMethod,
 	type HandoffPrepareResult,
 	type HandoffProvider,
+	type HandoffRepairResult,
+	type HandoffResumeResult,
 	type HandoffSubmitTargetResult,
 	type HandoffStatusResult,
 	type HandoffUploadTargetResult,
@@ -79,6 +85,21 @@ export interface HandoffUploadCliOptions {
 }
 
 export interface HandoffSubmitCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+}
+
+export interface HandoffResumeCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+}
+
+export interface HandoffRepairCliOptions {
+	handoffId: string;
+	outputDir?: string | null;
+}
+
+export interface HandoffExportCliOptions {
 	handoffId: string;
 	outputDir?: string | null;
 }
@@ -228,6 +249,33 @@ export async function submitHandoffForCli(
 	});
 }
 
+export async function resumeHandoffForCli(
+	options: HandoffResumeCliOptions,
+): Promise<HandoffResumeResult> {
+	return buildHandoffResumePlan({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+	});
+}
+
+export async function repairHandoffForCli(
+	options: HandoffRepairCliOptions,
+): Promise<HandoffRepairResult> {
+	return repairHandoffPacket({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+	});
+}
+
+export async function exportHandoffForCli(
+	options: HandoffExportCliOptions,
+): Promise<HandoffExportResult> {
+	return exportHandoffManualBundle({
+		handoffId: options.handoffId,
+		outputRoot: options.outputDir,
+	});
+}
+
 export function formatHandoffPrepareCliSummary(result: HandoffPrepareResult): string {
 	return [
 		`Handoff packet: ${result.run.id}`,
@@ -329,6 +377,40 @@ export function formatHandoffSubmitCliSummary(result: HandoffSubmitTargetResult)
 		`Target conversation ref: ${result.submissionResult.targetConversationRef ?? "missing"}`,
 		`Target provider message id: ${result.submissionResult.providerMessageId ?? "missing"}`,
 		`Readback status: ${result.readback.status}`,
+	].join("\n");
+}
+
+export function formatHandoffResumeCliSummary(result: HandoffResumeResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Current stage: ${result.resumePlan.currentStage}`,
+		`Next action: ${result.resumePlan.nextAction}`,
+		`Command: ${result.resumePlan.command ?? "none"}`,
+		`Reasons: ${result.resumePlan.reasons.join("; ")}`,
+	].join("\n");
+}
+
+export function formatHandoffRepairCliSummary(result: HandoffRepairResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Repair status: ${result.report.status}`,
+		`Repaired refs: ${result.report.repairedRefs.length}`,
+		`Blockers: ${result.report.blockers.length}`,
+		`Next action: ${result.resumePlan.nextAction}`,
+	].join("\n");
+}
+
+export function formatHandoffExportCliSummary(result: HandoffExportResult): string {
+	return [
+		`Handoff packet: ${result.runId}`,
+		`Packet path: ${result.packetPath}`,
+		`Manual export: target/manual-handoff-export.json`,
+		`Package digest: ${result.exportBundle.packageDigest}`,
+		`Selected files: ${result.exportBundle.selectedFiles.length}`,
+		`Uploaded provider files: ${result.exportBundle.uploadedProviderFileIds.length}`,
+		`Readback status: ${result.exportBundle.readbackStatus}`,
 	].join("\n");
 }
 

@@ -190,14 +190,20 @@ import {
 import {
   approveHandoffSubmitForCli,
   approveHandoffUploadForCli,
+  exportHandoffForCli,
+  formatHandoffExportCliSummary,
   formatHandoffApproveSubmitCliSummary,
   formatHandoffApproveUploadCliSummary,
   formatHandoffPrepareCliSummary,
+  formatHandoffRepairCliSummary,
+  formatHandoffResumeCliSummary,
   formatHandoffStatusCliSummary,
   formatHandoffSubmitCliSummary,
   formatHandoffUploadCliSummary,
   prepareHandoffForCli,
   readHandoffStatusForCli,
+  repairHandoffForCli,
+  resumeHandoffForCli,
   submitHandoffForCli,
   uploadHandoffForCli,
 } from '../src/cli/handoffCommand.js';
@@ -1935,6 +1941,60 @@ handoffCommand
       return;
     }
     console.log(formatHandoffSubmitCliSummary(result));
+  });
+
+handoffCommand
+  .command('resume')
+  .description('Write a deterministic handoff resume plan from current packet state.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await resumeHandoffForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffResumeCliSummary(result));
+  });
+
+handoffCommand
+  .command('repair')
+  .description('Repair missing derived handoff state and write a resume plan.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await repairHandoffForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffRepairCliSummary(result));
+  });
+
+handoffCommand
+  .command('export')
+  .description('Write a manual handoff export bundle for operator completion.')
+  .argument('<id>', 'Handoff packet id.')
+  .option('--output-dir <path>', 'Directory where handoff packet directories are written.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const result = await exportHandoffForCli({
+      handoffId: id,
+      outputDir: commandOptions.outputDir,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatHandoffExportCliSummary(result));
   });
 
 apiCommand

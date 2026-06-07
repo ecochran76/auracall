@@ -1,3 +1,26 @@
+## Turn 371 | 2026-06-07
+
+- Goal: continue Plan 0114 with the repair/resume/operator UX slice after Plan
+  0123.
+- Implemented:
+  - opened
+    `docs/dev/plans/0124-2026-06-07-handoff-repair-resume-export.md`.
+  - added deterministic `auracall handoff resume <id>` and
+    `target/resume-plan.json`.
+  - added deterministic `auracall handoff repair <id>` and
+    `repair/report.json`.
+  - added deterministic `auracall handoff export <id>` and
+    `target/manual-handoff-export.json`.
+  - kept live provider recovery and console surfaces out of scope for a later
+    operator UX slice.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts` passed with 27 tests.
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+  - focused Biome lint, handoff resume/repair/export help commands, plan
+    audit, diff check, and build all passed.
+- Decision:
+  - Plan 0124 closes as **Handoff Repair Resume Export Installed**.
+
 ## Turn 370 | 2026-06-07
 
 - Goal: plan and execute the next Plan 0114 cross-service handoff slice after

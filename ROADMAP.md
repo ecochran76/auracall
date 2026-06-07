@@ -10,6 +10,8 @@ Lane: P01
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
 - Latest completed plan:
+  [docs/dev/plans/0124-2026-06-07-handoff-repair-resume-export.md](docs/dev/plans/0124-2026-06-07-handoff-repair-resume-export.md)
+- Previous completed plan:
   [docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md](docs/dev/plans/0123-2026-06-07-handoff-target-submit-and-readback.md)
 - Previous completed plan:
   [docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md](docs/dev/plans/0121-2026-06-07-handoff-approval-and-target-upload.md)
@@ -216,6 +218,13 @@ Lane: P01
   `target/submission-result.json` and `target/readback.json`, and status now
   reports submit/readback evidence without live provider mutation by default.
   The next bounded handoff slice is repair/resume and operator UX.
+- Plan 0124 is closed as **Handoff Repair Resume Export Installed**.
+  `auracall handoff resume <id>` writes `target/resume-plan.json`,
+  `auracall handoff repair <id>` restores missing derived
+  submission/readback artifacts and writes `repair/report.json`, and
+  `auracall handoff export <id>` writes `target/manual-handoff-export.json`
+  for manual target completion. The next bounded handoff slice is console
+  operator UX and live-provider recovery integration.
 - Plan 0107 is closed as **ChatGPT Account-Library Automatic
   Mode Remains Preview-Only**. The preflight found
   foreground-work backpressure, active `wsl-chrome-3` live-follow completion
