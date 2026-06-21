@@ -71,6 +71,145 @@ function withStageTimeout<T>(task: Promise<T>, timeoutMs: number, message: strin
   });
 }
 
+type ModelOptionKind = 'instant' | 'thinking' | 'pro' | null;
+
+function normalizeModelPickerText(value: string | null | undefined): string {
+  if (!value) {
+    return '';
+  }
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function classifyModelPickerOption(normalizedText: string, normalizedTestId = ''): ModelOptionKind {
+  const text = normalizedText.trim();
+  const testId = normalizedTestId.toLowerCase();
+  const startsWith = (pattern: RegExp) => pattern.test(text);
+  const hasInstantTestId =
+    testId.includes('instant') ||
+    testId.includes('gpt-5-3') ||
+    testId.includes('gpt5-3') ||
+    testId.includes('gpt53');
+  const hasThinkingTestId = testId.includes('thinking');
+  const hasProTestId = testId.includes('pro') || testId.includes('proresearch');
+
+  if (hasInstantTestId) {
+    return 'instant';
+  }
+  if (hasProTestId) {
+    return 'pro';
+  }
+  if (hasThinkingTestId) {
+    return 'thinking';
+  }
+  if (startsWith(/^(chatgpt )?instant\b/) || text === 'instant') {
+    return 'instant';
+  }
+  if (
+    startsWith(/^(chatgpt )?(extended pro|pro extended|pro|gpt [0-9 ]+ pro)\b/) ||
+    text.endsWith(' pro')
+  ) {
+    return 'pro';
+  }
+  if (startsWith(/^(chatgpt )?thinking\b/) || text === 'thinking') {
+    return 'thinking';
+  }
+  if (text.includes('instant')) {
+    return 'instant';
+  }
+  if (text.includes('thinking')) {
+    return 'thinking';
+  }
+  if (text.includes(' pro') || text.endsWith('pro')) {
+    return 'pro';
+  }
+  return null;
+}
+
+function scoreModelPickerOption(targetModel: string, option: { text?: string | null; testId?: string | null }) {
+  const matchers = buildModelMatchersLiteral(targetModel);
+  const normalizedTarget = normalizeModelPickerText(targetModel);
+  const normalizedTokens = Array.from(new Set([normalizedTarget, ...matchers.labelTokens]))
+    .map((token) => normalizeModelPickerText(token))
+    .filter(Boolean);
+  const targetWords = normalizedTarget.split(' ').filter(Boolean);
+  const normalizedText = normalizeModelPickerText(option.text ?? '');
+  const normalizedTestId = (option.testId ?? '').toLowerCase();
+  const optionKind = classifyModelPickerOption(normalizedText, normalizedTestId);
+
+  if (!normalizedText && !normalizedTestId) {
+    return { score: 0, optionKind, normalizedText, normalizedTestId };
+  }
+
+  let score = 0;
+  if (matchers.semanticTarget) {
+    if (optionKind === matchers.semanticTarget) {
+      score += 2000;
+    } else if (optionKind && optionKind !== matchers.semanticTarget) {
+      return { score: 0, optionKind, normalizedText, normalizedTestId };
+    }
+  }
+  if (normalizedTestId) {
+    const exactMatch = matchers.testIdTokens.find((id) => id && normalizedTestId === id);
+    if (exactMatch) {
+      score += 1500;
+      if (exactMatch.startsWith('model-switcher-')) score += 200;
+    } else {
+      const matches = matchers.testIdTokens.filter((id) => id && normalizedTestId.includes(id));
+      if (matches.length > 0) {
+        const best = matches.reduce((acc, token) => (token.length > acc.length ? token : acc), '');
+        score += 200 + Math.min(900, best.length * 25);
+        if (best.startsWith('model-switcher-')) score += 120;
+        if (best.includes('gpt-')) score += 60;
+      }
+    }
+  }
+  if (normalizedText && normalizedTarget) {
+    if (normalizedText === normalizedTarget) {
+      score += 500;
+    } else if (normalizedText.startsWith(normalizedTarget)) {
+      score += 420;
+    } else if (normalizedText.includes(normalizedTarget)) {
+      score += 380;
+    }
+  }
+  for (const token of normalizedTokens) {
+    if (token && normalizedText.includes(token)) {
+      const tokenWeight = Math.min(120, Math.max(10, token.length * 4));
+      score += tokenWeight;
+    }
+  }
+  if (optionKind === 'instant' && normalizedText === 'instant') {
+    score += 150;
+  }
+  if (optionKind === 'thinking' && normalizedText === 'thinking') {
+    score += 150;
+  }
+  if (optionKind === 'pro' && normalizedText === 'pro') {
+    score += 150;
+  }
+  if (targetWords.length > 1) {
+    let missing = 0;
+    for (const word of targetWords) {
+      if (!normalizedText.includes(word)) {
+        missing += 1;
+      }
+    }
+    score -= missing * 12;
+  }
+  return { score: Math.max(score, 0), optionKind, normalizedText, normalizedTestId };
+}
+
+export function scoreModelPickerOptionForTest(
+  targetModel: string,
+  option: { text?: string | null; testId?: string | null },
+) {
+  return scoreModelPickerOption(targetModel, option);
+}
+
 /**
  * Builds the DOM expression that runs inside the ChatGPT tab to select a model.
  * The string is evaluated inside Chrome, so keep it self-contained and well-commented.
@@ -136,24 +275,44 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
 
     const getOptionLabel = (node) => node?.textContent?.trim() ?? '';
     const classifyOption = (normalizedText, normalizedTestId) => {
+      const text = normalizedText.trim();
+      const testId = (normalizedTestId ?? '').toLowerCase();
+      const hasInstantTestId =
+        testId.includes('instant') ||
+        testId.includes('gpt-5-3') ||
+        testId.includes('gpt5-3') ||
+        testId.includes('gpt53');
+      const hasThinkingTestId = testId.includes('thinking');
+      const hasProTestId = testId.includes('pro') || testId.includes('proresearch');
+      if (hasInstantTestId) {
+        return 'instant';
+      }
+      if (hasProTestId) {
+        return 'pro';
+      }
+      if (hasThinkingTestId) {
+        return 'thinking';
+      }
+      if (/^(chatgpt )?instant\\b/.test(text) || text === 'instant') {
+        return 'instant';
+      }
       if (
-        normalizedText.includes(' pro') ||
-        normalizedText.endsWith('pro') ||
-        normalizedTestId.includes('pro')
+        /^(chatgpt )?(extended pro|pro extended|pro|gpt [0-9 ]+ pro)\\b/.test(text) ||
+        text.endsWith(' pro')
       ) {
         return 'pro';
       }
-      if (normalizedText.includes('thinking') || normalizedTestId.includes('thinking')) {
+      if (/^(chatgpt )?thinking\\b/.test(text) || text === 'thinking') {
         return 'thinking';
       }
-      if (
-        normalizedText.includes('instant') ||
-        normalizedTestId.includes('instant') ||
-        normalizedTestId.includes('gpt-5-3') ||
-        normalizedTestId.includes('gpt5-3') ||
-        normalizedTestId.includes('gpt53')
-      ) {
+      if (text.includes('instant')) {
         return 'instant';
+      }
+      if (text.includes('thinking')) {
+        return 'thinking';
+      }
+      if (text.includes(' pro') || text.endsWith('pro')) {
+        return 'pro';
       }
       return null;
     };
@@ -435,10 +594,16 @@ function buildModelMatchersLiteral(targetModel: string): {
   }
   if (semanticTarget === 'pro') {
     push('pro', labelTokens);
+    push('extended pro', labelTokens);
+    push('pro extended', labelTokens);
+    push('chatgpt pro', labelTokens);
     push('research grade', labelTokens);
     push('advanced reasoning', labelTokens);
     testIdTokens.add('pro');
     testIdTokens.add('proresearch');
+    testIdTokens.add('extended-pro');
+    testIdTokens.add('pro-extended');
+    testIdTokens.add('model-switcher-pro');
     testIdTokens.add('model-switcher-gpt-5-4-pro');
   }
   // Numeric variations (5.1 ↔ 51 ↔ gpt-5-1)

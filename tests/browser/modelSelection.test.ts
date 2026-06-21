@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildModelMatchersLiteralForTest,
   buildModelSelectionExpressionForTest,
+  scoreModelPickerOptionForTest,
 } from '../../src/browser/actions/modelSelection.js';
 
 const expectContains = (arr: string[], value: string) => {
@@ -34,7 +35,10 @@ describe('browser model selection matchers', () => {
     const { labelTokens, testIdTokens, semanticTarget } = buildModelMatchersLiteralForTest('gpt-5.2-pro');
     expect(semanticTarget).toBe('pro');
     expect(labelTokens.some((t) => t.includes('pro') || t.includes('research'))).toBe(true);
+    expectContains(labelTokens, 'extended pro');
+    expectContains(labelTokens, 'pro extended');
     expectContains(testIdTokens, 'pro');
+    expectContains(testIdTokens, 'model-switcher-pro');
     expectContains(testIdTokens, 'model-switcher-gpt-5-4-pro');
   });
 
@@ -61,5 +65,26 @@ describe('browser model selection matchers', () => {
     expect(labelTokens.some((t) => t.includes('5.2') || t.includes('5-2'))).toBe(true);
     expect(testIdTokens).toContain('model-switcher-gpt-5-3');
     expect(testIdTokens).toContain('gpt-5.2-instant');
+  });
+
+  it('does not satisfy a Pro request with an Instant row that mentions Pro', () => {
+    const instant = scoreModelPickerOptionForTest('Pro', {
+      text: 'Instant\nFast everyday answers\nUpgrade to Pro for extended reasoning',
+      testId: 'model-switcher-gpt-5-3',
+    });
+    const extendedPro = scoreModelPickerOptionForTest('Pro', {
+      text: 'Extended Pro\nAdvanced reasoning',
+      testId: 'model-switcher-pro',
+    });
+    expect(instant.optionKind).toBe('instant');
+    expect(instant.score).toBe(0);
+    expect(extendedPro.optionKind).toBe('pro');
+    expect(extendedPro.score).toBeGreaterThan(0);
+  });
+
+  it('recognizes updated Pro label variants without falling back to Instant', () => {
+    expect(scoreModelPickerOptionForTest('Pro', { text: 'Pro Extended' }).optionKind).toBe('pro');
+    expect(scoreModelPickerOptionForTest('Pro', { text: 'ChatGPT Pro' }).optionKind).toBe('pro');
+    expect(scoreModelPickerOptionForTest('Pro', { text: 'Instant' }).score).toBe(0);
   });
 });
