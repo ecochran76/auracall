@@ -19,6 +19,7 @@ import {
 	getChatgptPostCommitQuietWaitMs,
 	isChatgptRateLimitMessage,
 	readChatgptRateLimitGuardState,
+	resolveChatgptRateLimitCooldownMs,
 	writeChatgptRateLimitGuardState,
 } from "../chatgptRateLimitGuard.js";
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
@@ -2988,12 +2989,18 @@ export abstract class LlmService {
 			return new Error(message, { cause: error as never });
 		}
 		const currentChatgpt = current as ChatgptRateLimitGuardState | null;
+		const chatgptCooldownUntil =
+			now +
+			resolveChatgptRateLimitCooldownMs(currentChatgpt, now, {
+				retryAfterMs: this.extractProviderRetryAfterMs(error),
+				baseCooldownMs: settings.cooldownMs,
+			});
 		await this.writeProviderGuardState({
 			provider: "chatgpt",
 			profile: this.resolveActiveProfileName() ?? "default",
 			updatedAt: now,
 			cooldownDetectedAt: now,
-			cooldownUntil,
+			cooldownUntil: chatgptCooldownUntil,
 			cooldownReason: reason ?? undefined,
 			cooldownAction: action,
 			lastMutationAt: this.isMutatingProviderAction(action) ? now : undefined,
@@ -3016,7 +3023,7 @@ export abstract class LlmService {
 		});
 		const detail = reason ? ` ${reason}` : "";
 		const message = `ChatGPT rate limit detected while ${action}; cooling down until ${new Date(
-			cooldownUntil,
+			chatgptCooldownUntil,
 		).toISOString()}.${detail}`.trim();
 		if (error instanceof Error) {
 			const wrapped = new Error(message, { cause: error }) as Error & {

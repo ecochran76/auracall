@@ -3,7 +3,10 @@ import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { getAuracallHomeDir, setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
-import { resolveChatgptRateLimitGuardPath } from '../../src/browser/chatgptRateLimitGuard.js';
+import {
+  resolveChatgptRateLimitGuardPath,
+  writeChatgptRateLimitGuardState,
+} from '../../src/browser/chatgptRateLimitGuard.js';
 import type { ResolvedUserConfig } from '../../src/config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../src/browser/providers/types.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
@@ -108,6 +111,47 @@ describe('llmService ChatGPT rate-limit guard', () => {
       await expect(
         nextProcess.runGuarded('listConversations', async () => []),
       ).rejects.toThrow(/cooldown active until/i);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('extends cooldown when ChatGPT rate-limit warnings repeat for the same profile', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-chatgpt-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const service = new RateLimitTestLlmService(userConfig, provider);
+    const now = Date.now();
+
+    try {
+      await writeChatgptRateLimitGuardState(
+        {
+          provider: 'chatgpt',
+          profile: 'default',
+          updatedAt: now - 60,
+          cooldownDetectedAt: now - 60,
+          cooldownUntil: now - 1,
+          cooldownReason: 'Too many requests.',
+          cooldownAction: 'readConversationContext',
+        },
+        { profileName: 'default' },
+      );
+
+      await expect(
+        service.runGuarded('readConversationContext', async () => {
+          throw new Error('Too many requests. You’re making requests too quickly.');
+        }),
+      ).rejects.toThrow(/cooling down until/i);
+
+      const persisted = JSON.parse(await readFile(service.getGuardStatePath() as string, 'utf8')) as {
+        cooldownUntil?: number;
+      };
+      expect(typeof persisted.cooldownUntil).toBe('number');
+      expect((persisted.cooldownUntil ?? 0) - Date.now()).toBeGreaterThan(10 * 60_000);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

@@ -1,3 +1,22 @@
+## 2026-06-21 | ChatGPT Repeated Rate-Limit Cooldown
+
+- Focus: reduce repeated ChatGPT/SoyLei `Too many requests` warnings after
+  read-side provider work detects the warning and persists only the short
+  cooldown.
+- Result:
+  - shared ChatGPT rate-limit guard now escalates repeated detections inside a
+    30-minute window from the base 5-minute cooldown to a 15-minute cooldown;
+  - both browser prompt failures and llmservice read/list/mutation failures use
+    the same escalation helper;
+  - focused coverage proves the pure cooldown policy and the llmservice
+    `readConversationContext` path.
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptRateLimitGuard.test.ts tests/browser/llmServiceRateLimit.test.ts`
+    passed with `18` tests;
+  - `pnpm exec biome lint src/browser/chatgptRateLimitGuard.ts src/browser/index.ts src/browser/llmService/llmService.ts tests/browser/chatgptRateLimitGuard.test.ts tests/browser/llmServiceRateLimit.test.ts`
+    passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+
 ## 2026-06-21 | ChatGPT Semantic Model Selector Cutover
 
 - Focus: stop active ChatGPT browser defaults and operator guidance from

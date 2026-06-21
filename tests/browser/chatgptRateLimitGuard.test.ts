@@ -11,6 +11,7 @@ import {
   isChatgptRateLimitMessage,
   pruneChatgptMutationHistory,
   readChatgptRateLimitGuardState,
+  resolveChatgptRateLimitCooldownMs,
   resolveChatgptRateLimitGuardPath,
   resolveChatgptRateLimitProfileName,
   writeChatgptRateLimitGuardState,
@@ -34,6 +35,40 @@ describe('chatgptRateLimitGuard', () => {
     const message = 'Too many requests. You’re making requests too quickly. Please try again later.';
     expect(isChatgptRateLimitMessage(message)).toBe(true);
     expect(extractChatgptRateLimitSummary(message)).toBe('Too many requests.');
+  });
+
+  test('escalates cooldown for repeated ChatGPT rate-limit detections', () => {
+    const now = 1_000_000;
+    expect(
+      resolveChatgptRateLimitCooldownMs(null, now, {
+        baseCooldownMs: 5_000,
+        repeatedCooldownMs: 15_000,
+        repeatedWindowMs: 30_000,
+      }),
+    ).toBe(5_000);
+    expect(
+      resolveChatgptRateLimitCooldownMs(
+        { cooldownDetectedAt: now - 10_000 },
+        now,
+        {
+          baseCooldownMs: 5_000,
+          repeatedCooldownMs: 15_000,
+          repeatedWindowMs: 30_000,
+        },
+      ),
+    ).toBe(15_000);
+    expect(
+      resolveChatgptRateLimitCooldownMs(
+        { cooldownDetectedAt: now - 10_000 },
+        now,
+        {
+          retryAfterMs: 20_000,
+          baseCooldownMs: 5_000,
+          repeatedCooldownMs: 15_000,
+          repeatedWindowMs: 30_000,
+        },
+      ),
+    ).toBe(20_000);
   });
 
   test('writes and reads persisted guard state', async () => {

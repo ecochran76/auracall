@@ -1,3 +1,13 @@
+- 2026-06-21: Repeated ChatGPT rate-limit warnings need a longer shared
+  cooldown than a first sighting. The SoyLei `wsl-chrome-3` profile was still
+  surfacing `Too many requests` warnings after read-side
+  `readConversationContext` work detected and persisted only the base 5-minute
+  cooldown. The shared ChatGPT guard now escalates repeated detections inside a
+  30-minute window to a 15-minute cooldown, and both browser prompt runs and
+  llmservice read/list/mutation paths use the same helper. Keep the first
+  warning bounded, but do not let separate processes rediscover the same
+  provider warning every few minutes.
+
 - 2026-06-21: ChatGPT browser model selection should carry semantic intent, not
   versioned Pro defaults. Active CLI/browser guidance still told operators to
   use concrete ChatGPT model names such as `gpt-5.2-pro`, even though the live

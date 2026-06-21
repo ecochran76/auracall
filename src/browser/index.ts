@@ -121,12 +121,12 @@ import {
   CHATGPT_MUTATION_WINDOW_MS,
   CHATGPT_POST_COMMIT_AUTO_WAIT_MAX_MS,
   CHATGPT_RATE_LIMIT_AUTO_WAIT_MAX_MS,
-  CHATGPT_RATE_LIMIT_COOLDOWN_MS,
   extractChatgptRateLimitSummary,
   getChatgptMutationBudgetWaitMs,
   getChatgptPostCommitQuietWaitMs,
   isChatgptRateLimitMessage,
   readChatgptRateLimitGuardState,
+  resolveChatgptRateLimitCooldownMs,
   resolveChatgptRateLimitProfileName,
   writeChatgptRateLimitGuardState,
 } from './chatgptRateLimitGuard.js';
@@ -1358,13 +1358,13 @@ async function handleChatgptBrowserRateLimitFailure(options: {
     return options.error;
   }
   const now = Date.now();
-  const cooldownUntil = now + CHATGPT_RATE_LIMIT_COOLDOWN_MS;
   const profile = resolveChatgptBrowserGuardProfileName(options.config, options.managedProfileDir);
   const current = await readChatgptRateLimitGuardState({
     profileName: profile,
     managedProfileDir: options.managedProfileDir ?? options.config.manualLoginProfileDir ?? null,
     managedProfileRoot: options.config.managedProfileRoot ?? null,
   });
+  const cooldownUntil = now + resolveChatgptRateLimitCooldownMs(current, now);
   const recentMutations = appendChatgptMutationRecord(
     current?.recentMutations ?? current?.recentMutationAts,
     options.action,

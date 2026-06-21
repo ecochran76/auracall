@@ -5,6 +5,8 @@ import { resolveManagedProfileRoot } from './profileStore.js';
 
 export const CHATGPT_MUTATION_MIN_INTERVAL_MS = 15_000;
 export const CHATGPT_RATE_LIMIT_COOLDOWN_MS = 5 * 60_000;
+export const CHATGPT_REPEATED_RATE_LIMIT_COOLDOWN_MS = 15 * 60_000;
+export const CHATGPT_REPEATED_RATE_LIMIT_WINDOW_MS = 30 * 60_000;
 export const CHATGPT_RATE_LIMIT_AUTO_WAIT_MAX_MS = 30_000;
 export const CHATGPT_MUTATION_WINDOW_MS = 2 * 60_000;
 export const CHATGPT_MUTATION_MAX_WEIGHT = 5;
@@ -144,6 +146,39 @@ export function extractChatgptRateLimitSummary(message: string): string | null {
   }
   const generic = normalized.match(/(rate limit[^.]*\.?)/i);
   return generic?.[1]?.trim() ?? null;
+}
+
+export function resolveChatgptRateLimitCooldownMs(
+  state:
+    | Pick<ChatgptRateLimitGuardState, 'cooldownDetectedAt' | 'cooldownUntil' | 'recentMutations' | 'recentMutationAts'>
+    | null
+    | undefined,
+  now = Date.now(),
+  options: {
+    retryAfterMs?: number | null;
+    baseCooldownMs?: number;
+    repeatedCooldownMs?: number;
+    repeatedWindowMs?: number;
+  } = {},
+): number {
+  const baseCooldownMs = options.baseCooldownMs ?? CHATGPT_RATE_LIMIT_COOLDOWN_MS;
+  const repeatedCooldownMs = options.repeatedCooldownMs ?? CHATGPT_REPEATED_RATE_LIMIT_COOLDOWN_MS;
+  const repeatedWindowMs = options.repeatedWindowMs ?? CHATGPT_REPEATED_RATE_LIMIT_WINDOW_MS;
+  const retryAfterMs =
+    typeof options.retryAfterMs === 'number' && Number.isFinite(options.retryAfterMs) && options.retryAfterMs > 0
+      ? options.retryAfterMs
+      : 0;
+  let cooldownMs = Math.max(baseCooldownMs, retryAfterMs);
+  const detectedAt =
+    typeof state?.cooldownDetectedAt === 'number' && Number.isFinite(state.cooldownDetectedAt)
+      ? state.cooldownDetectedAt
+      : typeof state?.cooldownUntil === 'number' && Number.isFinite(state.cooldownUntil)
+        ? state.cooldownUntil - baseCooldownMs
+        : null;
+  if (typeof detectedAt === 'number' && detectedAt > now - repeatedWindowMs) {
+    cooldownMs = Math.max(cooldownMs, repeatedCooldownMs);
+  }
+  return cooldownMs;
 }
 
 export function pruneChatgptMutationHistory(
