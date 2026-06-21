@@ -1726,10 +1726,14 @@ export async function createResponsesHttpServer(
 					await host.summarizeRunnerTopology(),
 					statusQuery.runnerTopologyMode,
 				);
-				const accountMirrorStatus = accountMirrorStatusRegistry.readStatus({
-					provider: statusQuery.accountMirrorProvider,
-					runtimeProfileId: statusQuery.accountMirrorRuntimeProfileId,
-				});
+				const accountMirrorStatus = await hydrateAccountMirrorStatusMaterializationEvidence(
+					accountMirrorStatusRegistry.readStatus({
+						provider: statusQuery.accountMirrorProvider,
+						runtimeProfileId: statusQuery.accountMirrorRuntimeProfileId,
+					}),
+					historyMaterializationService,
+					runArchiveService,
+				);
 				const statusResponseAccountMirrorStatus = scopeAccountMirrorStatusForProofScope(
 					accountMirrorStatus,
 					accountMirrorProofScope,
@@ -1806,7 +1810,11 @@ export async function createResponsesHttpServer(
 					res,
 					200,
 					await readBrowserProcessStatus({
-						status: accountMirrorStatusRegistry.readStatus(query),
+						status: await hydrateAccountMirrorStatusMaterializationEvidence(
+							accountMirrorStatusRegistry.readStatus(query),
+							historyMaterializationService,
+							runArchiveService,
+						),
 						now,
 					}),
 				);
@@ -1901,7 +1909,15 @@ export async function createResponsesHttpServer(
 					provider: query.provider,
 					runtimeProfileId: query.runtimeProfileId,
 				});
-				sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
+				sendJson(
+					res,
+					200,
+					await hydrateAccountMirrorStatusMaterializationEvidence(
+						accountMirrorStatusRegistry.readStatus(query),
+						historyMaterializationService,
+						runArchiveService,
+					),
+				);
 				return;
 			}
 
@@ -2252,7 +2268,14 @@ export async function createResponsesHttpServer(
 				const result = createAccountMirrorSchedulerDiagnosticsBundle({
 					query,
 					scheduler: accountMirrorSchedulerState,
-					status: accountMirrorStatusRegistry.readStatus(),
+					status: await hydrateAccountMirrorStatusMaterializationEvidence(
+						accountMirrorStatusRegistry.readStatus({
+							provider: normalizeBrowserProcessProvider(query.provider),
+							runtimeProfileId: query.runtimeProfileId,
+						}),
+						historyMaterializationService,
+						runArchiveService,
+					),
 					completions: await createAccountMirrorCompletionStatusSummary(
 						accountMirrorCompletionService,
 						now,
@@ -2579,6 +2602,8 @@ export async function createResponsesHttpServer(
 						runtimeProfileId: payload.runtimeProfile,
 						explicitRefresh: payload.explicitRefresh,
 						ignoreMinimumInterval: payload.ignoreMinimumInterval ?? payload.ignore_minimum_interval,
+						ignoreFailureBackoff:
+							payload.ignoreFailureBackoff ?? payload.ignore_failure_backoff,
 						queueTimeoutMs: payload.queueTimeoutMs,
 						queuePollMs: payload.queuePollMs,
 						collectorTimeoutMs: payload.collectorTimeoutMs,
@@ -2874,7 +2899,11 @@ export async function createResponsesHttpServer(
 				const boundPort =
 					address && typeof address !== "string" ? address.port : (options.port ?? 0);
 				await syncRunnerStateFromStore();
-				const accountMirrorStatus = accountMirrorStatusRegistry.readStatus();
+				const accountMirrorStatus = await hydrateAccountMirrorStatusMaterializationEvidence(
+					accountMirrorStatusRegistry.readStatus(),
+					historyMaterializationService,
+					runArchiveService,
+				);
 				const statusResponseAccountMirrorStatus = scopeAccountMirrorStatusForProofScope(
 					accountMirrorStatus,
 					accountMirrorProofScope,
@@ -4512,7 +4541,9 @@ function createHttpStatusResponse(input: {
 	runner: HttpStatusResponse["runner"];
 	backgroundDrain: HttpStatusResponse["backgroundDrain"];
 	tenantExecutionLimits: TenantExecutionLimitStatusSummary;
-	accountMirrorScheduler: HttpStatusResponse["accountMirrorScheduler"];
+	accountMirrorScheduler: HttpStatusResponse["accountMirrorScheduler"] & {
+		history: AccountMirrorSchedulerPassHistory;
+	};
 	accountMirrorSchedulerForegroundWork: AccountMirrorSchedulerForegroundWorkStatus;
 	accountMirrorStatus: AccountMirrorStatusSummary;
 	accountMirrorAccountLibraryPreviews?: AccountMirrorAccountLibraryPreviewMap | null;
@@ -4537,6 +4568,12 @@ function createHttpStatusResponse(input: {
 		publicDashboardUrl: input.publicDashboardUrl,
 		serviceRouting: input.serviceRouting,
 	});
+	const compactAccountMirrorScheduler: HttpStatusResponse["accountMirrorScheduler"] = {
+		...accountMirrorScheduler,
+		history: summarizeAccountMirrorSchedulerHistory(accountMirrorScheduler.history, {
+			limit: 10,
+		}) as unknown as AccountMirrorSchedulerPassHistory,
+	};
 	return {
 		object: "status",
 		ok: true,
@@ -4692,7 +4729,7 @@ function createHttpStatusResponse(input: {
 		runner: input.runner,
 		backgroundDrain: input.backgroundDrain,
 		tenantExecutionLimits: input.tenantExecutionLimits,
-		accountMirrorScheduler,
+		accountMirrorScheduler: compactAccountMirrorScheduler,
 		accountMirrorStatus: input.accountMirrorStatus,
 		accountMirrorCompletions: input.accountMirrorCompletions,
 		accountMirrorProofScope: input.accountMirrorProofScope,
@@ -5669,6 +5706,198 @@ async function readActiveAccountLibraryMaterializationJobs(input: {
 		});
 	}
 	return activeJobs;
+}
+
+async function hydrateAccountMirrorStatusMaterializationEvidence(
+	status: AccountMirrorStatusSummary,
+	service: HistoryMaterializationService | null | undefined,
+	runArchiveService: RunArchiveService | null | undefined,
+): Promise<AccountMirrorStatusSummary> {
+	if (status.entries.length !== 1) return status;
+	const localMaterialized = new Map<
+		string,
+		Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">
+	>();
+	await Promise.all(
+		status.entries.map(async (entry) => {
+			const [archiveItems, jobs] = await Promise.all([
+				runArchiveService
+					?.listItems({
+						provider: entry.provider,
+						runtimeProfile: entry.runtimeProfileId,
+						assetAvailability: "available",
+						limit: 500,
+					})
+					.catch(() => null) ?? null,
+				service
+					?.listJobs({
+						status: "terminal",
+						provider: entry.provider,
+						runtimeProfile: entry.runtimeProfileId,
+						limit: 500,
+					})
+					.catch(() => null) ?? null,
+			]);
+			mergeAccountMirrorLocalCountMap(
+				localMaterialized,
+				summarizeRunArchiveLocalCounts(archiveItems?.items ?? []),
+			);
+			mergeAccountMirrorLocalCountMap(
+				localMaterialized,
+				summarizeTerminalHistoryMaterializationLocalCounts(jobs?.jobs ?? []),
+			);
+		}),
+	);
+	if (localMaterialized.size === 0) return status;
+	let changed = false;
+	const entries = status.entries.map((entry) => {
+		const counts = localMaterialized.get(accountMirrorStatusMaterializationKey(entry));
+		if (!counts) return entry;
+		const hydrated = hydrateAccountMirrorStatusEntryAssetInventory(entry, counts);
+		if (hydrated !== entry) changed = true;
+		return hydrated;
+	});
+	return changed ? { ...status, entries } : status;
+}
+
+function summarizeRunArchiveLocalCounts(
+	items: RunArchiveListResult["items"],
+): Map<string, Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">> {
+	const counts = new Map<
+		string,
+		Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">
+	>();
+	for (const item of items) {
+		const provider = item.provider ?? null;
+		const runtimeProfileId = item.runtimeProfile ?? null;
+		if (!provider || !runtimeProfileId) continue;
+		const key = accountMirrorStatusMaterializationKey({
+			provider,
+			runtimeProfileId,
+			expectedIdentityKey: item.boundIdentityKey ?? null,
+		});
+		const next = counts.get(key) ?? { artifacts: 0, files: 0, media: 0 };
+		if (item.kind === "upload") next.files += 1;
+		else if (item.kind === "media_generation") next.media += 1;
+		else if (item.kind === "generated_artifact") next.artifacts += 1;
+		counts.set(key, next);
+	}
+	for (const [key, value] of counts) {
+		if (value.artifacts + value.files + value.media <= 0) counts.delete(key);
+	}
+	return counts;
+}
+
+function mergeAccountMirrorLocalCountMap(
+	target: Map<string, Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">>,
+	source: Map<string, Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">>,
+): void {
+	for (const [key, value] of source) {
+		const existing = target.get(key) ?? { artifacts: 0, files: 0, media: 0 };
+		target.set(key, {
+			artifacts: Math.max(existing.artifacts, value.artifacts),
+			files: Math.max(existing.files, value.files),
+			media: Math.max(existing.media, value.media),
+		});
+	}
+}
+
+function summarizeTerminalHistoryMaterializationLocalCounts(
+	jobs: HistoryMaterializationJob[],
+): Map<string, Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">> {
+	const counts = new Map<
+		string,
+		Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">
+	>();
+	for (const job of jobs) {
+		if (!job.result) continue;
+		const provider =
+			job.request.provider ?? job.result.target?.provider ?? (job.source.type === "reconciliation" ? job.source.provider : null);
+		const runtimeProfileId = job.request.runtimeProfile ?? job.result.target?.runtimeProfile ?? null;
+		const tenantKey = job.request.boundIdentityKey ?? job.result.target?.boundIdentityKey ?? null;
+		if (!provider || !runtimeProfileId) continue;
+		const key = accountMirrorStatusMaterializationKey({
+			provider,
+			runtimeProfileId,
+			expectedIdentityKey: tenantKey,
+		});
+		const next = counts.get(key) ?? { artifacts: 0, files: 0, media: 0 };
+		for (const entry of job.result.entries) {
+			if (entry.status !== "materialized" && entry.status !== "duplicate") continue;
+			if (entry.kind === "file") next.files += 1;
+			else if (entry.kind === "media") next.media += 1;
+			else next.artifacts += 1;
+		}
+		counts.set(key, next);
+	}
+	for (const [key, value] of counts) {
+		if (value.artifacts + value.files + value.media <= 0) counts.delete(key);
+	}
+	return counts;
+}
+
+function accountMirrorStatusMaterializationKey(input: {
+	provider: string | null;
+	runtimeProfileId: string | null;
+	expectedIdentityKey?: string | null;
+}): string {
+	return `${input.provider ?? ""}:${input.runtimeProfileId ?? ""}:${input.expectedIdentityKey ?? ""}`;
+}
+
+function hydrateAccountMirrorStatusEntryAssetInventory(
+	entry: AccountMirrorStatusEntry,
+	localCounts: Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">,
+): AccountMirrorStatusEntry {
+	const current =
+		entry.mirrorCompleteness.assetInventory ?? entry.metadataEvidence?.assetInventory ?? null;
+	if (!current) return entry;
+	const nextLocal = {
+		artifacts: Math.max(current.localMaterialized.artifacts, localCounts.artifacts),
+		files: Math.max(current.localMaterialized.files, localCounts.files),
+		media: Math.max(current.localMaterialized.media, localCounts.media),
+	};
+	if (
+		nextLocal.artifacts === current.localMaterialized.artifacts &&
+		nextLocal.files === current.localMaterialized.files &&
+		nextLocal.media === current.localMaterialized.media
+	) {
+		return entry;
+	}
+	const delta = {
+		artifacts: nextLocal.artifacts - current.localMaterialized.artifacts,
+		files: nextLocal.files - current.localMaterialized.files,
+		media: nextLocal.media - current.localMaterialized.media,
+	};
+	const hydrateInventory = (inventory: typeof current): typeof current => ({
+		...inventory,
+		localMaterialized: {
+			artifacts: Math.max(inventory.localMaterialized.artifacts, nextLocal.artifacts),
+			files: Math.max(inventory.localMaterialized.files, nextLocal.files),
+			media: Math.max(inventory.localMaterialized.media, nextLocal.media),
+		},
+		remoteKnownMissingLocal: {
+			artifacts: Math.max(0, inventory.remoteKnownMissingLocal.artifacts - delta.artifacts),
+			files: Math.max(0, inventory.remoteKnownMissingLocal.files - delta.files),
+			media: Math.max(0, inventory.remoteKnownMissingLocal.media - delta.media),
+		},
+	});
+	return {
+		...entry,
+		metadataEvidence: entry.metadataEvidence
+			? {
+					...entry.metadataEvidence,
+					assetInventory: entry.metadataEvidence.assetInventory
+						? hydrateInventory(entry.metadataEvidence.assetInventory)
+						: entry.metadataEvidence.assetInventory,
+				}
+			: entry.metadataEvidence,
+		mirrorCompleteness: {
+			...entry.mirrorCompleteness,
+			assetInventory: entry.mirrorCompleteness.assetInventory
+				? hydrateInventory(entry.mirrorCompleteness.assetInventory)
+				: entry.mirrorCompleteness.assetInventory,
+		},
+	};
 }
 
 async function readAccountLibraryBrowserProcessStatus(input: {
@@ -7134,6 +7363,8 @@ const ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA = z.object({
 	explicitRefresh: z.boolean().optional(),
 	ignoreMinimumInterval: z.boolean().optional(),
 	ignore_minimum_interval: z.boolean().optional(),
+	ignoreFailureBackoff: z.boolean().optional(),
+	ignore_failure_backoff: z.boolean().optional(),
 	queueTimeoutMs: z.number().int().nonnegative().optional(),
 	queuePollMs: z.number().int().positive().optional(),
 	collectorTimeoutMs: z.number().int().positive().optional(),
@@ -7388,6 +7619,8 @@ interface ParsedAccountMirrorStatusQuery {
 	provider?: AccountMirrorProvider;
 	runtimeProfileId?: string;
 	explicitRefresh?: boolean;
+	ignoreMinimumInterval?: boolean;
+	ignoreFailureBackoff?: boolean;
 }
 
 interface ParsedAccountMirrorCatalogQuery {
@@ -7718,11 +7951,31 @@ function parseAccountMirrorStatusQuery(
 	if (searchParams.has("explicitRefresh")) {
 		raw.explicitRefresh = searchParams.get("explicitRefresh");
 	}
+	if (searchParams.has("ignoreMinimumInterval")) {
+		raw.ignoreMinimumInterval = searchParams.get("ignoreMinimumInterval");
+	}
+	if (searchParams.has("ignore_minimum_interval")) {
+		raw.ignoreMinimumInterval = searchParams.get("ignore_minimum_interval");
+	}
+	if (searchParams.has("ignoreFailureBackoff")) {
+		raw.ignoreFailureBackoff = searchParams.get("ignoreFailureBackoff");
+	}
+	if (searchParams.has("ignore_failure_backoff")) {
+		raw.ignoreFailureBackoff = searchParams.get("ignore_failure_backoff");
+	}
 	const parsed = z
 		.object({
 			provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
 			runtimeProfile: z.string().trim().min(1).optional(),
 			explicitRefresh: z
+				.enum(["0", "1", "true", "false"])
+				.transform((value) => value === "1" || value.toLowerCase() === "true")
+				.optional(),
+			ignoreMinimumInterval: z
+				.enum(["0", "1", "true", "false"])
+				.transform((value) => value === "1" || value.toLowerCase() === "true")
+				.optional(),
+			ignoreFailureBackoff: z
 				.enum(["0", "1", "true", "false"])
 				.transform((value) => value === "1" || value.toLowerCase() === "true")
 				.optional(),
@@ -7732,6 +7985,8 @@ function parseAccountMirrorStatusQuery(
 		provider: parsed.provider,
 		runtimeProfileId: parsed.runtimeProfile,
 		explicitRefresh: parsed.explicitRefresh,
+		ignoreMinimumInterval: parsed.ignoreMinimumInterval,
+		ignoreFailureBackoff: parsed.ignoreFailureBackoff,
 	};
 }
 

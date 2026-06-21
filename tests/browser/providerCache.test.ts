@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../src/browser/providers/cache.js';
 import type { ProviderCacheContext } from '../../src/browser/providers/cache.js';
 import { JsonCacheStore, SqliteCacheStore } from '../../src/browser/llmService/cache/store.js';
+import { upsertCacheIndexEntry } from '../../src/browser/llmService/cache/index.js';
 
 describe('provider cache nested writes', () => {
   afterEach(() => {
@@ -123,6 +124,121 @@ describe('provider cache nested writes', () => {
       });
       expect(reread.items).toHaveLength(1);
       expect(reread.stale).toBe(true);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('overwrites provider JSON cache files via atomic replacement', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'oracle-cache-home-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const context: ProviderCacheContext = {
+      provider: 'chatgpt',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const cacheDir = path.join(
+      homeDir,
+      'cache',
+      'providers',
+      'chatgpt',
+      'cache-test@example.com',
+    );
+    const cacheFile = path.join(cacheDir, 'conversations.json');
+    try {
+      await writeConversationCache(context, [
+        {
+          id: 'conversation-1',
+          title: 'First',
+          provider: 'chatgpt',
+        },
+      ]);
+      await writeConversationCache(context, [
+        {
+          id: 'conversation-2',
+          title: 'Second',
+          provider: 'chatgpt',
+        },
+      ]);
+
+      const written = JSON.parse(await readFile(cacheFile, 'utf8')) as {
+        items: Array<{ id: string; title: string }>;
+      };
+      expect(written.items).toEqual([{ id: 'conversation-2', title: 'Second', provider: 'chatgpt' }]);
+      expect((await readdir(cacheDir)).filter((entry) => entry.endsWith('.tmp'))).toEqual([]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('cache index upsert salvages and rewrites appended JSON corruption', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'oracle-cache-home-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const context: ProviderCacheContext = {
+      provider: 'chatgpt',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const cacheDir = path.join(
+      homeDir,
+      'cache',
+      'providers',
+      'chatgpt',
+      'cache-test@example.com',
+    );
+    const indexPath = path.join(cacheDir, 'cache-index.json');
+    try {
+      await mkdir(cacheDir, { recursive: true });
+      await writeFile(
+        indexPath,
+        `${JSON.stringify(
+          {
+            version: 1,
+            updatedAt: '2026-06-10T00:00:00.000Z',
+            entries: [
+              {
+                kind: 'conversation-files',
+                path: 'conversation-files/old.json',
+                conversationId: 'old',
+                updatedAt: '2026-06-10T00:00:00.000Z',
+              },
+            ],
+          },
+          null,
+          2,
+        )}{${JSON.stringify({
+          kind: 'conversation-files',
+          path: 'conversation-files/orphan.json',
+          conversationId: 'orphan',
+          updatedAt: '2026-06-10T00:00:01.000Z',
+        }).slice(1)}`,
+        'utf8',
+      );
+
+      await upsertCacheIndexEntry(context, {
+        kind: 'account-mirror',
+        path: 'account-mirror/snapshot.json',
+      });
+
+      const rewritten = await readFile(indexPath, 'utf8');
+      const parsed = JSON.parse(rewritten) as {
+        entries: Array<{ kind: string; path: string; conversationId?: string }>;
+      };
+      expect(parsed.entries).toEqual([
+        expect.objectContaining({
+          kind: 'conversation-files',
+          path: 'conversation-files/old.json',
+          conversationId: 'old',
+        }),
+        expect.objectContaining({
+          kind: 'account-mirror',
+          path: 'account-mirror/snapshot.json',
+        }),
+      ]);
+      expect(rewritten).not.toContain('orphan.json');
+      expect((await readdir(cacheDir)).filter((entry) => entry.endsWith('.tmp'))).toEqual([]);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

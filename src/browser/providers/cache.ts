@@ -393,7 +393,14 @@ async function writeProviderCache<T>(
     identityKey: resolveIdentityKey(context),
     featureSignature: normalizeFeatureSignature(context.featureSignature),
   };
-  await fs.writeFile(cacheFile, JSON.stringify(payload, null, 2), 'utf8');
+  const tempFile = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await fs.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf8');
+    await fs.rename(tempFile, cacheFile);
+  } catch (error) {
+    await fs.rm(tempFile, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 function resolveIdentityKey(context: ProviderCacheContext): string {

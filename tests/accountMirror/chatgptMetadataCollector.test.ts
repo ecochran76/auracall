@@ -17,6 +17,7 @@ import {
 	readBoundedProjects,
 	readBoundedGrokAccountFileInventory,
 	readAccountMirrorProviderIdentityKeyForTest,
+	shouldResumeChatgptAttachmentInventoryCursor,
 	selectAttachmentInventoryCursorForSweep,
 	selectAttachmentInventoryCursorForProviderSweep,
 	selectProjectConversationCursorForSweep,
@@ -84,7 +85,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
-	test("uses prior attachment cursor only for full-sweep collection", () => {
+	test("uses prior attachment cursor for full-sweep and incomplete ChatGPT steady-follow", () => {
 		const previousEvidence = {
 			identitySource: "profile-menu",
 			projectSampleIds: [],
@@ -103,6 +104,30 @@ describe("ChatGPT account mirror metadata collector", () => {
 				yielded: false,
 				yieldCause: null,
 			},
+			assetInventory: {
+				state: "in_progress" as const,
+				summary: "Asset inventory is still in progress because detail inventory was truncated.",
+				detailScannedThisPass: {
+					projects: 0,
+					conversations: 1,
+					total: 1,
+				},
+				localMaterialized: {
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+				remoteKnownMissingLocal: {
+					artifacts: 64,
+					files: 73,
+					media: 0,
+				},
+				unknownOrDeferred: {
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+			},
 			projectConversations: {
 				nextProjectIndex: 3,
 				readLimit: 4,
@@ -113,6 +138,10 @@ describe("ChatGPT account mirror metadata collector", () => {
 
 		expect(selectAttachmentInventoryCursorForSweep("steady_follow", previousEvidence)).toBeNull();
 		expect(selectAttachmentInventoryCursorForSweep(undefined, previousEvidence)).toBeNull();
+		expect(
+			selectAttachmentInventoryCursorForProviderSweep("chatgpt", "steady_follow", previousEvidence),
+		).toBe(previousEvidence.attachmentInventory);
+		expect(shouldResumeChatgptAttachmentInventoryCursor(previousEvidence)).toBe(true);
 		expect(selectAttachmentInventoryCursorForSweep("full_sweep", previousEvidence)).toBe(
 			previousEvidence.attachmentInventory,
 		);
@@ -121,6 +150,57 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(selectProjectConversationCursorForSweep("full_sweep", previousEvidence)).toBe(
 			previousEvidence.projectConversations,
 		);
+	});
+
+	test("starts fresh for ChatGPT steady-follow when prior detail inventory is complete", () => {
+		const previousEvidence = {
+			identitySource: "profile-menu",
+			projectSampleIds: [],
+			conversationSampleIds: ["conv_recent"],
+			attachmentInventory: {
+				nextProjectIndex: 0,
+				nextConversationIndex: 0,
+				detailReadLimit: 4,
+				scannedProjects: 0,
+				scannedConversations: 4,
+				yielded: false,
+				yieldCause: null,
+			},
+			assetInventory: {
+				state: "complete" as const,
+				summary: "Asset inventory is complete.",
+				detailScannedThisPass: {
+					projects: 0,
+					conversations: 4,
+					total: 4,
+				},
+				localMaterialized: {
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+				remoteKnownMissingLocal: {
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+				unknownOrDeferred: {
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+			},
+			truncated: {
+				projects: false,
+				conversations: false,
+				artifacts: false,
+			},
+		};
+
+		expect(
+			selectAttachmentInventoryCursorForProviderSweep("chatgpt", "steady_follow", previousEvidence),
+		).toBeNull();
+		expect(shouldResumeChatgptAttachmentInventoryCursor(previousEvidence)).toBe(false);
 	});
 
 	test("can tolerate transient provider project route failures for Gemini live follow", async () => {
@@ -351,6 +431,12 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(client.getConversationContext).toHaveBeenCalledWith("conv_1", {
 			projectId: undefined,
 			refresh: true,
+			listOptions: {
+				accountMirrorContextChunk: {
+					startMessageIndex: 0,
+					maxMessages: 24,
+				},
+			},
 		});
 		expect(inventory.cursor).toMatchObject({
 			nextConversationIndex: 0,
@@ -416,6 +502,258 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(inventory.cursor).toMatchObject({
 			nextConversationIndex: 0,
 			scannedConversations: 1,
+		});
+	});
+
+	test("bounds hung ChatGPT library inventory and still scans conversation detail", async () => {
+		vi.useFakeTimers();
+		try {
+			const client = {
+				listAccountFiles: vi.fn(() => new Promise<never>(() => {})),
+				listProjectFiles: vi.fn(async () => []),
+				listConversationFiles: vi.fn(async (conversationId: string) => [
+					{
+						id: `conversation-file-${conversationId}`,
+						name: "Conversation source.pdf",
+						provider: "chatgpt" as const,
+						source: "conversation" as const,
+					},
+				]),
+				getConversationContext: vi.fn(async (conversationId: string) => ({
+					provider: "chatgpt" as const,
+					conversationId,
+					messages: [],
+					artifacts: [],
+				})),
+			};
+
+			const inventoryPromise = readBoundedChatgptDetailInventory(
+				client,
+				[],
+				[{ id: "conv_1", title: "Conversation 1", provider: "chatgpt" }],
+				4,
+				{
+					maxDetailReads: 2,
+					providerCallTimeoutMs: 1,
+				},
+			);
+			await vi.advanceTimersByTimeAsync(1);
+			const inventory = await inventoryPromise;
+
+			expect(inventory.files.map((file) => file.id)).toEqual(["conversation-file-conv_1"]);
+			expect(inventory.cursor).toMatchObject({
+				nextConversationIndex: 0,
+				scannedConversations: 1,
+			});
+			expect(inventory.truncated).toBe(false);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("bounds hung ChatGPT conversation detail reads and advances the cursor", async () => {
+		vi.useFakeTimers();
+		try {
+			const client = {
+				listAccountFiles: vi.fn(async () => []),
+				listProjectFiles: vi.fn(async () => []),
+				listConversationFiles: vi.fn(() => new Promise<never>(() => {})),
+				getConversationContext: vi.fn(() => new Promise<never>(() => {})),
+			};
+
+			const inventoryPromise = readBoundedChatgptDetailInventory(
+				client,
+				[],
+				[
+					{ id: "conv_1", title: "Conversation 1", provider: "chatgpt" },
+					{ id: "conv_2", title: "Conversation 2", provider: "chatgpt" },
+				],
+				4,
+				{
+					maxDetailReads: 1,
+					cursor: {
+						nextProjectIndex: 0,
+						nextConversationIndex: 1,
+						detailReadLimit: 1,
+						scannedProjects: 0,
+						scannedConversations: 1,
+					},
+					providerCallTimeoutMs: 1,
+				},
+			);
+			await vi.advanceTimersByTimeAsync(1);
+			await vi.advanceTimersByTimeAsync(1);
+			const inventory = await inventoryPromise;
+
+			expect(inventory.files).toEqual([]);
+			expect(inventory.artifacts).toEqual([]);
+			expect(inventory.cursor).toMatchObject({
+				nextConversationIndex: 0,
+				scannedConversations: 1,
+			});
+			expect(inventory.truncated).toBe(false);
+			expect(client.listConversationFiles).toHaveBeenCalledWith("conv_2", {
+				projectId: undefined,
+			});
+			expect(client.getConversationContext).toHaveBeenCalledWith("conv_2", {
+				projectId: undefined,
+				refresh: true,
+				listOptions: {
+					accountMirrorContextChunk: {
+						startMessageIndex: 0,
+						maxMessages: 24,
+					},
+				},
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("keeps the outer ChatGPT conversation cursor pinned while a large chat has more chunks", async () => {
+		const client = {
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(async (conversationId: string) => ({
+				provider: "chatgpt" as const,
+				conversationId,
+				messages: Array.from({ length: 24 }, (_, index) => ({
+					role: "assistant" as const,
+					text: `chunk message ${index}`,
+				})),
+				artifacts: [
+					{
+						id: "artifact-in-first-chunk",
+						title: "Chunk artifact",
+						kind: "document" as const,
+						messageIndex: 4,
+					},
+				],
+				metadata: {
+					accountMirrorContextChunk: {
+						startMessageIndex: 0,
+						endMessageIndex: 24,
+						nextMessageIndex: 24,
+						maxMessages: 24,
+						totalMessages: 40,
+						complete: false,
+					},
+				},
+			})),
+		};
+
+		const inventory = await readBoundedChatgptDetailInventory(
+			client,
+			[],
+			[{ id: "conv_large", title: "Large conversation", provider: "chatgpt" }],
+			20,
+			{ maxDetailReads: 1 },
+		);
+
+		expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
+			"artifact-in-first-chunk",
+		]);
+		expect(inventory.truncated).toBe(true);
+		expect(inventory.cursor).toMatchObject({
+			nextConversationIndex: 0,
+			scannedConversations: 1,
+			conversationDetail: {
+				conversationId: "conv_large",
+				nextMessageIndex: 24,
+				messageLimit: 24,
+				totalMessages: 40,
+			},
+		});
+		expect(client.getConversationContext).toHaveBeenCalledWith("conv_large", {
+			projectId: undefined,
+			refresh: true,
+			listOptions: {
+				accountMirrorContextChunk: {
+					startMessageIndex: 0,
+					maxMessages: 24,
+				},
+			},
+		});
+	});
+
+	test("resumes a large ChatGPT conversation chunk and advances after it completes", async () => {
+		const client = {
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(async (conversationId: string) => ({
+				provider: "chatgpt" as const,
+				conversationId,
+				messages: Array.from({ length: 16 }, (_, index) => ({
+					role: "assistant" as const,
+					text: `resumed message ${index + 24}`,
+				})),
+				artifacts: [
+					{
+						id: "artifact-in-final-chunk",
+						title: "Final chunk artifact",
+						kind: "document" as const,
+						messageIndex: 28,
+					},
+				],
+				metadata: {
+					accountMirrorContextChunk: {
+						startMessageIndex: 24,
+						endMessageIndex: 40,
+						nextMessageIndex: null,
+						maxMessages: 24,
+						totalMessages: 40,
+						complete: true,
+					},
+				},
+			})),
+		};
+
+		const inventory = await readBoundedChatgptDetailInventory(
+			client,
+			[],
+			[
+				{ id: "conv_large", title: "Large conversation", provider: "chatgpt" },
+				{ id: "conv_next", title: "Next conversation", provider: "chatgpt" },
+			],
+			20,
+			{
+				maxDetailReads: 1,
+				cursor: {
+					nextProjectIndex: 0,
+					nextConversationIndex: 0,
+					detailReadLimit: 1,
+					scannedProjects: 0,
+					scannedConversations: 1,
+					conversationDetail: {
+						conversationId: "conv_large",
+						nextMessageIndex: 24,
+						messageLimit: 24,
+						totalMessages: 40,
+					},
+				},
+			},
+		);
+
+		expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
+			"artifact-in-final-chunk",
+		]);
+		expect(inventory.truncated).toBe(true);
+		expect(inventory.cursor).toMatchObject({
+			nextConversationIndex: 1,
+			scannedConversations: 1,
+			conversationDetail: null,
+		});
+		expect(client.getConversationContext).toHaveBeenCalledWith("conv_large", {
+			projectId: undefined,
+			refresh: true,
+			listOptions: {
+				accountMirrorContextChunk: {
+					startMessageIndex: 24,
+					maxMessages: 24,
+				},
+			},
 		});
 	});
 
@@ -1026,7 +1364,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 		).toBe(previousEvidence.attachmentInventory);
 		expect(
 			selectAttachmentInventoryCursorForProviderSweep("chatgpt", "steady_follow", previousEvidence),
-		).toBeNull();
+		).toBe(previousEvidence.attachmentInventory);
 		expect(
 			selectAttachmentInventoryCursorForProviderSweep("gemini", "full_sweep", previousEvidence),
 		).toBe(previousEvidence.attachmentInventory);

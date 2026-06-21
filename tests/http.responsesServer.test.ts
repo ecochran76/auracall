@@ -19,7 +19,9 @@ import {
 import {
 	createAccountMirrorStatusRegistry,
 	type AccountMirrorStatusSummary,
+	createAccountMirrorStatusSummary,
 } from "../src/accountMirror/statusRegistry.js";
+import type { AccountMirrorRefreshService } from "../src/accountMirror/refreshService.js";
 import type {
 	AccountMirrorCatalogItemResult,
 	AccountMirrorCatalogResult,
@@ -39,6 +41,7 @@ import {
 	type HistoryMaterializationJob,
 	type HistoryMaterializationService,
 } from "../src/runtime/historyMaterializationService.js";
+import type { RunArchiveService } from "../src/runtime/archiveService.js";
 import type { SearchProjectionResult } from "../src/runtime/searchProjectionService.js";
 import { createExecutionRuntimeControl } from "../src/runtime/control.js";
 import { writeTaskRunSpecStoredRecord } from "../src/teams/store.js";
@@ -2500,6 +2503,242 @@ describe("http responses adapter", () => {
 			);
 			expect(ignoredIntervalRefresh.status).toBe(202);
 			await ignoredIntervalRefresh.body?.cancel();
+		} finally {
+			await server.close();
+		}
+	});
+
+	it("keeps broad account mirror status readback off archive hydration paths", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-http-account-mirror-status-broad-"),
+		);
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const listArchiveItems = vi.fn(async () => {
+			throw new Error("broad status must not list archive items");
+		});
+		const listHistoryMaterializationJobs = vi.fn(async () => ({
+			object: "history_materialization_jobs" as const,
+			generatedAt: "2026-06-11T17:15:00.000Z",
+			status: null,
+			provider: null,
+			runtimeProfile: null,
+			sourceType: null,
+			limit: 50,
+			jobs: [],
+			metrics: {
+				total: 0,
+				byStatus: {},
+				active: 0,
+				terminal: 0,
+			},
+		}));
+
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0 },
+			{
+				now: () => new Date("2026-06-11T17:15:00.000Z"),
+				config: {
+					runtimeProfiles: {
+						default: {
+							browserProfile: "default",
+							defaultService: "chatgpt",
+							services: {
+								chatgpt: {
+									identity: { email: "ecochran76@gmail.com" },
+								},
+							},
+						},
+						"wsl-chrome-2": {
+							browserProfile: "wsl-chrome-2",
+							defaultService: "chatgpt",
+							services: {
+								chatgpt: {
+									identity: { email: "consult@polymerconsultinggroup.com" },
+								},
+							},
+						},
+					},
+				},
+				runArchiveService: {
+					listItems: listArchiveItems,
+				} as unknown as RunArchiveService,
+				historyMaterializationService: {
+					listJobs: listHistoryMaterializationJobs,
+					createJob: vi.fn(),
+					readJob: vi.fn(),
+					cancelJob: vi.fn(),
+					runJob: vi.fn(),
+					recoverInterruptedJobs: vi.fn(async () => 0),
+				} as unknown as HistoryMaterializationService,
+			},
+		);
+
+		try {
+			const accountMirrorResponse = await fetch(
+				`http://127.0.0.1:${server.port}/v1/account-mirrors/status`,
+			);
+			expect(accountMirrorResponse.status).toBe(200);
+			await expect(accountMirrorResponse.json()).resolves.toMatchObject({
+				object: "account_mirror_status",
+				metrics: { total: 2 },
+			});
+
+			const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(statusResponse.status).toBe(200);
+			await expect(statusResponse.json()).resolves.toMatchObject({
+				accountMirrorStatus: {
+					object: "account_mirror_status",
+					metrics: { total: 2 },
+				},
+			});
+
+			expect(listArchiveItems).not.toHaveBeenCalled();
+			expect(listHistoryMaterializationJobs).not.toHaveBeenCalledWith(
+				expect.objectContaining({ status: "terminal" }),
+			);
+		} finally {
+			await server.close();
+		}
+	});
+
+	it("passes explicit failure-backoff recovery overrides through account mirror routes", async () => {
+		const config = {
+			model: "gpt-5.2",
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: {
+								email: "ecochran76@gmail.com",
+								accountLevel: "Business",
+							},
+						},
+					},
+				},
+			},
+		};
+		const statusRegistry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-06-07T15:55:18.700Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "ecochran76@gmail.com",
+					detectedIdentitySource: "provider-app",
+					detectedIdentityObservedAtMs: Date.parse("2026-06-07T15:52:30.359Z"),
+					detectedIdentityConfidence: "authoritative",
+					lastFailureAtMs: Date.parse("2026-06-07T15:54:18.700Z"),
+					consecutiveFailureCount: 189,
+				},
+			},
+		});
+		const mirrorStatus = createAccountMirrorStatusSummary({
+			config,
+			now: new Date("2026-06-07T15:55:18.700Z"),
+		});
+		const requestRefresh = vi.fn<AccountMirrorRefreshService["requestRefresh"]>(
+			async (request) => ({
+				object: "account_mirror_refresh",
+				requestId: "acctmirror_http_override",
+				status: "completed",
+				provider: request?.provider ?? "chatgpt",
+				runtimeProfileId: request?.runtimeProfileId ?? "default",
+				browserProfileId: "default",
+				startedAt: "2026-06-07T15:55:18.700Z",
+				completedAt: "2026-06-07T15:55:18.700Z",
+				dispatcher: {
+					key: null,
+					operationId: null,
+					blockedBy: null,
+				},
+				metadataCounts: {
+					projects: 0,
+					conversations: 0,
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+				metadataEvidence: null,
+				mirrorCompleteness: mirrorStatus.entries[0]?.mirrorCompleteness ?? {
+					state: "none",
+					summary: "No account mirror metadata has been captured yet.",
+					remainingDetailSurfaces: null,
+					signals: null,
+					assetInventory: null,
+				},
+				detectedIdentityKey: "ecochran76@gmail.com",
+				detectedAccountLevel: "Business",
+				mirrorStatus,
+			}),
+		);
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0 },
+			{
+				config,
+				accountMirrorStatusRegistry: statusRegistry,
+				accountMirrorRefreshService: { requestRefresh },
+			},
+		);
+
+		try {
+			const defaultStatus = await fetch(
+				`http://127.0.0.1:${server.port}/v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default&explicitRefresh=true`,
+			);
+			expect(defaultStatus.status).toBe(200);
+			expect((await defaultStatus.json()) as AccountMirrorStatusSummary).toMatchObject({
+				entries: [
+					expect.objectContaining({
+						status: "delayed",
+						reason: "failure-backoff",
+					}),
+				],
+			});
+
+			const recoveryStatus = await fetch(
+				`http://127.0.0.1:${server.port}/v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default&explicitRefresh=true&ignore_failure_backoff=true`,
+			);
+			expect(recoveryStatus.status).toBe(200);
+			expect((await recoveryStatus.json()) as AccountMirrorStatusSummary).toMatchObject({
+				entries: [
+					expect.objectContaining({
+						status: "eligible",
+						reason: "eligible",
+					}),
+				],
+			});
+
+			const refreshResponse = await fetch(
+				`http://127.0.0.1:${server.port}/v1/account-mirrors/refresh`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						provider: "chatgpt",
+						runtimeProfile: "default",
+						explicitRefresh: true,
+						ignoreMinimumInterval: true,
+						ignore_failure_backoff: true,
+						queueTimeoutMs: 0,
+					}),
+				},
+			);
+			expect(refreshResponse.status).toBe(202);
+			await refreshResponse.body?.cancel();
+			expect(requestRefresh).toHaveBeenCalledWith(
+				expect.objectContaining({
+					provider: "chatgpt",
+					runtimeProfileId: "default",
+					explicitRefresh: true,
+					ignoreMinimumInterval: true,
+					ignoreFailureBackoff: true,
+					queueTimeoutMs: 0,
+				}),
+			);
 		} finally {
 			await server.close();
 		}
@@ -5791,12 +6030,13 @@ describe("http responses adapter", () => {
 					},
 				},
 				history: {
-					object: "account_mirror_scheduler_pass_history",
+					object: "account_mirror_scheduler_history",
 					entries: expect.arrayContaining([
 						expect.objectContaining({
-							object: "account_mirror_scheduler_pass",
 							mode: "dry-run",
 							action: "dry-run",
+							provider: "chatgpt",
+							runtimeProfileId: "default",
 						}),
 					]),
 				},
@@ -6266,12 +6506,13 @@ describe("http responses adapter", () => {
 						},
 					},
 					history: {
-						object: "account_mirror_scheduler_pass_history",
+						object: "account_mirror_scheduler_history",
 						entries: [
 							expect.objectContaining({
-								object: "account_mirror_scheduler_pass",
 								mode: "dry-run",
 								action: "dry-run",
+								provider: "chatgpt",
+								runtimeProfileId: "default",
 							}),
 						],
 					},
@@ -6513,12 +6754,13 @@ describe("http responses adapter", () => {
 						action: "refresh-completed",
 					},
 					history: {
-						object: "account_mirror_scheduler_pass_history",
+						object: "account_mirror_scheduler_history",
 						entries: [
 							expect.objectContaining({
-								object: "account_mirror_scheduler_pass",
 								mode: "execute",
 								action: "refresh-completed",
+								provider: null,
+								runtimeProfileId: null,
 							}),
 						],
 					},

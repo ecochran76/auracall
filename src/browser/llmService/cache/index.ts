@@ -39,7 +39,7 @@ export async function readCacheIndex(context: ProviderCacheContext): Promise<Cac
   const indexPath = resolveCacheIndexPath(context);
   try {
     const raw = await fs.readFile(indexPath, 'utf8');
-    const parsed = JSON.parse(raw) as CacheIndex;
+    const parsed = parseCacheIndexJson(raw);
     if (parsed?.version === 1 && Array.isArray(parsed.entries)) {
       return parsed;
     }
@@ -92,5 +92,62 @@ function resolveCacheIndexPath(context: ProviderCacheContext): string {
 async function writeCacheIndex(context: ProviderCacheContext, payload: CacheIndex): Promise<void> {
   const indexPath = resolveCacheIndexPath(context);
   await fs.mkdir(path.dirname(indexPath), { recursive: true });
-  await fs.writeFile(indexPath, JSON.stringify(payload, null, 2), 'utf8');
+  const tempPath = `${indexPath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await fs.writeFile(tempPath, JSON.stringify(payload, null, 2), 'utf8');
+    await fs.rename(tempPath, indexPath);
+  } catch (error) {
+    await fs.rm(tempPath, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+function parseCacheIndexJson(raw: string): CacheIndex {
+  try {
+    return JSON.parse(raw) as CacheIndex;
+  } catch (error) {
+    const documentEnd = findFirstJsonObjectEnd(raw);
+    if (documentEnd !== null && raw.slice(documentEnd).trim().length > 0) {
+      return JSON.parse(raw.slice(0, documentEnd)) as CacheIndex;
+    }
+    throw error;
+  }
+}
+
+function findFirstJsonObjectEnd(raw: string): number | null {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < raw.length; index += 1) {
+    const char = raw[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return index + 1;
+      }
+    }
+  }
+  return null;
 }

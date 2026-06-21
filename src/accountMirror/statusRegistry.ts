@@ -107,6 +107,43 @@ export type AccountMirrorRouteProgressEvidence = {
 	yieldCause: string | null;
 };
 
+export type AccountMirrorCollectorPhase =
+	| "identity"
+	| "projects"
+	| "root-conversations"
+	| "project-conversations"
+	| "chatgpt-library"
+	| "detail-inventory"
+	| "merge-persisted-catalog"
+	| "complete";
+
+export type AccountMirrorCollectorPhaseProgressEvidence = {
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	sweepMode: AccountMirrorCompletionSweepMode | "unknown";
+	phase: AccountMirrorCollectorPhase;
+	event: "started" | "completed" | "failed";
+	observedAt: string;
+	projectsObserved?: number | null;
+	conversationsObserved?: number | null;
+	artifactsObserved?: number | null;
+	filesObserved?: number | null;
+	attachmentCursor?: {
+		nextProjectIndex: number;
+		nextConversationIndex: number;
+		detailReadLimit: number;
+		scannedProjects: number;
+		scannedConversations: number;
+		conversationDetail?: {
+			conversationId: string;
+			nextMessageIndex: number;
+			messageLimit: number;
+			totalMessages?: number | null;
+		} | null;
+		yielded?: boolean;
+	} | null;
+};
+
 export type AccountMirrorMetadataEvidence = {
 	identitySource: string | null;
 	projectSampleIds: string[];
@@ -115,12 +152,19 @@ export type AccountMirrorMetadataEvidence = {
 	detailScannedThisPass?: AccountMirrorDetailScannedEvidence | null;
 	assetInventory?: AccountMirrorAssetInventoryEvidence | null;
 	routeProgress?: AccountMirrorRouteProgressEvidence | null;
+	collectorProgress?: AccountMirrorCollectorPhaseProgressEvidence | null;
 	attachmentInventory?: {
 		nextProjectIndex: number;
 		nextConversationIndex: number;
 		detailReadLimit: number;
 		scannedProjects: number;
 		scannedConversations: number;
+		conversationDetail?: {
+			conversationId: string;
+			nextMessageIndex: number;
+			messageLimit: number;
+			totalMessages?: number | null;
+		} | null;
 		yielded?: boolean;
 		yieldCause?: {
 			observedAt: string | null;
@@ -281,6 +325,7 @@ export interface AccountMirrorStatusRegistry {
 		runtimeProfileId?: string | null;
 		explicitRefresh?: boolean;
 		ignoreMinimumInterval?: boolean;
+		ignoreFailureBackoff?: boolean;
 	}): AccountMirrorStatusSummary;
 	updateState(
 		key: {
@@ -322,6 +367,7 @@ export function createAccountMirrorStatusRegistry(input: {
 			runtimeProfileId: query.runtimeProfileId ?? null,
 			explicitRefresh: query.explicitRefresh ?? false,
 			ignoreMinimumInterval: query.ignoreMinimumInterval ?? false,
+			ignoreFailureBackoff: query.ignoreFailureBackoff ?? false,
 		});
 
 	return {
@@ -374,6 +420,7 @@ export function createAccountMirrorStatusSummary(input: {
 	runtimeProfileId?: string | null;
 	explicitRefresh?: boolean;
 	ignoreMinimumInterval?: boolean;
+	ignoreFailureBackoff?: boolean;
 }): AccountMirrorStatusSummary {
 	const states =
 		input.states instanceof Map ? input.states : new Map(Object.entries(input.states ?? {}));
@@ -402,6 +449,7 @@ export function createAccountMirrorStatusSummary(input: {
 				running: state.running,
 				explicitRefresh: input.explicitRefresh,
 				ignoreMinimumInterval: input.ignoreMinimumInterval,
+				ignoreFailureBackoff: input.ignoreFailureBackoff,
 				nowMs: input.now.getTime(),
 				policy: target.policy ?? undefined,
 			});
@@ -838,6 +886,7 @@ function normalizeMetadataEvidence(
 		detailScannedThisPass: normalizeDetailScannedEvidence(value.detailScannedThisPass),
 		assetInventory: normalizeAssetInventoryEvidence(value.assetInventory),
 		attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
+		collectorProgress: normalizeCollectorProgressEvidence(value.collectorProgress),
 		projectConversations: normalizeProjectConversationEvidence(value.projectConversations),
 		truncated: {
 			projects: value.truncated?.projects === true,
@@ -1118,9 +1167,104 @@ function normalizeAttachmentInventoryEvidence(
 		detailReadLimit: normalizeCount(value.detailReadLimit),
 		scannedProjects: normalizeCount(value.scannedProjects),
 		scannedConversations: normalizeCount(value.scannedConversations),
+		conversationDetail: normalizeConversationDetailCursorEvidence(value.conversationDetail),
 		yielded: value.yielded === true,
 		yieldCause: normalizeAttachmentInventoryYieldCause(value.yieldCause),
 	};
+}
+
+function normalizeConversationDetailCursorEvidence(
+	value: NonNullable<AccountMirrorMetadataEvidence["attachmentInventory"]>["conversationDetail"],
+): NonNullable<AccountMirrorMetadataEvidence["attachmentInventory"]>["conversationDetail"] {
+	if (!value || !isRecord(value)) return null;
+	const conversationId = readString(value.conversationId);
+	if (!conversationId) return null;
+	return {
+		conversationId,
+		nextMessageIndex: normalizeCount(readNumber(value.nextMessageIndex)),
+		messageLimit: normalizeCount(readNumber(value.messageLimit)),
+		totalMessages:
+			value.totalMessages === null || value.totalMessages === undefined
+				? null
+				: normalizeCount(readNumber(value.totalMessages)),
+	};
+}
+
+function normalizeCollectorProgressEvidence(
+	value: AccountMirrorMetadataEvidence["collectorProgress"] | null | undefined,
+): AccountMirrorMetadataEvidence["collectorProgress"] | null {
+	if (!value || !isRecord(value)) return null;
+	const provider = readString(value.provider);
+	const runtimeProfileId = readString(value.runtimeProfileId);
+	const observedAt = readString(value.observedAt);
+	if (!provider || !runtimeProfileId || !observedAt) return null;
+	return {
+		provider: normalizeCollectorProgressProvider(provider),
+		runtimeProfileId,
+		sweepMode: normalizeCollectorProgressSweepMode(value.sweepMode),
+		phase: normalizeCollectorProgressPhase(value.phase),
+		event: normalizeCollectorProgressEvent(value.event),
+		observedAt,
+		projectsObserved: nullableCount(value.projectsObserved),
+		conversationsObserved: nullableCount(value.conversationsObserved),
+		artifactsObserved: nullableCount(value.artifactsObserved),
+		filesObserved: nullableCount(value.filesObserved),
+		attachmentCursor: normalizeCollectorProgressAttachmentCursor(value.attachmentCursor),
+	};
+}
+
+function normalizeCollectorProgressProvider(value: string): AccountMirrorProvider {
+	if (value === "chatgpt" || value === "gemini" || value === "grok") return value;
+	return "chatgpt";
+}
+
+function normalizeCollectorProgressAttachmentCursor(
+	value: AccountMirrorCollectorPhaseProgressEvidence["attachmentCursor"] | null | undefined,
+): AccountMirrorCollectorPhaseProgressEvidence["attachmentCursor"] | null {
+	if (!value || !isRecord(value)) return null;
+	return {
+		nextProjectIndex: normalizeCount(value.nextProjectIndex),
+		nextConversationIndex: normalizeCount(value.nextConversationIndex),
+		detailReadLimit: normalizeCount(value.detailReadLimit),
+		scannedProjects: normalizeCount(value.scannedProjects),
+		scannedConversations: normalizeCount(value.scannedConversations),
+		conversationDetail: normalizeConversationDetailCursorEvidence(value.conversationDetail),
+		yielded: value.yielded === true,
+	};
+}
+
+function normalizeCollectorProgressSweepMode(
+	value: unknown,
+): AccountMirrorCollectorPhaseProgressEvidence["sweepMode"] {
+	return value === "steady_follow" || value === "full_sweep" ? value : "unknown";
+}
+
+function normalizeCollectorProgressPhase(value: unknown): AccountMirrorCollectorPhase {
+	if (
+		value === "identity" ||
+		value === "projects" ||
+		value === "root-conversations" ||
+		value === "project-conversations" ||
+		value === "chatgpt-library" ||
+		value === "detail-inventory" ||
+		value === "merge-persisted-catalog" ||
+		value === "complete"
+	) {
+		return value;
+	}
+	return "identity";
+}
+
+function normalizeCollectorProgressEvent(
+	value: unknown,
+): AccountMirrorCollectorPhaseProgressEvidence["event"] {
+	if (value === "started" || value === "completed" || value === "failed") return value;
+	return "started";
+}
+
+function nullableCount(value: unknown): number | null {
+	if (value === null || value === undefined) return null;
+	return normalizeCount(readNumber(value));
 }
 
 function normalizeProviderGuardForStatus(

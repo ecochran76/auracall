@@ -3110,6 +3110,9 @@ async function materializeConversationTarget(input: {
 						manifestEntries.map((entry) => historyEntryFromArtifactManifest(entry)),
 					)),
 				);
+				if (artifactFetch.artifacts.length === 0 && manifestEntries.length === 0) {
+					entries.push(noMaterializableEntry("artifact", input.target));
+				}
 				for (const file of artifactFetch.files) {
 					const manifestEntry = findArtifactManifestForFile(manifestEntries, file);
 					archiveAssets.push({
@@ -3149,6 +3152,9 @@ async function materializeConversationTarget(input: {
 						manifestEntries.map((entry) => historyEntryFromFileManifest(entry)),
 					)),
 				);
+				if (fileFetch.conversationFiles.length === 0 && manifestEntries.length === 0) {
+					entries.push(noMaterializableEntry("file", input.target));
+				}
 				for (const file of fileFetch.files) {
 					const manifestEntry = findFileManifestForFile(manifestEntries, file);
 					archiveAssets.push({
@@ -4359,6 +4365,28 @@ function unsupportedEntry(
 		size: null,
 		materializationMethod: null,
 		reason: formatHistoryMaterializationFailureReason({ target, error }),
+		archiveItemId: null,
+		assetRoute: null,
+	};
+}
+
+function noMaterializableEntry(
+	kind: HistoryMaterializationManifestEntry["kind"],
+	target: HistoryMaterializationTarget,
+): HistoryMaterializationManifestEntry {
+	return {
+		kind,
+		providerId: null,
+		title: null,
+		status: "skipped",
+		localPath: null,
+		remoteUrl: null,
+		cacheKey: null,
+		checksumSha256: null,
+		mimeType: null,
+		size: null,
+		materializationMethod: null,
+		reason: `no-materializable-${kind}: provider detail exposed no downloadable ${kind} assets for conversation ${target.conversationId}`,
 		archiveItemId: null,
 		assetRoute: null,
 	};

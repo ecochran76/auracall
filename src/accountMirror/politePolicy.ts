@@ -87,6 +87,7 @@ export interface AccountMirrorPolitenessInput {
 	running?: boolean;
 	explicitRefresh?: boolean;
 	ignoreMinimumInterval?: boolean;
+	ignoreFailureBackoff?: boolean;
 	nowMs?: number;
 	policy?: Partial<AccountMirrorProviderPolitenessPolicy>;
 }
@@ -419,7 +420,7 @@ export function evaluateAccountMirrorPoliteness(
 	const failureCount = Math.max(0, Math.floor(input.consecutiveFailureCount ?? 0));
 	const failureCooldownMs = getFailureCooldownMs(policy, failureCount);
 	const lastFailureAtMs = normalizeTimestamp(input.lastFailureAtMs);
-	if (lastFailureAtMs && failureCooldownMs > 0) {
+	if (lastFailureAtMs && failureCooldownMs > 0 && input.ignoreFailureBackoff !== true) {
 		const failureEligibleAtMs = lastFailureAtMs + failureCooldownMs;
 		if (failureEligibleAtMs > nowMs) {
 			return createDecision(input, policy, "failure-backoff", failureEligibleAtMs, zeroJitter);

@@ -339,6 +339,7 @@ function createStatusCandidate(input: {
   const local = totalAssetCounts(input.inventory?.localMaterialized);
   const unknown = totalAssetCounts(input.inventory?.unknownOrDeferred);
   const classification = input.classification ?? zeroRecoveryClassificationCounts();
+  const createRequestAssetKinds = recoveryCreateRequestAssetKinds(retrievable, unknown);
   return {
     object: 'account_mirror_artifact_recovery_candidate',
     id: `status:${input.entry.provider}:${input.entry.runtimeProfileId}:${input.entry.tenantKey ?? input.entry.bindingKey}`,
@@ -373,11 +374,23 @@ function createStatusCandidate(input: {
           boundIdentityKey: input.entry.expectedIdentityKey ?? undefined,
           reconcile: true,
           refreshSnapshot: input.action === 'refresh_detail_inventory',
-          assetKinds: ['all'],
+          assetKinds: createRequestAssetKinds,
           maxItems: Math.max(1, Math.min(25, retrievable.total || unknown.total || 1)),
         }
       : null,
   };
+}
+
+function recoveryCreateRequestAssetKinds(
+  retrievable: AssetCounts,
+  unknown: AssetCounts,
+): Array<'artifacts' | 'files' | 'media' | 'all'> {
+  const source = retrievable.total > 0 ? retrievable : unknown;
+  const kinds: Array<'artifacts' | 'files' | 'media'> = [];
+  if (source.artifacts > 0) kinds.push('artifacts');
+  if (source.files > 0) kinds.push('files');
+  if (source.media > 0) kinds.push('media');
+  return kinds.length > 0 ? kinds : ['all'];
 }
 
 interface RecoveryClassificationCounts {
@@ -478,7 +491,9 @@ function addHistoryMaterializationClassification(
   for (const entry of job.result.entries) {
     const field = entry.kind === 'file' ? 'files' : entry.kind === 'artifact' ? 'artifacts' : 'media';
     if (entry.status === 'duplicate') incrementAssetCount(counts.duplicateAliases, field);
-    if (entry.status === 'failed') incrementAssetCount(counts.failedTerminal, field);
+    if (entry.status === 'failed' || entry.status === 'skipped') {
+      incrementAssetCount(counts.failedTerminal, field);
+    }
   }
 }
 

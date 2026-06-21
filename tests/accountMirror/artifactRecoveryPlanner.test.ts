@@ -104,8 +104,158 @@ describe("account mirror artifact recovery planner", () => {
 				runtimeProfile: "wsl-chrome-4",
 				boundIdentityKey: "operator@example.com",
 				reconcile: true,
-				assetKinds: ["all"],
+				assetKinds: ["artifacts", "files"],
 			},
+		});
+	});
+
+	it("narrows status recovery create requests to file assets when only files are retrievable", async () => {
+		const registry = registryWithEntries([
+			statusEntry({
+				provider: "chatgpt",
+				runtimeProfileId: "wsl-chrome-2",
+				tenantKey: "service-account:chatgpt:consult@polymerconsultinggroup.com",
+				expectedIdentityKey: "consult@polymerconsultinggroup.com",
+				assetInventory: assetInventory({
+					remoteKnownMissingLocal: { artifacts: 0, files: 9, media: 0 },
+					detailScannedThisPass: { projects: 0, conversations: 4, total: 4 },
+				}),
+			}),
+		]);
+		const search = vi.fn(async () => ({
+			object: "search_results" as const,
+			generatedAt: "2026-06-10T16:42:00.000Z",
+			query: {
+				q: null,
+				provider: "chatgpt",
+				runtimeProfile: "wsl-chrome-2",
+				tenant: null,
+				kind: "artifact",
+				status: null,
+				fileAvailable: null,
+				assetAvailability: "unavailable" as const,
+				materialization: null,
+				limit: 500,
+				cursor: null,
+			},
+			rows: [],
+			nextCursor: null,
+			metrics: { total: 0, returned: 0 },
+			facets: {
+				providers: [],
+				tenants: [],
+				runtimeProfiles: [],
+				kinds: [],
+				statuses: [],
+				assetAvailability: [],
+				materialization: [],
+			},
+		}));
+		const listJobs = vi.fn(async () => ({
+			object: "history_materialization_jobs" as const,
+			generatedAt: "2026-06-10T16:42:00.000Z",
+			status: null,
+			provider: "chatgpt" as const,
+			runtimeProfile: "wsl-chrome-2",
+			sourceType: null,
+			limit: 50,
+			jobs: [
+				{
+					object: "history_materialization_job" as const,
+					id: "hmj_no_file_1",
+					source: { type: "reconciliation" as const, provider: "chatgpt" as const },
+					request: {
+						provider: "chatgpt" as const,
+						runtimeProfile: "wsl-chrome-2",
+						browserProfile: null,
+						boundIdentityKey: "consult@polymerconsultinggroup.com",
+						conversationId: null,
+						conversationIds: [],
+						providerConversationUrl: null,
+						projectId: null,
+						catalogItemId: null,
+						catalogKind: null,
+						archiveItemId: null,
+						reconcile: true,
+						assetSource: null,
+						refreshSnapshot: false,
+						assetKinds: ["files" as const],
+						maxItems: 1,
+						providerWorkTimeoutMs: null,
+						force: false,
+					},
+					sourceKey: "test",
+					status: "skipped" as const,
+					createdAt: "2026-06-10T16:40:00.000Z",
+					updatedAt: "2026-06-10T16:40:10.000Z",
+					startedAt: "2026-06-10T16:40:01.000Z",
+					completedAt: "2026-06-10T16:40:10.000Z",
+					attemptCount: 1,
+					result: {
+						object: "history_materialization_result" as const,
+						generatedAt: "2026-06-10T16:40:10.000Z",
+						status: "skipped" as const,
+						target: null,
+						source: { type: "reconciliation" as const, provider: "chatgpt" as const },
+						manifestPaths: [],
+						entries: [
+							{
+								kind: "file" as const,
+								providerId: null,
+								title: null,
+								status: "skipped" as const,
+								localPath: null,
+								remoteUrl: null,
+								cacheKey: null,
+								checksumSha256: null,
+								mimeType: null,
+								size: null,
+								materializationMethod: null,
+								reason: "no-materializable-file: provider detail exposed no downloadable file assets",
+								archiveItemId: null,
+								assetRoute: null,
+							},
+						],
+						archiveItems: [],
+						metrics: { conversations: 1, materialized: 0, duplicateAliases: 0, skipped: 1, failed: 0 },
+						message: "No downloadable files.",
+					},
+					error: null,
+					message: "No downloadable files.",
+				},
+			],
+			metrics: {
+				total: 1,
+				byStatus: { skipped: 1 },
+				active: 0,
+				terminal: 1,
+			},
+		}));
+		const planner = createAccountMirrorArtifactRecoveryPlanner({
+			registry,
+			searchProjectionService: { search } satisfies SearchProjectionService,
+			historyMaterializationService: { listJobs },
+		});
+
+		const result = await planner.plan({
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			includeSearchRows: false,
+		});
+
+		expect(result.candidates[0]?.counts.retrievableMissingLocal).toMatchObject({
+			artifacts: 0,
+			files: 8,
+			media: 0,
+			total: 8,
+		});
+		expect(result.candidates[0]?.createRequest).toMatchObject({
+			provider: "chatgpt",
+			runtimeProfile: "wsl-chrome-2",
+			boundIdentityKey: "consult@polymerconsultinggroup.com",
+			reconcile: true,
+			assetKinds: ["files"],
+			maxItems: 8,
 		});
 	});
 
@@ -464,6 +614,7 @@ describe("account mirror artifact recovery planner", () => {
 		});
 		expect(result.candidates[0]?.reason).toContain("4 retrievable missing local assets");
 		expect(result.candidates[0]?.createRequest).toMatchObject({
+			assetKinds: ["artifacts", "files"],
 			maxItems: 4,
 		});
 	});

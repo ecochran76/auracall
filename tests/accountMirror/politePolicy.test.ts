@@ -202,6 +202,97 @@ describe("account mirror polite policy", () => {
 		expect(decision.limits.failureCooldownMs).toBe(4 * 60_000);
 	});
 
+	test("lets explicit recovery bypass failure backoff after safety gates are clear", () => {
+		const decision = evaluateAccountMirrorPoliteness({
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			browserProfileId: "wsl-chrome-2",
+			expectedIdentityKey: "consult@polymerconsultinggroup.com",
+			detectedIdentityKey: "consult@polymerconsultinggroup.com",
+			detectedIdentitySource: "provider-app",
+			detectedIdentityObservedAtMs: 20_000,
+			detectedIdentityConfidence: "authoritative",
+			lastFailureAtMs: 20_000,
+			consecutiveFailureCount: 189,
+			nowMs: 20_000 + 60_000,
+			explicitRefresh: true,
+			ignoreFailureBackoff: true,
+		});
+
+		expect(decision).toMatchObject({
+			posture: "eligible",
+			reason: "eligible",
+		});
+	});
+
+	test("does not let failure backoff override bypass current provider-app identity mismatch", () => {
+		const decision = evaluateAccountMirrorPoliteness({
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			browserProfileId: "wsl-chrome-2",
+			expectedIdentityKey: "consult@polymerconsultinggroup.com",
+			detectedIdentityKey: "wrong@example.com",
+			detectedIdentitySource: "provider-app",
+			detectedIdentityObservedAtMs: 20_000,
+			detectedIdentityConfidence: "authoritative",
+			lastFailureAtMs: 20_000,
+			consecutiveFailureCount: 189,
+			nowMs: 20_000 + 60_000,
+			explicitRefresh: true,
+			ignoreFailureBackoff: true,
+		});
+
+		expect(decision).toMatchObject({
+			posture: "blocked",
+			reason: "identity-mismatch",
+		});
+	});
+
+	test("does not let failure backoff override bypass provider guard hard stops", () => {
+		const decision = evaluateAccountMirrorPoliteness({
+			provider: "gemini",
+			runtimeProfileId: "auracall-gemini-pro",
+			browserProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			lastFailureAtMs: 20_000,
+			consecutiveFailureCount: 2,
+			providerGuard: {
+				state: "manual_clear_required",
+				kind: "captcha",
+				summary: "CAPTCHA visible",
+				detectedAtMs: 20_000,
+			},
+			nowMs: 20_000 + 60_000,
+			explicitRefresh: true,
+			ignoreFailureBackoff: true,
+		});
+
+		expect(decision).toMatchObject({
+			posture: "blocked",
+			reason: "provider-manual-clear-required",
+		});
+	});
+
+	test("does not let failure backoff override bypass provider hard-stop cooldown", () => {
+		const decision = evaluateAccountMirrorPoliteness({
+			provider: "gemini",
+			runtimeProfileId: "auracall-gemini-pro",
+			browserProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			lastFailureAtMs: 20_000,
+			consecutiveFailureCount: 2,
+			providerHardStopAtMs: 20_000,
+			nowMs: 20_000 + 60_000,
+			explicitRefresh: true,
+			ignoreFailureBackoff: true,
+		});
+
+		expect(decision).toMatchObject({
+			posture: "delay",
+			reason: "provider-hard-stop",
+		});
+	});
+
 	test("keeps ChatGPT failure backoff short enough for operator-driven reconciliation tests", () => {
 		const policy = getDefaultAccountMirrorPolitenessPolicy("chatgpt");
 		const decision = evaluateAccountMirrorPoliteness({

@@ -441,6 +441,12 @@ describe("account mirror status registry", () => {
 						detailReadLimit: 6,
 						scannedProjects: 2,
 						scannedConversations: 1,
+						conversationDetail: {
+							conversationId: "conv_large",
+							nextMessageIndex: 24,
+							messageLimit: 24,
+							totalMessages: 80,
+						},
 					},
 					projectConversations: {
 						nextProjectIndex: 4,
@@ -483,6 +489,14 @@ describe("account mirror status registry", () => {
 				media: 0,
 			},
 			metadataEvidence: {
+				attachmentInventory: {
+					conversationDetail: {
+						conversationId: "conv_large",
+						nextMessageIndex: 24,
+						messageLimit: 24,
+						totalMessages: 80,
+					},
+				},
 				projectConversations: {
 					nextProjectIndex: 4,
 					readLimit: 4,
@@ -659,6 +673,50 @@ describe("account mirror status registry", () => {
 				files: 73,
 				media: 0,
 			},
+		});
+	});
+
+	test("can preview explicit recovery eligibility while default status keeps failure backoff", () => {
+		const states = {
+			"chatgpt:wsl-chrome-2": {
+				detectedIdentityKey: "consult@polymerconsultinggroup.com",
+				detectedIdentitySource: "provider-app",
+				detectedIdentityObservedAtMs: Date.parse("2026-06-07T15:52:30.359Z"),
+				detectedIdentityConfidence: "authoritative",
+				lastFailureAtMs: Date.parse("2026-06-07T15:54:18.700Z"),
+				consecutiveFailureCount: 189,
+			},
+		};
+		const defaultStatus = createAccountMirrorStatusSummary({
+			config,
+			now: new Date("2026-06-07T15:55:18.700Z"),
+			states,
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			explicitRefresh: true,
+		});
+		const recoveryStatus = createAccountMirrorStatusSummary({
+			config,
+			now: new Date("2026-06-07T15:55:18.700Z"),
+			states,
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			explicitRefresh: true,
+			ignoreFailureBackoff: true,
+		});
+
+		expect(defaultStatus.entries[0]).toMatchObject({
+			status: "delayed",
+			reason: "failure-backoff",
+		});
+		expect(recoveryStatus.entries[0]).toMatchObject({
+			status: "eligible",
+			reason: "eligible",
+			identityEvidence: expect.objectContaining({
+				source: "provider-app",
+				confidence: "authoritative",
+				recheckable: false,
+			}),
 		});
 	});
 });

@@ -20,6 +20,7 @@ import {
 	recordBrowserOperationQueueObservation,
 } from "../../src/browser/operationQueueObservations.js";
 import { listDomDriftObservations } from "../../src/browser/domDriftObservations.js";
+import { writeChatgptRateLimitGuardState } from "../../src/browser/chatgptRateLimitGuard.js";
 
 const config = {
 	model: "gpt-5.2",
@@ -66,8 +67,9 @@ function createNoopPersistence(): AccountMirrorPersistence {
 }
 
 describe("account mirror refresh service", () => {
-	beforeEach(() => {
+	beforeEach(async () => {
 		clearBrowserOperationQueueObservationsForTest();
+		await useTempAuracallHome();
 	});
 
 	afterEach(() => {
@@ -184,6 +186,7 @@ describe("account mirror refresh service", () => {
 			sweepMode: "steady_follow",
 			shouldYield: expect.any(Function),
 			onIdentityVerified: expect.any(Function),
+			onProgress: expect.any(Function),
 			limits: {
 				maxPageReadsPerCycle: 4,
 				maxConversationRowsPerCycle: 30,
@@ -301,6 +304,307 @@ describe("account mirror refresh service", () => {
 		});
 	});
 
+	test("preserves an active ChatGPT rate-limit guard after a successful refresh", async () => {
+		await writeChatgptRateLimitGuardState(
+			{
+				provider: "chatgpt",
+				profile: "default",
+				updatedAt: Date.parse("2026-04-29T11:59:30.000Z"),
+				cooldownDetectedAt: Date.parse("2026-04-29T11:59:30.000Z"),
+				cooldownUntil: Date.parse("2026-04-29T12:05:00.000Z"),
+				cooldownReason: "Too many requests. You're making requests too quickly.",
+				cooldownAction: "readConversationContext",
+			},
+			{ profileName: "default" },
+		);
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+		const persistence = createNoopPersistence();
+		const service = createAccountMirrorRefreshService({
+			config,
+			registry,
+			dispatcher: createBrowserOperationDispatcher({
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			metadataCollector: {
+				collect: vi.fn(async () => ({
+					detectedIdentityKey: "ecochran76@gmail.com",
+					detectedAccountLevel: "Business",
+					metadataCounts: {
+						projects: 1,
+						conversations: 1,
+						artifacts: 0,
+						files: 0,
+						media: 0,
+					},
+					manifests: {
+						projects: [{ id: "project_1", name: "Project 1", provider: "chatgpt" as const }],
+						conversations: [{ id: "conv_1", title: "One", provider: "chatgpt" as const }],
+						artifacts: [],
+						files: [],
+						media: [],
+					},
+					evidence: {
+						identitySource: "profile-menu",
+						projectSampleIds: ["project_1"],
+						conversationSampleIds: ["conv_1"],
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: false,
+						},
+					},
+				})),
+			},
+			persistence,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+
+		const result = await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+		});
+
+		expect(result.status).toBe("completed");
+		expect(result.mirrorStatus.entries[0]).toMatchObject({
+			status: "delayed",
+			reason: "provider-guard-cooldown",
+			eligibleAt: "2026-04-29T12:05:00.000Z",
+			providerGuard: expect.objectContaining({
+				state: "cooldown",
+				kind: "unknown",
+				summary:
+					"ChatGPT rate limit detected: Too many requests. You're making requests too quickly.",
+				detectedAt: "2026-04-29T11:59:30.000Z",
+				cooldownUntil: "2026-04-29T12:05:00.000Z",
+				action: "readConversationContext",
+			}),
+		});
+		expect(persistence.writeState).toHaveBeenCalledWith(
+			expect.objectContaining({
+				state: expect.objectContaining({
+					providerCooldownUntilMs: Date.parse("2026-04-29T12:05:00.000Z"),
+					providerGuard: expect.objectContaining({
+						state: "cooldown",
+						cooldownUntilMs: Date.parse("2026-04-29T12:05:00.000Z"),
+					}),
+				}),
+			}),
+		);
+	});
+
+	test("keeps failure backoff by default for explicit refresh requests", async () => {
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-06-07T15:55:18.700Z"),
+			initialState: {
+				"chatgpt:wsl-chrome-2": {
+					detectedIdentityKey: "consult@polymerconsultinggroup.com",
+					detectedIdentitySource: "provider-app",
+					detectedIdentityObservedAtMs: Date.parse("2026-06-07T15:52:30.359Z"),
+					detectedIdentityConfidence: "authoritative",
+					lastFailureAtMs: Date.parse("2026-06-07T15:54:18.700Z"),
+					consecutiveFailureCount: 189,
+				},
+			},
+		});
+		const metadataCollector = {
+			collect: vi.fn(async () => ({
+				detectedIdentityKey: "consult@polymerconsultinggroup.com",
+				detectedAccountLevel: "Pro",
+				metadataCounts: {
+					projects: 0,
+					conversations: 0,
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+				manifests: {
+					projects: [{ id: "project_1", name: "Project 1", provider: "chatgpt" as const }],
+					conversations: [
+						{ id: "conv_1", title: "One", provider: "chatgpt" as const },
+						{ id: "conv_2", title: "Two", provider: "chatgpt" as const },
+					],
+					artifacts: [
+						{ id: "artifact_1", title: "Artifact 1" },
+						{ id: "artifact_2", title: "Artifact 2" },
+						{ id: "artifact_3", title: "Artifact 3" },
+					],
+					files: [
+						{
+							id: "file_1",
+							name: "One.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+						{
+							id: "file_2",
+							name: "Two.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+						{
+							id: "file_3",
+							name: "Three.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+						{
+							id: "file_4",
+							name: "Four.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+					],
+					media: [],
+				},
+				evidence: {
+					identitySource: "auth-session",
+					projectSampleIds: [],
+					conversationSampleIds: [],
+					truncated: {
+						projects: false,
+						conversations: false,
+						artifacts: false,
+					},
+				},
+			})),
+		};
+		const service = createAccountMirrorRefreshService({
+			config,
+			registry,
+			dispatcher: createBrowserOperationDispatcher(),
+			metadataCollector,
+			persistence: createNoopPersistence(),
+			now: () => new Date("2026-06-07T15:55:18.700Z"),
+		});
+
+		await expect(
+			service.requestRefresh({
+				provider: "chatgpt",
+				runtimeProfileId: "wsl-chrome-2",
+				explicitRefresh: true,
+				ignoreMinimumInterval: true,
+				queueTimeoutMs: 0,
+			}),
+		).rejects.toMatchObject({
+			code: "account_mirror_not_eligible",
+			details: expect.objectContaining({
+				reason: "failure-backoff",
+			}),
+		});
+		expect(metadataCollector.collect).not.toHaveBeenCalled();
+	});
+
+	test("allows explicit recovery refresh to bypass failure backoff", async () => {
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-06-07T15:55:18.700Z"),
+			initialState: {
+				"chatgpt:wsl-chrome-2": {
+					detectedIdentityKey: "consult@polymerconsultinggroup.com",
+					detectedIdentitySource: "provider-app",
+					detectedIdentityObservedAtMs: Date.parse("2026-06-07T15:52:30.359Z"),
+					detectedIdentityConfidence: "authoritative",
+					lastFailureAtMs: Date.parse("2026-06-07T15:54:18.700Z"),
+					consecutiveFailureCount: 189,
+				},
+			},
+		});
+		const metadataCollector = {
+			collect: vi.fn(async () => ({
+				detectedIdentityKey: "consult@polymerconsultinggroup.com",
+				detectedAccountLevel: "Pro",
+				metadataCounts: {
+					projects: 1,
+					conversations: 2,
+					artifacts: 3,
+					files: 4,
+					media: 0,
+				},
+				manifests: {
+					projects: [{ id: "project_1", name: "Project 1", provider: "chatgpt" as const }],
+					conversations: [
+						{ id: "conv_1", title: "One", provider: "chatgpt" as const },
+						{ id: "conv_2", title: "Two", provider: "chatgpt" as const },
+					],
+					artifacts: [
+						{ id: "artifact_1", title: "Artifact 1" },
+						{ id: "artifact_2", title: "Artifact 2" },
+						{ id: "artifact_3", title: "Artifact 3" },
+					],
+					files: [
+						{
+							id: "file_1",
+							name: "One.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+						{
+							id: "file_2",
+							name: "Two.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+						{
+							id: "file_3",
+							name: "Three.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+						{
+							id: "file_4",
+							name: "Four.pdf",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+						},
+					],
+					media: [],
+				},
+				evidence: {
+					identitySource: "auth-session",
+					projectSampleIds: [],
+					conversationSampleIds: [],
+					truncated: {
+						projects: false,
+						conversations: false,
+						artifacts: false,
+					},
+				},
+			})),
+		};
+		const service = createAccountMirrorRefreshService({
+			config,
+			registry,
+			dispatcher: createBrowserOperationDispatcher(),
+			metadataCollector,
+			persistence: createNoopPersistence(),
+			now: () => new Date("2026-06-07T15:55:18.700Z"),
+		});
+
+		const result = await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "wsl-chrome-2",
+			explicitRefresh: true,
+			ignoreMinimumInterval: true,
+			ignoreFailureBackoff: true,
+			queueTimeoutMs: 0,
+		});
+
+		expect(result.status).toBe("completed");
+		expect(metadataCollector.collect).toHaveBeenCalledTimes(1);
+		expect(result.metadataCounts).toEqual({
+			projects: 1,
+			conversations: 2,
+			artifacts: 3,
+			files: 4,
+			media: 0,
+		});
+	});
+
 	test("passes the persisted attachment cursor and merges new manifest rows with the cached catalog", async () => {
 		const previousEvidence = {
 			identitySource: "profile-menu",
@@ -406,7 +710,7 @@ describe("account mirror refresh service", () => {
 			expect.objectContaining({
 				sweepMode: "steady_follow",
 				previousEvidence: expect.objectContaining({
-					attachmentInventory: previousEvidence.attachmentInventory,
+					attachmentInventory: expect.objectContaining(previousEvidence.attachmentInventory),
 					projectConversations: null,
 				}),
 			}),
@@ -1374,6 +1678,25 @@ describe("account mirror refresh service", () => {
 						detectedIdentityConfidence: "authoritative",
 						detectedAccountLevel: "Pro",
 					});
+					await input.onProgress?.({
+						provider: "chatgpt",
+						runtimeProfileId: "wsl-chrome-2",
+						sweepMode: "steady_follow",
+						phase: "detail-inventory",
+						event: "started",
+						observedAt: "2026-06-07T13:04:08.000Z",
+						conversationsObserved: 68,
+						artifactsObserved: 64,
+						filesObserved: 73,
+						attachmentCursor: {
+							nextProjectIndex: 0,
+							nextConversationIndex: 1,
+							detailReadLimit: 4,
+							scannedProjects: 0,
+							scannedConversations: 1,
+							yielded: false,
+						},
+					});
 					await new Promise(() => {});
 					throw new Error("unreachable");
 				}),
@@ -1412,6 +1735,17 @@ describe("account mirror refresh service", () => {
 				previousDetectedIdentityKey: "consulting pcg pro",
 				currentDetectedIdentityKey: "consult@polymerconsultinggroup.com",
 			}),
+			metadataEvidence: expect.objectContaining({
+				collectorProgress: expect.objectContaining({
+					phase: "detail-inventory",
+					event: "failed",
+					conversationsObserved: 68,
+					attachmentCursor: expect.objectContaining({
+						nextConversationIndex: 1,
+						scannedConversations: 1,
+					}),
+				}),
+			}),
 		});
 		expect(persistence.writeState).toHaveBeenLastCalledWith(
 			expect.objectContaining({
@@ -1421,6 +1755,15 @@ describe("account mirror refresh service", () => {
 					identityMismatchRepair: expect.objectContaining({
 						status: "stale_mismatch_repaired",
 						requestId: "acctmirror_identity_timeout_repair",
+					}),
+					metadataEvidence: expect.objectContaining({
+						collectorProgress: expect.objectContaining({
+							phase: "detail-inventory",
+							event: "failed",
+							attachmentCursor: expect.objectContaining({
+								nextConversationIndex: 1,
+							}),
+						}),
 					}),
 				}),
 			}),

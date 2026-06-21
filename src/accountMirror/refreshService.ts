@@ -2,6 +2,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import type { ResolvedUserConfig } from "../config.js";
+import { readChatgptRateLimitGuardState } from "../browser/chatgptRateLimitGuard.js";
 import type { ConversationArtifact, FileRef } from "../browser/providers/domain.js";
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
 import { listChromeTargets } from "../../packages/browser-service/src/chromeLifecycle.js";
@@ -52,6 +53,7 @@ export interface AccountMirrorRefreshRequest {
 	sweepMode?: "steady_follow" | "full_sweep" | null;
 	explicitRefresh?: boolean;
 	ignoreMinimumInterval?: boolean;
+	ignoreFailureBackoff?: boolean;
 	queueTimeoutMs?: number;
 	queuePollMs?: number;
 	collectorTimeoutMs?: number;
@@ -105,6 +107,19 @@ export interface AccountMirrorRefreshService {
 	requestRefresh(request?: AccountMirrorRefreshRequest): Promise<AccountMirrorRefreshResult>;
 }
 
+function createEmptyMetadataEvidence(): AccountMirrorMetadataEvidence {
+	return {
+		identitySource: null,
+		projectSampleIds: [],
+		conversationSampleIds: [],
+		truncated: {
+			projects: false,
+			conversations: false,
+			artifacts: false,
+		},
+	};
+}
+
 export type AccountMirrorProviderGuardCensusInput = {
 	config: Record<string, unknown> | null | undefined;
 	provider: AccountMirrorProvider;
@@ -120,6 +135,11 @@ export type AccountMirrorProviderGuardCensus = (
 type AccountMirrorYieldCause = NonNullable<
 	NonNullable<AccountMirrorMetadataEvidence["attachmentInventory"]>["yieldCause"]
 >;
+
+type AccountMirrorProviderCooldown = {
+	providerCooldownUntilMs: number;
+	providerGuard: AccountMirrorProviderGuardState;
+};
 
 export function createAccountMirrorRefreshService(input: {
 	config: Record<string, unknown> | null | undefined;
@@ -179,6 +199,8 @@ export function createAccountMirrorRefreshService(input: {
 				runtimeProfileId,
 				explicitRefresh: request.explicitRefresh ?? true,
 				ignoreMinimumInterval: request.ignoreMinimumInterval === true,
+				ignoreFailureBackoff:
+					request.explicitRefresh === true && request.ignoreFailureBackoff === true,
 			});
 			if (!target) {
 				throw new AccountMirrorRefreshError(
@@ -313,6 +335,11 @@ export function createAccountMirrorRefreshService(input: {
 			const verifiedIdentityRef: { current: AccountMirrorVerifiedIdentityEvidence | null } = {
 				current: null,
 			};
+			const latestCollectorProgressRef: {
+				current: AccountMirrorMetadataEvidence["collectorProgress"] | null;
+			} = {
+				current: null,
+			};
 			let latestYieldCause: AccountMirrorYieldCause | null = null;
 			const collectorAbort = new AbortController();
 			try {
@@ -342,6 +369,9 @@ export function createAccountMirrorRefreshService(input: {
 						onIdentityVerified: (evidence) => {
 							verifiedIdentityRef.current = evidence;
 						},
+						onProgress: (progress) => {
+							latestCollectorProgressRef.current = progress;
+						},
 						abortSignal: collectorAbort.signal,
 						shouldYield: () => {
 							const cause = getAccountMirrorYieldCause(acquired);
@@ -364,6 +394,12 @@ export function createAccountMirrorRefreshService(input: {
 					collection,
 				});
 				const completedAt = now();
+				const providerCooldown = await readAccountMirrorProviderCooldown({
+					provider,
+					runtimeProfileId,
+					action: "account-mirror-refresh",
+					nowMs: completedAt.getTime(),
+				});
 				registry.mergeState(
 					{ provider, runtimeProfileId },
 					{
@@ -388,9 +424,9 @@ export function createAccountMirrorRefreshService(input: {
 						lastFailureAtMs: null,
 						lastCompletedAtMs: completedAt.getTime(),
 						consecutiveFailureCount: 0,
-						providerCooldownUntilMs: null,
+						providerCooldownUntilMs: providerCooldown?.providerCooldownUntilMs ?? null,
 						providerHardStopAtMs: null,
-						providerGuard: null,
+						providerGuard: providerCooldown?.providerGuard ?? null,
 						metadataCounts: collectionWithPriorManifests.metadataCounts,
 						metadataEvidence: collectionWithPriorManifests.evidence,
 					},
@@ -444,8 +480,8 @@ export function createAccountMirrorRefreshService(input: {
 						lastDispatcherKey: acquired.operation.key,
 						lastDispatcherOperationId: acquired.operation.id,
 						consecutiveFailureCount: 0,
-						providerCooldownUntilMs: null,
-						providerGuard: null,
+						providerCooldownUntilMs: providerCooldown?.providerCooldownUntilMs ?? null,
+						providerGuard: providerCooldown?.providerGuard ?? null,
 						providerHardStopAtMs: null,
 						metadataCounts: collectionWithPriorManifests.metadataCounts,
 						metadataEvidence: collectionWithPriorManifests.evidence,
@@ -513,8 +549,27 @@ export function createAccountMirrorRefreshService(input: {
 				const providerGuard = isIdentityMismatch
 					? null
 					: extractProviderGuard(error, completedAt.getTime());
+				const providerCooldown = !providerGuard
+					? await readAccountMirrorProviderCooldown({
+							provider,
+							runtimeProfileId,
+							action: "account-mirror-refresh",
+							error,
+							nowMs: completedAt.getTime(),
+						})
+					: null;
+				const failureMetadataEvidence = latestCollectorProgressRef.current
+					? {
+							...(target.metadataEvidence ?? createEmptyMetadataEvidence()),
+							collectorProgress: {
+								...latestCollectorProgressRef.current,
+								event: "failed" as const,
+								observedAt: completedAt.toISOString(),
+							},
+						}
+					: target.metadataEvidence;
 				const failureCount = resolveNextConsecutiveFailureCount(target);
-				if (!isIdentityMismatch && !providerGuard) {
+				if (!isIdentityMismatch && !providerGuard && !providerCooldown) {
 					await recordAccountMirrorRefreshDomDriftObservation({
 						provider,
 						runtimeProfileId,
@@ -557,8 +612,10 @@ export function createAccountMirrorRefreshService(input: {
 						lastFailureAtMs: completedAt.getTime(),
 						lastCompletedAtMs: completedAt.getTime(),
 						consecutiveFailureCount: failureCount,
+						providerCooldownUntilMs: providerCooldown?.providerCooldownUntilMs,
 						providerHardStopAtMs: providerGuard ? completedAt.getTime() : undefined,
-						providerGuard: providerGuard ?? undefined,
+						providerGuard: providerGuard ?? providerCooldown?.providerGuard,
+						metadataEvidence: failureMetadataEvidence,
 					},
 				);
 				await persistRefreshState(persistence, {
@@ -604,10 +661,11 @@ export function createAccountMirrorRefreshService(input: {
 						lastDispatcherKey: acquired.operation.key,
 						lastDispatcherOperationId: acquired.operation.id,
 						consecutiveFailureCount: failureCount,
+						providerCooldownUntilMs: providerCooldown?.providerCooldownUntilMs,
 						providerHardStopAtMs: providerGuard ? completedAt.getTime() : undefined,
-						providerGuard: providerGuard ?? undefined,
+						providerGuard: providerGuard ?? providerCooldown?.providerGuard,
 						metadataCounts: target.metadataCounts,
-						metadataEvidence: target.metadataEvidence,
+						metadataEvidence: failureMetadataEvidence,
 					},
 				});
 				if (isIdentityMismatch) {
@@ -633,6 +691,21 @@ export function createAccountMirrorRefreshService(input: {
 							provider,
 							runtimeProfileId,
 							providerGuard,
+						},
+					);
+				}
+				if (providerCooldown) {
+					throw new AccountMirrorRefreshError(
+						409,
+						"account_mirror_provider_cooldown",
+						`${providerCooldown.providerGuard.summary} Automation is delayed until ${new Date(
+							providerCooldown.providerCooldownUntilMs,
+						).toISOString()} before ${provider}/${runtimeProfileId} live follow can continue.`,
+						{
+							provider,
+							runtimeProfileId,
+							providerCooldownUntilMs: providerCooldown.providerCooldownUntilMs,
+							providerGuard: providerCooldown.providerGuard,
 						},
 					);
 				}
@@ -704,6 +777,51 @@ function parseIsoTimestampMs(value: string | null | undefined): number | null {
 	if (!value) return null;
 	const parsed = Date.parse(value);
 	return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function readAccountMirrorProviderCooldown(input: {
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	action: string;
+	nowMs: number;
+	error?: unknown;
+}): Promise<AccountMirrorProviderCooldown | null> {
+	if (input.provider !== "chatgpt") {
+		return null;
+	}
+	try {
+		const state = await readChatgptRateLimitGuardState({
+			profileName: input.runtimeProfileId,
+		});
+		const cooldownUntilMs =
+			typeof state?.cooldownUntil === "number" && Number.isFinite(state.cooldownUntil)
+				? state.cooldownUntil
+				: null;
+		if (!cooldownUntilMs || cooldownUntilMs <= input.nowMs) {
+			return null;
+		}
+		const detectedAtMs =
+			typeof state?.cooldownDetectedAt === "number" && Number.isFinite(state.cooldownDetectedAt)
+				? state.cooldownDetectedAt
+				: input.nowMs;
+		const cooldownReason = state?.cooldownReason?.trim();
+		const summary = cooldownReason
+			? `ChatGPT rate limit detected: ${cooldownReason}`
+			: "ChatGPT rate limit cooldown is active.";
+		return {
+			providerCooldownUntilMs: cooldownUntilMs,
+			providerGuard: {
+				state: "cooldown",
+				kind: "unknown",
+				summary,
+				detectedAtMs,
+				cooldownUntilMs,
+				action: state?.cooldownAction?.trim() || input.action,
+			},
+		};
+	} catch {
+		return null;
+	}
 }
 
 async function cleanupManagedBrowserAfterRefresh(input: {
@@ -1526,6 +1644,7 @@ function readSingleMirrorTarget(input: {
 	runtimeProfileId: string;
 	explicitRefresh: boolean;
 	ignoreMinimumInterval?: boolean;
+	ignoreFailureBackoff?: boolean;
 }): AccountMirrorStatusEntry | null {
 	return (
 		input.registry.readStatus({
@@ -1533,6 +1652,8 @@ function readSingleMirrorTarget(input: {
 			runtimeProfileId: input.runtimeProfileId,
 			explicitRefresh: input.explicitRefresh,
 			ignoreMinimumInterval: input.ignoreMinimumInterval === true,
+			ignoreFailureBackoff:
+				input.explicitRefresh === true && input.ignoreFailureBackoff === true,
 		}).entries[0] ?? null
 	);
 }

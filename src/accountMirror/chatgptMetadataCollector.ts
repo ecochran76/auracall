@@ -11,7 +11,7 @@ import type {
 	Project,
 } from "../browser/providers/domain.js";
 import type { AccountMirrorMediaManifestEntry } from "../browser/llmService/cache/store.js";
-import type { ProviderUserIdentity } from "../browser/providers/types.js";
+import type { BrowserProviderListOptions, ProviderUserIdentity } from "../browser/providers/types.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
@@ -19,13 +19,16 @@ import type {
 } from "./politePolicy.js";
 import { recordDomDriftObservation } from "../browser/domDriftObservations.js";
 import type {
+	AccountMirrorCollectorPhaseProgressEvidence,
 	AccountMirrorMetadataCounts,
 	AccountMirrorMetadataEvidence,
 	AccountMirrorRouteProgressEvidence,
 } from "./statusRegistry.js";
 
 const MAX_DOM_DRIFT_SCREENSHOTS_PER_PROCESS = 3;
+const CHATGPT_DETAIL_READ_TIMEOUT_MS = 10_000;
 const GEMINI_DETAIL_READ_TIMEOUT_MS = 20_000;
+const CHATGPT_CONTEXT_CHUNK_MESSAGE_LIMIT = 24;
 let domDriftScreenshotsCaptured = 0;
 
 export interface AccountMirrorMetadataCollectorInput {
@@ -36,6 +39,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	previousEvidence?: AccountMirrorMetadataEvidence | null;
 	shouldYield?: () => Promise<boolean> | boolean;
 	onIdentityVerified?: (evidence: AccountMirrorVerifiedIdentityEvidence) => Promise<void> | void;
+	onProgress?: (progress: AccountMirrorCollectorPhaseProgressEvidence) => Promise<void> | void;
 	abortSignal?: AbortSignal;
 	limits: {
 		maxPageReadsPerCycle: number;
@@ -59,6 +63,12 @@ export interface AttachmentInventoryCursor {
 	detailReadLimit: number;
 	scannedProjects: number;
 	scannedConversations: number;
+	conversationDetail?: {
+		conversationId: string;
+		nextMessageIndex: number;
+		messageLimit: number;
+		totalMessages?: number | null;
+	} | null;
 	yielded?: boolean;
 	yieldCause?: {
 		observedAt: string | null;
@@ -103,6 +113,22 @@ export interface AccountMirrorMetadataCollector {
 	collect(
 		input: AccountMirrorMetadataCollectorInput,
 	): Promise<AccountMirrorMetadataCollectorResult>;
+}
+
+async function reportCollectorProgress(
+	input: AccountMirrorMetadataCollectorInput,
+	progress: Omit<
+		AccountMirrorCollectorPhaseProgressEvidence,
+		"provider" | "runtimeProfileId" | "sweepMode" | "observedAt"
+	>,
+): Promise<void> {
+	await input.onProgress?.({
+		provider: input.provider,
+		runtimeProfileId: input.runtimeProfileId,
+		sweepMode: input.sweepMode ?? "steady_follow",
+		observedAt: new Date().toISOString(),
+		...progress,
+	});
 }
 
 export interface AccountMirrorDomDriftObservationContext {
@@ -171,6 +197,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 			);
 			throwIfCollectionAborted(input.abortSignal);
 			const listOptions = input.abortSignal ? { abortSignal: input.abortSignal } : undefined;
+			await reportCollectorProgress(input, { phase: "identity", event: "started" });
 			await pacer.beforeInteraction();
 			const identity = await client.getUserIdentity(listOptions);
 			throwIfCollectionAborted(input.abortSignal);
@@ -191,12 +218,19 @@ export function createChatgptAccountMirrorMetadataCollector(
 				detectedAccountLevel: readAccountLevel(identity),
 			};
 			await input.onIdentityVerified?.(verifiedIdentity);
+			await reportCollectorProgress(input, { phase: "identity", event: "completed" });
 
+			await reportCollectorProgress(input, { phase: "projects", event: "started" });
 			const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle, {
 				tolerateReadFailure: input.provider === "gemini",
 				listOptions,
 				pacer,
 				observation: createAccountMirrorObservationContext(input, client),
+			});
+			await reportCollectorProgress(input, {
+				phase: "projects",
+				event: "completed",
+				projectsObserved: projects.items.length,
 			});
 			throwIfCollectionAborted(input.abortSignal);
 			const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
@@ -205,6 +239,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				conversationBudget,
 				projects.items.length,
 			);
+			await reportCollectorProgress(input, { phase: "root-conversations", event: "started" });
 			const rootConversations = await readBoundedConversations(
 				client,
 				null,
@@ -215,6 +250,11 @@ export function createChatgptAccountMirrorMetadataCollector(
 					observation: createAccountMirrorObservationContext(input, client),
 				},
 			);
+			await reportCollectorProgress(input, {
+				phase: "root-conversations",
+				event: "completed",
+				conversationsObserved: rootConversations.items.length,
+			});
 			const remainingConversationBudget = Math.max(
 				0,
 				conversationBudgets.projectRows +
@@ -224,6 +264,12 @@ export function createChatgptAccountMirrorMetadataCollector(
 			let projectConversationsTruncated = false;
 			let projectConversationCursor: ProjectConversationHistoryCursor | null = null;
 			if (shouldReadProjectConversationsForAccountMirror(input.provider)) {
+				await reportCollectorProgress(input, {
+					phase: "project-conversations",
+					event: "started",
+					projectsObserved: projects.items.length,
+					conversationsObserved: rootConversations.items.length,
+				});
 				const previousProjectConversationCursor = selectProjectConversationCursorForSweep(
 					input.sweepMode,
 					input.previousEvidence ?? null,
@@ -246,6 +292,12 @@ export function createChatgptAccountMirrorMetadataCollector(
 				projectConversations.push(...result.items);
 				projectConversationsTruncated = result.truncated;
 				projectConversationCursor = result.cursor;
+				await reportCollectorProgress(input, {
+					phase: "project-conversations",
+					event: "completed",
+					projectsObserved: projects.items.length,
+					conversationsObserved: projectConversations.length,
+				});
 			}
 			throwIfCollectionAborted(input.abortSignal);
 			const conversations = mergeConversationsById([
@@ -257,6 +309,13 @@ export function createChatgptAccountMirrorMetadataCollector(
 				input.sweepMode,
 				input.previousEvidence ?? null,
 			);
+			await reportCollectorProgress(input, {
+				phase: "detail-inventory",
+				event: "started",
+				projectsObserved: projects.items.length,
+				conversationsObserved: conversations.length,
+				attachmentCursor,
+			});
 			const inventory =
 				input.provider === "chatgpt"
 					? await readBoundedChatgptDetailInventory(
@@ -305,6 +364,15 @@ export function createChatgptAccountMirrorMetadataCollector(
 									truncated: false,
 									cursor: null,
 								};
+			await reportCollectorProgress(input, {
+				phase: "detail-inventory",
+				event: "completed",
+				projectsObserved: projects.items.length,
+				conversationsObserved: conversations.length,
+				artifactsObserved: inventory.artifacts.length,
+				filesObserved: inventory.files.length,
+				attachmentCursor: inventory.cursor,
+			});
 			const inventoryProgress = hasAttachmentInventoryProgress(inventory)
 				? inventory.progress
 				: createAttachmentInventoryProgress();
@@ -350,6 +418,19 @@ export function createChatgptAccountMirrorMetadataCollector(
 									inventoryProgress,
 								})
 							: null,
+					collectorProgress: {
+						provider: input.provider,
+						runtimeProfileId: input.runtimeProfileId,
+						sweepMode: input.sweepMode ?? "steady_follow",
+						phase: "complete",
+						event: "completed",
+						observedAt: new Date().toISOString(),
+						projectsObserved: projects.items.length,
+						conversationsObserved: conversations.length,
+						artifactsObserved: inventory.artifacts.length,
+						filesObserved: inventory.files.length,
+						attachmentCursor: inventory.cursor,
+					},
 					projectConversations: projectConversationCursor,
 					attachmentInventory: inventory.cursor,
 				},
@@ -372,7 +453,22 @@ export function selectAttachmentInventoryCursorForProviderSweep(
 	previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
 ): AttachmentInventoryCursor | null {
 	if (provider === "gemini") return previousEvidence?.attachmentInventory ?? null;
+	if (provider === "chatgpt" && sweepMode !== "full_sweep") {
+		return shouldResumeChatgptAttachmentInventoryCursor(previousEvidence)
+			? (previousEvidence?.attachmentInventory ?? null)
+			: null;
+	}
 	return selectAttachmentInventoryCursorForSweep(sweepMode, previousEvidence);
+}
+
+export function shouldResumeChatgptAttachmentInventoryCursor(
+	previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
+): boolean {
+	const cursor = previousEvidence?.attachmentInventory;
+	if (!cursor) return false;
+	if (previousEvidence?.truncated?.artifacts === true) return true;
+	const assetInventoryState = previousEvidence?.assetInventory?.state ?? null;
+	return assetInventoryState === "in_progress" || assetInventoryState === "deferred";
 }
 
 export function buildGeminiRouteProgressEvidence(input: {
@@ -803,6 +899,7 @@ export async function readBoundedAttachmentInventory(
 	);
 	let scannedProjects = 0;
 	let scannedConversations = 0;
+	let conversationDetailCursor: AttachmentInventoryCursor["conversationDetail"] = null;
 
 	const scanProjects = async () => {
 		for (; projectIndex < projects.length; projectIndex += 1) {
@@ -821,7 +918,13 @@ export async function readBoundedAttachmentInventory(
 			scannedProjects += 1;
 			progress.scannedProjectIds.push(project.id);
 			await pacer?.beforeInteraction();
-			const projectFiles = await safeReadProjectFiles(client, project.id, listOptions, observation);
+			const projectFiles = await safeReadProjectFiles(
+				client,
+				project.id,
+				listOptions,
+				observation,
+				providerCallTimeoutMs,
+			);
 			for (const file of projectFiles) {
 				if (remaining <= 0) {
 					truncated = true;
@@ -846,6 +949,10 @@ export async function readBoundedAttachmentInventory(
 			}
 			const conversation = conversations[conversationIndex];
 			if (!conversation) break;
+			const previousConversationDetail =
+				previousCursor?.conversationDetail?.conversationId === conversation.id
+					? previousCursor.conversationDetail
+					: null;
 			remainingDetailReads -= 1;
 			scannedConversations += 1;
 			progress.scannedConversationIds.push(conversation.id);
@@ -862,7 +969,18 @@ export async function readBoundedAttachmentInventory(
 				conversation,
 				observation,
 				providerCallTimeoutMs,
+				listOptions,
+				previousConversationDetail,
 			);
+			const contextChunk = readAccountMirrorContextChunkMetadata(context);
+			if (contextChunk?.nextMessageIndex !== null && contextChunk?.nextMessageIndex !== undefined) {
+				conversationDetailCursor = {
+					conversationId: conversation.id,
+					nextMessageIndex: contextChunk.nextMessageIndex,
+					messageLimit: contextChunk.maxMessages,
+					totalMessages: contextChunk.totalMessages,
+				};
+			}
 			if (conversationFiles.length > 0) {
 				progress.fileBearingConversationIds.push(conversation.id);
 			}
@@ -888,6 +1006,10 @@ export async function readBoundedAttachmentInventory(
 				}
 				addArtifact(artifacts, artifact, conversation);
 				remaining -= 1;
+			}
+			if (conversationDetailCursor) {
+				truncated = true;
+				break;
 			}
 		}
 	};
@@ -920,9 +1042,12 @@ export async function readBoundedAttachmentInventory(
 					? 0
 					: projectIndex,
 			nextConversationIndex:
-				projectIndex >= projects.length && conversationIndex >= conversations.length
-					? 0
-					: conversationIndex,
+				conversationDetailCursor !== null
+					? conversationIndex
+					: projectIndex >= projects.length && conversationIndex >= conversations.length
+						? 0
+						: conversationIndex,
+			conversationDetail: conversationDetailCursor,
 			yielded,
 		}),
 		progress,
@@ -977,6 +1102,7 @@ export async function readBoundedChatgptDetailInventory(
 				listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
 				pacer?: BrowserInteractionPacer;
 				observation?: AccountMirrorDomDriftObservationContext;
+				providerCallTimeoutMs?: number | null;
 		  } = 6,
 ): Promise<{
 	artifacts: ConversationArtifact[];
@@ -989,11 +1115,16 @@ export async function readBoundedChatgptDetailInventory(
 	const listOptions = typeof options === "number" ? undefined : options.listOptions;
 	const pacer = typeof options === "number" ? undefined : options.pacer;
 	const observation = typeof options === "number" ? undefined : options.observation;
+	const providerCallTimeoutMs =
+		typeof options === "number"
+			? CHATGPT_DETAIL_READ_TIMEOUT_MS
+			: (options.providerCallTimeoutMs ?? CHATGPT_DETAIL_READ_TIMEOUT_MS);
 	const hasAttachmentSurfaces = projects.length > 0 || conversations.length > 0;
 	const library = await readBoundedChatgptLibraryInventory(client, limit, {
 		listOptions,
 		pacer,
 		observation,
+		providerCallTimeoutMs,
 	});
 	const remainingRows =
 		hasAttachmentSurfaces && limit > 0
@@ -1004,7 +1135,15 @@ export async function readBoundedChatgptDetailInventory(
 		projects,
 		conversations,
 		remainingRows,
-		options,
+		typeof options === "number"
+			? {
+					maxDetailReads: options,
+					providerCallTimeoutMs,
+				}
+			: {
+					...options,
+					providerCallTimeoutMs,
+				},
 	);
 	return {
 		artifacts: mergeConversationArtifacts(library.artifacts, attachmentInventory.artifacts),
@@ -1022,6 +1161,7 @@ export async function readBoundedChatgptLibraryInventory(
 		listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
 		pacer?: BrowserInteractionPacer;
 		observation?: AccountMirrorDomDriftObservationContext;
+		providerCallTimeoutMs?: number | null;
 	} = {},
 ): Promise<{
 	artifacts: ConversationArtifact[];
@@ -1037,10 +1177,16 @@ export async function readBoundedChatgptLibraryInventory(
 		};
 	}
 	await options.pacer?.beforeInteraction();
-	const files = await safeReadAccountFiles(client, options.listOptions, options.observation, {
-		surface: "account-mirror-library",
-		action: "list-account-files",
-	});
+	const files = await safeReadAccountFiles(
+		client,
+		options.listOptions,
+		options.observation,
+		{
+			surface: "account-mirror-library",
+			action: "list-account-files",
+		},
+		options.providerCallTimeoutMs,
+	);
 	const boundedFiles = files.slice(0, limit);
 	return {
 		artifacts: mapChatgptLibraryFilesToArtifacts(boundedFiles),
@@ -1134,6 +1280,7 @@ function createAttachmentInventoryCursor(
 		scannedConversations: number;
 		nextProjectIndex?: number;
 		nextConversationIndex?: number;
+		conversationDetail?: AttachmentInventoryCursor["conversationDetail"];
 		yielded?: boolean;
 	},
 ): AttachmentInventoryCursor {
@@ -1149,6 +1296,7 @@ function createAttachmentInventoryCursor(
 		detailReadLimit: input.detailReadLimit,
 		scannedProjects: input.scannedProjects,
 		scannedConversations: input.scannedConversations,
+		conversationDetail: input.conversationDetail ?? null,
 		yielded: input.yielded === true,
 	};
 }
@@ -1194,11 +1342,18 @@ async function safeReadProjectFiles(
 	projectId: string,
 	listOptions?: Parameters<BrowserAutomationClient["listProjectFiles"]>[1],
 	observation?: AccountMirrorDomDriftObservationContext,
+	timeoutMs?: number | null,
 ): Promise<FileRef[]> {
 	try {
-		return listOptions === undefined
-			? await client.listProjectFiles(projectId)
-			: await client.listProjectFiles(projectId, listOptions);
+		const read =
+			listOptions === undefined
+				? client.listProjectFiles(projectId)
+				: client.listProjectFiles(projectId, listOptions);
+		return await withProviderCallTimeout(
+			read,
+			timeoutMs,
+			`Project file inventory timed out for ${projectId}.`,
+		);
 	} catch (error) {
 		await recordAccountMirrorDomDriftObservation(observation, {
 			surface: "account-mirror-project-files",
@@ -1222,11 +1377,16 @@ async function safeReadAccountFiles(
 		surface: "account-mirror-account-files",
 		action: "list-account-files",
 	},
+	timeoutMs?: number | null,
 ): Promise<FileRef[]> {
 	try {
-		return listOptions === undefined
-			? await client.listAccountFiles()
-			: await client.listAccountFiles(listOptions);
+		const read =
+			listOptions === undefined ? client.listAccountFiles() : client.listAccountFiles(listOptions);
+		return await withProviderCallTimeout(
+			read,
+			timeoutMs,
+			`Account file inventory timed out for ${input.surface}.`,
+		);
 	} catch (error) {
 		await recordAccountMirrorDomDriftObservation(observation, {
 			surface: input.surface,
@@ -1273,11 +1433,30 @@ async function safeReadConversationContext(
 	conversation: Conversation,
 	observation?: AccountMirrorDomDriftObservationContext,
 	timeoutMs?: number | null,
-): Promise<{ artifacts?: ConversationArtifact[] } | null> {
+	listOptions?: BrowserProviderListOptions,
+	cursor?: AttachmentInventoryCursor["conversationDetail"] | null,
+): Promise<{ artifacts?: ConversationArtifact[]; metadata?: Record<string, unknown> } | null> {
 	try {
+		const chunk =
+			conversation.provider === "chatgpt"
+				? {
+						startMessageIndex:
+							cursor?.conversationId === conversation.id ? cursor.nextMessageIndex : 0,
+						maxMessages:
+							cursor?.conversationId === conversation.id
+								? cursor.messageLimit
+								: CHATGPT_CONTEXT_CHUNK_MESSAGE_LIMIT,
+					}
+				: null;
 		const read = client.getConversationContext(conversation.id, {
 			projectId: conversation.projectId,
 			refresh: true,
+			listOptions: chunk
+				? {
+						...(listOptions ?? {}),
+						accountMirrorContextChunk: chunk,
+					}
+				: listOptions,
 		});
 		return await withProviderCallTimeout(
 			read,
@@ -1297,6 +1476,48 @@ async function safeReadConversationContext(
 		});
 		return null;
 	}
+}
+
+function readAccountMirrorContextChunkMetadata(
+	context: { metadata?: Record<string, unknown> } | null | undefined,
+): {
+	startMessageIndex: number;
+	endMessageIndex: number;
+	nextMessageIndex: number | null;
+	maxMessages: number;
+	totalMessages: number | null;
+	complete: boolean;
+} | null {
+	const metadata = context?.metadata?.accountMirrorContextChunk;
+	if (!metadata || typeof metadata !== "object") return null;
+	const record = metadata as Record<string, unknown>;
+	const startMessageIndex = readNonNegativeInteger(record.startMessageIndex);
+	const endMessageIndex = readNonNegativeInteger(record.endMessageIndex);
+	const maxMessages = readPositiveInteger(record.maxMessages);
+	if (startMessageIndex === null || endMessageIndex === null || maxMessages === null) return null;
+	const nextMessageIndex =
+		record.nextMessageIndex === null ? null : readNonNegativeInteger(record.nextMessageIndex);
+	return {
+		startMessageIndex,
+		endMessageIndex,
+		nextMessageIndex,
+		maxMessages,
+		totalMessages:
+			record.totalMessages === null || record.totalMessages === undefined
+				? null
+				: readNonNegativeInteger(record.totalMessages),
+		complete: record.complete === true || nextMessageIndex === null,
+	};
+}
+
+function readNonNegativeInteger(value: unknown): number | null {
+	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+	return Math.floor(value);
+}
+
+function readPositiveInteger(value: unknown): number | null {
+	if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+	return Math.floor(value);
 }
 
 function withProviderCallTimeout<T>(
