@@ -1,3 +1,16 @@
+- 2026-06-21: ChatGPT browser model selection should carry semantic intent, not
+  versioned Pro defaults. Active CLI/browser guidance still told operators to
+  use concrete ChatGPT model names such as `gpt-5.2-pro`, even though the live
+  ChatGPT picker is now semantic and can drift independently of OpenAI API model
+  IDs. Browser run-option resolution now treats the default ChatGPT browser
+  target as `chatgpt:instant`, preserves semantic selector metadata for direct
+  selectors such as `chatgpt:pro-extended`, and passes that metadata into
+  browser config as `desiredModel` plus default thinking-time depth while
+  keeping the compatibility `model` string for session/API plumbing. Keep
+  concrete OpenAI model IDs in the API/catalog layer, but route browser ChatGPT
+  selection through semantic service-level selectors so AuraCall can remain
+  responsive to picker-label and model-version churn.
+
 - 2026-06-21: ChatGPT Pro Extended depth selection now uses the current
   `Intelligence` menu, not only the older `Thinking time` menu. The current
   ChatGPT composer opens a menu with rows `Instant`, `Medium`, `High`,

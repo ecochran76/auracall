@@ -54,6 +54,25 @@ describe('buildBrowserConfig', () => {
     expect(config.modelStrategy).toBe('current');
   });
 
+  test('uses semantic ChatGPT selector metadata for desired model and thinking time', async () => {
+    const config = await buildBrowserConfig({
+      model: 'gpt-5.1-pro',
+      chatgptSemanticModelSelection: { desiredModel: 'Pro', thinkingTime: 'extended' },
+    });
+    expect(config.desiredModel).toBe('Pro');
+    expect(config.thinkingTime).toBe('extended');
+  });
+
+  test('lets explicit thinking-time flags override semantic selector depth', async () => {
+    const config = await buildBrowserConfig({
+      model: 'gpt-5.1-pro',
+      browserThinkingTime: 'standard',
+      chatgptSemanticModelSelection: { desiredModel: 'Pro', thinkingTime: 'extended' },
+    });
+    expect(config.desiredModel).toBe('Pro');
+    expect(config.thinkingTime).toBe('standard');
+  });
+
   test('honors overrides and converts durations + booleans', async () => {
     const config = await buildBrowserConfig({
       model: 'gpt-5.1',

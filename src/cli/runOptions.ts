@@ -7,8 +7,14 @@ import { normalizeModelOption, inferModelFromLabel, resolveApiModel, normalizeBa
 import { resolveGeminiModelId } from '../oracle/gemini.js';
 import { PromptValidationError } from '../oracle/errors.js';
 import { normalizeChatGptModelForBrowser } from './browserConfig.js';
+import {
+  resolveChatgptSemanticModelSelector,
+  type ChatgptSemanticModelSelection,
+} from '../config/modelSelector.js';
 
-const DEFAULT_BROWSER_MODEL: ModelName = 'gpt-5.2-instant';
+const DEFAULT_BROWSER_MODEL_SELECTOR = 'chatgpt:instant';
+const BROWSER_COMPAT_INSTANT_MODEL: ModelName = 'gpt-5.2-instant';
+const BROWSER_COMPAT_THINKING_MODEL: ModelName = 'gpt-5.2-thinking';
 
 export interface ResolveRunOptionsInput {
   prompt: string;
@@ -24,6 +30,7 @@ export interface ResolvedRunOptions {
   runOptions: RunOracleOptions;
   resolvedEngine: EngineMode;
   engineCoercedToApi?: boolean;
+  browserModelSelection?: ChatgptSemanticModelSelection | null;
 }
 
 export function resolveRunOptionsFromConfig({
@@ -43,12 +50,18 @@ export function resolveRunOptionsFromConfig({
   const configuredModel = normalizeModelOption(model ?? userConfig?.model);
   const cliModelArg =
     configuredModel ||
-    (resolvedEngine === 'browser' ? DEFAULT_BROWSER_MODEL : DEFAULT_MODEL);
-  const inferredModel =
+    (resolvedEngine === 'browser' ? DEFAULT_BROWSER_MODEL_SELECTOR : DEFAULT_MODEL);
+  const browserModelSelection =
     resolvedEngine === 'browser' && normalizedRequestedModels.length === 0
+      ? resolveChatgptSemanticModelSelector(cliModelArg)
+      : null;
+  const inferredModel =
+    browserModelSelection
+      ? resolveModelForChatgptSemanticSelection(browserModelSelection)
+      : resolvedEngine === 'browser' && normalizedRequestedModels.length === 0
       ? inferModelFromLabel(cliModelArg)
       : resolveApiModel(cliModelArg);
-  // Browser engine maps Pro/legacy aliases to the latest ChatGPT picker targets (GPT-5.2 / GPT-5.2 Pro).
+  // Browser engine maps legacy labels to current ChatGPT picker targets while semantic selectors carry durable intent.
   const resolvedModel = resolvedEngine === 'browser' ? normalizeChatGptModelForBrowser(inferredModel) : inferredModel;
   const isCodex = resolvedModel.startsWith('gpt-5.1-codex');
   const isClaude = resolvedModel.startsWith('claude');
@@ -111,7 +124,24 @@ export function resolveRunOptionsFromConfig({
     effectiveModelId,
   };
 
-  return { runOptions, resolvedEngine: fixedEngine, engineCoercedToApi };
+  return {
+    runOptions,
+    resolvedEngine: fixedEngine,
+    engineCoercedToApi,
+    browserModelSelection: fixedEngine === 'browser' ? browserModelSelection : null,
+  };
+}
+
+function resolveModelForChatgptSemanticSelection(selection: ChatgptSemanticModelSelection): ModelName {
+  switch (selection.desiredModel) {
+    case 'Pro':
+      return DEFAULT_MODEL;
+    case 'Thinking':
+      return BROWSER_COMPAT_THINKING_MODEL;
+    case 'Auto':
+    case 'Instant':
+      return BROWSER_COMPAT_INSTANT_MODEL;
+  }
 }
 
 function resolveEngineWithConfig({

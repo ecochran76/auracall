@@ -17,7 +17,7 @@ describe('Config Resolver', () => {
     expect(result.browser.headless).toBe(undefined);
   });
 
-  it('should default browser runs to gpt-5.2-instant when no model is configured', async () => {
+  it('should default browser runs through the semantic ChatGPT Instant selector when no model is configured', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: { browser: {} } as any,
       path: '/tmp/config.json',
@@ -28,6 +28,19 @@ describe('Config Resolver', () => {
 
     expect(result.engine).toBe('browser');
     expect(result.model).toBe('gpt-5.2-instant');
+  });
+
+  it('should resolve semantic ChatGPT Pro Extended selector to the stable Pro compatibility model', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: { browser: {} } as any,
+      path: '/tmp/config.json',
+      loaded: false,
+    });
+
+    const result = await resolveConfig({ engine: 'browser', model: 'chatgpt:pro-extended' });
+
+    expect(result.engine).toBe('browser');
+    expect(result.model).toBe('gpt-5.1-pro');
   });
 
   it('should override defaults with file config', async () => {

@@ -599,7 +599,7 @@ async function assertChatgptProModeSelectable(
 ): Promise<ChatgptProModeGate> {
   if (modelStrategy !== 'select') {
     throw new Error(
-      `ChatGPT Pro mode "${resolveChatgptProModeFromThinkingTime(level)}" requires selecting Pro through the ChatGPT model picker. Use --model gpt-5.2-pro with --browser-model-strategy select before using --browser-thinking-time for Pro mode.`,
+      `ChatGPT Pro mode "${resolveChatgptProModeFromThinkingTime(level)}" requires selecting Pro through the ChatGPT model picker. Use --model chatgpt:pro-extended or --model chatgpt:pro-standard with --browser-model-strategy select before using --browser-thinking-time for Pro mode.`,
     );
   }
   return assertChatgptProModeAllowed(Runtime, level, logger);

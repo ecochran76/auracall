@@ -8,6 +8,7 @@ import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { normalizeConfigV1toV2 } from '../config/migrate.js';
 import { resolveRuntimeSelection } from '../config/model.js';
 import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
+import { resolveChatgptSemanticModelSelector } from '../config/modelSelector.js';
 
 type MutableBrowserConfig = Record<string, unknown>;
 type MutableConfig = Record<string, unknown> & {
@@ -76,7 +77,7 @@ export async function resolveConfig(
   // Handle shorthands
   if (cliOptions.chatgpt) {
     deepSet(cliConfig, 'browser.target', 'chatgpt');
-    if (!cliConfig.model) cliConfig.model = 'gpt-5.2';
+    if (!cliConfig.model) cliConfig.model = 'chatgpt:instant';
     cliConfig.engine = 'browser';
   }
   if (cliOptions.gemini) {
@@ -111,9 +112,16 @@ export async function resolveConfig(
   const cliModelArg =
     cliConfig.model ||
     effective.model ||
-    (engine === 'browser' ? 'gpt-5.2-instant' : DEFAULT_MODEL);
+    (engine === 'browser' ? 'chatgpt:instant' : DEFAULT_MODEL);
 
-  const inferredModel = (engine === 'browser') ? inferModelFromLabel(cliModelArg) : resolveApiModel(cliModelArg);
+  const semanticChatgptSelection =
+    engine === 'browser' ? resolveChatgptSemanticModelSelector(cliModelArg) : null;
+  const inferredModel =
+    semanticChatgptSelection
+      ? resolveModelForChatgptSemanticSelection(semanticChatgptSelection)
+      : engine === 'browser'
+        ? inferModelFromLabel(cliModelArg)
+        : resolveApiModel(cliModelArg);
   
   // Engine coercion
   const isClaude = inferredModel.startsWith('claude');
@@ -138,6 +146,17 @@ export async function resolveConfig(
 
   // 5. Validate and Default
   return ComposedConfigSchema.parse(effective);
+}
+
+function resolveModelForChatgptSemanticSelection(selection: { desiredModel: string }): string {
+  switch (selection.desiredModel) {
+    case 'Pro':
+      return DEFAULT_MODEL;
+    case 'Thinking':
+      return 'gpt-5.2-thinking';
+    default:
+      return 'gpt-5.2-instant';
+  }
 }
 
 function mergeRecursively(target: MutableConfig, source: MutableConfig): MutableConfig {

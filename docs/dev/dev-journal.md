@@ -1,3 +1,25 @@
+## 2026-06-21 | ChatGPT Semantic Model Selector Cutover
+
+- Focus: stop active ChatGPT browser defaults and operator guidance from
+  depending on the time-sensitive `gpt-5.2-pro` name now that the ChatGPT model
+  picker is semantic (`Instant`, `Thinking`, `Pro`, plus depth controls).
+- Result:
+  - direct browser runs can preserve semantic selector intent from values such
+    as `chatgpt:instant`, `chatgpt:thinking-extended`, and
+    `chatgpt:pro-extended`;
+  - `buildBrowserConfig` now receives that semantic intent separately from the
+    compatibility `model` metadata and applies the desired ChatGPT picker row
+    plus default thinking-time depth;
+  - `--chatgpt`, help text, README guidance, temporary-chat errors, and Pro mode
+    guidance now point operators toward `chatgpt:*` selectors instead of
+    versioned Pro model IDs.
+- Validation:
+  - `pnpm vitest run tests/runOptions.test.ts tests/cli/browserConfig.test.ts tests/schema/resolver.test.ts`
+    passed with `79` tests;
+  - `pnpm exec biome lint src/cli/runOptions.ts src/cli/browserConfig.ts src/schema/resolver.ts src/browser/index.ts src/browser/actions/modelSelection.ts bin/auracall.ts src/cli/help.ts tests/runOptions.test.ts tests/cli/browserConfig.test.ts`
+    passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+
 ## 2026-06-21 | ChatGPT Intelligence Depth Selector Repair
 
 - Focus: clear the Odollo `indian-oil-amol-pro-extended-2` blocker where

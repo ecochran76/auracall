@@ -10,6 +10,7 @@ import type { CookieParam } from '../browser/types.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { resolveManagedProfileCookieExportPath, resolveManagedProfileDir } from '../browser/profileStore.js';
 import { resolveEffectiveManagedProfileRoot } from '../browser/config.js';
+import type { ChatgptSemanticModelSelection } from '../config/modelSelector.js';
 import {
   ensureServicesRegistry,
   requireBundledServiceModelLabel,
@@ -55,6 +56,7 @@ export interface BrowserFlagOptions {
   browserModelStrategy?: BrowserModelStrategy;
   browserAllowCookieErrors?: boolean;
   browserTarget?: 'chatgpt' | 'gemini' | 'grok';
+  chatgptSemanticModelSelection?: ChatgptSemanticModelSelection | null;
   remoteChrome?: string;
   browserPort?: number;
   browserDebugPort?: number;
@@ -100,6 +102,8 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const modelStrategy =
     normalizeBrowserModelStrategy(options.browserModelStrategy) ?? DEFAULT_MODEL_STRATEGY;
   const target = isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : options.browserTarget ?? 'chatgpt';
+  const chatgptSemanticModelSelection =
+    target === 'chatgpt' ? options.chatgptSemanticModelSelection ?? null : null;
   const managedProfileRoot = resolveEffectiveManagedProfileRoot({
     configuredManagedProfileRoot: options.managedProfileRoot ?? null,
     explicitProfileDir: options.browserManualLoginProfileDir ?? null,
@@ -136,7 +140,9 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
 
   const desiredModel = isGrokModel
     ? resolveGrokModeLabel(desiredModelOverride, options.model, servicesRegistry)
-    : isChatGptModel
+    : chatgptSemanticModelSelection
+      ? chatgptSemanticModelSelection.desiredModel
+      : isChatGptModel
         ? mapModelToBrowserLabel(options.model)
         : shouldUseOverride
           ? desiredModelOverride
@@ -145,7 +151,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   if (modelStrategy === 'select' && url && isTemporaryChatUrl(url) && /\bpro\b/i.test(desiredModel ?? '')) {
     throw new Error(
       'Temporary Chat mode does not expose Pro models in the ChatGPT model picker. ' +
-        'Remove "temporary-chat=true" from --chatgpt-url (or omit --chatgpt-url), or use a non-Pro model (e.g. --model gpt-5.2-instant).',
+        'Remove "temporary-chat=true" from --chatgpt-url (or omit --chatgpt-url), or use a non-Pro model (e.g. --model chatgpt:instant).',
     );
   }
 
@@ -191,7 +197,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     // Allow cookie failures by default so runs can continue without Chrome/Keychain secrets.
     allowCookieErrors: options.browserAllowCookieErrors ?? true,
     remoteChrome,
-    thinkingTime: options.browserThinkingTime,
+    thinkingTime: options.browserThinkingTime ?? chatgptSemanticModelSelection?.thinkingTime,
     composerTool: normalizeComposerTool(options.browserComposerTool),
     deepResearchPlanAction: normalizeDeepResearchPlanAction(options.browserDeepResearchPlanAction),
   };

@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-Aura-Call bundles your prompt and files so another AI can answer with real context. It speaks GPT-5.1 Pro (default alias to GPT-5.2 Pro on the API), GPT-5.1 Codex (API-only), GPT-5.1, GPT-5.2, Gemini 3 Pro, Claude Sonnet 4.5, Claude Opus 4.1, Grok 4.20, and more—and it can ask one or multiple models in a single run. Browser automation is available; use `--browser-model-strategy current` to keep the active ChatGPT model (or `ignore` to skip the picker). API remains the most reliable path, and `--copy` is an easy manual fallback.
+Aura-Call bundles your prompt and files so another AI can answer with real context. It speaks stable GPT Pro aliases, GPT-5.1 Codex (API-only), GPT-5.1, GPT-5.2 family models, Gemini 3 Pro, Claude Sonnet 4.5, Claude Opus 4.1, Grok 4.20, and more—and it can ask one or multiple models in a single run. Browser automation is available; use semantic ChatGPT selectors such as `chatgpt:instant`, `chatgpt:thinking-extended`, and `chatgpt:pro-extended`, or use `--browser-model-strategy current` to keep the active ChatGPT model. API remains the most reliable path, and `--copy` is an easy manual fallback.
 
 ## Quick start
 
@@ -1530,13 +1530,13 @@ npx -y auracall auracall-mcp
 | `-p, --prompt <text>` | Required prompt. |
 | `-f, --file <paths...>` | Attach files/dirs (globs + `!` excludes). |
 | `-e, --engine <api\|browser>` | Choose API or browser (browser is experimental). |
-| `-m, --model <name>` | Built-ins (`gpt-5.1-pro` default, `gpt-5-pro`, `gpt-5.1`, `gpt-5.1-codex`, `gpt-5.2`, `gpt-5.2-instant`, `gpt-5.2-pro`, `gemini-3-pro`, `claude-4.5-sonnet`, `claude-4.1-opus`) plus any OpenRouter id (e.g., `minimax/minimax-m2`, `openai/gpt-4o-mini`). |
+| `-m, --model <name>` | Built-ins (`gpt-5.1-pro` default, `gpt-5-pro`, `gpt-5.1`, `gpt-5.1-codex`, `gpt-5.2`, `gpt-5.2-instant`, `gpt-5.2-pro`, `gemini-3-pro`, `claude-4.5-sonnet`, `claude-4.1-opus`) plus any OpenRouter id (e.g., `minimax/minimax-m2`, `openai/gpt-4o-mini`). Browser ChatGPT also accepts semantic selectors such as `chatgpt:instant`, `chatgpt:thinking-extended`, and `chatgpt:pro-extended`. |
 | `--models <list>` | Comma-separated API models (mix built-ins and OpenRouter ids) for multi-model runs. |
 | `--base-url <url>` | Point API runs at LiteLLM/Azure/OpenRouter/etc. |
 | `--chatgpt-url <url>` | Target a ChatGPT workspace/folder (browser). |
 | `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (current keeps the active model; ignore skips the picker). |
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
-| `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT thinking-time intensity (browser; Thinking/Pro models only). Pro is selected through the model picker (`--model gpt-5.2-pro` with the default `--browser-model-strategy select`); Standard/Extended alone only select the workbench depth and are not proof that the run used Pro. |
+| `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT thinking-time intensity (browser; Thinking/Pro models only). Prefer semantic selectors such as `--model chatgpt:pro-extended` or `--model chatgpt:thinking-extended`; Standard/Extended alone only select the workbench depth and are not proof that the run used Pro. |
 | `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on such as `web-search`, `canvas`, or `deep-research`. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. |
 | `--browser-deep-research-plan-action <start\|edit>` | Control ChatGPT Deep Research after the provider plan appears. `start` accepts the plan; `edit` opens the plan editor before the timed auto-start window, keeps the managed browser open, and stores review evidence including the iframe/DOM edit target and passive screenshot path. |
 | `--browser-port <port>` | Force a fixed Chrome DevTools port (advanced/debugging). Normal WSL -> Windows launches default to auto-discovery instead. |

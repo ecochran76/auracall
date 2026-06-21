@@ -330,6 +330,7 @@ import {
 import { resolveConfig } from '../src/schema/resolver.js';
 import { materializeConfigV2, normalizeConfigV1toV2 } from '../src/config/migrate.js';
 import { isPortOpen } from '../src/browser/processCheck.js';
+import { resolveChatgptSemanticModelSelector } from '../src/config/modelSelector.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -609,7 +610,7 @@ program.hook('preAction', (thisCommand) => {
 });
 program
   .name('auracall')
-  .description('One-shot GPT-5.2 Pro / GPT-5.2 / GPT-5.1 Codex tool for hard questions that benefit from large file context and server-side search.')
+  .description('One-shot model orchestration tool for hard questions that benefit from large file context and server-side search.')
   .version(VERSION)
   .argument('[prompt]', 'Prompt text (shorthand for --prompt).')
   .option('-p, --prompt <text>', 'User prompt to send to the model.')
@@ -654,13 +655,13 @@ program
   .option('-s, --slug <words>', 'Custom session slug (3-5 words).')
   .option(
     '-m, --model <model>',
-    'Model to target (gpt-5.2-pro default; also supports gpt-5.1-pro alias). Also gpt-5-pro, gpt-5.1, gpt-5.1-codex API-only, gpt-5.2, gpt-5.2-instant, gpt-5.2-pro, gemini-3-pro, claude-4.5-sonnet, claude-4.1-opus, or ChatGPT labels like "5.2 Thinking" for browser runs).',
+    'Model to target (API default: gpt-5.1-pro stable alias). Browser ChatGPT runs also support semantic selectors like chatgpt:instant, chatgpt:thinking-extended, and chatgpt:pro-extended.',
     normalizeModelOption,
   )
   .addOption(
     new Option(
       '--models <models>',
-      'Comma-separated API model list to query in parallel (e.g., "gpt-5.2-pro,gemini-3-pro").',
+      'Comma-separated API model list to query in parallel (e.g., "gpt-5.1-pro,gemini-3-pro").',
     )
       .argParser(collectModelList)
       .default([]),
@@ -668,7 +669,7 @@ program
   .addOption(
     new Option(
       '--chatgpt',
-      'Use ChatGPT browser automation (shorthand for --engine browser --model gpt-5.2).',
+      'Use ChatGPT browser automation (shorthand for --engine browser --model chatgpt:instant).',
     ),
   )
   .addOption(
@@ -709,7 +710,7 @@ program
   .addOption(
     new Option(
       '--timeout <seconds|auto>',
-      'Overall timeout before aborting the API call (auto = 60m for gpt-5.2-pro, 120s otherwise).',
+      'Overall timeout before aborting the API call (auto = 60m for Pro API runs, 120s otherwise).',
     )
       .argParser(parseTimeoutOption)
       .default('auto'),
@@ -9020,7 +9021,7 @@ async function loadWritableUserConfigForWizard(): Promise<UserConfig> {
       if (scaffolded) {
         return materializeConfigV2(normalizeConfigV1toV2(scaffolded.config));
       }
-      return { version: 2, model: 'gpt-5.2-pro', browser: {}, profiles: {} };
+      return { version: 2, model: DEFAULT_MODEL, browser: {}, profiles: {} };
     }
     throw error;
   }
@@ -10888,6 +10889,10 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   });
 
   const sessionMode: SessionMode = engine === 'browser' ? 'browser' : 'api';
+  const chatgptSemanticModelSelection =
+    sessionMode === 'browser'
+      ? resolveChatgptSemanticModelSelector(options.model ?? cliModelArg)
+      : null;
   const browserModelLabelOverride =
     sessionMode === 'browser'
       ? (options.browserModelLabel || !resolvedModel.startsWith('grok')
@@ -10903,6 +10908,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
           managedProfileRoot: config.browser.managedProfileRoot ?? null,
           model: resolvedModel,
           browserModelLabel: browserModelLabelOverride,
+          chatgptSemanticModelSelection,
           browserManualLogin: config.browser.manualLogin ?? true,
           browserManualLoginProfileDir: config.browser.manualLoginProfileDir,
           browserChromeProfile: config.browser.chromeProfile,

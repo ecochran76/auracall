@@ -31,13 +31,25 @@ describe('resolveRunOptionsFromConfig', () => {
     expect(runOptions.model).toBe(DEFAULT_MODEL);
   });
 
-  it('defaults browser runs to gpt-5.2-instant when model not provided', () => {
-    const { runOptions, resolvedEngine } = resolveRunOptionsFromConfig({
+  it('defaults browser runs to the semantic ChatGPT Instant selector when model not provided', () => {
+    const { runOptions, resolvedEngine, browserModelSelection } = resolveRunOptionsFromConfig({
       prompt: basePrompt,
       engine: 'browser',
     });
     expect(resolvedEngine).toBe('browser');
     expect(runOptions.model).toBe('gpt-5.2-instant');
+    expect(browserModelSelection).toEqual({ desiredModel: 'Instant' });
+  });
+
+  it('preserves semantic ChatGPT Pro Extended intent for browser runs', () => {
+    const { runOptions, resolvedEngine, browserModelSelection } = resolveRunOptionsFromConfig({
+      prompt: basePrompt,
+      model: 'chatgpt:pro-extended',
+      engine: 'browser',
+    });
+    expect(resolvedEngine).toBe('browser');
+    expect(runOptions.model).toBe(DEFAULT_MODEL);
+    expect(browserModelSelection).toEqual({ desiredModel: 'Pro', thinkingTime: 'extended' });
   });
 
   it('uses config model when caller does not provide one', () => {
