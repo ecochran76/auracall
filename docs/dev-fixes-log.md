@@ -1,3 +1,15 @@
+- 2026-06-21: ChatGPT Pro Extended depth selection now uses the current
+  `Intelligence` menu, not only the older `Thinking time` menu. The current
+  ChatGPT composer opens a menu with rows `Instant`, `Medium`, `High`,
+  `Extra High`, `Pro Extended`, and a model submenu; requiring a menu that
+  contains legacy `Standard` and `Extended` labels causes Pro Extended runs to
+  fail with `Unable to find the Thinking time dropdown menu.` Treat
+  `Intelligence` as the depth menu, prefer `Pro Extended` for AuraCall
+  `extended`, and keep `Extra High` as the current heavy-depth target. Live
+  proof on `wsl-chrome-3` / SoyLei selected `Model picker: Pro Extended`,
+  reported `Thinking time: Pro Extended (already selected)`, submitted in the
+  SoyLei project, and returned `EXTENDED SELECTOR OK`.
+
 - 2026-06-20: ChatGPT account proof must come from the ChatGPT provider app,
   not from the Chrome/Google browser profile. A managed Chrome profile can be
   logged into Google as `ecochran76@gmail.com` while the active ChatGPT session

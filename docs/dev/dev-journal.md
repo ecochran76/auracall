@@ -1,3 +1,28 @@
+## 2026-06-21 | ChatGPT Intelligence Depth Selector Repair
+
+- Focus: clear the Odollo `indian-oil-amol-pro-extended-2` blocker where
+  AuraCall resolved `gpt-5.2-pro` and SoyLei correctly but failed before output
+  with `Unable to find the Thinking time dropdown menu.`
+- Result:
+  - ChatGPT thinking-time selection now recognizes the current `Intelligence`
+    composer menu, whose depth rows are `Instant`, `Medium`, `High`,
+    `Extra High`, and `Pro Extended`;
+  - Extended now targets `Pro Extended` before the legacy `Extended` label;
+  - Heavy can target `Extra High` while preserving legacy fallback labels.
+- Validation:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts tests/browser/modelSelection.test.ts tests/config/modelSelector.test.ts`
+    passed with `22` tests;
+  - `pnpm exec biome lint src/browser/actions/thinkingTime.ts tests/browser/thinkingTime.test.ts`
+    passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+- Live proof:
+  - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 --engine browser --browser-target chatgpt --model gpt-5.2-pro --browser-thinking-time extended --project-name SoyLei ...`
+    selected `Model picker: Pro Extended`, accepted Pro mode with
+    `level=Pro, plan=pro, structure=personal`, reported
+    `Thinking time: Pro Extended (already selected)`, submitted inside SoyLei
+    project `g-p-69eb844fc2408191b5ac5b567f8fd76d`, and received
+    `EXTENDED SELECTOR OK`.
+
 ## 2026-06-20 | ChatGPT Project Name Freshness Guard
 
 - Focus: stop ChatGPT account and project-name prompt runs from treating the

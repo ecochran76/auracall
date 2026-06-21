@@ -17,6 +17,7 @@ describe('browser thinking-time selection expression', () => {
     expect(expression).toContain('role=\\"menuitem\\"');
     expect(expression).toContain('role=\\"menuitemradio\\"');
     expect(expression).toContain('thinking time');
+    expect(expression).toContain('intelligence');
     expect(expression).toContain('configure');
     expect(expression).toContain('[role="dialog"]');
     expect(expression).toContain('[role="combobox"]');
@@ -26,6 +27,9 @@ describe('browser thinking-time selection expression', () => {
     expect(expression).toContain('[data-radix-select-item]');
     expect(expression).toContain('normalize');
     expect(expression).toContain('extended');
+    expect(expression).toContain('pro extended');
+    expect(expression).toContain('extra high');
+    expect(expression).toContain('medium');
     expect(expression).toContain('findSelectedLevelPill');
     expect(expression).toContain('button.__composer-pill, .__composer-pill-composite button');
     expect(expression).toContain('clientX');
@@ -39,11 +43,13 @@ describe('browser thinking-time selection expression', () => {
       expect(() => new Function(`return ${expression}`)).not.toThrow();
       expect(expression).toContain('const TARGET_LEVELS');
       if (level === 'light') {
-        expect(expression).toContain('"light","standard"');
+        expect(expression).toContain('"light","standard","instant"');
       } else if (level === 'heavy') {
-        expect(expression).toContain('"heavy","extended"');
+        expect(expression).toContain('"heavy","extra high","pro extended","extended"');
+      } else if (level === 'standard') {
+        expect(expression).toContain('"standard","medium"');
       } else {
-        expect(expression).toContain(`"${level}"`);
+        expect(expression).toContain('"pro extended","extended"');
       }
     }
   });

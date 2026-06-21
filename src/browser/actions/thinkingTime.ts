@@ -252,6 +252,15 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
           if (text.includes('standard') && text.includes('extended')) {
             return menu;
           }
+          if (
+            text.includes('intelligence') &&
+            (text.includes('pro extended') || text.includes('extra high') || text.includes('medium'))
+          ) {
+            return menu;
+          }
+          if (text.includes('instant') && text.includes('medium') && text.includes('high')) {
+            return menu;
+          }
         }
         return null;
       };
@@ -277,13 +286,19 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
 
       const findTargetOption = (menu) => {
         const items = menu.querySelectorAll(THINKING_MENU_ITEM_SELECTOR);
+        const scored = [];
         for (const item of items) {
           const text = normalize(item.textContent ?? '');
-          if (TARGET_LEVELS.some((target) => text.includes(target))) {
-            return item;
+          for (const [targetIndex, target] of TARGET_LEVELS.entries()) {
+            if (text === target) {
+              scored.push({ item, score: 1000 - targetIndex });
+            } else if (text.includes(target)) {
+              scored.push({ item, score: 500 - targetIndex });
+            }
           }
         }
-        return null;
+        scored.sort((left, right) => right.score - left.score);
+        return scored[0]?.item ?? null;
       };
 
       const optionIsSelected = (node) => {
@@ -443,12 +458,12 @@ function resolveThinkingTimeCandidates(level: ThinkingTimeLevel): string[] {
   const normalized = level.toLowerCase();
   switch (normalized) {
     case 'light':
-      return ['light', 'standard'];
+      return ['light', 'standard', 'instant'];
     case 'heavy':
-      return ['heavy', 'extended'];
+      return ['heavy', 'extra high', 'pro extended', 'extended'];
     case 'standard':
-      return ['standard'];
+      return ['standard', 'medium'];
     default:
-      return ['extended'];
+      return ['pro extended', 'extended'];
   }
 }
