@@ -2118,20 +2118,29 @@ export abstract class LlmService {
 		const allowAutoRefresh = options?.allowAutoRefresh ?? true;
 		let didRefresh = false;
 		const canList = Boolean(this.provider.listProjects);
-		if ((options?.forceRefresh || (allowAutoRefresh && cached.stale)) && canList) {
+		const shouldRefreshBeforeCacheMatch =
+			this.providerId === "chatgpt" && allowAutoRefresh && canList && !options?.forceRefresh;
+		if (
+			(options?.forceRefresh || (allowAutoRefresh && cached.stale) || shouldRefreshBeforeCacheMatch) &&
+			canList
+		) {
 			const items = await this.listProjects(listOptions);
 			await this.cacheStore.writeProjects(cacheContext, items);
 			cached = { items, fetchedAt: Date.now(), stale: false };
 			didRefresh = true;
 		}
-		const { match, candidates } = matchProjectByName(cached.items, projectName);
+		const { match, candidates } = resolveProjectNameMatch(cached.items, projectName, {
+			preferFirstCandidate: this.providerId === "chatgpt" && didRefresh,
+		});
 		if (match) {
 			return match.id;
 		}
 		if (!didRefresh && allowAutoRefresh && canList) {
 			const items = await this.listProjects(listOptions);
 			await this.cacheStore.writeProjects(cacheContext, items);
-			const retry = matchProjectByName(items, projectName);
+			const retry = resolveProjectNameMatch(items, projectName, {
+				preferFirstCandidate: this.providerId === "chatgpt",
+			});
 			if (retry.match) {
 				return retry.match.id;
 			}
@@ -2658,6 +2667,10 @@ export abstract class LlmService {
 			files: Array.isArray(raw.files) ? raw.files : undefined,
 			sources: normalizedSources.length > 0 ? normalizedSources : undefined,
 			artifacts: normalizedArtifacts.length > 0 ? normalizedArtifacts : undefined,
+			metadata:
+				raw.metadata && typeof raw.metadata === "object"
+					? (raw.metadata as Record<string, unknown>)
+					: undefined,
 		};
 	}
 
@@ -3209,6 +3222,21 @@ function parseLatestSelector(value: string): number | null {
 	const offset = match[1] ? Number.parseInt(match[1], 10) : 0;
 	if (!Number.isFinite(offset) || offset < 0) return null;
 	return offset;
+}
+
+function resolveProjectNameMatch(
+	projects: Project[],
+	projectName: string,
+	options: { preferFirstCandidate?: boolean } = {},
+): ReturnType<typeof matchProjectByName> {
+	const result = matchProjectByName(projects, projectName);
+	if (!result.match && options.preferFirstCandidate && result.candidates.length > 1) {
+		return {
+			match: result.candidates[0] ?? null,
+			candidates: result.candidates,
+		};
+	}
+	return result;
 }
 
 function resolveCacheStoreKind(value: unknown): CacheStoreKind {

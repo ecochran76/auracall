@@ -5818,13 +5818,87 @@ async function scrapeChatgptProjects(client: ChromeClient): Promise<Project[]> {
     })()`,
 		returnByValue: true,
 	});
-	const probes = (result?.value ?? []) as ChatgptProjectLinkProbe[];
+	let probes = (result?.value ?? []) as ChatgptProjectLinkProbe[];
+	if (probes.length === 0) {
+		probes = await scrapeChatgptProjectsFromSidebarButtons(client);
+	}
 	return probes.map((project) => ({
 		id: project.id,
 		name: project.name,
 		provider: "chatgpt",
 		url: project.url ?? resolveChatgptProjectUrl(project.id),
 	}));
+}
+
+async function scrapeChatgptProjectsFromSidebarButtons(
+	client: ChromeClient,
+): Promise<ChatgptProjectLinkProbe[]> {
+	const { result } = await client.Runtime.evaluate({
+		expression: `(async () => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const titleEditPrefix = ${JSON.stringify(CHATGPT_PROJECT_TITLE_EDIT_PREFIX)};
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const parseProjectId = (href) => {
+        try {
+          const url = new URL(href, location.origin);
+          const match = url.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/) || url.pathname.match(/^\\/g\\/([^/]+)\\/c\\/[^/]+\\/?$/);
+          if (!match) return null;
+          const raw = String(match[1] || '').trim();
+          const normalized = raw.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
+          return normalized ? normalized[1] : null;
+        } catch {
+          return null;
+        }
+      };
+      const dispatchClick = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const base = { bubbles: true, cancelable: true, button: 0, view: window };
+        node.dispatchEvent(new PointerEvent('pointerdown', { ...base, pointerType: 'mouse', buttons: 1 }));
+        node.dispatchEvent(new MouseEvent('mousedown', { ...base, buttons: 1 }));
+        node.dispatchEvent(new PointerEvent('pointerup', { ...base, pointerType: 'mouse', buttons: 0 }));
+        node.dispatchEvent(new MouseEvent('mouseup', { ...base, buttons: 0 }));
+        node.dispatchEvent(new MouseEvent('click', { ...base, buttons: 0 }));
+        return true;
+      };
+      const findOptionButtons = () =>
+        Array.from(document.querySelectorAll('button[aria-label^="Open project options for "]'));
+      const projectNames = Array.from(new Set(findOptionButtons()
+        .map((button) => normalize(button.getAttribute('aria-label')).replace(/^Open project options for\\s+/i, ''))
+        .filter(Boolean)));
+      const projects = new Map();
+      for (const name of projectNames.slice(0, 50)) {
+        const optionButton = findOptionButtons().find((button) =>
+          normalize(button.getAttribute('aria-label')) === \`Open project options for \${name}\`
+        );
+        const rowRoot = optionButton?.closest('[class*="project-unfurl-row"]');
+        const target =
+          rowRoot?.querySelector('button[aria-label="Open project home"]') ??
+          rowRoot?.querySelector('[role="button"][data-sidebar-item="true"]');
+        if (!dispatchClick(target)) continue;
+        let projectId = null;
+        for (let attempt = 0; attempt < 50; attempt += 1) {
+          await sleep(100);
+          projectId = parseProjectId(location.href);
+          if (projectId) break;
+        }
+        if (!projectId) continue;
+        const titleButton = Array.from(document.querySelectorAll('button,[role="button"]'))
+          .find((node) => String(node.getAttribute('aria-label') || '').toLowerCase().startsWith(titleEditPrefix));
+        const currentName = normalize(titleButton?.textContent || name || document.title.replace(/^ChatGPT\\s*-\\s*/i, '') || projectId);
+        if (!projects.has(projectId)) {
+          projects.set(projectId, {
+            id: projectId,
+            name: currentName || name || projectId,
+            url: location.href,
+          });
+        }
+      }
+      return Array.from(projects.values());
+    })()`,
+		awaitPromise: true,
+		returnByValue: true,
+	});
+	return (result?.value ?? []) as ChatgptProjectLinkProbe[];
 }
 
 export function resolveChatgptConversationUrl(
@@ -7518,14 +7592,17 @@ async function readChatgptConversationContextWithClient(
 				),
 				canvasProbes,
 			);
-			return {
-				provider: "chatgpt",
-				conversationId,
-				messages: normalizedMessages,
-				files,
-				sources,
-				artifacts,
-			};
+			return applyChatgptConversationContextChunk(
+				{
+					provider: "chatgpt",
+					conversationId,
+					messages: normalizedMessages,
+					files,
+					sources,
+					artifacts,
+				},
+				options?.accountMirrorContextChunk,
+			);
 		},
 		{
 			debugContext,
@@ -7533,6 +7610,51 @@ async function readChatgptConversationContextWithClient(
 			providerOptions: options,
 		},
 	);
+}
+
+function applyChatgptConversationContextChunk(
+	context: ConversationContext,
+	chunk: BrowserProviderListOptions["accountMirrorContextChunk"] | null | undefined,
+): ConversationContext {
+	const startMessageIndex = normalizeNonNegativeInteger(chunk?.startMessageIndex);
+	const maxMessages = normalizePositiveInteger(chunk?.maxMessages);
+	if (startMessageIndex === null || maxMessages === null) return context;
+	const totalMessages = context.messages.length;
+	const endMessageIndex = Math.min(totalMessages, startMessageIndex + maxMessages);
+	const nextMessageIndex = endMessageIndex < totalMessages ? endMessageIndex : null;
+	const includesMessageIndex = (value: { messageIndex?: number } | null | undefined): boolean => {
+		if (typeof value?.messageIndex !== "number" || !Number.isFinite(value.messageIndex)) {
+			return startMessageIndex === 0;
+		}
+		return value.messageIndex >= startMessageIndex && value.messageIndex < endMessageIndex;
+	};
+	return {
+		...context,
+		messages: context.messages.slice(startMessageIndex, endMessageIndex),
+		sources: context.sources?.filter(includesMessageIndex),
+		artifacts: context.artifacts?.filter(includesMessageIndex),
+		metadata: {
+			...(context.metadata ?? {}),
+			accountMirrorContextChunk: {
+				startMessageIndex,
+				endMessageIndex,
+				nextMessageIndex,
+				maxMessages,
+				totalMessages,
+				complete: nextMessageIndex === null,
+			},
+		},
+	};
+}
+
+function normalizeNonNegativeInteger(value: unknown): number | null {
+	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+	return Math.floor(value);
+}
+
+function normalizePositiveInteger(value: unknown): number | null {
+	if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+	return Math.floor(value);
 }
 
 async function readVisibleChatgptDownloadArtifactProbesWithClient(
@@ -9850,6 +9972,7 @@ export function createChatgptAdapter(): Pick<
 				);
 				try {
 					await assertChatgptExpectedIdentity(client, currentOptions);
+					await navigateToChatgptUrl(client, CHATGPT_HOME_URL);
 					await dismissCreateProjectDialogIfOpen(client.Runtime, {
 						strict: true,
 						source: "list-projects",

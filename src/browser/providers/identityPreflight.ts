@@ -199,9 +199,12 @@ export function checkProviderIdentityPreflight(input: {
 }): ProviderIdentityPreflightResult {
   const expectedIdentity = normalizeExpectedProviderIdentity(input.expectedIdentity);
   const expectedServiceAccountId = normalizeStringOrNull(input.expectedServiceAccountId);
+  const fallbackIdentity =
+    input.providerId === 'chatgpt'
+      ? null
+      : normalizeExpectedProviderIdentity(input.fallbackIdentity);
   const actualIdentity =
-    normalizeExpectedProviderIdentity(input.actualIdentity) ??
-    normalizeExpectedProviderIdentity(input.fallbackIdentity);
+    normalizeExpectedProviderIdentity(input.actualIdentity) ?? fallbackIdentity;
   const reason = (
     suffix: 'expected_identity_missing' | 'identity_not_detected' | 'identity_mismatch' | 'account_session_drift',
   ) =>

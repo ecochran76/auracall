@@ -82,6 +82,20 @@ describe('provider identity preflight', () => {
     });
   });
 
+  test('does not use Chrome or Google fallback identity as ChatGPT account proof', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: null,
+      fallbackIdentity: { email: 'eric.cochran@soylei.com', source: 'managed-profile-google-account' },
+      expectedIdentity: { email: 'eric.cochran@soylei.com', source: 'profile' },
+      expectedServiceAccountId: 'service-account:chatgpt:eric.cochran@soylei.com',
+    })).toMatchObject({
+      ok: false,
+      reason: 'chatgpt_identity_not_detected',
+      actualIdentity: null,
+    });
+  });
+
   test('checks configured account level when provided', () => {
     expect(checkProviderIdentityPreflight({
       providerId: 'chatgpt',

@@ -76,4 +76,5 @@ export interface ConversationContext {
   files?: FileRef[];
   sources?: ConversationSource[];
   artifacts?: ConversationArtifact[];
+  metadata?: Record<string, unknown>;
 }

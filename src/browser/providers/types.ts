@@ -52,6 +52,10 @@ export interface BrowserProviderListOptions {
 	identityPreflightFallbackIdentity?: ProviderUserIdentity | null;
 	skipFeatureSignature?: boolean;
 	abortSignal?: AbortSignal;
+	accountMirrorContextChunk?: {
+		startMessageIndex?: number | null;
+		maxMessages?: number | null;
+	};
 }
 
 export interface ProviderUserIdentity {

@@ -17,7 +17,7 @@ import {
 	type ProviderCacheContext,
 	resolveProviderCachePath,
 } from "../../src/browser/providers/cache.js";
-import type { ConversationArtifact, FileRef } from "../../src/browser/providers/domain.js";
+import type { ConversationArtifact, FileRef, Project } from "../../src/browser/providers/domain.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 import type { ResolvedUserConfig } from "../../src/config.js";
 
@@ -104,6 +104,88 @@ class BuildListOptionsLlmService extends LlmService {
 		return this.getDefaultLaunchUrl();
 	}
 }
+
+describe("llmService project name resolution", () => {
+	afterEach(() => {
+		setAuracallHomeDirOverrideForTest(null);
+	});
+
+	test("refreshes ChatGPT project names before returning a stale cached project id", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-resolve-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const cachedProjects: Project[] = [
+			{ id: "g-p-stale-soylei", name: "SoyLei", provider: "chatgpt" },
+		];
+		const liveProjects: Project[] = [
+			{ id: "g-p-current-soylei", name: "SoyLei", provider: "chatgpt" },
+			{ id: "g-p-stale-soylei", name: "SoyLei", provider: "chatgpt" },
+		];
+		await store.writeProjects(cacheContext, cachedProjects);
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listProjects: vi.fn(async () => liveProjects),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			const projectId = await service.resolveProjectIdByName("SoyLei", {
+				allowAutoRefresh: true,
+				listOptions: {},
+			});
+			expect(projectId).toBe("g-p-current-soylei");
+			expect(provider.listProjects).toHaveBeenCalledTimes(1);
+			const refreshed = await store.readProjects(cacheContext);
+			expect(refreshed.items.map((project) => project.id)).toEqual([
+				"g-p-current-soylei",
+				"g-p-stale-soylei",
+			]);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("can still use cached ChatGPT project ids when auto refresh is disabled", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-resolve-cache-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		await store.writeProjects(cacheContext, [
+			{ id: "g-p-cached-soylei", name: "SoyLei", provider: "chatgpt" },
+		]);
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listProjects: vi.fn(async () => [
+				{ id: "g-p-current-soylei", name: "SoyLei", provider: "chatgpt" },
+			]),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			const projectId = await service.resolveProjectIdByName("SoyLei", {
+				allowAutoRefresh: false,
+				listOptions: {},
+			});
+			expect(projectId).toBe("g-p-cached-soylei");
+			expect(provider.listProjects).not.toHaveBeenCalled();
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+});
 
 describe("llmService project file cache writes", () => {
 	afterEach(() => {
