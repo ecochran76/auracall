@@ -9,9 +9,17 @@ Lane: P01
 
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
+- Latest completed live-follow supporting plan:
+  [docs/dev/plans/0140-2026-06-10-large-chat-resumable-context-sync.md](docs/dev/plans/0140-2026-06-10-large-chat-resumable-context-sync.md)
+- Completed browser-control cutover proof:
+  [docs/dev/plans/0142-2026-06-20-agent-browser-remote-headed-service-request-proof.md](docs/dev/plans/0142-2026-06-20-agent-browser-remote-headed-service-request-proof.md)
+- Previous completed live-follow supporting plan:
+  [docs/dev/plans/0139-2026-06-08-chatgpt-live-follow-detail-cursor-resume.md](docs/dev/plans/0139-2026-06-08-chatgpt-live-follow-detail-cursor-resume.md)
+- Previous completed live-follow supporting plan:
+  [docs/dev/plans/0138-2026-06-07-account-mirror-failure-backoff-recovery-override.md](docs/dev/plans/0138-2026-06-07-account-mirror-failure-backoff-recovery-override.md)
 - Completed supporting plan:
   [docs/dev/plans/0136-2026-06-07-handoff-tranche-review-and-commit.md](docs/dev/plans/0136-2026-06-07-handoff-tranche-review-and-commit.md)
-- Latest completed live-follow supporting plan:
+- Previous completed live-follow supporting plan:
   [docs/dev/plans/0137-2026-06-07-oracle-identity-mismatch-self-healing.md](docs/dev/plans/0137-2026-06-07-oracle-identity-mismatch-self-healing.md)
 - Previous completed plan:
   [docs/dev/plans/0135-2026-06-07-chatgpt-project-sources-materialization.md](docs/dev/plans/0135-2026-06-07-chatgpt-project-sources-materialization.md)
@@ -2512,6 +2520,7 @@ Release discipline:
 See [docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md](docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md).
 
 Historical focused reliability slices:
+- [docs/dev/plans/0141-2026-06-12-agent-browser-migration.md](docs/dev/plans/0141-2026-06-12-agent-browser-migration.md) (closed as pilot deferred; no-launch BYOP mapping accepted, live mutation held for agent-browser external-BYOP adopt/reuse support)
 - [docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md](docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md) (closed)
 - [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md) (closed)
 - [docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md](docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md) (closed)

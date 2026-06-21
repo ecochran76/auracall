@@ -1,3 +1,348 @@
+## 2026-06-20 | ChatGPT Project Name Freshness Guard
+
+- Focus: stop ChatGPT account and project-name prompt runs from treating the
+  Chrome/Google browser profile identity as ChatGPT account proof, then using a
+  stale or incomplete project cache to fall back to root chat.
+- Result:
+  - ChatGPT identity preflight now ignores Chrome/Google fallback identity for
+    ChatGPT and requires provider-app session identity;
+  - ChatGPT project-name resolution now refreshes the live project list before
+    returning a cached exact-name match when auto-refresh is enabled;
+  - duplicate exact-name ChatGPT project matches from a live refresh choose the
+    first DOM-listed candidate, preserving current ChatGPT ordering for newer
+    same-name projects;
+  - `allowAutoRefresh=false` still allows explicit cache-only resolution;
+  - ChatGPT project scraping now handles the current sidebar button rows
+    (`Open project options for ...`) and normalizes `listProjects` back to
+    ChatGPT home before reading project rows, so a retained browser left on a
+    project page cannot narrow and overwrite the account-scoped cache.
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/providerIdentityPreflight.test.ts tests/browser/llmServiceFiles.test.ts`
+    passed with `139` tests;
+  - `pnpm exec biome lint src/browser/providers/chatgptAdapter.ts src/browser/providers/identityPreflight.ts tests/browser/providerIdentityPreflight.test.ts`
+    passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+- Live proof:
+  - scoped ChatGPT doctor verified provider-app identity
+    `eric.cochran@soylei.com` with Pro/Extended controls while Chrome/Google
+    identity remained `ecochran76@gmail.com` and was informational only;
+  - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 projects --target chatgpt --refresh --operation-timeout 90`
+    returned `8` live projects and persisted SoyLei
+    `g-p-69eb844fc2408191b5ac5b567f8fd76d` in the
+    `eric.cochran@soylei.com` account cache;
+  - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 --engine browser --browser-target chatgpt --model gpt-5.2-pro --browser-thinking-time extended --project-name SoyLei ...`
+    resolved SoyLei to `g-p-69eb844fc2408191b5ac5b567f8fd76d`, verified the
+    project route before and after submit, posted to
+    `https://chatgpt.com/g/g-p-69eb844fc2408191b5ac5b567f8fd76d-soylei/c/6a372d29-a9c4-83ea-93a5-1a1aeabe8eb8`,
+    and received `SOYLEI PROJECT ROUTE OK.`.
+
+## 2026-06-20 | ChatGPT Pro Model Chooser Guard
+
+- Focus: stop ChatGPT's updated model chooser from satisfying AuraCall Pro /
+  Extended Pro requests with the selected Instant row.
+- Result:
+  - model picker option classification now treats explicit Instant test ids and
+    Instant-leading labels as Instant before considering secondary text that
+    may mention Pro;
+  - Pro matching now recognizes `Extended Pro`, `Pro Extended`, `ChatGPT Pro`,
+    and current model-switcher Pro test id variants;
+  - regression coverage proves a row labeled `Instant` with `Upgrade to Pro`
+    copy scores `0` for a Pro request while `Extended Pro` remains selectable.
+- Validation:
+  - `pnpm vitest run tests/browser/modelSelection.test.ts tests/browser/modelSelection.label.test.ts tests/config/modelSelector.test.ts tests/cli/browserConfig.test.ts`
+    passed with `45` tests;
+  - `pnpm exec biome lint src/browser/actions/modelSelection.ts tests/browser/modelSelection.test.ts`
+    passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+
+## 2026-06-20 | Plan 0142 Clean-Binary Rerun
+
+- Focus: rerun the AuraCall agent-browser remote-headed proof after the
+  route-facing installed binary refresh and stale-daemon cleanup.
+- Result:
+  - installed binary hash matched
+    `4ae6838cd3c8b4de3341b4dc8b884e2dc14db62269212427e55b8239e4e4b6df`;
+  - service status was clean before the request with `browserHealth:
+    NotStarted`, worker `Ready`, and zero retained browsers/tabs;
+  - access-plan preserved the intended AuraCall ChatGPT profile and
+    remote-headed RDP posture;
+  - service request
+    `http-service-request-tab_new-3a8c634f-8049-4742-baef-acdb396dc0c1`
+    failed closed on the selected profile lock instead of opening `default`.
+- Stop gate:
+  - agent-browser still has no retained browser/session/tab or route descriptor
+    for the live AuraCall-owned Chrome process on
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`, so the
+    cutover remains blocked on external-BYOP adopt/reuse.
+
+## 2026-06-20 | Plan 0142 Agent-Browser Remote-Headed Proof
+
+- Focus: recheck agent-browser after remote-view repairs and run the bounded
+  AuraCall service-request proof recommended after Plan 0141.
+- Result:
+  - remote-view doctor now passes the required many-to-many and Guacamole route
+    readiness gates from the AuraCall cwd;
+  - access-plan selects `auracall-chatgpt-wsl-chrome-2-consult` and preserves
+    the requested `stealthcdp_chromium` + `remote_headed` + `rdp_gateway`
+    posture;
+  - queued service request
+    `http-service-request-tab_new-3db11da7-4a36-4170-92dd-5e7d1e690244`
+    succeeded but opened the ChatGPT tab in `session:default` with
+    `runtimeProfile: default`;
+  - cleanup request
+    `http-service-request-tab_close-17cd0f63-a96e-4347-a8d9-010067cce472`
+    closed the unintended default-session tab.
+- Stop gate:
+  - do not enable AuraCall's agent-browser browser-owner mode until
+    agent-browser service request execution either opens the selected AuraCall
+    profile/runtime profile or refuses the request explicitly. Silent fallback
+    to `default` is not acceptable for authenticated provider profiles.
+
+## 2026-06-18 | ChatGPT Provider Cooldown Status Repair
+
+- Focus: stop SoyLei `chatgpt/wsl-chrome-3` live-follow from continuing while
+  ChatGPT is showing `Too many requests` warnings.
+- Result:
+  - account-mirror refresh now reads the ChatGPT rate-limit guard file after
+    successful and failed refresh attempts;
+  - an active guard is persisted as `providerGuard.state="cooldown"` plus
+    `providerCooldownUntilMs`, so status/polite scheduling reports
+    `provider-guard-cooldown` instead of clearing the guard on success;
+  - provider cooldown failures are no longer recorded as DOM drift;
+  - refreshService unit tests now isolate `AURACALL_HOME` so live runtime guard
+    files cannot leak into unit results.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts` passed with
+    `18` tests;
+  - `pnpm vitest run tests/accountMirror/statusRegistry.test.ts tests/accountMirror/politePolicy.test.ts`
+    passed with `29` tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - `pnpm exec biome lint src/accountMirror/refreshService.ts tests/accountMirror/refreshService.test.ts`
+    passed.
+
+## 2026-06-15 | Plan 0141 Pilot Deferred Closeout
+
+- Focus: close the agent-browser migration plan on its documented deferred
+  outcome instead of leaving the blocked live pilot open.
+- Result:
+  - changed Plan 0141 state to `CLOSED`;
+  - recorded the closeout as **Pilot deferred** because AuraCall proved
+    no-launch BYOP profile selection and stock Chrome preflight, but
+    agent-browser cannot yet correlate/adopt the already-running AuraCall BYOP
+    Chrome lane;
+  - updated the roadmap entry to show Plan 0141 is closed pending
+    agent-browser `external_byop` adopt/attach/reuse support;
+  - kept AuraCall's internal browser-service as the default and stopped before
+    any live agent-browser `tab_new` mutation.
+
+## 2026-06-15 | Plan 0141 BYOP Registration And Stop Gate
+
+- Focus: continue the agent-browser migration after the initial Slice 2
+  mapping failure by using the public agent-browser service API rather than
+  editing the agent-browser repository.
+- Result:
+  - registered `auracall-chatgpt-wsl-chrome-2-consult` as an
+    `external_byop`/`caller_supplied` service profile for
+    `chatgpt` / `consult@polymerconsultinggroup.com`;
+  - added the stock Chrome WSL browser-capability registry rows needed for
+    no-launch preflight;
+  - reran access-plan and verified it now selects the AuraCall BYOP profile by
+    `authenticated_target`;
+  - verified browser-capability preflight applies `/usr/bin/google-chrome-stable`
+    for the BYOP profile without launching.
+- Stop gate:
+  - agent-browser still treats the active AuraCall
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+    Chrome process tree as observed-only resource pressure, not as a retained
+    service browser/session/tab;
+  - access-plan therefore recommends `launch_new_browser`, so live service
+    request mutation is blocked until agent-browser can adopt, attach, or
+    safely reuse the existing BYOP Chrome lane.
+
+## 2026-06-15 | Plan 0141 Slice 2 Mapping Proof
+
+- Focus: prove whether the first AuraCall pilot lane can safely advance to an
+  agent-browser-backed adapter.
+- Evidence:
+  - installed `agent-browser 0.27.0` service is healthy, while the local
+    agent-browser checkout at `7dcbd647911440d8ab3248deb44787786b44d23b` is
+    intentionally dirty and only counts as a local contract boundary for the
+    newly-added generic service routines;
+  - AuraCall verified `chatgpt/wsl-chrome-2` provider-app identity as
+    `consult@polymerconsultinggroup.com`, including the negative identity
+    smoke;
+  - the pilot managed browser profile exists at
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`, with
+    live registry entry on `127.0.0.1:45013`;
+  - agent-browser no-launch access-plan still selected `stealthcdp-default`
+    for the `AuraCall` / `auracall-api` /
+    `consult@polymerconsultinggroup.com` request, and `service profiles` did
+    not show the AuraCall BYOP lane.
+- Result:
+  - recorded Slice 2 as not accepted for adapter work;
+  - identified the next boundary as BYOP service profile registration and
+    access-plan rerun, not provider scraping or browser/account repair.
+
+## 2026-06-15 | Plan 0141 Agent-Browser Handoff Reconciliation
+
+- Focus: review the agent-browser generic service routines handoff and make it
+  actionable inside AuraCall's existing Plan 0141 migration lane.
+- Findings:
+  - the requested `.mds` path does not exist; the handoff note is
+    `docs/dev/notes/2026-06-14-agent-browser-generic-service-routines-handoff.md`;
+  - the note correctly keeps provider-specific selectors, DOM interpretation,
+    identity mismatch rules, account-mirror cursors, materialization policy,
+    and migration sequencing in AuraCall;
+  - the agent-browser checkout is intentionally dirty, so AuraCall needs an
+    explicit commit, branch, installed version, or local checkout boundary
+    before consuming helpers or service actions.
+- Result:
+  - patched the handoff note to name Plan 0141 as the governing AuraCall plan;
+  - added an availability boundary warning for the intentionally dirty
+    agent-browser workspace;
+  - wired the handoff into Plan 0141 Slice 2 and Slice 3 as an input while
+    keeping the `chatgpt/wsl-chrome-2` /
+    `consult@polymerconsultinggroup.com` profile and identity gate first.
+
+## 2026-06-12 | Plan 0141 Slice 1 Read-Only Audit
+
+- Focus: execute the first `/goal` slice for the agent-browser migration plan
+  without changing AuraCall runtime behavior.
+- Evidence:
+  - `agent-browser 0.27.0` service status was healthy with browser health and
+    worker state `Ready`, queue depth `0`, no warnings, and no retained
+    browsers/sessions/tabs;
+  - `agent-browser service resources --json` attributed existing AuraCall
+    Chrome pressure by managed browser profile path, including
+    `wsl-chrome-2/chatgpt` at `33` processes and about `9475 MB` RSS, while
+    confirming those processes are still external observations rather than
+    service-owned agent-browser resources;
+  - the no-launch access plan for
+    `consult@polymerconsultinggroup.com` selected `stealthcdp-default`, proving
+    Slice 2 must register/map the real AuraCall pilot profile before any
+    authenticated work;
+  - `auracall-api.service` was active under systemd, but scoped HTTP readbacks
+    to `127.0.0.1:8098` failed to connect after about `122s`, and the scoped
+    identity-smoke probe for `chatgpt/wsl-chrome-2` was terminated after more
+    than four minutes without output.
+- Result:
+  - moved
+    `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md` to `OPEN`;
+  - added the Slice 1 compatibility matrix, blockers, and pilot-lane
+    recommendation;
+  - clarified the profile-origin policy: fresh installs should use
+    agent-browser-owned service profiles, while AuraCall BYOP is a
+    migration/continuity path for existing account-bound profile state or
+    explicit operator selection;
+  - updated `ROADMAP.md` and `RUNBOOK.md` to reflect Slice 1 completion.
+
+## 2026-06-12 | Agent Browser Migration Plan
+
+- Focus: capture the browser lifecycle migration discussion as a durable,
+  `/goal`-friendly plan instead of leaving it in chat.
+- Context:
+  - AuraCall's account-mirror status OOM path is repaired, but live browser
+    resource pressure still points at generic browser lifecycle and tab
+    ownership limits;
+  - agent-browser is the intended shared service-owned browser control plane
+    and already provides access-plan, service request, profile lease, resource
+    monitor, retained browser/session/tab state, and cleanup concepts that
+    match the observed AuraCall gaps.
+- Result:
+  - added
+    `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md` in
+    `PLANNED` state;
+  - wired the plan into the P03 Browser Service Hardening roadmap section;
+  - added a runbook turn noting that the plan is ready for future activation
+    but does not change runtime behavior.
+
+## 2026-06-11 | Account Mirror Broad Status OOM Repair
+
+- Focus: diagnose API restarts observed during account-mirror status checkup.
+- Diagnosis:
+  - `auracall-api.service` restarted twice after Node heap OOMs while serving
+    broad status readback;
+  - the archive/materialization overlay added for scoped target status invoked
+    archive and terminal history-materialization list paths once per status
+    entry;
+  - `RunArchiveService.listItems()` reads the full archive/index corpus before
+    filtering, so broad `/status` and scheduler diagnostics amplified memory
+    use across all account-mirror entries.
+  - live probing after the first repair also showed `/status` still serialized
+    full account-mirror scheduler history, including embedded refresh payloads.
+- Fix:
+  - account-mirror materialization evidence hydration now runs only for
+    single-entry status summaries;
+  - scheduler diagnostics passes the scoped provider/runtime status summary
+    into hydration instead of hydrating all entries;
+  - `/status` now serializes compact scheduler history while keeping full
+    history available through `/v1/account-mirrors/scheduler/history`.
+- Validation:
+  - focused HTTP regression proves broad `/v1/account-mirrors/status` and
+    `/status` do not call archive or terminal history-materialization overlay
+    paths;
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern
+    "account mirror status|scheduler diagnostics|compact lazy mirror scheduler
+    yield history|reports explicit development posture"` passed with `5`
+    tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - focused Biome lint passed on `src/http/responsesServer.ts`.
+
+## 2026-06-10 | ChatGPT Live-Follow File Materialization Recovery
+
+- Focus: continue the `chatgpt/wsl-chrome-2` live-follow lane after metadata
+  sync completed and history materialization jobs still timed out.
+- Diagnosis:
+  - recovery candidates correctly reported only file assets as retrievable, but
+    emitted broad `assetKinds=["all"]` create requests;
+  - broad reconciliation ran artifact/media paths before file recovery and a
+    single-item `all` job still hit the `120000ms` running stale threshold;
+  - a file-only proof terminalized quickly, but no-download provider readback
+    returned an empty result, leaving recovery planning with no terminal
+    evidence to stop selecting the same no-op work.
+- Implemented:
+  - account-mirror recovery candidates now derive create-request `assetKinds`
+    from positive retrievable counts, falling back to unknown counts or `all`
+    only when no specific family is known;
+  - history materialization now emits explicit skipped manifest entries when a
+    provider conversation detail exposes no downloadable artifacts/files for a
+    requested family;
+  - terminal skipped materialization entries now reduce retrievable recovery
+    counts the same way failed terminal entries do.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/artifactRecoveryPlanner.test.ts
+    tests/runtime.historyMaterializationService.test.ts` passed with `60`
+    tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - focused Biome lint passed on the changed recovery/materialization files;
+  - `pnpm run build` passed;
+  - installed runtime restart left `auracall-api.service` active with
+    `MainPID=94620`, `NRestarts=0`.
+- Live proof:
+  - recovery candidates for `chatgpt/wsl-chrome-2` now return
+    `assetKinds=["files"]` with `boundIdentityKey=consult@polymerconsultinggroup.com`;
+  - file-only job `hmj_0a3612855d994907ac6c23428edb35c4` terminalized
+    `skipped` in about 8 seconds with one explicit skipped file entry:
+    `no-materializable-file` for conversation
+    `69da56ec-aab4-8325-a7a1-64c15dcbfae1`;
+  - recovery candidates then dropped from `9` retrievable files to `8` and
+    kept `assetKinds=["files"]`, proving terminal skipped evidence is applied.
+  - bounded drain job `hmj_afd88197159e45a2984c2d32314fb0fe` then
+    terminalized `succeeded` with `materialized=6`, `skipped=2`, `failed=0`,
+    `archiveItems=6`, and one file-fetch manifest under the
+    `consult@polymerconsultinggroup.com` provider cache;
+  - final recovery readback reported `eligible=0`,
+    `retrievableMissingLocal.total=0`, `localMaterialized.files=6`, and
+    `failedTerminal.files=3`, leaving no history-materialization work to queue
+    for `chatgpt/wsl-chrome-2`.
+  - account-mirror status readback now overlays archive-available and terminal
+    history-materialization evidence before returning asset inventory, so the
+    same `chatgpt/wsl-chrome-2` status response reports
+    `localMaterialized.artifacts=4`, `localMaterialized.files=6`,
+    `remoteKnownMissingLocal.artifacts=60`, and
+    `remoteKnownMissingLocal.files=67` in both metadata evidence and mirror
+    completeness.
+
 ## 2026-06-07 | Plan 0136 Handoff Tranche Review And Commit
 
 - Focus: turn the completed Plan 0133-0135 inter-tenant handoff code/docs into
@@ -38051,6 +38396,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Plan 0134 closes. The next handoff source-depth slice should target
     ChatGPT project `Sources` tab file materialization.
 
+## 2026-06-07 | Plan 0138 Account Mirror Failure Backoff Recovery Override
+
+- Focus: live-follow recovery after Plan 0137 identity repair. The
+  `chatgpt/wsl-chrome-2` target now proves provider-app identity and repaired
+  stale `consulting pcg pro`, but a later metadata collector timeout leaves the
+  target delayed by `failure-backoff`.
+- Decision: keep automatic live-follow polite by default, but add a separate
+  explicit recovery override for `failure-backoff`. This override is distinct
+  from `ignoreMinimumInterval` and must not bypass provider guard/manual-clear,
+  provider cooldown/hard-stop, active queued/running operations, missing
+  expected identity, or current authoritative provider-app identity mismatch.
+- Plan written:
+  `docs/dev/plans/0138-2026-06-07-account-mirror-failure-backoff-recovery-override.md`.
+- Closeout: Plan 0138 is implemented, installed, and closed. Default
+  `chatgpt/wsl-chrome-2` status remains `delayed / failure-backoff`, while the
+  recovery status view with `ignore_failure_backoff=true` reports `eligible`.
+  A live explicit refresh with `ignoreFailureBackoff=true` entered provider
+  collection instead of failing as `account_mirror_not_eligible`; provider-app
+  identity evidence remained authoritative for
+  `consult@polymerconsultinggroup.com`.
+- Residual: metadata collection still times out after entering the provider
+  read. That is now exposed as the next real bottleneck rather than hidden
+  behind the failure-backoff gate. Active history-materialization and
+  mirror-completion operations returned `0` after cancelling stale idle-waiting
+  completion `acctmirror_completion_016bd031-8c80-46dc-9a05-e4d03266ccff`.
+
 ## 2026-06-07 | Plan 0137 Oracle Identity Mismatch Self-Healing
 
 - Focus: live-follow status/oracle self-healing for stale identity mismatch
@@ -38077,6 +38448,108 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm run build` passed, user runtime install/restart left
   `auracall-api.service` active, and active materialization/completion queues
   returned `0`.
+
+## 2026-06-08 | Plan 0139 ChatGPT Live-Follow Detail Cursor Resume
+
+- Focus: make the remaining `chatgpt/wsl-chrome-2` metadata timeout
+  self-healing after the identity and failure-backoff fixes.
+- Diagnosis:
+  - live status had retained merged mirror counts
+    `projects=6/conversations=68/artifacts=64/files=73/media=0`;
+  - persisted detail evidence had
+    `attachmentInventory.nextConversationIndex=1` and
+    `scannedConversations=1`;
+  - ChatGPT steady-follow still restarted detail inventory because cursor reuse
+    was limited to `full_sweep`, unlike Gemini steady-follow.
+- Implementation checkpoint:
+  - ChatGPT steady-follow now resumes a prior attachment-detail cursor when
+    prior evidence says asset/detail inventory is incomplete;
+  - complete or absent ChatGPT detail evidence still starts fresh;
+  - collector phase progress is captured during collection and retained on
+    timeout failures so status readback can show the last phase and cursor.
+- Validation checkpoint:
+  - focused account-mirror collector and refresh-service tests pass;
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+- Closeout:
+  - status registry test, focused Biome lint, `pnpm run build`, and
+    `pnpm run plans:audit -- --keep 139` pass;
+  - user runtime install and API restart completed with
+    `auracall-api.service` active;
+  - installed `chatgpt/wsl-chrome-2` status with recovery overrides was
+    `eligible` and retained provider-app authoritative identity
+    `consult@polymerconsultinggroup.com`;
+  - bounded recovery refresh still timed out, but status now reports
+    `collectorProgress.phase=detail-inventory`,
+    `collectorProgress.event=failed`, and
+    `collectorProgress.attachmentCursor.nextConversationIndex=1`, proving the
+    pass resumed from the persisted cursor rather than conversation index `0`;
+  - active history-materialization jobs and queued/running mirror completions
+    both returned `0`.
+
+## 2026-06-09 | ChatGPT Detail Inventory Timeout Repair
+
+- Diagnosis: after Plan 0139, `chatgpt/wsl-chrome-2` proved that
+  steady-follow resumed at `attachmentInventory.nextConversationIndex=1`, but
+  repeated live completions still timed out in `detail-inventory` without
+  advancing. Browser, service, and provider-app identity were healthy, so the
+  remaining fault was in AuraCall's ChatGPT scraping loop.
+- Fix: bounded ChatGPT account-library, project-file, conversation-file, and
+  conversation-context detail subreads with per-provider-call timeouts. This
+  matches the existing Gemini detail-read model and lets one slow provider
+  surface be recorded as a tolerated read failure instead of consuming the
+  entire collector timeout.
+- Validation:
+  - added hung-promise regression coverage for ChatGPT library and conversation
+    detail reads;
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts`
+    passes with `30` tests;
+  - focused Biome lint passes;
+  - `pnpm run build` passes;
+  - user runtime install and API restart completed with
+    `auracall-api.service` active.
+- Live proof: `chatgpt/wsl-chrome-2` recovery refresh completed with
+  request id `acctmirror_ae3dbe91-4aba-4f36-9aec-c430a53dac17` and advanced
+  `attachmentInventory.nextConversationIndex` from `1` to `5`. Status now has
+  `collectorProgress.phase=complete`, `event=completed`,
+  `latestCompletionError=null`, active history-materialization jobs `0`, and
+  queued/running mirror completions `0`.
+
+## 2026-06-10 | Plan 0140 Large Chat Resumable Context Sync
+
+- Focus: prevent live-follow from getting stuck on one large ChatGPT
+  conversation by adding an intra-conversation message-range cursor.
+- Plan written:
+  `docs/dev/plans/0140-2026-06-10-large-chat-resumable-context-sync.md`.
+- Implementation checkpoint:
+  - `BrowserProviderListOptions.accountMirrorContextChunk` lets account-mirror
+    request a bounded message window without changing ordinary whole-context
+    reads;
+  - ChatGPT context reads slice messages/sources/artifacts by message range and
+    return chunk metadata;
+  - `llmService` preserves provider context metadata so chunk state survives the
+    normal browser client boundary;
+  - account-mirror persists `attachmentInventory.conversationDetail` and keeps
+    the outer conversation cursor pinned until the inner cursor completes.
+- Validation checkpoint:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/statusRegistry.test.ts tests/browser/llmServiceContext.test.ts`
+    passes with `49` tests;
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+- Closeout:
+  - added atomic provider JSON cache writes and cache-index writes after live
+    validation exposed a malformed appended `cache-index.json`;
+  - cache-index reads now salvage the first valid JSON document and rewrite a
+    clean index on the next upsert;
+  - focused validation passed with `154` tests across provider cache,
+    ChatGPT metadata collector, status registry, ChatGPT adapter, and
+    llmService context;
+  - `pnpm exec tsc --noEmit --pretty false`, focused Biome lint,
+    `pnpm run build`, and `pnpm run plans:audit -- --keep 140` passed;
+  - installed runtime refresh
+    `acctmirror_059ee058-f5bc-4087-aeae-15c6fbc16835` completed for
+    `chatgpt/wsl-chrome-2`, advanced durable
+    `attachmentInventory.nextConversationIndex` from `17` to `21`, cleared
+    `lastFailureAt`, reset `consecutiveFailureCount` to `0`, and rewrote the
+    corrupted cache index as valid JSON.
 
 ## 2026-06-07 | Plan 0135 ChatGPT Project Sources Materialization
 

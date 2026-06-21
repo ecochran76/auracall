@@ -1,5 +1,243 @@
 # RUNBOOK
 
+## Turn 287 | 2026-06-20
+
+- Active plan:
+  `docs/dev/plans/0142-2026-06-20-agent-browser-remote-headed-service-request-proof.md`
+- Goal: rerun Plan 0142 after the route-facing agent-browser installed binary
+  refresh and daemon/session cleanup.
+- Evidence:
+  - `/home/ecochran76/.local/bin/agent-browser` hashed to
+    `4ae6838cd3c8b4de3341b4dc8b884e2dc14db62269212427e55b8239e4e4b6df`;
+  - service state was clean before the request: `browserHealth: NotStarted`,
+    worker `Ready`, queue depth `0`, retained browsers `0`, retained tabs `0`;
+  - access-plan still selected
+    `auracall-chatgpt-wsl-chrome-2-consult` and preserved
+    `stealthcdp_chromium`, `remote_headed`, `rdp_gateway`,
+    `manual_attached_desktop`, and `private_virtual_display`;
+  - queued request
+    `http-service-request-tab_new-3a8c634f-8049-4742-baef-acdb396dc0c1`
+    failed closed because the selected AuraCall profile path was already in
+    use by PID `28288`;
+  - PID `28288` is an `auracall-api.service` child Chrome process on
+    DevTools port `37379` using
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`;
+  - post-failure readback retained no agent-browser browsers or tabs, and a
+    fresh access-plan still reported `compatibleLiveBrowserCount: 0`.
+- Decision:
+  - the unsafe `default` fallback is no longer reproduced on the clean binary,
+    but the cutover remains blocked until agent-browser can adopt/reuse the
+    external AuraCall BYOP Chrome lane or return route hints for it.
+
+## Turn 286 | 2026-06-20
+
+- Active plan:
+  `docs/dev/plans/0142-2026-06-20-agent-browser-remote-headed-service-request-proof.md`
+- Goal: recheck the repaired agent-browser remote-headed/RDP lane and run one
+  bounded no-provider-mutation service-request proof before any AuraCall
+  cutover.
+- Evidence:
+  - `agent-browser doctor remote-view --json` now works from the AuraCall cwd
+    with `scriptRoot` resolved to the agent-browser checkout and all required
+    many-to-many plus Guacamole local/public route readiness checks green;
+  - access-plan for `AuraCall` / `auracall-api` /
+    `chatgpt` / `consult@polymerconsultinggroup.com` selected
+    `auracall-chatgpt-wsl-chrome-2-consult` and preserved
+    `stealthcdp_chromium`, `remote_headed`, `rdp_gateway`,
+    `manual_attached_desktop`, and `private_virtual_display`;
+  - queued `POST /api/service/request` for job
+    `http-service-request-tab_new-3db11da7-4a36-4170-92dd-5e7d1e690244`
+    succeeded, but returned `browserId: session:default`,
+    `profileId: default`, and `runtimeProfile: default`;
+  - `agent-browser service tabs --json` confirmed the ChatGPT tab landed in
+    `session:default`, while a fresh access-plan still reported
+    `compatibleLiveBrowserCount: 0` for the selected AuraCall profile;
+  - cleanup job
+    `http-service-request-tab_close-17cd0f63-a96e-4347-a8d9-010067cce472`
+    closed the unintended default-session ChatGPT tab and retained it as
+    `lifecycle: closed` in tab readback.
+- Decision:
+  - keep the AuraCall cutover blocked. Agent-browser remote-view readiness is
+    now sufficient for the no-launch gate, but the service-request execution
+    path must honor the selected AuraCall service profile and preserve route
+    descriptors before AuraCall can make Guac/RDP `chromium-stealthcdp` the
+    default browser lane.
+
+## Turn 285 | 2026-06-15
+
+- Active plan:
+  `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md`
+- Goal: close Plan 0141 honestly after the live mutation stop gate proved an
+  agent-browser implementation gap rather than an AuraCall provider/account
+  issue.
+- Evidence:
+  - Plan 0141 Slice 2 rerun accepted the no-launch adapter design: access-plan
+    selected `auracall-chatgpt-wsl-chrome-2-consult` by
+    `authenticated_target`;
+  - browser-capability preflight applied `/usr/bin/google-chrome-stable` for
+    the BYOP profile with `wouldLaunch: false`;
+  - agent-browser still reported the active AuraCall Chrome process tree as
+    observed-only, with `compatibleLiveBrowserCount: 0` and
+    `recommendedAction: launch_new_browser`;
+  - the missing `external_byop` adopt/attach/reuse capability was recorded in
+    the AuraCall handoff note for the agent-browser implementation owner.
+- Decision:
+  - Plan 0141 closes as **Pilot deferred**. AuraCall retains the internal
+    browser-service path by default and must not issue live agent-browser
+    `tab_new` requests for the BYOP lane until agent-browser can adopt/reuse
+    the existing Chrome process without duplicate browser/profile pressure.
+
+## Turn 284 | 2026-06-15
+
+- Active plan:
+  `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md`
+- Goal: continue Plan 0141 after Slice 2 by registering the AuraCall BYOP lane
+  through agent-browser's public runtime API and checking whether live adapter
+  work is safe.
+- Evidence:
+  - registered agent-browser service profile
+    `auracall-chatgpt-wsl-chrome-2-consult` on stream API
+    `127.0.0.1:36969` with `profileOrigin: external_byop`, `allocation:
+    caller_supplied`, `browserBuild: stock_chrome`, target/authenticated
+    service `chatgpt`, account `consult@polymerconsultinggroup.com`, and
+    user-data dir
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`;
+  - no-launch access-plan for task `plan0141-slice3` selected that profile by
+    `authenticated_target` and produced a service request using the AuraCall
+    BYOP profile path;
+  - added persisted browser-capability registry rows for the BYOP lane and
+    stock Chrome WSL executable; HTTP preflight then returned
+    `validated_binding_applied` with executable
+    `/usr/bin/google-chrome-stable` and `wouldLaunch: false`;
+  - agent-browser resource monitoring observed the active AuraCall
+    `wsl-chrome-2/chatgpt` Chrome process tree on DevTools port `45013`, but
+    did not correlate it to the registered profile, a retained browser, a
+    session, or a tab;
+  - access-plan still reported `compatibleLiveBrowserCount: 0` and
+    `recommendedAction: launch_new_browser`.
+- Decision:
+  - stop before live `POST /api/service/request`. Agent-browser can now select
+    and preflight the BYOP profile, but it cannot yet adopt/reuse the existing
+    AuraCall Chrome lane, so live mutation risks duplicate browser/profile
+    pressure.
+
+## Turn 283 | 2026-06-15
+
+- Active plan:
+  `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md`
+- Goal: execute Plan 0141 Slice 2 identity/profile mapping proof without
+  changing AuraCall runtime behavior.
+- Evidence:
+  - installed `agent-browser 0.27.0` service is healthy (`browser_health:
+    Ready`, `worker_state: Ready`, queue depth `0`);
+  - local agent-browser checkout boundary is
+    `7dcbd647911440d8ab3248deb44787786b44d23b` and intentionally dirty, with
+    generic service-request actions/helpers present in local schema/client
+    files but not yet treated as installed-runtime proof;
+  - AuraCall config and identity smoke bind `chatgpt/wsl-chrome-2` to
+    `consult@polymerconsultinggroup.com` and the managed browser profile
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`;
+  - AuraCall identity-smoke verified actual ChatGPT provider-app identity as
+    `consult@polymerconsultinggroup.com` and passed the negative identity gate;
+  - no-launch `agent-browser service access-plan` for the same service/account
+    selected `stealthcdp-default`, which has no account, target, authenticated
+    service, or readiness rows for the AuraCall pilot lane;
+  - `agent-browser service profiles` did not show a registered
+    `wsl-chrome-2` / `consult@polymerconsultinggroup.com` BYOP profile;
+  - scoped AuraCall API status readback to `127.0.0.1:8098` timed out under a
+    20 second wrapper.
+- Decision:
+  - Slice 2 is not accepted for adapter work yet. The browser, service, and
+    account are healthy, but agent-browser must first register/configure the
+    AuraCall BYOP profile and make access-plan select it before Slice 3 can
+    start.
+
+## Turn 282 | 2026-06-15
+
+- Active plan:
+  `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md`
+- Goal: review and reconcile the agent-browser generic service routines
+  handoff for AuraCall migration planning.
+- Context:
+  - agent-browser intentionally left its implementation workspace dirty after
+    adding generic routines, so AuraCall must treat the handoff as a contract
+    and capability note until a commit, branch, installed version, or local
+    checkout boundary is recorded for the adapter proof;
+  - the handoff note was present as `.md`, not `.mds`.
+- Result:
+  - updated
+    `docs/dev/notes/2026-06-14-agent-browser-generic-service-routines-handoff.md`
+    to point at Plan 0141 as the governing AuraCall migration plan;
+  - added an explicit agent-browser availability boundary to prevent mixing a
+    stale installed binary with generated client helpers from the dirty
+    checkout;
+  - wired the handoff note into Plan 0141 Slice 2 and Slice 3 as an input while
+    preserving the identity/profile gate for
+    `chatgpt/wsl-chrome-2/consult@polymerconsultinggroup.com`.
+- Decision:
+  - next AuraCall work remains Plan 0141 Slice 2: prove the pilot
+    profile/account mapping and agent-browser availability boundary before
+    any adapter or provider scraping change.
+
+## Turn 281 | 2026-06-12
+
+- Active plan:
+  `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md`
+- Goal: execute Plan 0141 Slice 1 as a read-only AuraCall/agent-browser
+  browser-control compatibility audit.
+- Evidence:
+  - `agent-browser 0.27.0` service status reported browser health and worker
+    state `Ready`, queue depth `0`, no warnings, and no retained browsers,
+    sessions, or tabs;
+  - `agent-browser service resources --json` attributed AuraCall Chrome
+    pressure by managed browser profile path, including
+    `wsl-chrome-2/chatgpt` at `33` processes and about `9475 MB` RSS, but all
+    AuraCall Chrome trees were external observations rather than
+    agent-browser-correlated resources;
+  - a no-launch access plan for
+    `consult@polymerconsultinggroup.com` selected `stealthcdp-default`, so the
+    pilot account lane is not mapped yet;
+  - `auracall-api.service` was active under systemd with `MainPID=812`, but
+    scoped HTTP readbacks to `127.0.0.1:8098` failed to connect after about
+    `122s`;
+  - the scoped `chatgpt/wsl-chrome-2` identity-smoke probe produced no result
+    after more than four minutes and was terminated.
+- Result:
+  - moved Plan 0141 to `OPEN`;
+  - recorded the Slice 1 compatibility matrix, runtime evidence, blockers, and
+    recommendation in the plan;
+  - kept runtime behavior unchanged.
+- Decision:
+  - recommend `chatgpt/wsl-chrome-2` with expected provider-app identity
+    `consult@polymerconsultinggroup.com` as the first opt-in lane, but only
+    after Slice 2 maps it to an explicit agent-browser service profile and a
+    no-launch access plan stops falling back to `stealthcdp-default`.
+
+## Turn 280 | 2026-06-12
+
+- Planning artifact:
+  `docs/dev/plans/0141-2026-06-12-agent-browser-migration.md`
+- Goal: create a high-level, `/goal`-adapted migration plan for evaluating
+  agent-browser as AuraCall's browser lifecycle owner.
+- Context:
+  - live diagnosis showed AuraCall's broad status OOM path was fixed, but
+    browser-process memory pressure remained dominated by Chrome renderers and
+    duplicate/long-lived profile lanes;
+  - agent-browser already exposes access plans, service requests, profile
+    lease/reuse advice, resource attribution, retained browser/session/tab
+    state, and conservative resource cleanup;
+  - the migration risk is preserving AuraCall provider/account identity
+    semantics, not generic Chrome launch mechanics.
+- Result:
+  - opened Plan 0141 in `PLANNED` state under P03 Browser Service Hardening;
+  - wired the plan into `ROADMAP.md` as a planned reliability/migration track;
+  - shaped the plan around `/goal` execution with bounded slices, critical
+    path, parallel tracks, validation gates, rollback conditions, and a
+    copyable first-slice objective.
+- Decision:
+  - Plan 0141 is ready for an explicit future activation slice; it does not
+    change runtime behavior yet.
+
 ## Turn 279 | 2026-06-07
 
 - Active supporting plan:
@@ -11144,6 +11382,113 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `projects=6/conversations=68/artifacts=64/files=73/media=0`;
   - active history-materialization jobs and active mirror-completion operations
     returned `0`.
+
+## 2026-06-10 | Plan 0140 Large Chat Resumable Context Sync
+
+- Completed live-follow supporting plan:
+  `docs/dev/plans/0140-2026-06-10-large-chat-resumable-context-sync.md`
+- Goal: make ChatGPT account-mirror live-follow resumable inside one large
+  conversation, not only between conversations.
+- Current evidence:
+  - browser, service, and ChatGPT account identity can be healthy while a large
+    chat still takes longer than one bounded provider read;
+  - existing `attachmentInventory` resumes between conversations but
+    `readConversationContext` returns one whole `ConversationContext`;
+  - there is no persisted message/artifact-range cursor for partial chat
+    progress.
+- Planned implementation:
+  - add optional account-mirror context chunk options to the provider boundary;
+  - add ChatGPT chunk slicing by message range while preserving ordinary
+    whole-context reads;
+  - persist inner conversation-detail cursor evidence in account-mirror status;
+  - keep the outer conversation cursor pinned until the inner cursor completes.
+- Closeout:
+  - implemented provider chunk metadata, ChatGPT message-window slicing,
+    `llmService` metadata preservation, and
+    `attachmentInventory.conversationDetail` status persistence;
+  - live proof exposed a malformed appended `cache-index.json`; fixed provider
+    JSON/cache-index writes to use temp-file rename and added cache-index
+    salvage/rewrite for the first valid JSON document;
+  - validation passed with `154` focused tests, TypeScript, focused Biome
+    lint, build, and `pnpm run plans:audit -- --keep 140`;
+  - installed runtime refresh
+    `acctmirror_059ee058-f5bc-4087-aeae-15c6fbc16835` completed for
+    `chatgpt/wsl-chrome-2` at `2026-06-10T15:35:47.054Z`;
+  - durable status now has `lastFailureAt=null`,
+    `consecutiveFailureCount=0`, and
+    `attachmentInventory.nextConversationIndex=21`;
+  - repaired cache index parses as valid JSON with `85` entries and includes
+    `account-mirror/snapshot.json`.
+
+## 2026-06-07 | Plan 0138 Account Mirror Failure Backoff Recovery Override
+
+- Completed live-follow supporting plan:
+  `docs/dev/plans/0138-2026-06-07-account-mirror-failure-backoff-recovery-override.md`
+- Goal: make operator-directed recovery reruns possible when an account mirror
+  target has already cleared safety gates but is delayed by
+  `failure-backoff` after a metadata collector timeout.
+- Current evidence:
+  - `chatgpt/wsl-chrome-2` identity evidence is provider-app authoritative for
+    `consult@polymerconsultinggroup.com`;
+  - stale `consulting pcg pro` identity mismatch is repaired;
+  - active history-materialization and mirror-completion queues are `0`;
+  - default status still reports `delayed / failure-backoff` after
+    `Account mirror metadata collector timed out for chatgpt/wsl-chrome-2`.
+- Design:
+  - add a separate explicit `ignoreFailureBackoff` recovery flag;
+  - keep `ignoreMinimumInterval` scoped to minimum-interval only;
+  - do not let the failure-backoff override bypass provider guard/manual-clear,
+    provider cooldown/hard-stop, active queued/running work, missing expected
+    identity, or current authoritative provider-app identity mismatch;
+  - keep automatic live-follow on ordinary failure backoff by default.
+- Closeout:
+  - default status for `chatgpt/wsl-chrome-2` remains
+    `delayed / failure-backoff`;
+  - recovery status with `ignore_failure_backoff=true` and
+    `ignore_minimum_interval=true` reports `eligible`;
+  - explicit refresh with `ignoreFailureBackoff=true` entered provider
+    collection instead of returning `account_mirror_not_eligible`;
+  - provider-app identity evidence stayed authoritative for
+    `consult@polymerconsultinggroup.com`;
+  - retained mirror counts stayed
+    `projects=6/conversations=68/artifacts=64/files=73/media=0`;
+  - active history-materialization jobs and active mirror-completion operations
+    returned `0` after cancelling stale idle-waiting completion
+    `acctmirror_completion_016bd031-8c80-46dc-9a05-e4d03266ccff`;
+  - metadata collection still times out, so the slow metadata read remains a
+    separate follow-up from the recovery override.
+
+## 2026-06-08 | Plan 0139 ChatGPT Live-Follow Detail Cursor Resume
+
+- Completed live-follow supporting plan:
+  `docs/dev/plans/0139-2026-06-08-chatgpt-live-follow-detail-cursor-resume.md`
+- Diagnosis:
+  - `chatgpt/wsl-chrome-2` self-heal reached provider-app authoritative
+    identity for `consult@polymerconsultinggroup.com`;
+  - recovery override makes the target eligible past `failure-backoff`;
+  - the remaining timeout repeats because ChatGPT steady-follow discards the
+    persisted `attachmentInventory` cursor unless the sweep mode is
+    `full_sweep`;
+  - live persisted evidence already had
+    `attachmentInventory.nextConversationIndex=1`, proving the next bounded
+    pass should resume detail inventory instead of restarting from index `0`.
+- Fix strategy:
+  - resume ChatGPT steady-follow attachment-detail cursors only when prior
+    evidence proves detail inventory is incomplete;
+  - keep complete/absent ChatGPT detail evidence on a fresh steady-follow pass;
+  - persist collector phase/cursor progress on timeout so status readback names
+    the stalled phase.
+- Closeout:
+  - installed runtime status for `chatgpt/wsl-chrome-2` was eligible with
+    provider-app authoritative identity `consult@polymerconsultinggroup.com`;
+  - bounded recovery refresh timed out but status now reports
+    `collectorProgress.phase=detail-inventory`,
+    `collectorProgress.event=failed`, and
+    `collectorProgress.attachmentCursor.nextConversationIndex=1`;
+  - this proves steady-follow started from the persisted cursor rather than
+    restarting at conversation index `0`;
+  - active history-materialization jobs and queued/running mirror completions
+    both returned `0`.
 
 ## Turn 262 | 2026-06-05
 

@@ -1,3 +1,86 @@
+- 2026-06-20: ChatGPT account proof must come from the ChatGPT provider app,
+  not from the Chrome/Google browser profile. A managed Chrome profile can be
+  logged into Google as `ecochran76@gmail.com` while the active ChatGPT session
+  is `eric.cochran@soylei.com`; treating the browser profile identity as
+  ChatGPT account proof causes false mismatches and can send work down the
+  wrong resolution path. For ChatGPT, ignore Chrome/Google fallback identity in
+  provider identity preflight and gate on provider-app session identity. Also
+  normalize project-list refresh back to ChatGPT home and scrape current
+  sidebar button rows (`Open project options for ...`) so retained browsers
+  left on a project page cannot overwrite the account-scoped project cache
+  with only the current project. Live proof on `wsl-chrome-3` verified
+  provider-app `eric.cochran@soylei.com`, Chrome/Google
+  `ecochran76@gmail.com` as informational, SoyLei
+  `g-p-69eb844fc2408191b5ac5b567f8fd76d`, and a bounded Pro Extended SoyLei
+  project response.
+
+- 2026-06-20: ChatGPT project-name prompt runs must refresh live project DOM
+  before trusting cached exact-name ids. A stale cached `SoyLei` project id can
+  still match by name, but ChatGPT may have a newer same-name project visible
+  in the project list; returning the stale id can make the browser land outside
+  the requested project and submit in root chat. When auto-refresh is enabled,
+  refresh ChatGPT projects before cache match, then prefer the first exact-name
+  candidate from the live DOM order. Keep `allowAutoRefresh=false` as the
+  explicit cache-only path.
+
+- 2026-06-20: ChatGPT model chooser rows can contain secondary copy that
+  mentions other plans/models. A Pro or Extended Pro request must not treat an
+  `Instant` row as selected merely because that row includes upsell text such
+  as `Upgrade to Pro`. Classify explicit Instant test ids and Instant-leading
+  labels before generic Pro text, keep `Extended Pro`/`Pro Extended` as Pro
+  variants, and regression-test selector scoring rather than only token
+  generation.
+
+- 2026-06-20: The clean agent-browser installed binary fixes AuraCall's unsafe
+  default-session fallback, but not the external-BYOP reuse gate. The rerun
+  against binary hash
+  `4ae6838cd3c8b4de3341b4dc8b884e2dc14db62269212427e55b8239e4e4b6df`
+  selected `auracall-chatgpt-wsl-chrome-2-consult` and preserved the
+  remote-headed RDP posture, then failed closed because the selected AuraCall
+  profile was locked by an existing `auracall-api.service` Chrome process.
+  This is safer than opening `session:default`, but AuraCall still must gate
+  cutover on agent-browser retained browser/session/tab reuse or explicit
+  external-BYOP adoption for the selected profile.
+
+- 2026-06-20: Agent-browser access-plan success is not enough for AuraCall
+  browser-owner cutover. After remote-view doctor readiness recovered from the
+  AuraCall cwd, access-plan correctly selected
+  `auracall-chatgpt-wsl-chrome-2-consult` and preserved the requested
+  `stealthcdp_chromium`/`remote_headed`/`rdp_gateway` posture, but the queued
+  `tab_new` service request still executed in `session:default` with
+  `runtimeProfile: default`. For authenticated provider profiles, AuraCall must
+  gate on service-request execution readback matching the selected profile and
+  on route metadata preservation, not only on no-launch access-plan output.
+
+- 2026-06-18: ChatGPT provider rate-limit cooldowns must survive
+  account-mirror refresh success. A successful metadata pass can happen while
+  the ChatGPT adapter has just written `rate-limit-<browser profile>.json`;
+  clearing `providerGuard`/`providerCooldownUntilMs` in that success path makes
+  live-follow look healthy and eligible even while the account is warning
+  `Too many requests`. Account-mirror refresh now rehydrates the ChatGPT
+  rate-limit guard before persisting success or failure state, reports active
+  cooldowns as `provider-guard-cooldown`, and keeps cooldown failures out of
+  DOM-drift diagnostics.
+
+- 2026-06-11: Account-mirror local materialization overlays must stay scoped.
+  The archive service reads the full archive/index corpus before applying
+  request filters, so broad `/status`, broad `/v1/account-mirrors/status`, and
+  scheduler diagnostics must not run archive/materialization evidence hydration
+  across every status entry. Use persisted status for broad readback, and run
+  archive/terminal-job overlay only when the status summary is already narrowed
+  to one provider/runtime target. Also keep `/status` scheduler history compact;
+  full scheduler pass history can embed refresh payloads and belongs behind the
+  dedicated scheduler-history endpoint, not the general health route.
+
+- 2026-06-10: Account-mirror status readback uses `entries[]`, not `targets[]`.
+  When checking live target health, query `.entries` and include
+  `metadataEvidence.assetInventory` plus `mirrorCompleteness.assetInventory`.
+  Status responses must overlay archive-available rows and terminal
+  history-materialization jobs before returning local materialization counts;
+  otherwise a drained recovery lane can still appear to have
+  `localMaterialized=0` even after archive evidence proves local artifacts or
+  files exist.
+
 - 2026-06-07: Real-source handoff proof must gate target mutation on source
   completeness. Plan 0133 uses the original ChatGPT Business source ref as a
   bounded cache/import proof and forbids SoyLei target submission for empty,
@@ -18308,3 +18391,45 @@ browser-stage lifecycle observability, not transcript truncation.
   provider-app identity is verified. Later non-identity failures such as
   metadata collector timeouts must not erase that proof or recreate ambiguity
   about whether a stale identity-mismatch latch repaired.
+- 2026-06-07: Account-mirror recovery needs separate cooldown controls.
+  `ignoreMinimumInterval` is not a failure-backoff override. Operator-directed
+  recovery may bypass `failure-backoff` only with an explicit override after
+  safety gates are clear; automatic live-follow should keep ordinary backoff,
+  and no override may bypass provider guard/manual-clear, provider hard-stop, or
+  current authoritative provider-app identity mismatch.
+- 2026-06-08: ChatGPT account-mirror steady-follow must resume persisted
+  attachment-detail cursors when prior evidence proves detail inventory is
+  incomplete. A timeout that persists `attachmentInventory.nextConversationIndex`
+  but then restarts at conversation index `0` on the next ordinary
+  steady-follow pass cannot self-heal large accounts. Timeout failures should
+  also persist lightweight collector phase/cursor evidence so status readback
+  identifies the stalled collector phase instead of reporting only a generic
+  metadata timeout.
+- 2026-06-09: ChatGPT account-mirror detail inventory needs per-provider-read
+  timeouts just like Gemini. A healthy browser/account can still leave the
+  mirror stuck if one ChatGPT library, project-file, conversation-file, or
+  conversation-context scrape never resolves; the bounded collector cannot
+  persist cursor advancement until the detail loop returns. Keep ChatGPT
+  subreads short enough that a worst-case bounded pass returns before the
+  collector timeout and records tolerated read failures instead of reusing the
+  same cursor forever.
+- 2026-06-10: Large ChatGPT conversations need an inner message-range cursor,
+  not only the outer account-mirror conversation cursor. Whole-context reads
+  remain the default provider contract, but account-mirror live-follow can
+  request bounded message chunks and persist
+  `attachmentInventory.conversationDetail` so one large chat can be resumed
+  across passes without blocking the rest of live-follow.
+- 2026-06-10: Account-mirror cache writes must not expose partial or appended
+  JSON. A live `chatgpt/wsl-chrome-2` refresh found
+  `cache-index.json` corrupted as two concatenated JSON documents, causing both
+  cache stores to fail `writeAccountMirrorSnapshot`. Provider JSON cache files
+  and cache indexes now write through temp-file rename; cache-index reads
+  salvage the first valid JSON document and rewrite a clean index on the next
+  upsert.
+- 2026-06-10: Recovery materialization requests should be as narrow as their
+  own evidence. A `chatgpt/wsl-chrome-2` candidate with only retrievable files
+  still emitted `assetKinds=["all"]`, causing single-item jobs to spend the
+  provider timeout in unrelated artifact/media paths. Recovery create requests
+  now derive asset families from retrievable counts, and no-download provider
+  detail produces explicit skipped entries so terminal jobs reduce future
+  retrievable counts instead of looping silently.

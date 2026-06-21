@@ -653,6 +653,14 @@ Terminology note:
   that resume the persisted deep cursor for backfill. Gemini mirror collection
   reads both the left rail and Gem/project conversation histories; project
   history reads are limited to rows with a concrete `/gems/edit/<id>` link.
+  ChatGPT detail inventory also persists an outer
+  `metadataEvidence.attachmentInventory` cursor for bounded conversation
+  batches. When one large conversation itself needs multiple chunks,
+  `attachmentInventory.conversationDetail` records the current conversation id
+  and next message index, and the outer conversation cursor stays pinned until
+  that inner cursor completes. Cache/index writes use temp-file replacement and
+  malformed appended `cache-index.json` files are salvaged on the next index
+  upsert, so a partial cache-index write should not strand live-follow status.
   Google-made or third-party Gems shown elsewhere in Gemini's catalog are not
   editable and are not treated as AuraCall project targets, even when Gemini
   renders buttons around them. A successful non-truncated project scan replaces
@@ -712,7 +720,13 @@ Terminology note:
   target row also explains the current attention reason from existing status,
   failure-backoff, and recent completion error fields. Metadata collector
   timeouts abort the collector signal and persist target failure-backoff state
-  across API/proof-server restarts. Gemini explicit refreshes use a practical
+  across API/proof-server restarts. Operator-directed recovery can preview and
+  run through failure backoff with `ignoreFailureBackoff=true` (or
+  `ignore_failure_backoff=true`) on `/v1/account-mirrors/status` and
+  `/v1/account-mirrors/refresh`; this is separate from
+  `ignoreMinimumInterval` and does not bypass provider guard/manual-clear,
+  provider hard-stop, active queued/running work, or current authoritative
+  provider-app identity mismatch. Gemini explicit refreshes use a practical
   proof retry window by default: 2 minutes plus at most 1 minute jitter, with
   refresh failures escalating from 2 minutes to a 10 minute cap; provider guard
   hard stops remain separate manual-clear blockers. Grok account-file listing
