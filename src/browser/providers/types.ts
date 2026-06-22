@@ -41,6 +41,7 @@ export interface BrowserProviderListOptions {
 	historySince?: string;
 	allowNavigation?: boolean;
 	preserveActiveTab?: boolean;
+	tabLifecycle?: "retain" | "dispose-new";
 	downloadVariantLabel?: string | null;
 	discoveryAction?: "grok-imagine-video-mode" | null;
 	browserService?: import("../service/types.js").BrowserServiceHandle;

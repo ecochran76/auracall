@@ -28,6 +28,22 @@ import { listDomDriftObservations } from "../../src/browser/domDriftObservations
 
 describe("ChatGPT account mirror metadata collector", () => {
 	const cleanup: string[] = [];
+	const accountMirrorTabLifecycle = { tabLifecycle: "dispose-new" } as const;
+	const accountMirrorConversationOptions = {
+		projectId: undefined,
+		listOptions: accountMirrorTabLifecycle,
+	};
+	const accountMirrorContextOptions = (startMessageIndex = 0) => ({
+		projectId: undefined,
+		refresh: true,
+		listOptions: {
+			...accountMirrorTabLifecycle,
+			accountMirrorContextChunk: {
+				startMessageIndex,
+				maxMessages: 24,
+			},
+		},
+	});
 
 	afterEach(async () => {
 		setAuracallHomeDirOverrideForTest(null);
@@ -358,6 +374,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 
 		const inventory = await readBoundedChatgptLibraryInventory(client, 8);
 
+		expect(client.listAccountFiles).toHaveBeenCalledWith(accountMirrorTabLifecycle);
 		expect(inventory).toMatchObject({
 			truncated: false,
 			files: [
@@ -427,17 +444,14 @@ describe("ChatGPT account mirror metadata collector", () => {
 			"chatgpt-library:223e4567-e89b-12d3-a456-426614174111",
 		]);
 		expect(inventory.truncated).toBe(false);
-		expect(client.listConversationFiles).toHaveBeenCalledWith("conv_1", { projectId: undefined });
-		expect(client.getConversationContext).toHaveBeenCalledWith("conv_1", {
-			projectId: undefined,
-			refresh: true,
-			listOptions: {
-				accountMirrorContextChunk: {
-					startMessageIndex: 0,
-					maxMessages: 24,
-				},
-			},
-		});
+		expect(client.listConversationFiles).toHaveBeenCalledWith(
+			"conv_1",
+			accountMirrorConversationOptions,
+		);
+		expect(client.getConversationContext).toHaveBeenCalledWith(
+			"conv_1",
+			accountMirrorContextOptions(),
+		);
 		expect(inventory.cursor).toMatchObject({
 			nextConversationIndex: 0,
 			scannedConversations: 1,
@@ -498,7 +512,10 @@ describe("ChatGPT account mirror metadata collector", () => {
 			"library-file-2",
 			"conversation-file-conv_1",
 		]);
-		expect(client.listConversationFiles).toHaveBeenCalledWith("conv_1", { projectId: undefined });
+		expect(client.listConversationFiles).toHaveBeenCalledWith(
+			"conv_1",
+			accountMirrorConversationOptions,
+		);
 		expect(inventory.cursor).toMatchObject({
 			nextConversationIndex: 0,
 			scannedConversations: 1,
@@ -594,17 +611,12 @@ describe("ChatGPT account mirror metadata collector", () => {
 			expect(inventory.truncated).toBe(false);
 			expect(client.listConversationFiles).toHaveBeenCalledWith("conv_2", {
 				projectId: undefined,
+				listOptions: accountMirrorTabLifecycle,
 			});
-			expect(client.getConversationContext).toHaveBeenCalledWith("conv_2", {
-				projectId: undefined,
-				refresh: true,
-				listOptions: {
-					accountMirrorContextChunk: {
-						startMessageIndex: 0,
-						maxMessages: 24,
-					},
-				},
-			});
+			expect(client.getConversationContext).toHaveBeenCalledWith(
+				"conv_2",
+				accountMirrorContextOptions(),
+			);
 		} finally {
 			vi.useRealTimers();
 		}
@@ -651,9 +663,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 			{ maxDetailReads: 1 },
 		);
 
-		expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
-			"artifact-in-first-chunk",
-		]);
+		expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual(["artifact-in-first-chunk"]);
 		expect(inventory.truncated).toBe(true);
 		expect(inventory.cursor).toMatchObject({
 			nextConversationIndex: 0,
@@ -665,16 +675,10 @@ describe("ChatGPT account mirror metadata collector", () => {
 				totalMessages: 40,
 			},
 		});
-		expect(client.getConversationContext).toHaveBeenCalledWith("conv_large", {
-			projectId: undefined,
-			refresh: true,
-			listOptions: {
-				accountMirrorContextChunk: {
-					startMessageIndex: 0,
-					maxMessages: 24,
-				},
-			},
-		});
+		expect(client.getConversationContext).toHaveBeenCalledWith(
+			"conv_large",
+			accountMirrorContextOptions(),
+		);
 	});
 
 	test("resumes a large ChatGPT conversation chunk and advances after it completes", async () => {
@@ -736,25 +740,17 @@ describe("ChatGPT account mirror metadata collector", () => {
 			},
 		);
 
-		expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
-			"artifact-in-final-chunk",
-		]);
+		expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual(["artifact-in-final-chunk"]);
 		expect(inventory.truncated).toBe(true);
 		expect(inventory.cursor).toMatchObject({
 			nextConversationIndex: 1,
 			scannedConversations: 1,
 			conversationDetail: null,
 		});
-		expect(client.getConversationContext).toHaveBeenCalledWith("conv_large", {
-			projectId: undefined,
-			refresh: true,
-			listOptions: {
-				accountMirrorContextChunk: {
-					startMessageIndex: 24,
-					maxMessages: 24,
-				},
-			},
-		});
+		expect(client.getConversationContext).toHaveBeenCalledWith(
+			"conv_large",
+			accountMirrorContextOptions(24),
+		);
 	});
 
 	test("maps only ChatGPT library files into account artifacts", () => {
@@ -1004,8 +1000,11 @@ describe("ChatGPT account mirror metadata collector", () => {
 			scannedConversations: 1,
 		});
 		expect(inventory.truncated).toBe(true);
-		expect(client.listProjectFiles).toHaveBeenCalledWith("project_2");
-		expect(client.listConversationFiles).toHaveBeenCalledWith("conv_1", { projectId: undefined });
+		expect(client.listProjectFiles).toHaveBeenCalledWith("project_2", accountMirrorTabLifecycle);
+		expect(client.listConversationFiles).toHaveBeenCalledWith(
+			"conv_1",
+			accountMirrorConversationOptions,
+		);
 	});
 
 	test("yields between detail reads when higher-priority work is waiting", async () => {

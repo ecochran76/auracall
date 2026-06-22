@@ -11,7 +11,10 @@ import type {
 	Project,
 } from "../browser/providers/domain.js";
 import type { AccountMirrorMediaManifestEntry } from "../browser/llmService/cache/store.js";
-import type { BrowserProviderListOptions, ProviderUserIdentity } from "../browser/providers/types.js";
+import type {
+	BrowserProviderListOptions,
+	ProviderUserIdentity,
+} from "../browser/providers/types.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
@@ -131,6 +134,27 @@ async function reportCollectorProgress(
 	});
 }
 
+function createAccountMirrorListOptions(abortSignal?: AbortSignal): BrowserProviderListOptions {
+	return {
+		...(abortSignal ? { abortSignal } : {}),
+		tabLifecycle: "dispose-new",
+	};
+}
+
+function withAccountMirrorTabLifecycle(
+	listOptions?: BrowserProviderListOptions,
+	enabled = true,
+): BrowserProviderListOptions | undefined {
+	if (!enabled) {
+		return listOptions;
+	}
+	return {
+		...(listOptions ?? {}),
+		tabLifecycle:
+			listOptions?.preserveActiveTab === true ? listOptions.tabLifecycle : "dispose-new",
+	};
+}
+
 export interface AccountMirrorDomDriftObservationContext {
 	provider: AccountMirrorProvider;
 	runtimeProfileId: string;
@@ -196,7 +220,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				input.abortSignal,
 			);
 			throwIfCollectionAborted(input.abortSignal);
-			const listOptions = input.abortSignal ? { abortSignal: input.abortSignal } : undefined;
+			const listOptions = createAccountMirrorListOptions(input.abortSignal);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
 			await pacer.beforeInteraction();
 			const identity = await client.getUserIdentity(listOptions);
@@ -665,7 +689,9 @@ export async function readBoundedProjects(
 	let projects: Project[];
 	try {
 		await options.pacer?.beforeInteraction();
-		projects = (await client.listProjects(options.listOptions)) as Project[];
+		projects = (await client.listProjects(
+			withAccountMirrorTabLifecycle(options.listOptions, options.listOptions !== undefined),
+		)) as Project[];
 	} catch (error) {
 		await recordAccountMirrorDomDriftObservation(options.observation, {
 			surface: "account-mirror-projects",
@@ -703,8 +729,12 @@ export async function readBoundedConversations(
 	await options.pacer?.beforeInteraction();
 	let conversations: Conversation[];
 	try {
+		const providerListOptions = withAccountMirrorTabLifecycle(
+			options.listOptions,
+			options.listOptions !== undefined,
+		);
 		conversations = (await client.listConversations(projectId ?? undefined, {
-			...options.listOptions,
+			...(providerListOptions ?? {}),
 			historyLimit: limit,
 			includeHistory: true,
 		})) as Conversation[];
@@ -920,7 +950,7 @@ export async function readBoundedAttachmentInventory(
 			await pacer?.beforeInteraction();
 			const projectFiles = await safeReadProjectFiles(
 				client,
-				project.id,
+				project,
 				listOptions,
 				observation,
 				providerCallTimeoutMs,
@@ -962,6 +992,7 @@ export async function readBoundedAttachmentInventory(
 				conversation,
 				observation,
 				providerCallTimeoutMs,
+				listOptions,
 			);
 			await pacer?.beforeInteraction();
 			const context = await safeReadConversationContext(
@@ -1186,6 +1217,7 @@ export async function readBoundedChatgptLibraryInventory(
 			action: "list-account-files",
 		},
 		options.providerCallTimeoutMs,
+		true,
 	);
 	const boundedFiles = files.slice(0, limit);
 	return {
@@ -1339,20 +1371,24 @@ function createProjectConversationCursor(
 
 async function safeReadProjectFiles(
 	client: Pick<BrowserAutomationClient, "listProjectFiles">,
-	projectId: string,
+	project: Project,
 	listOptions?: Parameters<BrowserAutomationClient["listProjectFiles"]>[1],
 	observation?: AccountMirrorDomDriftObservationContext,
 	timeoutMs?: number | null,
 ): Promise<FileRef[]> {
 	try {
+		const providerListOptions = withAccountMirrorTabLifecycle(
+			listOptions,
+			project.provider === "chatgpt",
+		);
 		const read =
-			listOptions === undefined
-				? client.listProjectFiles(projectId)
-				: client.listProjectFiles(projectId, listOptions);
+			providerListOptions === undefined
+				? client.listProjectFiles(project.id)
+				: client.listProjectFiles(project.id, providerListOptions);
 		return await withProviderCallTimeout(
 			read,
 			timeoutMs,
-			`Project file inventory timed out for ${projectId}.`,
+			`Project file inventory timed out for ${project.id}.`,
 		);
 	} catch (error) {
 		await recordAccountMirrorDomDriftObservation(observation, {
@@ -1360,7 +1396,7 @@ async function safeReadProjectFiles(
 			action: "list-project-files",
 			fallbackKind: "read-failure-tolerated",
 			error,
-			metadata: { projectId },
+			metadata: { projectId: project.id },
 		});
 		return [];
 	}
@@ -1378,10 +1414,17 @@ async function safeReadAccountFiles(
 		action: "list-account-files",
 	},
 	timeoutMs?: number | null,
+	useAccountMirrorTabLifecycle = false,
 ): Promise<FileRef[]> {
 	try {
+		const providerListOptions = withAccountMirrorTabLifecycle(
+			listOptions,
+			useAccountMirrorTabLifecycle,
+		);
 		const read =
-			listOptions === undefined ? client.listAccountFiles() : client.listAccountFiles(listOptions);
+			providerListOptions === undefined
+				? client.listAccountFiles()
+				: client.listAccountFiles(providerListOptions);
 		return await withProviderCallTimeout(
 			read,
 			timeoutMs,
@@ -1403,10 +1446,16 @@ async function safeReadConversationFiles(
 	conversation: Conversation,
 	observation?: AccountMirrorDomDriftObservationContext,
 	timeoutMs?: number | null,
+	listOptions?: BrowserProviderListOptions,
 ): Promise<FileRef[]> {
 	try {
+		const providerListOptions = withAccountMirrorTabLifecycle(
+			listOptions,
+			conversation.provider === "chatgpt",
+		);
 		const read = client.listConversationFiles(conversation.id, {
 			projectId: conversation.projectId,
+			...(providerListOptions ? { listOptions: providerListOptions } : {}),
 		});
 		return await withProviderCallTimeout(
 			read,
@@ -1448,15 +1497,23 @@ async function safeReadConversationContext(
 								: CHATGPT_CONTEXT_CHUNK_MESSAGE_LIMIT,
 					}
 				: null;
+		const providerListOptions = withAccountMirrorTabLifecycle(
+			listOptions,
+			conversation.provider === "chatgpt",
+		);
 		const read = client.getConversationContext(conversation.id, {
 			projectId: conversation.projectId,
 			refresh: true,
-			listOptions: chunk
+			...(providerListOptions
 				? {
-						...(listOptions ?? {}),
-						accountMirrorContextChunk: chunk,
+						listOptions: chunk
+							? {
+									...providerListOptions,
+									accountMirrorContextChunk: chunk,
+								}
+							: providerListOptions,
 					}
-				: listOptions,
+				: {}),
 		});
 		return await withProviderCallTimeout(
 			read,

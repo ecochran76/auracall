@@ -695,13 +695,15 @@ export abstract class LlmService {
 					});
 		const host = target?.host ?? overrides.host;
 		const port = target?.port ?? overrides.port;
+		const attachResolvedServiceTab = shouldAttachResolvedServiceTab(overrides);
 		return {
 			...overrides,
 			port,
 			host,
 			configuredUrl,
-			tabTargetId: overrides.tabTargetId ?? target?.tab?.targetId,
-			tabUrl: overrides.tabUrl ?? target?.tab?.url ?? undefined,
+			tabTargetId:
+				overrides.tabTargetId ?? (attachResolvedServiceTab ? target?.tab?.targetId : undefined),
+			tabUrl: overrides.tabUrl ?? (attachResolvedServiceTab ? target?.tab?.url : undefined),
 			browserService: this.browserService,
 			mutationAudit: overrides.mutationAudit ?? this.browserService.getMutationAuditSink?.(),
 			mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
@@ -2122,7 +2124,9 @@ export abstract class LlmService {
 		const shouldRefreshBeforeCacheMatch =
 			this.providerId === "chatgpt" && allowAutoRefresh && canList && !options?.forceRefresh;
 		if (
-			(options?.forceRefresh || (allowAutoRefresh && cached.stale) || shouldRefreshBeforeCacheMatch) &&
+			(options?.forceRefresh ||
+				(allowAutoRefresh && cached.stale) ||
+				shouldRefreshBeforeCacheMatch) &&
 			canList
 		) {
 			const items = await this.listProjects(listOptions);
@@ -3218,6 +3222,13 @@ export abstract class LlmService {
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 }
+
+function shouldAttachResolvedServiceTab(overrides: BrowserProviderListOptions): boolean {
+	if (overrides.tabTargetId) return true;
+	return overrides.tabLifecycle !== "dispose-new";
+}
+
+export const shouldAttachResolvedServiceTabForTest = shouldAttachResolvedServiceTab;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);

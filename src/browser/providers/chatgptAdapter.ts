@@ -3653,6 +3653,7 @@ async function connectToChatgptTab(
 	let port = options?.port ?? resolvePortFromEnv();
 	let failedTargetId: string | undefined;
 	const preferredUrl = urlOverride ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
+	const forceNewDisposableTab = shouldForceNewChatgptTabConnection(options);
 	if (options?.tabTargetId && port) {
 		try {
 			const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
@@ -3705,7 +3706,9 @@ async function connectToChatgptTab(
 		});
 		host = target.host ?? host;
 		port = target.port ?? port;
-		resolvedTargetIdFromService = resolveChatgptTargetId(target.tab);
+		resolvedTargetIdFromService = forceNewDisposableTab
+			? undefined
+			: resolveChatgptTargetId(target.tab);
 	}
 	if ((!port || !host) && options?.browserService) {
 		const target = await options.browserService.resolveDevToolsTarget({
@@ -3725,13 +3728,15 @@ async function connectToChatgptTab(
 
 	const resolvedPort = port;
 	const targets = await listChatgptChromeTargets(host, resolvedPort);
-	const candidates = targets.filter(
-		(target) =>
-			target.type === "page" &&
-			isChatgptUrl(target.url ?? "") &&
-			isChatgptTargetReusableForPreferredUrl(target.url ?? "", preferredUrl) &&
-			resolveChatgptTargetId(target) !== failedTargetId,
-	);
+	const candidates = forceNewDisposableTab
+		? []
+		: targets.filter(
+				(target) =>
+					target.type === "page" &&
+					isChatgptUrl(target.url ?? "") &&
+					isChatgptTargetReusableForPreferredUrl(target.url ?? "", preferredUrl) &&
+					resolveChatgptTargetId(target) !== failedTargetId,
+			);
 	const serviceResolved = resolvedTargetIdFromService
 		? candidates.find((target) => resolveChatgptTargetId(target) === resolvedTargetIdFromService)
 		: undefined;
@@ -3745,7 +3750,10 @@ async function connectToChatgptTab(
 			? { target: await openChromeTarget(resolvedPort, preferredUrl, host), reused: false }
 			: await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
 					host,
-					reusePolicy: extractChatgptConversationIdFromUrl(preferredUrl) ? "same-origin" : "new",
+					reusePolicy:
+						forceNewDisposableTab || !extractChatgptConversationIdFromUrl(preferredUrl)
+							? "new"
+							: "same-origin",
 					compatibleHosts: CHATGPT_COMPATIBLE_HOSTS,
 					matchingTabLimit: tabPolicy.serviceTabLimit,
 					blankTabLimit: tabPolicy.blankTabLimit,
@@ -3795,6 +3803,45 @@ async function connectToChatgptTab(
 		usedExisting,
 	};
 }
+
+type ChatgptTabConnection = Awaited<ReturnType<typeof connectToChatgptTab>>;
+
+function shouldDisposeChatgptTabConnection(
+	connection: Pick<ChatgptTabConnection, "shouldClose" | "targetId">,
+	options?: BrowserProviderListOptions,
+): boolean {
+	if (options?.tabLifecycle !== "dispose-new") return false;
+	if (options.preserveActiveTab === true) return false;
+	if (options.tabTargetId) return false;
+	return Boolean(connection.shouldClose && connection.targetId);
+}
+
+async function closeChatgptTabConnection(
+	connection: Pick<ChatgptTabConnection, "client" | "targetId" | "shouldClose" | "host" | "port">,
+	options?: BrowserProviderListOptions,
+): Promise<void> {
+	await connection.client.close().catch(() => undefined);
+	if (!shouldDisposeChatgptTabConnection(connection, options)) {
+		return;
+	}
+	await CDP.Close({
+		host: connection.host,
+		port: connection.port,
+		id: connection.targetId as string,
+	}).catch(() => undefined);
+}
+
+export const closeChatgptTabConnectionForTest = closeChatgptTabConnection;
+export const shouldDisposeChatgptTabConnectionForTest = shouldDisposeChatgptTabConnection;
+
+function shouldForceNewChatgptTabConnection(options?: BrowserProviderListOptions): boolean {
+	if (options?.tabLifecycle !== "dispose-new") return false;
+	if (options.preserveActiveTab === true) return false;
+	if (options.tabTargetId) return false;
+	return true;
+}
+
+export const shouldForceNewChatgptTabConnectionForTest = shouldForceNewChatgptTabConnection;
 
 async function enableChatgptTargetDomains(client: ChromeClient, targetId?: string): Promise<void> {
 	await withChatgptTimeout(
@@ -9942,34 +9989,37 @@ export function createChatgptAdapter(): Pick<
 		async getUserIdentity(
 			options?: BrowserProviderListOptions,
 		): Promise<ProviderUserIdentity | null> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
+			const { client } = connection;
 			try {
 				return await readChatgptUserIdentity(client);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				return await readChatgptFeatureSignature(client);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
 			const attempt = async (currentOptions?: BrowserProviderListOptions): Promise<Project[]> => {
-				const { client } = await connectToChatgptTab(
+				const connection = await connectToChatgptTab(
 					currentOptions,
 					currentOptions?.configuredUrl ?? CHATGPT_HOME_URL,
 				);
+				const { client } = connection;
 				try {
 					await assertChatgptExpectedIdentity(client, currentOptions);
 					await navigateToChatgptUrl(client, CHATGPT_HOME_URL);
@@ -9980,7 +10030,7 @@ export function createChatgptAdapter(): Pick<
 					await ensureChatgptSidebarOpen(client);
 					return await scrapeChatgptProjects(client);
 				} finally {
-					await client.close().catch(() => undefined);
+					await closeChatgptTabConnection(connection, currentOptions);
 				}
 			};
 			try {
@@ -10014,7 +10064,8 @@ export function createChatgptAdapter(): Pick<
 				const targetUrl = normalizedProjectId
 					? resolveChatgptProjectUrl(normalizedProjectId)
 					: (currentOptions?.configuredUrl ?? CHATGPT_HOME_URL);
-				const { client } = await connectToChatgptTab(currentOptions, targetUrl);
+				const connection = await connectToChatgptTab(currentOptions, targetUrl);
+				const { client } = connection;
 				try {
 					await assertChatgptExpectedIdentity(client, currentOptions);
 					await dismissCreateProjectDialogIfOpen(client.Runtime, {
@@ -10028,7 +10079,7 @@ export function createChatgptAdapter(): Pick<
 						debugContext,
 					);
 				} finally {
-					await client.close().catch(() => undefined);
+					await closeChatgptTabConnection(connection, currentOptions);
 				}
 			};
 			try {
@@ -10058,10 +10109,11 @@ export function createChatgptAdapter(): Pick<
 					projectId: normalizedProjectId ?? null,
 				},
 			);
-			const { client, targetId, host, port } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			const { client, targetId, host, port } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await dismissCreateProjectDialogIfOpen(client.Runtime, {
@@ -10077,7 +10129,7 @@ export function createChatgptAdapter(): Pick<
 					{ host, port, targetId: targetId ?? null },
 				);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async readActiveConversationArtifacts(
@@ -10101,11 +10153,12 @@ export function createChatgptAdapter(): Pick<
 					tabTargetId: options.tabTargetId,
 				},
 			);
-			const { client, targetId, host, port } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				options.tabUrl ??
 					resolveChatgptConversationUrl(normalizedConversationId, normalizedProjectId),
 			);
+			const { client, targetId, host, port } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await dismissCreateProjectDialogIfOpen(client.Runtime, {
@@ -10127,7 +10180,7 @@ export function createChatgptAdapter(): Pick<
 				);
 				return context.artifacts ?? [];
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async listConversationFiles(
@@ -10143,10 +10196,11 @@ export function createChatgptAdapter(): Pick<
 					projectId: normalizedProjectId ?? null,
 				},
 			);
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				return await withChatgptBlockingSurfaceRecovery(
@@ -10173,7 +10227,7 @@ export function createChatgptAdapter(): Pick<
 					},
 				);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async downloadConversationFile(
@@ -10193,10 +10247,11 @@ export function createChatgptAdapter(): Pick<
 					fileId,
 				},
 			);
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await downloadChatgptConversationFileWithClient(
@@ -10210,11 +10265,12 @@ export function createChatgptAdapter(): Pick<
 					file,
 				);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async listAccountFiles(options?: BrowserProviderListOptions): Promise<FileRef[]> {
-			const { client } = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
+			const connection = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await dismissCreateProjectDialogIfOpen(client.Runtime, {
@@ -10225,7 +10281,7 @@ export function createChatgptAdapter(): Pick<
 				const inventory = await readChatgptLibraryItemsWithClient(client);
 				return inventory.files;
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async downloadAccountFile(
@@ -10241,7 +10297,8 @@ export function createChatgptAdapter(): Pick<
 					fileId,
 				},
 			);
-			const { client } = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
+			const connection = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await dismissCreateProjectDialogIfOpen(client.Runtime, {
@@ -10257,7 +10314,7 @@ export function createChatgptAdapter(): Pick<
 					file,
 				);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async materializeConversationArtifact(
@@ -10278,10 +10335,11 @@ export function createChatgptAdapter(): Pick<
 					artifactKind: artifact.kind,
 				},
 			);
-			const { client, targetId, host, port } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			const { client, targetId, host, port } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				return await materializeChatgptConversationArtifactWithClient(
@@ -10295,7 +10353,7 @@ export function createChatgptAdapter(): Pick<
 					{ host, port, targetId: targetId ?? null },
 				);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async renameConversation(
@@ -10305,10 +10363,11 @@ export function createChatgptAdapter(): Pick<
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
 			const normalizedProjectId = normalizeChatgptProjectId(projectId);
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				if (!normalizedProjectId) {
@@ -10346,7 +10405,7 @@ export function createChatgptAdapter(): Pick<
 					? lastError
 					: new Error(`ChatGPT conversation rename failed for ${conversationId}`);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async deleteConversation(
@@ -10355,27 +10414,29 @@ export function createChatgptAdapter(): Pick<
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
 			const normalizedProjectId = normalizeChatgptProjectId(projectId);
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await deleteChatgptConversationWithClient(client, conversationId, normalizedProjectId);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async openCreateProjectModal(options?: BrowserProviderListOptions): Promise<void> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await openCreateProjectModalWithClient(client);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async setCreateProjectFields(
@@ -10387,28 +10448,30 @@ export function createChatgptAdapter(): Pick<
 			},
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await openCreateProjectModalWithClient(client);
 				await setCreateProjectFieldsWithClient(client, fields);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async clickCreateProjectConfirm(options?: BrowserProviderListOptions): Promise<void> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await clickCreateProjectConfirmWithClient(client);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async createProject(
@@ -10421,10 +10484,11 @@ export function createChatgptAdapter(): Pick<
 			},
 			options?: BrowserProviderListOptions,
 		): Promise<Project | null> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await dismissCreateProjectDialogIfOpen(client.Runtime, {
@@ -10519,7 +10583,7 @@ export function createChatgptAdapter(): Pick<
 				}).catch(() => undefined);
 				throw error;
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async uploadProjectFiles(
@@ -10528,25 +10592,27 @@ export function createChatgptAdapter(): Pick<
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
 			if (filePaths.length === 0) return;
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptProjectSourcesUrl(projectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await uploadChatgptProjectSourceFilesWithClient(client, projectId, filePaths);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async listProjectFiles(
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<FileRef[]> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptProjectSourcesUrl(projectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await openProjectSourcesTab(client, projectId);
@@ -10557,7 +10623,7 @@ export function createChatgptAdapter(): Pick<
 				await reloadProjectSourcesTab(client, projectId);
 				return await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 8_000 });
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async downloadProjectFile(
@@ -10574,10 +10640,11 @@ export function createChatgptAdapter(): Pick<
 					fileId,
 				},
 			);
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptProjectSourcesUrl(projectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await downloadChatgptProjectFileWithClient(
@@ -10589,7 +10656,7 @@ export function createChatgptAdapter(): Pick<
 					options,
 				);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async deleteProjectFile(
@@ -10597,10 +10664,11 @@ export function createChatgptAdapter(): Pick<
 			fileName: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
-			const { client } = await connectToChatgptTab(
+			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptProjectSourcesUrl(projectId),
 			);
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await openProjectSourcesTab(client, projectId);
@@ -10682,7 +10750,7 @@ export function createChatgptAdapter(): Pick<
 					fallbackExpression: buildProjectSourceRemovedExpression(targetFileName),
 				});
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async updateProjectInstructions(
@@ -10694,20 +10762,22 @@ export function createChatgptAdapter(): Pick<
 			if (typeof modelLabel === "string" && modelLabel.trim().length > 0) {
 				throw new Error("ChatGPT project instructions model selection is not supported");
 			}
-			const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await applyProjectSettings(client, projectId, { instructions });
 				await waitForProjectSettingsApplied(client, projectId, { instructions });
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async getProjectInstructions(
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<{ text: string; model?: string | null }> {
-			const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await openProjectSettingsPanel(client, projectId);
@@ -10715,7 +10785,7 @@ export function createChatgptAdapter(): Pick<
 				return { text: snapshot.text, model: null };
 			} finally {
 				await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS).catch(() => undefined);
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async renameProject(
@@ -10723,20 +10793,22 @@ export function createChatgptAdapter(): Pick<
 			newTitle: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
-			const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await applyProjectSettings(client, projectId, { name: newTitle });
 				await waitForProjectSettingsApplied(client, projectId, { name: newTitle });
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async selectRemoveProjectItem(
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
-			const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				await openProjectSettingsPanel(client, projectId);
@@ -10779,14 +10851,15 @@ export function createChatgptAdapter(): Pick<
 					},
 				);
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 		async pushProjectRemoveConfirmation(
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
-			const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
+			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
 				const pressDeleteConfirmation = async (): Promise<
@@ -10891,7 +10964,7 @@ export function createChatgptAdapter(): Pick<
 					throw new Error("ChatGPT project delete did not leave the deleted project page");
 				}
 			} finally {
-				await client.close().catch(() => undefined);
+				await closeChatgptTabConnection(connection, options);
 			}
 		},
 	};
