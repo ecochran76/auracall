@@ -18501,3 +18501,10 @@ browser-stage lifecycle observability, not transcript truncation.
   `Too many requests` warning on `chatgpt/wsl-chrome-3` is a separate Pro-lane
   provider-guard issue, not evidence that the default Business tab-retention
   fix failed.
+- 2026-06-22: A cleared provider guard does not by itself mean ChatGPT request
+  pressure is gone. For the `chatgpt/wsl-chrome-3` Pro lane, installed status
+  showed the `Too many requests` guard had cleared and the latest full-sweep
+  refresh had succeeded, but one live-follow completion remained
+  `idle_waiting` with full-sweep plus missing-asset materialization queued for
+  the next wake. When the user reports visible ChatGPT request warnings, pause
+  that active completion first instead of launching another browser probe.

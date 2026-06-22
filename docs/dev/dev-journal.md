@@ -38727,3 +38727,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   Business lane provider guard clear, while the separate `chatgpt/wsl-chrome-3`
   Pro lane still carried a `Too many requests` provider-guard warning for the
   follow-up rate-limit slice.
+- 2026-06-22: Followed up on the `chatgpt/wsl-chrome-3` Pro
+  `Too many requests` warning. Installed status now reports the provider guard
+  clear, authoritative provider-app identity `eric.cochran@soylei.com`,
+  `accountLevel=Pro`, and a successful full-sweep completion at
+  `2026-06-22T14:51:22Z` with counts `projects=8`, `conversations=75`,
+  `artifacts=235`, `files=196`, `media=0`. The old DevTools port `45015` is no
+  longer listening and no `wsl-chrome-3` managed Chrome process remains. To
+  reduce request pressure, paused the only active `chatgpt/wsl-chrome-3`
+  live-follow completion
+  `acctmirror_completion_1818a4d4-05c9-4a4d-a5b0-98945a371cde`, which was
+  `idle_waiting` for the next wake at `2026-06-22T15:09:11Z` and would have
+  continued full-sweep plus missing-asset materialization.
