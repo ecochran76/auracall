@@ -18468,3 +18468,36 @@ browser-stage lifecycle observability, not transcript truncation.
   now derive asset families from retrievable counts, and no-download provider
   detail produces explicit skipped entries so terminal jobs reduce future
   retrievable counts instead of looping silently.
+- 2026-06-21: Live-follow inventory tabs need an explicit lifecycle contract.
+  Runtime inspection found the default ChatGPT tenant retaining multiple
+  conversation/library tabs after account-mirror activity. The code audit found
+  that shared `openOrReuseChromeTarget(...)` stockpile cleanup only runs when
+  callers use that primitive, while ChatGPT read/list paths often ignore the
+  `shouldClose` metadata from `connectToChatgptTab(...)` and close only the CDP
+  client. Treat account-mirror read probes as disposable unless they attach to
+  an explicit submitted tab, and keep `preserveActiveTab` as a no-cleanup guard.
+- 2026-06-21: ChatGPT account-mirror tab cleanup is now policy-driven instead
+  of relying on each read method to remember target cleanup. Use
+  `BrowserProviderListOptions.tabLifecycle="dispose-new"` for ChatGPT
+  inventory probes; the ChatGPT adapter closes the CDP client and closes the
+  target only when the target was newly opened, no submitted `tabTargetId` was
+  supplied, and `preserveActiveTab` is not set. Keep Gemini/Grok generic
+  inventory calls free of this ChatGPT-specific lifecycle flag unless a caller
+  explicitly supplies it.
+- 2026-06-21: Closing disposable ChatGPT tabs after use is not enough if the
+  connect path first reuses a same-origin operator tab. Disposable
+  account-mirror reads must also avoid implicit service-tab attachment and force
+  a new browser target before reading. The patched flow uses
+  `tabLifecycle="dispose-new"` to skip resolved service tabs, skip existing
+  ChatGPT candidates, request `reusePolicy="new"`, then close the disposable
+  target; the live proof reduced the default ChatGPT profile from 29 page
+  targets to 2 with no added or URL-mutated retained target IDs.
+- 2026-06-22: Install-time proof matters for tab-lifecycle fixes because the
+  long-running user API can still be serving an older packaged build after the
+  checkout passes. After rebuilding `~/.auracall/user-runtime` and restarting
+  `auracall-api.service`, the installed `chatgpt/default` explicit refresh
+  completed with the default Business lane provider guard clear and left only
+  one root ChatGPT page target on DevTools port `45011`. A concurrent
+  `Too many requests` warning on `chatgpt/wsl-chrome-3` is a separate Pro-lane
+  provider-guard issue, not evidence that the default Business tab-retention
+  fix failed.

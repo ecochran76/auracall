@@ -38682,3 +38682,48 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Decision:
   - Plan 0135 closes with the refreshed packet submitted to the SoyLei target
     and cached readback complete.
+- 2026-06-21: Opened Plan 0143 for live-follow tab management after runtime
+  inspection found default ChatGPT tenant pages retained after account-mirror
+  activity. Current audit evidence: `openOrReuseChromeTarget(...)` owns
+  stockpile cleanup, `LlmService.buildListOptions(...)` carries browser-service
+  target/mutation context, Gemini/Grok close newly opened read tabs in
+  `finally`, but ChatGPT read/list methods mostly close only the CDP client
+  even when `connectToChatgptTab(...)` reports a newly opened disposable tab.
+  Implementation direction is to add explicit tab-lifecycle intent to provider
+  list options, close disposable ChatGPT inventory tabs centrally, and keep the
+  same contract usable for future agent-browser access-plan/session ownership.
+- 2026-06-21: Closed Plan 0143 with a bounded code fix for retained ChatGPT
+  inventory tabs. `BrowserProviderListOptions.tabLifecycle` now lets
+  account-mirror request disposable read tabs, ChatGPT provider read/list
+  methods close through a centralized helper that protects submitted/preserved
+  tabs, and ChatGPT account-mirror detail reads thread the disposable intent
+  without changing Gemini/Grok generic call shapes. Validation passed:
+  `pnpm vitest run tests/browser/chatgptTabLifecycle.test.ts
+  tests/accountMirror/chatgptMetadataCollector.test.ts` and
+  `pnpm run typecheck`. Live no-mutation browser proof remains the next
+  operational check.
+- 2026-06-21: Completed the Plan 0143 live proof and tightened the code after
+  the first proof exposed same-origin tab mutation. The initial checkout-backed
+  `chatgpt/default` refresh completed but reused/navigated an existing ChatGPT
+  tab and later left extra conversation tabs. The follow-up patch makes
+  disposable ChatGPT reads drop implicit service-tab attachment, skip existing
+  same-origin candidates, force `reusePolicy="new"`, then close the disposable
+  target. A restarted scoped proof API on port `18143` completed one explicit
+  refresh for `ecochran76@gmail.com` with merged counts `projects=5`,
+  `conversations=416`, `artifacts=109`, `files=113`, `media=0`; DevTools page
+  targets on the default ChatGPT profile went from `29` before the patched
+  refresh to `2` after it with `added=[]` and `changed=[]`. Targeted lint,
+  focused Vitest, and `pnpm run typecheck` passed after the patch.
+- 2026-06-22: Installed and restarted the Plan 0143 fix in the user runtime.
+  `pnpm run install:user-runtime` rebuilt the package into
+  `~/.auracall/user-runtime`, `systemctl --user restart auracall-api.service`
+  brought the long-running API back on the installed
+  `dist/bin/auracall.js`, and authenticated `/status` returned `ok=true` on
+  port `18095`. An installed explicit refresh for `chatgpt/default` completed
+  in about 92 seconds with counts `projects=5`, `conversations=416`,
+  `artifacts=109`, `files=125`, `media=0`; the default managed browser was not
+  listening before the proof and ended with one page target on DevTools port
+  `45011`, `https://chatgpt.com/`. Installed status showed the default
+  Business lane provider guard clear, while the separate `chatgpt/wsl-chrome-3`
+  Pro lane still carried a `Too many requests` provider-guard warning for the
+  follow-up rate-limit slice.
