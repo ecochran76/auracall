@@ -837,6 +837,9 @@ function readLiveFollowPolitenessPolicy(
 	copyNonNegativeInteger(liveFollow, policy, "maxPageReadsPerCycle");
 	copyNonNegativeInteger(liveFollow, policy, "maxConversationRowsPerCycle");
 	copyNonNegativeInteger(liveFollow, policy, "maxArtifactRowsPerCycle");
+	copyNonNegativeInteger(liveFollow, policy, "conversationReadCooldownMs");
+	copyNonNegativeInteger(liveFollow, policy, "pageRefreshCooldownMs");
+	copyNonNegativeInteger(liveFollow, policy, "renavigationCooldownMs");
 	return Object.keys(policy).length > 1 ? policy : null;
 }
 

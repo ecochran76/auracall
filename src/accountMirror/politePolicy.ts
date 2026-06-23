@@ -65,6 +65,9 @@ export interface AccountMirrorProviderPolitenessPolicy {
 	maxPageReadsPerCycle: number;
 	maxConversationRowsPerCycle: number;
 	maxArtifactRowsPerCycle: number;
+	conversationReadCooldownMs: number;
+	pageRefreshCooldownMs: number;
+	renavigationCooldownMs: number;
 }
 
 export interface AccountMirrorPolitenessInput {
@@ -122,6 +125,9 @@ export interface AccountMirrorPolitenessDecision {
 		maxPageReadsPerCycle: number;
 		maxConversationRowsPerCycle: number;
 		maxArtifactRowsPerCycle: number;
+		conversationReadCooldownMs: number;
+		pageRefreshCooldownMs: number;
+		renavigationCooldownMs: number;
 	};
 }
 
@@ -142,6 +148,9 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
 		maxPageReadsPerCycle: 4,
 		maxConversationRowsPerCycle: 30,
 		maxArtifactRowsPerCycle: 24,
+		conversationReadCooldownMs: 0,
+		pageRefreshCooldownMs: 0,
+		renavigationCooldownMs: 0,
 	},
 	gemini: {
 		provider: "gemini",
@@ -155,6 +164,9 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
 		maxPageReadsPerCycle: 4,
 		maxConversationRowsPerCycle: 80,
 		maxArtifactRowsPerCycle: 24,
+		conversationReadCooldownMs: 0,
+		pageRefreshCooldownMs: 0,
+		renavigationCooldownMs: 0,
 	},
 	grok: {
 		provider: "grok",
@@ -168,6 +180,9 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
 		maxPageReadsPerCycle: 8,
 		maxConversationRowsPerCycle: 160,
 		maxArtifactRowsPerCycle: 80,
+		conversationReadCooldownMs: 0,
+		pageRefreshCooldownMs: 0,
+		renavigationCooldownMs: 0,
 	},
 };
 
@@ -270,6 +285,9 @@ function createDecision(
 			maxPageReadsPerCycle: policy.maxPageReadsPerCycle,
 			maxConversationRowsPerCycle: policy.maxConversationRowsPerCycle,
 			maxArtifactRowsPerCycle: policy.maxArtifactRowsPerCycle,
+			conversationReadCooldownMs: policy.conversationReadCooldownMs,
+			pageRefreshCooldownMs: policy.pageRefreshCooldownMs,
+			renavigationCooldownMs: policy.renavigationCooldownMs,
 		},
 	};
 }

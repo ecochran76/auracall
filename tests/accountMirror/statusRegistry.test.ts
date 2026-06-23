@@ -29,6 +29,9 @@ const config = {
 						enabled: true,
 						maxBrowserInteractionsPerMinute: 3,
 						maxConversationRowsPerCycle: 25,
+						conversationReadCooldownMs: 30_000,
+						pageRefreshCooldownMs: 30_000,
+						renavigationCooldownMs: 30_000,
 					},
 				},
 			},
@@ -133,6 +136,9 @@ describe("account mirror status registry", () => {
 					limits: expect.objectContaining({
 						maxBrowserInteractionsPerMinute: 3,
 						maxConversationRowsPerCycle: 25,
+						conversationReadCooldownMs: 30_000,
+						pageRefreshCooldownMs: 30_000,
+						renavigationCooldownMs: 30_000,
 					}),
 					liveFollow: expect.objectContaining({
 						configured: true,

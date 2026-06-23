@@ -364,6 +364,9 @@ export function createAccountMirrorRefreshService(input: {
 							maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
 							maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
 							maxBrowserInteractionsPerMinute: target.limits.maxBrowserInteractionsPerMinute,
+							conversationReadCooldownMs: target.limits.conversationReadCooldownMs,
+							pageRefreshCooldownMs: target.limits.pageRefreshCooldownMs,
+							renavigationCooldownMs: target.limits.renavigationCooldownMs,
 						},
 						previousEvidence: target.metadataEvidence,
 						onIdentityVerified: (evidence) => {
@@ -1652,8 +1655,7 @@ function readSingleMirrorTarget(input: {
 			runtimeProfileId: input.runtimeProfileId,
 			explicitRefresh: input.explicitRefresh,
 			ignoreMinimumInterval: input.ignoreMinimumInterval === true,
-			ignoreFailureBackoff:
-				input.explicitRefresh === true && input.ignoreFailureBackoff === true,
+			ignoreFailureBackoff: input.explicitRefresh === true && input.ignoreFailureBackoff === true,
 		}).entries[0] ?? null
 	);
 }

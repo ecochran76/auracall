@@ -18508,3 +18508,11 @@ browser-stage lifecycle observability, not transcript truncation.
   `idle_waiting` with full-sweep plus missing-asset materialization queued for
   the next wake. When the user reports visible ChatGPT request warnings, pause
   that active completion first instead of launching another browser probe.
+- 2026-06-23: ChatGPT live-follow needs action-specific pacing, not only a
+  coarse interactions-per-minute budget. `maxBrowserInteractionsPerMinute`
+  controls global spacing, but repeated conversation reads, page refreshes, and
+  re-navigation can still trip ChatGPT rate limits during a full sweep. Keep
+  full-sweep/materialization policy separate from pacing: add
+  `conversationReadCooldownMs`, `pageRefreshCooldownMs`, and
+  `renavigationCooldownMs` to `liveFollow` config and apply them as additional
+  pacer buckets before provider reads.

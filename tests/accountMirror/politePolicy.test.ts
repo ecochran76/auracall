@@ -348,6 +348,9 @@ describe("account mirror polite policy", () => {
 		expect(decision.limits.maxConversationRowsPerCycle).toBe(30);
 		expect(decision.limits.maxArtifactRowsPerCycle).toBe(24);
 		expect(decision.limits.maxBrowserInteractionsPerMinute).toBe(30);
+		expect(decision.limits.conversationReadCooldownMs).toBe(0);
+		expect(decision.limits.pageRefreshCooldownMs).toBe(0);
+		expect(decision.limits.renavigationCooldownMs).toBe(0);
 	});
 
 	test("uses slower Gemini defaults for bot-sensitive live follow", () => {

@@ -211,13 +211,20 @@ describe("account mirror artifact recovery planner", () => {
 								mimeType: null,
 								size: null,
 								materializationMethod: null,
-								reason: "no-materializable-file: provider detail exposed no downloadable file assets",
+								reason:
+									"no-materializable-file: provider detail exposed no downloadable file assets",
 								archiveItemId: null,
 								assetRoute: null,
 							},
 						],
 						archiveItems: [],
-						metrics: { conversations: 1, materialized: 0, duplicateAliases: 0, skipped: 1, failed: 0 },
+						metrics: {
+							conversations: 1,
+							materialized: 0,
+							duplicateAliases: 0,
+							skipped: 1,
+							failed: 0,
+						},
 						message: "No downloadable files.",
 					},
 					error: null,
@@ -1048,6 +1055,9 @@ function statusEntry(input: {
 			maxPageReadsPerCycle: 0,
 			maxConversationRowsPerCycle: 0,
 			maxArtifactRowsPerCycle: 0,
+			conversationReadCooldownMs: 0,
+			pageRefreshCooldownMs: 0,
+			renavigationCooldownMs: 0,
 		},
 	};
 }

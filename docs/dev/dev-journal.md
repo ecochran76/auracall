@@ -38739,3 +38739,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `acctmirror_completion_1818a4d4-05c9-4a4d-a5b0-98945a371cde`, which was
   `idle_waiting` for the next wake at `2026-06-22T15:09:11Z` and would have
   continued full-sweep plus missing-asset materialization.
+- 2026-06-23: Tuned `chatgpt/wsl-chrome-3` Pro live-follow pacing after another
+  ChatGPT `Too many requests` guard on `listConversations`. Kept
+  `sweepMode=full_sweep` and `materializationPolicy=full_missing_assets` per
+  operator direction, lowered the configured browser interaction cap to
+  `maxBrowserInteractionsPerMinute=15`, and added live-follow config support
+  for separate 30s cooldown buckets:
+  `conversationReadCooldownMs`, `pageRefreshCooldownMs`, and
+  `renavigationCooldownMs`. Installed and restarted the user runtime; installed
+  status readback for `chatgpt/wsl-chrome-3` showed all three cooldowns at
+  `30000`, the 15/min cap active, and the current completion
+  `acctmirror_completion_277ff7b8-a0fd-4745-8c54-321a4d40f001` still paused
+  before any retry.

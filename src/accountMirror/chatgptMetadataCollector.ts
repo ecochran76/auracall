@@ -49,6 +49,9 @@ export interface AccountMirrorMetadataCollectorInput {
 		maxConversationRowsPerCycle: number;
 		maxArtifactRowsPerCycle: number;
 		maxBrowserInteractionsPerMinute: number;
+		conversationReadCooldownMs?: number;
+		pageRefreshCooldownMs?: number;
+		renavigationCooldownMs?: number;
 	};
 }
 
@@ -217,12 +220,17 @@ export function createChatgptAccountMirrorMetadataCollector(
 			});
 			const pacer = createBrowserInteractionPacer(
 				input.limits.maxBrowserInteractionsPerMinute,
+				{
+					conversationReadCooldownMs: input.limits.conversationReadCooldownMs,
+					pageRefreshCooldownMs: input.limits.pageRefreshCooldownMs,
+					renavigationCooldownMs: input.limits.renavigationCooldownMs,
+				},
 				input.abortSignal,
 			);
 			throwIfCollectionAborted(input.abortSignal);
 			const listOptions = createAccountMirrorListOptions(input.abortSignal);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
-			await pacer.beforeInteraction();
+			await pacer.beforeInteraction("page-refresh");
 			const identity = await client.getUserIdentity(listOptions);
 			throwIfCollectionAborted(input.abortSignal);
 			const detectedIdentityKey = readProviderIdentityKey(input.provider, identity);
@@ -609,11 +617,18 @@ function throwIfCollectionAborted(signal: AbortSignal | null | undefined): void 
 }
 
 type BrowserInteractionPacer = {
-	beforeInteraction(): Promise<void>;
+	beforeInteraction(kind?: BrowserInteractionKind): Promise<void>;
 };
+
+type BrowserInteractionKind = "conversation-read" | "page-refresh" | "renavigation";
 
 function createBrowserInteractionPacer(
 	maxBrowserInteractionsPerMinute: number | null | undefined,
+	cooldowns: {
+		conversationReadCooldownMs?: number | null;
+		pageRefreshCooldownMs?: number | null;
+		renavigationCooldownMs?: number | null;
+	} = {},
 	abortSignal?: AbortSignal,
 ): BrowserInteractionPacer {
 	const maxPerMinute =
@@ -623,18 +638,35 @@ function createBrowserInteractionPacer(
 			: 20;
 	const minSpacingMs = Math.ceil(60_000 / maxPerMinute);
 	let lastInteractionAtMs = 0;
+	const lastByKind = new Map<BrowserInteractionKind, number>();
+	const cooldownByKind: Record<BrowserInteractionKind, number> = {
+		"conversation-read": normalizeCooldownMs(cooldowns.conversationReadCooldownMs),
+		"page-refresh": normalizeCooldownMs(cooldowns.pageRefreshCooldownMs),
+		renavigation: normalizeCooldownMs(cooldowns.renavigationCooldownMs),
+	};
 	return {
-		async beforeInteraction() {
+		async beforeInteraction(kind) {
 			throwIfCollectionAborted(abortSignal);
 			const nowMs = Date.now();
-			const waitMs =
+			const globalWaitMs =
 				lastInteractionAtMs > 0 ? Math.max(0, lastInteractionAtMs + minSpacingMs - nowMs) : 0;
+			const kindWaitMs = kind
+				? Math.max(0, (lastByKind.get(kind) ?? 0) + cooldownByKind[kind] - nowMs)
+				: 0;
+			const waitMs = Math.max(globalWaitMs, kindWaitMs);
 			if (waitMs > 0) {
 				await sleepWithAbort(waitMs, abortSignal);
 			}
 			lastInteractionAtMs = Date.now();
+			if (kind) {
+				lastByKind.set(kind, lastInteractionAtMs);
+			}
 		},
 	};
+}
+
+function normalizeCooldownMs(value: number | null | undefined): number {
+	return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
 function sleepWithAbort(ms: number, signal: AbortSignal | null | undefined): Promise<void> {
@@ -688,7 +720,7 @@ export async function readBoundedProjects(
 	const pageBudget = Math.max(1, Math.floor(maxPageReads));
 	let projects: Project[];
 	try {
-		await options.pacer?.beforeInteraction();
+		await options.pacer?.beforeInteraction("page-refresh");
 		projects = (await client.listProjects(
 			withAccountMirrorTabLifecycle(options.listOptions, options.listOptions !== undefined),
 		)) as Project[];
@@ -726,7 +758,7 @@ export async function readBoundedConversations(
 	if (limit <= 0) {
 		return { items: [], truncated: true };
 	}
-	await options.pacer?.beforeInteraction();
+	await options.pacer?.beforeInteraction("conversation-read");
 	let conversations: Conversation[];
 	try {
 		const providerListOptions = withAccountMirrorTabLifecycle(
@@ -947,7 +979,7 @@ export async function readBoundedAttachmentInventory(
 			remainingDetailReads -= 1;
 			scannedProjects += 1;
 			progress.scannedProjectIds.push(project.id);
-			await pacer?.beforeInteraction();
+			await pacer?.beforeInteraction("renavigation");
 			const projectFiles = await safeReadProjectFiles(
 				client,
 				project,
@@ -986,7 +1018,7 @@ export async function readBoundedAttachmentInventory(
 			remainingDetailReads -= 1;
 			scannedConversations += 1;
 			progress.scannedConversationIds.push(conversation.id);
-			await pacer?.beforeInteraction();
+			await pacer?.beforeInteraction("conversation-read");
 			const conversationFiles = await safeReadConversationFiles(
 				client,
 				conversation,
@@ -994,7 +1026,7 @@ export async function readBoundedAttachmentInventory(
 				providerCallTimeoutMs,
 				listOptions,
 			);
-			await pacer?.beforeInteraction();
+			await pacer?.beforeInteraction("conversation-read");
 			const context = await safeReadConversationContext(
 				client,
 				conversation,
@@ -1207,7 +1239,7 @@ export async function readBoundedChatgptLibraryInventory(
 			truncated: true,
 		};
 	}
-	await options.pacer?.beforeInteraction();
+	await options.pacer?.beforeInteraction("page-refresh");
 	const files = await safeReadAccountFiles(
 		client,
 		options.listOptions,
@@ -1287,7 +1319,7 @@ export async function readBoundedGrokAccountFileInventory(
 			cursor: null,
 		};
 	}
-	await options.pacer?.beforeInteraction();
+	await options.pacer?.beforeInteraction("page-refresh");
 	const files = await safeReadAccountFiles(client, options.listOptions, options.observation, {
 		surface: "account-mirror-account-files",
 		action: "list-account-files",

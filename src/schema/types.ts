@@ -126,6 +126,9 @@ export const ServiceLiveFollowSchema = z.object({
   maxPageReadsPerCycle: z.number().int().nonnegative().optional(),
   maxConversationRowsPerCycle: z.number().int().nonnegative().optional(),
   maxArtifactRowsPerCycle: z.number().int().nonnegative().optional(),
+  conversationReadCooldownMs: z.number().int().nonnegative().optional(),
+  pageRefreshCooldownMs: z.number().int().nonnegative().optional(),
+  renavigationCooldownMs: z.number().int().nonnegative().optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
