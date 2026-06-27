@@ -1782,6 +1782,7 @@ handoffCommand
   .option('--target-profile <profile>', 'Target AuraCall runtime profile.')
   .option('--target-ref <ref>', 'Optional target conversation reference.')
   .option('--target-project-ref <ref>', 'Optional target project reference.')
+  .option('--target-model-selector <selector>', 'Optional semantic target model selector such as chatgpt:pro-extended.')
   .option('--source-context-json <path>', 'Existing cached source context JSON to include in the packet.')
   .option('--source-manifest-json <path>', 'Existing source file/artifact manifest JSON to include in the packet.')
   .option('--source-omissions-json <path>', 'Existing source omissions JSON to include in the packet.')
@@ -1818,6 +1819,7 @@ handoffCommand
       targetProfile: commandOptions.targetProfile,
       targetRef: commandOptions.targetRef,
       targetProjectRef: commandOptions.targetProjectRef,
+      targetModelSelector: commandOptions.targetModelSelector,
       sourceContextJson: commandOptions.sourceContextJson,
       sourceManifestJson: commandOptions.sourceManifestJson,
       sourceOmissionsJson: commandOptions.sourceOmissionsJson,

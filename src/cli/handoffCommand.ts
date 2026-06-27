@@ -45,6 +45,7 @@ export interface HandoffPrepareCliOptions {
 	targetProfile?: string | null;
 	targetRef?: string | null;
 	targetProjectRef?: string | null;
+	targetModelSelector?: string | null;
 	sourceContextJson?: string | null;
 	sourceManifestJson?: string | null;
 	sourceOmissionsJson?: string | null;
@@ -158,6 +159,7 @@ export async function prepareHandoffForCli(
 		targetRuntimeProfile: options.targetProfile,
 		targetRef: options.targetRef,
 		targetProjectRef: options.targetProjectRef,
+		targetModelSelector: options.targetModelSelector,
 		sourceContext,
 		sourceManifest,
 		sourceOmissions,

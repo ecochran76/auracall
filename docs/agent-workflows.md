@@ -98,6 +98,11 @@ Use this when a client app needs one answer from one configured agent.
    `POST /v1/chat/completions`.
 4. Read the response body. If the run is asynchronous or detached, keep the
    response id and poll `GET /v1/responses/{response_id}` or MCP `run_status`.
+   Non-streaming chat completions also return a retryable `503` with
+   `error.type = "auracall_execution_pending"` and `Retry-After` when the
+   browser-backed run is still blocked after the bounded synchronous wait.
+   The default wait is 30 seconds; set `auracall.chatCompletionSyncTimeoutMs`
+   on a request to tune it.
 
 This is the minimum OpenAI-compatible path.
 

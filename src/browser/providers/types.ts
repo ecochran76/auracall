@@ -1,4 +1,5 @@
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
+import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
 
 export type SelectorList = readonly string[];
@@ -48,6 +49,7 @@ export interface BrowserProviderListOptions {
 	modelLabel?: string;
 	mutationAudit?: BrowserMutationAuditSink;
 	mutationSourcePrefix?: string;
+	interactionGovernor?: BrowserInteractionGovernor;
 	expectedUserIdentity?: ProviderUserIdentity | null;
 	expectedServiceAccountId?: string | null;
 	identityPreflightFallbackIdentity?: ProviderUserIdentity | null;

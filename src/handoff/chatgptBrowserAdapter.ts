@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ResolvedUserConfig } from "../config.js";
+import { resolveChatgptSemanticModelSelector } from "../config/modelSelector.js";
 import { ChatgptService } from "../browser/llmService/providers/chatgptService.js";
 import {
 	createProviderNativeHandoffTargetAdapter,
@@ -84,6 +85,7 @@ async function submitChatgptHandoffPrompt(
 		throw new Error(`ChatGPT browser handoff adapter cannot submit to ${input.provider}.`);
 	}
 	const prompt = buildChatgptHandoffPrompt(input);
+	const semanticSelection = resolveChatgptSemanticModelSelector(input.modelSelector);
 	const result = await service.runPrompt({
 		prompt,
 		attachments: input.uploadedFiles.map((file) => ({
@@ -95,6 +97,10 @@ async function submitChatgptHandoffPrompt(
 		configuredUrl: input.conversationRef,
 		conversationId: extractChatgptConversationId(input.conversationRef),
 		projectId: input.projectRef,
+		modelSelector: input.modelSelector,
+		desiredModel: semanticSelection?.desiredModel ?? null,
+		thinkingTime: semanticSelection?.thinkingTime ?? null,
+		modelStrategy: semanticSelection ? "select" : undefined,
 	});
 	const targetConversationRef =
 		normalizeString(result.url) ??

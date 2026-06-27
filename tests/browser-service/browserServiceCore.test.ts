@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import { BrowserService } from '../../packages/browser-service/src/service/browserService.js';
+import { createBrowserInteractionGovernor } from '../../packages/browser-service/src/service/interactionGovernor.js';
 import type { ResolvedBrowserConfig } from '../../packages/browser-service/src/types.js';
 import { DEFAULT_BROWSER_CONFIG } from '../../src/browser/config.js';
 
@@ -88,5 +89,31 @@ describe('BrowserService core launch port handling', () => {
         blankTabLimit: 0,
       }),
     );
+  });
+});
+
+describe('browser interaction governor', () => {
+  test('applies global spacing and action-class cooldowns before browser interactions', async () => {
+    let nowMs = 1_000;
+    const sleeps: number[] = [];
+    const governor = createBrowserInteractionGovernor({
+      maxInteractionsPerMinute: 6,
+      cooldownsByClass: {
+        'conversation-read': 120_000,
+      },
+      now: () => nowMs,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+        nowMs += ms;
+      },
+    });
+
+    await governor.beforeInteraction('conversation-read');
+    nowMs += 1_000;
+    await governor.beforeInteraction('page-refresh');
+    nowMs += 1_000;
+    await governor.beforeInteraction('conversation-read');
+
+    expect(sleeps).toEqual([9_000, 109_000]);
   });
 });

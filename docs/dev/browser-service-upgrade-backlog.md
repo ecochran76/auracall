@@ -78,7 +78,7 @@ and concrete:
   callers. Keep fail-fast `acquire(...)` for human/login/operator hard stops
   where an immediate structured busy result is more useful than waiting.
 - 2026-04-25 follow-up:
-  - Browser-service target resolution now treats managed browser profile
+- Browser-service target resolution now treats managed browser profile
     ownership as stronger authority than a selected DevTools port. If a port
     resolves to another managed browser profile, service targeting switches to
     the expected live registered profile when possible and otherwise fails
@@ -110,6 +110,21 @@ and concrete:
     run and confirmed browser-state diagnostics on `default/grok` port `38261`
     while Gemini remained registered separately on `default/gemini` port
     `45011`.
+- 2026-06-24 follow-up:
+  - Browser-service now owns a small `interactionGovernor` primitive for
+    global spacing plus action-class cooldowns before browser/provider
+    interactions.
+  - AuraCall carries that primitive through
+    `BrowserProviderListOptions.interactionGovernor`; `LlmService.buildListOptions`
+    attaches a shared ChatGPT governor from service `liveFollow` pacing config
+    so handoff/materialization/provider adapter calls reuse one boundary
+    control.
+  - ChatGPT account-mirror still keeps a helper-level fallback for non-governed
+    tests and future non-ChatGPT adapters, but production ChatGPT reads now pace
+    in the provider adapter before attach/navigation/read/recovery work.
+  - This is the bridge for an agent-browser-compatible control-plane governor:
+    AuraCall constructs the policy today, and agent-browser can take over the
+    same option contract after crossover.
 
 ## Current DOM-drift repair plan (2026-03-28)
 
@@ -1186,3 +1201,11 @@ Next:
 - Next browser-service anti-bot step:
   - broaden runtime consumers beyond browser-tools/doctor/features/setup so
     more operator flows stop before noisy retry loops, especially on Gemini
+- Interim AuraCall-side ChatGPT census:
+  - account-mirror now passively inspects retained managed ChatGPT targets for
+    visible rate-limit dialog/alert/live-region text before collection and
+    writes the profile-scoped cooldown guard when found
+  - after agent-browser crossover, move this visible-warning census down into
+    the browser service as a generic page-probe signal so host apps consume a
+    structured blocking/cooldown state instead of owning provider-local
+    `Runtime.evaluate(...)` snippets

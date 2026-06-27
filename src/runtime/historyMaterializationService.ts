@@ -2768,6 +2768,20 @@ async function reconcileConversationTarget(input: {
 	if (!shouldRefreshSnapshot(input.request)) {
 		return input.materializeConversation(input.target, input.request, input.jobId);
 	}
+	if (shouldMaterializeBeforeSnapshotRefresh(input.target, input.request)) {
+		const materialization = await input.materializeConversation(
+			input.target,
+			input.request,
+			input.jobId,
+		);
+		await input.recordConversationEvidence(
+			input.target,
+			evidenceFromMaterializationResult(materialization),
+		);
+		if (materialization.metrics.materialized > 0) {
+			return materialization;
+		}
+	}
 	let snapshotRefresh: HistoryMaterializationSnapshotRefresh;
 	try {
 		snapshotRefresh = await input.refreshConversationSnapshot(
@@ -2807,6 +2821,20 @@ async function reconcileConversationTarget(input: {
 		evidenceFromMaterializationResult(materialization),
 	);
 	return withSnapshotRefreshPhase(materialization, snapshotRefresh);
+}
+
+function shouldMaterializeBeforeSnapshotRefresh(
+	target: HistoryMaterializationTarget,
+	request: HistoryMaterializationCreateRequest,
+): boolean {
+	if (target.provider !== "chatgpt") return false;
+	if (request.reconcile !== true) return false;
+	const selectedKinds = normalizeAssetKinds(request.assetKinds);
+	return (
+		selectedKinds.includes("artifacts") ||
+		selectedKinds.includes("files") ||
+		selectedKinds.includes("media")
+	);
 }
 
 async function refreshConversationSnapshotTarget(input: {

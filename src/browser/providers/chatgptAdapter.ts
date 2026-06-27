@@ -7,6 +7,7 @@ import {
 	openChromeTarget,
 	openOrReuseChromeTarget,
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
+import type { BrowserInteractionClass } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import {
 	requireBundledServiceBaseUrl,
 	requireBundledServiceCompatibleHosts,
@@ -414,6 +415,8 @@ type ChatgptConversationLinkProbe = {
 	title?: string | null;
 	url?: string | null;
 	projectId?: string | null;
+	updatedAt?: string | null;
+	metadata?: Record<string, unknown> | null;
 };
 
 type ChatgptAuthSessionProbe = {
@@ -1046,6 +1049,7 @@ async function withChatgptBlockingSurfaceRecovery<T>(
 	};
 	const runRecoverySequence = async (match: ChatgptBlockingSurfaceMatch): Promise<void> => {
 		lastRecoveryActions = [];
+		await beforeChatgptBrowserInteraction(options?.providerOptions, "provider-recovery");
 		const primary = await recoverVisibleChatgptBlockingSurfaceWithClient(
 			client,
 			match,
@@ -1175,6 +1179,13 @@ function resolvePortFromEnv(): number | null {
 	const parsed = Number.parseInt(raw, 10);
 	if (!Number.isFinite(parsed) || parsed <= 0) return null;
 	return parsed;
+}
+
+async function beforeChatgptBrowserInteraction(
+	options: BrowserProviderListOptions | undefined,
+	kind: BrowserInteractionClass,
+): Promise<void> {
+	await options?.interactionGovernor?.beforeInteraction(kind);
 }
 
 function resolveBrowserTabPolicy(
@@ -2870,6 +2881,11 @@ export async function readChatgptConversationPayloadWithClient(
 export function normalizeChatgptConversationLinkProbes(
 	probes: readonly ChatgptConversationLinkProbe[],
 ): Conversation[] {
+	const normalizeTimestamp = (value: string | null | undefined): string | undefined => {
+		if (typeof value !== "string" || value.trim().length === 0) return undefined;
+		const timestamp = Date.parse(value);
+		return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : undefined;
+	};
 	const isGenericTitle = (value: string): boolean => {
 		const normalized = normalizeUiText(value).toLowerCase();
 		return normalized === "chatgpt" || normalized === "new chat";
@@ -2883,12 +2899,19 @@ export function normalizeChatgptConversationLinkProbes(
 		const normalizedProjectId = normalizeChatgptProjectId(probe.projectId) ?? undefined;
 		const url =
 			typeof probe.url === "string" && probe.url.trim().length > 0 ? probe.url.trim() : undefined;
+		const updatedAt = normalizeTimestamp(probe.updatedAt);
+		const metadata =
+			probe.metadata && typeof probe.metadata === "object" && !Array.isArray(probe.metadata)
+				? probe.metadata
+				: undefined;
 		const next: Conversation = {
 			id,
 			title,
 			provider: "chatgpt",
-			projectId: normalizedProjectId,
-			url,
+			...(normalizedProjectId ? { projectId: normalizedProjectId } : {}),
+			...(url ? { url } : {}),
+			...(updatedAt ? { updatedAt } : {}),
+			...(metadata ? { metadata } : {}),
 		};
 		const previous = conversations.get(id);
 		if (!previous) {
@@ -2902,16 +2925,35 @@ export function normalizeChatgptConversationLinkProbes(
 				? true
 				: isGenericTitle(previousTitle) && nextTitle.length > 0 && !isGenericTitle(nextTitle)
 					? true
-					: previousTitle.length > 0 &&
-							nextTitle.length > 0 &&
-							previousTitle !== nextTitle &&
-							previousTitle.startsWith(nextTitle)
-						? true
-						: Boolean(!previous.url && next.url) || Boolean(!previous.projectId && next.projectId);
+						: previousTitle.length > 0 &&
+								nextTitle.length > 0 &&
+								previousTitle !== nextTitle &&
+								previousTitle.startsWith(nextTitle)
+							? true
+							: Boolean(!previous.updatedAt && next.updatedAt) ||
+								Boolean(!previous.metadata && next.metadata) ||
+								Boolean(!previous.url && next.url) ||
+								Boolean(!previous.projectId && next.projectId);
 		if (useNext) {
 			conversations.set(id, {
 				...previous,
 				...next,
+				...(next.url ? { url: next.url } : previous.url ? { url: previous.url } : {}),
+				...(next.projectId
+					? { projectId: next.projectId }
+					: previous.projectId
+						? { projectId: previous.projectId }
+						: {}),
+				...(next.updatedAt
+					? { updatedAt: next.updatedAt }
+					: previous.updatedAt
+						? { updatedAt: previous.updatedAt }
+						: {}),
+				...(next.metadata
+					? { metadata: next.metadata }
+					: previous.metadata
+						? { metadata: previous.metadata }
+						: {}),
 			});
 		}
 	}
@@ -3557,7 +3599,7 @@ export function buildChatgptAuthSessionIdentityExpression(): string {
       try {
         controller?.abort();
       } catch {}
-    }, 2500);
+    }, 8000);
     try {
       const response = await fetch('/api/auth/session', {
         credentials: 'include',
@@ -4762,7 +4804,7 @@ async function waitForCreateProjectDialogReady(
 }
 
 async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
-	for (let attempt = 0; attempt < 3; attempt += 1) {
+	for (let attempt = 0; attempt < 5; attempt += 1) {
 		const authSessionResult = await client.Runtime.evaluate({
 			expression: buildChatgptAuthSessionIdentityExpression(),
 			awaitPromise: true,
@@ -4774,8 +4816,8 @@ async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUs
 		if (authIdentity) {
 			return authIdentity;
 		}
-		if (attempt < 2) {
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+		if (attempt < 4) {
+			await new Promise((resolve) => setTimeout(resolve, 2000));
 		}
 	}
 
@@ -6089,6 +6131,77 @@ async function scrapeChatgptConversations(
           return null;
         }
       };
+      const normalizeTimestamp = (value) => {
+        const text = String(value || '').trim();
+        if (!text) return null;
+        const timestamp = Date.parse(text);
+        return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+      };
+      const readConversationHistoryCache = () => {
+        const entries = new Map();
+        const addItem = (item, sourceKey) => {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+          const id = normalize(item.id || item.conversation_id || item.conversationId);
+          if (!id) return;
+          const updatedAt =
+            normalizeTimestamp(item.update_time) ||
+            normalizeTimestamp(item.updated_at) ||
+            normalizeTimestamp(item.updatedAt) ||
+            normalizeTimestamp(item.create_time) ||
+            normalizeTimestamp(item.created_at) ||
+            normalizeTimestamp(item.createdAt);
+          if (!updatedAt) return;
+          const projectId = normalizeProjectId(
+            item.conversation_template_id ||
+              item.gizmo_id ||
+              item.gizmoId ||
+              item.project_id ||
+              item.projectId ||
+              item.gizmo?.gizmo?.id ||
+              item.gizmo?.id,
+          );
+          const previous = entries.get(id);
+          if (previous && Date.parse(previous.updatedAt) >= Date.parse(updatedAt)) return;
+          entries.set(id, {
+            updatedAt,
+            createdAt: normalizeTimestamp(item.create_time || item.created_at || item.createdAt),
+            projectId,
+            sourceKey,
+          });
+        };
+        const visit = (value, sourceKey, depth = 0) => {
+          if (!value || typeof value !== 'object' || depth > 5) return;
+          if (Array.isArray(value)) {
+            for (const item of value) visit(item, sourceKey, depth + 1);
+            return;
+          }
+          addItem(value, sourceKey);
+          const pages = value.pages;
+          if (Array.isArray(pages)) {
+            for (const page of pages) visit(page, sourceKey, depth + 1);
+          }
+          const items = value.items;
+          if (Array.isArray(items)) {
+            for (const item of items) visit(item, sourceKey, depth + 1);
+          }
+          const innerValue = value.value;
+          if (innerValue && typeof innerValue === 'object') {
+            visit(innerValue, sourceKey, depth + 1);
+          }
+        };
+        try {
+          for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index) || '';
+            if (!/conversation-history|snorlax-history/i.test(key)) continue;
+            const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+            visit(parsed, key);
+          }
+        } catch {
+          return entries;
+        }
+        return entries;
+      };
+      const conversationHistoryCache = readConversationHistoryCache();
       const probes = new Map();
       const pushProbe = (probe) => {
         if (!probe || !probe.id) return;
@@ -6103,7 +6216,9 @@ async function scrapeChatgptConversations(
         const useNext =
           (!previousTitle || previousTitle === previous.id) && nextTitle.length > 0
             ? true
-            : Boolean(!previous.url && probe.url) || Boolean(!previous.projectId && probe.projectId);
+            : Boolean(!previous.updatedAt && probe.updatedAt) ||
+                Boolean(!previous.url && probe.url) ||
+                Boolean(!previous.projectId && probe.projectId);
         if (useNext) {
           probes.set(probe.id, { ...previous, ...probe });
         }
@@ -6157,6 +6272,7 @@ async function scrapeChatgptConversations(
       const readAnchorProbe = (anchor) => {
         const info = parse(anchor.getAttribute('href') || '');
         if (!info) return null;
+        const cached = conversationHistoryCache.get(info.id) || null;
         const rowLabel = findRowButtonLabel(anchor);
         const rowTitle = findRowTitle(anchor);
         const titleCandidate =
@@ -6172,6 +6288,14 @@ async function scrapeChatgptConversations(
         return {
           ...info,
           title,
+          updatedAt: cached?.updatedAt || null,
+          metadata: cached
+            ? {
+                chatgptHistoryCacheSource: cached.sourceKey,
+                chatgptHistoryCacheCreatedAt: cached.createdAt || null,
+                chatgptHistoryCacheProjectId: cached.projectId || null,
+              }
+            : null,
         };
       };
 
@@ -9989,6 +10113,7 @@ export function createChatgptAdapter(): Pick<
 		async getUserIdentity(
 			options?: BrowserProviderListOptions,
 		): Promise<ProviderUserIdentity | null> {
+			await beforeChatgptBrowserInteraction(options, "page-refresh");
 			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
@@ -10001,6 +10126,7 @@ export function createChatgptAdapter(): Pick<
 			}
 		},
 		async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
+			await beforeChatgptBrowserInteraction(options, "page-refresh");
 			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
@@ -10015,6 +10141,7 @@ export function createChatgptAdapter(): Pick<
 		},
 		async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
 			const attempt = async (currentOptions?: BrowserProviderListOptions): Promise<Project[]> => {
+				await beforeChatgptBrowserInteraction(currentOptions, "page-refresh");
 				const connection = await connectToChatgptTab(
 					currentOptions,
 					currentOptions?.configuredUrl ?? CHATGPT_HOME_URL,
@@ -10061,6 +10188,7 @@ export function createChatgptAdapter(): Pick<
 			const attempt = async (
 				currentOptions?: BrowserProviderListOptions,
 			): Promise<Conversation[]> => {
+				await beforeChatgptBrowserInteraction(currentOptions, "conversation-read");
 				const targetUrl = normalizedProjectId
 					? resolveChatgptProjectUrl(normalizedProjectId)
 					: (currentOptions?.configuredUrl ?? CHATGPT_HOME_URL);
@@ -10100,6 +10228,7 @@ export function createChatgptAdapter(): Pick<
 			projectId?: string,
 			options?: BrowserProviderListOptions,
 		): Promise<ConversationContext> {
+			await beforeChatgptBrowserInteraction(options, "conversation-read");
 			const normalizedProjectId = normalizeChatgptProjectId(projectId);
 			const debugContext = resolveChatgptRecoveryDebugContext(
 				options,
@@ -10136,6 +10265,7 @@ export function createChatgptAdapter(): Pick<
 			conversationId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<ConversationArtifact[]> {
+			await beforeChatgptBrowserInteraction(options, "conversation-read");
 			const normalizedConversationId = normalizeChatgptConversationId(conversationId);
 			if (!normalizedConversationId) {
 				throw new Error("ChatGPT active artifact read requires a conversation id.");
@@ -10187,6 +10317,7 @@ export function createChatgptAdapter(): Pick<
 			conversationId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<FileRef[]> {
+			await beforeChatgptBrowserInteraction(options, "conversation-read");
 			const normalizedProjectId = normalizeChatgptProjectId(options?.projectId);
 			const debugContext = resolveChatgptRecoveryDebugContext(
 				options,
@@ -10237,6 +10368,7 @@ export function createChatgptAdapter(): Pick<
 			options?: BrowserProviderListOptions,
 			file?: FileRef,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "conversation-read");
 			const normalizedProjectId = normalizeChatgptProjectId(options?.projectId);
 			const debugContext = resolveChatgptRecoveryDebugContext(
 				options,
@@ -10269,6 +10401,7 @@ export function createChatgptAdapter(): Pick<
 			}
 		},
 		async listAccountFiles(options?: BrowserProviderListOptions): Promise<FileRef[]> {
+			await beforeChatgptBrowserInteraction(options, "page-refresh");
 			const connection = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
 			const { client } = connection;
 			try {
@@ -10290,6 +10423,7 @@ export function createChatgptAdapter(): Pick<
 			options?: BrowserProviderListOptions,
 			file?: FileRef,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "page-refresh");
 			const debugContext = resolveChatgptRecoveryDebugContext(
 				options,
 				"chatgpt-download-account-library-file",
@@ -10324,6 +10458,7 @@ export function createChatgptAdapter(): Pick<
 			projectId?: string,
 			options?: BrowserProviderListOptions,
 		): Promise<FileRef | null> {
+			await beforeChatgptBrowserInteraction(options, "conversation-read");
 			const normalizedProjectId = normalizeChatgptProjectId(projectId);
 			const debugContext = resolveChatgptRecoveryDebugContext(
 				options,
@@ -10362,6 +10497,7 @@ export function createChatgptAdapter(): Pick<
 			projectId?: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const normalizedProjectId = normalizeChatgptProjectId(projectId);
 			const connection = await connectToChatgptTab(
 				options,
@@ -10413,6 +10549,7 @@ export function createChatgptAdapter(): Pick<
 			projectId?: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const normalizedProjectId = normalizeChatgptProjectId(projectId);
 			const connection = await connectToChatgptTab(
 				options,
@@ -10427,6 +10564,7 @@ export function createChatgptAdapter(): Pick<
 			}
 		},
 		async openCreateProjectModal(options?: BrowserProviderListOptions): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
@@ -10448,6 +10586,7 @@ export function createChatgptAdapter(): Pick<
 			},
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
@@ -10462,6 +10601,7 @@ export function createChatgptAdapter(): Pick<
 			}
 		},
 		async clickCreateProjectConfirm(options?: BrowserProviderListOptions): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
@@ -10484,6 +10624,7 @@ export function createChatgptAdapter(): Pick<
 			},
 			options?: BrowserProviderListOptions,
 		): Promise<Project | null> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
@@ -10592,6 +10733,7 @@ export function createChatgptAdapter(): Pick<
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
 			if (filePaths.length === 0) return;
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptProjectSourcesUrl(projectId),
@@ -10608,6 +10750,7 @@ export function createChatgptAdapter(): Pick<
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<FileRef[]> {
+			await beforeChatgptBrowserInteraction(options, "renavigation");
 			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptProjectSourcesUrl(projectId),
@@ -10632,6 +10775,7 @@ export function createChatgptAdapter(): Pick<
 			destPath: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "renavigation");
 			const debugContext = resolveChatgptRecoveryDebugContext(
 				options,
 				"chatgpt-download-project-file",
@@ -10664,6 +10808,7 @@ export function createChatgptAdapter(): Pick<
 			fileName: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptProjectSourcesUrl(projectId),
@@ -10759,6 +10904,7 @@ export function createChatgptAdapter(): Pick<
 			options?: BrowserProviderListOptions,
 			modelLabel?: string,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			if (typeof modelLabel === "string" && modelLabel.trim().length > 0) {
 				throw new Error("ChatGPT project instructions model selection is not supported");
 			}
@@ -10776,6 +10922,7 @@ export function createChatgptAdapter(): Pick<
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<{ text: string; model?: string | null }> {
+			await beforeChatgptBrowserInteraction(options, "renavigation");
 			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
 			const { client } = connection;
 			try {
@@ -10793,6 +10940,7 @@ export function createChatgptAdapter(): Pick<
 			newTitle: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
 			const { client } = connection;
 			try {
@@ -10807,6 +10955,7 @@ export function createChatgptAdapter(): Pick<
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
 			const { client } = connection;
 			try {
@@ -10858,6 +11007,7 @@ export function createChatgptAdapter(): Pick<
 			projectId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<void> {
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
 			const connection = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
 			const { client } = connection;
 			try {

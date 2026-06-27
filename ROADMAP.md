@@ -9,6 +9,12 @@ Lane: P01
 
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
+- Planned live-follow supporting plan:
+  [docs/dev/plans/0145-2026-06-27-live-follow-reverse-mtime-frontier.md](docs/dev/plans/0145-2026-06-27-live-follow-reverse-mtime-frontier.md)
+- Completed live-follow supporting plan:
+  [docs/dev/plans/0146-2026-06-27-live-follow-detail-completeness-guard.md](docs/dev/plans/0146-2026-06-27-live-follow-detail-completeness-guard.md)
+- Completed supporting handoff plan:
+  [docs/dev/plans/0144-2026-06-26-handoff-attachment-zip-packaging.md](docs/dev/plans/0144-2026-06-26-handoff-attachment-zip-packaging.md)
 - Latest completed live-follow supporting plan:
   [docs/dev/plans/0140-2026-06-10-large-chat-resumable-context-sync.md](docs/dev/plans/0140-2026-06-10-large-chat-resumable-context-sync.md)
 - Completed browser-control cutover proof:

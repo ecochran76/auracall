@@ -627,6 +627,7 @@ describe("normalizeChatgptAuthSessionIdentity", () => {
 
 		expect(expression).toContain("AbortController");
 		expect(expression).toContain("controller?.abort()");
+		expect(expression).toContain("}, 8000)");
 		expect(expression).toContain("signal: controller?.signal");
 	});
 
@@ -1004,6 +1005,58 @@ describe("normalizeChatgptConversationLinkProbes", () => {
 				provider: "chatgpt",
 				projectId: "g-p-69c851be8cc88191afe109bea1b2a28d",
 				url: "https://chatgpt.com/g/g-p-69c851be8cc88191afe109bea1b2a28d-oracle/c/69c93212-f180-8330-815b-5f831fc395e6",
+			},
+		]);
+	});
+
+	test("preserves cached conversation history timestamps from link probes", () => {
+		expect(
+			normalizeChatgptConversationLinkProbes([
+				{
+					id: "6a3f1652-2490-83ea-add0-0a900e6d55bc",
+					title: "Handoff Preview ChatGPT",
+					updatedAt: "2026-06-27T00:17:47.211915Z",
+					metadata: {
+						chatgptHistoryCacheSource: "cache/user/account/conversation-history-without-projects",
+						chatgptHistoryCacheCreatedAt: "2026-06-27T00:16:18.808314Z",
+					},
+				},
+			]),
+		).toEqual([
+			{
+				id: "6a3f1652-2490-83ea-add0-0a900e6d55bc",
+				title: "Handoff Preview ChatGPT",
+				provider: "chatgpt",
+				updatedAt: "2026-06-27T00:17:47.211Z",
+				metadata: {
+					chatgptHistoryCacheSource: "cache/user/account/conversation-history-without-projects",
+					chatgptHistoryCacheCreatedAt: "2026-06-27T00:16:18.808314Z",
+				},
+			},
+		]);
+	});
+
+	test("prefers a timestamped duplicate over an otherwise complete untimestamped probe", () => {
+		expect(
+			normalizeChatgptConversationLinkProbes([
+				{
+					id: "6a3f1652-2490-83ea-add0-0a900e6d55bc",
+					title: "Handoff Preview ChatGPT",
+					url: "https://chatgpt.com/c/6a3f1652-2490-83ea-add0-0a900e6d55bc",
+				},
+				{
+					id: "6a3f1652-2490-83ea-add0-0a900e6d55bc",
+					title: "Handoff Preview ChatGPT",
+					updatedAt: "2026-06-27T00:17:47.211915Z",
+				},
+			]),
+		).toEqual([
+			{
+				id: "6a3f1652-2490-83ea-add0-0a900e6d55bc",
+				title: "Handoff Preview ChatGPT",
+				provider: "chatgpt",
+				url: "https://chatgpt.com/c/6a3f1652-2490-83ea-add0-0a900e6d55bc",
+				updatedAt: "2026-06-27T00:17:47.211Z",
 			},
 		]);
 	});

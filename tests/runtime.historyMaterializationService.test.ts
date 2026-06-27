@@ -4496,6 +4496,176 @@ describe("history materialization service", () => {
 		});
 	});
 
+	it("tries ChatGPT reconciliation materialization before live snapshot refresh", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-history-materialize-chatgpt-cache-first-"),
+		);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		let scheduled: (() => Promise<void>) | undefined;
+		const readCatalog = vi.fn(async () => ({
+			object: "account_mirror_catalog" as const,
+			generatedAt: "2026-05-24T02:10:00.000Z",
+			kind: "all" as const,
+			limit: 500,
+			entries: [
+				{
+					provider: "chatgpt" as const,
+					runtimeProfileId: "wsl-chrome-3",
+					browserProfileId: "wsl-chrome-3",
+					boundIdentityKey: "eric.cochran@soylei.com",
+					status: "eligible" as const,
+					reason: "eligible" as const,
+					mirrorCompleteness: {
+						state: "in_progress" as const,
+						summary: "Progressive backfill.",
+						remainingDetailSurfaces: { projects: 0, conversations: 1, total: 1 },
+						signals: {
+							projectsTruncated: false,
+							conversationsTruncated: true,
+							attachmentInventoryTruncated: true,
+							attachmentCursorPresent: true,
+						},
+					},
+					counts: {
+						projects: 0,
+						conversations: 1,
+						artifacts: 1,
+						files: 0,
+						media: 0,
+					},
+					manifests: {
+						projects: [],
+						conversations: [
+							{
+								id: "chatgpt_missing_assets",
+								title: "Missing local ChatGPT asset",
+								provider: "chatgpt" as const,
+								cachedArtifactCount: 1,
+								cachedFileCount: 0,
+								conversationFreshness: {
+									object: "account_mirror_conversation_freshness",
+									state: "missing_assets",
+									assetCompleteness: "partial",
+									assetCounts: { known: 1, local: 0, missingLocal: 1 },
+								},
+							},
+						],
+						artifacts: [
+							{
+								id: "artifact_chatgpt_missing",
+								title: "Cached download button artifact",
+								provider: "chatgpt" as const,
+								conversationId: "chatgpt_missing_assets",
+							},
+						],
+						files: [],
+						media: [],
+					},
+				},
+			],
+			metrics: {
+				targets: 1,
+				projects: 0,
+				conversations: 1,
+				artifacts: 1,
+				files: 0,
+				media: 0,
+			},
+		}));
+		const refreshConversationSnapshot = vi.fn(async () => {
+			throw new Error(
+				"ChatGPT rate limit detected while readConversationContext; cooling down until 2026-05-24T02:25:00.000Z. Too many requests.",
+			);
+		});
+		const recordConversationEvidence = vi.fn(async () => undefined);
+		const materializeConversation = vi.fn(
+			async (target): Promise<HistoryMaterializationResult> => ({
+				object: "history_materialization_result",
+				generatedAt: "2026-05-24T02:10:01.000Z",
+				status: "materialized",
+				target,
+				source: { type: "reconciliation", provider: "chatgpt" },
+				manifestPaths: [`/tmp/${target.conversationId}/artifact-fetch-manifest.json`],
+				entries: [
+					{
+						kind: "artifact",
+						providerId: "artifact_chatgpt_missing",
+						title: "Cached download button artifact",
+						status: "materialized",
+						localPath: `/tmp/${target.conversationId}/artifact.md`,
+						remoteUrl: null,
+						cacheKey: `chatgpt:${target.conversationId}`,
+						checksumSha256: "cachefirst123",
+						mimeType: "text/markdown",
+						size: 12,
+						materializationMethod: "download-button",
+						reason: null,
+						archiveItemId: null,
+						assetRoute: null,
+					},
+				],
+				archiveItems: [],
+				metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+				message: "Recovered one cached ChatGPT asset.",
+			}),
+		);
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog,
+				readItem: vi.fn(),
+			},
+			generateId: () => "hmj_chatgpt_cache_first_1",
+			now: sequenceNow([
+				"2026-05-24T02:10:00.000Z",
+				"2026-05-24T02:10:01.000Z",
+				"2026-05-24T02:10:02.000Z",
+			]),
+			schedule: (work) => {
+				scheduled = work;
+			},
+			refreshConversationSnapshot,
+			recordConversationEvidence,
+			materializeConversation,
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			runtimeProfile: "wsl-chrome-3",
+			reconcile: true,
+			refreshSnapshot: true,
+			assetKinds: ["all"],
+			maxItems: 1,
+		});
+		if (!scheduled) throw new Error("Expected job to be scheduled.");
+		await scheduled();
+
+		expect(materializeConversation).toHaveBeenCalledWith(
+			expect.objectContaining({ conversationId: "chatgpt_missing_assets" }),
+			expect.objectContaining({ refreshSnapshot: true }),
+			"hmj_chatgpt_cache_first_1",
+		);
+		expect(refreshConversationSnapshot).not.toHaveBeenCalled();
+		expect(recordConversationEvidence).toHaveBeenCalledWith(
+			expect.objectContaining({ conversationId: "chatgpt_missing_assets" }),
+			expect.objectContaining({
+				manifestObservedAt: "2026-05-24T02:10:01.000Z",
+				materializedAt: "2026-05-24T02:10:01.000Z",
+				assetCompleteness: "complete",
+			}),
+		);
+		await expect(service.readJob("hmj_chatgpt_cache_first_1")).resolves.toMatchObject({
+			status: "succeeded",
+			result: {
+				metrics: {
+					conversations: 1,
+					materialized: 1,
+				},
+				snapshotRefreshes: [],
+			},
+		});
+	});
+
 	it("honors selected conversation id order so terminal misses do not hide behind cached matches", async () => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-history-materialize-selected-order-"),

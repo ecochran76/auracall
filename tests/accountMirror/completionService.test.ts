@@ -1354,6 +1354,38 @@ describe('account mirror completion service', () => {
     }));
   });
 
+  test('uses a wider collector timeout for ChatGPT steady-follow completions', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      generateId: () => 'acctmirror_chatgpt_steady_follow_timeout',
+    });
+
+    service.start({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      maxPasses: 1,
+      sweepMode: 'steady_follow',
+      materializationPolicy: 'metadata_only',
+    });
+
+    await waitFor(() => service.read('acctmirror_chatgpt_steady_follow_timeout')?.status === 'completed');
+
+    expect(requestRefresh).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      sweepMode: 'steady_follow',
+      collectorTimeoutMs: 900_000,
+    }));
+  });
+
   test('uses a wider collector timeout for Gemini steady-follow completions', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const service = createAccountMirrorCompletionService({
@@ -1974,6 +2006,7 @@ describe('account mirror completion service', () => {
       explicitRefresh: true,
       ignoreMinimumInterval: true,
       queueTimeoutMs: 0,
+      collectorTimeoutMs: 900_000,
     });
     expect(service.read('acctmirror_completion_test')).toMatchObject({
       status: 'completed',

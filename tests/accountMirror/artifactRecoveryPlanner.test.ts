@@ -1055,6 +1055,7 @@ function statusEntry(input: {
 			maxPageReadsPerCycle: 0,
 			maxConversationRowsPerCycle: 0,
 			maxArtifactRowsPerCycle: 0,
+			freshFrontierThreshold: 3,
 			conversationReadCooldownMs: 0,
 			pageRefreshCooldownMs: 0,
 			renavigationCooldownMs: 0,

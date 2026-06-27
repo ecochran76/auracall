@@ -96,9 +96,11 @@ Implemented:
   for local client agents without storing secrets in the repo.
 - `/v1/chat/completions` is implemented for non-streaming calls. It reuses the
   same execution authorization, agent shorthand, response drain, and stored-run
-  readback as `/v1/responses`, but blocks for the one created run before
-  returning so ordinary OpenAI-style clients receive content in the initial
-  response.
+  readback as `/v1/responses`, but blocks for the one created run only inside a
+  bounded synchronous wait window. If browser-backed execution is still blocked,
+  the adapter returns retryable `503` metadata with the persisted response id so
+  client apps can poll `/v1/responses/{response_id}` instead of tying up their
+  own workers indefinitely.
 - `POST /v1/projects/ensure` and `POST /v1/response-batches` combine into the
   first documented deterministic setup plus stochastic execution workflow for
   external agents.

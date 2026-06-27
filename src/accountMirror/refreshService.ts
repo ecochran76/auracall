@@ -1,51 +1,62 @@
-import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { getAuracallHomeDir } from "../auracallHome.js";
-import type { ResolvedUserConfig } from "../config.js";
-import { readChatgptRateLimitGuardState } from "../browser/chatgptRateLimitGuard.js";
-import type { ConversationArtifact, FileRef } from "../browser/providers/domain.js";
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
-import { listChromeTargets } from "../../packages/browser-service/src/chromeLifecycle.js";
+import path from "node:path";
+import {
+	connectToChromeTarget,
+	listChromeTargets,
+} from "../../packages/browser-service/src/chromeLifecycle.js";
 import { findChromePidUsingUserDataDir } from "../../packages/browser-service/src/processCheck.js";
 import {
-	createFileBackedBrowserOperationDispatcher,
-	formatBrowserOperationBusyResult,
 	type BrowserOperationAcquiredResult,
 	type BrowserOperationDispatcher,
 	type BrowserOperationRecord,
+	createFileBackedBrowserOperationDispatcher,
+	formatBrowserOperationBusyResult,
 } from "../../packages/browser-service/src/service/operationDispatcher.js";
 import { listInstancesWithLiveness } from "../../packages/browser-service/src/service/stateRegistry.js";
+import { getAuracallHomeDir } from "../auracallHome.js";
 import {
-	recordBrowserOperationQueueObservation,
+	extractChatgptRateLimitSummary,
+	isChatgptRateLimitMessage,
+	readChatgptRateLimitGuardState,
+	resolveChatgptRateLimitCooldownMs,
+	writeChatgptRateLimitGuardState,
+} from "../browser/chatgptRateLimitGuard.js";
+import { recordDomDriftObservation } from "../browser/domDriftObservations.js";
+import {
 	type BrowserOperationQueueObservation,
+	recordBrowserOperationQueueObservation,
 	summarizeBrowserOperationQueueObservationsByKey,
 } from "../browser/operationQueueObservations.js";
-import { recordDomDriftObservation } from "../browser/domDriftObservations.js";
-import type { AccountMirrorProvider } from "./politePolicy.js";
+import type { ConversationArtifact, FileRef } from "../browser/providers/domain.js";
+import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
+import type { ResolvedUserConfig } from "../config.js";
+import {
+	type AccountMirrorPersistence,
+	createAccountMirrorPersistence,
+} from "./cachePersistence.js";
+import {
+	AccountMirrorIdentityMismatchError,
+	type AccountMirrorMetadataCollector,
+	type AccountMirrorMetadataCollectorResult,
+	type AccountMirrorVerifiedIdentityEvidence,
+	createChatgptAccountMirrorMetadataCollector,
+} from "./chatgptMetadataCollector.js";
+import { deriveAccountMirrorConversationFreshness } from "./conversationFreshness.js";
+import { buildConversationFreshnessSummaryMap } from "./conversationFreshnessFrontier.js";
 import type {
+	AccountMirrorProvider,
 	AccountMirrorProviderGuardKind,
 	AccountMirrorProviderGuardState,
 } from "./politePolicy.js";
 import type {
-	AccountMirrorMetadataEvidence,
 	AccountMirrorMetadataCounts,
+	AccountMirrorMetadataEvidence,
 	AccountMirrorStatusEntry,
 	AccountMirrorStatusRegistry,
-	AccountMirrorStatusSummary,
 	AccountMirrorStatusState,
+	AccountMirrorStatusSummary,
 } from "./statusRegistry.js";
 import { createAccountMirrorStatusRegistry } from "./statusRegistry.js";
-import {
-	AccountMirrorIdentityMismatchError,
-	createChatgptAccountMirrorMetadataCollector,
-	type AccountMirrorMetadataCollector,
-	type AccountMirrorMetadataCollectorResult,
-	type AccountMirrorVerifiedIdentityEvidence,
-} from "./chatgptMetadataCollector.js";
-import {
-	createAccountMirrorPersistence,
-	type AccountMirrorPersistence,
-} from "./cachePersistence.js";
 
 export interface AccountMirrorRefreshRequest {
 	provider?: AccountMirrorProvider | null;
@@ -353,6 +364,12 @@ export function createAccountMirrorRefreshService(input: {
 				if (providerGuard) {
 					throw createProviderGuardError(providerGuard);
 				}
+				const previousConversationFreshness = await readCachedConversationFreshnessSummaries({
+					persistence,
+					provider,
+					boundIdentityKey: target.expectedIdentityKey ?? null,
+					limit: target.limits.maxConversationRowsPerCycle,
+				});
 				collection = await withTimeout(
 					metadataCollector.collect({
 						provider,
@@ -363,12 +380,14 @@ export function createAccountMirrorRefreshService(input: {
 							maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
 							maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
 							maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
+							freshFrontierThreshold: target.limits.freshFrontierThreshold,
 							maxBrowserInteractionsPerMinute: target.limits.maxBrowserInteractionsPerMinute,
 							conversationReadCooldownMs: target.limits.conversationReadCooldownMs,
 							pageRefreshCooldownMs: target.limits.pageRefreshCooldownMs,
 							renavigationCooldownMs: target.limits.renavigationCooldownMs,
 						},
 						previousEvidence: target.metadataEvidence,
+						previousConversationFreshness,
 						onIdentityVerified: (evidence) => {
 							verifiedIdentityRef.current = evidence;
 						},
@@ -615,8 +634,12 @@ export function createAccountMirrorRefreshService(input: {
 						lastFailureAtMs: completedAt.getTime(),
 						lastCompletedAtMs: completedAt.getTime(),
 						consecutiveFailureCount: failureCount,
-						providerCooldownUntilMs: providerCooldown?.providerCooldownUntilMs,
-						providerHardStopAtMs: providerGuard ? completedAt.getTime() : undefined,
+						providerCooldownUntilMs:
+							providerGuard?.state === "cooldown"
+								? providerGuard.cooldownUntilMs
+								: providerCooldown?.providerCooldownUntilMs,
+						providerHardStopAtMs:
+							providerGuard?.state === "manual_clear_required" ? completedAt.getTime() : undefined,
 						providerGuard: providerGuard ?? providerCooldown?.providerGuard,
 						metadataEvidence: failureMetadataEvidence,
 					},
@@ -664,8 +687,12 @@ export function createAccountMirrorRefreshService(input: {
 						lastDispatcherKey: acquired.operation.key,
 						lastDispatcherOperationId: acquired.operation.id,
 						consecutiveFailureCount: failureCount,
-						providerCooldownUntilMs: providerCooldown?.providerCooldownUntilMs,
-						providerHardStopAtMs: providerGuard ? completedAt.getTime() : undefined,
+						providerCooldownUntilMs:
+							providerGuard?.state === "cooldown"
+								? providerGuard.cooldownUntilMs
+								: providerCooldown?.providerCooldownUntilMs,
+						providerHardStopAtMs:
+							providerGuard?.state === "manual_clear_required" ? completedAt.getTime() : undefined,
 						providerGuard: providerGuard ?? providerCooldown?.providerGuard,
 						metadataCounts: target.metadataCounts,
 						metadataEvidence: failureMetadataEvidence,
@@ -686,13 +713,20 @@ export function createAccountMirrorRefreshService(input: {
 					);
 				}
 				if (providerGuard) {
+					const cooldownUntilMs =
+						providerGuard.state === "cooldown" ? providerGuard.cooldownUntilMs : null;
 					throw new AccountMirrorRefreshError(
 						409,
 						"account_mirror_provider_guard",
-						`${providerGuard.summary} Manual clearance is required before ${provider}/${runtimeProfileId} live follow can continue.`,
+						providerGuard.state === "cooldown" && cooldownUntilMs
+							? `${providerGuard.summary} Automation is delayed until ${new Date(
+									cooldownUntilMs,
+								).toISOString()} before ${provider}/${runtimeProfileId} live follow can continue.`
+							: `${providerGuard.summary} Manual clearance is required before ${provider}/${runtimeProfileId} live follow can continue.`,
 						{
 							provider,
 							runtimeProfileId,
+							providerCooldownUntilMs: cooldownUntilMs,
 							providerGuard,
 						},
 					);
@@ -759,6 +793,179 @@ function createVerifiedIdentityRepairState(input: {
 		source: input.verifiedIdentity.detectedIdentitySource,
 		requestId: input.requestId,
 	};
+}
+
+async function readCachedConversationFreshnessSummaries(input: {
+	persistence: AccountMirrorPersistence;
+	provider: AccountMirrorProvider;
+	boundIdentityKey: string | null;
+	limit: number;
+}) {
+	const existing = await input.persistence
+		.readCatalog({
+			provider: input.provider,
+			boundIdentityKey: input.boundIdentityKey,
+			limit: Math.max(1, Math.floor(input.limit || 10_000)),
+		})
+		.catch(() => null);
+	const conversations = existing?.conversations ?? [];
+	if (!conversations.length) {
+		return buildConversationFreshnessSummaryMap(conversations);
+	}
+	const hydrated = await Promise.all(
+		conversations.map(async (conversation, index) => {
+			const contextEntry = await input.persistence
+				.readConversationContextEntry?.({
+					provider: input.provider,
+					boundIdentityKey: input.boundIdentityKey,
+					conversationId: conversation.id,
+				})
+				.catch(() => null);
+			const context = contextEntry?.context ?? null;
+			const freshnessItem = withProviderFreshnessObservedAt(
+				stripCachedConversationFreshness(conversation),
+			);
+			const freshness = deriveAccountMirrorConversationFreshness({
+				conversationId: conversation.id,
+				item: freshnessItem,
+				indexRank: index,
+				target: {
+					lastCompletedAt: null,
+					lastSuccessAt: null,
+					reason: null,
+					providerGuard: null,
+					mirrorCompleteness: null,
+				},
+				detail: context
+					? {
+							exists: true,
+							observedAt: contextEntry?.fetchedAt ?? null,
+							messageCount: context.messages.length,
+							fileCount: context.files?.length ?? 0,
+							artifactCount: context.artifacts?.length ?? 0,
+							sourceCount: context.sources?.length ?? 0,
+						}
+					: {
+							exists: false,
+							observedAt: null,
+							messageCount: null,
+							fileCount: null,
+							artifactCount: null,
+							sourceCount: null,
+						},
+				assets: collectCachedConversationAssets(conversation.id, {
+					artifacts: existing?.artifacts ?? [],
+					files: existing?.files ?? [],
+					media: existing?.media ?? [],
+					context,
+				}),
+			});
+			return {
+				...conversation,
+				conversationFreshness: freshness,
+			};
+		}),
+	);
+	return buildConversationFreshnessSummaryMap(hydrated);
+}
+
+function stripCachedConversationFreshness<
+	T extends {
+		metadata?: Record<string, unknown>;
+		conversationFreshness?: unknown;
+		freshness?: unknown;
+	},
+>(conversation: T): T {
+	const {
+		conversationFreshness: _conversationFreshness,
+		freshness: _freshness,
+		...rest
+	} = conversation;
+	const restRecord = rest as Omit<T, "conversationFreshness" | "freshness"> & {
+		metadata?: unknown;
+	};
+	const metadata: Record<string, unknown> = isRecord(restRecord.metadata)
+		? restRecord.metadata
+		: {};
+	const {
+		conversationFreshness: _metadataConversationFreshness,
+		freshness: _metadataFreshness,
+		...cleanMetadata
+	} = metadata;
+	return {
+		...rest,
+		metadata: cleanMetadata,
+	} as T;
+}
+
+function withProviderFreshnessObservedAt<
+	T extends { updatedAt?: string; metadata?: Record<string, unknown> },
+>(conversation: T): T {
+	const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+	const remoteMtime =
+		normalizeIsoTimestamp(conversation.updatedAt) ??
+		normalizeIsoTimestamp(readStringField(metadata.updatedAt)) ??
+		normalizeIsoTimestamp(readStringField(metadata.lastMessageAt)) ??
+		normalizeIsoTimestamp(readStringField(metadata.lastActivityAt));
+	if (!remoteMtime) {
+		return conversation;
+	}
+	return {
+		...conversation,
+		indexObservedAt: remoteMtime,
+		metadata: {
+			...metadata,
+			indexObservedAt: remoteMtime,
+		},
+	} as T;
+}
+
+function collectCachedConversationAssets(
+	conversationId: string,
+	input: {
+		artifacts: readonly unknown[];
+		files: readonly unknown[];
+		media: readonly unknown[];
+		context: unknown;
+	},
+): unknown[] {
+	const assets: unknown[] = [];
+	for (const item of [...input.artifacts, ...input.files, ...input.media]) {
+		if (readConversationId(item) === conversationId) {
+			assets.push(item);
+		}
+	}
+	if (isRecord(input.context)) {
+		for (const field of ["files", "artifacts", "sources"] as const) {
+			const items = input.context[field];
+			if (Array.isArray(items)) {
+				assets.push(...items);
+			}
+		}
+	}
+	return assets;
+}
+
+function readConversationId(item: unknown): string | null {
+	if (!isRecord(item)) return null;
+	const metadata = isRecord(item.metadata) ? item.metadata : {};
+	const value =
+		readStringField(item.conversationId) ??
+		readStringField(item.providerConversationId) ??
+		readStringField(metadata.conversationId) ??
+		readStringField(metadata.providerConversationId);
+	return value?.trim() || null;
+}
+
+function readStringField(value: unknown): string | null {
+	return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeIsoTimestamp(value: unknown): string | null {
+	const raw = readStringField(value);
+	if (!raw) return null;
+	const parsed = Date.parse(raw);
+	return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
 
 function createIdentityMismatchRepairStateFromStatus(
@@ -1053,7 +1260,10 @@ function withYieldCause(
 export async function detectProviderGuardWithTargetCensus(
 	input: AccountMirrorProviderGuardCensusInput,
 ): Promise<AccountMirrorProviderGuardState | null> {
-	if (input.provider !== "gemini" || !isResolvedUserConfig(input.config)) {
+	if (
+		(input.provider !== "gemini" && input.provider !== "chatgpt") ||
+		!isResolvedUserConfig(input.config)
+	) {
 		return null;
 	}
 	const context = resolveManagedBrowserLaunchContextFromResolvedConfig({
@@ -1077,28 +1287,186 @@ export async function detectProviderGuardWithTargetCensus(
 			),
 	);
 	for (const { instance } of matchingInstances) {
+		const host = instance.host || "127.0.0.1";
 		const targets = await listChromeTargets(instance.port, instance.host || "127.0.0.1").catch(
 			() => [],
 		);
-		for (const target of targets as Array<{ type?: string; url?: string; title?: string }>) {
+		for (const target of targets as Array<{
+			id?: string;
+			type?: string;
+			url?: string;
+			title?: string;
+		}>) {
 			if (target.type && target.type !== "page") continue;
-			const guard = classifyProviderGuardCensusTarget({
-				url: target.url ?? "",
-				title: target.title ?? "",
+			if (input.provider === "gemini") {
+				const guard = classifyProviderGuardCensusTarget({
+					url: target.url ?? "",
+					title: target.title ?? "",
+				});
+				if (guard) {
+					return {
+						state: "manual_clear_required",
+						kind: guard.kind,
+						summary: guard.summary,
+						detectedAtMs: input.detectedAtMs,
+						url: target.url ?? null,
+						action: "account-mirror-refresh:target-census",
+					};
+				}
+				continue;
+			}
+			if (!isChatgptProviderGuardCensusTarget(target.url ?? "")) {
+				continue;
+			}
+			const visibleWarning = await readVisibleChatgptRateLimitCensusProbe({
+				host,
+				port: instance.port,
+				targetId: target.id ?? null,
+			}).catch(() => null);
+			const rateLimit = classifyChatgptRateLimitCensusProbeForTest({
+				text: visibleWarning?.text ?? null,
+				ariaLabel: visibleWarning?.ariaLabel ?? null,
+				buttonLabels: visibleWarning?.buttonLabels ?? null,
 			});
-			if (guard) {
-				return {
-					state: "manual_clear_required",
-					kind: guard.kind,
-					summary: guard.summary,
+			if (rateLimit) {
+				return await writeChatgptRateLimitCensusGuard({
+					runtimeProfileId: input.runtimeProfileId,
 					detectedAtMs: input.detectedAtMs,
+					reason: rateLimit.reason,
 					url: target.url ?? null,
-					action: "account-mirror-refresh:target-census",
-				};
+				});
 			}
 		}
 	}
 	return null;
+}
+
+function isChatgptProviderGuardCensusTarget(url: string): boolean {
+	try {
+		const hostname = new URL(url).hostname.toLowerCase();
+		return hostname === "chatgpt.com" || hostname.endsWith(".chatgpt.com");
+	} catch {
+		return /(^|\.)chatgpt\.com\b/i.test(url);
+	}
+}
+
+type ChatgptRateLimitCensusProbe = {
+	text?: string | null;
+	ariaLabel?: string | null;
+	buttonLabels?: readonly string[] | null;
+};
+
+export function classifyChatgptRateLimitCensusProbeForTest(
+	input: ChatgptRateLimitCensusProbe,
+): { reason: string } | null {
+	const corpus = [
+		input.text,
+		input.ariaLabel,
+		...(Array.isArray(input.buttonLabels) ? input.buttonLabels : []),
+	]
+		.map((value) => (typeof value === "string" ? value.replace(/\s+/g, " ").trim() : ""))
+		.filter(Boolean)
+		.join(" ");
+	if (!corpus || !isChatgptRateLimitMessage(corpus)) {
+		return null;
+	}
+	return {
+		reason: extractChatgptRateLimitSummary(corpus) ?? "ChatGPT rate limit warning detected.",
+	};
+}
+
+async function writeChatgptRateLimitCensusGuard(input: {
+	runtimeProfileId: string;
+	detectedAtMs: number;
+	reason: string;
+	url: string | null;
+}): Promise<AccountMirrorProviderGuardState> {
+	const previousState = await readChatgptRateLimitGuardState({
+		profileName: input.runtimeProfileId,
+	}).catch(() => null);
+	const cooldownMs = resolveChatgptRateLimitCooldownMs(previousState, input.detectedAtMs);
+	const cooldownUntilMs = input.detectedAtMs + cooldownMs;
+	const action = "account-mirror-refresh:target-census-visible-warning";
+	await writeChatgptRateLimitGuardState(
+		{
+			provider: "chatgpt",
+			profile: input.runtimeProfileId,
+			updatedAt: input.detectedAtMs,
+			lastMutationAt: previousState?.lastMutationAt,
+			recentMutationAts: previousState?.recentMutationAts,
+			recentMutations: previousState?.recentMutations,
+			cooldownUntil: cooldownUntilMs,
+			cooldownDetectedAt: input.detectedAtMs,
+			cooldownReason: input.reason,
+			cooldownAction: action,
+		},
+		{ profileName: input.runtimeProfileId },
+	);
+	return {
+		state: "cooldown",
+		kind: "unknown",
+		summary: `ChatGPT rate limit detected: ${input.reason}`,
+		detectedAtMs: input.detectedAtMs,
+		cooldownUntilMs,
+		url: input.url,
+		action,
+	};
+}
+
+async function readVisibleChatgptRateLimitCensusProbe(input: {
+	host: string;
+	port: number;
+	targetId: string | null;
+}): Promise<ChatgptRateLimitCensusProbe | null> {
+	if (!input.targetId) {
+		return null;
+	}
+	const client = await connectToChromeTarget({
+		host: input.host,
+		port: input.port,
+		target: input.targetId,
+	});
+	try {
+		const result = await client.Runtime.evaluate({
+			expression: `(() => {
+  const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+  const isVisible = (element) => {
+    const style = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) !== 0 && rect.width > 0 && rect.height > 0;
+  };
+  const selectors = ['[role="dialog"]', '[aria-modal="true"]', '[role="alert"]', '[aria-live]'];
+  for (const selector of selectors) {
+    for (const element of Array.from(document.querySelectorAll(selector))) {
+      if (!(element instanceof HTMLElement) || !isVisible(element)) continue;
+      const text = normalize(element.innerText || element.textContent);
+      const ariaLabel = normalize(element.getAttribute('aria-label'));
+      const buttonLabels = Array.from(element.querySelectorAll('button,[role="button"]')).map((button) => normalize(button.innerText || button.textContent || button.getAttribute('aria-label'))).filter(Boolean);
+      const corpus = [text, ariaLabel, ...buttonLabels].join(' ');
+      if (/too many requests|too quickly|rate limit/i.test(corpus)) {
+        return { text, ariaLabel, buttonLabels };
+      }
+    }
+  }
+  return null;
+})()`,
+			returnByValue: true,
+		});
+		const value = result.result?.value;
+		if (!value || typeof value !== "object") {
+			return null;
+		}
+		const record = value as Record<string, unknown>;
+		return {
+			text: typeof record.text === "string" ? record.text : null,
+			ariaLabel: typeof record.ariaLabel === "string" ? record.ariaLabel : null,
+			buttonLabels: Array.isArray(record.buttonLabels)
+				? record.buttonLabels.filter((label): label is string => typeof label === "string")
+				: [],
+		};
+	} finally {
+		await client.close().catch(() => undefined);
+	}
 }
 
 function matchesManagedProfileForGuardCensus(
@@ -1167,7 +1535,7 @@ function createProviderGuardError(providerGuard: AccountMirrorProviderGuardState
 			blockingState: {
 				kind: providerGuard.kind,
 				summary: providerGuard.summary,
-				requiresHuman: true,
+				requiresHuman: providerGuard.state === "manual_clear_required",
 			},
 		},
 	});
@@ -1180,10 +1548,11 @@ function extractProviderGuard(
 	const detailsGuard = findProviderGuardInError(error, new Set());
 	if (detailsGuard) {
 		return {
-			state: "manual_clear_required",
+			state: detailsGuard.state,
 			kind: detailsGuard.kind,
 			summary: detailsGuard.summary,
 			detectedAtMs,
+			cooldownUntilMs: detailsGuard.cooldownUntilMs,
 			url: detailsGuard.url,
 			action: detailsGuard.action ?? "account-mirror-refresh",
 		};
@@ -1227,8 +1596,10 @@ function findProviderGuardInError(
 	value: unknown,
 	seen: Set<unknown>,
 ): {
+	state: "manual_clear_required" | "cooldown";
 	kind: AccountMirrorProviderGuardKind;
 	summary: string;
+	cooldownUntilMs?: number | null;
 	url: string | null;
 	action?: string | null;
 } | null {
@@ -1238,10 +1609,19 @@ function findProviderGuardInError(
 	const details = isRecord(record.details) ? record.details : null;
 	const providerGuard = details && isRecord(details.providerGuard) ? details.providerGuard : null;
 	if (providerGuard) {
+		const state =
+			providerGuard.state === "cooldown" || providerGuard.state === "manual_clear_required"
+				? providerGuard.state
+				: "manual_clear_required";
 		const rawKind = String(providerGuard.kind ?? "").trim();
 		const kind = normalizeProviderGuardKind(rawKind);
 		const summary =
 			String(providerGuard.summary ?? "").trim() || "Provider human-verification gate detected.";
+		const cooldownUntilMs =
+			typeof providerGuard.cooldownUntilMs === "number" &&
+			Number.isFinite(providerGuard.cooldownUntilMs)
+				? providerGuard.cooldownUntilMs
+				: null;
 		const url =
 			typeof providerGuard.url === "string" && providerGuard.url.trim().length > 0
 				? providerGuard.url.trim()
@@ -1250,7 +1630,7 @@ function findProviderGuardInError(
 			typeof providerGuard.action === "string" && providerGuard.action.trim().length > 0
 				? providerGuard.action.trim()
 				: null;
-		return { kind, summary, url, action };
+		return { state, kind, summary, cooldownUntilMs, url, action };
 	}
 	const blockingState = details && isRecord(details.blockingState) ? details.blockingState : null;
 	if (blockingState) {
@@ -1264,7 +1644,7 @@ function findProviderGuardInError(
 			typeof details?.action === "string" && details.action.trim().length > 0
 				? details.action.trim()
 				: null;
-		return { kind, summary, url, action };
+		return { state: "manual_clear_required", kind, summary, url, action };
 	}
 	const cause = record.cause;
 	const causeGuard = findProviderGuardInError(cause, seen);
@@ -1501,7 +1881,23 @@ function mergeById<T extends { id: string }>(existing: readonly T[], incoming: r
 	return [...merged.values()];
 }
 
-function mergeConversationsByObservedOrder<T extends { id: string }>(
+function mergeConversationRow<T extends { metadata?: unknown }>(
+	existing: T | undefined,
+	incoming: T,
+): T {
+	const existingMetadata = isRecord(existing?.metadata) ? existing.metadata : {};
+	const incomingMetadata = isRecord(incoming.metadata) ? incoming.metadata : {};
+	return {
+		...(existing ?? {}),
+		...incoming,
+		metadata: {
+			...existingMetadata,
+			...incomingMetadata,
+		},
+	};
+}
+
+function mergeConversationsByObservedOrder<T extends { id: string; metadata?: unknown }>(
 	existing: readonly T[],
 	incoming: readonly T[],
 ): T[] {
@@ -1511,7 +1907,7 @@ function mergeConversationsByObservedOrder<T extends { id: string }>(
 		.filter((item) => item?.id)
 		.map((item) => {
 			incomingIds.add(item.id);
-			return { ...(existingById.get(item.id) ?? {}), ...item };
+			return mergeConversationRow(existingById.get(item.id), item);
 		});
 	const retained = existing.filter((item) => item?.id && !incomingIds.has(item.id));
 	return [...observed, ...retained];

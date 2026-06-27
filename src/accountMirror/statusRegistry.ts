@@ -4,6 +4,7 @@ import type {
 	AccountMirrorCompletionMaterializationPolicy,
 	AccountMirrorCompletionSweepMode,
 } from "./completionService.js";
+import type { ConversationFreshnessFrontierEvidence } from "./conversationFreshnessFrontier.js";
 import type {
 	AccountMirrorPolitenessDecision,
 	AccountMirrorIdentityEvidenceConfidence,
@@ -151,6 +152,7 @@ export type AccountMirrorMetadataEvidence = {
 	countEvidence?: AccountMirrorMetadataCountEvidence | null;
 	detailScannedThisPass?: AccountMirrorDetailScannedEvidence | null;
 	assetInventory?: AccountMirrorAssetInventoryEvidence | null;
+	conversationFreshnessFrontier?: ConversationFreshnessFrontierEvidence | null;
 	routeProgress?: AccountMirrorRouteProgressEvidence | null;
 	collectorProgress?: AccountMirrorCollectorPhaseProgressEvidence | null;
 	attachmentInventory?: {
@@ -837,6 +839,7 @@ function readLiveFollowPolitenessPolicy(
 	copyNonNegativeInteger(liveFollow, policy, "maxPageReadsPerCycle");
 	copyNonNegativeInteger(liveFollow, policy, "maxConversationRowsPerCycle");
 	copyNonNegativeInteger(liveFollow, policy, "maxArtifactRowsPerCycle");
+	copyPositiveInteger(liveFollow, policy, "freshFrontierThreshold");
 	copyNonNegativeInteger(liveFollow, policy, "conversationReadCooldownMs");
 	copyNonNegativeInteger(liveFollow, policy, "pageRefreshCooldownMs");
 	copyNonNegativeInteger(liveFollow, policy, "renavigationCooldownMs");
@@ -888,6 +891,10 @@ function normalizeMetadataEvidence(
 		countEvidence: normalizeCountEvidence(value.countEvidence),
 		detailScannedThisPass: normalizeDetailScannedEvidence(value.detailScannedThisPass),
 		assetInventory: normalizeAssetInventoryEvidence(value.assetInventory),
+		conversationFreshnessFrontier: normalizeConversationFreshnessFrontierEvidence(
+			value.conversationFreshnessFrontier,
+		),
+		routeProgress: normalizeRouteProgressEvidence(value.routeProgress),
 		attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
 		collectorProgress: normalizeCollectorProgressEvidence(value.collectorProgress),
 		projectConversations: normalizeProjectConversationEvidence(value.projectConversations),
@@ -896,6 +903,33 @@ function normalizeMetadataEvidence(
 			conversations: value.truncated?.conversations === true,
 			artifacts: value.truncated?.artifacts === true,
 		},
+	};
+}
+
+function normalizeConversationFreshnessFrontierEvidence(
+	value: AccountMirrorMetadataEvidence["conversationFreshnessFrontier"] | null | undefined,
+): AccountMirrorMetadataEvidence["conversationFreshnessFrontier"] | null {
+	if (!value || value.object !== "account_mirror_conversation_freshness_frontier") return null;
+	return {
+		...value,
+		threshold: normalizeCount(value.threshold),
+		rowsExamined: normalizeCount(value.rowsExamined),
+		rowsSelectedForDetail: normalizeCount(value.rowsSelectedForDetail),
+		selectedConversationIds: normalizeStringArray(value.selectedConversationIds),
+		rowEvidence: Array.isArray(value.rowEvidence) ? value.rowEvidence.slice(0, 25) : [],
+	};
+}
+
+function normalizeRouteProgressEvidence(
+	value: AccountMirrorMetadataEvidence["routeProgress"] | null | undefined,
+): AccountMirrorMetadataEvidence["routeProgress"] | null {
+	if (!value) return null;
+	return {
+		...value,
+		routeSequence: normalizeStringArray(value.routeSequence),
+		selectedConversationIds: normalizeStringArray(value.selectedConversationIds),
+		artifactBearingConversationIds: normalizeStringArray(value.artifactBearingConversationIds),
+		fileBearingConversationIds: normalizeStringArray(value.fileBearingConversationIds),
 	};
 }
 

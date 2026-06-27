@@ -1,26 +1,36 @@
-import type { ResolvedUserConfig } from "../config.js";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+	type BrowserInteractionClass,
+	type BrowserInteractionGovernor,
+	createBrowserInteractionGovernor,
+} from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
-import { resolveRuntimeProfileUserConfig as resolveBrowserRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
 import { BrowserAutomationClient } from "../browser/client.js";
+import { recordDomDriftObservation } from "../browser/domDriftObservations.js";
+import type { AccountMirrorMediaManifestEntry } from "../browser/llmService/cache/store.js";
 import type {
 	Conversation,
 	ConversationArtifact,
 	FileRef,
 	Project,
 } from "../browser/providers/domain.js";
-import type { AccountMirrorMediaManifestEntry } from "../browser/llmService/cache/store.js";
 import type {
 	BrowserProviderListOptions,
 	ProviderUserIdentity,
 } from "../browser/providers/types.js";
+import { resolveRuntimeProfileUserConfig as resolveBrowserRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
+import type { ResolvedUserConfig } from "../config.js";
+import {
+	applyConversationFreshnessFrontier,
+	type ConversationFreshnessFrontierCachedSummary,
+	type ConversationFreshnessFrontierEvidence,
+} from "./conversationFreshnessFrontier.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
 	AccountMirrorProvider,
 } from "./politePolicy.js";
-import { recordDomDriftObservation } from "../browser/domDriftObservations.js";
 import type {
 	AccountMirrorCollectorPhaseProgressEvidence,
 	AccountMirrorMetadataCounts,
@@ -40,6 +50,10 @@ export interface AccountMirrorMetadataCollectorInput {
 	expectedIdentityKey: string;
 	sweepMode?: "steady_follow" | "full_sweep";
 	previousEvidence?: AccountMirrorMetadataEvidence | null;
+	previousConversationFreshness?: ReadonlyMap<
+		string,
+		ConversationFreshnessFrontierCachedSummary
+	> | null;
 	shouldYield?: () => Promise<boolean> | boolean;
 	onIdentityVerified?: (evidence: AccountMirrorVerifiedIdentityEvidence) => Promise<void> | void;
 	onProgress?: (progress: AccountMirrorCollectorPhaseProgressEvidence) => Promise<void> | void;
@@ -48,6 +62,7 @@ export interface AccountMirrorMetadataCollectorInput {
 		maxPageReadsPerCycle: number;
 		maxConversationRowsPerCycle: number;
 		maxArtifactRowsPerCycle: number;
+		freshFrontierThreshold?: number;
 		maxBrowserInteractionsPerMinute: number;
 		conversationReadCooldownMs?: number;
 		pageRefreshCooldownMs?: number;
@@ -87,6 +102,8 @@ export interface AttachmentInventoryCursor {
 export interface AttachmentInventoryProgress {
 	scannedProjectIds: string[];
 	scannedConversationIds: string[];
+	detailObservedConversationIds: string[];
+	contextObservedConversationIds: string[];
 	artifactBearingConversationIds: string[];
 	fileBearingConversationIds: string[];
 }
@@ -137,9 +154,13 @@ async function reportCollectorProgress(
 	});
 }
 
-function createAccountMirrorListOptions(abortSignal?: AbortSignal): BrowserProviderListOptions {
+function createAccountMirrorListOptions(
+	abortSignal?: AbortSignal,
+	interactionGovernor?: BrowserInteractionGovernor,
+): BrowserProviderListOptions {
 	return {
 		...(abortSignal ? { abortSignal } : {}),
+		...(interactionGovernor ? { interactionGovernor } : {}),
 		tabLifecycle: "dispose-new",
 	};
 }
@@ -156,6 +177,15 @@ function withAccountMirrorTabLifecycle(
 		tabLifecycle:
 			listOptions?.preserveActiveTab === true ? listOptions.tabLifecycle : "dispose-new",
 	};
+}
+
+async function beforeAccountMirrorBrowserInteraction(
+	listOptions: BrowserProviderListOptions | undefined,
+	pacer: BrowserInteractionGovernor | undefined,
+	kind: BrowserInteractionClass,
+): Promise<void> {
+	if (listOptions?.interactionGovernor) return;
+	await pacer?.beforeInteraction(kind);
 }
 
 export interface AccountMirrorDomDriftObservationContext {
@@ -218,7 +248,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 			const client = await BrowserAutomationClient.fromConfig(clientConfig, {
 				target: input.provider,
 			});
-			const pacer = createBrowserInteractionPacer(
+			const pacer = createAccountMirrorBrowserInteractionGovernor(
 				input.limits.maxBrowserInteractionsPerMinute,
 				{
 					conversationReadCooldownMs: input.limits.conversationReadCooldownMs,
@@ -228,9 +258,9 @@ export function createChatgptAccountMirrorMetadataCollector(
 				input.abortSignal,
 			);
 			throwIfCollectionAborted(input.abortSignal);
-			const listOptions = createAccountMirrorListOptions(input.abortSignal);
+			const listOptions = createAccountMirrorListOptions(input.abortSignal, pacer);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
-			await pacer.beforeInteraction("page-refresh");
+			await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "page-refresh");
 			const identity = await client.getUserIdentity(listOptions);
 			throwIfCollectionAborted(input.abortSignal);
 			const detectedIdentityKey = readProviderIdentityKey(input.provider, identity);
@@ -341,6 +371,14 @@ export function createChatgptAccountMirrorMetadataCollector(
 				input.sweepMode,
 				input.previousEvidence ?? null,
 			);
+			const frontier = selectConversationDetailCandidates({
+				provider: input.provider,
+				sweepMode: input.sweepMode ?? "steady_follow",
+				conversations,
+				previousConversationFreshness: input.previousConversationFreshness ?? null,
+				attachmentCursor,
+				freshFrontierThreshold: input.limits.freshFrontierThreshold,
+			});
 			await reportCollectorProgress(input, {
 				phase: "detail-inventory",
 				event: "started",
@@ -348,16 +386,24 @@ export function createChatgptAccountMirrorMetadataCollector(
 				conversationsObserved: conversations.length,
 				attachmentCursor,
 			});
+			const detailAttachmentCursor = selectDetailAttachmentCursorForFreshnessFrontier({
+				provider: input.provider,
+				sweepMode: input.sweepMode ?? "steady_follow",
+				attachmentCursor,
+				frontierEvidence: frontier.evidence,
+				detailConversations: frontier.detailConversations,
+				projectsLength: projects.items.length,
+			});
 			const inventory =
 				input.provider === "chatgpt"
 					? await readBoundedChatgptDetailInventory(
 							client,
 							projects.items,
-							conversations,
+							frontier.detailConversations,
 							input.limits.maxArtifactRowsPerCycle,
 							{
 								maxDetailReads: input.limits.maxPageReadsPerCycle,
-								cursor: attachmentCursor,
+								cursor: detailAttachmentCursor,
 								shouldYield: input.shouldYield,
 								listOptions,
 								pacer,
@@ -368,11 +414,11 @@ export function createChatgptAccountMirrorMetadataCollector(
 						? await readBoundedGeminiDetailInventory(
 								client,
 								projects.items,
-								conversations,
+								frontier.detailConversations,
 								input.limits.maxArtifactRowsPerCycle,
 								{
 									maxDetailReads: input.limits.maxPageReadsPerCycle,
-									cursor: attachmentCursor,
+									cursor: detailAttachmentCursor,
 									shouldYield: input.shouldYield,
 									listOptions,
 									pacer,
@@ -380,10 +426,14 @@ export function createChatgptAccountMirrorMetadataCollector(
 								},
 							)
 						: input.provider === "grok"
-							? await readBoundedGrokAccountFileInventory(
+							? await readBoundedGrokDetailInventory(
 									client,
+									frontier.detailConversations,
 									input.limits.maxArtifactRowsPerCycle,
 									{
+										maxDetailReads: input.limits.maxPageReadsPerCycle,
+										cursor: detailAttachmentCursor,
+										shouldYield: input.shouldYield,
 										listOptions,
 										pacer,
 										observation: createAccountMirrorObservationContext(input, client),
@@ -408,6 +458,15 @@ export function createChatgptAccountMirrorMetadataCollector(
 			const inventoryProgress = hasAttachmentInventoryProgress(inventory)
 				? inventory.progress
 				: createAttachmentInventoryProgress();
+			const detailObservedAt = new Date().toISOString();
+			const detailObservedConversationIds = new Set(
+				inventoryProgress.detailObservedConversationIds,
+			);
+			const conversationsWithDetailEvidence = conversations.map((conversation) =>
+				detailObservedConversationIds.has(conversation.id)
+					? annotateConversationDetailObservedAt(conversation, detailObservedAt)
+					: conversation,
+			);
 			return {
 				detectedIdentityKey,
 				detectedIdentitySource: verifiedIdentity.detectedIdentitySource,
@@ -423,7 +482,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				},
 				manifests: {
 					projects: projects.items,
-					conversations,
+					conversations: conversationsWithDetailEvidence,
 					artifacts: inventory.artifacts,
 					files: inventory.files,
 					media: inventory.media,
@@ -463,11 +522,90 @@ export function createChatgptAccountMirrorMetadataCollector(
 						filesObserved: inventory.files.length,
 						attachmentCursor: inventory.cursor,
 					},
+					conversationFreshnessFrontier: frontier.evidence,
 					projectConversations: projectConversationCursor,
 					attachmentInventory: inventory.cursor,
 				},
 			};
 		},
+	};
+}
+
+function normalizeAttachmentCursorForDetailCandidates(
+	cursor: AttachmentInventoryCursor | null,
+	conversations: readonly Conversation[],
+): AttachmentInventoryCursor | null {
+	if (!cursor?.conversationDetail) return cursor;
+	const conversationIndex = conversations.findIndex(
+		(conversation) => conversation.id === cursor.conversationDetail?.conversationId,
+	);
+	if (conversationIndex < 0) return cursor;
+	return {
+		...cursor,
+		nextConversationIndex: conversationIndex,
+	};
+}
+
+export function selectDetailAttachmentCursorForFreshnessFrontier(input: {
+	provider: AccountMirrorProvider;
+	sweepMode: "steady_follow" | "full_sweep";
+	attachmentCursor: AttachmentInventoryCursor | null;
+	frontierEvidence: ConversationFreshnessFrontierEvidence | null;
+	detailConversations: readonly Conversation[];
+	projectsLength: number;
+}): AttachmentInventoryCursor | null {
+	const normalized = normalizeAttachmentCursorForDetailCandidates(
+		input.attachmentCursor,
+		input.detailConversations,
+	);
+	if (normalized && !normalized.conversationDetail) {
+		const frontierFilteredRows =
+			input.frontierEvidence &&
+			input.frontierEvidence.rowsSelectedForDetail < input.frontierEvidence.rowsExamined;
+		if (
+			input.sweepMode === "steady_follow" &&
+			frontierFilteredRows &&
+			(input.provider === "chatgpt" || input.provider === "gemini" || input.provider === "grok")
+		) {
+			return {
+				...normalized,
+				nextProjectIndex: Math.max(0, Math.floor(input.projectsLength)),
+				nextConversationIndex: 0,
+			};
+		}
+	}
+	return normalized;
+}
+
+export function selectConversationDetailCandidates(input: {
+	provider: AccountMirrorProvider;
+	sweepMode: "steady_follow" | "full_sweep";
+	conversations: readonly Conversation[];
+	previousConversationFreshness: ReadonlyMap<
+		string,
+		ConversationFreshnessFrontierCachedSummary
+	> | null;
+	attachmentCursor: AttachmentInventoryCursor | null;
+	freshFrontierThreshold?: number | null;
+}): {
+	detailConversations: Conversation[];
+	evidence: ConversationFreshnessFrontierEvidence | null;
+} {
+	if (input.provider !== "chatgpt" && input.provider !== "gemini" && input.provider !== "grok") {
+		return { detailConversations: [...input.conversations], evidence: null };
+	}
+	const result = applyConversationFreshnessFrontier({
+		provider: input.provider,
+		sweepMode: input.sweepMode,
+		conversations: input.conversations,
+		cachedSummaries: input.previousConversationFreshness,
+		incompleteDetailConversationId:
+			input.attachmentCursor?.conversationDetail?.conversationId ?? null,
+		threshold: input.freshFrontierThreshold,
+	});
+	return {
+		detailConversations: result.conversations,
+		evidence: result.evidence,
 	};
 }
 
@@ -616,13 +754,7 @@ function throwIfCollectionAborted(signal: AbortSignal | null | undefined): void 
 	}
 }
 
-type BrowserInteractionPacer = {
-	beforeInteraction(kind?: BrowserInteractionKind): Promise<void>;
-};
-
-type BrowserInteractionKind = "conversation-read" | "page-refresh" | "renavigation";
-
-function createBrowserInteractionPacer(
+function createAccountMirrorBrowserInteractionGovernor(
 	maxBrowserInteractionsPerMinute: number | null | undefined,
 	cooldowns: {
 		conversationReadCooldownMs?: number | null;
@@ -630,69 +762,15 @@ function createBrowserInteractionPacer(
 		renavigationCooldownMs?: number | null;
 	} = {},
 	abortSignal?: AbortSignal,
-): BrowserInteractionPacer {
-	const maxPerMinute =
-		typeof maxBrowserInteractionsPerMinute === "number" &&
-		Number.isFinite(maxBrowserInteractionsPerMinute)
-			? Math.max(1, Math.floor(maxBrowserInteractionsPerMinute))
-			: 20;
-	const minSpacingMs = Math.ceil(60_000 / maxPerMinute);
-	let lastInteractionAtMs = 0;
-	const lastByKind = new Map<BrowserInteractionKind, number>();
-	const cooldownByKind: Record<BrowserInteractionKind, number> = {
-		"conversation-read": normalizeCooldownMs(cooldowns.conversationReadCooldownMs),
-		"page-refresh": normalizeCooldownMs(cooldowns.pageRefreshCooldownMs),
-		renavigation: normalizeCooldownMs(cooldowns.renavigationCooldownMs),
-	};
-	return {
-		async beforeInteraction(kind) {
-			throwIfCollectionAborted(abortSignal);
-			const nowMs = Date.now();
-			const globalWaitMs =
-				lastInteractionAtMs > 0 ? Math.max(0, lastInteractionAtMs + minSpacingMs - nowMs) : 0;
-			const kindWaitMs = kind
-				? Math.max(0, (lastByKind.get(kind) ?? 0) + cooldownByKind[kind] - nowMs)
-				: 0;
-			const waitMs = Math.max(globalWaitMs, kindWaitMs);
-			if (waitMs > 0) {
-				await sleepWithAbort(waitMs, abortSignal);
-			}
-			lastInteractionAtMs = Date.now();
-			if (kind) {
-				lastByKind.set(kind, lastInteractionAtMs);
-			}
+): BrowserInteractionGovernor {
+	return createBrowserInteractionGovernor({
+		maxInteractionsPerMinute: maxBrowserInteractionsPerMinute,
+		cooldownsByClass: {
+			"conversation-read": cooldowns.conversationReadCooldownMs,
+			"page-refresh": cooldowns.pageRefreshCooldownMs,
+			renavigation: cooldowns.renavigationCooldownMs,
 		},
-	};
-}
-
-function normalizeCooldownMs(value: number | null | undefined): number {
-	return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
-}
-
-function sleepWithAbort(ms: number, signal: AbortSignal | null | undefined): Promise<void> {
-	if (ms <= 0) return Promise.resolve();
-	return new Promise((resolve, reject) => {
-		const timeout = setTimeout(() => {
-			cleanup();
-			resolve();
-		}, ms);
-		const onAbort = () => {
-			cleanup();
-			const reason = signal?.reason;
-			reject(
-				reason instanceof Error
-					? reason
-					: new Error("Account mirror metadata collection was aborted."),
-			);
-		};
-		const cleanup = () => {
-			clearTimeout(timeout);
-			signal?.removeEventListener("abort", onAbort);
-		};
-		signal?.addEventListener("abort", onAbort, { once: true });
-		if (signal?.aborted) {
-			onAbort();
-		}
+		abortSignal,
 	});
 }
 
@@ -713,14 +791,14 @@ export async function readBoundedProjects(
 	options: {
 		tolerateReadFailure?: boolean;
 		listOptions?: Parameters<BrowserAutomationClient["listProjects"]>[0];
-		pacer?: BrowserInteractionPacer;
+		pacer?: BrowserInteractionGovernor;
 		observation?: AccountMirrorDomDriftObservationContext;
 	} = {},
 ): Promise<{ items: Project[]; truncated: boolean }> {
 	const pageBudget = Math.max(1, Math.floor(maxPageReads));
 	let projects: Project[];
 	try {
-		await options.pacer?.beforeInteraction("page-refresh");
+		await beforeAccountMirrorBrowserInteraction(options.listOptions, options.pacer, "page-refresh");
 		projects = (await client.listProjects(
 			withAccountMirrorTabLifecycle(options.listOptions, options.listOptions !== undefined),
 		)) as Project[];
@@ -749,7 +827,7 @@ export async function readBoundedConversations(
 	maxRows: number,
 	options: {
 		listOptions?: Parameters<BrowserAutomationClient["listConversations"]>[1];
-		pacer?: BrowserInteractionPacer;
+		pacer?: BrowserInteractionGovernor;
 		observation?: AccountMirrorDomDriftObservationContext;
 		tolerateReadFailure?: boolean;
 	} = {},
@@ -758,7 +836,11 @@ export async function readBoundedConversations(
 	if (limit <= 0) {
 		return { items: [], truncated: true };
 	}
-	await options.pacer?.beforeInteraction("conversation-read");
+	await beforeAccountMirrorBrowserInteraction(
+		options.listOptions,
+		options.pacer,
+		"conversation-read",
+	);
 	let conversations: Conversation[];
 	try {
 		const providerListOptions = withAccountMirrorTabLifecycle(
@@ -798,7 +880,7 @@ export async function readBoundedProjectConversations(
 	maxRows: number,
 	options: {
 		listOptions?: Parameters<BrowserAutomationClient["listConversations"]>[1];
-		pacer?: BrowserInteractionPacer;
+		pacer?: BrowserInteractionGovernor;
 		observation?: AccountMirrorDomDriftObservationContext;
 		tolerateReadFailure?: boolean;
 		abortSignal?: AbortSignal;
@@ -883,9 +965,16 @@ function mergeConversationsById(conversations: readonly Conversation[]): Convers
 	const merged = new Map<string, Conversation>();
 	for (const conversation of conversations) {
 		if (!conversation.id) continue;
+		const existing = merged.get(conversation.id);
+		const existingMetadata = isRecord(existing?.metadata) ? existing.metadata : {};
+		const incomingMetadata = isRecord(conversation.metadata) ? conversation.metadata : {};
 		merged.set(conversation.id, {
-			...(merged.get(conversation.id) ?? {}),
+			...(existing ?? {}),
 			...conversation,
+			metadata: {
+				...existingMetadata,
+				...incomingMetadata,
+			},
 		});
 	}
 	return [...merged.values()];
@@ -906,7 +995,7 @@ export async function readBoundedAttachmentInventory(
 				cursor?: AttachmentInventoryCursor | null;
 				shouldYield?: () => Promise<boolean> | boolean;
 				listOptions?: Parameters<BrowserAutomationClient["listProjectFiles"]>[1];
-				pacer?: BrowserInteractionPacer;
+				pacer?: BrowserInteractionGovernor;
 				observation?: AccountMirrorDomDriftObservationContext;
 				prioritizeConversations?: boolean;
 				providerCallTimeoutMs?: number | null;
@@ -979,13 +1068,13 @@ export async function readBoundedAttachmentInventory(
 			remainingDetailReads -= 1;
 			scannedProjects += 1;
 			progress.scannedProjectIds.push(project.id);
-			await pacer?.beforeInteraction("renavigation");
 			const projectFiles = await safeReadProjectFiles(
 				client,
 				project,
 				listOptions,
 				observation,
 				providerCallTimeoutMs,
+				pacer,
 			);
 			for (const file of projectFiles) {
 				if (remaining <= 0) {
@@ -1018,24 +1107,32 @@ export async function readBoundedAttachmentInventory(
 			remainingDetailReads -= 1;
 			scannedConversations += 1;
 			progress.scannedConversationIds.push(conversation.id);
-			await pacer?.beforeInteraction("conversation-read");
-			const conversationFiles = await safeReadConversationFiles(
+			const conversationFileResult = await safeReadConversationFiles(
 				client,
 				conversation,
 				observation,
 				providerCallTimeoutMs,
 				listOptions,
+				pacer,
 			);
-			await pacer?.beforeInteraction("conversation-read");
-			const context = await safeReadConversationContext(
+			const conversationFiles = conversationFileResult.files;
+			const contextResult = await safeReadConversationContext(
 				client,
 				conversation,
 				observation,
 				providerCallTimeoutMs,
 				listOptions,
 				previousConversationDetail,
+				pacer,
 			);
+			const context = contextResult.context;
 			const contextChunk = readAccountMirrorContextChunkMetadata(context);
+			if (context && contextChunk?.nextMessageIndex == null) {
+				progress.contextObservedConversationIds.push(conversation.id);
+				if (conversationFileResult.observed) {
+					progress.detailObservedConversationIds.push(conversation.id);
+				}
+			}
 			if (contextChunk?.nextMessageIndex !== null && contextChunk?.nextMessageIndex !== undefined) {
 				conversationDetailCursor = {
 					conversationId: conversation.id,
@@ -1121,8 +1218,26 @@ function createAttachmentInventoryProgress(): AttachmentInventoryProgress {
 	return {
 		scannedProjectIds: [],
 		scannedConversationIds: [],
+		detailObservedConversationIds: [],
+		contextObservedConversationIds: [],
 		artifactBearingConversationIds: [],
 		fileBearingConversationIds: [],
+	};
+}
+
+function annotateConversationDetailObservedAt(
+	conversation: Conversation,
+	observedAt: string,
+): Conversation {
+	const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+	return {
+		...conversation,
+		metadata: {
+			...metadata,
+			detailObservedAt: observedAt,
+			manifestObservedAt: observedAt,
+			detailCompleteness: "complete",
+		},
 	};
 }
 
@@ -1143,6 +1258,8 @@ function isAttachmentInventoryProgress(value: unknown): value is AttachmentInven
 	return (
 		Array.isArray(record.scannedProjectIds) &&
 		Array.isArray(record.scannedConversationIds) &&
+		Array.isArray(record.detailObservedConversationIds) &&
+		Array.isArray(record.contextObservedConversationIds) &&
 		Array.isArray(record.artifactBearingConversationIds) &&
 		Array.isArray(record.fileBearingConversationIds)
 	);
@@ -1163,7 +1280,7 @@ export async function readBoundedChatgptDetailInventory(
 				cursor?: AttachmentInventoryCursor | null;
 				shouldYield?: () => Promise<boolean> | boolean;
 				listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
-				pacer?: BrowserInteractionPacer;
+				pacer?: BrowserInteractionGovernor;
 				observation?: AccountMirrorDomDriftObservationContext;
 				providerCallTimeoutMs?: number | null;
 		  } = 6,
@@ -1173,6 +1290,7 @@ export async function readBoundedChatgptDetailInventory(
 	media: AccountMirrorMediaManifestEntry[];
 	truncated: boolean;
 	cursor: AttachmentInventoryCursor;
+	progress: AttachmentInventoryProgress;
 }> {
 	const limit = Math.max(0, Math.floor(maxRows));
 	const listOptions = typeof options === "number" ? undefined : options.listOptions;
@@ -1214,6 +1332,7 @@ export async function readBoundedChatgptDetailInventory(
 		media: [],
 		truncated: library.truncated || attachmentInventory.truncated,
 		cursor: attachmentInventory.cursor,
+		progress: attachmentInventory.progress,
 	};
 }
 
@@ -1222,7 +1341,7 @@ export async function readBoundedChatgptLibraryInventory(
 	maxRows: number,
 	options: {
 		listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
-		pacer?: BrowserInteractionPacer;
+		pacer?: BrowserInteractionGovernor;
 		observation?: AccountMirrorDomDriftObservationContext;
 		providerCallTimeoutMs?: number | null;
 	} = {},
@@ -1239,7 +1358,6 @@ export async function readBoundedChatgptLibraryInventory(
 			truncated: true,
 		};
 	}
-	await options.pacer?.beforeInteraction("page-refresh");
 	const files = await safeReadAccountFiles(
 		client,
 		options.listOptions,
@@ -1250,6 +1368,7 @@ export async function readBoundedChatgptLibraryInventory(
 		},
 		options.providerCallTimeoutMs,
 		true,
+		options.pacer,
 	);
 	const boundedFiles = files.slice(0, limit);
 	return {
@@ -1272,7 +1391,7 @@ export async function readBoundedGeminiDetailInventory(
 		cursor?: AttachmentInventoryCursor | null;
 		shouldYield?: () => Promise<boolean> | boolean;
 		listOptions?: Parameters<BrowserAutomationClient["listProjectFiles"]>[1];
-		pacer?: BrowserInteractionPacer;
+		pacer?: BrowserInteractionGovernor;
 		observation?: AccountMirrorDomDriftObservationContext;
 	} = {},
 ): Promise<{
@@ -1299,7 +1418,7 @@ export async function readBoundedGrokAccountFileInventory(
 	maxRows: number,
 	options: {
 		listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
-		pacer?: BrowserInteractionPacer;
+		pacer?: BrowserInteractionGovernor;
 		observation?: AccountMirrorDomDriftObservationContext;
 	} = {},
 ): Promise<{
@@ -1319,11 +1438,18 @@ export async function readBoundedGrokAccountFileInventory(
 			cursor: null,
 		};
 	}
-	await options.pacer?.beforeInteraction("page-refresh");
-	const files = await safeReadAccountFiles(client, options.listOptions, options.observation, {
-		surface: "account-mirror-account-files",
-		action: "list-account-files",
-	});
+	const files = await safeReadAccountFiles(
+		client,
+		options.listOptions,
+		options.observation,
+		{
+			surface: "account-mirror-account-files",
+			action: "list-account-files",
+		},
+		null,
+		false,
+		options.pacer,
+	);
 	const boundedFiles = files.slice(0, limit);
 	return {
 		artifacts: [],
@@ -1331,6 +1457,64 @@ export async function readBoundedGrokAccountFileInventory(
 		media: mapGrokAccountFilesToMediaManifest(boundedFiles),
 		truncated: files.length > limit,
 		cursor: null,
+	};
+}
+
+export async function readBoundedGrokDetailInventory(
+	client: Pick<
+		BrowserAutomationClient,
+		"listAccountFiles" | "listProjectFiles" | "listConversationFiles" | "getConversationContext"
+	>,
+	conversations: readonly Conversation[],
+	maxRows: number,
+	options: {
+		maxDetailReads?: number;
+		cursor?: AttachmentInventoryCursor | null;
+		shouldYield?: () => Promise<boolean> | boolean;
+		listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
+		pacer?: BrowserInteractionGovernor;
+		observation?: AccountMirrorDomDriftObservationContext;
+	} = {},
+): Promise<{
+	artifacts: ConversationArtifact[];
+	files: FileRef[];
+	media: AccountMirrorMediaManifestEntry[];
+	truncated: boolean;
+	cursor: AttachmentInventoryCursor;
+	progress: AttachmentInventoryProgress;
+}> {
+	const limit = Math.max(0, Math.floor(maxRows));
+	const accountFiles = await readBoundedGrokAccountFileInventory(client, limit, {
+		listOptions: options.listOptions,
+		pacer: options.pacer,
+		observation: options.observation,
+	});
+	const remainingRows =
+		conversations.length > 0 && limit > 0
+			? Math.max(1, limit - accountFiles.files.length)
+			: Math.max(0, limit - accountFiles.files.length);
+	const conversationInventory = await readBoundedAttachmentInventory(
+		client,
+		[],
+		conversations,
+		remainingRows,
+		{
+			maxDetailReads: options.maxDetailReads,
+			cursor: options.cursor,
+			shouldYield: options.shouldYield,
+			listOptions: options.listOptions,
+			pacer: options.pacer,
+			observation: options.observation,
+			prioritizeConversations: true,
+		},
+	);
+	return {
+		artifacts: conversationInventory.artifacts,
+		files: mergeFileRefs(accountFiles.files, conversationInventory.files),
+		media: accountFiles.media,
+		truncated: accountFiles.truncated || conversationInventory.truncated,
+		cursor: conversationInventory.cursor,
+		progress: conversationInventory.progress,
 	};
 }
 
@@ -1407,8 +1591,10 @@ async function safeReadProjectFiles(
 	listOptions?: Parameters<BrowserAutomationClient["listProjectFiles"]>[1],
 	observation?: AccountMirrorDomDriftObservationContext,
 	timeoutMs?: number | null,
+	pacer?: BrowserInteractionGovernor,
 ): Promise<FileRef[]> {
 	try {
+		await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "renavigation");
 		const providerListOptions = withAccountMirrorTabLifecycle(
 			listOptions,
 			project.provider === "chatgpt",
@@ -1447,8 +1633,10 @@ async function safeReadAccountFiles(
 	},
 	timeoutMs?: number | null,
 	useAccountMirrorTabLifecycle = false,
+	pacer?: BrowserInteractionGovernor,
 ): Promise<FileRef[]> {
 	try {
+		await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "page-refresh");
 		const providerListOptions = withAccountMirrorTabLifecycle(
 			listOptions,
 			useAccountMirrorTabLifecycle,
@@ -1479,8 +1667,10 @@ async function safeReadConversationFiles(
 	observation?: AccountMirrorDomDriftObservationContext,
 	timeoutMs?: number | null,
 	listOptions?: BrowserProviderListOptions,
-): Promise<FileRef[]> {
+	pacer?: BrowserInteractionGovernor,
+): Promise<{ files: FileRef[]; observed: boolean }> {
 	try {
+		await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "conversation-read");
 		const providerListOptions = withAccountMirrorTabLifecycle(
 			listOptions,
 			conversation.provider === "chatgpt",
@@ -1489,11 +1679,12 @@ async function safeReadConversationFiles(
 			projectId: conversation.projectId,
 			...(providerListOptions ? { listOptions: providerListOptions } : {}),
 		});
-		return await withProviderCallTimeout(
+		const files = await withProviderCallTimeout(
 			read,
 			timeoutMs,
 			`Conversation file inventory timed out for ${conversation.id}.`,
 		);
+		return { files, observed: true };
 	} catch (error) {
 		await recordAccountMirrorDomDriftObservation(observation, {
 			surface: "account-mirror-conversation-files",
@@ -1505,7 +1696,7 @@ async function safeReadConversationFiles(
 				projectId: conversation.projectId ?? null,
 			},
 		});
-		return [];
+		return { files: [], observed: false };
 	}
 }
 
@@ -1516,8 +1707,13 @@ async function safeReadConversationContext(
 	timeoutMs?: number | null,
 	listOptions?: BrowserProviderListOptions,
 	cursor?: AttachmentInventoryCursor["conversationDetail"] | null,
-): Promise<{ artifacts?: ConversationArtifact[]; metadata?: Record<string, unknown> } | null> {
+	pacer?: BrowserInteractionGovernor,
+): Promise<{
+	context: { artifacts?: ConversationArtifact[]; metadata?: Record<string, unknown> } | null;
+	observed: boolean;
+}> {
 	try {
+		await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "conversation-read");
 		const chunk =
 			conversation.provider === "chatgpt"
 				? {
@@ -1547,11 +1743,12 @@ async function safeReadConversationContext(
 					}
 				: {}),
 		});
-		return await withProviderCallTimeout(
+		const context = await withProviderCallTimeout(
 			read,
 			timeoutMs,
 			`Conversation context inventory timed out for ${conversation.id}.`,
 		);
+		return { context, observed: context !== null };
 	} catch (error) {
 		await recordAccountMirrorDomDriftObservation(observation, {
 			surface: "account-mirror-conversation-context",
@@ -1563,7 +1760,7 @@ async function safeReadConversationContext(
 				projectId: conversation.projectId ?? null,
 			},
 		});
-		return null;
+		return { context: null, observed: false };
 	}
 }
 

@@ -1,3 +1,35 @@
+- 2026-06-27: Raw-cache conversation freshness hydration must honor persisted
+  row-level completeness metadata, not only loaded detail files or embedded
+  `conversationFreshness` records. Plan 0145 live proof kept selecting rows
+  `1..3` as `cached_state_not_fresh` because stale embedded freshness was
+  stripped correctly, but `metadata.detailCompleteness="complete"` was ignored
+  when no detail file was loaded. Read `detailCompleteness` from explicit
+  freshness, item fields, or metadata before falling back to detail existence;
+  this lets scanned-row `detailObservedAt`/`manifestObservedAt` evidence form a
+  cached-fresh frontier on the next steady-follow pass. Installed proof
+  `acctmirror_completion_a3401827-527a-4d21-9721-943797bd38f8` then stopped at
+  row `3` with `rowsSelectedForDetail=1` and `detailScannedThisPass.total=1`.
+
+- 2026-06-26: OpenAI-compatible chat completions must not hold client workers
+  indefinitely while a browser-backed AuraCall run waits on the managed browser
+  operation lock. `POST /v1/chat/completions` still routes through the
+  persisted `/v1/responses` runtime path, but its synchronous drain is now
+  bounded. If the run has not completed before the wait window expires, the
+  endpoint returns retryable `503` metadata with `Retry-After`,
+  `error.type = "auracall_execution_pending"`, and the persisted
+  `response_id` for `/v1/responses/{response_id}` polling. This keeps
+  OpenAI-style callers such as Open Notebook from blocking a FastAPI worker on
+  a stuck ChatGPT browser lane while preserving durable AuraCall run state.
+
+- 2026-06-26: Handoff attachment-count limits belong in target package
+  assembly, not provider adapters. The default handoff policy now keeps ten or
+  fewer selected files as individual upload manifest entries and packages
+  eleven or more selected files into one deterministic
+  `target/selected-files/handoff-attachments.zip` item for all target services.
+  Preserve original selected-file metadata in target package/upload manifest
+  packaging metadata, include ZIP bytes in the package digest, and only add
+  target primer ZIP-extraction instructions when ZIP mode is active.
+
 - 2026-06-21: Repeated ChatGPT rate-limit warnings need a longer shared
   cooldown than a first sighting. The SoyLei `wsl-chrome-3` profile was still
   surfacing `Too many requests` warnings after read-side
@@ -205,6 +237,19 @@
   forwards them to `runBrowserMode`, and the ChatGPT handoff adapter stages
   selected packet files before submit recovery attaches them with the approved
   primer and compact context JSON.
+
+- 2026-06-24: ChatGPT handoff submit should carry explicit model intent instead
+  of inheriting the current browser picker state. Handoff prepare now records a
+  target semantic model selector, and the ChatGPT browser handoff adapter
+  resolves selectors such as `chatgpt:pro-extended` into Pro plus extended
+  thinking before submitting the approved prompt.
+
+- 2026-06-24: Handoff target packaging should try a bounded local file-searcher
+  fallback before omitting selected files whose provider-upload path has gone
+  stale. If `fsr find` resolves an available local copy, the packet copies that
+  file into `target/selected-files` and marks the upload manifest item with
+  file-search recovery metadata; otherwise the existing retryable omission path
+  remains authoritative.
 
 - 2026-06-07: Provider-native handoff upload needs manifest-validated file
   evidence before live provider/browser attachment code exists. The native file
@@ -18516,3 +18561,78 @@ browser-stage lifecycle observability, not transcript truncation.
   `conversationReadCooldownMs`, `pageRefreshCooldownMs`, and
   `renavigationCooldownMs` to `liveFollow` config and apply them as additional
   pacer buckets before provider reads.
+- 2026-06-24: Conservative ChatGPT live-follow pacing is not enough when the
+  enforcement point sits above provider read helpers. A fresh `wsl-chrome-3`
+  warning showed `listConversationFiles` as the guard action even though the
+  lane was configured for `6/min` plus `120s` action cooldowns. Move pacing
+  down toward browser-service with `createBrowserInteractionGovernor(...)`, and
+  carry the governor through `BrowserProviderListOptions.interactionGovernor`.
+  `LlmService.buildListOptions(...)` now attaches a shared ChatGPT governor from
+  service `liveFollow` pacing config, so handoff/materialization/provider
+  recovery paths inherit the same boundary enforcement as account-mirror instead
+  of adding more live-follow-only knobs.
+- 2026-06-25: A visible ChatGPT `requests too quickly` warning can sit on a
+  retained tab without surfacing as a failed provider read or log event. Treat
+  account-mirror target census as the last passive preflight before collection:
+  when a managed ChatGPT page exposes visible dialog/alert/live-region text that
+  matches the rate-limit signature, write the profile-scoped ChatGPT cooldown
+  guard and stop before the collector runs. Preserve cooldown guards as
+  cooldowns in refresh error extraction; do not convert them into manual-clear
+  hard stops.
+- 2026-06-26: ChatGPT file catch-up failures during history materialization can
+  be caused by `refreshSnapshot=true` forcing live `readConversationContext`
+  before cached missing-asset materialization, not by passive scrolling or
+  expired file URLs. For ChatGPT reconciliation jobs, try cache-backed
+  materialization first and only fall back to live snapshot refresh when that
+  does not materialize anything. Keep direct conversation jobs on the stricter
+  refresh-first path.
+- 2026-06-27: Account-mirror steady-follow should stop old conversation detail
+  reads at a reverse-mtime cached-fresh frontier. The collector now receives
+  persisted per-conversation freshness summaries before detail inventory,
+  selects ChatGPT/Gemini/Grok conversation detail candidates through the shared
+  `conversationFreshnessFrontier` helper, preserves `full_sweep`, missing
+  asset, missing mtime, stale cache, and incomplete large-chat chunk semantics,
+  and reports `metadataEvidence.conversationFreshnessFrontier` for operator
+  readback. Non-chat surfaces such as ChatGPT Library and Grok account files
+  remain outside the chat frontier.
+- 2026-06-27: Installed frontier proof needs both row mtimes and hydrated cached
+  freshness summaries before it can demonstrate reduced detail churn. ChatGPT
+  row mtimes are available from already-loaded localStorage
+  `conversation-history` caches, not visible row DOM. Raw persistence
+  `readCatalog` does not hydrate `conversationFreshness`, so refresh-time
+  frontier summary reads must derive freshness from cached conversation context
+  and cached conversation assets. Even with both fixes installed, a live lane
+  can legitimately select every row when cached detail is stale or local assets
+  are missing; do not close a frontier plan from evidence emission alone.
+- 2026-06-27: Reverse-mtime frontier proof can also be defeated by stale
+  embedded `conversationFreshness` records and old detail cursors. When a
+  frontier-filtered steady-follow pass excludes any row, reset the detail
+  cursor to the newest selected rows unless a chunk cursor is incomplete. When
+  a conversation row is scanned by detail inventory, persist
+  `detailObservedAt`, `manifestObservedAt`, and `detailCompleteness=complete`
+  so future passes do not repeatedly treat the same row as
+  `cached_state_not_fresh`. During cached-summary hydration, strip old embedded
+  `conversationFreshness`/`freshness` records before deriving freshness from the
+  current row metadata, cached context, and assets.
+- 2026-06-27: Conversation index refresh can erase detail freshness evidence if
+  cache merges replace nested `metadata` shallowly. Preserve existing nested
+  conversation metadata when merging incoming index rows over cached catalog
+  rows, then let incoming index fields update title/order/mtime. Otherwise a
+  guard-clear pass can write `detailObservedAt`/`manifestObservedAt`, only for
+  the next list refresh to remove it before the frontier can use it.
+- 2026-06-27: Account-mirror frontier freshness must distinguish attempted
+  conversation scans from completed detail reads. `scannedConversationIds`
+  proves only that the collector tried a row; durable
+  `detailCompleteness=complete` should be written only after conversation file
+  inventory succeeds and the context read completes without an outstanding
+  chunk cursor. Otherwise a tolerated context failure can become cached-fresh
+  frontier evidence and suppress a necessary future detail read.
+- 2026-06-27: Accepted browser-backed response runs must not leak recoverable
+  interruption windows as client-facing disconnects or generic 500s. Open
+  Notebook run `resp_69cc117b60d747d9a769f283f1eacc77` completed in AuraCall
+  after ChatGPT reattach/recovery, but Open Notebook saw
+  `Server disconnected without sending a response` while polling
+  `/v1/responses/{response_id}` and failed the notebook chat. Once AuraCall has
+  issued a `response_id`, chat-completions and responses endpoints must return
+  structured pending/recovering/completed/failure JSON; reserve 500s for true
+  unrecoverable server faults.

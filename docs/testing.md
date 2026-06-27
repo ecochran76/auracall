@@ -157,6 +157,11 @@
       - `accountMirrorStatus.entries[].metadataEvidence.countEvidence.mergedTotal`
       - `accountMirrorStatus.entries[].metadataEvidence.detailScannedThisPass`
       - `accountMirrorStatus.entries[].metadataEvidence.assetInventory.state = observed|complete|in_progress|deferred|unknown`
+      - `accountMirrorStatus.entries[].metadataEvidence.conversationFreshnessFrontier.object = account_mirror_conversation_freshness_frontier`
+      - `accountMirrorStatus.entries[].metadataEvidence.conversationFreshnessFrontier.rowsExamined`
+      - `accountMirrorStatus.entries[].metadataEvidence.conversationFreshnessFrontier.rowsSelectedForDetail`
+      - `accountMirrorStatus.entries[].metadataEvidence.conversationFreshnessFrontier.firstStoppedRow`
+      - `accountMirrorStatus.entries[].metadataEvidence.conversationFreshnessFrontier.fallbackReason`
       - `accountMirrorStatus.entries[].metadataEvidence.attachmentInventory`
       - `accountMirrorStatus.entries[].mirrorCompleteness.state = none|complete|in_progress|unknown`
       - `accountMirrorStatus.entries[].mirrorCompleteness.assetInventory.state`

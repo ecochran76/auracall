@@ -72,6 +72,10 @@ export type PromptInput = {
   allowAutoRefresh?: boolean;
   forceProjectRefresh?: boolean;
   forceConversationRefresh?: boolean;
+  desiredModel?: string | null;
+  modelStrategy?: 'select' | 'current' | 'ignore';
+  thinkingTime?: 'light' | 'standard' | 'extended' | 'heavy' | null;
+  modelSelector?: string | null;
   timeoutMs?: number | null;
   listOptions?: BrowserProviderListOptions;
   onProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void> | void;

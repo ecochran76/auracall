@@ -126,6 +126,7 @@ export const ServiceLiveFollowSchema = z.object({
   maxPageReadsPerCycle: z.number().int().nonnegative().optional(),
   maxConversationRowsPerCycle: z.number().int().nonnegative().optional(),
   maxArtifactRowsPerCycle: z.number().int().nonnegative().optional(),
+  freshFrontierThreshold: z.number().int().positive().optional(),
   conversationReadCooldownMs: z.number().int().nonnegative().optional(),
   pageRefreshCooldownMs: z.number().int().nonnegative().optional(),
   renavigationCooldownMs: z.number().int().nonnegative().optional(),
@@ -136,6 +137,17 @@ export const ServiceTenantLimitsSchema = z.object({
   maxConcurrentChats: z.number().int().positive().optional(),
   maxChatsPerHour: z.number().int().positive().optional(),
   maxChatsPerDay: z.number().int().positive().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const HandoffAttachmentPackagingConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  zipWhenFileCountExceeds: z.number().int().positive().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const HandoffConfigSchema = z.object({
+  attachmentPackaging: HandoffAttachmentPackagingConfigSchema.optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
@@ -544,6 +556,7 @@ export const ConfigSchema = z.object({
   auracallProfile: z.string().optional(),
   auracallProfiles: RuntimeProfilesConfigSchema.optional(),
   services: OracleServicesSchema.optional(),
+  handoff: HandoffConfigSchema.optional(),
   agents: z.record(z.string(), AgentConfigSchema).optional(),
   teams: z.record(z.string(), TeamConfigSchema).optional(),
   dev: OracleDevConfigSchema.optional(),

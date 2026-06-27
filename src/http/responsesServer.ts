@@ -412,6 +412,9 @@ interface HttpErrorPayload {
 	error: {
 		message: string;
 		type: string;
+		response_id?: string;
+		response_status?: string;
+		retry_after_seconds?: number;
 	};
 }
 
@@ -450,6 +453,7 @@ interface HttpChatCompletionRequest {
 	metadata?: Record<string, unknown>;
 	tools?: Array<Record<string, unknown>>;
 	auracall?: ExecutionRequestExtensionHints;
+	syncTimeoutMs?: number;
 }
 
 interface HttpChatCompletionResponse {
@@ -472,6 +476,9 @@ interface HttpChatCompletionResponse {
 	};
 	metadata?: ExecutionResponse["metadata"];
 }
+
+const DEFAULT_CHAT_COMPLETION_SYNC_TIMEOUT_MS = 30_000;
+const CHAT_COMPLETION_RETRY_AFTER_SECONDS = 30;
 
 interface HttpRecoveryDetailResponse {
 	object: "recovery_detail";
@@ -3436,11 +3443,33 @@ export async function createResponsesHttpServer(
 						return;
 					}
 					const createdResponse = await responsesService.createResponse(request);
-					await drainThroughServerHost({
+					const drain = drainThroughServerHost({
 						runId: createdResponse.id,
 						maxRuns: 1,
 						trigger: "request-create",
 					});
+					const drainedInSyncWindow = await waitForChatCompletionDrain(
+						drain,
+						chatRequest.syncTimeoutMs,
+					);
+					if (!drainedInSyncWindow) {
+						drain.catch((error) => {
+							logger?.(
+								`chat completion background drain failed after sync timeout: ${
+									error instanceof Error ? error.message : String(error)
+								}`,
+							);
+						});
+						const pendingResponse =
+							(await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
+						sendJson(
+							res,
+							503,
+							createChatCompletionPendingResponse(pendingResponse),
+							{ "Retry-After": String(CHAT_COMPLETION_RETRY_AFTER_SECONDS) },
+						);
+						return;
+					}
 					scheduleAccountMirrorSchedulerFollowUp(0, "response-drain-completed");
 					const response =
 						(await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
@@ -6795,6 +6824,12 @@ function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
 	const tools = Array.isArray(value.tools)
 		? value.tools.filter((tool): tool is Record<string, unknown> => isRecord(tool))
 		: undefined;
+	const auracall = isRecord(value.auracall)
+		? (value.auracall as Record<string, unknown>)
+		: undefined;
+	const syncTimeoutMs = readNonNegativeInteger(
+		auracall?.chatCompletionSyncTimeoutMs ?? auracall?.syncTimeoutMs,
+	);
 	return {
 		model,
 		messages,
@@ -6802,9 +6837,8 @@ function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
 		...(responseFormat ? { response_format: responseFormat } : {}),
 		...(metadata ? { metadata } : {}),
 		...(tools ? { tools } : {}),
-		auracall: isRecord(value.auracall)
-			? (value.auracall as ExecutionRequestExtensionHints)
-			: undefined,
+		...(auracall ? { auracall: auracall as ExecutionRequestExtensionHints } : {}),
+		...(syncTimeoutMs !== undefined ? { syncTimeoutMs } : {}),
 	};
 }
 
@@ -6865,6 +6899,41 @@ function createChatCompletionErrorResponse(response: ExecutionResponse): HttpErr
 			message: `AuraCall execution ${response.id} ended with status ${response.status}.`,
 		},
 	};
+}
+
+function createChatCompletionPendingResponse(response: ExecutionResponse): HttpErrorPayload {
+	return {
+		error: {
+			type: "auracall_execution_pending",
+			message:
+				`AuraCall execution ${response.id} did not complete within the synchronous ` +
+				"chat/completions wait window. Poll /v1/responses/{response_id} or retry later.",
+			response_id: response.id,
+			response_status: response.status,
+			retry_after_seconds: CHAT_COMPLETION_RETRY_AFTER_SECONDS,
+		},
+	};
+}
+
+async function waitForChatCompletionDrain(
+	drain: Promise<unknown>,
+	timeoutMs: number | undefined,
+): Promise<boolean> {
+	const normalizedTimeoutMs = timeoutMs ?? DEFAULT_CHAT_COMPLETION_SYNC_TIMEOUT_MS;
+	if (normalizedTimeoutMs <= 0) {
+		return false;
+	}
+	let timeout: NodeJS.Timeout | null = null;
+	try {
+		return await Promise.race([
+			drain.then(() => true),
+			new Promise<boolean>((resolve) => {
+				timeout = setTimeout(() => resolve(false), normalizedTimeoutMs);
+			}),
+		]);
+	} finally {
+		if (timeout) clearTimeout(timeout);
+	}
 }
 
 function createChatCompletionResponse(
@@ -9113,8 +9182,13 @@ async function readRequestBody(req: http.IncomingMessage): Promise<string> {
 	return Buffer.concat(chunks).toString("utf8");
 }
 
-function sendJson(res: http.ServerResponse, statusCode: number, payload: unknown): void {
-	res.writeHead(statusCode, { "Content-Type": "application/json" });
+function sendJson(
+	res: http.ServerResponse,
+	statusCode: number,
+	payload: unknown,
+	headers: http.OutgoingHttpHeaders = {},
+): void {
+	res.writeHead(statusCode, { "Content-Type": "application/json", ...headers });
 	res.end(`${JSON.stringify(payload)}\n`);
 }
 

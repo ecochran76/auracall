@@ -8,20 +8,23 @@ import {
 	mapChatgptLibraryFilesToArtifacts,
 	mapGeminiConversationArtifactsToMediaManifest,
 	mapGrokAccountFilesToMediaManifest,
+	readAccountMirrorProviderIdentityKeyForTest,
 	readBoundedAttachmentInventory,
 	readBoundedChatgptDetailInventory,
-	readBoundedConversations,
-	readBoundedProjectConversations,
 	readBoundedChatgptLibraryInventory,
+	readBoundedConversations,
 	readBoundedGeminiDetailInventory,
-	readBoundedProjects,
 	readBoundedGrokAccountFileInventory,
-	readAccountMirrorProviderIdentityKeyForTest,
-	shouldResumeChatgptAttachmentInventoryCursor,
-	selectAttachmentInventoryCursorForSweep,
+	readBoundedGrokDetailInventory,
+	readBoundedProjectConversations,
+	readBoundedProjects,
 	selectAttachmentInventoryCursorForProviderSweep,
+	selectAttachmentInventoryCursorForSweep,
+	selectConversationDetailCandidates,
+	selectDetailAttachmentCursorForFreshnessFrontier,
 	selectProjectConversationCursorForSweep,
 	shouldReadProjectConversationsForAccountMirror,
+	shouldResumeChatgptAttachmentInventoryCursor,
 } from "../../src/accountMirror/chatgptMetadataCollector.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { listDomDriftObservations } from "../../src/browser/domDriftObservations.js";
@@ -74,6 +77,229 @@ describe("ChatGPT account mirror metadata collector", () => {
 				source: "auth-session",
 			}),
 		).toBe("consult@polymerconsultinggroup.com");
+	});
+
+	test("selects only changed conversation rows for steady-follow detail inventory after fresh frontier", () => {
+		const conversations = [
+			{
+				id: "changed",
+				title: "Changed",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T12:05:00.000Z",
+			},
+			{
+				id: "fresh_1",
+				title: "Fresh 1",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T11:55:00.000Z",
+			},
+			{
+				id: "fresh_2",
+				title: "Fresh 2",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T11:54:00.000Z",
+			},
+			{
+				id: "old",
+				title: "Old",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T11:00:00.000Z",
+			},
+		];
+		const previousConversationFreshness = new Map(
+			conversations.map((conversation) => [
+				conversation.id,
+				{
+					conversationId: conversation.id,
+					detailObservedAt:
+						conversation.id === "changed" ? "2026-06-27T12:00:00.000Z" : "2026-06-27T12:10:00.000Z",
+					manifestObservedAt:
+						conversation.id === "changed" ? "2026-06-27T12:00:00.000Z" : "2026-06-27T12:10:00.000Z",
+					freshnessState: "fresh" as const,
+					routeabilityState: "unknown" as const,
+					assetCompleteness: "complete" as const,
+					missingLocalCount: 0,
+					incompleteDetailChunk: false,
+				},
+			]),
+		);
+
+		const selection = selectConversationDetailCandidates({
+			provider: "chatgpt",
+			sweepMode: "steady_follow",
+			conversations,
+			previousConversationFreshness,
+			attachmentCursor: null,
+			freshFrontierThreshold: 2,
+		});
+
+		expect(selection.detailConversations.map((conversation) => conversation.id)).toEqual([
+			"changed",
+		]);
+		expect(selection.evidence).toMatchObject({
+			provider: "chatgpt",
+			sweepMode: "steady_follow",
+			frontierReached: true,
+			rowsSelectedForDetail: 1,
+			firstStoppedRow: {
+				conversationId: "fresh_2",
+			},
+		});
+	});
+
+	test("resets steady-follow detail cursor to newest selected rows after frontier filtering", () => {
+		const selection = selectConversationDetailCandidates({
+			provider: "chatgpt",
+			sweepMode: "steady_follow",
+			conversations: [
+				{
+					id: "stale_1",
+					title: "Stale 1",
+					provider: "chatgpt",
+					updatedAt: "2026-06-27T12:00:00.000Z",
+				},
+				{
+					id: "stale_2",
+					title: "Stale 2",
+					provider: "chatgpt",
+					updatedAt: "2026-06-27T11:00:00.000Z",
+				},
+				{
+					id: "fresh_1",
+					title: "Fresh 1",
+					provider: "chatgpt",
+					updatedAt: "2026-06-27T10:00:00.000Z",
+				},
+			],
+			previousConversationFreshness: new Map([
+				[
+					"stale_1",
+					{
+						conversationId: "stale_1",
+						detailObservedAt: "2026-06-27T11:00:00.000Z",
+						manifestObservedAt: "2026-06-27T11:00:00.000Z",
+						freshnessState: "stale",
+						routeabilityState: "unknown",
+						assetCompleteness: "complete",
+						missingLocalCount: 0,
+						incompleteDetailChunk: false,
+					},
+				],
+				[
+					"stale_2",
+					{
+						conversationId: "stale_2",
+						detailObservedAt: "2026-06-27T10:00:00.000Z",
+						manifestObservedAt: "2026-06-27T10:00:00.000Z",
+						freshnessState: "stale",
+						routeabilityState: "unknown",
+						assetCompleteness: "complete",
+						missingLocalCount: 0,
+						incompleteDetailChunk: false,
+					},
+				],
+				[
+					"fresh_1",
+					{
+						conversationId: "fresh_1",
+						detailObservedAt: "2026-06-27T10:30:00.000Z",
+						manifestObservedAt: "2026-06-27T10:30:00.000Z",
+						freshnessState: "fresh",
+						routeabilityState: "unknown",
+						assetCompleteness: "complete",
+						missingLocalCount: 0,
+						incompleteDetailChunk: false,
+					},
+				],
+			]),
+			attachmentCursor: {
+				nextProjectIndex: 8,
+				nextConversationIndex: 12,
+				detailReadLimit: 4,
+				scannedProjects: 0,
+				scannedConversations: 4,
+				conversationDetail: null,
+				yielded: false,
+			},
+			freshFrontierThreshold: 3,
+		});
+
+		expect(selection.evidence).toMatchObject({
+			rowsExamined: 3,
+			rowsSelectedForDetail: 2,
+			frontierReached: false,
+		});
+		expect(
+			selectDetailAttachmentCursorForFreshnessFrontier({
+				provider: "chatgpt",
+				sweepMode: "steady_follow",
+				attachmentCursor: {
+					nextProjectIndex: 8,
+					nextConversationIndex: 12,
+					detailReadLimit: 4,
+					scannedProjects: 0,
+					scannedConversations: 4,
+					conversationDetail: null,
+					yielded: false,
+				},
+				frontierEvidence: selection.evidence,
+				detailConversations: selection.detailConversations,
+				projectsLength: 8,
+			}),
+		).toMatchObject({
+			nextProjectIndex: 8,
+			nextConversationIndex: 0,
+		});
+	});
+
+	test("preserves incomplete detail cursor even when frontier filtering occurred", () => {
+		const cursor = {
+			nextProjectIndex: 8,
+			nextConversationIndex: 12,
+			detailReadLimit: 4,
+			scannedProjects: 0,
+			scannedConversations: 4,
+			conversationDetail: {
+				conversationId: "chunked",
+				nextMessageIndex: 24,
+				messageLimit: 24,
+				totalMessages: 60,
+			},
+			yielded: false,
+		};
+		const selected = [
+			{ id: "before", title: "Before", provider: "chatgpt" as const },
+			{ id: "chunked", title: "Chunked", provider: "chatgpt" as const },
+		];
+
+		expect(
+			selectDetailAttachmentCursorForFreshnessFrontier({
+				provider: "chatgpt",
+				sweepMode: "steady_follow",
+				attachmentCursor: cursor,
+				frontierEvidence: {
+					object: "account_mirror_conversation_freshness_frontier",
+					provider: "chatgpt",
+					sweepMode: "steady_follow",
+					threshold: 3,
+					rowsExamined: 3,
+					rowsSelectedForDetail: 2,
+					frontierReached: false,
+					firstStoppedRow: null,
+					fallbackReason: "cached_state_not_fresh",
+					selectedConversationIds: ["before", "chunked"],
+					rowEvidence: [],
+				},
+				detailConversations: selected,
+				projectsLength: 8,
+			}),
+		).toMatchObject({
+			nextConversationIndex: 1,
+			conversationDetail: {
+				conversationId: "chunked",
+				nextMessageIndex: 24,
+			},
+		});
 	});
 
 	test("does not derive ChatGPT account identity from display name when email is absent", () => {
@@ -456,6 +682,96 @@ describe("ChatGPT account mirror metadata collector", () => {
 			nextConversationIndex: 0,
 			scannedConversations: 1,
 		});
+		expect(inventory.progress).toMatchObject({
+			scannedConversationIds: ["conv_1"],
+			detailObservedConversationIds: ["conv_1"],
+			contextObservedConversationIds: ["conv_1"],
+		});
+	});
+
+	test("does not mark conversation detail complete when context read fails", async () => {
+		const client = {
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(async () => null as never),
+		};
+
+		const inventory = await readBoundedChatgptDetailInventory(
+			client,
+			[],
+			[{ id: "conv_context_failed", title: "Context failed", provider: "chatgpt" }],
+			4,
+			{ maxDetailReads: 1 },
+		);
+
+		expect(inventory.cursor).toMatchObject({
+			nextConversationIndex: 0,
+			scannedConversations: 1,
+		});
+		expect(inventory.progress).toMatchObject({
+			scannedConversationIds: ["conv_context_failed"],
+			detailObservedConversationIds: [],
+			contextObservedConversationIds: [],
+		});
+	});
+
+	test("paces ChatGPT detail inventory reads through the browser interaction governor", async () => {
+		const calls: string[] = [];
+		const pacer = {
+			beforeInteraction: vi.fn(async (kind?: string) => {
+				calls.push(`pacer:${kind ?? "generic"}`);
+			}),
+		};
+		const client = {
+			listAccountFiles: vi.fn(async () => {
+				calls.push("provider:listAccountFiles");
+				return [
+					{
+						id: "library-file-1",
+						name: "Library one.pdf",
+						provider: "chatgpt" as const,
+						source: "account" as const,
+						metadata: {
+							source: "chatgpt-library",
+							artifactKind: "download",
+						},
+					},
+				];
+			}),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => {
+				calls.push("provider:listConversationFiles");
+				return [];
+			}),
+			getConversationContext: vi.fn(async () => {
+				calls.push("provider:getConversationContext");
+				return {
+					provider: "chatgpt" as const,
+					conversationId: "conv_1",
+					messages: [],
+					artifacts: [],
+				};
+			}),
+		};
+
+		await readBoundedChatgptDetailInventory(
+			client,
+			[],
+			[{ id: "conv_1", title: "Conversation 1", provider: "chatgpt" }],
+			4,
+			{ maxDetailReads: 1, pacer },
+		);
+
+		expect(calls).toEqual([
+			"pacer:page-refresh",
+			"provider:listAccountFiles",
+			"pacer:conversation-read",
+			"provider:listConversationFiles",
+			"pacer:conversation-read",
+			"provider:getConversationContext",
+		]);
+		expect(pacer.beforeInteraction).toHaveBeenCalledTimes(3);
 	});
 
 	test("reserves one ChatGPT conversation detail row when library inventory fills the row budget", async () => {
@@ -1115,6 +1431,75 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
+	test("reads Grok account files separately from frontier-selected chat detail", async () => {
+		const calls: string[] = [];
+		const client = {
+			listAccountFiles: vi.fn(async () => {
+				calls.push("account-files");
+				return [
+					{
+						id: "grok_image_1",
+						name: "image.png",
+						provider: "grok" as const,
+						source: "account" as const,
+						remoteUrl: "https://assets.grok.com/image.png",
+					},
+				];
+			}),
+			listProjectFiles: vi.fn(async () => {
+				throw new Error("Grok chat-detail inventory should not read project files");
+			}),
+			listConversationFiles: vi.fn(async (conversationId: string) => {
+				calls.push(`conversation-files:${conversationId}`);
+				return [];
+			}),
+			getConversationContext: vi.fn(async (conversationId: string) => {
+				calls.push(`conversation-context:${conversationId}`);
+				return {
+					provider: "grok" as const,
+					conversationId,
+					messages: [],
+					artifacts:
+						conversationId === "grok_changed"
+							? [
+									{
+										id: "artifact_1",
+										title: "Generated image",
+										kind: "image" as const,
+										uri: "https://assets.grok.com/generated.png",
+									},
+								]
+							: [],
+				};
+			}),
+		};
+
+		const inventory = await readBoundedGrokDetailInventory(
+			client,
+			[{ id: "grok_changed", title: "Changed", provider: "grok" }],
+			8,
+			{ maxDetailReads: 1 },
+		);
+
+		expect(calls).toEqual([
+			"account-files",
+			"conversation-files:grok_changed",
+			"conversation-context:grok_changed",
+		]);
+		expect(inventory.media).toMatchObject([
+			{ id: "grok-account-file:grok_image_1", mediaType: "image" },
+		]);
+		expect(inventory.artifacts).toMatchObject([
+			{
+				id: "artifact_1",
+				metadata: {
+					conversationId: "grok_changed",
+				},
+			},
+		]);
+		expect(inventory.cursor.scannedConversations).toBe(1);
+	});
+
 	test("builds Gemini conversation detail inventory with media manifests", async () => {
 		const client = {
 			listProjectFiles: vi.fn(async () => []),
@@ -1376,6 +1761,8 @@ describe("ChatGPT account mirror metadata collector", () => {
 			inventoryProgress: {
 				scannedProjectIds: [],
 				scannedConversationIds: [],
+				detailObservedConversationIds: [],
+				contextObservedConversationIds: [],
 				artifactBearingConversationIds: [],
 				fileBearingConversationIds: [],
 			},
@@ -1400,6 +1787,8 @@ describe("ChatGPT account mirror metadata collector", () => {
 			inventoryProgress: {
 				scannedProjectIds: [],
 				scannedConversationIds: ["gemini_conv_1"],
+				detailObservedConversationIds: ["gemini_conv_1"],
+				contextObservedConversationIds: ["gemini_conv_1"],
 				artifactBearingConversationIds: ["gemini_conv_1"],
 				fileBearingConversationIds: [],
 			},

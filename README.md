@@ -156,7 +156,8 @@ auracall run status <id> --json
 # Prepare a provider-neutral cross-service handoff packet without target mutation
 auracall handoff prepare \
   --source-provider chatgpt --source-profile default --source-ref "https://chatgpt.com/c/..." \
-  --target-provider gemini --target-profile auracall-gemini-pro \
+  --target-provider chatgpt --target-profile auracall-chatgpt-pro \
+  --target-model-selector chatgpt:pro-extended \
   --source-context-json /path/to/context.json \
   --source-manifest-json /path/to/manifest.json \
   --source-materialization-job-json /path/to/history-materialization-job.json \
@@ -231,7 +232,23 @@ Current browser-mode default posture:
   and omissions. Repeatable `--source-materialization-job-id` inputs read
   existing source jobs through the local API; explicit
   `--source-materialization-create` can create one bounded source job when no
-  prior source job evidence was supplied. `auracall handoff status
+  prior source job evidence was supplied. When a selected manifest item has no
+  usable local file path, packet preparation asks the local `fsr`/file-searcher
+  index for a bounded fallback match before recording a retryable omission; any
+  recovered file is copied into the packet and marked in
+  `target/upload-manifest.json`. Handoff target attachment packaging is enabled
+  for all target services by default: ten or fewer selected files remain
+  individual upload manifest entries, while eleven or more selected files are
+  packaged into one deterministic `target/selected-files/handoff-attachments.zip`
+  upload item. The upload manifest and target package retain the original
+  selected-file metadata, and ZIP-mode primer text instructs the target chat to
+  inspect or extract the ZIP before analysis. Override the default with
+  `handoff.attachmentPackaging.enabled` and
+  `handoff.attachmentPackaging.zipWhenFileCountExceeds` in config. For ChatGPT
+  targets, pass
+  `--target-model-selector chatgpt:pro-extended` or another semantic selector
+  when the live submit path must select a specific model mode instead of
+  inheriting the browser's current model. `auracall handoff status
   <handoff_id>` reads the packet ledger back by id, including event count,
   packet digest, source completeness, source materialization job evidence,
   analysis schema validity, package digest, package file metrics, and target
@@ -369,8 +386,15 @@ Terminology note:
 - `POST /v1/chat/completions` accepts non-streaming OpenAI-style chat requests,
   maps `system` messages to instructions, joins the remaining chat messages
   into the existing `/v1/responses` runtime path, drains one host-owned run
-  before returning, and returns a standard `chat.completion` object. `stream:
-  true` is rejected explicitly until the streaming adapter is implemented.
+  before returning, and returns a standard `chat.completion` object. If a
+  browser-backed run cannot finish inside the bounded synchronous wait window,
+  the endpoint returns `503` with `Retry-After`, `error.type =
+  "auracall_execution_pending"`, and the persisted `response_id` for
+  `GET /v1/responses/{response_id}` polling instead of holding the client
+  request indefinitely. The default wait is 30 seconds; set
+  `auracall.chatCompletionSyncTimeoutMs` on a request to tune it. `stream:
+  true` is rejected explicitly until the
+  streaming adapter is implemented.
 - `GET /v1/models` returns the static provider model catalog plus AuraCall
   discovery entries. Effective config-defined and registry-backed agents appear
   as `agent:<agent_id>` model ids usable with `/v1/responses` and non-streaming
@@ -649,6 +673,14 @@ Terminology note:
   forcing a browser refresh. Gemini context, file-download, and materialization
   reads click rail-discovered conversations in-page before any direct route
   fallback.
+  During steady-follow, ChatGPT, Gemini, and Grok conversation rows are also
+  evaluated in provider-observed reverse modified-time order before expensive
+  detail reads. Cached-fresh rows with current detail, manifest, assets, and no
+  incomplete chunk cursor count toward a fresh frontier; after
+  `liveFollow.freshFrontierThreshold` contiguous fresh rows, older cached-fresh
+  conversation detail is skipped. `full_sweep` keeps its full verification
+  behavior, and missing-asset or chunk-incomplete rows remain selectable even
+  when old.
   Full-sweep refreshes are the mode
   that resume the persisted deep cursor for backfill. Gemini mirror collection
   reads both the left rail and Gem/project conversation histories; project
@@ -707,7 +739,11 @@ Terminology note:
   separates `metadataEvidence.countEvidence.observedThisPass`,
   `retainedFromCache`, and `mergedTotal`; unscanned Gemini conversation asset
   detail is reported through `assetInventory.state = deferred|unknown` instead
-  of treating `artifacts=0` as proof that no assets exist. `/ops/browser`
+  of treating `artifacts=0` as proof that no assets exist.
+  `metadataEvidence.conversationFreshnessFrontier` reports the provider, sweep
+  mode, rows examined, rows selected for detail, first stopped row, selected
+  conversation ids, and fallback reason when the frontier cannot be trusted.
+  `/ops/browser`
   renders the same live-follow posture plus
   service controls for the background drain, mirror scheduler run-once,
   scheduler pause/resume, and live-follow start/pause/resume/cancel in the
@@ -1562,6 +1598,12 @@ Put defaults in `~/.auracall/config.json` (JSON5). Example:
   model: "gpt-5.1-pro",
   engine: "api",
   filesReport: true,
+  handoff: {
+    attachmentPackaging: {
+      enabled: true,
+      zipWhenFileCountExceeds: 10,
+    },
+  },
   browser: {
     chatgptUrl: "https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project"
   }

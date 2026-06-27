@@ -327,6 +327,18 @@ Version policy:
 - `version: 2` means the file is written in the compatibility bridge shape
 - Aura-Call still loads either version permissively during the transition
 
+Handoff packaging policy:
+- `handoff.attachmentPackaging.enabled` defaults to `true`
+- `handoff.attachmentPackaging.zipWhenFileCountExceeds` defaults to `10`
+- with the default policy, ten or fewer selected target files remain individual
+  upload manifest entries
+- eleven or more selected target files are packaged into one deterministic
+  `target/selected-files/handoff-attachments.zip` upload item
+- ZIP-mode target primer text instructs the receiving chat to inspect or
+  extract the ZIP before analysis
+- the target package and upload manifest retain original selected-file metadata
+  for audit, approval, export, and repair
+
 ## Primary Example (`~/.auracall/config.json`)
 
 ```json5
@@ -347,6 +359,16 @@ Version policy:
     chatgpt: { url: "https://chatgpt.com/" },
     gemini: { url: "https://gemini.google.com/app" },
     grok: { url: "https://grok.com/" },
+  },
+
+  // Optional handoff packaging policy. These are the defaults: all target
+  // services upload ten or fewer selected files individually and package
+  // eleven or more selected files into one deterministic ZIP attachment.
+  handoff: {
+    attachmentPackaging: {
+      enabled: true,
+      zipWhenFileCountExceeds: 10,
+    },
   },
 
   // Optional host-owned runtime execution policy defaults
@@ -705,6 +727,9 @@ Within each file, later CLI flags still override config, and environment variabl
     storms
   - each mirror pass has page/read budgets and should prefer metadata before
     full content or binary artifact retrieval
+  - `liveFollow.freshFrontierThreshold` optionally controls how many contiguous
+    cached-fresh reverse-mtime conversation rows stop steady-follow detail
+    scanning; the default is `3`
 - `runtimeProfiles.<name>.cache.store` controls cache backend: `json` keeps legacy JSON files only, `sqlite` uses SQLite only (`cache.sqlite` per provider+identity), and `dual` reads/writes SQLite plus the JSON mirror (recommended migration mode).
 - `dev.browserPortRange` sets the fallback DevTools port range used when spawning new Chrome instances (profile/browser overrides still win).
 - `browser.*` legacy keys are still accepted and override profile defaults when present (CLI flags still win).

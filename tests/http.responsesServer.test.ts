@@ -19541,6 +19541,70 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("returns retryable pending chat completion errors when synchronous drain is still blocked", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-http-chat-completions-pending-"),
+		);
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		let unblockExecution: () => void = () => {};
+		const blockedExecution = new Promise<void>((resolve) => {
+			unblockExecution = resolve;
+		});
+
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0, backgroundDrainIntervalMs: 60_000 },
+			{
+				now: () => new Date("2026-06-26T15:00:00.000Z"),
+				generateResponseId: () => "chatcmpl_resp_pending_1",
+				executeStoredRunStep: async () => {
+					await blockedExecution;
+					return {
+						output: {
+							summary: "released after pending response",
+							artifacts: [],
+							structuredData: {},
+							notes: [],
+						},
+					};
+				},
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					model: "agent:researcher",
+					messages: [{ role: "user", content: "Say hello." }],
+					auracall: {
+						service: "chatgpt",
+						chatCompletionSyncTimeoutMs: 1,
+					},
+				}),
+			});
+			const payload = (await response.json()) as JsonObject;
+			expect(response.status).toBe(503);
+			expect(response.headers.get("retry-after")).toBe("30");
+			expect(payload).toMatchObject({
+				error: {
+					type: "auracall_execution_pending",
+					message:
+						"AuraCall execution chatcmpl_resp_pending_1 did not complete within the synchronous chat/completions wait window. Poll /v1/responses/{response_id} or retry later.",
+					response_id: "chatcmpl_resp_pending_1",
+					retry_after_seconds: 30,
+				},
+			});
+			expect(["in_progress", "completed", "failed"]).toContain(
+				requireJsonObject(payload.error, "error").response_status,
+			);
+		} finally {
+			unblockExecution();
+			await server.close();
+		}
+	});
+
 	it("rejects streaming chat completions explicitly", async () => {
 		const server = await createResponsesHttpServer({ host: "127.0.0.1", port: 0 });
 

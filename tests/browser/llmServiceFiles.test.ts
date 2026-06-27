@@ -1302,6 +1302,54 @@ describe("llmService project file cache writes", () => {
 		expect(result.configuredUrl).toBe("https://grok.com/c/conversation-123");
 	});
 
+	test("buildListOptions attaches a shared ChatGPT browser interaction governor", async () => {
+		const browserService = {
+			resolveServiceTarget: vi.fn(async () => ({
+				host: "127.0.0.1",
+				port: 45011,
+				tab: { targetId: "chatgpt-target", url: CHATGPT_URL },
+			})),
+		};
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+		};
+		const service = new BuildListOptionsLlmService(
+			{
+				auracallProfile: "default",
+				browser: { cache: {}, chatgptUrl: CHATGPT_URL },
+				profiles: {
+					default: {
+						services: {
+							chatgpt: {
+								accountId: "chatgpt-account",
+								liveFollow: {
+									enabled: true,
+									maxBrowserInteractionsPerMinute: 6,
+									conversationReadCooldownMs: 120_000,
+									pageRefreshCooldownMs: 60_000,
+									renavigationCooldownMs: 90_000,
+								},
+							},
+						},
+					},
+				},
+			} as unknown as ResolvedUserConfig,
+			provider as never,
+			browserService,
+		);
+
+		const first = await service.buildListOptions();
+		const second = await service.buildListOptions();
+		const abortController = new AbortController();
+		const abortScoped = await service.buildListOptions({ abortSignal: abortController.signal });
+
+		expect(first.interactionGovernor).toBeDefined();
+		expect(second.interactionGovernor).toBe(first.interactionGovernor);
+		expect(abortScoped.interactionGovernor).toBeDefined();
+		expect(abortScoped.interactionGovernor).not.toBe(first.interactionGovernor);
+	});
+
 	test("buildListOptions uses Gemini service URLs instead of inheriting ChatGPT defaults", async () => {
 		const browserService = {
 			resolveServiceTarget: vi.fn(async ({ configuredUrl }: { configuredUrl?: string | null }) => ({

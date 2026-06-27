@@ -3,6 +3,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from "../../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../../config/serviceAccountIdentity.js";
+import {
+	createBrowserInteractionGovernor,
+	type BrowserInteractionGovernor,
+} from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { ResolvedUserConfig } from "../../config.js";
 import {
 	appendChatgptMutationRecord,
@@ -508,6 +512,7 @@ export abstract class LlmService {
 	private readonly browserService: BrowserService;
 	protected readonly cacheStore: CacheStore;
 	private readonly identityPrompt?: IdentityPrompt;
+	private readonly browserInteractionGovernors = new Map<string, BrowserInteractionGovernor>();
 
 	protected constructor(
 		private readonly userConfig: ResolvedUserConfig,
@@ -707,6 +712,8 @@ export abstract class LlmService {
 			browserService: this.browserService,
 			mutationAudit: overrides.mutationAudit ?? this.browserService.getMutationAuditSink?.(),
 			mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
+			interactionGovernor:
+				overrides.interactionGovernor ?? this.resolveBrowserInteractionGovernor(overrides),
 			expectedUserIdentity:
 				overrides.expectedUserIdentity ?? this.resolveProfileServiceIdentity(this.providerId),
 			expectedServiceAccountId:
@@ -716,6 +723,57 @@ export abstract class LlmService {
 					runtimeProfileId: this.resolveActiveProfileName(),
 				}),
 		};
+	}
+
+	private resolveBrowserInteractionGovernor(
+		overrides: BrowserProviderListOptions,
+	): BrowserInteractionGovernor | undefined {
+		if (this.providerId !== "chatgpt") return undefined;
+		const liveFollow = this.resolveConfiguredLiveFollow();
+		const policy = {
+			maxInteractionsPerMinute: readPositiveNumber(liveFollow?.maxBrowserInteractionsPerMinute),
+			cooldownsByClass: {
+				"conversation-read": readNonNegativeNumber(liveFollow?.conversationReadCooldownMs),
+				"page-refresh": readNonNegativeNumber(liveFollow?.pageRefreshCooldownMs),
+				renavigation: readNonNegativeNumber(liveFollow?.renavigationCooldownMs),
+			},
+			abortSignal: overrides.abortSignal,
+		};
+		if (overrides.abortSignal) {
+			return createBrowserInteractionGovernor(policy);
+		}
+		const profileName = this.resolveActiveProfileName() ?? "default";
+		const accountId =
+			resolveConfiguredServiceAccountId(this.userConfig as unknown as Record<string, unknown>, {
+				serviceId: this.providerId,
+				runtimeProfileId: this.resolveActiveProfileName(),
+			}) ?? "default";
+		const key = `${profileName}:${this.providerId}:${accountId}`;
+		let governor = this.browserInteractionGovernors.get(key);
+		if (!governor) {
+			governor = createBrowserInteractionGovernor(policy);
+			this.browserInteractionGovernors.set(key, governor);
+		}
+		return governor;
+	}
+
+	private resolveConfiguredLiveFollow(): Record<string, unknown> | null {
+		const globalService = this.userConfig.services?.[this.providerId];
+		const globalLiveFollow = isRecord(globalService?.liveFollow) ? globalService.liveFollow : null;
+		const profileName = this.resolveActiveProfileName();
+		if (!profileName) return globalLiveFollow;
+		const profile = getPreferredRuntimeProfile(this.userConfig, {
+			explicitProfileName: profileName,
+		});
+		const profileServices =
+			profile?.services && typeof profile.services === "object"
+				? (profile.services as Record<string, unknown>)
+				: null;
+		const profileService =
+			profileServices && this.providerId in profileServices
+				? (profileServices[this.providerId] as Record<string, unknown> | undefined)
+				: undefined;
+		return isRecord(profileService?.liveFollow) ? profileService.liveFollow : globalLiveFollow;
 	}
 
 	protected scopeConversationListOptions(
@@ -3232,6 +3290,16 @@ export const shouldAttachResolvedServiceTabForTest = shouldAttachResolvedService
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readPositiveNumber(value: unknown): number | null {
+	return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
+}
+
+function readNonNegativeNumber(value: unknown): number | null {
+	return typeof value === "number" && Number.isFinite(value) && value >= 0
+		? Math.floor(value)
+		: null;
 }
 
 function parseLatestSelector(value: string): number | null {

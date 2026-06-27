@@ -65,6 +65,7 @@ export interface AccountMirrorProviderPolitenessPolicy {
 	maxPageReadsPerCycle: number;
 	maxConversationRowsPerCycle: number;
 	maxArtifactRowsPerCycle: number;
+	freshFrontierThreshold: number;
 	conversationReadCooldownMs: number;
 	pageRefreshCooldownMs: number;
 	renavigationCooldownMs: number;
@@ -125,6 +126,7 @@ export interface AccountMirrorPolitenessDecision {
 		maxPageReadsPerCycle: number;
 		maxConversationRowsPerCycle: number;
 		maxArtifactRowsPerCycle: number;
+		freshFrontierThreshold: number;
 		conversationReadCooldownMs: number;
 		pageRefreshCooldownMs: number;
 		renavigationCooldownMs: number;
@@ -148,6 +150,7 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
 		maxPageReadsPerCycle: 4,
 		maxConversationRowsPerCycle: 30,
 		maxArtifactRowsPerCycle: 24,
+		freshFrontierThreshold: 3,
 		conversationReadCooldownMs: 0,
 		pageRefreshCooldownMs: 0,
 		renavigationCooldownMs: 0,
@@ -164,6 +167,7 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
 		maxPageReadsPerCycle: 4,
 		maxConversationRowsPerCycle: 80,
 		maxArtifactRowsPerCycle: 24,
+		freshFrontierThreshold: 3,
 		conversationReadCooldownMs: 0,
 		pageRefreshCooldownMs: 0,
 		renavigationCooldownMs: 0,
@@ -180,6 +184,7 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
 		maxPageReadsPerCycle: 8,
 		maxConversationRowsPerCycle: 160,
 		maxArtifactRowsPerCycle: 80,
+		freshFrontierThreshold: 3,
 		conversationReadCooldownMs: 0,
 		pageRefreshCooldownMs: 0,
 		renavigationCooldownMs: 0,
@@ -285,6 +290,7 @@ function createDecision(
 			maxPageReadsPerCycle: policy.maxPageReadsPerCycle,
 			maxConversationRowsPerCycle: policy.maxConversationRowsPerCycle,
 			maxArtifactRowsPerCycle: policy.maxArtifactRowsPerCycle,
+			freshFrontierThreshold: policy.freshFrontierThreshold,
 			conversationReadCooldownMs: policy.conversationReadCooldownMs,
 			pageRefreshCooldownMs: policy.pageRefreshCooldownMs,
 			renavigationCooldownMs: policy.renavigationCooldownMs,

@@ -1109,7 +1109,7 @@ function resolveCompletionCollectorTimeoutMs(operation: AccountMirrorCompletionO
   if (operation.provider === 'gemini') {
     return operation.sweepMode === 'full_sweep' ? 900_000 : 300_000;
   }
-  if (operation.provider === 'chatgpt' && operation.sweepMode === 'full_sweep') return 900_000;
+  if (operation.provider === 'chatgpt') return 900_000;
   return undefined;
 }
 

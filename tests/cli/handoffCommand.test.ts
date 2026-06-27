@@ -290,6 +290,287 @@ describe("handoff prepare CLI helpers", () => {
 		).toEqual(["duplicate_alias_a", "project_index"]);
 	});
 
+	test("keeps ten selected handoff attachments individual by default", async () => {
+		const root = await tempRoot("auracall-handoff-ten-attachments-");
+		const manifestItems = await createSelectedFileManifestItems(root, 10);
+
+		const result = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			handoffId: "ten-attachments-individual",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: { messages: [{ role: "user", content: "ten files" }] },
+			sourceManifest: { items: manifestItems },
+			maxSelectedArtifacts: 10,
+			generatedAt: "2026-06-26T12:00:00.000Z",
+		});
+
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(result.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		const primer = await readFile(path.join(result.packetPath, "target", "primer.md"), "utf8");
+		expect(result.targetPackage.selectedFileCount).toBe(10);
+		expect(uploadManifest.items).toHaveLength(10);
+		expect(uploadManifest.attachmentPackaging).toMatchObject({
+			mode: "individual",
+			enabled: true,
+			zipWhenFileCountExceeds: 10,
+			originalSelectedFileCount: 10,
+			emittedUploadItemCount: 10,
+		});
+		expect(primer).not.toContain("Attachment packaging instruction");
+	});
+
+	test("packages eleven selected handoff attachments into one deterministic ZIP by default", async () => {
+		const root = await tempRoot("auracall-handoff-zip-attachments-");
+		const manifestItems = await createSelectedFileManifestItems(root, 11);
+
+		const first = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			handoffId: "eleven-attachments-zip-a",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: { messages: [{ role: "user", content: "eleven files" }] },
+			sourceManifest: { items: manifestItems },
+			maxSelectedArtifacts: 11,
+			generatedAt: "2026-06-26T12:00:00.000Z",
+		});
+		const second = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			handoffId: "eleven-attachments-zip-b",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: { messages: [{ role: "user", content: "eleven files" }] },
+			sourceManifest: { items: manifestItems },
+			maxSelectedArtifacts: 11,
+			generatedAt: "2026-06-26T12:00:00.000Z",
+		});
+
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(first.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		const zipPath = path.join(first.packetPath, "target", "selected-files", "handoff-attachments.zip");
+		const firstZip = await readFile(zipPath);
+		const secondZip = await readFile(
+			path.join(second.packetPath, "target", "selected-files", "handoff-attachments.zip"),
+		);
+		const entries = parseStoredZipEntries(firstZip);
+		const expectedEntryNames = uploadManifest.attachmentPackaging.originalItems
+			.map((item: { packetPath: string }) => item.packetPath.replace(/^target\//, ""))
+			.sort();
+
+		expect(first.targetPackage.packageDigest).toBe(second.targetPackage.packageDigest);
+		expect(firstZip.equals(secondZip)).toBe(true);
+		expect(uploadManifest.items).toEqual([
+			expect.objectContaining({
+				sourceManifestItemId: "attachment_package_zip",
+				packetPath: "target/selected-files/handoff-attachments.zip",
+				filename: "handoff-attachments.zip",
+				mimeType: "application/zip",
+				sizeBytes: firstZip.length,
+				checksumSha256: createHash("sha256").update(firstZip).digest("hex"),
+			}),
+		]);
+		expect(uploadManifest.attachmentPackaging).toMatchObject({
+			mode: "zip",
+			enabled: true,
+			zipWhenFileCountExceeds: 10,
+			originalSelectedFileCount: 11,
+			emittedUploadItemCount: 1,
+			zip: expect.objectContaining({
+				packetPath: "target/selected-files/handoff-attachments.zip",
+				mimeType: "application/zip",
+			}),
+		});
+		expect(entries.map((entry) => entry.name)).toEqual(expectedEntryNames);
+		expect(entries.map((entry) => entry.content.toString("utf8")).sort()).toEqual(
+			Array.from({ length: 11 }, (_, index) => `file-${String(index + 1).padStart(2, "0")}`).sort(),
+		);
+		const primer = await readFile(path.join(first.packetPath, "target", "primer.md"), "utf8");
+		expect(primer).toContain("Attachment packaging instruction");
+		expect(primer).toContain("handoff-attachments.zip");
+		expect(first.submissionPlan.attachmentPackaging.mode).toBe("zip");
+	});
+
+	test("allows handoff attachment ZIP packaging to be disabled by config", async () => {
+		const root = await tempRoot("auracall-handoff-zip-disabled-");
+		const manifestItems = await createSelectedFileManifestItems(root, 11);
+
+		const result = await prepareCrossServiceHandoffPacket({
+			config: {
+				...fixtureConfig(),
+				handoff: { attachmentPackaging: { enabled: false } },
+			},
+			handoffId: "zip-disabled",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: { messages: [{ role: "user", content: "disabled zip" }] },
+			sourceManifest: { items: manifestItems },
+			maxSelectedArtifacts: 11,
+			generatedAt: "2026-06-26T12:00:00.000Z",
+		});
+		const zipped = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			handoffId: "zip-enabled-for-digest",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: { messages: [{ role: "user", content: "disabled zip" }] },
+			sourceManifest: { items: manifestItems },
+			maxSelectedArtifacts: 11,
+			generatedAt: "2026-06-26T12:00:00.000Z",
+		});
+
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(result.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		expect(result.targetPackage.packageDigest).not.toBe(zipped.targetPackage.packageDigest);
+		expect(uploadManifest.items).toHaveLength(11);
+		expect(uploadManifest.attachmentPackaging).toMatchObject({
+			mode: "individual",
+			enabled: false,
+			zipWhenFileCountExceeds: 10,
+			originalSelectedFileCount: 11,
+			emittedUploadItemCount: 11,
+		});
+	});
+
+	test("honors handoff attachment ZIP threshold overrides", async () => {
+		const root = await tempRoot("auracall-handoff-zip-threshold-");
+		const manifestItems = await createSelectedFileManifestItems(root, 3);
+
+		const result = await prepareCrossServiceHandoffPacket({
+			config: {
+				...fixtureConfig(),
+				handoff: { attachmentPackaging: { zipWhenFileCountExceeds: 2 } },
+			},
+			handoffId: "zip-threshold-override",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: { messages: [{ role: "user", content: "threshold zip" }] },
+			sourceManifest: { items: manifestItems },
+			maxSelectedArtifacts: 3,
+			generatedAt: "2026-06-26T12:00:00.000Z",
+		});
+
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(result.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		expect(uploadManifest.items).toHaveLength(1);
+		expect(uploadManifest.attachmentPackaging).toMatchObject({
+			mode: "zip",
+			enabled: true,
+			zipWhenFileCountExceeds: 2,
+			originalSelectedFileCount: 3,
+			emittedUploadItemCount: 1,
+		});
+	});
+
+	test("uses file-searcher fallback when a selected manifest file is no longer available", async () => {
+		const root = await tempRoot("auracall-handoff-file-searcher-");
+		const recoveredPath = path.join(root, "Recovered Artifact.pdf");
+		await writeFile(recoveredPath, "recovered artifact body", "utf8");
+		const calls: string[] = [];
+
+		const result = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			handoffId: "file-searcher-fallback",
+			sourceProvider: "chatgpt",
+			sourceRuntimeProfile: "source-business",
+			sourceRef: "https://chatgpt.com/c/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			sourceContext: {
+				messages: [{ role: "user", content: "recover missing upload" }],
+			},
+			sourceManifest: {
+				items: [
+					{
+						id: "missing_upload",
+						kind: "file",
+						title: "Recovered Artifact.pdf",
+						localPath: path.join(root, "expired-provider-upload.pdf"),
+						sizeBytes: 123,
+						importanceHint: 10,
+					},
+				],
+			},
+			fileSearchFallback: {
+				async findLocalCopy(item) {
+					calls.push(item.id);
+					return {
+						localPath: recoveredPath,
+						query: "Recovered Artifact.pdf",
+						reason: "file-searcher fallback resolved a local copy",
+					};
+				},
+			},
+			generatedAt: "2026-06-24T12:00:00.000Z",
+		});
+
+		expect(calls).toEqual(["missing_upload"]);
+		expect(result.targetPackage).toMatchObject({
+			selectedFileCount: 1,
+			packageOmissionCount: 0,
+		});
+		const uploadManifest = JSON.parse(
+			await readFile(path.join(result.packetPath, "target", "upload-manifest.json"), "utf8"),
+		);
+		expect(uploadManifest.items).toEqual([
+			expect.objectContaining({
+				sourceManifestItemId: "missing_upload",
+				recoveredFromFileSearch: true,
+				fileSearchQuery: "Recovered Artifact.pdf",
+				sizeBytes: "recovered artifact body".length,
+			}),
+		]);
+		const selectedFilePath = path.join(
+			result.packetPath,
+			uploadManifest.items[0].packetPath,
+		);
+		await expect(readFile(selectedFilePath, "utf8")).resolves.toBe("recovered artifact body");
+	});
+
+	test("records target model selector on prepared handoff target", async () => {
+		const root = await tempRoot("auracall-handoff-model-selector-");
+		const result = await prepareCrossServiceHandoffPacket({
+			config: fixtureConfig(),
+			outputRoot: root,
+			handoffId: "model-selector-target",
+			sourceProvider: "gemini",
+			sourceRuntimeProfile: "target-gemini",
+			sourceRef: "https://gemini.google.com/app/source",
+			targetProvider: "chatgpt",
+			targetRuntimeProfile: "target-pro",
+			targetModelSelector: "chatgpt:pro-extended",
+			sourceContext: { messages: [{ role: "user", content: "use pro extended" }] },
+			sourceManifest: { items: [] },
+			generatedAt: "2026-06-24T12:00:00.000Z",
+		});
+
+		expect(result.run.target.modelSelector).toBe("chatgpt:pro-extended");
+		expect(result.submissionPlan.target.modelSelector).toBe("chatgpt:pro-extended");
+		const runJson = JSON.parse(await readFile(path.join(result.packetPath, "run.json"), "utf8"));
+		expect(runJson.target.modelSelector).toBe("chatgpt:pro-extended");
+	});
+
 	test("represents multiple provider pairs without provider-specific top-level fields", async () => {
 		const root = await tempRoot("auracall-handoff-pairs-");
 		const outputRoot = path.join(root, "packets");
@@ -584,7 +865,9 @@ describe("handoff prepare CLI helpers", () => {
 			omissions: [
 				expect.objectContaining({
 					sourceManifestItemId: "hmj_fixture:entry_1",
-					reason: "selected local file is unavailable",
+					reason: expect.stringMatching(
+						/^file-searcher fallback (found no available local copy|unavailable or returned no usable output)$/,
+					),
 				}),
 			],
 		});
@@ -2298,6 +2581,50 @@ async function tempRoot(prefix: string): Promise<string> {
 	const root = await mkdtemp(path.join(os.tmpdir(), prefix));
 	tempRoots.push(root);
 	return root;
+}
+
+async function createSelectedFileManifestItems(root: string, count: number): Promise<unknown[]> {
+	const items: unknown[] = [];
+	for (let index = 0; index < count; index += 1) {
+		const ordinal = String(index + 1).padStart(2, "0");
+		const body = `file-${ordinal}`;
+		const filePath = path.join(root, `source-${ordinal}.txt`);
+		await writeFile(filePath, body, "utf8");
+		items.push({
+			id: `file_${ordinal}`,
+			kind: "file",
+			title: `Source ${ordinal}.txt`,
+			localPath: filePath,
+			sizeBytes: body.length,
+			checksumSha256: createHash("sha256").update(body).digest("hex"),
+			importanceHint: count - index,
+		});
+	}
+	return items;
+}
+
+function parseStoredZipEntries(zip: Buffer): Array<{ name: string; content: Buffer }> {
+	const entries: Array<{ name: string; content: Buffer }> = [];
+	let offset = 0;
+	while (offset < zip.length && zip.readUInt32LE(offset) === 0x04034b50) {
+		const compressionMethod = zip.readUInt16LE(offset + 8);
+		const compressedSize = zip.readUInt32LE(offset + 18);
+		const uncompressedSize = zip.readUInt32LE(offset + 22);
+		const nameLength = zip.readUInt16LE(offset + 26);
+		const extraLength = zip.readUInt16LE(offset + 28);
+		const nameStart = offset + 30;
+		const contentStart = nameStart + nameLength + extraLength;
+		const contentEnd = contentStart + compressedSize;
+		if (compressionMethod !== 0 || compressedSize !== uncompressedSize) {
+			throw new Error("Expected a deterministic stored ZIP entry.");
+		}
+		entries.push({
+			name: zip.subarray(nameStart, nameStart + nameLength).toString("utf8"),
+			content: zip.subarray(contentStart, contentEnd),
+		});
+		offset = contentEnd;
+	}
+	return entries.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function fixtureConfig(): Record<string, unknown> {

@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import {
 	getPreferredRuntimeProfile,
@@ -10,6 +12,7 @@ import {
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 
 type MutableRecord = Record<string, unknown>;
+const execFileAsync = promisify(execFile);
 
 export type HandoffProvider = "chatgpt" | "gemini" | "grok";
 export type HandoffPhase =
@@ -37,6 +40,10 @@ export const HANDOFF_RESUME_PLAN_SCHEMA = "auracall.handoff-resume-plan.v1";
 export const HANDOFF_REPAIR_REPORT_SCHEMA = "auracall.handoff-repair-report.v1";
 export const HANDOFF_MANUAL_EXPORT_SCHEMA = "auracall.handoff-manual-export.v1";
 export const HANDOFF_LIVE_RECOVERY_SCHEMA = "auracall.handoff-live-recovery.v1";
+export const HANDOFF_ATTACHMENT_ZIP_SOURCE_MANIFEST_ITEM_ID = "attachment_package_zip";
+export const DEFAULT_HANDOFF_ATTACHMENT_ZIP_THRESHOLD = 10;
+const HANDOFF_ATTACHMENT_ZIP_FILENAME = "handoff-attachments.zip";
+const ZIP_MAX_UINT32 = 0xffffffff;
 
 export const HANDOFF_ANALYSIS_OMISSION_WARNING_PREFIXES = [
 	"source_context_not_provided",
@@ -67,6 +74,7 @@ export interface HandoffEndpoint {
 	accountMirrorTenantKey: string | null;
 	conversationRef: string | null;
 	projectRef: string | null;
+	modelSelector: string | null;
 	capabilities: HandoffEndpointCapabilities;
 }
 
@@ -233,6 +241,7 @@ export interface HandoffTargetPackage {
 	selectedFileCount: number;
 	selectedTotalBytes: number;
 	packageOmissionCount: number;
+	attachmentPackaging: HandoffAttachmentPackagingMetadata;
 	zeroTargetMutationEvidence: {
 		uploadAttemptCount: 0;
 		submitAttemptCount: 0;
@@ -245,6 +254,7 @@ export interface HandoffTargetUploadManifest {
 	packageDigest: string;
 	targetMutationAllowed: false;
 	items: HandoffTargetUploadManifestItem[];
+	attachmentPackaging: HandoffAttachmentPackagingMetadata;
 	omissions: HandoffTargetPackageOmission[];
 }
 
@@ -255,12 +265,49 @@ export interface HandoffTargetUploadManifestItem {
 	mimeType: string | null;
 	sizeBytes: number;
 	checksumSha256: string;
+	recoveredFromFileSearch?: boolean;
+	fileSearchQuery?: string | null;
 }
 
 export interface HandoffTargetPackageOmission {
 	sourceManifestItemId: string;
 	reason: string;
 	retryable: boolean;
+}
+
+export interface HandoffAttachmentPackagingConfig {
+	enabled: boolean;
+	zipWhenFileCountExceeds: number;
+}
+
+export interface HandoffAttachmentPackagingOriginalItem {
+	sourceManifestItemId: string;
+	packetPath: string;
+	filename: string;
+	mimeType: string | null;
+	sizeBytes: number;
+	checksumSha256: string;
+	recoveredFromFileSearch?: boolean;
+	fileSearchQuery?: string | null;
+}
+
+export interface HandoffAttachmentPackagingZipItem {
+	sourceManifestItemId: typeof HANDOFF_ATTACHMENT_ZIP_SOURCE_MANIFEST_ITEM_ID;
+	packetPath: string;
+	filename: string;
+	mimeType: "application/zip";
+	sizeBytes: number;
+	checksumSha256: string;
+}
+
+export interface HandoffAttachmentPackagingMetadata {
+	mode: "individual" | "zip";
+	enabled: boolean;
+	zipWhenFileCountExceeds: number;
+	originalSelectedFileCount: number;
+	emittedUploadItemCount: number;
+	originalItems: HandoffAttachmentPackagingOriginalItem[];
+	zip?: HandoffAttachmentPackagingZipItem;
 }
 
 export interface HandoffUploadApproval {
@@ -343,6 +390,8 @@ interface HandoffSelectedFileCopy {
 	filename: string;
 	sizeBytes: number;
 	checksumSha256: string;
+	recoveredFromFileSearch: boolean;
+	fileSearchQuery: string | null;
 }
 
 export interface HandoffSubmissionPlan {
@@ -359,6 +408,7 @@ export interface HandoffSubmissionPlan {
 	compactContextRef: "target/compact-context.json";
 	uploadManifestRef: "target/upload-manifest.json";
 	requiredApproval: "target-submit";
+	attachmentPackaging: HandoffAttachmentPackagingMetadata;
 	zeroTargetMutationEvidence: {
 		submitTargetPhaseSkipped: true;
 		uploadAttemptCount: 0;
@@ -464,6 +514,7 @@ export interface HandoffPrepareRequest {
 	targetRuntimeProfile?: string | null;
 	targetRef?: string | null;
 	targetProjectRef?: string | null;
+	targetModelSelector?: string | null;
 	sourceContext?: unknown;
 	sourceManifest?: unknown;
 	sourceOmissions?: unknown;
@@ -473,6 +524,17 @@ export interface HandoffPrepareRequest {
 	handoffId?: string | null;
 	generatedAt?: string;
 	maxSelectedArtifacts?: number | null;
+	fileSearchFallback?: HandoffFileSearchFallback | null;
+}
+
+export interface HandoffFileSearchFallbackResult {
+	localPath: string | null;
+	query: string;
+	reason?: string | null;
+}
+
+export interface HandoffFileSearchFallback {
+	findLocalCopy(item: HandoffManifestItem): Promise<HandoffFileSearchFallbackResult | null>;
 }
 
 export interface HandoffPrepareResult {
@@ -770,6 +832,7 @@ export interface HandoffProviderNativePromptInput {
 	browserProfileId: string | null;
 	conversationRef: string | null;
 	projectRef: string | null;
+	modelSelector: string | null;
 	prompt: string;
 	compactContext: unknown;
 	uploadedProviderFileIds: string[];
@@ -852,6 +915,7 @@ export async function prepareCrossServiceHandoffPacket(
 		runtimeProfile: request.sourceRuntimeProfile,
 		conversationRef: request.sourceRef,
 		projectRef: request.sourceProjectRef,
+		modelSelector: null,
 		role: "source",
 	});
 	const target = resolveHandoffEndpoint(request.config, {
@@ -859,8 +923,10 @@ export async function prepareCrossServiceHandoffPacket(
 		runtimeProfile: request.targetRuntimeProfile,
 		conversationRef: request.targetRef ?? null,
 		projectRef: request.targetProjectRef,
+		modelSelector: request.targetModelSelector,
 		role: "target",
 	});
+	const attachmentPackagingConfig = resolveHandoffAttachmentPackagingConfig(request.config);
 	const sourceContext = normalizeSourceContext(request.sourceContext, request.sourceRef);
 	const importedReadback = importSourceMaterializationReadbacks(
 		request.sourceMaterializationReadbacks,
@@ -918,6 +984,8 @@ export async function prepareCrossServiceHandoffPacket(
 		generatedAt,
 		analysis,
 		manifestItems,
+		fileSearchFallback: request.fileSearchFallback ?? defaultHandoffFileSearchFallback,
+		attachmentPackagingConfig,
 	});
 	const submissionPlan = buildSubmissionPlan({
 		generatedAt,
@@ -1909,6 +1977,7 @@ async function submitHandoffWithProviderNativePrompt(
 		browserProfileId: packet.run.target.browserProfileId,
 		conversationRef: packet.run.target.conversationRef,
 		projectRef: packet.run.target.projectRef,
+		modelSelector: packet.run.target.modelSelector,
 		prompt: primer.trimEnd(),
 		compactContext,
 		uploadedProviderFileIds,
@@ -1997,6 +2066,7 @@ function resolveHandoffEndpoint(
 		runtimeProfile?: string | null;
 		conversationRef?: string | null;
 		projectRef?: string | null;
+		modelSelector?: string | null;
 		role: "source" | "target";
 	},
 ): HandoffEndpoint {
@@ -2030,6 +2100,7 @@ function resolveHandoffEndpoint(
 		}),
 		conversationRef: normalizeOptionalString(input.conversationRef),
 		projectRef: normalizeOptionalString(input.projectRef),
+		modelSelector: normalizeOptionalString(input.modelSelector),
 		capabilities: defaultCapabilities(input.role),
 	};
 }
@@ -2601,6 +2672,8 @@ async function buildTargetPackage(input: {
 	generatedAt: string;
 	analysis: HandoffAnalysisDecision;
 	manifestItems: HandoffManifestItem[];
+	fileSearchFallback: HandoffFileSearchFallback | null;
+	attachmentPackagingConfig: HandoffAttachmentPackagingConfig;
 }): Promise<{
 	targetPackage: HandoffTargetPackage;
 	uploadManifest: HandoffTargetUploadManifest;
@@ -2613,30 +2686,77 @@ async function buildTargetPackage(input: {
 	const selectedFileCopies: HandoffSelectedFileCopy[] = [];
 	const omissions: HandoffTargetPackageOmission[] = [];
 	for (const item of selectedItems) {
-		if (!item.localPath) {
+		let localCandidate = await resolveSelectedItemLocalPath(item, input.fileSearchFallback);
+		if (!localCandidate.localPath) {
 			omissions.push({
 				sourceManifestItemId: item.id,
-				reason: "selected manifest item has no localPath",
+				reason: localCandidate.reason,
 				retryable: true,
 			});
 			continue;
 		}
-		const sourcePath = path.resolve(item.localPath);
+		let sourcePath = path.resolve(localCandidate.localPath);
 		let stat: Awaited<ReturnType<typeof fs.stat>>;
 		try {
 			stat = await fs.stat(sourcePath);
 		} catch {
-			omissions.push({
-				sourceManifestItemId: item.id,
-				reason: "selected local file is unavailable",
-				retryable: true,
-			});
-			continue;
+			localCandidate = await recoverUnavailableSelectedItemLocalPath(
+				item,
+				input.fileSearchFallback,
+				"selected local file is unavailable",
+			);
+			if (localCandidate.localPath) {
+				sourcePath = path.resolve(localCandidate.localPath);
+				try {
+					stat = await fs.stat(sourcePath);
+				} catch {
+					omissions.push({
+						sourceManifestItemId: item.id,
+						reason: localCandidate.reason,
+						retryable: true,
+					});
+					continue;
+				}
+			} else {
+				omissions.push({
+					sourceManifestItemId: item.id,
+					reason: localCandidate.reason,
+					retryable: true,
+				});
+				continue;
+			}
+		}
+		if (!stat.isFile()) {
+			localCandidate = await recoverUnavailableSelectedItemLocalPath(
+				item,
+				input.fileSearchFallback,
+				"selected local path is not a file",
+			);
+			if (localCandidate.localPath) {
+				sourcePath = path.resolve(localCandidate.localPath);
+				try {
+					stat = await fs.stat(sourcePath);
+				} catch {
+					omissions.push({
+						sourceManifestItemId: item.id,
+						reason: localCandidate.reason,
+						retryable: true,
+					});
+					continue;
+				}
+			} else {
+				omissions.push({
+					sourceManifestItemId: item.id,
+					reason: localCandidate.reason,
+					retryable: true,
+				});
+				continue;
+			}
 		}
 		if (!stat.isFile()) {
 			omissions.push({
 				sourceManifestItemId: item.id,
-				reason: "selected local path is not a file",
+				reason: "file-searcher fallback did not resolve to a file",
 				retryable: true,
 			});
 			continue;
@@ -2653,14 +2773,26 @@ async function buildTargetPackage(input: {
 			filename,
 			sizeBytes: stat.size,
 			checksumSha256,
+			recoveredFromFileSearch: localCandidate.recoveredFromFileSearch,
+			fileSearchQuery: localCandidate.fileSearchQuery,
 		});
 	}
+	const originalUploadItems = selectedFileCopies.map((copy) => buildUploadManifestItemFromCopy(copy));
+	const attachmentPackaging = await buildAttachmentPackagingMetadata({
+		selectedFileCopies,
+		originalUploadItems,
+		config: input.attachmentPackagingConfig,
+	});
+	const emittedUploadItems =
+		attachmentPackaging.mode === "zip" && attachmentPackaging.zip
+			? [attachmentPackaging.zip]
+			: originalUploadItems;
 	const digestSeed = {
 		object: HANDOFF_TARGET_PACKAGE_SCHEMA,
 		decision: {
 			selectedManifestItemIds: input.analysis.selectedManifestItemIds,
 			compactContext: input.analysis.compactContext,
-			targetPrimer: input.analysis.targetPrimer,
+			targetPrimer: buildTargetPrimerText(input.analysis.targetPrimer, attachmentPackaging),
 			approvalRecommendation: input.analysis.approvalRecommendation,
 		},
 		selectedFiles: selectedFileCopies.map((copy) => ({
@@ -2669,7 +2801,15 @@ async function buildTargetPackage(input: {
 			mimeType: copy.item.mimeType,
 			sizeBytes: copy.sizeBytes,
 			checksumSha256: copy.checksumSha256,
+			...(copy.recoveredFromFileSearch
+				? {
+						recoveredFromFileSearch: true,
+						fileSearchQuery: copy.fileSearchQuery,
+					}
+				: {}),
 		})),
+		attachmentPackaging,
+		emittedUploadItems,
 		omissions,
 	};
 	const packageDigest = buildPacketDigest(stableJson(digestSeed));
@@ -2678,14 +2818,8 @@ async function buildTargetPackage(input: {
 		generatedAt: input.generatedAt,
 		packageDigest,
 		targetMutationAllowed: false,
-		items: selectedFileCopies.map((copy) => ({
-			sourceManifestItemId: copy.item.id,
-			packetPath: copy.relativePath,
-			filename: copy.filename,
-			mimeType: copy.item.mimeType,
-			sizeBytes: copy.sizeBytes,
-			checksumSha256: copy.checksumSha256,
-		})),
+		items: emittedUploadItems,
+		attachmentPackaging,
 		omissions,
 	};
 	const selectedTotalBytes = selectedFileCopies.reduce((total, copy) => total + copy.sizeBytes, 0);
@@ -2703,6 +2837,7 @@ async function buildTargetPackage(input: {
 		selectedFileCount: selectedFileCopies.length,
 		selectedTotalBytes,
 		packageOmissionCount: omissions.length,
+		attachmentPackaging,
 		zeroTargetMutationEvidence: {
 			uploadAttemptCount: 0,
 			submitAttemptCount: 0,
@@ -2731,12 +2866,276 @@ function buildSubmissionPlan(input: {
 		compactContextRef: "target/compact-context.json",
 		uploadManifestRef: "target/upload-manifest.json",
 		requiredApproval: "target-submit",
+		attachmentPackaging: input.targetPackage.attachmentPackaging,
 		zeroTargetMutationEvidence: {
 			submitTargetPhaseSkipped: true,
 			uploadAttemptCount: 0,
 			submitAttemptCount: 0,
 		},
 	};
+}
+
+function buildUploadManifestItemFromCopy(
+	copy: HandoffSelectedFileCopy,
+): HandoffTargetUploadManifestItem {
+	return {
+		sourceManifestItemId: copy.item.id,
+		packetPath: copy.relativePath,
+		filename: copy.filename,
+		mimeType: copy.item.mimeType,
+		sizeBytes: copy.sizeBytes,
+		checksumSha256: copy.checksumSha256,
+		...(copy.recoveredFromFileSearch
+			? {
+					recoveredFromFileSearch: true,
+					fileSearchQuery: copy.fileSearchQuery,
+				}
+			: {}),
+	};
+}
+
+function buildTargetPrimerText(
+	targetPrimer: string,
+	attachmentPackaging: HandoffAttachmentPackagingMetadata,
+): string {
+	const trimmed = targetPrimer.trimEnd();
+	if (attachmentPackaging.mode !== "zip") return trimmed;
+	const zipFileName = attachmentPackaging.zip?.filename ?? HANDOFF_ATTACHMENT_ZIP_FILENAME;
+	const instruction =
+		`One uploaded attachment is a ZIP archive (${zipFileName}) containing ` +
+		`${attachmentPackaging.originalSelectedFileCount} selected source files. ` +
+		"Before analysis, inspect or extract the ZIP and treat the contained files as the handoff's selected attachments.";
+	return `${trimmed}\n\nAttachment packaging instruction: ${instruction}`;
+}
+
+async function buildAttachmentPackagingMetadata(input: {
+	selectedFileCopies: HandoffSelectedFileCopy[];
+	originalUploadItems: HandoffTargetUploadManifestItem[];
+	config: HandoffAttachmentPackagingConfig;
+}): Promise<HandoffAttachmentPackagingMetadata> {
+	const originalItems = input.originalUploadItems.map((item) => ({
+		sourceManifestItemId: item.sourceManifestItemId,
+		packetPath: item.packetPath,
+		filename: item.filename,
+		mimeType: item.mimeType,
+		sizeBytes: item.sizeBytes,
+		checksumSha256: item.checksumSha256,
+		...(item.recoveredFromFileSearch
+			? {
+					recoveredFromFileSearch: true,
+					fileSearchQuery: item.fileSearchQuery ?? null,
+				}
+			: {}),
+	}));
+	const shouldZip =
+		input.config.enabled &&
+		input.selectedFileCopies.length > input.config.zipWhenFileCountExceeds;
+	if (!shouldZip) {
+		return {
+			mode: "individual",
+			enabled: input.config.enabled,
+			zipWhenFileCountExceeds: input.config.zipWhenFileCountExceeds,
+			originalSelectedFileCount: input.selectedFileCopies.length,
+			emittedUploadItemCount: input.originalUploadItems.length,
+			originalItems,
+		};
+	}
+	const zipBuffer = await buildDeterministicZipBuffer(
+		input.selectedFileCopies.map((copy) => ({
+			name: `selected-files/${copy.filename}`,
+			filePath: copy.sourcePath,
+		})),
+	);
+	const zipChecksumSha256 = createHash("sha256").update(zipBuffer).digest("hex");
+	const zipItem: HandoffAttachmentPackagingZipItem = {
+		sourceManifestItemId: HANDOFF_ATTACHMENT_ZIP_SOURCE_MANIFEST_ITEM_ID,
+		packetPath: `target/selected-files/${HANDOFF_ATTACHMENT_ZIP_FILENAME}`,
+		filename: HANDOFF_ATTACHMENT_ZIP_FILENAME,
+		mimeType: "application/zip",
+		sizeBytes: zipBuffer.length,
+		checksumSha256: zipChecksumSha256,
+	};
+	return {
+		mode: "zip",
+		enabled: input.config.enabled,
+		zipWhenFileCountExceeds: input.config.zipWhenFileCountExceeds,
+		originalSelectedFileCount: input.selectedFileCopies.length,
+		emittedUploadItemCount: 1,
+		originalItems,
+		zip: zipItem,
+	};
+}
+
+async function writeAttachmentZip(input: {
+	packetPath: string;
+	selectedFileCopies: HandoffSelectedFileCopy[];
+	attachmentPackaging: HandoffAttachmentPackagingMetadata;
+}): Promise<void> {
+	const zip = input.attachmentPackaging.zip;
+	if (!zip) {
+		throw new Error("ZIP attachment packaging metadata is missing the ZIP item.");
+	}
+	const zipBuffer = await buildDeterministicZipBuffer(
+		input.selectedFileCopies.map((copy) => ({
+			name: `selected-files/${copy.filename}`,
+			filePath: copy.sourcePath,
+		})),
+	);
+	const checksumSha256 = createHash("sha256").update(zipBuffer).digest("hex");
+	if (zip.sizeBytes !== zipBuffer.length || zip.checksumSha256 !== checksumSha256) {
+		throw new Error("Deterministic ZIP packaging output did not match target package metadata.");
+	}
+	await fs.mkdir(path.dirname(path.join(input.packetPath, zip.packetPath)), { recursive: true });
+	await fs.writeFile(path.join(input.packetPath, zip.packetPath), zipBuffer);
+}
+
+function resolveHandoffAttachmentPackagingConfig(
+	config: MutableRecord,
+): HandoffAttachmentPackagingConfig {
+	const handoffConfig = isRecord(config.handoff) ? config.handoff : {};
+	const packaging = isRecord(handoffConfig.attachmentPackaging)
+		? handoffConfig.attachmentPackaging
+		: {};
+	const enabled = packaging.enabled === undefined ? true : packaging.enabled !== false;
+	const rawThreshold = normalizeNumber(packaging.zipWhenFileCountExceeds);
+	const zipWhenFileCountExceeds = rawThreshold ?? DEFAULT_HANDOFF_ATTACHMENT_ZIP_THRESHOLD;
+	if (!Number.isInteger(zipWhenFileCountExceeds) || zipWhenFileCountExceeds < 1) {
+		throw new Error("handoff.attachmentPackaging.zipWhenFileCountExceeds must be a positive integer.");
+	}
+	return {
+		enabled,
+		zipWhenFileCountExceeds,
+	};
+}
+
+async function resolveSelectedItemLocalPath(
+	item: HandoffManifestItem,
+	fileSearchFallback: HandoffFileSearchFallback | null,
+): Promise<{
+	localPath: string | null;
+	recoveredFromFileSearch: boolean;
+	fileSearchQuery: string | null;
+	reason: string;
+}> {
+	if (item.localPath) {
+		return {
+			localPath: item.localPath,
+			recoveredFromFileSearch: false,
+			fileSearchQuery: null,
+			reason: "selected manifest item has localPath",
+		};
+	}
+	const result = fileSearchFallback ? await fileSearchFallback.findLocalCopy(item) : null;
+	return {
+		localPath: result?.localPath ?? null,
+		recoveredFromFileSearch: Boolean(result?.localPath),
+		fileSearchQuery: result?.query ?? null,
+		reason: result?.reason ?? "selected manifest item has no localPath",
+	};
+}
+
+async function recoverUnavailableSelectedItemLocalPath(
+	item: HandoffManifestItem,
+	fileSearchFallback: HandoffFileSearchFallback | null,
+	defaultReason: string,
+): Promise<{
+	localPath: string | null;
+	recoveredFromFileSearch: boolean;
+	fileSearchQuery: string | null;
+	reason: string;
+}> {
+	if (!fileSearchFallback) {
+		return {
+			localPath: null,
+			recoveredFromFileSearch: false,
+			fileSearchQuery: null,
+			reason: defaultReason,
+		};
+	}
+	const result = await fileSearchFallback.findLocalCopy({ ...item, localPath: null });
+	return {
+		localPath: result?.localPath ?? null,
+		recoveredFromFileSearch: Boolean(result?.localPath),
+		fileSearchQuery: result?.query ?? null,
+		reason: result?.reason ?? defaultReason,
+	};
+}
+
+const defaultHandoffFileSearchFallback: HandoffFileSearchFallback = {
+	async findLocalCopy(item) {
+		const query = buildFileSearchQuery(item);
+		if (!query) return null;
+		let stdout = "";
+		try {
+			const result = await execFileAsync("fsr", ["find", query, "--limit", "5"], {
+				timeout: 15_000,
+				maxBuffer: 1024 * 1024,
+			});
+			stdout = result.stdout;
+		} catch {
+			return {
+				localPath: null,
+				query,
+				reason: "file-searcher fallback unavailable or returned no usable output",
+			};
+		}
+		const parsed = parseJsonRecord(stdout);
+		const results = Array.isArray(parsed?.results) ? parsed.results : [];
+		for (const result of results) {
+			const candidate = selectFileSearchResultPath(result);
+			if (!candidate) continue;
+			try {
+				const stat = await fs.stat(candidate);
+				if (stat.isFile()) {
+					return {
+						localPath: candidate,
+						query,
+						reason: "file-searcher fallback resolved a local copy",
+					};
+				}
+			} catch {
+			}
+		}
+		return {
+			localPath: null,
+			query,
+			reason: "file-searcher fallback found no available local copy",
+		};
+	},
+};
+
+function buildFileSearchQuery(item: HandoffManifestItem): string | null {
+	const parts = [
+		item.checksumSha256,
+		item.title,
+		item.sourceRef ? path.basename(item.sourceRef) : null,
+		item.id,
+		item.mimeType,
+	]
+		.map((part) => normalizeOptionalString(part))
+		.filter((part): part is string => Boolean(part));
+	const deduped = Array.from(new Set(parts));
+	return deduped.length > 0 ? deduped.join(" ") : null;
+}
+
+function selectFileSearchResultPath(value: unknown): string | null {
+	if (!isRecord(value)) return null;
+	for (const key of [
+		"path",
+		"file_path",
+		"wsl_path",
+		"logical_path",
+		"physical_path",
+		"physical_wsl_path",
+		"symlink_resolved",
+	]) {
+		const candidate = normalizeOptionalString(value[key]);
+		if (candidate) return path.resolve(candidate);
+	}
+	if (isRecord(value.source_metadata)) {
+		return selectFileSearchResultPath(value.source_metadata);
+	}
+	return null;
 }
 
 function buildRunRecord(input: {
@@ -2846,7 +3245,7 @@ async function writePacket(
 	);
 	await fs.writeFile(
 		path.join(packetPath, "target", "primer.md"),
-		`${input.analysis.targetPrimer}\n`,
+		`${buildTargetPrimerText(input.analysis.targetPrimer, input.targetPackage.attachmentPackaging)}\n`,
 		"utf8",
 	);
 	await writeJson(path.join(packetPath, "analysis", "decision.json"), input.analysis);
@@ -2857,6 +3256,13 @@ async function writePacket(
 	for (const copy of input.selectedFileCopies) {
 		await fs.mkdir(path.dirname(copy.targetPath), { recursive: true });
 		await fs.copyFile(copy.sourcePath, copy.targetPath);
+	}
+	if (input.targetPackage.attachmentPackaging.mode === "zip") {
+		await writeAttachmentZip({
+			packetPath,
+			selectedFileCopies: input.selectedFileCopies,
+			attachmentPackaging: input.targetPackage.attachmentPackaging,
+		});
 	}
 	await writeJson(path.join(packetPath, "target", "upload-manifest.json"), input.uploadManifest);
 	await writeJson(path.join(packetPath, "target", "package.json"), input.targetPackage);
@@ -3564,6 +3970,107 @@ function sanitizeFileNameSegment(value: string): string {
 		.trim();
 }
 
+async function buildDeterministicZipBuffer(
+	entries: Array<{ name: string; filePath: string }>,
+): Promise<Buffer> {
+	const normalizedEntries = [...entries]
+		.map((entry) => ({
+			name: normalizeZipEntryName(entry.name),
+			filePath: entry.filePath,
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name));
+	const localParts: Buffer[] = [];
+	const centralParts: Buffer[] = [];
+	let offset = 0;
+	for (const entry of normalizedEntries) {
+		const nameBuffer = Buffer.from(entry.name, "utf8");
+		const content = await fs.readFile(entry.filePath);
+		assertZipUInt32(content.length, `ZIP entry ${entry.name} is too large`);
+		assertZipUInt32(offset, "ZIP central directory offset is too large");
+		const crc32 = computeCrc32(content);
+		const localHeader = Buffer.alloc(30);
+		localHeader.writeUInt32LE(0x04034b50, 0);
+		localHeader.writeUInt16LE(20, 4);
+		localHeader.writeUInt16LE(0x0800, 6);
+		localHeader.writeUInt16LE(0, 8);
+		localHeader.writeUInt16LE(0, 10);
+		localHeader.writeUInt16LE(33, 12);
+		localHeader.writeUInt32LE(crc32, 14);
+		localHeader.writeUInt32LE(content.length, 18);
+		localHeader.writeUInt32LE(content.length, 22);
+		localHeader.writeUInt16LE(nameBuffer.length, 26);
+		localHeader.writeUInt16LE(0, 28);
+		localParts.push(localHeader, nameBuffer, content);
+		const centralHeader = Buffer.alloc(46);
+		centralHeader.writeUInt32LE(0x02014b50, 0);
+		centralHeader.writeUInt16LE(20, 4);
+		centralHeader.writeUInt16LE(20, 6);
+		centralHeader.writeUInt16LE(0x0800, 8);
+		centralHeader.writeUInt16LE(0, 10);
+		centralHeader.writeUInt16LE(0, 12);
+		centralHeader.writeUInt16LE(33, 14);
+		centralHeader.writeUInt32LE(crc32, 16);
+		centralHeader.writeUInt32LE(content.length, 20);
+		centralHeader.writeUInt32LE(content.length, 24);
+		centralHeader.writeUInt16LE(nameBuffer.length, 28);
+		centralHeader.writeUInt16LE(0, 30);
+		centralHeader.writeUInt16LE(0, 32);
+		centralHeader.writeUInt16LE(0, 34);
+		centralHeader.writeUInt16LE(0, 36);
+		centralHeader.writeUInt32LE((0o100644 << 16) >>> 0, 38);
+		centralHeader.writeUInt32LE(offset, 42);
+		centralParts.push(centralHeader, nameBuffer);
+		offset += localHeader.length + nameBuffer.length + content.length;
+	}
+	const centralDirectoryOffset = offset;
+	const centralDirectorySize = centralParts.reduce((total, part) => total + part.length, 0);
+	assertZipUInt32(centralDirectoryOffset, "ZIP central directory offset is too large");
+	assertZipUInt32(centralDirectorySize, "ZIP central directory is too large");
+	if (normalizedEntries.length > 0xffff) {
+		throw new Error("ZIP attachment packaging supports at most 65535 selected files.");
+	}
+	const endOfCentralDirectory = Buffer.alloc(22);
+	endOfCentralDirectory.writeUInt32LE(0x06054b50, 0);
+	endOfCentralDirectory.writeUInt16LE(0, 4);
+	endOfCentralDirectory.writeUInt16LE(0, 6);
+	endOfCentralDirectory.writeUInt16LE(normalizedEntries.length, 8);
+	endOfCentralDirectory.writeUInt16LE(normalizedEntries.length, 10);
+	endOfCentralDirectory.writeUInt32LE(centralDirectorySize, 12);
+	endOfCentralDirectory.writeUInt32LE(centralDirectoryOffset, 16);
+	endOfCentralDirectory.writeUInt16LE(0, 20);
+	return Buffer.concat([...localParts, ...centralParts, endOfCentralDirectory]);
+}
+
+function normalizeZipEntryName(value: string): string {
+	const normalized = value.replace(/\\/g, "/").replace(/^\/+/, "");
+	if (!normalized || normalized.includes("../") || normalized === "..") {
+		throw new Error(`Unsafe ZIP entry name: ${value}`);
+	}
+	return normalized;
+}
+
+function assertZipUInt32(value: number, message: string): void {
+	if (!Number.isSafeInteger(value) || value < 0 || value > ZIP_MAX_UINT32) {
+		throw new Error(message);
+	}
+}
+
+const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
+	let value = index;
+	for (let bit = 0; bit < 8; bit += 1) {
+		value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+	}
+	return value >>> 0;
+});
+
+function computeCrc32(content: Buffer): number {
+	let crc = 0xffffffff;
+	for (const byte of content) {
+		crc = CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+	}
+	return (crc ^ 0xffffffff) >>> 0;
+}
+
 async function hashFile(filePath: string): Promise<string> {
 	const hash = createHash("sha256");
 	const content = await fs.readFile(filePath);
@@ -3614,6 +4121,15 @@ function countMessages(value: unknown): number {
 function normalizeOptionalString(value: unknown): string | null {
 	const normalized = typeof value === "string" ? value.trim() : "";
 	return normalized.length > 0 ? normalized : null;
+}
+
+function parseJsonRecord(value: string): MutableRecord | null {
+	try {
+		const parsed = JSON.parse(value) as unknown;
+		return isRecord(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
 }
 
 function normalizeNumber(value: unknown): number | null {

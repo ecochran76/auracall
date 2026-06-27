@@ -1,3 +1,81 @@
+## 2026-06-27 | Plan 0146 Detail Completeness Guard
+
+- Focus: execute the Plan 0145 audit follow-up so frontier freshness does not
+  promote attempted conversation scans into complete detail evidence.
+- Result:
+  - opened Plan 0146 as a bounded P01 follow-up and closed it after the code
+    repair;
+  - account-mirror metadata annotation now uses
+    `detailObservedConversationIds` only, not raw `scannedConversationIds`;
+  - bounded conversation detail inventory now records detail-observed progress
+    only when conversation file inventory succeeds and the context read
+    completes without an outstanding chunk cursor;
+  - added regression coverage for a successful conversation file inventory plus
+    `null` context read.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts`;
+  - `pnpm vitest run tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/refreshService.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts`;
+  - `pnpm run plans:audit -- --keep 146`.
+
+## 2026-06-27 | Plan 0145 Reverse-Mtime Frontier Closure
+
+- Focus: finish the installed SoyLei ChatGPT proof for reverse-mtime
+  steady-follow frontier selection.
+- Result:
+  - cached-row freshness derivation now honors persisted
+    `metadata.detailCompleteness` during raw-cache summary hydration, so rows
+    with durable `detailObservedAt`/`manifestObservedAt` metadata can become
+    cached-fresh without requiring a loaded detail file;
+  - installed proof `acctmirror_completion_a3401827-527a-4d21-9721-943797bd38f8`
+    completed with provider guard clear, `frontierReached=true`,
+    `rowsExamined=4`, `rowsSelectedForDetail=1`, first stopped row index `3`,
+    `detailScannedThisPass.conversations=1`, and no attachment-inventory yield;
+  - Plan 0145 is closed.
+- Validation:
+  - `pnpm exec biome check src/accountMirror/conversationFreshness.ts src/accountMirror/conversationFreshnessFrontier.ts src/accountMirror/refreshService.ts src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/conversationFreshness.test.ts tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`;
+  - `pnpm vitest run tests/accountMirror/conversationFreshness.test.ts tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm run build && pnpm run install:user-runtime-service && systemctl --user restart auracall-api.service && systemctl --user status auracall-api.service --no-pager`;
+  - `pnpm run plans:audit -- --keep 145`.
+
+## 2026-06-26 | Plan 0144 Handoff Attachment ZIP Packaging
+
+- Focus: implement the operator rule for large handoff attachment sets as a
+  provider-neutral, config-driven target package policy.
+- Result:
+  - added `handoff.attachmentPackaging.enabled` and
+    `handoff.attachmentPackaging.zipWhenFileCountExceeds` config support;
+  - default target package assembly now keeps ten selected files individual and
+    emits one deterministic `handoff-attachments.zip` upload item for eleven or
+    more selected files;
+  - target package/upload manifest metadata preserves original selected-file
+    entries while provider adapters consume only the emitted upload manifest;
+  - ZIP-mode primer text instructs the target chat to inspect or extract the
+    ZIP before analysis.
+- Validation:
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts -t "handoff attachment|ten selected|eleven selected|disabled by config|threshold overrides"`
+    passed with `4` tests;
+  - `pnpm vitest run tests/cli/handoffCommand.test.ts --testTimeout 15000`
+    passed with `42` tests.
+- Live proof:
+  - prepared the bounded packet
+    `/tmp/auracall-plan0144-live-zip-proof/handoffs/plan0144-live-zip-proof`
+    for `chatgpt/wsl-chrome-3`, target root (`projectRef=null`) and
+    `chatgpt:pro-extended`;
+  - default packaging emitted one `handoff-attachments.zip` upload item for
+    `11` selected files with SHA-256
+    `40f1ac5352d1928b820fab8934927f52a1461badcb30123f6e82a2485936b6dc`;
+  - upload recovery uploaded one file and failed zero files;
+  - submit recovery completed
+    `https://chatgpt.com/c/6a3f1652-2490-83ea-add0-0a900e6d55bc`;
+  - readback cache
+    `/tmp/auracall-plan0144-live-zip-proof/handoffs/plan0144-live-zip-proof/target/chatgpt-context-readback.json`
+    recorded one `application/zip` file, and the assistant response stated it
+    inspected and extracted the ZIP and saw all `PLAN0144_ZIP_PROOF_01` through
+    `PLAN0144_ZIP_PROOF_11` markers.
+
 ## 2026-06-21 | ChatGPT Repeated Rate-Limit Cooldown
 
 - Focus: reduce repeated ChatGPT/SoyLei `Too many requests` warnings after
@@ -38751,3 +38829,274 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `30000`, the 15/min cap active, and the current completion
   `acctmirror_completion_277ff7b8-a0fd-4745-8c54-321a4d40f001` still paused
   before any retry.
+- 2026-06-24: Resumed the `chatgpt/wsl-chrome-3` Pro live-follow completion
+  `acctmirror_completion_277ff7b8-a0fd-4745-8c54-321a4d40f001` with
+  `/home/ecochran76/.local/bin/auracall api mirror-completion-control ... resume`.
+  The lane moved from operator-paused to `idle_waiting`, then ran one
+  backfill-history pass at `2026-06-24T15:33Z` and returned to `idle_waiting`
+  at `2026-06-24T15:40:21Z` with `passCount=1`, no completion error, provider
+  guard clear, and no matching `Too many requests`/`429`/provider-guard warning
+  lines in the watched service log window. Next attempt was
+  `2026-06-24T15:58:52Z`.
+- 2026-06-24: Checked `chatgpt/wsl-chrome-3` again after the clean resume and
+  found a later ChatGPT `Too many requests` provider guard on
+  `listConversations`, detected at `2026-06-24T18:11:34Z` with cooldown until
+  `2026-06-24T18:26:34Z`. The previous resumed completion
+  `acctmirror_completion_277ff7b8-a0fd-4745-8c54-321a4d40f001` had run three
+  passes and ended `blocked`; a replacement live-follow completion
+  `acctmirror_completion_5dc45846-4efa-4a1f-97e4-6a4ffe61552c` was already
+  `running`, so it was operator-paused at `2026-06-24T18:29:59Z` to stop
+  additional request pressure.
+- 2026-06-24: After the operator reported a ChatGPT warning on mobile, checked
+  all ChatGPT live-follow lanes. Runtime status showed scheduler backpressure
+  from provider guards on `default` (`readConversationContext`, detected
+  `2026-06-24T18:11:56Z`) and `wsl-chrome-3` (`listConversations`, detected
+  `2026-06-24T18:30:27Z`). `wsl-chrome-3` was already paused; the active
+  default completion `acctmirror_completion_f9756e54-af2c-438f-9516-a2a1c063783e`
+  was operator-paused at `2026-06-24T18:31:57Z`. Final readback showed no
+  ChatGPT completion running or queued: default, `wsl-chrome-3`, and
+  `wsl-chrome-4` paused; `wsl-chrome-2` delayed with no active completion.
+- 2026-06-24: Retuned ChatGPT live-follow pacing again after the mobile warning
+  showed account-level pressure. Backed up `~/.auracall/config.json` to
+  `~/.auracall/config.json.bak-20260624T184141Z-chatgpt-rate-retune`, then set
+  all configured ChatGPT live-follow profiles (`default`, `wsl-chrome-2`,
+  `wsl-chrome-3`, `wsl-chrome-4`) to
+  `maxBrowserInteractionsPerMinute=6`,
+  `conversationReadCooldownMs=120000`, `pageRefreshCooldownMs=120000`, and
+  `renavigationCooldownMs=120000`, preserving existing mode, sweep, and
+  materialization settings. Restarted `auracall-api.service`; readback showed
+  the service active on PID `1484301` and all four active ChatGPT completions
+  paused, including the startup-created `wsl-chrome-2` completion
+  `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2`.
+- 2026-06-24: Resumed only the `chatgpt/wsl-chrome-3` live-follow completion
+  `acctmirror_completion_5dc45846-4efa-4a1f-97e4-6a4ffe61552c` under the
+  stricter `6/min` plus `120s` action-cooldown posture. The completion moved to
+  `running` at `2026-06-24T19:42:24Z`; a bounded watch through
+  `2026-06-24T19:52:20Z` showed `error=null` and no new matching
+  `Too many requests`/`429`/provider-guard log lines since the resume. Other
+  ChatGPT live-follow completions remained paused.
+- 2026-06-24: Performed a provider-native handoff from source ChatGPT
+  `ecochran76@gmail.com` Business project
+  `g-p-693083c638ec8191afc1eeac6fc92c96` conversation
+  `69d7cef8-1ed0-8326-87b6-3b990dde8b54` into the SoyLei ChatGPT Pro tenant
+  `wsl-chrome-3` project `g-p-69eb844fc2408191b5ac5b567f8fd76d`. Target
+  identity smoke showed `eric.cochran@soylei.com`, Pro/personal. Source
+  project-source materialization job
+  `hmj_b18438169ea943ecb6bce86689939b10` terminaled `skipped` because no
+  downloadable project files were found, so the handoff packet attached the
+  normalized 8-message source context JSON plus a derived Markdown transcript
+  and recorded 27 source omissions for non-materialized sent files/artifacts.
+  Replacement packet
+  `handoff_1782332020276_c1aebd33-f5f0-41be-8197-532f53e0ec69` completed with
+  package digest
+  `2f4673d548102fe8b18d191355614d1ec0d5dc86405474d12b57a0e9d922bf68`, two
+  selected attachments uploaded, and target conversation
+  `https://chatgpt.com/g/g-p-69eb844fc2408191b5ac5b567f8fd76d-soylei/c/6a3c3aa8-10b4-83ea-99e5-f2952009139b`.
+- 2026-06-24: Started the browser-service rate-limit refactor after the
+  `wsl-chrome-3` handoff produced a fresh `Too many requests` guard on
+  `listConversationFiles` despite `6/min` and `120s` live-follow cooldowns.
+  Added `packages/browser-service/src/service/interactionGovernor.ts` and wired
+  ChatGPT account-mirror detail safe-read helpers through it so the existing
+  conservative policy is enforced immediately before account-file,
+  project-file, conversation-file, and conversation-context provider reads.
+  Followed up by adding
+  `BrowserProviderListOptions.interactionGovernor`, central ChatGPT governor
+  attachment in `LlmService.buildListOptions(...)`, and ChatGPT adapter
+  boundary waits before identity/signature reads, project/conversation lists,
+  file/context reads, downloads, uploads, mutations, and blocking-surface
+  recovery. Account-mirror now carries the same governor through list options
+  and only uses its helper-level pacer as a fallback when no provider governor
+  is present. Focused validation passed:
+  `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/browser-service/browserServiceCore.test.ts`
+  and `pnpm exec tsc --noEmit --pretty false`.
+  Installed the updated runtime with `pnpm run install:user-runtime`, restarted
+  `auracall-api.service`, and confirmed the service was active with installed
+  `/home/ecochran76/.local/bin/auracall --version` reporting `0.1.1`. Startup
+  resumed the SoyLei `chatgpt/wsl-chrome-3` completion
+  `acctmirror_completion_efd12c56-ecd9-436c-9909-1fecf998bd25` into
+  `idle_waiting` while the pre-existing `listConversationFiles` provider guard
+  was still cooling down until `2026-06-24T21:27:05.958Z`, so it was
+  operator-paused immediately. Final status readback showed all four ChatGPT
+  live-follow completions (`default`, `wsl-chrome-2`, `wsl-chrome-3`,
+  `wsl-chrome-4`) paused.
+- 2026-06-24: Tightened forward handoff semantics after the RuralStamina
+  packet landed in ChatGPT Instant. Added target semantic model selector
+  propagation from `auracall handoff prepare --target-model-selector` through
+  packet target records and the ChatGPT browser handoff adapter, so
+  `chatgpt:pro-extended` resolves to Pro plus extended thinking on live submit.
+  Added bounded file-searcher fallback during target packaging: when a selected
+  manifest file has no usable local path, preparation tries `fsr find` before
+  recording a retryable omission and records recovery metadata on
+  `target/upload-manifest.json` when a local copy is found. Planned validation:
+  focused handoff CLI tests, ChatGPT service adapter test, typecheck, and
+  focused lint.
+- 2026-06-24: Reran the RuralSTAMINA handoff into the SoyLei Pro tenant root
+  chat using recovered local files and `chatgpt:pro-extended`. Built packet
+  `ruralstamina-root-pro-extended-20260624` from the original context plus 7
+  file-searcher-recovered documents, for 9 selected uploads and no ZIP
+  threshold trigger. Target was `https://chatgpt.com/`, `projectRef=null`, and
+  `modelSelector=chatgpt:pro-extended`. Live recovery completed upload and
+  submit through `--profile wsl-chrome-3 --target-adapter chatgpt-browser`,
+  producing root conversation
+  `https://chatgpt.com/c/6a3c8d88-cb7c-83ea-950d-810d1e592f08`. Read-only DOM
+  verification reported `hasProjectPath=false` and model lines including
+  `Pro Extended`.
+- 2026-06-25: User reported another visible ChatGPT `requests too quickly`
+  warning on the SoyLei lane while the installed service had no matching
+  provider-guard/log event. Status showed only `chatgpt/wsl-chrome-3` running
+  (`acctmirror_completion_34e7ca30-2b1e-4dd5-a5f8-68b5102b1e88`,
+  `backfill_history`, `passCount=5`, `providerGuard=null`); paused it at
+  `2026-06-25T16:06:58.952Z`, leaving all four ChatGPT live-follow completions
+  paused. Added a passive ChatGPT target-census guard in
+  `src/accountMirror/refreshService.ts`: before collection, managed ChatGPT
+  page targets are read-only inspected for visible dialog/alert/live-region
+  rate-limit text, profile-scoped cooldown guard state is written, and cooldown
+  guards remain cooldowns rather than manual-clear hard stops. Focused
+  validation passed with
+  `pnpm vitest run tests/accountMirror/refreshService.test.ts` and
+  `pnpm exec tsc --noEmit --pretty false`. Installed with
+  `pnpm run install:user-runtime`, restarted `auracall-api.service`, and
+  confirmed installed `/home/ecochran76/.local/bin/auracall --version` still
+  reports `0.1.1`. Post-restart status showed service PID `1202472`, all four
+  ChatGPT live-follow completions paused, and `wsl-chrome-3` carrying a
+  cooldown provider guard until `2026-06-25T16:27:01.532Z`.
+- 2026-06-26: Investigated Open Notebook worker starvation after
+  `agent:open-notebook-pro-chatgpt-soylei` timed out behind an AuraCall
+  ChatGPT browser operation lock (`browser-execution/exclusive-mutating`). The
+  root AuraCall issue was the `/v1/chat/completions` compatibility route
+  synchronously waiting on the persisted response drain, while browser-backed
+  execution can wait much longer for the managed browser profile lock. Added a
+  bounded synchronous wait to `src/http/responsesServer.ts`: pending
+  chat-completion drains now return retryable `503` with `Retry-After`,
+  `auracall_execution_pending`, and the persisted `response_id` for
+  `/v1/responses/{response_id}` polling. Updated README, agent workflow docs,
+  and Plan 0064. Focused validation passed:
+  `pnpm vitest run tests/http.responsesServer.test.ts -t "chat completion" --maxWorkers 1`
+  and `pnpm exec tsc --noEmit --pretty false`.
+- 2026-06-26: Dug into SoyLei ChatGPT file catch-up failures after repeated
+  `readConversationContext` rate-limit warnings. The failing history
+  materialization jobs were not reaching stale/expired file URLs; snapshot
+  refreshes were failing first with routeability `unknown`, null provider ids,
+  null remote URLs, and no local path. Root cause in code was
+  `refreshSnapshot=true` on reconciliation forcing live
+  `getConversationContext(... refresh: true, allowCacheFallback: false)` before
+  cached missing-asset materialization. Changed ChatGPT reconciliation to try
+  cache-backed materialization before live snapshot refresh, preserving the old
+  refresh-first behavior for direct conversation jobs and falling back to
+  snapshot refresh if cache-first materializes nothing. Validation passed:
+  `pnpm vitest run tests/runtime.historyMaterializationService.test.ts`,
+  `pnpm exec tsc --noEmit --pretty false`, and
+  `pnpm exec biome lint src/runtime/historyMaterializationService.ts tests/runtime.historyMaterializationService.test.ts`.
+- 2026-06-27: Opened Plan 0145 as a high-level live-follow design slice for
+  reverse-mtime conversation frontiers across ChatGPT, Gemini, and Grok. The
+  plan keeps list/index refresh as the cheap front door, moves expensive
+  detail/context reads behind cached-fresh frontier checks, and preserves
+  `full_sweep` plus missing-asset catch-up semantics instead of falling back to
+  metadata-only mode. Documentation-only planning slice; no runtime validation
+  run.
+- 2026-06-27: Implemented the first Plan 0145 code slice. Added
+  `src/accountMirror/conversationFreshnessFrontier.ts`, threaded persisted
+  catalog conversation freshness summaries into account-mirror collection, and
+  filtered ChatGPT/Gemini/Grok conversation detail candidates before file/context
+  reads. Added `liveFollow.freshFrontierThreshold` with default `3` and status
+  readback under `metadataEvidence.conversationFreshnessFrontier`. Focused
+  validation passed:
+  `pnpm vitest run tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/conversationFreshness.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`,
+  `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts`,
+  and `pnpm exec tsc --noEmit --pretty false`; the focused account-mirror
+  suite now passes with `83` tests after the Grok chat-detail assertion.
+  Remaining Plan 0145 proof:
+  focused lint, plan audit, install/runtime readback, and a bounded
+  `chatgpt/wsl-chrome-3` live pass only when the provider guard/cooldown state
+  is clear.
+- 2026-06-27: Completed focused lint and plan audit for the Plan 0145 slice:
+  `pnpm exec biome lint src/accountMirror/conversationFreshnessFrontier.ts src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/accountMirror/statusRegistry.ts src/accountMirror/politePolicy.ts src/schema/types.ts tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts`
+  passed, and `pnpm run plans:audit -- --keep 145` reported
+  `Validation errors: 0`. Installed `/status` readback showed
+  `chatgpt/wsl-chrome-3` delayed by a ChatGPT cooldown guard until
+  `2026-06-27T12:09:19.761Z`, with active completion
+  `acctmirror_completion_59c632cc-9b67-47f3-8b49-aeb739c082e6` in
+  `full_sweep`; live proof was intentionally deferred because this state would
+  add provider pressure and would not prove steady-follow frontier skipping.
+- 2026-06-27: Installed the Plan 0145 slice into the user runtime with
+  `pnpm run install:user-runtime-service` and restarted
+  `auracall-api.service` to active PID `2686801`. Paused the stale active
+  `full_sweep` completion, then started bounded installed steady-follow proof
+  `acctmirror_completion_fa025714-358f-4b0c-bc7b-654608198ad2` for
+  `chatgpt/wsl-chrome-3` with `--max-passes 1` and
+  `--materialization-policy metadata_only`. The operation blocked before
+  collection with `account_mirror_identity_mismatch` for expected
+  `eric.cochran@soylei.com`; provider guard readback was clear, but no
+  `metadataEvidence.conversationFreshnessFrontier` proof was emitted. Plan 0145
+  remains open on live frontier readback and reduced detail-read churn proof.
+- 2026-06-27: Continued Plan 0145 installed proof on
+  `chatgpt/wsl-chrome-3`. Backed up `~/.auracall/config.json` to
+  `/home/ecochran76/.auracall/config.json.bak-20260627T1226Z-plan0145-frontier-proof`
+  and kept only the SoyLei ChatGPT live-follow proof path on
+  `steady_follow`/`metadata_only` with account-library still `preview_only`.
+  Raised ChatGPT completion collector timeout to `900000` ms and widened
+  ChatGPT auth-session identity fetch retries after a bounded proof failed
+  preflight with `chatgpt_identity_not_detected` despite immediate passive
+  identity-smoke success. Installed proof
+  `acctmirror_completion_d8e1af61-0e52-4394-9789-6ddc0a62d764` completed and
+  emitted frontier evidence, but selected all `27` rows because row mtimes were
+  missing. Added ChatGPT localStorage `conversation-history` mtime hydration;
+  installed proof `acctmirror_completion_92586cf3-2d34-4f07-80e3-8443f4c9b9fd`
+  completed with row mtimes present but selected all rows due
+  `missing_cached_summary`. Added raw-cache freshness summary hydration from
+  cached context/assets; installed proof
+  `acctmirror_completion_22e5919b-db13-42fa-bb88-e24ae43b64b0` completed but
+  selected all `27` rows with `fallbackReason="cached_state_not_fresh"` because
+  this live lane's cached detail/assets are stale or missing local assets. Plan
+  0145 remains open because the installed SoyLei lane still has no reduced
+  detail/context read count proof.
+- 2026-06-27: Continued Plan 0145 live-proof repair. Fixed steady-follow
+  cursor behavior so frontier-filtered passes scan newest selected rows rather
+  than resuming a stale deep detail cursor; added durable scanned-row
+  `detailObservedAt`/`manifestObservedAt`/`detailCompleteness` metadata; and
+  changed cached-summary hydration to strip stale embedded
+  `conversationFreshness` records before deriving current freshness from row
+  metadata, cached context, and assets. Focused validation passed:
+  `pnpm exec tsc --noEmit --pretty false`,
+  `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/conversationFreshness.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts tests/accountMirror/completionService.test.ts`
+  with one completionService timing flake passing on rerun, and scoped Biome on
+  changed collector/refresh files. Installed proof
+  `acctmirror_completion_14973999-511f-4fef-9d87-b6c9b2dfc2d4` wrote scanned-row
+  detail metadata for rows `0..3`; later proof
+  `acctmirror_completion_23b7b425-f9ec-40b5-98ce-d0ea46bdc696` yielded before
+  detail reads to foreground owner
+  `response-run:resp_69cc117b60d747d9a769f283f1eacc77:open-notebook-pro-chatgpt-soylei`.
+  Final guard-clear validation is still blocked by ChatGPT `Too many requests`
+  cooldown, latest observed on
+  `acctmirror_completion_8cd8956f-1dec-4813-a9fd-a55ea7756dba` until
+  `2026-06-27T19:04:11.132Z`; Plan 0145 remains open.
+- 2026-06-27: Continued Plan 0145 after the ChatGPT guard window cleared.
+  Verified the previously written scanned-row metadata had been lost from
+  `conversations.json`, then fixed the shallow conversation merge that was
+  replacing nested `metadata` on later index-only observations. Both
+  `src/accountMirror/refreshService.ts` and
+  `src/accountMirror/chatgptMetadataCollector.ts` now preserve existing nested
+  conversation metadata while still accepting incoming index fields. Focused
+  validation passed:
+  `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/conversationFreshnessFrontier.test.ts`,
+  `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on the changed
+  source/test files. Installed the patched runtime and restarted
+  `auracall-api.service` to PID `3482548`. Guard-clear proof
+  `acctmirror_completion_5ac10f4d-01bf-42cd-93a8-c7cb6032fc1c` completed with
+  provider guard clear and no foreground-owner yield; it still selected `26` of
+  `27` rows because the frontier decision preceded the newly repaired metadata
+  write, but it scanned rows `0..3` and persisted
+  `detailObservedAt`/`manifestObservedAt`/`detailCompleteness=complete` for
+  those rows. A second bounded proof
+  `acctmirror_completion_4ea08242-b885-48a4-b0d5-1df31fdbfda3` was started
+  after verifying rows `0..3` retained the metadata, but it blocked on ChatGPT
+  `Too many requests` during `listConversations` before a refresh result; the
+  current cooldown is until `2026-06-27T19:44:32.158Z`. Plan 0145 remains open
+  pending a guard-clear pass proving reduced frontier-selected detail rows.
+- 2026-06-27: Recorded the Open Notebook client-facing recovery contract in
+  `docs/dev/notes/2026-06-27-open-notebook-client-facing-recoverable-run-contract.md`.
+  Evidence run `resp_69cc117b60d747d9a769f283f1eacc77` completed after
+  ChatGPT reattach/recovery, while Open Notebook saw a transport disconnect
+  during `/v1/responses/{response_id}` polling and surfaced a notebook chat
+  500. No code changed in this slice; next work should harden the HTTP
+  chat-completions/responses contract and restart-recovery tests.
