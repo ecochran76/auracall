@@ -3699,12 +3699,28 @@ async function connectToChatgptTab(
 	host: string;
 	port: number;
 	usedExisting: boolean;
+	borrowedFromSession?: boolean;
 }> {
 	let host = options?.host ?? "127.0.0.1";
 	let port = options?.port ?? resolvePortFromEnv();
 	let failedTargetId: string | undefined;
 	const preferredUrl = urlOverride ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
 	const forceNewDisposableTab = shouldForceNewChatgptTabConnection(options);
+	if (port) {
+		const scopedConnection = readChatgptScopedSession(
+			options,
+			buildChatgptScopedSessionKey(host, port, preferredUrl),
+		);
+		if (scopedConnection) {
+			recordBrowserScrapeProviderAction(options, "chatgpt.reuseScopedTarget");
+			return {
+				...scopedConnection,
+				shouldClose: false,
+				usedExisting: true,
+				borrowedFromSession: true,
+			};
+		}
+	}
 	if (options?.tabTargetId && port) {
 		try {
 			recordBrowserScrapeCdpCall(options, "Target.attachToTarget");
@@ -3719,7 +3735,7 @@ async function connectToChatgptTab(
 					`ChatGPT target ${options.tabTargetId} is on ${currentUrl ?? "(unknown URL)"}, not the expected ${preferredUrl}.`,
 				);
 			}
-			return {
+			const connection = {
 				client,
 				targetId: options.tabTargetId,
 				shouldClose: false,
@@ -3727,6 +3743,12 @@ async function connectToChatgptTab(
 				port,
 				usedExisting: true,
 			};
+			retainChatgptScopedSession(
+				options,
+				buildChatgptScopedSessionKey(host, port, preferredUrl),
+				connection,
+			);
+			return connection;
 		} catch (error) {
 			if (!providerNavigationAllowed(options)) {
 				throw error;
@@ -3780,6 +3802,17 @@ async function connectToChatgptTab(
 	}
 
 	const resolvedPort = port;
+	const sessionKey = buildChatgptScopedSessionKey(host, resolvedPort, preferredUrl);
+	const scopedConnection = readChatgptScopedSession(options, sessionKey);
+	if (scopedConnection) {
+		recordBrowserScrapeProviderAction(options, "chatgpt.reuseScopedTarget");
+		return {
+			...scopedConnection,
+			shouldClose: false,
+			usedExisting: true,
+			borrowedFromSession: true,
+		};
+	}
 	const targets = await listChatgptChromeTargets(host, resolvedPort);
 	const candidates = forceNewDisposableTab
 		? []
@@ -3854,7 +3887,7 @@ async function connectToChatgptTab(
 	annotateClientMutationContext(client, options, "provider:chatgpt");
 	setClientSuppressFocus(client, tabPolicy.suppressFocus);
 	await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
-	return {
+	const connection = {
 		client,
 		targetId: resolvedTargetId,
 		shouldClose,
@@ -3862,9 +3895,14 @@ async function connectToChatgptTab(
 		port: resolvedPort,
 		usedExisting,
 	};
+	retainChatgptScopedSession(options, sessionKey, connection);
+	return connection;
 }
 
 type ChatgptTabConnection = Awaited<ReturnType<typeof connectToChatgptTab>>;
+type ChatgptScopedTabSessionValue = {
+	connection: ChatgptTabConnection;
+};
 
 function shouldDisposeChatgptTabConnection(
 	connection: Pick<ChatgptTabConnection, "shouldClose" | "targetId">,
@@ -3877,9 +3915,17 @@ function shouldDisposeChatgptTabConnection(
 }
 
 async function closeChatgptTabConnection(
-	connection: Pick<ChatgptTabConnection, "client" | "targetId" | "shouldClose" | "host" | "port">,
+	connection: Pick<
+		ChatgptTabConnection,
+		"client" | "targetId" | "shouldClose" | "host" | "port" | "borrowedFromSession"
+	>,
 	options?: BrowserProviderListOptions,
 ): Promise<void> {
+	if (connection.borrowedFromSession) return;
+	const retainedSession = options?.providerSession?.value as
+		| Partial<ChatgptScopedTabSessionValue>
+		| undefined;
+	if (options?.useProviderSession && retainedSession?.connection === connection) return;
 	await connection.client.close().catch(() => undefined);
 	if (!shouldDisposeChatgptTabConnection(connection, options)) {
 		return;
@@ -3902,6 +3948,42 @@ function shouldForceNewChatgptTabConnection(options?: BrowserProviderListOptions
 }
 
 export const shouldForceNewChatgptTabConnectionForTest = shouldForceNewChatgptTabConnection;
+
+function buildChatgptScopedSessionKey(host: string, port: number, preferredUrl: string): string {
+	return `chatgpt:${host}:${port}:${preferredUrl}`;
+}
+
+function readChatgptScopedSession(
+	options: BrowserProviderListOptions | undefined,
+	key: string,
+): ChatgptTabConnection | null {
+	const session = options?.providerSession;
+	if (!options?.useProviderSession || !session) return null;
+	if (session.providerId !== "chatgpt" || session.key !== key) return null;
+	const value = session.value as Partial<ChatgptScopedTabSessionValue> | null;
+	return value?.connection ?? null;
+}
+
+function retainChatgptScopedSession(
+	options: BrowserProviderListOptions | undefined,
+	key: string,
+	connection: ChatgptTabConnection,
+): void {
+	if (!options?.useProviderSession || options.providerSession) return;
+	options.providerSession = {
+		providerId: "chatgpt",
+		key,
+		value: { connection } satisfies ChatgptScopedTabSessionValue,
+		close: async () => {
+			options.providerSession = undefined;
+			await closeChatgptTabConnection(connection, {
+				...options,
+				useProviderSession: false,
+			});
+		},
+	};
+	recordBrowserScrapeProviderAction(options, "chatgpt.retainScopedTarget");
+}
 
 async function enableChatgptTargetDomains(
 	client: ChromeClient,
@@ -8788,22 +8870,29 @@ async function fetchChatgptBinaryWithClient(
     })()`;
 	recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
 	recordBrowserScrapeProviderAction(options, "chatgpt.fetchBinary");
-	const result = await client.Runtime.evaluate({
-		expression,
-		awaitPromise: true,
-		returnByValue: true,
-	});
-	const value = isRecord(result.result?.value) ? result.result.value : null;
-	if (!value || value.ok !== true || typeof value.base64 !== "string") {
-		const status = typeof value?.status === "number" ? ` (status ${value.status})` : "";
-		throw new Error(`ChatGPT artifact binary fetch failed${status}`);
+	recordBrowserScrapeDownloadAttempt(options);
+	try {
+		const result = await client.Runtime.evaluate({
+			expression,
+			awaitPromise: true,
+			returnByValue: true,
+		});
+		const value = isRecord(result.result?.value) ? result.result.value : null;
+		if (!value || value.ok !== true || typeof value.base64 !== "string") {
+			const status = typeof value?.status === "number" ? ` (status ${value.status})` : "";
+			throw new Error(`ChatGPT artifact binary fetch failed${status}`);
+		}
+		recordBrowserScrapeDownloadSuccess(options);
+		return {
+			buffer: Buffer.from(value.base64, "base64"),
+			contentType: typeof value.contentType === "string" ? value.contentType : null,
+			contentDisposition:
+				typeof value.contentDisposition === "string" ? value.contentDisposition : null,
+		};
+	} catch (error) {
+		recordBrowserScrapeDownloadFailure(options);
+		throw error;
 	}
-	return {
-		buffer: Buffer.from(value.base64, "base64"),
-		contentType: typeof value.contentType === "string" ? value.contentType : null,
-		contentDisposition:
-			typeof value.contentDisposition === "string" ? value.contentDisposition : null,
-	};
 }
 
 function parseChatgptConversationFileRefName(

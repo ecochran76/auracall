@@ -61,6 +61,16 @@ export interface BrowserProviderListOptions {
 		maxMessages?: number | null;
 	};
 	scrapeTelemetry?: BrowserScrapeTelemetryRecorder;
+	useProviderSession?: boolean;
+	keepProviderSessionOpen?: boolean;
+	providerSession?: BrowserProviderScopedSession;
+}
+
+export interface BrowserProviderScopedSession {
+	providerId: BrowserProviderConfig["id"];
+	key: string;
+	value: unknown;
+	close: () => Promise<void>;
 }
 
 export interface ProviderUserIdentity {

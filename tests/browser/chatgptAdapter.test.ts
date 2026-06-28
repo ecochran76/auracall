@@ -3,6 +3,7 @@ import {
 	buildChatgptAuthSessionIdentityExpression,
 	buildChatgptCreateProjectDialogStateExpressionForTest,
 	classifyChatgptBlockingSurfaceProbe,
+	closeChatgptTabConnectionForTest,
 	createChatgptAdapter,
 	extractChatgptConversationArtifactsFromPayload,
 	extractChatgptConversationIdFromUrl,
@@ -46,6 +47,32 @@ import {
 	serializeChatgptGridRowsToCsv,
 } from "../../src/browser/providers/chatgptAdapter.js";
 import { normalizeProjectMemoryMode } from "../../src/browser/providers/domain.js";
+
+describe("closeChatgptTabConnection", () => {
+	test("keeps retained scoped provider sessions open for later materialization steps", async () => {
+		const close = vi.fn(async () => undefined);
+		const connection = {
+			client: { close },
+			targetId: "target-1",
+			shouldClose: false,
+			host: "127.0.0.1",
+			port: 9222,
+			usedExisting: true,
+		};
+
+		await closeChatgptTabConnectionForTest(connection as never, {
+			useProviderSession: true,
+			providerSession: {
+				providerId: "chatgpt",
+				key: "chatgpt:127.0.0.1:9222:https://chatgpt.com/c/conv",
+				value: { connection },
+				close: vi.fn(),
+			},
+		});
+
+		expect(close).not.toHaveBeenCalled();
+	});
+});
 
 describe("isChatgptTargetReusableForPreferredUrl", () => {
 	test("does not reuse running conversation tabs for root/library requests", () => {

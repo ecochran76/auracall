@@ -777,7 +777,7 @@ describe("llmService project file cache writes", () => {
 				expect.objectContaining({ id: "image-dom:turn-real:0" }),
 				expect.any(String),
 				undefined,
-				{},
+				expect.objectContaining({ useProviderSession: true }),
 			);
 			const manifest = JSON.parse(await readFile(result.manifestPath as string, "utf8")) as {
 				artifactCount: number;
@@ -858,7 +858,7 @@ describe("llmService project file cache writes", () => {
 				expect.objectContaining({ id: "download-dom:turn-1:0" }),
 				expect.any(String),
 				undefined,
-				{},
+				expect.objectContaining({ useProviderSession: true }),
 			);
 			const manifest = JSON.parse(await readFile(result.manifestPath as string, "utf8")) as {
 				artifactCount: number;
@@ -992,12 +992,31 @@ describe("llmService project file cache writes", () => {
 				mimeType: "image/png",
 			},
 		];
+		const closeProviderSession = vi.fn(async () => undefined);
 		const provider = {
 			id: "gemini",
 			config: { id: "gemini", selectors: {} as never },
-			listConversationFiles: vi.fn(async () => conversationFiles),
+			listConversationFiles: vi.fn(
+				async (_conversationId: string, options?: BrowserProviderListOptions) => {
+					expect(options?.useProviderSession).toBe(true);
+					if (!options) throw new Error("expected list options");
+					options.providerSession = {
+						providerId: "gemini",
+						key: "test-session",
+						value: { connected: true },
+						close: closeProviderSession,
+					};
+					return conversationFiles;
+				},
+			),
 			downloadConversationFile: vi.fn(
-				async (_conversationId: string, fileId: string, destPath: string) => {
+				async (
+					_conversationId: string,
+					fileId: string,
+					destPath: string,
+					options?: BrowserProviderListOptions,
+				) => {
+					expect(options?.providerSession?.key).toBe("test-session");
 					if (fileId === "conv-file-1") {
 						await fs.writeFile(destPath, "hello from gemini chat upload", "utf8");
 						return;
@@ -1016,6 +1035,7 @@ describe("llmService project file cache writes", () => {
 			expect(result.conversationFiles).toHaveLength(2);
 			expect(result.files).toHaveLength(1);
 			expect(result.manifestPath).toBeTruthy();
+			expect(closeProviderSession).toHaveBeenCalledTimes(1);
 			const cached = await store.readConversationAttachments(cacheContext, "conversation-123");
 			expect(cached.items).toEqual([
 				expect.objectContaining({

@@ -217,6 +217,13 @@ function limitItems<T>(items: T[], maxItems: number | null | undefined): T[] {
 	return items.slice(0, Math.max(0, Math.trunc(maxItems)));
 }
 
+async function closeScopedProviderSession(listOptions: BrowserProviderListOptions): Promise<void> {
+	const session = listOptions.providerSession;
+	if (!session) return;
+	listOptions.providerSession = undefined;
+	await session.close();
+}
+
 function normalizeProjectInstructionsForPrefix(value: string): string {
 	return value.replace(/\r\n/g, "\n").trim();
 }
@@ -1494,7 +1501,9 @@ export abstract class LlmService {
 		options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
 	): Promise<FileRef[]> {
 		const listOptions = this.scopeConversationListOptions(
-			await this.buildListOptions(options?.listOptions, { ensurePort: true }),
+			options?.listOptions?.useProviderSession
+				? options.listOptions
+				: await this.buildListOptions(options?.listOptions, { ensurePort: true }),
 			options?.projectId,
 		);
 		recordBrowserScrapeProviderAction(listOptions, "llmService.listConversationFiles");
@@ -1530,128 +1539,141 @@ export abstract class LlmService {
 			await this.buildListOptions(options?.listOptions, { ensurePort: true }),
 			options?.projectId,
 		);
-		recordBrowserScrapeProviderAction(listOptions, "llmService.materializeConversationArtifacts");
-		const context = await this.getConversationContext(conversationId, {
-			projectId: options?.projectId,
-			refresh: options?.refresh ?? true,
-			listOptions,
-		});
-		const artifacts = limitItems(
-			selectMaterializableConversationArtifacts(
-				this.providerId,
-				Array.isArray(context.artifacts) ? context.artifacts : [],
-			),
-			options?.maxItems,
-		);
-		recordBrowserScrapeCandidateCount(
-			listOptions,
-			"llmService.materializeConversationArtifacts.artifacts",
-			artifacts.length,
-		);
-		if (artifacts.length === 0) {
-			return { artifacts: [], files: [], manifestPath: null };
-		}
-		const cacheContext = await this.resolveCacheContext(listOptions);
-		const { cacheDir } = resolveProviderCachePath(
-			cacheContext,
-			`conversation-attachments/${conversationId}/manifest.json`,
-		);
-		const attachmentsDir = path.join(cacheDir, "conversation-attachments", conversationId, "files");
-		const manifestPath = path.join(
-			cacheDir,
-			"conversation-attachments",
-			conversationId,
-			"artifact-fetch-manifest.json",
-		);
-		await fs.mkdir(attachmentsDir, { recursive: true });
-		const existing = await this.cacheStore.readConversationAttachments(
-			cacheContext,
-			conversationId,
-		);
-		const merged = new Map(existing.items.map((item) => [item.id, item]));
-		const materialized: FileRef[] = [];
-		const manifestEntries: ConversationArtifactFetchManifestEntry[] = [];
-		for (const artifact of artifacts) {
-			const artifactDir = path.join(
-				attachmentsDir,
-				sanitizeArtifactPathSegment(
-					artifact.id || artifact.title || `artifact-${materialized.length + 1}`,
+		listOptions.useProviderSession = true;
+		const shouldCloseProviderSession = listOptions.keepProviderSessionOpen !== true;
+		try {
+			recordBrowserScrapeProviderAction(listOptions, "llmService.materializeConversationArtifacts");
+			const context = await this.getConversationContext(conversationId, {
+				projectId: options?.projectId,
+				refresh: options?.refresh ?? true,
+				listOptions,
+			});
+			const artifacts = limitItems(
+				selectMaterializableConversationArtifacts(
+					this.providerId,
+					Array.isArray(context.artifacts) ? context.artifacts : [],
 				),
+				options?.maxItems,
 			);
-			await fs.mkdir(artifactDir, { recursive: true });
-			try {
-				const file = await this.withRetry(
-					() =>
-						this.provider.materializeConversationArtifact?.(
-							conversationId,
-							artifact,
-							artifactDir,
-							options?.projectId,
-							listOptions,
-						) as Promise<FileRef | null>,
-					{ action: "materializeConversationArtifact" },
+			recordBrowserScrapeCandidateCount(
+				listOptions,
+				"llmService.materializeConversationArtifacts.artifacts",
+				artifacts.length,
+			);
+			if (artifacts.length === 0) {
+				return { artifacts: [], files: [], manifestPath: null };
+			}
+			const cacheContext = await this.resolveCacheContext(listOptions);
+			const { cacheDir } = resolveProviderCachePath(
+				cacheContext,
+				`conversation-attachments/${conversationId}/manifest.json`,
+			);
+			const attachmentsDir = path.join(
+				cacheDir,
+				"conversation-attachments",
+				conversationId,
+				"files",
+			);
+			const manifestPath = path.join(
+				cacheDir,
+				"conversation-attachments",
+				conversationId,
+				"artifact-fetch-manifest.json",
+			);
+			await fs.mkdir(attachmentsDir, { recursive: true });
+			const existing = await this.cacheStore.readConversationAttachments(
+				cacheContext,
+				conversationId,
+			);
+			const merged = new Map(existing.items.map((item) => [item.id, item]));
+			const materialized: FileRef[] = [];
+			const manifestEntries: ConversationArtifactFetchManifestEntry[] = [];
+			for (const artifact of artifacts) {
+				const artifactDir = path.join(
+					attachmentsDir,
+					sanitizeArtifactPathSegment(
+						artifact.id || artifact.title || `artifact-${materialized.length + 1}`,
+					),
 				);
-				if (!file) {
+				await fs.mkdir(artifactDir, { recursive: true });
+				try {
+					const file = await this.withRetry(
+						() =>
+							this.provider.materializeConversationArtifact?.(
+								conversationId,
+								artifact,
+								artifactDir,
+								options?.projectId,
+								listOptions,
+							) as Promise<FileRef | null>,
+						{ action: "materializeConversationArtifact" },
+					);
+					if (!file) {
+						manifestEntries.push({
+							artifactId: artifact.id,
+							title: artifact.title,
+							kind: artifact.kind,
+							uri: artifact.uri ?? null,
+							status: "skipped",
+						});
+						continue;
+					}
+					materialized.push(file);
+					merged.set(file.id, file);
 					manifestEntries.push({
 						artifactId: artifact.id,
 						title: artifact.title,
 						kind: artifact.kind,
 						uri: artifact.uri ?? null,
-						status: "skipped",
+						status: "materialized",
+						fileId: file.id,
+						fileName: file.name,
+						localPath: file.localPath,
+						remoteUrl: file.remoteUrl ?? artifact.uri ?? null,
+						mimeType: file.mimeType,
+						size: file.size,
+						materializationMethod:
+							typeof file.metadata?.materializationSurface === "string"
+								? file.metadata.materializationSurface
+								: typeof file.metadata?.materialization === "string"
+									? file.metadata.materialization
+									: "provider-download",
 					});
-					continue;
+				} catch (error) {
+					manifestEntries.push({
+						artifactId: artifact.id,
+						title: artifact.title,
+						kind: artifact.kind,
+						uri: artifact.uri ?? null,
+						status: "error",
+						error: normalizeArtifactFetchError(error),
+					});
 				}
-				materialized.push(file);
-				merged.set(file.id, file);
-				manifestEntries.push({
-					artifactId: artifact.id,
-					title: artifact.title,
-					kind: artifact.kind,
-					uri: artifact.uri ?? null,
-					status: "materialized",
-					fileId: file.id,
-					fileName: file.name,
-					localPath: file.localPath,
-					remoteUrl: file.remoteUrl ?? artifact.uri ?? null,
-					mimeType: file.mimeType,
-					size: file.size,
-					materializationMethod:
-						typeof file.metadata?.materializationSurface === "string"
-							? file.metadata.materializationSurface
-							: typeof file.metadata?.materialization === "string"
-								? file.metadata.materialization
-								: "provider-download",
-				});
-			} catch (error) {
-				manifestEntries.push({
-					artifactId: artifact.id,
-					title: artifact.title,
-					kind: artifact.kind,
-					uri: artifact.uri ?? null,
-					status: "error",
-					error: normalizeArtifactFetchError(error),
-				});
+			}
+			if (materialized.length > 0) {
+				await this.cacheStore.writeConversationAttachments(
+					cacheContext,
+					conversationId,
+					Array.from(merged.values()),
+				);
+			}
+			const manifest: ConversationArtifactFetchManifest = {
+				provider: this.providerId,
+				conversationId,
+				projectId: options?.projectId ?? null,
+				generatedAt: new Date().toISOString(),
+				artifactCount: artifacts.length,
+				materializedCount: materialized.length,
+				scrapeTelemetry: snapshotBrowserScrapeTelemetry(listOptions.scrapeTelemetry),
+				entries: manifestEntries,
+			};
+			await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+			return { artifacts, files: materialized, manifestPath };
+		} finally {
+			if (shouldCloseProviderSession) {
+				await closeScopedProviderSession(listOptions);
 			}
 		}
-		if (materialized.length > 0) {
-			await this.cacheStore.writeConversationAttachments(
-				cacheContext,
-				conversationId,
-				Array.from(merged.values()),
-			);
-		}
-		const manifest: ConversationArtifactFetchManifest = {
-			provider: this.providerId,
-			conversationId,
-			projectId: options?.projectId ?? null,
-			generatedAt: new Date().toISOString(),
-			artifactCount: artifacts.length,
-			materializedCount: materialized.length,
-			scrapeTelemetry: snapshotBrowserScrapeTelemetry(listOptions.scrapeTelemetry),
-			entries: manifestEntries,
-		};
-		await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-		return { artifacts, files: materialized, manifestPath };
 	}
 
 	async materializeConversationArtifact(
@@ -1714,147 +1736,160 @@ export abstract class LlmService {
 			await this.buildListOptions(options?.listOptions, { ensurePort: true }),
 			options?.projectId,
 		);
-		recordBrowserScrapeProviderAction(listOptions, "llmService.materializeConversationFiles");
-		const conversationFiles = limitItems(
-			await this.listConversationFiles(conversationId, {
-				projectId: options?.projectId,
+		listOptions.useProviderSession = true;
+		const shouldCloseProviderSession = listOptions.keepProviderSessionOpen !== true;
+		try {
+			recordBrowserScrapeProviderAction(listOptions, "llmService.materializeConversationFiles");
+			const conversationFiles = limitItems(
+				await this.listConversationFiles(conversationId, {
+					projectId: options?.projectId,
+					listOptions,
+				}),
+				options?.maxItems,
+			);
+			recordBrowserScrapeCandidateCount(
 				listOptions,
-			}),
-			options?.maxItems,
-		);
-		recordBrowserScrapeCandidateCount(
-			listOptions,
-			"llmService.materializeConversationFiles.files",
-			conversationFiles.length,
-		);
-		if (conversationFiles.length === 0) {
-			return { conversationFiles: [], files: [], manifestPath: null };
-		}
-		const cacheContext = await this.resolveCacheContext(listOptions);
-		const { cacheDir } = resolveProviderCachePath(
-			cacheContext,
-			`conversation-attachments/${conversationId}/manifest.json`,
-		);
-		const attachmentsDir = path.join(cacheDir, "conversation-attachments", conversationId, "files");
-		const manifestPath = path.join(
-			cacheDir,
-			"conversation-attachments",
-			conversationId,
-			"file-fetch-manifest.json",
-		);
-		await fs.mkdir(attachmentsDir, { recursive: true });
-		const existing = await this.cacheStore.readConversationAttachments(
-			cacheContext,
-			conversationId,
-		);
-		const merged = new Map(existing.items.map((item) => [item.id, item]));
-		const materialized: FileRef[] = [];
-		const manifestEntries: ConversationFileFetchManifestEntry[] = [];
-		for (const file of conversationFiles) {
-			const cachedSalvageCandidate = await findCachedConversationFileSalvageCandidate({
-				currentFile: file,
-				cachedFiles: merged,
+				"llmService.materializeConversationFiles.files",
+				conversationFiles.length,
+			);
+			if (conversationFiles.length === 0) {
+				return { conversationFiles: [], files: [], manifestPath: null };
+			}
+			const cacheContext = await this.resolveCacheContext(listOptions);
+			const { cacheDir } = resolveProviderCachePath(
+				cacheContext,
+				`conversation-attachments/${conversationId}/manifest.json`,
+			);
+			const attachmentsDir = path.join(
+				cacheDir,
+				"conversation-attachments",
 				conversationId,
-				attachmentsDir,
-			});
-			if (cachedSalvageCandidate) {
-				const materializedFile: FileRef = {
-					...cachedSalvageCandidate.file,
-					metadata: {
-						...cachedSalvageCandidate.file.metadata,
-						cachedProviderFileReason: "matched-current-provider-detail",
-					},
-				};
-				materialized.push(materializedFile);
-				merged.set(materializedFile.id, materializedFile);
-				manifestEntries.push({
-					fileId: file.id,
-					fileName: file.name,
-					status: "materialized",
-					localPath: materializedFile.localPath,
-					remoteUrl: materializedFile.remoteUrl ?? null,
-					mimeType: materializedFile.mimeType,
-					size: cachedSalvageCandidate.size,
-					materializationMethod: "cached-provider-file",
-				});
-				continue;
-			}
-			const fileDir = path.join(
-				attachmentsDir,
-				sanitizeArtifactPathSegment(file.id || file.name || `file-${materialized.length + 1}`),
+				"files",
 			);
-			await fs.mkdir(fileDir, { recursive: true });
-			const destPath = path.join(
-				fileDir,
-				sanitizeConversationFileName(
-					file.name || file.id || `conversation-file-${materialized.length + 1}`,
-				),
+			const manifestPath = path.join(
+				cacheDir,
+				"conversation-attachments",
+				conversationId,
+				"file-fetch-manifest.json",
 			);
-			try {
-				await this.withRetry(
-					() =>
-						this.provider.downloadConversationFile?.(
-							conversationId,
-							file.id,
-							destPath,
-							listOptions,
-							file,
-						) as Promise<void>,
-					{ action: "downloadConversationFile" },
-				);
-				const stat = await fs.stat(destPath);
-				const checksumSha256 = await calculateSha256(destPath);
-				const materializedFile: FileRef = {
-					...file,
-					size: stat.size,
-					localPath: destPath,
-					checksumSha256,
-				};
-				materialized.push(materializedFile);
-				merged.set(materializedFile.id, materializedFile);
-				manifestEntries.push({
-					fileId: file.id,
-					fileName: file.name,
-					status: "materialized",
-					localPath: destPath,
-					remoteUrl: file.remoteUrl ?? null,
-					mimeType: materializedFile.mimeType,
-					size: stat.size,
-					materializationMethod:
-						typeof file.metadata?.materializationSurface === "string"
-							? file.metadata.materializationSurface
-							: "provider-download",
-				});
-			} catch (error) {
-				manifestEntries.push({
-					fileId: file.id,
-					fileName: file.name,
-					status: "error",
-					remoteUrl: file.remoteUrl ?? null,
-					mimeType: file.mimeType,
-					error: normalizeArtifactFetchError(error),
-				});
-			}
-		}
-		if (materialized.length > 0) {
-			await this.cacheStore.writeConversationAttachments(
+			await fs.mkdir(attachmentsDir, { recursive: true });
+			const existing = await this.cacheStore.readConversationAttachments(
 				cacheContext,
 				conversationId,
-				Array.from(merged.values()),
 			);
+			const merged = new Map(existing.items.map((item) => [item.id, item]));
+			const materialized: FileRef[] = [];
+			const manifestEntries: ConversationFileFetchManifestEntry[] = [];
+			for (const file of conversationFiles) {
+				const cachedSalvageCandidate = await findCachedConversationFileSalvageCandidate({
+					currentFile: file,
+					cachedFiles: merged,
+					conversationId,
+					attachmentsDir,
+				});
+				if (cachedSalvageCandidate) {
+					const materializedFile: FileRef = {
+						...cachedSalvageCandidate.file,
+						metadata: {
+							...cachedSalvageCandidate.file.metadata,
+							cachedProviderFileReason: "matched-current-provider-detail",
+						},
+					};
+					materialized.push(materializedFile);
+					merged.set(materializedFile.id, materializedFile);
+					manifestEntries.push({
+						fileId: file.id,
+						fileName: file.name,
+						status: "materialized",
+						localPath: materializedFile.localPath,
+						remoteUrl: materializedFile.remoteUrl ?? null,
+						mimeType: materializedFile.mimeType,
+						size: cachedSalvageCandidate.size,
+						materializationMethod: "cached-provider-file",
+					});
+					continue;
+				}
+				const fileDir = path.join(
+					attachmentsDir,
+					sanitizeArtifactPathSegment(file.id || file.name || `file-${materialized.length + 1}`),
+				);
+				await fs.mkdir(fileDir, { recursive: true });
+				const destPath = path.join(
+					fileDir,
+					sanitizeConversationFileName(
+						file.name || file.id || `conversation-file-${materialized.length + 1}`,
+					),
+				);
+				try {
+					await this.withRetry(
+						() =>
+							this.provider.downloadConversationFile?.(
+								conversationId,
+								file.id,
+								destPath,
+								listOptions,
+								file,
+							) as Promise<void>,
+						{ action: "downloadConversationFile" },
+					);
+					const stat = await fs.stat(destPath);
+					const checksumSha256 = await calculateSha256(destPath);
+					const materializedFile: FileRef = {
+						...file,
+						size: stat.size,
+						localPath: destPath,
+						checksumSha256,
+					};
+					materialized.push(materializedFile);
+					merged.set(materializedFile.id, materializedFile);
+					manifestEntries.push({
+						fileId: file.id,
+						fileName: file.name,
+						status: "materialized",
+						localPath: destPath,
+						remoteUrl: file.remoteUrl ?? null,
+						mimeType: materializedFile.mimeType,
+						size: stat.size,
+						materializationMethod:
+							typeof file.metadata?.materializationSurface === "string"
+								? file.metadata.materializationSurface
+								: "provider-download",
+					});
+				} catch (error) {
+					manifestEntries.push({
+						fileId: file.id,
+						fileName: file.name,
+						status: "error",
+						remoteUrl: file.remoteUrl ?? null,
+						mimeType: file.mimeType,
+						error: normalizeArtifactFetchError(error),
+					});
+				}
+			}
+			if (materialized.length > 0) {
+				await this.cacheStore.writeConversationAttachments(
+					cacheContext,
+					conversationId,
+					Array.from(merged.values()),
+				);
+			}
+			const manifest: ConversationFileFetchManifest = {
+				provider: this.providerId,
+				conversationId,
+				projectId: options?.projectId ?? null,
+				generatedAt: new Date().toISOString(),
+				fileCount: conversationFiles.length,
+				materializedCount: materialized.length,
+				scrapeTelemetry: snapshotBrowserScrapeTelemetry(listOptions.scrapeTelemetry),
+				entries: manifestEntries,
+			};
+			await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+			return { conversationFiles, files: materialized, manifestPath };
+		} finally {
+			if (shouldCloseProviderSession) {
+				await closeScopedProviderSession(listOptions);
+			}
 		}
-		const manifest: ConversationFileFetchManifest = {
-			provider: this.providerId,
-			conversationId,
-			projectId: options?.projectId ?? null,
-			generatedAt: new Date().toISOString(),
-			fileCount: conversationFiles.length,
-			materializedCount: materialized.length,
-			scrapeTelemetry: snapshotBrowserScrapeTelemetry(listOptions.scrapeTelemetry),
-			entries: manifestEntries,
-		};
-		await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-		return { conversationFiles, files: materialized, manifestPath };
 	}
 
 	async clickCreateProjectConfirm(options?: {
@@ -2072,9 +2107,11 @@ export abstract class LlmService {
 		if (!this.provider.readConversationContext) {
 			throw new Error(`Conversation context retrieval is not supported for ${this.providerId}.`);
 		}
-		const listOptions = await this.buildListOptions(options?.listOptions, {
-			ensurePort: !options?.cacheOnly,
-		});
+		const listOptions = options?.listOptions?.useProviderSession
+			? options.listOptions
+			: await this.buildListOptions(options?.listOptions, {
+					ensurePort: !options?.cacheOnly,
+				});
 		recordBrowserScrapeProviderAction(listOptions, "llmService.getConversationContext");
 		const cacheContext = await this.resolveCacheContext(listOptions);
 		const refresh = options?.refresh !== false;

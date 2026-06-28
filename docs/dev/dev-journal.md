@@ -1,3 +1,37 @@
+## 2026-06-28 | Plan 0149 Scoped Single-Chat Scrape Cleanup
+
+- Focus: execute the end-to-end Plan 0149 follow-up after telemetry proved
+  direct ChatGPT file scrape worked but still attached/enabled the target four
+  times.
+- Result:
+  - added scoped provider-session reuse for direct artifact/file
+    materialization, preserving a ChatGPT CDP attachment across list/context
+    and download steps;
+  - added scrape-telemetry progress sidecars and failed-job readback attachment
+    for stale running materialization jobs;
+  - fixed the retained-session close bug found by live proof, where an
+    intermediate provider-method `finally` closed the WebSocket before the next
+    download step reused it;
+  - counted artifact binary fetches as actual download attempts/success/failure.
+- Live proof:
+  - isolated repo-local proof server on `127.0.0.1:18149`; live-follow stayed
+    paused and installed `auracall-api.service` was not restarted;
+  - `hmj_97829e859adf4cf6bd2607a53187f988` materialized
+    `10-Full Proposal Preview.pdf` from
+    `6a0b63f7-cc4c-83ea-b37a-4f094762838d` with
+    `Target.attachToTarget=1`, `Page.enable=1`, `Runtime.enable=1`,
+    `Runtime.evaluate=2`, `downloads={attempted:1,succeeded:1,failed:0}`,
+    and no account/project inventory counters;
+  - hard `all` target `hmj_0ed6ee6b8c4a4937b014d17f1782f094` still failed at
+    the 180s stale threshold, but failed-job readback preserved telemetry
+    showing candidate extraction completed and the remaining delay is artifact
+    click/fetch materialization (`clickArtifactDownload=1`, `fetchBinary=1`),
+    not account-library/project fanout.
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts tests/runtime.historyMaterializationService.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/browser/providers/scrapeTelemetry.ts src/browser/providers/types.ts src/browser/providers/chatgptAdapter.ts src/browser/llmService/llmService.ts src/runtime/historyMaterializationService.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts tests/runtime.historyMaterializationService.test.ts`.
+
 ## 2026-06-28 | Plan 0149 Single-Chat Scrape Telemetry Proof
 
 - Focus: answer whether direct single ChatGPT conversation scraping works and

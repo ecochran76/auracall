@@ -1,5 +1,35 @@
 # RUNBOOK
 
+## Turn 296 | 2026-06-28
+
+- Active supporting plan:
+  `docs/dev/plans/0149-2026-06-28-single-chat-artifact-scrape-instrumented-proof.md`
+- Goal: continue Plan 0149 end-to-end execution beyond telemetry proof by
+  reducing direct single-chat CDP attach churn and preserving failure-time
+  evidence.
+- Result:
+  - added scoped provider-session reuse for direct history materialization so
+    ChatGPT context/list/download phases can share one retained CDP target;
+  - preserved progress scrape telemetry in
+    `history-materialization-jobs/<job>-scrape-telemetry.json` and attached it
+    to stale failed job readback;
+  - fixed the live-discovered retained-session close bug that reused a closed
+    WebSocket during file download;
+  - left live-follow paused and did not restart the installed API service.
+- Live proof:
+  - files-only direct proof `hmj_97829e859adf4cf6bd2607a53187f988` succeeded
+    for conversation `6a0b63f7-cc4c-83ea-b37a-4f094762838d`, materializing
+    `10-Full Proposal Preview.pdf` with one attach/domain-enable cycle and
+    `downloads={attempted:1,succeeded:1,failed:0}`;
+  - hard artifact-rich `all` proof `hmj_0ed6ee6b8c4a4937b014d17f1782f094`
+    failed at the 180s stale threshold, but failed-job readback preserved
+    telemetry showing candidate extraction completed and the remaining blocker
+    is artifact click/fetch materialization after DOM/app-state parsing.
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts tests/runtime.historyMaterializationService.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/browser/providers/scrapeTelemetry.ts src/browser/providers/types.ts src/browser/providers/chatgptAdapter.ts src/browser/llmService/llmService.ts src/runtime/historyMaterializationService.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts tests/runtime.historyMaterializationService.test.ts`.
+
 ## Turn 295 | 2026-06-28
 
 - Active supporting plan:

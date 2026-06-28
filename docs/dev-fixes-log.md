@@ -1,3 +1,14 @@
+- 2026-06-28: Direct ChatGPT materialization needs a scoped CDP session, not
+  repeated provider attaches. `materializeConversationFiles` originally listed
+  files and then downloaded through separate ChatGPT tab connections, producing
+  four attach/domain-enable cycles for one file. Keep a provider-session
+  lifetime on the direct materialization options object, preserve it across
+  nested `getConversationContext`/`listConversationFiles` calls, and close it
+  only at the owning materialization boundary. Also persist scrape telemetry to
+  a job progress sidecar so stale running recovery can report partial CDP,
+  provider-action, candidate, and download counters instead of returning a
+  blind timeout.
+
 - 2026-06-28: Direct ChatGPT history materialization now emits scrape
   telemetry in job readback and artifact/file sidecar manifests. The telemetry
   separates LLM service/provider actions from CDP method counts and actual

@@ -12,9 +12,13 @@ export interface BrowserScrapeTelemetrySnapshot {
 	notes: string[];
 }
 
-export interface BrowserScrapeTelemetryRecorder extends BrowserScrapeTelemetrySnapshot {}
+export interface BrowserScrapeTelemetryRecorder extends BrowserScrapeTelemetrySnapshot {
+	onUpdate?: () => void;
+}
 
-export function createBrowserScrapeTelemetryRecorder(): BrowserScrapeTelemetryRecorder {
+export function createBrowserScrapeTelemetryRecorder(options?: {
+	onUpdate?: () => void;
+}): BrowserScrapeTelemetryRecorder {
 	return {
 		providerActions: {},
 		cdpCalls: {},
@@ -25,6 +29,7 @@ export function createBrowserScrapeTelemetryRecorder(): BrowserScrapeTelemetryRe
 			failed: 0,
 		},
 		notes: [],
+		onUpdate: options?.onUpdate,
 	};
 }
 
@@ -45,14 +50,18 @@ export function recordBrowserScrapeProviderAction(
 	options: BrowserProviderListOptions | null | undefined,
 	action: string,
 ): void {
-	increment(options?.scrapeTelemetry?.providerActions, action);
+	const telemetry = options?.scrapeTelemetry;
+	increment(telemetry?.providerActions, action);
+	notify(telemetry);
 }
 
 export function recordBrowserScrapeCdpCall(
 	options: BrowserProviderListOptions | null | undefined,
 	method: string,
 ): void {
-	increment(options?.scrapeTelemetry?.cdpCalls, method);
+	const telemetry = options?.scrapeTelemetry;
+	increment(telemetry?.cdpCalls, method);
+	notify(telemetry);
 }
 
 export function recordBrowserScrapeCandidateCount(
@@ -63,6 +72,7 @@ export function recordBrowserScrapeCandidateCount(
 	const candidates = options?.scrapeTelemetry?.candidates;
 	if (!candidates) return;
 	candidates[name] = Math.max(0, Math.floor(count));
+	notify(options?.scrapeTelemetry);
 }
 
 export function recordBrowserScrapeDownloadAttempt(
@@ -71,6 +81,7 @@ export function recordBrowserScrapeDownloadAttempt(
 	const downloads = options?.scrapeTelemetry?.downloads;
 	if (!downloads) return;
 	downloads.attempted += 1;
+	notify(options?.scrapeTelemetry);
 }
 
 export function recordBrowserScrapeDownloadSuccess(
@@ -79,6 +90,7 @@ export function recordBrowserScrapeDownloadSuccess(
 	const downloads = options?.scrapeTelemetry?.downloads;
 	if (!downloads) return;
 	downloads.succeeded += 1;
+	notify(options?.scrapeTelemetry);
 }
 
 export function recordBrowserScrapeDownloadFailure(
@@ -87,6 +99,7 @@ export function recordBrowserScrapeDownloadFailure(
 	const downloads = options?.scrapeTelemetry?.downloads;
 	if (!downloads) return;
 	downloads.failed += 1;
+	notify(options?.scrapeTelemetry);
 }
 
 export function recordBrowserScrapeNote(
@@ -96,9 +109,14 @@ export function recordBrowserScrapeNote(
 	const notes = options?.scrapeTelemetry?.notes;
 	if (!notes) return;
 	notes.push(note);
+	notify(options?.scrapeTelemetry);
 }
 
 function increment(target: Record<string, number> | undefined, key: string): void {
 	if (!target) return;
 	target[key] = (target[key] ?? 0) + 1;
+}
+
+function notify(telemetry: BrowserScrapeTelemetryRecorder | null | undefined): void {
+	telemetry?.onUpdate?.();
 }

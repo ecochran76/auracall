@@ -18,11 +18,11 @@ import {
 import { createLlmService } from "../browser/llmService/providers/index.js";
 import type { ConversationArtifact, FileRef, ProviderId } from "../browser/providers/domain.js";
 import {
-	type BrowserScrapeTelemetryRecorder,
 	type BrowserScrapeTelemetrySnapshot,
 	createBrowserScrapeTelemetryRecorder,
 	snapshotBrowserScrapeTelemetry,
 } from "../browser/providers/scrapeTelemetry.js";
+import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { BrowserProcessOwnerAttribution } from "../browser/service/browserService.js";
 import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
@@ -181,7 +181,7 @@ export interface HistoryProjectSourcesMaterializeInput {
 	maxItems: number | null;
 }
 
-export interface HistoryMaterializationProviderListOptions {
+export interface HistoryMaterializationProviderListOptions extends BrowserProviderListOptions {
 	configuredUrl?: string;
 	tabUrl?: string;
 	projectId?: string;
@@ -191,7 +191,6 @@ export interface HistoryMaterializationProviderListOptions {
 		handle?: string;
 	};
 	skipFeatureSignature?: boolean;
-	scrapeTelemetry?: BrowserScrapeTelemetryRecorder;
 }
 
 export interface HistoryMaterializationResult {
@@ -235,6 +234,7 @@ export interface HistoryMaterializationJob {
 	completedAt: string | null;
 	attemptCount: number;
 	result: HistoryMaterializationResult | null;
+	scrapeTelemetry?: BrowserScrapeTelemetrySnapshot | null;
 	error: {
 		message: string;
 		type:
@@ -792,11 +792,13 @@ export function createHistoryMaterializationService(
 		const timestamp = timestampDate.toISOString();
 		const timeoutMs = resolveRunningStaleThresholdMs(job);
 		const message = formatRunningTimeoutMessage(job, timeoutMs);
+		const scrapeTelemetryProgress = await readHistoryMaterializationScrapeTelemetryProgress(job.id);
 		const failed: HistoryMaterializationJob = {
 			...job,
 			status: "failed",
 			updatedAt: timestamp,
 			completedAt: timestamp,
+			scrapeTelemetry: scrapeTelemetryProgress?.scrapeTelemetry ?? job.scrapeTelemetry ?? null,
 			error: {
 				message,
 				type: "internal_error",
@@ -836,6 +838,50 @@ export function createHistoryMaterializationJobStore(
 			await writeJobStoreFile(filePath, nextJobs);
 		},
 	};
+}
+
+interface HistoryMaterializationScrapeTelemetryProgress {
+	generatedAt: string;
+	scrapeTelemetry: BrowserScrapeTelemetrySnapshot;
+}
+
+function resolveHistoryMaterializationScrapeTelemetryProgressPath(jobId: string): string {
+	return path.join(
+		getRunArchiveDir(),
+		"history-materialization-jobs",
+		`${jobId}-scrape-telemetry.json`,
+	);
+}
+
+async function writeHistoryMaterializationScrapeTelemetryProgress(
+	jobId: string,
+	progress: HistoryMaterializationScrapeTelemetryProgress,
+): Promise<void> {
+	const filePath = resolveHistoryMaterializationScrapeTelemetryProgressPath(jobId);
+	await fs.mkdir(path.dirname(filePath), { recursive: true });
+	await fs.writeFile(filePath, `${JSON.stringify(progress, null, 2)}\n`, "utf8");
+}
+
+async function readHistoryMaterializationScrapeTelemetryProgress(
+	jobId: string,
+): Promise<HistoryMaterializationScrapeTelemetryProgress | null> {
+	try {
+		const raw = await fs.readFile(
+			resolveHistoryMaterializationScrapeTelemetryProgressPath(jobId),
+			"utf8",
+		);
+		const parsed = JSON.parse(raw) as Partial<HistoryMaterializationScrapeTelemetryProgress>;
+		if (!parsed.scrapeTelemetry) return null;
+		return {
+			generatedAt:
+				typeof parsed.generatedAt === "string" ? parsed.generatedAt : new Date(0).toISOString(),
+			scrapeTelemetry: parsed.scrapeTelemetry,
+		};
+	} catch (error) {
+		const code = (error as NodeJS.ErrnoException).code;
+		if (code === "ENOENT") return null;
+		return null;
+	}
 }
 
 async function materializeHistoryRequest(input: {
@@ -3090,7 +3136,22 @@ async function materializeConversationTarget(input: {
 }): Promise<HistoryMaterializationResult> {
 	const selectedKinds = normalizeAssetKinds(input.request.assetKinds);
 	const maxItems = normalizeMaxItems(input.request.maxItems);
-	const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+	let scrapeTelemetryProgressWrite = Promise.resolve();
+	const persistScrapeTelemetryProgress = () => {
+		const snapshot = snapshotBrowserScrapeTelemetry(scrapeTelemetry);
+		if (!snapshot) return;
+		scrapeTelemetryProgressWrite = scrapeTelemetryProgressWrite
+			.then(() =>
+				writeHistoryMaterializationScrapeTelemetryProgress(input.jobId, {
+					generatedAt: input.now().toISOString(),
+					scrapeTelemetry: snapshot,
+				}),
+			)
+			.catch(() => undefined);
+	};
+	const scrapeTelemetry = createBrowserScrapeTelemetryRecorder({
+		onUpdate: persistScrapeTelemetryProgress,
+	});
 	const llmService = createLlmService(
 		input.target.provider,
 		withRuntimeProfileSelection(
@@ -3112,144 +3173,151 @@ async function materializeConversationTarget(input: {
 	const listOptions = {
 		...resolveHistoryMaterializationProviderListOptions(input.target),
 		scrapeTelemetry,
+		useProviderSession: true,
+		keepProviderSessionOpen: true,
 	};
-	const manifestPaths: string[] = [];
-	let remaining = maxItems;
-	let artifactFetch: {
-		artifacts: ConversationArtifact[];
-		files: FileRef[];
-		manifestPath: string | null;
-	} | null = null;
-	let fileFetch: {
-		conversationFiles: FileRef[];
-		files: FileRef[];
-		manifestPath: string | null;
-	} | null = null;
-	const entries: HistoryMaterializationManifestEntry[] = [];
-	const archiveAssets: RunArchiveHistoryMaterializationAsset[] = [];
-	const refreshMaterializationSource = input.request.refreshSnapshot !== true;
+	try {
+		const manifestPaths: string[] = [];
+		let remaining = maxItems;
+		let artifactFetch: {
+			artifacts: ConversationArtifact[];
+			files: FileRef[];
+			manifestPath: string | null;
+		} | null = null;
+		let fileFetch: {
+			conversationFiles: FileRef[];
+			files: FileRef[];
+			manifestPath: string | null;
+		} | null = null;
+		const entries: HistoryMaterializationManifestEntry[] = [];
+		const archiveAssets: RunArchiveHistoryMaterializationAsset[] = [];
+		const refreshMaterializationSource = input.request.refreshSnapshot !== true;
 
-	if (selectedKinds.includes("artifacts") || selectedKinds.includes("media")) {
-		if (remaining === null || remaining > 0) {
-			try {
-				artifactFetch = await llmService.materializeConversationArtifacts(
-					input.target.conversationId,
-					{
+		if (selectedKinds.includes("artifacts") || selectedKinds.includes("media")) {
+			if (remaining === null || remaining > 0) {
+				try {
+					artifactFetch = await llmService.materializeConversationArtifacts(
+						input.target.conversationId,
+						{
+							projectId: input.target.projectId ?? undefined,
+							listOptions,
+							refresh: refreshMaterializationSource,
+							maxItems: remaining,
+						},
+					);
+					if (artifactFetch.manifestPath) manifestPaths.push(artifactFetch.manifestPath);
+					const manifestEntries = await readArtifactManifestEntries(artifactFetch.manifestPath);
+					entries.push(
+						...(await Promise.all(
+							manifestEntries.map((entry) => historyEntryFromArtifactManifest(entry)),
+						)),
+					);
+					if (artifactFetch.artifacts.length === 0 && manifestEntries.length === 0) {
+						entries.push(noMaterializableEntry("artifact", input.target));
+					}
+					for (const file of artifactFetch.files) {
+						const manifestEntry = findArtifactManifestForFile(manifestEntries, file);
+						archiveAssets.push({
+							kind:
+								selectedKinds.includes("media") && !selectedKinds.includes("artifacts")
+									? "media"
+									: "artifact",
+							file,
+							artifactId: manifestEntry?.artifactId ?? file.id,
+							title: manifestEntry?.title ?? file.name,
+							manifestPath: artifactFetch.manifestPath,
+							materializationMethod:
+								manifestEntry?.materializationMethod ??
+								readRecordString(file.metadata, ["materialization", "materializationSource"]),
+						});
+					}
+					remaining = decrementRemaining(remaining, artifactFetch.artifacts.length);
+				} catch (error) {
+					entries.push(unsupportedEntry("artifact", error, input.target));
+				}
+			}
+		}
+
+		if (selectedKinds.includes("files")) {
+			if (remaining === null || remaining > 0) {
+				try {
+					fileFetch = await llmService.materializeConversationFiles(input.target.conversationId, {
 						projectId: input.target.projectId ?? undefined,
 						listOptions,
 						refresh: refreshMaterializationSource,
 						maxItems: remaining,
-					},
-				);
-				if (artifactFetch.manifestPath) manifestPaths.push(artifactFetch.manifestPath);
-				const manifestEntries = await readArtifactManifestEntries(artifactFetch.manifestPath);
-				entries.push(
-					...(await Promise.all(
-						manifestEntries.map((entry) => historyEntryFromArtifactManifest(entry)),
-					)),
-				);
-				if (artifactFetch.artifacts.length === 0 && manifestEntries.length === 0) {
-					entries.push(noMaterializableEntry("artifact", input.target));
-				}
-				for (const file of artifactFetch.files) {
-					const manifestEntry = findArtifactManifestForFile(manifestEntries, file);
-					archiveAssets.push({
-						kind:
-							selectedKinds.includes("media") && !selectedKinds.includes("artifacts")
-								? "media"
-								: "artifact",
-						file,
-						artifactId: manifestEntry?.artifactId ?? file.id,
-						title: manifestEntry?.title ?? file.name,
-						manifestPath: artifactFetch.manifestPath,
-						materializationMethod:
-							manifestEntry?.materializationMethod ??
-							readRecordString(file.metadata, ["materialization", "materializationSource"]),
 					});
+					if (fileFetch.manifestPath) manifestPaths.push(fileFetch.manifestPath);
+					const manifestEntries = await readFileManifestEntries(fileFetch.manifestPath);
+					entries.push(
+						...(await Promise.all(
+							manifestEntries.map((entry) => historyEntryFromFileManifest(entry)),
+						)),
+					);
+					if (fileFetch.conversationFiles.length === 0 && manifestEntries.length === 0) {
+						entries.push(noMaterializableEntry("file", input.target));
+					}
+					for (const file of fileFetch.files) {
+						const manifestEntry = findFileManifestForFile(manifestEntries, file);
+						archiveAssets.push({
+							kind: "file",
+							file,
+							artifactId: manifestEntry?.fileId ?? file.id,
+							title: manifestEntry?.fileName ?? file.name,
+							manifestPath: fileFetch.manifestPath,
+							materializationMethod:
+								manifestEntry?.materializationMethod ??
+								readRecordString(file.metadata, ["materialization", "materializationSource"]),
+						});
+					}
+				} catch (error) {
+					entries.push(unsupportedEntry("file", error, input.target));
 				}
-				remaining = decrementRemaining(remaining, artifactFetch.artifacts.length);
-			} catch (error) {
-				entries.push(unsupportedEntry("artifact", error, input.target));
 			}
 		}
-	}
 
-	if (selectedKinds.includes("files")) {
-		if (remaining === null || remaining > 0) {
-			try {
-				fileFetch = await llmService.materializeConversationFiles(input.target.conversationId, {
-					projectId: input.target.projectId ?? undefined,
-					listOptions,
-					refresh: refreshMaterializationSource,
-					maxItems: remaining,
-				});
-				if (fileFetch.manifestPath) manifestPaths.push(fileFetch.manifestPath);
-				const manifestEntries = await readFileManifestEntries(fileFetch.manifestPath);
-				entries.push(
-					...(await Promise.all(
-						manifestEntries.map((entry) => historyEntryFromFileManifest(entry)),
-					)),
-				);
-				if (fileFetch.conversationFiles.length === 0 && manifestEntries.length === 0) {
-					entries.push(noMaterializableEntry("file", input.target));
-				}
-				for (const file of fileFetch.files) {
-					const manifestEntry = findFileManifestForFile(manifestEntries, file);
-					archiveAssets.push({
-						kind: "file",
-						file,
-						artifactId: manifestEntry?.fileId ?? file.id,
-						title: manifestEntry?.fileName ?? file.name,
-						manifestPath: fileFetch.manifestPath,
-						materializationMethod:
-							manifestEntry?.materializationMethod ??
-							readRecordString(file.metadata, ["materialization", "materializationSource"]),
-					});
-				}
-			} catch (error) {
-				entries.push(unsupportedEntry("file", error, input.target));
-			}
+		if (archiveAssets.length > 0 && !input.runArchiveService.upsertHistoryMaterializationItems) {
+			throw new Error("History materialization archive upsert is not configured.");
 		}
+		const archiveItems =
+			archiveAssets.length > 0
+				? ((
+						await input.runArchiveService.upsertHistoryMaterializationItems?.({
+							provider: input.target.provider,
+							runtimeProfile: input.target.runtimeProfile,
+							browserProfile: input.target.browserProfile,
+							projectId: input.target.projectId,
+							boundIdentityKey: input.target.boundIdentityKey,
+							providerConversationId: input.target.conversationId,
+							providerConversationUrl: input.target.providerConversationUrl,
+							materializationJobId: input.jobId,
+							assets: archiveAssets,
+						})
+					)?.items ?? [])
+				: [];
+		applyArchiveLinks(entries, archiveItems);
+		const generatedAt = input.now().toISOString();
+		const metrics = summarizeEntries(entries, 1);
+		return {
+			object: "history_materialization_result",
+			generatedAt,
+			status: metrics.materialized > 0 ? "materialized" : "skipped",
+			target: input.target,
+			source: sourceFromCreateRequest(input.request),
+			manifestPaths,
+			entries,
+			archiveItems,
+			scrapeTelemetry: snapshotBrowserScrapeTelemetry(scrapeTelemetry),
+			metrics,
+			message:
+				metrics.materialized > 0
+					? `History materialization downloaded ${metrics.materialized} asset${metrics.materialized === 1 ? "" : "s"} for conversation ${input.target.conversationId}.`
+					: `History materialization found no downloadable assets for conversation ${input.target.conversationId}.`,
+		};
+	} finally {
+		await listOptions.providerSession?.close();
+		await scrapeTelemetryProgressWrite;
 	}
-
-	if (archiveAssets.length > 0 && !input.runArchiveService.upsertHistoryMaterializationItems) {
-		throw new Error("History materialization archive upsert is not configured.");
-	}
-	const archiveItems =
-		archiveAssets.length > 0
-			? ((
-					await input.runArchiveService.upsertHistoryMaterializationItems?.({
-						provider: input.target.provider,
-						runtimeProfile: input.target.runtimeProfile,
-						browserProfile: input.target.browserProfile,
-						projectId: input.target.projectId,
-						boundIdentityKey: input.target.boundIdentityKey,
-						providerConversationId: input.target.conversationId,
-						providerConversationUrl: input.target.providerConversationUrl,
-						materializationJobId: input.jobId,
-						assets: archiveAssets,
-					})
-				)?.items ?? [])
-			: [];
-	applyArchiveLinks(entries, archiveItems);
-	const generatedAt = input.now().toISOString();
-	const metrics = summarizeEntries(entries, 1);
-	return {
-		object: "history_materialization_result",
-		generatedAt,
-		status: metrics.materialized > 0 ? "materialized" : "skipped",
-		target: input.target,
-		source: sourceFromCreateRequest(input.request),
-		manifestPaths,
-		entries,
-		archiveItems,
-		scrapeTelemetry: snapshotBrowserScrapeTelemetry(scrapeTelemetry),
-		metrics,
-		message:
-			metrics.materialized > 0
-				? `History materialization downloaded ${metrics.materialized} asset${metrics.materialized === 1 ? "" : "s"} for conversation ${input.target.conversationId}.`
-				: `History materialization found no downloadable assets for conversation ${input.target.conversationId}.`,
-	};
 }
 
 function normalizeCreateRequest(

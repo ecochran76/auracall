@@ -572,6 +572,17 @@ Terminology note:
   browser-backed provider work for explicit proofs; MCP parity is
   `history_materialization_create`, `history_materialization_job`,
   `history_materialization_jobs`, and `history_materialization_cancel`.
+  Direct single-conversation materialization readback includes
+  `scrapeTelemetry` on successful results, and stale timeout recovery attaches
+  the last progress snapshot to the failed job. Use it to verify that direct
+  ChatGPT ids stay scoped to `getConversationContext`,
+  `listConversationFiles`, `materializeConversationArtifacts`, and
+  `materializeConversationFiles`, with zero account-library/project inventory
+  counters. A healthy direct file proof should show bounded CDP traffic such as
+  one `Target.attachToTarget`, one `Page.enable`, one `Runtime.enable`, a small
+  `Runtime.evaluate` count, and `downloads.attempted/succeeded` matching the
+  actual provider/browser transfer count. Example:
+  `auracall api history-materialization-create --provider chatgpt --runtime-profile wsl-chrome-3 --bound-identity-key <email> --conversation-id <id> --asset-kind files --max-items 1 --provider-work-timeout-ms 300000 --force --json`.
   React Search conversation rows and the cache-only Account Mirror catalog page
   expose the same reconciliation request as explicit row actions; opening rows
   still reads only cached catalog/search data. Lazy mirror

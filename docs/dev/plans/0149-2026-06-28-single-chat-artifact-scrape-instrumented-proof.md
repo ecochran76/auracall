@@ -147,7 +147,7 @@ isolated micropolish.
   structured no-candidate result with scrape telemetry.
 - [x] The live proof keeps live-follow paused and records exact command,
   completion/job id, manifest paths, local files, and counters.
-- [ ] Docs and dev logs record the command and proof gate.
+- [x] Docs and dev logs record the command and proof gate.
 
 ## Progress Evidence
 
@@ -203,6 +203,43 @@ isolated micropolish.
   `provider.listProjectFiles` counters. Remaining open issue: four target
   attaches/domain-enables per run and 130-140s completion latency are too high
   for a clean "load once, parse once" scrape.
+
+### 2026-06-28 | Scoped Target Reuse And Timeout Telemetry
+
+- Added opt-in scoped provider sessions for direct materialization so
+  ChatGPT list/context/download steps can reuse the same CDP target attachment
+  across one `history-materialization-create --conversation-id ...` job.
+- Added stale-timeout progress telemetry sidecars at
+  `~/.auracall/runtime/archive/history-materialization-jobs/<job>-scrape-telemetry.json`;
+  stale recovery now attaches the latest snapshot to failed job readback.
+- Fixed the first scoped-session live bug: retained ChatGPT sessions must not
+  be closed by intermediate provider-method `finally` blocks, or the next
+  download step reuses a closed WebSocket.
+- Files-only live proof
+  `hmj_97829e859adf4cf6bd2607a53187f988` against paused `wsl-chrome-3`
+  materialized `10-Full Proposal Preview.pdf` from
+  `6a0b63f7-cc4c-83ea-b37a-4f094762838d` with:
+  `providerActions={llmService.materializeConversationFiles:1,
+  llmService.listConversationFiles:1, provider.listConversationFiles:1,
+  chatgpt.connectExistingTarget:1, chatgpt.retainScopedTarget:1,
+  chatgpt.readVisibleConversationFiles:1, chatgpt.reuseScopedTarget:3,
+  chatgpt.downloadConversationFile:1}`,
+  `cdpCalls={Target.attachToTarget:1, Page.enable:1, Runtime.enable:1,
+  Runtime.evaluate:2}`, `downloads={attempted:1, succeeded:1, failed:0}`.
+  Manifest:
+  `/home/ecochran76/.auracall/cache/providers/chatgpt/eric.cochran@soylei.com/conversation-attachments/6a0b63f7-cc4c-83ea-b37a-4f094762838d/file-fetch-manifest.json`.
+- Heavy artifact-rich `all` target
+  `hmj_0ed6ee6b8c4a4937b014d17f1782f094` still failed at the 180s running
+  stale threshold, but failed-job readback preserved scrape telemetry:
+  `payloadArtifacts=3`, `domDownloadArtifacts=3`, `visibleFiles=2`,
+  `llmService.materializeConversationArtifacts.artifacts=2`,
+  `chatgpt.clickArtifactDownload=1`, `chatgpt.fetchBinary=1`,
+  `cdpCalls={Target.attachToTarget:2, Page.enable:2, Runtime.enable:2,
+  Runtime.evaluate:9, Browser.setDownloadBehavior:1}`.
+- Remaining open issue: direct artifact-heavy materialization is now isolated
+  to artifact click/fetch/download waiting after candidate extraction, not
+  broad account-library/project/history fanout and not repeated four-attach
+  target churn.
 
 ## Validation Plan
 

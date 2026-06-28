@@ -2704,6 +2704,102 @@ describe("history materialization service", () => {
 		});
 	});
 
+	it("attaches partial scrape telemetry when stale running conversation jobs fail on readback", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-hmj-telemetry-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const progressDir = path.join(homeDir, "runtime", "archive", "history-materialization-jobs");
+		await fs.mkdir(progressDir, { recursive: true });
+		await fs.writeFile(
+			path.join(progressDir, "hmj_conversation_timeout-scrape-telemetry.json"),
+			`${JSON.stringify(
+				{
+					generatedAt: "2026-06-02T12:00:01.000Z",
+					scrapeTelemetry: {
+						providerActions: {
+							"llmService.materializeConversationFiles": 1,
+							"provider.listConversationFiles": 1,
+							"chatgpt.connectExistingTarget": 1,
+						},
+						cdpCalls: {
+							"Target.attachToTarget": 1,
+							"Runtime.evaluate": 2,
+						},
+						candidates: {
+							"chatgpt.visibleFiles": 1,
+						},
+						downloads: {
+							attempted: 0,
+							succeeded: 0,
+							failed: 0,
+						},
+						notes: [],
+					},
+				},
+				null,
+				2,
+			)}\n`,
+			"utf8",
+		);
+		const store = createInMemoryHistoryMaterializationJobStore([
+			buildHistoryMaterializationJob({
+				id: "hmj_conversation_timeout",
+				status: "running",
+				source: {
+					type: "conversation",
+					provider: "chatgpt",
+					conversationId: "conv_timeout",
+				},
+				request: {
+					provider: "chatgpt",
+					runtimeProfile: "wsl-chrome-3",
+					conversationId: "conv_timeout",
+					assetKinds: ["files"],
+					maxItems: 1,
+					providerWorkTimeoutMs: 1_000,
+				},
+				startedAt: "2026-06-02T12:00:00.000Z",
+				updatedAt: "2026-06-02T12:00:00.000Z",
+				completedAt: null,
+			}),
+		]);
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: vi.fn(),
+				readItem: vi.fn(),
+			},
+			store,
+			now: sequenceNow(["2026-06-02T12:00:02.000Z"]),
+			schedule: () => undefined,
+			materializeConversation: vi.fn(),
+		});
+
+		await expect(service.readJob("hmj_conversation_timeout")).resolves.toMatchObject({
+			status: "failed",
+			result: null,
+			scrapeTelemetry: {
+				providerActions: {
+					"llmService.materializeConversationFiles": 1,
+					"provider.listConversationFiles": 1,
+					"chatgpt.connectExistingTarget": 1,
+				},
+				cdpCalls: {
+					"Target.attachToTarget": 1,
+					"Runtime.evaluate": 2,
+				},
+				candidates: {
+					"chatgpt.visibleFiles": 1,
+				},
+				downloads: {
+					attempted: 0,
+					succeeded: 0,
+					failed: 0,
+				},
+			},
+		});
+		await fs.rm(homeDir, { recursive: true, force: true });
+	});
+
 	it("detaches stale in-process provider work so later queued jobs can run", async () => {
 		const store = createInMemoryHistoryMaterializationJobStore([]);
 		const scheduled: Array<() => Promise<void>> = [];
