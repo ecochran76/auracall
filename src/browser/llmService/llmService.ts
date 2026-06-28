@@ -94,6 +94,7 @@ const GROK_RATE_LIMIT_COOLDOWN_MS = 5 * 60_000;
 const GROK_RATE_LIMIT_AUTO_WAIT_MAX_MS = 30_000;
 const GROK_POST_COMMIT_QUIET_MS = 8_000;
 const GROK_MUTATION_MIN_INTERVAL_MS = 12_000;
+const SCOPED_CONVERSATION_FILE_LIST_TIMEOUT_MS = 15_000;
 
 type ProviderGuardSettings = {
 	cooldownMs: number;
@@ -215,6 +216,12 @@ function stableStringify(value: unknown): string {
 function limitItems<T>(items: T[], maxItems: number | null | undefined): T[] {
 	if (typeof maxItems !== "number" || !Number.isFinite(maxItems)) return items;
 	return items.slice(0, Math.max(0, Math.trunc(maxItems)));
+}
+
+function timeoutAfter<T>(timeoutMs: number, message: string): Promise<T> {
+	return new Promise<T>((_, reject) => {
+		setTimeout(() => reject(new Error(message)), timeoutMs);
+	});
 }
 
 async function closeScopedProviderSession(listOptions: BrowserProviderListOptions): Promise<void> {
@@ -1555,6 +1562,14 @@ export abstract class LlmService {
 				),
 				options?.maxItems,
 			);
+			if (listOptions.useProviderSession === true) {
+				listOptions.interactionGovernor = undefined;
+				listOptions.skipFeatureSignature = true;
+				recordBrowserScrapeProviderAction(
+					listOptions,
+					"llmService.scopedArtifactTransfersBypassInteractionGovernor",
+				);
+			}
 			recordBrowserScrapeCandidateCount(
 				listOptions,
 				"llmService.materializeConversationArtifacts.artifacts",
@@ -1563,7 +1578,14 @@ export abstract class LlmService {
 			if (artifacts.length === 0) {
 				return { artifacts: [], files: [], manifestPath: null };
 			}
-			const cacheContext = await this.resolveCacheContext(listOptions);
+			recordBrowserScrapeProviderAction(
+				listOptions,
+				"llmService.materializeConversationArtifacts.prepareCache",
+			);
+			const cacheContext = await this.resolveCacheContext(listOptions, {
+				detect: false,
+				prompt: false,
+			});
 			const { cacheDir } = resolveProviderCachePath(
 				cacheContext,
 				`conversation-attachments/${conversationId}/manifest.json`,
@@ -1581,14 +1603,26 @@ export abstract class LlmService {
 				"artifact-fetch-manifest.json",
 			);
 			await fs.mkdir(attachmentsDir, { recursive: true });
+			recordBrowserScrapeProviderAction(
+				listOptions,
+				"llmService.materializeConversationArtifacts.readExisting",
+			);
 			const existing = await this.cacheStore.readConversationAttachments(
 				cacheContext,
 				conversationId,
+			);
+			recordBrowserScrapeProviderAction(
+				listOptions,
+				"llmService.materializeConversationArtifacts.beginTransfers",
 			);
 			const merged = new Map(existing.items.map((item) => [item.id, item]));
 			const materialized: FileRef[] = [];
 			const manifestEntries: ConversationArtifactFetchManifestEntry[] = [];
 			for (const artifact of artifacts) {
+				recordBrowserScrapeProviderAction(
+					listOptions,
+					"llmService.materializeConversationArtifacts.transferCandidate",
+				);
 				const artifactDir = path.join(
 					attachmentsDir,
 					sanitizeArtifactPathSegment(
@@ -1598,15 +1632,23 @@ export abstract class LlmService {
 				await fs.mkdir(artifactDir, { recursive: true });
 				try {
 					const file = await this.withRetry(
-						() =>
-							this.provider.materializeConversationArtifact?.(
+						() => {
+							recordBrowserScrapeProviderAction(
+								listOptions,
+								"llmService.materializeConversationArtifacts.invokeProvider",
+							);
+							return this.provider.materializeConversationArtifact?.(
 								conversationId,
 								artifact,
 								artifactDir,
 								options?.projectId,
 								listOptions,
-							) as Promise<FileRef | null>,
-						{ action: "materializeConversationArtifact" },
+							) as Promise<FileRef | null>;
+						},
+						{
+							action: "materializeConversationArtifact",
+							skipPostCommitQuiet: listOptions.useProviderSession === true,
+						},
 					);
 					if (!file) {
 						manifestEntries.push({
@@ -1740,13 +1782,42 @@ export abstract class LlmService {
 		const shouldCloseProviderSession = listOptions.keepProviderSessionOpen !== true;
 		try {
 			recordBrowserScrapeProviderAction(listOptions, "llmService.materializeConversationFiles");
-			const conversationFiles = limitItems(
-				await this.listConversationFiles(conversationId, {
-					projectId: options?.projectId,
+			if (listOptions.useProviderSession === true) {
+				listOptions.interactionGovernor = undefined;
+				listOptions.skipFeatureSignature = true;
+				recordBrowserScrapeProviderAction(
 					listOptions,
-				}),
-				options?.maxItems,
-			);
+					"llmService.scopedFileListingBypassInteractionGovernor",
+				);
+			}
+			let listedConversationFiles: FileRef[] = [];
+			try {
+				listedConversationFiles = await Promise.race([
+					this.listConversationFiles(conversationId, {
+						projectId: options?.projectId,
+						listOptions,
+					}),
+					timeoutAfter<FileRef[]>(
+						SCOPED_CONVERSATION_FILE_LIST_TIMEOUT_MS,
+						`Timed out listing scoped conversation files after ${SCOPED_CONVERSATION_FILE_LIST_TIMEOUT_MS}ms.`,
+					),
+				]);
+			} catch {
+				recordBrowserScrapeProviderAction(
+					listOptions,
+					"llmService.materializeConversationFiles.listTimedOut",
+				);
+				listedConversationFiles = [];
+			}
+			const conversationFiles = limitItems(listedConversationFiles, options?.maxItems);
+			if (listOptions.useProviderSession === true) {
+				listOptions.interactionGovernor = undefined;
+				listOptions.skipFeatureSignature = true;
+				recordBrowserScrapeProviderAction(
+					listOptions,
+					"llmService.scopedFileTransfersBypassInteractionGovernor",
+				);
+			}
 			recordBrowserScrapeCandidateCount(
 				listOptions,
 				"llmService.materializeConversationFiles.files",
@@ -1755,7 +1826,14 @@ export abstract class LlmService {
 			if (conversationFiles.length === 0) {
 				return { conversationFiles: [], files: [], manifestPath: null };
 			}
-			const cacheContext = await this.resolveCacheContext(listOptions);
+			recordBrowserScrapeProviderAction(
+				listOptions,
+				"llmService.materializeConversationFiles.prepareCache",
+			);
+			const cacheContext = await this.resolveCacheContext(listOptions, {
+				detect: false,
+				prompt: false,
+			});
 			const { cacheDir } = resolveProviderCachePath(
 				cacheContext,
 				`conversation-attachments/${conversationId}/manifest.json`,
@@ -1773,14 +1851,26 @@ export abstract class LlmService {
 				"file-fetch-manifest.json",
 			);
 			await fs.mkdir(attachmentsDir, { recursive: true });
+			recordBrowserScrapeProviderAction(
+				listOptions,
+				"llmService.materializeConversationFiles.readExisting",
+			);
 			const existing = await this.cacheStore.readConversationAttachments(
 				cacheContext,
 				conversationId,
+			);
+			recordBrowserScrapeProviderAction(
+				listOptions,
+				"llmService.materializeConversationFiles.beginTransfers",
 			);
 			const merged = new Map(existing.items.map((item) => [item.id, item]));
 			const materialized: FileRef[] = [];
 			const manifestEntries: ConversationFileFetchManifestEntry[] = [];
 			for (const file of conversationFiles) {
+				recordBrowserScrapeProviderAction(
+					listOptions,
+					"llmService.materializeConversationFiles.transferCandidate",
+				);
 				const cachedSalvageCandidate = await findCachedConversationFileSalvageCandidate({
 					currentFile: file,
 					cachedFiles: merged,
@@ -1822,15 +1912,23 @@ export abstract class LlmService {
 				);
 				try {
 					await this.withRetry(
-						() =>
-							this.provider.downloadConversationFile?.(
+						() => {
+							recordBrowserScrapeProviderAction(
+								listOptions,
+								"llmService.materializeConversationFiles.invokeProvider",
+							);
+							return this.provider.downloadConversationFile?.(
 								conversationId,
 								file.id,
 								destPath,
 								listOptions,
 								file,
-							) as Promise<void>,
-						{ action: "downloadConversationFile" },
+							) as Promise<void>;
+						},
+						{
+							action: "downloadConversationFile",
+							skipPostCommitQuiet: listOptions.useProviderSession === true,
+						},
 					);
 					const stat = await fs.stat(destPath);
 					const checksumSha256 = await calculateSha256(destPath);
@@ -2832,9 +2930,13 @@ export abstract class LlmService {
 
 	protected async withRetry<T>(
 		fn: () => Promise<T>,
-		options: { action: string; retries?: number } = { action: "operation" },
+		options: { action: string; retries?: number; skipPostCommitQuiet?: boolean } = {
+			action: "operation",
+		},
 	): Promise<T> {
-		await this.enforceProviderGuard(options.action);
+		await this.enforceProviderGuard(options.action, {
+			skipPostCommitQuiet: options.skipPostCommitQuiet === true,
+		});
 		const retries = typeof options.retries === "number" ? options.retries : 1;
 		for (let attempt = 0; ; attempt += 1) {
 			try {
@@ -2896,7 +2998,10 @@ export abstract class LlmService {
 		return null;
 	}
 
-	private async enforceProviderGuard(action: string): Promise<void> {
+	private async enforceProviderGuard(
+		action: string,
+		options: { skipPostCommitQuiet?: boolean } = {},
+	): Promise<void> {
 		const settings = this.getProviderGuardSettings();
 		if (!settings) {
 			return;
@@ -2981,7 +3086,10 @@ export abstract class LlmService {
 			quietScale: settings.postCommitQuietScale,
 			jitterMaxMs: settings.postCommitJitterMaxMs,
 		});
-		if (postCommitWaitMs > 0) {
+		if (
+			postCommitWaitMs > 0 &&
+			!(options.skipPostCommitQuiet === true && !this.isMutatingProviderAction(action))
+		) {
 			if (postCommitWaitMs <= settings.postCommitAutoWaitMaxMs) {
 				await this.delay(postCommitWaitMs);
 			} else {

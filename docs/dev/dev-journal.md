@@ -39204,3 +39204,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm exec tsc --noEmit --pretty false`, and
   `pnpm exec biome check src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
   Live-follow remains paused intentionally.
+- 2026-06-28: Closed Plan 0149 with an accepted direct single-chat ChatGPT
+  artifact-rich scrape proof. The hard target
+  `hmj_3e6e8bc40a9b49cb9c99e761dfbfc8be` completed on the isolated repo-local
+  proof server for conversation `6a0fa901-77d0-83ea-80e0-fbaaa4eca529`,
+  materializing two PDFs with sha256
+  `7275c5d08508b22855a8ad36bc06d7cc6e3476f5ab84620814381b09b037e767` and
+  `2af143990726fe561aa02a36756f180738c2bc706c466361943801cb9a1f4221`.
+  Scrape telemetry showed bounded direct traffic:
+  `Target.attachToTarget=3`, `Page.enable=3`, `Runtime.enable=3`,
+  `Runtime.evaluate=10`, `Browser.setDownloadBehavior=2`,
+  `downloads={attempted:2,succeeded:2,failed:0}`. Live-follow remained paused
+  and the installed API service was not restarted.

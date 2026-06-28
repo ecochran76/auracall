@@ -18675,3 +18675,12 @@ browser-stage lifecycle observability, not transcript truncation.
   paths still keep account-library/project behavior, but targeted artifact-rich
   chat enrichment should load the chat once, parse DOM/app state, and then
   iterate download candidates instead of burning the pass on unrelated surfaces.
+- 2026-06-28: Direct ChatGPT single-chat materialization can still stall after
+  candidate extraction if post-scrape helper phases re-enter generic
+  interaction pacing, identity detection, feature-signature probes, or
+  unbounded in-page DOM/CDP reads. For scoped direct materialization, bypass
+  redundant post-scrape governors after the initial conversation read, disable
+  provider identity/feature-signature detection during cache setup, prefer the
+  browser download path for artifacts, and bound optional file enumeration so
+  artifact assets complete with explicit telemetry instead of a stale-running
+  job.

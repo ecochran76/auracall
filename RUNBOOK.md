@@ -1,5 +1,39 @@
 # RUNBOOK
 
+## Turn 297 | 2026-06-28
+
+- Active supporting plan:
+  `docs/dev/plans/0149-2026-06-28-single-chat-artifact-scrape-instrumented-proof.md`
+- Goal: finish Plan 0149 by proving a single artifact-rich ChatGPT chat can be
+  scraped and materialized with bounded, inspectable DOM/CDP traffic.
+- Result:
+  - bounded ChatGPT captured-anchor binary fetches and preferred browser
+    download completion for generated artifacts;
+  - bypassed redundant scoped interaction-governor/post-commit waits after the
+    initial direct conversation scrape;
+  - disabled provider identity/feature-signature probes during scoped
+    post-scrape cache setup;
+  - added service-level bounded fallback for optional conversation-file listing
+    so artifact materialization can complete instead of going stale.
+- Live proof:
+  - hard artifact-rich direct proof `hmj_3e6e8bc40a9b49cb9c99e761dfbfc8be`
+    succeeded for conversation `6a0fa901-77d0-83ea-80e0-fbaaa4eca529`;
+  - materialized two PDFs with checksums
+    `7275c5d08508b22855a8ad36bc06d7cc6e3476f5ab84620814381b09b037e767` and
+    `2af143990726fe561aa02a36756f180738c2bc706c466361943801cb9a1f4221`;
+  - telemetry: `Target.attachToTarget=3`, `Page.enable=3`,
+    `Runtime.enable=3`, `Runtime.evaluate=10`,
+    `Browser.setDownloadBehavior=2`,
+    `downloads={attempted:2,succeeded:2,failed:0}`,
+    `payloadArtifacts=3`, `domDownloadArtifacts=3`, `visibleFiles=2`,
+    `llmService.materializeConversationFiles.listTimedOut=1`.
+  - live-follow remained paused; installed `auracall-api.service` was not
+    restarted.
+- Validation:
+  - `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/chatgptAdapter.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check --write src/browser/llmService/llmService.ts src/browser/providers/chatgptAdapter.ts`.
+
 ## Turn 296 | 2026-06-28
 
 - Active supporting plan:

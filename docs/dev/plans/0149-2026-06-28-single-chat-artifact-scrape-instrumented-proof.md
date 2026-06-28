@@ -1,6 +1,6 @@
 # Single-Chat Artifact Scrape Instrumented Proof | 0149-2026-06-28
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -241,6 +241,55 @@ isolated micropolish.
   broad account-library/project/history fanout and not repeated four-attach
   target churn.
 
+### 2026-06-28 | Accepted Artifact-Rich Single-Chat Proof
+
+- Fixed the remaining single-chat blockers found by live telemetry:
+  - ChatGPT artifact materialization now tries the browser download first and
+    bounds captured-anchor binary fetch fallback.
+  - Scoped artifact/file transfer phases skip redundant interaction-governor
+    waits and post-commit quiet waits after the initial conversation read.
+  - Scoped cache resolution disables provider identity detection and feature
+    signature probes during post-scrape transfer setup.
+  - Conversation-file listing is bounded at the service layer; if optional file
+    enumeration wedges after artifacts materialize, the job records
+    `llmService.materializeConversationFiles.listTimedOut` and completes with a
+    skipped file entry instead of aging into stale-running failure.
+- Accepted live proof:
+  `hmj_3e6e8bc40a9b49cb9c99e761dfbfc8be` on isolated repo-local server
+  `127.0.0.1:18149`, target conversation
+  `6a0fa901-77d0-83ea-80e0-fbaaa4eca529`, command shape:
+  `pnpm tsx bin/auracall.ts api history-materialization-create --port 18149 --provider chatgpt --runtime-profile wsl-chrome-3 --bound-identity-key eric.cochran@soylei.com --conversation-id 6a0fa901-77d0-83ea-80e0-fbaaa4eca529 --asset-kind all --max-items 3 --provider-work-timeout-ms 180000 --force --json`.
+- Result: job succeeded in about 42s, materialized two generated-artifact PDFs,
+  and left live-follow paused with no installed service restart.
+- Materialized files:
+  - `Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut_clean_2page.pdf`,
+    size `154914`, sha256
+    `7275c5d08508b22855a8ad36bc06d7cc6e3476f5ab84620814381b09b037e767`.
+  - `Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut_revised_MYAP.pdf`,
+    size `240115`, sha256
+    `2af143990726fe561aa02a36756f180738c2bc706c466361943801cb9a1f4221`.
+- Manifest:
+  `/home/ecochran76/.auracall/cache/providers/chatgpt/eric.cochran@soylei.com/conversation-attachments/6a0fa901-77d0-83ea-80e0-fbaaa4eca529/artifact-fetch-manifest.json`.
+- Scrape telemetry:
+  `providerActions={llmService.materializeConversationArtifacts:1,
+  llmService.getConversationContext:1, chatgpt.connectExistingTarget:3,
+  chatgpt.retainScopedTarget:3, chatgpt.readConversationMessages:3,
+  chatgpt.readVisibleConversationFiles:2,
+  chatgpt.readVisibleDownloadArtifactProbes:1,
+  chatgpt.readVisibleImageArtifactProbes:1,
+  chatgpt.readVisibleCanvasProbes:1,
+  llmService.materializeConversationArtifacts.invokeProvider:2,
+  chatgpt.materializeArtifact.start:2, chatgpt.clickArtifactDownload:2,
+  llmService.materializeConversationFiles.listTimedOut:1}`.
+  `cdpCalls={Target.attachToTarget:3, Page.enable:3, Runtime.enable:3,
+  Runtime.evaluate:10, Browser.setDownloadBehavior:2}`.
+  `candidates={payloadArtifacts:3, domDownloadArtifacts:3, visibleFiles:2,
+  materializableArtifacts:2, materializableFiles:0}`.
+  `downloads={attempted:2, succeeded:2, failed:0}`.
+- Direct-id proof retained zero account-library/project/root-history fanout
+  counters for the materialization run. The optional file-list timeout is now
+  explicit telemetry, not a hidden stale-running failure.
+
 ## Validation Plan
 
 - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts`
@@ -254,7 +303,7 @@ isolated micropolish.
 
 ## Definition Of Done
 
-Plan 0149 closes only when the direct single-chat scrape path is instrumented,
-tested, and proven live with exact traffic counters. The proof must show that a
-direct artifact-rich chat scrape avoids broad account-library/project/history
-work and either materializes assets or returns structured candidate evidence.
+Plan 0149 closed on `2026-06-28` after the direct single-chat scrape path was
+instrumented, tested, and proven live with exact traffic counters. The accepted
+proof materialized two artifact assets from a direct artifact-rich ChatGPT
+conversation while avoiding broad account-library/project/history fanout.

@@ -409,6 +409,9 @@ const CHATGPT_CONVERSATION_ROW_ATTR = "data-auracall-chatgpt-conversation-row";
 const CHATGPT_CONVERSATION_ACTION_ATTR = "data-auracall-chatgpt-conversation-action";
 const CHATGPT_DOWNLOAD_BUTTON_ATTR = "data-auracall-chatgpt-download-button";
 const CHATGPT_DOWNLOAD_CAPTURE_STATE_KEY = "__auracallChatgptDownloadCapture";
+const CHATGPT_ARTIFACT_CAPTURED_FETCH_TIMEOUT_MS = 20_000;
+const CHATGPT_ARTIFACT_BROWSER_DOWNLOAD_TIMEOUT_MS = 30_000;
+const CHATGPT_VISIBLE_FILES_READ_TIMEOUT_MS = 10_000;
 const CHATGPT_RATE_LIMIT_RECOVERY_PAUSE_MS = 15_000;
 const CHATGPT_HOME_LOCATION = new URL(CHATGPT_HOME_URL);
 
@@ -1194,8 +1197,14 @@ async function beforeChatgptBrowserInteraction(
 	options: BrowserProviderListOptions | undefined,
 	kind: BrowserInteractionClass,
 ): Promise<void> {
+	if (kind === "conversation-read" && options?.useProviderSession && options.providerSession) {
+		recordBrowserScrapeProviderAction(options, "chatgpt.skipScopedInteractionGovernor");
+		return;
+	}
 	await options?.interactionGovernor?.beforeInteraction(kind);
 }
+
+export const beforeChatgptBrowserInteractionForTest = beforeChatgptBrowserInteraction;
 
 function resolveBrowserTabPolicy(
 	options: Pick<BrowserProviderListOptions, "browserService"> | undefined,
@@ -3706,6 +3715,7 @@ async function connectToChatgptTab(
 	let failedTargetId: string | undefined;
 	const preferredUrl = urlOverride ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
 	const forceNewDisposableTab = shouldForceNewChatgptTabConnection(options);
+	recordBrowserScrapeProviderAction(options, "chatgpt.connectTab.start");
 	if (port) {
 		const scopedConnection = readChatgptScopedSession(
 			options,
@@ -3861,6 +3871,7 @@ async function connectToChatgptTab(
 		throw new Error("No ChatGPT tab found. Launch a ChatGPT browser session and retry.");
 	}
 	let client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
+	recordBrowserScrapeProviderAction(options, "chatgpt.connectTab.attached");
 	recordBrowserScrapeCdpCall(options, "Target.attachToTarget");
 	let resolvedTargetId = targetId;
 	try {
@@ -3896,6 +3907,7 @@ async function connectToChatgptTab(
 		usedExisting,
 	};
 	retainChatgptScopedSession(options, sessionKey, connection);
+	recordBrowserScrapeProviderAction(options, "chatgpt.connectTab.ready");
 	return connection;
 }
 
@@ -8175,8 +8187,9 @@ async function readVisibleChatgptConversationFilesWithClient(
 ): Promise<FileRef[]> {
 	recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
 	recordBrowserScrapeProviderAction(options, "chatgpt.readVisibleConversationFiles");
-	const { result } = await client.Runtime.evaluate({
-		expression: `(async () => {
+	const { result } = await withChatgptTimeout(
+		client.Runtime.evaluate({
+			expression: `(async () => {
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const extractLabel = (tile, name) => {
@@ -8262,9 +8275,12 @@ async function readVisibleChatgptConversationFilesWithClient(
       }
       return collect();
     })()`,
-		awaitPromise: true,
-		returnByValue: true,
-	});
+			awaitPromise: true,
+			returnByValue: true,
+		}),
+		CHATGPT_VISIBLE_FILES_READ_TIMEOUT_MS,
+		`Timed out reading visible ChatGPT conversation files after ${CHATGPT_VISIBLE_FILES_READ_TIMEOUT_MS}ms.`,
+	);
 	const rawItems = Array.isArray(result?.value)
 		? (result.value as ChatgptConversationFileProbe[])
 		: [];
@@ -8845,6 +8861,7 @@ async function fetchChatgptBinaryWithClient(
 	client: ChromeClient,
 	url: string,
 	options?: BrowserProviderListOptions,
+	timeoutMs = CHATGPT_ARTIFACT_CAPTURED_FETCH_TIMEOUT_MS,
 ): Promise<{ buffer: Buffer; contentType: string | null; contentDisposition: string | null }> {
 	const expression = `(async () => {
     const response = await fetch(${JSON.stringify(url)}, { credentials: 'include' });
@@ -8872,11 +8889,15 @@ async function fetchChatgptBinaryWithClient(
 	recordBrowserScrapeProviderAction(options, "chatgpt.fetchBinary");
 	recordBrowserScrapeDownloadAttempt(options);
 	try {
-		const result = await client.Runtime.evaluate({
-			expression,
-			awaitPromise: true,
-			returnByValue: true,
-		});
+		const result = await withChatgptTimeout(
+			client.Runtime.evaluate({
+				expression,
+				awaitPromise: true,
+				returnByValue: true,
+			}),
+			timeoutMs,
+			`Timed out fetching ChatGPT artifact binary from captured URL after ${timeoutMs}ms.`,
+		);
 		const value = isRecord(result.result?.value) ? result.result.value : null;
 		if (!value || value.ok !== true || typeof value.base64 !== "string") {
 			const status = typeof value?.status === "number" ? ` (status ${value.status})` : "";
@@ -8894,6 +8915,8 @@ async function fetchChatgptBinaryWithClient(
 		throw error;
 	}
 }
+
+export const fetchChatgptBinaryWithClientForTest = fetchChatgptBinaryWithClient;
 
 function parseChatgptConversationFileRefName(
 	conversationId: string,
@@ -9809,6 +9832,31 @@ async function waitForChatgptDownloadedFile(
 	return null;
 }
 
+async function fileRefFromChatgptDownloadedArtifact(
+	artifact: ConversationArtifact,
+	downloadedPath: string,
+	metadata: Record<string, unknown>,
+): Promise<FileRef> {
+	const stat = await fs.stat(downloadedPath);
+	const name = path.basename(downloadedPath);
+	return {
+		id: artifact.id,
+		name,
+		provider: "chatgpt",
+		source: "conversation",
+		size: stat.size,
+		mimeType: inferMimeTypeFromArtifactName(name),
+		remoteUrl: artifact.uri,
+		localPath: downloadedPath,
+		metadata: {
+			artifactKind: artifact.kind,
+			artifactTitle: artifact.title,
+			...metadata,
+			...(artifact.metadata ?? {}),
+		},
+	};
+}
+
 async function materializeChatgptDeepResearchExportWithClient(
 	artifact: ConversationArtifact,
 	destDir: string,
@@ -10106,59 +10154,53 @@ async function materializeChatgptConversationArtifactWithClient(
 				});
 				const remoteUrl = normalizeUiText(capture.href);
 				const downloadName = normalizeUiText(capture.downloadName);
-				if (remoteUrl) {
-					const { buffer, contentType, contentDisposition } = await fetchChatgptBinaryWithClient(
-						client,
-						remoteUrl,
-						options,
-					);
-					const fallbackBaseName =
-						extractFilenameFromContentDisposition(contentDisposition) ||
-						extractFilenameFromArtifactUri(artifact.uri) ||
-						downloadName ||
-						artifact.title;
-					const fileName = ensureChatgptArtifactExtension(
-						fallbackBaseName,
-						contentTypeToExtension(contentType),
-					);
-					const destPath = path.join(destDir, fileName);
-					await fs.writeFile(destPath, buffer);
-					return {
-						id: artifact.id,
-						name: fileName,
-						provider: "chatgpt",
-						source: "conversation",
-						size: buffer.byteLength,
-						mimeType: contentType ?? inferMimeTypeFromArtifactName(fileName),
-						remoteUrl,
-						localPath: destPath,
-						metadata: {
-							artifactKind: artifact.kind,
-							artifactTitle: artifact.title,
-							materialization: "captured-anchor-fetch",
-							...(artifact.metadata ?? {}),
-						},
-					};
+				recordBrowserScrapeDownloadAttempt(options);
+				const downloadedPath = await waitForChatgptDownloadedFile(
+					destDir,
+					CHATGPT_ARTIFACT_BROWSER_DOWNLOAD_TIMEOUT_MS,
+				);
+				if (downloadedPath) {
+					recordBrowserScrapeDownloadSuccess(options);
+					return fileRefFromChatgptDownloadedArtifact(artifact, downloadedPath, {
+						materialization: "download-button",
+						capturedAnchorUrl: remoteUrl || undefined,
+						capturedDownloadName: downloadName || undefined,
+					});
 				}
-				const downloadedPath = await waitForChatgptDownloadedFile(destDir);
-				if (!downloadedPath) {
+				if (!remoteUrl) {
+					recordBrowserScrapeDownloadFailure(options);
 					return null;
 				}
-				const stat = await fs.stat(downloadedPath);
-				const name = path.basename(downloadedPath);
+				recordBrowserScrapeDownloadFailure(options);
+				const { buffer, contentType, contentDisposition } = await fetchChatgptBinaryWithClient(
+					client,
+					remoteUrl,
+					options,
+				);
+				const fallbackBaseName =
+					extractFilenameFromContentDisposition(contentDisposition) ||
+					extractFilenameFromArtifactUri(artifact.uri) ||
+					downloadName ||
+					artifact.title;
+				const fileName = ensureChatgptArtifactExtension(
+					fallbackBaseName,
+					contentTypeToExtension(contentType),
+				);
+				const destPath = path.join(destDir, fileName);
+				await fs.writeFile(destPath, buffer);
 				return {
 					id: artifact.id,
-					name,
+					name: fileName,
 					provider: "chatgpt",
 					source: "conversation",
-					size: stat.size,
-					mimeType: inferMimeTypeFromArtifactName(name),
-					remoteUrl: artifact.uri,
-					localPath: downloadedPath,
+					size: buffer.byteLength,
+					mimeType: contentType ?? inferMimeTypeFromArtifactName(fileName),
+					remoteUrl,
+					localPath: destPath,
 					metadata: {
 						artifactKind: artifact.kind,
 						artifactTitle: artifact.title,
-						materialization: "download-button",
+						materialization: "captured-anchor-fetch",
 						...(artifact.metadata ?? {}),
 					},
 				};
@@ -10490,7 +10532,9 @@ export function createChatgptAdapter(): Pick<
 			conversationId: string,
 			options?: BrowserProviderListOptions,
 		): Promise<FileRef[]> {
+			recordBrowserScrapeProviderAction(options, "chatgpt.listConversationFiles.start");
 			await beforeChatgptBrowserInteraction(options, "conversation-read");
+			recordBrowserScrapeProviderAction(options, "chatgpt.listConversationFiles.afterGovernor");
 			const normalizedProjectId = normalizeChatgptProjectId(options?.projectId);
 			const debugContext = resolveChatgptRecoveryDebugContext(
 				options,
@@ -10500,13 +10544,16 @@ export function createChatgptAdapter(): Pick<
 					projectId: normalizedProjectId ?? null,
 				},
 			);
+			recordBrowserScrapeProviderAction(options, "chatgpt.listConversationFiles.beforeConnect");
 			const connection = await connectToChatgptTab(
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			recordBrowserScrapeProviderAction(options, "chatgpt.listConversationFiles.connected");
 			const { client } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);
+				recordBrowserScrapeProviderAction(options, "chatgpt.listConversationFiles.readVisible");
 				return await withChatgptBlockingSurfaceRecovery(
 					client,
 					`listChatgptConversationFiles:${conversationId}`,
@@ -10635,6 +10682,7 @@ export function createChatgptAdapter(): Pick<
 			projectId?: string,
 			options?: BrowserProviderListOptions,
 		): Promise<FileRef | null> {
+			recordBrowserScrapeProviderAction(options, "chatgpt.materializeArtifact.start");
 			await beforeChatgptBrowserInteraction(options, "conversation-read");
 			const normalizedProjectId = normalizeChatgptProjectId(projectId);
 			const debugContext = resolveChatgptRecoveryDebugContext(
@@ -10651,6 +10699,7 @@ export function createChatgptAdapter(): Pick<
 				options,
 				resolveChatgptConversationUrl(conversationId, normalizedProjectId),
 			);
+			recordBrowserScrapeProviderAction(options, "chatgpt.materializeArtifact.connected");
 			const { client, targetId, host, port } = connection;
 			try {
 				await assertChatgptExpectedIdentity(client, options);

@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import {
+	beforeChatgptBrowserInteractionForTest,
 	buildChatgptAuthSessionIdentityExpression,
 	buildChatgptCreateProjectDialogStateExpressionForTest,
 	classifyChatgptBlockingSurfaceProbe,
@@ -10,6 +11,7 @@ import {
 	extractChatgptConversationSourcesFromPayload,
 	extractChatgptProjectIdFromUrl,
 	extractChatgptProjectSourceName,
+	fetchChatgptBinaryWithClientForTest,
 	filterChatgptDeepResearchTargets,
 	findChatgptProjectByName,
 	findChatgptProjectSourceName,
@@ -47,6 +49,7 @@ import {
 	serializeChatgptGridRowsToCsv,
 } from "../../src/browser/providers/chatgptAdapter.js";
 import { normalizeProjectMemoryMode } from "../../src/browser/providers/domain.js";
+import { createBrowserScrapeTelemetryRecorder } from "../../src/browser/providers/scrapeTelemetry.js";
 
 describe("closeChatgptTabConnection", () => {
 	test("keeps retained scoped provider sessions open for later materialization steps", async () => {
@@ -71,6 +74,115 @@ describe("closeChatgptTabConnection", () => {
 		});
 
 		expect(close).not.toHaveBeenCalled();
+	});
+});
+
+describe("fetchChatgptBinaryWithClient", () => {
+	test("records a bounded failed download when the in-page fetch hangs", async () => {
+		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+		const client = {
+			// biome-ignore lint/style/useNamingConvention: CDP client shape uses Runtime.
+			Runtime: {
+				evaluate: vi.fn(() => new Promise<never>(() => undefined)),
+			},
+		};
+
+		await expect(
+			fetchChatgptBinaryWithClientForTest(
+				client as never,
+				"https://chatgpt.com/backend-api/artifact",
+				{ scrapeTelemetry },
+				5,
+			),
+		).rejects.toThrow("Timed out fetching ChatGPT artifact binary");
+
+		expect(scrapeTelemetry.providerActions).toMatchObject({
+			"chatgpt.fetchBinary": 1,
+		});
+		expect(scrapeTelemetry.cdpCalls).toMatchObject({
+			"Runtime.evaluate": 1,
+		});
+		expect(scrapeTelemetry.downloads).toEqual({
+			attempted: 1,
+			succeeded: 0,
+			failed: 1,
+		});
+	});
+
+	test("records a successful captured binary fetch", async () => {
+		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+		const client = {
+			// biome-ignore lint/style/useNamingConvention: CDP client shape uses Runtime.
+			Runtime: {
+				evaluate: vi.fn(async () => ({
+					result: {
+						value: {
+							ok: true,
+							contentType: "text/plain",
+							contentDisposition: 'attachment; filename="artifact.txt"',
+							base64: Buffer.from("artifact bytes", "utf8").toString("base64"),
+						},
+					},
+				})),
+			},
+		};
+
+		const result = await fetchChatgptBinaryWithClientForTest(
+			client as never,
+			"https://chatgpt.com/backend-api/artifact",
+			{ scrapeTelemetry },
+			100,
+		);
+
+		expect(result.buffer.toString("utf8")).toBe("artifact bytes");
+		expect(result.contentType).toBe("text/plain");
+		expect(result.contentDisposition).toBe('attachment; filename="artifact.txt"');
+		expect(scrapeTelemetry.downloads).toEqual({
+			attempted: 1,
+			succeeded: 1,
+			failed: 0,
+		});
+	});
+});
+
+describe("beforeChatgptBrowserInteraction", () => {
+	test("does not reapply conversation-read pacing inside a scoped provider session", async () => {
+		const beforeInteraction = vi.fn(async () => undefined);
+		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+
+		await beforeChatgptBrowserInteractionForTest(
+			{
+				useProviderSession: true,
+				scrapeTelemetry,
+				providerSession: {
+					providerId: "chatgpt",
+					key: "chatgpt:127.0.0.1:9222:https://chatgpt.com/c/conv",
+					value: {},
+					close: vi.fn(),
+				},
+				interactionGovernor: { beforeInteraction },
+			},
+			"conversation-read",
+		);
+
+		expect(beforeInteraction).not.toHaveBeenCalled();
+		expect(scrapeTelemetry.providerActions).toMatchObject({
+			"chatgpt.skipScopedInteractionGovernor": 1,
+		});
+	});
+
+	test("keeps pacing for the first conversation-read before a session exists", async () => {
+		const beforeInteraction = vi.fn(async () => undefined);
+
+		await beforeChatgptBrowserInteractionForTest(
+			{
+				useProviderSession: true,
+				interactionGovernor: { beforeInteraction },
+			},
+			"conversation-read",
+		);
+
+		expect(beforeInteraction).toHaveBeenCalledWith("conversation-read");
 	});
 });
 
