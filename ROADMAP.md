@@ -13,6 +13,12 @@ Lane: P01
   [docs/dev/plans/0145-2026-06-27-live-follow-reverse-mtime-frontier.md](docs/dev/plans/0145-2026-06-27-live-follow-reverse-mtime-frontier.md)
 - Completed live-follow supporting plan:
   [docs/dev/plans/0146-2026-06-27-live-follow-detail-completeness-guard.md](docs/dev/plans/0146-2026-06-27-live-follow-detail-completeness-guard.md)
+- Completed API reliability supporting plan:
+  [docs/dev/plans/0147-2026-06-28-open-notebook-recoverable-run-polling.md](docs/dev/plans/0147-2026-06-28-open-notebook-recoverable-run-polling.md)
+- Completed live-follow supporting plan:
+  [docs/dev/plans/0148-2026-06-28-chatgpt-targeted-conversation-artifact-scrape.md](docs/dev/plans/0148-2026-06-28-chatgpt-targeted-conversation-artifact-scrape.md)
+- Active live-follow proof plan:
+  [docs/dev/plans/0149-2026-06-28-single-chat-artifact-scrape-instrumented-proof.md](docs/dev/plans/0149-2026-06-28-single-chat-artifact-scrape-instrumented-proof.md)
 - Completed supporting handoff plan:
   [docs/dev/plans/0144-2026-06-26-handoff-attachment-zip-packaging.md](docs/dev/plans/0144-2026-06-26-handoff-attachment-zip-packaging.md)
 - Latest completed live-follow supporting plan:

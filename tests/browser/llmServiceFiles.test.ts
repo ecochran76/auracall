@@ -18,6 +18,7 @@ import {
 	resolveProviderCachePath,
 } from "../../src/browser/providers/cache.js";
 import type { ConversationArtifact, FileRef, Project } from "../../src/browser/providers/domain.js";
+import { createBrowserScrapeTelemetryRecorder } from "../../src/browser/providers/scrapeTelemetry.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 import type { ResolvedUserConfig } from "../../src/config.js";
 
@@ -642,10 +643,11 @@ describe("llmService project file cache writes", () => {
 			),
 		};
 		const service = new TestLlmService(provider as never, store, cacheContext);
+		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
 
 		try {
 			const result = await service.materializeConversationArtifacts("conversation-123", {
-				listOptions: {},
+				listOptions: { scrapeTelemetry },
 				refresh: true,
 			});
 			expect(result.files).toHaveLength(1);
@@ -666,10 +668,35 @@ describe("llmService project file cache writes", () => {
 			const manifest = JSON.parse(await readFile(result.manifestPath as string, "utf8")) as {
 				artifactCount: number;
 				materializedCount: number;
+				scrapeTelemetry?: {
+					providerActions?: Record<string, number>;
+					downloads?: { attempted?: number; succeeded?: number; failed?: number };
+					candidates?: Record<string, number>;
+				};
 				entries: Array<{ artifactId: string; status: string; error?: string; fileName?: string }>;
 			};
 			expect(manifest.artifactCount).toBe(2);
 			expect(manifest.materializedCount).toBe(1);
+			expect(scrapeTelemetry.providerActions).toMatchObject({
+				"llmService.materializeConversationArtifacts": 1,
+				"llmService.getConversationContext": 1,
+			});
+			expect(scrapeTelemetry.providerActions["llmService.listAccountFiles"]).toBeUndefined();
+			expect(scrapeTelemetry.providerActions["llmService.listProjectFiles"]).toBeUndefined();
+			expect(scrapeTelemetry.providerActions["llmService.listConversationFiles"]).toBeUndefined();
+			expect(scrapeTelemetry.downloads).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
+			expect(scrapeTelemetry.candidates).toMatchObject({
+				"llmService.materializeConversationArtifacts.artifacts": 2,
+			});
+			expect(manifest.scrapeTelemetry?.providerActions).toMatchObject({
+				"llmService.materializeConversationArtifacts": 1,
+				"llmService.getConversationContext": 1,
+			});
+			expect(manifest.scrapeTelemetry?.downloads).toEqual({
+				attempted: 0,
+				succeeded: 0,
+				failed: 0,
+			});
 			expect(manifest.entries).toEqual([
 				expect.objectContaining({
 					artifactId: "artifact-1",
@@ -980,10 +1007,11 @@ describe("llmService project file cache writes", () => {
 			),
 		};
 		const service = new TestLlmService(provider as never, store, cacheContext);
+		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
 
 		try {
 			const result = await service.materializeConversationFiles("conversation-123", {
-				listOptions: {},
+				listOptions: { scrapeTelemetry },
 			});
 			expect(result.conversationFiles).toHaveLength(2);
 			expect(result.files).toHaveLength(1);
@@ -1001,6 +1029,11 @@ describe("llmService project file cache writes", () => {
 			const manifest = JSON.parse(await readFile(result.manifestPath as string, "utf8")) as {
 				fileCount: number;
 				materializedCount: number;
+				scrapeTelemetry?: {
+					providerActions?: Record<string, number>;
+					downloads?: { attempted?: number; succeeded?: number; failed?: number };
+					candidates?: Record<string, number>;
+				};
 				entries: Array<{
 					fileId: string;
 					status: string;
@@ -1011,6 +1044,27 @@ describe("llmService project file cache writes", () => {
 			};
 			expect(manifest.fileCount).toBe(2);
 			expect(manifest.materializedCount).toBe(1);
+			expect(scrapeTelemetry.providerActions).toMatchObject({
+				"llmService.materializeConversationFiles": 1,
+				"llmService.listConversationFiles": 1,
+				"provider.listConversationFiles": 1,
+			});
+			expect(scrapeTelemetry.providerActions["llmService.listAccountFiles"]).toBeUndefined();
+			expect(scrapeTelemetry.providerActions["llmService.listProjectFiles"]).toBeUndefined();
+			expect(scrapeTelemetry.downloads).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
+			expect(scrapeTelemetry.candidates).toMatchObject({
+				"llmService.materializeConversationFiles.files": 2,
+			});
+			expect(manifest.scrapeTelemetry?.providerActions).toMatchObject({
+				"llmService.materializeConversationFiles": 1,
+				"llmService.listConversationFiles": 1,
+				"provider.listConversationFiles": 1,
+			});
+			expect(manifest.scrapeTelemetry?.downloads).toEqual({
+				attempted: 0,
+				succeeded: 0,
+				failed: 0,
+			});
 			expect(manifest.entries).toEqual([
 				expect.objectContaining({
 					fileId: "conv-file-1",

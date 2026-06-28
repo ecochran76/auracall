@@ -1,3 +1,39 @@
+## 2026-06-28 | Plan 0149 Single-Chat Scrape Telemetry Proof
+
+- Focus: answer whether direct single ChatGPT conversation scraping works and
+  instrument exact browser/provider traffic instead of treating rate-limit
+  guards as the root cause.
+- Result:
+  - added direct materialization `scrapeTelemetry` to job readback and
+    artifact/file sidecar manifests;
+  - LLM service telemetry now records direct-path provider actions, and ChatGPT
+    provider telemetry records target attach/open, domain enables,
+    `Runtime.evaluate`, candidate extraction, and actual download attempts;
+  - focused tests prove direct materialization telemetry and no
+    account-library/project inventory fanout.
+- Live proof:
+  - isolated repo-local proof server on `127.0.0.1:18149`; live-follow stayed
+    paused;
+  - `hmj_0740b08ee2364bac85ef6247327b64bc` scraped one artifact candidate from
+    `6a066c34-5664-83ea-99c1-94f44d0428ea` and returned structured
+    no-downloadable-asset telemetry with `Runtime.evaluate=7` and no
+    account/project inventory counters;
+  - `hmj_22812c8aa8b6447683d36d3e4bab2c9e` materialized one file from
+    `6a0b63f7-cc4c-83ea-b37a-4f094762838d`, writing
+    `file-fetch-manifest.json` and a 19,402,584-byte PDF; telemetry showed
+    `provider.listConversationFiles=1`, `chatgpt.downloadConversationFile=1`,
+    `Target.attachToTarget=4`, `Runtime.evaluate=2`, and
+    `downloads={attempted:1,succeeded:1,failed:0}`.
+- Remaining issue: the heavier `all` target
+  `6a0fa901-77d0-83ea-80e0-fbaaa4eca529` hit the 120s running stale threshold,
+  and even successful direct runs still attach/enable four times and take
+  roughly 130-140s. Plan 0149 stays open for the load-once/reuse cleanup.
+- Validation:
+  - `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/browser/providers/scrapeTelemetry.ts src/browser/providers/types.ts src/runtime/historyMaterializationService.ts src/browser/llmService/llmService.ts src/browser/providers/chatgptAdapter.ts tests/browser/llmServiceFiles.test.ts`;
+  - `pnpm run plans:audit -- --keep 149`.
+
 ## 2026-06-27 | Plan 0146 Detail Completeness Guard
 
 - Focus: execute the Plan 0145 audit follow-up so frontier freshness does not
@@ -39100,3 +39136,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   during `/v1/responses/{response_id}` polling and surfaced a notebook chat
   500. No code changed in this slice; next work should harden the HTTP
   chat-completions/responses contract and restart-recovery tests.
+- 2026-06-28: Opened Plan 0147 for the Open Notebook recoverable-run polling
+  contract. Added explicit `response_poll_path` to retryable
+  `auracall_execution_pending` chat-completions payloads, and hardened
+  `GET /v1/responses/{response_id}` so route-local readback faults return
+  structured `auracall_response_readback_error` JSON with the response id
+  instead of relying on generic request error handling. Added HTTP regression
+  coverage for an Open Notebook style recovering browser run polling through to
+  completed output and for structured readback faults. Focused validation
+  passed with:
+  `pnpm vitest run tests/http.responsesServer.test.ts -t "Open Notebook"` and
+  `pnpm vitest run tests/http.responsesServer.test.ts -t "chat completion"`.
+  `pnpm exec tsc --noEmit --pretty false` and
+  `pnpm run plans:audit -- --keep 147` passed. Scoped Biome lint exited `0`
+  with existing warning-level non-null assertion debt in unrelated parts of
+  `tests/http.responsesServer.test.ts`. A full
+  `pnpm vitest run tests/http.responsesServer.test.ts` was interrupted after
+  multiple quiet 30s intervals with no failure output. Plan 0147 is closed as
+  **Accepted Response Polling Hardened**.
+- 2026-06-28: Opened and closed Plan 0148 for the ChatGPT targeted
+  conversation artifact scrape repair. The paused `chatgpt/wsl-chrome-3`
+  live-follow evidence showed repeated provider-guard backpressure with
+  `passCount=0` and unchanged `90` remaining detail surfaces, while the last
+  successful bounded pass reached the freshness frontier but scanned projects
+  before the selected conversation. Changed ChatGPT steady-follow
+  frontier-selected detail passes to skip account-library inventory and
+  prioritize selected conversation detail before project-file surfaces. Added a
+  regression test proving the targeted mode calls only `listConversationFiles`
+  and `getConversationContext` for the selected conversation under a one-detail
+  pass budget. Validation passed with
+  `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts`,
+  `pnpm vitest run tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/refreshService.test.ts`,
+  `pnpm exec tsc --noEmit --pretty false`, and
+  `pnpm exec biome check src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
+  Live-follow remains paused intentionally.

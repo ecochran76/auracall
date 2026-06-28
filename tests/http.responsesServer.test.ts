@@ -36,6 +36,7 @@ import type { AccountMirrorSchedulerPassResult } from "../src/accountMirror/sche
 import type { AccountMirrorSchedulerPassLedger } from "../src/accountMirror/schedulerLedger.js";
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from "../src/runtime/liveServiceStateRegistry.js";
 import type { ArchiveMaterializationJobListRequest } from "../src/runtime/archiveMaterializationJobService.js";
+import type { ExecutionRuntimeControlContract } from "../src/runtime/contract.js";
 import {
 	HistoryMaterializationJobControlError,
 	type HistoryMaterializationJob,
@@ -19593,6 +19594,7 @@ describe("http responses adapter", () => {
 					message:
 						"AuraCall execution chatcmpl_resp_pending_1 did not complete within the synchronous chat/completions wait window. Poll /v1/responses/{response_id} or retry later.",
 					response_id: "chatcmpl_resp_pending_1",
+					response_poll_path: "/v1/responses/chatcmpl_resp_pending_1",
 					retry_after_seconds: 30,
 				},
 			});
@@ -19601,6 +19603,273 @@ describe("http responses adapter", () => {
 			);
 		} finally {
 			unblockExecution();
+			await server.close();
+		}
+	});
+
+	it("keeps Open Notebook style response polling structured through recovery and completion", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-http-open-notebook-recovery-"),
+		);
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+
+		const control = createExecutionRuntimeControl();
+		const runId = "resp_open_notebook_recovering_1";
+		const stepId = `${runId}:step:1`;
+		const createdAt = "2026-06-27T18:06:13.000Z";
+
+		await control.createRun(
+			createExecutionRunRecordBundle({
+				run: createExecutionRun({
+					id: runId,
+					sourceKind: "direct",
+					sourceId: null,
+					status: "running",
+					createdAt,
+					updatedAt: "2026-06-27T18:08:00.000Z",
+					trigger: "api",
+					requestedBy: "open-notebook",
+					entryPrompt: "Notebook chat request.",
+					initialInputs: {
+						model: "agent:open-notebook-pro-chatgpt-soylei",
+						runtimeProfile: "wsl-chrome-3",
+						service: "chatgpt",
+					},
+					sharedStateId: `${runId}:state`,
+					stepIds: [stepId],
+					policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+				}),
+				steps: [
+					createExecutionRunStep({
+						id: stepId,
+						runId,
+						agentId: "open-notebook-pro-chatgpt-soylei",
+						runtimeProfileId: "wsl-chrome-3",
+						browserProfileId: "wsl-chrome-3",
+						service: "chatgpt",
+						kind: "prompt",
+						status: "running",
+						order: 1,
+						dependsOnStepIds: [],
+						input: {
+							prompt: "Notebook chat request.",
+							handoffIds: [],
+							artifacts: [],
+							structuredData: {},
+							notes: [],
+						},
+						startedAt: "2026-06-27T18:06:20.000Z",
+					}),
+				],
+				sharedState: createExecutionRunSharedState({
+					id: `${runId}:state`,
+					runId,
+					status: "active",
+					artifacts: [],
+					structuredOutputs: [],
+					notes: [],
+					history: [],
+					lastUpdatedAt: "2026-06-27T18:08:00.000Z",
+				}),
+				events: [
+					createExecutionRunEvent({
+						id: `${runId}:event:created`,
+						runId,
+						type: "run-created",
+						createdAt,
+						note: "Open Notebook accepted response run.",
+					}),
+				],
+			}),
+		);
+		await control.acquireLease({
+			runId,
+			leaseId: `${runId}:lease:browser`,
+			ownerId: "runner:chatgpt-browser",
+			acquiredAt: "2026-06-27T18:06:20.000Z",
+			heartbeatAt: "2026-06-27T18:07:00.000Z",
+			expiresAt: "2026-06-27T18:08:00.000Z",
+		});
+		await control.heartbeatLease({
+			runId,
+			leaseId: `${runId}:lease:browser`,
+			heartbeatAt: "2026-06-27T18:07:30.000Z",
+			expiresAt: "2026-06-27T18:08:30.000Z",
+			runtimeEvidence: {
+				observedAt: "2026-06-27T18:07:29.000Z",
+				state: "thinking",
+				source: "browser-service",
+				evidenceRef: "chatgpt-assistant-pending",
+				confidence: "medium",
+				details: {
+					service: "chatgpt",
+					runtimeProfileId: "wsl-chrome-3",
+					browserProfileId: "wsl-chrome-3",
+					agentId: "open-notebook-pro-chatgpt-soylei",
+					chromeTargetId: "target-open-notebook",
+					tabUrl: "https://chatgpt.com/c/open-notebook",
+					conversationId: "open-notebook",
+				},
+			},
+		});
+		await control.releaseLease({
+			runId,
+			leaseId: `${runId}:lease:browser`,
+			releasedAt: "2026-06-27T18:08:10.000Z",
+			releaseReason: "api server shutdown",
+		});
+
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0, recoverRunsOnStart: false },
+			{ control },
+		);
+
+		try {
+			const recoveringResponse = await fetch(
+				`http://127.0.0.1:${server.port}/v1/responses/${runId}`,
+			);
+			expect(recoveringResponse.status).toBe(200);
+			const recoveringPayload = (await recoveringResponse.json()) as JsonObject;
+			expect(recoveringPayload).toMatchObject({
+				id: runId,
+				object: "response",
+				status: "in_progress",
+				metadata: {
+					runtimeProfile: "wsl-chrome-3",
+					service: "chatgpt",
+					executionSummary: {
+						runtimeDiagnosticsSummary: {
+							runtimeState: "recovering",
+							leaseState: "released",
+							browserTaskState: "thinking",
+							lastProviderEvidence: {
+								state: "thinking",
+								evidenceRef: "chatgpt-assistant-pending",
+							},
+						},
+					},
+				},
+			});
+
+			const storedRecord = await control.readRun(runId);
+			if (!storedRecord) {
+				throw new Error("expected Open Notebook recovery test run to be persisted");
+			}
+			await control.persistRun({
+				runId,
+				expectedRevision: storedRecord.revision,
+				bundle: {
+					...storedRecord.bundle,
+					run: {
+						...storedRecord.bundle.run,
+						status: "succeeded",
+						updatedAt: "2026-06-27T18:12:53.000Z",
+					},
+					steps: storedRecord.bundle.steps.map((step) =>
+						step.id === stepId
+							? {
+									...step,
+									status: "succeeded",
+									output: {
+										summary: "Open Notebook assistant response recovered.",
+										artifacts: [],
+										structuredData: {},
+										notes: [],
+									},
+									completedAt: "2026-06-27T18:12:53.000Z",
+								}
+							: step,
+					),
+					sharedState: {
+						...storedRecord.bundle.sharedState,
+						status: "succeeded",
+						structuredOutputs: [
+							{
+								key: "response.output",
+								value: [
+									{
+										type: "message",
+										role: "assistant",
+										content: [
+											{
+												type: "output_text",
+												text: "Open Notebook assistant response recovered.",
+											},
+										],
+									},
+								],
+							},
+						],
+						lastUpdatedAt: "2026-06-27T18:12:53.000Z",
+					},
+				},
+			});
+
+			const completedResponse = await fetch(
+				`http://127.0.0.1:${server.port}/v1/responses/${runId}`,
+			);
+			expect(completedResponse.status).toBe(200);
+			const completedPayload = (await completedResponse.json()) as JsonObject;
+			expect(completedPayload).toMatchObject({
+				id: runId,
+				status: "completed",
+				output: [
+					{
+						type: "message",
+						role: "assistant",
+						content: [
+							{
+								type: "output_text",
+								text: "Open Notebook assistant response recovered.",
+							},
+						],
+					},
+				],
+			});
+		} finally {
+			await server.close();
+		}
+	});
+
+	it("returns structured Open Notebook response readback errors for known response ids", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-http-open-notebook-readback-error-"),
+		);
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+
+		const control = createExecutionRuntimeControl();
+		const throwingControl: ExecutionRuntimeControlContract = {
+			...control,
+			readRun: async (runId) => {
+				if (runId === "resp_open_notebook_readback_fault_1") {
+					throw new Error("simulated persisted response readback fault");
+				}
+				return control.readRun(runId);
+			},
+		};
+
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0, recoverRunsOnStart: false },
+			{ control: throwingControl },
+		);
+
+		try {
+			const response = await fetch(
+				`http://127.0.0.1:${server.port}/v1/responses/resp_open_notebook_readback_fault_1`,
+			);
+			expect(response.status).toBe(500);
+			const payload = (await response.json()) as JsonObject;
+			expect(payload).toMatchObject({
+				error: {
+					type: "auracall_response_readback_error",
+					message: "simulated persisted response readback fault",
+					response_id: "resp_open_notebook_readback_fault_1",
+					response_poll_path: "/v1/responses/resp_open_notebook_readback_fault_1",
+				},
+			});
+		} finally {
 			await server.close();
 		}
 	});

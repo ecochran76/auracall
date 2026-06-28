@@ -1,40 +1,46 @@
-import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { ResolvedUserConfig } from "../config.js";
+import { findChromePidUsingUserDataDir } from "../../packages/browser-service/src/processCheck.js";
 import {
-	createAccountMirrorCatalogService,
+	type AccountMirrorConversationEvidence,
+	createAccountMirrorPersistence,
+} from "../accountMirror/cachePersistence.js";
+import {
 	type AccountMirrorCatalogEntry,
 	type AccountMirrorCatalogItemResult,
 	type AccountMirrorCatalogKind,
 	type AccountMirrorCatalogService,
+	createAccountMirrorCatalogService,
 } from "../accountMirror/catalogService.js";
+import { createLlmService } from "../browser/llmService/providers/index.js";
+import type { ConversationArtifact, FileRef, ProviderId } from "../browser/providers/domain.js";
 import {
-	createAccountMirrorPersistence,
-	type AccountMirrorConversationEvidence,
-} from "../accountMirror/cachePersistence.js";
+	type BrowserScrapeTelemetryRecorder,
+	type BrowserScrapeTelemetrySnapshot,
+	createBrowserScrapeTelemetryRecorder,
+	snapshotBrowserScrapeTelemetry,
+} from "../browser/providers/scrapeTelemetry.js";
+import type { BrowserProcessOwnerAttribution } from "../browser/service/browserService.js";
+import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
+import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
+import type { ResolvedUserConfig } from "../config.js";
+import { createBrowserMediaGenerationMaterializer } from "../media/browserExecutor.js";
+import { createMediaGenerationService } from "../media/service.js";
+import type {
+	MediaGenerationArtifact,
+	MediaGenerationResponse,
+	MediaGenerationType,
+} from "../media/types.js";
+import { getRunArchiveDir } from "./archiveIndexStore.js";
 import {
 	createRunArchiveService,
 	type RunArchiveHistoryMaterializationAsset,
 	type RunArchiveItem,
 	type RunArchiveService,
 } from "./archiveService.js";
-import { getRunArchiveDir } from "./archiveIndexStore.js";
-import { createLlmService } from "../browser/llmService/providers/index.js";
-import type { ConversationArtifact, FileRef, ProviderId } from "../browser/providers/domain.js";
-import { createMediaGenerationService } from "../media/service.js";
-import { createBrowserMediaGenerationMaterializer } from "../media/browserExecutor.js";
-import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
-import type { BrowserProcessOwnerAttribution } from "../browser/service/browserService.js";
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
-import { findChromePidUsingUserDataDir } from "../../packages/browser-service/src/processCheck.js";
-import type {
-	MediaGenerationArtifact,
-	MediaGenerationResponse,
-	MediaGenerationType,
-} from "../media/types.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -185,6 +191,7 @@ export interface HistoryMaterializationProviderListOptions {
 		handle?: string;
 	};
 	skipFeatureSignature?: boolean;
+	scrapeTelemetry?: BrowserScrapeTelemetryRecorder;
 }
 
 export interface HistoryMaterializationResult {
@@ -197,6 +204,7 @@ export interface HistoryMaterializationResult {
 	entries: HistoryMaterializationManifestEntry[];
 	archiveItems: RunArchiveItem[];
 	snapshotRefreshes?: HistoryMaterializationSnapshotRefresh[] | null;
+	scrapeTelemetry?: BrowserScrapeTelemetrySnapshot | null;
 	metrics: {
 		conversations: number;
 		materialized: number;
@@ -503,11 +511,7 @@ export function createHistoryMaterializationService(
 			const source = sourceFromCreateRequest(normalized);
 			const sourceKey = sourceKeyFromCreateRequest(normalized);
 			const generatedAt = now().toISOString();
-			const active = await findActiveJobForSource(
-				store,
-				sourceKey,
-				recoverStaleRunningJob,
-			);
+			const active = await findActiveJobForSource(store, sourceKey, recoverStaleRunningJob);
 			if (active) {
 				if (active.status === "queued") {
 					scheduleJob(active.id);
@@ -1025,7 +1029,9 @@ async function materializeProjectSources(input: {
 	const provider = input.request.provider;
 	const projectId = input.request.projectId;
 	if (!provider || !projectId) {
-		throw new HistoryMaterializationError("Project source materialization requires provider and projectId.");
+		throw new HistoryMaterializationError(
+			"Project source materialization requires provider and projectId.",
+		);
 	}
 	const maxItems = normalizeMaxItems(input.request.maxItems);
 	const materialized = await input.materializeProjectSources({
@@ -3084,6 +3090,7 @@ async function materializeConversationTarget(input: {
 }): Promise<HistoryMaterializationResult> {
 	const selectedKinds = normalizeAssetKinds(input.request.assetKinds);
 	const maxItems = normalizeMaxItems(input.request.maxItems);
+	const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
 	const llmService = createLlmService(
 		input.target.provider,
 		withRuntimeProfileSelection(
@@ -3102,7 +3109,10 @@ async function materializeConversationTarget(input: {
 			}),
 		},
 	);
-	const listOptions = resolveHistoryMaterializationProviderListOptions(input.target);
+	const listOptions = {
+		...resolveHistoryMaterializationProviderListOptions(input.target),
+		scrapeTelemetry,
+	};
 	const manifestPaths: string[] = [];
 	let remaining = maxItems;
 	let artifactFetch: {
@@ -3233,6 +3243,7 @@ async function materializeConversationTarget(input: {
 		manifestPaths,
 		entries,
 		archiveItems,
+		scrapeTelemetry: snapshotBrowserScrapeTelemetry(scrapeTelemetry),
 		metrics,
 		message:
 			metrics.materialized > 0
@@ -5064,8 +5075,10 @@ function resolveProviderConversationUrl(
 
 function resolveProviderProjectUrl(provider: ProviderId, projectId: string | null): string | null {
 	if (!projectId) return null;
-	if (provider === "chatgpt") return `https://chatgpt.com/g/${encodeURIComponent(projectId)}/project`;
-	if (provider === "gemini") return `https://gemini.google.com/gem/${encodeURIComponent(projectId)}`;
+	if (provider === "chatgpt")
+		return `https://chatgpt.com/g/${encodeURIComponent(projectId)}/project`;
+	if (provider === "gemini")
+		return `https://gemini.google.com/gem/${encodeURIComponent(projectId)}`;
 	return null;
 }
 

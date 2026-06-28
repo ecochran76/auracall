@@ -689,6 +689,88 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
+	test("prioritizes selected ChatGPT conversations without account-library reads in targeted steady-follow mode", async () => {
+		const calls: string[] = [];
+		const client = {
+			listAccountFiles: vi.fn(async () => {
+				calls.push("listAccountFiles");
+				return [
+					{
+						id: "library-file-1",
+						name: "Library file.pdf",
+						provider: "chatgpt" as const,
+						source: "account" as const,
+					},
+				];
+			}),
+			listProjectFiles: vi.fn(async (projectId: string) => {
+				calls.push(`listProjectFiles:${projectId}`);
+				return [
+					{
+						id: `project-file-${projectId}`,
+						name: "Project file.pdf",
+						provider: "chatgpt" as const,
+						source: "project" as const,
+					},
+				];
+			}),
+			listConversationFiles: vi.fn(async (conversationId: string) => {
+				calls.push(`listConversationFiles:${conversationId}`);
+				return [
+					{
+						id: `conversation-file-${conversationId}`,
+						name: "Conversation file.csv",
+						provider: "chatgpt" as const,
+						source: "conversation" as const,
+					},
+				];
+			}),
+			getConversationContext: vi.fn(async (conversationId: string) => {
+				calls.push(`getConversationContext:${conversationId}`);
+				return {
+					provider: "chatgpt" as const,
+					conversationId,
+					messages: [],
+					artifacts: [
+						{
+							id: `artifact-${conversationId}`,
+							title: "Generated table",
+							kind: "spreadsheet" as const,
+						},
+					],
+				};
+			}),
+		};
+
+		const inventory = await readBoundedChatgptDetailInventory(
+			client,
+			[{ id: "project_1", name: "Project 1", provider: "chatgpt" }],
+			[{ id: "conv_artifact", title: "Artifact chat", provider: "chatgpt" }],
+			8,
+			{
+				maxDetailReads: 1,
+				prioritizeConversations: true,
+				skipAccountLibraryInventory: true,
+			},
+		);
+
+		expect(calls).toEqual([
+			"listConversationFiles:conv_artifact",
+			"getConversationContext:conv_artifact",
+		]);
+		expect(client.listAccountFiles).not.toHaveBeenCalled();
+		expect(client.listProjectFiles).not.toHaveBeenCalled();
+		expect(inventory.files.map((file) => file.id)).toEqual(["conversation-file-conv_artifact"]);
+		expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual(["artifact-conv_artifact"]);
+		expect(inventory.progress).toMatchObject({
+			scannedProjectIds: [],
+			scannedConversationIds: ["conv_artifact"],
+			detailObservedConversationIds: ["conv_artifact"],
+			artifactBearingConversationIds: ["conv_artifact"],
+			fileBearingConversationIds: ["conv_artifact"],
+		});
+	});
+
 	test("does not mark conversation detail complete when context read fails", async () => {
 		const client = {
 			listAccountFiles: vi.fn(async () => []),

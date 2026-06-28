@@ -1,5 +1,60 @@
 # RUNBOOK
 
+## Turn 295 | 2026-06-28
+
+- Active supporting plan:
+  `docs/dev/plans/0149-2026-06-28-single-chat-artifact-scrape-instrumented-proof.md`
+- Goal: replace the narrow Plan 0148 code-path fix with an end-to-end
+  instrumented proof plan for single ChatGPT conversation artifact scraping.
+- Current evidence:
+  - Plan 0148 proves call-order priority in unit tests only;
+  - no live single-chat scrape proof exists yet;
+  - no CDP method counters or LLM/provider action counters exist yet;
+  - `chatgpt/wsl-chrome-3` live-follow remains paused at
+    `acctmirror_completion_3f89a264-db31-44ce-afc4-aed30bc3c33e`.
+- Planned execution:
+  - add scrape telemetry through history materialization, LLM service, and the
+    ChatGPT provider path;
+  - prove direct `history-materialization-create --conversation-id ...` avoids
+    account-library/project/history surfaces;
+  - run one bounded live proof against an artifact-rich ChatGPT conversation
+    before any live-follow resumption decision.
+
+## Turn 294 | 2026-06-28
+
+- Active supporting plan:
+  `docs/dev/plans/0148-2026-06-28-chatgpt-targeted-conversation-artifact-scrape.md`
+- Goal: repair the ChatGPT steady-follow artifact enrichment scaling shape so a
+  frontier-selected conversation is scraped before account-library or project
+  inventory work.
+- Runtime evidence:
+  - `chatgpt/wsl-chrome-3` live-follow was paused at
+    `acctmirror_completion_3f89a264-db31-44ce-afc4-aed30bc3c33e`;
+  - recent attempts repeatedly hit ChatGPT provider-guard backpressure with
+    `passCount=0`;
+  - the last successful bounded proof reached the freshness frontier but spent
+    detail reads on projects rather than the selected artifact-rich
+    conversation.
+- Planned scope:
+  - skip ChatGPT account-library inventory for steady-follow conversation
+    detail passes;
+  - prioritize selected conversations before project surfaces in that mode;
+  - preserve broad/full-sweep inventory behavior;
+  - validate with focused collector tests and plan audit.
+- Result:
+  - added a ChatGPT targeted detail mode used by steady-follow when the
+    freshness frontier selected conversations;
+  - that mode skips account-library inventory and prioritizes conversation
+    detail before project-file surfaces;
+  - retained default broad inventory behavior for paths that still need
+    account-library and project inventory;
+  - left `chatgpt/wsl-chrome-3` live-follow paused.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts`;
+  - `pnpm vitest run tests/accountMirror/conversationFreshnessFrontier.test.ts tests/accountMirror/refreshService.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
+
 ## Turn 293 | 2026-06-27
 
 - Active supporting plan:
@@ -11846,3 +11901,39 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Current status: Plan 0145 remains open. The installed service now emits
   meaningful frontier evidence, but the SoyLei `chatgpt/wsl-chrome-3` lane has
   not yet produced the required reduced detail/context read count proof.
+
+## Turn 266 | 2026-06-28
+
+- Active supporting plan:
+  `docs/dev/plans/0147-2026-06-28-open-notebook-recoverable-run-polling.md`
+- Goal: harden the Open Notebook client-facing recoverable-run contract so an
+  accepted browser-backed `response_id` remains pollable through pending,
+  recovering, reattach, and completion windows.
+- Planned scope:
+  - preserve the existing `/v1/chat/completions` pending response contract;
+  - harden `GET /v1/responses/{response_id}` with structured readback for
+    recoverable runtime states and structured JSON for true readback faults;
+  - add focused HTTP regression tests for the Open Notebook failure mode;
+  - update endpoint/workflow docs plus the dev journal and fixes log.
+- Implemented:
+  - `auracall_execution_pending` chat-completions payloads now include
+    `response_poll_path` alongside `response_id`;
+  - `GET /v1/responses/{response_id}` catches route-local readback exceptions
+    and returns structured `auracall_response_readback_error` JSON with
+    `response_id` and `response_poll_path`;
+  - focused HTTP tests prove an Open Notebook style browser-backed run can poll
+    as `recovering` and later read back the same id as `completed`.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "Open Notebook"`
+    passed;
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "chat completion"`
+    passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - `pnpm exec biome lint src/http/responsesServer.ts tests/http.responsesServer.test.ts`
+    exited `0` with existing warning-level non-null assertion debt in unrelated
+    portions of `tests/http.responsesServer.test.ts`;
+  - `pnpm run plans:audit -- --keep 147` passed with `Validation errors: 0`;
+  - full `pnpm vitest run tests/http.responsesServer.test.ts` was interrupted
+    after multiple quiet 30s intervals with no failure output.
+- Decision:
+  - Plan 0147 closes as **Accepted Response Polling Hardened**.

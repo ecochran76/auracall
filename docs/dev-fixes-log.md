@@ -1,3 +1,16 @@
+- 2026-06-28: Direct ChatGPT history materialization now emits scrape
+  telemetry in job readback and artifact/file sidecar manifests. The telemetry
+  separates LLM service/provider actions from CDP method counts and actual
+  browser/provider download attempts, so a direct conversation id can prove it
+  did or did not touch account-library/project inventory. Live proof on a
+  paused `wsl-chrome-3` profile materialized one file from conversation
+  `6a0b63f7-cc4c-83ea-b37a-4f094762838d` with
+  `provider.listConversationFiles=1`, no account/project inventory counters,
+  `Target.attachToTarget=4`, `Runtime.evaluate=2`, and
+  `downloads={attempted:1,succeeded:1,failed:0}`. The heavier artifact-rich
+  `all` proof still hit the running stale threshold, so continue Plan 0149 by
+  reducing target attach/reopen churn and preserving failure-time telemetry.
+
 - 2026-06-27: Raw-cache conversation freshness hydration must honor persisted
   row-level completeness metadata, not only loaded detail files or embedded
   `conversationFreshness` records. Plan 0145 live proof kept selecting rows
@@ -18636,3 +18649,18 @@ browser-stage lifecycle observability, not transcript truncation.
   issued a `response_id`, chat-completions and responses endpoints must return
   structured pending/recovering/completed/failure JSON; reserve 500s for true
   unrecoverable server faults.
+- 2026-06-28: The accepted-response polling contract now has route-level HTTP
+  coverage. Retryable chat-completions pending payloads include
+  `response_poll_path`, and `GET /v1/responses/{response_id}` catches readback
+  exceptions locally to return structured `auracall_response_readback_error`
+  JSON with `response_id` and `response_poll_path`. Persisted browser-backed
+  runs in `recovering`/`finalizing` style states remain normal `200` response
+  projections; clients should keep polling the same id until terminal state.
+- 2026-06-28: Treat repeated ChatGPT live-follow provider guards with
+  `passCount=0` as scrape-shape evidence, not just rate-limit tuning evidence.
+  For ChatGPT steady-follow passes where the freshness frontier selected
+  conversations, the collector now skips account-library inventory and reads
+  selected conversation detail before project-file surfaces. Broad inventory
+  paths still keep account-library/project behavior, but targeted artifact-rich
+  chat enrichment should load the chat once, parse DOM/app state, and then
+  iterate download candidates instead of burning the pass on unrelated surfaces.

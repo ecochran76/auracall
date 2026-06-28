@@ -389,12 +389,17 @@ Terminology note:
   before returning, and returns a standard `chat.completion` object. If a
   browser-backed run cannot finish inside the bounded synchronous wait window,
   the endpoint returns `503` with `Retry-After`, `error.type =
-  "auracall_execution_pending"`, and the persisted `response_id` for
+  "auracall_execution_pending"`, `response_id`, and `response_poll_path` for
   `GET /v1/responses/{response_id}` polling instead of holding the client
   request indefinitely. The default wait is 30 seconds; set
   `auracall.chatCompletionSyncTimeoutMs` on a request to tune it. `stream:
   true` is rejected explicitly until the
   streaming adapter is implemented.
+- Once AuraCall has issued a `response_id`, clients should keep polling that
+  same id. `GET /v1/responses/{response_id}` returns structured JSON for
+  pending, recovering, finalizing, completed, failed, and cancelled run states;
+  true readback faults return structured JSON with the `response_id` rather
+  than an empty response.
 - `GET /v1/models` returns the static provider model catalog plus AuraCall
   discovery entries. Effective config-defined and registry-backed agents appear
   as `agent:<agent_id>` model ids usable with `/v1/responses` and non-streaming

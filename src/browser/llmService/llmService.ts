@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+	type BrowserInteractionGovernor,
+	createBrowserInteractionGovernor,
+} from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from "../../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../../config/serviceAccountIdentity.js";
-import {
-	createBrowserInteractionGovernor,
-	type BrowserInteractionGovernor,
-} from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { ResolvedUserConfig } from "../../config.js";
 import {
 	appendChatgptMutationRecord,
@@ -45,6 +45,11 @@ import type {
 	ProjectMemoryMode,
 	ProviderId,
 } from "../providers/domain.js";
+import {
+	recordBrowserScrapeCandidateCount,
+	recordBrowserScrapeProviderAction,
+	snapshotBrowserScrapeTelemetry,
+} from "../providers/scrapeTelemetry.js";
 import type {
 	BrowserProviderActiveMediaMaterializationInput,
 	BrowserProviderListOptions,
@@ -128,6 +133,7 @@ type ConversationArtifactFetchManifest = {
 	generatedAt: string;
 	artifactCount: number;
 	materializedCount: number;
+	scrapeTelemetry?: ReturnType<typeof snapshotBrowserScrapeTelemetry>;
 	entries: ConversationArtifactFetchManifestEntry[];
 };
 
@@ -152,6 +158,7 @@ type ConversationFileFetchManifest = {
 	generatedAt: string;
 	fileCount: number;
 	materializedCount: number;
+	scrapeTelemetry?: ReturnType<typeof snapshotBrowserScrapeTelemetry>;
 	entries: ConversationFileFetchManifestEntry[];
 };
 
@@ -1197,6 +1204,7 @@ export abstract class LlmService {
 			throw new Error(`Project file listing is not supported for ${this.providerId}.`);
 		}
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+		recordBrowserScrapeProviderAction(listOptions, "llmService.listProjectFiles");
 		return this.refreshProjectKnowledgeCache(projectId, listOptions);
 	}
 
@@ -1353,6 +1361,7 @@ export abstract class LlmService {
 			throw new Error(`Account file listing is not supported for ${this.providerId}.`);
 		}
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+		recordBrowserScrapeProviderAction(listOptions, "llmService.listAccountFiles");
 		return this.refreshAccountFilesCache(listOptions);
 	}
 
@@ -1488,6 +1497,7 @@ export abstract class LlmService {
 			await this.buildListOptions(options?.listOptions, { ensurePort: true }),
 			options?.projectId,
 		);
+		recordBrowserScrapeProviderAction(listOptions, "llmService.listConversationFiles");
 		if (this.provider.listConversationFiles) {
 			return this.refreshConversationFilesCache(conversationId, listOptions);
 		}
@@ -1520,6 +1530,7 @@ export abstract class LlmService {
 			await this.buildListOptions(options?.listOptions, { ensurePort: true }),
 			options?.projectId,
 		);
+		recordBrowserScrapeProviderAction(listOptions, "llmService.materializeConversationArtifacts");
 		const context = await this.getConversationContext(conversationId, {
 			projectId: options?.projectId,
 			refresh: options?.refresh ?? true,
@@ -1531,6 +1542,11 @@ export abstract class LlmService {
 				Array.isArray(context.artifacts) ? context.artifacts : [],
 			),
 			options?.maxItems,
+		);
+		recordBrowserScrapeCandidateCount(
+			listOptions,
+			"llmService.materializeConversationArtifacts.artifacts",
+			artifacts.length,
 		);
 		if (artifacts.length === 0) {
 			return { artifacts: [], files: [], manifestPath: null };
@@ -1631,6 +1647,7 @@ export abstract class LlmService {
 			generatedAt: new Date().toISOString(),
 			artifactCount: artifacts.length,
 			materializedCount: materialized.length,
+			scrapeTelemetry: snapshotBrowserScrapeTelemetry(listOptions.scrapeTelemetry),
 			entries: manifestEntries,
 		};
 		await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
@@ -1697,12 +1714,18 @@ export abstract class LlmService {
 			await this.buildListOptions(options?.listOptions, { ensurePort: true }),
 			options?.projectId,
 		);
+		recordBrowserScrapeProviderAction(listOptions, "llmService.materializeConversationFiles");
 		const conversationFiles = limitItems(
 			await this.listConversationFiles(conversationId, {
 				projectId: options?.projectId,
 				listOptions,
 			}),
 			options?.maxItems,
+		);
+		recordBrowserScrapeCandidateCount(
+			listOptions,
+			"llmService.materializeConversationFiles.files",
+			conversationFiles.length,
 		);
 		if (conversationFiles.length === 0) {
 			return { conversationFiles: [], files: [], manifestPath: null };
@@ -1827,6 +1850,7 @@ export abstract class LlmService {
 			generatedAt: new Date().toISOString(),
 			fileCount: conversationFiles.length,
 			materializedCount: materialized.length,
+			scrapeTelemetry: snapshotBrowserScrapeTelemetry(listOptions.scrapeTelemetry),
 			entries: manifestEntries,
 		};
 		await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
@@ -2051,6 +2075,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, {
 			ensurePort: !options?.cacheOnly,
 		});
+		recordBrowserScrapeProviderAction(listOptions, "llmService.getConversationContext");
 		const cacheContext = await this.resolveCacheContext(listOptions);
 		const refresh = options?.refresh !== false;
 		if (!refresh) {
@@ -2541,6 +2566,7 @@ export abstract class LlmService {
 		if (!this.provider.listProjectFiles) {
 			return [];
 		}
+		recordBrowserScrapeProviderAction(listOptions, "provider.listProjectFiles");
 		const files = await this.withRetry(
 			() => this.provider.listProjectFiles?.(projectId, listOptions) as Promise<FileRef[]>,
 			{ action: "listProjectFiles" },
@@ -2557,6 +2583,7 @@ export abstract class LlmService {
 		if (!this.provider.listAccountFiles) {
 			return [];
 		}
+		recordBrowserScrapeProviderAction(listOptions, "provider.listAccountFiles");
 		const files = await this.withRetry(
 			() => this.provider.listAccountFiles?.(listOptions) as Promise<FileRef[]>,
 			{ action: "listAccountFiles" },
@@ -2574,6 +2601,7 @@ export abstract class LlmService {
 		if (!this.provider.listConversationFiles) {
 			return [];
 		}
+		recordBrowserScrapeProviderAction(listOptions, "provider.listConversationFiles");
 		const files = await this.withRetry(
 			() =>
 				this.provider.listConversationFiles?.(conversationId, listOptions) as Promise<FileRef[]>,
@@ -3293,7 +3321,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readPositiveNumber(value: unknown): number | null {
-	return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
+	return typeof value === "number" && Number.isFinite(value) && value > 0
+		? Math.floor(value)
+		: null;
 }
 
 function readNonNegativeNumber(value: unknown): number | null {

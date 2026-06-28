@@ -1,6 +1,7 @@
-import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
+import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
+import type { BrowserScrapeTelemetryRecorder } from "./scrapeTelemetry.js";
 
 export type SelectorList = readonly string[];
 
@@ -59,6 +60,7 @@ export interface BrowserProviderListOptions {
 		startMessageIndex?: number | null;
 		maxMessages?: number | null;
 	};
+	scrapeTelemetry?: BrowserScrapeTelemetryRecorder;
 }
 
 export interface ProviderUserIdentity {

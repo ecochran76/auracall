@@ -255,6 +255,12 @@ Current limits:
     is still loading or thinking. Startup recovery uses persisted submitted-tab
     evidence to reattach stranded ChatGPT work; if AuraCall cannot prove the
     original tab, it fails the run instead of replaying the prompt.
+  - Once a response id exists, `GET /v1/responses/{response_id}` is the
+    durable client polling surface. Recoverable states such as pending browser
+    work, `recovering`, and `finalizing` return structured JSON with the same
+    id; true readback faults return structured JSON with `error.type =
+    "auracall_response_readback_error"`, `response_id`, and
+    `response_poll_path`.
   - Passive DOM evidence for a running ChatGPT prompt must still be attached to
     the submitted conversation target. Library, root, project, or wrong-chat
     targets do not count as running-prompt evidence and should produce a

@@ -408,6 +408,12 @@ export function createChatgptAccountMirrorMetadataCollector(
 								listOptions,
 								pacer,
 								observation: createAccountMirrorObservationContext(input, client),
+								prioritizeConversations:
+									(input.sweepMode ?? "steady_follow") === "steady_follow" &&
+									frontier.detailConversations.length > 0,
+								skipAccountLibraryInventory:
+									(input.sweepMode ?? "steady_follow") === "steady_follow" &&
+									frontier.detailConversations.length > 0,
 							},
 						)
 					: input.provider === "gemini"
@@ -1283,6 +1289,8 @@ export async function readBoundedChatgptDetailInventory(
 				pacer?: BrowserInteractionGovernor;
 				observation?: AccountMirrorDomDriftObservationContext;
 				providerCallTimeoutMs?: number | null;
+				prioritizeConversations?: boolean;
+				skipAccountLibraryInventory?: boolean;
 		  } = 6,
 ): Promise<{
 	artifacts: ConversationArtifact[];
@@ -1296,17 +1304,23 @@ export async function readBoundedChatgptDetailInventory(
 	const listOptions = typeof options === "number" ? undefined : options.listOptions;
 	const pacer = typeof options === "number" ? undefined : options.pacer;
 	const observation = typeof options === "number" ? undefined : options.observation;
+	const prioritizeConversations =
+		typeof options === "number" ? false : options.prioritizeConversations === true;
+	const skipAccountLibraryInventory =
+		typeof options === "number" ? false : options.skipAccountLibraryInventory === true;
 	const providerCallTimeoutMs =
 		typeof options === "number"
 			? CHATGPT_DETAIL_READ_TIMEOUT_MS
 			: (options.providerCallTimeoutMs ?? CHATGPT_DETAIL_READ_TIMEOUT_MS);
 	const hasAttachmentSurfaces = projects.length > 0 || conversations.length > 0;
-	const library = await readBoundedChatgptLibraryInventory(client, limit, {
-		listOptions,
-		pacer,
-		observation,
-		providerCallTimeoutMs,
-	});
+	const library = skipAccountLibraryInventory
+		? { artifacts: [], files: [], truncated: false }
+		: await readBoundedChatgptLibraryInventory(client, limit, {
+				listOptions,
+				pacer,
+				observation,
+				providerCallTimeoutMs,
+			});
 	const remainingRows =
 		hasAttachmentSurfaces && limit > 0
 			? Math.max(1, limit - library.files.length)
@@ -1323,6 +1337,7 @@ export async function readBoundedChatgptDetailInventory(
 				}
 			: {
 					...options,
+					prioritizeConversations,
 					providerCallTimeoutMs,
 				},
 	);

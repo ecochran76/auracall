@@ -414,6 +414,7 @@ interface HttpErrorPayload {
 		type: string;
 		response_id?: string;
 		response_status?: string;
+		response_poll_path?: string;
 		retry_after_seconds?: number;
 	};
 }
@@ -3462,12 +3463,9 @@ export async function createResponsesHttpServer(
 						});
 						const pendingResponse =
 							(await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
-						sendJson(
-							res,
-							503,
-							createChatCompletionPendingResponse(pendingResponse),
-							{ "Retry-After": String(CHAT_COMPLETION_RETRY_AFTER_SECONDS) },
-						);
+						sendJson(res, 503, createChatCompletionPendingResponse(pendingResponse), {
+							"Retry-After": String(CHAT_COMPLETION_RETRY_AFTER_SECONDS),
+						});
 						return;
 					}
 					scheduleAccountMirrorSchedulerFollowUp(0, "response-drain-completed");
@@ -3747,7 +3745,14 @@ export async function createResponsesHttpServer(
 
 			const responseId = matchResponseRoute(url.pathname);
 			if (req.method === "GET" && responseId) {
-				const response = await responsesService.readResponse(responseId);
+				let response: Awaited<ReturnType<typeof responsesService.readResponse>>;
+				try {
+					response = await responsesService.readResponse(responseId);
+				} catch (error) {
+					logger(error instanceof Error ? error.message : String(error));
+					sendJson(res, 500, createResponseReadbackErrorPayload(responseId, error));
+					return;
+				}
 				if (!response) {
 					sendJson(res, 404, {
 						error: {
@@ -6910,7 +6915,19 @@ function createChatCompletionPendingResponse(response: ExecutionResponse): HttpE
 				"chat/completions wait window. Poll /v1/responses/{response_id} or retry later.",
 			response_id: response.id,
 			response_status: response.status,
+			response_poll_path: `/v1/responses/${encodeURIComponent(response.id)}`,
 			retry_after_seconds: CHAT_COMPLETION_RETRY_AFTER_SECONDS,
+		},
+	};
+}
+
+function createResponseReadbackErrorPayload(responseId: string, error: unknown): HttpErrorPayload {
+	return {
+		error: {
+			type: "auracall_response_readback_error",
+			message: error instanceof Error ? error.message : "Response readback failed.",
+			response_id: responseId,
+			response_poll_path: `/v1/responses/${encodeURIComponent(responseId)}`,
 		},
 	};
 }
