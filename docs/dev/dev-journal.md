@@ -1,3 +1,30 @@
+## 2026-06-28 | Plan 0150 Live-Follow Cycle Phase Ledger
+
+- Focus: capture the live-follow starvation issue as a control-plane problem:
+  bounded cycles need a durable phase ledger and decision tree, not another
+  rate-limit guard.
+- Current finding:
+  - existing collector evidence reports phases and cursors for identity,
+    projects, root conversations, project conversations, file library, and
+    detail inventory;
+  - completion persists pass/cooldown/materialization state but has no
+    cross-cycle phase ledger;
+  - refresh requests carry `sweepMode` only, so completion cannot yet tell the
+    collector to resume a later phase instead of starting with rails/projects.
+- Result:
+  - opened Plan 0150;
+  - added a durable `liveFollowCycle` ledger to completion readback/store state;
+  - added a pure phase decision helper and focused tests for detail-cursor,
+    freshness-frontier, and project-conversation continuation decisions;
+  - added `live_follow_phase_decision` lifecycle events.
+- Remaining gap:
+  - refresh requests still carry `sweepMode` only; the next slice must thread a
+    requested phase/work class into refresh and collector code so the decision
+    changes browser behavior.
+- Runtime posture:
+  - live-follow remains paused;
+  - installed `auracall-api.service` was not restarted.
+
 ## 2026-06-28 | Plan 0149 Scoped Single-Chat Scrape Cleanup
 
 - Focus: execute the end-to-end Plan 0149 follow-up after telemetry proved

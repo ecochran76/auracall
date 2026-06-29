@@ -1,3 +1,14 @@
+- 2026-06-28: Live-follow needs a durable phase ledger in addition to
+  freshness-frontier row selection. Plan 0145 can decide which recent
+  conversation rows are fresh enough to skip, but it does not prevent a new
+  completion cycle from re-entering root/project rail work before pending
+  detail/full-chat scraping. Persist `liveFollowCycle` on completion readback
+  and choose the next phase from collector evidence, freshness-frontier
+  selections, project-conversation cursors, attachment/detail cursors, and
+  remaining detail surfaces. The next implementation step is to carry that
+  requested phase into refresh/collector inputs so browser work honors the
+  decision instead of merely reporting it.
+
 - 2026-06-28: Direct ChatGPT materialization needs a scoped CDP session, not
   repeated provider attaches. `materializeConversationFiles` originally listed
   files and then downloaded through separate ChatGPT tab connections, producing

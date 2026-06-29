@@ -1,5 +1,38 @@
 # RUNBOOK
 
+## Turn 298 | 2026-06-28
+
+- Active supporting plan:
+  `docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md`
+- Goal: define and implement the live-follow decision tree needed to keep
+  bounded cycles from restarting at root rails when later phases are pending.
+- Current evidence:
+  - Plan 0145 solved recent-row freshness frontier selection, but not
+    cross-cycle phase starvation;
+  - Plan 0149 proved direct single-chat scraping is the right target behavior
+    for detail/full-chat phases once a chat is loaded;
+  - `AccountMirrorCollectorPhaseProgressEvidence` already reports collector
+    phases and cursors, while `AccountMirrorCompletionOperation` lacks a
+    durable phase ledger and `AccountMirrorRefreshRequest` lacks a requested
+    phase/work-class contract.
+- Result:
+  - opened Plan 0150 and wired it into `ROADMAP.md`, this runbook, and the dev
+    journal;
+  - added a persisted `liveFollowCycle` ledger to completion readback/store
+    state;
+  - added a pure phase decision helper that chooses pending detail/full-chat
+    work before returning to project or rail phases when detail cursors,
+    freshness-frontier selections, or remaining detail surfaces exist;
+  - added `live_follow_phase_decision` lifecycle events.
+- Remaining scope:
+  - thread requested phase/work class into refresh and collector inputs;
+  - prove multi-cycle progress reaches detail/full-chat scraping instead of
+    always beginning again with root conversation rails.
+- Runtime posture:
+  - live-follow remains paused;
+  - installed `auracall-api.service` was not restarted in this plan-opening
+    slice.
+
 ## Turn 297 | 2026-06-28
 
 - Active supporting plan:
