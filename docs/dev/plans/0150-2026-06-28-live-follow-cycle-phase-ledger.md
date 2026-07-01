@@ -239,13 +239,16 @@ operation state and latest mirror evidence:
   sidebar, or click-heavy project-row fallback work.
 - Normal installed service evidence after reinstall:
   `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` resumed,
-  reported `projects:completed projects=0`, then advanced to
-  `root-conversations:started`; it was paused again by operator request before
-  further provider work.
+  reported `projects:completed projects=0`, advanced through
+  `root-conversations`, reached `detail-inventory`, scanned `4` conversation
+  detail surfaces, completed pass `1`, and set
+  `liveFollowCycle.nextPhase=detail-inventory` because the freshness frontier
+  selected `4` conversation rows for detail.
 - All `chatgpt/wsl-chrome-3` live-follow completions on the normal service
   were left paused. The isolated proof target entered backoff after a busy
-  attempt, so Plan 0150 remains open pending a clean installed proof that
-  reaches a later-phase/detail continuation.
+  attempt, so Plan 0150 remains open pending a clean next-cycle installed proof
+  that uses the requested `detail-inventory` phase instead of restarting at root
+  rails.
 - Focused coverage:
   - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit --pretty false`

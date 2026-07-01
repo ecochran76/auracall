@@ -39270,7 +39270,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   spend the pass walking/clicking project rows before detail scraping. Installed
   proof showed the prior ambiguity clearly: `chatgpt/wsl-chrome-3` reached
   `identity:completed`, stalled at `projects:started`, then after reinstall
-  advanced to `projects:completed projects=0` and
-  `root-conversations:started`; no single-chat/detail continuation was proven
-  yet. All normal-service `chatgpt/wsl-chrome-3` live-follow completions were
-  left paused.
+  completed pass `1`, reached `detail-inventory`, scanned `4` conversation
+  detail surfaces, and set `liveFollowCycle.nextPhase=detail-inventory`. The
+  remaining Plan 0150 gap is the next-cycle proof that uses the requested
+  detail phase directly instead of restarting at root rails. All normal-service
+  `chatgpt/wsl-chrome-3` live-follow completions were left paused.

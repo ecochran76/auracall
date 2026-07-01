@@ -16,8 +16,11 @@
   - isolated proof operations initially showed `identity:completed` followed by
     `projects:started` with `passCount=0`;
   - after reinstall, normal installed service operation
-    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` advanced to
-    `projects:completed projects=0` and `root-conversations:started`;
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` advanced
+    through `projects:completed projects=0`, `root-conversations`,
+    `detail-inventory:completed`, and pass `1`;
+  - the pass scanned `4` conversation detail surfaces and set
+    `liveFollowCycle.nextPhase=detail-inventory`;
   - that operation was paused again, and all normal-service
     `chatgpt/wsl-chrome-3` live-follow completions were left paused.
 - Validation:
@@ -26,8 +29,9 @@
   - `pnpm exec tsc --noEmit --pretty false` passed;
   - `pnpm exec biome check src/browser/providers/types.ts src/browser/providers/chatgptAdapter.ts src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/accountMirror/completionService.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/completionService.test.ts`
     passed.
-- Remaining gap: no installed single-chat/detail continuation proof yet; Plan
-  0150 remains open.
+- Remaining gap: no next-cycle requested-phase proof yet; Plan 0150 remains
+  open until a later wake uses `detail-inventory` directly instead of
+  restarting at root rails.
 
 ## Turn 299 | 2026-06-30
 
