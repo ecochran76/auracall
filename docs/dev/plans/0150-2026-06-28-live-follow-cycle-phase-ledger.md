@@ -223,3 +223,30 @@ operation state and latest mirror evidence:
 - Remaining implementation gap: installed/runtime proof still needs to show a
   continuation across a wake boundary that does not restart at the root rail
   when a later phase is pending.
+
+### 2026-06-30 | Installed Proof Instrumentation And Project Scrape Blocker
+
+- Added in-flight `collector_progress` lifecycle events to account-mirror
+  completion readback so a running pass reports phases such as
+  `identity:started`, `identity:completed`, `projects:started`, and
+  `root-conversations:started` before a refresh result exists.
+- Installed proof server on `127.0.0.1:18150` confirmed the previous
+  pass-0 ambiguity: ChatGPT `wsl-chrome-3` reached identity, then remained in
+  `projects:started`; no single-chat/detail scrape proof was produced.
+- ChatGPT account-mirror project reads now pass
+  `disableProjectClickFallback=true` and the ChatGPT adapter honors that by
+  using a DOM-only project link scrape path instead of navigation, dialog,
+  sidebar, or click-heavy project-row fallback work.
+- Normal installed service evidence after reinstall:
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` resumed,
+  reported `projects:completed projects=0`, then advanced to
+  `root-conversations:started`; it was paused again by operator request before
+  further provider work.
+- All `chatgpt/wsl-chrome-3` live-follow completions on the normal service
+  were left paused. The isolated proof target entered backoff after a busy
+  attempt, so Plan 0150 remains open pending a clean installed proof that
+  reaches a later-phase/detail continuation.
+- Focused coverage:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome check src/browser/providers/types.ts src/browser/providers/chatgptAdapter.ts src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/accountMirror/completionService.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/completionService.test.ts`

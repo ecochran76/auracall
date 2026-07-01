@@ -499,6 +499,25 @@ describe("ChatGPT account mirror metadata collector", () => {
 		);
 	});
 
+	test("passes project click fallback suppression into provider project reads", async () => {
+		const client = {
+			listProjects: vi.fn(async () => []),
+		};
+
+		await expect(
+			readBoundedProjects(client, 6, {
+				listOptions: { disableProjectClickFallback: true },
+			}),
+		).resolves.toEqual({
+			items: [],
+			truncated: false,
+		});
+
+		expect(client.listProjects).toHaveBeenCalledWith(
+			expect.objectContaining({ disableProjectClickFallback: true }),
+		);
+	});
+
 	test("can tolerate transient Gemini project conversation route failures", async () => {
 		const client = {
 			listConversations: vi.fn(async () => {

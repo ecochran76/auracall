@@ -18707,3 +18707,10 @@ browser-stage lifecycle observability, not transcript truncation.
   browser download path for artifacts, and bound optional file enumeration so
   artifact assets complete with explicit telemetry instead of a stale-running
   job.
+- 2026-06-30: ChatGPT live-follow account-mirror passes need in-flight phase
+  evidence and DOM-only project discovery. A pass that sits at `passCount=0`
+  can be doing real provider work; expose collector phases as completion
+  lifecycle events before refresh completion. For account-mirror project reads,
+  avoid ChatGPT's click-heavy sidebar project fallback and use a direct DOM
+  link scrape so the cycle can move on to root conversations and detail
+  scraping instead of restarting or burning the pass in project rails.

@@ -746,6 +746,56 @@ describe("account mirror completion service", () => {
 		service.control({ id: "acctmirror_phase_contract", action: "cancel" });
 	});
 
+	test("records collector progress lifecycle events while refresh is running", async () => {
+		const requestRefresh = vi.fn(async (request) => {
+			await request.onCollectorProgress?.({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				sweepMode: "steady_follow",
+				phase: "detail-inventory",
+				event: "started",
+				observedAt: "2026-04-30T12:00:01.000Z",
+				conversationsObserved: 1,
+			});
+			return new Promise<AccountMirrorRefreshResult>(() => {});
+		});
+		const service = createAccountMirrorCompletionService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-04-30T12:00:00.000Z"),
+			}),
+			refreshService: {
+				requestRefresh,
+			},
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			generateId: () => "acctmirror_progress_events",
+		});
+
+		service.start({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			sweepMode: "steady_follow",
+		});
+
+		await waitFor(() =>
+			Boolean(
+				service
+					.read("acctmirror_progress_events")
+					?.lifecycleEvents?.some((event) => event.type === "collector_progress"),
+			),
+		);
+		expect(service.read("acctmirror_progress_events")?.lifecycleEvents).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "collector_progress",
+					status: "running",
+					message: "Collector progress: detail-inventory:started conversations=1.",
+				}),
+			]),
+		);
+		service.control({ id: "acctmirror_progress_events", action: "cancel" });
+	});
+
 	test("full-sweep live follow queues snapshot-refresh history materialization after a refresh pass", async () => {
 		const createJob = vi.fn(async () => ({
 			object: "history_materialization_job_create_result" as const,
@@ -2263,16 +2313,18 @@ describe("account mirror completion service", () => {
 
 		await waitFor(() => service.read("acctmirror_completion_test")?.status === "completed");
 
-		expect(requestRefresh).toHaveBeenCalledWith({
-			provider: "chatgpt",
-			runtimeProfileId: "default",
-			sweepMode: "steady_follow",
-			requestedPhase: null,
-			explicitRefresh: true,
-			ignoreMinimumInterval: true,
-			queueTimeoutMs: 0,
-			collectorTimeoutMs: 900_000,
-		});
+		expect(requestRefresh).toHaveBeenCalledWith(
+			expect.objectContaining({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				sweepMode: "steady_follow",
+				requestedPhase: null,
+				explicitRefresh: true,
+				ignoreMinimumInterval: true,
+				queueTimeoutMs: 0,
+				collectorTimeoutMs: 900_000,
+			}),
+		);
 		expect(service.read("acctmirror_completion_test")).toMatchObject({
 			status: "completed",
 			passCount: 1,

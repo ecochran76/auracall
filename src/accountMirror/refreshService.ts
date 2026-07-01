@@ -50,6 +50,7 @@ import type {
 } from "./politePolicy.js";
 import type {
 	AccountMirrorCollectorPhase,
+	AccountMirrorCollectorPhaseProgressEvidence,
 	AccountMirrorMetadataCounts,
 	AccountMirrorMetadataEvidence,
 	AccountMirrorStatusEntry,
@@ -71,6 +72,9 @@ export interface AccountMirrorRefreshRequest {
 	queuePollMs?: number;
 	collectorTimeoutMs?: number;
 	cleanupManagedBrowserAfterRefresh?: boolean;
+	onCollectorProgress?: (
+		progress: AccountMirrorCollectorPhaseProgressEvidence,
+	) => Promise<void> | void;
 }
 
 export interface AccountMirrorRefreshBrowserLifecycle {
@@ -396,6 +400,7 @@ export function createAccountMirrorRefreshService(input: {
 						},
 						onProgress: (progress) => {
 							latestCollectorProgressRef.current = progress;
+							void request.onCollectorProgress?.(progress);
 						},
 						abortSignal: collectorAbort.signal,
 						shouldYield: () => {

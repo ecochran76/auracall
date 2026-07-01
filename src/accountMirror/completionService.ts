@@ -13,6 +13,7 @@ import {
 } from "./refreshService.js";
 import type {
 	AccountMirrorCollectorPhase,
+	AccountMirrorCollectorPhaseProgressEvidence,
 	AccountMirrorStatusEntry,
 	AccountMirrorStatusRegistry,
 } from "./statusRegistry.js";
@@ -61,6 +62,7 @@ export interface AccountMirrorCompletionLifecycleEvent {
 		| "campaign_policy_upgraded"
 		| "live_follow_policy_upgraded"
 		| "live_follow_phase_decision"
+		| "collector_progress"
 		| "account_library_catchup_queued"
 		| "account_library_catchup_skipped";
 	status: AccountMirrorCompletionOperation["status"];
@@ -381,6 +383,14 @@ export function createAccountMirrorCompletionService(input: {
 						explicitRefresh: true,
 						ignoreMinimumInterval: refreshOperation.mode === "bounded",
 						queueTimeoutMs: 0,
+						onCollectorProgress: (progress) => {
+							appendLifecycleEvent(id, {
+								type: "collector_progress",
+								status: operations.get(id)?.status ?? refreshOperation.status,
+								previousStatus: refreshOperation.status,
+								message: formatCollectorProgressLifecycleMessage(progress),
+							});
+						},
 						...(shouldCleanupManagedBrowserAfterRefresh(refreshOperation, pass)
 							? { cleanupManagedBrowserAfterRefresh: true }
 							: {}),
@@ -1186,6 +1196,24 @@ function liveFollowCyclePhaseToCollectorPhase(
 		return phase;
 	}
 	return null;
+}
+
+function formatCollectorProgressLifecycleMessage(
+	progress: AccountMirrorCollectorPhaseProgressEvidence,
+): string {
+	const counts = [
+		progress.projectsObserved === undefined ? null : `projects=${progress.projectsObserved}`,
+		progress.conversationsObserved === undefined
+			? null
+			: `conversations=${progress.conversationsObserved}`,
+		progress.artifactsObserved === undefined ? null : `artifacts=${progress.artifactsObserved}`,
+		progress.filesObserved === undefined ? null : `files=${progress.filesObserved}`,
+	]
+		.filter(Boolean)
+		.join(" ");
+	return counts
+		? `Collector progress: ${progress.phase}:${progress.event} ${counts}.`
+		: `Collector progress: ${progress.phase}:${progress.event}.`;
 }
 
 function normalizeMaterializationForce(value: boolean | null | undefined): boolean {

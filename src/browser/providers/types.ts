@@ -55,6 +55,7 @@ export interface BrowserProviderListOptions {
 	expectedServiceAccountId?: string | null;
 	identityPreflightFallbackIdentity?: ProviderUserIdentity | null;
 	skipFeatureSignature?: boolean;
+	disableProjectClickFallback?: boolean;
 	abortSignal?: AbortSignal;
 	accountMirrorContextChunk?: {
 		startMessageIndex?: number | null;

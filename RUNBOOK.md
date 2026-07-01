@@ -1,5 +1,34 @@
 # RUNBOOK
 
+## Turn 300 | 2026-06-30
+
+- Active plan: `docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md`
+- Goal: prove live-follow cycles continue later phases instead of restarting at
+  root/project rails, and answer whether single-chat/detail scrape is actually
+  reached.
+- Implemented:
+  - completion readback now records in-flight `collector_progress` lifecycle
+    events from account-mirror refreshes;
+  - ChatGPT account-mirror project reads set `disableProjectClickFallback=true`;
+  - ChatGPT `listProjects` honors that flag with DOM-only project-link scraping,
+    skipping navigation/dialog/sidebar prep and click-heavy project-row fallback.
+- Installed proof:
+  - isolated proof operations initially showed `identity:completed` followed by
+    `projects:started` with `passCount=0`;
+  - after reinstall, normal installed service operation
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` advanced to
+    `projects:completed projects=0` and `root-conversations:started`;
+  - that operation was paused again, and all normal-service
+    `chatgpt/wsl-chrome-3` live-follow completions were left paused.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`
+    passed with 103 tests;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - `pnpm exec biome check src/browser/providers/types.ts src/browser/providers/chatgptAdapter.ts src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/accountMirror/completionService.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/completionService.test.ts`
+    passed.
+- Remaining gap: no installed single-chat/detail continuation proof yet; Plan
+  0150 remains open.
+
 ## Turn 299 | 2026-06-30
 
 - Active supporting plan:

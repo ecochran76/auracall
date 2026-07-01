@@ -39263,3 +39263,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `Runtime.evaluate=10`, `Browser.setDownloadBehavior=2`,
   `downloads={attempted:2,succeeded:2,failed:0}`. Live-follow remained paused
   and the installed API service was not restarted.
+- 2026-06-30: Continued Plan 0150 live-follow cycle work. Added
+  `collector_progress` lifecycle events to completion readback and changed
+  ChatGPT account-mirror project reads to request a DOM-only project link
+  scrape (`disableProjectClickFallback=true`) so live-follow cycles do not
+  spend the pass walking/clicking project rows before detail scraping. Installed
+  proof showed the prior ambiguity clearly: `chatgpt/wsl-chrome-3` reached
+  `identity:completed`, stalled at `projects:started`, then after reinstall
+  advanced to `projects:completed projects=0` and
+  `root-conversations:started`; no single-chat/detail continuation was proven
+  yet. All normal-service `chatgpt/wsl-chrome-3` live-follow completions were
+  left paused.

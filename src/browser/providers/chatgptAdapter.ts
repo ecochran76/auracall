@@ -5985,7 +5985,10 @@ async function readCurrentProject(client: ChromeClient): Promise<Project | null>
 	};
 }
 
-async function scrapeChatgptProjects(client: ChromeClient): Promise<Project[]> {
+async function scrapeChatgptProjects(
+	client: ChromeClient,
+	options: { disableClickFallback?: boolean } = {},
+): Promise<Project[]> {
 	const { result } = await client.Runtime.evaluate({
 		expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -6029,7 +6032,7 @@ async function scrapeChatgptProjects(client: ChromeClient): Promise<Project[]> {
 		returnByValue: true,
 	});
 	let probes = (result?.value ?? []) as ChatgptProjectLinkProbe[];
-	if (probes.length === 0) {
+	if (probes.length === 0 && options.disableClickFallback !== true) {
 		probes = await scrapeChatgptProjectsFromSidebarButtons(client);
 	}
 	return probes.map((project) => ({
@@ -10363,6 +10366,9 @@ export function createChatgptAdapter(): Pick<
 				);
 				const { client } = connection;
 				try {
+					if (currentOptions?.disableProjectClickFallback === true) {
+						return await scrapeChatgptProjects(client, { disableClickFallback: true });
+					}
 					await assertChatgptExpectedIdentity(client, currentOptions);
 					await navigateToChatgptUrl(client, CHATGPT_HOME_URL);
 					await dismissCreateProjectDialogIfOpen(client.Runtime, {

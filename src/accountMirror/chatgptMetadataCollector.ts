@@ -171,6 +171,7 @@ function createAccountMirrorListOptions(
 		...(abortSignal ? { abortSignal } : {}),
 		...(interactionGovernor ? { interactionGovernor } : {}),
 		tabLifecycle: "dispose-new",
+		disableProjectClickFallback: true,
 	};
 }
 
