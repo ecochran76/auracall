@@ -1,5 +1,33 @@
 # RUNBOOK
 
+## Turn 301 | 2026-06-30
+
+- Active plan:
+  `docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md`
+- Goal: complete Plan 0150 by proving a later live-follow wake uses the
+  persisted requested detail phase instead of restarting at project/root rails.
+- Installed proof:
+  - resumed `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae`
+    from paused pass `1` with `liveFollowCycle.nextPhase=detail-inventory`;
+  - the operation waited until `2026-07-01T01:14:36.506Z`;
+  - pass `2` emitted `identity:started`, `identity:completed`, then
+    `detail-inventory:started projects=0 conversations=4`;
+  - pass `2` completed with
+    `detail-inventory:completed projects=0 conversations=4 artifacts=0 files=0`;
+  - refresh readback showed
+    `lastRefresh.metadataEvidence.countEvidence.observedThisPass.projects=0`,
+    `lastRefresh.metadataEvidence.countEvidence.observedThisPass.conversations=4`,
+    and `lastRefresh.metadataEvidence.detailScannedThisPass={projects:0,
+    conversations:4, total:4}`;
+  - no new post-resume project/root/project-conversation progress events
+    occurred before detail inventory.
+- Result:
+  - Plan 0150 closed as accepted;
+  - `chatgpt/wsl-chrome-3` live-follow operation was paused again at
+    `passCount=2`;
+  - roadmap moved Plan 0150 from active supporting plan to completed supporting
+    plan.
+
 ## Turn 300 | 2026-06-30
 
 - Active plan: `docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md`

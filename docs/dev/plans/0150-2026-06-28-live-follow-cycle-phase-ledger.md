@@ -1,6 +1,6 @@
 # Live-Follow Cycle Phase Ledger | 0150-2026-06-28
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -13,23 +13,19 @@ chat scraping over multiple wakes without starving the later phases."
 
 ## Current State
 
-- Plan 0145 fixed reverse-mtime freshness frontier selection for recent
-  conversation rows.
-- Plan 0148 made steady-follow prioritize frontier-selected ChatGPT
-  conversations before account-library/project inventory in the narrow detail
-  pass.
-- Plan 0149 proved direct single-chat artifact scraping can succeed with
-  bounded DOM/CDP traffic and no broad account/project fanout.
-- `AccountMirrorCollectorPhaseProgressEvidence` already records collector
-  phase progress for `identity`, `projects`, `root-conversations`,
-  `project-conversations`, `chatgpt-library`, `detail-inventory`, and
-  `complete`.
-- `AccountMirrorCompletionOperation` persists pass count, cooldowns, last
-  refresh, materialization state, and account-library catch-up state, but it
-  does not persist a live-follow cycle phase ledger or next-surface decision.
-- `AccountMirrorRefreshRequest` accepts `sweepMode`, but it does not accept a
-  requested collector phase, work class, or resume cursor that completion can
-  use to prevent cross-cycle starvation.
+- Accepted. Completion now persists a live-follow cycle ledger, derives the
+  next collector phase from mirror evidence, threads `requestedPhase` into the
+  refresh/collector path, and exposes phase decisions plus in-flight collector
+  progress in completion readback.
+- ChatGPT account-mirror reads honor requested `detail-inventory` continuation
+  by keeping identity verification while skipping project, root-conversation,
+  project-conversation, and account-library reads when prior evidence identifies
+  concrete target conversation ids.
+- Installed runtime proof on `chatgpt/wsl-chrome-3` completed a wake-boundary
+  continuation: pass `1` selected `detail-inventory`, the resumed pass `2`
+  woke at `2026-07-01T01:14:37Z`, entered `detail-inventory` directly after
+  identity, observed `projects=0`, `conversations=4`, and did not emit new
+  project/root rail progress events.
 
 ## Problem Statement
 
@@ -177,7 +173,7 @@ operation state and latest mirror evidence:
   finish in one pass.
 - [x] Completion readback exposes current phase, next phase, and decision
   reason.
-- [ ] Installed proof shows at least one continuation across a wake boundary
+- [x] Installed proof shows at least one continuation across a wake boundary
   that does not restart at root rail when a later phase is pending.
 
 ## Progress Evidence
@@ -253,3 +249,32 @@ operation state and latest mirror evidence:
   - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit --pretty false`
   - `pnpm exec biome check src/browser/providers/types.ts src/browser/providers/chatgptAdapter.ts src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/accountMirror/completionService.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/completionService.test.ts`
+
+### 2026-06-30 | Accepted Wake-Boundary Detail Continuation
+
+- Installed operation
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` was resumed
+  from paused state with `liveFollowCycle.nextPhase=detail-inventory`.
+- The operation idled until the configured wake at
+  `2026-07-01T01:14:36.506Z`, then started pass `2`.
+- Post-wake lifecycle evidence:
+  - `2026-07-01T01:14:37.001Z`:
+    `Collector progress: identity:started.`
+  - `2026-07-01T01:14:39.550Z`:
+    `Collector progress: identity:completed.`
+  - `2026-07-01T01:14:39.550Z`:
+    `Collector progress: detail-inventory:started projects=0 conversations=4.`
+  - `2026-07-01T01:15:52.455Z`:
+    `Collector progress: detail-inventory:completed projects=0 conversations=4 artifacts=0 files=0.`
+- Pass `2` refresh readback:
+  - `passCount=2`
+  - `lastRefresh.status=completed`
+  - `lastRefresh.metadataEvidence.countEvidence.observedThisPass.projects=0`
+  - `lastRefresh.metadataEvidence.countEvidence.observedThisPass.conversations=4`
+  - `lastRefresh.metadataEvidence.detailScannedThisPass={projects:0, conversations:4, total:4}`
+  - `lastRefresh.metadataEvidence.collectorProgress.phase=complete`
+- No post-resume `projects`, `root-conversations`, or
+  `project-conversations` collector progress events occurred before the
+  requested detail phase. The live-follow operation was paused again after the
+  proof.
+- Plan 0150 closes as accepted.

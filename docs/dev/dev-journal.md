@@ -1,3 +1,22 @@
+## 2026-06-30 | Plan 0150 Accepted Wake-Boundary Proof
+
+- Focus: close Plan 0150 with installed proof that a later live-follow wake
+  uses the requested detail phase rather than restarting at root/project rails.
+- Evidence:
+  - resumed `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae`
+    from paused pass `1` with `liveFollowCycle.nextPhase=detail-inventory`;
+  - after waiting until `2026-07-01T01:14:36.506Z`, pass `2` emitted
+    `identity:started`, `identity:completed`, then
+    `detail-inventory:started projects=0 conversations=4`;
+  - pass `2` completed with `observedThisPass.projects=0`,
+    `observedThisPass.conversations=4`, and
+    `detailScannedThisPass={projects:0, conversations:4, total:4}`.
+- Result:
+  - Plan 0150 is closed as accepted;
+  - `chatgpt/wsl-chrome-3` live-follow was paused again at `passCount=2`;
+  - no post-resume project/root/project-conversation collector events occurred
+    before the requested detail phase.
+
 ## 2026-06-30 | Plan 0150 Requested Phase Contract
 
 - Focus: make Plan 0150's persisted live-follow phase decision affect the next

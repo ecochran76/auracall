@@ -9,7 +9,7 @@ Lane: P01
 
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
-- Active live-follow supporting plan:
+- Completed live-follow supporting plan:
   [docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md](docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md)
 - Completed live-follow supporting plan:
   [docs/dev/plans/0145-2026-06-27-live-follow-reverse-mtime-frontier.md](docs/dev/plans/0145-2026-06-27-live-follow-reverse-mtime-frontier.md)

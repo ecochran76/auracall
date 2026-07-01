@@ -18707,6 +18707,13 @@ browser-stage lifecycle observability, not transcript truncation.
   browser download path for artifacts, and bound optional file enumeration so
   artifact assets complete with explicit telemetry instead of a stale-running
   job.
+- 2026-06-30: Plan 0150 accepted proof shows live-follow can carry a later
+  requested phase across a real wake boundary. The decisive evidence is not
+  only a `liveFollowCycle.nextPhase=detail-inventory` ledger entry; the next
+  installed pass must emit `detail-inventory:started` immediately after
+  identity and must not emit new project/root rail progress first. Preserve
+  that distinction for future live-follow audits.
+
 - 2026-06-30: ChatGPT live-follow account-mirror passes need in-flight phase
   evidence and DOM-only project discovery. A pass that sits at `passCount=0`
   can be doing real provider work; expose collector phases as completion
