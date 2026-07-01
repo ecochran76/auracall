@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 299 | 2026-06-30
+
+- Active supporting plan:
+  `docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md`
+- Goal: continue Plan 0150 by turning the persisted phase decision into a
+  refresh/collector contract.
+- Result:
+  - added `requestedPhase` to `AccountMirrorRefreshRequest` and
+    `AccountMirrorMetadataCollectorInput`;
+  - completion now sends the live-follow cycle `nextPhase` into the next
+    refresh when it maps to a collector phase;
+  - ChatGPT requested `detail-inventory` continuation skips project/root/project
+    conversation/account-library reads when prior evidence has concrete target
+    conversation ids;
+  - ChatGPT requested `project-conversations` continuation skips the root rail
+    and resumes project conversation work.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/accountMirror/completionService.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`.
+- Remaining gate:
+  - installed/runtime proof still needs to show a continuation across a wake
+    boundary that does not restart at the root rail when a later phase is
+    pending.
+
 ## Turn 298 | 2026-06-28
 
 - Active supporting plan:

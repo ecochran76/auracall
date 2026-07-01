@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { AccountMirrorCompletionStore } from "./completionStore.js";
 import {
 	type AccountMirrorLiveFollowCycleLedger,
+	type AccountMirrorLiveFollowCyclePhase,
 	deriveLiveFollowCycleLedger,
 } from "./liveFollowCycleDecision.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
@@ -10,7 +11,11 @@ import {
 	type AccountMirrorRefreshResult,
 	type AccountMirrorRefreshService,
 } from "./refreshService.js";
-import type { AccountMirrorStatusEntry, AccountMirrorStatusRegistry } from "./statusRegistry.js";
+import type {
+	AccountMirrorCollectorPhase,
+	AccountMirrorStatusEntry,
+	AccountMirrorStatusRegistry,
+} from "./statusRegistry.js";
 
 export interface AccountMirrorCompletionStartRequest {
 	provider?: AccountMirrorProvider | null;
@@ -372,6 +377,7 @@ export function createAccountMirrorCompletionService(input: {
 						provider: refreshOperation.provider,
 						runtimeProfileId: refreshOperation.runtimeProfileId,
 						sweepMode: refreshOperation.sweepMode ?? "steady_follow",
+						requestedPhase: resolveRequestedCollectorPhase(refreshOperation),
 						explicitRefresh: true,
 						ignoreMinimumInterval: refreshOperation.mode === "bounded",
 						queueTimeoutMs: 0,
@@ -1156,6 +1162,30 @@ function normalizeMaterializationRefreshSnapshot(
 	sweepMode: AccountMirrorCompletionSweepMode,
 ): boolean {
 	return value ?? sweepMode === "full_sweep";
+}
+
+function resolveRequestedCollectorPhase(
+	operation: AccountMirrorCompletionOperation,
+): AccountMirrorCollectorPhase | null {
+	if (operation.mode !== "live_follow") return null;
+	return liveFollowCyclePhaseToCollectorPhase(operation.liveFollowCycle?.nextPhase ?? null);
+}
+
+function liveFollowCyclePhaseToCollectorPhase(
+	phase: AccountMirrorLiveFollowCyclePhase | null,
+): AccountMirrorCollectorPhase | null {
+	if (
+		phase === "identity" ||
+		phase === "projects" ||
+		phase === "root-conversations" ||
+		phase === "project-conversations" ||
+		phase === "chatgpt-library" ||
+		phase === "detail-inventory" ||
+		phase === "merge-persisted-catalog"
+	) {
+		return phase;
+	}
+	return null;
 }
 
 function normalizeMaterializationForce(value: boolean | null | undefined): boolean {

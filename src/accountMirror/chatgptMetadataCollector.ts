@@ -32,6 +32,7 @@ import type {
 	AccountMirrorProvider,
 } from "./politePolicy.js";
 import type {
+	AccountMirrorCollectorPhase,
 	AccountMirrorCollectorPhaseProgressEvidence,
 	AccountMirrorMetadataCounts,
 	AccountMirrorMetadataEvidence,
@@ -49,6 +50,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	runtimeProfileId: string;
 	expectedIdentityKey: string;
 	sweepMode?: "steady_follow" | "full_sweep";
+	requestedPhase?: AccountMirrorCollectorPhase | null;
 	previousEvidence?: AccountMirrorMetadataEvidence | null;
 	previousConversationFreshness?: ReadonlyMap<
 		string,
@@ -136,6 +138,13 @@ export interface AccountMirrorMetadataCollector {
 	collect(
 		input: AccountMirrorMetadataCollectorInput,
 	): Promise<AccountMirrorMetadataCollectorResult>;
+}
+
+export interface ChatgptAccountMirrorMetadataCollectorOptions {
+	createClient?: (
+		config: ResolvedUserConfig,
+		input: AccountMirrorMetadataCollectorInput,
+	) => Promise<BrowserAutomationClient> | BrowserAutomationClient;
 }
 
 async function reportCollectorProgress(
@@ -237,6 +246,7 @@ export class AccountMirrorIdentityMismatchError extends Error {
 
 export function createChatgptAccountMirrorMetadataCollector(
 	userConfig: ResolvedUserConfig,
+	options: ChatgptAccountMirrorMetadataCollectorOptions = {},
 ): AccountMirrorMetadataCollector {
 	return {
 		async collect(input) {
@@ -245,9 +255,11 @@ export function createChatgptAccountMirrorMetadataCollector(
 				input.runtimeProfileId,
 				input.provider,
 			);
-			const client = await BrowserAutomationClient.fromConfig(clientConfig, {
-				target: input.provider,
-			});
+			const client =
+				(await options.createClient?.(clientConfig, input)) ??
+				(await BrowserAutomationClient.fromConfig(clientConfig, {
+					target: input.provider,
+				}));
 			const pacer = createAccountMirrorBrowserInteractionGovernor(
 				input.limits.maxBrowserInteractionsPerMinute,
 				{
@@ -282,18 +294,19 @@ export function createChatgptAccountMirrorMetadataCollector(
 			await input.onIdentityVerified?.(verifiedIdentity);
 			await reportCollectorProgress(input, { phase: "identity", event: "completed" });
 
-			await reportCollectorProgress(input, { phase: "projects", event: "started" });
-			const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle, {
-				tolerateReadFailure: input.provider === "gemini",
-				listOptions,
-				pacer,
-				observation: createAccountMirrorObservationContext(input, client),
-			});
-			await reportCollectorProgress(input, {
-				phase: "projects",
-				event: "completed",
-				projectsObserved: projects.items.length,
-			});
+			const requestedPhase = resolveRequestedCollectorPhase(input);
+			const requestedDetailConversations = resolveRequestedDetailPhaseConversations(input);
+			const honorRequestedDetailPhase =
+				requestedPhase === "detail-inventory" &&
+				(input.sweepMode ?? "steady_follow") !== "full_sweep" &&
+				requestedDetailConversations.length > 0;
+			const honorRequestedProjectConversationsPhase =
+				requestedPhase === "project-conversations" &&
+				(input.sweepMode ?? "steady_follow") !== "full_sweep";
+
+			const projects = honorRequestedDetailPhase
+				? { items: [] as Project[], truncated: false }
+				: await readCollectorProjects(input, client, listOptions, pacer);
 			throwIfCollectionAborted(input.abortSignal);
 			const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
 			const conversationBudgets = allocateConversationReadBudgets(
@@ -301,39 +314,39 @@ export function createChatgptAccountMirrorMetadataCollector(
 				conversationBudget,
 				projects.items.length,
 			);
-			await reportCollectorProgress(input, { phase: "root-conversations", event: "started" });
-			const rootConversations = await readBoundedConversations(
-				client,
-				null,
-				conversationBudgets.rootRows,
-				{
-					listOptions,
-					pacer,
-					observation: createAccountMirrorObservationContext(input, client),
-				},
-			);
-			await reportCollectorProgress(input, {
-				phase: "root-conversations",
-				event: "completed",
-				conversationsObserved: rootConversations.items.length,
-			});
+			const rootConversations =
+				honorRequestedDetailPhase || honorRequestedProjectConversationsPhase
+					? { items: [] as Conversation[], truncated: false }
+					: await readCollectorRootConversations(
+							input,
+							client,
+							conversationBudgets.rootRows,
+							listOptions,
+							pacer,
+						);
 			const remainingConversationBudget = Math.max(
 				0,
-				conversationBudgets.projectRows +
-					Math.max(0, conversationBudgets.rootRows - rootConversations.items.length),
+				honorRequestedProjectConversationsPhase
+					? conversationBudget
+					: conversationBudgets.projectRows +
+							Math.max(0, conversationBudgets.rootRows - rootConversations.items.length),
 			);
 			const projectConversations: Conversation[] = [];
 			let projectConversationsTruncated = false;
 			let projectConversationCursor: ProjectConversationHistoryCursor | null = null;
-			if (shouldReadProjectConversationsForAccountMirror(input.provider)) {
+			if (
+				!honorRequestedDetailPhase &&
+				shouldReadProjectConversationsForAccountMirror(input.provider)
+			) {
 				await reportCollectorProgress(input, {
 					phase: "project-conversations",
 					event: "started",
 					projectsObserved: projects.items.length,
 					conversationsObserved: rootConversations.items.length,
 				});
-				const previousProjectConversationCursor = selectProjectConversationCursorForSweep(
+				const previousProjectConversationCursor = selectProjectConversationCursorForRequestedPhase(
 					input.sweepMode,
+					requestedPhase,
 					input.previousEvidence ?? null,
 				);
 				const result = await readBoundedProjectConversations(
@@ -362,23 +375,28 @@ export function createChatgptAccountMirrorMetadataCollector(
 				});
 			}
 			throwIfCollectionAborted(input.abortSignal);
-			const conversations = mergeConversationsById([
-				...rootConversations.items,
-				...projectConversations,
-			]);
-			const attachmentCursor = selectAttachmentInventoryCursorForProviderSweep(
+			const conversations = honorRequestedDetailPhase
+				? requestedDetailConversations
+				: mergeConversationsById([...rootConversations.items, ...projectConversations]);
+			const attachmentCursor = selectAttachmentInventoryCursorForRequestedPhase(
 				input.provider,
 				input.sweepMode,
+				requestedPhase,
 				input.previousEvidence ?? null,
 			);
-			const frontier = selectConversationDetailCandidates({
-				provider: input.provider,
-				sweepMode: input.sweepMode ?? "steady_follow",
-				conversations,
-				previousConversationFreshness: input.previousConversationFreshness ?? null,
-				attachmentCursor,
-				freshFrontierThreshold: input.limits.freshFrontierThreshold,
-			});
+			const frontier = honorRequestedDetailPhase
+				? {
+						detailConversations: requestedDetailConversations,
+						evidence: input.previousEvidence?.conversationFreshnessFrontier ?? null,
+					}
+				: selectConversationDetailCandidates({
+						provider: input.provider,
+						sweepMode: input.sweepMode ?? "steady_follow",
+						conversations,
+						previousConversationFreshness: input.previousConversationFreshness ?? null,
+						attachmentCursor,
+						freshFrontierThreshold: input.limits.freshFrontierThreshold,
+					});
 			await reportCollectorProgress(input, {
 				phase: "detail-inventory",
 				event: "started",
@@ -409,11 +427,13 @@ export function createChatgptAccountMirrorMetadataCollector(
 								pacer,
 								observation: createAccountMirrorObservationContext(input, client),
 								prioritizeConversations:
-									(input.sweepMode ?? "steady_follow") === "steady_follow" &&
-									frontier.detailConversations.length > 0,
+									honorRequestedDetailPhase ||
+									((input.sweepMode ?? "steady_follow") === "steady_follow" &&
+										frontier.detailConversations.length > 0),
 								skipAccountLibraryInventory:
-									(input.sweepMode ?? "steady_follow") === "steady_follow" &&
-									frontier.detailConversations.length > 0,
+									honorRequestedDetailPhase ||
+									((input.sweepMode ?? "steady_follow") === "steady_follow" &&
+										frontier.detailConversations.length > 0),
 							},
 						)
 					: input.provider === "gemini"
@@ -637,6 +657,18 @@ export function selectAttachmentInventoryCursorForProviderSweep(
 	return selectAttachmentInventoryCursorForSweep(sweepMode, previousEvidence);
 }
 
+export function selectAttachmentInventoryCursorForRequestedPhase(
+	provider: AccountMirrorProvider,
+	sweepMode: AccountMirrorMetadataCollectorInput["sweepMode"],
+	requestedPhase: AccountMirrorCollectorPhase | null | undefined,
+	previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
+): AttachmentInventoryCursor | null {
+	if (requestedPhase === "detail-inventory") {
+		return previousEvidence?.attachmentInventory ?? null;
+	}
+	return selectAttachmentInventoryCursorForProviderSweep(provider, sweepMode, previousEvidence);
+}
+
 export function shouldResumeChatgptAttachmentInventoryCursor(
 	previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
 ): boolean {
@@ -707,6 +739,90 @@ export function selectProjectConversationCursorForSweep(
 ): ProjectConversationHistoryCursor | null {
 	if (sweepMode !== "full_sweep") return null;
 	return previousEvidence?.projectConversations ?? null;
+}
+
+export function selectProjectConversationCursorForRequestedPhase(
+	sweepMode: AccountMirrorMetadataCollectorInput["sweepMode"],
+	requestedPhase: AccountMirrorCollectorPhase | null | undefined,
+	previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
+): ProjectConversationHistoryCursor | null {
+	if (requestedPhase === "project-conversations") {
+		return previousEvidence?.projectConversations ?? null;
+	}
+	return selectProjectConversationCursorForSweep(sweepMode, previousEvidence);
+}
+
+export function resolveRequestedDetailPhaseConversations(
+	input: Pick<
+		AccountMirrorMetadataCollectorInput,
+		"provider" | "previousEvidence" | "requestedPhase"
+	>,
+): Conversation[] {
+	if (input.requestedPhase !== "detail-inventory") return [];
+	const ids = uniqueStrings([
+		input.previousEvidence?.attachmentInventory?.conversationDetail?.conversationId ?? "",
+		...(input.previousEvidence?.conversationFreshnessFrontier?.selectedConversationIds ?? []),
+		...(input.previousEvidence?.collectorProgress?.attachmentCursor?.conversationDetail
+			?.conversationId
+			? [
+					input.previousEvidence.collectorProgress.attachmentCursor.conversationDetail
+						.conversationId,
+				]
+			: []),
+	]);
+	return ids.map((id) => ({
+		id,
+		title: id,
+		provider: input.provider,
+	}));
+}
+
+function resolveRequestedCollectorPhase(
+	input: Pick<AccountMirrorMetadataCollectorInput, "requestedPhase">,
+): AccountMirrorCollectorPhase | null {
+	return input.requestedPhase ?? null;
+}
+
+async function readCollectorProjects(
+	input: AccountMirrorMetadataCollectorInput,
+	client: Pick<BrowserAutomationClient, "listProjects">,
+	listOptions: BrowserProviderListOptions | undefined,
+	pacer: BrowserInteractionGovernor,
+): Promise<{ items: Project[]; truncated: boolean }> {
+	await reportCollectorProgress(input, { phase: "projects", event: "started" });
+	const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle, {
+		tolerateReadFailure: input.provider === "gemini",
+		listOptions,
+		pacer,
+		observation: createAccountMirrorObservationContext(input),
+	});
+	await reportCollectorProgress(input, {
+		phase: "projects",
+		event: "completed",
+		projectsObserved: projects.items.length,
+	});
+	return projects;
+}
+
+async function readCollectorRootConversations(
+	input: AccountMirrorMetadataCollectorInput,
+	client: BrowserAutomationClient,
+	rootRows: number,
+	listOptions: BrowserProviderListOptions | undefined,
+	pacer: BrowserInteractionGovernor,
+): Promise<{ items: Conversation[]; truncated: boolean }> {
+	await reportCollectorProgress(input, { phase: "root-conversations", event: "started" });
+	const rootConversations = await readBoundedConversations(client, null, rootRows, {
+		listOptions,
+		pacer,
+		observation: createAccountMirrorObservationContext(input, client),
+	});
+	await reportCollectorProgress(input, {
+		phase: "root-conversations",
+		event: "completed",
+		conversationsObserved: rootConversations.items.length,
+	});
+	return rootConversations;
 }
 
 export function shouldReadProjectConversationsForAccountMirror(

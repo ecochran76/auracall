@@ -49,6 +49,7 @@ import type {
 	AccountMirrorProviderGuardState,
 } from "./politePolicy.js";
 import type {
+	AccountMirrorCollectorPhase,
 	AccountMirrorMetadataCounts,
 	AccountMirrorMetadataEvidence,
 	AccountMirrorStatusEntry,
@@ -62,6 +63,7 @@ export interface AccountMirrorRefreshRequest {
 	provider?: AccountMirrorProvider | null;
 	runtimeProfileId?: string | null;
 	sweepMode?: "steady_follow" | "full_sweep" | null;
+	requestedPhase?: AccountMirrorCollectorPhase | null;
 	explicitRefresh?: boolean;
 	ignoreMinimumInterval?: boolean;
 	ignoreFailureBackoff?: boolean;
@@ -376,6 +378,7 @@ export function createAccountMirrorRefreshService(input: {
 						runtimeProfileId,
 						expectedIdentityKey: target.expectedIdentityKey ?? "",
 						sweepMode: normalizeSweepMode(request.sweepMode),
+						requestedPhase: normalizeRequestedCollectorPhase(request.requestedPhase),
 						limits: {
 							maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
 							maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
@@ -2138,6 +2141,25 @@ function normalizeSweepMode(
 	value: AccountMirrorRefreshRequest["sweepMode"],
 ): "steady_follow" | "full_sweep" {
 	return value === "full_sweep" ? "full_sweep" : "steady_follow";
+}
+
+function normalizeRequestedCollectorPhase(
+	value: AccountMirrorRefreshRequest["requestedPhase"],
+): AccountMirrorCollectorPhase | null {
+	return isCollectorPhase(value) ? value : null;
+}
+
+function isCollectorPhase(value: unknown): value is AccountMirrorCollectorPhase {
+	return (
+		value === "identity" ||
+		value === "projects" ||
+		value === "root-conversations" ||
+		value === "project-conversations" ||
+		value === "chatgpt-library" ||
+		value === "detail-inventory" ||
+		value === "merge-persisted-catalog" ||
+		value === "complete"
+	);
 }
 
 function normalizePositiveInteger(value: number | null | undefined, fallback: number): number {

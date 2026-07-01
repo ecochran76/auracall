@@ -168,11 +168,11 @@ operation state and latest mirror evidence:
   read/write and runtime restart.
 - [x] A pure decision helper chooses the next phase without always starting at
   root rails.
-- [ ] `AccountMirrorRefreshRequest` can carry the requested phase/work class to
+- [x] `AccountMirrorRefreshRequest` can carry the requested phase/work class to
   the collector.
-- [ ] ChatGPT collector honors requested project-conversation and detail/full
+- [x] ChatGPT collector honors requested project-conversation and detail/full
   scrape continuation phases without broad restart work.
-- [ ] Tests prove multi-cycle progress eventually reaches
+- [x] Tests prove multi-cycle progress eventually reaches
   `detail-inventory`/full-chat scraping even when earlier phases cannot all
   finish in one pass.
 - [x] Completion readback exposes current phase, next phase, and decision
@@ -202,3 +202,24 @@ operation state and latest mirror evidence:
 - Remaining implementation gap: refresh requests still carry `sweepMode` only;
   the next slice must thread a requested phase/work class into refresh and
   collector code so the persisted decision changes browser behavior.
+
+### 2026-06-30 | Requested Phase Contract And Collector Honoring
+
+- Extended `AccountMirrorRefreshRequest` and
+  `AccountMirrorMetadataCollectorInput` with `requestedPhase`.
+- Completion now maps live-follow cycle `nextPhase` to a collector phase on
+  the next refresh, excluding terminal/internal phases.
+- ChatGPT collector honors requested `detail-inventory` when prior evidence has
+  concrete target conversation ids from an attachment/detail cursor or
+  freshness-frontier selection; in that continuation path it keeps identity
+  verification but skips project, root-conversation, project-conversation, and
+  account-library reads.
+- ChatGPT collector honors requested `project-conversations` by reading
+  projects and project conversations while skipping the root conversation rail.
+- Focused coverage:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome check src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/accountMirror/completionService.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts`
+- Remaining implementation gap: installed/runtime proof still needs to show a
+  continuation across a wake boundary that does not restart at the root rail
+  when a later phase is pending.

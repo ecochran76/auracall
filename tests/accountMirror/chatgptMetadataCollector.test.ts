@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import {
 	allocateConversationReadBudgets,
 	buildGeminiRouteProgressEvidence,
+	createChatgptAccountMirrorMetadataCollector,
 	mapChatgptLibraryFilesToArtifacts,
 	mapGeminiConversationArtifactsToMediaManifest,
 	mapGrokAccountFilesToMediaManifest,
@@ -22,6 +23,7 @@ import {
 	selectAttachmentInventoryCursorForSweep,
 	selectConversationDetailCandidates,
 	selectDetailAttachmentCursorForFreshnessFrontier,
+	selectProjectConversationCursorForRequestedPhase,
 	selectProjectConversationCursorForSweep,
 	shouldReadProjectConversationsForAccountMirror,
 	shouldResumeChatgptAttachmentInventoryCursor,
@@ -66,6 +68,42 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(shouldReadProjectConversationsForAccountMirror("chatgpt")).toBe(true);
 		expect(shouldReadProjectConversationsForAccountMirror("gemini")).toBe(true);
 		expect(shouldReadProjectConversationsForAccountMirror("grok")).toBe(false);
+	});
+
+	test("resumes project conversation cursor when that phase is requested", () => {
+		const cursor = {
+			nextProjectIndex: 4,
+			readLimit: 2,
+			scannedProjects: 4,
+			yielded: true,
+		};
+
+		expect(
+			selectProjectConversationCursorForRequestedPhase("steady_follow", "project-conversations", {
+				identitySource: null,
+				projectSampleIds: [],
+				conversationSampleIds: [],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: false,
+				},
+				projectConversations: cursor,
+			}),
+		).toEqual(cursor);
+		expect(
+			selectProjectConversationCursorForRequestedPhase("steady_follow", null, {
+				identitySource: null,
+				projectSampleIds: [],
+				conversationSampleIds: [],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: false,
+				},
+				projectConversations: cursor,
+			}),
+		).toBeNull();
 	});
 
 	test("uses provider auth-session email instead of display name or plan labels for ChatGPT", () => {
@@ -768,6 +806,244 @@ describe("ChatGPT account mirror metadata collector", () => {
 			detailObservedConversationIds: ["conv_artifact"],
 			artifactBearingConversationIds: ["conv_artifact"],
 			fileBearingConversationIds: ["conv_artifact"],
+		});
+	});
+
+	test("honors requested detail-inventory phase without root or project rail reads", async () => {
+		const calls: string[] = [];
+		const client = {
+			getUserIdentity: vi.fn(async () => ({
+				email: "ecochran76@gmail.com",
+				accountLevel: "Business",
+				source: "auth-session",
+			})),
+			listProjects: vi.fn(async () => {
+				calls.push("listProjects");
+				throw new Error("projects should not be read");
+			}),
+			listConversations: vi.fn(async () => {
+				calls.push("listConversations");
+				throw new Error("conversations should not be read");
+			}),
+			listAccountFiles: vi.fn(async () => {
+				calls.push("listAccountFiles");
+				return [];
+			}),
+			listProjectFiles: vi.fn(async () => {
+				calls.push("listProjectFiles");
+				return [];
+			}),
+			listConversationFiles: vi.fn(async (conversationId: string) => {
+				calls.push(`listConversationFiles:${conversationId}`);
+				return [
+					{
+						id: `conversation-file-${conversationId}`,
+						name: "Conversation file.csv",
+						provider: "chatgpt" as const,
+						source: "conversation" as const,
+					},
+				];
+			}),
+			getConversationContext: vi.fn(async (conversationId: string) => {
+				calls.push(`getConversationContext:${conversationId}`);
+				return {
+					provider: "chatgpt" as const,
+					conversationId,
+					messages: [],
+					artifacts: [
+						{
+							id: `artifact-${conversationId}`,
+							title: "Generated table",
+							kind: "spreadsheet" as const,
+						},
+					],
+				};
+			}),
+		};
+		const collector = createChatgptAccountMirrorMetadataCollector(
+			{
+				model: "gpt-5.2",
+				browser: {},
+				runtimeProfiles: {
+					default: {
+						browserProfile: "default",
+						defaultService: "chatgpt",
+						services: {
+							chatgpt: {
+								identity: {
+									email: "ecochran76@gmail.com",
+								},
+							},
+						},
+					},
+				},
+			} as never,
+			{
+				createClient: async () => client as never,
+			},
+		);
+
+		const result = await collector.collect({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			sweepMode: "steady_follow",
+			requestedPhase: "detail-inventory",
+			previousEvidence: {
+				identitySource: "auth-session",
+				projectSampleIds: [],
+				conversationSampleIds: ["conv_target"],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: true,
+				},
+				conversationFreshnessFrontier: {
+					object: "account_mirror_conversation_freshness_frontier",
+					provider: "chatgpt",
+					sweepMode: "steady_follow",
+					threshold: 3,
+					rowsExamined: 4,
+					rowsSelectedForDetail: 1,
+					frontierReached: true,
+					firstStoppedRow: null,
+					fallbackReason: null,
+					selectedConversationIds: ["conv_target"],
+					rowEvidence: [],
+				},
+			},
+			limits: {
+				maxPageReadsPerCycle: 1,
+				maxConversationRowsPerCycle: 10,
+				maxArtifactRowsPerCycle: 10,
+				maxBrowserInteractionsPerMinute: 0,
+			},
+		});
+
+		expect(calls).toEqual([
+			"listConversationFiles:conv_target",
+			"getConversationContext:conv_target",
+		]);
+		expect(client.listProjects).not.toHaveBeenCalled();
+		expect(client.listConversations).not.toHaveBeenCalled();
+		expect(client.listProjectFiles).not.toHaveBeenCalled();
+		expect(client.listAccountFiles).not.toHaveBeenCalled();
+		expect(result.evidence.collectorProgress).toMatchObject({
+			phase: "complete",
+			attachmentCursor: expect.objectContaining({
+				scannedConversations: 1,
+			}),
+		});
+		expect(result.manifests.conversations.map((conversation) => conversation.id)).toEqual([
+			"conv_target",
+		]);
+		expect(result.manifests.files.map((file) => file.id)).toEqual([
+			"conversation-file-conv_target",
+		]);
+		expect(result.manifests.artifacts.map((artifact) => artifact.id)).toEqual([
+			"artifact-conv_target",
+		]);
+	});
+
+	test("honors requested project-conversations phase without root rail reads", async () => {
+		const calls: string[] = [];
+		const client = {
+			getUserIdentity: vi.fn(async () => ({
+				email: "ecochran76@gmail.com",
+				accountLevel: "Business",
+				source: "auth-session",
+			})),
+			listProjects: vi.fn(async () => {
+				calls.push("listProjects");
+				return [
+					{
+						id: "project_1",
+						name: "Project 1",
+						provider: "chatgpt" as const,
+					},
+				];
+			}),
+			listConversations: vi.fn(async (projectId?: string) => {
+				calls.push(`listConversations:${projectId ?? "root"}`);
+				if (!projectId) throw new Error("root rail should not be read");
+				return [
+					{
+						id: "project_conv_1",
+						title: "Project conversation",
+						provider: "chatgpt" as const,
+						projectId,
+					},
+				];
+			}),
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(async () => ({
+				provider: "chatgpt" as const,
+				conversationId: "project_conv_1",
+				messages: [],
+				artifacts: [],
+			})),
+		};
+		const collector = createChatgptAccountMirrorMetadataCollector(
+			{
+				model: "gpt-5.2",
+				browser: {},
+				runtimeProfiles: {
+					default: {
+						browserProfile: "default",
+						defaultService: "chatgpt",
+						services: {
+							chatgpt: {
+								identity: {
+									email: "ecochran76@gmail.com",
+								},
+							},
+						},
+					},
+				},
+			} as never,
+			{
+				createClient: async () => client as never,
+			},
+		);
+
+		const result = await collector.collect({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			sweepMode: "steady_follow",
+			requestedPhase: "project-conversations",
+			previousEvidence: {
+				identitySource: "auth-session",
+				projectSampleIds: ["project_1"],
+				conversationSampleIds: [],
+				truncated: {
+					projects: false,
+					conversations: true,
+					artifacts: false,
+				},
+				projectConversations: {
+					nextProjectIndex: 0,
+					readLimit: 1,
+					scannedProjects: 0,
+					yielded: true,
+				},
+			},
+			limits: {
+				maxPageReadsPerCycle: 1,
+				maxConversationRowsPerCycle: 10,
+				maxArtifactRowsPerCycle: 0,
+				maxBrowserInteractionsPerMinute: 0,
+			},
+		});
+
+		expect(calls).toEqual(["listProjects", "listConversations:project_1"]);
+		expect(result.manifests.conversations.map((conversation) => conversation.id)).toEqual([
+			"project_conv_1",
+		]);
+		expect(result.evidence.projectConversations).toMatchObject({
+			scannedProjects: 1,
 		});
 	});
 

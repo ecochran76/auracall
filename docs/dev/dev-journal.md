@@ -1,3 +1,23 @@
+## 2026-06-30 | Plan 0150 Requested Phase Contract
+
+- Focus: make Plan 0150's persisted live-follow phase decision affect the next
+  refresh and collector pass.
+- Result:
+  - added `requestedPhase` to refresh and metadata collector inputs;
+  - completion now sends the live-follow cycle `nextPhase` to refresh when it
+    maps to a collector phase;
+  - ChatGPT detail continuation can skip project/root/project-conversation and
+    account-library reads when prior evidence has concrete conversation ids;
+  - ChatGPT project-conversation continuation can skip the root rail while
+    resuming project conversation work.
+- Validation:
+  - focused account-mirror tests passed with `101` tests;
+  - TypeScript passed;
+  - Biome check passed on touched files.
+- Remaining gap:
+  - Plan 0150 still needs installed proof across a wake/restart/cooldown
+    boundary before closure.
+
 ## 2026-06-28 | Plan 0150 Live-Follow Cycle Phase Ledger
 
 - Focus: capture the live-follow starvation issue as a control-plane problem:

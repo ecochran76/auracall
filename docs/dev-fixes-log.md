@@ -1,3 +1,15 @@
+- 2026-06-30: The live-follow phase ledger must be wired into refresh, not
+  only persisted for readback. `AccountMirrorRefreshRequest` and
+  `AccountMirrorMetadataCollectorInput` now carry `requestedPhase`. Completion
+  sends the live-follow cycle `nextPhase` into the next refresh when it maps to
+  a collector phase. ChatGPT detail continuation honors
+  `requestedPhase="detail-inventory"` by using prior detail/frontier
+  conversation ids and skipping project/root/project-conversation/account-
+  library reads; project-conversation continuation skips the root rail and
+  resumes project conversation work. Keep this fail-closed: if prior detail
+  evidence does not identify concrete conversation ids, fall back to the
+  existing broad collector path rather than doing an empty detail pass.
+
 - 2026-06-28: Live-follow needs a durable phase ledger in addition to
   freshness-frontier row selection. Plan 0145 can decide which recent
   conversation rows are fresh enough to skip, but it does not prevent a new

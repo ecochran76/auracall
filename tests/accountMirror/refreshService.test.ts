@@ -185,6 +185,7 @@ describe("account mirror refresh service", () => {
 			runtimeProfileId: "default",
 			expectedIdentityKey: "ecochran76@gmail.com",
 			sweepMode: "steady_follow",
+			requestedPhase: null,
 			shouldYield: expect.any(Function),
 			onIdentityVerified: expect.any(Function),
 			onProgress: expect.any(Function),
@@ -308,6 +309,72 @@ describe("account mirror refresh service", () => {
 				lastDispatcherBlockedBy: null,
 			},
 		});
+	});
+
+	test("threads requested collector phase into metadata collection", async () => {
+		const metadataCollector = {
+			collect: vi.fn(async (input: AccountMirrorMetadataCollectorInput) => ({
+				detectedIdentityKey: "ecochran76@gmail.com",
+				detectedAccountLevel: "Business",
+				metadataCounts: {
+					projects: 0,
+					conversations: 1,
+					artifacts: 0,
+					files: 0,
+					media: 0,
+				},
+				manifests: {
+					projects: [],
+					conversations: [{ id: "conv_1", title: "One", provider: "chatgpt" as const }],
+					artifacts: [],
+					files: [],
+					media: [],
+				},
+				evidence: {
+					identitySource: "profile-menu",
+					projectSampleIds: [],
+					conversationSampleIds: ["conv_1"],
+					truncated: {
+						projects: false,
+						conversations: false,
+						artifacts: false,
+					},
+					collectorProgress: {
+						provider: "chatgpt" as const,
+						runtimeProfileId: "default",
+						sweepMode: input.sweepMode ?? "steady_follow",
+						phase: "detail-inventory" as const,
+						event: "completed" as const,
+						observedAt: "2026-04-29T12:00:01.000Z",
+						conversationsObserved: 1,
+					},
+				},
+			})),
+		};
+		const service = createAccountMirrorRefreshService({
+			config,
+			dispatcher: createBrowserOperationDispatcher({
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			metadataCollector,
+			persistence: createNoopPersistence(),
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+			generateRequestId: () => "acctmirror_requested_phase",
+		});
+
+		await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+			ignoreMinimumInterval: true,
+			requestedPhase: "detail-inventory",
+		});
+
+		expect(metadataCollector.collect).toHaveBeenCalledWith(
+			expect.objectContaining({
+				requestedPhase: "detail-inventory",
+			}),
+		);
 	});
 
 	test("hydrates cached conversation freshness against provider row mtime instead of index scrape time", async () => {

@@ -666,6 +666,86 @@ describe("account mirror completion service", () => {
 		});
 	});
 
+	test("passes requested live-follow phase into the next refresh", async () => {
+		let resolveSecondRefresh: (value: AccountMirrorRefreshResult) => void = () => {};
+		const firstRefresh: AccountMirrorRefreshResult = {
+			...createRefreshResult(),
+			metadataEvidence: {
+				identitySource: null,
+				projectSampleIds: [],
+				conversationSampleIds: ["conv_pending"],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: true,
+				},
+				conversationFreshnessFrontier: {
+					object: "account_mirror_conversation_freshness_frontier",
+					provider: "chatgpt",
+					sweepMode: "steady_follow",
+					threshold: 3,
+					rowsExamined: 4,
+					rowsSelectedForDetail: 1,
+					frontierReached: true,
+					firstStoppedRow: null,
+					fallbackReason: null,
+					selectedConversationIds: ["conv_pending"],
+					rowEvidence: [],
+				},
+			},
+			mirrorCompleteness: {
+				...completeMirror,
+				state: "in_progress",
+				remainingDetailSurfaces: { projects: 0, conversations: 1, total: 1 },
+			},
+		};
+		const requestRefresh = vi
+			.fn()
+			.mockResolvedValueOnce(firstRefresh)
+			.mockImplementationOnce(
+				() =>
+					new Promise<AccountMirrorRefreshResult>((resolve) => {
+						resolveSecondRefresh = resolve;
+					}),
+			);
+		const service = createAccountMirrorCompletionService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-04-30T12:00:00.000Z"),
+			}),
+			refreshService: {
+				requestRefresh,
+			},
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			generateId: () => "acctmirror_phase_contract",
+		});
+
+		service.start({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			sweepMode: "steady_follow",
+		});
+
+		await waitFor(() => requestRefresh.mock.calls.length === 2);
+		expect(requestRefresh).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				sweepMode: "steady_follow",
+				requestedPhase: "detail-inventory",
+			}),
+		);
+		expect(service.read("acctmirror_phase_contract")?.liveFollowCycle).toMatchObject({
+			currentPhase: "detail-inventory",
+			nextPhase: "detail-inventory",
+		});
+
+		resolveSecondRefresh(createRefreshResult());
+		await waitFor(() => service.read("acctmirror_phase_contract")?.passCount === 2);
+		service.control({ id: "acctmirror_phase_contract", action: "cancel" });
+	});
+
 	test("full-sweep live follow queues snapshot-refresh history materialization after a refresh pass", async () => {
 		const createJob = vi.fn(async () => ({
 			object: "history_materialization_job_create_result" as const,
@@ -2187,6 +2267,7 @@ describe("account mirror completion service", () => {
 			provider: "chatgpt",
 			runtimeProfileId: "default",
 			sweepMode: "steady_follow",
+			requestedPhase: null,
 			explicitRefresh: true,
 			ignoreMinimumInterval: true,
 			queueTimeoutMs: 0,
