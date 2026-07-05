@@ -116,6 +116,7 @@ export interface AccountMirrorPersistence {
 		input: AccountMirrorConversationContextRequest,
 	): Promise<ConversationContext | null>;
 	readConversationFiles?(input: AccountMirrorConversationContextRequest): Promise<FileRef[]>;
+	readConversationAttachments?(input: AccountMirrorConversationContextRequest): Promise<FileRef[]>;
 	readConversationContextEntry?(
 		input: AccountMirrorConversationContextRequest,
 	): Promise<AccountMirrorConversationContextCacheEntry | null>;
@@ -329,6 +330,21 @@ export function createAccountMirrorPersistence(input: {
 				boundIdentityKey: request.boundIdentityKey,
 			});
 			const result = await cacheStore.readConversationFiles(context, request.conversationId.trim());
+			return result.items;
+		},
+		async readConversationAttachments(request) {
+			if (!request.boundIdentityKey || !request.conversationId.trim()) {
+				return [];
+			}
+			const context = createMirrorCacheContext({
+				config: options.config,
+				provider: request.provider,
+				boundIdentityKey: request.boundIdentityKey,
+			});
+			const result = await cacheStore.readConversationAttachments(
+				context,
+				request.conversationId.trim(),
+			);
 			return result.items;
 		},
 		readConversationContextEntry,

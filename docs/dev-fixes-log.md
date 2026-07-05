@@ -18739,3 +18739,12 @@ browser-stage lifecycle observability, not transcript truncation.
   evidence for selected conversations. Before collection, read cached
   conversation files for cached conversations and pass them as prior files so
   empty live detail reads do not collapse known attachment evidence to zero.
+- 2026-07-05: Cached conversation freshness must hydrate both
+  `conversation-files` and `conversation-attachments` evidence. ChatGPT can
+  refresh a remote-only `conversation-files` row after an older
+  `conversation-attachments` row has already materialized the same file with a
+  local path and checksum. If freshness derivation only sees the remote-only
+  row, the frontier keeps selecting the chat as `missing_local_assets` even
+  though local materialization evidence exists. Merge duplicate file evidence by
+  stable file identity and prefer local evidence before deriving asset
+  completeness.

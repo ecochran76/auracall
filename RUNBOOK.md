@@ -12120,3 +12120,48 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     after multiple quiet 30s intervals with no failure output.
 - Decision:
   - Plan 0147 closes as **Accepted Response Polling Hardened**.
+## Turn 267 | 2026-07-05
+
+- Active supporting plan:
+  `docs/dev/plans/0151-2026-07-05-live-follow-frontier-retention-inspection.md`
+- Goal: write and execute a detailed inspection plan for the post-retention
+  ChatGPT live-follow frontier behavior.
+- Starting evidence:
+  - commit `5987024b` retained cached per-conversation file evidence in
+    detail inventory;
+  - installed completion
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` pass `6`
+    resumed directly into `detail-inventory`, observed `files=1`, and was
+    paused again;
+  - the same completion still reports `nextPhase=detail-inventory`, so the
+    next inspection must prove why the frontier still selects those rows.
+- Planned execution:
+  - capture current completion/cache state for the four selected rows;
+  - build a red-capable local loop for the current freshness decision;
+  - patch only the failed semantic boundary;
+  - validate locally, install if needed, and run one paused live proof.
+
+## Turn 268 | 2026-07-05
+
+- Active supporting plan:
+  `docs/dev/plans/0151-2026-07-05-live-follow-frontier-retention-inspection.md`
+- Result:
+  - cached conversation attachment evidence is now hydrated into account-mirror
+    freshness and prior-file seeding;
+  - duplicate remote-only and locally materialized file evidence is merged by
+    stable file identity before freshness derivation;
+  - focused refresh-service coverage proves remote-only context assets now
+    produce an explicit `missing_assets` cached summary instead of falling out
+    of the frontier map.
+- Installed proof:
+  - rebuilt/installed runtime and restarted `auracall-api.service`;
+  - resumed
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` for pass `7`;
+  - request `acctmirror_f0166291-d1a0-4cce-8c3b-000c3ddfff41` completed with
+    `projectsObserved=0`, `conversationsObserved=4`, `filesObserved=3`, and
+    no project/root rail work;
+  - completion is paused again at pass `7`.
+- Remaining operator decision:
+  - do not broad-resume live follow yet if the goal is frontier closure;
+  - next slice should define the `metadata_only` decision tree for remote-only
+    context assets versus local materialization requirements.

@@ -24,6 +24,56 @@
   - TypeScript passed;
   - Biome check passed on touched files.
 
+## 2026-07-05 | Plan 0151 Frontier Retention Inspection
+
+- Focus: open an inspection-first follow-up for the post-retention ChatGPT
+  live-follow frontier loop.
+- Starting point:
+  - installed pass `6` on
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` resumed
+    directly into `detail-inventory` and observed `files=1`;
+  - the same live-follow cycle still selected `detail-inventory` for the next
+    phase, so the remaining question is whether the four rows are legitimately
+    stale or whether retained per-conversation file evidence is not feeding
+    freshness/frontier derivation.
+- Plan:
+  - added
+    `docs/dev/plans/0151-2026-07-05-live-follow-frontier-retention-inspection.md`
+    and wired it into `ROADMAP.md`/`RUNBOOK.md`;
+  - execution will start with runtime/cache probes for the four selected rows,
+    then a red-capable freshness/frontier loop before any code change.
+- Execution finding:
+  - selected conversation `6a3f1652-2490-83ea-add0-0a900e6d55bc` had split file
+    evidence: a recent remote-only `conversation-files` row and an older
+    materialized `conversation-attachments` row for the same
+    `handoff-attachments.zip`;
+  - cached freshness hydration did not read conversation attachments, so the
+    frontier could still classify the row as `missing_local_assets`.
+- Result:
+  - persistence now exposes cached conversation attachments;
+  - cached freshness hydration merges conversation files, conversation
+    attachments, context assets, and catalog evidence before deriving
+    freshness, preferring local evidence for duplicate file identities;
+  - prior-file seeding also includes cached conversation attachments.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts` passed;
+  - `pnpm exec tsc --noEmit` passed.
+- Installed proof:
+  - rebuilt and installed the user runtime/service, then restarted
+    `auracall-api.service` with systemd reporting active PID `2760`;
+  - resumed
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` for pass `7`;
+  - pass `7` completed request
+    `acctmirror_f0166291-d1a0-4cce-8c3b-000c3ddfff41` with
+    `projectsObserved=0`, `conversationsObserved=4`, `filesObserved=3`,
+    `scannedProjects=0`, and `scannedConversations=4`;
+  - the completion was paused again at pass `7`.
+- Remaining decision:
+  - rows are still selected because context assets remain remote-only under the
+    current freshness model; the next decision-tree slice must separate
+    completed chat detail scraping from local materialization requirements for
+    `metadata_only` live follow.
+
 ## 2026-06-30 | Plan 0150 Accepted Wake-Boundary Proof
 
 - Focus: close Plan 0150 with installed proof that a later live-follow wake

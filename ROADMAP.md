@@ -9,6 +9,8 @@ Lane: P01
 
 - Active plan:
   [docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md](docs/dev/plans/0114-2026-06-05-end-to-end-cross-service-handoff.md)
+- Completed live-follow inspection plan:
+  [docs/dev/plans/0151-2026-07-05-live-follow-frontier-retention-inspection.md](docs/dev/plans/0151-2026-07-05-live-follow-frontier-retention-inspection.md)
 - Completed live-follow supporting plan:
   [docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md](docs/dev/plans/0150-2026-06-28-live-follow-cycle-phase-ledger.md)
 - Completed live-follow supporting plan:

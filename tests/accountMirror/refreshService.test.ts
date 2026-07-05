@@ -447,6 +447,17 @@ describe("account mirror refresh service", () => {
 					remoteUrl: "chatgpt://file/file_cached",
 				},
 			]),
+			readConversationAttachments: vi.fn(async () => [
+				{
+					id: "conv_cached:turn_1:0:handoff-attachments.zip",
+					name: "handoff-attachments.zip",
+					provider: "chatgpt" as const,
+					source: "conversation" as const,
+					remoteUrl: "chatgpt://file/file_cached",
+					localPath: "/tmp/auracall-test/handoff-attachments.zip",
+					checksumSha256: "4f".repeat(32),
+				},
+			]),
 			readConversationContextEntry: vi.fn(async () => ({
 				fetchedAt: "2026-04-29T11:00:00.000Z",
 				stale: false,
@@ -499,6 +510,111 @@ describe("account mirror refresh service", () => {
 				source: "conversation",
 			}),
 		]);
+	});
+
+	test("hydrates cached conversation freshness summaries for remote-only context assets", async () => {
+		const metadataCollector = {
+			collect: vi.fn(
+				async (_input: AccountMirrorMetadataCollectorInput) =>
+					({
+						detectedIdentityKey: "ecochran76@gmail.com",
+						detectedAccountLevel: "Business",
+						metadataCounts: {
+							projects: 0,
+							conversations: 1,
+							artifacts: 0,
+							files: 0,
+							media: 0,
+						},
+						manifests: {
+							projects: [],
+							conversations: [],
+							artifacts: [],
+							files: [],
+							media: [],
+						},
+						evidence: {
+							identitySource: "profile-menu",
+							projectSampleIds: [],
+							conversationSampleIds: ["conv_remote_assets"],
+							truncated: {
+								projects: false,
+								conversations: false,
+								artifacts: false,
+							},
+						},
+					}) satisfies AccountMirrorMetadataCollectorResult,
+			),
+		};
+		const persistence: AccountMirrorPersistence = {
+			...createNoopPersistence(),
+			readCatalog: vi.fn(async () => ({
+				projects: [],
+				conversations: [
+					{
+						id: "conv_remote_assets",
+						title: "Remote Assets",
+						provider: "chatgpt" as const,
+						updatedAt: "2026-04-29T10:00:00.000Z",
+					},
+				],
+				artifacts: [],
+				files: [],
+				media: [],
+			})),
+			readConversationContextEntry: vi.fn(async () => ({
+				fetchedAt: "2026-04-29T11:00:00.000Z",
+				stale: false,
+				context: {
+					provider: "chatgpt" as const,
+					conversationId: "conv_remote_assets",
+					messages: [{ role: "assistant" as const, text: "remote artifact" }],
+					files: [],
+					artifacts: [
+						{
+							id: "artifact_remote",
+							title: "Remote artifact",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
+							remoteUrl: "chatgpt://artifact/artifact_remote",
+						},
+					],
+					sources: [],
+				},
+			})),
+		};
+		const service = createAccountMirrorRefreshService({
+			config,
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			dispatcher: createBrowserOperationDispatcher({
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			metadataCollector,
+			persistence,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+			generateRequestId: () => "acctmirror_remote_context_assets",
+		});
+
+		await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+		});
+
+		const collectInput = metadataCollector.collect.mock.calls[0]?.[0] as
+			| AccountMirrorMetadataCollectorInput
+			| undefined;
+		expect(collectInput?.previousConversationFreshness?.get("conv_remote_assets")).toMatchObject({
+			conversationId: "conv_remote_assets",
+			detailObservedAt: "2026-04-29T11:00:00.000Z",
+			manifestObservedAt: "2026-04-29T11:00:00.000Z",
+			freshnessState: "missing_assets",
+			assetCompleteness: "partial",
+			missingLocalCount: 1,
+		});
 	});
 
 	test("preserves an active ChatGPT rate-limit guard after a successful refresh", async () => {

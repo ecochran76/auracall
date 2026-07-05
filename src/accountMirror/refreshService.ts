@@ -835,13 +835,22 @@ async function readCachedConversationFreshnessSummaries(input: {
 	}
 	const hydrated = await Promise.all(
 		conversations.map(async (conversation, index) => {
-			const contextEntry = await input.persistence
-				.readConversationContextEntry?.({
-					provider: input.provider,
-					boundIdentityKey: input.boundIdentityKey,
-					conversationId: conversation.id,
-				})
-				.catch(() => null);
+			const contextRequest = {
+				provider: input.provider,
+				boundIdentityKey: input.boundIdentityKey,
+				conversationId: conversation.id,
+			};
+			const [contextEntry, conversationFiles, conversationAttachments] = await Promise.all([
+				input.persistence
+					.readConversationContextEntry?.(contextRequest)
+					.catch(() => null),
+				input.persistence
+					.readConversationFiles?.(contextRequest)
+					.catch(() => []),
+				input.persistence
+					.readConversationAttachments?.(contextRequest)
+					.catch(() => []),
+			]);
 			const context = contextEntry?.context ?? null;
 			const freshnessItem = withProviderFreshnessObservedAt(
 				stripCachedConversationFreshness(conversation),
@@ -878,6 +887,8 @@ async function readCachedConversationFreshnessSummaries(input: {
 					artifacts: existing?.artifacts ?? [],
 					files: existing?.files ?? [],
 					media: existing?.media ?? [],
+					conversationFiles: conversationFiles ?? [],
+					conversationAttachments: conversationAttachments ?? [],
 					context,
 				}),
 			});
@@ -947,11 +958,19 @@ function collectCachedConversationAssets(
 		artifacts: readonly unknown[];
 		files: readonly unknown[];
 		media: readonly unknown[];
+		conversationFiles?: readonly unknown[];
+		conversationAttachments?: readonly unknown[];
 		context: unknown;
 	},
 ): unknown[] {
 	const assets: unknown[] = [];
-	for (const item of [...input.artifacts, ...input.files, ...input.media]) {
+	for (const item of [
+		...input.artifacts,
+		...input.files,
+		...input.media,
+		...(input.conversationFiles ?? []),
+		...(input.conversationAttachments ?? []),
+	]) {
 		if (readConversationId(item) === conversationId) {
 			assets.push(item);
 		}
@@ -964,7 +983,7 @@ function collectCachedConversationAssets(
 			}
 		}
 	}
-	return assets;
+	return mergeCachedConversationAssetEvidence(assets);
 }
 
 function readConversationId(item: unknown): string | null {
@@ -976,6 +995,72 @@ function readConversationId(item: unknown): string | null {
 		readStringField(metadata.conversationId) ??
 		readStringField(metadata.providerConversationId);
 	return value?.trim() || null;
+}
+
+function mergeCachedConversationAssetEvidence(assets: readonly unknown[]): unknown[] {
+	const byKey = new Map<string, unknown>();
+	const unkeyed: unknown[] = [];
+	for (const asset of assets) {
+		const key = readAssetEvidenceKey(asset);
+		if (!key) {
+			unkeyed.push(asset);
+			continue;
+		}
+		const existing = byKey.get(key);
+		byKey.set(key, existing ? mergeAssetEvidence(existing, asset) : asset);
+	}
+	return [...byKey.values(), ...unkeyed];
+}
+
+function mergeAssetEvidence(existing: unknown, incoming: unknown): unknown {
+	if (!isRecord(existing) || !isRecord(incoming)) {
+		return hasLocalAssetEvidenceLike(incoming) ? incoming : existing;
+	}
+	const existingMetadata = isRecord(existing.metadata) ? existing.metadata : {};
+	const incomingMetadata = isRecord(incoming.metadata) ? incoming.metadata : {};
+	const preferIncoming = hasLocalAssetEvidenceLike(incoming) && !hasLocalAssetEvidenceLike(existing);
+	const primary = preferIncoming ? incoming : existing;
+	const secondary = preferIncoming ? existing : incoming;
+	return {
+		...secondary,
+		...primary,
+		metadata: {
+			...existingMetadata,
+			...incomingMetadata,
+		},
+	};
+}
+
+function readAssetEvidenceKey(asset: unknown): string | null {
+	if (!isRecord(asset)) return null;
+	const metadata = isRecord(asset.metadata) ? asset.metadata : {};
+	const providerFileId =
+		readStringField(asset.providerFileId) ??
+		readStringField(metadata.providerFileId) ??
+		readStringField(metadata.fileId);
+	if (providerFileId) return `provider-file:${providerFileId}`;
+	const remoteUrl = readStringField(asset.remoteUrl) ?? readStringField(metadata.remoteUrl);
+	if (remoteUrl) return `remote-url:${remoteUrl}`;
+	const id = readStringField(asset.id);
+	if (id) return `id:${id}`;
+	const name = readStringField(asset.name) ?? readStringField(asset.displayName);
+	const turnId = readStringField(metadata.turnId) ?? readStringField(metadata.messageId);
+	return name && turnId ? `turn-name:${turnId}:${name}` : null;
+}
+
+function hasLocalAssetEvidenceLike(asset: unknown): boolean {
+	if (!isRecord(asset)) return false;
+	const metadata = isRecord(asset.metadata) ? asset.metadata : {};
+	return Boolean(
+		readStringField(asset.localPath) ??
+			readStringField(asset.storageRelpath) ??
+			readStringField(asset.cacheKey) ??
+			readStringField(asset.checksumSha256) ??
+			readStringField(metadata.localPath) ??
+			readStringField(metadata.storageRelpath) ??
+			readStringField(metadata.cacheKey) ??
+			readStringField(metadata.checksumSha256),
+	);
 }
 
 function readStringField(value: unknown): string | null {
@@ -2108,19 +2193,24 @@ async function readPreviousAccountMirrorFiles(input: {
 	for (const file of input.catalogFiles) {
 		filesById.set(file.id, file);
 	}
-	if (!input.boundIdentityKey || !input.persistence.readConversationFiles) {
+	if (
+		!input.boundIdentityKey ||
+		(!input.persistence.readConversationFiles && !input.persistence.readConversationAttachments)
+	) {
 		return Array.from(filesById.values());
 	}
 	await Promise.all(
 		input.conversations.map(async (conversation) => {
-			const conversationFiles = await input.persistence
-				.readConversationFiles?.({
-					provider: input.provider,
-					boundIdentityKey: input.boundIdentityKey,
-					conversationId: conversation.id,
-				})
-				.catch(() => []);
-			for (const file of conversationFiles ?? []) {
+			const request = {
+				provider: input.provider,
+				boundIdentityKey: input.boundIdentityKey,
+				conversationId: conversation.id,
+			};
+			const [conversationFiles, conversationAttachments] = await Promise.all([
+				input.persistence.readConversationFiles?.(request).catch(() => []),
+				input.persistence.readConversationAttachments?.(request).catch(() => []),
+			]);
+			for (const file of [...(conversationFiles ?? []), ...(conversationAttachments ?? [])]) {
 				filesById.set(file.id, file);
 			}
 		}),
