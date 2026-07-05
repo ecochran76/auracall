@@ -188,6 +188,69 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
+	test("does not select metadata-only remote asset backlog for detail inventory", () => {
+		const conversations = [
+			{
+				id: "remote_backlog",
+				title: "Remote Backlog",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T11:55:00.000Z",
+			},
+			{
+				id: "fresh_1",
+				title: "Fresh 1",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T11:54:00.000Z",
+			},
+		];
+
+		const selection = selectConversationDetailCandidates({
+			provider: "chatgpt",
+			sweepMode: "steady_follow",
+			conversations,
+			previousConversationFreshness: new Map([
+				[
+					"remote_backlog",
+					{
+						conversationId: "remote_backlog",
+						detailObservedAt: "2026-06-27T12:00:00.000Z",
+						manifestObservedAt: "2026-06-27T12:00:00.000Z",
+						freshnessState: "fresh",
+						routeabilityState: "unknown",
+						assetCompleteness: "partial",
+						missingLocalCount: 3,
+						incompleteDetailChunk: false,
+					},
+				],
+				[
+					"fresh_1",
+					{
+						conversationId: "fresh_1",
+						detailObservedAt: "2026-06-27T12:00:00.000Z",
+						manifestObservedAt: "2026-06-27T12:00:00.000Z",
+						freshnessState: "fresh",
+						routeabilityState: "unknown",
+						assetCompleteness: "complete",
+						missingLocalCount: 0,
+						incompleteDetailChunk: false,
+					},
+				],
+			]),
+			materializationPolicy: "metadata_only",
+			attachmentCursor: null,
+			freshFrontierThreshold: 2,
+		});
+
+		expect(selection.detailConversations).toEqual([]);
+		expect(selection.evidence).toMatchObject({
+			frontierReached: true,
+			rowsSelectedForDetail: 0,
+			firstStoppedRow: {
+				conversationId: "fresh_1",
+			},
+		});
+	});
+
 	test("resets steady-follow detail cursor to newest selected rows after frontier filtering", () => {
 		const selection = selectConversationDetailCandidates({
 			provider: "chatgpt",

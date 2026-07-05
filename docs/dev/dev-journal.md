@@ -1,3 +1,20 @@
+## 2026-07-05 | Plan 0152 M5 Metadata-Only Split
+
+- Focus: execute the first critical-path Plan 0152 slice by separating
+  metadata freshness from local materialization backlog.
+- Result:
+  - completion-driven refreshes pass `materializationPolicy` into cached
+    freshness hydration and collector frontier selection;
+  - `metadata_only` can now mark a chat as metadata-current when context and
+    remote asset references are current, while still exposing
+    `assetCompleteness=partial` and `missingLocalCount`;
+  - `recent_missing_assets` and `full_missing_assets` retain missing-local
+    selection behavior.
+- Validation:
+  - focused account-mirror freshness, frontier, collector, and refresh-service
+    tests passed;
+  - scoped Biome lint passed.
+
 ## 2026-07-05 | Plan 0152 Live-Follow Operating Model
 
 - Focus: create a parent goal for live follow that can converge the current

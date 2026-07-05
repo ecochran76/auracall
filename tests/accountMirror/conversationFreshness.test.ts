@@ -95,6 +95,51 @@ describe("account mirror conversation freshness", () => {
 		});
 	});
 
+	test("treats remote-only assets as local materialization backlog under metadata-only policy", () => {
+		const freshness = deriveAccountMirrorConversationFreshness({
+			conversationId: "conv_metadata_only",
+			item: {
+				id: "conv_metadata_only",
+				title: "Artifact-rich thread",
+				provider: "chatgpt",
+				updatedAt: "2026-05-23T12:00:00.000Z",
+			},
+			target: {
+				lastCompletedAt: "2026-05-23T12:01:00.000Z",
+				mirrorCompleteness: completeMirror,
+			},
+			detail: {
+				exists: true,
+				observedAt: "2026-05-23T12:01:00.000Z",
+				messageCount: 4,
+				fileCount: 0,
+				artifactCount: 1,
+				sourceCount: 0,
+			},
+			assets: [
+				{
+					id: "artifact_remote",
+					title: "Remote artifact",
+					remoteUrl: "chatgpt://artifact/artifact_remote",
+					metadata: { conversationId: "conv_metadata_only" },
+				},
+			],
+			materializationPolicy: "metadata_only",
+		});
+
+		expect(freshness).toMatchObject({
+			state: "fresh",
+			detailCompleteness: "complete",
+			assetCompleteness: "partial",
+			assetCounts: {
+				known: 1,
+				local: 0,
+				missingLocal: 1,
+			},
+			reasons: ["local_materialization_pending", "detail_current"],
+		});
+	});
+
 	test("honors row-level materialization completeness over remote-only manifest evidence", () => {
 		const freshness = deriveAccountMirrorConversationFreshness({
 			conversationId: "conv_materialized",

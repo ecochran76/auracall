@@ -379,6 +379,7 @@ export function createAccountMirrorCompletionService(input: {
 						provider: refreshOperation.provider,
 						runtimeProfileId: refreshOperation.runtimeProfileId,
 						sweepMode: refreshOperation.sweepMode ?? "steady_follow",
+						materializationPolicy: refreshOperation.materializationPolicy ?? null,
 						requestedPhase: resolveRequestedCollectorPhase(refreshOperation),
 						explicitRefresh: true,
 						ignoreMinimumInterval: refreshOperation.mode === "bounded",

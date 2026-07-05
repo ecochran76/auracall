@@ -41,7 +41,10 @@ import {
 	type AccountMirrorVerifiedIdentityEvidence,
 	createChatgptAccountMirrorMetadataCollector,
 } from "./chatgptMetadataCollector.js";
-import { deriveAccountMirrorConversationFreshness } from "./conversationFreshness.js";
+import {
+	type AccountMirrorConversationMaterializationPolicy,
+	deriveAccountMirrorConversationFreshness,
+} from "./conversationFreshness.js";
 import { buildConversationFreshnessSummaryMap } from "./conversationFreshnessFrontier.js";
 import type {
 	AccountMirrorProvider,
@@ -64,6 +67,7 @@ export interface AccountMirrorRefreshRequest {
 	provider?: AccountMirrorProvider | null;
 	runtimeProfileId?: string | null;
 	sweepMode?: "steady_follow" | "full_sweep" | null;
+	materializationPolicy?: AccountMirrorConversationMaterializationPolicy | null;
 	requestedPhase?: AccountMirrorCollectorPhase | null;
 	explicitRefresh?: boolean;
 	ignoreMinimumInterval?: boolean;
@@ -375,6 +379,7 @@ export function createAccountMirrorRefreshService(input: {
 					provider,
 					boundIdentityKey: target.expectedIdentityKey ?? null,
 					limit: target.limits.maxConversationRowsPerCycle,
+					materializationPolicy: request.materializationPolicy ?? null,
 				});
 				const previousCatalog = await persistence.readCatalog({
 					provider,
@@ -394,6 +399,7 @@ export function createAccountMirrorRefreshService(input: {
 						runtimeProfileId,
 						expectedIdentityKey: target.expectedIdentityKey ?? "",
 						sweepMode: normalizeSweepMode(request.sweepMode),
+						materializationPolicy: request.materializationPolicy ?? null,
 						requestedPhase: normalizeRequestedCollectorPhase(request.requestedPhase),
 						limits: {
 							maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
@@ -821,6 +827,7 @@ async function readCachedConversationFreshnessSummaries(input: {
 	provider: AccountMirrorProvider;
 	boundIdentityKey: string | null;
 	limit: number;
+	materializationPolicy: AccountMirrorConversationMaterializationPolicy | null;
 }) {
 	const existing = await input.persistence
 		.readCatalog({
@@ -891,6 +898,7 @@ async function readCachedConversationFreshnessSummaries(input: {
 					conversationAttachments: conversationAttachments ?? [],
 					context,
 				}),
+				materializationPolicy: input.materializationPolicy,
 			});
 			return {
 				...conversation,

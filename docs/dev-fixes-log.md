@@ -18748,3 +18748,10 @@ browser-stage lifecycle observability, not transcript truncation.
   though local materialization evidence exists. Merge duplicate file evidence by
   stable file identity and prefer local evidence before deriving asset
   completeness.
+- 2026-07-05: `metadata_only` live follow must not conflate completed chat
+  metadata with local asset materialization. Once a chat's rail row, context,
+  and remote asset references are current, missing local bytes should remain
+  visible as `assetCompleteness=partial` / `missingLocalCount`, but they should
+  not by themselves reselect that chat for detail scraping. Policies that
+  intentionally recover local bytes, such as `recent_missing_assets` and
+  `full_missing_assets`, should continue selecting the backlog.

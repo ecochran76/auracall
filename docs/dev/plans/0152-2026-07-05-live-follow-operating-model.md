@@ -30,6 +30,20 @@ visible to operators.
   priority model for foreground runs, manual materialization, reconciliation,
   browser jobs, and account-mirror background work.
 
+## Progress
+
+### 2026-07-05 | M5 Metadata-Only Split
+
+- `metadata_only` now treats completed chat context and remote asset references
+  as metadata-current even when local asset bytes are still missing.
+- Missing local bytes remain visible through `assetCompleteness=partial` and
+  `missingLocalCount`, so operator/materialization surfaces can still expose the
+  backlog.
+- `recent_missing_assets` and `full_missing_assets` preserve the prior behavior:
+  missing local bytes still select the row for follow-up work.
+- Completion-driven refreshes now pass the materialization policy through
+  refresh, cached freshness hydration, and collector frontier selection.
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,
@@ -168,9 +182,9 @@ Separate "what must be known" from "what must be local":
 
 Acceptance:
 
-- artifact-rich chats stop re-entering detail inventory after complete context
+- [x] artifact-rich chats stop re-entering detail inventory after complete context
   and remote references are persisted;
-- missing local assets remain visible as materialization backlog with counts,
+- [x] missing local assets remain visible as materialization backlog with counts,
   ids, and policy reason.
 
 ### M6 | Backpressure And Cadence Model
@@ -263,7 +277,7 @@ Parallelizable tracks:
   phase across API restarts.
 - [ ] Steady-follow chooses the next phase from current evidence instead of
   restarting at root rails.
-- [ ] `metadata_only` freshness can complete for chats with persisted context
+- [x] `metadata_only` freshness can complete for chats with persisted context
   and remote references while keeping local materialization backlog visible.
 - [ ] Provider-polite scrape telemetry distinguishes passive parsing from
   active UI/provider interactions.

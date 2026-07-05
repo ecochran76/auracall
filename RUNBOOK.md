@@ -12187,3 +12187,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - use Plan 0152 as the parent acceptance target;
   - start with the `metadata_only` freshness/materialization split because it
     is the blocker proven by Plan 0151 pass `7`.
+
+## Turn 270 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Implemented M5:
+  - `metadata_only` live follow now treats complete chat context plus persisted
+    remote asset references as metadata-current;
+  - local byte gaps remain visible through `assetCompleteness=partial` and
+    `missingLocalCount`;
+  - `recent_missing_assets` and `full_missing_assets` still select rows with
+    missing local assets.
+- Validation:
+  - focused account-mirror freshness, frontier, collector, and refresh-service
+    tests passed;
+  - scoped Biome lint passed.
+- Next slice:
+  - use the same policy boundary in operator status/readback so UI/API
+    surfaces distinguish metadata current from materialization backlog.

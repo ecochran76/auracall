@@ -3,6 +3,7 @@ import type { AccountMirrorCompletionSweepMode } from "./completionService.js";
 import type {
 	AccountMirrorConversationFreshness,
 	AccountMirrorConversationFreshnessState,
+	AccountMirrorConversationMaterializationPolicy,
 } from "./conversationFreshness.js";
 import { readAccountMirrorConversationFreshness } from "./conversationFreshness.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
@@ -92,6 +93,7 @@ export function applyConversationFreshnessFrontier(input: {
 	cachedSummaries?: ReadonlyMap<string, ConversationFreshnessFrontierCachedSummary> | null;
 	incompleteDetailConversationId?: string | null;
 	threshold?: number | null;
+	materializationPolicy?: AccountMirrorConversationMaterializationPolicy | null;
 }): ConversationFreshnessFrontierResult {
 	const threshold = normalizeThreshold(input.threshold);
 	if (input.sweepMode === "full_sweep") {
@@ -128,6 +130,7 @@ export function applyConversationFreshnessFrontier(input: {
 		const reasons = evaluateSelectionReasons({
 			remoteMtime,
 			cached,
+			materializationPolicy: input.materializationPolicy ?? null,
 			incompleteDetail:
 				!!conversationId && conversationId === normalizeId(input.incompleteDetailConversationId),
 		});
@@ -209,6 +212,7 @@ function createFrontierEvidence(input: {
 function evaluateSelectionReasons(input: {
 	remoteMtime: string | null;
 	cached?: ConversationFreshnessFrontierCachedSummary | null;
+	materializationPolicy: AccountMirrorConversationMaterializationPolicy | null;
 	incompleteDetail: boolean;
 }): ConversationFreshnessFrontierFallbackReason[] {
 	const reasons: ConversationFreshnessFrontierFallbackReason[] = [];
@@ -229,7 +233,10 @@ function evaluateSelectionReasons(input: {
 	) {
 		reasons.push("routeability_not_current");
 	}
-	if (input.cached.missingLocalCount > 0 || input.cached.assetCompleteness === "partial") {
+	if (
+		input.materializationPolicy !== "metadata_only" &&
+		(input.cached.missingLocalCount > 0 || input.cached.assetCompleteness === "partial")
+	) {
 		reasons.push("missing_local_assets");
 	}
 	if (input.remoteMtime && isObservedAfter(input.remoteMtime, input.cached.detailObservedAt)) {

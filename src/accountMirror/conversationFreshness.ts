@@ -18,6 +18,10 @@ export type AccountMirrorConversationRouteabilityState =
 	| "unknown";
 
 export type AccountMirrorConversationCompleteness = "none" | "partial" | "complete" | "unknown";
+export type AccountMirrorConversationMaterializationPolicy =
+	| "metadata_only"
+	| "recent_missing_assets"
+	| "full_missing_assets";
 
 export interface AccountMirrorConversationFreshness {
 	object: "account_mirror_conversation_freshness";
@@ -61,6 +65,7 @@ export interface AccountMirrorConversationFreshnessInput {
 		sourceCount?: number | null;
 	} | null;
 	assets?: unknown[];
+	materializationPolicy?: AccountMirrorConversationMaterializationPolicy | null;
 }
 
 export function deriveAccountMirrorConversationFreshness(
@@ -149,6 +154,7 @@ export function deriveAccountMirrorConversationFreshness(
 		detailObservedAt,
 		manifestObservedAt,
 		conversationFingerprint,
+		materializationPolicy: input.materializationPolicy ?? null,
 		stateReasons,
 	});
 	return {
@@ -197,6 +203,7 @@ function deriveFreshnessState(input: {
 	detailObservedAt: string | null;
 	manifestObservedAt: string | null;
 	conversationFingerprint: string;
+	materializationPolicy: AccountMirrorConversationMaterializationPolicy | null;
 	stateReasons: string[];
 }): AccountMirrorConversationFreshnessState {
 	const explicitState = normalizeFreshnessState(readString(input.explicit, ["state"]));
@@ -211,9 +218,18 @@ function deriveFreshnessState(input: {
 		input.stateReasons.push(`routeability_${input.routeabilityState}`);
 		return "terminal_unavailable";
 	}
-	if (input.assetCounts.missingLocal > 0 || input.assetCompleteness === "partial") {
+	if (
+		input.materializationPolicy !== "metadata_only" &&
+		(input.assetCounts.missingLocal > 0 || input.assetCompleteness === "partial")
+	) {
 		input.stateReasons.push("missing_local_assets");
 		return "missing_assets";
+	}
+	if (
+		input.materializationPolicy === "metadata_only" &&
+		(input.assetCounts.missingLocal > 0 || input.assetCompleteness === "partial")
+	) {
+		input.stateReasons.push("local_materialization_pending");
 	}
 	if (input.detailCompleteness === "partial" || input.detailCompleteness === "none") {
 		input.stateReasons.push(`detail_${input.detailCompleteness}`);

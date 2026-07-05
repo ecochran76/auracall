@@ -185,6 +185,7 @@ describe("account mirror refresh service", () => {
 			runtimeProfileId: "default",
 			expectedIdentityKey: "ecochran76@gmail.com",
 			sweepMode: "steady_follow",
+			materializationPolicy: null,
 			requestedPhase: null,
 			shouldYield: expect.any(Function),
 			onIdentityVerified: expect.any(Function),
@@ -512,7 +513,7 @@ describe("account mirror refresh service", () => {
 		]);
 	});
 
-	test("hydrates cached conversation freshness summaries for remote-only context assets", async () => {
+	test("hydrates metadata-only cached freshness for remote-only context assets", async () => {
 		const metadataCollector = {
 			collect: vi.fn(
 				async (_input: AccountMirrorMetadataCollectorInput) =>
@@ -602,6 +603,7 @@ describe("account mirror refresh service", () => {
 			provider: "chatgpt",
 			runtimeProfileId: "default",
 			explicitRefresh: true,
+			materializationPolicy: "metadata_only",
 		});
 
 		const collectInput = metadataCollector.collect.mock.calls[0]?.[0] as
@@ -611,7 +613,7 @@ describe("account mirror refresh service", () => {
 			conversationId: "conv_remote_assets",
 			detailObservedAt: "2026-04-29T11:00:00.000Z",
 			manifestObservedAt: "2026-04-29T11:00:00.000Z",
-			freshnessState: "missing_assets",
+			freshnessState: "fresh",
 			assetCompleteness: "partial",
 			missingLocalCount: 1,
 		});

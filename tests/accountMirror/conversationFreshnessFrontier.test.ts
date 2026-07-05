@@ -103,6 +103,79 @@ describe("conversation freshness frontier", () => {
 		expect(result.evidence.frontierReached).toBe(false);
 	});
 
+	test("does not select metadata-only rows solely for local materialization backlog", () => {
+		const rows = [
+			conversation("remote_backlog", "2026-06-27T11:55:00.000Z"),
+			conversation("fresh_1", "2026-06-27T11:54:00.000Z"),
+		];
+		const cached = new Map<string, ConversationFreshnessFrontierCachedSummary>([
+			[
+				"remote_backlog",
+				{
+					...cachedFresh("remote_backlog", "2026-06-27T12:00:00.000Z"),
+					assetCompleteness: "partial",
+					missingLocalCount: 3,
+				},
+			],
+			["fresh_1", cachedFresh("fresh_1")],
+		]);
+
+		const result = applyConversationFreshnessFrontier({
+			provider: "chatgpt",
+			sweepMode: "steady_follow",
+			conversations: rows,
+			cachedSummaries: cached,
+			materializationPolicy: "metadata_only",
+			threshold: 2,
+		});
+
+		expect(result.conversations).toEqual([]);
+		expect(result.evidence).toMatchObject({
+			frontierReached: true,
+			rowsSelectedForDetail: 0,
+			firstStoppedRow: {
+				conversationId: "fresh_1",
+			},
+		});
+		expect(result.evidence.rowEvidence[0]).toMatchObject({
+			conversationId: "remote_backlog",
+			decision: "fresh-frontier",
+			reasons: [],
+			cachedFresh: true,
+		});
+	});
+
+	test("selects local materialization backlog when policy requires missing assets", () => {
+		const rows = [conversation("remote_backlog", "2026-06-27T11:55:00.000Z")];
+		const cached = new Map<string, ConversationFreshnessFrontierCachedSummary>([
+			[
+				"remote_backlog",
+				{
+					...cachedFresh("remote_backlog", "2026-06-27T12:00:00.000Z"),
+					assetCompleteness: "partial",
+					missingLocalCount: 3,
+				},
+			],
+		]);
+
+		const result = applyConversationFreshnessFrontier({
+			provider: "chatgpt",
+			sweepMode: "steady_follow",
+			conversations: rows,
+			cachedSummaries: cached,
+			materializationPolicy: "recent_missing_assets",
+			threshold: 2,
+		});
+
+		expect(result.conversations.map((item) => item.id)).toEqual(["remote_backlog"]);
+		expect(result.evidence.rowEvidence[0]).toMatchObject({
+			conversationId: "remote_backlog",
+			decision: "selected",
+			reasons: ["missing_local_assets"],
+			cachedFresh: false,
+		});
+	});
+
 	test("full-sweep override keeps every row selected", () => {
 		const rows = [
 			conversation("fresh_1", "2026-06-27T11:55:00.000Z"),

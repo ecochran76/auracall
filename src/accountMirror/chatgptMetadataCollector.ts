@@ -26,6 +26,7 @@ import {
 	type ConversationFreshnessFrontierCachedSummary,
 	type ConversationFreshnessFrontierEvidence,
 } from "./conversationFreshnessFrontier.js";
+import type { AccountMirrorConversationMaterializationPolicy } from "./conversationFreshness.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
@@ -50,6 +51,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	runtimeProfileId: string;
 	expectedIdentityKey: string;
 	sweepMode?: "steady_follow" | "full_sweep";
+	materializationPolicy?: AccountMirrorConversationMaterializationPolicy | null;
 	requestedPhase?: AccountMirrorCollectorPhase | null;
 	previousEvidence?: AccountMirrorMetadataEvidence | null;
 	previousFiles?: readonly FileRef[] | null;
@@ -398,6 +400,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 						sweepMode: input.sweepMode ?? "steady_follow",
 						conversations,
 						previousConversationFreshness: input.previousConversationFreshness ?? null,
+						materializationPolicy: input.materializationPolicy ?? null,
 						attachmentCursor,
 						freshFrontierThreshold: input.limits.freshFrontierThreshold,
 					});
@@ -616,6 +619,7 @@ export function selectConversationDetailCandidates(input: {
 		string,
 		ConversationFreshnessFrontierCachedSummary
 	> | null;
+	materializationPolicy?: AccountMirrorConversationMaterializationPolicy | null;
 	attachmentCursor: AttachmentInventoryCursor | null;
 	freshFrontierThreshold?: number | null;
 }): {
@@ -630,6 +634,7 @@ export function selectConversationDetailCandidates(input: {
 		sweepMode: input.sweepMode,
 		conversations: input.conversations,
 		cachedSummaries: input.previousConversationFreshness,
+		materializationPolicy: input.materializationPolicy ?? null,
 		incompleteDetailConversationId:
 			input.attachmentCursor?.conversationDetail?.conversationId ?? null,
 		threshold: input.freshFrontierThreshold,
