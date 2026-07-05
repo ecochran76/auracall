@@ -1,3 +1,25 @@
+## 2026-07-05 | Plan 0152 Live-Follow Operating Model
+
+- Focus: create a parent goal for live follow that can converge the current
+  sequence of narrow fixes into a sane routine.
+- Goal:
+  - subscribed accounts should backfill and stay current through a durable
+    phase ledger;
+  - background work should remain provider-polite and avoid avoidable
+    rate-limit warnings;
+  - explicit operator/API/browser work should preempt live follow instead of
+    waiting behind it.
+- Plan:
+  - added
+    `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`;
+  - wired it into `ROADMAP.md` and `RUNBOOK.md`;
+  - milestone order starts with state contract, deterministic decision tree,
+    metadata/materialization split, preemption, and installed proof.
+- Immediate next slice:
+  - implement the `metadata_only` decision-tree split proven necessary by Plan
+    0151: completed chat detail scraping should not be conflated with local
+    materialization backlog.
+
 ## 2026-07-05 | ChatGPT Detail Inventory Empty-Refresh Retention
 
 - Focus: diagnose why live-follow detail inventory scanned four ChatGPT

@@ -12165,3 +12165,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - do not broad-resume live follow yet if the goal is frontier closure;
   - next slice should define the `metadata_only` decision tree for remote-only
     context assets versus local materialization requirements.
+
+## Turn 269 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - converge live follow into a stateful background routine that backfills and
+    keeps subscribed accounts current while avoiding provider warnings and
+    yielding to foreground operator work.
+- Milestone shape:
+  - define the state contract;
+  - persist account backfill progress;
+  - make next-phase selection deterministic;
+  - separate passive scrape budgets from active provider interactions;
+  - make foreground operator work preempt live follow;
+  - split metadata completeness from local materialization backlog;
+  - expose compact operator status and controls;
+  - prove the routine on installed services.
+- Current recommendation:
+  - use Plan 0152 as the parent acceptance target;
+  - start with the `metadata_only` freshness/materialization split because it
+    is the blocker proven by Plan 0151 pass `7`.
