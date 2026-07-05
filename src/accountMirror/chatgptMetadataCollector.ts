@@ -52,6 +52,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	sweepMode?: "steady_follow" | "full_sweep";
 	requestedPhase?: AccountMirrorCollectorPhase | null;
 	previousEvidence?: AccountMirrorMetadataEvidence | null;
+	previousFiles?: readonly FileRef[] | null;
 	previousConversationFreshness?: ReadonlyMap<
 		string,
 		ConversationFreshnessFrontierCachedSummary
@@ -170,6 +171,7 @@ function createAccountMirrorListOptions(
 	return {
 		...(abortSignal ? { abortSignal } : {}),
 		...(interactionGovernor ? { interactionGovernor } : {}),
+		accountMirrorInventory: true,
 		tabLifecycle: "dispose-new",
 		disableProjectClickFallback: true,
 	};
@@ -184,6 +186,7 @@ function withAccountMirrorTabLifecycle(
 	}
 	return {
 		...(listOptions ?? {}),
+		accountMirrorInventory: true,
 		tabLifecycle:
 			listOptions?.preserveActiveTab === true ? listOptions.tabLifecycle : "dispose-new",
 	};
@@ -427,6 +430,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 								listOptions,
 								pacer,
 								observation: createAccountMirrorObservationContext(input, client),
+								previousFiles: input.previousFiles,
 								prioritizeConversations:
 									honorRequestedDetailPhase ||
 									((input.sweepMode ?? "steady_follow") === "steady_follow" &&
@@ -1121,6 +1125,7 @@ export async function readBoundedAttachmentInventory(
 				pacer?: BrowserInteractionGovernor;
 				observation?: AccountMirrorDomDriftObservationContext;
 				prioritizeConversations?: boolean;
+				previousFiles?: readonly FileRef[] | null;
 				providerCallTimeoutMs?: number | null;
 		  } = 6,
 ): Promise<{
@@ -1140,6 +1145,7 @@ export async function readBoundedAttachmentInventory(
 	const observation = typeof options === "number" ? undefined : options.observation;
 	const prioritizeConversations =
 		typeof options === "number" ? false : options.prioritizeConversations === true;
+	const previousFiles = typeof options === "number" ? [] : (options.previousFiles ?? []);
 	const providerCallTimeoutMs =
 		typeof options === "number" ? null : (options.providerCallTimeoutMs ?? null);
 	const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
@@ -1239,6 +1245,10 @@ export async function readBoundedAttachmentInventory(
 				pacer,
 			);
 			const conversationFiles = conversationFileResult.files;
+			const knownConversationFiles =
+				conversationFiles.length > 0
+					? []
+					: selectPreviousConversationFiles(previousFiles, conversation);
 			const contextResult = await safeReadConversationContext(
 				client,
 				conversation,
@@ -1264,13 +1274,13 @@ export async function readBoundedAttachmentInventory(
 					totalMessages: contextChunk.totalMessages,
 				};
 			}
-			if (conversationFiles.length > 0) {
+			if (conversationFiles.length > 0 || knownConversationFiles.length > 0) {
 				progress.fileBearingConversationIds.push(conversation.id);
 			}
 			if ((context?.artifacts ?? []).length > 0) {
 				progress.artifactBearingConversationIds.push(conversation.id);
 			}
-			for (const file of conversationFiles) {
+			for (const file of [...conversationFiles, ...knownConversationFiles]) {
 				if (remaining <= 0) {
 					truncated = true;
 					break;
@@ -1407,6 +1417,7 @@ export async function readBoundedChatgptDetailInventory(
 				observation?: AccountMirrorDomDriftObservationContext;
 				providerCallTimeoutMs?: number | null;
 				prioritizeConversations?: boolean;
+				previousFiles?: readonly FileRef[] | null;
 				skipAccountLibraryInventory?: boolean;
 		  } = 6,
 ): Promise<{
@@ -1455,6 +1466,7 @@ export async function readBoundedChatgptDetailInventory(
 			: {
 					...options,
 					prioritizeConversations,
+					previousFiles: options.previousFiles,
 					providerCallTimeoutMs,
 				},
 	);
@@ -1648,6 +1660,19 @@ export async function readBoundedGrokDetailInventory(
 		cursor: conversationInventory.cursor,
 		progress: conversationInventory.progress,
 	};
+}
+
+function selectPreviousConversationFiles(
+	files: readonly FileRef[],
+	conversation: Conversation,
+): FileRef[] {
+	return files.filter((file) => {
+		if (file.source !== "conversation") return false;
+		const metadata = isRecord(file.metadata) ? file.metadata : {};
+		const metadataConversationId =
+			typeof metadata.conversationId === "string" ? metadata.conversationId : null;
+		return metadataConversationId === conversation.id || file.id.startsWith(`${conversation.id}:`);
+	});
 }
 
 function createAttachmentInventoryCursor(

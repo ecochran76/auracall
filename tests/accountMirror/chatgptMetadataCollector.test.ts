@@ -33,7 +33,10 @@ import { listDomDriftObservations } from "../../src/browser/domDriftObservations
 
 describe("ChatGPT account mirror metadata collector", () => {
 	const cleanup: string[] = [];
-	const accountMirrorTabLifecycle = { tabLifecycle: "dispose-new" } as const;
+	const accountMirrorTabLifecycle = {
+		accountMirrorInventory: true,
+		tabLifecycle: "dispose-new",
+	} as const;
 	const accountMirrorConversationOptions = {
 		projectId: undefined,
 		listOptions: accountMirrorTabLifecycle,
@@ -1558,6 +1561,48 @@ describe("ChatGPT account mirror metadata collector", () => {
 					},
 				},
 			],
+		});
+	});
+
+	test("uses prior known conversation files when account-mirror detail refresh returns empty", async () => {
+		const client = {
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(async (conversationId: string) => ({
+				provider: "chatgpt" as const,
+				conversationId,
+				messages: [],
+				artifacts: [],
+			})),
+		};
+
+		const inventory = await readBoundedAttachmentInventory(
+			client,
+			[],
+			[{ id: "conv_with_file", title: "Conversation with file", provider: "chatgpt" }],
+			4,
+			{
+				maxDetailReads: 1,
+				prioritizeConversations: true,
+				previousFiles: [
+					{
+						id: "conv_with_file:turn-1:0:handoff-attachments.zip",
+						name: "handoff-attachments.zip",
+						provider: "chatgpt",
+						source: "conversation",
+						remoteUrl: "chatgpt://file/file_cached",
+					},
+				],
+			},
+		);
+
+		expect(inventory.files.map((file) => file.id)).toEqual([
+			"conv_with_file:turn-1:0:handoff-attachments.zip",
+		]);
+		expect(inventory.progress.fileBearingConversationIds).toEqual(["conv_with_file"]);
+		expect(inventory.cursor).toMatchObject({
+			scannedConversations: 1,
+			nextConversationIndex: 0,
 		});
 	});
 

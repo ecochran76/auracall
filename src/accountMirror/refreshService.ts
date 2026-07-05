@@ -27,7 +27,7 @@ import {
 	recordBrowserOperationQueueObservation,
 	summarizeBrowserOperationQueueObservationsByKey,
 } from "../browser/operationQueueObservations.js";
-import type { ConversationArtifact, FileRef } from "../browser/providers/domain.js";
+import type { Conversation, ConversationArtifact, FileRef } from "../browser/providers/domain.js";
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
 import type { ResolvedUserConfig } from "../config.js";
 import {
@@ -376,6 +376,18 @@ export function createAccountMirrorRefreshService(input: {
 					boundIdentityKey: target.expectedIdentityKey ?? null,
 					limit: target.limits.maxConversationRowsPerCycle,
 				});
+				const previousCatalog = await persistence.readCatalog({
+					provider,
+					boundIdentityKey: target.expectedIdentityKey ?? null,
+					limit: 10_000,
+				});
+				const previousFiles = await readPreviousAccountMirrorFiles({
+					persistence,
+					provider,
+					boundIdentityKey: target.expectedIdentityKey ?? null,
+					catalogFiles: previousCatalog?.files ?? [],
+					conversations: previousCatalog?.conversations ?? [],
+				});
 				collection = await withTimeout(
 					metadataCollector.collect({
 						provider,
@@ -394,6 +406,7 @@ export function createAccountMirrorRefreshService(input: {
 							renavigationCooldownMs: target.limits.renavigationCooldownMs,
 						},
 						previousEvidence: target.metadataEvidence,
+						previousFiles,
 						previousConversationFreshness,
 						onIdentityVerified: (evidence) => {
 							verifiedIdentityRef.current = evidence;
@@ -2082,6 +2095,37 @@ function resolveMirrorManagedProfileDir(input: {
 		target: input.provider,
 	});
 	return context.managedProfileDir;
+}
+
+async function readPreviousAccountMirrorFiles(input: {
+	persistence: AccountMirrorPersistence;
+	provider: AccountMirrorProvider;
+	boundIdentityKey: string | null;
+	catalogFiles: readonly FileRef[];
+	conversations: readonly Conversation[];
+}): Promise<FileRef[]> {
+	const filesById = new Map<string, FileRef>();
+	for (const file of input.catalogFiles) {
+		filesById.set(file.id, file);
+	}
+	if (!input.boundIdentityKey || !input.persistence.readConversationFiles) {
+		return Array.from(filesById.values());
+	}
+	await Promise.all(
+		input.conversations.map(async (conversation) => {
+			const conversationFiles = await input.persistence
+				.readConversationFiles?.({
+					provider: input.provider,
+					boundIdentityKey: input.boundIdentityKey,
+					conversationId: conversation.id,
+				})
+				.catch(() => []);
+			for (const file of conversationFiles ?? []) {
+				filesById.set(file.id, file);
+			}
+		}),
+	);
+	return Array.from(filesById.values());
 }
 
 function estimateMetadataCountsFromConfig(

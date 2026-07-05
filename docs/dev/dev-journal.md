@@ -1,3 +1,29 @@
+## 2026-07-05 | ChatGPT Detail Inventory Empty-Refresh Retention
+
+- Focus: diagnose why live-follow detail inventory scanned four ChatGPT
+  conversations but reported `artifacts=0 files=0` while the retained mirror
+  cache still had known conversation-file inventory.
+- Finding:
+  - the requested detail phase did call conversation-file and conversation-
+    context reads, but a provider refresh that returned an empty
+    conversation-file list was treated as authoritative for the pass;
+  - selected conversation `6a3f1652-2490-83ea-add0-0a900e6d55bc` already had a
+    cached `handoff-attachments.zip`, so `filesObserved=0` was losing useful
+    evidence during account-mirror inventory.
+- Result:
+  - account-mirror list options now carry an explicit inventory marker;
+  - conversation-file refreshes preserve non-empty cached file evidence only
+    for account-mirror inventory reads when the provider refresh returns empty;
+  - the refresh service also passes prior persisted catalog files into the
+    collector, and ChatGPT detail inventory seeds selected conversations from
+    those known file refs when a live conversation-file read returns empty;
+  - normal user-requested `listConversationFiles` behavior is unchanged.
+- Validation:
+  - focused LLM file-listing regression passed;
+  - account-mirror collector, refresh, and completion tests passed;
+  - TypeScript passed;
+  - Biome check passed on touched files.
+
 ## 2026-06-30 | Plan 0150 Accepted Wake-Boundary Proof
 
 - Focus: close Plan 0150 with installed proof that a later live-follow wake
@@ -39294,3 +39320,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   remaining Plan 0150 gap is the next-cycle proof that uses the requested
   detail phase directly instead of restarting at root rails. All normal-service
   `chatgpt/wsl-chrome-3` live-follow completions were left paused.
+- 2026-07-05: Continued Plan 0150 ChatGPT detail-inventory retention work.
+  Live proof showed the scheduler resumed at `detail-inventory` instead of
+  restarting rail walks, but the pass still returned `files=0` while
+  conversation `6a3f1652-2490-83ea-add0-0a900e6d55bc` had a cached
+  `handoff-attachments.zip` in the conversation-files cache. The missing piece
+  was that refresh-time prior file carry-forward only read the account-mirror
+  catalog file list, not per-conversation file caches. Added persistence read
+  support for cached conversation files and pass those files into the collector
+  as prior known conversation files. Validation passed with focused
+  account-mirror/LLM file tests, `pnpm exec tsc --noEmit --pretty false`, and
+  scoped Biome.

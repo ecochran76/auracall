@@ -555,6 +555,49 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
+	test("listConversationFiles preserves cached conversation files for account-mirror empty refreshes", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const cachedFiles: FileRef[] = [
+			{
+				id: "cached-conversation-file",
+				name: "handoff-attachments.zip",
+				provider: "chatgpt",
+				source: "conversation",
+				remoteUrl: "chatgpt://file/file_cached",
+			},
+		];
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listConversationFiles: vi.fn(async () => []),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			await store.writeConversationFiles(cacheContext, "conversation-123", cachedFiles);
+			const result = await service.listConversationFiles("conversation-123", {
+				listOptions: { accountMirrorInventory: true },
+			});
+
+			expect(result).toEqual(cachedFiles);
+			expect(provider.listConversationFiles).toHaveBeenCalledWith("conversation-123", {
+				accountMirrorInventory: true,
+			});
+			const retained = await store.readConversationFiles(cacheContext, "conversation-123");
+			expect(retained.items).toEqual(cachedFiles);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("listConversationFiles falls back to context files when provider lacks listConversationFiles", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
 		setAuracallHomeDirOverrideForTest(homeDir);

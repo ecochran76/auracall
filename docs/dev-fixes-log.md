@@ -1,3 +1,14 @@
+- 2026-07-05: ChatGPT account-mirror detail inventory must not treat an empty
+  conversation-file refresh as authoritative deletion evidence when non-empty
+  cached conversation-file evidence already exists. Mark account-mirror list
+  options with `accountMirrorInventory=true` and, only on that path, retain
+  cached conversation files when the provider refresh returns `[]`. This keeps
+  live-follow detail passes from reporting `filesObserved=0` for rows with
+  known remote files while preserving normal user-requested file-list behavior.
+  Also pass prior persisted catalog files into the metadata collector so
+  selected conversation rows can seed known file refs even when provider DOM
+  listing is empty.
+
 - 2026-06-30: The live-follow phase ledger must be wired into refresh, not
   only persisted for readback. `AccountMirrorRefreshRequest` and
   `AccountMirrorMetadataCollectorInput` now carry `requestedPhase`. Completion
@@ -18721,3 +18732,10 @@ browser-stage lifecycle observability, not transcript truncation.
   avoid ChatGPT's click-heavy sidebar project fallback and use a direct DOM
   link scrape so the cycle can move on to root conversations and detail
   scraping instead of restarting or burning the pass in project rails.
+- 2026-07-05: Account-mirror detail inventory must retain per-conversation
+  file caches, not only the persisted account-mirror file catalog. A targeted
+  ChatGPT detail pass can legitimately observe no live file tiles in the
+  current DOM pass, but cached conversation-files entries are still valid prior
+  evidence for selected conversations. Before collection, read cached
+  conversation files for cached conversations and pass them as prior files so
+  empty live detail reads do not collapse known attachment evidence to zero.

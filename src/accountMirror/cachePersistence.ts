@@ -1,8 +1,14 @@
-import type { ResolvedUserConfig } from "../config.js";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import {
+	type AccountMirrorCacheSnapshot,
+	type AccountMirrorMediaManifestEntry,
+	type CacheStore,
+	type CacheStoreKind,
+	createCacheStore,
+} from "../browser/llmService/cache/store.js";
 import type { ProviderCacheContext } from "../browser/providers/cache.js";
 import type {
 	Conversation,
@@ -11,13 +17,7 @@ import type {
 	FileRef,
 	Project,
 } from "../browser/providers/domain.js";
-import {
-	createCacheStore,
-	type AccountMirrorCacheSnapshot,
-	type AccountMirrorMediaManifestEntry,
-	type CacheStore,
-	type CacheStoreKind,
-} from "../browser/llmService/cache/store.js";
+import type { ResolvedUserConfig } from "../config.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
 import type {
 	AccountMirrorMetadataCounts,
@@ -115,6 +115,7 @@ export interface AccountMirrorPersistence {
 	readConversationContext(
 		input: AccountMirrorConversationContextRequest,
 	): Promise<ConversationContext | null>;
+	readConversationFiles?(input: AccountMirrorConversationContextRequest): Promise<FileRef[]>;
 	readConversationContextEntry?(
 		input: AccountMirrorConversationContextRequest,
 	): Promise<AccountMirrorConversationContextCacheEntry | null>;
@@ -317,6 +318,18 @@ export function createAccountMirrorPersistence(input: {
 		},
 		async readConversationContext(request) {
 			return (await readConversationContextEntry(request))?.context ?? null;
+		},
+		async readConversationFiles(request) {
+			if (!request.boundIdentityKey || !request.conversationId.trim()) {
+				return [];
+			}
+			const context = createMirrorCacheContext({
+				config: options.config,
+				provider: request.provider,
+				boundIdentityKey: request.boundIdentityKey,
+			});
+			const result = await cacheStore.readConversationFiles(context, request.conversationId.trim());
+			return result.items;
 		},
 		readConversationContextEntry,
 	};

@@ -200,6 +200,7 @@ describe("account mirror refresh service", () => {
 				renavigationCooldownMs: 0,
 			},
 			previousEvidence: null,
+			previousFiles: [],
 			previousConversationFreshness: new Map(),
 			abortSignal: expect.any(AbortSignal),
 		});
@@ -437,6 +438,15 @@ describe("account mirror refresh service", () => {
 				files: [],
 				media: [],
 			})),
+			readConversationFiles: vi.fn(async () => [
+				{
+					id: "conv_cached:turn_1:0:handoff-attachments.zip",
+					name: "handoff-attachments.zip",
+					provider: "chatgpt" as const,
+					source: "conversation" as const,
+					remoteUrl: "chatgpt://file/file_cached",
+				},
+			]),
 			readConversationContextEntry: vi.fn(async () => ({
 				fetchedAt: "2026-04-29T11:00:00.000Z",
 				stale: false,
@@ -482,6 +492,13 @@ describe("account mirror refresh service", () => {
 			freshnessState: "fresh",
 			missingLocalCount: 0,
 		});
+		expect(collectInput?.previousFiles).toEqual([
+			expect.objectContaining({
+				id: "conv_cached:turn_1:0:handoff-attachments.zip",
+				name: "handoff-attachments.zip",
+				source: "conversation",
+			}),
+		]);
 	});
 
 	test("preserves an active ChatGPT rate-limit guard after a successful refresh", async () => {

@@ -2744,6 +2744,12 @@ export abstract class LlmService {
 		);
 		const normalizedFiles = Array.isArray(files) ? files : [];
 		const cacheContext = await this.resolveCacheContext(listOptions);
+		if (normalizedFiles.length === 0 && listOptions.accountMirrorInventory === true) {
+			const existing = await this.cacheStore.readConversationFiles(cacheContext, conversationId);
+			if (existing.items.length > 0) {
+				return existing.items;
+			}
+		}
 		await this.cacheStore.writeConversationFiles(cacheContext, conversationId, normalizedFiles);
 		return normalizedFiles;
 	}

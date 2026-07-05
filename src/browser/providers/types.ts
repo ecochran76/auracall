@@ -57,6 +57,7 @@ export interface BrowserProviderListOptions {
 	skipFeatureSignature?: boolean;
 	disableProjectClickFallback?: boolean;
 	abortSignal?: AbortSignal;
+	accountMirrorInventory?: boolean;
 	accountMirrorContextChunk?: {
 		startMessageIndex?: number | null;
 		maxMessages?: number | null;
