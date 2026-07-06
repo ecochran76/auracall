@@ -1,3 +1,16 @@
+## 2026-07-06 | Plan 0153 Target Resume Readiness
+
+- Focus: write the follow-up plan after Plan 0152 closed the live-follow
+  operating model.
+- Result:
+  - opened `docs/dev/plans/0153-2026-07-06-live-follow-target-resume-readiness.md`;
+  - wired it into `ROADMAP.md` as the active live-follow follow-up plan;
+  - scoped the work to target-specific resume decisions for operator-paused
+    ChatGPT rows, Gemini provider-blocked live follow, Grok identity-blocked
+    live follow, and materialization/account-library backlog separation.
+- Validation:
+  - `pnpm run plans:audit -- --keep 153`.
+
 ## 2026-07-06 | Plan 0152 Operating Model Closeout
 
 - Focus: close the live-follow operating-model convergence slice without

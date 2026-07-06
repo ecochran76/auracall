@@ -13225,3 +13225,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - closeout validation reran `pnpm run plans:audit -- --keep 152`;
   - installed runtime status was rechecked through `auracall api status` and
     `systemctl --user show auracall-api.service`.
+
+## Turn 323 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0153-2026-07-06-live-follow-target-resume-readiness.md`
+- Goal:
+  - write the follow-up plan for converting the post-0152 target
+    classifications into operator-safe resume decisions.
+- Result:
+  - opened Plan 0153 as the active live-follow follow-up plan;
+  - scoped the work to target-specific resume readiness instead of reopening
+    the 0152 operating model;
+  - preserved safe steady-follow ChatGPT rows as cadence-only evidence;
+  - split non-safe rows into explicit work classes: operator-paused ChatGPT
+    controls, Gemini provider-specific repair, Grok identity/config repair,
+    and separate account-library/materialization backlog handling;
+  - wired Plan 0153 into `ROADMAP.md`.
+- Validation:
+  - `pnpm run plans:audit -- --keep 153` returned validation errors `0`.
