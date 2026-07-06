@@ -344,6 +344,30 @@ Validation:
 - post-restart `auracall api status --port 18095 --json`
 - post-restart `auracall api mirror-completion-status acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 --port 18095 --json`
 
+### 2026-07-06 | M4/M8 Installed Isolated Preemption Harness
+
+- Ran the installed runtime package's scheduler preemption harness directly
+  from `~/.auracall/user-runtime/node_modules/auracall/dist/scripts/`, not the
+  source tree.
+- The scheduler-level harness used an isolated API server and injected
+  foreground backpressure. It proved one execute scheduler pass selected an
+  eligible live-follow target, yielded to `foreground-work`, projected target
+  `routineDecision.state=operator_preempted`, preserved
+  `targetNextPhase=identity`, and started zero provider refresh work.
+- Ran the installed runtime package's completion foreground-deferral harness
+  from the same installed package. It proved a queued live-follow completion
+  resumes, observes foreground pressure before refresh, records
+  `foreground_work_deferred`, exposes the same lifecycle through status and
+  scheduler diagnostics, and starts zero provider refresh work.
+- This closes the installed isolated-harness part of Gate E. It does not claim
+  broad live-follow resume safety or a real-provider foreground collision; the
+  normal service remains on bounded, cadence-preserving proof.
+
+Validation:
+
+- `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-scheduler-preemption.js`
+- `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-foreground-deferral.js`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
@@ -595,10 +619,16 @@ Current evidence:
 - Deterministic smoke `pnpm run smoke:scheduler-preemption` proves the
   scheduler preemption/readback path with zero provider refresh or completion
   work.
-- Installed proof remains pending because the current configured live-follow
-  targets are paused/minimum-interval or disabled/blocked; an installed
-  preemption smoke must wait for an eligible target or use an isolated proof
-  harness that cannot touch provider surfaces after preemption.
+- Installed isolated harness proof now covers both preemption layers without
+  touching provider surfaces: the installed package
+  `smoke-account-mirror-scheduler-preemption.js` reported
+  `schedulerBackpressure=foreground-work`,
+  `targetRoutineState=operator_preempted`, and `providerWork=none`; the
+  installed package `smoke-account-mirror-foreground-deferral.js` reported
+  `deferred=foreground_work_deferred`,
+  `diagnosticsLifecycle=foreground_work_deferred`, and `providerWork=none`.
+- A real-provider foreground collision proof is still intentionally deferred
+  until it can be staged without broad live-follow resume or provider churn.
 
 ### Gate F | Installed Resume Decision
 

@@ -1,3 +1,24 @@
+## 2026-07-06 | Plan 0152 Installed Isolated Preemption Harness
+
+- Focus: prove the installed runtime package carries the foreground-preemption
+  gates before attempting any real-provider collision.
+- Result:
+  - ran installed
+    `smoke-account-mirror-scheduler-preemption.js` from
+    `~/.auracall/user-runtime/node_modules/auracall/dist/scripts/`;
+  - the isolated scheduler harness reported
+    `schedulerBackpressure=foreground-work`,
+    `targetRoutineState=operator_preempted`, `targetNextPhase=identity`, and
+    `providerWork=none`;
+  - ran installed `smoke-account-mirror-foreground-deferral.js` from the same
+    package;
+  - the completion harness reported `deferred=foreground_work_deferred`,
+    `diagnosticsLifecycle=foreground_work_deferred`, `providerRefreshCalls=0`,
+    and `providerWork=none`.
+- Validation:
+  - installed package scheduler-preemption harness passed;
+  - installed package foreground-deferral harness passed.
+
 ## 2026-07-06 | Plan 0152 Installed Steady-Follow Cadence Cycle
 
 - Focus: prove another real subscribed-account steady-follow loop on the

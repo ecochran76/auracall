@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 316 | 2026-07-06
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: close the installed isolated-harness portion of Gate E without forcing
+  a real-provider foreground collision or broad live-follow resume.
+- Result:
+  - ran the installed package scheduler preemption harness directly from
+    `~/.auracall/user-runtime/node_modules/auracall/dist/scripts/`;
+  - scheduler proof reported `schedulerBackpressure=foreground-work`,
+    `targetRoutineState=operator_preempted`, `targetNextPhase=identity`, and
+    `providerWork=none`;
+  - ran the installed package foreground-deferral harness from the same
+    installed runtime;
+  - completion proof reported `deferred=foreground_work_deferred`,
+    `diagnosticsLifecycle=foreground_work_deferred`,
+    `providerRefreshCalls=0`, and `providerWork=none`.
+- Validation:
+  - `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-scheduler-preemption.js`;
+  - `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-foreground-deferral.js`.
+- Remaining scope:
+  - Plan 0152 still should not broadly resume live follow until the operator
+    accepts either this isolated installed proof as the Gate E boundary or a
+    carefully staged real-provider foreground collision is run.
+
 ## Turn 315 | 2026-07-06
 
 - Active plan:
