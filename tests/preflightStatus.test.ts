@@ -232,6 +232,60 @@ describe('preflight status persistence', () => {
         '==== completion controls ====',
         '>> pnpm run smoke:completion-control',
         'completion-control smoke: pass',
+        '==== foreground deferral evidence ====',
+        '>> pnpm run smoke:foreground-deferral',
+      ].join('\n'),
+    );
+
+    expect(run.steps).toEqual([
+      expect.objectContaining({
+        label: 'completion controls',
+        status: 'passed',
+        command: 'pnpm run smoke:completion-control',
+        completedAt: expect.any(String),
+        durationMs: expect.any(Number),
+      }),
+      expect.objectContaining({
+        label: 'foreground deferral evidence',
+        status: 'running',
+        command: 'pnpm run smoke:foreground-deferral',
+        completedAt: null,
+        durationMs: null,
+      }),
+    ]);
+  });
+
+  it('continues to the hydration step after foreground deferral evidence passes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-preflight-run-foreground-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const run = {
+      object: 'auracall_preflight_run' as const,
+      id: 'preflight_lazy_live_follow_foreground',
+      name: 'lazy-live-follow' as const,
+      status: 'running' as const,
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: null,
+      durationMs: null,
+      exitCode: null,
+      signal: null,
+      errorMessage: null,
+      command: 'node',
+      args: ['preflight.js'],
+      cwd: '/tmp',
+      logPath: path.join(homeDir, 'logs', 'preflight-lazy-live-follow-active.log'),
+      steps: [],
+    };
+
+    observeLazyLiveFollowPreflightRunOutput(
+      run,
+      [
+        '==== completion controls ====',
+        '>> pnpm run smoke:completion-control',
+        'completion-control smoke: pass',
+        '==== foreground deferral evidence ====',
+        '>> pnpm run smoke:foreground-deferral',
+        'foreground-deferral smoke: pass',
         '==== completion hydration ====',
         '>> pnpm run smoke:completion-hydration',
       ].join('\n'),
@@ -242,6 +296,13 @@ describe('preflight status persistence', () => {
         label: 'completion controls',
         status: 'passed',
         command: 'pnpm run smoke:completion-control',
+        completedAt: expect.any(String),
+        durationMs: expect.any(Number),
+      }),
+      expect.objectContaining({
+        label: 'foreground deferral evidence',
+        status: 'passed',
+        command: 'pnpm run smoke:foreground-deferral',
         completedAt: expect.any(String),
         durationMs: expect.any(Number),
       }),

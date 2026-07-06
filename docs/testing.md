@@ -308,6 +308,11 @@
         `pnpm run smoke:completion-control`; it uses an injected completion
         service and proves `POST /status` pause, CLI helper resume, MCP cancel,
         and `/status` readback without provider or browser dispatcher access
+      - local deterministic smoke for foreground live-follow deferral:
+        `pnpm run smoke:foreground-deferral`; it resumes a paused fixture
+        live-follow completion under foreground backpressure and proves
+        `foreground_work_deferred` status/diagnostics readback with zero
+        provider refresh calls
       - local deterministic smoke for persisted completion hydration:
         `pnpm run smoke:completion-hydration`; it seeds a paused live-follow
         completion into a temp cache, restarts the API over the same cache,
@@ -391,8 +396,9 @@
         provider/browser dispatcher work
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
-        completion-hydration, live-follow health/diagnostics parity,
-        ops-browser-control, ops-browser provider-guard clear,
+        foreground-deferral, completion-hydration, live-follow
+        health/diagnostics parity, ops-browser-control, ops-browser
+        provider-guard clear,
         ops-browser preflight run-detail, operator API-key issue,
         OpenAI-compatible client auth, scoped client handoff workflow,
         setup-plus-batch agent workflow, user runtime install, installed

@@ -39743,3 +39743,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   currently paused/minimum-interval or disabled/blocked, so installed
   `operator_preempted` proof remains pending rather than forcing provider state
   changes just to manufacture eligibility.
+- 2026-07-06: Continued Plan 0152 M4/M8 foreground-deferral smoke coverage.
+  Added `pnpm run smoke:foreground-deferral` and wired it into
+  `preflight:lazy-live-follow`. The smoke starts a short-lived API server with
+  the real completion service, resumes a paused fixture live-follow operation
+  under foreground backpressure, verifies `foreground_work_deferred` through
+  API status and scheduler diagnostics, then asserts provider refresh calls
+  stayed at zero. Source smoke proof passed with `providerWork=none`.

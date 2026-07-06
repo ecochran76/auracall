@@ -274,6 +274,11 @@ scoped keys, response batches, attachments, and polling rules, see
   with an injected completion service and verify `POST /status` pause, CLI
   helper resume, MCP cancel, `/status` readback, and compact `api_status`
   completion posture without provider or browser dispatcher access.
+- Deterministic foreground-deferral smoke: run
+  `pnpm run smoke:foreground-deferral` to resume a paused fixture live-follow
+  completion under foreground backpressure and verify
+  `foreground_work_deferred` status plus scheduler diagnostics readback with
+  zero provider refresh calls.
 - Deterministic health parity smoke: run `pnpm run smoke:live-follow-health`
   to start one fixture-backed local API server and compare `/status.liveFollow`,
   CLI `api status`, MCP `api_status`, and `/ops/browser` against the same
@@ -294,9 +299,9 @@ scoped keys, response batches, attachments, and polling rules, see
   and can call it against a fixture local API server.
 - Lazy-live-follow operator preflight: run
 `pnpm run preflight:lazy-live-follow` to execute the no-browser completion,
-hydration, health, dashboard, operator API-key issue/client-auth,
-user-runtime install, and installed MCP status plus log-tail checks as one
-release gate before live dogfood.
+foreground-deferral, hydration, health, dashboard, operator API-key
+issue/client-auth, user-runtime install, and installed MCP status plus
+log-tail checks as one release gate before live dogfood.
 
 ### `config_entities_list`
 - Behavior: reads the effective AuraCall agent/team catalog. The returned

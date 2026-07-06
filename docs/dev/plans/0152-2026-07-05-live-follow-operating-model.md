@@ -139,6 +139,21 @@ Validation:
 - `pnpm vitest run tests/accountMirror/completionService.test.ts --testNamePattern "defers due live-follow completion refreshes"`
 - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "scheduler diagnostics|foreground scheduler preemption|does not treat an idle background drain cadence timer"`
 
+### 2026-07-06 | M4/M8 Foreground Deferral Smoke
+
+- Added `pnpm run smoke:foreground-deferral` as a deterministic no-provider
+  proof that a paused live-follow completion resumes, observes foreground
+  backpressure before refresh, records `foreground_work_deferred`, and exposes
+  that lifecycle event through API status and scheduler diagnostics.
+- Wired the smoke into `preflight:lazy-live-follow`, so release/operator
+  preflight now fails if foreground deferral regresses before live dogfood.
+- Source smoke proof completed with `providerRefreshCalls=0` and
+  `providerWork=none`.
+
+Validation:
+
+- `pnpm run smoke:foreground-deferral`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
@@ -385,6 +400,8 @@ Current evidence:
 - Completion-level foreground deferral is persisted as
   `foreground_work_deferred` and exposed through live-follow target status plus
   scheduler diagnostics.
+- Deterministic smoke `pnpm run smoke:foreground-deferral` proves the
+  completion deferral/readback path with zero provider refresh calls.
 - Installed proof remains pending because the current configured live-follow
   targets are paused/minimum-interval or disabled/blocked; an installed
   preemption smoke must wait for an eligible target or use an isolated proof

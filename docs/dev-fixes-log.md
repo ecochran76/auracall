@@ -18932,3 +18932,8 @@ browser-stage lifecycle observability, not transcript truncation.
   `foreground_work_deferred` lifecycle event with the reason and retry
   timestamp, and project that latest event through scheduler diagnostics so an
   `idle_waiting` operation explains why it is waiting.
+- 2026-07-06: Foreground-deferral regressions need a no-provider preflight
+  proof. Keep `smoke:foreground-deferral` in the lazy-live-follow preflight so
+  a paused fixture completion can prove resume-to-deferral, API status
+  lifecycle readback, scheduler diagnostics readback, and zero provider refresh
+  calls before any live dogfood resumes real accounts.
