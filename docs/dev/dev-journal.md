@@ -1,3 +1,28 @@
+## 2026-07-05 | Plan 0152 Passive Scrape Telemetry Accounting
+
+- Focus: repair the M3 evidence gap where installed detail-inventory proof
+  showed active chat loads but `passive.total=0` even though provider telemetry
+  proved visible-DOM/context reads.
+- Result:
+  - scrape-budget passive counters now use browser/provider telemetry as an
+    evidence source in addition to inventory progress arrays;
+  - ChatGPT visible conversation-file DOM reads, visible artifact/canvas probe
+    reads, conversation message reads, and local/context reads raise passive
+    parse/read counters even when no new artifact/file rows are produced;
+  - empty or chunked detail passes no longer look like pure active UI churn.
+- Installed proof:
+  - reinstalled user runtime, restarted `auracall-api.service`, then ran
+    bounded completion
+    `acctmirror_completion_10a35365-d10a-464c-abfa-4371f3dead2c` on
+    `chatgpt/wsl-chrome-3`;
+  - the pass completed with `classification=passive_dominant`, passive `6`,
+    active `5`, `llmServiceRequests=0`, `cdpMethodCalls=9`, provider
+    interactions `5/6`, and no provider guard.
+- Validation:
+  - focused ChatGPT metadata collector regression passed;
+  - TypeScript passed;
+  - Biome check passed on touched source/test files.
+
 ## 2026-07-05 | Plan 0152 Bounded Completion Phase Selection
 
 - Focus: fix the installed dogfood failure where a manual one-pass

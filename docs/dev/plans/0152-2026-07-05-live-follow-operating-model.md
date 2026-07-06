@@ -215,6 +215,34 @@ Validation:
 - `systemctl --user restart auracall-api.service`
 - `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
 
+### 2026-07-05 | M3 Passive Telemetry Accounting
+
+- Scrape-budget passive counters now use browser/provider telemetry as evidence,
+  not only final artifact/file-bearing progress arrays.
+- ChatGPT visible-DOM reads such as `chatgpt.readVisibleConversationFiles`,
+  artifact/canvas probe reads, and context/app-state reads such as
+  `chatgpt.readConversationMessages` or `llmService.getConversationContext`
+  raise the passive parse/read counters even when the pass finds no new
+  artifacts or files.
+- This fixes the misleading `passive.total=0` shape from empty or chunked
+  detail-inventory passes: a loaded chat that was parsed but produced no new
+  materialized objects is no longer reported as purely active UI work.
+- Installed dogfood on `chatgpt/wsl-chrome-3` proved completion
+  `acctmirror_completion_10a35365-d10a-464c-abfa-4371f3dead2c` completed one
+  bounded metadata-only detail pass with `classification=passive_dominant`,
+  passive `6`, active `5`, `llmServiceRequests=0`, `cdpMethodCalls=9`, provider
+  interactions `5/6`, no provider guard, and `detail-inventory` still selected
+  as the next ledger phase.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --testNamePattern "requested detail-inventory|passive telemetry"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

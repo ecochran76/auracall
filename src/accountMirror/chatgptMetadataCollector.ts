@@ -772,15 +772,26 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 	scrapeTelemetry: BrowserScrapeTelemetrySnapshot | null;
 	chatgptAccountLibraryRead: boolean;
 }): AccountMirrorScrapeBudgetEvidence {
+	const providerActions = normalizePositiveCountRecord(input.scrapeTelemetry?.providerActions);
+	const cdpMethods = normalizePositiveCountRecord(input.scrapeTelemetry?.cdpCalls);
+	const telemetryPassive = derivePassiveScrapeSignalsFromTelemetry(providerActions);
 	const passive = {
-		domParses:
+		domParses: Math.max(
 			input.inventoryProgress.detailObservedConversationIds.length +
-			input.inventoryProgress.scannedProjectIds.length,
-		appStateReads: input.inventoryProgress.contextObservedConversationIds.length,
-		downloadLinkEnumerations: uniqueStrings([
-			...input.inventoryProgress.artifactBearingConversationIds,
-			...input.inventoryProgress.fileBearingConversationIds,
-		]).length,
+				input.inventoryProgress.scannedProjectIds.length,
+			telemetryPassive.domParses,
+		),
+		appStateReads: Math.max(
+			input.inventoryProgress.contextObservedConversationIds.length,
+			telemetryPassive.appStateReads,
+		),
+		downloadLinkEnumerations: Math.max(
+			uniqueStrings([
+				...input.inventoryProgress.artifactBearingConversationIds,
+				...input.inventoryProgress.fileBearingConversationIds,
+			]).length,
+			telemetryPassive.downloadLinkEnumerations,
+		),
 		cachedFileCarries: 0,
 		total: 0,
 	};
@@ -811,8 +822,6 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 	const budget = Math.max(0, Math.floor(input.limits.maxBrowserInteractionsPerMinute));
 	const remaining = budget > 0 ? Math.max(0, budget - active.total) : null;
 	const yielded = input.attachmentCursor?.yielded === true;
-	const cdpMethods = normalizePositiveCountRecord(input.scrapeTelemetry?.cdpCalls);
-	const providerActions = normalizePositiveCountRecord(input.scrapeTelemetry?.providerActions);
 	const cdpMethodCalls = sumCountRecord(cdpMethods);
 	const classification =
 		passive.total === 0 && active.total === 0
@@ -855,6 +864,29 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 	};
 }
 
+function derivePassiveScrapeSignalsFromTelemetry(providerActions: Record<string, number>): {
+	domParses: number;
+	appStateReads: number;
+	downloadLinkEnumerations: number;
+} {
+	return {
+		domParses: sumSelectedCountRecord(providerActions, [
+			"chatgpt.readVisibleConversationFiles",
+			"chatgpt.readVisibleDownloadArtifactProbes",
+			"chatgpt.readVisibleImageArtifactProbes",
+			"chatgpt.readVisibleCanvasProbes",
+		]),
+		appStateReads: sumSelectedCountRecord(providerActions, [
+			"chatgpt.readConversationMessages",
+			"llmService.getConversationContext",
+		]),
+		downloadLinkEnumerations: sumSelectedCountRecord(providerActions, [
+			"chatgpt.readVisibleConversationFiles",
+			"chatgpt.readVisibleDownloadArtifactProbes",
+		]),
+	};
+}
+
 function normalizePositiveCountRecord(
 	value: Record<string, number> | null | undefined,
 ): Record<string, number> {
@@ -869,6 +901,10 @@ function normalizePositiveCountRecord(
 
 function sumCountRecord(value: Record<string, number>): number {
 	return Object.values(value).reduce((total, count) => total + count, 0);
+}
+
+function sumSelectedCountRecord(value: Record<string, number>, keys: readonly string[]): number {
+	return keys.reduce((total, key) => total + (value[key] ?? 0), 0);
 }
 
 function uniqueStrings(values: readonly string[]): string[] {

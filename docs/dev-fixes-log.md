@@ -1,3 +1,15 @@
+- 2026-07-05: Account-mirror scrape budgets should count passive parse/read
+  work from concrete browser telemetry, not only from final artifact/file
+  progress arrays. Empty or chunked ChatGPT detail passes can read the visible
+  conversation files DOM and request conversation context without producing new
+  artifact/file rows; reporting those passes as `passive.total=0` makes a
+  parsed chat look like pure active UI churn. Derive passive DOM parses,
+  app-state reads, and download-link enumeration attempts from telemetry actions
+  such as `chatgpt.readVisibleConversationFiles`,
+  `chatgpt.readConversationMessages`, visible artifact/canvas probes, and
+  `llmService.getConversationContext`, using the existing progress arrays as
+  the floor.
+
 - 2026-07-05: Bounded/manual account-mirror completions must use the persisted
   account backfill ledger before their first refresh, not only the live-follow
   scheduler path. A one-pass `mirror-complete` can otherwise restart at broad

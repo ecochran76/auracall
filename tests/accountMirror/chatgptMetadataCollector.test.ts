@@ -1109,6 +1109,133 @@ describe("ChatGPT account mirror metadata collector", () => {
 		]);
 	});
 
+	test("counts passive telemetry for empty requested detail-inventory parses", async () => {
+		const client = {
+			getUserIdentity: vi.fn(async () => ({
+				email: "ecochran76@gmail.com",
+				accountLevel: "Business",
+				source: "auth-session",
+			})),
+			listProjects: vi.fn(async () => {
+				throw new Error("projects should not be read");
+			}),
+			listConversations: vi.fn(async () => {
+				throw new Error("conversations should not be read");
+			}),
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(
+				async (_conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					recordBrowserScrapeProviderAction(
+						options?.listOptions,
+						"chatgpt.readVisibleConversationFiles",
+					);
+					recordBrowserScrapeCdpCall(options?.listOptions, "Runtime.evaluate");
+					return [];
+				},
+			),
+			getConversationContext: vi.fn(
+				async (_conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					recordBrowserScrapeProviderAction(
+						options?.listOptions,
+						"llmService.getConversationContext",
+					);
+					return null as never;
+				},
+			),
+		};
+		const collector = createChatgptAccountMirrorMetadataCollector(
+			{
+				model: "gpt-5.2",
+				browser: {},
+				runtimeProfiles: {
+					default: {
+						browserProfile: "default",
+						defaultService: "chatgpt",
+						services: {
+							chatgpt: {
+								identity: {
+									email: "ecochran76@gmail.com",
+								},
+							},
+						},
+					},
+				},
+			} as never,
+			{
+				createClient: async () => client as never,
+			},
+		);
+
+		const result = await collector.collect({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			sweepMode: "steady_follow",
+			requestedPhase: "detail-inventory",
+			previousEvidence: {
+				identitySource: "auth-session",
+				projectSampleIds: [],
+				conversationSampleIds: ["conv_empty_parse"],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: true,
+				},
+				conversationFreshnessFrontier: {
+					object: "account_mirror_conversation_freshness_frontier",
+					provider: "chatgpt",
+					sweepMode: "steady_follow",
+					threshold: 3,
+					rowsExamined: 4,
+					rowsSelectedForDetail: 1,
+					frontierReached: true,
+					firstStoppedRow: null,
+					fallbackReason: null,
+					selectedConversationIds: ["conv_empty_parse"],
+					rowEvidence: [],
+				},
+			},
+			limits: {
+				maxPageReadsPerCycle: 1,
+				maxConversationRowsPerCycle: 10,
+				maxArtifactRowsPerCycle: 10,
+				maxBrowserInteractionsPerMinute: 6,
+			},
+		});
+
+		expect(result.evidence.scrapeBudget).toMatchObject({
+			classification: "passive_dominant",
+			passive: {
+				domParses: 1,
+				appStateReads: 1,
+				downloadLinkEnumerations: 1,
+				total: 3,
+			},
+			active: {
+				identityReads: 1,
+				projectIndexReads: 0,
+				rootRailReads: 0,
+				chatLoads: 1,
+				total: 2,
+			},
+			providerInteractions: {
+				budget: 6,
+				used: 2,
+				remaining: 4,
+			},
+			llmServiceRequests: 0,
+			cdpMethodCalls: 1,
+			providerActions: {
+				"chatgpt.readVisibleConversationFiles": 1,
+				"llmService.getConversationContext": 1,
+			},
+		});
+		expect(result.evidence.collectorProgress?.attachmentCursor).toMatchObject({
+			scannedConversations: 1,
+		});
+	});
+
 	test("honors requested project-conversations phase without root rail reads", async () => {
 		const calls: string[] = [];
 		const client = {
