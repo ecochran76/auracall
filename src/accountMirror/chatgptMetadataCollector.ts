@@ -15,6 +15,11 @@ import type {
 	FileRef,
 	Project,
 } from "../browser/providers/domain.js";
+import {
+	type BrowserScrapeTelemetrySnapshot,
+	createBrowserScrapeTelemetryRecorder,
+	snapshotBrowserScrapeTelemetry,
+} from "../browser/providers/scrapeTelemetry.js";
 import type {
 	BrowserProviderListOptions,
 	ProviderUserIdentity,
@@ -170,10 +175,12 @@ async function reportCollectorProgress(
 function createAccountMirrorListOptions(
 	abortSignal?: AbortSignal,
 	interactionGovernor?: BrowserInteractionGovernor,
+	scrapeTelemetry = createBrowserScrapeTelemetryRecorder(),
 ): BrowserProviderListOptions {
 	return {
 		...(abortSignal ? { abortSignal } : {}),
 		...(interactionGovernor ? { interactionGovernor } : {}),
+		scrapeTelemetry,
 		accountMirrorInventory: true,
 		tabLifecycle: "dispose-new",
 		disableProjectClickFallback: true,
@@ -277,7 +284,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 				input.abortSignal,
 			);
 			throwIfCollectionAborted(input.abortSignal);
-			const listOptions = createAccountMirrorListOptions(input.abortSignal, pacer);
+			const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+			const listOptions = createAccountMirrorListOptions(input.abortSignal, pacer, scrapeTelemetry);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
 			await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "page-refresh");
 			const identity = await client.getUserIdentity(listOptions);
@@ -505,6 +513,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				projectConversationCursor,
 				inventoryProgress,
 				attachmentCursor: inventory.cursor,
+				scrapeTelemetry: snapshotBrowserScrapeTelemetry(scrapeTelemetry),
 				chatgptAccountLibraryRead:
 					input.provider === "chatgpt" &&
 					!honorRequestedDetailPhase &&
@@ -760,6 +769,7 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 	projectConversationCursor: ProjectConversationHistoryCursor | null;
 	inventoryProgress: AttachmentInventoryProgress;
 	attachmentCursor: AttachmentInventoryCursor | null;
+	scrapeTelemetry: BrowserScrapeTelemetrySnapshot | null;
 	chatgptAccountLibraryRead: boolean;
 }): AccountMirrorScrapeBudgetEvidence {
 	const passive = {
@@ -801,6 +811,9 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 	const budget = Math.max(0, Math.floor(input.limits.maxBrowserInteractionsPerMinute));
 	const remaining = budget > 0 ? Math.max(0, budget - active.total) : null;
 	const yielded = input.attachmentCursor?.yielded === true;
+	const cdpMethods = normalizePositiveCountRecord(input.scrapeTelemetry?.cdpCalls);
+	const providerActions = normalizePositiveCountRecord(input.scrapeTelemetry?.providerActions);
+	const cdpMethodCalls = sumCountRecord(cdpMethods);
 	const classification =
 		passive.total === 0 && active.total === 0
 			? "unknown"
@@ -826,8 +839,26 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 			yieldReason: input.attachmentCursor?.yieldCause?.kind ?? null,
 		},
 		llmServiceRequests: 0,
-		cdpMethodCalls: null,
+		cdpMethodCalls,
+		cdpMethods,
+		providerActions,
 	};
+}
+
+function normalizePositiveCountRecord(
+	value: Record<string, number> | null | undefined,
+): Record<string, number> {
+	const normalized: Record<string, number> = {};
+	for (const [key, count] of Object.entries(value ?? {})) {
+		const normalizedKey = key.trim();
+		if (!normalizedKey || !Number.isFinite(count) || count <= 0) continue;
+		normalized[normalizedKey] = Math.floor(count);
+	}
+	return normalized;
+}
+
+function sumCountRecord(value: Record<string, number>): number {
+	return Object.values(value).reduce((total, count) => total + count, 0);
 }
 
 function uniqueStrings(values: readonly string[]): string[] {

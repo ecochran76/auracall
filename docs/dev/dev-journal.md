@@ -39516,3 +39516,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on touched
   source/tests. Direct Biome on `tests/http.responsesServer.test.ts` still
   reports pre-existing non-null assertion lint debt.
+- 2026-07-05: Continued Plan 0152 M3 CDP method telemetry. Account-mirror
+  collection now attaches the existing browser scrape telemetry recorder to
+  provider `listOptions`, snapshots it into `scrapeBudget`, and exposes
+  aggregate `cdpMethodCalls`, exact `cdpMethods`, and exact `providerActions`
+  through `/status` and CLI-normalized status. Focused validation passed with
+  `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "requested detail-inventory|pending detail inventory"`,
+  `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on touched
+  source/tests. Direct Biome on `tests/http.responsesServer.test.ts` still
+  reports pre-existing non-null assertion lint debt.

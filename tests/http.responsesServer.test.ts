@@ -5288,7 +5288,15 @@ describe("http responses adapter", () => {
 								yieldReason: null,
 							},
 							llmServiceRequests: 0,
-							cdpMethodCalls: null,
+							cdpMethodCalls: 3,
+							cdpMethods: {
+								"Target.attachToTarget": 1,
+								"Runtime.evaluate": 2,
+							},
+							providerActions: {
+								"chatgpt.listConversationFiles.start": 1,
+								"llmService.getConversationContext": 1,
+							},
 						},
 						attachmentInventory: {
 							nextProjectIndex: 2,
@@ -5344,6 +5352,8 @@ describe("http responses adapter", () => {
 								classification: string;
 								llmServiceRequests: number;
 								cdpMethodCalls: number | null;
+								cdpMethods: Record<string, number>;
+								providerActions: Record<string, number>;
 								passive: { total: number };
 								active: { total: number };
 								providerInteractions: {
@@ -5379,7 +5389,15 @@ describe("http responses adapter", () => {
 								yielded: false,
 							}),
 							llmServiceRequests: 0,
-							cdpMethodCalls: null,
+							cdpMethodCalls: 3,
+							cdpMethods: expect.objectContaining({
+								"Target.attachToTarget": 1,
+								"Runtime.evaluate": 2,
+							}),
+							providerActions: expect.objectContaining({
+								"chatgpt.listConversationFiles.start": 1,
+								"llmService.getConversationContext": 1,
+							}),
 						}),
 					}),
 				]),

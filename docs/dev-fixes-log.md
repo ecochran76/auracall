@@ -18807,3 +18807,9 @@ browser-stage lifecycle observability, not transcript truncation.
   repeated LLM-service requests. First expose collector-boundary evidence with
   `llmServiceRequests=0` and `cdpMethodCalls=null`, then add lower-level
   browser/CDP counters before using rate-limit thresholds as the explanation.
+- 2026-07-05: Account-mirror scrape-budget evidence should reuse browser
+  scrape telemetry instead of maintaining a parallel CDP counter. Attach the
+  recorder to provider `listOptions`, snapshot it into status evidence, and
+  carry both aggregate `cdpMethodCalls` and exact `cdpMethods`/`providerActions`
+  maps. Provider warning conclusions still require installed dogfood
+  correlation against guard/yield evidence.

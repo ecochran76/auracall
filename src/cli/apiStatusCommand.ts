@@ -939,7 +939,20 @@ function summarizeLiveFollowScrapeBudget(value: Record<string, unknown> | null) 
 		},
 		llmServiceRequests: readNumber(value.llmServiceRequests) ?? 0,
 		cdpMethodCalls: readNumber(value.cdpMethodCalls),
+		cdpMethods: summarizeNumberRecord(value.cdpMethods),
+		providerActions: summarizeNumberRecord(value.providerActions),
 	};
+}
+
+function summarizeNumberRecord(value: unknown): Record<string, number> {
+	if (!isRecord(value)) return {};
+	const summary: Record<string, number> = {};
+	for (const [key, rawCount] of Object.entries(value)) {
+		const count = readNumber(rawCount);
+		if (count === null || count <= 0) continue;
+		summary[key] = count;
+	}
+	return summary;
 }
 
 function summarizeAccountLibraryScheduler(value: unknown) {

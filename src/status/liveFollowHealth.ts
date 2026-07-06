@@ -183,6 +183,8 @@ export interface LiveFollowTargetAccountSummary {
 		};
 		llmServiceRequests: number;
 		cdpMethodCalls: number | null;
+		cdpMethods: Record<string, number>;
+		providerActions: Record<string, number>;
 	} | null;
 	accountLibraryCatchup: {
 		mode: string;

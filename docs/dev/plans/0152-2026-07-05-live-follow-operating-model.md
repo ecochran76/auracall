@@ -421,8 +421,8 @@ Parallelizable tracks:
   LLM-service requests at the account-mirror collector boundary.
 - `/status` live-follow target rows and CLI-normalized status preserve the
   scrape-budget evidence so operators can inspect provider-interaction budget
-  usage, passive/active totals, LLM-service request count, and the current CDP
-  method-count placeholder (`null` until browser-client instrumentation lands).
+  usage, passive/active totals, LLM-service request count, and CDP-method
+  traffic once browser telemetry is attached.
 
 Validation:
 
@@ -430,10 +430,27 @@ Validation:
 - `pnpm exec tsc --noEmit --pretty false`
 - `pnpm exec biome check --write src/accountMirror/statusRegistry.ts src/cli/apiStatusCommand.ts src/accountMirror/chatgptMetadataCollector.ts src/status/liveFollowHealth.ts src/http/responsesServer.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --max-diagnostics 40`
 
+### 2026-07-05 | M3 CDP Method Telemetry
+
+- Account-mirror collection now attaches the existing browser scrape telemetry
+  recorder to its shared provider `listOptions`, then snapshots the recorder
+  into `scrapeBudget` after detail inventory.
+- `scrapeBudget` now includes aggregate `cdpMethodCalls`, exact `cdpMethods`
+  counts by CDP method, and exact `providerActions` counts by provider/LLM
+  service action, while continuing to report `llmServiceRequests: 0` for the
+  account-mirror collector boundary.
+- Focused tests prove the requested `detail-inventory` path propagates
+  provider telemetry into account-mirror evidence and that `/status` preserves
+  the method/action breakdown for operator inspection.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "requested detail-inventory|pending detail inventory"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check --write src/accountMirror/statusRegistry.ts src/accountMirror/chatgptMetadataCollector.ts src/status/liveFollowHealth.ts src/cli/apiStatusCommand.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --max-diagnostics 40`
+
 Remaining M3 work:
 
-- instrument lower-level browser/CDP method counts rather than reporting
-  `cdpMethodCalls: null`;
 - correlate provider warning/guard evidence with scrape-budget yield behavior
   in an installed dogfood pass.
 

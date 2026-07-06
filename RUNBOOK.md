@@ -12404,3 +12404,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Remaining scope:
   - add lower-level browser/CDP method counters and correlate provider-warning
     guard evidence before installed dogfood resume.
+
+## Turn 311 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - finish the M3 CDP-counter gap by replacing the scrape-budget placeholder
+    with concrete browser scrape telemetry.
+- Result:
+  - account-mirror collection now attaches the existing browser scrape
+    telemetry recorder to its shared provider `listOptions`;
+  - `scrapeBudget` now carries aggregate `cdpMethodCalls`, exact `cdpMethods`
+    counts, and exact `providerActions` counts alongside passive/active budget
+    counters and `llmServiceRequests`;
+  - `/status` and CLI-normalized status preserve the breakdown, and the
+    requested `detail-inventory` regression proves telemetry propagation from
+    provider options into account-mirror evidence.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "requested detail-inventory|pending detail inventory"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - scoped Biome passed on touched source/tests; direct Biome on
+    `tests/http.responsesServer.test.ts` still reports pre-existing non-null
+    assertion lint debt.
+- Remaining scope:
+  - correlate provider-warning/guard evidence with scrape-budget yield
+    behavior in an installed dogfood pass before broad live-follow resume.

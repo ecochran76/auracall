@@ -30,6 +30,11 @@ import {
 } from "../../src/accountMirror/chatgptMetadataCollector.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { listDomDriftObservations } from "../../src/browser/domDriftObservations.js";
+import {
+	recordBrowserScrapeCdpCall,
+	recordBrowserScrapeProviderAction,
+} from "../../src/browser/providers/scrapeTelemetry.js";
+import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 
 describe("ChatGPT account mirror metadata collector", () => {
 	const cleanup: string[] = [];
@@ -837,32 +842,46 @@ describe("ChatGPT account mirror metadata collector", () => {
 					},
 				];
 			}),
-			listConversationFiles: vi.fn(async (conversationId: string) => {
-				calls.push(`listConversationFiles:${conversationId}`);
-				return [
-					{
-						id: `conversation-file-${conversationId}`,
-						name: "Conversation file.csv",
-						provider: "chatgpt" as const,
-						source: "conversation" as const,
-					},
-				];
-			}),
-			getConversationContext: vi.fn(async (conversationId: string) => {
-				calls.push(`getConversationContext:${conversationId}`);
-				return {
-					provider: "chatgpt" as const,
-					conversationId,
-					messages: [],
-					artifacts: [
+			listConversationFiles: vi.fn(
+				async (conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					calls.push(`listConversationFiles:${conversationId}`);
+					recordBrowserScrapeProviderAction(
+						options?.listOptions,
+						"test.provider.listConversationFiles",
+					);
+					recordBrowserScrapeCdpCall(options?.listOptions, "Target.attachToTarget");
+					return [
 						{
-							id: `artifact-${conversationId}`,
-							title: "Generated table",
-							kind: "spreadsheet" as const,
+							id: `conversation-file-${conversationId}`,
+							name: "Conversation file.csv",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
 						},
-					],
-				};
-			}),
+					];
+				},
+			),
+			getConversationContext: vi.fn(
+				async (conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					calls.push(`getConversationContext:${conversationId}`);
+					recordBrowserScrapeProviderAction(
+						options?.listOptions,
+						"test.provider.getConversationContext",
+					);
+					recordBrowserScrapeCdpCall(options?.listOptions, "Runtime.evaluate");
+					return {
+						provider: "chatgpt" as const,
+						conversationId,
+						messages: [],
+						artifacts: [
+							{
+								id: `artifact-${conversationId}`,
+								title: "Generated table",
+								kind: "spreadsheet" as const,
+							},
+						],
+					};
+				},
+			),
 		};
 
 		const inventory = await readBoundedChatgptDetailInventory(
@@ -918,32 +937,46 @@ describe("ChatGPT account mirror metadata collector", () => {
 				calls.push("listProjectFiles");
 				return [];
 			}),
-			listConversationFiles: vi.fn(async (conversationId: string) => {
-				calls.push(`listConversationFiles:${conversationId}`);
-				return [
-					{
-						id: `conversation-file-${conversationId}`,
-						name: "Conversation file.csv",
-						provider: "chatgpt" as const,
-						source: "conversation" as const,
-					},
-				];
-			}),
-			getConversationContext: vi.fn(async (conversationId: string) => {
-				calls.push(`getConversationContext:${conversationId}`);
-				return {
-					provider: "chatgpt" as const,
-					conversationId,
-					messages: [],
-					artifacts: [
+			listConversationFiles: vi.fn(
+				async (conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					calls.push(`listConversationFiles:${conversationId}`);
+					recordBrowserScrapeProviderAction(
+						options?.listOptions,
+						"test.provider.listConversationFiles",
+					);
+					recordBrowserScrapeCdpCall(options?.listOptions, "Target.attachToTarget");
+					return [
 						{
-							id: `artifact-${conversationId}`,
-							title: "Generated table",
-							kind: "spreadsheet" as const,
+							id: `conversation-file-${conversationId}`,
+							name: "Conversation file.csv",
+							provider: "chatgpt" as const,
+							source: "conversation" as const,
 						},
-					],
-				};
-			}),
+					];
+				},
+			),
+			getConversationContext: vi.fn(
+				async (conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					calls.push(`getConversationContext:${conversationId}`);
+					recordBrowserScrapeProviderAction(
+						options?.listOptions,
+						"test.provider.getConversationContext",
+					);
+					recordBrowserScrapeCdpCall(options?.listOptions, "Runtime.evaluate");
+					return {
+						provider: "chatgpt" as const,
+						conversationId,
+						messages: [],
+						artifacts: [
+							{
+								id: `artifact-${conversationId}`,
+								title: "Generated table",
+								kind: "spreadsheet" as const,
+							},
+						],
+					};
+				},
+			),
 		};
 		const collector = createChatgptAccountMirrorMetadataCollector(
 			{
@@ -1045,7 +1078,15 @@ describe("ChatGPT account mirror metadata collector", () => {
 				yielded: false,
 			},
 			llmServiceRequests: 0,
-			cdpMethodCalls: null,
+			cdpMethodCalls: 2,
+			cdpMethods: {
+				"Target.attachToTarget": 1,
+				"Runtime.evaluate": 1,
+			},
+			providerActions: {
+				"test.provider.listConversationFiles": 1,
+				"test.provider.getConversationContext": 1,
+			},
 		});
 		expect(result.manifests.conversations.map((conversation) => conversation.id)).toEqual([
 			"conv_target",

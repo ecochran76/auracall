@@ -146,6 +146,8 @@ export type AccountMirrorScrapeBudgetEvidence = {
 	};
 	llmServiceRequests: number;
 	cdpMethodCalls: number | null;
+	cdpMethods: Record<string, number>;
+	providerActions: Record<string, number>;
 };
 
 export type AccountMirrorCollectorPhase =
@@ -1292,6 +1294,8 @@ function normalizeScrapeBudgetEvidence(
 		},
 		llmServiceRequests: normalizeCount(readNumber(value.llmServiceRequests)),
 		cdpMethodCalls: normalizeNullableCount(readNumber(value.cdpMethodCalls)),
+		cdpMethods: normalizeCountRecord(value.cdpMethods),
+		providerActions: normalizeCountRecord(value.providerActions),
 	};
 }
 
@@ -1518,6 +1522,20 @@ function normalizeStringArray(value: string[] | null | undefined): string[] {
 	return Array.isArray(value)
 		? value.map((entry) => readString(entry)).filter((entry): entry is string => entry !== null)
 		: [];
+}
+
+function normalizeCountRecord(value: unknown): Record<string, number> {
+	if (!isRecord(value)) return {};
+	const normalized: Record<string, number> = {};
+	for (const [key, count] of Object.entries(value)) {
+		const normalizedKey = readString(key);
+		if (!normalizedKey) continue;
+		const normalizedCount = normalizeCount(readNumber(count));
+		if (normalizedCount > 0) {
+			normalized[normalizedKey] = normalizedCount;
+		}
+	}
+	return normalized;
 }
 
 function normalizeCount(value: number | null | undefined): number {
