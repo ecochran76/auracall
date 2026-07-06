@@ -39721,3 +39721,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on touched
   source/tests. Direct Biome on `tests/http.responsesServer.test.ts` still
   reports pre-existing non-null assertion lint debt.
+- 2026-07-05: Continued Plan 0152 M3/M8 keep-current cost trim. ChatGPT
+  steady-follow now skips project discovery when prior evidence proves the
+  project index is complete and empty, skips account-library inventory when the
+  freshness frontier selects zero detail rows, and completion service preflights
+  provider-guard cooldown before `requestRefresh`. Installed proof
+  `acctmirror_completion_cf5cee77-c960-4b25-a30e-f11f54486feb` completed in
+  roughly 16 seconds with active provider interactions `2/6`,
+  project-index reads `0`, account-library reads `0`, chat loads `0`,
+  `llmServiceRequests=0`, `cdpMethodCalls=8`, no provider-guard correlation,
+  and post-run status `providerGuard=null` / `nextPhase=steady_follow`.

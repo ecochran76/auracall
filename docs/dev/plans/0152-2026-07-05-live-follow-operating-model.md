@@ -838,6 +838,56 @@ Validation:
 - `auracall api mirror-completion-status acctmirror_completion_37317275-8475-4d90-b7c7-616b6759fd83 --json --timeout-ms 30000`
 - `auracall api status --json --timeout-ms 30000`
 
+### 2026-07-05 | M3/M8 Zero-Project Keep-Current Cost Trim
+
+- ChatGPT steady-follow now skips project discovery when previous account
+  evidence proves the project index was complete and empty. It still emits
+  `projects:started` and `projects:completed projects=0` progress so lifecycle
+  readback stays explicit without opening the project surface.
+- ChatGPT steady-follow also skips account-library inventory when the freshness
+  frontier selects zero detail rows. This prevents a caught-up metadata-only
+  loop from spending an account-library provider interaction just to confirm
+  no detail work is needed.
+- The same slice fixed a guard-boundary gap exposed by installed proof:
+  explicit bounded completions still intentionally ignore minimum interval, but
+  they now preflight persisted provider-guard cooldown before calling refresh.
+  A guarded bounded completion blocks with `provider_guard_backoff` and never
+  starts identity/root/project collector work.
+- Installed repro before the guard preflight:
+  `acctmirror_completion_c4df53db-43ce-4cc2-9840-2839041954db` started during
+  an active ChatGPT cooldown and reached `identity:completed`,
+  `projects:completed projects=0`, and `root-conversations:started` before
+  blocking. This proved the zero-project skip had landed but also proved
+  guarded completions were still touching provider surfaces.
+- Installed proof after reinstall/restart:
+  `acctmirror_completion_cf5cee77-c960-4b25-a30e-f11f54486feb` completed one
+  bounded `steady_follow` pass from `2026-07-06T03:48:43.239Z` to
+  `2026-07-06T03:48:59.169Z`. It selected `requestedPhase=root-conversations`,
+  observed `projects=0`, `conversations=94`, `artifacts=235`, `files=199`,
+  reached a three-row freshness frontier with `rowsSelectedForDetail=0`, and
+  kept `remainingDetailSurfaces.total=0`.
+- The patched installed scrape budget was the desired cheap keep-current shape:
+  `active.identityReads=1`, `active.projectIndexReads=0`,
+  `active.rootRailReads=1`, `active.projectConversationReads=0`,
+  `active.chatLoads=0`, `active.accountLibraryReads=0`, `active.total=2`,
+  provider budget `used=2` / `remaining=4`, `llmServiceRequests=0`,
+  `cdpMethodCalls=8`, and `providerGuardCorrelation.state=none`.
+- Post-run `/status` for `chatgpt/wsl-chrome-3` reported
+  `providerGuard=null`, `lastFailureAt=null`, `mirrorCompleteness=complete`,
+  `routineDecision.state=paused`, and `routineDecision.nextPhase=steady_follow`.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts --testNamePattern "provider guard cooldown|bounded completion|persisted phase ledger|completed project conversation cursor"`
+- `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --testNamePattern "fresh ChatGPT steady-follow|requested detail-inventory|persisted selected-row cursor"`
+- `pnpm exec biome check src/accountMirror/completionService.ts tests/accountMirror/completionService.test.ts src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts --max-diagnostics 60`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+- authenticated `GET /v1/account-mirrors/completions/acctmirror_completion_cf5cee77-c960-4b25-a30e-f11f54486feb`
+- `auracall api status --json --timeout-ms 30000`
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.

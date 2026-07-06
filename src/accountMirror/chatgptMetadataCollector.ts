@@ -318,10 +318,13 @@ export function createChatgptAccountMirrorMetadataCollector(
 			const honorRequestedProjectConversationsPhase =
 				requestedPhase === "project-conversations" &&
 				(input.sweepMode ?? "steady_follow") !== "full_sweep";
+			const skipSteadyFollowProjectDiscovery = shouldSkipSteadyFollowProjectDiscovery(input);
 
 			const projects = honorRequestedDetailPhase
 				? { items: [] as Project[], truncated: false }
-				: await readCollectorProjects(input, client, listOptions, pacer);
+				: skipSteadyFollowProjectDiscovery
+					? await readSkippedCollectorProjects(input)
+					: await readCollectorProjects(input, client, listOptions, pacer);
 			throwIfCollectionAborted(input.abortSignal);
 			const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
 			const conversationBudgets = allocateConversationReadBudgets(
@@ -451,7 +454,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 								skipAccountLibraryInventory:
 									honorRequestedDetailPhase ||
 									((input.sweepMode ?? "steady_follow") === "steady_follow" &&
-										frontier.detailConversations.length > 0),
+										(frontier.detailConversations.length > 0 ||
+											(frontier.evidence?.rowsSelectedForDetail ?? 0) === 0)),
 							},
 						)
 					: input.provider === "gemini"
@@ -515,9 +519,14 @@ export function createChatgptAccountMirrorMetadataCollector(
 				inventoryProgress,
 				attachmentCursor: inventory.cursor,
 				scrapeTelemetry: snapshotBrowserScrapeTelemetry(scrapeTelemetry),
+				projectIndexRead: !honorRequestedDetailPhase && !skipSteadyFollowProjectDiscovery,
 				chatgptAccountLibraryRead:
 					input.provider === "chatgpt" &&
 					!honorRequestedDetailPhase &&
+					!(
+						(input.sweepMode ?? "steady_follow") === "steady_follow" &&
+						(frontier.evidence?.rowsSelectedForDetail ?? 0) === 0
+					) &&
 					!(
 						(input.sweepMode ?? "steady_follow") === "steady_follow" &&
 						frontier.detailConversations.length > 0
@@ -773,6 +782,7 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 	inventoryProgress: AttachmentInventoryProgress;
 	attachmentCursor: AttachmentInventoryCursor | null;
 	scrapeTelemetry: BrowserScrapeTelemetrySnapshot | null;
+	projectIndexRead: boolean;
 	chatgptAccountLibraryRead: boolean;
 }): AccountMirrorScrapeBudgetEvidence {
 	const providerActions = normalizePositiveCountRecord(input.scrapeTelemetry?.providerActions);
@@ -805,7 +815,7 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 		passive.cachedFileCarries;
 	const active = {
 		identityReads: 1,
-		projectIndexReads: input.honorRequestedDetailPhase ? 0 : 1,
+		projectIndexReads: input.projectIndexRead ? 1 : 0,
 		rootRailReads:
 			input.honorRequestedDetailPhase || input.honorRequestedProjectConversationsPhase ? 0 : 1,
 		projectConversationReads: input.projectConversationCursor?.scannedProjects ?? 0,
@@ -975,6 +985,32 @@ function resolveRequestedCollectorPhase(
 	input: Pick<AccountMirrorMetadataCollectorInput, "requestedPhase">,
 ): AccountMirrorCollectorPhase | null {
 	return input.requestedPhase ?? null;
+}
+
+function shouldSkipSteadyFollowProjectDiscovery(
+	input: AccountMirrorMetadataCollectorInput,
+): boolean {
+	if (input.provider !== "chatgpt") return false;
+	if ((input.sweepMode ?? "steady_follow") !== "steady_follow") return false;
+	if (input.requestedPhase === "projects" || input.requestedPhase === "project-conversations") {
+		return false;
+	}
+	const previousEvidence = input.previousEvidence;
+	if (!previousEvidence) return false;
+	if (previousEvidence.truncated.projects === true) return false;
+	return (previousEvidence.projectSampleIds?.length ?? 0) === 0;
+}
+
+async function readSkippedCollectorProjects(
+	input: AccountMirrorMetadataCollectorInput,
+): Promise<{ items: Project[]; truncated: boolean }> {
+	await reportCollectorProgress(input, { phase: "projects", event: "started" });
+	await reportCollectorProgress(input, {
+		phase: "projects",
+		event: "completed",
+		projectsObserved: 0,
+	});
+	return { items: [], truncated: false };
 }
 
 async function readCollectorProjects(

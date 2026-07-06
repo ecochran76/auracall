@@ -18915,3 +18915,14 @@ browser-stage lifecycle observability, not transcript truncation.
   or manual-clear details after collection when provider guard state is known.
   Keep guard ownership out of the collector so a passive DOM/detail scrape can
   be audited separately from ChatGPT warning or live-operator yield behavior.
+- 2026-07-05: A caught-up ChatGPT steady-follow loop should not re-open every
+  provider surface by habit. If prior account evidence says the project index
+  was complete and empty, skip project discovery for steady-follow unless the
+  requested phase is project work; if the freshness frontier selects zero detail
+  rows, skip account-library inventory too. Keep zero-project progress events
+  visible so the lifecycle still explains the skipped work.
+- 2026-07-05: Explicit bounded account-mirror completions may bypass minimum
+  interval for proof runs, but they must not bypass provider guards. Preflight
+  persisted provider-guard cooldown before calling refresh; a guarded bounded
+  completion should block with `provider_guard_backoff` and no identity/root
+  collector progress.

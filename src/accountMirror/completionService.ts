@@ -67,6 +67,7 @@ export interface AccountMirrorCompletionLifecycleEvent {
 		| "campaign_policy_upgraded"
 		| "live_follow_policy_upgraded"
 		| "live_follow_phase_decision"
+		| "provider_guard_backoff"
 		| "collector_progress"
 		| "account_library_catchup_queued"
 		| "account_library_catchup_skipped";
@@ -389,6 +390,43 @@ export function createAccountMirrorCompletionService(input: {
 						refreshOperation.provider,
 						refreshOperation.runtimeProfileId,
 					);
+					const providerGuardBackoff = resolveProviderGuardBackoff(phaseStatusEntry, now());
+					if (providerGuardBackoff) {
+						appendLifecycleEvent(id, {
+							type: "provider_guard_backoff",
+							status: operations.get(id)?.status ?? refreshOperation.status,
+							previousStatus: refreshOperation.status,
+							message: providerGuardBackoff.message,
+						});
+						if (refreshOperation.mode === "bounded") {
+							update(id, {
+								status: "blocked",
+								completedAt: now().toISOString(),
+								nextAttemptAt: null,
+								mirrorCompleteness:
+									phaseStatusEntry?.mirrorCompleteness ??
+									operations.get(id)?.mirrorCompleteness ??
+									null,
+								error: {
+									message: providerGuardBackoff.message,
+									code: providerGuardBackoff.code,
+								},
+							});
+							return;
+						}
+						update(id, {
+							status: "idle_waiting",
+							nextAttemptAt: providerGuardBackoff.eligibleAt,
+							mirrorCompleteness:
+								phaseStatusEntry?.mirrorCompleteness ??
+								operations.get(id)?.mirrorCompleteness ??
+								null,
+							error: null,
+						});
+						if (!(await sleepUntilAttempt(id, providerGuardBackoff.eligibleAt))) return;
+						update(id, { status: "running", nextAttemptAt: null });
+						continue;
+					}
 					const collectorTimeoutMs = resolveCompletionCollectorTimeoutMs(refreshOperation);
 					refresh = await input.refreshService.requestRefresh({
 						provider: refreshOperation.provider,
@@ -1261,6 +1299,46 @@ function findTargetEntry(
 			explicitRefresh: true,
 		}).entries[0] ?? null
 	);
+}
+
+function resolveProviderGuardBackoff(
+	entry: AccountMirrorStatusEntry | null,
+	nowDate: Date,
+): { eligibleAt: string; message: string; code: string } | null {
+	if (!entry) return null;
+	const guard = entry.providerGuard;
+	const cooldownUntil = guard.cooldownUntil;
+	if (
+		guard.state === "cooldown" &&
+		cooldownUntil &&
+		Date.parse(cooldownUntil) > nowDate.getTime()
+	) {
+		return {
+			eligibleAt: cooldownUntil,
+			message: formatProviderGuardBackoffMessage(entry, cooldownUntil),
+			code: "account_mirror_provider_cooldown",
+		};
+	}
+	if (
+		(entry.reason === "provider-guard-cooldown" || entry.reason === "provider-cooldown") &&
+		entry.eligibleAt &&
+		Date.parse(entry.eligibleAt) > nowDate.getTime()
+	) {
+		return {
+			eligibleAt: entry.eligibleAt,
+			message: formatProviderGuardBackoffMessage(entry, entry.eligibleAt),
+			code: "account_mirror_provider_cooldown",
+		};
+	}
+	return null;
+}
+
+function formatProviderGuardBackoffMessage(
+	entry: AccountMirrorStatusEntry,
+	eligibleAt: string,
+): string {
+	const summary = entry.providerGuard.summary ?? "Provider guard cooldown is active.";
+	return `${summary} Automation is delayed until ${eligibleAt} before ${entry.provider}/${entry.runtimeProfileId} live follow can continue.`;
 }
 
 function normalizeRuntimeProfile(value: string | null | undefined): string {

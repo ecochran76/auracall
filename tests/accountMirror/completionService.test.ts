@@ -1156,6 +1156,67 @@ describe("account mirror completion service", () => {
 		});
 	});
 
+	test("blocks bounded completion before refresh while provider guard cooldown is active", async () => {
+		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "ecochran76@gmail.com",
+					providerGuard: {
+						state: "cooldown",
+						kind: "unknown",
+						summary: "ChatGPT rate limit detected: Too many requests.",
+						detectedAtMs: Date.parse("2026-04-30T11:59:00.000Z"),
+						clearedAtMs: null,
+						cooldownUntilMs: Date.parse("2026-04-30T12:15:00.000Z"),
+						url: null,
+						action: "readConversationContext",
+					},
+				},
+			},
+		});
+		const service = createAccountMirrorCompletionService({
+			registry,
+			refreshService: {
+				requestRefresh,
+			},
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			generateId: () => "acctmirror_guarded_bounded",
+		});
+
+		service.start({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			maxPasses: 1,
+			sweepMode: "steady_follow",
+			materializationPolicy: "metadata_only",
+		});
+
+		await waitFor(() => service.read("acctmirror_guarded_bounded")?.status === "blocked");
+
+		expect(requestRefresh).not.toHaveBeenCalled();
+		expect(service.read("acctmirror_guarded_bounded")).toMatchObject({
+			status: "blocked",
+			passCount: 0,
+			completedAt: "2026-04-30T12:00:00.000Z",
+			error: {
+				code: "account_mirror_provider_cooldown",
+				message:
+					"ChatGPT rate limit detected: Too many requests. Automation is delayed until 2026-04-30T12:15:00.000Z before chatgpt/default live follow can continue.",
+			},
+			lifecycleEvents: expect.arrayContaining([
+				expect.objectContaining({
+					type: "provider_guard_backoff",
+					status: "running",
+					message:
+						"ChatGPT rate limit detected: Too many requests. Automation is delayed until 2026-04-30T12:15:00.000Z before chatgpt/default live follow can continue.",
+				}),
+			]),
+		});
+	});
+
 	test("records collector progress lifecycle events while refresh is running", async () => {
 		const requestRefresh = vi.fn(async (request) => {
 			await request.onCollectorProgress?.({

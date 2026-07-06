@@ -1230,6 +1230,141 @@ describe("ChatGPT account mirror metadata collector", () => {
 		]);
 	});
 
+	test("skips zero-project and account-library reads for fresh ChatGPT steady-follow", async () => {
+		const calls: string[] = [];
+		const conversations = [
+			{
+				id: "fresh_1",
+				title: "Fresh 1",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T12:00:00.000Z",
+			},
+			{
+				id: "fresh_2",
+				title: "Fresh 2",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T11:59:00.000Z",
+			},
+			{
+				id: "fresh_3",
+				title: "Fresh 3",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-06-27T11:58:00.000Z",
+			},
+		];
+		const client = {
+			getUserIdentity: vi.fn(async () => ({
+				email: "ecochran76@gmail.com",
+				accountLevel: "Business",
+				source: "auth-session",
+			})),
+			listProjects: vi.fn(async () => {
+				throw new Error("projects should not be read");
+			}),
+			listConversations: vi.fn(async () => {
+				calls.push("listConversations");
+				return conversations;
+			}),
+			listAccountFiles: vi.fn(async () => {
+				throw new Error("account library should not be read");
+			}),
+			listProjectFiles: vi.fn(async () => {
+				throw new Error("project files should not be read");
+			}),
+			listConversationFiles: vi.fn(async () => {
+				throw new Error("conversation files should not be read");
+			}),
+			getConversationContext: vi.fn(async () => {
+				throw new Error("conversation context should not be read");
+			}),
+		};
+		const collector = createChatgptAccountMirrorMetadataCollector(
+			{
+				model: "gpt-5.2",
+				browser: {},
+				runtimeProfiles: {
+					default: {
+						browserProfile: "default",
+						defaultService: "chatgpt",
+						services: {
+							chatgpt: {
+								identity: {
+									email: "ecochran76@gmail.com",
+								},
+							},
+						},
+					},
+				},
+			} as never,
+			{
+				createClient: async () => client as never,
+			},
+		);
+
+		const result = await collector.collect({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			sweepMode: "steady_follow",
+			previousEvidence: {
+				identitySource: "auth-session",
+				projectSampleIds: [],
+				conversationSampleIds: conversations.map((conversation) => conversation.id),
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: false,
+				},
+			},
+			previousConversationFreshness: new Map(
+				conversations.map((conversation) => [
+					conversation.id,
+					{
+						conversationId: conversation.id,
+						detailObservedAt: "2026-06-27T12:30:00.000Z",
+						manifestObservedAt: "2026-06-27T12:30:00.000Z",
+						freshnessState: "fresh" as const,
+						routeabilityState: "unknown" as const,
+						assetCompleteness: "complete" as const,
+						missingLocalCount: 0,
+						incompleteDetailChunk: false,
+					},
+				]),
+			),
+			limits: {
+				maxPageReadsPerCycle: 4,
+				maxConversationRowsPerCycle: 30,
+				maxArtifactRowsPerCycle: 10,
+				maxBrowserInteractionsPerMinute: 6,
+				freshFrontierThreshold: 3,
+			},
+		});
+
+		expect(calls).toEqual(["listConversations"]);
+		expect(client.listProjects).not.toHaveBeenCalled();
+		expect(client.listAccountFiles).not.toHaveBeenCalled();
+		expect(client.listConversationFiles).not.toHaveBeenCalled();
+		expect(client.getConversationContext).not.toHaveBeenCalled();
+		expect(result.evidence.conversationFreshnessFrontier).toMatchObject({
+			rowsExamined: 3,
+			rowsSelectedForDetail: 0,
+			frontierReached: true,
+		});
+		expect(result.evidence.scrapeBudget).toMatchObject({
+			classification: "active_dominant",
+			active: {
+				identityReads: 1,
+				projectIndexReads: 0,
+				rootRailReads: 1,
+				projectConversationReads: 0,
+				chatLoads: 0,
+				accountLibraryReads: 0,
+				downloads: 0,
+				total: 2,
+			},
+		});
+	});
+
 	test("counts passive telemetry for empty requested detail-inventory parses", async () => {
 		const client = {
 			getUserIdentity: vi.fn(async () => ({

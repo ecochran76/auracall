@@ -1,5 +1,45 @@
 # RUNBOOK
 
+## Turn 314 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: trim the caught-up ChatGPT steady-follow path so a zero-project account
+  does not spend project-discovery or account-library interactions every loop,
+  and prove explicit completions respect provider guard cooldown before refresh.
+- Result:
+  - ChatGPT steady-follow skips project discovery when prior evidence proves the
+    project index was complete and empty, while still emitting zero-project
+    lifecycle progress;
+  - ChatGPT steady-follow skips account-library inventory when the freshness
+    frontier selects zero detail rows;
+  - completion service now preflights provider-guard cooldown before
+    `requestRefresh`, so bounded proof runs block with `provider_guard_backoff`
+    instead of touching provider surfaces during cooldown.
+- Installed proof:
+  - preflight repro `acctmirror_completion_c4df53db-43ce-4cc2-9840-2839041954db`
+    showed the zero-project skip fired but also exposed guarded refresh still
+    starting identity/root work;
+  - patched installed pass
+    `acctmirror_completion_cf5cee77-c960-4b25-a30e-f11f54486feb` completed from
+    `2026-07-06T03:48:43.239Z` to `2026-07-06T03:48:59.169Z`;
+  - scrape budget: active `2/6`, project-index reads `0`, account-library reads
+    `0`, chat loads `0`, `llmServiceRequests=0`, `cdpMethodCalls=8`,
+    `providerGuardCorrelation.state=none`;
+  - post-run `/status` reported `providerGuard=null`, `lastFailureAt=null`,
+    `mirrorCompleteness=complete`, and
+    `routineDecision.nextPhase=steady_follow`.
+- Validation:
+  - focused completion-service guard/phase tests passed;
+  - focused ChatGPT collector cursor/cheap-steady-follow tests passed;
+  - scoped Biome passed on touched files;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - installed API runtime was rebuilt/restarted and proved with the bounded
+    ChatGPT completion above.
+- Remaining scope:
+  - Plan 0152 still needs explicit foreground-operator preemption proof and a
+    careful broad-resume decision; broad live follow remains paused.
+
 ## Turn 310 | 2026-07-05
 
 - Active plan:
