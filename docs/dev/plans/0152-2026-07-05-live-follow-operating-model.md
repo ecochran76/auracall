@@ -19,6 +19,11 @@ until one subscribed ChatGPT account can complete an initial backfill, transitio
 to steady-follow, keep itself current across at least one restart boundary, and
 yield to foreground operator/API/browser work without provider-warning churn.
 
+The operator-facing resume target is a milestone ladder, not one oversized
+cycle. A safe routine must be able to stop after any bounded pass, preserve the
+account-level ledger, and let the next cycle start at the next owed phase for
+that account or another eligible subscribed account.
+
 ## Current State
 
 - Account mirror refreshes can persist catalog, context, file, artifact, media,
@@ -650,13 +655,26 @@ Current evidence:
 - Installed `chatgpt/wsl-chrome-3` has proved the steady-follow keep-current
   side with zero detail rows selected, no LLM-service requests, no provider
   guard correlation, and restart-visible status readback.
-- Installed `chatgpt/wsl-chrome-2` has now proved one bounded incomplete-account
-  backfill pass can reach `mirrorCompleteness=complete` after local malformed
-  guard-state repair, but its immediate follow-up keep-current pass failed on a
-  closed browser WebSocket before refresh completion.
-- Broad live-follow resume remains gated until the same account class proves a
-  successful follow-up keep-current pass without warning churn or browser
-  session loss.
+- Installed `chatgpt/wsl-chrome-2` has proved the incomplete-account path can
+  reach `mirrorCompleteness=complete` after local malformed guard-state repair,
+  and the recognized closed-CDP-socket failure is now retryable.
+- The same `chatgpt/wsl-chrome-2` live-follow completion later proved
+  successful cadence-preserving keep-current behavior: `run-one-pass` preserved
+  the cadence gate, refresh
+  `acctmirror_644c16a1-0f8-4599-bcd3-b22a248a8485` advanced `passCount` from
+  `3` to `4`, selected zero detail rows, kept
+  `mirrorCompleteness.state=complete`, used `providerInteractions.used=2` of
+  budget `6`, reported `llmServiceRequests=0`, reported `cdpMethodCalls=8`,
+  and had `providerGuardCorrelation.state=none`.
+- Installed status on 2026-07-06 showed the same `chatgpt/wsl-chrome-2`
+  completion still `idle_waiting` in `steady_follow` with `passCount=4`,
+  `routineDecision.state=steady_follow`, `remainingWork.detailSurfaces=0`,
+  `providerGuard=null`, and `latestLifecycleEvent=resumed_after_restart`.
+- Broad live-follow resume is no longer gated on proving a wsl-chrome-2
+  follow-up keep-current pass. It remains gated on the final Gate E decision:
+  accept the installed isolated preemption proof as sufficient for foreground
+  preemption, or stage one narrowly bounded real-provider foreground collision
+  without broad live-follow resume or provider churn.
 
 ## Milestones
 
@@ -835,6 +853,24 @@ Acceptance:
 - foreground operator work preempts live follow;
 - completion/status evidence proves accounts are current or explains the exact
   remaining backlog.
+
+Current installed scoreboard:
+
+- Initial/backfill account: covered by `chatgpt/wsl-chrome-2` bounded
+  backfill-to-steady proof after malformed guard-state repair.
+- Mostly-current steady-follow account: covered by `chatgpt/wsl-chrome-3`
+  keep-current proof and restart-visible status readback.
+- Artifact-rich ChatGPT account: covered by requested `detail-inventory`
+  installed proofs with passive-dominant scrape accounting, zero
+  LLM-service requests, exact CDP method counts, and materialization backlog
+  separated from metadata freshness.
+- Provider-guard or preemption scenario: covered by installed isolated
+  preemption harnesses with `providerWork=none`; optional remaining work is a
+  real-provider foreground collision if the operator requires live collision
+  evidence before broad resume.
+- API restart/resume boundary: covered by wsl-chrome-3 and wsl-chrome-2
+  post-restart readbacks, including the wsl-chrome-2 `resumed_after_restart`
+  lifecycle event.
 
 ## Execution Order
 

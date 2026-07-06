@@ -1,3 +1,24 @@
+## 2026-07-06 | Plan 0152 Convergence Milestone Reconciliation
+
+- Focus: make the canonical Plan 0152 goal match the installed evidence already
+  proved for bounded backfill, steady-follow cadence, restart readback, and
+  foreground preemption.
+- Result:
+  - clarified the resume target as a bounded milestone ladder rather than one
+    oversized live-follow pass;
+  - corrected Gate F so `chatgpt/wsl-chrome-2` no longer appears blocked on a
+    missing keep-current pass after the successful cadence-preserving
+    `run-one-pass` proof;
+  - recorded current installed `/status` readback for
+    `chatgpt/wsl-chrome-2`: `idle_waiting`, `phase=steady_follow`,
+    `passCount=4`, zero remaining detail surfaces, no provider guard, and
+    `latestLifecycleEvent=resumed_after_restart`;
+  - added the M8 installed proof scoreboard and left the remaining broad-resume
+    boundary on the Gate E foreground-preemption decision.
+- Validation:
+  - installed `auracall api status --port 18095 --json` readback;
+  - Plan 0152 audit.
+
 ## 2026-07-06 | Plan 0152 Installed Isolated Preemption Harness
 
 - Focus: prove the installed runtime package carries the foreground-preemption

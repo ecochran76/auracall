@@ -1,5 +1,31 @@
 # RUNBOOK
 
+## Turn 317 | 2026-07-06
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: reconcile the Plan 0152 high-level convergence target after installed
+  cadence and preemption evidence, without broadly resuming live follow.
+- Result:
+  - clarified that the resume target is a milestone ladder of bounded,
+    restart-safe cycles, not a single oversized pass;
+  - corrected Gate F so it no longer treats `chatgpt/wsl-chrome-2`
+    keep-current proof as missing after the later successful cadence pass;
+  - recorded the current installed status readback for `chatgpt/wsl-chrome-2`:
+    PID `51051`, `idle_waiting`, `phase=steady_follow`, `passCount=4`,
+    `routineDecision.state=steady_follow`, zero remaining detail surfaces, no
+    provider guard, and `latestLifecycleEvent=resumed_after_restart`;
+  - added the current M8 installed scoreboard separating backfill, steady
+    follow, artifact-rich detail inventory, preemption, and restart evidence.
+- Validation:
+  - installed `/status` readback through
+    `auracall api status --port 18095 --json`;
+  - `pnpm run plans:audit -- --keep 152`.
+- Remaining scope:
+  - Plan 0152 remains open for the final Gate E decision: accept installed
+    isolated preemption as the foreground boundary, or stage one narrowly
+    bounded real-provider foreground collision before broad resume.
+
 ## Turn 316 | 2026-07-06
 
 - Active plan:
