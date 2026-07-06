@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 304 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: advance M4/M6 by making live-follow target decisions show when the
+  scheduler yielded to foreground operator work.
+- Result:
+  - threaded scheduler foreground/backpressure evidence into live-follow target
+    rollup;
+  - a selected live-follow target now reports
+    `routineDecision.state=operator_preempted` when the latest scheduler pass
+    yielded to `foreground-work`;
+  - active completion states still take precedence over preemption readback.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "foreground scheduler preemption|does not treat an idle background drain cadence timer"` passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 20`
+    passed;
+  - `pnpm run plans:audit -- --keep 152` passed;
+  - direct Biome on `tests/http.responsesServer.test.ts` still reports
+    pre-existing import ordering/non-null assertion debt.
+- Remaining scope:
+  - Plan 0152 still needs durable per-cycle cadence/fairness execution changes
+    and installed dogfood proof before live follow should be resumed broadly.
+
 ## Turn 303 | 2026-07-05
 
 - Active plan:

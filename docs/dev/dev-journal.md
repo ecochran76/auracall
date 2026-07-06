@@ -39438,3 +39438,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   and `pnpm exec tsc --noEmit --pretty false`. Scoped Biome passed on touched
   source and `tests/cli/apiStatusCommand.test.ts`; the large HTTP test still
   carries pre-existing import/non-null assertion lint debt.
+- 2026-07-05: Continued Plan 0152 M4/M6 foreground-preemption decision
+  evidence. Threaded account-mirror scheduler foreground/backpressure status
+  into live-follow target rollup so a target selected by a scheduler pass that
+  yielded to `foreground-work` reports
+  `routineDecision.state=operator_preempted` with the exact foreground-yield
+  reason. Active completion states still take precedence, so queued/running or
+  paused work is not hidden by global scheduler preemption. Focused validation
+  passed with
+  `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "foreground scheduler preemption|does not treat an idle background drain cadence timer"`,
+  `pnpm exec tsc --noEmit --pretty false`,
+  `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 20`,
+  and `pnpm run plans:audit -- --keep 152`. Direct Biome on
+  `tests/http.responsesServer.test.ts` still reports pre-existing import
+  ordering/non-null assertion lint debt.

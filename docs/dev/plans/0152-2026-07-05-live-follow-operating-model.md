@@ -78,6 +78,25 @@ Validation:
 - `pnpm vitest run tests/cli/apiStatusCommand.test.ts --testNamePattern "proof scope|deferred asset"`
 - `pnpm exec tsc --noEmit --pretty false`
 
+### 2026-07-05 | M4/M6 Foreground Preemption Decision Evidence
+
+- Live-follow target account `routineDecision` now consumes the scheduler
+  foreground/backpressure readback instead of leaving preemption as an empty
+  placeholder.
+- A scheduler pass that yields to `foreground-work` now marks the selected
+  live-follow target as `operator_preempted`, preserves the next routine phase,
+  and reports the foreground-yield reason in the target-level decision.
+- Active completion state still wins over global scheduler preemption, so
+  running/queued/paused work remains visible while idle eligible targets can
+  explain why the scheduler backed away.
+
+Validation:
+
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "foreground scheduler preemption|does not treat an idle background drain cadence timer"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 20`
+- `pnpm run plans:audit -- --keep 152`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

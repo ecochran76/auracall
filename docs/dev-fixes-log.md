@@ -18768,3 +18768,9 @@ browser-stage lifecycle observability, not transcript truncation.
   remains, and which guard/preemption/cycle evidence drove the state. Active
   completion/cycle evidence should take precedence over backlog-only summaries,
   while materialization backlog remains visible as remaining work.
+- 2026-07-05: Live-follow foreground preemption must be visible on the
+  per-target routine decision, not only the scheduler headline. When the
+  scheduler yields a selected live-follow target to `foreground-work`, surface
+  `operator_preempted` with the same reason on that target row. Keep queued,
+  running, paused, and failed completion states ahead of preemption so active
+  work is not masked by background scheduler posture.

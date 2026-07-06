@@ -5329,6 +5329,7 @@ function createLiveFollowHealthSummary(
 				}
 			: null,
 		targets: createLiveFollowTargetRollup(
+			scheduler,
 			status,
 			completions,
 			accountLibraryPreviews,
@@ -5955,6 +5956,7 @@ async function readAccountLibraryBrowserProcessStatus(input: {
 }
 
 function createLiveFollowTargetRollup(
+	scheduler: HttpStatusResponse["accountMirrorScheduler"],
 	status: AccountMirrorStatusSummary,
 	completions: AccountMirrorCompletionStatusSummary,
 	accountLibraryPreviews: AccountMirrorAccountLibraryPreviewMap | null,
@@ -6028,6 +6030,7 @@ function createLiveFollowTargetRollup(
 				operation,
 				materializationBacklog,
 				accountLibraryCatchup,
+				scheduler,
 			}),
 			assetInventory,
 			materializationBacklog,
@@ -6165,11 +6168,13 @@ function summarizeLiveFollowRoutineDecision(input: {
 	operation: AccountMirrorCompletionOperation | null;
 	materializationBacklog: LiveFollowTargetAccountSummary["materializationBacklog"];
 	accountLibraryCatchup: LiveFollowTargetAccountSummary["accountLibraryCatchup"];
+	scheduler: HttpStatusResponse["accountMirrorScheduler"];
 }): LiveFollowTargetAccountSummary["routineDecision"] {
-	const { entry, operation, materializationBacklog, accountLibraryCatchup } = input;
+	const { entry, operation, materializationBacklog, accountLibraryCatchup, scheduler } = input;
 	const guard = entry.providerGuard.state === "clear" ? null : entry.providerGuard;
 	const cycle = operation?.liveFollowCycle ?? null;
 	const currentPhase = cycle?.phases.find((phase) => phase.phase === cycle.currentPhase) ?? null;
+	const preemption = summarizeLiveFollowPreemption(entry, scheduler);
 	const remainingDetailSurfaces = entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null;
 	const materializationAssets =
 		materializationBacklog?.remoteKnownMissingLocal.total ??
@@ -6190,7 +6195,7 @@ function summarizeLiveFollowRoutineDecision(input: {
 			accountLibraryStatus: accountLibraryCatchup?.status ?? null,
 		},
 		guard,
-		preemption: null,
+		preemption,
 		cycle: cycle
 			? {
 					id: cycle.cycleId,
@@ -6261,6 +6266,15 @@ function summarizeLiveFollowRoutineDecision(input: {
 			why: "live-follow completion is queued",
 		};
 	}
+	if (preemption) {
+		return {
+			...base,
+			state: "operator_preempted",
+			nextPhase: cycle?.nextPhase ?? "identity",
+			why: preemption.reason ?? "foreground operator work has priority over live follow",
+			eligibleAt: preemption.retryAt ?? base.eligibleAt,
+		};
+	}
 	if (cycle && cycle.currentPhase !== "complete") {
 		return {
 			...base,
@@ -6319,6 +6333,35 @@ function summarizeLiveFollowRoutineDecision(input: {
 		state: "delayed",
 		nextPhase: cycle?.nextPhase ?? null,
 		why: entry.reason ?? "live-follow target is waiting for cadence or provider politeness",
+	};
+}
+
+function summarizeLiveFollowPreemption(
+	entry: AccountMirrorStatusEntry,
+	scheduler: HttpStatusResponse["accountMirrorScheduler"],
+): LiveFollowTargetAccountSummary["routineDecision"]["preemption"] {
+	if (entry.liveFollow.state !== "enabled") return null;
+	if (scheduler.foregroundWork.active) {
+		return {
+			state: "foreground-work",
+			reason: scheduler.operatorStatus.reason,
+			retryAt: null,
+		};
+	}
+	if (scheduler.lastPass?.backpressure.reason !== "foreground-work") return null;
+	const selected = scheduler.lastPass.selectedTarget;
+	if (
+		selected &&
+		(selected.provider !== entry.provider || selected.runtimeProfileId !== entry.runtimeProfileId)
+	) {
+		return null;
+	}
+	return {
+		state: "foreground-work",
+		reason:
+			scheduler.lastPass.backpressure.message ??
+			"latest scheduler pass yielded to foreground AuraCall work",
+		retryAt: null,
 	};
 }
 

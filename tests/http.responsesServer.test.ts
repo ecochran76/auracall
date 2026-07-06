@@ -6263,6 +6263,147 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("reports foreground scheduler preemption on live-follow target routine decisions", async () => {
+		const config = {
+			model: "gpt-5.2",
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: { email: "operator@example.com" },
+							liveFollow: { enabled: true },
+						},
+					},
+				},
+			},
+		};
+		const pass: AccountMirrorSchedulerPassResult = {
+			object: "account_mirror_scheduler_pass",
+			mode: "execute",
+			action: "skipped",
+			startedAt: "2026-06-05T01:20:00.000Z",
+			completedAt: "2026-06-05T01:20:01.000Z",
+			selectedTarget: {
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				browserProfileId: "default",
+				status: "eligible",
+				reason: "eligible",
+				eligibleAt: "2026-06-05T01:20:00.000Z",
+				mirrorCompleteness: completeAccountMirror,
+			},
+			backpressure: {
+				reason: "foreground-work",
+				message: "Foreground AuraCall API work is pending.",
+			},
+			metrics: {
+				totalTargets: 1,
+				eligibleTargets: 1,
+				delayedTargets: 0,
+				blockedTargets: 0,
+				defaultChatgptEligibleTargets: 1,
+				defaultChatgptDelayedTargets: 0,
+				inProgressEligibleTargets: 0,
+				liveFollowEnabledTargets: 1,
+				liveFollowEligibleTargets: 1,
+				liveFollowDelayedTargets: 0,
+			},
+			refresh: null,
+			error: null,
+		};
+		const runOnce = vi.fn(async () => pass);
+		const server = await createResponsesHttpServer(
+			{
+				host: "127.0.0.1",
+				port: 0,
+				accountMirrorSchedulerIntervalMs: 25,
+				accountMirrorSchedulerDryRun: false,
+			},
+			{
+				config,
+				accountMirrorSchedulerService: {
+					runOnce,
+				},
+				accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
+				accountMirrorCompletionService: {
+					start: vi.fn(),
+					read: vi.fn(() => null),
+					list: vi.fn(() => []),
+					control: vi.fn(() => null),
+				},
+			},
+		);
+
+		try {
+			await delay(40);
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			const payload = (await response.json()) as {
+				accountMirrorScheduler: {
+					operatorStatus: {
+						posture: string;
+						reason: string;
+						backpressureReason: string | null;
+					};
+					lastPass: AccountMirrorSchedulerPassResult | null;
+				};
+				liveFollow: {
+					targets: {
+						accounts: Array<{
+							provider: string;
+							runtimeProfileId: string;
+							routineDecision: {
+								state: string;
+								nextPhase: string | null;
+								why: string | null;
+								preemption: {
+									state: string;
+									reason: string | null;
+									retryAt: string | null;
+								} | null;
+							};
+						}>;
+					};
+				};
+			};
+
+			expect(runOnce).toHaveBeenCalledWith({
+				dryRun: false,
+			});
+			expect(payload.accountMirrorScheduler.operatorStatus).toMatchObject({
+				posture: "waiting",
+				backpressureReason: "foreground-work",
+			});
+			expect(payload.accountMirrorScheduler.lastPass).toMatchObject({
+				action: "skipped",
+				backpressure: { reason: "foreground-work" },
+			});
+			expect(payload.liveFollow.targets.accounts).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						provider: "chatgpt",
+						runtimeProfileId: "default",
+						routineDecision: expect.objectContaining({
+							state: "operator_preempted",
+							nextPhase: "identity",
+							why: "Foreground AuraCall API work is pending.",
+							preemption: {
+								state: "foreground-work",
+								reason: "Foreground AuraCall API work is pending.",
+								retryAt: null,
+							},
+						}),
+					}),
+				]),
+			);
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("reports compact lazy mirror scheduler yield history through the API surface", async () => {
 		const yieldedPass: AccountMirrorSchedulerPassResult = {
 			object: "account_mirror_scheduler_pass",
