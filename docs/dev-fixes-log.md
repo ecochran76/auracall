@@ -1,3 +1,15 @@
+- 2026-07-05: Bounded/manual account-mirror completions must use the persisted
+  account backfill ledger before their first refresh, not only the live-follow
+  scheduler path. A one-pass `mirror-complete` can otherwise restart at broad
+  identity/root work even when `/status` says the next eligible phase is
+  `detail-inventory`. Refresh persisted status state before each completion
+  collector pass and derive `requestedPhase` from the status entry when it has
+  phase evidence; keep brand-new bounded completions on the old broad fallback.
+  Installed proof on `chatgpt/wsl-chrome-3` completed
+  `acctmirror_completion_de84d37f-a509-4450-a03a-ab37132ca2d4` with
+  `detail-inventory`, zero root/project active reads, `llmServiceRequests=0`,
+  `cdpMethodCalls=9`, and provider interactions `5/6`.
+
 - 2026-07-05: ChatGPT account-mirror detail inventory must not treat an empty
   conversation-file refresh as authoritative deletion evidence when non-empty
   cached conversation-file evidence already exists. Mark account-mirror list

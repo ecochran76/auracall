@@ -190,6 +190,31 @@ Validation:
 - `pnpm exec biome check src/accountMirror/liveFollowCycleDecision.ts src/accountMirror/schedulerService.ts src/http/responsesServer.ts tests/accountMirror/completionService.test.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 40`
 - `pnpm exec biome check --write tests/http.responsesServer.test.ts --max-diagnostics 5`
 
+### 2026-07-05 | M2 Bounded Completion Phase Selection
+
+- Manual/bounded `mirror-complete` operations now refresh persisted status
+  state before each collector pass and choose their requested collector phase
+  from the same account-level backfill ledger used by live-follow scheduler
+  target selection.
+- A one-pass bounded completion with pending `detail-inventory` now asks the
+  collector for `detail-inventory` instead of defaulting back to broad
+  identity/project/root rail work.
+- Installed dogfood on `chatgpt/wsl-chrome-3` proved completion
+  `acctmirror_completion_de84d37f-a509-4450-a03a-ab37132ca2d4` ran
+  `identity` plus `detail-inventory`, completed one pass in 78s, scanned four
+  conversation detail surfaces, used zero project-index/root-rail active
+  reads, reported `llmServiceRequests=0`, `cdpMethodCalls=9`, and stayed under
+  the provider-interaction budget at `5/6`.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts --testNamePattern "bounded refresh|persisted phase ledger|requested live-follow phase"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/completionService.ts tests/accountMirror/completionService.test.ts`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

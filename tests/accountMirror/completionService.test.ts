@@ -850,6 +850,72 @@ describe("account mirror completion service", () => {
 		service.control({ id: "acctmirror_phase_contract", action: "cancel" });
 	});
 
+	test("uses persisted phase ledger for the first bounded refresh", async () => {
+		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "ecochran76@gmail.com",
+					backfillLedger: {
+						...completeBackfillLedger,
+						state: "in_progress",
+						lastCompletedPhase: "project-conversations",
+						nextEligiblePhase: "detail-inventory",
+						cursors: {
+							...completeBackfillLedger.cursors,
+							newestFirstDetail: {
+								status: "pending",
+								reason: "Detail inventory cursor or remaining detail surfaces are still pending.",
+								updatedAt: "2026-04-30T12:00:01.000Z",
+								nextIndex: 4,
+								readLimit: 4,
+								scanned: 4,
+								yielded: false,
+								conversationDetail: null,
+							},
+						},
+					},
+				},
+			},
+		});
+		const service = createAccountMirrorCompletionService({
+			registry,
+			refreshService: {
+				requestRefresh,
+			},
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			generateId: () => "acctmirror_bounded_phase_contract",
+		});
+
+		service.start({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			maxPasses: 1,
+			sweepMode: "steady_follow",
+			materializationPolicy: "metadata_only",
+		});
+
+		await waitFor(() => service.read("acctmirror_bounded_phase_contract")?.status === "completed");
+
+		expect(requestRefresh).toHaveBeenCalledTimes(1);
+		expect(requestRefresh).toHaveBeenCalledWith(
+			expect.objectContaining({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				sweepMode: "steady_follow",
+				materializationPolicy: "metadata_only",
+				requestedPhase: "detail-inventory",
+			}),
+		);
+		expect(service.read("acctmirror_bounded_phase_contract")).toMatchObject({
+			status: "completed",
+			mode: "bounded",
+			passCount: 1,
+		});
+	});
+
 	test("records collector progress lifecycle events while refresh is running", async () => {
 		const requestRefresh = vi.fn(async (request) => {
 			await request.onCollectorProgress?.({

@@ -1,3 +1,26 @@
+## 2026-07-05 | Plan 0152 Bounded Completion Phase Selection
+
+- Focus: fix the installed dogfood failure where a manual one-pass
+  `mirror-complete` ignored the account backfill ledger and restarted broad
+  backfill even though `/status` selected `detail-inventory`.
+- Result:
+  - completion refresh passes now hydrate persisted account status before the
+    collector call;
+  - bounded and live-follow completions derive `requestedPhase` from the status
+    entry when it has ledger/evidence, while new bounded completions without
+    phase evidence keep the previous broad fallback;
+  - installed `chatgpt/wsl-chrome-3` completion
+    `acctmirror_completion_de84d37f-a509-4450-a03a-ab37132ca2d4` completed one
+    pass with `detail-inventory`, zero root/project active reads,
+    `llmServiceRequests=0`, `cdpMethodCalls=9`, and provider interactions
+    `5/6`.
+- Validation:
+  - focused completion-service regression passed;
+  - TypeScript passed;
+  - Biome check passed on touched source/test files;
+  - user runtime was reinstalled and `auracall-api.service` restarted before
+    the installed dogfood run.
+
 ## 2026-07-05 | Plan 0152 M5 Metadata-Only Split
 
 - Focus: execute the first critical-path Plan 0152 slice by separating

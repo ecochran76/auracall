@@ -7,6 +7,7 @@ import type { AccountMirrorCompletionStore } from "./completionStore.js";
 import {
 	type AccountMirrorLiveFollowCycleLedger,
 	type AccountMirrorLiveFollowCyclePhase,
+	chooseLiveFollowCyclePhase,
 	deriveLiveFollowCycleLedger,
 } from "./liveFollowCycleDecision.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
@@ -378,13 +379,22 @@ export function createAccountMirrorCompletionService(input: {
 				let refresh: AccountMirrorRefreshResult;
 				try {
 					if (!shouldContinue(id)) return;
+					await input.registry.refreshPersistentState?.({
+						provider: refreshOperation.provider,
+						runtimeProfileId: refreshOperation.runtimeProfileId,
+					});
+					const phaseStatusEntry = findTargetEntry(
+						input.registry,
+						refreshOperation.provider,
+						refreshOperation.runtimeProfileId,
+					);
 					const collectorTimeoutMs = resolveCompletionCollectorTimeoutMs(refreshOperation);
 					refresh = await input.refreshService.requestRefresh({
 						provider: refreshOperation.provider,
 						runtimeProfileId: refreshOperation.runtimeProfileId,
 						sweepMode: refreshOperation.sweepMode ?? "steady_follow",
 						materializationPolicy: refreshOperation.materializationPolicy ?? null,
-						requestedPhase: resolveRequestedCollectorPhase(refreshOperation),
+						requestedPhase: resolveRequestedCollectorPhase(refreshOperation, phaseStatusEntry),
 						explicitRefresh: true,
 						ignoreMinimumInterval: refreshOperation.mode === "bounded",
 						queueTimeoutMs: 0,
@@ -435,8 +445,14 @@ export function createAccountMirrorCompletionService(input: {
 					error: null,
 				};
 				const refreshedBase = { ...refreshOperation, ...refreshedPatch };
+				const refreshedStatusEntry = findTargetEntry(
+					input.registry,
+					refreshedBase.provider,
+					refreshedBase.runtimeProfileId,
+				);
 				refreshedPatch.liveFollowCycle = deriveLiveFollowCycleLedger({
 					operation: refreshedBase,
+					statusEntry: refreshedStatusEntry,
 					now: now().toISOString(),
 				});
 				const refreshed = update(id, refreshedPatch);
@@ -1296,9 +1312,43 @@ function normalizeMaterializationRefreshSnapshot(
 
 function resolveRequestedCollectorPhase(
 	operation: AccountMirrorCompletionOperation,
+	statusEntry?: AccountMirrorStatusEntry | null,
 ): AccountMirrorCollectorPhase | null {
+	const statusRequestedPhase = resolveStatusRequestedCollectorPhase(operation, statusEntry);
+	if (statusRequestedPhase) return statusRequestedPhase;
 	if (operation.mode !== "live_follow") return null;
 	return liveFollowCyclePhaseToCollectorPhase(operation.liveFollowCycle?.nextPhase ?? null);
+}
+
+function resolveStatusRequestedCollectorPhase(
+	operation: AccountMirrorCompletionOperation,
+	statusEntry: AccountMirrorStatusEntry | null | undefined,
+): AccountMirrorCollectorPhase | null {
+	if (!statusEntry || !hasStatusPhaseEvidence(statusEntry)) return null;
+	const decision = chooseLiveFollowCyclePhase({
+		operation: {
+			passCount:
+				statusEntry.metadataEvidence || statusEntry.lastCompletedAt ? 1 : operation.passCount,
+			lastRefresh:
+				statusEntry.metadataEvidence || statusEntry.lastCompletedAt ? {} : operation.lastRefresh,
+		},
+		evidence: statusEntry.metadataEvidence ?? operation.lastRefresh?.metadataEvidence ?? null,
+		remainingDetailSurfaces:
+			statusEntry.mirrorCompleteness.remainingDetailSurfaces?.total ??
+			operation.mirrorCompleteness?.remainingDetailSurfaces?.total ??
+			null,
+		backfillLedger: statusEntry.backfillLedger,
+	});
+	return liveFollowCyclePhaseToCollectorPhase(decision.phase);
+}
+
+function hasStatusPhaseEvidence(statusEntry: AccountMirrorStatusEntry): boolean {
+	return Boolean(
+		statusEntry.backfillLedger ||
+			statusEntry.metadataEvidence ||
+			statusEntry.lastCompletedAt ||
+			(statusEntry.mirrorCompleteness.remainingDetailSurfaces?.total ?? 0) > 0,
+	);
 }
 
 function liveFollowCyclePhaseToCollectorPhase(
