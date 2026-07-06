@@ -49,9 +49,9 @@ export function deriveLiveFollowCycleLedger(input: {
 	const previous = operation.liveFollowCycle ?? null;
 	const evidence = operation.lastRefresh?.metadataEvidence ?? null;
 	const completeness =
-		operation.lastRefresh?.mirrorCompleteness ??
-		operation.mirrorCompleteness ??
 		input.statusEntry?.mirrorCompleteness ??
+		operation.mirrorCompleteness ??
+		operation.lastRefresh?.mirrorCompleteness ??
 		null;
 	const decision = chooseLiveFollowCyclePhase({
 		operation,

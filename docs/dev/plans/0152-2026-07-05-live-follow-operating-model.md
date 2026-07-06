@@ -516,6 +516,51 @@ Validation:
 - `systemctl --user restart auracall-api.service`
 - installed `/status` readback at `2026-07-06T07:35:37Z`
 
+### 2026-07-06 | M2/M4/M8 Completion-Status Hydration And Deferred Cycle Advance
+
+- Installed readback exposed one more operator-surface drift: `/status`
+  reported `chatgpt/wsl-chrome-4` with 26 remaining selected detail surfaces,
+  but `mirror-completion-status` for the same live-follow completion still
+  returned the stale persisted operation snapshot with 412 remaining surfaces.
+- Completion-status readback now hydrates current account status registry
+  evidence before returning an operation, so a stale live-follow operation
+  snapshot inherits current `mirrorCompleteness` and live-follow cycle
+  projection without running provider work.
+- After reinstall/restart on PID `37108`, installed
+  `mirror-completion-status` and `/status` both reported completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` at
+  `passCount=3`, `remainingDetailSurfaces.total=26`,
+  `currentPhase=detail-inventory`, and `nextPhase=detail-inventory`.
+- Operator `run-one-pass` set `forceRunUntilPassCount=4`. At the original
+  cadence window the live-follow completion correctly yielded to foreground
+  AuraCall API work and recorded `foreground_work_deferred` with retry at
+  `2026-07-06T07:57:55.610Z`, preserving the owed detail phase instead of
+  starting provider work under operator pressure.
+- On retry, the same existing live-follow completion ran pass `4` from
+  `2026-07-06T07:57:55.632Z` to `2026-07-06T07:59:14.173Z`, requested
+  `detail-inventory`, skipped project/root rails, and advanced the selected
+  detail cursor from `nextConversationIndex=4` to `8`.
+- Remaining selected detail surfaces dropped from `26` to `22`, with
+  `nextAttemptAt=2026-07-06T08:27:43.215Z` and
+  `forceRunUntilPassCount=null`.
+- The scrape shape stayed provider-polite:
+  `classification=passive_dominant`, passive total `8`, active provider
+  interactions `5/6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, and
+  `providerGuardCorrelation.state=none`.
+- This keeps Plan 0152 open: the routine now proves one more full bounded
+  cycle with preemption and continuation, but `chatgpt/wsl-chrome-4` still has
+  22 selected detail surfaces to drain.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/schedulerService.test.ts tests/http.responsesServer.test.ts --testNamePattern "hydrates completion status|freshness frontier|idle-waiting live-follow|effective live-follow wake|pending detail inventory|selected live-follow phase"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/completionService.ts src/accountMirror/liveFollowCycleDecision.ts tests/accountMirror/completionService.test.ts --max-diagnostics 30`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- installed `auracall api mirror-completion-status acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63 --port 18095 --json`
+- installed `/status` readback at `2026-07-06T08:00:21Z`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive

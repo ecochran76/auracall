@@ -685,12 +685,12 @@ export function createAccountMirrorCompletionService(input: {
 		async refreshMaterializationStatus(id: string) {
 			const operation = operations.get(id);
 			if (!operation) return null;
-			return await hydrateMaterializationStatus(operation);
+			return await hydrateCompletionStatus(operation);
 		},
 		async refreshMaterializationStatuses(inputOperations: AccountMirrorCompletionOperation[]) {
 			const results: AccountMirrorCompletionOperation[] = [];
 			for (const operation of inputOperations) {
-				results.push(await hydrateMaterializationStatus(operation));
+				results.push(await hydrateCompletionStatus(operation));
 			}
 			return results;
 		},
@@ -942,6 +942,41 @@ export function createAccountMirrorCompletionService(input: {
 			}),
 		});
 		return updated;
+	}
+
+	async function hydrateCompletionStatus(
+		operation: AccountMirrorCompletionOperation,
+	): Promise<AccountMirrorCompletionOperation> {
+		const materialized = await hydrateMaterializationStatus(operation);
+		await input.registry.refreshPersistentState?.({
+			provider: materialized.provider,
+			runtimeProfileId: materialized.runtimeProfileId,
+		});
+		const entry = findTargetEntry(
+			input.registry,
+			materialized.provider,
+			materialized.runtimeProfileId,
+		);
+		if (!entry) return materialized;
+		const statusPatch: Partial<AccountMirrorCompletionOperation> = {
+			mirrorCompleteness: entry.mirrorCompleteness,
+		};
+		if (materialized.mode === "live_follow") {
+			statusPatch.liveFollowCycle = deriveLiveFollowCycleLedger({
+				operation: {
+					...materialized,
+					mirrorCompleteness: entry.mirrorCompleteness,
+				},
+				statusEntry: entry,
+				now: now().toISOString(),
+			});
+		}
+		return (
+			update(materialized.id, statusPatch) ?? {
+				...materialized,
+				...statusPatch,
+			}
+		);
 	}
 
 	async function decideAccountLibraryCatchup(

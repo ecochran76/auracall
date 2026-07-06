@@ -12898,3 +12898,42 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `NRestarts=0`;
   - installed `/status` readback at `2026-07-06T07:35:37Z` proved the corrected
     `26` remaining detail surfaces.
+
+## Turn 316 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - continue the existing `chatgpt/wsl-chrome-4` live-follow completion through
+    one more bounded detail-inventory cycle and reconcile operator readback.
+- Result:
+  - fixed completion-status readback so
+    `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` hydrates
+    current registry `mirrorCompleteness` instead of returning stale persisted
+    remaining-detail math;
+  - after reinstall/restart on PID `37108`, `mirror-completion-status` and
+    `/status` agreed on `remainingDetailSurfaces.total=26` and
+    `nextPhase=detail-inventory`;
+  - `run-one-pass` set `forceRunUntilPassCount=4`, then the routine correctly
+    deferred at `2026-07-06T07:56:55.610Z` because foreground AuraCall API work
+    was active;
+  - the retry ran pass `4` from `2026-07-06T07:57:55.632Z` to
+    `2026-07-06T07:59:14.173Z`, stayed on `requestedPhase=detail-inventory`,
+    skipped root/project rails, advanced `nextConversationIndex` from `4` to
+    `8`, and reduced remaining selected detail surfaces from `26` to `22`;
+  - scrape telemetry reported `classification=passive_dominant`, passive total
+    `8`, active provider interactions `5/6`, `llmServiceRequests=0`,
+    `cdpMethodCalls=9`, and no provider guard correlation.
+- Validation:
+  - focused completion/status/scheduler/HTTP tests passed;
+  - TypeScript passed;
+  - scoped Biome passed;
+  - installed runtime rebuild/restart left PID `37108` active with
+    `NRestarts=0`;
+  - installed completion-status and `/status` readback at
+    `2026-07-06T08:00:21Z` proved pass `4` and the remaining `22` selected
+    detail surfaces.
+- Remaining scope:
+  - Plan 0152 remains open until `chatgpt/wsl-chrome-4` drains the remaining
+    22 selected detail surfaces and broader subscribed-account scope is
+    explicitly resolved.

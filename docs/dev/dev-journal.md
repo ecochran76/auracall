@@ -1,3 +1,29 @@
+## 2026-07-06 | Plan 0152 Completion-Status Hydration And Deferred Cycle Advance
+
+- Focus: continue the installed `chatgpt/wsl-chrome-4` live-follow completion
+  through one more bounded detail-inventory cycle while preserving
+  foreground-work preemption.
+- Result:
+  - completion-status readback now hydrates current account status registry
+    `mirrorCompleteness` and live-follow cycle projection before returning a
+    stale persisted operation snapshot;
+  - installed completion-status and `/status` agreed on 26 remaining selected
+    detail surfaces after reinstall/restart on PID `37108`;
+  - `run-one-pass` first recorded `foreground_work_deferred` because foreground
+    AuraCall API work was active, then retried without losing the owed
+    `detail-inventory` phase;
+  - pass `4` ran from `2026-07-06T07:57:55.632Z` to
+    `2026-07-06T07:59:14.173Z`, advanced the selected detail cursor from `4`
+    to `8`, and reduced remaining selected detail surfaces to `22`;
+  - scrape telemetry stayed `passive_dominant`, active provider interactions
+    `5/6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, with no provider guard.
+- Validation:
+  - focused completion/status/scheduler/HTTP tests;
+  - TypeScript;
+  - scoped Biome;
+  - installed runtime rebuild/restart plus completion-status and `/status`
+    proof at `2026-07-06T08:00:21Z`.
+
 ## 2026-07-06 | Plan 0152 Frontier-Scoped Remaining Detail Readback
 
 - Focus: diagnose the natural `wsl-chrome-4` live-follow cadence after the

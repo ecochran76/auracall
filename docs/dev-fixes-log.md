@@ -1,3 +1,12 @@
+- 2026-07-06: Completion-status readback must hydrate current account status
+  registry evidence before returning active live-follow operation snapshots.
+  A persisted completion can carry stale `mirrorCompleteness` math after the
+  registry semantics are fixed, leaving `/status` and
+  `mirror-completion-status` disagreeing about remaining detail surfaces. On
+  readback, overlay current registry `mirrorCompleteness` and live-follow cycle
+  projection onto the operation without running provider work, so operator
+  controls and audits reason from one current detail backlog.
+
 - 2026-07-06: Remaining detail surfaces for steady-follow freshness-frontier
   passes must be scoped to the selected frontier set, not the full account
   conversation catalog. In installed Plan 0152 evidence,

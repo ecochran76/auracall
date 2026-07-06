@@ -579,6 +579,132 @@ describe("account mirror completion service", () => {
 		});
 	});
 
+	test("hydrates completion status mirror completeness from current registry evidence", async () => {
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+		});
+		registry.mergeState(
+			{
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+			},
+			{
+				lastRefreshRequestId: "acctmirror_frontier_registry",
+				lastSuccessAtMs: Date.parse("2026-04-30T11:58:02.000Z"),
+				detectedIdentityKey: "ecochran76@gmail.com",
+				metadataCounts: {
+					projects: 0,
+					conversations: 416,
+					artifacts: 109,
+					files: 126,
+					media: 0,
+				},
+				metadataEvidence: {
+					identitySource: "profile-menu",
+					projectSampleIds: [],
+					conversationSampleIds: ["conv_1"],
+					truncated: {
+						projects: false,
+						conversations: false,
+						artifacts: true,
+					},
+					conversationFreshnessFrontier: {
+						object: "account_mirror_conversation_freshness_frontier",
+						provider: "chatgpt",
+						sweepMode: "steady_follow",
+						threshold: 3,
+						rowsExamined: 30,
+						rowsSelectedForDetail: 30,
+						frontierReached: false,
+						firstStoppedRow: null,
+						fallbackReason: "missing_cached_summary",
+						selectedConversationIds: ["conv_1", "conv_2", "conv_3", "conv_4"],
+						rowEvidence: [],
+					},
+					attachmentInventory: {
+						nextProjectIndex: 0,
+						nextConversationIndex: 4,
+						detailReadLimit: 4,
+						scannedProjects: 0,
+						scannedConversations: 4,
+						conversationDetail: null,
+						yielded: false,
+					},
+				},
+			},
+		);
+		const service = createAccountMirrorCompletionService({
+			registry,
+			refreshService: {
+				requestRefresh: vi.fn(async () => createRefreshResult()),
+			},
+			initialOperations: [
+				{
+					object: "account_mirror_completion",
+					id: "acctmirror_frontier_stale_completion",
+					provider: "chatgpt",
+					runtimeProfileId: "default",
+					mode: "live_follow",
+					sweepMode: "steady_follow",
+					phase: "backfill_history",
+					status: "idle_waiting",
+					startedAt: "2026-04-30T11:00:00.000Z",
+					completedAt: null,
+					nextAttemptAt: "2026-04-30T12:30:00.000Z",
+					maxPasses: null,
+					passCount: 3,
+					lastRefresh: createRefreshResult(),
+					materializationPolicy: "metadata_only",
+					materializationAssetKinds: ["all"],
+					materializationMaxItems: null,
+					materializationRefreshSnapshot: false,
+					materializationForce: false,
+					materializationCursor: null,
+					materializationOutcome: null,
+					accountLibraryCursor: null,
+					liveFollowCycle: null,
+					forceRunUntilPassCount: null,
+					mirrorCompleteness: {
+						...completeMirror,
+						state: "in_progress",
+						summary: "Attachment inventory has 412 detail surfaces remaining.",
+						remainingDetailSurfaces: { projects: 0, conversations: 412, total: 412 },
+						signals: {
+							projectsTruncated: false,
+							conversationsTruncated: false,
+							attachmentInventoryTruncated: true,
+							attachmentCursorPresent: true,
+						},
+					},
+					error: null,
+					lifecycleEvents: [],
+				},
+			],
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+		});
+
+		await expect(
+			service.refreshMaterializationStatus?.("acctmirror_frontier_stale_completion"),
+		).resolves.toMatchObject({
+			mirrorCompleteness: {
+				state: "in_progress",
+				summary: "Attachment inventory has 26 detail surfaces remaining.",
+				remainingDetailSurfaces: { projects: 0, conversations: 26, total: 26 },
+			},
+			liveFollowCycle: {
+				currentPhase: "detail-inventory",
+				nextPhase: "detail-inventory",
+				phases: [
+					{
+						phase: "detail-inventory",
+						status: "pending",
+					},
+				],
+			},
+		});
+	});
+
 	test("hydrates active cooldown operations without refreshing before eligible time", async () => {
 		const initial = {
 			object: "account_mirror_completion" as const,
