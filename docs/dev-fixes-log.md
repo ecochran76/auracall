@@ -18774,3 +18774,10 @@ browser-stage lifecycle observability, not transcript truncation.
   `operator_preempted` with the same reason on that target row. Keep queued,
   running, paused, and failed completion states ahead of preemption so active
   work is not masked by background scheduler posture.
+- 2026-07-05: Scheduler-selected live-follow passes need explicit phase
+  decisions before calling refresh. If status evidence says a later phase such
+  as `detail-inventory` is pending, pass that phase to the collector and expose
+  the same branch on selected-target and idle target `routineDecision`
+  readback. Otherwise the scheduler can accidentally preserve the old behavior
+  of starting from identity/root rails even though the phase ledger and cached
+  evidence know where to resume.

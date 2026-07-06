@@ -97,6 +97,26 @@ Validation:
 - `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 20`
 - `pnpm run plans:audit -- --keep 152`
 
+### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
+
+- Scheduler-selected live-follow targets now carry an additive
+  `requestedPhase` plus `phaseDecision` record, derived from the same
+  live-follow phase chooser used by completion cycles.
+- Execute scheduler passes pass `sweepMode`, materialization policy, and the
+  chosen `requestedPhase` into `requestRefresh`, so an account with pending
+  detail inventory asks the collector for `detail-inventory` instead of
+  implicitly restarting at identity/root rails.
+- Idle target `routineDecision` readback now uses the same status evidence, so
+  `/status` shows pending detail inventory as the next phase even before an
+  active completion ledger exists.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/schedulerService.test.ts tests/http.responsesServer.test.ts --testNamePattern "selected live-follow phase|pending detail inventory|effective live-follow wake|foreground scheduler preemption"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/schedulerService.ts src/accountMirror/liveFollowCycleDecision.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20`
+- `pnpm run plans:audit -- --keep 152`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

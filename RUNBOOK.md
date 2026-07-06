@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 305 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: advance M2/M6 by making scheduler-selected live-follow passes choose
+  and expose the next phase from current evidence instead of relying on a
+  default refresh shape.
+- Result:
+  - scheduler selected-target readback now includes additive `requestedPhase`
+    and `phaseDecision` evidence;
+  - execute scheduler passes pass `sweepMode`, materialization policy, and the
+    chosen `requestedPhase` into account-mirror refresh;
+  - idle live-follow target `routineDecision` now reports pending
+    `detail-inventory` from status evidence before an active cycle exists.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/schedulerService.test.ts tests/http.responsesServer.test.ts --testNamePattern "selected live-follow phase|pending detail inventory|effective live-follow wake|foreground scheduler preemption"` passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - `pnpm exec biome check src/accountMirror/schedulerService.ts src/accountMirror/liveFollowCycleDecision.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20` passed;
+  - `pnpm run plans:audit -- --keep 152` passed;
+  - direct Biome on `tests/http.responsesServer.test.ts` still reports
+    pre-existing import ordering/non-null assertion debt.
+- Remaining scope:
+  - Plan 0152 still needs persistent per-account backfill/cadence fairness and
+    installed dogfood proof before live follow should be resumed broadly.
+
 ## Turn 304 | 2026-07-05
 
 - Active plan:

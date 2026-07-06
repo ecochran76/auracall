@@ -33,6 +33,10 @@ import {
 	createAccountMirrorCompletionService,
 } from "../accountMirror/completionService.js";
 import { createAccountMirrorCompletionStore } from "../accountMirror/completionStore.js";
+import {
+	type AccountMirrorLiveFollowCyclePhase,
+	chooseLiveFollowCyclePhase,
+} from "../accountMirror/liveFollowCycleDecision.js";
 import { reconcileConfiguredAccountMirrorLiveFollow } from "../accountMirror/liveFollowReconciler.js";
 import type { AccountMirrorProvider } from "../accountMirror/politePolicy.js";
 import { createAccountMirrorPreviewSessionStore } from "../accountMirror/previewSessionStore.js";
@@ -6174,6 +6178,8 @@ function summarizeLiveFollowRoutineDecision(input: {
 	const guard = entry.providerGuard.state === "clear" ? null : entry.providerGuard;
 	const cycle = operation?.liveFollowCycle ?? null;
 	const currentPhase = cycle?.phases.find((phase) => phase.phase === cycle.currentPhase) ?? null;
+	const statusPhaseDecision = summarizeLiveFollowStatusPhaseDecision(entry);
+	const nextEvidencePhase = cycle?.nextPhase ?? statusPhaseDecision.phase;
 	const preemption = summarizeLiveFollowPreemption(entry, scheduler);
 	const remainingDetailSurfaces = entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null;
 	const materializationAssets =
@@ -6225,7 +6231,7 @@ function summarizeLiveFollowRoutineDecision(input: {
 		return {
 			...base,
 			state: "provider_guarded",
-			nextPhase: cycle?.nextPhase ?? null,
+			nextPhase: nextEvidencePhase,
 			eligibleAt: guard.cooldownUntil ?? base.eligibleAt,
 			why: guard.summary ?? "provider guard requires clearance before live follow can continue",
 		};
@@ -6270,7 +6276,7 @@ function summarizeLiveFollowRoutineDecision(input: {
 		return {
 			...base,
 			state: "operator_preempted",
-			nextPhase: cycle?.nextPhase ?? "identity",
+			nextPhase: nextEvidencePhase,
 			why: preemption.reason ?? "foreground operator work has priority over live follow",
 			eligibleAt: preemption.retryAt ?? base.eligibleAt,
 		};
@@ -6324,8 +6330,11 @@ function summarizeLiveFollowRoutineDecision(input: {
 		return {
 			...base,
 			state: "eligible",
-			nextPhase: "identity",
-			why: entry.reason ?? "live-follow target is eligible for the next routine pass",
+			nextPhase: nextEvidencePhase,
+			why:
+				statusPhaseDecision.phase && statusPhaseDecision.phase !== "identity"
+					? statusPhaseDecision.reason
+					: (entry.reason ?? "live-follow target is eligible for the next routine pass"),
 		};
 	}
 	return {
@@ -6333,6 +6342,24 @@ function summarizeLiveFollowRoutineDecision(input: {
 		state: "delayed",
 		nextPhase: cycle?.nextPhase ?? null,
 		why: entry.reason ?? "live-follow target is waiting for cadence or provider politeness",
+	};
+}
+
+function summarizeLiveFollowStatusPhaseDecision(entry: AccountMirrorStatusEntry): {
+	phase: AccountMirrorLiveFollowCyclePhase | null;
+	reason: string;
+} {
+	const decision = chooseLiveFollowCyclePhase({
+		operation: {
+			passCount: entry.metadataEvidence || entry.lastCompletedAt ? 1 : 0,
+			lastRefresh: entry.metadataEvidence || entry.lastCompletedAt ? {} : null,
+		},
+		evidence: entry.metadataEvidence,
+		remainingDetailSurfaces: entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null,
+	});
+	return {
+		phase: decision.phase === "complete" ? null : decision.phase,
+		reason: decision.reason,
 	};
 }
 

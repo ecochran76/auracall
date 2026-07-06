@@ -39452,3 +39452,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   and `pnpm run plans:audit -- --keep 152`. Direct Biome on
   `tests/http.responsesServer.test.ts` still reports pre-existing import
   ordering/non-null assertion lint debt.
+- 2026-07-05: Continued Plan 0152 M2/M6 scheduler phase-decision evidence.
+  Scheduler-selected live-follow targets now include additive `requestedPhase`
+  and `phaseDecision` fields derived from the live-follow phase chooser, and
+  execute scheduler passes thread `sweepMode`, materialization policy, and the
+  chosen `requestedPhase` into account-mirror refresh. Idle target
+  `routineDecision` readback now uses the same status evidence, so pending
+  detail inventory reports `nextPhase=detail-inventory` before an active cycle
+  ledger exists. Focused validation passed with
+  `pnpm vitest run tests/accountMirror/schedulerService.test.ts tests/http.responsesServer.test.ts --testNamePattern "selected live-follow phase|pending detail inventory|effective live-follow wake|foreground scheduler preemption"`,
+  `pnpm exec tsc --noEmit --pretty false`,
+  `pnpm exec biome check src/accountMirror/schedulerService.ts src/accountMirror/liveFollowCycleDecision.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20`,
+  and `pnpm run plans:audit -- --keep 152`. Direct Biome on
+  `tests/http.responsesServer.test.ts` still reports pre-existing import
+  ordering/non-null assertion lint debt.

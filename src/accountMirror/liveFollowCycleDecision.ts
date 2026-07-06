@@ -78,7 +78,10 @@ export function deriveLiveFollowCycleLedger(input: {
 }
 
 export function chooseLiveFollowCyclePhase(input: {
-	operation: Pick<AccountMirrorCompletionOperation, "passCount" | "lastRefresh">;
+	operation: {
+		passCount: number;
+		lastRefresh: AccountMirrorCompletionOperation["lastRefresh"] | unknown | null;
+	};
 	evidence: AccountMirrorMetadataEvidence | null;
 	remainingDetailSurfaces: number | null;
 }): {

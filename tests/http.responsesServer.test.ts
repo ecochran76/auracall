@@ -5150,6 +5150,113 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("reports pending detail inventory as the idle live-follow target next phase", async () => {
+		const config = {
+			model: "gpt-5.2",
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: { email: "operator@example.com" },
+							liveFollow: { enabled: true },
+						},
+					},
+				},
+			},
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "operator@example.com",
+					metadataCounts: {
+						projects: 2,
+						conversations: 4,
+						artifacts: 0,
+						files: 0,
+						media: 0,
+					},
+					metadataEvidence: {
+						identitySource: "profile-menu",
+						projectSampleIds: ["project_1"],
+						conversationSampleIds: ["conv_pending"],
+						attachmentInventory: {
+							nextProjectIndex: 2,
+							nextConversationIndex: 1,
+							detailReadLimit: 6,
+							scannedProjects: 2,
+							scannedConversations: 1,
+							conversationDetail: {
+								conversationId: "conv_pending",
+								nextMessageIndex: 0,
+								messageLimit: 24,
+								totalMessages: 48,
+							},
+						},
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: true,
+						},
+					},
+				},
+			},
+		});
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0 },
+			{
+				config,
+				accountMirrorStatusRegistry: registry,
+				accountMirrorCompletionService: {
+					start: vi.fn(),
+					read: vi.fn(() => null),
+					list: vi.fn(() => []),
+					control: vi.fn(() => null),
+				},
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			const payload = (await response.json()) as {
+				liveFollow: {
+					targets: {
+						accounts: Array<{
+							provider: string;
+							runtimeProfileId: string;
+							routineDecision: {
+								state: string;
+								nextPhase: string | null;
+								why: string | null;
+							};
+						}>;
+					};
+				};
+			};
+
+			expect(payload.liveFollow.targets.accounts).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						provider: "chatgpt",
+						runtimeProfileId: "default",
+						routineDecision: expect.objectContaining({
+							state: "eligible",
+							nextPhase: "detail-inventory",
+							why: "conversation detail cursor is pending for conv_pending",
+						}),
+					}),
+				]),
+			);
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("reports stale identity mismatch evidence on live-follow target accounts", async () => {
 		const config = {
 			model: "gpt-5.2",
