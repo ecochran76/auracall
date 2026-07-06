@@ -691,6 +691,40 @@ Validation:
 - persisted completion JSON cursor readback under
   `~/.auracall/cache/account-mirror/completions/`
 
+### 2026-07-06 | M2/M8 Selected Detail Drain Completion
+
+- The installed `chatgpt/wsl-chrome-4` live-follow completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` completed the
+  selected detail-drain sequence on natural cadence.
+- Pass `9` started at `2026-07-06T10:26:56.905Z`, completed at
+  `2026-07-06T10:27:19.179Z`, returned to `idle_waiting`, and scheduled
+  `nextAttemptAt=2026-07-06T10:55:49.986Z`.
+- The pass stayed on `requestedPhase=detail-inventory`, scanned the final
+  selected conversation, reset the completed detail cursor to
+  `nextConversationIndex=0`, and reduced remaining selected detail surfaces
+  from `6` to `0`.
+- The live-follow cycle decision moved to `currentPhase=complete`,
+  `nextPhase=complete`, `status=complete`, and target
+  `routineDecision.state=steady_follow` /
+  `routineDecision.nextPhase=steady_follow`.
+- The final drain scrape was lighter than the preceding four-row passes:
+  `classification=passive_dominant`, passive total `3`, provider interactions
+  `2/6`, `projectIndexReads=0`, `rootRailReads=0`,
+  `projectConversationReads=0`, `llmServiceRequests=0`, `cdpMethodCalls=9`,
+  and `providerGuardCorrelation.state=none`.
+- This closes the `chatgpt/wsl-chrome-4` selected-detail drain milestone. Plan
+  0152 remains open because the broader subscribed-account posture still shows
+  non-current, paused, disabled, or attention-needed targets outside this one
+  completed ChatGPT routine.
+
+Validation:
+
+- quiet-window observation through the installed cadence timestamp
+- `auracall api mirror-completion-status acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63 --port 18095 --json`
+- installed `/status` live-follow target readback at `2026-07-06T10:27:59Z`
+- persisted completion JSON cursor readback under
+  `~/.auracall/cache/account-mirror/completions/`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive

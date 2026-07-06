@@ -1,3 +1,25 @@
+## 2026-07-06 | Plan 0152 Selected Detail Drain Completion
+
+- Focus: observe whether installed `chatgpt/wsl-chrome-4` naturally completes
+  the selected detail-drain sequence and returns to steady-follow.
+- Result:
+  - completion `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63`
+    ran pass `9` from `2026-07-06T10:26:56.905Z` to
+    `2026-07-06T10:27:19.179Z`;
+  - the pass stayed on `requestedPhase=detail-inventory`, scanned the final
+    selected conversation, reset `nextConversationIndex` to `0`, and `/status`
+    reduced remaining selected detail surfaces from `6` to `0`;
+  - the cycle moved to `currentPhase=complete`, `nextPhase=complete`,
+    `status=complete`, and target `routineDecision.state=steady_follow`;
+  - final scrape telemetry stayed `passive_dominant`, active provider
+    interactions `2/6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, with no
+    provider guard and no root/project rail replay.
+- Validation:
+  - quiet-window observation through the installed cadence timestamp;
+  - installed completion-status readback;
+  - installed `/status` target readback at `2026-07-06T10:27:59Z`;
+  - persisted completion JSON cursor readback.
+
 ## 2026-07-06 | Plan 0152 Natural Cadence Detail Drain Pass 8
 
 - Focus: continue installed `chatgpt/wsl-chrome-4` natural cadence observation
