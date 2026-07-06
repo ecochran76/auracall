@@ -1,5 +1,41 @@
 # RUNBOOK
 
+## Turn 318 | 2026-07-06
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: prove the installed foreground-preemption boundary on the real service
+  without starting provider refresh or broadly resuming live follow.
+- Result:
+  - added `run-once-with-foreground-pressure` as a status-control proof action
+    for the lazy account-mirror scheduler;
+  - the action uses the normal foreground AuraCall work counter and only
+    ignores the minimum-interval target-selection gate so a target can be
+    selected for the preemption assertion;
+  - source regression coverage proves the scheduler selects a live-follow
+    target, records `operator-foreground-pressure-proof`, reports
+    `foreground-work`, projects target-level `operator_preempted`, and never
+    calls provider refresh;
+  - installed service PID `78853` selected `chatgpt/wsl-chrome-4`, preserved
+    requested phase `detail-inventory`, skipped with
+    `backpressure.reason=foreground-work`, and reported `refresh=null` /
+    `error=null`;
+  - the separate `chatgpt/wsl-chrome-2` steady-follow account remained
+    `idle_waiting` with zero remaining detail surfaces and no provider guard.
+- Validation:
+  - focused HTTP/scheduler Vitest proof passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome check passed with only pre-existing test non-null assertion
+    warnings in `tests/http.responsesServer.test.ts`;
+  - `pnpm run install:user-runtime-service`;
+  - `systemctl --user restart auracall-api.service`;
+  - installed `POST /status` foreground-pressure proof;
+  - installed `/status` readback.
+- Remaining scope:
+  - Plan 0152 now has all acceptance boxes satisfied, but remains open for the
+    explicit operator decision to resume broad subscribed-account live follow
+    or stage one more real foreground collision proof first.
+
 ## Turn 317 | 2026-07-06
 
 - Active plan:

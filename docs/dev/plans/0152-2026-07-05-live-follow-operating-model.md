@@ -33,12 +33,15 @@ that account or another eligible subscribed account.
   `detail-inventory` across wake boundaries.
 - ChatGPT targeted detail inventory can skip root/project rails and preserve
   cached per-conversation file and attachment evidence.
-- The current blocker is semantic: artifact-rich chats with completed context
-  still look unfinished because `metadata_only` freshness conflates "detail
-  scrape complete" with "every remote context asset locally materialized."
-- Operator preemption exists in pieces, but live follow still needs one explicit
-  priority model for foreground runs, manual materialization, reconciliation,
-  browser jobs, and account-mirror background work.
+- Artifact-rich chats with completed context no longer look unfinished merely
+  because remote assets still need local materialization; `metadata_only`
+  freshness and local materialization backlog now remain separate status
+  concerns.
+- Operator preemption now has deterministic source, installed-harness, and
+  installed-service proof. The remaining decision is operational: whether that
+  evidence is sufficient to resume the normal subscribed-account routine, or
+  whether to stage one additional real foreground collision before broad
+  resume.
 
 ## Progress
 
@@ -373,6 +376,43 @@ Validation:
 - `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-scheduler-preemption.js`
 - `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-foreground-deferral.js`
 
+### 2026-07-06 | M4/M8 Installed Foreground-Pressure Scheduler Proof
+
+- Added a status-control action,
+  `accountMirrorScheduler.action=run-once-with-foreground-pressure`, that holds
+  the same foreground AuraCall work counter used by foreground API/browser
+  paths while running one normal scheduler pass.
+- The proof action intentionally ignores only the minimum-interval target
+  selection gate so an eligible account can be selected for the preemption
+  assertion; it still must yield before refresh and does not bypass provider
+  guard or foreground-work gates.
+- Source regression coverage proves the action selects a live-follow target,
+  records `operator-foreground-pressure-proof`, reports scheduler
+  backpressure `foreground-work`, projects target-level `operator_preempted`,
+  and never calls provider refresh.
+- Installed service proof on PID `78853` selected `chatgpt/wsl-chrome-4`, whose
+  next ledger-selected phase was `detail-inventory`, then skipped with
+  `backpressure.reason=foreground-work`, `refresh=null`, and `error=null`.
+  Installed `/status` preserved `lastWakeReason=operator-foreground-pressure-proof`
+  and the selected target's 397 remaining detail surfaces, so the routine
+  position was visible even though provider work did not start.
+- Installed status for `chatgpt/wsl-chrome-2` remained a separate
+  steady-follow cadence account with zero remaining detail surfaces and no
+  provider guard, confirming the preemption proof did not turn broad live
+  follow into another sweep.
+
+Validation:
+
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "foreground-pressure proof"`
+- `pnpm vitest run tests/http.responsesServer.test.ts tests/accountMirror/schedulerService.test.ts --testNamePattern "foreground-pressure proof|reports foreground scheduler preemption|does not treat an idle background drain cadence timer|pauses, resumes, and manually triggers lazy account mirror scheduler|selected live-follow phase|pending detail inventory|foreground scheduler preemption"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check --write src/accountMirror/schedulerService.ts src/http/responsesServer.ts tests/http.responsesServer.test.ts --max-diagnostics 30`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- installed `POST /status` with
+  `{"accountMirrorScheduler":{"action":"run-once-with-foreground-pressure","dryRun":false}}`
+- installed `/status` readback on `2026-07-06T06:39:18.927Z`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
@@ -632,6 +672,12 @@ Current evidence:
   installed package `smoke-account-mirror-foreground-deferral.js` reported
   `deferred=foreground_work_deferred`,
   `diagnosticsLifecycle=foreground_work_deferred`, and `providerWork=none`.
+- Installed real service proof now covers the scheduler foreground boundary
+  without starting provider work: `POST /status` action
+  `run-once-with-foreground-pressure` selected `chatgpt/wsl-chrome-4` at
+  `detail-inventory`, yielded to `foreground-work`, reported
+  `lastWakeReason=operator-foreground-pressure-proof`, and left
+  `refresh=null` / `error=null`.
 - A real-provider foreground collision proof is still intentionally deferred
   until it can be staged without broad live-follow resume or provider churn.
 
@@ -672,9 +718,10 @@ Current evidence:
   `providerGuard=null`, and `latestLifecycleEvent=resumed_after_restart`.
 - Broad live-follow resume is no longer gated on proving a wsl-chrome-2
   follow-up keep-current pass. It remains gated on the final Gate E decision:
-  accept the installed isolated preemption proof as sufficient for foreground
-  preemption, or stage one narrowly bounded real-provider foreground collision
-  without broad live-follow resume or provider churn.
+  accept the installed isolated plus installed service foreground-pressure
+  proofs as sufficient for foreground preemption, or stage one narrowly bounded
+  real-provider foreground collision without broad live-follow resume or
+  provider churn.
 
 ## Milestones
 
@@ -865,9 +912,11 @@ Current installed scoreboard:
   LLM-service requests, exact CDP method counts, and materialization backlog
   separated from metadata freshness.
 - Provider-guard or preemption scenario: covered by installed isolated
-  preemption harnesses with `providerWork=none`; optional remaining work is a
-  real-provider foreground collision if the operator requires live collision
-  evidence before broad resume.
+  preemption harnesses with `providerWork=none` plus the installed service
+  `run-once-with-foreground-pressure` proof that selected
+  `chatgpt/wsl-chrome-4`, yielded to `foreground-work`, and started no
+  refresh. Optional remaining work is a real-provider foreground collision if
+  the operator requires live collision evidence before broad resume.
 - API restart/resume boundary: covered by wsl-chrome-3 and wsl-chrome-2
   post-restart readbacks, including the wsl-chrome-2 `resumed_after_restart`
   lifecycle event.
@@ -1228,9 +1277,9 @@ Validation:
   and remote references while keeping local materialization backlog visible.
 - [x] Provider-polite scrape telemetry distinguishes passive parsing from
   active UI/provider interactions.
-- [ ] Foreground operator work preempts or defers live follow with explicit
+- [x] Foreground operator work preempts or defers live follow with explicit
   status evidence.
-- [ ] Installed dogfood proves at least one full backfill-to-steady transition
+- [x] Installed dogfood proves at least one full backfill-to-steady transition
   and one steady-follow keep-current loop without avoidable rate-limit warnings.
 
 ## Definition Of Done

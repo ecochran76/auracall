@@ -18,6 +18,7 @@ import type {
 
 export interface AccountMirrorSchedulerPassRequest {
 	dryRun?: boolean | null;
+	ignoreMinimumInterval?: boolean | null;
 }
 
 export interface AccountMirrorSchedulerSelectedTarget {
@@ -103,6 +104,7 @@ export function createAccountMirrorSchedulerPassService(input: {
 			await input.registry.refreshPersistentState?.();
 			const status = input.registry.readStatus({
 				explicitRefresh: false,
+				ignoreMinimumInterval: request.ignoreMinimumInterval ?? false,
 			});
 			const eligibleTargets = status.entries.filter((entry) => entry.status === "eligible");
 			const delayedTargets = status.entries.filter((entry) => entry.status === "delayed");

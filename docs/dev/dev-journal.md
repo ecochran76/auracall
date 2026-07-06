@@ -1,3 +1,28 @@
+## 2026-07-06 | Plan 0152 Installed Foreground-Pressure Scheduler Proof
+
+- Focus: prove foreground operator pressure on the installed service without
+  broad live-follow resume or provider refresh.
+- Result:
+  - added status-control action
+    `accountMirrorScheduler.action=run-once-with-foreground-pressure`;
+  - the action uses the real foreground AuraCall work counter while running one
+    normal scheduler pass, and only ignores minimum interval so a target can be
+    selected for the assertion;
+  - source tests prove the pass selects a live-follow target, reports
+    `operator-foreground-pressure-proof`, yields to `foreground-work`, projects
+    target-level `operator_preempted`, and never calls provider refresh;
+  - installed `/status` on PID `78853` selected `chatgpt/wsl-chrome-4`,
+    preserved `requestedPhase=detail-inventory`, skipped with
+    `backpressure.reason=foreground-work`, and reported `refresh=null` /
+    `error=null`;
+  - `chatgpt/wsl-chrome-2` remained a separate steady-follow cadence account
+    with zero remaining detail surfaces and no provider guard.
+- Validation:
+  - focused HTTP/scheduler Vitest proof;
+  - TypeScript;
+  - scoped Biome with pre-existing test non-null assertion warnings only;
+  - installed runtime rebuild/restart plus installed `/status` proof.
+
 ## 2026-07-06 | Plan 0152 Convergence Milestone Reconciliation
 
 - Focus: make the canonical Plan 0152 goal match the installed evidence already

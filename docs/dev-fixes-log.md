@@ -18994,3 +18994,9 @@ browser-stage lifecycle observability, not transcript truncation.
   already the canonical API projection; use it as fallback when scheduler
   history entries omit full refresh metadata, or preflight can lose queued owner
   evidence even though `/status` and MCP health are correct.
+- 2026-07-06: Installed foreground-preemption proof needs a target-selecting
+  scheduler action, not a broad live-follow resume. Use
+  `run-once-with-foreground-pressure` to hold the real foreground AuraCall work
+  counter and ignore only minimum-interval target selection; the pass must still
+  yield before provider refresh, report `foreground-work`, and leave
+  `refresh=null` so the proof cannot spend provider budget.

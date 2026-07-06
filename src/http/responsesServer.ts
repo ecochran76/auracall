@@ -584,6 +584,7 @@ type AccountMirrorSchedulerWakeReason =
 	| "startup-cadence"
 	| "cadence"
 	| "operator-run-once"
+	| "operator-foreground-pressure-proof"
 	| "operator-resume"
 	| "media-generation-settled"
 	| "response-drain-completed";
@@ -936,7 +937,7 @@ interface HttpStatusResponse {
 		  }
 		| {
 				kind: "account-mirror-scheduler";
-				action: "pause" | "resume" | "run-once";
+				action: "pause" | "resume" | "run-once" | "run-once-with-foreground-pressure";
 				dryRun: boolean;
 		  }
 		| {
@@ -1506,6 +1507,7 @@ export async function createResponsesHttpServer(
 	let accountMirrorSchedulerScheduled = false;
 	const runAccountMirrorSchedulerPass = async (input: {
 		dryRun: boolean;
+		ignoreMinimumInterval?: boolean;
 		wakeReason: AccountMirrorSchedulerWakeReason;
 	}) => {
 		if (accountMirrorSchedulerState.state === "running") {
@@ -1519,6 +1521,7 @@ export async function createResponsesHttpServer(
 		try {
 			accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
 				dryRun: input.dryRun,
+				...(input.ignoreMinimumInterval ? { ignoreMinimumInterval: true } : {}),
 			});
 			accountMirrorSchedulerState.history = await accountMirrorSchedulerLedger
 				.appendPass(accountMirrorSchedulerState.lastPass)
@@ -2813,10 +2816,24 @@ export async function createResponsesHttpServer(
 					} else {
 						const requestedDryRun = payload.accountMirrorScheduler.dryRun ?? true;
 						const dryRun = accountMirrorSchedulerDryRun ? true : requestedDryRun;
-						const ran = await runAccountMirrorSchedulerPass({
-							dryRun,
-							wakeReason: "operator-run-once",
-						});
+						const runWithForegroundPressure = action === "run-once-with-foreground-pressure";
+						const runScheduler = () =>
+							runAccountMirrorSchedulerPass({
+								dryRun,
+								...(runWithForegroundPressure ? { ignoreMinimumInterval: true } : {}),
+								wakeReason: runWithForegroundPressure
+									? "operator-foreground-pressure-proof"
+									: "operator-run-once",
+							});
+						const endForegroundWork = runWithForegroundPressure
+							? beginForegroundAuraCallWork()
+							: null;
+						let ran = false;
+						try {
+							ran = await runScheduler();
+						} finally {
+							endForegroundWork?.();
+						}
 						if (!ran) {
 							sendJson(res, 409, {
 								error: {
@@ -4960,9 +4977,9 @@ function createCompletionReadinessAction(
 				? "provider browser work may start again on the next live-follow pass"
 				: action === "run_one_pass"
 					? "provider browser work may start for one live-follow pass if safety gates allow it"
-				: action === "pause"
-					? "provider browser work should stop after the current live-follow checkpoint"
-					: "provider browser work should stop for this live-follow operation",
+					: action === "pause"
+						? "provider browser work should stop after the current live-follow checkpoint"
+						: "provider browser work should stop for this live-follow operation",
 	});
 }
 
@@ -4979,7 +4996,10 @@ function accountMirrorCompletionControlBlockedReason(
 			: `live-follow status ${status} cannot be paused`;
 	}
 	if (action === "run_one_pass") {
-		return status === "queued" || status === "running" || status === "idle_waiting" || status === "paused"
+		return status === "queued" ||
+			status === "running" ||
+			status === "idle_waiting" ||
+			status === "paused"
 			? null
 			: `live-follow status ${status} cannot run one pass`;
 	}
@@ -7875,7 +7895,7 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
 	}),
 	z.object({
 		accountMirrorScheduler: z.object({
-			action: z.enum(["pause", "resume", "run-once"]),
+			action: z.enum(["pause", "resume", "run-once", "run-once-with-foreground-pressure"]),
 			dryRun: z.boolean().optional(),
 		}),
 	}),
@@ -12343,6 +12363,7 @@ function createOperatorBrowserDashboardHtml(
         + '<dt>Diagnostics</dt><dd id="mirrorSchedulerDiagnosticsHint">' + diagnosticsHint + '</dd>'
         + '</dl><div class="row">'
         + '<button id="runMirrorScheduler" class="primary" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', false)" ' + disabledAttr(running) + '>Run Now</button>'
+        + '<button id="foregroundProofMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'run-once-with-foreground-pressure'" + ', false)" ' + disabledAttr(running) + '>Foreground Proof</button>'
         + '<button id="dryRunMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', true)" ' + disabledAttr(running) + '>Dry Run</button>'
         + '<button id="pauseMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'pause'" + ')" ' + disabledAttr(!enabled || paused) + '>Pause</button>'
         + '<button id="resumeMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
@@ -15417,7 +15438,7 @@ function createOperatorBrowserDashboardHtml(
 
     async function controlMirrorScheduler(action, dryRun) {
       const body = { accountMirrorScheduler: { action } };
-      if (action === 'run-once' && typeof dryRun === 'boolean') {
+      if ((action === 'run-once' || action === 'run-once-with-foreground-pressure') && typeof dryRun === 'boolean') {
         body.accountMirrorScheduler.dryRun = dryRun;
       }
       await controlService('mirror scheduler', () => postStatusControl(body));

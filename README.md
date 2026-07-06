@@ -596,9 +596,13 @@ Terminology note:
   Operator controls share
   `POST /status`: `{"accountMirrorScheduler":{"action":"pause"}}`,
   `{"accountMirrorScheduler":{"action":"resume"}}`, or
-  `{"accountMirrorScheduler":{"action":"run-once"}}`. Manual `run-once`
-  remains dry-run unless the server was started with
-  `--account-mirror-scheduler-execute` and the request sets `"dryRun":false`.
+  `{"accountMirrorScheduler":{"action":"run-once"}}`. The diagnostic
+  `{"accountMirrorScheduler":{"action":"run-once-with-foreground-pressure"}}`
+  control proves foreground-yield behavior by holding AuraCall foreground
+  pressure while one scheduler pass selects a target and should not start
+  provider refresh. Manual `run-once` remains dry-run unless the server was
+  started with `--account-mirror-scheduler-execute` and the request sets
+  `"dryRun":false`.
   Recent scheduler passes are persisted in the AuraCall cache and exposed at
   `/status.accountMirrorScheduler.history` so cadence and failure evidence
   survives a service restart. `/status.accountMirrorScheduler.lastWakeReason`

@@ -4887,7 +4887,11 @@ describe("http responses adapter", () => {
 					services: {
 						chatgpt: {
 							identity: { email: "operator@example.com" },
-							liveFollow: { enabled: true },
+							liveFollow: {
+								enabled: true,
+								minIntervalMs: 0,
+								jitterMaxMs: 0,
+							},
 						},
 					},
 				},
@@ -5233,7 +5237,11 @@ describe("http responses adapter", () => {
 					services: {
 						chatgpt: {
 							identity: { email: "operator@example.com" },
-							liveFollow: { enabled: true },
+							liveFollow: {
+								enabled: true,
+								minIntervalMs: 0,
+								jitterMaxMs: 0,
+							},
 						},
 					},
 				},
@@ -7239,6 +7247,156 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("runs a scheduler foreground-pressure proof without starting provider refresh", async () => {
+		const config = {
+			model: "gpt-5.2",
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: { email: "operator@example.com" },
+							liveFollow: {
+								enabled: true,
+								minIntervalMs: 0,
+								jitterMaxMs: 0,
+							},
+						},
+					},
+				},
+			},
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-07-06T06:30:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "operator@example.com",
+					lastAttemptAtMs: Date.parse("2026-07-06T04:30:00.000Z"),
+					lastSuccessAtMs: Date.parse("2026-07-06T04:30:00.000Z"),
+					metadataCounts: {
+						projects: 0,
+						conversations: 3,
+						artifacts: 1,
+						files: 1,
+						media: 0,
+					},
+				},
+			},
+		});
+		const requestRefresh = vi.fn(async () => {
+			throw new Error("foreground-pressure proof must not start provider refresh");
+		});
+		const server = await createResponsesHttpServer(
+			{
+				host: "127.0.0.1",
+				port: 0,
+				accountMirrorSchedulerIntervalMs: 60_000,
+				accountMirrorSchedulerDryRun: false,
+			},
+			{
+				config,
+				now: () => new Date("2026-07-06T06:30:00.000Z"),
+				accountMirrorStatusRegistry: registry,
+				accountMirrorRefreshService: { requestRefresh },
+				accountMirrorCompletionService: {
+					start: vi.fn(),
+					read: vi.fn(() => null),
+					list: vi.fn(() => []),
+					control: vi.fn(() => null),
+				},
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					accountMirrorScheduler: {
+						action: "run-once-with-foreground-pressure",
+						dryRun: false,
+					},
+				}),
+			});
+			expect(response.status).toBe(200);
+			const payload = (await response.json()) as {
+				controlResult: {
+					kind: string;
+					action: string;
+					dryRun: boolean;
+				};
+				accountMirrorScheduler: {
+					lastWakeReason: string | null;
+					operatorStatus: {
+						posture: string;
+						backpressureReason: string | null;
+					};
+					lastPass: AccountMirrorSchedulerPassResult | null;
+				};
+				liveFollow: {
+					targets: {
+						accounts: Array<{
+							provider: string;
+							runtimeProfileId: string;
+							routineDecision: {
+								state: string;
+								nextPhase: string | null;
+								preemption: {
+									state: string;
+									reason: string | null;
+								} | null;
+							};
+						}>;
+					};
+				};
+			};
+			expect(requestRefresh).not.toHaveBeenCalled();
+			expect(payload.controlResult).toMatchObject({
+				kind: "account-mirror-scheduler",
+				action: "run-once-with-foreground-pressure",
+				dryRun: false,
+			});
+			expect(payload.accountMirrorScheduler).toMatchObject({
+				lastWakeReason: "operator-foreground-pressure-proof",
+				operatorStatus: {
+					posture: "waiting",
+					backpressureReason: "foreground-work",
+				},
+				lastPass: {
+					mode: "execute",
+					action: "skipped",
+					backpressure: {
+						reason: "foreground-work",
+					},
+					selectedTarget: {
+						provider: "chatgpt",
+						runtimeProfileId: "default",
+					},
+				},
+			});
+			expect(payload.liveFollow.targets.accounts).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						provider: "chatgpt",
+						runtimeProfileId: "default",
+						routineDecision: expect.objectContaining({
+							state: "operator_preempted",
+							nextPhase: "identity",
+							preemption: expect.objectContaining({
+								state: "foreground-work",
+							}),
+						}),
+					}),
+				]),
+			);
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("reports compact lazy mirror scheduler yield history through the API surface", async () => {
 		const yieldedPass: AccountMirrorSchedulerPassResult = {
 			object: "account_mirror_scheduler_pass",
@@ -7449,8 +7607,7 @@ describe("http responses adapter", () => {
 					status: "idle_waiting",
 					previousStatus: "running",
 					processPid: process.pid,
-					message:
-						"Foreground AuraCall API work is pending. Retry at 2026-05-09T12:03:00.000Z.",
+					message: "Foreground AuraCall API work is pending. Retry at 2026-05-09T12:03:00.000Z.",
 				},
 			],
 		};
@@ -7493,8 +7650,7 @@ describe("http responses adapter", () => {
 					latestLifecycleEvent: {
 						at: "2026-05-09T12:02:59.000Z",
 						type: "foreground_work_deferred",
-						message:
-							"Foreground AuraCall API work is pending. Retry at 2026-05-09T12:03:00.000Z.",
+						message: "Foreground AuraCall API work is pending. Retry at 2026-05-09T12:03:00.000Z.",
 					},
 				},
 				browserMutations: null,
