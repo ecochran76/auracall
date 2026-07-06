@@ -1,5 +1,38 @@
 # RUNBOOK
 
+## Turn 315 | 2026-07-06
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: add one more installed, bounded subscribed-account steady-follow proof
+  without broadly resuming live follow.
+- Result:
+  - selected existing `chatgpt/wsl-chrome-2` live-follow completion
+    `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2`;
+  - `run-one-pass` queued one bounded pass while preserving cadence, leaving
+    the completion idle until `nextAttemptAt=2026-07-06T06:12:14.551Z`;
+  - refresh `acctmirror_644c16a1-0f8-4599-bcd3-b22a248a8485` ran from
+    `2026-07-06T06:12:14.570Z` to `2026-07-06T06:12:29.802Z`, advanced
+    `passCount` from `3` to `4`, cleared `forceRunUntilPassCount`, and returned
+    the completion to `idle_waiting`.
+- Installed proof:
+  - freshness frontier examined three rows and selected zero rows for detail;
+  - `mirrorCompleteness.state=complete`, remaining detail surfaces `0`,
+    `providerInteractions.used=2` of budget `6`, `llmServiceRequests=0`,
+    `cdpMethodCalls=8`, and `providerGuardCorrelation.state=none`;
+  - direct service log tail around the pass had no rate-limit, CAPTCHA/sorry,
+    provider-guard, closed-WebSocket, or warning lines;
+  - after `systemctl --user restart auracall-api.service`, PID `51051` read
+    back the same completion as `idle_waiting`, `passCount=4`, cycle
+    `complete`, and `latestLifecycleEvent=resumed_after_restart`.
+- Validation:
+  - installed completion control/status readback;
+  - installed `/status` target readback before and after restart;
+  - direct installed service log inspection.
+- Remaining scope:
+  - Plan 0152 still needs installed foreground-operator preemption proof before
+    broad live-follow resume is safe.
+
 ## Turn 314 | 2026-07-05
 
 - Active plan:

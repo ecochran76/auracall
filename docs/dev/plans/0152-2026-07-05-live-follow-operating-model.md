@@ -307,6 +307,43 @@ Validation:
 - `pnpm run smoke:live-follow-cycle`
 - `pnpm run preflight:lazy-live-follow`
 
+### 2026-07-06 | M8 Installed Steady-Follow Cadence Cycle
+
+- Installed dogfood on `chatgpt/wsl-chrome-2` used the existing live-follow
+  completion `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2`
+  instead of starting a broad new completion.
+- Operator `run-one-pass` set `forceRunUntilPassCount=4` while preserving the
+  safe cadence gate; the completion stayed `idle_waiting` until
+  `nextAttemptAt=2026-07-06T06:12:14.551Z`.
+- The cadence pass ran from `2026-07-06T06:12:14.570Z` to
+  `2026-07-06T06:12:29.802Z` as refresh
+  `acctmirror_644c16a1-0f8-4599-bcd3-b22a248a8485`, advanced `passCount` from
+  `3` to `4`, cleared `forceRunUntilPassCount`, and returned to
+  `idle_waiting`.
+- The pass remained a cheap steady-follow loop: the freshness frontier examined
+  three rows, selected zero rows for detail, left
+  `mirrorCompleteness.state=complete`, kept remaining detail surfaces at `0`,
+  used `providerInteractions.used=2` of budget `6`, reported
+  `llmServiceRequests=0`, `cdpMethodCalls=8`, and
+  `providerGuardCorrelation.state=none`.
+- Direct installed service log inspection around the pass found no
+  rate-limit, CAPTCHA/sorry, provider-guard, closed-WebSocket, or warning
+  lines.
+- After `systemctl --user restart auracall-api.service`, PID `51051` read back
+  the same completion as `idle_waiting`, `passCount=4`, cycle `complete`, with
+  `latestLifecycleEvent=resumed_after_restart` and target
+  `routineDecision.state=steady_follow`.
+
+Validation:
+
+- `auracall api mirror-completion-control acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 run-one-pass --port 18095 --json`
+- `auracall api mirror-completion-status acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 --port 18095 --json`
+- `auracall api status --port 18095 --json`
+- `tail -n 400 ~/.auracall/logs/api-18095.log`
+- `systemctl --user restart auracall-api.service`
+- post-restart `auracall api status --port 18095 --json`
+- post-restart `auracall api mirror-completion-status acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 --port 18095 --json`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive

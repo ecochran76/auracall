@@ -1,3 +1,27 @@
+## 2026-07-06 | Plan 0152 Installed Steady-Follow Cadence Cycle
+
+- Focus: prove another real subscribed-account steady-follow loop on the
+  installed service without broad live-follow resume.
+- Result:
+  - used `run-one-pass` on existing `chatgpt/wsl-chrome-2` live-follow
+    completion `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2`;
+  - the control preserved cadence, then the pass completed from
+    `2026-07-06T06:12:14.570Z` to `2026-07-06T06:12:29.802Z`;
+  - pass count advanced from `3` to `4`, `forceRunUntilPassCount` cleared, and
+    the completion returned to `idle_waiting`;
+  - the freshness frontier examined three rows, selected zero detail rows, kept
+    `mirrorCompleteness.state=complete`, and left detail surfaces at `0`;
+  - scrape evidence stayed cheap: provider interactions `2/6`,
+    `llmServiceRequests=0`, `cdpMethodCalls=8`, provider guard `none`;
+  - after installed API restart, PID `51051` read back the same pass and cycle
+    evidence with `latestLifecycleEvent=resumed_after_restart`.
+- Validation:
+  - installed `mirror-completion-control run-one-pass` and completion status
+    readback passed;
+  - installed `/status` target readback passed before and after restart;
+  - direct installed service log tail had no matching rate-limit, CAPTCHA/sorry,
+    provider-guard, closed-WebSocket, or warning lines around the pass.
+
 ## 2026-07-06 | Plan 0152 Cycle-Continuation Preflight Gate
 
 - Focus: make the live-follow preflight catch the starvation failure mode where
