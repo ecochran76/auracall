@@ -1,3 +1,21 @@
+## 2026-07-06 | Plan 0152 Operating Model Closeout
+
+- Focus: close the live-follow operating-model convergence slice without
+  treating provider-specific blockers as evidence that broad cycles should keep
+  restarting from rail walking.
+- Result:
+  - marked Plan 0152 `CLOSED`;
+  - moved it from active to completed status in `ROADMAP.md`;
+  - recorded the remaining work as explicit follow-up classes:
+    operator-paused ChatGPT targets, Gemini bounded left-rail live follow,
+    Grok identity/config repair, and separate account-library materialization;
+  - preserved the target-classifier closeout boundary: automatic broad resume
+    can continue safe steady-follow rows while keeping operator-paused,
+    provider-blocked, and identity-blocked rows out of blind resume.
+- Validation:
+  - `pnpm run plans:audit -- --keep 152`;
+  - installed `/status` target posture and `auracall-api.service` state.
+
 ## 2026-07-06 | Plan 0152 Broad Resume Target Classifier
 
 - Focus: make the M8/M9 broad-resume decision tree executable and visible on

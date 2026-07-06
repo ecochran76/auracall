@@ -13199,3 +13199,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `chatgpt/wsl-chrome-4` selected-detail drain is complete, but other
     subscribed targets are still paused, disabled, blocked, attention-needed,
     or outside the completed ChatGPT routine proof.
+
+## Turn 322 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - close the operating-model convergence slice once target classification made
+    broad live-follow resume an account-level safety decision.
+- Result:
+  - marked Plan 0152 `CLOSED`;
+  - moved the plan from active to completed live-follow operating-model status
+    in `ROADMAP.md`;
+  - preserved the current installed posture as the closeout boundary:
+    `chatgpt/wsl-chrome-2` and `chatgpt/wsl-chrome-4` are safe steady-follow,
+    `chatgpt/default` and `chatgpt/wsl-chrome-3` are operator-paused,
+    `gemini/auracall-gemini-pro` is provider-blocked, and `grok/default` is
+    identity-blocked;
+  - split remaining work into explicit follow-up classes instead of keeping
+    the operating-model plan open: operator decision for paused ChatGPT rows,
+    Gemini bounded left-rail work, Grok identity/config repair, and separate
+    account-library materialization backlog.
+- Validation:
+  - plan acceptance criteria were already complete;
+  - closeout validation reran `pnpm run plans:audit -- --keep 152`;
+  - installed runtime status was rechecked through `auracall api status` and
+    `systemctl --user show auracall-api.service`.

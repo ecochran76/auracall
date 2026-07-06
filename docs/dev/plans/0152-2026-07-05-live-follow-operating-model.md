@@ -1,6 +1,6 @@
 # Live-Follow Operating Model | 0152-2026-07-05
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Goal
@@ -1742,3 +1742,23 @@ This plan closes when installed AuraCall live follow behaves as a durable,
 polite, operator-preemptible background routine for subscribed accounts, with
 status evidence that explains each account's current phase, remaining backlog,
 next wake, and safety posture.
+
+## Closeout
+
+Closed on 2026-07-06 after M8/M9 target classification made broad resume an
+account-level safety decision instead of a global unpause. Installed `/status`
+readback proved current live-follow target posture with two ChatGPT accounts in
+`safe_steady_follow`, operator-paused ChatGPT accounts preserved as
+`operator_paused`, Gemini preserved as `provider_blocked`, and Grok preserved
+as `identity_blocked`.
+
+Plan 0152 is complete as the operating-model convergence slice. Remaining
+non-green rows are explicit follow-up classes, not evidence that the routine
+should restart from conversation rail walking:
+
+- ChatGPT operator-paused targets need an operator decision before resuming.
+- Gemini automatic live follow remains provider-specific bounded left-rail
+  work.
+- Grok automatic live follow remains identity/config repair work.
+- Account-library materialization remains a separate backlog from
+  metadata-current steady-follow.

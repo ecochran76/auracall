@@ -1,3 +1,10 @@
+- 2026-07-06: Close the live-follow operating model when account-level target
+  classification explains every subscribed target. Do not keep an
+  operating-model plan open merely because some rows are operator-paused,
+  provider-blocked, identity-blocked, or materialization-backlogged. Those are
+  follow-up classes; broad resume should continue only rows classified safe and
+  should not restart every cycle from conversation rail walking.
+
 - 2026-07-06: Broad live-follow reconciliation must classify targets before
   acting. Treat `operator_paused` as a keep-existing boundary and do not apply
   automatic policy upgrades to paused active completions. Expose the same
