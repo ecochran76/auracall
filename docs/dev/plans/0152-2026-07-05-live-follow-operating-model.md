@@ -252,10 +252,21 @@ Validation:
   an immediate broad sweep. It moved from `paused` to `queued` and then
   reconciled to `idle_waiting`, still in `backfill_history`, with
   `passCount=0` and `nextAttemptAt=2026-07-06T05:14:08.904Z`.
-- Installed controls still expose only pause/resume/cancel, not the plan's
-  desired "force one bounded pass" operator action. Until that control exists,
-  the safe proof path for a single account remains a separately bounded
-  `mirror-complete --max-passes 1` run plus completion-specific readback.
+- Completion controls now expose the plan's desired force-one-bounded-pass
+  action as `run_one_pass` / CLI `run-one-pass`, while preserving live-follow
+  mode and normal provider guard / foreground-yield gates.
+- Installed control proof on the same `chatgpt/wsl-chrome-2` live-follow
+  completion accepted `run-one-pass` at `2026-07-06T05:13:34.217Z`, set
+  `forceRunUntilPassCount=1`, woke at cadence, ran exactly one pass from
+  `2026-07-06T05:14:08.920Z` to `2026-07-06T05:14:26.566Z`, and returned to
+  `idle_waiting` with `phase=steady_follow`, `passCount=1`,
+  `forceRunUntilPassCount=null`, and
+  `nextAttemptAt=2026-07-06T05:33:31.828Z`.
+- The forced pass was a cheap keep-current pass: freshness frontier examined
+  three rows, selected zero rows for detail, reported
+  `mirrorCompleteness=complete`, used `providerInteractions.used=2` of budget
+  `6`, preserved `llmServiceRequests=0`, reported `cdpMethodCalls=8`, and had
+  `providerGuardCorrelation.state=none`.
 
 Validation:
 
@@ -269,6 +280,8 @@ Validation:
 - `auracall api mirror-completion-status acctmirror_completion_5ccd7f0d-f112-4f5b-9fd2-a8205bd2e6b9 --port 18095 --json`
 - `auracall api mirror-completion-status acctmirror_completion_fe05a8f9-9aa2-4b71-a80d-e35884c7030d --port 18095 --json`
 - `auracall api mirror-completion-control acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 resume --port 18095 --json`
+- `auracall api mirror-completion-control acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 run-one-pass --port 18095 --json`
+- `auracall api mirror-completion-status acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 --port 18095 --json`
 
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 

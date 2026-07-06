@@ -96,6 +96,16 @@ function createInjectedCompletionService(): AccountMirrorCompletionService & { c
           completedAt: null,
           error: null,
         };
+      } else if (request.action === 'run_one_pass') {
+        current = {
+          ...current,
+          status: 'idle_waiting',
+          completedAt: null,
+          nextAttemptAt: '2026-05-01T12:15:00.000Z',
+          passCount: current.passCount + 1,
+          forceRunUntilPassCount: null,
+          error: null,
+        };
       } else {
         current = {
           ...current,
@@ -204,6 +214,14 @@ async function main(): Promise<void> {
     }) as AccountMirrorCompletionOperation;
     assertEqual(cliStatus.status, 'running', 'CLI status after resume');
 
+    const cliRunOnePass = await controlApiMirrorCompletionForCli({
+      port: server.port,
+      id: 'acctmirror_control_smoke',
+      action: 'run-one-pass',
+    }) as AccountMirrorCompletionOperation;
+    assertEqual(cliRunOnePass.status, 'idle_waiting', 'CLI run-one-pass status');
+    assertEqual(cliRunOnePass.passCount, 4, 'CLI run-one-pass pass count');
+
     const cliList = await listApiMirrorCompletionsForCli({
       port: server.port,
       status: 'active',
@@ -248,11 +266,12 @@ async function main(): Promise<void> {
     assertEqual(finalStatus.accountMirrorCompletions?.metrics?.cancelled, 1, 'status cancelled count after cancel');
     assertEqual(finalStatus.accountMirrorCompletions?.recent?.[0]?.status, 'cancelled', 'status recent operation cancelled');
 
-    assertEqual(service.controlCalls.length, 3, 'control call count');
+    assertEqual(service.controlCalls.length, 4, 'control call count');
     console.log([
       `completion-control smoke: pass port=${server.port}`,
       `status.pause=${httpPause.controlResult?.status ?? 'unknown'}`,
       `cli.resume=${cliResume.status}`,
+      `cli.run_one_pass=${cliRunOnePass.status}`,
       `mcp.cancel=${(mcpCancel.structuredContent as AccountMirrorCompletionOperation).status}`,
       `status.cancelled=${finalStatus.accountMirrorCompletions?.metrics?.cancelled ?? 'unknown'}`,
       `api_status.cancelled=${apiStatusStructured.completions.metrics.cancelled ?? 'unknown'}`,

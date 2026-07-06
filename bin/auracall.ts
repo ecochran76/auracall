@@ -2338,14 +2338,14 @@ apiCommand
 
 apiCommand
   .command('mirror-completion-control')
-  .description('Pause, resume, or cancel a nonblocking account mirror completion operation.')
+  .description('Pause, resume, run one bounded pass, or cancel a nonblocking account mirror completion operation.')
   .argument('<id>', 'Account mirror completion id.')
-  .argument('<action>', 'Control action: pause, resume, or cancel.')
+  .argument('<action>', 'Control action: pause, resume, run-one-pass, or cancel.')
   .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
   .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--json', 'Emit machine-readable JSON output.', false)
-  .action(async (id: string, action: 'pause' | 'resume' | 'cancel', commandOptions) => {
+  .action(async (id: string, action: 'pause' | 'resume' | 'cancel' | 'run_one_pass' | 'run-one-pass', commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
     const apiConfig = readCliApiConfig(await resolveConfig(
       { ...parentOptions, ...commandOptions },

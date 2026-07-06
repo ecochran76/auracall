@@ -158,6 +158,7 @@ describe('mcp api_ops_browser_status tool', () => {
           usesAccountMirrorCompletionPayload: true,
           hasPauseBinding: true,
           hasResumeBinding: true,
+          hasRunOnePassCompletionAction: true,
           hasCancelBinding: true,
         },
         status: {

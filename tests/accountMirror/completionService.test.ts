@@ -949,6 +949,78 @@ describe("account mirror completion service", () => {
 		expect(service.control({ id: "missing", action: "pause" })).toBeNull();
 	});
 
+	test("forces one live-follow pass without converting the subscription to bounded completion", async () => {
+		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const service = createAccountMirrorCompletionService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-04-30T12:00:00.000Z"),
+			}),
+			refreshService: {
+				requestRefresh,
+			},
+			initialOperations: [
+				{
+					object: "account_mirror_completion",
+					id: "acctmirror_force_one",
+					provider: "chatgpt",
+					runtimeProfileId: "default",
+					mode: "live_follow",
+					sweepMode: "steady_follow",
+					phase: "steady_follow",
+					status: "idle_waiting",
+					startedAt: "2026-04-30T11:45:00.000Z",
+					completedAt: null,
+					nextAttemptAt: "2026-04-30T12:30:00.000Z",
+					maxPasses: null,
+					passCount: 4,
+					lastRefresh: createRefreshResult(),
+					materializationPolicy: "metadata_only",
+					mirrorCompleteness: completeMirror,
+					error: null,
+					lifecycleEvents: [],
+				},
+			],
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+		});
+
+		expect(service.control({ id: "acctmirror_force_one", action: "run_one_pass" })).toMatchObject({
+			id: "acctmirror_force_one",
+			status: "queued",
+			nextAttemptAt: null,
+			forceRunUntilPassCount: 5,
+			lifecycleEvents: [
+				{
+					type: "operator_forced_pass",
+					status: "queued",
+					previousStatus: "idle_waiting",
+				},
+			],
+		});
+
+		await waitFor(() => service.read("acctmirror_force_one")?.passCount === 5);
+
+		expect(requestRefresh).toHaveBeenCalledTimes(1);
+		expect(requestRefresh).toHaveBeenCalledWith(
+			expect.objectContaining({
+				explicitRefresh: true,
+				ignoreMinimumInterval: false,
+				requestedPhase: null,
+			}),
+		);
+		expect(service.read("acctmirror_force_one")).toMatchObject({
+			mode: "live_follow",
+			status: "idle_waiting",
+			maxPasses: null,
+			passCount: 5,
+			forceRunUntilPassCount: null,
+			mirrorCompleteness: completeMirror,
+			lastRefresh: {
+				requestId: "acctmirror_refresh_1",
+			},
+		});
+	});
+
 	test("defaults to live follow and keeps running after a complete refresh", async () => {
 		const requestRefresh = vi
 			.fn()

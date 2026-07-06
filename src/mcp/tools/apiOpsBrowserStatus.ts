@@ -49,6 +49,7 @@ const apiOpsBrowserDashboardShape = z.object({
   usesAccountMirrorCompletionPayload: z.boolean(),
   hasPauseBinding: z.boolean(),
   hasResumeBinding: z.boolean(),
+  hasRunOnePassCompletionAction: z.boolean(),
   hasCancelBinding: z.boolean(),
 }).catchall(z.boolean());
 

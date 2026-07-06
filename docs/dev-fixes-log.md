@@ -18965,3 +18965,15 @@ browser-stage lifecycle observability, not transcript truncation.
   `acctmirror_completion_fe05a8f9-9aa2-4b71-a80d-e35884c7030d` then completed
   with `llmServiceRequests=0`, `cdpMethodCalls=9`, passive-dominant scrape
   budget, and no provider guard correlation.
+- 2026-07-06: Live-follow needs an operator control that wakes exactly one
+  completion pass without converting the subscription into a bounded terminal
+  operation. Use completion action `run_one_pass` (CLI alias `run-one-pass`) to
+  persist a target pass count, clear cadence sleep, preserve live-follow mode,
+  and return to `idle_waiting` after the pass. The action must retain provider
+  guard and foreground-yield gates unless a future control explicitly records
+  an override.
+- 2026-07-06: CLI status should not recompute live-follow latest-yield evidence
+  solely from compact scheduler history. `/status.liveFollow.latestYield` is
+  already the canonical API projection; use it as fallback when scheduler
+  history entries omit full refresh metadata, or preflight can lose queued owner
+  evidence even though `/status` and MCP health are correct.

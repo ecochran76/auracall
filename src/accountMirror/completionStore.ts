@@ -182,6 +182,7 @@ function parseOperation(value: unknown): AccountMirrorCompletionOperation {
 		materializationOutcome: parseMaterializationOutcome(value.materializationOutcome),
 		accountLibraryCursor: parseAccountLibraryCursor(value.accountLibraryCursor),
 		liveFollowCycle: parseLiveFollowCycleLedger(value.liveFollowCycle),
+		forceRunUntilPassCount: readPositiveInteger(value.forceRunUntilPassCount),
 		mirrorCompleteness: isRecord(value.mirrorCompleteness)
 			? (value.mirrorCompleteness as AccountMirrorCompletionOperation["mirrorCompleteness"])
 			: null,
@@ -409,6 +410,7 @@ function readLifecycleEventType(
 		value === "resumed_after_restart" ||
 		value === "operator_paused" ||
 		value === "operator_resumed" ||
+		value === "operator_forced_pass" ||
 		value === "operator_cancelled" ||
 		value === "campaign_policy_upgraded" ||
 		value === "live_follow_policy_upgraded" ||

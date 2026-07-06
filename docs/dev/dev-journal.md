@@ -39799,3 +39799,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   scheduled `idle_waiting` with `nextAttemptAt=2026-07-06T05:14:08.904Z`
   rather than launching an immediate sweep; installed controls still lack a
   force-one-bounded-pass action.
+- 2026-07-06: Continued Plan 0152 M7/Gate F force-one-pass control.
+  Added `run_one_pass` / CLI `run-one-pass` account-mirror completion control
+  across API, `/status`, CLI, MCP, and `/ops/browser`. The control preserves
+  live-follow mode, sets a persisted `forceRunUntilPassCount`, wakes sleepers,
+  and returns to cadence waiting after one pass. Installed
+  `chatgpt/wsl-chrome-2` completion
+  `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2` accepted the
+  control at `2026-07-06T05:13:34.217Z`, ran one pass
+  `2026-07-06T05:14:08.920Z` to `2026-07-06T05:14:26.566Z`, and returned to
+  `idle_waiting` / `steady_follow` with `passCount=1`,
+  `forceRunUntilPassCount=null`, `nextAttemptAt=2026-07-06T05:33:31.828Z`,
+  `llmServiceRequests=0`, `cdpMethodCalls=8`, and no provider guard
+  correlation.

@@ -229,9 +229,9 @@ export function summarizeApiStatusPayload(
 	const operatorStatus = isRecord(scheduler.operatorStatus) ? scheduler.operatorStatus : {};
 	const foregroundWork = isRecord(scheduler.foregroundWork) ? scheduler.foregroundWork : {};
 	const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
-	const latestYield = summarizeLatestYield(scheduler, lastPass);
-	const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
 	const rawLiveFollow = isRecord(record.liveFollow) ? record.liveFollow : {};
+	const latestYield = summarizeLatestYield(scheduler, lastPass) ?? summarizeRawLatestYield(rawLiveFollow);
+	const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
 	const targets = summarizeLiveFollowTargets(rawLiveFollow.targets);
 	const routes = isRecord(record.routes) ? record.routes : {};
 	const schedulerSummary: ApiStatusSchedulerSummary = {
@@ -623,6 +623,18 @@ function summarizeLatestYield(
 			readString(selectedTarget.runtimeProfileId) ?? readString(refresh.runtimeProfileId),
 		queuedOwnerCommand: readString(yieldCause.ownerCommand),
 		remainingDetailSurfaces: readNumber(remainingDetailSurfaces.total),
+	};
+}
+
+function summarizeRawLatestYield(liveFollow: Record<string, unknown>): ApiStatusSchedulerYieldSummary | null {
+	const latestYield = isRecord(liveFollow.latestYield) ? liveFollow.latestYield : null;
+	if (!latestYield) return null;
+	return {
+		completedAt: readString(latestYield.completedAt),
+		provider: readString(latestYield.provider),
+		runtimeProfileId: readString(latestYield.runtimeProfileId),
+		queuedOwnerCommand: readString(latestYield.queuedOwnerCommand),
+		remainingDetailSurfaces: readNumber(latestYield.remainingDetailSurfaces),
 	};
 }
 

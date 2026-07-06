@@ -33,7 +33,8 @@ const accountMirrorCompletionListInputShape = {
 
 const accountMirrorCompletionControlInputShape = {
   id: z.string().min(1),
-  action: z.enum(['pause', 'resume', 'cancel']),
+  action: z.enum(['pause', 'resume', 'cancel', 'run_one_pass', 'run-one-pass'])
+    .transform((value) => value === 'run-one-pass' ? 'run_one_pass' : value),
 } satisfies z.ZodRawShape;
 
 const accountMirrorCompletionOutputShape = {
@@ -71,6 +72,7 @@ const accountMirrorCompletionOutputShape = {
       'resumed_after_restart',
       'operator_paused',
       'operator_resumed',
+      'operator_forced_pass',
       'operator_cancelled',
       'campaign_policy_upgraded',
     ]),
@@ -177,7 +179,7 @@ export function registerAccountMirrorCompletionTools(
     {
       title: 'Control account mirror completion',
       description:
-        'Pause, resume, or cancel an Aura-Call account mirror completion operation without touching provider browsers.',
+        'Pause, resume, run one bounded pass, or cancel an Aura-Call account mirror completion operation.',
       inputSchema: accountMirrorCompletionControlInputShape,
       outputSchema: accountMirrorCompletionOutputShape,
     },

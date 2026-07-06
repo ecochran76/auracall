@@ -45,7 +45,7 @@ export interface AccountMirrorCompletionListRequest {
 
 export interface AccountMirrorCompletionControlRequest {
 	id: string;
-	action: "pause" | "resume" | "cancel";
+	action: "pause" | "resume" | "cancel" | "run_one_pass";
 }
 
 export interface AccountMirrorCompletionPolicyUpgradeRequest
@@ -62,6 +62,7 @@ export interface AccountMirrorCompletionLifecycleEvent {
 		| "automatic_resume_blocked"
 		| "operator_paused"
 		| "operator_resumed"
+		| "operator_forced_pass"
 		| "operator_resume_blocked"
 		| "operator_cancelled"
 		| "campaign_policy_upgraded"
@@ -182,6 +183,7 @@ export interface AccountMirrorCompletionOperation {
 	materializationOutcome?: AccountMirrorCompletionMaterializationOutcome | null;
 	accountLibraryCursor?: AccountMirrorCompletionAccountLibraryCursor | null;
 	liveFollowCycle?: AccountMirrorLiveFollowCycleLedger | null;
+	forceRunUntilPassCount?: number | null;
 	mirrorCompleteness: AccountMirrorStatusEntry["mirrorCompleteness"] | null;
 	error: {
 		message: string;
@@ -517,6 +519,31 @@ export function createAccountMirrorCompletionService(input: {
 					await decideAccountLibraryCatchup(refreshed);
 				}
 				if (!shouldContinue(id)) return;
+				if (
+					refreshOperation.mode === "live_follow" &&
+					refreshOperation.forceRunUntilPassCount !== null &&
+					refreshOperation.forceRunUntilPassCount !== undefined &&
+					nextPassCount >= refreshOperation.forceRunUntilPassCount
+				) {
+					await input.registry.refreshPersistentState?.({
+						provider: refreshOperation.provider,
+						runtimeProfileId: refreshOperation.runtimeProfileId,
+					});
+					const cadenceEntry = findTargetEntry(
+						input.registry,
+						refreshOperation.provider,
+						refreshOperation.runtimeProfileId,
+					);
+					update(id, {
+						status: "idle_waiting",
+						nextAttemptAt: cadenceEntry?.eligibleAt ?? null,
+						forceRunUntilPassCount: null,
+						mirrorCompleteness:
+							refreshed?.mirrorCompleteness ?? cadenceEntry?.mirrorCompleteness ?? null,
+						error: null,
+					});
+					return;
+				}
 				if (refresh.mirrorCompleteness.state === "complete") {
 					const latest = operations.get(id);
 					if (
@@ -619,6 +646,7 @@ export function createAccountMirrorCompletionService(input: {
 				materializationOutcome: null,
 				accountLibraryCursor: null,
 				liveFollowCycle: null,
+				forceRunUntilPassCount: null,
 				mirrorCompleteness: null,
 				error: null,
 				lifecycleEvents: [],
@@ -702,6 +730,28 @@ export function createAccountMirrorCompletionService(input: {
 				});
 				launch(operation.id);
 				return evented ?? resumed;
+			}
+			if (request.action === "run_one_pass") {
+				if (isTerminalOperation(operation)) return operation;
+				if (shouldBlockGeminiResume(operation)) {
+					return blockGeminiResume(operation, "operator");
+				}
+				const forced = update(operation.id, {
+					status: "queued",
+					completedAt: null,
+					nextAttemptAt: null,
+					forceRunUntilPassCount: operation.passCount + 1,
+					error: null,
+				});
+				const evented = appendLifecycleEvent(operation.id, {
+					type: "operator_forced_pass",
+					status: "queued",
+					previousStatus: operation.status,
+					message: "Forced one bounded live-follow pass by operator request.",
+				});
+				wakeSleepers();
+				launch(operation.id);
+				return evented ?? forced;
 			}
 			if (request.action === "cancel") {
 				if (isTerminalOperation(operation)) return operation;

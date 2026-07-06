@@ -948,7 +948,7 @@ interface HttpStatusResponse {
 		  }
 		| {
 				kind: "account-mirror-completion";
-				action: "pause" | "resume" | "cancel";
+				action: "pause" | "resume" | "cancel" | "run_one_pass";
 				id: string;
 				status: AccountMirrorCompletionOperation["status"];
 		  }
@@ -4712,7 +4712,7 @@ function createHttpStatusResponse(input: {
 				"/v1/account-mirrors/completions[?status=active|queued|running|idle_waiting|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]",
 			accountMirrorCompletionsGetTemplate: "/v1/account-mirrors/completions/{completion_id}",
 			accountMirrorCompletionsControlTemplate:
-				'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel"}',
+				'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel|run_one_pass"}',
 			accountMirrorSchedulerHistory: "/v1/account-mirrors/scheduler/history[?limit=10]",
 			accountMirrorSchedulerDiagnostics:
 				"/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]",
@@ -4916,16 +4916,24 @@ function createAccountMirrorCompletionControlActions(
 	return [
 		createCompletionReadinessAction(operation, "pause"),
 		createCompletionReadinessAction(operation, "resume"),
+		createCompletionReadinessAction(operation, "run_one_pass"),
 		createCompletionReadinessAction(operation, "cancel"),
 	];
 }
 
 function createCompletionReadinessAction(
 	operation: AccountMirrorCompletionOperation,
-	action: "pause" | "resume" | "cancel",
+	action: "pause" | "resume" | "cancel" | "run_one_pass",
 ): HttpRunControlReadinessAction {
 	const blockedReason = accountMirrorCompletionControlBlockedReason(operation.status, action);
-	const label = action === "pause" ? "Pause" : action === "resume" ? "Resume" : "Cancel";
+	const label =
+		action === "pause"
+			? "Pause"
+			: action === "resume"
+				? "Resume"
+				: action === "run_one_pass"
+					? "Run One Pass"
+					: "Cancel";
 	return createRunControlReadinessAction({
 		action: `completion.${action}` as HttpRunControlActionId,
 		label,
@@ -4937,10 +4945,12 @@ function createCompletionReadinessAction(
 				? "live-follow operation becomes paused"
 				: action === "resume"
 					? "live-follow operation returns to running"
-					: "live-follow operation becomes cancelled",
+					: action === "run_one_pass"
+						? "live-follow operation runs one bounded pass and returns to cadence waiting"
+						: "live-follow operation becomes cancelled",
 		expectedEvidence:
 			"controlResult.kind=account-mirror-completion and refreshed accountMirrorCompletions readback includes the updated status",
-		startsProviderBrowserWork: action === "resume",
+		startsProviderBrowserWork: action === "resume" || action === "run_one_pass",
 		stopsProviderBrowserWork: action === "pause" || action === "cancel",
 		writesPersistentState: true,
 		targetId: operation.id,
@@ -4948,6 +4958,8 @@ function createCompletionReadinessAction(
 		browserEffect:
 			action === "resume"
 				? "provider browser work may start again on the next live-follow pass"
+				: action === "run_one_pass"
+					? "provider browser work may start for one live-follow pass if safety gates allow it"
 				: action === "pause"
 					? "provider browser work should stop after the current live-follow checkpoint"
 					: "provider browser work should stop for this live-follow operation",
@@ -4956,7 +4968,7 @@ function createCompletionReadinessAction(
 
 function accountMirrorCompletionControlBlockedReason(
 	status: AccountMirrorCompletionOperation["status"],
-	action: "pause" | "resume" | "cancel",
+	action: "pause" | "resume" | "cancel" | "run_one_pass",
 ): string | null {
 	if (action === "resume") {
 		return status === "paused" ? null : `live-follow status ${status} cannot be resumed`;
@@ -4965,6 +4977,11 @@ function accountMirrorCompletionControlBlockedReason(
 		return status === "queued" || status === "running" || status === "idle_waiting"
 			? null
 			: `live-follow status ${status} cannot be paused`;
+	}
+	if (action === "run_one_pass") {
+		return status === "queued" || status === "running" || status === "idle_waiting" || status === "paused"
+			? null
+			: `live-follow status ${status} cannot run one pass`;
 	}
 	if (
 		status === "queued" ||
@@ -7839,7 +7856,9 @@ const ACCOUNT_MIRROR_RECONCILIATION_REQUEST_SCHEMA = z.object({
 });
 
 const ACCOUNT_MIRROR_COMPLETION_CONTROL_REQUEST_SCHEMA = z.object({
-	action: z.enum(["pause", "resume", "cancel"]),
+	action: z
+		.enum(["pause", "resume", "cancel", "run_one_pass", "run-one-pass"])
+		.transform((value) => (value === "run-one-pass" ? "run_one_pass" : value)),
 });
 
 const ACCOUNT_MIRROR_RECONCILIATION_CONTROL_REQUEST_SCHEMA = z.object({
@@ -7870,7 +7889,9 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
 	}),
 	z.object({
 		accountMirrorCompletion: z.object({
-			action: z.enum(["pause", "resume", "cancel"]),
+			action: z
+				.enum(["pause", "resume", "cancel", "run_one_pass", "run-one-pass"])
+				.transform((value) => (value === "run-one-pass" ? "run_one_pass" : value)),
 			id: z.string().min(1),
 		}),
 	}),
@@ -12649,7 +12670,7 @@ function createOperatorBrowserDashboardHtml(
         + renderSeverity(liveFollow.severity || 'unknown')
         + '</div><dl>'
         + '<dt>Targets</dt><dd>' + formatTargetHealth(targets) + '</dd>'
-        + '<dt>Next Action</dt><dd>Use the live-follow table to pause, resume, or cancel a completion by id.</dd>'
+        + '<dt>Next Action</dt><dd>Use the live-follow table to pause, resume, run one bounded pass, or cancel a completion by id.</dd>'
         + '</dl></div>';
     }
 
@@ -12932,14 +12953,16 @@ function createOperatorBrowserDashboardHtml(
     }
 
     function completionActionsForStatus(status) {
-      if (status === 'paused') return ['resume', 'cancel'];
-      if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel'];
+      if (status === 'paused') return ['resume', 'run_one_pass', 'cancel'];
+      if (status === 'idle_waiting') return ['run_one_pass', 'pause', 'cancel'];
+      if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'run_one_pass', 'cancel'];
       return [];
     }
 
     function labelForCompletionAction(action) {
       if (action === 'pause') return 'Pause';
       if (action === 'resume') return 'Resume';
+      if (action === 'run_one_pass') return 'Run 1';
       if (action === 'cancel') return 'Cancel';
       return action;
     }

@@ -532,12 +532,14 @@
         `/status.accountMirrorCompletions`
       - operator control is available with
         `POST /v1/account-mirrors/completions/{completion_id}` body
-        `{"action":"pause|resume|cancel"}`; paused operations stay discoverable
-        in active readback, resume relaunches the service-owned loop, and cancel
-        records terminal `cancelled` without touching provider browsers
+        `{"action":"pause|resume|run_one_pass|cancel"}`; paused operations stay
+        discoverable in active readback, resume relaunches the service-owned
+        loop, `run_one_pass` wakes one bounded live-follow pass while preserving
+        safety gates, and cancel records terminal `cancelled` without touching
+        provider browsers
       - the regular status preflight path accepts
         `POST /status` body
-        `{"accountMirrorCompletion":{"id":"<completion_id>","action":"pause|resume|cancel"}}`
+        `{"accountMirrorCompletion":{"id":"<completion_id>","action":"pause|resume|run_one_pass|cancel"}}`
         and returns the updated `controlResult` plus refreshed status
         projections
       - ChatGPT completion uses `includeHistory` plus `historyLimit`, which

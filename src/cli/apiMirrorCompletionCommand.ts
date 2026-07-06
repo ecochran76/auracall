@@ -38,7 +38,7 @@ export interface ApiMirrorCompletionControlCliOptions {
   port?: number | null;
   timeoutMs?: number | null;
   id: string;
-  action: 'pause' | 'resume' | 'cancel';
+  action: 'pause' | 'resume' | 'cancel' | 'run_one_pass' | 'run-one-pass';
 }
 
 export interface ApiMirrorReconciliationCliOptions {
@@ -520,8 +520,10 @@ function normalizeId(value: string): string {
 }
 
 function normalizeAction(value: string): ApiMirrorCompletionControlCliOptions['action'] {
+  if (value === 'run-one-pass') return 'run_one_pass';
+  if (value === 'run_one_pass') return value;
   if (value === 'pause' || value === 'resume' || value === 'cancel') return value;
-  throw new Error('Use a completion control action: pause, resume, or cancel.');
+  throw new Error('Use a completion control action: pause, resume, cancel, or run-one-pass.');
 }
 
 function normalizeReconciliationAction(value: string): 'pause' | 'resume' | 'cancel' | 'run_next_pass' {

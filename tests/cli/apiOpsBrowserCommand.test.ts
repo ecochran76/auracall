@@ -50,6 +50,7 @@ const dashboardHtml = `
 <button data-completion-id="acctmirror_paused" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button>
+<button data-completion-id="acctmirror_paused" data-completion-action="run_one_pass" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Run 1</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button>
 <div id="mirrorControlNotice" role="status" aria-live="polite"></div>
 <div id="mirrorControlResultToast" class="notice control-result-toast">Completion control succeeded Live follow started</div>
@@ -331,8 +332,9 @@ const dashboardHtml = `
   '<div id="mirrorSchedulerControls"><button id="runMirrorScheduler">Run Now</button><button id="dryRunMirrorScheduler">Dry Run</button><button id="pauseMirrorScheduler">Pause</button><button id="resumeMirrorScheduler">Resume</button></div>';
   controlMirrorScheduler('run-once', false);
   function completionActionsForStatus(status) {
-    if (status === 'paused') return ['resume', 'cancel'];
-    if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel'];
+    if (status === 'paused') return ['resume', 'run_one_pass', 'cancel'];
+    if (status === 'idle_waiting') return ['run_one_pass', 'pause', 'cancel'];
+    if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'run_one_pass', 'cancel'];
     return [];
   }
   async function controlMirrorCompletion(action) {
@@ -531,6 +533,7 @@ describe('api ops browser CLI helpers', () => {
       usesAccountMirrorCompletionPayload: true,
       hasPauseBinding: true,
       hasResumeBinding: true,
+      hasRunOnePassCompletionAction: true,
       hasCancelBinding: true,
       hasAccountMirrorCatalogPanel: true,
       hasCatalogSearchControls: true,
@@ -589,7 +592,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok rowReconcile=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchDetailCopy=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok confirmCancel=ok feedback=ok pause=ok resume=ok cancel=ok',
+      'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok confirmCancel=ok feedback=ok pause=ok resume=ok runOnePass=ok cancel=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Scheduler diagnostics: available=2',
