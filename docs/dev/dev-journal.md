@@ -1,3 +1,28 @@
+## 2026-07-05 | Plan 0152 Restart Cycle Reconciliation
+
+- Focus: prevent a completed steady-follow detail pass from reporting stale
+  pending `detail-inventory` after service restart.
+- Result:
+  - completed collector progress now wins over historical frontier row
+    selection when no cursor/yield/in-progress inventory/remaining detail
+    surfaces are pending;
+  - live-follow completions rederive their cycle ledger from last-refresh
+    evidence when loaded into the service;
+  - installed completion
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` now reads back
+    `liveFollowCycle.currentPhase=complete` and `nextPhase=complete` after
+    reinstall/restart.
+- Installed proof:
+  - same persisted pass `7` evidence had `collectorProgress.phase=complete`,
+    `conversationFreshnessFrontier.rowsSelectedForDetail=4`, and
+    `remainingDetailSurfaces.total=0`;
+  - controlled resume did not run provider work immediately because cadence
+    moved the operation to `idle_waiting`; it was paused again at pass `7`.
+- Validation:
+  - focused cycle/restart completion-service tests passed;
+  - TypeScript passed;
+  - scoped Biome check passed.
+
 ## 2026-07-05 | Plan 0152 Requested-Phase Installed Readback
 
 - Focus: close the evidence gap where bounded installed detail-inventory proof

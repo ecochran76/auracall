@@ -3,7 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import type { AccountMirrorBackfillLedger } from "../../src/accountMirror/backfillLedger.js";
-import { createAccountMirrorCompletionService } from "../../src/accountMirror/completionService.js";
+import {
+	type AccountMirrorCompletionOperation,
+	createAccountMirrorCompletionService,
+} from "../../src/accountMirror/completionService.js";
 import { createAccountMirrorCompletionStore } from "../../src/accountMirror/completionStore.js";
 import { chooseLiveFollowCyclePhase } from "../../src/accountMirror/liveFollowCycleDecision.js";
 import {
@@ -238,6 +241,65 @@ describe("live-follow cycle decision", () => {
 		});
 	});
 
+	test("does not repeat detail inventory after selected frontier rows completed", () => {
+		const decision = chooseLiveFollowCyclePhase({
+			operation: {
+				passCount: 7,
+				lastRefresh: createRefreshResult(),
+			},
+			evidence: {
+				identitySource: null,
+				projectSampleIds: [],
+				conversationSampleIds: [],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: false,
+				},
+				collectorProgress: {
+					provider: "chatgpt",
+					runtimeProfileId: "default",
+					sweepMode: "steady_follow",
+					phase: "complete",
+					event: "completed",
+					observedAt: "2026-04-30T12:00:01.000Z",
+				},
+				conversationFreshnessFrontier: {
+					object: "account_mirror_conversation_freshness_frontier",
+					provider: "chatgpt",
+					sweepMode: "steady_follow",
+					threshold: 3,
+					rowsExamined: 7,
+					rowsSelectedForDetail: 4,
+					frontierReached: true,
+					selectedConversationIds: ["conv_1", "conv_2", "conv_3", "conv_4"],
+					firstStoppedRow: {
+						conversationId: "conv_old",
+						index: 6,
+						remoteMtime: "2026-06-25T01:19:57.866Z",
+					},
+					fallbackReason: "missing_cached_summary",
+					rowEvidence: [],
+				},
+				attachmentInventory: {
+					nextProjectIndex: 0,
+					nextConversationIndex: 0,
+					detailReadLimit: 4,
+					scannedProjects: 0,
+					scannedConversations: 4,
+					conversationDetail: null,
+					yielded: false,
+				},
+			},
+			remainingDetailSurfaces: 0,
+		});
+
+		expect(decision).toMatchObject({
+			phase: "complete",
+			status: "complete",
+		});
+	});
+
 	test("resumes project conversation cursor when no detail work is pending", () => {
 		const decision = chooseLiveFollowCyclePhase({
 			operation: {
@@ -347,6 +409,109 @@ describe("account mirror completion service", () => {
 		} finally {
 			await fs.rm(tmp, { recursive: true, force: true });
 		}
+	});
+
+	test("reconciles stale loaded live-follow cycle from completed refresh evidence", () => {
+		const refresh = createRefreshResult();
+		refresh.metadataEvidence = {
+			identitySource: null,
+			projectSampleIds: [],
+			conversationSampleIds: [],
+			truncated: {
+				projects: false,
+				conversations: false,
+				artifacts: false,
+			},
+			collectorProgress: {
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				sweepMode: "steady_follow",
+				phase: "complete",
+				event: "completed",
+				observedAt: "2026-04-30T12:00:01.000Z",
+			},
+			conversationFreshnessFrontier: {
+				object: "account_mirror_conversation_freshness_frontier",
+				provider: "chatgpt",
+				sweepMode: "steady_follow",
+				threshold: 3,
+				rowsExamined: 7,
+				rowsSelectedForDetail: 4,
+				frontierReached: true,
+				selectedConversationIds: ["conv_1", "conv_2", "conv_3", "conv_4"],
+				firstStoppedRow: {
+					conversationId: "conv_old",
+					index: 6,
+					remoteMtime: "2026-06-25T01:19:57.866Z",
+				},
+				fallbackReason: "missing_cached_summary",
+				rowEvidence: [],
+			},
+		};
+		const operation: AccountMirrorCompletionOperation = {
+			object: "account_mirror_completion",
+			id: "acctmirror_loaded_stale_cycle",
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			mode: "live_follow",
+			sweepMode: "steady_follow",
+			phase: "steady_follow",
+			status: "paused",
+			startedAt: "2026-04-30T12:00:00.000Z",
+			completedAt: null,
+			nextAttemptAt: "2026-04-30T12:20:00.000Z",
+			maxPasses: null,
+			passCount: 7,
+			lastRefresh: refresh,
+			materializationPolicy: "metadata_only",
+			materializationAssetKinds: ["all"],
+			materializationMaxItems: null,
+			materializationRefreshSnapshot: false,
+			materializationForce: false,
+			materializationCursor: null,
+			materializationOutcome: null,
+			accountLibraryCursor: null,
+			liveFollowCycle: {
+				cycleId: "lfc_stale",
+				startedAt: "2026-04-30T12:00:00.000Z",
+				updatedAt: "2026-04-30T12:00:01.000Z",
+				currentPhase: "detail-inventory",
+				nextPhase: "detail-inventory",
+				decisionReason: "freshness frontier selected 4 conversation row(s) for detail",
+				passCount: 7,
+				phases: [
+					{
+						phase: "detail-inventory",
+						status: "pending",
+						reason: "freshness frontier selected 4 conversation row(s) for detail",
+						updatedAt: "2026-04-30T12:00:01.000Z",
+						passCount: 7,
+					},
+				],
+			},
+			mirrorCompleteness: completeMirror,
+			error: null,
+			lifecycleEvents: [],
+		};
+		const service = createAccountMirrorCompletionService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-04-30T12:00:00.000Z"),
+			}),
+			refreshService: {
+				requestRefresh: vi.fn(async () => createRefreshResult()),
+			},
+			initialOperations: [operation],
+			now: () => new Date("2026-04-30T12:30:00.000Z"),
+		});
+
+		expect(service.read("acctmirror_loaded_stale_cycle")?.liveFollowCycle).toMatchObject({
+			currentPhase: "complete",
+			nextPhase: "complete",
+			decisionReason:
+				"all required live-follow phases are complete for the current evidence window",
+			passCount: 7,
+		});
 	});
 
 	test("hydrates active cooldown operations without refreshing before eligible time", async () => {

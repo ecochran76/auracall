@@ -676,6 +676,40 @@ Validation:
 - `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
 - `auracall api mirror-completion-status acctmirror_completion_512abfb3-d0e5-49db-a9e7-070c06e2140d --json --timeout-ms 30000`
 
+### 2026-07-05 | M1/M2/M8 Restart Cycle Reconciliation
+
+- `chooseLiveFollowCyclePhase` now treats a completed collector progress record
+  as proof that selected freshness-frontier rows have already been consumed,
+  provided no detail cursor, yield, in-progress asset inventory, or remaining
+  detail surfaces are still pending.
+- Loaded live-follow completion operations now rederive `liveFollowCycle` from
+  their own last refresh evidence during service startup, so stale persisted
+  cycle ledgers do not keep reporting `detail-inventory` after a completed
+  metadata pass.
+- Installed restart proof on live-follow completion
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` showed the same
+  persisted pass `7` last refresh had `collectorProgress.phase=complete`,
+  `event=completed`, `conversationFreshnessFrontier.rowsSelectedForDetail=4`,
+  and `remainingDetailSurfaces.total=0`; after reinstall/restart, completion
+  readback changed from stale `detail-inventory` to
+  `liveFollowCycle.currentPhase=complete`, `nextPhase=complete`, with reason
+  `all required live-follow phases are complete for the current evidence
+  window`.
+- A controlled resume before the restart fix did not start provider work
+  immediately; cadence moved the completion to `idle_waiting` with
+  `nextAttemptAt=2026-07-06T03:07:06.600Z`, and the operation was paused again
+  at pass `7`. This is cadence/yield evidence, not a full keep-current pass.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts --testNamePattern "live-follow cycle decision|reconciles stale loaded live-follow cycle|hydrates active cooldown|requested phase|persisted phase ledger|bounded refresh"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/liveFollowCycleDecision.ts src/accountMirror/completionService.ts tests/accountMirror/completionService.test.ts --max-diagnostics 40`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-completion-status acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae --json --timeout-ms 30000`
+- `auracall api status --json --timeout-ms 30000`
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.

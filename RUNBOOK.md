@@ -1,5 +1,41 @@
 # RUNBOOK
 
+## Turn 309 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: stop completed steady-follow detail passes from leaving stale
+  `detail-inventory` cycle state across service restarts.
+- Result:
+  - `chooseLiveFollowCyclePhase` no longer treats frontier rows selected for a
+    completed pass as still pending when collector progress is complete and no
+    detail surfaces remain;
+  - loaded live-follow completions rederive `liveFollowCycle` from their own
+    last refresh evidence at service startup;
+  - installed completion
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` now reads back
+    `liveFollowCycle.currentPhase=complete` and `nextPhase=complete` after API
+    reinstall/restart.
+- Installed proof:
+  - before the fix, pass `7` had completed collector evidence but stale
+    `detail-inventory` cycle readback;
+  - after `pnpm run install:user-runtime-service` and
+    `systemctl --user restart auracall-api.service`, the same persisted
+    operation read back `collectorProgress.phase=complete`,
+    `rowsSelectedForDetail=4`, `remainingDetailSurfaces.total=0`, and
+    `liveFollowCycle.currentPhase=complete`;
+  - a controlled resume was attempted first, but cadence moved the completion
+    to `idle_waiting` with `nextAttemptAt=2026-07-06T03:07:06.600Z`, and it was
+    paused again at pass `7` without starting provider work.
+- Validation:
+  - focused completion-service cycle/restart tests passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome check passed.
+- Remaining scope:
+  - shared account status still carries broader detail/materialization backlog
+    from the later bounded proof; Plan 0152 still needs full installed
+    backfill-to-steady plus steady keep-current proof before broad resume.
+
 ## Turn 308 | 2026-07-05
 
 - Active plan:

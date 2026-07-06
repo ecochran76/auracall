@@ -288,7 +288,8 @@ export function createAccountMirrorCompletionService(input: {
 	const foregroundRetryDelayMs = normalizeForegroundRetryDelayMs(input.foregroundRetryDelayMs);
 
 	for (const operation of input.initialOperations ?? []) {
-		operations.set(operation.id, normalizeLifecycleEvents(operation));
+		const normalized = normalizeLifecycleEvents(operation);
+		operations.set(operation.id, reconcileLoadedLiveFollowCycle(normalized, now().toISOString()));
 	}
 
 	const update = (id: string, patch: Partial<AccountMirrorCompletionOperation>) => {
@@ -1340,6 +1341,21 @@ function resolveStatusRequestedCollectorPhase(
 		backfillLedger: statusEntry.backfillLedger,
 	});
 	return liveFollowCyclePhaseToCollectorPhase(decision.phase);
+}
+
+function reconcileLoadedLiveFollowCycle(
+	operation: AccountMirrorCompletionOperation,
+	now: string,
+): AccountMirrorCompletionOperation {
+	if (operation.mode !== "live_follow" || !operation.lastRefresh) return operation;
+	return {
+		...operation,
+		liveFollowCycle: deriveLiveFollowCycleLedger({
+			operation,
+			statusEntry: null,
+			now: operation.lastRefresh.completedAt ?? operation.completedAt ?? now,
+		}),
+	};
 }
 
 function hasStatusPhaseEvidence(statusEntry: AccountMirrorStatusEntry): boolean {

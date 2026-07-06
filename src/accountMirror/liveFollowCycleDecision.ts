@@ -103,6 +103,8 @@ export function chooseLiveFollowCyclePhase(input: {
 	const frontier = evidence?.conversationFreshnessFrontier ?? null;
 	const assetInventoryState = evidence?.assetInventory?.state ?? null;
 	const remainingDetailSurfaces = Math.max(0, Math.floor(input.remainingDetailSurfaces ?? 0));
+	const collectorCompleted =
+		collectorProgress?.phase === "complete" && collectorProgress.event === "completed";
 
 	if (!input.operation.lastRefresh && input.operation.passCount === 0) {
 		return {
@@ -139,7 +141,7 @@ export function chooseLiveFollowCyclePhase(input: {
 			reason: `${remainingDetailSurfaces} detail surface(s) remain incomplete`,
 		};
 	}
-	if (frontier && frontier.rowsSelectedForDetail > 0) {
+	if (frontier && frontier.rowsSelectedForDetail > 0 && !collectorCompleted) {
 		return {
 			phase: "detail-inventory",
 			status: "pending",

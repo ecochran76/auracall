@@ -1,3 +1,16 @@
+- 2026-07-05: Freshness-frontier row selection is not itself pending work after
+  a collector pass completes. If `collectorProgress.phase=complete` and
+  `event=completed`, with no detail cursor, yield, in-progress asset inventory,
+  or remaining detail surfaces, `chooseLiveFollowCyclePhase` should return
+  `complete` even when `conversationFreshnessFrontier.rowsSelectedForDetail`
+  records rows selected for the pass. Reconcile loaded live-follow completion
+  cycles from their own last-refresh evidence at service startup so persisted
+  stale cycle ledgers do not restart at `detail-inventory` after restart.
+  Installed proof corrected
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` from stale
+  `detail-inventory` to `liveFollowCycle.currentPhase=complete` after
+  reinstall/restart, without running provider work.
+
 - 2026-07-05: Requested collector phase is runtime evidence, not just an input
   hint. Carry normalized `requestedPhase` on `AccountMirrorRefreshResult` and
   persist it through completion/status fixtures so installed proof can answer
