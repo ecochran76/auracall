@@ -9,6 +9,10 @@ import type {
 	AccountMirrorCompletionSweepMode,
 } from "./completionService.js";
 import type { ConversationFreshnessFrontierEvidence } from "./conversationFreshnessFrontier.js";
+import {
+	isLiveFollowCollectorPhase,
+	type LiveFollowCollectorPhase,
+} from "./liveFollowOperatingModel.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
@@ -160,15 +164,7 @@ export type AccountMirrorScrapeBudgetEvidence = {
 	providerActions: Record<string, number>;
 };
 
-export type AccountMirrorCollectorPhase =
-	| "identity"
-	| "projects"
-	| "root-conversations"
-	| "project-conversations"
-	| "chatgpt-library"
-	| "detail-inventory"
-	| "merge-persisted-catalog"
-	| "complete";
+export type AccountMirrorCollectorPhase = LiveFollowCollectorPhase;
 
 export type AccountMirrorCollectorPhaseProgressEvidence = {
 	provider: AccountMirrorProvider;
@@ -1497,16 +1493,7 @@ function normalizeCollectorProgressSweepMode(
 }
 
 function normalizeCollectorProgressPhase(value: unknown): AccountMirrorCollectorPhase {
-	if (
-		value === "identity" ||
-		value === "projects" ||
-		value === "root-conversations" ||
-		value === "project-conversations" ||
-		value === "chatgpt-library" ||
-		value === "detail-inventory" ||
-		value === "merge-persisted-catalog" ||
-		value === "complete"
-	) {
+	if (isLiveFollowCollectorPhase(value)) {
 		return value;
 	}
 	return "identity";

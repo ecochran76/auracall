@@ -5,6 +5,10 @@ import type {
 } from "./backfillLedger.js";
 import type { AccountMirrorCompletionOperation } from "./completionService.js";
 import type {
+	LiveFollowRoutinePhase,
+	LiveFollowRoutinePhaseStatus,
+} from "./liveFollowOperatingModel.js";
+import type {
 	AccountMirrorCollectorPhase,
 	AccountMirrorMetadataEvidence,
 	AccountMirrorStatusEntry,
@@ -12,16 +16,9 @@ import type {
 
 export type AccountMirrorLiveFollowCyclePhase =
 	| AccountMirrorCollectorPhase
-	| "materialization"
-	| "account-library";
+	| Extract<LiveFollowRoutinePhase, "materialization" | "account-library">;
 
-export type AccountMirrorLiveFollowCyclePhaseStatus =
-	| "pending"
-	| "running"
-	| "yielded"
-	| "complete"
-	| "skipped"
-	| "blocked";
+export type AccountMirrorLiveFollowCyclePhaseStatus = LiveFollowRoutinePhaseStatus;
 
 export interface AccountMirrorLiveFollowCyclePhaseEntry {
 	phase: AccountMirrorLiveFollowCyclePhase;

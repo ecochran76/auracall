@@ -15,6 +15,10 @@ import type {
 	AccountMirrorLiveFollowCyclePhase,
 	AccountMirrorLiveFollowCyclePhaseStatus,
 } from "./liveFollowCycleDecision.js";
+import {
+	isLiveFollowRoutinePhase,
+	isLiveFollowRoutinePhaseStatus,
+} from "./liveFollowOperatingModel.js";
 
 const COMPLETIONS_DIRNAME = "completions";
 
@@ -466,34 +470,14 @@ function parseLiveFollowCyclePhaseEntries(
 }
 
 function readLiveFollowCyclePhase(value: unknown): AccountMirrorLiveFollowCyclePhase | null {
-	if (
-		value === "identity" ||
-		value === "projects" ||
-		value === "root-conversations" ||
-		value === "project-conversations" ||
-		value === "chatgpt-library" ||
-		value === "detail-inventory" ||
-		value === "merge-persisted-catalog" ||
-		value === "complete" ||
-		value === "materialization" ||
-		value === "account-library"
-	)
-		return value;
+	if (isLiveFollowRoutinePhase(value)) return value;
 	return null;
 }
 
 function readLiveFollowCyclePhaseStatus(
 	value: unknown,
 ): AccountMirrorLiveFollowCyclePhaseStatus | null {
-	if (
-		value === "pending" ||
-		value === "running" ||
-		value === "yielded" ||
-		value === "complete" ||
-		value === "skipped" ||
-		value === "blocked"
-	)
-		return value;
+	if (isLiveFollowRoutinePhaseStatus(value)) return value;
 	return null;
 }
 

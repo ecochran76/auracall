@@ -47,6 +47,7 @@ import {
 	deriveAccountMirrorConversationFreshness,
 } from "./conversationFreshness.js";
 import { buildConversationFreshnessSummaryMap } from "./conversationFreshnessFrontier.js";
+import { isLiveFollowCollectorPhase } from "./liveFollowOperatingModel.js";
 import type {
 	AccountMirrorProvider,
 	AccountMirrorProviderGuardKind,
@@ -2362,16 +2363,7 @@ function normalizeRequestedCollectorPhase(
 }
 
 function isCollectorPhase(value: unknown): value is AccountMirrorCollectorPhase {
-	return (
-		value === "identity" ||
-		value === "projects" ||
-		value === "root-conversations" ||
-		value === "project-conversations" ||
-		value === "chatgpt-library" ||
-		value === "detail-inventory" ||
-		value === "merge-persisted-catalog" ||
-		value === "complete"
-	);
+	return isLiveFollowCollectorPhase(value);
 }
 
 function normalizePositiveInteger(value: number | null | undefined, fallback: number): number {

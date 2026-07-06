@@ -1,4 +1,10 @@
 import {
+	type LiveFollowMaterializationBacklogState,
+	type LiveFollowRoutineDecisionState,
+	normalizeLiveFollowMaterializationBacklogState,
+	normalizeLiveFollowRoutineDecisionState,
+} from "../accountMirror/liveFollowOperatingModel.js";
+import {
 	LIVE_FOLLOW_SEVERITIES,
 	type LiveFollowHealthSummary,
 	type LiveFollowSeverity,
@@ -1020,17 +1026,8 @@ function summarizeMaterializationAssetCounts(value: unknown) {
 
 function summarizeMaterializationBacklogState(
 	value: unknown,
-): "none" | "metadata_current_backlog" | "materialization_required" | "inventory_unknown" {
-	const state = readString(value);
-	if (
-		state === "none" ||
-		state === "metadata_current_backlog" ||
-		state === "materialization_required" ||
-		state === "inventory_unknown"
-	) {
-		return state;
-	}
-	return "inventory_unknown";
+): LiveFollowMaterializationBacklogState {
+	return normalizeLiveFollowMaterializationBacklogState(readString(value));
 }
 
 function summarizeLiveFollowRoutineDecision(value: unknown) {
@@ -1072,47 +1069,8 @@ function summarizeLiveFollowRoutineDecision(value: unknown) {
 	};
 }
 
-function summarizeLiveFollowRoutineDecisionState(
-	value: unknown,
-):
-	| "disabled"
-	| "unsupported"
-	| "missing_identity"
-	| "provider_guarded"
-	| "operator_preempted"
-	| "running"
-	| "queued"
-	| "paused"
-	| "attention_needed"
-	| "backfilling"
-	| "steady_follow"
-	| "materialization_pending"
-	| "account_library_catchup"
-	| "caught_up"
-	| "eligible"
-	| "delayed" {
-	const state = readString(value);
-	if (
-		state === "disabled" ||
-		state === "unsupported" ||
-		state === "missing_identity" ||
-		state === "provider_guarded" ||
-		state === "operator_preempted" ||
-		state === "running" ||
-		state === "queued" ||
-		state === "paused" ||
-		state === "attention_needed" ||
-		state === "backfilling" ||
-		state === "steady_follow" ||
-		state === "materialization_pending" ||
-		state === "account_library_catchup" ||
-		state === "caught_up" ||
-		state === "eligible" ||
-		state === "delayed"
-	) {
-		return state;
-	}
-	return "delayed";
+function summarizeLiveFollowRoutineDecisionState(value: unknown): LiveFollowRoutineDecisionState {
+	return normalizeLiveFollowRoutineDecisionState(readString(value));
 }
 
 function summarizeLiveFollowProviderGuard(value: unknown) {

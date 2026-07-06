@@ -37,6 +37,25 @@ yield to foreground operator/API/browser work without provider-warning churn.
 
 ## Progress
 
+### 2026-07-05 | M0 Shared State Contract
+
+- Added `src/accountMirror/liveFollowOperatingModel.ts` as the shared
+  live-follow operating vocabulary for collector phases, routine phases,
+  routine phase statuses, routine decision states, and materialization backlog
+  states.
+- Account-mirror status persistence, refresh requested-phase guards,
+  live-follow cycle decisions, status interfaces, and CLI/API normalization now
+  consume the shared contract instead of local string unions.
+- Added `docs/dev/live-follow-operating-model-contract.md` to document
+  metadata freshness versus local materialization states for operators and
+  future implementation slices.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/liveFollowOperatingModel.test.ts tests/status/liveFollowHealth.test.ts tests/cli/apiStatusCommand.test.ts --testNamePattern "live follow operating model|materialization|routineDecision|deferred asset|proof scope"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/liveFollowOperatingModel.ts src/accountMirror/statusRegistry.ts src/accountMirror/liveFollowCycleDecision.ts src/accountMirror/completionStore.ts src/accountMirror/refreshService.ts src/status/liveFollowHealth.ts src/cli/apiStatusCommand.ts tests/accountMirror/liveFollowOperatingModel.test.ts --max-diagnostics 40`
+
 ### 2026-07-05 | M5 Metadata-Only Split
 
 - `metadata_only` now treats completed chat context and remote asset references
@@ -374,8 +393,9 @@ Define one vocabulary for live-follow state:
 
 Deliverables:
 
-- shared enum/contract for completion, scheduler, status, and dashboard use;
-- docs update explaining the difference between metadata freshness and local
+- [x] shared enum/contract for completion, scheduler, status, and dashboard
+  use;
+- [x] docs update explaining the difference between metadata freshness and local
   asset materialization.
 
 Acceptance:
@@ -634,7 +654,7 @@ Remaining M3 work:
 
 ## Acceptance Criteria
 
-- [ ] A documented live-follow state contract exists and is used by scheduler,
+- [x] A documented live-follow state contract exists and is used by scheduler,
   completion, status, and operator surfaces.
 - [ ] Backfill progress is persisted per account and resumes from the correct
   phase across API restarts.

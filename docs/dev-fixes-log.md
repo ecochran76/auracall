@@ -1,3 +1,11 @@
+- 2026-07-05: Live-follow state and phase names are an owned operating-model
+  contract, not ad hoc status strings. Add collector phases, routine phases,
+  routine phase statuses, routine decision states, and materialization backlog
+  states in `src/accountMirror/liveFollowOperatingModel.ts` first, then consume
+  that contract from completion, scheduler, persistence, status, CLI/API, and
+  operator readback. This prevents status from drifting away from the phase
+  chooser and restart-hydrated completion ledger.
+
 - 2026-07-05: Broad live-follow resume requires staged installed proof, not
   another blind cadence restart. The convergence gate is: prove one subscribed
   ChatGPT account can finish initial backfill, transition to steady-follow,

@@ -1,3 +1,8 @@
+import type {
+	LiveFollowMaterializationBacklogState,
+	LiveFollowRoutineDecisionState,
+} from "../accountMirror/liveFollowOperatingModel.js";
+
 export const LIVE_FOLLOW_SEVERITIES = [
 	"healthy",
 	"backpressured",
@@ -278,23 +283,7 @@ export interface LiveFollowTargetAccountSummary {
 }
 
 export interface LiveFollowTargetRoutineDecisionSummary {
-	state:
-		| "disabled"
-		| "unsupported"
-		| "missing_identity"
-		| "provider_guarded"
-		| "operator_preempted"
-		| "running"
-		| "queued"
-		| "paused"
-		| "attention_needed"
-		| "backfilling"
-		| "steady_follow"
-		| "materialization_pending"
-		| "account_library_catchup"
-		| "caught_up"
-		| "eligible"
-		| "delayed";
+	state: LiveFollowRoutineDecisionState;
 	nextPhase: string | null;
 	why: string;
 	eligibleAt: string | null;
@@ -329,7 +318,7 @@ export interface LiveFollowTargetRoutineDecisionSummary {
 }
 
 export interface LiveFollowMaterializationBacklogSummary {
-	state: "none" | "metadata_current_backlog" | "materialization_required" | "inventory_unknown";
+	state: LiveFollowMaterializationBacklogState;
 	policy: string | null;
 	metadataCurrent: boolean;
 	localRequired: boolean;

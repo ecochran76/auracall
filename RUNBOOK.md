@@ -1,5 +1,26 @@
 # RUNBOOK
 
+## Turn 307 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: advance M0 by making live-follow state and phase vocabulary a shared
+  contract instead of duplicated local string unions.
+- Result:
+  - added `src/accountMirror/liveFollowOperatingModel.ts`;
+  - wired account-mirror status persistence, refresh requested-phase guards,
+    live-follow cycle decisions, status interfaces, and CLI/API normalization
+    to the shared contract;
+  - added `docs/dev/live-follow-operating-model-contract.md`;
+  - marked the Plan 0152 state-contract acceptance item complete.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/liveFollowOperatingModel.test.ts tests/status/liveFollowHealth.test.ts tests/cli/apiStatusCommand.test.ts --testNamePattern "live follow operating model|materialization|routineDecision|deferred asset|proof scope"` passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - `pnpm exec biome check src/accountMirror/liveFollowOperatingModel.ts src/accountMirror/statusRegistry.ts src/accountMirror/liveFollowCycleDecision.ts src/accountMirror/completionStore.ts src/accountMirror/refreshService.ts src/status/liveFollowHealth.ts src/cli/apiStatusCommand.ts tests/accountMirror/liveFollowOperatingModel.test.ts --max-diagnostics 40` passed.
+- Remaining scope:
+  - Plan 0152 still needs installed backfill-to-steady and steady keep-current
+    dogfood proof before broad live-follow resume.
+
 ## Turn 306 | 2026-07-05
 
 - Active plan:

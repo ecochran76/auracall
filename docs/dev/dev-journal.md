@@ -1,3 +1,21 @@
+## 2026-07-05 | Plan 0152 M0 Shared State Contract
+
+- Focus: make live-follow state and phase vocabulary a shared contract instead
+  of duplicated local string unions.
+- Result:
+  - added `src/accountMirror/liveFollowOperatingModel.ts` for collector phases,
+    routine phases, routine phase statuses, routine decision states, and
+    materialization backlog states;
+  - account-mirror status persistence, refresh requested-phase guards,
+    live-follow cycle decisions, status interfaces, and CLI/API normalization
+    now consume the shared contract;
+  - added `docs/dev/live-follow-operating-model-contract.md` and marked the
+    Plan 0152 state-contract acceptance item complete.
+- Validation:
+  - focused operating-model/status/CLI tests passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome check passed.
+
 ## 2026-07-05 | Plan 0152 Live-Follow Convergence Gates
 
 - Focus: turn the live-follow operating-model discussion into a durable
