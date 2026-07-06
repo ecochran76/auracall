@@ -39420,3 +39420,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   as prior known conversation files. Validation passed with focused
   account-mirror/LLM file tests, `pnpm exec tsc --noEmit --pretty false`, and
   scoped Biome.
+- 2026-07-05: Continued Plan 0152 M7 operator observability. Added structured
+  live-follow target `materializationBacklog` readback so `/status` and
+  CLI-normalized API status distinguish `metadata_current_backlog` from
+  `materialization_required`, carrying policy, metadata-current status,
+  local-required status, and local/remote/unknown asset totals. Focused
+  validation passed with
+  `pnpm vitest run tests/status/liveFollowHealth.test.ts tests/http.responsesServer.test.ts --testNamePattern "materialization|effective live-follow wake"`
+  and `pnpm exec tsc --noEmit --pretty false`.

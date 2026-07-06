@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 302 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: make live-follow status explain materialization backlog separately from
+  metadata freshness, so operators can tell when an account is current for
+  metadata but still has local bytes queued or deferred.
+- Result:
+  - added `materializationBacklog` to live-follow target account readback;
+  - `/status` now reports `metadata_current_backlog` versus
+    `materialization_required` with policy, metadata-current status,
+    local-required status, and local/remote/unknown asset counts;
+  - CLI-normalized API status preserves the same field instead of dropping it.
+- Validation:
+  - `pnpm vitest run tests/status/liveFollowHealth.test.ts tests/http.responsesServer.test.ts --testNamePattern "materialization|effective live-follow wake"` passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed.
+- Remaining scope:
+  - Plan 0152 still needs the broader M2/M4/M6 decision tree, cadence, and
+    installed dogfood proof before live follow should be resumed broadly.
+
 ## Turn 301 | 2026-06-30
 
 - Active plan:

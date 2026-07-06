@@ -44,6 +44,22 @@ visible to operators.
 - Completion-driven refreshes now pass the materialization policy through
   refresh, cached freshness hydration, and collector frontier selection.
 
+### 2026-07-05 | M7 Materialization Backlog Readback
+
+- Live-follow target accounts now expose a structured
+  `materializationBacklog` readback alongside raw asset inventory.
+- The readback distinguishes `metadata_current_backlog` from
+  `materialization_required`, carrying policy, metadata-current status,
+  local-required status, and local/remote/unknown asset counts.
+- `/status` and CLI-normalized API status keep the field so operators can see
+  that a target is metadata-current while local asset bytes remain a separate
+  backlog.
+
+Validation:
+
+- `pnpm vitest run tests/status/liveFollowHealth.test.ts tests/http.responsesServer.test.ts --testNamePattern "materialization|effective live-follow wake"`
+- `pnpm exec tsc --noEmit --pretty false`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

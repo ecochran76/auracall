@@ -141,6 +141,7 @@ export interface LiveFollowTargetAccountSummary {
 			total: number;
 		} | null;
 	} | null;
+	materializationBacklog: LiveFollowMaterializationBacklogSummary | null;
 	latestLifecycleEvent: {
 		at: string | null;
 		type: string | null;
@@ -231,6 +232,98 @@ export interface LiveFollowTargetAccountSummary {
 			media: number;
 		};
 	} | null;
+}
+
+export interface LiveFollowMaterializationBacklogSummary {
+	state: "none" | "metadata_current_backlog" | "materialization_required" | "inventory_unknown";
+	policy: string | null;
+	metadataCurrent: boolean;
+	localRequired: boolean;
+	remoteKnownMissingLocal: LiveFollowMaterializationAssetCounts;
+	localMaterialized: LiveFollowMaterializationAssetCounts;
+	unknownOrDeferred: LiveFollowMaterializationAssetCounts;
+	summary: string;
+}
+
+export interface LiveFollowMaterializationAssetCounts {
+	artifacts: number;
+	files: number;
+	media: number;
+	total: number;
+}
+
+export interface LiveFollowMaterializationBacklogInput {
+	materializationPolicy?: string | null;
+	mirrorCompleteness?: string | null;
+	assetInventory?: {
+		state?: string | null;
+		localMaterialized?: Partial<Record<"artifacts" | "files" | "media", number>> | null;
+		remoteKnownMissingLocal?: Partial<Record<"artifacts" | "files" | "media", number>> | null;
+		unknownOrDeferred?: Partial<Record<"artifacts" | "files" | "media", number>> | null;
+	} | null;
+}
+
+export function summarizeLiveFollowMaterializationBacklog(
+	input: LiveFollowMaterializationBacklogInput,
+): LiveFollowMaterializationBacklogSummary | null {
+	const inventory = input.assetInventory ?? null;
+	if (!inventory) return null;
+	const policy = normalizeOptionalLabel(input.materializationPolicy);
+	const remoteKnownMissingLocal = normalizeAssetCounts(inventory.remoteKnownMissingLocal);
+	const localMaterialized = normalizeAssetCounts(inventory.localMaterialized);
+	const unknownOrDeferred = normalizeAssetCounts(inventory.unknownOrDeferred);
+	const metadataCurrent = input.mirrorCompleteness === "complete";
+	const remoteMissingTotal = remoteKnownMissingLocal.total;
+	const unknownTotal = unknownOrDeferred.total;
+	const localRequired = policy !== "metadata_only" && remoteMissingTotal > 0;
+	if (remoteMissingTotal <= 0 && unknownTotal <= 0) {
+		return {
+			state: "none",
+			policy,
+			metadataCurrent,
+			localRequired: false,
+			remoteKnownMissingLocal,
+			localMaterialized,
+			unknownOrDeferred,
+			summary: "No known remote assets are missing from local materialization.",
+		};
+	}
+	if (unknownTotal > 0 && remoteMissingTotal <= 0) {
+		return {
+			state: "inventory_unknown",
+			policy,
+			metadataCurrent,
+			localRequired: false,
+			remoteKnownMissingLocal,
+			localMaterialized,
+			unknownOrDeferred,
+			summary: `${unknownTotal} remote asset${unknownTotal === 1 ? "" : "s"} still need inventory confirmation before local materialization can be judged.`,
+		};
+	}
+	if (localRequired) {
+		return {
+			state: "materialization_required",
+			policy,
+			metadataCurrent,
+			localRequired: true,
+			remoteKnownMissingLocal,
+			localMaterialized,
+			unknownOrDeferred,
+			summary: `${remoteMissingTotal} known remote asset${remoteMissingTotal === 1 ? "" : "s"} still need local materialization.`,
+		};
+	}
+	return {
+		state: "metadata_current_backlog",
+		policy,
+		metadataCurrent,
+		localRequired: false,
+		remoteKnownMissingLocal,
+		localMaterialized,
+		unknownOrDeferred,
+		summary: metadataCurrent
+			? `${remoteMissingTotal} known remote asset${remoteMissingTotal === 1 ? "" : "s"} remain in the local materialization backlog; metadata is current under the active policy.`
+			: `${remoteMissingTotal} known remote asset${remoteMissingTotal === 1 ? "" : "s"} remain in the local materialization backlog.`,
+	};
 }
 
 export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFollowHealthSummary {
@@ -345,6 +438,28 @@ export function deriveLiveFollowSeverity(input: {
 
 function normalizeLabel(value: string | null | undefined): string {
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : "unknown";
+}
+
+function normalizeOptionalLabel(value: string | null | undefined): string | null {
+	return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeAssetCounts(
+	counts: Partial<Record<"artifacts" | "files" | "media", number>> | null | undefined,
+): LiveFollowMaterializationAssetCounts {
+	const artifacts = normalizeCount(counts?.artifacts);
+	const files = normalizeCount(counts?.files);
+	const media = normalizeCount(counts?.media);
+	return {
+		artifacts,
+		files,
+		media,
+		total: artifacts + files + media,
+	};
+}
+
+function normalizeCount(value: number | null | undefined): number {
+	return Number.isFinite(value) && value ? Math.max(0, Math.floor(value)) : 0;
 }
 
 function formatNullableNumber(value: number | null): string {

@@ -269,6 +269,7 @@ import {
 	type LiveFollowTargetAccountSummary,
 	type LiveFollowTargetRollup,
 	summarizeLiveFollowHealth,
+	summarizeLiveFollowMaterializationBacklog,
 } from "../status/liveFollowHealth.js";
 import {
 	buildTeamRunExecutionPayload,
@@ -2610,8 +2611,7 @@ export async function createResponsesHttpServer(
 						runtimeProfileId: payload.runtimeProfile,
 						explicitRefresh: payload.explicitRefresh,
 						ignoreMinimumInterval: payload.ignoreMinimumInterval ?? payload.ignore_minimum_interval,
-						ignoreFailureBackoff:
-							payload.ignoreFailureBackoff ?? payload.ignore_failure_backoff,
+						ignoreFailureBackoff: payload.ignoreFailureBackoff ?? payload.ignore_failure_backoff,
 						queueTimeoutMs: payload.queueTimeoutMs,
 						queuePollMs: payload.queuePollMs,
 						collectorTimeoutMs: payload.collectorTimeoutMs,
@@ -5823,8 +5823,14 @@ function summarizeRunArchiveLocalCounts(
 }
 
 function mergeAccountMirrorLocalCountMap(
-	target: Map<string, Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">>,
-	source: Map<string, Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">>,
+	target: Map<
+		string,
+		Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">
+	>,
+	source: Map<
+		string,
+		Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">
+	>,
 ): void {
 	for (const [key, value] of source) {
 		const existing = target.get(key) ?? { artifacts: 0, files: 0, media: 0 };
@@ -5846,8 +5852,11 @@ function summarizeTerminalHistoryMaterializationLocalCounts(
 	for (const job of jobs) {
 		if (!job.result) continue;
 		const provider =
-			job.request.provider ?? job.result.target?.provider ?? (job.source.type === "reconciliation" ? job.source.provider : null);
-		const runtimeProfileId = job.request.runtimeProfile ?? job.result.target?.runtimeProfile ?? null;
+			job.request.provider ??
+			job.result.target?.provider ??
+			(job.source.type === "reconciliation" ? job.source.provider : null);
+		const runtimeProfileId =
+			job.request.runtimeProfile ?? job.result.target?.runtimeProfile ?? null;
 		const tenantKey = job.request.boundIdentityKey ?? job.result.target?.boundIdentityKey ?? null;
 		if (!provider || !runtimeProfileId) continue;
 		const key = accountMirrorStatusMaterializationKey({
@@ -5996,6 +6005,12 @@ function createLiveFollowTargetRollup(
 			providerGuard: entry.providerGuard.state === "clear" ? null : entry.providerGuard,
 			mirrorCompleteness: entry.mirrorCompleteness.state,
 			assetInventory: summarizeLiveFollowAssetInventory(entry),
+			materializationBacklog: summarizeLiveFollowMaterializationBacklog({
+				materializationPolicy: entry.liveFollow.materializationPolicy,
+				mirrorCompleteness: entry.mirrorCompleteness.state,
+				assetInventory:
+					entry.mirrorCompleteness.assetInventory ?? entry.metadataEvidence?.assetInventory ?? null,
+			}),
 			latestLifecycleEvent: summarizeCompletionLifecycleEvent(activeOperation ?? recentOperation),
 			materializationOutcome: summarizeLiveFollowMaterializationOutcome(
 				activeOperation ?? recentOperation,

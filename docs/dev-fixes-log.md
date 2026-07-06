@@ -18755,3 +18755,10 @@ browser-stage lifecycle observability, not transcript truncation.
   not by themselves reselect that chat for detail scraping. Policies that
   intentionally recover local bytes, such as `recent_missing_assets` and
   `full_missing_assets`, should continue selecting the backlog.
+- 2026-07-05: Live-follow status must expose policy-aware materialization
+  backlog, not just raw asset inventory. A complete metadata mirror can still
+  have known remote assets missing locally; under `metadata_only` that should
+  read as `metadata_current_backlog` with `localRequired=false`, while
+  asset-recovery policies should read as `materialization_required`. Keep this
+  distinction in API, CLI, MCP, and dashboard projections so operators do not
+  mistake local-byte backlog for another detail-scrape obligation.

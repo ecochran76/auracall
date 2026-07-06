@@ -4924,6 +4924,7 @@ describe("http responses adapter", () => {
 								enabled: true,
 								mode: "metadata-first",
 								priority: "background",
+								materializationPolicy: "metadata_only",
 							},
 						},
 					},
@@ -4944,6 +4945,40 @@ describe("http responses adapter", () => {
 						artifacts: 532,
 						files: 65,
 						media: 0,
+					},
+					metadataEvidence: {
+						identitySource: "profile-menu",
+						projectSampleIds: [],
+						conversationSampleIds: [],
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: false,
+						},
+						assetInventory: {
+							state: "complete",
+							summary: "Asset inventory is complete.",
+							detailScannedThisPass: {
+								projects: 5,
+								conversations: 304,
+								total: 309,
+							},
+							localMaterialized: {
+								artifacts: 12,
+								files: 3,
+								media: 0,
+							},
+							remoteKnownMissingLocal: {
+								artifacts: 520,
+								files: 62,
+								media: 0,
+							},
+							unknownOrDeferred: {
+								artifacts: 0,
+								files: 0,
+								media: 0,
+							},
+						},
 					},
 				},
 			},
@@ -4998,6 +5033,18 @@ describe("http responses adapter", () => {
 							nextAttemptAt: string | null;
 							routineEligibleAt: string | null;
 							activeCompletionNextAttemptAt: string | null;
+							materializationBacklog: {
+								state: string;
+								policy: string | null;
+								metadataCurrent: boolean;
+								localRequired: boolean;
+								remoteKnownMissingLocal: {
+									total: number;
+									artifacts: number;
+									files: number;
+									media: number;
+								};
+							} | null;
 						}>;
 					};
 				};
@@ -5012,6 +5059,18 @@ describe("http responses adapter", () => {
 				routineEligibleAt: expect.any(String),
 				activeCompletionNextAttemptAt: "2026-04-30T12:10:00.000Z",
 				nextAttemptAt: "2026-04-30T12:10:00.000Z",
+				materializationBacklog: {
+					state: "metadata_current_backlog",
+					policy: "metadata_only",
+					metadataCurrent: true,
+					localRequired: false,
+					remoteKnownMissingLocal: {
+						artifacts: 520,
+						files: 62,
+						media: 0,
+						total: 582,
+					},
+				},
 			});
 			expect(Date.parse(account.routineEligibleAt ?? "")).toBeGreaterThan(
 				Date.parse(account.nextAttemptAt ?? ""),

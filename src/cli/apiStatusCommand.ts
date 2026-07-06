@@ -1,8 +1,8 @@
 import {
 	LIVE_FOLLOW_SEVERITIES,
-	summarizeLiveFollowHealth as summarizeSharedLiveFollowHealth,
 	type LiveFollowHealthSummary,
 	type LiveFollowSeverity,
+	summarizeLiveFollowHealth as summarizeSharedLiveFollowHealth,
 } from "../status/liveFollowHealth.js";
 
 export const API_STATUS_BACKPRESSURE_REASONS = [
@@ -734,6 +734,9 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 	const materializationOutcome = isRecord(account.materializationOutcome)
 		? account.materializationOutcome
 		: null;
+	const materializationBacklog = isRecord(account.materializationBacklog)
+		? account.materializationBacklog
+		: null;
 	const accountLibraryCatchup = isRecord(account.accountLibraryCatchup)
 		? account.accountLibraryCatchup
 		: null;
@@ -798,6 +801,24 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 					state: readString(assetInventory.state) ?? "unknown",
 					summary: readString(assetInventory.summary),
 					detailScannedThisPass: summarizeDetailScanned(assetInventory.detailScannedThisPass),
+				}
+			: null,
+		materializationBacklog: materializationBacklog
+			? {
+					state: summarizeMaterializationBacklogState(materializationBacklog.state),
+					policy: readString(materializationBacklog.policy),
+					metadataCurrent: materializationBacklog.metadataCurrent === true,
+					localRequired: materializationBacklog.localRequired === true,
+					remoteKnownMissingLocal: summarizeMaterializationAssetCounts(
+						materializationBacklog.remoteKnownMissingLocal,
+					),
+					localMaterialized: summarizeMaterializationAssetCounts(
+						materializationBacklog.localMaterialized,
+					),
+					unknownOrDeferred: summarizeMaterializationAssetCounts(
+						materializationBacklog.unknownOrDeferred,
+					),
+					summary: readString(materializationBacklog.summary) ?? "",
 				}
 			: null,
 		latestLifecycleEvent: readLatestCompletionLifecycleEvent(account.latestLifecycleEvent),
@@ -913,6 +934,34 @@ function summarizeMetadataCounts(value: unknown) {
 		files: readNumber(record.files) ?? 0,
 		media: readNumber(record.media) ?? 0,
 	};
+}
+
+function summarizeMaterializationAssetCounts(value: unknown) {
+	const record = isRecord(value) ? value : {};
+	const artifacts = readNumber(record.artifacts) ?? 0;
+	const files = readNumber(record.files) ?? 0;
+	const media = readNumber(record.media) ?? 0;
+	return {
+		artifacts,
+		files,
+		media,
+		total: readNumber(record.total) ?? artifacts + files + media,
+	};
+}
+
+function summarizeMaterializationBacklogState(
+	value: unknown,
+): "none" | "metadata_current_backlog" | "materialization_required" | "inventory_unknown" {
+	const state = readString(value);
+	if (
+		state === "none" ||
+		state === "metadata_current_backlog" ||
+		state === "materialization_required" ||
+		state === "inventory_unknown"
+	) {
+		return state;
+	}
+	return "inventory_unknown";
 }
 
 function summarizeLiveFollowProviderGuard(value: unknown) {
