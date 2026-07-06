@@ -6061,7 +6061,7 @@ function createLiveFollowTargetRollup(
 			activeCompletionId: activeOperation?.id ?? null,
 			latestCompletionStatus: recentOperation?.status ?? null,
 			latestCompletionError: recentOperation?.error?.message ?? null,
-			phase: activeOperation?.phase ?? recentOperation?.phase ?? null,
+			phase: summarizeLiveFollowTargetPhase(entry, activeOperation, recentOperation),
 			passCount: activeOperation?.passCount ?? recentOperation?.passCount ?? null,
 			routineEligibleAt: entry.eligibleAt,
 			lastFailureAt: entry.lastFailureAt,
@@ -6196,6 +6196,19 @@ function createLiveFollowTargetRollup(
 	);
 }
 
+function summarizeLiveFollowTargetPhase(
+	entry: AccountMirrorStatusEntry,
+	activeOperation: AccountMirrorCompletionOperation | null,
+	recentOperation: AccountMirrorCompletionOperation | null,
+): string | null {
+	const operation = activeOperation ?? recentOperation;
+	if (operation?.status === "idle_waiting" && entry.mirrorCompleteness.state === "complete") {
+		const decision = summarizeLiveFollowStatusPhaseDecision(entry);
+		if (decision.phase === null) return "steady_follow";
+	}
+	return operation?.phase ?? null;
+}
+
 function summarizeLiveFollowAssetInventory(
 	entry: AccountMirrorStatusEntry,
 ): LiveFollowTargetAccountSummary["assetInventory"] {
@@ -6317,7 +6330,7 @@ function summarizeLiveFollowRoutineDecision(input: {
 			return {
 				...base,
 				state: "steady_follow",
-				nextPhase: operation.phase,
+				nextPhase: "steady_follow",
 				why:
 					cycle?.decisionReason ??
 					"live-follow metadata is current and waiting for the next cadence window",

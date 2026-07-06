@@ -413,6 +413,65 @@ Validation:
   `{"accountMirrorScheduler":{"action":"run-once-with-foreground-pressure","dryRun":false}}`
 - installed `/status` readback on `2026-07-06T06:39:18.927Z`
 
+### 2026-07-06 | M8 Installed Controlled Live-Follow Cycles
+
+- Installed `chatgpt/wsl-chrome-2` live-follow completion
+  `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2` accepted
+  `run-one-pass`, waited for its cadence window, ran from
+  `2026-07-06T06:50:58.087Z` to `2026-07-06T06:51:14.936Z`, advanced to
+  `passCount=6`, cleared `forceRunUntilPassCount`, and returned to
+  `idle_waiting` with `nextAttemptAt=2026-07-06T07:10:41.337Z`.
+- That cadence pass stayed cheap and provider-polite: it examined three
+  freshness-frontier rows, selected zero rows for detail, used
+  `providerInteractions.used=2` of budget `6`, reported
+  `llmServiceRequests=0`, `cdpMethodCalls=8`, and kept
+  `providerGuardCorrelation.state=none`.
+- Installed `chatgpt/wsl-chrome-4` live-follow completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` proved the
+  remaining legacy-resume shape: the first forced pass had to rebuild
+  row-selection evidence before requested `detail-inventory`, reduced
+  remaining detail surfaces from `404` to `393`, and returned to
+  `idle_waiting`, but it spent `providerInteractions.used=7` of budget `6`.
+  That pass is logged as legacy repair evidence, not broad-resume proof.
+- A direct follow-up bounded proof on `chatgpt/wsl-chrome-4`,
+  `acctmirror_completion_5c806a6b-b023-4506-9e9b-4c54228e6009`, then started
+  at `detail-inventory:started projects=0 conversations=25` without replaying
+  root or project rails, completed from `2026-07-06T06:57:50.286Z` to
+  `2026-07-06T06:58:30.535Z`, scanned to zero remaining detail surfaces, and
+  kept `mirrorCompleteness.state=complete`.
+- The follow-up proof was the desired scrape shape:
+  `classification=passive_dominant`, passive total `4`, active total `3`,
+  provider budget `used=3` / `remaining=3`, `projectIndexReads=0`,
+  `rootRailReads=0`, `chatLoads=2`, `llmServiceRequests=0`, `cdpMethodCalls=9`,
+  and `providerGuardCorrelation.state=none`.
+- `/status` exposed a projection bug after this proof: the account evidence was
+  complete but the active live-follow operation still carried old
+  `phase=backfill_history`. Target status now prefers complete current account
+  evidence for complete `idle_waiting` operations, so installed readback after
+  reinstall/restart reports `chatgpt/wsl-chrome-4` as
+  `phase=steady_follow`, `routineDecision.state=steady_follow`,
+  `routineDecision.nextPhase=steady_follow`, no foreground preemption, and no
+  provider guard.
+- Current installed ChatGPT target posture after the projection fix:
+  `wsl-chrome-2` and `wsl-chrome-4` are cadence-waiting steady-follow accounts
+  with zero remaining detail surfaces; `wsl-chrome-3` is complete but
+  operator-paused; the legacy `chatgpt/default` completion is still paused in
+  `backfill_history`, but current account evidence reports
+  `mirrorCompleteness=complete`, zero remaining detail surfaces, zero
+  consecutive failures, and no provider guard.
+
+Validation:
+
+- `auracall api mirror-completion-control acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 run-one-pass --port 18095 --json`
+- `auracall api mirror-completion-control acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63 run-one-pass --port 18095 --json`
+- `auracall api mirror-complete --port 18095 --provider chatgpt --runtime-profile wsl-chrome-4 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "idle-waiting live-follow|newer account evidence|foreground-pressure proof|foreground scheduler preemption"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/http/responsesServer.ts tests/http.responsesServer.test.ts --max-diagnostics 30`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- installed `/status` readback on PID `5943`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive

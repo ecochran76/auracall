@@ -5894,7 +5894,7 @@ describe("http responses adapter", () => {
 			provider: "chatgpt",
 			runtimeProfileId: "default",
 			mode: "live_follow",
-			phase: "steady_follow",
+			phase: "backfill_history",
 			status: "idle_waiting",
 			startedAt: "2026-04-30T11:50:00.000Z",
 			completedAt: null,
@@ -5954,6 +5954,7 @@ describe("http responses adapter", () => {
 							actualStatus: string | null;
 							activeCompletionId: string | null;
 							activeCompletionNextAttemptAt: string | null;
+							phase: string | null;
 							routineDecision: {
 								state: string;
 								nextPhase: string | null;
@@ -5977,6 +5978,7 @@ describe("http responses adapter", () => {
 				actualStatus: "idle_waiting",
 				activeCompletionId: "acctmirror_idle_steady_follow",
 				activeCompletionNextAttemptAt: "2026-04-30T12:30:00.000Z",
+				phase: "steady_follow",
 				routineDecision: {
 					state: "steady_follow",
 					nextPhase: "steady_follow",

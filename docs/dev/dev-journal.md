@@ -1,3 +1,31 @@
+## 2026-07-06 | Plan 0152 Controlled Live-Follow Cycle Proof
+
+- Focus: prove installed live-follow can continue bounded cycles without
+  replaying every surface, then make complete idle target status match current
+  account evidence.
+- Result:
+  - `chatgpt/wsl-chrome-2` completion
+    `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2` ran a
+    cadence-gated `run-one-pass`, returned to `idle_waiting` at `passCount=6`,
+    selected zero detail rows, used active provider interactions `2/6`,
+    reported `llmServiceRequests=0` and `cdpMethodCalls=8`, and had no provider
+    guard;
+  - `chatgpt/wsl-chrome-4` first legacy-resume pass repaired row-selection
+    evidence but spent `7/6` active interactions, so it was treated as repair
+    evidence only;
+  - a follow-up bounded pass on `chatgpt/wsl-chrome-4` went directly to
+    `detail-inventory`, reached zero remaining detail surfaces, stayed
+    `passive_dominant`, used active provider interactions `3/6`, reported
+    `llmServiceRequests=0` and `cdpMethodCalls=9`, and had no provider guard;
+  - complete `idle_waiting` live-follow targets now project `phase` and
+    `routineDecision.nextPhase` as `steady_follow` when current account
+    evidence is complete.
+- Validation:
+  - focused HTTP status tests;
+  - TypeScript;
+  - scoped Biome on touched source/tests;
+  - installed runtime rebuild/restart plus `/status` readback on PID `5943`.
+
 ## 2026-07-06 | Plan 0152 Installed Foreground-Pressure Scheduler Proof
 
 - Focus: prove foreground operator pressure on the installed service without

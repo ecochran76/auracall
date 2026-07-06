@@ -1,3 +1,14 @@
+- 2026-07-06: Legacy paused live-follow completions can need one repair pass
+  to rebuild selected-row frontier evidence before a requested
+  `detail-inventory` continuation becomes cheap. Treat that first pass as
+  repair evidence if it exceeds the provider-interaction budget, then require a
+  follow-up bounded pass to prove the persisted ledger starts at the owed
+  phase without replaying root/project rails. Complete `idle_waiting` target
+  status must also prefer current complete account evidence over the stale
+  active operation phase, reporting `phase=steady_follow` and
+  `routineDecision.nextPhase=steady_follow` instead of old
+  `backfill_history`.
+
 - 2026-07-06: Lazy live-follow preflight should prove cycle continuation, not
   just controls and health readback. Add a no-provider scheduler smoke that
   runs the real status registry and scheduler service across two fixture

@@ -12814,3 +12814,45 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - keep-current project discovery still took roughly 99 seconds with zero
     projects and should be optimized before broad live-follow resume;
   - foreground operator preemption still needs installed proof.
+
+## Turn 314 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - prove controlled installed live-follow cycles can stay on cadence, continue
+    incomplete detail inventory, and report complete idle targets as
+    steady-follow instead of stale backfill work.
+- Result:
+  - `chatgpt/wsl-chrome-2` live-follow completion
+    `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2` waited for
+    cadence, ran one pass from `2026-07-06T06:50:58.087Z` to
+    `2026-07-06T06:51:14.936Z`, advanced to `passCount=6`, and returned to
+    `idle_waiting` / `steady_follow`;
+  - that pass selected zero detail rows, used active provider interactions
+    `2/6`, reported `llmServiceRequests=0`, `cdpMethodCalls=8`, and had no
+    provider-guard correlation;
+  - `chatgpt/wsl-chrome-4` first legacy-resume pass reduced remaining detail
+    surfaces from `404` to `393` but spent active provider interactions `7/6`,
+    so it remains repair evidence rather than broad-resume proof;
+  - follow-up completion
+    `acctmirror_completion_5c806a6b-b023-4506-9e9b-4c54228e6009` went directly
+    to `detail-inventory`, reached zero remaining detail surfaces, stayed
+    `passive_dominant`, used active provider interactions `3/6`, reported
+    `llmServiceRequests=0` and `cdpMethodCalls=9`, and had no provider guard;
+  - target status now projects complete `idle_waiting` live-follow operations
+    as `phase=steady_follow` and `routineDecision.nextPhase=steady_follow`
+    even when the old active operation phase was `backfill_history`.
+- Validation:
+  - focused HTTP status tests passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome passed on touched source/tests with only pre-existing
+    non-null assertion warnings in the HTTP test file;
+  - installed runtime rebuild/restart left PID `5943` active with
+    `NRestarts=0`;
+  - installed `/status` reports `chatgpt/wsl-chrome-4` as cadence-waiting
+    `steady_follow`, no foreground work, no preemption, and no provider guard.
+- Remaining scope:
+  - ChatGPT WSL targets are metadata-current enough for bounded cadence
+    observation, but legacy paused/non-ChatGPT targets remain outside this
+    resume proof.
