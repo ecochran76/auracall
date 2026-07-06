@@ -1666,6 +1666,47 @@ Validation:
 
 - `auracall api status --port 18095 --json`
 
+### 2026-07-06 | M8/M9 Target Classification Contract
+
+- Broad live-follow reconciliation now classifies every configured target
+  before starting, keeping, upgrading, or skipping work. The result records
+  `safe_steady_follow`, `safe_bounded_resume`, `existing_active`,
+  `operator_paused`, `provider_blocked`, `identity_blocked`, or `disabled`
+  plus the intended action: `start`, `keep_existing`, or `skip`.
+- Operator-paused active completions are now a hard automatic-reconciliation
+  boundary: they remain in `existing`, but broad reconciliation does not
+  policy-upgrade them. This preserves operator intent until an explicit
+  target-level resume decision is made.
+- Legacy/provider-blocked Gemini live-follow completions classify as
+  `provider_blocked`, so they stay out of blind broad resume until bounded
+  left-rail retrieval policy is replaced or upgraded.
+- `/status.liveFollow.targets.accounts[]` and CLI-normalized status now expose
+  additive `resumePolicy`, giving operators the same classification for live
+  target rows without inferring from `routineDecision`, completion status, and
+  provider errors manually.
+- `docs/dev/live-follow-operating-model-contract.md` and `README.md` document
+  the new broad-resume classification contract.
+- Installed readback after `pnpm run install:user-runtime-service` and
+  `systemctl --user restart auracall-api.service` proved the live service on
+  PID `42889` emits `resumePolicy` for the current target posture:
+  `chatgpt/wsl-chrome-2` and `chatgpt/wsl-chrome-4` are
+  `safe_steady_follow`, `chatgpt/default` and `chatgpt/wsl-chrome-3` are
+  `operator_paused`, `gemini/auracall-gemini-pro` is `provider_blocked`, and
+  `grok/default` is `identity_blocked`.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/liveFollowReconciler.test.ts`
+- `pnpm vitest run tests/accountMirror/liveFollowReconciler.test.ts tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts --testNamePattern "live-follow reconciler|effective live-follow wake|identity evidence|proof scope|materialization|routineDecision|resumePolicy|live follow"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/liveFollowReconciler.ts src/http/responsesServer.ts src/status/liveFollowHealth.ts src/cli/apiStatusCommand.ts tests/accountMirror/liveFollowReconciler.test.ts tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts --max-diagnostics 30`
+  - exit status `0`, with pre-existing non-null assertion warnings in
+    unrelated sections of `tests/http.responsesServer.test.ts`.
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- installed `auracall api status --port 18095 --json --timeout-ms 30000`
+  readback filtered through `jq` for `resumePolicy`.
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.
@@ -1691,7 +1732,7 @@ Validation:
   status evidence.
 - [x] Installed dogfood proves at least one full backfill-to-steady transition
   and one steady-follow keep-current loop without avoidable rate-limit warnings.
-- [ ] Remaining desired-enabled targets are classified so broad resume cannot
+- [x] Remaining desired-enabled targets are classified so broad resume cannot
   blindly unpause operator-paused, legacy-blocked, or identity-mismatched
   accounts.
 

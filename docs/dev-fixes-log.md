@@ -1,3 +1,11 @@
+- 2026-07-06: Broad live-follow reconciliation must classify targets before
+  acting. Treat `operator_paused` as a keep-existing boundary and do not apply
+  automatic policy upgrades to paused active completions. Expose the same
+  classification as `/status.liveFollow.targets.accounts[].resumePolicy` so
+  operators can distinguish `safe_steady_follow`, `safe_bounded_resume`,
+  `existing_active`, `operator_paused`, `provider_blocked`, `identity_blocked`,
+  and `disabled` targets before broad resume.
+
 - 2026-07-06: Broad live-follow resume needs target classification before
   unpausing. A healthy routine is not "walk every rail every cycle" and it is
   not "resume every active completion." Classify subscribed targets first:

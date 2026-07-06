@@ -230,7 +230,8 @@ export function summarizeApiStatusPayload(
 	const foregroundWork = isRecord(scheduler.foregroundWork) ? scheduler.foregroundWork : {};
 	const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
 	const rawLiveFollow = isRecord(record.liveFollow) ? record.liveFollow : {};
-	const latestYield = summarizeLatestYield(scheduler, lastPass) ?? summarizeRawLatestYield(rawLiveFollow);
+	const latestYield =
+		summarizeLatestYield(scheduler, lastPass) ?? summarizeRawLatestYield(rawLiveFollow);
 	const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
 	const targets = summarizeLiveFollowTargets(rawLiveFollow.targets);
 	const routes = isRecord(record.routes) ? record.routes : {};
@@ -626,7 +627,9 @@ function summarizeLatestYield(
 	};
 }
 
-function summarizeRawLatestYield(liveFollow: Record<string, unknown>): ApiStatusSchedulerYieldSummary | null {
+function summarizeRawLatestYield(
+	liveFollow: Record<string, unknown>,
+): ApiStatusSchedulerYieldSummary | null {
 	const latestYield = isRecord(liveFollow.latestYield) ? liveFollow.latestYield : null;
 	if (!latestYield) return null;
 	return {
@@ -749,6 +752,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 	const account = isRecord(value) ? value : {};
 	const metadataCounts = isRecord(account.metadataCounts) ? account.metadataCounts : null;
 	const assetInventory = isRecord(account.assetInventory) ? account.assetInventory : null;
+	const resumePolicy = isRecord(account.resumePolicy) ? account.resumePolicy : null;
 	const routineDecision = isRecord(account.routineDecision) ? account.routineDecision : null;
 	const materializationOutcome = isRecord(account.materializationOutcome)
 		? account.materializationOutcome
@@ -816,6 +820,12 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 		nextAttemptAt: readString(account.nextAttemptAt),
 		providerGuard: summarizeLiveFollowProviderGuard(account.providerGuard),
 		mirrorCompleteness: readString(account.mirrorCompleteness),
+		resumePolicy: {
+			classification: readString(resumePolicy?.classification) ?? "disabled",
+			action: readString(resumePolicy?.action) ?? "skip",
+			reason: readString(resumePolicy?.reason) ?? "",
+			activeCompletionId: readString(resumePolicy?.activeCompletionId),
+		},
 		routineDecision: summarizeLiveFollowRoutineDecision(routineDecision),
 		assetInventory: assetInventory
 			? {

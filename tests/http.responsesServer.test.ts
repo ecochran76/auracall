@@ -5145,6 +5145,12 @@ describe("http responses adapter", () => {
 							nextAttemptAt: string | null;
 							routineEligibleAt: string | null;
 							activeCompletionNextAttemptAt: string | null;
+							resumePolicy: {
+								classification: string;
+								action: string;
+								reason: string;
+								activeCompletionId: string | null;
+							};
 							routineDecision: {
 								state: string;
 								nextPhase: string | null;
@@ -5188,6 +5194,12 @@ describe("http responses adapter", () => {
 				routineEligibleAt: expect.any(String),
 				activeCompletionNextAttemptAt: "2026-04-30T12:10:00.000Z",
 				nextAttemptAt: "2026-04-30T12:10:00.000Z",
+				resumePolicy: {
+					classification: "existing_active",
+					action: "keep_existing",
+					reason: "active live-follow completion is running",
+					activeCompletionId: "acctmirror_effective_wake",
+				},
 				routineDecision: {
 					state: "running",
 					nextPhase: "detail-inventory",

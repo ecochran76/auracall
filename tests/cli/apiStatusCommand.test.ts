@@ -182,6 +182,12 @@ const statusPayload = {
 					passCount: 7,
 					nextAttemptAt: "2026-04-29T12:05:00.000Z",
 					mirrorCompleteness: "complete",
+					resumePolicy: {
+						classification: "operator_paused",
+						action: "keep_existing",
+						reason: "active live-follow completion is operator-paused",
+						activeCompletionId: "acctmirror_paused",
+					},
 					routineDecision: {
 						state: "paused",
 						nextPhase: "detail-inventory",
@@ -639,6 +645,12 @@ describe("api status CLI helpers", () => {
 				status: "pending",
 				passCount: 7,
 			},
+		});
+		expect(summary.liveFollow.targets?.accounts[0]?.resumePolicy).toMatchObject({
+			classification: "operator_paused",
+			action: "keep_existing",
+			reason: "active live-follow completion is operator-paused",
+			activeCompletionId: "acctmirror_paused",
 		});
 	});
 

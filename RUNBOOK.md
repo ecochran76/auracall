@@ -1,5 +1,43 @@
 # RUNBOOK
 
+## Turn 323 | 2026-07-06
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: implement the Plan 0152 broad-resume target classifier so live follow
+  can distinguish safe steady-follow/bounded-resume targets from
+  operator-paused, provider-blocked, identity-blocked, disabled, and
+  already-active targets.
+- Result:
+  - broad live-follow reconciliation now emits per-target classifications and
+    keeps operator-paused active completions unchanged instead of applying
+    automatic policy upgrades;
+  - legacy/provider-blocked Gemini live-follow completions classify as
+    `provider_blocked` and remain out of blind broad resume;
+  - `/status.liveFollow.targets.accounts[]` and CLI-normalized status now
+    expose additive `resumePolicy` with `classification`, `action`, `reason`,
+    and `activeCompletionId`;
+  - updated the live-follow operating-model contract, README, and Plan 0152 to
+    document the broad-resume classification boundary.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/liveFollowReconciler.test.ts`;
+  - focused HTTP/CLI/reconciler Vitest pattern passed;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - scoped Biome passed with only pre-existing non-null assertion warnings in
+    unrelated sections of `tests/http.responsesServer.test.ts`;
+  - `pnpm run plans:audit -- --keep 152`;
+  - `pnpm run install:user-runtime-service`;
+  - `systemctl --user restart auracall-api.service`;
+  - installed `/status` readback on PID `42889` showed
+    `resumePolicy=safe_steady_follow` for `chatgpt/wsl-chrome-2` and
+    `chatgpt/wsl-chrome-4`, `operator_paused` for `chatgpt/default` and
+    `chatgpt/wsl-chrome-3`, `provider_blocked` for
+    `gemini/auracall-gemini-pro`, and `identity_blocked` for `grok/default`.
+- Remaining scope:
+  - Plan 0152 can now move to the closeout decision: either close the operating
+    model slice and split Gemini/Grok/operator-paused follow-ups, or explicitly
+    resume a classified ChatGPT target under the new policy.
+
 ## Turn 322 | 2026-07-06
 
 - Active plan:

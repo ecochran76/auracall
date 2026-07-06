@@ -1,3 +1,28 @@
+## 2026-07-06 | Plan 0152 Broad Resume Target Classifier
+
+- Focus: make the M8/M9 broad-resume decision tree executable and visible on
+  operator status surfaces.
+- Result:
+  - live-follow reconciliation now classifies targets as `safe_steady_follow`,
+    `safe_bounded_resume`, `existing_active`, `operator_paused`,
+    `provider_blocked`, `identity_blocked`, or `disabled`;
+  - automatic reconciliation keeps operator-paused active completions unchanged
+    and does not apply policy upgrades to them;
+  - `/status.liveFollow.targets.accounts[]` and CLI-normalized status now
+    expose additive `resumePolicy` with the classification/action/reason;
+  - contract and README docs now describe the broad-resume classification
+    boundary;
+  - installed service PID `42889` now reports `resumePolicy` in `/status`,
+    including `safe_steady_follow` for `chatgpt/wsl-chrome-2` and
+    `chatgpt/wsl-chrome-4`, `operator_paused` for `chatgpt/default` and
+    `chatgpt/wsl-chrome-3`, `provider_blocked` for
+    `gemini/auracall-gemini-pro`, and `identity_blocked` for `grok/default`.
+- Validation:
+  - focused reconciler/HTTP/CLI Vitest pattern;
+  - TypeScript;
+  - scoped Biome with only pre-existing unrelated test non-null warnings;
+  - installed user-runtime service restart and `/status` readback.
+
 ## 2026-07-06 | Plan 0152 Convergence Milestone Audit
 
 - Focus: convert the installed live-follow dogfood evidence into the

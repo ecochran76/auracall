@@ -50,6 +50,29 @@ Routine-only phases:
 - `eligible`: the account can run the next routine pass now.
 - `delayed`: cadence, politeness, or another non-terminal delay is active.
 
+## Broad Resume Policy
+
+Live-follow target rows expose additive `resumePolicy` readback so broad resume
+decisions can be audited without inferring from completion status alone:
+
+- `safe_steady_follow`: metadata is complete with zero remaining detail
+  surfaces; the target may continue cadence-only steady follow.
+- `safe_bounded_resume`: unfinished account evidence remains and the target
+  should resume only from the persisted next phase.
+- `existing_active`: a live-follow completion is already queued, running, or
+  otherwise active; keep that completion instead of starting another one.
+- `operator_paused`: an active completion is paused; automatic broad
+  reconciliation must keep it paused and must not policy-upgrade it.
+- `provider_blocked`: a provider guard, cooldown, or provider-specific legacy
+  policy blocks automatic resume.
+- `identity_blocked`: configured identity is missing, unsupported, or
+  mismatched.
+- `disabled`: live follow is disabled or unconfigured for the target.
+
+`resumePolicy.action` is one of `start`, `keep_existing`, or `skip`. It is an
+operator classification layer, not a provider-safety bypass; provider guards,
+foreground preemption, and cadence checks still apply before provider work.
+
 ## Materialization Backlog States
 
 - `none`: no known remote assets are missing local materialization.

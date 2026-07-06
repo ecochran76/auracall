@@ -37,7 +37,10 @@ import {
 	type AccountMirrorLiveFollowCyclePhase,
 	chooseLiveFollowCyclePhase,
 } from "../accountMirror/liveFollowCycleDecision.js";
-import { reconcileConfiguredAccountMirrorLiveFollow } from "../accountMirror/liveFollowReconciler.js";
+import {
+	classifyLiveFollowTarget,
+	reconcileConfiguredAccountMirrorLiveFollow,
+} from "../accountMirror/liveFollowReconciler.js";
 import type { AccountMirrorProvider } from "../accountMirror/politePolicy.js";
 import { createAccountMirrorPreviewSessionStore } from "../accountMirror/previewSessionStore.js";
 import {
@@ -6070,6 +6073,7 @@ function createLiveFollowTargetRollup(
 			nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
 			providerGuard: entry.providerGuard.state === "clear" ? null : entry.providerGuard,
 			mirrorCompleteness: entry.mirrorCompleteness.state,
+			resumePolicy: classifyLiveFollowTarget(entry, activeOperation),
 			routineDecision: summarizeLiveFollowRoutineDecision({
 				entry,
 				operation,

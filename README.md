@@ -774,7 +774,11 @@ Terminology note:
   target table can filter by mirror completeness or attention state so operators
   can focus on incomplete account mirrors without opening raw status JSON; each
   target row also explains the current attention reason from existing status,
-  failure-backoff, and recent completion error fields. Metadata collector
+  failure-backoff, recent completion error fields, and additive
+  `resumePolicy` classification. `resumePolicy` separates safe steady-follow
+  or bounded-resume targets from operator-paused, provider-blocked,
+  identity-blocked, disabled, and already-active targets so broad live-follow
+  resume does not blindly unpause or restart expensive scrape work. Metadata collector
   timeouts abort the collector signal and persist target failure-backoff state
   across API/proof-server restarts. Operator-directed recovery can preview and
   run through failure backoff with `ignoreFailureBackoff=true` (or

@@ -137,6 +137,12 @@ export interface LiveFollowTargetAccountSummary {
 		action: string | null;
 	} | null;
 	mirrorCompleteness: string | null;
+	resumePolicy: {
+		classification: string;
+		action: string;
+		reason: string;
+		activeCompletionId: string | null;
+	};
 	routineDecision: LiveFollowTargetRoutineDecisionSummary;
 	assetInventory: {
 		state: string;
