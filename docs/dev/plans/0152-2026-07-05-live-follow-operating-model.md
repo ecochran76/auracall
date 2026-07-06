@@ -283,6 +283,30 @@ Validation:
 - `auracall api mirror-completion-control acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 run-one-pass --port 18095 --json`
 - `auracall api mirror-completion-status acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 --port 18095 --json`
 
+### 2026-07-06 | M1/M2 Cycle-Continuation Preflight Gate
+
+- Added `pnpm run smoke:live-follow-cycle` as a deterministic no-provider
+  proof that two scheduler cycles consume the persisted account
+  `backfillLedger` rather than restarting at identity/root rails.
+- The smoke runs the real status registry and scheduler service against a
+  fixture account whose ledger advances from `project-conversations` to
+  `detail-inventory` between passes, then to `complete`.
+- The smoke is wired into `preflight:lazy-live-follow`, so the operator
+  preflight now fails if cycle continuation regresses before live dogfood.
+- Full preflight closeout also hardened additive MCP readback contracts:
+  `api_status` now accepts top-level `proofScope`, and
+  `account_mirror_status` tolerates additive status fields emitted by the
+  installed runtime.
+- Installed archive parity initially found a stale local archive/search index
+  for an existing media-generation artifact; installed
+  `auracall api archive-backfill` rebuilt the local index without provider
+  work, and the full lazy-live-follow preflight then passed.
+
+Validation:
+
+- `pnpm run smoke:live-follow-cycle`
+- `pnpm run preflight:lazy-live-follow`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive

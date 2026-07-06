@@ -310,6 +310,12 @@
         `auracall api status --port 8080 --expect-account-mirror-backpressure routine-delayed`
       - local deterministic smoke for scheduler-history/API/MCP yield readback:
         `pnpm run smoke:scheduler-history`
+      - local deterministic smoke for live-follow cycle continuation:
+        `pnpm run smoke:live-follow-cycle`; it runs two fixture scheduler
+        cycles against the real status registry and scheduler service, proving
+        a persisted backfill ledger advances from `project-conversations` to
+        `detail-inventory` instead of restarting at identity/root rails, with
+        zero provider or browser dispatcher access
       - local deterministic smoke for mirror completion controls:
         `pnpm run smoke:completion-control`; it uses an injected completion
         service and proves `POST /status` pause, CLI helper resume, MCP cancel,
@@ -402,7 +408,8 @@
         provider/browser dispatcher work
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
-        foreground-deferral, completion-hydration, live-follow
+        live-follow cycle-continuation, foreground-deferral,
+        completion-hydration, live-follow
         health/diagnostics parity, ops-browser-control, ops-browser
         provider-guard clear,
         ops-browser preflight run-detail, operator API-key issue,

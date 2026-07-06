@@ -33,6 +33,7 @@
     "smoke:mcp-api-status": "tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081",
     "smoke:mcp-ops-browser": "tsx scripts/smoke-ops-browser-mcp.ts",
     "smoke:scheduler-history": "tsx scripts/smoke-account-mirror-scheduler-history.ts",
+    "smoke:live-follow-cycle": "tsx scripts/smoke-account-mirror-live-follow-cycle.ts",
     "smoke:completion-control": "tsx scripts/smoke-account-mirror-completion-control.ts",
     "smoke:foreground-deferral": "tsx scripts/smoke-account-mirror-foreground-deferral.ts",
     "smoke:scheduler-preemption": "tsx scripts/smoke-account-mirror-scheduler-preemption.ts",

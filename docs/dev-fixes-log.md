@@ -1,3 +1,20 @@
+- 2026-07-06: Lazy live-follow preflight should prove cycle continuation, not
+  just controls and health readback. Add a no-provider scheduler smoke that
+  runs the real status registry and scheduler service across two fixture
+  cycles, mutating the account `backfillLedger` from `project-conversations`
+  to `detail-inventory` and then `complete`. Wire it into
+  `preflight:lazy-live-follow` so a regression that starts every cycle at
+  identity/root rails fails before live dogfood.
+
+- 2026-07-06: Installed lazy-live-follow preflight is also an MCP contract
+  drift detector. Keep `api_status` output schema aligned with additive
+  top-level `proofScope`, and keep `account_mirror_status` tolerant of
+  additive status, `liveFollow`, `limits`, and `mirrorCompleteness` fields so
+  richer readback does not fail strict MCP validation. If asset readback parity
+  finds files under `~/.auracall/runtime/media-generations/` but archive/search
+  cannot see them, run installed `auracall api archive-backfill` to refresh the
+  local index before treating the fixture as missing.
+
 - 2026-07-05: `/status` live-follow routine decisions must compare active
   completion cycle freshness against account status registry freshness before
   trusting the active cycle. A paused live-follow completion can remain active

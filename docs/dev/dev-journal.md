@@ -1,3 +1,23 @@
+## 2026-07-06 | Plan 0152 Cycle-Continuation Preflight Gate
+
+- Focus: make the live-follow preflight catch the starvation failure mode where
+  every cycle starts over at identity/root rails instead of advancing the
+  persisted backfill ledger.
+- Result:
+  - added `pnpm run smoke:live-follow-cycle`;
+  - the smoke runs two real scheduler cycles against a fixture status registry;
+  - the first cycle selects `project-conversations`, the second selects
+    `detail-inventory`, and the final ledger reads `nextEligiblePhase=complete`;
+  - wired the smoke into `preflight:lazy-live-follow` immediately after
+    completion controls;
+  - hardened installed MCP status output schemas for additive `proofScope` and
+    account mirror status fields exposed by the same preflight.
+- Validation:
+  - `pnpm run smoke:live-follow-cycle` passed with `providerWork=none`.
+  - `pnpm run preflight:lazy-live-follow` passed after reinstalling the user
+    runtime; the full chain included installed archive/search/MCP asset
+    readback and installed MCP provider-guard clear with `providerWork=none`.
+
 ## 2026-07-05 | Plan 0152 Stale Active Cycle Status Decision
 
 - Focus: fix `/status` reporting `routineDecision.nextPhase=complete` from an

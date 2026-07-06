@@ -28,7 +28,7 @@ const mirrorCompletenessShape = z.object({
 		attachmentInventoryTruncated: z.boolean(),
 		attachmentCursorPresent: z.boolean(),
 	}),
-});
+}).catchall(z.unknown());
 
 const accountMirrorProviderGuardShape = z.object({
 	state: z.enum(["clear", "manual_clear_required", "cooldown"]),
@@ -117,7 +117,7 @@ const accountMirrorStatusEntryShape = z.object({
 		reason: z.string(),
 		mode: z.string().nullable(),
 		priority: z.string().nullable(),
-	}),
+	}).catchall(z.unknown()),
 	limits: z.object({
 		minIntervalMs: z.number(),
 		explicitRefreshMinIntervalMs: z.number(),
@@ -132,8 +132,8 @@ const accountMirrorStatusEntryShape = z.object({
 		conversationReadCooldownMs: z.number(),
 		pageRefreshCooldownMs: z.number(),
 		renavigationCooldownMs: z.number(),
-	}),
-});
+	}).catchall(z.unknown()),
+}).catchall(z.unknown());
 
 const accountMirrorStatusOutputShape = {
 	object: z.literal("account_mirror_status"),
