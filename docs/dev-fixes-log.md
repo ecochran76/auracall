@@ -18942,3 +18942,8 @@ browser-stage lifecycle observability, not transcript truncation.
   the lazy-live-follow preflight so a foreground-yielded scheduler pass must
   project target-level `operator_preempted` through API/CLI status without
   starting provider refresh or completion work.
+- 2026-07-06: Do not label complete cadence-waiting live-follow operations as
+  actively running. If an active live-follow completion is `idle_waiting`, the
+  account mirror is complete, and the cycle/status phase is complete, target
+  `routineDecision.state` should be `steady_follow` with the next cadence time.
+  Reserve `running` for actual provider/background work in progress.

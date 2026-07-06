@@ -6264,10 +6264,31 @@ function summarizeLiveFollowRoutineDecision(input: {
 			why: operation.error?.message ?? `latest live-follow completion is ${operation.status}`,
 		};
 	}
-	if (operation?.status === "running" || operation?.status === "idle_waiting") {
+	if (operation?.status === "running") {
 		return {
 			...base,
 			state: "running",
+			nextPhase: nextEvidencePhase ?? operation.phase,
+			why: cycle?.decisionReason ?? statusPhaseDecision.reason,
+		};
+	}
+	if (operation?.status === "idle_waiting") {
+		const idleComplete =
+			(cycle?.currentPhase === "complete" || statusPhaseDecision.phase === null) &&
+			entry.mirrorCompleteness.state === "complete";
+		if (idleComplete) {
+			return {
+				...base,
+				state: "steady_follow",
+				nextPhase: operation.phase,
+				why:
+					cycle?.decisionReason ??
+					"live-follow metadata is current and waiting for the next cadence window",
+			};
+		}
+		return {
+			...base,
+			state: "delayed",
 			nextPhase: nextEvidencePhase ?? operation.phase,
 			why: cycle?.decisionReason ?? statusPhaseDecision.reason,
 		};

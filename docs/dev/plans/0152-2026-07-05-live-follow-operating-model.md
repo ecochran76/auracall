@@ -172,6 +172,41 @@ Validation:
 
 - `pnpm run smoke:scheduler-preemption`
 
+### 2026-07-06 | M7/M8 Installed Steady-Follow Cadence Readback
+
+- Installed dogfood on `chatgpt/wsl-chrome-3` proved bounded steady-follow
+  keep-current completion
+  `acctmirror_completion_b770b9eb-a232-4295-8d39-c10053dcf514` completed from
+  `2026-07-06T04:22:16.353Z` to `2026-07-06T04:22:31.698Z`.
+- The pass remained cheap and metadata-only: it examined three newest
+  conversation rows, selected zero rows for detail, scanned zero detail
+  surfaces, kept `mirrorCompleteness.state=complete`, reported
+  `llmServiceRequests=0`, `cdpMethodCalls=8`, `active.total=2`, and
+  `providerGuardCorrelation.state=none`.
+- After an installed API restart, completion status and `/status` preserved the
+  completed pass evidence and updated the target `lastProgressAt` to
+  `2026-07-06T04:22:31.698Z`.
+- Resuming the single existing live-follow completion
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` for
+  `chatgpt/wsl-chrome-3` did not restart rails or spend immediate provider
+  work. It reconciled to `idle_waiting` with
+  `mirrorCompleteness.state=complete`, zero remaining detail surfaces,
+  `nextAttemptAt=2026-07-06T04:50:42.986Z`, and the live-follow cycle decision
+  `complete`.
+- Target routine-decision readback now treats complete `idle_waiting`
+  live-follow operations as `steady_follow` cadence wait instead of reporting
+  them as actively `running`.
+
+Validation:
+
+- `auracall api mirror-complete --port 18095 --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_b770b9eb-a232-4295-8d39-c10053dcf514 --port 18095 --json`
+- `systemctl --user restart auracall-api.service`
+- post-restart `/status` readback for `chatgpt/wsl-chrome-3`
+- `auracall api mirror-completion-control acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae resume --port 18095 --json`
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "idle-waiting live-follow|effective live-follow wake|pending detail inventory"`
+- `pnpm exec tsc --noEmit --pretty false`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
@@ -442,6 +477,15 @@ Exit evidence:
 - any remaining backlog is classified as backfill, steady metadata,
   account-library catch-up, or materialization, with the next bounded action
   visible to operators.
+
+Current evidence:
+
+- Installed `chatgpt/wsl-chrome-3` has proved the steady-follow keep-current
+  side with zero detail rows selected, no LLM-service requests, no provider
+  guard correlation, and restart-visible status readback.
+- The full installed backfill-to-steady transition is still pending for an
+  initially incomplete subscribed ChatGPT account; broad live-follow resume
+  remains gated until that transition is proven without warning churn.
 
 ## Milestones
 

@@ -39756,3 +39756,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   starts an isolated API server with an injected execute-mode scheduler pass
   that yields to foreground work, verifies API/CLI status report target-level
   `operator_preempted`, and asserts completion/provider work stays at zero.
+- 2026-07-06: Continued Plan 0152 M7/M8 installed steady-follow proof.
+  Installed completion
+  `acctmirror_completion_b770b9eb-a232-4295-8d39-c10053dcf514` ran
+  `chatgpt/wsl-chrome-3` bounded `steady_follow` / `metadata_only` from
+  `2026-07-06T04:22:16.353Z` to `2026-07-06T04:22:31.698Z`, selected zero
+  detail rows, kept `mirrorCompleteness=complete`, used
+  `llmServiceRequests=0` and `cdpMethodCalls=8`, and had
+  `providerGuardCorrelation.state=none`. After API restart, resuming the single
+  existing live-follow operation
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` reconciled to
+  `idle_waiting` / complete with next cadence at
+  `2026-07-06T04:50:42.986Z`; status projection now reports complete
+  idle-waiting live-follow as `routineDecision.state=steady_follow` instead of
+  `running`.

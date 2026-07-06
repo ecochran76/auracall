@@ -5774,6 +5774,217 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("reports complete idle-waiting live-follow operations as steady-follow cadence wait", async () => {
+		const config = {
+			model: "gpt-5.2",
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: { email: "operator@example.com" },
+							liveFollow: { enabled: true },
+						},
+					},
+				},
+			},
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "operator@example.com",
+					metadataCounts: {
+						projects: 0,
+						conversations: 3,
+						artifacts: 2,
+						files: 1,
+						media: 0,
+					},
+					metadataEvidence: {
+						identitySource: "auth-session",
+						projectSampleIds: [],
+						conversationSampleIds: ["conv_current"],
+						conversationFreshnessFrontier: {
+							object: "account_mirror_conversation_freshness_frontier",
+							provider: "chatgpt",
+							sweepMode: "steady_follow",
+							threshold: 3,
+							rowsExamined: 3,
+							rowsSelectedForDetail: 0,
+							frontierReached: true,
+							firstStoppedRow: {
+								conversationId: "conv_current",
+								index: 2,
+								remoteMtime: "2026-04-30T11:00:00.000Z",
+							},
+							fallbackReason: null,
+							selectedConversationIds: [],
+							rowEvidence: [],
+						},
+						collectorProgress: {
+							provider: "chatgpt",
+							runtimeProfileId: "default",
+							sweepMode: "steady_follow",
+							phase: "complete",
+							event: "completed",
+							observedAt: "2026-04-30T11:59:00.000Z",
+							projectsObserved: 0,
+							conversationsObserved: 3,
+							artifactsObserved: 2,
+							filesObserved: 1,
+							attachmentCursor: null,
+						},
+						attachmentInventory: {
+							nextProjectIndex: 0,
+							nextConversationIndex: 0,
+							detailReadLimit: 4,
+							scannedProjects: 0,
+							scannedConversations: 0,
+							conversationDetail: null,
+							yielded: false,
+						},
+						assetInventory: {
+							state: "observed",
+							summary: "Asset inventory was observed for current provider surfaces.",
+							detailScannedThisPass: {
+								projects: 0,
+								conversations: 0,
+								total: 0,
+							},
+							localMaterialized: {
+								artifacts: 0,
+								files: 1,
+								media: 0,
+							},
+							remoteKnownMissingLocal: {
+								artifacts: 2,
+								files: 0,
+								media: 0,
+							},
+							unknownOrDeferred: {
+								artifacts: 0,
+								files: 0,
+								media: 0,
+							},
+						},
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: false,
+						},
+					},
+				},
+			},
+		});
+		const operation: AccountMirrorCompletionOperation = {
+			object: "account_mirror_completion",
+			id: "acctmirror_idle_steady_follow",
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			mode: "live_follow",
+			phase: "steady_follow",
+			status: "idle_waiting",
+			startedAt: "2026-04-30T11:50:00.000Z",
+			completedAt: null,
+			nextAttemptAt: "2026-04-30T12:30:00.000Z",
+			maxPasses: null,
+			passCount: 3,
+			lastRefresh: null,
+			mirrorCompleteness: completeAccountMirror,
+			liveFollowCycle: {
+				cycleId: "lfc_idle_steady_follow",
+				startedAt: "2026-04-30T11:50:00.000Z",
+				updatedAt: "2026-04-30T11:59:00.000Z",
+				currentPhase: "complete",
+				nextPhase: "complete",
+				decisionReason:
+					"all required live-follow phases are complete for the current evidence window",
+				passCount: 3,
+				phases: [
+					{
+						phase: "complete",
+						status: "complete",
+						reason: "all required live-follow phases are complete for the current evidence window",
+						updatedAt: "2026-04-30T11:59:00.000Z",
+						passCount: 3,
+					},
+				],
+			},
+			error: null,
+		};
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0 },
+			{
+				config,
+				accountMirrorStatusRegistry: registry,
+				accountMirrorCompletionService: {
+					start: vi.fn(() => operation),
+					read: vi.fn(() => operation),
+					list: vi.fn((request) =>
+						!request?.status || request.status === "active" ? [operation] : [],
+					),
+					control: vi.fn(() => operation),
+				},
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			const payload = (await response.json()) as {
+				liveFollow: {
+					targets: {
+						actual: {
+							active: number;
+							running: number;
+						};
+						accounts: Array<{
+							actualStatus: string | null;
+							activeCompletionId: string | null;
+							activeCompletionNextAttemptAt: string | null;
+							routineDecision: {
+								state: string;
+								nextPhase: string | null;
+								why: string | null;
+								eligibleAt: string | null;
+								cycle: {
+									currentPhase: string;
+									status: string | null;
+								} | null;
+							};
+						}>;
+					};
+				};
+			};
+			const account = payload.liveFollow.targets.accounts[0];
+			expect(payload.liveFollow.targets.actual).toMatchObject({
+				active: 1,
+				running: 0,
+			});
+			expect(account).toMatchObject({
+				actualStatus: "idle_waiting",
+				activeCompletionId: "acctmirror_idle_steady_follow",
+				activeCompletionNextAttemptAt: "2026-04-30T12:30:00.000Z",
+				routineDecision: {
+					state: "steady_follow",
+					nextPhase: "steady_follow",
+					why: "all required live-follow phases are complete for the current evidence window",
+					eligibleAt: "2026-04-30T12:30:00.000Z",
+					cycle: {
+						currentPhase: "complete",
+						status: "complete",
+					},
+				},
+			});
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("reports stale identity mismatch evidence on live-follow target accounts", async () => {
 		const config = {
 			model: "gpt-5.2",
