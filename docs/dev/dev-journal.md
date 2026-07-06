@@ -39475,3 +39475,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm exec tsc --noEmit --pretty false`,
   `pnpm exec biome check src/accountMirror/schedulerService.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20`,
   and `pnpm run plans:audit -- --keep 152`.
+- 2026-07-05: Continued Plan 0152 M1 account backfill ledger work. Added a
+  typed account-level `backfillLedger` to account-mirror status, derived it
+  from completed refresh cursor evidence, and persisted it through the existing
+  account-mirror status state so startup hydration can resume from account
+  backfill progress before a new completion operation starts. Focused
+  validation passed with
+  `pnpm vitest run tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts`,
+  `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on the touched
+  account-mirror files.

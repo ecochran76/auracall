@@ -18,6 +18,7 @@ import type {
 	Project,
 } from "../browser/providers/domain.js";
 import type { ResolvedUserConfig } from "../config.js";
+import { normalizeAccountMirrorBackfillLedger } from "./backfillLedger.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
 import type {
 	AccountMirrorMetadataCounts,
@@ -571,6 +572,7 @@ function normalizePersistentStatusState(state: AccountMirrorStatusState): Accoun
 			: null,
 		metadataCounts: state.metadataCounts ?? null,
 		metadataEvidence: state.metadataEvidence ?? null,
+		backfillLedger: normalizeAccountMirrorBackfillLedger(state.backfillLedger),
 	};
 }
 

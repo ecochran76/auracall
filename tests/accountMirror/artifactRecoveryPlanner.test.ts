@@ -1019,6 +1019,7 @@ function statusEntry(input: {
 				attachmentCursorPresent: false,
 			},
 		},
+		backfillLedger: null,
 		liveFollow: {
 			configured: true,
 			enabled: true,

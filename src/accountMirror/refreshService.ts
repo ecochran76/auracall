@@ -30,6 +30,7 @@ import {
 import type { Conversation, ConversationArtifact, FileRef } from "../browser/providers/domain.js";
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
 import type { ResolvedUserConfig } from "../config.js";
+import { deriveAccountMirrorBackfillLedger } from "./backfillLedger.js";
 import {
 	type AccountMirrorPersistence,
 	createAccountMirrorPersistence,
@@ -324,6 +325,7 @@ export function createAccountMirrorRefreshService(input: {
 						lastDispatcherBlockedBy: summarizeBrowserOperation(acquired.blockedBy),
 						metadataCounts: target.metadataCounts,
 						metadataEvidence: target.metadataEvidence,
+						backfillLedger: target.backfillLedger,
 					},
 				});
 				throw new AccountMirrorRefreshError(
@@ -480,6 +482,28 @@ export function createAccountMirrorRefreshService(input: {
 						metadataEvidence: collectionWithPriorManifests.evidence,
 					},
 				);
+				const preliminaryMirrorStatus = registry.readStatus({
+					provider,
+					runtimeProfileId,
+					explicitRefresh: true,
+				});
+				const refreshedBackfillLedger = deriveAccountMirrorBackfillLedger({
+					provider,
+					runtimeProfileId,
+					browserProfileId: target.browserProfileId,
+					boundIdentityKey:
+						target.expectedIdentityKey ?? collectionWithPriorManifests.detectedIdentityKey ?? "",
+					updatedAt: completedAt.toISOString(),
+					previous: target.backfillLedger,
+					evidence: collectionWithPriorManifests.evidence,
+					mirrorCompleteness: preliminaryMirrorStatus.entries[0]?.mirrorCompleteness ?? null,
+				});
+				registry.mergeState(
+					{ provider, runtimeProfileId },
+					{
+						backfillLedger: refreshedBackfillLedger,
+					},
+				);
 				await persistence.writeSnapshot({
 					provider,
 					runtimeProfileId,
@@ -534,6 +558,7 @@ export function createAccountMirrorRefreshService(input: {
 						providerHardStopAtMs: null,
 						metadataCounts: collectionWithPriorManifests.metadataCounts,
 						metadataEvidence: collectionWithPriorManifests.evidence,
+						backfillLedger: refreshedBackfillLedger,
 					},
 				});
 				const mirrorStatus = registry.readStatus({
@@ -723,6 +748,7 @@ export function createAccountMirrorRefreshService(input: {
 						providerGuard: providerGuard ?? providerCooldown?.providerGuard,
 						metadataCounts: target.metadataCounts,
 						metadataEvidence: failureMetadataEvidence,
+						backfillLedger: target.backfillLedger,
 					},
 				});
 				if (isIdentityMismatch) {
@@ -848,15 +874,9 @@ async function readCachedConversationFreshnessSummaries(input: {
 				conversationId: conversation.id,
 			};
 			const [contextEntry, conversationFiles, conversationAttachments] = await Promise.all([
-				input.persistence
-					.readConversationContextEntry?.(contextRequest)
-					.catch(() => null),
-				input.persistence
-					.readConversationFiles?.(contextRequest)
-					.catch(() => []),
-				input.persistence
-					.readConversationAttachments?.(contextRequest)
-					.catch(() => []),
+				input.persistence.readConversationContextEntry?.(contextRequest).catch(() => null),
+				input.persistence.readConversationFiles?.(contextRequest).catch(() => []),
+				input.persistence.readConversationAttachments?.(contextRequest).catch(() => []),
 			]);
 			const context = contextEntry?.context ?? null;
 			const freshnessItem = withProviderFreshnessObservedAt(
@@ -1026,7 +1046,8 @@ function mergeAssetEvidence(existing: unknown, incoming: unknown): unknown {
 	}
 	const existingMetadata = isRecord(existing.metadata) ? existing.metadata : {};
 	const incomingMetadata = isRecord(incoming.metadata) ? incoming.metadata : {};
-	const preferIncoming = hasLocalAssetEvidenceLike(incoming) && !hasLocalAssetEvidenceLike(existing);
+	const preferIncoming =
+		hasLocalAssetEvidenceLike(incoming) && !hasLocalAssetEvidenceLike(existing);
 	const primary = preferIncoming ? incoming : existing;
 	const secondary = preferIncoming ? existing : incoming;
 	return {

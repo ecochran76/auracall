@@ -1,4 +1,8 @@
 import { getCurrentRuntimeProfiles, getRuntimeProfileBrowserProfileId } from "../config/model.js";
+import {
+	type AccountMirrorBackfillLedger,
+	normalizeAccountMirrorBackfillLedger,
+} from "./backfillLedger.js";
 import type {
 	AccountMirrorCompletionMaterializationAssetKind,
 	AccountMirrorCompletionMaterializationPolicy,
@@ -6,13 +10,13 @@ import type {
 } from "./completionService.js";
 import type { ConversationFreshnessFrontierEvidence } from "./conversationFreshnessFrontier.js";
 import type {
-	AccountMirrorPolitenessDecision,
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
-	AccountMirrorProviderPolitenessPolicy,
+	AccountMirrorPolitenessDecision,
+	AccountMirrorProvider,
 	AccountMirrorProviderGuardKind,
 	AccountMirrorProviderGuardState,
-	AccountMirrorProvider,
+	AccountMirrorProviderPolitenessPolicy,
 } from "./politePolicy.js";
 import { evaluateAccountMirrorPoliteness } from "./politePolicy.js";
 import { createAccountMirrorBindingKey, createAccountMirrorTenantKey } from "./tenantBinding.js";
@@ -44,6 +48,7 @@ export type AccountMirrorStatusState = {
 	lastDispatcherBlockedBy?: Record<string, unknown> | null;
 	metadataCounts?: AccountMirrorMetadataCounts | null;
 	metadataEvidence?: AccountMirrorMetadataEvidence | null;
+	backfillLedger?: AccountMirrorBackfillLedger | null;
 };
 
 export type AccountMirrorIdentityMismatchRepair = {
@@ -267,6 +272,7 @@ export type AccountMirrorStatusEntry = {
 	metadataCounts: AccountMirrorMetadataCounts;
 	metadataEvidence: AccountMirrorMetadataEvidence | null;
 	mirrorCompleteness: AccountMirrorCompleteness;
+	backfillLedger: AccountMirrorBackfillLedger | null;
 	liveFollow: AccountMirrorLiveFollowDesiredState;
 	limits: AccountMirrorPolitenessDecision["limits"];
 };
@@ -522,6 +528,7 @@ function createStatusEntry(
 ): AccountMirrorStatusEntry {
 	const metadataCounts = normalizeMetadataCounts(state.metadataCounts);
 	const metadataEvidence = normalizeMetadataEvidence(state.metadataEvidence);
+	const backfillLedger = normalizeAccountMirrorBackfillLedger(state.backfillLedger);
 	return {
 		provider: target.provider,
 		tenantKey: createAccountMirrorTenantKey({
@@ -564,6 +571,7 @@ function createStatusEntry(
 		metadataCounts,
 		metadataEvidence,
 		mirrorCompleteness: deriveMirrorCompleteness(target.provider, metadataCounts, metadataEvidence),
+		backfillLedger,
 		liveFollow: {
 			...target.liveFollow,
 			...(target.liveFollow.state === "enabled" && !target.expectedIdentityKey

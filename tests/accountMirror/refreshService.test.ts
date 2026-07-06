@@ -180,6 +180,25 @@ describe("account mirror refresh service", () => {
 				blockedBy: null,
 			},
 		});
+		expect(persistence.writeState).toHaveBeenCalledWith(
+			expect.objectContaining({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				state: expect.objectContaining({
+					backfillLedger: expect.objectContaining({
+						object: "account_mirror_backfill_ledger",
+						state: "complete",
+						lastCompletedPhase: "detail-inventory",
+						nextEligiblePhase: "complete",
+						cursors: expect.objectContaining({
+							projects: expect.objectContaining({ status: "complete" }),
+							rootRail: expect.objectContaining({ status: "complete" }),
+							newestFirstDetail: expect.objectContaining({ status: "complete" }),
+						}),
+					}),
+				}),
+			}),
+		);
 		expect(metadataCollector.collect).toHaveBeenCalledWith({
 			provider: "chatgpt",
 			runtimeProfileId: "default",

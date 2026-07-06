@@ -12319,3 +12319,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Remaining scope:
   - full backfill ledger/cursor persistence and installed dogfood proof remain
     required before broad live-follow resume.
+
+## Turn 307 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - advance M1 by making backfill progress account-level and restart-visible,
+    not only tied to a live completion operation.
+- Result:
+  - added typed `account_mirror_backfill_ledger` status state/readback;
+  - completed refreshes now derive the ledger from existing cursor evidence and
+    persist it through the account-mirror status state file;
+  - startup/status hydration can read back project, root rail, project
+    conversation, detail, account-library, and materialization cursor slots
+    before the next live-follow cycle starts.
+- Remaining scope:
+  - account-library and materialization job producers still need to write their
+    terminal cursor outcomes into the ledger;
+  - installed dogfood proof is still required before broad live-follow resume.

@@ -18786,3 +18786,8 @@ browser-stage lifecycle observability, not transcript truncation.
   the least-recently selected eligible account before comparing remaining
   detail surfaces, and wire the scheduler service to the persisted pass ledger
   so a restart does not reset target rotation.
+- 2026-07-05: Live-follow backfill progress needs an account-level ledger, not
+  only per-operation cycle state. Persist a typed backfill ledger in the
+  account-mirror status state so refreshPersistentState can hydrate project,
+  rail, project-conversation, detail, account-library, and materialization
+  cursor slots across API restart before scheduler/completion selection runs.

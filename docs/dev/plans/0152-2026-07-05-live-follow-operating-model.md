@@ -134,6 +134,25 @@ Validation:
 - `pnpm exec biome check src/accountMirror/schedulerService.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20`
 - `pnpm run plans:audit -- --keep 152`
 
+### 2026-07-05 | M1 Account Backfill Ledger Foundation
+
+- Account mirror status now carries a typed per-account `backfillLedger`
+  alongside mirror completeness.
+- Completed refreshes derive and persist the ledger into the existing
+  account-mirror status state, so `refreshPersistentState()` hydrates backfill
+  progress across API restarts before a new completion operation starts.
+- The ledger preserves M1 cursor slots for project index, root rail, project
+  conversations, newest-first detail, account-library catchup, and
+  materialization/recovery. The current refresh path populates the evidence it
+  already owns and carries account-library/materialization cursor state forward
+  for the producers that own those jobs.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/backfillLedger.ts src/accountMirror/statusRegistry.ts src/accountMirror/cachePersistence.ts src/accountMirror/refreshService.ts tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts --max-diagnostics 30`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,
