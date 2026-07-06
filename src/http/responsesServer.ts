@@ -1142,12 +1142,18 @@ export async function createResponsesHttpServer(
 	let historyMaterializationService = deps.historyMaterializationService;
 	let searchProjectionService: SearchProjectionService;
 	let accountMirrorArtifactRecoveryPlanner: AccountMirrorArtifactRecoveryPlanner;
+	const accountMirrorSchedulerLedger =
+		deps.accountMirrorSchedulerLedger ??
+		createAccountMirrorSchedulerPassLedger({
+			config: configuredRuntimeConfig,
+		});
 	const accountMirrorSchedulerService =
 		deps.accountMirrorSchedulerService ??
 		createAccountMirrorSchedulerPassService({
 			registry: accountMirrorStatusRegistry,
 			refreshService: accountMirrorRefreshService,
 			now,
+			readHistory: () => accountMirrorSchedulerLedger.readHistory(),
 			shouldYieldToForegroundWork: () =>
 				hasForegroundAuraCallExecutionPressure()
 					? {
@@ -1156,11 +1162,6 @@ export async function createResponsesHttpServer(
 								"Foreground AuraCall API or service work is pending; live follow will retry later.",
 						}
 					: null,
-		});
-	const accountMirrorSchedulerLedger =
-		deps.accountMirrorSchedulerLedger ??
-		createAccountMirrorSchedulerPassLedger({
-			config: configuredRuntimeConfig,
 		});
 	const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
 		config: configuredRuntimeConfig,

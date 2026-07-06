@@ -126,6 +126,45 @@ function createProviderConfig() {
 	};
 }
 
+function createMultiChatgptConfig() {
+	return {
+		runtimeProfiles: {
+			default: {
+				browserProfile: "default",
+				defaultService: "chatgpt",
+				services: {
+					chatgpt: {
+						identity: {
+							email: "default@example.com",
+						},
+						liveFollow: {
+							enabled: true,
+							mode: "metadata-first",
+							priority: "background",
+						},
+					},
+				},
+			},
+			secondary: {
+				browserProfile: "secondary",
+				defaultService: "chatgpt",
+				services: {
+					chatgpt: {
+						identity: {
+							email: "secondary@example.com",
+						},
+						liveFollow: {
+							enabled: true,
+							mode: "metadata-first",
+							priority: "background",
+						},
+					},
+				},
+			},
+		},
+	};
+}
+
 describe("account mirror scheduler pass service", () => {
 	test("dry-run pass selects the first eligible live-follow target without refreshing", async () => {
 		const requestRefresh = vi.fn(async () => createRefreshResult());
@@ -356,6 +395,114 @@ describe("account mirror scheduler pass service", () => {
 			},
 			metrics: {
 				inProgressEligibleTargets: 1,
+			},
+		});
+	});
+
+	test("rotates same-priority live-follow targets using persisted scheduler history", async () => {
+		const requestRefresh = vi.fn(async (request) => ({
+			...createRefreshResult(),
+			runtimeProfileId: request.runtimeProfileId ?? "default",
+			browserProfileId: request.runtimeProfileId === "secondary" ? "secondary" : "default",
+		}));
+		const createInProgressState = (conversationCount: number) => ({
+			detectedIdentityKey: "operator@example.com",
+			metadataCounts: {
+				projects: 1,
+				conversations: conversationCount,
+				artifacts: 0,
+				files: 0,
+				media: 0,
+			},
+			metadataEvidence: {
+				identitySource: "profile-menu",
+				projectSampleIds: ["project_1"],
+				conversationSampleIds: ["conv_1"],
+				attachmentInventory: {
+					nextProjectIndex: 1,
+					nextConversationIndex: 1,
+					detailReadLimit: 6,
+					scannedProjects: 1,
+					scannedConversations: 1,
+				},
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: true,
+				},
+			},
+		});
+		const service = createAccountMirrorSchedulerPassService({
+			registry: createAccountMirrorStatusRegistry({
+				config: createMultiChatgptConfig(),
+				initialState: {
+					"chatgpt:default": createInProgressState(120),
+					"chatgpt:secondary": createInProgressState(2),
+				},
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			refreshService: {
+				requestRefresh,
+			},
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+			readHistory: async () => ({
+				object: "account_mirror_scheduler_pass_history",
+				version: 1,
+				updatedAt: "2026-04-29T11:59:01.000Z",
+				limit: 50,
+				entries: [
+					{
+						object: "account_mirror_scheduler_pass",
+						mode: "execute",
+						action: "refresh-completed",
+						startedAt: "2026-04-29T11:59:00.000Z",
+						completedAt: "2026-04-29T11:59:01.000Z",
+						selectedTarget: {
+							provider: "chatgpt",
+							runtimeProfileId: "default",
+							browserProfileId: "default",
+							status: "eligible",
+							reason: "eligible",
+							eligibleAt: "2026-04-29T11:59:00.000Z",
+							mirrorCompleteness: completeMirror,
+						},
+						backpressure: {
+							reason: "none",
+							message: null,
+						},
+						metrics: {
+							totalTargets: 2,
+							eligibleTargets: 2,
+							delayedTargets: 0,
+							blockedTargets: 0,
+							defaultChatgptEligibleTargets: 2,
+							defaultChatgptDelayedTargets: 0,
+							inProgressEligibleTargets: 2,
+						},
+						refresh: null,
+						error: null,
+					},
+				],
+			}),
+		});
+
+		const result = await service.runOnce({ dryRun: false });
+
+		expect(requestRefresh).toHaveBeenCalledWith(
+			expect.objectContaining({
+				provider: "chatgpt",
+				runtimeProfileId: "secondary",
+			}),
+		);
+		expect(result).toMatchObject({
+			action: "refresh-completed",
+			selectedTarget: {
+				provider: "chatgpt",
+				runtimeProfileId: "secondary",
+			},
+			metrics: {
+				liveFollowEligibleTargets: 2,
+				inProgressEligibleTargets: 2,
 			},
 		});
 	});

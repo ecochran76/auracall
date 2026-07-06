@@ -9,6 +9,7 @@ import {
 	type AccountMirrorRefreshResult,
 	type AccountMirrorRefreshService,
 } from "./refreshService.js";
+import type { AccountMirrorSchedulerPassHistory } from "./schedulerLedger.js";
 import type {
 	AccountMirrorCollectorPhase,
 	AccountMirrorStatusEntry,
@@ -92,6 +93,7 @@ export function createAccountMirrorSchedulerPassService(input: {
 	refreshService: AccountMirrorRefreshService;
 	now?: () => Date;
 	shouldYieldToForegroundWork?: () => AccountMirrorSchedulerBackpressure | null;
+	readHistory?: () => Promise<AccountMirrorSchedulerPassHistory>;
 }): AccountMirrorSchedulerPassService {
 	const now = input.now ?? (() => new Date());
 	return {
@@ -114,7 +116,8 @@ export function createAccountMirrorSchedulerPassService(input: {
 			const liveFollowDelayedTargets = delayedTargets.filter(
 				(entry) => entry.liveFollow.state === "enabled",
 			);
-			const selected = chooseSchedulerTarget(liveFollowEligibleTargets);
+			const history = (await input.readHistory?.().catch(() => null)) ?? null;
+			const selected = chooseSchedulerTarget(liveFollowEligibleTargets, history);
 			const metrics = {
 				totalTargets: status.metrics.total,
 				eligibleTargets: eligibleTargets.length,
@@ -286,16 +289,53 @@ function deriveErrorBackpressure(
 
 function chooseSchedulerTarget(
 	entries: AccountMirrorStatusEntry[],
+	history: AccountMirrorSchedulerPassHistory | null,
 ): AccountMirrorStatusEntry | null {
-	return [...entries].sort(compareSchedulerTargets)[0] ?? null;
+	const recentSelections = createRecentSelectionMap(history);
+	return [...entries].sort((a, b) => compareSchedulerTargets(a, b, recentSelections))[0] ?? null;
 }
 
-function compareSchedulerTargets(a: AccountMirrorStatusEntry, b: AccountMirrorStatusEntry): number {
+function compareSchedulerTargets(
+	a: AccountMirrorStatusEntry,
+	b: AccountMirrorStatusEntry,
+	recentSelections: Map<string, number>,
+): number {
 	const priorityDelta = completenessPriority(a) - completenessPriority(b);
 	if (priorityDelta !== 0) return priorityDelta;
+	const recentSelectionDelta =
+		recentSelectionPriority(a, recentSelections) - recentSelectionPriority(b, recentSelections);
+	if (recentSelectionDelta !== 0) return recentSelectionDelta;
 	const remainingDelta = remainingDetailSurfaces(b) - remainingDetailSurfaces(a);
 	if (remainingDelta !== 0) return remainingDelta;
 	return a.runtimeProfileId.localeCompare(b.runtimeProfileId);
+}
+
+function createRecentSelectionMap(
+	history: AccountMirrorSchedulerPassHistory | null,
+): Map<string, number> {
+	const selections = new Map<string, number>();
+	for (const pass of history?.entries ?? []) {
+		const selected = pass.selectedTarget ?? pass.refresh ?? null;
+		if (!selected) continue;
+		const completedAtMs = Date.parse(pass.completedAt);
+		if (!Number.isFinite(completedAtMs)) continue;
+		const key = schedulerTargetKey(selected.provider, selected.runtimeProfileId);
+		if (!selections.has(key)) {
+			selections.set(key, completedAtMs);
+		}
+	}
+	return selections;
+}
+
+function recentSelectionPriority(
+	entry: AccountMirrorStatusEntry,
+	recentSelections: Map<string, number>,
+): number {
+	return recentSelections.get(schedulerTargetKey(entry.provider, entry.runtimeProfileId)) ?? 0;
+}
+
+function schedulerTargetKey(provider: AccountMirrorProvider, runtimeProfileId: string): string {
+	return `${provider}:${runtimeProfileId}`;
 }
 
 function completenessPriority(entry: AccountMirrorStatusEntry): number {

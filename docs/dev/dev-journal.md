@@ -39466,3 +39466,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   and `pnpm run plans:audit -- --keep 152`. Direct Biome on
   `tests/http.responsesServer.test.ts` still reports pre-existing import
   ordering/non-null assertion lint debt.
+- 2026-07-05: Continued Plan 0152 M6 scheduler fairness. Scheduler target
+  selection now reads persisted scheduler pass history, rotates same-priority
+  live-follow accounts by least-recent selection before backlog size, and the
+  HTTP server wires the default scheduler pass service to persisted ledger
+  history so fairness survives restart. Focused validation passed with
+  `pnpm vitest run tests/accountMirror/schedulerService.test.ts`,
+  `pnpm exec tsc --noEmit --pretty false`,
+  `pnpm exec biome check src/accountMirror/schedulerService.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20`,
+  and `pnpm run plans:audit -- --keep 152`.

@@ -117,6 +117,23 @@ Validation:
 - `pnpm exec biome check src/accountMirror/schedulerService.ts src/accountMirror/liveFollowCycleDecision.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20`
 - `pnpm run plans:audit -- --keep 152`
 
+### 2026-07-05 | M6 Ledger-Backed Scheduler Fairness
+
+- Scheduler live-follow target selection now reads persisted scheduler pass
+  history before choosing the next eligible account.
+- Within the same completeness priority, the least-recently selected
+  live-follow target wins before backlog size, so one artifact-heavy account
+  cannot monopolize repeated scheduler cycles.
+- The HTTP server wires the default scheduler pass service to the persisted
+  scheduler ledger, so target fairness survives API restarts.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/schedulerService.test.ts`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/schedulerService.ts src/http/responsesServer.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 20`
+- `pnpm run plans:audit -- --keep 152`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

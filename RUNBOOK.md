@@ -12299,3 +12299,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next slice:
   - use the same policy boundary in operator status/readback so UI/API
     surfaces distinguish metadata current from materialization backlog.
+
+## Turn 306 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - advance M6 cadence/fairness so one artifact-heavy account cannot
+    monopolize repeated scheduler loops.
+- Result:
+  - account-mirror scheduler target selection now reads persisted scheduler
+    pass history;
+  - same-priority eligible targets rotate by least-recent selection before
+    backlog size;
+  - the HTTP server wires the default scheduler pass service to the persisted
+    scheduler ledger so fairness survives restart;
+  - regression coverage proves a recently selected large-backlog target yields
+    to a never-selected same-priority target.
+- Remaining scope:
+  - full backfill ledger/cursor persistence and installed dogfood proof remain
+    required before broad live-follow resume.

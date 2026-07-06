@@ -18781,3 +18781,8 @@ browser-stage lifecycle observability, not transcript truncation.
   readback. Otherwise the scheduler can accidentally preserve the old behavior
   of starting from identity/root rails even though the phase ledger and cached
   evidence know where to resume.
+- 2026-07-05: Live-follow scheduler fairness must use persisted pass history,
+  not only current backlog size. Within the same completeness priority, choose
+  the least-recently selected eligible account before comparing remaining
+  detail surfaces, and wire the scheduler service to the persisted pass ledger
+  so a restart does not reset target rotation.
