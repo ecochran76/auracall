@@ -613,6 +613,81 @@ describe("account mirror status registry", () => {
 		});
 	});
 
+	test("scopes remaining detail surfaces to the selected freshness frontier", () => {
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+		registry.mergeState(
+			{
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+			},
+			{
+				lastRefreshRequestId: "acctmirror_frontier_remaining",
+				lastSuccessAtMs: Date.parse("2026-04-29T11:58:02.000Z"),
+				detectedIdentityKey: "ecochran76@gmail.com",
+				metadataCounts: {
+					projects: 0,
+					conversations: 416,
+					artifacts: 109,
+					files: 126,
+					media: 0,
+				},
+				metadataEvidence: {
+					identitySource: "profile-menu",
+					projectSampleIds: [],
+					conversationSampleIds: ["conv_1"],
+					truncated: {
+						projects: false,
+						conversations: false,
+						artifacts: true,
+					},
+					conversationFreshnessFrontier: {
+						object: "account_mirror_conversation_freshness_frontier",
+						provider: "chatgpt",
+						sweepMode: "steady_follow",
+						threshold: 3,
+						rowsExamined: 30,
+						rowsSelectedForDetail: 30,
+						frontierReached: false,
+						firstStoppedRow: null,
+						fallbackReason: "missing_cached_summary",
+						selectedConversationIds: ["conv_1", "conv_2", "conv_3", "conv_4"],
+						rowEvidence: [],
+					},
+					attachmentInventory: {
+						nextProjectIndex: 0,
+						nextConversationIndex: 4,
+						detailReadLimit: 4,
+						scannedProjects: 0,
+						scannedConversations: 4,
+						conversationDetail: null,
+						yielded: false,
+					},
+				},
+			},
+		);
+
+		const status = registry.readStatus({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+		});
+
+		expect(status.entries[0]).toMatchObject({
+			mirrorCompleteness: {
+				state: "in_progress",
+				summary: "Attachment inventory has 26 detail surfaces remaining.",
+				remainingDetailSurfaces: {
+					projects: 0,
+					conversations: 26,
+					total: 26,
+				},
+			},
+		});
+	});
+
 	test("hydrates persisted mirror state without making status readback asynchronous", async () => {
 		const registry = createAccountMirrorStatusRegistry({
 			config,

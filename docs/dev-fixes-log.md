@@ -1,3 +1,13 @@
+- 2026-07-06: Remaining detail surfaces for steady-follow freshness-frontier
+  passes must be scoped to the selected frontier set, not the full account
+  conversation catalog. In installed Plan 0152 evidence,
+  `chatgpt/wsl-chrome-4` selected 30 detail rows and advanced the detail cursor
+  to index 4, but status reported 412 remaining by calculating `416 - 4`.
+  Use `conversationFreshnessFrontier.rowsSelectedForDetail` when a frontier is
+  present so the same evidence reports 26 remaining selected rows and the next
+  bounded pass can continue the owed detail queue without pretending the whole
+  account restarted.
+
 - 2026-07-06: Legacy paused live-follow completions can need one repair pass
   to rebuild selected-row frontier evidence before a requested
   `detail-inventory` continuation becomes cheap. Treat that first pass as

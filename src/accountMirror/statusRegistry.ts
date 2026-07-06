@@ -1057,7 +1057,7 @@ function deriveMirrorCompleteness(
 			state: "unknown",
 			summary: assetInventory.summary,
 			assetInventory,
-			remainingDetailSurfaces: deriveRemainingDetailSurfaces(counts, cursor),
+			remainingDetailSurfaces: deriveRemainingDetailSurfaces(counts, evidence, cursor),
 			signals,
 		};
 	}
@@ -1088,25 +1088,34 @@ function deriveMirrorCompleteness(
 			signals,
 		};
 	}
+	const remainingDetailSurfaces = deriveRemainingDetailSurfaces(counts, evidence, cursor);
 	return {
 		state: "in_progress",
 		summary:
-			(deriveRemainingDetailSurfaces(counts, cursor)?.total ?? 0) > 0
-				? `Attachment inventory has ${deriveRemainingDetailSurfaces(counts, cursor)?.total ?? 0} detail surfaces remaining.`
+			(remainingDetailSurfaces?.total ?? 0) > 0
+				? `Attachment inventory has ${remainingDetailSurfaces?.total ?? 0} detail surfaces remaining.`
 				: "Mirror metadata is still marked truncated; another refresh should verify completion.",
 		assetInventory,
-		remainingDetailSurfaces: deriveRemainingDetailSurfaces(counts, cursor),
+		remainingDetailSurfaces,
 		signals,
 	};
 }
 
 function deriveRemainingDetailSurfaces(
 	counts: AccountMirrorMetadataCounts,
+	evidence: AccountMirrorMetadataEvidence,
 	cursor: AccountMirrorMetadataEvidence["attachmentInventory"] | null,
 ): AccountMirrorCompleteness["remainingDetailSurfaces"] {
 	if (!cursor) return null;
-	const remainingProjects = Math.max(0, counts.projects - cursor.nextProjectIndex);
-	const remainingConversations = Math.max(0, counts.conversations - cursor.nextConversationIndex);
+	const frontierRowsSelected = evidence.conversationFreshnessFrontier
+		? Math.max(0, Math.floor(evidence.conversationFreshnessFrontier.rowsSelectedForDetail))
+		: null;
+	const remainingProjects =
+		frontierRowsSelected !== null ? 0 : Math.max(0, counts.projects - cursor.nextProjectIndex);
+	const remainingConversations = Math.max(
+		0,
+		(frontierRowsSelected ?? counts.conversations) - cursor.nextConversationIndex,
+	);
 	return {
 		projects: remainingProjects,
 		conversations: remainingConversations,

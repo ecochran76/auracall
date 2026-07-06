@@ -12862,3 +12862,39 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - ChatGPT WSL targets are metadata-current enough for bounded cadence
     observation, but legacy paused/non-ChatGPT targets remain outside this
     resume proof.
+
+## Turn 315 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - diagnose the installed natural-cycle behavior after `wsl-chrome-4`
+    resumed its own live-follow cadence.
+- Result:
+  - installed `chatgpt/wsl-chrome-4` completion
+    `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` naturally ran
+    pass `3` from `2026-07-06T07:26:59.411Z` to
+    `2026-07-06T07:28:18.289Z`;
+  - the pass correctly stayed on `requestedPhase=detail-inventory`, skipped
+    root/project replay, used active provider interactions `5/6`, reported
+    `llmServiceRequests=0`, `cdpMethodCalls=9`, and had no provider-guard
+    correlation;
+  - the pass exposed a status-accounting bug: the freshness frontier selected
+    `30` rows and advanced the selected detail cursor to `4`, but status
+    reported `412` remaining surfaces by subtracting from the full `416`
+    conversation catalog instead of the selected frontier set;
+  - remaining-detail accounting now scopes to
+    `conversationFreshnessFrontier.rowsSelectedForDetail`, so installed
+    readback after reinstall/restart reports `remaining.detailSurfaces=26`;
+  - Plan 0152 remains open because `wsl-chrome-4` still has 26 selected detail
+    surfaces to drain across bounded cycles, due next at
+    `2026-07-06T07:56:47.237Z`.
+- Validation:
+  - focused status-registry regression test passed;
+  - focused completion/collector/status tests passed;
+  - TypeScript passed;
+  - scoped Biome passed;
+  - installed runtime rebuild/restart left PID `86558` active with
+    `NRestarts=0`;
+  - installed `/status` readback at `2026-07-06T07:35:37Z` proved the corrected
+    `26` remaining detail surfaces.

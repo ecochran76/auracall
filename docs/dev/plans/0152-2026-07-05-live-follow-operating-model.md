@@ -480,6 +480,42 @@ Validation:
 - installed `/status` readback on PID `5943`
 - installed natural cadence `/status` readback at `2026-07-06T07:11:15Z`
 
+### 2026-07-06 | M2/M8 Frontier-Scoped Remaining Detail Readback
+
+- Passive observation of the installed scheduler showed
+  `chatgpt/wsl-chrome-4` naturally woke the existing live-follow completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` for pass `3`
+  at `2026-07-06T07:26:59.411Z`.
+- The pass preserved the desired provider-polite scrape shape:
+  `requestedPhase=detail-inventory`, `projects=0`, `conversations=25`,
+  `detailReadLimit=4`, `classification=passive_dominant`,
+  `providerInteractions.used=5` of budget `6`, `llmServiceRequests=0`,
+  `cdpMethodCalls=9`, and `providerGuardCorrelation.state=none`.
+- The pass exposed a remaining status-accounting bug. The freshness frontier
+  selected `30` conversation rows and the detail cursor advanced to
+  `nextConversationIndex=4`, but remaining detail was calculated against the
+  full account catalog (`416 - 4 = 412`) instead of the selected frontier
+  detail set (`30 - 4 = 26`).
+- Remaining detail readback now scopes the cursor to
+  `conversationFreshnessFrontier.rowsSelectedForDetail` when a frontier exists.
+  After reinstall/restart, installed `/status` on PID `86558` reports
+  `chatgpt/wsl-chrome-4` with `remaining.detailSurfaces=26`,
+  `nextPhase=detail-inventory`, `nextAttemptAt=2026-07-06T07:56:47.237Z`,
+  no provider guard, and the same passive-dominant scrape budget.
+- This keeps Plan 0152 open: the routine no longer exaggerates the backlog, but
+  `chatgpt/wsl-chrome-4` still has 26 selected detail surfaces to drain across
+  bounded cycles.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/statusRegistry.test.ts --testNamePattern "freshness frontier|dispatcher and metadata state|hydrates persisted mirror"`
+- `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "requested detail-inventory|persisted selected-row cursor|idle-waiting live-follow|newer account evidence"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/statusRegistry.ts tests/accountMirror/statusRegistry.test.ts --max-diagnostics 30`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- installed `/status` readback at `2026-07-06T07:35:37Z`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive

@@ -1,3 +1,27 @@
+## 2026-07-06 | Plan 0152 Frontier-Scoped Remaining Detail Readback
+
+- Focus: diagnose the natural `wsl-chrome-4` live-follow cadence after the
+  previous ChatGPT steady-follow resume proof.
+- Result:
+  - installed `chatgpt/wsl-chrome-4` naturally ran pass `3` of
+    `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` from
+    `2026-07-06T07:26:59.411Z` to `2026-07-06T07:28:18.289Z`;
+  - the pass stayed on `requestedPhase=detail-inventory`, used active provider
+    interactions `5/6`, reported `llmServiceRequests=0`, `cdpMethodCalls=9`,
+    and had no provider guard;
+  - status incorrectly reported `412` remaining detail surfaces because it
+    subtracted the selected detail cursor from the full `416` conversation
+    catalog instead of the freshness frontier's `30` selected rows;
+  - remaining-detail readback now scopes to
+    `conversationFreshnessFrontier.rowsSelectedForDetail`, and installed
+    `/status` after reinstall/restart reports `26` remaining detail surfaces.
+- Validation:
+  - focused status-registry regression test;
+  - focused completion/collector/status tests;
+  - TypeScript;
+  - scoped Biome;
+  - installed runtime rebuild/restart plus `/status` proof on PID `86558`.
+
 ## 2026-07-06 | Plan 0152 Controlled Live-Follow Cycle Proof
 
 - Focus: prove installed live-follow can continue bounded cycles without
