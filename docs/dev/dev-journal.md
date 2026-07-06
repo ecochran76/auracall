@@ -1,3 +1,27 @@
+## 2026-07-06 | Plan 0152 Cadence-Preserved Detail Drain Pass
+
+- Focus: verify whether the pending `chatgpt/wsl-chrome-4` live-follow
+  `run-one-pass` marker would advance naturally at cadence instead of needing
+  repeated operator pokes.
+- Result:
+  - restored the local exploratory test edit so source matches the pushed
+    cadence-preserving behavior;
+  - focused completion-service tests still pass for forced pass controls and
+    hydration cases;
+  - after a quiet window, installed completion
+    `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` ran pass `5`
+    from `2026-07-06T08:27:43.235Z` to `2026-07-06T08:29:03.514Z`;
+  - the pass stayed on `requestedPhase=detail-inventory`, advanced
+    `nextConversationIndex` from `8` to `12`, and `/status` reduced remaining
+    selected detail surfaces from `22` to `18`;
+  - scrape telemetry stayed `passive_dominant`, active provider interactions
+    `5/6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, with no provider guard.
+- Validation:
+  - focused completion-service Vitest pattern;
+  - installed completion-status readback;
+  - installed `/status` target readback at `2026-07-06T08:30:25Z`;
+  - persisted completion JSON cursor readback.
+
 ## 2026-07-06 | Plan 0152 Completion-Status Hydration And Deferred Cycle Advance
 
 - Focus: continue the installed `chatgpt/wsl-chrome-4` live-follow completion

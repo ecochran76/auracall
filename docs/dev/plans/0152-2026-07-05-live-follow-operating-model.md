@@ -561,6 +561,43 @@ Validation:
 - installed `auracall api mirror-completion-status acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63 --port 18095 --json`
 - installed `/status` readback at `2026-07-06T08:00:21Z`
 
+### 2026-07-06 | M2/M8 Cadence-Preserved Detail Drain Pass
+
+- The existing installed `chatgpt/wsl-chrome-4` live-follow completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` preserved its
+  cadence gate after operator `run-one-pass`; the forced marker remained
+  pending until `nextAttemptAt=2026-07-06T08:27:43.215Z` instead of bypassing
+  the minimum interval.
+- With no repeated status polling during the cadence window, pass `5` started
+  at `2026-07-06T08:27:43.235Z`, completed at
+  `2026-07-06T08:29:03.514Z`, cleared `forceRunUntilPassCount`, and scheduled
+  the next attempt for `2026-07-06T08:57:33.300Z`.
+- The pass continued the owed `detail-inventory` phase and advanced the
+  selected detail cursor from `nextConversationIndex=8` to `12`; `/status`
+  reported remaining selected detail surfaces reduced from `22` to `18`.
+- The cycle did not restart at identity/root/project rails:
+  `rootRailReads=0`, `projectIndexReads=0`,
+  `projectConversationReads=0`, and lifecycle readback recorded
+  `detail-inventory:started projects=0 conversations=25` followed by
+  `detail-inventory:completed projects=0 conversations=25 artifacts=0 files=3`.
+- The scrape shape stayed within the live-follow target: `classification` was
+  `passive_dominant`, passive total `6`, provider interactions `5/6`,
+  `llmServiceRequests=0`, `cdpMethodCalls=9`, and provider guard correlation
+  stayed `none`.
+- This keeps Plan 0152 open: the installed routine is now proving bounded
+  cursor-drain cycles, but `chatgpt/wsl-chrome-4` still has `18` selected
+  detail surfaces plus the wider subscribed-account posture to resolve before
+  broad resume.
+
+Validation:
+
+- quiet-window observation from `2026-07-06T08:22:59Z` through the scheduled
+  cadence window
+- `auracall api mirror-completion-status acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63 --port 18095 --json`
+- installed `/status` live-follow target readback at `2026-07-06T08:30:25Z`
+- persisted completion JSON cursor readback under
+  `~/.auracall/cache/account-mirror/completions/`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive

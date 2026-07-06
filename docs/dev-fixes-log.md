@@ -1,3 +1,14 @@
+- 2026-07-06: `run-one-pass` for live-follow is a bounded force marker, not a
+  provider-safety bypass. If a forced pass remains pending while
+  `nextAttemptAt` or foreground/background drain pressure is active, first
+  observe the safe cadence window before treating it as a wake bug. Installed
+  Plan 0152 proof on `chatgpt/wsl-chrome-4` kept
+  `forceRunUntilPassCount=5` until `nextAttemptAt=2026-07-06T08:27:43.215Z`,
+  then ran pass 5 from `08:27:43.235Z` to `08:29:03.514Z`, advanced the
+  selected detail cursor from `8` to `12`, reduced remaining selected detail
+  surfaces from `22` to `18`, and preserved `llmServiceRequests=0` with no
+  provider guard.
+
 - 2026-07-06: Completion-status readback must hydrate current account status
   registry evidence before returning active live-follow operation snapshots.
   A persisted completion can carry stale `mirrorCompleteness` math after the

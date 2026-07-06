@@ -12937,3 +12937,44 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - Plan 0152 remains open until `chatgpt/wsl-chrome-4` drains the remaining
     22 selected detail surfaces and broader subscribed-account scope is
     explicitly resolved.
+
+## Turn 317 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - verify whether the pending `chatgpt/wsl-chrome-4` live-follow force marker
+    would complete a full bounded cycle at the safe cadence without restarting
+    from the same scrape phase.
+- Result:
+  - restored the exploratory local completion-service test change so the
+    source tree matches the cadence-preserving behavior from the pushed
+    runtime work;
+  - focused completion-service regression coverage passed after the revert;
+  - after a quiet window with no repeated API polling, installed completion
+    `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` ran pass `5`
+    from `2026-07-06T08:27:43.235Z` to
+    `2026-07-06T08:29:03.514Z`;
+  - the pass stayed on `requestedPhase=detail-inventory`, cleared
+    `forceRunUntilPassCount`, scheduled
+    `nextAttemptAt=2026-07-06T08:57:33.300Z`, and advanced the selected detail
+    cursor from `nextConversationIndex=8` to `12`;
+  - `/status` reported `routineDecision.nextPhase=detail-inventory`,
+    `state=delayed`, and remaining selected detail surfaces reduced from `22`
+    to `18`, so the cycle continued its owed work instead of restarting at
+    conversation rails;
+  - scrape telemetry stayed `classification=passive_dominant`, passive total
+    `6`, active provider interactions `5/6`, `llmServiceRequests=0`,
+    `cdpMethodCalls=9`, and `providerGuardCorrelation.state=none`.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts --testNamePattern "forces one live-follow pass|hydrates completion status|hydrates active cooldown|live follow wakes from cooldown|rechecks persisted cooldowns"`
+  - quiet-window observation through the installed cadence timestamp;
+  - installed `mirror-completion-status` readback for
+    `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63`;
+  - installed `/status` live-follow target readback at
+    `2026-07-06T08:30:25Z`;
+  - persisted completion JSON cursor readback under `~/.auracall/cache/`.
+- Remaining scope:
+  - Plan 0152 remains open until `chatgpt/wsl-chrome-4` drains the remaining
+    18 selected detail surfaces and the non-current subscribed-account posture
+    is resolved explicitly.
