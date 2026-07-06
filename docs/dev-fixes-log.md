@@ -18791,3 +18791,8 @@ browser-stage lifecycle observability, not transcript truncation.
   account-mirror status state so refreshPersistentState can hydrate project,
   rail, project-conversation, detail, account-library, and materialization
   cursor slots across API restart before scheduler/completion selection runs.
+- 2026-07-05: Account-level backfill ledgers must be producer-owned after
+  refresh. Account-library and materialization jobs can queue, reuse, skip, or
+  finish outside the refresh completion path, so those producers need to write
+  their own cursor outcomes through account-mirror status persistence instead
+  of relying on a later refresh to infer the phase state.

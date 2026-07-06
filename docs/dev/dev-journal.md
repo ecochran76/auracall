@@ -39484,3 +39484,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm vitest run tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts`,
   `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on the touched
   account-mirror files.
+- 2026-07-05: Continued Plan 0152 M1 producer-owned backfill cursor work. Added
+  a status-registry write-through hook and wired account-library and
+  materialization job producers to persist their queue/reuse/skip/terminal
+  cursor outcomes into the account-level `backfillLedger`, so restart-visible
+  status no longer depends only on a live completion operation for those
+  phases. Focused validation passed with
+  `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts`,
+  `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on the touched
+  account-mirror files.

@@ -53,6 +53,59 @@ export interface AccountMirrorBackfillLedger {
 	};
 }
 
+export function updateAccountMirrorBackfillLedgerCursors(
+	value: AccountMirrorBackfillLedger | null | undefined,
+	input: {
+		provider: AccountMirrorProvider;
+		runtimeProfileId: string;
+		browserProfileId: string | null;
+		boundIdentityKey: string | null;
+		updatedAt: string;
+		accountLibrary?: AccountMirrorBackfillCursor | null;
+		materialization?: AccountMirrorBackfillCursor | null;
+	},
+): AccountMirrorBackfillLedger {
+	const previous = normalizeAccountMirrorBackfillLedger(value);
+	const cursors = {
+		projects:
+			previous?.cursors.projects ?? unknownCursor("No project evidence has been collected."),
+		rootRail:
+			previous?.cursors.rootRail ??
+			unknownCursor("No root conversation evidence has been collected."),
+		projectConversations:
+			previous?.cursors.projectConversations ??
+			unknownCursor("No project conversation evidence has been collected."),
+		newestFirstDetail:
+			previous?.cursors.newestFirstDetail ??
+			({
+				...unknownCursor("No detail inventory evidence has been collected."),
+				conversationDetail: null,
+			} satisfies AccountMirrorBackfillDetailCursor),
+		accountLibrary:
+			input.accountLibrary ??
+			previous?.cursors.accountLibrary ??
+			skippedCursor("No account-library cursor recorded yet."),
+		materialization:
+			input.materialization ??
+			previous?.cursors.materialization ??
+			skippedCursor("No materialization cursor recorded yet."),
+	};
+	const nextEligiblePhase = chooseNextEligiblePhase(cursors, true);
+	return {
+		object: "account_mirror_backfill_ledger",
+		version: 1,
+		provider: input.provider,
+		runtimeProfileId: input.runtimeProfileId,
+		browserProfileId: input.browserProfileId,
+		boundIdentityKey: input.boundIdentityKey,
+		updatedAt: input.updatedAt,
+		state: nextEligiblePhase === "complete" ? "complete" : "in_progress",
+		lastCompletedPhase: chooseLastCompletedPhase(cursors),
+		nextEligiblePhase,
+		cursors,
+	};
+}
+
 export function deriveAccountMirrorBackfillLedger(input: {
 	provider: AccountMirrorProvider;
 	runtimeProfileId: string;
@@ -85,7 +138,7 @@ export function deriveAccountMirrorBackfillLedger(input: {
 		accountLibrary,
 		materialization,
 	};
-	const nextEligiblePhase = chooseNextEligiblePhase(cursors, evidence);
+	const nextEligiblePhase = chooseNextEligiblePhase(cursors, evidence !== null);
 	const lastCompletedPhase = chooseLastCompletedPhase(cursors);
 	return {
 		object: "account_mirror_backfill_ledger",
@@ -243,9 +296,9 @@ function deriveNewestFirstDetailCursor(input: {
 
 function chooseNextEligiblePhase(
 	cursors: AccountMirrorBackfillLedger["cursors"],
-	evidence: AccountMirrorMetadataEvidence | null,
+	hasEvidence: boolean,
 ): AccountMirrorBackfillPhase {
-	if (!evidence) return "identity";
+	if (!hasEvidence) return "identity";
 	if (cursors.projects.status === "pending") return "projects";
 	if (cursors.rootRail.status === "pending") return "root-conversations";
 	if (cursors.projectConversations.status === "pending") return "project-conversations";

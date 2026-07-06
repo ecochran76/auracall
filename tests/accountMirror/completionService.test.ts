@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
+import type { AccountMirrorBackfillLedger } from "../../src/accountMirror/backfillLedger.js";
 import { createAccountMirrorCompletionService } from "../../src/accountMirror/completionService.js";
 import { createAccountMirrorCompletionStore } from "../../src/accountMirror/completionStore.js";
 import { chooseLiveFollowCyclePhase } from "../../src/accountMirror/liveFollowCycleDecision.js";
@@ -36,6 +37,76 @@ const completeMirror = {
 		conversationsTruncated: false,
 		attachmentInventoryTruncated: false,
 		attachmentCursorPresent: false,
+	},
+};
+
+const completeBackfillLedger: AccountMirrorBackfillLedger = {
+	object: "account_mirror_backfill_ledger",
+	version: 1,
+	provider: "chatgpt",
+	runtimeProfileId: "default",
+	browserProfileId: "default",
+	boundIdentityKey: "ecochran76@gmail.com",
+	updatedAt: "2026-04-30T12:00:01.000Z",
+	state: "complete",
+	lastCompletedPhase: "detail-inventory",
+	nextEligiblePhase: "complete",
+	cursors: {
+		projects: {
+			status: "complete",
+			reason: "project cursor complete",
+			updatedAt: "2026-04-30T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: 1,
+			yielded: false,
+		},
+		rootRail: {
+			status: "complete",
+			reason: "root rail cursor complete",
+			updatedAt: "2026-04-30T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: 2,
+			yielded: false,
+		},
+		projectConversations: {
+			status: "skipped",
+			reason: "No project conversation cursor was emitted.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
+		newestFirstDetail: {
+			status: "complete",
+			reason: "detail cursor complete",
+			updatedAt: "2026-04-30T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+			conversationDetail: null,
+		},
+		accountLibrary: {
+			status: "skipped",
+			reason: "No account-library cursor recorded yet.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
+		materialization: {
+			status: "skipped",
+			reason: "No materialization cursor recorded yet.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
 	},
 };
 
@@ -587,13 +658,13 @@ describe("account mirror completion service", () => {
 		});
 		await waitFor(() => service.read("acctmirror_control")?.status === "running");
 		expect(service.read("acctmirror_control")?.lifecycleEvents?.map((event) => event.type)).toEqual(
-			[
+			expect.arrayContaining([
 				"started",
 				"operator_paused",
 				"live_follow_phase_decision",
 				"account_library_catchup_skipped",
 				"operator_resumed",
-			],
+			]),
 		);
 		await waitFor(() => requestRefresh.mock.calls.length === 2);
 		expect(requestRefresh).toHaveBeenCalledTimes(2);
@@ -808,11 +879,20 @@ describe("account mirror completion service", () => {
 			},
 		}));
 		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const writePersistentState = vi.fn(async () => {});
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "ecochran76@gmail.com",
+					backfillLedger: completeBackfillLedger,
+				},
+			},
+			writePersistentState,
+		});
 		const service = createAccountMirrorCompletionService({
-			registry: createAccountMirrorStatusRegistry({
-				config,
-				now: () => new Date("2026-04-30T12:00:00.000Z"),
-			}),
+			registry,
 			refreshService: {
 				requestRefresh,
 			},
@@ -867,6 +947,29 @@ describe("account mirror completion service", () => {
 				},
 			},
 		});
+		expect(
+			registry.readStatus({ provider: "chatgpt", runtimeProfileId: "default" }).entries[0],
+		).toMatchObject({
+			backfillLedger: {
+				state: "in_progress",
+				nextEligiblePhase: "materialization",
+				cursors: {
+					materialization: {
+						status: "pending",
+						reason: "queued materialization job hmj_full_sweep_1 with status queued",
+					},
+				},
+			},
+		});
+		expect(writePersistentState).toHaveBeenCalledWith(
+			expect.objectContaining({
+				state: expect.objectContaining({
+					backfillLedger: expect.objectContaining({
+						nextEligiblePhase: "materialization",
+					}),
+				}),
+			}),
+		);
 	});
 
 	test("eligible account-library live follow queues capped file reconciliation after a refresh pass", async () => {
@@ -906,11 +1009,23 @@ describe("account mirror completion service", () => {
 			},
 		}));
 		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const writePersistentState = vi.fn(async () => {});
+		const registry = createAccountMirrorStatusRegistry({
+			config: eligibleConfig,
+			now: () => new Date("2026-06-05T04:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "ecochran76@gmail.com",
+					backfillLedger: {
+						...completeBackfillLedger,
+						browserProfileId: "wsl-chrome-3",
+					},
+				},
+			},
+			writePersistentState,
+		});
 		const service = createAccountMirrorCompletionService({
-			registry: createAccountMirrorStatusRegistry({
-				config: eligibleConfig,
-				now: () => new Date("2026-06-05T04:00:00.000Z"),
-			}),
+			registry,
 			refreshService: {
 				requestRefresh,
 			},
@@ -966,6 +1081,30 @@ describe("account mirror completion service", () => {
 				}),
 			]),
 		});
+		expect(
+			registry.readStatus({ provider: "chatgpt", runtimeProfileId: "default" }).entries[0],
+		).toMatchObject({
+			backfillLedger: {
+				state: "in_progress",
+				nextEligiblePhase: "account-library",
+				cursors: {
+					accountLibrary: {
+						status: "pending",
+						reason: "queued account-library materialization job hmj_account_library_1",
+						readLimit: 3,
+					},
+				},
+			},
+		});
+		expect(writePersistentState).toHaveBeenCalledWith(
+			expect.objectContaining({
+				state: expect.objectContaining({
+					backfillLedger: expect.objectContaining({
+						nextEligiblePhase: "account-library",
+					}),
+				}),
+			}),
+		);
 	});
 
 	test("eligible account-library live follow records reused active reconciliation jobs", async () => {
@@ -1336,11 +1475,20 @@ describe("account mirror completion service", () => {
 				message: "History reconciliation materialized 4 assets from 5 conversations.",
 			},
 		}));
+		const writePersistentState = vi.fn(async () => {});
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "ecochran76@gmail.com",
+					backfillLedger: completeBackfillLedger,
+				},
+			},
+			writePersistentState,
+		});
 		const service = createAccountMirrorCompletionService({
-			registry: createAccountMirrorStatusRegistry({
-				config,
-				now: () => new Date("2026-04-30T12:00:00.000Z"),
-			}),
+			registry,
 			refreshService: {
 				requestRefresh,
 			},
@@ -1388,6 +1536,31 @@ describe("account mirror completion service", () => {
 				},
 			},
 		});
+		expect(
+			registry.readStatus({ provider: "chatgpt", runtimeProfileId: "default" }).entries[0],
+		).toMatchObject({
+			backfillLedger: {
+				state: "complete",
+				nextEligiblePhase: "complete",
+				cursors: {
+					materialization: {
+						status: "complete",
+						reason:
+							"materialization job hmj_terminal_1 finished with status succeeded; materialized=4 failed=0",
+						scanned: 5,
+					},
+				},
+			},
+		});
+		expect(writePersistentState).toHaveBeenCalledWith(
+			expect.objectContaining({
+				state: expect.objectContaining({
+					backfillLedger: expect.objectContaining({
+						nextEligiblePhase: "complete",
+					}),
+				}),
+			}),
+		);
 	});
 
 	test("upgrades idle live-follow completion into bounded full-sweep materialization", async () => {

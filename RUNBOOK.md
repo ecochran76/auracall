@@ -12338,3 +12338,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - account-library and materialization job producers still need to write their
     terminal cursor outcomes into the ledger;
   - installed dogfood proof is still required before broad live-follow resume.
+
+## Turn 308 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - finish the M1 producer side by making account-library and materialization
+    jobs write account-level backfill cursor outcomes, not only per-operation
+    state.
+- Result:
+  - account-mirror status registry can write through explicit status state
+    updates to the persisted cache;
+  - completion service persists account-library queue/reuse/skip cursors and
+    materialization queue/reuse/terminal cursors into `backfillLedger`;
+  - restart-visible status can now report account-library and materialization
+    cursor outcomes as pending, complete, or skipped.
+- Remaining scope:
+  - scheduler/status decision logic should consume `backfillLedger` directly
+    for next-phase selection;
+  - installed dogfood proof is still required before broad live-follow resume.

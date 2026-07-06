@@ -153,6 +153,24 @@ Validation:
 - `pnpm exec tsc --noEmit --pretty false`
 - `pnpm exec biome check src/accountMirror/backfillLedger.ts src/accountMirror/statusRegistry.ts src/accountMirror/cachePersistence.ts src/accountMirror/refreshService.ts tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/artifactRecoveryPlanner.test.ts --max-diagnostics 30`
 
+### 2026-07-05 | M1 Producer-Owned Backfill Cursor Updates
+
+- The account-mirror status registry now exposes an optional write-through hook
+  for persisted status state updates that originate outside refresh
+  completion.
+- Account-library and materialization producers update the account-level
+  `backfillLedger` when they queue, reuse, skip, or hydrate terminal job
+  outcomes.
+- Status hydration can now show producer-owned account-library and
+  materialization cursor outcomes as pending, complete, or skipped across API
+  restart, instead of relying only on the active completion operation.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/backfillLedger.ts src/accountMirror/statusRegistry.ts src/accountMirror/completionService.ts src/http/responsesServer.ts tests/accountMirror/completionService.test.ts tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts --max-diagnostics 40`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

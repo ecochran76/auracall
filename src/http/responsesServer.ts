@@ -1108,6 +1108,7 @@ export async function createResponsesHttpServer(
 			config: configuredRuntimeConfig,
 			now,
 			readPersistentState: accountMirrorPersistence.readState,
+			writePersistentState: accountMirrorPersistence.writeState?.bind(accountMirrorPersistence),
 		});
 	const accountMirrorRefreshService =
 		deps.accountMirrorRefreshService ??

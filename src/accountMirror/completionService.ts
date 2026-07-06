@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+	type AccountMirrorBackfillCursor,
+	updateAccountMirrorBackfillLedgerCursors,
+} from "./backfillLedger.js";
 import type { AccountMirrorCompletionStore } from "./completionStore.js";
 import {
 	type AccountMirrorLiveFollowCycleLedger,
@@ -775,16 +779,26 @@ export function createAccountMirrorCompletionService(input: {
 			force: operation.materializationForce === true,
 		} satisfies AccountMirrorCompletionMaterializationCursor["request"];
 		const result = await input.historyMaterializationService.createJob(request);
-		update(operation.id, {
+		const requestedAt = result.generatedAt ?? now().toISOString();
+		const updated = update(operation.id, {
 			materializationCursor: {
 				jobId: result.job.id,
 				jobStatus: result.job.status,
 				reused: result.reused === true,
-				requestedAt: result.generatedAt ?? now().toISOString(),
+				requestedAt,
 				passCount: operation.passCount,
 				request,
 			},
 			materializationOutcome: null,
+		});
+		await persistBackfillLedgerCursor(updated ?? operation, {
+			materialization: createMaterializationBackfillCursor({
+				jobId: result.job.id,
+				jobStatus: result.job.status,
+				updatedAt: requestedAt,
+				passCount: operation.passCount,
+				reused: result.reused === true,
+			}),
 		});
 	}
 
@@ -798,31 +812,40 @@ export function createAccountMirrorCompletionService(input: {
 		const outcome = isTerminalMaterializationStatus(job.status)
 			? summarizeMaterializationOutcome(job)
 			: null;
-		return (
+		const updated =
 			update(operation.id, {
 				materializationCursor: {
 					...cursor,
 					jobStatus: job.status || cursor.jobStatus,
 				},
 				materializationOutcome: outcome,
-			}) ?? operation
-		);
+			}) ?? operation;
+		await persistBackfillLedgerCursor(updated, {
+			materialization: createMaterializationBackfillCursor({
+				jobId: cursor.jobId,
+				jobStatus: job.status || cursor.jobStatus,
+				updatedAt: outcome?.completedAt ?? now().toISOString(),
+				passCount: cursor.passCount,
+				outcome,
+			}),
+		});
+		return updated;
 	}
 
 	async function decideAccountLibraryCatchup(
 		operation: AccountMirrorCompletionOperation,
 	): Promise<AccountMirrorCompletionOperation | null> {
 		if (operation.lastRefresh?.status !== "completed") {
-			return recordAccountLibraryCatchupSkip(operation, "latest refresh did not complete");
+			return await recordAccountLibraryCatchupSkip(operation, "latest refresh did not complete");
 		}
 		if (operation.accountLibraryCursor?.passCount === operation.passCount) {
-			return recordAccountLibraryCatchupSkip(
+			return await recordAccountLibraryCatchupSkip(
 				operation,
 				"account-library catch-up already evaluated for this pass",
 			);
 		}
 		if (!input.historyMaterializationService) {
-			return recordAccountLibraryCatchupSkip(
+			return await recordAccountLibraryCatchupSkip(
 				operation,
 				"history materialization service is not configured",
 			);
@@ -833,7 +856,7 @@ export function createAccountMirrorCompletionService(input: {
 		});
 		const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
 		if (!entry) {
-			return recordAccountLibraryCatchupSkip(
+			return await recordAccountLibraryCatchupSkip(
 				operation,
 				"account mirror status target was not found",
 			);
@@ -843,14 +866,14 @@ export function createAccountMirrorCompletionService(input: {
 			return null;
 		}
 		if (desired.mode !== "eligible") {
-			return recordAccountLibraryCatchupSkip(
+			return await recordAccountLibraryCatchupSkip(
 				operation,
 				`liveFollow.accountLibrary.mode is ${desired.mode}`,
 			);
 		}
 		const cooldownUntil = deriveAccountLibraryCooldownUntil(entry);
 		if (cooldownUntil && Date.parse(cooldownUntil) > now().getTime()) {
-			return recordAccountLibraryCatchupSkip(
+			return await recordAccountLibraryCatchupSkip(
 				operation,
 				`account-library failure cooldown is active until ${cooldownUntil}`,
 			);
@@ -870,9 +893,9 @@ export function createAccountMirrorCompletionService(input: {
 		};
 		try {
 			const result = await input.historyMaterializationService.createJob(request);
-			return recordAccountLibraryCatchupJob(operation, request, result);
+			return await recordAccountLibraryCatchupJob(operation, request, result);
 		} catch (error) {
-			return recordAccountLibraryCatchupSkip(
+			return await recordAccountLibraryCatchupSkip(
 				operation,
 				`account-library materialization job create failed: ${
 					error instanceof Error ? error.message : String(error)
@@ -881,27 +904,36 @@ export function createAccountMirrorCompletionService(input: {
 		}
 	}
 
-	function recordAccountLibraryCatchupJob(
+	async function recordAccountLibraryCatchupJob(
 		operation: AccountMirrorCompletionOperation,
 		request: AccountMirrorHistoryMaterializationCreateRequest,
 		result: AccountMirrorHistoryMaterializationJobCreateResult,
-	): AccountMirrorCompletionOperation | null {
+	): Promise<AccountMirrorCompletionOperation | null> {
 		const status = result.reused === true ? "reused" : "queued";
 		const reason =
 			result.reused === true
 				? (result.reuseReason ?? `reused account-library materialization job ${result.job.id}`)
 				: `queued account-library materialization job ${result.job.id}`;
-		update(operation.id, {
+		const requestedAt = result.generatedAt ?? now().toISOString();
+		const updated = update(operation.id, {
 			accountLibraryCursor: {
 				jobId: result.job.id,
 				jobStatus: result.job.status,
 				reused: result.reused === true,
-				requestedAt: result.generatedAt ?? now().toISOString(),
+				requestedAt,
 				passCount: operation.passCount,
 				status,
 				reason,
 				request,
 			},
+		});
+		await persistBackfillLedgerCursor(updated ?? operation, {
+			accountLibrary: createAccountLibraryBackfillCursor({
+				status,
+				reason,
+				updatedAt: requestedAt,
+				readLimit: request.maxItems,
+			}),
 		});
 		return appendLifecycleEvent(operation.id, {
 			type: "account_library_catchup_queued",
@@ -911,21 +943,30 @@ export function createAccountMirrorCompletionService(input: {
 		});
 	}
 
-	function recordAccountLibraryCatchupSkip(
+	async function recordAccountLibraryCatchupSkip(
 		operation: AccountMirrorCompletionOperation,
 		reason: string,
-	): AccountMirrorCompletionOperation | null {
-		update(operation.id, {
+	): Promise<AccountMirrorCompletionOperation | null> {
+		const requestedAt = now().toISOString();
+		const updated = update(operation.id, {
 			accountLibraryCursor: {
 				jobId: null,
 				jobStatus: null,
 				reused: false,
-				requestedAt: now().toISOString(),
+				requestedAt,
 				passCount: operation.passCount,
 				status: "skipped",
 				reason,
 				request: null,
 			},
+		});
+		await persistBackfillLedgerCursor(updated ?? operation, {
+			accountLibrary: createAccountLibraryBackfillCursor({
+				status: "skipped",
+				reason,
+				updatedAt: requestedAt,
+				readLimit: null,
+			}),
 		});
 		return appendLifecycleEvent(operation.id, {
 			type: "account_library_catchup_skipped",
@@ -962,12 +1003,90 @@ export function createAccountMirrorCompletionService(input: {
 			}) ?? updated
 		);
 	}
+
+	async function persistBackfillLedgerCursor(
+		operation: AccountMirrorCompletionOperation,
+		cursors: {
+			accountLibrary?: AccountMirrorBackfillCursor | null;
+			materialization?: AccountMirrorBackfillCursor | null;
+		},
+	): Promise<void> {
+		const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
+		const updatedAt = now().toISOString();
+		const backfillLedger = updateAccountMirrorBackfillLedgerCursors(entry?.backfillLedger ?? null, {
+			provider: operation.provider,
+			runtimeProfileId: operation.runtimeProfileId,
+			browserProfileId: entry?.browserProfileId ?? null,
+			boundIdentityKey:
+				entry?.expectedIdentityKey ?? operation.lastRefresh?.detectedIdentityKey ?? null,
+			updatedAt,
+			...cursors,
+		});
+		const state = input.registry.mergeState(
+			{ provider: operation.provider, runtimeProfileId: operation.runtimeProfileId },
+			{ backfillLedger },
+		);
+		await input.registry.writePersistentState?.(
+			{ provider: operation.provider, runtimeProfileId: operation.runtimeProfileId },
+			state,
+		);
+	}
 }
 
 function isTerminalMaterializationStatus(status: string): boolean {
 	return (
 		status === "succeeded" || status === "skipped" || status === "failed" || status === "cancelled"
 	);
+}
+
+function createAccountLibraryBackfillCursor(input: {
+	status: "queued" | "reused" | "skipped";
+	reason: string;
+	updatedAt: string;
+	readLimit: number | null;
+}): AccountMirrorBackfillCursor {
+	return {
+		status: input.status === "skipped" ? "skipped" : "pending",
+		reason: input.reason,
+		updatedAt: input.updatedAt,
+		nextIndex: null,
+		readLimit: input.readLimit,
+		scanned: null,
+		yielded: false,
+	};
+}
+
+function createMaterializationBackfillCursor(input: {
+	jobId: string;
+	jobStatus: string;
+	updatedAt: string;
+	passCount: number;
+	reused?: boolean;
+	outcome?: AccountMirrorCompletionMaterializationOutcome | null;
+}): AccountMirrorBackfillCursor {
+	const status = materializationBackfillCursorStatus(input.jobStatus);
+	const materialized = input.outcome?.materialized ?? null;
+	const failed = input.outcome?.failed ?? null;
+	return {
+		status,
+		reason: input.outcome
+			? `materialization job ${input.jobId} finished with status ${input.jobStatus}; materialized=${materialized ?? 0} failed=${failed ?? 0}`
+			: `${input.reused === true ? "reused" : "queued"} materialization job ${input.jobId} with status ${input.jobStatus}`,
+		updatedAt: input.updatedAt,
+		nextIndex: null,
+		readLimit: null,
+		scanned: input.outcome?.conversationsAttempted ?? null,
+		yielded: false,
+	};
+}
+
+function materializationBackfillCursorStatus(
+	status: string,
+): AccountMirrorBackfillCursor["status"] {
+	if (status === "succeeded") return "complete";
+	if (status === "skipped" || status === "cancelled") return "skipped";
+	if (status === "failed") return "pending";
+	return "pending";
 }
 
 function summarizeMaterializationOutcome(

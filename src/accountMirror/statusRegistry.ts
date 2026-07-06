@@ -328,6 +328,13 @@ export interface AccountMirrorStatusRegistry {
 		provider?: AccountMirrorProvider | null;
 		runtimeProfileId?: string | null;
 	}): Promise<void>;
+	writePersistentState?(
+		key: {
+			provider: AccountMirrorProvider;
+			runtimeProfileId: string;
+		},
+		state?: AccountMirrorStatusState,
+	): Promise<void>;
 	readStatus(input?: {
 		provider?: AccountMirrorProvider | null;
 		runtimeProfileId?: string | null;
@@ -361,6 +368,14 @@ export function createAccountMirrorStatusRegistry(input: {
 		browserProfileId: string | null;
 		boundIdentityKey: string | null;
 	}) => Promise<AccountMirrorStatusState | null>;
+	writePersistentState?: (record: {
+		provider: AccountMirrorProvider;
+		runtimeProfileId: string;
+		browserProfileId: string | null;
+		boundIdentityKey: string | null;
+		updatedAt: string;
+		state: AccountMirrorStatusState;
+	}) => Promise<void>;
 }): AccountMirrorStatusRegistry {
 	const states = new Map<string, AccountMirrorStatusState>(
 		Object.entries(input.initialState ?? {}),
@@ -403,6 +418,26 @@ export function createAccountMirrorStatusRegistry(input: {
 					});
 				}
 			}
+		},
+		async writePersistentState(key, state) {
+			if (!input.writePersistentState) return;
+			const target = discoverConfiguredAccountMirrorTargets(input.config).find(
+				(candidate) =>
+					candidate.provider === key.provider &&
+					candidate.runtimeProfileId === key.runtimeProfileId,
+			);
+			if (!target) return;
+			const stateKey = createMirrorStateKey(key);
+			const next = state ?? states.get(stateKey);
+			if (!next) return;
+			await input.writePersistentState({
+				provider: target.provider,
+				runtimeProfileId: target.runtimeProfileId,
+				browserProfileId: target.browserProfileId,
+				boundIdentityKey: target.expectedIdentityKey,
+				updatedAt: now().toISOString(),
+				state: next,
+			});
 		},
 		readStatus,
 		updateState(key, state) {
