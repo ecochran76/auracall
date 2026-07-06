@@ -1,5 +1,45 @@
 # RUNBOOK
 
+## Turn 310 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: make live-follow `/status` prefer newer account evidence when an older
+  paused active completion still carries a completed cycle ledger.
+- Result:
+  - active paused completions remain visible as paused;
+  - `routineDecision.nextPhase`, `lastProgressAt`, and remaining-work
+    explanation now ignore a stale active `liveFollowCycle` when newer account
+    status evidence proves unfinished detail work;
+  - regression coverage matches the installed symptom: stale active cycle
+    `complete`, newer account mirror evidence `in_progress`, 90 detail surfaces
+    remaining, passive-dominant scrape telemetry, and `llmServiceRequests=0`.
+- Installed proof:
+  - after `pnpm run install:user-runtime-service` and
+    `systemctl --user restart auracall-api.service`, the service was
+    active/running with PID `57602`;
+  - active completion
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` remained
+    paused at pass `7` with older `liveFollowCycle.nextPhase=complete`;
+  - `/status` for `chatgpt/wsl-chrome-3` reported `actualStatus=paused`,
+    `mirrorCompleteness=in_progress`,
+    `routineDecision.nextPhase=detail-inventory`,
+    `lastProgressAt=2026-07-06T02:38:56.298Z`, 90 remaining detail surfaces,
+    433 materialization backlog assets, `providerGuardCorrelation.state=none`,
+    and `llmServiceRequests=0`.
+- Validation:
+  - focused HTTP status tests passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 40`
+    passed;
+  - `pnpm exec biome check tests/http.responsesServer.test.ts --max-diagnostics
+    8` reported only pre-existing non-null assertion warnings outside this
+    slice;
+  - `pnpm run plans:audit -- --keep 152` passed with validation errors `0`.
+- Remaining scope:
+  - Plan 0152 remains open for full backfill-to-steady and keep-current
+    dogfood proof before broad live-follow resume.
+
 ## Turn 309 | 2026-07-05
 
 - Active plan:

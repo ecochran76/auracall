@@ -1,3 +1,30 @@
+## 2026-07-05 | Plan 0152 Stale Active Cycle Status Decision
+
+- Focus: fix `/status` reporting `routineDecision.nextPhase=complete` from an
+  older paused live-follow completion while newer account evidence still had
+  unfinished detail work.
+- Result:
+  - active paused completions still report `state=paused`;
+  - stale active `liveFollowCycle` evidence is ignored for target routine
+    decisions when the account status registry has a newer observation;
+  - the target decision now reports the newer evidence phase, progress
+    timestamp, and remaining detail/materialization work.
+- Installed proof:
+  - reinstalled user runtime and restarted `auracall-api.service`;
+  - service readback was active/running with PID `57602`;
+  - installed `/status` for `chatgpt/wsl-chrome-3` now reports paused
+    `routineDecision.nextPhase=detail-inventory`, 90 detail surfaces, 433
+    materialization backlog assets, `providerGuardCorrelation.state=none`, and
+    `llmServiceRequests=0`, even though the active completion's older cycle
+    still reads `nextPhase=complete`.
+- Validation:
+  - focused live-follow HTTP status tests passed;
+  - TypeScript passed;
+  - source Biome check passed;
+  - test-file Biome check reported only pre-existing non-null assertion
+    warnings outside this slice;
+  - Plan 0152 audit passed.
+
 ## 2026-07-05 | Plan 0152 Restart Cycle Reconciliation
 
 - Focus: prevent a completed steady-follow detail pass from reporting stale

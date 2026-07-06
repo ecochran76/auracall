@@ -5533,6 +5533,245 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("prefers newer account evidence over a stale paused live-follow cycle", async () => {
+		const config = {
+			model: "gpt-5.2",
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: { email: "operator@example.com" },
+							liveFollow: {
+								enabled: true,
+								mode: "metadata-first",
+								priority: "background",
+								materializationPolicy: "metadata_only",
+							},
+						},
+					},
+				},
+			},
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:06:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "operator@example.com",
+					lastCompletedAtMs: Date.parse("2026-04-30T12:05:00.000Z"),
+					metadataCounts: {
+						projects: 0,
+						conversations: 94,
+						artifacts: 235,
+						files: 199,
+						media: 0,
+					},
+					metadataEvidence: {
+						identitySource: "profile-menu",
+						projectSampleIds: [],
+						conversationSampleIds: ["conv_pending"],
+						scrapeBudget: {
+							provider: "chatgpt",
+							runtimeProfileId: "default",
+							sweepMode: "steady_follow",
+							observedAt: "2026-04-30T12:05:00.000Z",
+							classification: "passive_dominant",
+							summary:
+								"Account mirror scrape used 6 passive parse/read signal(s) and 5 active provider interaction(s).",
+							passive: {
+								domParses: 2,
+								appStateReads: 1,
+								downloadLinkEnumerations: 3,
+								cachedFileCarries: 0,
+								total: 6,
+							},
+							active: {
+								identityReads: 1,
+								projectIndexReads: 0,
+								rootRailReads: 1,
+								projectConversationReads: 0,
+								chatLoads: 3,
+								accountLibraryReads: 0,
+								downloads: 0,
+								total: 5,
+							},
+							providerInteractions: {
+								budget: 20,
+								used: 5,
+								remaining: 15,
+								yielded: false,
+								yieldReason: null,
+							},
+							providerGuardCorrelation: {
+								state: "none",
+								kind: null,
+								summary: null,
+								detectedAt: null,
+								cooldownUntil: null,
+								action: null,
+								correlatedWithYield: false,
+								yieldReason: null,
+							},
+							llmServiceRequests: 0,
+							cdpMethodCalls: 9,
+							cdpMethods: {
+								"Target.attachToTarget": 1,
+								"Runtime.evaluate": 8,
+							},
+							providerActions: {
+								"chatgpt.listConversationFiles.start": 3,
+								"llmService.getConversationContext": 2,
+							},
+						},
+						attachmentInventory: {
+							nextProjectIndex: 0,
+							nextConversationIndex: 4,
+							detailReadLimit: 6,
+							scannedProjects: 0,
+							scannedConversations: 4,
+						},
+						truncated: {
+							projects: false,
+							conversations: false,
+							artifacts: true,
+						},
+					},
+				},
+			},
+		});
+		const pausedOperation: AccountMirrorCompletionOperation = {
+			object: "account_mirror_completion",
+			id: "acctmirror_paused_stale_complete",
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			mode: "live_follow",
+			phase: "steady_follow",
+			status: "paused",
+			startedAt: "2026-04-30T11:55:00.000Z",
+			completedAt: null,
+			nextAttemptAt: null,
+			maxPasses: null,
+			passCount: 7,
+			lastRefresh: null,
+			mirrorCompleteness: completeAccountMirror,
+			liveFollowCycle: {
+				cycleId: "lfc_stale_complete",
+				startedAt: "2026-04-30T11:55:00.000Z",
+				updatedAt: "2026-04-30T12:00:00.000Z",
+				currentPhase: "complete",
+				nextPhase: "complete",
+				decisionReason:
+					"all required live-follow phases are complete for the current evidence window",
+				passCount: 7,
+				phases: [
+					{
+						phase: "complete",
+						status: "complete",
+						reason: "all required live-follow phases are complete for the current evidence window",
+						updatedAt: "2026-04-30T12:00:00.000Z",
+						passCount: 7,
+					},
+				],
+			},
+			error: null,
+		};
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0 },
+			{
+				config,
+				accountMirrorStatusRegistry: registry,
+				accountMirrorCompletionService: {
+					start: vi.fn(() => pausedOperation),
+					read: vi.fn(() => pausedOperation),
+					list: vi.fn((request) =>
+						!request?.status || request.status === "active" ? [pausedOperation] : [],
+					),
+					control: vi.fn(() => pausedOperation),
+				},
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			const payload = (await response.json()) as {
+				liveFollow: {
+					targets: {
+						actual: {
+							paused: number;
+						};
+						accounts: Array<{
+							actualStatus: string | null;
+							activeCompletionId: string | null;
+							mirrorCompleteness: string;
+							routineDecision: {
+								state: string;
+								nextPhase: string | null;
+								why: string | null;
+								lastProgressAt: string | null;
+								remainingWork: {
+									detailSurfaces: number | null;
+									materializationAssets: number;
+								};
+								cycle: {
+									currentPhase: string;
+									nextPhase: string;
+								} | null;
+							};
+							materializationBacklog: {
+								state: string;
+								metadataCurrent: boolean;
+								remoteKnownMissingLocal: {
+									total: number;
+								};
+							} | null;
+							scrapeBudget: {
+								classification: string;
+								llmServiceRequests: number;
+								cdpMethodCalls: number | null;
+							} | null;
+						}>;
+					};
+				};
+			};
+			const account = payload.liveFollow.targets.accounts[0];
+			expect(payload.liveFollow.targets.actual.paused).toBe(1);
+			expect(account).toMatchObject({
+				actualStatus: "paused",
+				activeCompletionId: "acctmirror_paused_stale_complete",
+				mirrorCompleteness: "in_progress",
+				routineDecision: {
+					state: "paused",
+					nextPhase: "detail-inventory",
+					why: "active live-follow completion is paused; newer account evidence selected detail-inventory",
+					lastProgressAt: "2026-04-30T12:05:00.000Z",
+					remainingWork: {
+						detailSurfaces: 90,
+						materializationAssets: 434,
+					},
+					cycle: null,
+				},
+				materializationBacklog: {
+					state: "metadata_current_backlog",
+					metadataCurrent: false,
+					remoteKnownMissingLocal: {
+						total: 434,
+					},
+				},
+				scrapeBudget: {
+					classification: "passive_dominant",
+					llmServiceRequests: 0,
+					cdpMethodCalls: 9,
+				},
+			});
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("reports stale identity mismatch evidence on live-follow target accounts", async () => {
 		const config = {
 			model: "gpt-5.2",

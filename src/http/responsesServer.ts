@@ -6179,11 +6179,16 @@ function summarizeLiveFollowRoutineDecision(input: {
 }): LiveFollowTargetAccountSummary["routineDecision"] {
 	const { entry, operation, materializationBacklog, accountLibraryCatchup, scheduler } = input;
 	const guard = entry.providerGuard.state === "clear" ? null : entry.providerGuard;
-	const cycle = operation?.liveFollowCycle ?? null;
+	const rawCycle = operation?.liveFollowCycle ?? null;
+	const cycleStaleForStatus = isLiveFollowCycleStaleForStatus(rawCycle, entry);
+	const cycle = cycleStaleForStatus ? null : rawCycle;
 	const currentPhase = cycle?.phases.find((phase) => phase.phase === cycle.currentPhase) ?? null;
 	const statusPhaseDecision = summarizeLiveFollowStatusPhaseDecision(entry);
 	const nextEvidencePhase = cycle?.nextPhase ?? statusPhaseDecision.phase;
 	const preemption = summarizeLiveFollowPreemption(entry, scheduler);
+	const accountObservedAt = latestAccountStatusObservedAt(entry);
+	const operationObservedAt =
+		cycle?.updatedAt ?? operation?.lastRefresh?.completedAt ?? operation?.completedAt ?? null;
 	const remainingDetailSurfaces = entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null;
 	const materializationAssets =
 		materializationBacklog?.remoteKnownMissingLocal.total ??
@@ -6192,12 +6197,7 @@ function summarizeLiveFollowRoutineDecision(input: {
 			(entry.mirrorCompleteness.assetInventory?.remoteKnownMissingLocal.media ?? 0);
 	const base = {
 		eligibleAt: operation?.nextAttemptAt ?? entry.eligibleAt,
-		lastProgressAt:
-			cycle?.updatedAt ??
-			operation?.lastRefresh?.completedAt ??
-			operation?.completedAt ??
-			entry.lastCompletedAt ??
-			entry.lastSuccessAt,
+		lastProgressAt: latestIsoTimestamp(operationObservedAt, accountObservedAt),
 		remainingWork: {
 			detailSurfaces: remainingDetailSurfaces,
 			materializationAssets,
@@ -6243,8 +6243,11 @@ function summarizeLiveFollowRoutineDecision(input: {
 		return {
 			...base,
 			state: "paused",
-			nextPhase: cycle?.nextPhase ?? operation.phase,
-			why: "active live-follow completion is paused",
+			nextPhase: nextEvidencePhase ?? operation.phase,
+			why:
+				cycleStaleForStatus && statusPhaseDecision.phase
+					? `active live-follow completion is paused; newer account evidence selected ${statusPhaseDecision.phase}`
+					: "active live-follow completion is paused",
 		};
 	}
 	if (
@@ -6255,7 +6258,7 @@ function summarizeLiveFollowRoutineDecision(input: {
 		return {
 			...base,
 			state: "attention_needed",
-			nextPhase: cycle?.nextPhase ?? operation.phase,
+			nextPhase: nextEvidencePhase ?? operation.phase,
 			why: operation.error?.message ?? `latest live-follow completion is ${operation.status}`,
 		};
 	}
@@ -6263,15 +6266,15 @@ function summarizeLiveFollowRoutineDecision(input: {
 		return {
 			...base,
 			state: "running",
-			nextPhase: cycle?.nextPhase ?? operation.phase,
-			why: cycle?.decisionReason ?? `live-follow completion is ${operation.status}`,
+			nextPhase: nextEvidencePhase ?? operation.phase,
+			why: cycle?.decisionReason ?? statusPhaseDecision.reason,
 		};
 	}
 	if (operation?.status === "queued") {
 		return {
 			...base,
 			state: "queued",
-			nextPhase: cycle?.nextPhase ?? operation.phase,
+			nextPhase: nextEvidencePhase ?? operation.phase,
 			why: "live-follow completion is queued",
 		};
 	}
@@ -6356,9 +6359,41 @@ function summarizeLiveFollowRoutineDecision(input: {
 	return {
 		...base,
 		state: "delayed",
-		nextPhase: cycle?.nextPhase ?? null,
+		nextPhase: nextEvidencePhase,
 		why: entry.reason ?? "live-follow target is waiting for cadence or provider politeness",
 	};
+}
+
+function isLiveFollowCycleStaleForStatus(
+	cycle: AccountMirrorCompletionOperation["liveFollowCycle"] | null | undefined,
+	entry: AccountMirrorStatusEntry,
+): boolean {
+	if (!cycle) return false;
+	const cycleAt = Date.parse(cycle.updatedAt);
+	const statusObservedAt = latestAccountStatusObservedAt(entry);
+	const statusAt = statusObservedAt ? Date.parse(statusObservedAt) : Number.NaN;
+	return Number.isFinite(cycleAt) && Number.isFinite(statusAt) && statusAt > cycleAt;
+}
+
+function latestAccountStatusObservedAt(entry: AccountMirrorStatusEntry): string | null {
+	return latestIsoTimestamp(
+		entry.lastCompletedAt,
+		entry.lastSuccessAt,
+		entry.metadataEvidence?.scrapeBudget?.observedAt ?? null,
+	);
+}
+
+function latestIsoTimestamp(...timestamps: Array<string | null | undefined>): string | null {
+	let latest: { timestamp: string; time: number } | null = null;
+	for (const timestamp of timestamps) {
+		if (!timestamp) continue;
+		const time = Date.parse(timestamp);
+		if (!Number.isFinite(time)) continue;
+		if (!latest || time > latest.time) {
+			latest = { timestamp, time };
+		}
+	}
+	return latest?.timestamp ?? null;
 }
 
 function summarizeLiveFollowStatusPhaseDecision(entry: AccountMirrorStatusEntry): {

@@ -710,6 +710,39 @@ Validation:
 - `auracall api mirror-completion-status acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae --json --timeout-ms 30000`
 - `auracall api status --json --timeout-ms 30000`
 
+### 2026-07-05 | M2/M7 Newer Account Evidence Wins Status Decisions
+
+- `/status` live-follow target decisions now detect when an active completion's
+  `liveFollowCycle` is older than the account status registry evidence.
+- A paused active completion remains visible as paused, but its
+  `routineDecision.nextPhase`, `lastProgressAt`, and remaining-work explanation
+  now come from the newer account evidence instead of falsely reporting
+  `complete` while detail surfaces remain.
+- The regression fixture matches the installed mismatch: paused active
+  completion with a stale complete cycle, newer metadata-only scrape evidence,
+  90 remaining detail surfaces, `passive_dominant` scrape telemetry, and
+  `llmServiceRequests=0`.
+- Installed readback after reinstall/restart proved `auracall-api.service`
+  active/running with PID `57602`; the active paused completion
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` still carries
+  its older `liveFollowCycle.nextPhase=complete`, while `/status` now reports
+  `routineDecision.nextPhase=detail-inventory`, `lastProgressAt=2026-07-06T02:38:56.298Z`,
+  90 remaining detail surfaces, 433 materialization backlog assets,
+  `providerGuardCorrelation.state=none`, and `llmServiceRequests=0`.
+
+Validation:
+
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "newer account evidence|effective live-follow wake|pending detail inventory|persisted backfill ledger|foreground scheduler preemption"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 40`
+- `pnpm exec biome check tests/http.responsesServer.test.ts --max-diagnostics 8`
+  - reports only pre-existing non-null assertion warnings outside this slice.
+- `pnpm run plans:audit -- --keep 152`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api status --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae --json --timeout-ms 30000`
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.

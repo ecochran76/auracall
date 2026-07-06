@@ -1,3 +1,18 @@
+- 2026-07-05: `/status` live-follow routine decisions must compare active
+  completion cycle freshness against account status registry freshness before
+  trusting the active cycle. A paused live-follow completion can remain active
+  with `liveFollowCycle.nextPhase=complete` while a newer bounded proof updates
+  account status to `in_progress` with remaining detail surfaces. In that case,
+  keep the target `state=paused`, but select `nextPhase`, `lastProgressAt`, and
+  remaining-work explanation from the newer account evidence; otherwise
+  operators see `complete` and backlog at the same time. Installed proof after
+  restart: `chatgpt/wsl-chrome-3` kept active completion
+  `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` paused with its
+  older cycle `nextPhase=complete`, while `/status` reported
+  `routineDecision.nextPhase=detail-inventory`, 90 detail surfaces, 433
+  materialization backlog assets, `providerGuardCorrelation.state=none`, and
+  `llmServiceRequests=0`.
+
 - 2026-07-05: Freshness-frontier row selection is not itself pending work after
   a collector pass completes. If `collectorProgress.phase=complete` and
   `event=completed`, with no detail cursor, yield, in-progress asset inventory,
