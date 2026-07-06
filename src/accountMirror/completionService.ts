@@ -67,6 +67,7 @@ export interface AccountMirrorCompletionLifecycleEvent {
 		| "campaign_policy_upgraded"
 		| "live_follow_policy_upgraded"
 		| "live_follow_phase_decision"
+		| "foreground_work_deferred"
 		| "provider_guard_backoff"
 		| "collector_progress"
 		| "account_library_catchup_queued"
@@ -372,6 +373,12 @@ export function createAccountMirrorCompletionService(input: {
 							status: "idle_waiting",
 							nextAttemptAt,
 							error: null,
+						});
+						appendLifecycleEvent(id, {
+							type: "foreground_work_deferred",
+							status: "idle_waiting",
+							previousStatus: refreshOperation.status,
+							message: `${foregroundBackpressure.message ?? "Foreground AuraCall work is pending."} Retry at ${nextAttemptAt}.`,
 						});
 						if (!(await sleepUntilAttempt(id, nextAttemptAt))) return;
 						update(id, { status: "running", nextAttemptAt: null });

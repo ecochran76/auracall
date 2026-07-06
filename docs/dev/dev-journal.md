@@ -39731,3 +39731,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   project-index reads `0`, account-library reads `0`, chat loads `0`,
   `llmServiceRequests=0`, `cdpMethodCalls=8`, no provider-guard correlation,
   and post-run status `providerGuard=null` / `nextPhase=steady_follow`.
+- 2026-07-06: Continued Plan 0152 M4/M6 foreground-deferral evidence.
+  Live-follow completions that back away from foreground AuraCall work now
+  append a `foreground_work_deferred` lifecycle event with the blocking reason
+  and retry timestamp. Scheduler diagnostics now projects the compact
+  completion `latestLifecycleEvent`, matching live-follow target status
+  readback. Focused validation passed with
+  `pnpm vitest run tests/accountMirror/completionService.test.ts --testNamePattern "defers due live-follow completion refreshes"` and
+  `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "scheduler diagnostics|foreground scheduler preemption|does not treat an idle background drain cadence timer"`.
+  Installed status readback showed the configured live-follow targets are
+  currently paused/minimum-interval or disabled/blocked, so installed
+  `operator_preempted` proof remains pending rather than forcing provider state
+  changes just to manufacture eligibility.

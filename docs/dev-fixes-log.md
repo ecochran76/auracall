@@ -18926,3 +18926,9 @@ browser-stage lifecycle observability, not transcript truncation.
   persisted provider-guard cooldown before calling refresh; a guarded bounded
   completion should block with `provider_guard_backoff` and no identity/root
   collector progress.
+- 2026-07-06: Live-follow foreground deferrals need durable completion-level
+  evidence, not only a scheduler headline. When a live-follow completion yields
+  because foreground AuraCall work is active, append a
+  `foreground_work_deferred` lifecycle event with the reason and retry
+  timestamp, and project that latest event through scheduler diagnostics so an
+  `idle_waiting` operation explains why it is waiting.

@@ -2570,6 +2570,14 @@ describe("account mirror completion service", () => {
 			status: "idle_waiting",
 			passCount: 4,
 			nextAttemptAt: "2026-04-30T12:00:05.000Z",
+			lifecycleEvents: expect.arrayContaining([
+				expect.objectContaining({
+					type: "foreground_work_deferred",
+					status: "idle_waiting",
+					previousStatus: "running",
+					message: "Foreground AuraCall API work is pending. Retry at 2026-04-30T12:00:05.000Z.",
+				}),
+			]),
 		});
 	});
 

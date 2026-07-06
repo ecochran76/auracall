@@ -5628,6 +5628,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 	phase: string;
 	nextAttemptAt: string | null;
 	passCount: number;
+	latestLifecycleEvent: LiveFollowTargetAccountSummary["latestLifecycleEvent"];
 	accountLibraryCursor: AccountMirrorCompletionOperation["accountLibraryCursor"] | null;
 	error: AccountMirrorCompletionOperation["error"];
 } {
@@ -5639,6 +5640,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 		phase: operation.phase,
 		nextAttemptAt: operation.nextAttemptAt,
 		passCount: operation.passCount,
+		latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
 		accountLibraryCursor: operation.accountLibraryCursor ?? null,
 		error: operation.error,
 	};

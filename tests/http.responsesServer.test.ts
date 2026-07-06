@@ -7231,6 +7231,17 @@ describe("http responses adapter", () => {
 			lastRefresh: null,
 			mirrorCompleteness: completeAccountMirror,
 			error: null,
+			lifecycleEvents: [
+				{
+					at: "2026-05-09T12:02:59.000Z",
+					type: "foreground_work_deferred",
+					status: "idle_waiting",
+					previousStatus: "running",
+					processPid: process.pid,
+					message:
+						"Foreground AuraCall API work is pending. Retry at 2026-05-09T12:03:00.000Z.",
+				},
+			],
 		};
 		const ledger = createMemorySchedulerLedger();
 		await ledger.appendPass(pass);
@@ -7268,6 +7279,12 @@ describe("http responses adapter", () => {
 					status: "running",
 					phase: "backfill_history",
 					passCount: 2,
+					latestLifecycleEvent: {
+						at: "2026-05-09T12:02:59.000Z",
+						type: "foreground_work_deferred",
+						message:
+							"Foreground AuraCall API work is pending. Retry at 2026-05-09T12:03:00.000Z.",
+					},
 				},
 				browserMutations: null,
 				latestSchedulerEvent: {

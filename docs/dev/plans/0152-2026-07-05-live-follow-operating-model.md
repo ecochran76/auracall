@@ -121,6 +121,24 @@ Validation:
 - `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 20`
 - `pnpm run plans:audit -- --keep 152`
 
+### 2026-07-06 | M4/M6 Completion Deferral Evidence
+
+- Live-follow completions that yield to foreground AuraCall work now append a
+  `foreground_work_deferred` lifecycle event with the blocking reason and retry
+  timestamp.
+- The scheduler diagnostics bundle now includes the compact completion
+  `latestLifecycleEvent`, matching the live-follow target account rollup, so
+  operators can distinguish a foreground deferral from a silent idle wait.
+- Installed status readback showed the current configured live-follow accounts
+  are paused/minimum-interval or disabled/blocked; this preserves safety, but
+  it does not yet produce an installed `operator_preempted` scheduler pass
+  without first changing live-follow completion state.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts --testNamePattern "defers due live-follow completion refreshes"`
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "scheduler diagnostics|foreground scheduler preemption|does not treat an idle background drain cadence timer"`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
@@ -359,6 +377,18 @@ Exit evidence:
 - status reports `operator_preempted` with the blocking work class and retry
   time;
 - the later live-follow pass resumes from the same ledger-selected phase.
+
+Current evidence:
+
+- Scheduler-level `operator_preempted` projection is covered by focused API
+  tests for selected eligible targets.
+- Completion-level foreground deferral is persisted as
+  `foreground_work_deferred` and exposed through live-follow target status plus
+  scheduler diagnostics.
+- Installed proof remains pending because the current configured live-follow
+  targets are paused/minimum-interval or disabled/blocked; an installed
+  preemption smoke must wait for an eligible target or use an isolated proof
+  harness that cannot touch provider surfaces after preemption.
 
 ### Gate F | Installed Resume Decision
 
