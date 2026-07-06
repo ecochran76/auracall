@@ -1,3 +1,25 @@
+## 2026-07-06 | Plan 0152 Natural Cadence Detail Drain Pass 7
+
+- Focus: continue installed `chatgpt/wsl-chrome-4` natural cadence observation
+  through another detail-inventory cursor drain pass.
+- Result:
+  - completion `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63`
+    ran pass `7` from `2026-07-06T09:27:21.996Z` to
+    `2026-07-06T09:28:38.938Z`;
+  - the pass stayed on `requestedPhase=detail-inventory`, advanced
+    `nextConversationIndex` from `16` to `20`, and `/status` reduced remaining
+    selected detail surfaces from `14` to `10`;
+  - lifecycle and scrape telemetry again showed no root/project rail replay:
+    `projectIndexReads=0`, `rootRailReads=0`,
+    `projectConversationReads=0`;
+  - scrape telemetry stayed `passive_dominant`, active provider interactions
+    `5/6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, with no provider guard.
+- Validation:
+  - quiet-window observation through the installed cadence timestamp;
+  - installed completion-status readback;
+  - installed `/status` target readback at `2026-07-06T09:29:36Z`;
+  - persisted completion JSON cursor readback.
+
 ## 2026-07-06 | Plan 0152 Natural Cadence Detail Drain Pass 6
 
 - Focus: continue installed `chatgpt/wsl-chrome-4` observation through the

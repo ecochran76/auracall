@@ -633,6 +633,35 @@ Validation:
 - persisted completion JSON cursor readback under
   `~/.auracall/cache/account-mirror/completions/`
 
+### 2026-07-06 | M2/M8 Natural Cadence Detail Drain Pass 7
+
+- The installed `chatgpt/wsl-chrome-4` live-follow completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` continued its
+  natural cadence with no operator force marker active.
+- Pass `7` started at `2026-07-06T09:27:21.996Z`, completed at
+  `2026-07-06T09:28:38.938Z`, returned to `idle_waiting`, and scheduled
+  `nextAttemptAt=2026-07-06T09:57:08.909Z`.
+- The pass stayed on `requestedPhase=detail-inventory`, scanned four more
+  selected conversations, and advanced the selected detail cursor from
+  `nextConversationIndex=16` to `20`.
+- `/status` reported remaining selected detail surfaces reduced from `14` to
+  `10`, with `routineDecision.nextPhase=detail-inventory`, no preemption, and
+  no provider guard.
+- The scrape shape stayed stable: `classification=passive_dominant`, passive
+  total `6`, provider interactions `5/6`, `projectIndexReads=0`,
+  `rootRailReads=0`, `projectConversationReads=0`, `llmServiceRequests=0`,
+  `cdpMethodCalls=9`, and `providerGuardCorrelation.state=none`.
+- This keeps Plan 0152 open with `10` selected detail surfaces remaining on
+  `chatgpt/wsl-chrome-4`.
+
+Validation:
+
+- quiet-window observation through the installed cadence timestamp
+- `auracall api mirror-completion-status acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63 --port 18095 --json`
+- installed `/status` live-follow target readback at `2026-07-06T09:29:36Z`
+- persisted completion JSON cursor readback under
+  `~/.auracall/cache/account-mirror/completions/`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
