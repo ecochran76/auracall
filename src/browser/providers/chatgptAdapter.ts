@@ -1704,10 +1704,13 @@ function isRetryableConnectionError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
 	return (
 		message.includes("WebSocket connection closed") ||
+		message.includes("WebSocket is not open") ||
 		message.includes("ECONNRESET") ||
 		isRetryableChatgptTransientMessage(message)
 	);
 }
+
+export const isRetryableConnectionErrorForTest = isRetryableConnectionError;
 
 function withChatgptTimeout<T>(
 	operation: Promise<T>,

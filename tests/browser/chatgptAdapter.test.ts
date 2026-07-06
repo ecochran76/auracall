@@ -16,6 +16,7 @@ import {
 	findChatgptProjectByName,
 	findChatgptProjectSourceName,
 	isChatgptTargetReusableForPreferredUrl,
+	isRetryableConnectionErrorForTest,
 	isRetryableChatgptTransientMessage,
 	matchesChatgptConversationTitleProbe,
 	matchesChatgptDeleteConfirmationProbe,
@@ -676,6 +677,19 @@ describe("isRetryableChatgptTransientMessage", () => {
 
 	test("does not mark unrelated text as retryable", () => {
 		expect(isRetryableChatgptTransientMessage("Project settings")).toBe(false);
+	});
+});
+
+describe("isRetryableConnectionError", () => {
+	test("treats closed CDP WebSocket errors as retryable", () => {
+		expect(
+			isRetryableConnectionErrorForTest(
+				new Error("WebSocket is not open: readyState 3 (CLOSED)"),
+			),
+		).toBe(true);
+		expect(isRetryableConnectionErrorForTest(new Error("WebSocket connection closed"))).toBe(
+			true,
+		);
 	});
 });
 

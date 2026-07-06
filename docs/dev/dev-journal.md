@@ -39785,3 +39785,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `acctmirror_completion_5ccd7f0d-f112-4f5b-9fd2-a8205bd2e6b9` failed before
   refresh completion with `WebSocket is not open: readyState 3 (CLOSED)`, so
   broad live-follow resume remains gated.
+- 2026-07-06: Continued Plan 0152 Gate F browser-session retry proof.
+  Classified native Chrome's `WebSocket is not open: readyState 3 (CLOSED)` CDP
+  failure as a retryable ChatGPT connection error and reinstalled/restarted the
+  user runtime. Installed `chatgpt/wsl-chrome-2` bounded completion
+  `acctmirror_completion_fe05a8f9-9aa2-4b71-a80d-e35884c7030d` completed from
+  `2026-07-06T04:53:45.198Z` to `2026-07-06T04:55:04.354Z` with
+  `mirrorCompleteness=complete`, `classification=passive_dominant`,
+  `providerInteractions.used=5/6`, `llmServiceRequests=0`,
+  `cdpMethodCalls=9`, and `providerGuardCorrelation.state=none`. Resuming the
+  stale paused live-follow completion
+  `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2` moved it to
+  scheduled `idle_waiting` with `nextAttemptAt=2026-07-06T05:14:08.904Z`
+  rather than launching an immediate sweep; installed controls still lack a
+  force-one-bounded-pass action.

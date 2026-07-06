@@ -235,16 +235,40 @@ Validation:
   completion with `WebSocket is not open: readyState 3 (CLOSED)`. Gate F stays
   open until the now-complete account can run a successful follow-up
   keep-current pass without restarting into fragile browser-session state.
+- Native Chrome can report closed CDP sockets as
+  `WebSocket is not open: readyState 3 (CLOSED)` rather than the previously
+  recognized `WebSocket connection closed` string. That browser-session error
+  is now classified as retryable so metadata reads can reattach/fresh-tab
+  instead of failing the account-mirror cycle.
+- After reinstall/restart, bounded completion
+  `acctmirror_completion_fe05a8f9-9aa2-4b71-a80d-e35884c7030d` completed from
+  `2026-07-06T04:53:45.198Z` to `2026-07-06T04:55:04.354Z` with
+  `phase=steady_follow`, `mirrorCompleteness=complete`,
+  `classification=passive_dominant`, `providerInteractions.used=5` of budget
+  `6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, and
+  `providerGuardCorrelation.state=none`.
+- Resuming the stale paused `chatgpt/wsl-chrome-2` live-follow completion
+  `acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2` did not launch
+  an immediate broad sweep. It moved from `paused` to `queued` and then
+  reconciled to `idle_waiting`, still in `backfill_history`, with
+  `passCount=0` and `nextAttemptAt=2026-07-06T05:14:08.904Z`.
+- Installed controls still expose only pause/resume/cancel, not the plan's
+  desired "force one bounded pass" operator action. Until that control exists,
+  the safe proof path for a single account remains a separately bounded
+  `mirror-complete --max-passes 1` run plus completion-specific readback.
 
 Validation:
 
 - `pnpm vitest run tests/browser/chatgptRateLimitGuard.test.ts`
+- `pnpm vitest run tests/browser/chatgptAdapter.test.ts --testNamePattern "isRetryableConnectionError|isRetryableChatgptTransientMessage|classifies connection failures"`
 - `pnpm exec tsc --noEmit --pretty false`
 - `pnpm run install:user-runtime-service`
 - `systemctl --user restart auracall-api.service`
 - `auracall api mirror-complete --port 18095 --provider chatgpt --runtime-profile wsl-chrome-2 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
 - `auracall api mirror-completion-status acctmirror_completion_f9175187-dfe5-43e3-83ce-06d558d2fffe --port 18095 --json`
 - `auracall api mirror-completion-status acctmirror_completion_5ccd7f0d-f112-4f5b-9fd2-a8205bd2e6b9 --port 18095 --json`
+- `auracall api mirror-completion-status acctmirror_completion_fe05a8f9-9aa2-4b71-a80d-e35884c7030d --port 18095 --json`
+- `auracall api mirror-completion-control acctmirror_completion_9861be3f-d04e-4864-9f31-96c070e4b5a2 resume --port 18095 --json`
 
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 

@@ -18956,3 +18956,12 @@ browser-stage lifecycle observability, not transcript truncation.
   had an extra closing brace. Treat malformed persisted guard state as absent
   and write guard state via temp-file rename; keep real provider guards proven
   by collector/CDP/status evidence, not by local guard-file parse failures.
+- 2026-07-06: Native Chrome closed-CDP failures may surface as
+  `WebSocket is not open: readyState 3 (CLOSED)`, not only
+  `WebSocket connection closed`. Treat that message as retryable connection
+  churn in ChatGPT metadata/detail reads so the adapter can reattach or open a
+  fresh disposable tab instead of failing a passive account-mirror cycle.
+  Installed `wsl-chrome-2` follow-up completion
+  `acctmirror_completion_fe05a8f9-9aa2-4b71-a80d-e35884c7030d` then completed
+  with `llmServiceRequests=0`, `cdpMethodCalls=9`, passive-dominant scrape
+  budget, and no provider guard correlation.
