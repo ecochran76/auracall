@@ -1,3 +1,29 @@
+## 2026-07-05 | Plan 0152 Requested-Phase Installed Readback
+
+- Focus: close the evidence gap where bounded installed detail-inventory proof
+  showed the right scrape behavior but refresh readback still reported
+  `requestedPhase=null`.
+- Result:
+  - `AccountMirrorRefreshResult` now carries the normalized requested collector
+    phase;
+  - bounded completion/status evidence can prove `detail-inventory` directly
+    from `lastRefresh.requestedPhase`;
+  - installed `chatgpt/wsl-chrome-3` completion
+    `acctmirror_completion_512abfb3-d0e5-49db-a9e7-070c06e2140d` completed one
+    metadata-only pass with `lastRefresh.requestedPhase=detail-inventory`.
+- Installed proof:
+  - scrape budget was `passive_dominant`, passive `6`, active `5`,
+    provider interactions `5/6`, `llmServiceRequests=0`,
+    `cdpMethodCalls=9`, and no provider guard correlation;
+  - the pass scanned four conversation detail surfaces, stopped at a three-row
+    freshness frontier, and left 90 detail surfaces remaining;
+  - the live-follow target remained paused, so this was bounded evidence rather
+    than broad resume.
+- Validation:
+  - focused requested-phase/completion/scheduler/HTTP/MCP tests passed;
+  - TypeScript passed;
+  - scoped Biome check passed.
+
 ## 2026-07-05 | Plan 0152 M0 Shared State Contract
 
 - Focus: make live-follow state and phase vocabulary a shared contract instead

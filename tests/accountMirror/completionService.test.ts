@@ -118,6 +118,7 @@ function createRefreshResult(): AccountMirrorRefreshResult {
 		provider: "chatgpt",
 		runtimeProfileId: "default",
 		browserProfileId: "default",
+		requestedPhase: null,
 		startedAt: "2026-04-30T12:00:00.000Z",
 		completedAt: "2026-04-30T12:00:01.000Z",
 		dispatcher: {
@@ -366,7 +367,10 @@ describe("account mirror completion service", () => {
 			mirrorCompleteness: completeMirror,
 			error: null,
 		};
-		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const requestRefresh = vi.fn(async (request) => ({
+			...createRefreshResult(),
+			requestedPhase: request.requestedPhase ?? null,
+		}));
 		const sleep = vi.fn(() => new Promise<void>(() => {}));
 
 		const service = createAccountMirrorCompletionService({
@@ -851,7 +855,10 @@ describe("account mirror completion service", () => {
 	});
 
 	test("uses persisted phase ledger for the first bounded refresh", async () => {
-		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const requestRefresh = vi.fn(async (request) => ({
+			...createRefreshResult(),
+			requestedPhase: request.requestedPhase ?? null,
+		}));
 		const registry = createAccountMirrorStatusRegistry({
 			config,
 			now: () => new Date("2026-04-30T12:00:00.000Z"),
@@ -913,6 +920,9 @@ describe("account mirror completion service", () => {
 			status: "completed",
 			mode: "bounded",
 			passCount: 1,
+			lastRefresh: {
+				requestedPhase: "detail-inventory",
+			},
 		});
 	});
 

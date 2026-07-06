@@ -126,6 +126,7 @@ function createRefreshResult(): AccountMirrorRefreshResult {
 		provider: "chatgpt",
 		runtimeProfileId: "default",
 		browserProfileId: "default",
+		requestedPhase: null,
 		startedAt: "2026-04-29T12:00:00.000Z",
 		completedAt: "2026-04-29T12:00:01.000Z",
 		dispatcher: {

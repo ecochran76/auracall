@@ -643,6 +643,39 @@ Remaining M3 work:
 - installed dogfood pass proving the new guard correlation against real
   ChatGPT warning/yield evidence.
 
+### 2026-07-05 | M2/M3/M8 Requested-Phase Installed Readback
+
+- `AccountMirrorRefreshResult` now carries the normalized `requestedPhase` that
+  was sent into the metadata collector, so completion readback can prove which
+  branch actually ran instead of inferring it from lifecycle messages alone.
+- Focused tests cover bounded completion phase readback, scheduler fixtures,
+  refresh-service results, MCP refresh fixtures, and HTTP refresh mocks.
+- Installed dogfood on `chatgpt/wsl-chrome-3` proved bounded metadata-only
+  completion `acctmirror_completion_512abfb3-d0e5-49db-a9e7-070c06e2140d`
+  completed one pass after API reinstall/restart with
+  `lastRefresh.requestedPhase=detail-inventory`, scanned four conversation
+  detail surfaces, selected five newest conversation rows, stopped at a
+  three-row freshness frontier, and left 90 detail surfaces remaining.
+- The same installed pass reported `classification=passive_dominant`, passive
+  `6`, active `5`, provider interactions `5/6`, `llmServiceRequests=0`,
+  `cdpMethodCalls=9`, CDP methods
+  `Target.createTarget=2`, `Target.attachToTarget=2`, `Page.enable=2`,
+  `Runtime.enable=2`, `Runtime.evaluate=1`, and
+  `providerGuardCorrelation.state=none`.
+- Installed status still showed the live-follow target paused, with
+  `routineDecision.nextPhase=detail-inventory`; this was a bounded proof pass,
+  not a broad live-follow resume.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts tests/accountMirror/schedulerService.test.ts tests/http.responsesServer.test.ts tests/mcp.accountMirrorRefresh.test.ts --testNamePattern "requested phase|persisted phase ledger|bounded refresh|selected live-follow phase|starts nonblocking|foreground scheduler preemption|requests one explicit refresh"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/refreshService.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/completionService.test.ts tests/accountMirror/schedulerService.test.ts scripts/smoke-account-mirror-scheduler-history.ts scripts/smoke-live-follow-health-parity.ts tests/mcp.accountMirrorRefresh.test.ts --max-diagnostics 40`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_512abfb3-d0e5-49db-a9e7-070c06e2140d --json --timeout-ms 30000`
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.
@@ -662,7 +695,7 @@ Remaining M3 work:
   restarting at root rails.
 - [x] `metadata_only` freshness can complete for chats with persisted context
   and remote references while keeping local materialization backlog visible.
-- [ ] Provider-polite scrape telemetry distinguishes passive parsing from
+- [x] Provider-polite scrape telemetry distinguishes passive parsing from
   active UI/provider interactions.
 - [ ] Foreground operator work preempts or defers live follow with explicit
   status evidence.

@@ -1,3 +1,13 @@
+- 2026-07-05: Requested collector phase is runtime evidence, not just an input
+  hint. Carry normalized `requestedPhase` on `AccountMirrorRefreshResult` and
+  persist it through completion/status fixtures so installed proof can answer
+  which branch actually ran. Bounded installed proof
+  `acctmirror_completion_512abfb3-d0e5-49db-a9e7-070c06e2140d` on
+  `chatgpt/wsl-chrome-3` completed one metadata-only pass with
+  `lastRefresh.requestedPhase=detail-inventory`, passive `6`, active `5`,
+  provider interactions `5/6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, and
+  `providerGuardCorrelation.state=none`.
+
 - 2026-07-05: Live-follow state and phase names are an owned operating-model
   contract, not ad hoc status strings. Add collector phases, routine phases,
   routine phase statuses, routine decision states, and materialization backlog

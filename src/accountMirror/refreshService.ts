@@ -98,6 +98,7 @@ export interface AccountMirrorRefreshResult {
 	provider: AccountMirrorProvider;
 	runtimeProfileId: string;
 	browserProfileId: string | null;
+	requestedPhase: AccountMirrorCollectorPhase | null;
 	startedAt: string;
 	completedAt: string | null;
 	dispatcher: {
@@ -214,6 +215,7 @@ export function createAccountMirrorRefreshService(input: {
 			const provider = request.provider ?? "chatgpt";
 			const runtimeProfileId = request.runtimeProfileId ?? "default";
 			const requestId = generateRequestId();
+			const requestedPhase = normalizeRequestedCollectorPhase(request.requestedPhase);
 
 			await registry.refreshPersistentState?.();
 			const target = readSingleMirrorTarget({
@@ -403,7 +405,7 @@ export function createAccountMirrorRefreshService(input: {
 						expectedIdentityKey: target.expectedIdentityKey ?? "",
 						sweepMode: normalizeSweepMode(request.sweepMode),
 						materializationPolicy: request.materializationPolicy ?? null,
-						requestedPhase: normalizeRequestedCollectorPhase(request.requestedPhase),
+						requestedPhase,
 						limits: {
 							maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
 							maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
@@ -587,6 +589,7 @@ export function createAccountMirrorRefreshService(input: {
 					provider,
 					runtimeProfileId,
 					browserProfileId: target.browserProfileId,
+					requestedPhase,
 					startedAt: startedAt.toISOString(),
 					completedAt: completedAt.toISOString(),
 					dispatcher: {

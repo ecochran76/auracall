@@ -1,5 +1,41 @@
 # RUNBOOK
 
+## Turn 308 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: close the installed evidence gap where a bounded detail-inventory pass
+  proved scrape shape but `lastRefresh.requestedPhase` still read back as
+  `null`.
+- Result:
+  - `AccountMirrorRefreshResult` now carries normalized `requestedPhase` from
+    the collector request;
+  - bounded completion/status evidence can prove the exact phase branch that
+    ran;
+  - installed dogfood operation
+    `acctmirror_completion_512abfb3-d0e5-49db-a9e7-070c06e2140d` completed one
+    metadata-only pass on `chatgpt/wsl-chrome-3` with
+    `lastRefresh.requestedPhase=detail-inventory`.
+- Installed proof:
+  - pass window: `2026-07-06T02:37:37.798Z` to
+    `2026-07-06T02:38:56.691Z`;
+  - scanned four conversation detail surfaces, selected five newest rows, and
+    stopped at a three-row freshness frontier;
+  - scrape budget was `passive_dominant`: passive `6`, active `5`,
+    provider interactions `5/6`, `llmServiceRequests=0`,
+    `cdpMethodCalls=9`, `providerGuardCorrelation.state=none`;
+  - live-follow target remained paused with next phase `detail-inventory`, so
+    this was not a broad resume.
+- Validation:
+  - focused requested-phase/completion/scheduler/HTTP/MCP tests passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome check passed; direct Biome on
+    `tests/http.responsesServer.test.ts` still has pre-existing non-null
+    assertion debt outside this slice.
+- Remaining scope:
+  - Plan 0152 still needs full backfill-to-steady, restart keep-current, and
+    normal-cadence preemption proof before broad live-follow resume.
+
 ## Turn 307 | 2026-07-05
 
 - Active plan:

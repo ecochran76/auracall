@@ -2719,6 +2719,7 @@ describe("http responses adapter", () => {
 				provider: request?.provider ?? "chatgpt",
 				runtimeProfileId: request?.runtimeProfileId ?? "default",
 				browserProfileId: "default",
+				requestedPhase: request?.requestedPhase ?? null,
 				startedAt: "2026-06-07T15:55:18.700Z",
 				completedAt: "2026-06-07T15:55:18.700Z",
 				dispatcher: {
@@ -6823,6 +6824,7 @@ describe("http responses adapter", () => {
 				provider: "chatgpt",
 				runtimeProfileId: "default",
 				browserProfileId: "default",
+				requestedPhase: null,
 				startedAt: "2026-04-29T12:00:00.000Z",
 				completedAt: "2026-04-29T12:00:05.000Z",
 				dispatcher: {

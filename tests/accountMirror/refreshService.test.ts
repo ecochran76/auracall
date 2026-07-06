@@ -147,6 +147,7 @@ describe("account mirror refresh service", () => {
 			provider: "chatgpt",
 			runtimeProfileId: "default",
 			browserProfileId: "default",
+			requestedPhase: null,
 			metadataCounts: {
 				projects: 1,
 				conversations: 2,
@@ -383,7 +384,7 @@ describe("account mirror refresh service", () => {
 			generateRequestId: () => "acctmirror_requested_phase",
 		});
 
-		await service.requestRefresh({
+		const result = await service.requestRefresh({
 			provider: "chatgpt",
 			runtimeProfileId: "default",
 			explicitRefresh: true,
@@ -391,6 +392,9 @@ describe("account mirror refresh service", () => {
 			requestedPhase: "detail-inventory",
 		});
 
+		expect(result).toMatchObject({
+			requestedPhase: "detail-inventory",
+		});
 		expect(metadataCollector.collect).toHaveBeenCalledWith(
 			expect.objectContaining({
 				requestedPhase: "detail-inventory",
