@@ -1109,6 +1109,127 @@ describe("ChatGPT account mirror metadata collector", () => {
 		]);
 	});
 
+	test("continues requested detail-inventory from the persisted selected-row cursor", async () => {
+		const calls: string[] = [];
+		const client = {
+			getUserIdentity: vi.fn(async () => ({
+				email: "ecochran76@gmail.com",
+				accountLevel: "Business",
+				source: "auth-session",
+			})),
+			listProjects: vi.fn(async () => {
+				throw new Error("projects should not be read");
+			}),
+			listConversations: vi.fn(async () => {
+				throw new Error("conversations should not be read");
+			}),
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async (conversationId: string) => {
+				calls.push(`listConversationFiles:${conversationId}`);
+				return [];
+			}),
+			getConversationContext: vi.fn(async (conversationId: string) => {
+				calls.push(`getConversationContext:${conversationId}`);
+				return {
+					provider: "chatgpt" as const,
+					conversationId,
+					messages: [],
+					artifacts: [
+						{
+							id: `artifact-${conversationId}`,
+							title: "Generated table",
+							kind: "spreadsheet" as const,
+						},
+					],
+				};
+			}),
+		};
+		const collector = createChatgptAccountMirrorMetadataCollector(
+			{
+				model: "gpt-5.2",
+				browser: {},
+				runtimeProfiles: {
+					default: {
+						browserProfile: "default",
+						defaultService: "chatgpt",
+						services: {
+							chatgpt: {
+								identity: {
+									email: "ecochran76@gmail.com",
+								},
+							},
+						},
+					},
+				},
+			} as never,
+			{
+				createClient: async () => client as never,
+			},
+		);
+
+		const result = await collector.collect({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			sweepMode: "steady_follow",
+			requestedPhase: "detail-inventory",
+			previousEvidence: {
+				identitySource: "auth-session",
+				projectSampleIds: [],
+				conversationSampleIds: ["conv_done", "conv_next", "conv_later"],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: true,
+				},
+				attachmentInventory: {
+					nextProjectIndex: 0,
+					nextConversationIndex: 1,
+					detailReadLimit: 1,
+					scannedProjects: 0,
+					scannedConversations: 1,
+					conversationDetail: null,
+					yielded: false,
+				},
+				conversationFreshnessFrontier: {
+					object: "account_mirror_conversation_freshness_frontier",
+					provider: "chatgpt",
+					sweepMode: "steady_follow",
+					threshold: 3,
+					rowsExamined: 8,
+					rowsSelectedForDetail: 3,
+					frontierReached: true,
+					firstStoppedRow: null,
+					fallbackReason: "missing_cached_summary",
+					selectedConversationIds: ["conv_done", "conv_next", "conv_later"],
+					rowEvidence: [],
+				},
+			},
+			limits: {
+				maxPageReadsPerCycle: 1,
+				maxConversationRowsPerCycle: 10,
+				maxArtifactRowsPerCycle: 10,
+				maxBrowserInteractionsPerMinute: 0,
+			},
+		});
+
+		expect(calls).toEqual(["listConversationFiles:conv_next", "getConversationContext:conv_next"]);
+		expect(result.evidence.attachmentInventory).toMatchObject({
+			nextConversationIndex: 2,
+			detailReadLimit: 1,
+			scannedConversations: 1,
+		});
+		expect(result.manifests.conversations.map((conversation) => conversation.id)).toEqual([
+			"conv_done",
+			"conv_next",
+			"conv_later",
+		]);
+		expect(result.manifests.artifacts.map((artifact) => artifact.id)).toEqual([
+			"artifact-conv_next",
+		]);
+	});
+
 	test("counts passive telemetry for empty requested detail-inventory parses", async () => {
 		const client = {
 			getUserIdentity: vi.fn(async () => ({

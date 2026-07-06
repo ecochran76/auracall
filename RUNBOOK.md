@@ -12614,3 +12614,43 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Remaining scope:
   - full backfill-to-steady and keep-current loop proof remain required before
     broad live-follow resume.
+
+## Turn 313 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - make requested `detail-inventory` continuations consume the persisted
+    selected-row cursor instead of replaying the same selected conversations.
+- Result:
+  - pre-fix installed pass
+    `acctmirror_completion_11cfbf8f-8524-44af-b442-9d94e21a9dd6` reproduced
+    the bug by scanning four conversations and leaving
+    `newestFirstDetail.nextIndex=4` unchanged;
+  - the collector now resets the cursor for fresh frontier selection but keeps
+    the stored cursor for requested detail continuations;
+  - patched installed pass
+    `acctmirror_completion_ee1e76cb-2c4b-492c-a07b-a6ae8a7e8b5e` consumed the
+    persisted `nextIndex=4` cursor, scanned one conversation, and moved the
+    account ledger to `state=complete` / `nextEligiblePhase=complete`;
+  - status then selected `routineDecision.nextPhase=steady_follow` with zero
+    remaining detail surfaces and no provider guard;
+  - bounded keep-current pass
+    `acctmirror_completion_37317275-8475-4d90-b7c7-616b6759fd83` selected zero
+    detail rows after a three-row fresh frontier and kept detail surfaces at
+    zero, with `llmServiceRequests=0` and no provider guard.
+  - completed project-conversation cursor evidence no longer selects
+    `project-conversations` as the next phase; installed readback after
+    reinstall/restart reports `routineDecision.nextPhase=steady_follow`.
+- Validation:
+  - focused collector cursor tests passed;
+  - focused phase-decision tests passed for yielded versus completed
+    project-conversation cursors;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome passed on touched source/test;
+  - installed API reinstall/restart plus two bounded ChatGPT completions proved
+    cursor consumption and keep-current readback.
+- Remaining scope:
+  - keep-current project discovery still took roughly 99 seconds with zero
+    projects and should be optimized before broad live-follow resume;
+  - foreground operator preemption still needs installed proof.

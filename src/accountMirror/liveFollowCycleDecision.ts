@@ -148,7 +148,10 @@ export function chooseLiveFollowCyclePhase(input: {
 			reason: `freshness frontier selected ${frontier.rowsSelectedForDetail} conversation row(s) for detail`,
 		};
 	}
-	if (projectConversationCursor) {
+	if (
+		projectConversationCursor &&
+		(projectConversationCursor.yielded === true || projectConversationCursor.nextProjectIndex > 0)
+	) {
 		return {
 			phase: "project-conversations",
 			status: projectConversationCursor.yielded === true ? "yielded" : "pending",

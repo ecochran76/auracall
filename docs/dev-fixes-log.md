@@ -18840,6 +18840,17 @@ browser-stage lifecycle observability, not transcript truncation.
   should advance only from successful account evidence such as `lastSuccessAt`
   or scrape-budget `observedAt`. Keep the failed timestamp visible separately
   so operators can distinguish real scrape progress from retry/backoff churn.
+- 2026-07-05: Requested detail-inventory continuations must consume the
+  persisted selected-row cursor. Fresh reverse-mtime frontier filtering should
+  reset cursor indexes to the new selected rows, but a later requested
+  `detail-inventory` pass must not apply that reset again to the same
+  persisted `selectedConversationIds`; otherwise every cycle replays the first
+  page and leaves `newestFirstDetail.nextIndex` unchanged.
+- 2026-07-05: Completed project-conversation cursor evidence is not a pending
+  phase. Treat a project-conversation cursor as resumable only when it yielded
+  or has a nonzero `nextProjectIndex`; terminal cursors such as
+  `yielded=false` / `nextProjectIndex=0` should fall through to complete or
+  steady-follow status instead of reselecting `project-conversations`.
 - 2026-07-05: Live-follow status must expose policy-aware materialization
   backlog, not just raw asset inventory. A complete metadata mirror can still
   have known remote assets missing locally; under `metadata_only` that should

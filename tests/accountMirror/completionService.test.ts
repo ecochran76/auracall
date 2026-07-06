@@ -331,6 +331,71 @@ describe("live-follow cycle decision", () => {
 		});
 	});
 
+	test("does not resume completed project conversation cursor after keep-current pass", () => {
+		const decision = chooseLiveFollowCyclePhase({
+			operation: {
+				passCount: 4,
+				lastRefresh: createRefreshResult(),
+			},
+			evidence: {
+				identitySource: null,
+				projectSampleIds: [],
+				conversationSampleIds: [],
+				truncated: {
+					projects: false,
+					conversations: false,
+					artifacts: false,
+				},
+				collectorProgress: {
+					provider: "chatgpt",
+					runtimeProfileId: "default",
+					sweepMode: "steady_follow",
+					phase: "complete",
+					event: "completed",
+					observedAt: "2026-04-30T12:00:01.000Z",
+				},
+				conversationFreshnessFrontier: {
+					object: "account_mirror_conversation_freshness_frontier",
+					provider: "chatgpt",
+					sweepMode: "steady_follow",
+					threshold: 3,
+					rowsExamined: 3,
+					rowsSelectedForDetail: 0,
+					frontierReached: true,
+					selectedConversationIds: [],
+					firstStoppedRow: {
+						conversationId: "conv_fresh",
+						index: 2,
+						remoteMtime: "2026-06-27T18:00:00.000Z",
+					},
+					fallbackReason: null,
+					rowEvidence: [],
+				},
+				projectConversations: {
+					nextProjectIndex: 0,
+					readLimit: 0,
+					scannedProjects: 0,
+					yielded: false,
+				},
+				attachmentInventory: {
+					nextProjectIndex: 0,
+					nextConversationIndex: 0,
+					detailReadLimit: 4,
+					scannedProjects: 0,
+					scannedConversations: 0,
+					conversationDetail: null,
+					yielded: false,
+				},
+			},
+			remainingDetailSurfaces: 0,
+		});
+
+		expect(decision).toMatchObject({
+			phase: "complete",
+			status: "complete",
+		});
+	});
+
 	test("uses persisted backfill ledger phase before stale completion evidence", () => {
 		const decision = chooseLiveFollowCyclePhase({
 			operation: {

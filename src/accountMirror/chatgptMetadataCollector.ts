@@ -427,6 +427,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				frontierEvidence: frontier.evidence,
 				detailConversations: frontier.detailConversations,
 				projectsLength: projects.items.length,
+				resetCursorForFreshnessFrontier: !honorRequestedDetailPhase,
 			});
 			const inventory =
 				input.provider === "chatgpt"
@@ -618,6 +619,7 @@ export function selectDetailAttachmentCursorForFreshnessFrontier(input: {
 	frontierEvidence: ConversationFreshnessFrontierEvidence | null;
 	detailConversations: readonly Conversation[];
 	projectsLength: number;
+	resetCursorForFreshnessFrontier?: boolean;
 }): AttachmentInventoryCursor | null {
 	const normalized = normalizeAttachmentCursorForDetailCandidates(
 		input.attachmentCursor,
@@ -628,6 +630,7 @@ export function selectDetailAttachmentCursorForFreshnessFrontier(input: {
 			input.frontierEvidence &&
 			input.frontierEvidence.rowsSelectedForDetail < input.frontierEvidence.rowsExamined;
 		if (
+			input.resetCursorForFreshnessFrontier !== false &&
 			input.sweepMode === "steady_follow" &&
 			frontierFilteredRows &&
 			(input.provider === "chatgpt" || input.provider === "gemini" || input.provider === "grok")

@@ -39590,6 +39590,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `WebSocket connection closed`, so status now derives
   `routineDecision.lastProgressAt` from successful account evidence instead of
   failed `lastCompletedAt` timestamps.
+- 2026-07-05: Continued Plan 0152 cursor-resume proof. Pre-fix bounded
+  completion `acctmirror_completion_11cfbf8f-8524-44af-b442-9d94e21a9dd6`
+  proved requested `detail-inventory` still replayed the first four selected
+  rows and left `newestFirstDetail.nextIndex=4`. The collector now keeps the
+  persisted selected-row cursor for requested detail continuations while still
+  resetting cursors for fresh frontier selections. Installed completion
+  `acctmirror_completion_ee1e76cb-2c4b-492c-a07b-a6ae8a7e8b5e` then scanned
+  one conversation, dropped remaining detail surfaces to zero, and moved the
+  ledger to complete; keep-current completion
+  `acctmirror_completion_37317275-8475-4d90-b7c7-616b6759fd83` selected zero
+  detail rows after a three-row fresh frontier with no provider guard. A
+  follow-up phase-decision fix prevents completed project-conversation cursor
+  evidence from reselecting `project-conversations`; installed restart readback
+  now reports `routineDecision.nextPhase=steady_follow`.
 - 2026-07-05: Continued Plan 0152 M7 operator observability. Added structured
   live-follow target `materializationBacklog` readback so `/status` and
   CLI-normalized API status distinguish `metadata_current_backlog` from

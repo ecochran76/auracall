@@ -787,6 +787,57 @@ Validation:
 - `auracall api mirror-completion-status acctmirror_completion_1214d506-d1f7-4a88-b8fd-1e76784aebc9 --json --timeout-ms 30000`
 - `auracall api status --json --timeout-ms 30000`
 
+### 2026-07-05 | M1/M2/M8 Requested Detail Cursor Consumption
+
+- A controlled installed rerun before this fix,
+  `acctmirror_completion_11cfbf8f-8524-44af-b442-9d94e21a9dd6`, proved the
+  remaining cursor bug: the pass correctly started at `detail-inventory` but
+  replayed four selected conversations and persisted
+  `newestFirstDetail.nextIndex=4` again.
+- The collector now distinguishes fresh frontier selection from requested-phase
+  continuation. Fresh frontier filtering still resets the local cursor to the
+  newest selected rows, while a requested `detail-inventory` continuation keeps
+  the persisted selected-row cursor.
+- Installed proof after reinstall/restart completed
+  `acctmirror_completion_ee1e76cb-2c4b-492c-a07b-a6ae8a7e8b5e` from the
+  persisted `nextIndex=4` cursor. The patched pass scanned one conversation,
+  set `attachmentInventory.nextConversationIndex=0`, reported
+  `remainingDetailSurfaces.total=0`, and moved the account backfill ledger to
+  `state=complete` / `nextEligiblePhase=complete`.
+- `/status` then reported `routineDecision.nextPhase=steady_follow`,
+  `remainingWork.detailSurfaces=0`, `lastProgressAt=2026-07-06T03:27:49.213Z`,
+  `materializationBacklog.state=metadata_current_backlog`, and no provider
+  guard evidence.
+- A following bounded keep-current pass,
+  `acctmirror_completion_37317275-8475-4d90-b7c7-616b6759fd83`, completed with
+  no requested phase, read current rails, reached the freshness frontier after
+  three fresh rows, selected zero detail rows, kept
+  `remainingDetailSurfaces.total=0`, and reported `llmServiceRequests=0` with
+  `providerGuardCorrelation.state=none`.
+- The keep-current pass exposed a status-only phase fallback bug:
+  `projectConversations` evidence with `yielded=false` and
+  `nextProjectIndex=0` was incorrectly treated as pending. The phase chooser
+  now resumes project conversations only for yielded or nonzero-index project
+  cursors, and installed readback after reinstall/restart reports
+  `routineDecision.nextPhase=steady_follow`.
+- The keep-current pass also exposed remaining performance work before broad
+  resume: project discovery took roughly 99 seconds even with zero projects,
+  and the sweep shape was `active_dominant` (`active.total=4`,
+  `passive.total=0`, `cdpMethodCalls=12`). This is not rate-limit guard
+  evidence, but it is still too expensive for an unattended steady routine.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts --testNamePattern "completed project conversation cursor|resumes project conversation cursor|requested detail-inventory|persisted selected-row cursor|resets steady-follow detail cursor|preserves incomplete detail cursor"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/liveFollowCycleDecision.ts src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/completionService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts --max-diagnostics 40`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_ee1e76cb-2c4b-492c-a07b-a6ae8a7e8b5e --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_37317275-8475-4d90-b7c7-616b6759fd83 --json --timeout-ms 30000`
+- `auracall api status --json --timeout-ms 30000`
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.
@@ -800,9 +851,9 @@ Validation:
 
 - [x] A documented live-follow state contract exists and is used by scheduler,
   completion, status, and operator surfaces.
-- [ ] Backfill progress is persisted per account and resumes from the correct
+- [x] Backfill progress is persisted per account and resumes from the correct
   phase across API restarts.
-- [ ] Steady-follow chooses the next phase from current evidence instead of
+- [x] Steady-follow chooses the next phase from current evidence instead of
   restarting at root rails.
 - [x] `metadata_only` freshness can complete for chats with persisted context
   and remote references while keeping local materialization backlog visible.
