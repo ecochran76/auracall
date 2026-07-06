@@ -37,7 +37,7 @@
    - [ ] `pnpm run lint` (error-level lint diagnostics block release; warning-level Biome diagnostics follow `docs/dev/policies/0020-lint-warning-debt.md`)
    - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
    - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`auracall-local`), run `mcporter list auracall-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.
-   - [ ] Lazy-live-follow operator preflight: run `pnpm run preflight:lazy-live-follow` to verify completion controls, foreground deferral, hydration, live-follow health parity, `/ops/browser`, operator API-key issue/client auth, user-runtime install, installed MCP status tools, and direct API log-tail retrieval.
+   - [ ] Lazy-live-follow operator preflight: run `pnpm run preflight:lazy-live-follow` to verify completion controls, foreground deferral, scheduler preemption, hydration, live-follow health parity, `/ops/browser`, operator API-key issue/client auth, user-runtime install, installed MCP status tools, and direct API log-tail retrieval.
 5. **Publish / distribute**
    - [ ] Ensure git status is clean; commit and push any pending changes.
    - [ ] Run `./scripts/release.sh smoke` to verify the local tarball executes from an empty directory.

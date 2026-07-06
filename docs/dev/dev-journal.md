@@ -39750,3 +39750,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   under foreground backpressure, verifies `foreground_work_deferred` through
   API status and scheduler diagnostics, then asserts provider refresh calls
   stayed at zero. Source smoke proof passed with `providerWork=none`.
+- 2026-07-06: Continued Plan 0152 M4/M7 scheduler-preemption smoke coverage.
+  Added `pnpm run smoke:scheduler-preemption` and wired it into
+  `preflight:lazy-live-follow` after the foreground-deferral proof. The smoke
+  starts an isolated API server with an injected execute-mode scheduler pass
+  that yields to foreground work, verifies API/CLI status report target-level
+  `operator_preempted`, and asserts completion/provider work stays at zero.

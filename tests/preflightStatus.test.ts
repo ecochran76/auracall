@@ -234,6 +234,9 @@ describe('preflight status persistence', () => {
         'completion-control smoke: pass',
         '==== foreground deferral evidence ====',
         '>> pnpm run smoke:foreground-deferral',
+        'foreground-deferral smoke: pass',
+        '==== scheduler preemption evidence ====',
+        '>> pnpm run smoke:scheduler-preemption',
       ].join('\n'),
     );
 
@@ -247,15 +250,22 @@ describe('preflight status persistence', () => {
       }),
       expect.objectContaining({
         label: 'foreground deferral evidence',
-        status: 'running',
+        status: 'passed',
         command: 'pnpm run smoke:foreground-deferral',
+        completedAt: expect.any(String),
+        durationMs: expect.any(Number),
+      }),
+      expect.objectContaining({
+        label: 'scheduler preemption evidence',
+        status: 'running',
+        command: 'pnpm run smoke:scheduler-preemption',
         completedAt: null,
         durationMs: null,
       }),
     ]);
   });
 
-  it('continues to the hydration step after foreground deferral evidence passes', async () => {
+  it('continues to the hydration step after scheduler preemption evidence passes', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-preflight-run-foreground-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -286,6 +296,9 @@ describe('preflight status persistence', () => {
         '==== foreground deferral evidence ====',
         '>> pnpm run smoke:foreground-deferral',
         'foreground-deferral smoke: pass',
+        '==== scheduler preemption evidence ====',
+        '>> pnpm run smoke:scheduler-preemption',
+        'scheduler-preemption smoke: pass',
         '==== completion hydration ====',
         '>> pnpm run smoke:completion-hydration',
       ].join('\n'),
@@ -303,6 +316,13 @@ describe('preflight status persistence', () => {
         label: 'foreground deferral evidence',
         status: 'passed',
         command: 'pnpm run smoke:foreground-deferral',
+        completedAt: expect.any(String),
+        durationMs: expect.any(Number),
+      }),
+      expect.objectContaining({
+        label: 'scheduler preemption evidence',
+        status: 'passed',
+        command: 'pnpm run smoke:scheduler-preemption',
         completedAt: expect.any(String),
         durationMs: expect.any(Number),
       }),

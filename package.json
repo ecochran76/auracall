@@ -35,6 +35,7 @@
     "smoke:scheduler-history": "tsx scripts/smoke-account-mirror-scheduler-history.ts",
     "smoke:completion-control": "tsx scripts/smoke-account-mirror-completion-control.ts",
     "smoke:foreground-deferral": "tsx scripts/smoke-account-mirror-foreground-deferral.ts",
+    "smoke:scheduler-preemption": "tsx scripts/smoke-account-mirror-scheduler-preemption.ts",
     "smoke:completion-hydration": "tsx scripts/smoke-account-mirror-completion-hydration.ts",
     "smoke:live-follow-health": "tsx scripts/smoke-live-follow-health-parity.ts",
     "smoke:ops-browser-control": "tsx scripts/smoke-ops-browser-completion-control.ts",

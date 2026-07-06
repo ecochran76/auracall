@@ -18937,3 +18937,8 @@ browser-stage lifecycle observability, not transcript truncation.
   a paused fixture completion can prove resume-to-deferral, API status
   lifecycle readback, scheduler diagnostics readback, and zero provider refresh
   calls before any live dogfood resumes real accounts.
+- 2026-07-06: Scheduler-preemption regressions need a no-provider preflight
+  proof separate from completion deferral. Keep `smoke:scheduler-preemption` in
+  the lazy-live-follow preflight so a foreground-yielded scheduler pass must
+  project target-level `operator_preempted` through API/CLI status without
+  starting provider refresh or completion work.

@@ -279,6 +279,11 @@ scoped keys, response batches, attachments, and polling rules, see
   completion under foreground backpressure and verify
   `foreground_work_deferred` status plus scheduler diagnostics readback with
   zero provider refresh calls.
+- Deterministic scheduler-preemption smoke: run
+  `pnpm run smoke:scheduler-preemption` to inject a foreground-yielded
+  scheduler pass into an isolated local API server and verify API/CLI status
+  report target-level `operator_preempted` with zero provider refresh or
+  completion work.
 - Deterministic health parity smoke: run `pnpm run smoke:live-follow-health`
   to start one fixture-backed local API server and compare `/status.liveFollow`,
   CLI `api status`, MCP `api_status`, and `/ops/browser` against the same
@@ -299,7 +304,7 @@ scoped keys, response batches, attachments, and polling rules, see
   and can call it against a fixture local API server.
 - Lazy-live-follow operator preflight: run
 `pnpm run preflight:lazy-live-follow` to execute the no-browser completion,
-foreground-deferral, hydration, health, dashboard, operator API-key
+foreground-deferral, scheduler-preemption, hydration, health, dashboard, operator API-key
 issue/client-auth, user-runtime install, and installed MCP status plus
 log-tail checks as one release gate before live dogfood.
 

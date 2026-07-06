@@ -15,6 +15,7 @@ interface Step {
 const steps: Step[] = [
   createScriptStep('completion controls', 'smoke:completion-control', 'smoke-account-mirror-completion-control'),
   createScriptStep('foreground deferral evidence', 'smoke:foreground-deferral', 'smoke-account-mirror-foreground-deferral'),
+  createScriptStep('scheduler preemption evidence', 'smoke:scheduler-preemption', 'smoke-account-mirror-scheduler-preemption'),
   createScriptStep('completion hydration', 'smoke:completion-hydration', 'smoke-account-mirror-completion-hydration'),
   createScriptStep('live-follow health and diagnostics parity', 'smoke:live-follow-health', 'smoke-live-follow-health-parity'),
   createScriptStep('ops-browser dashboard controls', 'smoke:ops-browser-control', 'smoke-ops-browser-completion-control'),

@@ -200,6 +200,12 @@
         manually scanning raw mutation rows
       - compact history reports `latestYield`, `yieldEvents[]`,
         queued-work owner/kind, resume cursor, and remaining detail surfaces
+      - deterministic scheduler preemption proof is available with
+        `pnpm run smoke:scheduler-preemption`; it starts an isolated local API
+        server, injects a foreground-yielded scheduler pass, verifies
+        `/status` and CLI-normalized status report target-level
+        `operator_preempted`, and asserts no provider refresh/completion work
+        starts
       - nonblocking completion is available with
         `POST /v1/account-mirrors/completions` and
         `GET /v1/account-mirrors/completions/{completion_id}`

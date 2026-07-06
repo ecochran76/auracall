@@ -154,6 +154,24 @@ Validation:
 
 - `pnpm run smoke:foreground-deferral`
 
+### 2026-07-06 | M4/M7 Scheduler Preemption Smoke
+
+- Added `pnpm run smoke:scheduler-preemption` as a deterministic no-provider
+  proof that an execute-mode scheduler pass yielding to foreground work is
+  projected through `/status` and CLI-normalized status as target-level
+  `operator_preempted`.
+- Wired the smoke into `preflight:lazy-live-follow`, so operator/release
+  preflight now proves both completion-level foreground deferral and
+  scheduler-level foreground preemption before any live dogfood resumes real
+  subscribed accounts.
+- The smoke uses an isolated API server with an injected foreground-yielded
+  scheduler pass and an injected completion service that would fail if
+  completion/provider work started.
+
+Validation:
+
+- `pnpm run smoke:scheduler-preemption`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
@@ -402,6 +420,9 @@ Current evidence:
   scheduler diagnostics.
 - Deterministic smoke `pnpm run smoke:foreground-deferral` proves the
   completion deferral/readback path with zero provider refresh calls.
+- Deterministic smoke `pnpm run smoke:scheduler-preemption` proves the
+  scheduler preemption/readback path with zero provider refresh or completion
+  work.
 - Installed proof remains pending because the current configured live-follow
   targets are paused/minimum-interval or disabled/blocked; an installed
   preemption smoke must wait for an eligible target or use an isolated proof
