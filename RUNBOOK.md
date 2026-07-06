@@ -13244,3 +13244,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - wired Plan 0153 into `ROADMAP.md`.
 - Validation:
   - `pnpm run plans:audit -- --keep 153` returned validation errors `0`.
+
+## Turn 324 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0153-2026-07-06-live-follow-target-resume-readiness.md`
+- Goal:
+  - diagnose and correct the recurring false Grok identity-mismatch blocker.
+- Result:
+  - confirmed installed `/status` reported `grok/default` as
+    `blocked / identity-mismatch` because persisted state treated provider-app
+    value `company logo` as authoritative identity evidence against configured
+    tenant email `ez86944@gmail.com`;
+  - fixed account-mirror identity comparison so Grok only blocks on comparable
+    identity namespaces, such as email-vs-email or handle-vs-handle;
+  - wired the same semantics into the metadata collector identity gate;
+  - prevented stale `current_mismatch_confirmed` Grok repair readback from
+    overriding an eligible decision when the current keys are not comparable;
+  - updated Plan 0153 so the Grok lane is false mismatch semantics and stale
+    state cleanup, not assumed account/config repair.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/statusRegistry.test.ts --testNamePattern "Grok|identity mismatch|stale malformed identity mismatch"`;
+  - `pnpm exec tsc --noEmit --pretty false`.

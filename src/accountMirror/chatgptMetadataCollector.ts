@@ -45,6 +45,10 @@ import type {
 	AccountMirrorRouteProgressEvidence,
 	AccountMirrorScrapeBudgetEvidence,
 } from "./statusRegistry.js";
+import {
+	accountMirrorIdentityKeysMismatch,
+	normalizeAccountMirrorProviderIdentityKey,
+} from "./tenantBinding.js";
 
 const MAX_DOM_DRIFT_SCREENSHOTS_PER_PROCESS = 3;
 const CHATGPT_DETAIL_READ_TIMEOUT_MS = 10_000;
@@ -291,8 +295,20 @@ export function createChatgptAccountMirrorMetadataCollector(
 			const identity = await client.getUserIdentity(listOptions);
 			throwIfCollectionAborted(input.abortSignal);
 			const detectedIdentityKey = readProviderIdentityKey(input.provider, identity);
-			const expectedIdentityKey = normalizeIdentityKey(input.expectedIdentityKey);
-			if (!expectedIdentityKey || detectedIdentityKey !== expectedIdentityKey) {
+			const expectedIdentityKey = normalizeAccountMirrorProviderIdentityKey(
+				input.provider,
+				input.expectedIdentityKey,
+			);
+			if (
+				!expectedIdentityKey ||
+				!detectedIdentityKey ||
+				(detectedIdentityKey &&
+					accountMirrorIdentityKeysMismatch({
+						provider: input.provider,
+						expectedIdentityKey,
+						detectedIdentityKey,
+					}))
+			) {
 				throw new AccountMirrorIdentityMismatchError(
 					input.provider,
 					expectedIdentityKey ?? "",

@@ -5,6 +5,14 @@
   follow-up classes; broad resume should continue only rows classified safe and
   should not restart every cycle from conversation rail walking.
 
+- 2026-07-06: Grok account-mirror identity checks must not compare
+  cross-namespace values as hard mismatches. A configured browser tenant email
+  such as `ez86944@gmail.com` is not comparable to a Grok provider display
+  value or scraped label such as `company logo`. Only comparable Grok identity
+  keys, such as email-vs-email or handle-vs-handle, should block as
+  `identity-mismatch`; stale `current_mismatch_confirmed` repair readback must
+  not keep a target blocked after the current comparison is non-comparable.
+
 - 2026-07-06: Broad live-follow reconciliation must classify targets before
   acting. Treat `operator_paused` as a keep-existing boundary and do not apply
   automatic policy upgrades to paused active completions. Expose the same

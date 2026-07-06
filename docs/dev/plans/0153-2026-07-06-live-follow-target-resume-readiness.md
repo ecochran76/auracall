@@ -8,9 +8,10 @@ Lane: P01
 Convert the post-0152 live-follow posture from "attention-needed but
 explained" into an operator-safe target resume routine. The work should decide
 and prove what happens to each subscribed account class that 0152 deliberately
-kept out of blind broad resume: operator-paused ChatGPT accounts, provider-
-blocked Gemini accounts, identity-blocked Grok accounts, and account-library or
-materialization backlogs that should not force broad chat re-scrapes.
+kept out of blind broad resume: operator-paused ChatGPT accounts,
+provider-blocked Gemini accounts, false Grok identity-blocked rows caused by
+cross-namespace identity comparison, and account-library or materialization
+backlogs that should not force broad chat re-scrapes.
 
 This plan does not replace the 0152 operating model. It applies that model to
 the remaining non-safe targets one class at a time, with installed evidence
@@ -29,8 +30,12 @@ excluded for a precise operator-visible reason.
   operator decision.
 - `gemini/auracall-gemini-pro` is provider-blocked by legacy bounded-left-rail
   semantics. It needs a provider-specific repair path before automatic resume.
-- `grok/default` is identity-blocked. Its completeness evidence is not enough
-  to resume until account identity/config repair is proven.
+- `grok/default` was classified `identity_blocked`, but the live evidence shows
+  the recurring failure is a false comparison: Grok provider display/user
+  labels such as `company logo` are not the same namespace as the configured
+  Chrome/browser tenant email. Grok needs provider-aware identity semantics and
+  stale mismatch cleanup before target resume, not an assumption that the
+  configured tenant is wrong.
 - Account-library and local materialization backlogs remain separate from
   metadata-current steady-follow. They must not make a complete metadata row
   restart root/project rail walking.
@@ -45,8 +50,10 @@ excluded for a precise operator-visible reason.
 3. If a target is `provider_blocked`, repair or replace the provider-specific
    policy before any automatic resume. Do not retry the old blocked completion
    as a liveness test.
-4. If a target is `identity_blocked`, repair identity/config evidence first,
-   then rerun classification before provider work.
+4. If a Grok target is `identity_blocked`, first determine whether the
+   detected provider-app value is comparable to the configured tenant identity.
+   Email-vs-display-name and email-vs-provider-user-id are not comparable and
+   must not block live follow.
 5. If a target is metadata-current with only materialization/account-library
    backlog, route that backlog through its own queue/status surface rather than
    restarting full chat scraping.
@@ -64,8 +71,9 @@ excluded for a precise operator-visible reason.
 - M4: Convert Gemini from `provider_blocked` to a bounded provider-specific
   plan or repair path that does not reuse the legacy blocked completion as the
   broad-resume mechanism.
-- M5: Convert Grok from `identity_blocked` to either repaired identity/config
-  evidence or a durable disabled/blocked state with a precise operator note.
+- M5: Convert Grok from false `identity_blocked` to eligible or
+  safe-bounded-resume by making identity comparison provider-aware and clearing
+  stale mismatch readback when the keys are not comparable.
 - M6: Keep account-library and local materialization backlog out of metadata
   freshness decisions, with status readback that names the separate queue.
 - M7: Reconcile broad live-follow after M2-M6 and prove that enabled targets
@@ -83,7 +91,7 @@ excluded for a precise operator-visible reason.
 - Parallelizable:
   - ChatGPT paused-target operator UX/docs;
   - Gemini bounded-left-rail provider repair design;
-  - Grok identity/config investigation;
+  - Grok false identity-mismatch semantics and stale-state cleanup;
   - account-library/materialization backlog readback refinement.
 
 ## Non-Goals
@@ -107,8 +115,9 @@ excluded for a precise operator-visible reason.
   target was upgraded.
 - [ ] Gemini provider-blocked live follow has a bounded repair/replacement path
   that avoids the legacy blocked completion as the automatic broad-resume path.
-- [ ] Grok identity-blocked live follow has repaired identity/config evidence
-  or a durable disabled/blocked operator state.
+- [ ] Grok false identity-blocked live follow no longer treats provider
+  display/user labels as mismatches against configured browser tenant email,
+  and stale mismatch readback no longer keeps the target blocked.
 - [ ] Materialization/account-library backlog remains separate from
   metadata-current live-follow freshness in status and scheduling behavior.
 - [ ] Installed broad reconciliation leaves no desired-enabled target in an
@@ -120,6 +129,6 @@ excluded for a precise operator-visible reason.
 This plan closes when installed AuraCall can run broad live-follow
 reconciliation with every subscribed account classified into an intentional
 target state, at least one formerly operator-paused ChatGPT target has an
-explicitly controlled outcome, and Gemini/Grok blockers are either repaired or
-preserved as precise follow-up states without causing broad resume to restart
-expensive scrape work.
+explicitly controlled outcome, Gemini blockers are either repaired or preserved
+as precise follow-up states, and Grok false identity-blocked state is eliminated
+without causing broad resume to restart expensive scrape work.

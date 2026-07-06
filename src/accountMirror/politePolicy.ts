@@ -1,4 +1,5 @@
 import {
+	accountMirrorIdentityKeysMismatch,
 	normalizeAccountMirrorIdentityKey,
 	normalizeAccountMirrorProviderIdentityKey,
 } from "./tenantBinding.js";
@@ -313,11 +314,11 @@ function classifyIdentityEvidence(
 		input.provider,
 		input.expectedIdentityKey,
 	);
-	const mismatch = Boolean(
-		expectedIdentityKey &&
-			previousDetectedIdentityKey &&
-			previousDetectedIdentityKey !== expectedIdentityKey,
-	);
+	const mismatch = accountMirrorIdentityKeysMismatch({
+		provider: input.provider,
+		expectedIdentityKey,
+		detectedIdentityKey: previousDetectedIdentityKey,
+	});
 	const authoritative = source === "provider-app" && confidence === "authoritative";
 	const stale = observedAtMs === null || nowMs - observedAtMs >= IDENTITY_MISMATCH_RECHECK_AFTER_MS;
 	const malformed = isMalformedProviderIdentityKey(input.provider, previousDetectedIdentityKey);
@@ -403,7 +404,11 @@ export function evaluateAccountMirrorPoliteness(
 	const identityEvidence = classifyIdentityEvidence(input, nowMs);
 	if (
 		detectedIdentityKey &&
-		detectedIdentityKey !== expectedIdentityKey &&
+		accountMirrorIdentityKeysMismatch({
+			provider: input.provider,
+			expectedIdentityKey,
+			detectedIdentityKey,
+		}) &&
 		!identityEvidence.recheckable
 	) {
 		return createDecision(input, policy, "identity-mismatch", null, zeroJitter);

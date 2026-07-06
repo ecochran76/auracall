@@ -845,6 +845,72 @@ describe("account mirror status registry", () => {
 		});
 	});
 
+	test("does not let stale Grok display-name mismatch repair keep email-bound target blocked", () => {
+		const grokConfig = {
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "grok",
+					services: {
+						grok: {
+							identity: {
+								email: "ez86944@gmail.com",
+								handle: "@SwantonDoug",
+							},
+							liveFollow: {
+								enabled: true,
+							},
+						},
+					},
+				},
+			},
+		};
+		const status = createAccountMirrorStatusSummary({
+			config: grokConfig,
+			now: new Date("2026-07-06T12:00:00.000Z"),
+			states: {
+				"grok:default": {
+					detectedIdentityKey: "company logo",
+					detectedIdentitySource: "provider-app",
+					detectedIdentityObservedAtMs: Date.parse("2026-07-06T05:02:49.797Z"),
+					detectedIdentityConfidence: "authoritative",
+					identityMismatchLastCheckedAtMs: Date.parse("2026-07-06T05:02:49.797Z"),
+					identityMismatchRepair: {
+						status: "current_mismatch_confirmed",
+						previousDetectedIdentityKey: "company logo",
+						currentDetectedIdentityKey: "company logo",
+						repairedAtMs: null,
+						checkedAtMs: Date.parse("2026-07-06T05:02:49.797Z"),
+						source: "provider-app",
+						requestId: "acctmirror_false_grok_mismatch",
+					},
+				},
+			},
+			provider: "grok",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+		});
+
+		expect(status.metrics).toMatchObject({
+			total: 1,
+			eligible: 1,
+			blocked: 0,
+		});
+		expect(status.entries[0]).toMatchObject({
+			provider: "grok",
+			expectedIdentityKey: "ez86944@gmail.com",
+			detectedIdentityKey: "company logo",
+			status: "eligible",
+			reason: "eligible",
+			identityEvidence: expect.objectContaining({
+				source: "provider-app",
+				confidence: "authoritative",
+				repairStatus: "none",
+				repair: null,
+			}),
+		});
+	});
+
 	test("can preview explicit recovery eligibility while default status keeps failure backoff", () => {
 		const states = {
 			"chatgpt:wsl-chrome-2": {

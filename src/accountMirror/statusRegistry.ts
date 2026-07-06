@@ -23,7 +23,11 @@ import type {
 	AccountMirrorProviderPolitenessPolicy,
 } from "./politePolicy.js";
 import { evaluateAccountMirrorPoliteness } from "./politePolicy.js";
-import { createAccountMirrorBindingKey, createAccountMirrorTenantKey } from "./tenantBinding.js";
+import {
+	accountMirrorIdentityKeysMismatch,
+	createAccountMirrorBindingKey,
+	createAccountMirrorTenantKey,
+} from "./tenantBinding.js";
 
 type MutableRecord = Record<string, unknown>;
 
@@ -669,7 +673,7 @@ function createIdentityEvidenceStatus(
 	state: AccountMirrorStatusState,
 	decision: AccountMirrorPolitenessDecision,
 ): AccountMirrorStatusEntry["identityEvidence"] {
-	const repair = normalizeIdentityMismatchRepair(state.identityMismatchRepair);
+	const repair = normalizeIdentityMismatchRepair(state.identityMismatchRepair, decision);
 	return {
 		source: decision.identityEvidence.source,
 		confidence: decision.identityEvidence.confidence,
@@ -697,6 +701,7 @@ function createIdentityEvidenceStatus(
 
 function normalizeIdentityMismatchRepair(
 	value: AccountMirrorStatusState["identityMismatchRepair"],
+	decision: AccountMirrorPolitenessDecision,
 ): AccountMirrorIdentityMismatchRepair | null {
 	if (!value || !isRecord(value)) return null;
 	const status =
@@ -706,6 +711,16 @@ function normalizeIdentityMismatchRepair(
 				? "stale_mismatch_repaired"
 				: "none";
 	if (status === "none") return null;
+	if (
+		status === "current_mismatch_confirmed" &&
+		!accountMirrorIdentityKeysMismatch({
+			provider: decision.provider,
+			expectedIdentityKey: decision.expectedIdentityKey,
+			detectedIdentityKey: readString(value.currentDetectedIdentityKey),
+		})
+	) {
+		return null;
+	}
 	return {
 		status,
 		previousDetectedIdentityKey: readString(value.previousDetectedIdentityKey),

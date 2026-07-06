@@ -1,3 +1,23 @@
+## 2026-07-06 | Grok False Identity Mismatch
+
+- Focus: explain and fix why AuraCall kept classifying `grok/default` as an
+  identity mismatch even though Grok provider user/display ids are not the same
+  namespace as the configured browser tenant email.
+- Result:
+  - installed `/status` showed `grok/default` blocked on `identity-mismatch`
+    with stale authoritative provider-app evidence `company logo`;
+  - account-mirror identity mismatch checks now require comparable identity
+    namespaces for Grok, such as email-vs-email or handle-vs-handle;
+  - the metadata collector now uses the same provider-aware comparison before
+    throwing an identity mismatch;
+  - status readback ignores stale Grok `current_mismatch_confirmed` repair
+    evidence when the current expected/detected keys are not comparable;
+  - Plan 0153 now tracks Grok as false mismatch semantics and stale-state
+    cleanup rather than assumed account/config repair.
+- Validation:
+  - focused account-mirror identity tests;
+  - TypeScript.
+
 ## 2026-07-06 | Plan 0153 Target Resume Readiness
 
 - Focus: write the follow-up plan after Plan 0152 closed the live-follow

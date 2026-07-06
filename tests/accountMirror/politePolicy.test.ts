@@ -94,6 +94,57 @@ describe("account mirror polite policy", () => {
 		});
 	});
 
+	test("does not block Grok when provider display identity is not comparable to bound email", () => {
+		const decision = evaluateAccountMirrorPoliteness({
+			provider: "grok",
+			runtimeProfileId: "default",
+			browserProfileId: "default",
+			expectedIdentityKey: "ez86944@gmail.com",
+			detectedIdentityKey: "company logo",
+			detectedIdentitySource: "provider-app",
+			detectedIdentityObservedAtMs: 1_000,
+			detectedIdentityConfidence: "authoritative",
+			nowMs: 1_000,
+		});
+
+		expect(decision).toMatchObject({
+			posture: "eligible",
+			reason: "eligible",
+			expectedIdentityKey: "ez86944@gmail.com",
+			detectedIdentityKey: "company logo",
+			identityEvidence: expect.objectContaining({
+				source: "provider-app",
+				confidence: "authoritative",
+				recheckable: false,
+				repairStatus: "none",
+			}),
+		});
+	});
+
+	test("still blocks Grok when comparable provider identities mismatch", () => {
+		const decision = evaluateAccountMirrorPoliteness({
+			provider: "grok",
+			runtimeProfileId: "default",
+			browserProfileId: "default",
+			expectedIdentityKey: "@SwantonDoug",
+			detectedIdentityKey: "@DifferentUser",
+			detectedIdentitySource: "provider-app",
+			detectedIdentityObservedAtMs: 1_000,
+			detectedIdentityConfidence: "authoritative",
+			nowMs: 1_000,
+		});
+
+		expect(decision).toMatchObject({
+			posture: "blocked",
+			reason: "identity-mismatch",
+			expectedIdentityKey: "@swantondoug",
+			detectedIdentityKey: "@differentuser",
+			identityEvidence: expect.objectContaining({
+				repairStatus: "current_mismatch",
+			}),
+		});
+	});
+
 	test("adds deterministic jitter to routine mirror refreshes", () => {
 		const policy = getDefaultAccountMirrorPolitenessPolicy("chatgpt");
 		const jitterMs = getAccountMirrorJitterMs({
