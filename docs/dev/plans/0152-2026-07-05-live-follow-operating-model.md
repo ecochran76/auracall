@@ -60,6 +60,24 @@ Validation:
 - `pnpm vitest run tests/status/liveFollowHealth.test.ts tests/http.responsesServer.test.ts --testNamePattern "materialization|effective live-follow wake"`
 - `pnpm exec tsc --noEmit --pretty false`
 
+### 2026-07-05 | M2/M7 Routine Decision Readback
+
+- Live-follow target accounts now expose `routineDecision`, a compact
+  operator decision record with `state`, `nextPhase`, `why`, `eligibleAt`,
+  `lastProgressAt`, remaining detail/materialization/account-library work,
+  guard/preemption placeholders, and the active cycle ledger when present.
+- Active completion state has precedence over backlog-only states, so a running
+  pass reports the phase it is actually advancing while still carrying
+  materialization backlog counts.
+- CLI-normalized API status preserves the same decision object for downstream
+  operator tooling.
+
+Validation:
+
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "effective live-follow wake"`
+- `pnpm vitest run tests/cli/apiStatusCommand.test.ts --testNamePattern "proof scope|deferred asset"`
+- `pnpm exec tsc --noEmit --pretty false`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,

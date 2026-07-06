@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 303 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: advance M2/M7 by making each live-follow target explain the routine
+  decision branch instead of only exposing raw completion and backlog fields.
+- Result:
+  - added `routineDecision` to live-follow target account readback;
+  - the decision includes `state`, `nextPhase`, `why`, eligibility/progress
+    timestamps, remaining detail/materialization/account-library work,
+    guard/preemption placeholders, and the active cycle ledger when present;
+  - `/status` and CLI-normalized API status both preserve the field.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "effective live-follow wake"` passed;
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts --testNamePattern "proof scope|deferred asset"` passed;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome passed on touched source plus `tests/cli/apiStatusCommand.test.ts`;
+  - `tests/http.responsesServer.test.ts` still reports pre-existing import
+    ordering/non-null assertion debt when checked directly.
+- Remaining scope:
+  - Plan 0152 still needs scheduler execution changes for the full decision
+    tree, foreground preemption, cadence fairness, and installed dogfood proof.
+
 ## Turn 302 | 2026-07-05
 
 - Active plan:

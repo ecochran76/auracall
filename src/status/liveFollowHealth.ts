@@ -132,6 +132,7 @@ export interface LiveFollowTargetAccountSummary {
 		action: string | null;
 	} | null;
 	mirrorCompleteness: string | null;
+	routineDecision: LiveFollowTargetRoutineDecisionSummary;
 	assetInventory: {
 		state: string;
 		summary: string | null;
@@ -231,6 +232,57 @@ export interface LiveFollowTargetAccountSummary {
 			files: number;
 			media: number;
 		};
+	} | null;
+}
+
+export interface LiveFollowTargetRoutineDecisionSummary {
+	state:
+		| "disabled"
+		| "unsupported"
+		| "missing_identity"
+		| "provider_guarded"
+		| "operator_preempted"
+		| "running"
+		| "queued"
+		| "paused"
+		| "attention_needed"
+		| "backfilling"
+		| "steady_follow"
+		| "materialization_pending"
+		| "account_library_catchup"
+		| "caught_up"
+		| "eligible"
+		| "delayed";
+	nextPhase: string | null;
+	why: string;
+	eligibleAt: string | null;
+	lastProgressAt: string | null;
+	remainingWork: {
+		detailSurfaces: number | null;
+		materializationAssets: number;
+		accountLibraryStatus: string | null;
+	};
+	guard: {
+		state: string;
+		kind: string | null;
+		summary: string | null;
+		cooldownUntil: string | null;
+		url: string | null;
+		action: string | null;
+	} | null;
+	preemption: {
+		state: string;
+		reason: string | null;
+		retryAt: string | null;
+	} | null;
+	cycle: {
+		id: string;
+		currentPhase: string;
+		nextPhase: string;
+		status: string | null;
+		updatedAt: string;
+		passCount: number;
+		reason: string;
 	} | null;
 }
 

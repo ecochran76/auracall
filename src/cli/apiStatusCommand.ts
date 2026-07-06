@@ -731,6 +731,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 	const account = isRecord(value) ? value : {};
 	const metadataCounts = isRecord(account.metadataCounts) ? account.metadataCounts : null;
 	const assetInventory = isRecord(account.assetInventory) ? account.assetInventory : null;
+	const routineDecision = isRecord(account.routineDecision) ? account.routineDecision : null;
 	const materializationOutcome = isRecord(account.materializationOutcome)
 		? account.materializationOutcome
 		: null;
@@ -796,6 +797,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 		nextAttemptAt: readString(account.nextAttemptAt),
 		providerGuard: summarizeLiveFollowProviderGuard(account.providerGuard),
 		mirrorCompleteness: readString(account.mirrorCompleteness),
+		routineDecision: summarizeLiveFollowRoutineDecision(routineDecision),
 		assetInventory: assetInventory
 			? {
 					state: readString(assetInventory.state) ?? "unknown",
@@ -962,6 +964,88 @@ function summarizeMaterializationBacklogState(
 		return state;
 	}
 	return "inventory_unknown";
+}
+
+function summarizeLiveFollowRoutineDecision(value: unknown) {
+	const decision = isRecord(value) ? value : null;
+	const remainingWork = decision && isRecord(decision.remainingWork) ? decision.remainingWork : {};
+	const guard = decision && isRecord(decision.guard) ? decision.guard : null;
+	const preemption = decision && isRecord(decision.preemption) ? decision.preemption : null;
+	const cycle = decision && isRecord(decision.cycle) ? decision.cycle : null;
+	return {
+		state: summarizeLiveFollowRoutineDecisionState(decision?.state),
+		nextPhase: readString(decision?.nextPhase),
+		why: readString(decision?.why) ?? "live-follow routine decision is unavailable",
+		eligibleAt: readString(decision?.eligibleAt),
+		lastProgressAt: readString(decision?.lastProgressAt),
+		remainingWork: {
+			detailSurfaces: readNumber(remainingWork.detailSurfaces),
+			materializationAssets: readNumber(remainingWork.materializationAssets) ?? 0,
+			accountLibraryStatus: readString(remainingWork.accountLibraryStatus),
+		},
+		guard: guard ? summarizeLiveFollowProviderGuard(guard) : null,
+		preemption: preemption
+			? {
+					state: readString(preemption.state) ?? "unknown",
+					reason: readString(preemption.reason),
+					retryAt: readString(preemption.retryAt),
+				}
+			: null,
+		cycle: cycle
+			? {
+					id: readString(cycle.id) ?? "",
+					currentPhase: readString(cycle.currentPhase) ?? "complete",
+					nextPhase: readString(cycle.nextPhase) ?? "complete",
+					status: readString(cycle.status),
+					updatedAt: readString(cycle.updatedAt) ?? "",
+					passCount: readNumber(cycle.passCount) ?? 0,
+					reason: readString(cycle.reason) ?? "",
+				}
+			: null,
+	};
+}
+
+function summarizeLiveFollowRoutineDecisionState(
+	value: unknown,
+):
+	| "disabled"
+	| "unsupported"
+	| "missing_identity"
+	| "provider_guarded"
+	| "operator_preempted"
+	| "running"
+	| "queued"
+	| "paused"
+	| "attention_needed"
+	| "backfilling"
+	| "steady_follow"
+	| "materialization_pending"
+	| "account_library_catchup"
+	| "caught_up"
+	| "eligible"
+	| "delayed" {
+	const state = readString(value);
+	if (
+		state === "disabled" ||
+		state === "unsupported" ||
+		state === "missing_identity" ||
+		state === "provider_guarded" ||
+		state === "operator_preempted" ||
+		state === "running" ||
+		state === "queued" ||
+		state === "paused" ||
+		state === "attention_needed" ||
+		state === "backfilling" ||
+		state === "steady_follow" ||
+		state === "materialization_pending" ||
+		state === "account_library_catchup" ||
+		state === "caught_up" ||
+		state === "eligible" ||
+		state === "delayed"
+	) {
+		return state;
+	}
+	return "delayed";
 }
 
 function summarizeLiveFollowProviderGuard(value: unknown) {

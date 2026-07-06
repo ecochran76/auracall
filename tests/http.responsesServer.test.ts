@@ -3665,6 +3665,24 @@ describe("http responses adapter", () => {
 			passCount: 1,
 			lastRefresh: null,
 			mirrorCompleteness: completeAccountMirror,
+			liveFollowCycle: {
+				cycleId: "lfc_effective_wake",
+				startedAt: "2026-04-30T11:55:00.000Z",
+				updatedAt: "2026-04-30T12:00:00.000Z",
+				currentPhase: "detail-inventory",
+				nextPhase: "detail-inventory",
+				decisionReason: "freshness frontier selected 1 conversation row(s) for detail",
+				passCount: 1,
+				phases: [
+					{
+						phase: "detail-inventory",
+						status: "pending",
+						reason: "freshness frontier selected 1 conversation row(s) for detail",
+						updatedAt: "2026-04-30T12:00:00.000Z",
+						passCount: 1,
+					},
+				],
+			},
 			error: null,
 		};
 		const list = vi.fn(() => [operation]);
@@ -4998,6 +5016,24 @@ describe("http responses adapter", () => {
 			passCount: 1,
 			lastRefresh: null,
 			mirrorCompleteness: completeAccountMirror,
+			liveFollowCycle: {
+				cycleId: "lfc_effective_wake",
+				startedAt: "2026-04-30T11:55:00.000Z",
+				updatedAt: "2026-04-30T12:00:00.000Z",
+				currentPhase: "detail-inventory",
+				nextPhase: "detail-inventory",
+				decisionReason: "freshness frontier selected 1 conversation row(s) for detail",
+				passCount: 1,
+				phases: [
+					{
+						phase: "detail-inventory",
+						status: "pending",
+						reason: "freshness frontier selected 1 conversation row(s) for detail",
+						updatedAt: "2026-04-30T12:00:00.000Z",
+						passCount: 1,
+					},
+				],
+			},
 			error: null,
 		};
 		const server = await createResponsesHttpServer(
@@ -5033,6 +5069,23 @@ describe("http responses adapter", () => {
 							nextAttemptAt: string | null;
 							routineEligibleAt: string | null;
 							activeCompletionNextAttemptAt: string | null;
+							routineDecision: {
+								state: string;
+								nextPhase: string | null;
+								why: string;
+								eligibleAt: string | null;
+								lastProgressAt: string | null;
+								remainingWork: {
+									detailSurfaces: number | null;
+									materializationAssets: number;
+									accountLibraryStatus: string | null;
+								};
+								cycle: {
+									currentPhase: string;
+									nextPhase: string;
+									reason: string;
+								} | null;
+							};
 							materializationBacklog: {
 								state: string;
 								policy: string | null;
@@ -5059,6 +5112,23 @@ describe("http responses adapter", () => {
 				routineEligibleAt: expect.any(String),
 				activeCompletionNextAttemptAt: "2026-04-30T12:10:00.000Z",
 				nextAttemptAt: "2026-04-30T12:10:00.000Z",
+				routineDecision: {
+					state: "running",
+					nextPhase: "detail-inventory",
+					why: "freshness frontier selected 1 conversation row(s) for detail",
+					eligibleAt: "2026-04-30T12:10:00.000Z",
+					lastProgressAt: "2026-04-30T12:00:00.000Z",
+					remainingWork: {
+						detailSurfaces: 0,
+						materializationAssets: 582,
+						accountLibraryStatus: "disabled",
+					},
+					cycle: {
+						currentPhase: "detail-inventory",
+						nextPhase: "detail-inventory",
+						reason: "freshness frontier selected 1 conversation row(s) for detail",
+					},
+				},
 				materializationBacklog: {
 					state: "metadata_current_backlog",
 					policy: "metadata_only",

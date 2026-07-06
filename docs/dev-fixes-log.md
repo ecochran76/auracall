@@ -18762,3 +18762,9 @@ browser-stage lifecycle observability, not transcript truncation.
   asset-recovery policies should read as `materialization_required`. Keep this
   distinction in API, CLI, MCP, and dashboard projections so operators do not
   mistake local-byte backlog for another detail-scrape obligation.
+- 2026-07-05: Live-follow target status needs an explicit routine decision
+  branch, not just raw completion status. A target row should say what it is
+  doing next (`nextPhase`), why that branch won, when it is eligible, what work
+  remains, and which guard/preemption/cycle evidence drove the state. Active
+  completion/cycle evidence should take precedence over backlog-only summaries,
+  while materialization backlog remains visible as remaining work.

@@ -182,6 +182,29 @@ const statusPayload = {
 					passCount: 7,
 					nextAttemptAt: "2026-04-29T12:05:00.000Z",
 					mirrorCompleteness: "complete",
+					routineDecision: {
+						state: "paused",
+						nextPhase: "detail-inventory",
+						why: "active live-follow completion is paused",
+						eligibleAt: "2026-04-29T12:05:00.000Z",
+						lastProgressAt: "2026-04-29T11:55:00.000Z",
+						remainingWork: {
+							detailSurfaces: 4,
+							materializationAssets: 2,
+							accountLibraryStatus: "disabled",
+						},
+						guard: null,
+						preemption: null,
+						cycle: {
+							id: "lfc_cli_status",
+							currentPhase: "detail-inventory",
+							nextPhase: "detail-inventory",
+							status: "pending",
+							updatedAt: "2026-04-29T11:55:00.000Z",
+							passCount: 7,
+							reason: "freshness frontier selected 1 conversation row(s) for detail",
+						},
+					},
 					metadataCounts: {
 						projects: 1,
 						conversations: 10,
@@ -599,6 +622,22 @@ describe("api status CLI helpers", () => {
 					source: "provider-app",
 					requestId: "acctmirror_identity_repair",
 				},
+			},
+		});
+		expect(summary.liveFollow.targets?.accounts[0]?.routineDecision).toMatchObject({
+			state: "paused",
+			nextPhase: "detail-inventory",
+			why: "active live-follow completion is paused",
+			remainingWork: {
+				detailSurfaces: 4,
+				materializationAssets: 2,
+				accountLibraryStatus: "disabled",
+			},
+			cycle: {
+				currentPhase: "detail-inventory",
+				nextPhase: "detail-inventory",
+				status: "pending",
+				passCount: 7,
 			},
 		});
 	});

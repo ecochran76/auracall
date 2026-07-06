@@ -5979,6 +5979,25 @@ function createLiveFollowTargetRollup(
 					candidate.runtimeProfileId === entry.runtimeProfileId,
 			) ??
 			null;
+		const operation = activeOperation ?? recentOperation;
+		const assetInventory = summarizeLiveFollowAssetInventory(entry);
+		const materializationBacklog = summarizeLiveFollowMaterializationBacklog({
+			materializationPolicy: entry.liveFollow.materializationPolicy,
+			mirrorCompleteness: entry.mirrorCompleteness.state,
+			assetInventory:
+				entry.mirrorCompleteness.assetInventory ?? entry.metadataEvidence?.assetInventory ?? null,
+		});
+		const accountLibraryCatchup = summarizeLiveFollowAccountLibraryCatchup(
+			entry,
+			accountLibraryPreviews?.get(
+				accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId),
+			) ?? null,
+			accountLibraryActiveJobs?.get(
+				accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId),
+			) ?? null,
+			accountLibraryBrowserProcessStatus,
+			now,
+		);
 		return {
 			provider: entry.provider,
 			tenantKey: entry.tenantKey,
@@ -6004,28 +6023,17 @@ function createLiveFollowTargetRollup(
 			nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
 			providerGuard: entry.providerGuard.state === "clear" ? null : entry.providerGuard,
 			mirrorCompleteness: entry.mirrorCompleteness.state,
-			assetInventory: summarizeLiveFollowAssetInventory(entry),
-			materializationBacklog: summarizeLiveFollowMaterializationBacklog({
-				materializationPolicy: entry.liveFollow.materializationPolicy,
-				mirrorCompleteness: entry.mirrorCompleteness.state,
-				assetInventory:
-					entry.mirrorCompleteness.assetInventory ?? entry.metadataEvidence?.assetInventory ?? null,
-			}),
-			latestLifecycleEvent: summarizeCompletionLifecycleEvent(activeOperation ?? recentOperation),
-			materializationOutcome: summarizeLiveFollowMaterializationOutcome(
-				activeOperation ?? recentOperation,
-			),
-			accountLibraryCatchup: summarizeLiveFollowAccountLibraryCatchup(
+			routineDecision: summarizeLiveFollowRoutineDecision({
 				entry,
-				accountLibraryPreviews?.get(
-					accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId),
-				) ?? null,
-				accountLibraryActiveJobs?.get(
-					accountMirrorPreviewKey(entry.provider, entry.runtimeProfileId),
-				) ?? null,
-				accountLibraryBrowserProcessStatus,
-				now,
-			),
+				operation,
+				materializationBacklog,
+				accountLibraryCatchup,
+			}),
+			assetInventory,
+			materializationBacklog,
+			latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
+			materializationOutcome: summarizeLiveFollowMaterializationOutcome(operation),
+			accountLibraryCatchup,
 			metadataCounts: entry.metadataCounts,
 			metadataCountEvidence: entry.metadataEvidence?.countEvidence ?? null,
 		};
@@ -6149,6 +6157,168 @@ function summarizeLiveFollowAssetInventory(
 		state: inventory.state,
 		summary: inventory.summary,
 		detailScannedThisPass: inventory.detailScannedThisPass,
+	};
+}
+
+function summarizeLiveFollowRoutineDecision(input: {
+	entry: AccountMirrorStatusEntry;
+	operation: AccountMirrorCompletionOperation | null;
+	materializationBacklog: LiveFollowTargetAccountSummary["materializationBacklog"];
+	accountLibraryCatchup: LiveFollowTargetAccountSummary["accountLibraryCatchup"];
+}): LiveFollowTargetAccountSummary["routineDecision"] {
+	const { entry, operation, materializationBacklog, accountLibraryCatchup } = input;
+	const guard = entry.providerGuard.state === "clear" ? null : entry.providerGuard;
+	const cycle = operation?.liveFollowCycle ?? null;
+	const currentPhase = cycle?.phases.find((phase) => phase.phase === cycle.currentPhase) ?? null;
+	const remainingDetailSurfaces = entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null;
+	const materializationAssets =
+		materializationBacklog?.remoteKnownMissingLocal.total ??
+		(entry.mirrorCompleteness.assetInventory?.remoteKnownMissingLocal.artifacts ?? 0) +
+			(entry.mirrorCompleteness.assetInventory?.remoteKnownMissingLocal.files ?? 0) +
+			(entry.mirrorCompleteness.assetInventory?.remoteKnownMissingLocal.media ?? 0);
+	const base = {
+		eligibleAt: operation?.nextAttemptAt ?? entry.eligibleAt,
+		lastProgressAt:
+			cycle?.updatedAt ??
+			operation?.lastRefresh?.completedAt ??
+			operation?.completedAt ??
+			entry.lastCompletedAt ??
+			entry.lastSuccessAt,
+		remainingWork: {
+			detailSurfaces: remainingDetailSurfaces,
+			materializationAssets,
+			accountLibraryStatus: accountLibraryCatchup?.status ?? null,
+		},
+		guard,
+		preemption: null,
+		cycle: cycle
+			? {
+					id: cycle.cycleId,
+					currentPhase: cycle.currentPhase,
+					nextPhase: cycle.nextPhase,
+					status: currentPhase?.status ?? null,
+					updatedAt: cycle.updatedAt,
+					passCount: cycle.passCount,
+					reason: cycle.decisionReason,
+				}
+			: null,
+	};
+	if (!entry.liveFollow.enabled) {
+		return {
+			...base,
+			state:
+				entry.liveFollow.state === "unsupported" ||
+				entry.liveFollow.state === "missing_identity" ||
+				entry.liveFollow.state === "disabled"
+					? entry.liveFollow.state
+					: "disabled",
+			nextPhase: null,
+			why: entry.liveFollow.reason,
+		};
+	}
+	if (guard) {
+		return {
+			...base,
+			state: "provider_guarded",
+			nextPhase: cycle?.nextPhase ?? null,
+			eligibleAt: guard.cooldownUntil ?? base.eligibleAt,
+			why: guard.summary ?? "provider guard requires clearance before live follow can continue",
+		};
+	}
+	if (operation?.status === "paused") {
+		return {
+			...base,
+			state: "paused",
+			nextPhase: cycle?.nextPhase ?? operation.phase,
+			why: "active live-follow completion is paused",
+		};
+	}
+	if (
+		operation?.status === "blocked" ||
+		operation?.status === "failed" ||
+		operation?.status === "cancelled"
+	) {
+		return {
+			...base,
+			state: "attention_needed",
+			nextPhase: cycle?.nextPhase ?? operation.phase,
+			why: operation.error?.message ?? `latest live-follow completion is ${operation.status}`,
+		};
+	}
+	if (operation?.status === "running" || operation?.status === "idle_waiting") {
+		return {
+			...base,
+			state: "running",
+			nextPhase: cycle?.nextPhase ?? operation.phase,
+			why: cycle?.decisionReason ?? `live-follow completion is ${operation.status}`,
+		};
+	}
+	if (operation?.status === "queued") {
+		return {
+			...base,
+			state: "queued",
+			nextPhase: cycle?.nextPhase ?? operation.phase,
+			why: "live-follow completion is queued",
+		};
+	}
+	if (cycle && cycle.currentPhase !== "complete") {
+		return {
+			...base,
+			state: cycle.currentPhase === "materialization" ? "materialization_pending" : "backfilling",
+			nextPhase: cycle.nextPhase,
+			why: cycle.decisionReason,
+		};
+	}
+	if (materializationBacklog?.state === "materialization_required") {
+		return {
+			...base,
+			state: "materialization_pending",
+			nextPhase: "materialization",
+			why: materializationBacklog.summary,
+		};
+	}
+	if (
+		accountLibraryCatchup?.enabled &&
+		accountLibraryCatchup.status !== "disabled" &&
+		accountLibraryCatchup.status !== "preview_only"
+	) {
+		return {
+			...base,
+			state: "account_library_catchup",
+			nextPhase: "account-library",
+			why:
+				accountLibraryCatchup.reason ??
+				`account-library catch-up is ${accountLibraryCatchup.status}`,
+		};
+	}
+	if (entry.mirrorCompleteness.state === "complete") {
+		return {
+			...base,
+			state:
+				materializationBacklog?.state === "metadata_current_backlog"
+					? "materialization_pending"
+					: "caught_up",
+			nextPhase:
+				materializationBacklog?.state === "metadata_current_backlog" ? "materialization" : null,
+			why:
+				materializationBacklog?.state === "metadata_current_backlog"
+					? materializationBacklog.summary
+					: "live-follow metadata is current for the configured provider surfaces",
+		};
+	}
+	if (entry.status === "eligible") {
+		return {
+			...base,
+			state: "eligible",
+			nextPhase: "identity",
+			why: entry.reason ?? "live-follow target is eligible for the next routine pass",
+		};
+	}
+	return {
+		...base,
+		state: "delayed",
+		nextPhase: cycle?.nextPhase ?? null,
+		why: entry.reason ?? "live-follow target is waiting for cadence or provider politeness",
 	};
 }
 

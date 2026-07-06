@@ -39428,3 +39428,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   validation passed with
   `pnpm vitest run tests/status/liveFollowHealth.test.ts tests/http.responsesServer.test.ts --testNamePattern "materialization|effective live-follow wake"`
   and `pnpm exec tsc --noEmit --pretty false`.
+- 2026-07-05: Continued Plan 0152 M2/M7 routine decision readback. Added
+  `routineDecision` to live-follow target accounts so `/status` and
+  CLI-normalized API status expose `state`, `nextPhase`, `why`, eligibility and
+  progress timestamps, remaining work, guard/preemption placeholders, and the
+  active cycle ledger. Focused validation passed with
+  `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "effective live-follow wake"`,
+  `pnpm vitest run tests/cli/apiStatusCommand.test.ts --testNamePattern "proof scope|deferred asset"`,
+  and `pnpm exec tsc --noEmit --pretty false`. Scoped Biome passed on touched
+  source and `tests/cli/apiStatusCommand.test.ts`; the large HTTP test still
+  carries pre-existing import/non-null assertion lint debt.
