@@ -1,5 +1,37 @@
 # RUNBOOK
 
+## Turn 322 | 2026-07-06
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: turn the current live-follow dogfood evidence into a high-level
+  convergence target with a sane broad-resume decision tree.
+- Result:
+  - added a plan-level decision tree that makes live follow pick the next owed
+    account phase from ledger/status evidence instead of restarting every cycle
+    at rail walking;
+  - added convergence milestones M1-M9, ending with target classification
+    before broad resume;
+  - recorded installed `/status` posture at `2026-07-06T10:32:12.872Z`:
+    service PID `5546`, scheduler `scheduled`, live-follow
+    `severity=attention-needed`, targets `enabled=6`, `paused=3`,
+    `attentionNeeded=4`, `complete=4`, and `inProgress=2`;
+  - classified current desired-enabled targets: `chatgpt/wsl-chrome-2` and
+    `chatgpt/wsl-chrome-4` are safe steady-follow evidence with zero remaining
+    detail surfaces; `chatgpt/wsl-chrome-3` is complete but operator-paused;
+    `chatgpt/default` is operator-paused and still in `backfill_history`;
+    `gemini/auracall-gemini-pro` needs bounded left-rail replacement; and
+    `grok/default` needs identity/config repair.
+- Validation:
+  - installed `/status` readback through
+    `auracall api status --port 18095 --json`;
+  - `pnpm run plans:audit -- --keep 152`.
+- Remaining scope:
+  - Plan 0152 remains open for a target-classifier/broad-resume policy slice so
+    the normal scheduler can resume safe complete ChatGPT steady-follow rows
+    without blindly unpausing operator-paused, legacy-blocked, or
+    identity-mismatched accounts.
+
 ## Turn 318 | 2026-07-06
 
 - Active plan:

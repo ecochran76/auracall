@@ -1,3 +1,28 @@
+## 2026-07-06 | Plan 0152 Convergence Milestone Audit
+
+- Focus: convert the installed live-follow dogfood evidence into the
+  high-level goal and milestone ladder needed for a sane broad-resume routine.
+- Result:
+  - added a plan-level decision tree that makes each cycle choose the next
+    owed account phase from persisted ledger/status evidence instead of
+    restarting at rail walking;
+  - added convergence milestones M1-M9, with broad resume blocked until
+    desired-enabled targets are classified as safe steady-follow, bounded
+    resume, explicit operator-paused, provider-specific blocked, or identity
+    repair;
+  - installed `/status` at `2026-07-06T10:32:12.872Z` showed service PID
+    `5546`, scheduler `scheduled`, live-follow `severity=attention-needed`,
+    targets `enabled=6`, `paused=3`, `attentionNeeded=4`, `complete=4`,
+    `inProgress=2`;
+  - current safe steady-follow evidence is `chatgpt/wsl-chrome-2` and
+    `chatgpt/wsl-chrome-4`; `chatgpt/wsl-chrome-3` is complete but
+    operator-paused, `chatgpt/default` is operator-paused and still
+    `backfill_history`, `gemini/auracall-gemini-pro` needs bounded left-rail
+    replacement, and `grok/default` needs identity/config repair.
+- Validation:
+  - installed `/status` readback;
+  - `pnpm run plans:audit -- --keep 152`.
+
 ## 2026-07-06 | Plan 0152 Selected Detail Drain Completion
 
 - Focus: observe whether installed `chatgpt/wsl-chrome-4` naturally completes

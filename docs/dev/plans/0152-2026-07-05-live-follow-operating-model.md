@@ -24,6 +24,55 @@ cycle. A safe routine must be able to stop after any bounded pass, preserve the
 account-level ledger, and let the next cycle start at the next owed phase for
 that account or another eligible subscribed account.
 
+## Decision Tree
+
+Live follow should choose the next action from account evidence, not from a
+fixed provider traversal order:
+
+1. If foreground operator/API/browser work is active, defer before provider
+   refresh and record the preemption/defer reason.
+2. If the provider has a guard/cooldown, back away and surface the guard
+   rather than probing again.
+3. If a subscribed target is operator-paused, legacy-blocked, disabled, or in
+   identity mismatch, keep it out of automatic broad resume until an explicit
+   target policy handles that state.
+4. If a target has unfinished account evidence, resume the persisted next phase
+   only: identity, root conversations, project conversations, selected detail
+   inventory, account-library catch-up, or materialization, whichever the
+   ledger says is owed.
+5. If metadata is current and only local bytes are missing under
+   `metadata_only`, keep metadata live follow in steady-follow and expose the
+   materialization backlog separately.
+6. If metadata is complete with zero selected detail surfaces, run
+   steady-follow as a cheap freshness check: newest rows first, frontier stop,
+   no full rail replay, no account-library read unless the target policy
+   explicitly enables it.
+
+The scheduler should rotate among eligible subscribed accounts by the next
+owed phase and cadence window. It must not start every cycle by walking
+conversation rails, because rail walking, project discovery, project
+conversations, file-library catch-up, and full chat/detail scraping are too
+large to finish safely in one routine cycle.
+
+## Convergence Milestones
+
+- M1: Persist and expose a per-account phase ledger that survives restarts.
+- M2: Make every status/control readback hydrate current account evidence so
+  operators see the real next owed phase.
+- M3: Prove cheap steady-follow on complete accounts with zero detail backlog.
+- M4: Prove foreground operator work preempts scheduler and completion refresh
+  before provider work starts.
+- M5: Separate metadata freshness from local materialization so remote asset
+  references do not force broad chat re-scrapes.
+- M6: Preserve cadence and guard boundaries for forced/controlled passes.
+- M7: Drain an artifact-rich selected detail backlog over multiple cycles
+  without replaying root/project rails.
+- M8: Audit the remaining subscribed-account posture and classify each target
+  as safe steady-follow, safe bounded resume, explicit operator-paused, or
+  provider-specific blocked work.
+- M9: Resume broad live follow only after M8 leaves no desired-enabled target
+  in an ambiguous state.
+
 ## Current State
 
 - Account mirror refreshes can persist catalog, context, file, artifact, media,
@@ -1568,6 +1617,55 @@ Validation:
 - authenticated `GET /v1/account-mirrors/completions/acctmirror_completion_cf5cee77-c960-4b25-a30e-f11f54486feb`
 - `auracall api status --json --timeout-ms 30000`
 
+### 2026-07-06 | M8 Remaining Subscribed-Account Posture Audit
+
+- Installed `/status` at `2026-07-06T10:32:12.872Z` reported
+  `auracall-api.service` PID `5546`, scheduler `scheduled`, last wake
+  `2026-07-06T10:31:28.309Z`, and live-follow health
+  `severity=attention-needed` with `backpressure=routine-delayed`.
+- Target counts were `total=10`, `enabled=6`, `disabled=1`,
+  `unconfigured=3`, `active=5`, `paused=3`, `attentionNeeded=4`,
+  `complete=4`, and `inProgress=2`.
+- `chatgpt/wsl-chrome-4` completed the selected artifact-rich detail drain:
+  live-follow completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` is
+  `idle_waiting`, `phase=steady_follow`, `passCount=9`,
+  `mirrorCompleteness=complete`, `remainingWork.detailSurfaces=0`, no provider
+  guard, scrape shape `passive_dominant`, provider interactions `2/6`,
+  `llmServiceRequests=0`, and `cdpMethodCalls=9`.
+- `chatgpt/wsl-chrome-2` is also safe steady-follow evidence:
+  `idle_waiting`, `phase=steady_follow`, `passCount=17`,
+  `mirrorCompleteness=complete`, `remainingWork.detailSurfaces=0`, and next
+  cadence wake `2026-07-06T10:47:41.174Z`.
+- `chatgpt/wsl-chrome-3` is complete but still operator-paused:
+  `phase=steady_follow`, `passCount=7`, `mirrorCompleteness=complete`,
+  `remainingWork.detailSurfaces=0`, `materializationAssets=433`,
+  `accountLibraryStatus=preview_only`, and latest lifecycle
+  `operator_paused` at `2026-07-06T04:49:51.971Z`.
+- `chatgpt/default` remains operator-paused and in progress:
+  `phase=backfill_history`, `passCount=0`, `routineDecision.nextPhase=identity`,
+  `remainingWork.detailSurfaces=18`, and `materializationAssets=235`. It is
+  not a safe broad-resume target without explicit operator decision because it
+  is paused and overlaps the already-proven `ecochran76@gmail.com` ChatGPT
+  account family.
+- `gemini/auracall-gemini-pro` is desired-enabled but legacy blocked:
+  its active completion is paused with
+  `Gemini live-follow resume is blocked until the completion is upgraded or
+  replaced with bounded left-rail retrieval policy.` This needs a
+  provider-specific Gemini slice, not blind broad resume.
+- `grok/default` remains desired-enabled but blocked by identity mismatch. Its
+  completeness evidence is not the live-follow blocker; the blocker is account
+  identity/config repair.
+- Broad resume should therefore be a target-classifier decision, not a single
+  global unpause. Safe automatic candidates are complete, metadata-current
+  ChatGPT steady-follow rows with no provider guard. Operator-paused legacy,
+  Gemini bounded-left-rail, and Grok identity-mismatch rows must stay out of
+  automatic broad resume until their explicit blockers are resolved.
+
+Validation:
+
+- `auracall api status --port 18095 --json`
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.
@@ -1593,6 +1691,9 @@ Validation:
   status evidence.
 - [x] Installed dogfood proves at least one full backfill-to-steady transition
   and one steady-follow keep-current loop without avoidable rate-limit warnings.
+- [ ] Remaining desired-enabled targets are classified so broad resume cannot
+  blindly unpause operator-paused, legacy-blocked, or identity-mismatched
+  accounts.
 
 ## Definition Of Done
 

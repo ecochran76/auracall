@@ -1,3 +1,13 @@
+- 2026-07-06: Broad live-follow resume needs target classification before
+  unpausing. A healthy routine is not "walk every rail every cycle" and it is
+  not "resume every active completion." Classify subscribed targets first:
+  complete ChatGPT steady-follow rows with zero detail surfaces can continue
+  on cadence; operator-paused rows stay paused until explicitly chosen;
+  legacy/provider-specific blockers such as Gemini bounded left-rail policy
+  require their own slice; identity-mismatched rows such as Grok require
+  account/config repair. This keeps broad resume from restarting expensive
+  scrape work or overriding operator intent.
+
 - 2026-07-06: `run-one-pass` for live-follow is a bounded force marker, not a
   provider-safety bypass. If a forced pass remains pending while
   `nextAttemptAt` or foreground/background drain pressure is active, first
