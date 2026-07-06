@@ -39504,3 +39504,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   account-mirror/status source. Direct Biome on
   `tests/http.responsesServer.test.ts` still reports pre-existing non-null
   assertion lint debt.
+- 2026-07-05: Continued Plan 0152 M3 scrape-budget evidence. Account-mirror
+  metadata evidence now records `scrapeBudget` with passive DOM/app-state/link
+  counters, active provider-interaction counters, provider budget usage,
+  LLM-service request count, and a CDP method-count placeholder. ChatGPT
+  requested `detail-inventory` status now proves the single-chat artifact
+  scrape shape as `passive_dominant` with zero LLM-service requests and no root
+  rail/project index/account-library reads, and `/status` plus CLI-normalized
+  status expose the same evidence. Focused validation passed with
+  `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "requested detail-inventory|pending detail inventory"`,
+  `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on touched
+  source/tests. Direct Biome on `tests/http.responsesServer.test.ts` still
+  reports pre-existing non-null assertion lint debt.

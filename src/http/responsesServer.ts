@@ -6042,6 +6042,7 @@ function createLiveFollowTargetRollup(
 			materializationBacklog,
 			latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
 			materializationOutcome: summarizeLiveFollowMaterializationOutcome(operation),
+			scrapeBudget: entry.metadataEvidence?.scrapeBudget ?? null,
 			accountLibraryCatchup,
 			metadataCounts: entry.metadataCounts,
 			metadataCountEvidence: entry.metadataEvidence?.countEvidence ?? null,

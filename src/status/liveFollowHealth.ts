@@ -154,6 +154,36 @@ export interface LiveFollowTargetAccountSummary {
 		materialized: number;
 		checksumCount: number;
 	} | null;
+	scrapeBudget: {
+		classification: string;
+		summary: string;
+		passive: {
+			domParses: number;
+			appStateReads: number;
+			downloadLinkEnumerations: number;
+			cachedFileCarries: number;
+			total: number;
+		};
+		active: {
+			identityReads: number;
+			projectIndexReads: number;
+			rootRailReads: number;
+			projectConversationReads: number;
+			chatLoads: number;
+			accountLibraryReads: number;
+			downloads: number;
+			total: number;
+		};
+		providerInteractions: {
+			budget: number | null;
+			used: number;
+			remaining: number | null;
+			yielded: boolean;
+			yieldReason: string | null;
+		};
+		llmServiceRequests: number;
+		cdpMethodCalls: number | null;
+	} | null;
 	accountLibraryCatchup: {
 		mode: string;
 		enabled: boolean;

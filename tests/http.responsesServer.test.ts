@@ -5255,6 +5255,41 @@ describe("http responses adapter", () => {
 						identitySource: "profile-menu",
 						projectSampleIds: ["project_1"],
 						conversationSampleIds: ["conv_pending"],
+						scrapeBudget: {
+							provider: "chatgpt",
+							runtimeProfileId: "default",
+							sweepMode: "steady_follow",
+							observedAt: "2026-04-30T11:59:00.000Z",
+							classification: "passive_dominant",
+							summary:
+								"Account mirror scrape used 3 passive parse/read signal(s) and 2 active provider interaction(s).",
+							passive: {
+								domParses: 1,
+								appStateReads: 1,
+								downloadLinkEnumerations: 1,
+								cachedFileCarries: 0,
+								total: 3,
+							},
+							active: {
+								identityReads: 1,
+								projectIndexReads: 0,
+								rootRailReads: 0,
+								projectConversationReads: 0,
+								chatLoads: 1,
+								accountLibraryReads: 0,
+								downloads: 0,
+								total: 2,
+							},
+							providerInteractions: {
+								budget: 20,
+								used: 2,
+								remaining: 18,
+								yielded: false,
+								yieldReason: null,
+							},
+							llmServiceRequests: 0,
+							cdpMethodCalls: null,
+						},
 						attachmentInventory: {
 							nextProjectIndex: 2,
 							nextConversationIndex: 1,
@@ -5305,6 +5340,19 @@ describe("http responses adapter", () => {
 								nextPhase: string | null;
 								why: string | null;
 							};
+							scrapeBudget: {
+								classification: string;
+								llmServiceRequests: number;
+								cdpMethodCalls: number | null;
+								passive: { total: number };
+								active: { total: number };
+								providerInteractions: {
+									budget: number | null;
+									used: number;
+									remaining: number | null;
+									yielded: boolean;
+								};
+							} | null;
 						}>;
 					};
 				};
@@ -5319,6 +5367,19 @@ describe("http responses adapter", () => {
 							state: "eligible",
 							nextPhase: "detail-inventory",
 							why: "conversation detail cursor is pending for conv_pending",
+						}),
+						scrapeBudget: expect.objectContaining({
+							classification: "passive_dominant",
+							passive: expect.objectContaining({ total: 3 }),
+							active: expect.objectContaining({ total: 2 }),
+							providerInteractions: expect.objectContaining({
+								budget: 20,
+								used: 2,
+								remaining: 18,
+								yielded: false,
+							}),
+							llmServiceRequests: 0,
+							cdpMethodCalls: null,
 						}),
 					}),
 				]),

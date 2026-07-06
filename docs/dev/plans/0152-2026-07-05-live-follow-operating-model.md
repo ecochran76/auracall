@@ -406,6 +406,37 @@ Parallelizable tracks:
   controls after M2/M4 settle.
 - M6 cadence can be refined after M3/M4 produce real evidence.
 
+## Progress
+
+### 2026-07-05 | M3 Scrape-Budget Evidence Projection
+
+- Account-mirror metadata evidence now carries `scrapeBudget` with separate
+  passive counters for DOM parses, app-state reads, download-link enumeration,
+  and cached-file carries, plus active counters for identity reads, project
+  index reads, root rail reads, project conversation reads, chat loads,
+  account-library reads, and downloads.
+- The ChatGPT requested `detail-inventory` path now reports a single-chat
+  artifact scrape shape as `passive_dominant`: one chat load plus one identity
+  read, no root rail/project index reads, no account-library read, and zero
+  LLM-service requests at the account-mirror collector boundary.
+- `/status` live-follow target rows and CLI-normalized status preserve the
+  scrape-budget evidence so operators can inspect provider-interaction budget
+  usage, passive/active totals, LLM-service request count, and the current CDP
+  method-count placeholder (`null` until browser-client instrumentation lands).
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "requested detail-inventory|pending detail inventory"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check --write src/accountMirror/statusRegistry.ts src/cli/apiStatusCommand.ts src/accountMirror/chatgptMetadataCollector.ts src/status/liveFollowHealth.ts src/http/responsesServer.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --max-diagnostics 40`
+
+Remaining M3 work:
+
+- instrument lower-level browser/CDP method counts rather than reporting
+  `cdpMethodCalls: null`;
+- correlate provider warning/guard evidence with scrape-budget yield behavior
+  in an installed dogfood pass.
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.

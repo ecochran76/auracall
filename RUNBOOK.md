@@ -12377,3 +12377,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Remaining scope:
   - provider-polite scrape-budget/CDP instrumentation and installed dogfood
     proof remain required before broad live-follow resume.
+
+## Turn 310 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - advance M3 by making live-follow status show whether a detail scrape is
+    spending passive DOM/app-state budget or active provider interaction
+    budget.
+- Result:
+  - account-mirror metadata evidence now records `scrapeBudget` with passive
+    parse/read counters, active provider-interaction counters, provider budget
+    usage, LLM-service request count, and a CDP method-count placeholder;
+  - ChatGPT requested `detail-inventory` evidence proves the single-chat
+    artifact scrape path as `passive_dominant`, with zero LLM-service requests
+    and no root rail/project index/account-library reads;
+  - `/status` live-follow target rows and CLI-normalized status preserve the
+    scrape-budget evidence for operator inspection.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "requested detail-inventory|pending detail inventory"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - scoped Biome passed on touched source/tests; direct Biome on
+    `tests/http.responsesServer.test.ts` still reports pre-existing non-null
+    assertion lint debt.
+- Remaining scope:
+  - add lower-level browser/CDP method counters and correlate provider-warning
+    guard evidence before installed dogfood resume.

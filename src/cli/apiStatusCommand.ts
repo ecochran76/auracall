@@ -738,6 +738,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 	const materializationBacklog = isRecord(account.materializationBacklog)
 		? account.materializationBacklog
 		: null;
+	const scrapeBudget = isRecord(account.scrapeBudget) ? account.scrapeBudget : null;
 	const accountLibraryCatchup = isRecord(account.accountLibraryCatchup)
 		? account.accountLibraryCatchup
 		: null;
@@ -832,6 +833,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 					checksumCount: readNumber(materializationOutcome.checksumCount) ?? 0,
 				}
 			: null,
+		scrapeBudget: summarizeLiveFollowScrapeBudget(scrapeBudget),
 		accountLibraryCatchup: accountLibraryCatchup
 			? {
 					mode: readString(accountLibraryCatchup.mode) ?? "disabled",
@@ -898,6 +900,45 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 					mergedTotal: summarizeMetadataCounts(metadataCountEvidence.mergedTotal),
 				}
 			: null,
+	};
+}
+
+function summarizeLiveFollowScrapeBudget(value: Record<string, unknown> | null) {
+	if (!value) return null;
+	const passive = isRecord(value.passive) ? value.passive : {};
+	const active = isRecord(value.active) ? value.active : {};
+	const providerInteractions = isRecord(value.providerInteractions)
+		? value.providerInteractions
+		: {};
+	return {
+		classification: readString(value.classification) ?? "unknown",
+		summary: readString(value.summary) ?? "",
+		passive: {
+			domParses: readNumber(passive.domParses) ?? 0,
+			appStateReads: readNumber(passive.appStateReads) ?? 0,
+			downloadLinkEnumerations: readNumber(passive.downloadLinkEnumerations) ?? 0,
+			cachedFileCarries: readNumber(passive.cachedFileCarries) ?? 0,
+			total: readNumber(passive.total) ?? 0,
+		},
+		active: {
+			identityReads: readNumber(active.identityReads) ?? 0,
+			projectIndexReads: readNumber(active.projectIndexReads) ?? 0,
+			rootRailReads: readNumber(active.rootRailReads) ?? 0,
+			projectConversationReads: readNumber(active.projectConversationReads) ?? 0,
+			chatLoads: readNumber(active.chatLoads) ?? 0,
+			accountLibraryReads: readNumber(active.accountLibraryReads) ?? 0,
+			downloads: readNumber(active.downloads) ?? 0,
+			total: readNumber(active.total) ?? 0,
+		},
+		providerInteractions: {
+			budget: readNumber(providerInteractions.budget),
+			used: readNumber(providerInteractions.used) ?? 0,
+			remaining: readNumber(providerInteractions.remaining),
+			yielded: providerInteractions.yielded === true,
+			yieldReason: readString(providerInteractions.yieldReason),
+		},
+		llmServiceRequests: readNumber(value.llmServiceRequests) ?? 0,
+		cdpMethodCalls: readNumber(value.cdpMethodCalls),
 	};
 }
 

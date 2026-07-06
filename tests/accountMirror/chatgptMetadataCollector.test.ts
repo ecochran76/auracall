@@ -1019,6 +1019,34 @@ describe("ChatGPT account mirror metadata collector", () => {
 				scannedConversations: 1,
 			}),
 		});
+		expect(result.evidence.scrapeBudget).toMatchObject({
+			classification: "passive_dominant",
+			passive: {
+				domParses: 1,
+				appStateReads: 1,
+				downloadLinkEnumerations: 1,
+				cachedFileCarries: 0,
+				total: 3,
+			},
+			active: {
+				identityReads: 1,
+				projectIndexReads: 0,
+				rootRailReads: 0,
+				projectConversationReads: 0,
+				chatLoads: 1,
+				accountLibraryReads: 0,
+				downloads: 0,
+				total: 2,
+			},
+			providerInteractions: {
+				budget: null,
+				used: 2,
+				remaining: null,
+				yielded: false,
+			},
+			llmServiceRequests: 0,
+			cdpMethodCalls: null,
+		});
 		expect(result.manifests.conversations.map((conversation) => conversation.id)).toEqual([
 			"conv_target",
 		]);

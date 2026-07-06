@@ -21,12 +21,12 @@ import type {
 } from "../browser/providers/types.js";
 import { resolveRuntimeProfileUserConfig as resolveBrowserRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
 import type { ResolvedUserConfig } from "../config.js";
+import type { AccountMirrorConversationMaterializationPolicy } from "./conversationFreshness.js";
 import {
 	applyConversationFreshnessFrontier,
 	type ConversationFreshnessFrontierCachedSummary,
 	type ConversationFreshnessFrontierEvidence,
 } from "./conversationFreshnessFrontier.js";
-import type { AccountMirrorConversationMaterializationPolicy } from "./conversationFreshness.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
@@ -38,6 +38,7 @@ import type {
 	AccountMirrorMetadataCounts,
 	AccountMirrorMetadataEvidence,
 	AccountMirrorRouteProgressEvidence,
+	AccountMirrorScrapeBudgetEvidence,
 } from "./statusRegistry.js";
 
 const MAX_DOM_DRIFT_SCREENSHOTS_PER_PROCESS = 3;
@@ -492,6 +493,26 @@ export function createChatgptAccountMirrorMetadataCollector(
 			const inventoryProgress = hasAttachmentInventoryProgress(inventory)
 				? inventory.progress
 				: createAttachmentInventoryProgress();
+			const scrapeBudget = buildAccountMirrorScrapeBudgetEvidence({
+				provider: input.provider,
+				runtimeProfileId: input.runtimeProfileId,
+				sweepMode: input.sweepMode ?? "steady_follow",
+				limits: input.limits,
+				honorRequestedDetailPhase,
+				honorRequestedProjectConversationsPhase,
+				projectsRead: projects.items.length,
+				rootConversationsRead: rootConversations.items.length,
+				projectConversationCursor,
+				inventoryProgress,
+				attachmentCursor: inventory.cursor,
+				chatgptAccountLibraryRead:
+					input.provider === "chatgpt" &&
+					!honorRequestedDetailPhase &&
+					!(
+						(input.sweepMode ?? "steady_follow") === "steady_follow" &&
+						frontier.detailConversations.length > 0
+					),
+			});
 			const detailObservedAt = new Date().toISOString();
 			const detailObservedConversationIds = new Set(
 				inventoryProgress.detailObservedConversationIds,
@@ -543,6 +564,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 									inventoryProgress,
 								})
 							: null,
+					scrapeBudget,
 					collectorProgress: {
 						provider: input.provider,
 						runtimeProfileId: input.runtimeProfileId,
@@ -723,6 +745,88 @@ export function buildGeminiRouteProgressEvidence(input: {
 			artifactBearingConversationIds.length + fileBearingConversationIds.length,
 		churnDetected,
 		yieldCause: churnDetected ? "shell_without_conversation_selection" : null,
+	};
+}
+
+function buildAccountMirrorScrapeBudgetEvidence(input: {
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	sweepMode: "steady_follow" | "full_sweep";
+	limits: AccountMirrorMetadataCollectorInput["limits"];
+	honorRequestedDetailPhase: boolean;
+	honorRequestedProjectConversationsPhase: boolean;
+	projectsRead: number;
+	rootConversationsRead: number;
+	projectConversationCursor: ProjectConversationHistoryCursor | null;
+	inventoryProgress: AttachmentInventoryProgress;
+	attachmentCursor: AttachmentInventoryCursor | null;
+	chatgptAccountLibraryRead: boolean;
+}): AccountMirrorScrapeBudgetEvidence {
+	const passive = {
+		domParses:
+			input.inventoryProgress.detailObservedConversationIds.length +
+			input.inventoryProgress.scannedProjectIds.length,
+		appStateReads: input.inventoryProgress.contextObservedConversationIds.length,
+		downloadLinkEnumerations: uniqueStrings([
+			...input.inventoryProgress.artifactBearingConversationIds,
+			...input.inventoryProgress.fileBearingConversationIds,
+		]).length,
+		cachedFileCarries: 0,
+		total: 0,
+	};
+	passive.total =
+		passive.domParses +
+		passive.appStateReads +
+		passive.downloadLinkEnumerations +
+		passive.cachedFileCarries;
+	const active = {
+		identityReads: 1,
+		projectIndexReads: input.honorRequestedDetailPhase ? 0 : 1,
+		rootRailReads:
+			input.honorRequestedDetailPhase || input.honorRequestedProjectConversationsPhase ? 0 : 1,
+		projectConversationReads: input.projectConversationCursor?.scannedProjects ?? 0,
+		chatLoads: input.inventoryProgress.scannedConversationIds.length,
+		accountLibraryReads: input.chatgptAccountLibraryRead ? 1 : 0,
+		downloads: 0,
+		total: 0,
+	};
+	active.total =
+		active.identityReads +
+		active.projectIndexReads +
+		active.rootRailReads +
+		active.projectConversationReads +
+		active.chatLoads +
+		active.accountLibraryReads +
+		active.downloads;
+	const budget = Math.max(0, Math.floor(input.limits.maxBrowserInteractionsPerMinute));
+	const remaining = budget > 0 ? Math.max(0, budget - active.total) : null;
+	const yielded = input.attachmentCursor?.yielded === true;
+	const classification =
+		passive.total === 0 && active.total === 0
+			? "unknown"
+			: passive.total > active.total
+				? "passive_dominant"
+				: active.total > passive.total
+					? "active_dominant"
+					: "balanced";
+	return {
+		provider: input.provider,
+		runtimeProfileId: input.runtimeProfileId,
+		sweepMode: input.sweepMode,
+		observedAt: new Date().toISOString(),
+		classification,
+		summary: `Account mirror scrape used ${passive.total} passive parse/read signal(s) and ${active.total} active provider interaction(s).`,
+		passive,
+		active,
+		providerInteractions: {
+			budget: budget > 0 ? budget : null,
+			used: active.total,
+			remaining,
+			yielded,
+			yieldReason: input.attachmentCursor?.yieldCause?.kind ?? null,
+		},
+		llmServiceRequests: 0,
+		cdpMethodCalls: null,
 	};
 }
 

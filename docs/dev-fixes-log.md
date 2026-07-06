@@ -18801,3 +18801,9 @@ browser-stage lifecycle observability, not transcript truncation.
   should consume `nextEligiblePhase` plus the cursor reason before falling back
   to latest refresh evidence; otherwise API restart can make the routine look
   caught up or restart rails even though persisted backfill work remains.
+- 2026-07-05: Scrape-shape debugging needs action-class counters before
+  threshold tuning. A single artifact-rich ChatGPT detail pass should mostly
+  spend passive DOM/app-state/download-link budget and should not imply
+  repeated LLM-service requests. First expose collector-boundary evidence with
+  `llmServiceRequests=0` and `cdpMethodCalls=null`, then add lower-level
+  browser/CDP counters before using rate-limit thresholds as the explanation.

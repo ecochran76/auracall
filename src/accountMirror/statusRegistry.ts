@@ -113,6 +113,41 @@ export type AccountMirrorRouteProgressEvidence = {
 	yieldCause: string | null;
 };
 
+export type AccountMirrorScrapeBudgetEvidence = {
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	sweepMode: AccountMirrorCompletionSweepMode | "unknown";
+	observedAt: string;
+	classification: "passive_dominant" | "active_dominant" | "balanced" | "unknown";
+	summary: string;
+	passive: {
+		domParses: number;
+		appStateReads: number;
+		downloadLinkEnumerations: number;
+		cachedFileCarries: number;
+		total: number;
+	};
+	active: {
+		identityReads: number;
+		projectIndexReads: number;
+		rootRailReads: number;
+		projectConversationReads: number;
+		chatLoads: number;
+		accountLibraryReads: number;
+		downloads: number;
+		total: number;
+	};
+	providerInteractions: {
+		budget: number | null;
+		used: number;
+		remaining: number | null;
+		yielded: boolean;
+		yieldReason: string | null;
+	};
+	llmServiceRequests: number;
+	cdpMethodCalls: number | null;
+};
+
 export type AccountMirrorCollectorPhase =
 	| "identity"
 	| "projects"
@@ -157,6 +192,7 @@ export type AccountMirrorMetadataEvidence = {
 	countEvidence?: AccountMirrorMetadataCountEvidence | null;
 	detailScannedThisPass?: AccountMirrorDetailScannedEvidence | null;
 	assetInventory?: AccountMirrorAssetInventoryEvidence | null;
+	scrapeBudget?: AccountMirrorScrapeBudgetEvidence | null;
 	conversationFreshnessFrontier?: ConversationFreshnessFrontierEvidence | null;
 	routeProgress?: AccountMirrorRouteProgressEvidence | null;
 	collectorProgress?: AccountMirrorCollectorPhaseProgressEvidence | null;
@@ -934,6 +970,7 @@ function normalizeMetadataEvidence(
 		countEvidence: normalizeCountEvidence(value.countEvidence),
 		detailScannedThisPass: normalizeDetailScannedEvidence(value.detailScannedThisPass),
 		assetInventory: normalizeAssetInventoryEvidence(value.assetInventory),
+		scrapeBudget: normalizeScrapeBudgetEvidence(value.scrapeBudget),
 		conversationFreshnessFrontier: normalizeConversationFreshnessFrontierEvidence(
 			value.conversationFreshnessFrontier,
 		),
@@ -1194,6 +1231,94 @@ function normalizeAssetCounts(
 	};
 }
 
+function normalizeScrapeBudgetEvidence(
+	value: AccountMirrorMetadataEvidence["scrapeBudget"] | null | undefined,
+): AccountMirrorMetadataEvidence["scrapeBudget"] | null {
+	if (!value || !isRecord(value)) return null;
+	const passiveRecord: MutableRecord = isRecord(value.passive) ? value.passive : {};
+	const passive = {
+		domParses: normalizeCount(readNumber(passiveRecord.domParses)),
+		appStateReads: normalizeCount(readNumber(passiveRecord.appStateReads)),
+		downloadLinkEnumerations: normalizeCount(readNumber(passiveRecord.downloadLinkEnumerations)),
+		cachedFileCarries: normalizeCount(readNumber(passiveRecord.cachedFileCarries)),
+		total: normalizeCount(readNumber(passiveRecord.total)),
+	};
+	passive.total ||=
+		passive.domParses +
+		passive.appStateReads +
+		passive.downloadLinkEnumerations +
+		passive.cachedFileCarries;
+	const activeRecord: MutableRecord = isRecord(value.active) ? value.active : {};
+	const active = {
+		identityReads: normalizeCount(readNumber(activeRecord.identityReads)),
+		projectIndexReads: normalizeCount(readNumber(activeRecord.projectIndexReads)),
+		rootRailReads: normalizeCount(readNumber(activeRecord.rootRailReads)),
+		projectConversationReads: normalizeCount(readNumber(activeRecord.projectConversationReads)),
+		chatLoads: normalizeCount(readNumber(activeRecord.chatLoads)),
+		accountLibraryReads: normalizeCount(readNumber(activeRecord.accountLibraryReads)),
+		downloads: normalizeCount(readNumber(activeRecord.downloads)),
+		total: normalizeCount(readNumber(activeRecord.total)),
+	};
+	active.total ||=
+		active.identityReads +
+		active.projectIndexReads +
+		active.rootRailReads +
+		active.projectConversationReads +
+		active.chatLoads +
+		active.accountLibraryReads +
+		active.downloads;
+	const interactionRecord: MutableRecord = isRecord(value.providerInteractions)
+		? value.providerInteractions
+		: {};
+	const budget = normalizeNullableCount(readNumber(interactionRecord.budget));
+	const used = normalizeCount(readNumber(interactionRecord.used)) || active.total;
+	return {
+		provider: normalizeScrapeBudgetProvider(value.provider),
+		runtimeProfileId: readString(value.runtimeProfileId) ?? "default",
+		sweepMode: normalizeScrapeBudgetSweepMode(value.sweepMode),
+		observedAt: readString(value.observedAt) ?? new Date(0).toISOString(),
+		classification: normalizeScrapeBudgetClassification(value.classification),
+		summary:
+			readString(value.summary) ??
+			`Account mirror scrape used ${passive.total} passive parse/read signal(s) and ${active.total} active provider interaction(s).`,
+		passive,
+		active,
+		providerInteractions: {
+			budget,
+			used,
+			remaining: normalizeNullableCount(readNumber(interactionRecord.remaining)),
+			yielded: interactionRecord.yielded === true,
+			yieldReason: readString(interactionRecord.yieldReason),
+		},
+		llmServiceRequests: normalizeCount(readNumber(value.llmServiceRequests)),
+		cdpMethodCalls: normalizeNullableCount(readNumber(value.cdpMethodCalls)),
+	};
+}
+
+function normalizeScrapeBudgetProvider(value: unknown): AccountMirrorProvider {
+	return value === "gemini" || value === "grok" ? value : "chatgpt";
+}
+
+function normalizeScrapeBudgetSweepMode(
+	value: unknown,
+): AccountMirrorCompletionSweepMode | "unknown" {
+	return value === "steady_follow" || value === "full_sweep" ? value : "unknown";
+}
+
+function normalizeScrapeBudgetClassification(
+	value: unknown,
+): AccountMirrorScrapeBudgetEvidence["classification"] {
+	if (
+		value === "passive_dominant" ||
+		value === "active_dominant" ||
+		value === "balanced" ||
+		value === "unknown"
+	) {
+		return value;
+	}
+	return "unknown";
+}
+
 function detailScannedFromAttachmentInventory(
 	value: AccountMirrorMetadataEvidence["attachmentInventory"] | null | undefined,
 ): AccountMirrorDetailScannedEvidence {
@@ -1397,6 +1522,12 @@ function normalizeStringArray(value: string[] | null | undefined): string[] {
 
 function normalizeCount(value: number | null | undefined): number {
 	return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
+}
+
+function normalizeNullableCount(value: number | null | undefined): number | null {
+	return typeof value === "number" && Number.isFinite(value) && value >= 0
+		? Math.trunc(value)
+		: null;
 }
 
 function timestampToIso(value: number | null | undefined): string | null {
