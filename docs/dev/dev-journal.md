@@ -39770,3 +39770,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `2026-07-06T04:50:42.986Z`; status projection now reports complete
   idle-waiting live-follow as `routineDecision.state=steady_follow` instead of
   `running`.
+- 2026-07-06: Continued Plan 0152 Gate F installed incomplete-account probe.
+  `chatgpt/wsl-chrome-2` first failed before refresh in completion
+  `acctmirror_completion_cacf3d32-091d-4ae1-a4bd-0730a70bc0ef` because
+  `~/.auracall/cache/providers/chatgpt/__runtime__/rate-limit-wsl-chrome-2.json`
+  had malformed JSON with an extra closing brace. The guard reader now treats
+  malformed persisted guard state as absent and writes guard JSON atomically.
+  With the malformed installed file still present, completion
+  `acctmirror_completion_f9175187-dfe5-43e3-83ce-06d558d2fffe` completed
+  `wsl-chrome-2` from `2026-07-06T04:42:19.734Z` to
+  `2026-07-06T04:45:39.008Z`, reached `mirrorCompleteness=complete`,
+  preserved `llmServiceRequests=0`, reported `cdpMethodCalls=12`, and had
+  `providerGuardCorrelation.state=none`. The immediate keep-current probe
+  `acctmirror_completion_5ccd7f0d-f112-4f5b-9fd2-a8205bd2e6b9` failed before
+  refresh completion with `WebSocket is not open: readyState 3 (CLOSED)`, so
+  broad live-follow resume remains gated.

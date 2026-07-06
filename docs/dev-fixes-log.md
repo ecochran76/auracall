@@ -18947,3 +18947,12 @@ browser-stage lifecycle observability, not transcript truncation.
   account mirror is complete, and the cycle/status phase is complete, target
   `routineDecision.state` should be `steady_follow` with the next cadence time.
   Reserve `running` for actual provider/background work in progress.
+- 2026-07-06: Malformed ChatGPT rate-limit guard JSON must not abort
+  metadata-only account-mirror backfill before provider work starts. Installed
+  `wsl-chrome-2` completion
+  `acctmirror_completion_cacf3d32-091d-4ae1-a4bd-0730a70bc0ef` failed at
+  `passCount=0` because
+  `~/.auracall/cache/providers/chatgpt/__runtime__/rate-limit-wsl-chrome-2.json`
+  had an extra closing brace. Treat malformed persisted guard state as absent
+  and write guard state via temp-file rename; keep real provider guards proven
+  by collector/CDP/status evidence, not by local guard-file parse failures.

@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import {
@@ -93,6 +93,27 @@ describe('chatgptRateLimitGuard', () => {
       expect(resolveChatgptRateLimitGuardPath({ profileName: 'default' })).toBe(
         path.join(homeDir, 'cache', 'providers', 'chatgpt', '__runtime__', 'rate-limit-default.json'),
       );
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('ignores malformed persisted guard state', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-chatgpt-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    try {
+      const statePath = resolveChatgptRateLimitGuardPath({ profileName: 'wsl-chrome-2' });
+      await mkdir(path.dirname(statePath), { recursive: true });
+      await writeFile(
+        statePath,
+        '{\n  "provider": "chatgpt",\n  "profile": "wsl-chrome-2"\n}\n}\n',
+        'utf8',
+      );
+
+      await expect(
+        readChatgptRateLimitGuardState({ profileName: 'wsl-chrome-2' }),
+      ).resolves.toBeNull();
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

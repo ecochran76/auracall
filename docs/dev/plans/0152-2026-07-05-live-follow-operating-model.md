@@ -207,6 +207,45 @@ Validation:
 - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "idle-waiting live-follow|effective live-follow wake|pending detail inventory"`
 - `pnpm exec tsc --noEmit --pretty false`
 
+### 2026-07-06 | Gate F Installed Incomplete-Account Probe
+
+- Installed `chatgpt/wsl-chrome-2` bounded completion
+  `acctmirror_completion_cacf3d32-091d-4ae1-a4bd-0730a70bc0ef` failed before
+  any provider refresh with
+  `Unexpected non-whitespace character after JSON at position 470`; disk
+  inspection traced the exact malformed file to
+  `~/.auracall/cache/providers/chatgpt/__runtime__/rate-limit-wsl-chrome-2.json`,
+  not DOM parsing, CDP traffic, or an LLM-service request.
+- The ChatGPT rate-limit guard now treats malformed persisted guard JSON as a
+  stale/absent guard and writes guard state via temp-file rename. With the same
+  malformed installed file still present, bounded completion
+  `acctmirror_completion_f9175187-dfe5-43e3-83ce-06d558d2fffe` advanced past
+  guard parsing, reached collector progress, and completed
+  `2026-07-06T04:42:19.734Z` to `2026-07-06T04:45:39.008Z`.
+- That pass transitioned the incomplete account to
+  `phase=steady_follow` / `mirrorCompleteness=complete`, preserved
+  `llmServiceRequests=0`, reported `cdpMethodCalls=12`, and had
+  `providerGuardCorrelation.state=none`. It still spent an over-budget active
+  shape (`providerInteractions.used=7` with budget `6`), so it is proof of
+  local guard repair and bounded backfill completion, not proof that broad
+  cadence is safe.
+- The immediate follow-up keep-current probe
+  `acctmirror_completion_5ccd7f0d-f112-4f5b-9fd2-a8205bd2e6b9` started
+  identity/project/root-conversation progress but failed before refresh
+  completion with `WebSocket is not open: readyState 3 (CLOSED)`. Gate F stays
+  open until the now-complete account can run a successful follow-up
+  keep-current pass without restarting into fragile browser-session state.
+
+Validation:
+
+- `pnpm vitest run tests/browser/chatgptRateLimitGuard.test.ts`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-complete --port 18095 --provider chatgpt --runtime-profile wsl-chrome-2 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_f9175187-dfe5-43e3-83ce-06d558d2fffe --port 18095 --json`
+- `auracall api mirror-completion-status acctmirror_completion_5ccd7f0d-f112-4f5b-9fd2-a8205bd2e6b9 --port 18095 --json`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
@@ -483,9 +522,13 @@ Current evidence:
 - Installed `chatgpt/wsl-chrome-3` has proved the steady-follow keep-current
   side with zero detail rows selected, no LLM-service requests, no provider
   guard correlation, and restart-visible status readback.
-- The full installed backfill-to-steady transition is still pending for an
-  initially incomplete subscribed ChatGPT account; broad live-follow resume
-  remains gated until that transition is proven without warning churn.
+- Installed `chatgpt/wsl-chrome-2` has now proved one bounded incomplete-account
+  backfill pass can reach `mirrorCompleteness=complete` after local malformed
+  guard-state repair, but its immediate follow-up keep-current pass failed on a
+  closed browser WebSocket before refresh completion.
+- Broad live-follow resume remains gated until the same account class proves a
+  successful follow-up keep-current pass without warning churn or browser
+  session loss.
 
 ## Milestones
 

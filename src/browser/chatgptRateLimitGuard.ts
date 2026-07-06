@@ -113,7 +113,7 @@ export async function readChatgptRateLimitGuardState(options: {
     };
   } catch (error) {
     const code = (error as { code?: string }).code;
-    if (code === 'ENOENT') {
+    if (code === 'ENOENT' || error instanceof SyntaxError) {
       return null;
     }
     throw error;
@@ -131,7 +131,9 @@ export async function writeChatgptRateLimitGuardState(
 ): Promise<void> {
   const statePath = resolveChatgptRateLimitGuardPath(options);
   await fs.mkdir(path.dirname(statePath), { recursive: true });
-  await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  const tempPath = `${statePath}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tempPath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  await fs.rename(tempPath, statePath);
 }
 
 export function isChatgptRateLimitMessage(message: string): boolean {
