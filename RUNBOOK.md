@@ -12358,3 +12358,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - scheduler/status decision logic should consume `backfillLedger` directly
     for next-phase selection;
   - installed dogfood proof is still required before broad live-follow resume.
+
+## Turn 309 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - make scheduler and idle status decisions consume the account-level
+    `backfillLedger` directly for restart-safe next-phase selection.
+- Result:
+  - shared live-follow phase selection now accepts `backfillLedger` and uses
+    `nextEligiblePhase` plus cursor reason before latest refresh evidence;
+  - scheduler execute passes request the ledger-selected collector phase after
+    restart;
+  - idle `/status` `routineDecision` readback reports ledger-selected phases as
+    `backfilling`, `account_library_catchup`, or `materialization_pending`
+    before treating a complete mirror as caught up.
+- Remaining scope:
+  - provider-polite scrape-budget/CDP instrumentation and installed dogfood
+    proof remain required before broad live-follow resume.

@@ -4,11 +4,28 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
+import type { AccountMirrorArtifactRecoveryPlanResult } from "../src/accountMirror/artifactRecoveryPlanner.js";
+import type { AccountMirrorBackfillLedger } from "../src/accountMirror/backfillLedger.js";
+import type {
+	AccountMirrorCatalogItemResult,
+	AccountMirrorCatalogResult,
+} from "../src/accountMirror/catalogService.js";
+import type {
+	AccountMirrorCompletionListRequest,
+	AccountMirrorCompletionOperation,
+} from "../src/accountMirror/completionService.js";
+import { createAccountMirrorCompletionStore } from "../src/accountMirror/completionStore.js";
+import type { AccountMirrorRefreshService } from "../src/accountMirror/refreshService.js";
+import type { AccountMirrorSchedulerPassLedger } from "../src/accountMirror/schedulerLedger.js";
+import type { AccountMirrorSchedulerPassResult } from "../src/accountMirror/schedulerService.js";
 import {
-	recordLazyLiveFollowPreflightRun,
-	writeLazyLiveFollowPreflightStatus,
-} from "../src/preflightStatus.js";
+	type AccountMirrorStatusSummary,
+	createAccountMirrorStatusRegistry,
+	createAccountMirrorStatusSummary,
+} from "../src/accountMirror/statusRegistry.js";
+import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
+import { recordDomDriftObservation } from "../src/browser/domDriftObservations.js";
+import { createAgentRegistryStore } from "../src/config/agentRegistryStore.js";
 import {
 	assertResponsesHostAllowed,
 	createDefaultRuntimeRunServiceStateProbe,
@@ -17,51 +34,35 @@ import {
 	terminateSamePortApiServeProcesses,
 } from "../src/http/responsesServer.js";
 import {
-	createAccountMirrorStatusRegistry,
-	type AccountMirrorStatusSummary,
-	createAccountMirrorStatusSummary,
-} from "../src/accountMirror/statusRegistry.js";
-import type { AccountMirrorRefreshService } from "../src/accountMirror/refreshService.js";
-import type {
-	AccountMirrorCatalogItemResult,
-	AccountMirrorCatalogResult,
-} from "../src/accountMirror/catalogService.js";
-import type { AccountMirrorArtifactRecoveryPlanResult } from "../src/accountMirror/artifactRecoveryPlanner.js";
-import { createAccountMirrorCompletionStore } from "../src/accountMirror/completionStore.js";
-import type {
-	AccountMirrorCompletionListRequest,
-	AccountMirrorCompletionOperation,
-} from "../src/accountMirror/completionService.js";
-import type { AccountMirrorSchedulerPassResult } from "../src/accountMirror/schedulerService.js";
-import type { AccountMirrorSchedulerPassLedger } from "../src/accountMirror/schedulerLedger.js";
-import { resetLiveRuntimeRunServiceStateRegistryForTests } from "../src/runtime/liveServiceStateRegistry.js";
+	recordLazyLiveFollowPreflightRun,
+	writeLazyLiveFollowPreflightStatus,
+} from "../src/preflightStatus.js";
 import type { ArchiveMaterializationJobListRequest } from "../src/runtime/archiveMaterializationJobService.js";
+import type { RunArchiveService } from "../src/runtime/archiveService.js";
 import type { ExecutionRuntimeControlContract } from "../src/runtime/contract.js";
+import { createExecutionRuntimeControl } from "../src/runtime/control.js";
 import {
-	HistoryMaterializationJobControlError,
 	type HistoryMaterializationJob,
+	HistoryMaterializationJobControlError,
 	type HistoryMaterializationService,
 } from "../src/runtime/historyMaterializationService.js";
-import type { RunArchiveService } from "../src/runtime/archiveService.js";
-import type { SearchProjectionResult } from "../src/runtime/searchProjectionService.js";
-import { createExecutionRuntimeControl } from "../src/runtime/control.js";
-import { writeTaskRunSpecStoredRecord } from "../src/teams/store.js";
-import { createTaskRunSpec } from "../src/teams/model.js";
-import { createExecutionRunnerControl } from "../src/runtime/runnersControl.js";
-import { createExecutionServiceHost } from "../src/runtime/serviceHost.js";
+import { resetLiveRuntimeRunServiceStateRegistryForTests } from "../src/runtime/liveServiceStateRegistry.js";
 import {
-	createExecutionRunnerRecord,
 	createExecutionRun,
 	createExecutionRunEvent,
+	createExecutionRunnerRecord,
 	createExecutionRunRecordBundle,
 	createExecutionRunSharedState,
 	createExecutionRunStep,
 } from "../src/runtime/model.js";
-import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from "../src/teams/types.js";
+import { createExecutionRunnerControl } from "../src/runtime/runnersControl.js";
+import type { SearchProjectionResult } from "../src/runtime/searchProjectionService.js";
+import { createExecutionServiceHost } from "../src/runtime/serviceHost.js";
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from "../src/runtime/stepOutputContract.js";
+import { createTaskRunSpec } from "../src/teams/model.js";
+import { writeTaskRunSpecStoredRecord } from "../src/teams/store.js";
+import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from "../src/teams/types.js";
 import { createChatgptDeepResearchStatusFixture } from "./fixtures/chatgptDeepResearchStatusFixture.js";
-import { createAgentRegistryStore } from "../src/config/agentRegistryStore.js";
-import { recordDomDriftObservation } from "../src/browser/domDriftObservations.js";
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -84,6 +85,76 @@ const completeAccountMirror = {
 		conversationsTruncated: false,
 		attachmentInventoryTruncated: false,
 		attachmentCursorPresent: false,
+	},
+};
+
+const completeBackfillLedger: AccountMirrorBackfillLedger = {
+	object: "account_mirror_backfill_ledger",
+	version: 1,
+	provider: "chatgpt",
+	runtimeProfileId: "default",
+	browserProfileId: "default",
+	boundIdentityKey: "operator@example.com",
+	updatedAt: "2026-04-30T12:00:01.000Z",
+	state: "complete",
+	lastCompletedPhase: "detail-inventory",
+	nextEligiblePhase: "complete",
+	cursors: {
+		projects: {
+			status: "complete",
+			reason: "project cursor complete",
+			updatedAt: "2026-04-30T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: 1,
+			yielded: false,
+		},
+		rootRail: {
+			status: "complete",
+			reason: "root rail cursor complete",
+			updatedAt: "2026-04-30T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: 2,
+			yielded: false,
+		},
+		projectConversations: {
+			status: "skipped",
+			reason: "No project conversation cursor was emitted.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
+		newestFirstDetail: {
+			status: "complete",
+			reason: "detail cursor complete",
+			updatedAt: "2026-04-30T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+			conversationDetail: null,
+		},
+		accountLibrary: {
+			status: "skipped",
+			reason: "No account-library cursor recorded yet.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
+		materialization: {
+			status: "skipped",
+			reason: "No materialization cursor recorded yet.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
 	},
 };
 
@@ -5248,6 +5319,101 @@ describe("http responses adapter", () => {
 							state: "eligible",
 							nextPhase: "detail-inventory",
 							why: "conversation detail cursor is pending for conv_pending",
+						}),
+					}),
+				]),
+			);
+		} finally {
+			await server.close();
+		}
+	});
+
+	it("reports persisted backfill ledger phase as the idle live-follow target next phase", async () => {
+		const config = {
+			model: "gpt-5.2",
+			browser: {},
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: { email: "operator@example.com" },
+							liveFollow: { enabled: true },
+						},
+					},
+				},
+			},
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-30T12:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "operator@example.com",
+					lastCompletedAtMs: Date.parse("2026-04-30T11:59:00.000Z"),
+					backfillLedger: {
+						...completeBackfillLedger,
+						state: "in_progress",
+						lastCompletedPhase: "project-conversations",
+						nextEligiblePhase: "detail-inventory",
+						cursors: {
+							...completeBackfillLedger.cursors,
+							newestFirstDetail: {
+								...completeBackfillLedger.cursors.newestFirstDetail,
+								status: "pending",
+								reason: "detail inventory yielded before completion",
+								updatedAt: "2026-04-30T11:59:00.000Z",
+								scanned: 12,
+								yielded: true,
+							},
+						},
+					},
+				},
+			},
+		});
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0 },
+			{
+				config,
+				accountMirrorStatusRegistry: registry,
+				accountMirrorCompletionService: {
+					start: vi.fn(),
+					read: vi.fn(() => null),
+					list: vi.fn(() => []),
+					control: vi.fn(() => null),
+				},
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			const payload = (await response.json()) as {
+				liveFollow: {
+					targets: {
+						accounts: Array<{
+							provider: string;
+							runtimeProfileId: string;
+							routineDecision: {
+								state: string;
+								nextPhase: string | null;
+								why: string | null;
+							};
+						}>;
+					};
+				};
+			};
+
+			expect(payload.liveFollow.targets.accounts).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						provider: "chatgpt",
+						runtimeProfileId: "default",
+						routineDecision: expect.objectContaining({
+							state: "backfilling",
+							nextPhase: "detail-inventory",
+							why: "detail inventory yielded before completion",
 						}),
 					}),
 				]),

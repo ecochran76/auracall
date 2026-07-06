@@ -1,3 +1,8 @@
+import type {
+	AccountMirrorBackfillCursor,
+	AccountMirrorBackfillLedger,
+	AccountMirrorBackfillPhase,
+} from "./backfillLedger.js";
 import type { AccountMirrorCompletionOperation } from "./completionService.js";
 import type {
 	AccountMirrorCollectorPhase,
@@ -55,6 +60,7 @@ export function deriveLiveFollowCycleLedger(input: {
 		operation,
 		evidence,
 		remainingDetailSurfaces: completeness?.remainingDetailSurfaces?.total ?? null,
+		backfillLedger: input.statusEntry?.backfillLedger ?? null,
 	});
 	const cycleId =
 		previous?.cycleId ?? `lfc_${operation.id}_${Date.parse(operation.startedAt) || 0}`;
@@ -84,11 +90,15 @@ export function chooseLiveFollowCyclePhase(input: {
 	};
 	evidence: AccountMirrorMetadataEvidence | null;
 	remainingDetailSurfaces: number | null;
+	backfillLedger?: AccountMirrorBackfillLedger | null;
 }): {
 	phase: AccountMirrorLiveFollowCyclePhase;
 	status: AccountMirrorLiveFollowCyclePhaseStatus;
 	reason: string;
 } {
+	const ledgerDecision = chooseBackfillLedgerPhase(input.backfillLedger ?? null);
+	if (ledgerDecision) return ledgerDecision;
+
 	const evidence = input.evidence;
 	const collectorProgress = evidence?.collectorProgress ?? null;
 	const attachmentCursor = evidence?.attachmentInventory ?? null;
@@ -158,6 +168,71 @@ export function chooseLiveFollowCyclePhase(input: {
 		status: "complete",
 		reason: "all required live-follow phases are complete for the current evidence window",
 	};
+}
+
+function chooseBackfillLedgerPhase(ledger: AccountMirrorBackfillLedger | null): {
+	phase: AccountMirrorLiveFollowCyclePhase;
+	status: AccountMirrorLiveFollowCyclePhaseStatus;
+	reason: string;
+} | null {
+	if (!ledger || ledger.state === "complete" || ledger.nextEligiblePhase === "complete")
+		return null;
+	const phase = backfillPhaseToLiveFollowPhase(ledger.nextEligiblePhase);
+	const cursor = backfillCursorForPhase(ledger, ledger.nextEligiblePhase);
+	return {
+		phase,
+		status: backfillCursorStatusToLiveFollowStatus(cursor?.status ?? "pending"),
+		reason:
+			cursor?.reason ??
+			`backfill ledger selected ${ledger.nextEligiblePhase} as the next eligible phase`,
+	};
+}
+
+function backfillPhaseToLiveFollowPhase(
+	phase: AccountMirrorBackfillPhase,
+): AccountMirrorLiveFollowCyclePhase {
+	const phaseMap: Record<AccountMirrorBackfillPhase, AccountMirrorLiveFollowCyclePhase> = {
+		identity: "identity",
+		projects: "projects",
+		"root-conversations": "root-conversations",
+		"project-conversations": "project-conversations",
+		"detail-inventory": "detail-inventory",
+		"account-library": "account-library",
+		materialization: "materialization",
+		complete: "complete",
+	};
+	return phaseMap[phase];
+}
+
+function backfillCursorForPhase(
+	ledger: AccountMirrorBackfillLedger,
+	phase: AccountMirrorBackfillPhase,
+): AccountMirrorBackfillCursor | null {
+	const cursorMap: Record<AccountMirrorBackfillPhase, AccountMirrorBackfillCursor | null> = {
+		identity: null,
+		projects: ledger.cursors.projects,
+		"root-conversations": ledger.cursors.rootRail,
+		"project-conversations": ledger.cursors.projectConversations,
+		"detail-inventory": ledger.cursors.newestFirstDetail,
+		"account-library": ledger.cursors.accountLibrary,
+		materialization: ledger.cursors.materialization,
+		complete: null,
+	};
+	return cursorMap[phase];
+}
+
+function backfillCursorStatusToLiveFollowStatus(
+	status: AccountMirrorBackfillCursor["status"],
+): AccountMirrorLiveFollowCyclePhaseStatus {
+	switch (status) {
+		case "complete":
+			return "complete";
+		case "skipped":
+			return "skipped";
+		case "pending":
+		case "unknown":
+			return "pending";
+	}
 }
 
 function updatePhaseEntries(input: {

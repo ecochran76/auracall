@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import type { AccountMirrorBackfillLedger } from "../../src/accountMirror/backfillLedger.js";
 import {
 	AccountMirrorRefreshError,
 	type AccountMirrorRefreshResult,
@@ -44,6 +45,76 @@ const completeMirror = {
 		conversationsTruncated: false,
 		attachmentInventoryTruncated: false,
 		attachmentCursorPresent: false,
+	},
+};
+
+const completeBackfillLedger: AccountMirrorBackfillLedger = {
+	object: "account_mirror_backfill_ledger",
+	version: 1,
+	provider: "chatgpt",
+	runtimeProfileId: "default",
+	browserProfileId: "default",
+	boundIdentityKey: "ecochran76@gmail.com",
+	updatedAt: "2026-04-29T12:00:01.000Z",
+	state: "complete",
+	lastCompletedPhase: "detail-inventory",
+	nextEligiblePhase: "complete",
+	cursors: {
+		projects: {
+			status: "complete",
+			reason: "project cursor complete",
+			updatedAt: "2026-04-29T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: 1,
+			yielded: false,
+		},
+		rootRail: {
+			status: "complete",
+			reason: "root rail cursor complete",
+			updatedAt: "2026-04-29T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: 2,
+			yielded: false,
+		},
+		projectConversations: {
+			status: "skipped",
+			reason: "No project conversation cursor was emitted.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
+		newestFirstDetail: {
+			status: "complete",
+			reason: "detail cursor complete",
+			updatedAt: "2026-04-29T12:00:01.000Z",
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+			conversationDetail: null,
+		},
+		accountLibrary: {
+			status: "skipped",
+			reason: "No account-library cursor recorded yet.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
+		materialization: {
+			status: "skipped",
+			reason: "No materialization cursor recorded yet.",
+			updatedAt: null,
+			nextIndex: null,
+			readLimit: null,
+			scanned: null,
+			yielded: false,
+		},
 	},
 };
 
@@ -575,6 +646,70 @@ describe("account mirror scheduler pass service", () => {
 					phase: "detail-inventory",
 					status: "pending",
 					reason: "freshness frontier selected 1 conversation row(s) for detail",
+				},
+			},
+		});
+	});
+
+	test("execute pass requests the persisted backfill ledger phase across restart", async () => {
+		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const service = createAccountMirrorSchedulerPassService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				initialState: {
+					"chatgpt:default": {
+						detectedIdentityKey: "ecochran76@gmail.com",
+						lastCompletedAtMs: Date.parse("2026-04-29T11:59:00.000Z"),
+						backfillLedger: {
+							...completeBackfillLedger,
+							state: "in_progress",
+							lastCompletedPhase: "root-conversations",
+							nextEligiblePhase: "project-conversations",
+							cursors: {
+								...completeBackfillLedger.cursors,
+								projectConversations: {
+									...completeBackfillLedger.cursors.projectConversations,
+									status: "pending",
+									reason: "Project conversation pass yielded before finishing.",
+									updatedAt: "2026-04-29T11:59:00.000Z",
+									nextIndex: 8,
+									readLimit: 2,
+									scanned: 8,
+									yielded: true,
+								},
+							},
+						},
+					},
+				},
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			refreshService: {
+				requestRefresh,
+			},
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+
+		const result = await service.runOnce({ dryRun: false });
+
+		expect(requestRefresh).toHaveBeenCalledWith({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			sweepMode: "steady_follow",
+			materializationPolicy: null,
+			requestedPhase: "project-conversations",
+			explicitRefresh: false,
+			queueTimeoutMs: 0,
+		});
+		expect(result).toMatchObject({
+			action: "refresh-completed",
+			selectedTarget: {
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				requestedPhase: "project-conversations",
+				phaseDecision: {
+					phase: "project-conversations",
+					status: "pending",
+					reason: "Project conversation pass yielded before finishing.",
 				},
 			},
 		});

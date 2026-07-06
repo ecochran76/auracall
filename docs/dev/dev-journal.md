@@ -39493,3 +39493,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts`,
   `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on the touched
   account-mirror files.
+- 2026-07-05: Continued Plan 0152 M2/M7 ledger-driven phase decisions. The
+  shared live-follow phase chooser now accepts account-level `backfillLedger`,
+  scheduler execute passes request the ledger-selected collector phase after
+  restart, and idle `/status` `routineDecision` readback reports
+  ledger-selected phases before marking a mirror caught up. Focused validation
+  passed with
+  `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/schedulerService.test.ts tests/http.responsesServer.test.ts --testNamePattern "backfill ledger|selected live-follow phase|pending detail inventory|effective live-follow wake|foreground scheduler preemption"`,
+  `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on touched
+  account-mirror/status source. Direct Biome on
+  `tests/http.responsesServer.test.ts` still reports pre-existing non-null
+  assertion lint debt.

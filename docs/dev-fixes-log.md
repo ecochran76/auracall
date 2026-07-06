@@ -18796,3 +18796,8 @@ browser-stage lifecycle observability, not transcript truncation.
   finish outside the refresh completion path, so those producers need to write
   their own cursor outcomes through account-mirror status persistence instead
   of relying on a later refresh to infer the phase state.
+- 2026-07-05: Live-follow phase selection must treat the account-level
+  `backfillLedger` as restart authority. Scheduler and idle status readback
+  should consume `nextEligiblePhase` plus the cursor reason before falling back
+  to latest refresh evidence; otherwise API restart can make the routine look
+  caught up or restart rails even though persisted backfill work remains.

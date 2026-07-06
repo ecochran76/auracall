@@ -6291,6 +6291,19 @@ function summarizeLiveFollowRoutineDecision(input: {
 			why: cycle.decisionReason,
 		};
 	}
+	if (statusPhaseDecision.source === "backfill_ledger" && statusPhaseDecision.phase) {
+		return {
+			...base,
+			state:
+				statusPhaseDecision.phase === "materialization"
+					? "materialization_pending"
+					: statusPhaseDecision.phase === "account-library"
+						? "account_library_catchup"
+						: "backfilling",
+			nextPhase: statusPhaseDecision.phase,
+			why: statusPhaseDecision.reason,
+		};
+	}
 	if (materializationBacklog?.state === "materialization_required") {
 		return {
 			...base,
@@ -6350,6 +6363,7 @@ function summarizeLiveFollowRoutineDecision(input: {
 function summarizeLiveFollowStatusPhaseDecision(entry: AccountMirrorStatusEntry): {
 	phase: AccountMirrorLiveFollowCyclePhase | null;
 	reason: string;
+	source: "backfill_ledger" | "evidence";
 } {
 	const decision = chooseLiveFollowCyclePhase({
 		operation: {
@@ -6358,10 +6372,17 @@ function summarizeLiveFollowStatusPhaseDecision(entry: AccountMirrorStatusEntry)
 		},
 		evidence: entry.metadataEvidence,
 		remainingDetailSurfaces: entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null,
+		backfillLedger: entry.backfillLedger,
 	});
 	return {
 		phase: decision.phase === "complete" ? null : decision.phase,
 		reason: decision.reason,
+		source:
+			entry.backfillLedger &&
+			entry.backfillLedger.state !== "complete" &&
+			entry.backfillLedger.nextEligiblePhase !== "complete"
+				? "backfill_ledger"
+				: "evidence",
 	};
 }
 

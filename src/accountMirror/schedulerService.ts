@@ -387,6 +387,7 @@ function chooseSchedulerPhase(entry: AccountMirrorStatusEntry): {
 		},
 		evidence: entry.metadataEvidence,
 		remainingDetailSurfaces: entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null,
+		backfillLedger: entry.backfillLedger,
 	});
 	return {
 		...decision,

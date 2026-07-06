@@ -267,6 +267,39 @@ describe("live-follow cycle decision", () => {
 			status: "yielded",
 		});
 	});
+
+	test("uses persisted backfill ledger phase before stale completion evidence", () => {
+		const decision = chooseLiveFollowCyclePhase({
+			operation: {
+				passCount: 8,
+				lastRefresh: createRefreshResult(),
+			},
+			evidence: null,
+			remainingDetailSurfaces: 0,
+			backfillLedger: {
+				...completeBackfillLedger,
+				state: "in_progress",
+				lastCompletedPhase: "detail-inventory",
+				nextEligiblePhase: "account-library",
+				cursors: {
+					...completeBackfillLedger.cursors,
+					accountLibrary: {
+						...completeBackfillLedger.cursors.accountLibrary,
+						status: "pending",
+						reason: "queued account-library materialization job hmj_account_library_1",
+						updatedAt: "2026-04-30T12:00:05.000Z",
+						readLimit: 3,
+					},
+				},
+			},
+		});
+
+		expect(decision).toMatchObject({
+			phase: "account-library",
+			status: "pending",
+			reason: "queued account-library materialization job hmj_account_library_1",
+		});
+	});
 });
 
 describe("account mirror completion service", () => {

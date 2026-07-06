@@ -171,6 +171,25 @@ Validation:
 - `pnpm exec tsc --noEmit --pretty false`
 - `pnpm exec biome check src/accountMirror/backfillLedger.ts src/accountMirror/statusRegistry.ts src/accountMirror/completionService.ts src/http/responsesServer.ts tests/accountMirror/completionService.test.ts tests/accountMirror/backfillLedger.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts --max-diagnostics 40`
 
+### 2026-07-05 | M2/M7 Backfill-Ledger Phase Decisions
+
+- The shared live-follow phase chooser now accepts the account-level
+  `backfillLedger` and treats its `nextEligiblePhase` plus cursor reason as
+  authoritative before falling back to latest refresh evidence.
+- Scheduler execute passes now request the ledger-selected collector phase, so
+  an API restart can continue a pending project-conversations/detail phase
+  instead of restarting rails.
+- Idle `/status` routine decisions now surface ledger-selected phases as
+  `backfilling`, `account_library_catchup`, or `materialization_pending` before
+  reporting a complete mirror as caught up.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/schedulerService.test.ts tests/http.responsesServer.test.ts --testNamePattern "backfill ledger|selected live-follow phase|pending detail inventory|effective live-follow wake|foreground scheduler preemption"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/liveFollowCycleDecision.ts src/accountMirror/schedulerService.ts src/http/responsesServer.ts tests/accountMirror/completionService.test.ts tests/accountMirror/schedulerService.test.ts --max-diagnostics 40`
+- `pnpm exec biome check --write tests/http.responsesServer.test.ts --max-diagnostics 5`
+
 ## North-Star Routine
 
 For each subscribed account, live follow should run as a low-priority,
