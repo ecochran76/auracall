@@ -743,6 +743,50 @@ Validation:
 - `auracall api status --json --timeout-ms 30000`
 - `auracall api mirror-completion-status acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae --json --timeout-ms 30000`
 
+### 2026-07-05 | M2/M3/M8 Detail Cursor Proof And Failed-Attempt Progress Guard
+
+- Bounded installed proof on `chatgpt/wsl-chrome-3` completed
+  `acctmirror_completion_0fa92c99-052c-4141-956d-f2dfa5d7d2ab` with
+  `lastRefresh.requestedPhase=detail-inventory`, proving the next pass selected
+  the current-evidence detail phase instead of restarting root or project rail
+  walks.
+- The pass scanned four conversation detail surfaces, persisted
+  `backfillLedger.cursors.newestFirstDetail.nextIndex=4`, kept
+  `remainingDetailSurfaces.total=90`, and selected five newest conversation
+  rows with a three-row freshness frontier stop.
+- Scrape telemetry for that installed pass remained `passive_dominant`: passive
+  `6`, active `5`, provider interactions `5/6`, `llmServiceRequests=0`,
+  `cdpMethodCalls=9`, CDP methods
+  `Target.createTarget=2`, `Target.attachToTarget=2`, `Page.enable=2`,
+  `Runtime.enable=2`, `Runtime.evaluate=1`, and
+  `providerGuardCorrelation.state=none`.
+- A second bounded pass,
+  `acctmirror_completion_1214d506-d1f7-4a88-b8fd-1e76784aebc9`, failed during
+  identity with `WebSocket connection closed` before detail inventory and
+  without provider guard evidence. This exposed a status bug: failed attempts
+  updated `lastCompletedAt` and could be reported as `routineDecision`
+  progress.
+- `/status` now derives account-level routine progress from successful account
+  evidence only (`lastSuccessAt` or scrape-budget `observedAt`), while keeping
+  `lastFailureAt` visible separately. Installed readback after reinstall/restart
+  reports `routineDecision.lastProgressAt=2026-07-06T03:11:07.511Z` and
+  `lastFailureAt=2026-07-06T03:13:34.985Z`.
+
+Validation:
+
+- `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "newer account evidence|effective live-follow wake|pending detail inventory|persisted backfill ledger|foreground scheduler preemption"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/http/responsesServer.ts --max-diagnostics 40`
+- `pnpm exec biome check tests/http.responsesServer.test.ts --max-diagnostics 8`
+  - reports only pre-existing non-null assertion warnings outside this slice.
+- `pnpm run plans:audit -- --keep 152`
+- `pnpm run install:user-runtime-service`
+- `systemctl --user restart auracall-api.service`
+- `auracall api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-3 --sweep-mode steady_follow --materialization-policy metadata_only --max-passes 1 --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_0fa92c99-052c-4141-956d-f2dfa5d7d2ab --json --timeout-ms 30000`
+- `auracall api mirror-completion-status acctmirror_completion_1214d506-d1f7-4a88-b8fd-1e76784aebc9 --json --timeout-ms 30000`
+- `auracall api status --json --timeout-ms 30000`
+
 ## Non-Goals
 
 - Do not tune rate-limit thresholds as a substitute for fixing scrape shape.

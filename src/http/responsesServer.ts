@@ -6377,7 +6377,6 @@ function isLiveFollowCycleStaleForStatus(
 
 function latestAccountStatusObservedAt(entry: AccountMirrorStatusEntry): string | null {
 	return latestIsoTimestamp(
-		entry.lastCompletedAt,
 		entry.lastSuccessAt,
 		entry.metadataEvidence?.scrapeBudget?.observedAt ?? null,
 	);

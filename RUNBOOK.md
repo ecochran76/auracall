@@ -12582,3 +12582,35 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Remaining scope:
   - correlate provider-warning/guard evidence with scrape-budget yield
     behavior in an installed dogfood pass before broad live-follow resume.
+
+## Turn 312 | 2026-07-05
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - prove a bounded installed detail cycle uses the persisted/current-evidence
+    phase and make status avoid counting failed transport attempts as progress.
+- Result:
+  - installed bounded completion
+    `acctmirror_completion_0fa92c99-052c-4141-956d-f2dfa5d7d2ab` ran
+    `detail-inventory`, scanned four conversation detail surfaces, left
+    `remainingDetailSurfaces.total=90`, and persisted
+    `backfillLedger.cursors.newestFirstDetail.nextIndex=4`;
+  - scrape telemetry stayed `passive_dominant` with `llmServiceRequests=0`,
+    `cdpMethodCalls=9`, no root/project/account-library reads, and
+    `providerGuardCorrelation.state=none`;
+  - a following bounded pass failed during identity with
+    `WebSocket connection closed`; status now keeps that failure visible as
+    `lastFailureAt` without advancing `routineDecision.lastProgressAt`.
+- Validation:
+  - focused HTTP status tests passed for newer account evidence, detail
+    inventory, persisted ledger, and foreground preemption fixtures;
+  - `pnpm exec tsc --noEmit --pretty false` passed;
+  - scoped Biome passed on touched source; HTTP-test Biome reported only
+    pre-existing non-null assertion lint debt;
+  - installed API reinstall/restart proved `routineDecision.lastProgressAt`
+    remained the successful detail scrape timestamp while `lastFailureAt`
+    carried the failed WebSocket attempt.
+- Remaining scope:
+  - full backfill-to-steady and keep-current loop proof remain required before
+    broad live-follow resume.

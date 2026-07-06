@@ -18834,6 +18834,12 @@ browser-stage lifecycle observability, not transcript truncation.
   not by themselves reselect that chat for detail scraping. Policies that
   intentionally recover local bytes, such as `recent_missing_assets` and
   `full_missing_assets`, should continue selecting the backlog.
+- 2026-07-05: Failed account-mirror attempts are not live-follow progress.
+  Transport failures such as `WebSocket connection closed` may update
+  `lastCompletedAt` and `lastFailureAt`, but `routineDecision.lastProgressAt`
+  should advance only from successful account evidence such as `lastSuccessAt`
+  or scrape-budget `observedAt`. Keep the failed timestamp visible separately
+  so operators can distinguish real scrape progress from retry/backoff churn.
 - 2026-07-05: Live-follow status must expose policy-aware materialization
   backlog, not just raw asset inventory. A complete metadata mirror can still
   have known remote assets missing locally; under `metadata_only` that should

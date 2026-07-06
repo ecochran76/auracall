@@ -5561,7 +5561,9 @@ describe("http responses adapter", () => {
 			initialState: {
 				"chatgpt:default": {
 					detectedIdentityKey: "operator@example.com",
-					lastCompletedAtMs: Date.parse("2026-04-30T12:05:00.000Z"),
+					lastSuccessAtMs: Date.parse("2026-04-30T12:05:00.000Z"),
+					lastFailureAtMs: Date.parse("2026-04-30T12:08:00.000Z"),
+					lastCompletedAtMs: Date.parse("2026-04-30T12:08:00.000Z"),
 					metadataCounts: {
 						projects: 0,
 						conversations: 94,

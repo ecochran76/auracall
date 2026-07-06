@@ -39580,6 +39580,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   as prior known conversation files. Validation passed with focused
   account-mirror/LLM file tests, `pnpm exec tsc --noEmit --pretty false`, and
   scoped Biome.
+- 2026-07-05: Continued Plan 0152 installed live-follow proof. Bounded
+  `chatgpt/wsl-chrome-3` completion
+  `acctmirror_completion_0fa92c99-052c-4141-956d-f2dfa5d7d2ab` ran
+  `detail-inventory` directly, scanned four conversation detail surfaces,
+  persisted `backfillLedger.cursors.newestFirstDetail.nextIndex=4`, and stayed
+  `passive_dominant` with `llmServiceRequests=0`, `cdpMethodCalls=9`, and no
+  provider guard evidence. The next bounded attempt failed during identity with
+  `WebSocket connection closed`, so status now derives
+  `routineDecision.lastProgressAt` from successful account evidence instead of
+  failed `lastCompletedAt` timestamps.
 - 2026-07-05: Continued Plan 0152 M7 operator observability. Added structured
   live-follow target `materializationBacklog` readback so `/status` and
   CLI-normalized API status distinguish `metadata_current_backlog` from
