@@ -12978,3 +12978,40 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - Plan 0152 remains open until `chatgpt/wsl-chrome-4` drains the remaining
     18 selected detail surfaces and the non-current subscribed-account posture
     is resolved explicitly.
+
+## Turn 318 | 2026-07-06
+
+- Active parent plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal:
+  - observe the next installed `chatgpt/wsl-chrome-4` natural cadence pass
+    without an active operator force marker, and prove the cycle continues the
+    detail cursor instead of restarting rails.
+- Result:
+  - installed API stayed active/running on PID `5546` with `NRestarts=0`;
+  - completion `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63`
+    ran pass `6` from `2026-07-06T08:57:33.323Z` to
+    `2026-07-06T08:58:52.092Z`;
+  - the pass returned to `idle_waiting`, kept
+    `forceRunUntilPassCount=null`, and scheduled
+    `nextAttemptAt=2026-07-06T09:27:21.970Z`;
+  - the pass stayed on `requestedPhase=detail-inventory`, advanced the selected
+    detail cursor from `nextConversationIndex=12` to `16`, and `/status`
+    reduced remaining selected detail surfaces from `18` to `14`;
+  - lifecycle and scrape telemetry showed no root/project rail replay:
+    `projectIndexReads=0`, `rootRailReads=0`,
+    `projectConversationReads=0`;
+  - scrape telemetry stayed `classification=passive_dominant`, passive total
+    `6`, active provider interactions `5/6`, `llmServiceRequests=0`,
+    `cdpMethodCalls=9`, and `providerGuardCorrelation.state=none`.
+- Validation:
+  - quiet-window observation through the installed cadence timestamp;
+  - installed `mirror-completion-status` readback for
+    `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63`;
+  - installed `/status` live-follow target readback at
+    `2026-07-06T09:00:12Z`;
+  - persisted completion JSON cursor readback under `~/.auracall/cache/`.
+- Remaining scope:
+  - Plan 0152 remains open until `chatgpt/wsl-chrome-4` drains the remaining
+    14 selected detail surfaces and the non-current subscribed-account posture
+    is resolved explicitly.

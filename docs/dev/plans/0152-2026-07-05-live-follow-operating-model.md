@@ -598,6 +598,41 @@ Validation:
 - persisted completion JSON cursor readback under
   `~/.auracall/cache/account-mirror/completions/`
 
+### 2026-07-06 | M2/M8 Natural Cadence Detail Drain Pass 6
+
+- After the pass-5 proof, the installed service was left quiet until the next
+  natural cadence window. No operator force marker was active:
+  `forceRunUntilPassCount=null`.
+- The same installed `chatgpt/wsl-chrome-4` live-follow completion
+  `acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63` woke on its own
+  at `nextAttemptAt=2026-07-06T08:57:33.300Z`, ran pass `6` from
+  `2026-07-06T08:57:33.323Z` to `2026-07-06T08:58:52.092Z`, and returned to
+  `idle_waiting`.
+- The pass continued `requestedPhase=detail-inventory`, scanned four more
+  selected conversations, and advanced the selected detail cursor from
+  `nextConversationIndex=12` to `16`.
+- `/status` reported remaining selected detail surfaces reduced from `18` to
+  `14`, `routineDecision.state=delayed`,
+  `routineDecision.nextPhase=detail-inventory`, and no provider guard or
+  preemption.
+- The cycle still did not restart at root/project rails:
+  `projectIndexReads=0`, `rootRailReads=0`,
+  `projectConversationReads=0`, with provider interactions `5/6`.
+- Scrape telemetry remained provider-polite: `classification=passive_dominant`,
+  passive total `6`, `llmServiceRequests=0`, `cdpMethodCalls=9`, and
+  `providerGuardCorrelation.state=none`.
+- This keeps Plan 0152 open with `14` selected detail surfaces remaining on
+  `chatgpt/wsl-chrome-4`; the next natural attempt was scheduled for
+  `2026-07-06T09:27:21.970Z`.
+
+Validation:
+
+- quiet-window observation through the installed cadence timestamp
+- `auracall api mirror-completion-status acctmirror_completion_8cd5b932-89d1-49f2-bdf0-a66b406aff63 --port 18095 --json`
+- installed `/status` live-follow target readback at `2026-07-06T09:00:12Z`
+- persisted completion JSON cursor readback under
+  `~/.auracall/cache/account-mirror/completions/`
+
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
 - Scheduler-selected live-follow targets now carry an additive
