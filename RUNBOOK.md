@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 306 | 2026-07-05
+
+- Active plan:
+  `docs/dev/plans/0152-2026-07-05-live-follow-operating-model.md`
+- Goal: tighten the high-level Plan 0152 convergence target so live follow is
+  resumed only after staged proof of backfill, steady-follow, provider-politeness,
+  and foreground preemption.
+- Result:
+  - added a convergence milestone ladder to Plan 0152;
+  - made the broad-resume gate explicit: installed dogfood must prove a full
+    backfill-to-steady transition plus one steady keep-current loop without
+    avoidable provider-warning churn;
+  - kept live follow paused/not resumed in this planning slice.
+- Validation:
+  - `pnpm run plans:audit -- --keep 152` passed with validation errors `0`.
+- Remaining scope:
+  - implement the remaining M0 state contract consolidation and the installed
+    dogfood proof gates before broad live-follow resume.
+
 ## Turn 305 | 2026-07-05
 
 - Active plan:

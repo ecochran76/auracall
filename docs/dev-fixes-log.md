@@ -1,3 +1,12 @@
+- 2026-07-05: Broad live-follow resume requires staged installed proof, not
+  another blind cadence restart. The convergence gate is: prove one subscribed
+  ChatGPT account can finish initial backfill, transition to steady-follow,
+  keep current across a restart boundary, expose passive-vs-active scrape
+  budget evidence, and yield to foreground operator work without avoidable
+  provider-warning churn. If a single artifact-rich chat triggers warnings
+  during metadata-only detail inventory, treat that as scrape-shape/cycle
+  evidence failure until CDP/provider telemetry proves a real provider guard.
+
 - 2026-07-05: Account-mirror scrape budgets should count passive parse/read
   work from concrete browser telemetry, not only from final artifact/file
   progress arrays. Empty or chunked ChatGPT detail passes can read the visible

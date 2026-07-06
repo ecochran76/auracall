@@ -14,6 +14,11 @@ cycle that remembers unfinished work, advances the highest-value next phase,
 avoids repeating completed scrape work, and makes every pause, defer, or guard
 visible to operators.
 
+The convergence goal is staged: AuraCall should not broadly resume live follow
+until one subscribed ChatGPT account can complete an initial backfill, transition
+to steady-follow, keep itself current across at least one restart boundary, and
+yield to foreground operator/API/browser work without provider-warning churn.
+
 ## Current State
 
 - Account mirror refreshes can persist catalog, context, file, artifact, media,
@@ -262,6 +267,94 @@ stateful, restart-safe background worker:
    operator demand.
 7. Expose one compact operator status line plus drilldown evidence for the
    exact next phase, delay, blocker, and remaining work.
+
+## Convergence Milestones
+
+These gates define the path from the current repaired slices to a routine that
+is safe to resume broadly.
+
+### Gate A | Contracted State And Progress
+
+Live follow has one shared state/phase vocabulary, and every subscribed account
+status row can answer:
+
+- what phase is next;
+- why that phase was selected;
+- what remains in backfill, steady metadata, account library catch-up, and
+  local materialization;
+- whether a guard, cadence delay, or operator preemption is blocking progress.
+
+Exit evidence:
+
+- scheduler, completion, status, CLI/API, and operator readback consume the same
+  contract;
+- status after API restart preserves the same per-account next phase instead of
+  falling back to root rail walking.
+
+### Gate B | Bounded Backfill Cycle
+
+One subscribed account can run bounded cycles that advance historical catch-up
+without attempting to walk rails, projects, project conversations, account
+library, and full chat detail in one pass.
+
+Exit evidence:
+
+- each cycle starts from the persisted backfill ledger;
+- completed phases are not repeated unless their freshness evidence expires;
+- interruption or service restart resumes from the ledger-selected phase.
+
+### Gate C | Steady-Follow Cycle
+
+An account that is backfilled can run newest-first maintenance without becoming
+a hidden full backfill.
+
+Exit evidence:
+
+- rail/catalog freshness frontier decides whether new detail inventory is due;
+- artifact-rich chats with complete context and remote references do not
+  re-enter detail scraping solely because local bytes are missing;
+- materialization backlog is queued or exposed under policy, not treated as
+  metadata staleness.
+
+### Gate D | Provider-Polite Budget Proof
+
+Live follow can prove whether a pass is mostly passive DOM/app-state parsing or
+active provider interaction.
+
+Exit evidence:
+
+- single-chat detail passes expose passive counters, active counters,
+  LLM-service request count, CDP method counts, and provider guard correlation;
+- avoidable provider warnings are treated as scrape-shape defects until the
+  evidence proves a provider-wide cooldown/guard.
+
+### Gate E | Foreground Preemption Proof
+
+Foreground operator work outranks background live follow without losing routine
+position.
+
+Exit evidence:
+
+- a queued foreground browser-backed request causes live follow to yield before
+  acquiring the browser lease or at a safe checkpoint;
+- status reports `operator_preempted` with the blocking work class and retry
+  time;
+- the later live-follow pass resumes from the same ledger-selected phase.
+
+### Gate F | Installed Resume Decision
+
+Broad live-follow resume is allowed only after installed dogfood proves a full
+backfill-to-steady transition and one steady keep-current loop.
+
+Exit evidence:
+
+- installed service evidence includes completion ids, status snapshots, phase
+  ledger readback, scrape-budget counters, provider guard state, and foreground
+  preemption/yield evidence;
+- no normal-cadence pass produces avoidable rate-limit warnings;
+- any remaining backlog is classified as backfill, steady metadata,
+  account-library catch-up, or materialization, with the next bounded action
+  visible to operators.
 
 ## Milestones
 

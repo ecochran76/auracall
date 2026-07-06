@@ -1,3 +1,19 @@
+## 2026-07-05 | Plan 0152 Live-Follow Convergence Gates
+
+- Focus: turn the live-follow operating-model discussion into a durable
+  high-level milestone ladder before broad resume.
+- Result:
+  - Plan 0152 now names the safe-resume convergence goal: one subscribed
+    ChatGPT account must prove initial backfill, steady-follow, restart-safe
+    keep-current behavior, provider-politeness, and foreground preemption
+    before broad live follow resumes;
+  - added Gate A-F milestones for contracted state/progress, bounded backfill,
+    steady-follow, provider-polite budget proof, foreground preemption, and
+    installed resume decision;
+  - live follow was not resumed in this planning slice.
+- Validation:
+  - `pnpm run plans:audit -- --keep 152` passed with validation errors `0`.
+
 ## 2026-07-05 | Plan 0152 Passive Scrape Telemetry Accounting
 
 - Focus: repair the M3 evidence gap where installed detail-inventory proof
