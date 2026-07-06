@@ -910,6 +910,9 @@ function summarizeLiveFollowScrapeBudget(value: Record<string, unknown> | null) 
 	const providerInteractions = isRecord(value.providerInteractions)
 		? value.providerInteractions
 		: {};
+	const providerGuardCorrelation = isRecord(value.providerGuardCorrelation)
+		? value.providerGuardCorrelation
+		: {};
 	return {
 		classification: readString(value.classification) ?? "unknown",
 		summary: readString(value.summary) ?? "",
@@ -936,6 +939,16 @@ function summarizeLiveFollowScrapeBudget(value: Record<string, unknown> | null) 
 			remaining: readNumber(providerInteractions.remaining),
 			yielded: providerInteractions.yielded === true,
 			yieldReason: readString(providerInteractions.yieldReason),
+		},
+		providerGuardCorrelation: {
+			state: readString(providerGuardCorrelation.state) ?? "none",
+			kind: readString(providerGuardCorrelation.kind),
+			summary: readString(providerGuardCorrelation.summary),
+			detectedAt: readString(providerGuardCorrelation.detectedAt),
+			cooldownUntil: readString(providerGuardCorrelation.cooldownUntil),
+			action: readString(providerGuardCorrelation.action),
+			correlatedWithYield: providerGuardCorrelation.correlatedWithYield === true,
+			yieldReason: readString(providerGuardCorrelation.yieldReason),
 		},
 		llmServiceRequests: readNumber(value.llmServiceRequests) ?? 0,
 		cdpMethodCalls: readNumber(value.cdpMethodCalls),

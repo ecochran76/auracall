@@ -438,7 +438,7 @@ export function createAccountMirrorRefreshService(input: {
 					collectorAbort,
 				);
 				collection = withYieldCause(collection, latestYieldCause);
-				const collectionWithPriorManifests = await mergeCollectionWithPersistedCatalog({
+				let collectionWithPriorManifests = await mergeCollectionWithPersistedCatalog({
 					persistence,
 					provider,
 					boundIdentityKey: target.expectedIdentityKey ?? collection.detectedIdentityKey,
@@ -451,6 +451,10 @@ export function createAccountMirrorRefreshService(input: {
 					action: "account-mirror-refresh",
 					nowMs: completedAt.getTime(),
 				});
+				collectionWithPriorManifests = withProviderGuardScrapeBudgetCorrelation(
+					collectionWithPriorManifests,
+					providerCooldown?.providerGuard ?? null,
+				);
 				registry.mergeState(
 					{ provider, runtimeProfileId },
 					{
@@ -1390,6 +1394,46 @@ function withYieldCause(
 			},
 		},
 	};
+}
+
+function withProviderGuardScrapeBudgetCorrelation(
+	collection: AccountMirrorMetadataCollectorResult,
+	providerGuard: AccountMirrorProviderGuardState | null,
+): AccountMirrorMetadataCollectorResult {
+	const scrapeBudget = collection.evidence.scrapeBudget;
+	if (!providerGuard || !scrapeBudget) {
+		return collection;
+	}
+	const attachmentYieldCause = collection.evidence.attachmentInventory?.yieldCause?.kind ?? null;
+	const yieldReason = attachmentYieldCause ?? scrapeBudget.providerInteractions.yieldReason ?? null;
+	return {
+		...collection,
+		evidence: {
+			...collection.evidence,
+			scrapeBudget: {
+				...scrapeBudget,
+				providerGuardCorrelation: {
+					state: providerGuard.state,
+					kind: providerGuard.kind,
+					summary: providerGuard.summary,
+					detectedAt: formatEpochMs(providerGuard.detectedAtMs),
+					cooldownUntil: formatEpochMs(providerGuard.cooldownUntilMs),
+					action: providerGuard.action ?? null,
+					correlatedWithYield:
+						collection.evidence.attachmentInventory?.yielded === true ||
+						scrapeBudget.providerInteractions.yielded === true,
+					yieldReason,
+				},
+			},
+		},
+	};
+}
+
+function formatEpochMs(value: number | null | undefined): string | null {
+	if (typeof value !== "number" || !Number.isFinite(value)) {
+		return null;
+	}
+	return new Date(value).toISOString();
 }
 
 export async function detectProviderGuardWithTargetCensus(

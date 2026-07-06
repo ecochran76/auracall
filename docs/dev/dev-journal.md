@@ -39525,3 +39525,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on touched
   source/tests. Direct Biome on `tests/http.responsesServer.test.ts` still
   reports pre-existing non-null assertion lint debt.
+- 2026-07-05: Continued Plan 0152 M3 provider-guard correlation. `scrapeBudget`
+  now carries a normalized `providerGuardCorrelation` block: collectors emit
+  `state=none`, while successful refreshes annotate the just-produced scrape
+  evidence when ChatGPT cooldown state is active after collection. The
+  correlation includes guard state, summary, detected/cooldown timestamps,
+  action, and whether the pass also yielded to foreground work; `/status` and
+  CLI-normalized status preserve the field with CDP method/action counts.
+  Focused validation passed with
+  `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "active ChatGPT rate-limit guard|requested detail-inventory|pending detail inventory"`,
+  `pnpm exec tsc --noEmit --pretty false`, and scoped Biome on touched
+  source/tests. Direct Biome on `tests/http.responsesServer.test.ts` still
+  reports pre-existing non-null assertion lint debt.

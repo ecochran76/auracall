@@ -449,10 +449,33 @@ Validation:
 - `pnpm exec tsc --noEmit --pretty false`
 - `pnpm exec biome check --write src/accountMirror/statusRegistry.ts src/accountMirror/chatgptMetadataCollector.ts src/status/liveFollowHealth.ts src/cli/apiStatusCommand.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --max-diagnostics 40`
 
+### 2026-07-05 | M3 Provider-Guard Correlation
+
+- `scrapeBudget` now carries `providerGuardCorrelation` so a completed scrape
+  can distinguish "no provider warning seen" from "scrape completed but a
+  provider cooldown/guard was active immediately afterward".
+- The collector still emits a stable `state: "none"` default; guard ownership
+  remains in the refresh/status layer. After a successful refresh,
+  `readAccountMirrorProviderCooldown` enriches the just-produced scrape budget
+  with guard state, summary, detected/cooldown timestamps, action, and whether
+  the scrape also yielded to foreground work.
+- `/status` and CLI-normalized status preserve this correlation alongside CDP
+  method/action counts, so operators can compare scrape shape, live operator
+  preemption, and ChatGPT cooldown evidence without assuming rate-limit guards
+  caused the scrape behavior.
+
+Validation:
+
+- `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --testNamePattern "active ChatGPT rate-limit guard|requested detail-inventory|pending detail inventory"`
+- `pnpm exec tsc --noEmit --pretty false`
+- `pnpm exec biome check src/accountMirror/statusRegistry.ts src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/status/liveFollowHealth.ts src/cli/apiStatusCommand.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/http.responsesServer.test.ts --max-diagnostics=24`
+  - reports only pre-existing non-null assertion warnings in
+    `tests/http.responsesServer.test.ts`.
+
 Remaining M3 work:
 
-- correlate provider warning/guard evidence with scrape-budget yield behavior
-  in an installed dogfood pass.
+- installed dogfood pass proving the new guard correlation against real
+  ChatGPT warning/yield evidence.
 
 ## Non-Goals
 

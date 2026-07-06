@@ -689,6 +689,71 @@ describe("account mirror refresh service", () => {
 							conversations: false,
 							artifacts: false,
 						},
+						attachmentInventory: {
+							nextProjectIndex: 0,
+							nextConversationIndex: 1,
+							detailReadLimit: 1,
+							scannedProjects: 0,
+							scannedConversations: 1,
+							yielded: true,
+							yieldCause: {
+								observedAt: "2026-04-29T12:00:00.000Z",
+								ownerCommand: "operator-request",
+								kind: "foreground-work",
+								operationClass: "interactive",
+							},
+						},
+						scrapeBudget: {
+							provider: "chatgpt" as const,
+							runtimeProfileId: "default",
+							sweepMode: "steady_follow" as const,
+							observedAt: "2026-04-29T12:00:00.000Z",
+							classification: "active_dominant" as const,
+							summary:
+								"Account mirror scrape used 1 passive parse/read signal(s) and 2 active provider interaction(s).",
+							passive: {
+								domParses: 1,
+								appStateReads: 0,
+								downloadLinkEnumerations: 0,
+								cachedFileCarries: 0,
+								total: 1,
+							},
+							active: {
+								identityReads: 1,
+								projectIndexReads: 0,
+								rootRailReads: 0,
+								projectConversationReads: 0,
+								chatLoads: 1,
+								accountLibraryReads: 0,
+								downloads: 0,
+								total: 2,
+							},
+							providerInteractions: {
+								budget: 20,
+								used: 2,
+								remaining: 18,
+								yielded: true,
+								yieldReason: "foreground-work",
+							},
+							providerGuardCorrelation: {
+								state: "none" as const,
+								kind: null,
+								summary: null,
+								detectedAt: null,
+								cooldownUntil: null,
+								action: null,
+								correlatedWithYield: false,
+								yieldReason: null,
+							},
+							llmServiceRequests: 0,
+							cdpMethodCalls: 2,
+							cdpMethods: {
+								"Runtime.evaluate": 2,
+							},
+							providerActions: {
+								"chatgpt.listConversationFiles.start": 1,
+							},
+						},
 					},
 				})),
 			},
@@ -716,6 +781,21 @@ describe("account mirror refresh service", () => {
 				cooldownUntil: "2026-04-29T12:05:00.000Z",
 				action: "readConversationContext",
 			}),
+			metadataEvidence: expect.objectContaining({
+				scrapeBudget: expect.objectContaining({
+					providerGuardCorrelation: {
+						state: "cooldown",
+						kind: "unknown",
+						summary:
+							"ChatGPT rate limit detected: Too many requests. You're making requests too quickly.",
+						detectedAt: "2026-04-29T11:59:30.000Z",
+						cooldownUntil: "2026-04-29T12:05:00.000Z",
+						action: "readConversationContext",
+						correlatedWithYield: true,
+						yieldReason: "foreground-work",
+					},
+				}),
+			}),
 		});
 		expect(persistence.writeState).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -724,6 +804,14 @@ describe("account mirror refresh service", () => {
 					providerGuard: expect.objectContaining({
 						state: "cooldown",
 						cooldownUntilMs: Date.parse("2026-04-29T12:05:00.000Z"),
+					}),
+					metadataEvidence: expect.objectContaining({
+						scrapeBudget: expect.objectContaining({
+							providerGuardCorrelation: expect.objectContaining({
+								state: "cooldown",
+								correlatedWithYield: true,
+							}),
+						}),
 					}),
 				}),
 			}),

@@ -1077,6 +1077,16 @@ describe("ChatGPT account mirror metadata collector", () => {
 				remaining: null,
 				yielded: false,
 			},
+			providerGuardCorrelation: {
+				state: "none",
+				kind: null,
+				summary: null,
+				detectedAt: null,
+				cooldownUntil: null,
+				action: null,
+				correlatedWithYield: false,
+				yieldReason: null,
+			},
 			llmServiceRequests: 0,
 			cdpMethodCalls: 2,
 			cdpMethods: {

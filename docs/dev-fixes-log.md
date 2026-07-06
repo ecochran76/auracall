@@ -18813,3 +18813,9 @@ browser-stage lifecycle observability, not transcript truncation.
   carry both aggregate `cdpMethodCalls` and exact `cdpMethods`/`providerActions`
   maps. Provider warning conclusions still require installed dogfood
   correlation against guard/yield evidence.
+- 2026-07-05: Scrape-budget evidence needs explicit provider-guard
+  correlation, not inference from status alone. Collectors should default this
+  correlation to `state=none`; the refresh/status layer should attach cooldown
+  or manual-clear details after collection when provider guard state is known.
+  Keep guard ownership out of the collector so a passive DOM/detail scrape can
+  be audited separately from ChatGPT warning or live-operator yield behavior.

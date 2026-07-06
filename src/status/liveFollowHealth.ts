@@ -181,6 +181,16 @@ export interface LiveFollowTargetAccountSummary {
 			yielded: boolean;
 			yieldReason: string | null;
 		};
+		providerGuardCorrelation: {
+			state: string;
+			kind: string | null;
+			summary: string | null;
+			detectedAt: string | null;
+			cooldownUntil: string | null;
+			action: string | null;
+			correlatedWithYield: boolean;
+			yieldReason: string | null;
+		};
 		llmServiceRequests: number;
 		cdpMethodCalls: number | null;
 		cdpMethods: Record<string, number>;

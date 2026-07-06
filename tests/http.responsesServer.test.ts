@@ -5287,6 +5287,16 @@ describe("http responses adapter", () => {
 								yielded: false,
 								yieldReason: null,
 							},
+							providerGuardCorrelation: {
+								state: "none",
+								kind: null,
+								summary: null,
+								detectedAt: null,
+								cooldownUntil: null,
+								action: null,
+								correlatedWithYield: false,
+								yieldReason: null,
+							},
 							llmServiceRequests: 0,
 							cdpMethodCalls: 3,
 							cdpMethods: {
@@ -5362,6 +5372,16 @@ describe("http responses adapter", () => {
 									remaining: number | null;
 									yielded: boolean;
 								};
+								providerGuardCorrelation: {
+									state: string;
+									kind: string | null;
+									summary: string | null;
+									detectedAt: string | null;
+									cooldownUntil: string | null;
+									action: string | null;
+									correlatedWithYield: boolean;
+									yieldReason: string | null;
+								};
 							} | null;
 						}>;
 					};
@@ -5388,6 +5408,16 @@ describe("http responses adapter", () => {
 								remaining: 18,
 								yielded: false,
 							}),
+							providerGuardCorrelation: {
+								state: "none",
+								kind: null,
+								summary: null,
+								detectedAt: null,
+								cooldownUntil: null,
+								action: null,
+								correlatedWithYield: false,
+								yieldReason: null,
+							},
 							llmServiceRequests: 0,
 							cdpMethodCalls: 3,
 							cdpMethods: expect.objectContaining({

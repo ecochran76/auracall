@@ -144,6 +144,16 @@ export type AccountMirrorScrapeBudgetEvidence = {
 		yielded: boolean;
 		yieldReason: string | null;
 	};
+	providerGuardCorrelation: {
+		state: "none" | AccountMirrorProviderGuardState["state"];
+		kind: AccountMirrorProviderGuardKind | null;
+		summary: string | null;
+		detectedAt: string | null;
+		cooldownUntil: string | null;
+		action: string | null;
+		correlatedWithYield: boolean;
+		yieldReason: string | null;
+	};
 	llmServiceRequests: number;
 	cdpMethodCalls: number | null;
 	cdpMethods: Record<string, number>;
@@ -1292,11 +1302,49 @@ function normalizeScrapeBudgetEvidence(
 			yielded: interactionRecord.yielded === true,
 			yieldReason: readString(interactionRecord.yieldReason),
 		},
+		providerGuardCorrelation: normalizeProviderGuardCorrelation(
+			value.providerGuardCorrelation,
+			readString(interactionRecord.yieldReason),
+		),
 		llmServiceRequests: normalizeCount(readNumber(value.llmServiceRequests)),
 		cdpMethodCalls: normalizeNullableCount(readNumber(value.cdpMethodCalls)),
 		cdpMethods: normalizeCountRecord(value.cdpMethods),
 		providerActions: normalizeCountRecord(value.providerActions),
 	};
+}
+
+function normalizeProviderGuardCorrelation(
+	value: unknown,
+	providerYieldReason: string | null,
+): AccountMirrorScrapeBudgetEvidence["providerGuardCorrelation"] {
+	const record = isRecord(value) ? value : {};
+	const rawState = readString(record.state);
+	const state: AccountMirrorScrapeBudgetEvidence["providerGuardCorrelation"]["state"] =
+		rawState === "cooldown" || rawState === "manual_clear_required" ? rawState : "none";
+	return {
+		state,
+		kind: state === "none" ? null : normalizeProviderGuardKind(record.kind),
+		summary: state === "none" ? null : readString(record.summary),
+		detectedAt: state === "none" ? null : readString(record.detectedAt),
+		cooldownUntil: state === "cooldown" ? readString(record.cooldownUntil) : null,
+		action: state === "none" ? null : readString(record.action),
+		correlatedWithYield: state !== "none" && record.correlatedWithYield === true,
+		yieldReason: state === "none" ? null : (readString(record.yieldReason) ?? providerYieldReason),
+	};
+}
+
+function normalizeProviderGuardKind(value: unknown): AccountMirrorProviderGuardKind {
+	switch (value) {
+		case "google-sorry":
+		case "captcha":
+		case "cloudflare":
+		case "account-auth":
+		case "human-verification":
+		case "unknown":
+			return value;
+		default:
+			return "unknown";
+	}
 }
 
 function normalizeScrapeBudgetProvider(value: unknown): AccountMirrorProvider {
