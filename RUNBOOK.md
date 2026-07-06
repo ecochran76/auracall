@@ -12843,6 +12843,12 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - target status now projects complete `idle_waiting` live-follow operations
     as `phase=steady_follow` and `routineDecision.nextPhase=steady_follow`
     even when the old active operation phase was `backfill_history`.
+  - after commit/restart closeout, the installed scheduler naturally advanced
+    `chatgpt/wsl-chrome-2` from pass `6` to pass `7` at
+    `2026-07-06T07:10:57.815Z`, scheduled the next wake for
+    `2026-07-06T07:30:24.210Z`, spent active provider interactions `2/6`,
+    reported `llmServiceRequests=0` and `cdpMethodCalls=8`, and had no
+    provider-guard correlation.
 - Validation:
   - focused HTTP status tests passed;
   - `pnpm exec tsc --noEmit --pretty false` passed;

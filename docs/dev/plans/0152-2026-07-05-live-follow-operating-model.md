@@ -459,6 +459,13 @@ Validation:
   `backfill_history`, but current account evidence reports
   `mirrorCompleteness=complete`, zero remaining detail surfaces, zero
   consecutive failures, and no provider guard.
+- After commit/restart closeout, the installed scheduler naturally advanced
+  the `chatgpt/wsl-chrome-2` cadence window without a manual force. It
+  completed pass `7` at `2026-07-06T07:10:57.815Z`, scheduled the next wake for
+  `2026-07-06T07:30:24.210Z`, kept zero remaining detail surfaces, used
+  `providerInteractions.used=2` of budget `6`, reported
+  `llmServiceRequests=0`, `cdpMethodCalls=8`, and kept
+  `providerGuardCorrelation.state=none`.
 
 Validation:
 
@@ -471,6 +478,7 @@ Validation:
 - `pnpm run install:user-runtime-service`
 - `systemctl --user restart auracall-api.service`
 - installed `/status` readback on PID `5943`
+- installed natural cadence `/status` readback at `2026-07-06T07:11:15Z`
 
 ### 2026-07-05 | M2/M6 Scheduler Phase Decision Evidence
 
