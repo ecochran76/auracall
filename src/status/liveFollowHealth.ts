@@ -144,6 +144,23 @@ export interface LiveFollowTargetAccountSummary {
 		activeCompletionId: string | null;
 	};
 	routineDecision: LiveFollowTargetRoutineDecisionSummary;
+	targetDecision: {
+		state: string;
+		action: string;
+		reason: string;
+		canAutoResume: boolean;
+		requiresOperator: boolean;
+		blocker: string | null;
+		nextPhase: string | null;
+		materialization: {
+			state: string | null;
+			policy: string | null;
+			metadataCurrent: boolean;
+			localRequired: boolean;
+			remoteKnownMissingLocal: LiveFollowMaterializationAssetCounts;
+			localMaterialized: LiveFollowMaterializationAssetCounts;
+		} | null;
+	};
 	assetInventory: {
 		state: string;
 		summary: string | null;

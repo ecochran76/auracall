@@ -1,5 +1,37 @@
 # RUNBOOK
 
+## Turn 325 | 2026-07-07
+
+- Active plan:
+  `docs/dev/plans/0153-2026-07-06-live-follow-target-resume-readiness.md`
+- Goal: make the live-follow resume/materialization decision tree
+  operator-visible before resuming a paused target.
+- Result:
+  - added additive `targetDecision` status readback for every
+    `/status.liveFollow.targets.accounts[]` row and CLI-normalized status row;
+  - `targetDecision` synthesizes `resumePolicy`, `routineDecision`, and
+    `materializationBacklog` into one row decision with `state`, `action`,
+    `blocker`, `nextPhase`, `canAutoResume`, `requiresOperator`, and
+    materialization counts;
+  - installed and restarted `auracall-api.service`; PID `59885` exposed
+    `targetDecision` from `/status`;
+  - refreshed Plan 0153 with the installed 2026-07-07 target matrix from port
+    `18095`: desired-enabled targets `6`, paused `3`, attention-needed `3`,
+    complete `5`, in-progress `1`;
+  - current first proof target remains `chatgpt/wsl-chrome-3`:
+    `operator_paused`, metadata `complete`, no provider guard,
+    `llmServiceRequests=0`, CDP calls `8`, and materialization backlog
+    `metadata_current_backlog` / `metadata_only` with 433 remote assets missing
+    locally and 1 local asset materialized.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts --testNamePattern "live-follow target|resumePolicy|routineDecision|account mirror scheduler backpressure|effective live-follow cadence"`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - installed `/status` readback on port `18095`.
+- Remaining scope:
+  - use the installed `targetDecision` matrix to resume one bounded
+    `chatgpt/wsl-chrome-3` cycle and start or explicitly policy-gate
+    materialization progress.
+
 ## Turn 323 | 2026-07-06
 
 - Active plan:

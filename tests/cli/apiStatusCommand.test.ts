@@ -211,6 +211,33 @@ const statusPayload = {
 							reason: "freshness frontier selected 1 conversation row(s) for detail",
 						},
 					},
+					targetDecision: {
+						state: "operator_paused",
+						action: "resume_one_bounded_pass_or_keep_paused",
+						reason: "active live-follow completion is operator-paused",
+						canAutoResume: false,
+						requiresOperator: true,
+						blocker: "operator_paused",
+						nextPhase: "detail-inventory",
+						materialization: {
+							state: "materialization_required",
+							policy: "download",
+							metadataCurrent: false,
+							localRequired: true,
+							remoteKnownMissingLocal: {
+								artifacts: 1,
+								files: 1,
+								media: 0,
+								total: 2,
+							},
+							localMaterialized: {
+								artifacts: 0,
+								files: 0,
+								media: 0,
+								total: 0,
+							},
+						},
+					},
 					metadataCounts: {
 						projects: 1,
 						conversations: 10,
@@ -651,6 +678,27 @@ describe("api status CLI helpers", () => {
 			action: "keep_existing",
 			reason: "active live-follow completion is operator-paused",
 			activeCompletionId: "acctmirror_paused",
+		});
+		expect(summary.liveFollow.targets?.accounts[0]?.targetDecision).toMatchObject({
+			state: "operator_paused",
+			action: "resume_one_bounded_pass_or_keep_paused",
+			reason: "active live-follow completion is operator-paused",
+			canAutoResume: false,
+			requiresOperator: true,
+			blocker: "operator_paused",
+			nextPhase: "detail-inventory",
+			materialization: {
+				state: "materialization_required",
+				policy: "download",
+				metadataCurrent: false,
+				localRequired: true,
+				remoteKnownMissingLocal: {
+					total: 2,
+				},
+				localMaterialized: {
+					total: 0,
+				},
+			},
 		});
 	});
 

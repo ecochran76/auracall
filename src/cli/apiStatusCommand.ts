@@ -754,6 +754,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 	const assetInventory = isRecord(account.assetInventory) ? account.assetInventory : null;
 	const resumePolicy = isRecord(account.resumePolicy) ? account.resumePolicy : null;
 	const routineDecision = isRecord(account.routineDecision) ? account.routineDecision : null;
+	const targetDecision = isRecord(account.targetDecision) ? account.targetDecision : null;
 	const materializationOutcome = isRecord(account.materializationOutcome)
 		? account.materializationOutcome
 		: null;
@@ -827,6 +828,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 			activeCompletionId: readString(resumePolicy?.activeCompletionId),
 		},
 		routineDecision: summarizeLiveFollowRoutineDecision(routineDecision),
+		targetDecision: summarizeLiveFollowTargetDecision(targetDecision),
 		assetInventory: assetInventory
 			? {
 					state: readString(assetInventory.state) ?? "unknown",
@@ -1086,6 +1088,33 @@ function summarizeLiveFollowRoutineDecision(value: unknown) {
 					updatedAt: readString(cycle.updatedAt) ?? "",
 					passCount: readNumber(cycle.passCount) ?? 0,
 					reason: readString(cycle.reason) ?? "",
+				}
+			: null,
+	};
+}
+
+function summarizeLiveFollowTargetDecision(value: unknown) {
+	const decision = isRecord(value) ? value : null;
+	const materialization =
+		decision && isRecord(decision.materialization) ? decision.materialization : null;
+	return {
+		state: readString(decision?.state) ?? "unknown",
+		action: readString(decision?.action) ?? "inspect_status",
+		reason: readString(decision?.reason) ?? "",
+		canAutoResume: decision?.canAutoResume === true,
+		requiresOperator: decision?.requiresOperator === true,
+		blocker: readString(decision?.blocker),
+		nextPhase: readString(decision?.nextPhase),
+		materialization: materialization
+			? {
+					state: readString(materialization.state),
+					policy: readString(materialization.policy),
+					metadataCurrent: materialization.metadataCurrent === true,
+					localRequired: materialization.localRequired === true,
+					remoteKnownMissingLocal: summarizeMaterializationAssetCounts(
+						materialization.remoteKnownMissingLocal,
+					),
+					localMaterialized: summarizeMaterializationAssetCounts(materialization.localMaterialized),
 				}
 			: null,
 	};

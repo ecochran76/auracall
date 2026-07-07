@@ -1,3 +1,29 @@
+## 2026-07-07 | Live-Follow Target Decision Surface
+
+- Focus: make the Plan 0153 resume/materialization decision tree explicit on
+  status readback before resuming paused targets.
+- Result:
+  - added additive `targetDecision` readback to
+    `/status.liveFollow.targets.accounts[]` and CLI-normalized status;
+  - `targetDecision` synthesizes `resumePolicy`, `routineDecision`, and
+    `materializationBacklog` into one operator row decision with state, action,
+    blocker, next phase, operator requirement, auto-resume eligibility, and
+    materialization counts;
+  - refreshed Plan 0153 with the 2026-07-07 installed target matrix:
+    `chatgpt/wsl-chrome-3` is the preferred first controlled proof target
+    because it is operator-paused, metadata-complete, guard-clear, and has
+    `llmServiceRequests=0`, while its 433 remaining assets are a
+    `metadata_only` materialization-policy decision;
+  - recorded `grok/default` as no longer false identity-blocked after
+    `f5ddde4f`, with installed status now `safe_steady_follow` and no
+    attention needed.
+- Validation:
+  - focused HTTP/CLI status Vitest pattern;
+  - TypeScript;
+  - plan audit for Plan 0153;
+  - installed user runtime service reinstall/restart, then `/status` readback
+    on PID `59885` showing `targetDecision` for all desired-enabled targets.
+
 ## 2026-07-06 | Grok False Identity Mismatch
 
 - Focus: explain and fix why AuraCall kept classifying `grok/default` as an
@@ -40006,6 +40032,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   follow-up phase-decision fix prevents completed project-conversation cursor
   evidence from reselecting `project-conversations`; installed restart readback
   now reports `routineDecision.nextPhase=steady_follow`.
+- 2026-07-05: Recorded the ChatGPT project-resolution cache-authority failure
+  in `docs/dev/notes/2026-07-05-chatgpt-project-resolution-cache-authority.md`.
+  The immediate production symptom was the SoyLei Lei humor AuraCall backup
+  failing with `No cached project named "Lei"` after `auracall projects`
+  returned an empty list. The note clarifies that cache absence is not project
+  absence: a `--project-name` run should perform bounded live discovery in the
+  selected tenant account before failing.
 - 2026-07-05: Continued Plan 0152 M7 operator observability. Added structured
   live-follow target `materializationBacklog` readback so `/status` and
   CLI-normalized API status distinguish `metadata_current_backlog` from
@@ -40214,3 +40247,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `forceRunUntilPassCount=null`, `nextAttemptAt=2026-07-06T05:33:31.828Z`,
   `llmServiceRequests=0`, `cdpMethodCalls=8`, and no provider guard
   correlation.
+- 2026-07-06: Implemented the ChatGPT project-resolution cache-authority fix.
+  `LlmService.resolveProjectIdByName` now treats cache absence as unknown when
+  live discovery is allowed, refreshes the selected account project list before
+  failing, writes successful live discovery back to cache, and returns
+  structured `project_discovery_failed`, `project_not_found`, or
+  `project_cache_miss` diagnostics instead of the old cache-only authority
+  message. Focused validation passed with
+  `pnpm vitest run tests/browser/llmServiceFiles.test.ts --testNamePattern
+  "project name resolution"`, `pnpm exec tsc --noEmit --pretty false`, and
+  scoped Biome on the touched resolver/test files.

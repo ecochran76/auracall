@@ -1,3 +1,11 @@
+- 2026-07-07: Live-follow target rows need one synthesized next-action
+  decision, not only separate `resumePolicy`, `routineDecision`, and
+  `materializationBacklog` fields. Expose `targetDecision` with state, action,
+  blocker, operator requirement, auto-resume eligibility, next phase, and
+  materialization counts so operators can distinguish "resume a bounded pass"
+  from "start materialization" or "enable materialization policy" without
+  reconstructing the decision tree from chat history.
+
 - 2026-07-06: Close the live-follow operating model when account-level target
   classification explains every subscribed target. Do not keep an
   operating-model plan open merely because some rows are operator-paused,
@@ -18942,6 +18950,12 @@ browser-stage lifecycle observability, not transcript truncation.
   or has a nonzero `nextProjectIndex`; terminal cursors such as
   `yielded=false` / `nextProjectIndex=0` should fall through to complete or
   steady-follow status instead of reselecting `project-conversations`.
+- 2026-07-05: ChatGPT project caches are not authoritative for tenant project
+  existence. A project-bound run such as `--project-name Lei` must treat an
+  empty or stale cache as an unknown state and perform bounded live project
+  discovery in the selected tenant account before failing. If the live account
+  contains the project, refresh the cache and proceed; only live-discovery miss
+  should become `project_not_found`.
 - 2026-07-05: Live-follow status must expose policy-aware materialization
   backlog, not just raw asset inventory. A complete metadata mirror can still
   have known remote assets missing locally; under `metadata_only` that should
@@ -19074,3 +19088,9 @@ browser-stage lifecycle observability, not transcript truncation.
   counter and ignore only minimum-interval target selection; the pass must still
   yield before provider refresh, report `foreground-work`, and leave
   `refresh=null` so the proof cannot spend provider budget.
+- 2026-07-06: ChatGPT `--project-name` resolution must distinguish cache miss,
+  live discovery failure, and completed live miss. `resolveProjectIdByName` now
+  wraps project-list refresh in resolver diagnostics, updates the project cache
+  on live success, resolves an empty-cache live hit such as `Lei`, reports
+  readiness/listing failures as `project_discovery_failed`, and reports
+  `project_not_found` only after live discovery completes without a match.

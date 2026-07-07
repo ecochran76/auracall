@@ -27,18 +27,44 @@ excluded for a precise operator-visible reason.
   evidence and should continue on cadence.
 - `chatgpt/default` and `chatgpt/wsl-chrome-3` are operator-paused. Automatic
   reconciliation must not unpause or policy-upgrade them without an explicit
-  operator decision.
+  operator decision. `wsl-chrome-3` is the preferred first controlled proof
+  target because metadata is complete, rate-limit guard evidence is clear, and
+  the remaining work is a distinct materialization policy/backlog decision.
 - `gemini/auracall-gemini-pro` is provider-blocked by legacy bounded-left-rail
   semantics. It needs a provider-specific repair path before automatic resume.
-- `grok/default` was classified `identity_blocked`, but the live evidence shows
-  the recurring failure is a false comparison: Grok provider display/user
-  labels such as `company logo` are not the same namespace as the configured
-  Chrome/browser tenant email. Grok needs provider-aware identity semantics and
-  stale mismatch cleanup before target resume, not an assumption that the
-  configured tenant is wrong.
+- `grok/default` no longer blocks on the false cross-namespace identity
+  comparison fixed in commit `f5ddde4f`. Installed status now reports
+  `safe_steady_follow` with no attention needed, while its current
+  `failure-backoff`/identity recheck timing remains a normal cadence issue
+  rather than a tenant mismatch.
 - Account-library and local materialization backlogs remain separate from
   metadata-current steady-follow. They must not make a complete metadata row
   restart root/project rail walking.
+- Status now needs an explicit synthesized target decision because
+  `resumePolicy`, `routineDecision`, and `materializationBacklog` each answer a
+  different question. Operators need one row-level decision that says whether a
+  target can resume, requires operator action, needs provider repair, or needs
+  materialization policy/progress.
+
+## Live Survey | 2026-07-07
+
+Installed `/status` on port `18095` reports live-follow
+`severity=attention-needed`, desired-enabled targets `6`, paused `3`,
+attention-needed `3`, complete `5`, and in-progress `1` after installing the
+target-decision status surface.
+
+| Target | Status | Resume class | Routine | Materialization | Rate-limit/LLM evidence |
+| --- | --- | --- | --- | --- | --- |
+| `chatgpt/default` | `paused`, `complete` | `operator_paused` / `targetDecision=operator_paused` | `identity` | `materialization_required`, 235 remote missing, 0 local | no provider guard, `llmServiceRequests=0`, CDP 9 |
+| `chatgpt/wsl-chrome-2` | `idle_waiting`, `complete` | `safe_steady_follow` | `steady_follow` | `materialization_required`, 221 remote missing, 0 local | no provider guard, `llmServiceRequests=0`, CDP 8 |
+| `chatgpt/wsl-chrome-3` | `paused`, `complete` | `operator_paused` / `targetDecision=operator_paused` | `complete` | `metadata_current_backlog`, `metadata_only`, 433 remote missing, 1 local | no provider guard, `llmServiceRequests=0`, CDP 8 |
+| `chatgpt/wsl-chrome-4` | `idle_waiting`, `complete` | `safe_steady_follow` | `steady_follow` | `materialization_required`, 235 remote missing, 0 local | no provider guard, `llmServiceRequests=0`, CDP 8 |
+| `gemini/auracall-gemini-pro` | `paused`, `in_progress` | `provider_blocked` / `targetDecision=provider_repair_required` | `detail-inventory` | `materialization_required`, 64 remote missing, 0 local | no current guard; legacy bounded-left-rail blocker |
+| `grok/default` | `idle_waiting`, `complete` | `safe_steady_follow` | delayed identity recheck | none | no attention needed; no false mismatch blocker |
+
+Disabled or unconfigured rows remain out of the subscribed-target success
+definition: `gemini/default`, `grok/windows-chrome-test`,
+`grok/wsl-chrome-2`, and `grok/auracall-grok-auto`.
 
 ## Decision Tree
 
@@ -63,7 +89,8 @@ excluded for a precise operator-visible reason.
 ## Milestones
 
 - M1: Add an operator-facing target resume matrix that lists every subscribed
-  target, current `resumePolicy`, permitted next action, and exact blocker.
+  target, current `resumePolicy`, synthesized `targetDecision`, permitted next
+  action, materialization posture, and exact blocker.
 - M2: Define target-level controls for operator-paused ChatGPT rows:
   observe-only, run one bounded pass, resume cadence, or keep paused.
 - M3: Prove one ChatGPT operator-paused target can be resumed only through the
@@ -108,14 +135,15 @@ excluded for a precise operator-visible reason.
 
 ## Acceptance Criteria
 
-- [ ] `/status` or an equivalent operator readback shows a target resume matrix
-  with subscribed targets, `resumePolicy`, next permitted action, and blocker.
+- [x] Installed `/status` or an equivalent operator readback shows a target
+  resume matrix with subscribed targets, `resumePolicy`, synthesized
+  `targetDecision`, next permitted action, materialization posture, and blocker.
 - [ ] Operator-paused ChatGPT targets can only resume through explicit
   target-level controls, and one installed proof shows no unrelated paused
   target was upgraded.
 - [ ] Gemini provider-blocked live follow has a bounded repair/replacement path
   that avoids the legacy blocked completion as the automatic broad-resume path.
-- [ ] Grok false identity-blocked live follow no longer treats provider
+- [x] Grok false identity-blocked live follow no longer treats provider
   display/user labels as mismatches against configured browser tenant email,
   and stale mismatch readback no longer keeps the target blocked.
 - [ ] Materialization/account-library backlog remains separate from

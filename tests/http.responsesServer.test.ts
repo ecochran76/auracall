@@ -5168,6 +5168,24 @@ describe("http responses adapter", () => {
 									reason: string;
 								} | null;
 							};
+							targetDecision: {
+								state: string;
+								action: string;
+								reason: string;
+								canAutoResume: boolean;
+								requiresOperator: boolean;
+								blocker: string | null;
+								nextPhase: string | null;
+								materialization: {
+									state: string | null;
+									policy: string | null;
+									metadataCurrent: boolean;
+									localRequired: boolean;
+									remoteKnownMissingLocal: {
+										total: number;
+									};
+								} | null;
+							};
 							materializationBacklog: {
 								state: string;
 								policy: string | null;
@@ -5215,6 +5233,24 @@ describe("http responses adapter", () => {
 						currentPhase: "detail-inventory",
 						nextPhase: "detail-inventory",
 						reason: "freshness frontier selected 1 conversation row(s) for detail",
+					},
+				},
+				targetDecision: {
+					state: "active",
+					action: "keep_existing",
+					reason: "active live-follow completion is running",
+					canAutoResume: false,
+					requiresOperator: false,
+					blocker: null,
+					nextPhase: "detail-inventory",
+					materialization: {
+						state: "metadata_current_backlog",
+						policy: "metadata_only",
+						metadataCurrent: true,
+						localRequired: false,
+						remoteKnownMissingLocal: {
+							total: 582,
+						},
 					},
 				},
 				materializationBacklog: {

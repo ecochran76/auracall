@@ -6048,6 +6048,14 @@ function createLiveFollowTargetRollup(
 			accountLibraryBrowserProcessStatus,
 			now,
 		);
+		const resumePolicy = classifyLiveFollowTarget(entry, activeOperation);
+		const routineDecision = summarizeLiveFollowRoutineDecision({
+			entry,
+			operation,
+			materializationBacklog,
+			accountLibraryCatchup,
+			scheduler,
+		});
 		return {
 			provider: entry.provider,
 			tenantKey: entry.tenantKey,
@@ -6073,13 +6081,13 @@ function createLiveFollowTargetRollup(
 			nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
 			providerGuard: entry.providerGuard.state === "clear" ? null : entry.providerGuard,
 			mirrorCompleteness: entry.mirrorCompleteness.state,
-			resumePolicy: classifyLiveFollowTarget(entry, activeOperation),
-			routineDecision: summarizeLiveFollowRoutineDecision({
+			resumePolicy,
+			routineDecision,
+			targetDecision: summarizeLiveFollowTargetDecision({
 				entry,
-				operation,
+				resumePolicy,
+				routineDecision,
 				materializationBacklog,
-				accountLibraryCatchup,
-				scheduler,
 			}),
 			assetInventory,
 			materializationBacklog,
@@ -6223,6 +6231,148 @@ function summarizeLiveFollowAssetInventory(
 		state: inventory.state,
 		summary: inventory.summary,
 		detailScannedThisPass: inventory.detailScannedThisPass,
+	};
+}
+
+function summarizeLiveFollowTargetDecision(input: {
+	entry: AccountMirrorStatusEntry;
+	resumePolicy: LiveFollowTargetAccountSummary["resumePolicy"];
+	routineDecision: LiveFollowTargetAccountSummary["routineDecision"];
+	materializationBacklog: LiveFollowTargetAccountSummary["materializationBacklog"];
+}): LiveFollowTargetAccountSummary["targetDecision"] {
+	const { entry, resumePolicy, routineDecision, materializationBacklog } = input;
+	const materialization = materializationBacklog
+		? {
+				state: materializationBacklog.state,
+				policy: materializationBacklog.policy,
+				metadataCurrent: materializationBacklog.metadataCurrent,
+				localRequired: materializationBacklog.localRequired,
+				remoteKnownMissingLocal: materializationBacklog.remoteKnownMissingLocal,
+				localMaterialized: materializationBacklog.localMaterialized,
+			}
+		: null;
+	const base = {
+		nextPhase: routineDecision.nextPhase,
+		materialization,
+	};
+	if (!entry.liveFollow.enabled) {
+		return {
+			...base,
+			state: "disabled",
+			action: "skip",
+			reason: `desired live-follow state is ${entry.liveFollow.state}`,
+			canAutoResume: false,
+			requiresOperator: false,
+			blocker: entry.liveFollow.state,
+		};
+	}
+	if (entry.providerGuard.state !== "clear") {
+		return {
+			...base,
+			state: "provider_guard",
+			action: "wait_for_guard_clearance",
+			reason: entry.providerGuard.summary ?? "provider guard is active",
+			canAutoResume: false,
+			requiresOperator: false,
+			blocker: entry.providerGuard.kind ?? entry.providerGuard.state,
+		};
+	}
+	if (resumePolicy.classification === "operator_paused") {
+		return {
+			...base,
+			state: "operator_paused",
+			action: "resume_one_bounded_pass_or_keep_paused",
+			reason: resumePolicy.reason,
+			canAutoResume: false,
+			requiresOperator: true,
+			blocker: "operator_paused",
+		};
+	}
+	if (resumePolicy.classification === "provider_blocked") {
+		return {
+			...base,
+			state: "provider_repair_required",
+			action: "repair_provider_policy",
+			reason: resumePolicy.reason,
+			canAutoResume: false,
+			requiresOperator: false,
+			blocker: "provider_blocked",
+		};
+	}
+	if (resumePolicy.classification === "identity_blocked") {
+		return {
+			...base,
+			state: "identity_repair_required",
+			action: "repair_identity_binding",
+			reason: resumePolicy.reason,
+			canAutoResume: false,
+			requiresOperator: false,
+			blocker: "identity_blocked",
+		};
+	}
+	if (resumePolicy.classification === "safe_bounded_resume") {
+		return {
+			...base,
+			state: "resume_ready",
+			action: "resume_one_bounded_pass",
+			reason: resumePolicy.reason,
+			canAutoResume: true,
+			requiresOperator: false,
+			blocker: null,
+		};
+	}
+	if (resumePolicy.classification === "existing_active") {
+		return {
+			...base,
+			state: "active",
+			action: "keep_existing",
+			reason: resumePolicy.reason,
+			canAutoResume: false,
+			requiresOperator: false,
+			blocker: null,
+		};
+	}
+	if (materializationBacklog?.state === "materialization_required") {
+		return {
+			...base,
+			state: "materialization_required",
+			action: "start_materialization",
+			reason: materializationBacklog.summary,
+			canAutoResume: false,
+			requiresOperator: false,
+			blocker: "materialization_backlog",
+		};
+	}
+	if (materializationBacklog?.state === "metadata_current_backlog") {
+		return {
+			...base,
+			state: "materialization_policy_required",
+			action: "enable_materialization_or_keep_metadata_only",
+			reason: materializationBacklog.summary,
+			canAutoResume: false,
+			requiresOperator: false,
+			blocker: "metadata_only_materialization_backlog",
+		};
+	}
+	if (resumePolicy.classification === "safe_steady_follow") {
+		return {
+			...base,
+			state: routineDecision.state === "caught_up" ? "steady_follow" : routineDecision.state,
+			action: "keep_cadence",
+			reason: routineDecision.why,
+			canAutoResume: true,
+			requiresOperator: false,
+			blocker: null,
+		};
+	}
+	return {
+		...base,
+		state: routineDecision.state,
+		action: resumePolicy.action,
+		reason: resumePolicy.reason || routineDecision.why,
+		canAutoResume: false,
+		requiresOperator: false,
+		blocker: resumePolicy.classification,
 	};
 }
 
