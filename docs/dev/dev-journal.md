@@ -1,3 +1,31 @@
+## 2026-07-07 | Plan 0153 Gemini Replacement Closeout
+
+- Focus: remove the last desired-enabled live-follow blocker by replacing the
+  stale legacy Gemini completion with a bounded, materializing live-follow
+  path.
+- Result:
+  - `liveFollowReconciler` now cancels only a legacy
+    `gemini_live_follow_resume_blocked` active completion and starts a capped
+    Gemini replacement with `sweepMode=full_sweep`,
+    `materializationPolicy=full_missing_assets`, `materializationMaxItems=3`,
+    and `materializationRefreshSnapshot=true`;
+  - installed service PID `50360` started replacement completion
+    `acctmirror_completion_2ee350f8-6135-403a-a3aa-e45d181db4b2`;
+  - Gemini selected 4 real left-rail conversations, found 3 artifact-bearing
+    conversations, avoided churn (`gemsViewVisits=0`,
+    `repeatedRouteVisits=0`, `churnDetected=false`), and kept
+    `llmServiceRequests=0`, `cdpMethodCalls=0`, and provider guard `null`;
+  - materialization job `hmj_52051faa252d4b27bbad34505e673c4c` succeeded,
+    materializing 2 assets from 3 conversations with 0 failures;
+  - final installed `/status` reports desired-enabled targets `6`, paused `0`,
+    attention-needed `0`, and active materialization jobs `0`.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/liveFollowReconciler.test.ts --maxWorkers 1`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/accountMirror/liveFollowReconciler.ts tests/accountMirror/liveFollowReconciler.test.ts`;
+  - installed user-runtime-service reinstall/restart and live `/status`,
+    completion, and materialization-job readbacks.
+
 ## 2026-07-07 | Plan 0153 Bounded Resume And Materialization Proof
 
 - Focus: execute the target-level resume/materialization path after installing

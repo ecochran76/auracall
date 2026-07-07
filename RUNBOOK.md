@@ -13344,3 +13344,33 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Validation:
   - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/statusRegistry.test.ts --testNamePattern "Grok|identity mismatch|stale malformed identity mismatch"`;
   - `pnpm exec tsc --noEmit --pretty false`.
+
+## Turn 325 | 2026-07-07
+
+- Active parent plan:
+  `docs/dev/plans/0153-2026-07-06-live-follow-target-resume-readiness.md`
+- Goal:
+  - finish the remaining Gemini provider-blocked live-follow path and close
+    the subscribed-target resume/materialization objective.
+- Result:
+  - changed configured live-follow reconciliation so a legacy
+    `gemini_live_follow_resume_blocked` active completion is cancelled and
+    replaced with a capped Gemini `full_sweep` /
+    `full_missing_assets` live-follow operation instead of being retried;
+  - installed service PID `50360` replaced the old Gemini blocker with
+    completion `acctmirror_completion_2ee350f8-6135-403a-a3aa-e45d181db4b2`;
+  - the replacement pass completed, selected 4 real left-rail conversations,
+    found 3 artifact-bearing conversations, reported no route churn, kept
+    `llmServiceRequests=0`, `cdpMethodCalls=0`, and provider guard `null`;
+  - materialization job `hmj_52051faa252d4b27bbad34505e673c4c` succeeded,
+    materializing 2 assets from 3 conversations with 0 failures;
+  - final installed `/status` reported desired-enabled targets `6`, paused
+    `0`, attention-needed `0`, and active materialization jobs `0`.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/liveFollowReconciler.test.ts --maxWorkers 1`;
+  - `pnpm exec tsc --noEmit --pretty false`;
+  - `pnpm exec biome check src/accountMirror/liveFollowReconciler.ts tests/accountMirror/liveFollowReconciler.test.ts`;
+  - `pnpm run install:user-runtime-service`;
+  - `systemctl --user restart auracall-api.service`;
+  - installed `/status`, `mirror-completion-status`, and
+    `history-materialization-status` readbacks.

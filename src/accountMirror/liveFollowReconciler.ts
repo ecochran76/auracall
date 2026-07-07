@@ -10,6 +10,10 @@ export interface AccountMirrorLiveFollowReconcileResult {
 	started: AccountMirrorCompletionOperation[];
 	existing: AccountMirrorCompletionOperation[];
 	upgraded: AccountMirrorCompletionOperation[];
+	replaced: Array<{
+		previous: AccountMirrorCompletionOperation;
+		replacement: AccountMirrorCompletionOperation;
+	}>;
 	targetClassifications: AccountMirrorLiveFollowTargetClassification[];
 	skipped: Array<{
 		provider: AccountMirrorStatusEntry["provider"];
@@ -21,6 +25,7 @@ export interface AccountMirrorLiveFollowReconcileResult {
 		started: number;
 		existing: number;
 		upgraded: number;
+		replaced: number;
 		skipped: number;
 	};
 }
@@ -55,6 +60,7 @@ export async function reconcileConfiguredAccountMirrorLiveFollow(input: {
 	const started: AccountMirrorCompletionOperation[] = [];
 	const existing: AccountMirrorCompletionOperation[] = [];
 	const upgraded: AccountMirrorCompletionOperation[] = [];
+	const replaced: AccountMirrorLiveFollowReconcileResult["replaced"] = [];
 	const targetClassifications: AccountMirrorLiveFollowTargetClassification[] = [];
 	const skipped: AccountMirrorLiveFollowReconcileResult["skipped"] = [];
 
@@ -86,14 +92,34 @@ export async function reconcileConfiguredAccountMirrorLiveFollow(input: {
 			continue;
 		}
 		if (active) {
-			if (
-				classification.classification === "operator_paused" ||
-				classification.classification === "provider_blocked"
-			) {
+			if (classification.classification === "operator_paused") {
 				existing.push(active);
 				continue;
 			}
 			const policy = buildLiveFollowCompletionPolicy(entry);
+			if (classification.classification === "provider_blocked") {
+				const replacementPolicy = buildLegacyGeminiReplacementPolicy(entry, active);
+				if (!replacementPolicy) {
+					existing.push(active);
+					continue;
+				}
+				const cancelled = input.completionService.control({
+					id: active.id,
+					action: "cancel",
+				});
+				const replacement = input.completionService.start({
+					provider: entry.provider,
+					runtimeProfileId: entry.runtimeProfileId,
+					maxPasses: null,
+					...replacementPolicy,
+				});
+				started.push(replacement);
+				replaced.push({
+					previous: cancelled ?? active,
+					replacement,
+				});
+				continue;
+			}
 			const upgradedOperation = maybeUpgradeActiveCompletion(
 				input.completionService,
 				active,
@@ -122,6 +148,7 @@ export async function reconcileConfiguredAccountMirrorLiveFollow(input: {
 		started,
 		existing,
 		upgraded,
+		replaced,
 		targetClassifications,
 		skipped,
 		metrics: {
@@ -129,6 +156,7 @@ export async function reconcileConfiguredAccountMirrorLiveFollow(input: {
 			started: started.length,
 			existing: existing.length,
 			upgraded: upgraded.length,
+			replaced: replaced.length,
 			skipped: skipped.length,
 		},
 	};
@@ -158,9 +186,11 @@ export function classifyLiveFollowTarget(
 		return {
 			...base,
 			classification: "provider_blocked",
-			action: "skip",
-			reason:
-				active?.error?.message ?? "provider-specific live-follow policy blocks automatic resume",
+			action: hasSafeLegacyGeminiReplacementPolicy(entry, active) ? "start" : "skip",
+			reason: hasSafeLegacyGeminiReplacementPolicy(entry, active)
+				? "replace legacy Gemini blocker with bounded full-missing-assets live follow"
+				: (active?.error?.message ??
+					"provider-specific live-follow policy blocks automatic resume"),
 		};
 	}
 	if (entry.status === "blocked") {
@@ -238,6 +268,40 @@ function isLegacyProviderBlockedCompletion(
 		active.status === "paused" &&
 		active.passCount > 0
 	);
+}
+
+function hasSafeLegacyGeminiReplacementPolicy(
+	entry: AccountMirrorStatusEntry,
+	active: AccountMirrorCompletionOperation | null,
+): boolean {
+	return buildLegacyGeminiReplacementPolicy(entry, active) !== null;
+}
+
+function buildLegacyGeminiReplacementPolicy(
+	entry: AccountMirrorStatusEntry,
+	active: AccountMirrorCompletionOperation | null,
+): Pick<
+	AccountMirrorCompletionStartRequest,
+	| "sweepMode"
+	| "materializationPolicy"
+	| "materializationAssetKinds"
+	| "materializationMaxItems"
+	| "materializationRefreshSnapshot"
+	| "materializationForce"
+> | null {
+	if (!isLegacyProviderBlockedCompletion(active)) return null;
+	if (entry.provider !== "gemini") return null;
+	const configured = buildLiveFollowCompletionPolicy(entry);
+	const policy = configured.materializationPolicy ?? "full_missing_assets";
+	if (policy === "metadata_only") return null;
+	return {
+		sweepMode: configured.sweepMode ?? "full_sweep",
+		materializationPolicy: policy,
+		materializationAssetKinds: configured.materializationAssetKinds ?? ["all"],
+		materializationMaxItems: configured.materializationMaxItems ?? 3,
+		materializationRefreshSnapshot: configured.materializationRefreshSnapshot ?? true,
+		materializationForce: configured.materializationForce ?? false,
+	};
 }
 
 function buildLiveFollowCompletionPolicy(

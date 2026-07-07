@@ -404,7 +404,7 @@ describe("account mirror live-follow reconciler", () => {
 		]);
 	});
 
-	test("classifies legacy Gemini live follow as provider-blocked", async () => {
+	test("replaces legacy Gemini live follow with bounded full-missing-assets policy", async () => {
 		const registry = createAccountMirrorStatusRegistry({
 			config: {
 				runtimeProfiles: {
@@ -433,7 +433,24 @@ describe("account mirror live-follow reconciler", () => {
 					"Gemini live-follow resume is blocked until the completion is upgraded or replaced with bounded left-rail retrieval policy.",
 			},
 		};
-		const start = vi.fn();
+		const replacement = {
+			...baseOperation,
+			id: "acctmirror_replacement_gemini",
+			provider: "gemini" as const,
+			runtimeProfileId: "gemini",
+			status: "queued" as const,
+			sweepMode: "full_sweep" as const,
+			materializationPolicy: "full_missing_assets" as const,
+			materializationAssetKinds: ["all" as const],
+			materializationMaxItems: 3,
+			materializationRefreshSnapshot: true,
+			materializationForce: false,
+		};
+		const start = vi.fn(() => replacement);
+		const control = vi.fn(() => ({
+			...legacyGemini,
+			status: "cancelled" as const,
+		}));
 
 		const result = await reconcileConfiguredAccountMirrorLiveFollow({
 			registry,
@@ -441,21 +458,47 @@ describe("account mirror live-follow reconciler", () => {
 				start,
 				list: vi.fn(() => [legacyGemini]),
 				read: vi.fn(),
-				control: vi.fn(),
+				control,
 			},
 		});
 
-		expect(start).not.toHaveBeenCalled();
-		expect(result.existing[0]).toMatchObject({
+		expect(control).toHaveBeenCalledWith({
 			id: "acctmirror_legacy_gemini",
-			status: "paused",
+			action: "cancel",
+		});
+		expect(start).toHaveBeenCalledWith({
+			provider: "gemini",
+			runtimeProfileId: "gemini",
+			maxPasses: null,
+			sweepMode: "full_sweep",
+			materializationPolicy: "full_missing_assets",
+			materializationAssetKinds: ["all"],
+			materializationMaxItems: 3,
+			materializationRefreshSnapshot: true,
+			materializationForce: false,
+		});
+		expect(result.metrics).toMatchObject({
+			enabledTargets: 1,
+			started: 1,
+			existing: 0,
+			replaced: 1,
+		});
+		expect(result.replaced[0]?.previous).toMatchObject({
+			id: "acctmirror_legacy_gemini",
+			status: "cancelled",
+		});
+		expect(result.replaced[0]?.replacement).toMatchObject({
+			id: "acctmirror_replacement_gemini",
+			sweepMode: "full_sweep",
+			materializationPolicy: "full_missing_assets",
 		});
 		expect(result.targetClassifications[0]).toMatchObject({
 			provider: "gemini",
 			runtimeProfileId: "gemini",
 			classification: "provider_blocked",
-			action: "skip",
+			action: "start",
 			activeCompletionId: "acctmirror_legacy_gemini",
+			reason: "replace legacy Gemini blocker with bounded full-missing-assets live follow",
 		});
 	});
 

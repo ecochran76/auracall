@@ -19107,3 +19107,14 @@ browser-stage lifecycle observability, not transcript truncation.
   on live success, resolves an empty-cache live hit such as `Lei`, reports
   readiness/listing failures as `project_discovery_failed`, and reports
   `project_not_found` only after live discovery completes without a match.
+- 2026-07-07: Legacy Gemini live-follow blockers should be replaced, not
+  retried. When an enabled Gemini target has an active completion blocked by
+  `gemini_live_follow_resume_blocked`, reconcile only that stale completion:
+  cancel it and start a capped full-sweep live-follow replacement with
+  `full_missing_assets`, `materializationMaxItems=3`, and snapshot refresh.
+  Installed replacement
+  `acctmirror_completion_2ee350f8-6135-403a-a3aa-e45d181db4b2` selected 4
+  left-rail conversations with no route churn, kept `llmServiceRequests=0` and
+  no provider guard correlation, then materialization job
+  `hmj_52051faa252d4b27bbad34505e673c4c` materialized 2 Gemini assets from 3
+  conversations with 0 failures.

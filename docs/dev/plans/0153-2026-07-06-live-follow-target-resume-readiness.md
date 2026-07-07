@@ -1,6 +1,6 @@
 # Live-Follow Target Resume Readiness | 0153-2026-07-06
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Goal
@@ -99,6 +99,26 @@ definition: `gemini/default`, `grok/windows-chrome-test`,
   paused `1`, attention-needed `1`, complete `5`, in-progress `1`; all ChatGPT
   rows are `idle_waiting` and guard-clear, while
   `gemini/auracall-gemini-pro` remains `provider_repair_required`.
+- Installed PID `50360` then replaced the stale Gemini blocker with completion
+  `acctmirror_completion_2ee350f8-6135-403a-a3aa-e45d181db4b2`:
+  - the old legacy completion was no longer the broad-resume path;
+  - replacement policy was `sweepMode=full_sweep`,
+    `materializationPolicy=full_missing_assets`, `materializationMaxItems=3`,
+    `materializationRefreshSnapshot=true`;
+  - the pass completed from `2026-07-07T14:27:17.874Z` to
+    `2026-07-07T14:29:55.314Z`, selected 4 real left-rail conversations,
+    found 3 artifact-bearing conversations, reported `churnDetected=false`,
+    `gemsViewVisits=0`, `repeatedRouteVisits=0`, `llmServiceRequests=0`,
+    `cdpMethodCalls=0`, and no provider guard correlation;
+  - materialization job `hmj_52051faa252d4b27bbad34505e673c4c` succeeded from
+    `2026-07-07T14:29:55.802Z` to `2026-07-07T14:30:17.455Z`, materialized
+    2 assets from 3 conversations, skipped 3, failed 0, and wrote manifest
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/667691d5b0f04652/artifact-fetch-manifest.json`.
+- Final installed broad readback: desired-enabled targets `6`, paused `0`,
+  attention-needed `0`, complete `3`, in-progress `3`; active materialization
+  jobs `0`; every desired-enabled row is `idle_waiting`, guard-clear, and
+  either cadence-waiting, active backfill/materialization, or an explicit
+  metadata-only materialization policy decision.
 
 ## Decision Tree
 
@@ -175,14 +195,14 @@ definition: `gemini/default`, `grok/windows-chrome-test`,
 - [x] Operator-paused ChatGPT targets can only resume through explicit
   target-level controls, and one installed proof shows no unrelated paused
   target was upgraded.
-- [ ] Gemini provider-blocked live follow has a bounded repair/replacement path
+- [x] Gemini provider-blocked live follow has a bounded repair/replacement path
   that avoids the legacy blocked completion as the automatic broad-resume path.
 - [x] Grok false identity-blocked live follow no longer treats provider
   display/user labels as mismatches against configured browser tenant email,
   and stale mismatch readback no longer keeps the target blocked.
 - [x] Materialization/account-library backlog remains separate from
   metadata-current live-follow freshness in status and scheduling behavior.
-- [ ] Installed broad reconciliation leaves no desired-enabled target in an
+- [x] Installed broad reconciliation leaves no desired-enabled target in an
   ambiguous state: each is safe steady-follow, safe bounded resume, explicit
   operator-paused, provider-blocked, identity-blocked, or disabled.
 
@@ -194,3 +214,8 @@ target state, at least one formerly operator-paused ChatGPT target has an
 explicitly controlled outcome, Gemini blockers are either repaired or preserved
 as precise follow-up states, and Grok false identity-blocked state is eliminated
 without causing broad resume to restart expensive scrape work.
+
+Closed on `2026-07-07` after installed broad reconciliation reported
+desired-enabled targets `6`, paused `0`, attention-needed `0`, active
+materialization jobs `0`, and Gemini materialization progress under the bounded
+replacement path.
