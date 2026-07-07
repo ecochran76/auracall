@@ -5796,22 +5796,24 @@ async function hydrateAccountMirrorStatusMaterializationEvidence(
 	service: HistoryMaterializationService | null | undefined,
 	runArchiveService: RunArchiveService | null | undefined,
 ): Promise<AccountMirrorStatusSummary> {
-	if (status.entries.length !== 1) return status;
 	const localMaterialized = new Map<
 		string,
 		Pick<AccountMirrorStatusEntry["metadataCounts"], "artifacts" | "files" | "media">
 	>();
 	await Promise.all(
 		status.entries.map(async (entry) => {
+			const shouldHydrateArchiveItems = status.entries.length === 1;
 			const [archiveItems, jobs] = await Promise.all([
-				runArchiveService
-					?.listItems({
-						provider: entry.provider,
-						runtimeProfile: entry.runtimeProfileId,
-						assetAvailability: "available",
-						limit: 500,
-					})
-					.catch(() => null) ?? null,
+				shouldHydrateArchiveItems
+					? (runArchiveService
+							?.listItems({
+								provider: entry.provider,
+								runtimeProfile: entry.runtimeProfileId,
+								assetAvailability: "available",
+								limit: 500,
+							})
+							.catch(() => null) ?? null)
+					: null,
 				service
 					?.listJobs({
 						status: "terminal",

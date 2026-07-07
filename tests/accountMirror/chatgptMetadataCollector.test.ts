@@ -2671,6 +2671,115 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(fourth.truncated).toBe(false);
 	});
 
+	test("caps Gemini detail inventory to the remaining active interaction budget", async () => {
+		const calls: string[] = [];
+		const conversations = Array.from({ length: 5 }, (_, index) => ({
+			id: `gemini_conv_${index + 1}`,
+			title: `Gemini conversation ${index + 1}`,
+			provider: "gemini" as const,
+		}));
+		const client = {
+			getUserIdentity: vi.fn(async () => ({
+				email: "operator@example.com",
+				source: "google-account-label",
+			})),
+			listProjects: vi.fn(async () => []),
+			listConversations: vi.fn(async () => conversations),
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async (conversationId: string) => {
+				calls.push(`files:${conversationId}`);
+				return [];
+			}),
+			getConversationContext: vi.fn(async (conversationId: string) => {
+				calls.push(`context:${conversationId}`);
+				return {
+					provider: "gemini" as const,
+					conversationId,
+					messages: [],
+					artifacts: [
+						{
+							id: `artifact-${conversationId}`,
+							title: `Generated media ${conversationId}`,
+							kind: "image" as const,
+							metadata: { mediaType: "image" },
+						},
+					],
+				};
+			}),
+		};
+		const collector = createChatgptAccountMirrorMetadataCollector(
+			{
+				model: "gpt-5.2",
+				browser: {},
+				runtimeProfiles: {
+					default: {
+						browserProfile: "default",
+						defaultService: "gemini",
+						services: {
+							gemini: {
+								identity: { email: "operator@example.com" },
+							},
+						},
+					},
+				},
+			} as never,
+			{
+				createClient: async () => client as never,
+			},
+		);
+
+		const result = await collector.collect({
+			provider: "gemini",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "operator@example.com",
+			sweepMode: "steady_follow",
+			limits: {
+				maxPageReadsPerCycle: 6,
+				maxConversationRowsPerCycle: 10,
+				maxArtifactRowsPerCycle: 20,
+				maxBrowserInteractionsPerMinute: 6,
+				freshFrontierThreshold: 5,
+			},
+		});
+
+		expect(calls).toEqual([
+			"files:gemini_conv_1",
+			"context:gemini_conv_1",
+			"files:gemini_conv_2",
+			"context:gemini_conv_2",
+			"files:gemini_conv_3",
+			"context:gemini_conv_3",
+		]);
+		expect(result.evidence.attachmentInventory).toMatchObject({
+			nextConversationIndex: 3,
+			scannedConversations: 3,
+			yielded: false,
+			yieldCause: null,
+		});
+		expect(result.evidence.scrapeBudget).toMatchObject({
+			active: {
+				identityReads: 1,
+				projectIndexReads: 1,
+				rootRailReads: 1,
+				chatLoads: 3,
+				total: 6,
+			},
+			providerInteractions: {
+				budget: 6,
+				used: 6,
+				remaining: 0,
+				yielded: true,
+				yieldReason: "provider-interaction-budget",
+			},
+		});
+		expect(result.manifests.artifacts.map((artifact) => artifact.id)).toEqual([
+			"artifact-gemini_conv_1",
+			"artifact-gemini_conv_2",
+			"artifact-gemini_conv_3",
+		]);
+	});
+
 	test("keeps Gemini steady-follow on the rail cursor instead of restarting at the shell", () => {
 		const previousEvidence = {
 			identitySource: "google-account-label",

@@ -8,6 +8,8 @@ import {
 	normalizeGeminiConversationHistoryLimit,
 	resolveGeminiConversationRailTargetUrl,
 	selectPreferredGeminiTarget,
+	shouldDisposeGeminiTabConnectionForTest,
+	shouldForceNewGeminiTabConnectionForTest,
 	shouldHydrateGeminiConversationHistory,
 } from "../../src/browser/providers/geminiAdapter.js";
 
@@ -26,7 +28,9 @@ describe("Gemini browser adapter", () => {
 	});
 
 	test("filters Gemini project probes to editable My Gems rows", () => {
-		expect(isEditableGeminiProjectProbe({ editUrl: "https://gemini.google.com/gems/edit/my-gem" })).toBe(true);
+		expect(
+			isEditableGeminiProjectProbe({ editUrl: "https://gemini.google.com/gems/edit/my-gem" }),
+		).toBe(true);
 		expect(isEditableGeminiProjectProbe({ editable: true })).toBe(false);
 		expect(isEditableGeminiProjectProbe({ editable: false })).toBe(false);
 		expect(
@@ -168,5 +172,32 @@ describe("Gemini browser adapter", () => {
 				bodyText: "Verify you are human to continue.",
 			}),
 		).toContain("Human-verification");
+	});
+
+	test("uses disposable Gemini tabs only for explicit disposable inventory reads", () => {
+		expect(
+			shouldForceNewGeminiTabConnectionForTest({
+				tabLifecycle: "dispose-new",
+			}),
+		).toBe(true);
+		expect(
+			shouldDisposeGeminiTabConnectionForTest(
+				{ shouldClose: true, targetId: "target-1" } as never,
+				{ tabLifecycle: "dispose-new" },
+			),
+		).toBe(true);
+		expect(
+			shouldForceNewGeminiTabConnectionForTest({
+				tabLifecycle: "dispose-new",
+				tabTargetId: "submitted-target",
+			}),
+		).toBe(false);
+		expect(
+			shouldDisposeGeminiTabConnectionForTest(
+				{ shouldClose: true, targetId: "target-1" } as never,
+				{ tabLifecycle: "dispose-new", preserveActiveTab: true },
+			),
+		).toBe(false);
+		expect(shouldForceNewGeminiTabConnectionForTest({ useProviderSession: true })).toBe(false);
 	});
 });

@@ -448,6 +448,31 @@ export function createChatgptAccountMirrorMetadataCollector(
 				projectsLength: projects.items.length,
 				resetCursorForFreshnessFrontier: !honorRequestedDetailPhase,
 			});
+			const projectIndexRead = !honorRequestedDetailPhase && !skipSteadyFollowProjectDiscovery;
+			const chatgptAccountLibraryRead =
+				input.provider === "chatgpt" &&
+				!honorRequestedDetailPhase &&
+				!(
+					(input.sweepMode ?? "steady_follow") === "steady_follow" &&
+					(frontier.evidence?.rowsSelectedForDetail ?? 0) === 0
+				) &&
+				!(
+					(input.sweepMode ?? "steady_follow") === "steady_follow" &&
+					frontier.detailConversations.length > 0
+				);
+			const maxDetailReads = capDetailReadsForActiveInteractionBudget({
+				maxDetailReads: input.limits.maxPageReadsPerCycle,
+				maxBrowserInteractionsPerMinute: input.limits.maxBrowserInteractionsPerMinute,
+				projectIndexRead,
+				rootRailRead:
+					!(honorRequestedDetailPhase || honorRequestedProjectConversationsPhase),
+				projectConversationReads: projectConversationCursor?.scannedProjects ?? 0,
+				chatgptAccountLibraryRead,
+			});
+			const budgetYieldCause =
+				maxDetailReads <= 0 && frontier.detailConversations.length + projects.items.length > 0
+					? createProviderInteractionBudgetYieldCause()
+					: null;
 			const inventory =
 				input.provider === "chatgpt"
 					? await readBoundedChatgptDetailInventory(
@@ -456,8 +481,9 @@ export function createChatgptAccountMirrorMetadataCollector(
 							frontier.detailConversations,
 							input.limits.maxArtifactRowsPerCycle,
 							{
-								maxDetailReads: input.limits.maxPageReadsPerCycle,
+								maxDetailReads,
 								cursor: detailAttachmentCursor,
+								budgetYieldCause,
 								shouldYield: input.shouldYield,
 								listOptions,
 								pacer,
@@ -481,8 +507,9 @@ export function createChatgptAccountMirrorMetadataCollector(
 								frontier.detailConversations,
 								input.limits.maxArtifactRowsPerCycle,
 								{
-									maxDetailReads: input.limits.maxPageReadsPerCycle,
+									maxDetailReads,
 									cursor: detailAttachmentCursor,
+									budgetYieldCause,
 									shouldYield: input.shouldYield,
 									listOptions,
 									pacer,
@@ -495,8 +522,9 @@ export function createChatgptAccountMirrorMetadataCollector(
 									frontier.detailConversations,
 									input.limits.maxArtifactRowsPerCycle,
 									{
-										maxDetailReads: input.limits.maxPageReadsPerCycle,
+										maxDetailReads,
 										cursor: detailAttachmentCursor,
+										budgetYieldCause,
 										shouldYield: input.shouldYield,
 										listOptions,
 										pacer,
@@ -535,18 +563,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 				inventoryProgress,
 				attachmentCursor: inventory.cursor,
 				scrapeTelemetry: snapshotBrowserScrapeTelemetry(scrapeTelemetry),
-				projectIndexRead: !honorRequestedDetailPhase && !skipSteadyFollowProjectDiscovery,
-				chatgptAccountLibraryRead:
-					input.provider === "chatgpt" &&
-					!honorRequestedDetailPhase &&
-					!(
-						(input.sweepMode ?? "steady_follow") === "steady_follow" &&
-						(frontier.evidence?.rowsSelectedForDetail ?? 0) === 0
-					) &&
-					!(
-						(input.sweepMode ?? "steady_follow") === "steady_follow" &&
-						frontier.detailConversations.length > 0
-					),
+				projectIndexRead,
+				chatgptAccountLibraryRead,
 			});
 			const detailObservedAt = new Date().toISOString();
 			const detailObservedConversationIds = new Set(
@@ -850,7 +868,11 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 		active.downloads;
 	const budget = Math.max(0, Math.floor(input.limits.maxBrowserInteractionsPerMinute));
 	const remaining = budget > 0 ? Math.max(0, budget - active.total) : null;
-	const yielded = input.attachmentCursor?.yielded === true;
+	const providerInteractionBudgetExhausted = budget > 0 && active.total >= budget;
+	const yielded = input.attachmentCursor?.yielded === true || providerInteractionBudgetExhausted;
+	const yieldReason =
+		input.attachmentCursor?.yieldCause?.kind ??
+		(providerInteractionBudgetExhausted ? "provider-interaction-budget" : null);
 	const cdpMethodCalls = sumCountRecord(cdpMethods);
 	const classification =
 		passive.total === 0 && active.total === 0
@@ -874,7 +896,7 @@ function buildAccountMirrorScrapeBudgetEvidence(input: {
 			used: active.total,
 			remaining,
 			yielded,
-			yieldReason: input.attachmentCursor?.yieldCause?.kind ?? null,
+			yieldReason,
 		},
 		providerGuardCorrelation: {
 			state: "none",
@@ -1015,6 +1037,37 @@ function shouldSkipSteadyFollowProjectDiscovery(
 	if (!previousEvidence) return false;
 	if (previousEvidence.truncated.projects === true) return false;
 	return (previousEvidence.projectSampleIds?.length ?? 0) === 0;
+}
+
+function capDetailReadsForActiveInteractionBudget(input: {
+	maxDetailReads: number;
+	maxBrowserInteractionsPerMinute: number;
+	projectIndexRead: boolean;
+	rootRailRead: boolean;
+	projectConversationReads: number;
+	chatgptAccountLibraryRead: boolean;
+}): number {
+	const requested = Math.max(0, Math.floor(input.maxDetailReads));
+	const budget = Math.max(0, Math.floor(input.maxBrowserInteractionsPerMinute));
+	if (budget <= 0) return requested;
+	const spentBeforeDetail =
+		1 +
+		(input.projectIndexRead ? 1 : 0) +
+		(input.rootRailRead ? 1 : 0) +
+		Math.max(0, Math.floor(input.projectConversationReads)) +
+		(input.chatgptAccountLibraryRead ? 1 : 0);
+	return Math.max(0, Math.min(requested, budget - spentBeforeDetail));
+}
+
+function createProviderInteractionBudgetYieldCause(): NonNullable<
+	AttachmentInventoryCursor["yieldCause"]
+> {
+	return {
+		observedAt: new Date().toISOString(),
+		ownerCommand: "account-mirror-refresh",
+		kind: "provider-interaction-budget",
+		operationClass: "account-mirror",
+	};
 }
 
 async function readSkippedCollectorProjects(
@@ -1358,10 +1411,11 @@ export async function readBoundedAttachmentInventory(
 	maxRows: number,
 	options:
 		| number
-		| {
-				maxDetailReads?: number;
-				cursor?: AttachmentInventoryCursor | null;
-				shouldYield?: () => Promise<boolean> | boolean;
+			| {
+					maxDetailReads?: number;
+					cursor?: AttachmentInventoryCursor | null;
+					budgetYieldCause?: AttachmentInventoryCursor["yieldCause"] | null;
+					shouldYield?: () => Promise<boolean> | boolean;
 				listOptions?: Parameters<BrowserAutomationClient["listProjectFiles"]>[1];
 				pacer?: BrowserInteractionGovernor;
 				observation?: AccountMirrorDomDriftObservationContext;
@@ -1380,6 +1434,7 @@ export async function readBoundedAttachmentInventory(
 	const limit = Math.max(0, Math.floor(maxRows));
 	const maxDetailReads = typeof options === "number" ? options : (options.maxDetailReads ?? 6);
 	const previousCursor = typeof options === "number" ? null : (options.cursor ?? null);
+	const budgetYieldCause = typeof options === "number" ? null : (options.budgetYieldCause ?? null);
 	const shouldYield = typeof options === "number" ? undefined : options.shouldYield;
 	const listOptions = typeof options === "number" ? undefined : options.listOptions;
 	const pacer = typeof options === "number" ? undefined : options.pacer;
@@ -1389,8 +1444,13 @@ export async function readBoundedAttachmentInventory(
 	const previousFiles = typeof options === "number" ? [] : (options.previousFiles ?? []);
 	const providerCallTimeoutMs =
 		typeof options === "number" ? null : (options.providerCallTimeoutMs ?? null);
-	const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
-	if (limit <= 0) {
+	const detailReadLimit = Math.max(0, Math.min(6, Math.floor(maxDetailReads)));
+	if (limit <= 0 || detailReadLimit <= 0) {
+		const budgetYielded =
+			limit > 0 &&
+			detailReadLimit <= 0 &&
+			budgetYieldCause !== null &&
+			(projects.length > 0 || conversations.length > 0);
 		return {
 			artifacts: [],
 			files: [],
@@ -1402,6 +1462,8 @@ export async function readBoundedAttachmentInventory(
 				detailReadLimit,
 				scannedProjects: 0,
 				scannedConversations: 0,
+				yielded: budgetYielded,
+				yieldCause: budgetYielded ? budgetYieldCause : null,
 			}),
 			progress: createAttachmentInventoryProgress(),
 		};
@@ -1426,6 +1488,9 @@ export async function readBoundedAttachmentInventory(
 		for (; projectIndex < projects.length; projectIndex += 1) {
 			if (remaining <= 0 || remainingDetailReads <= 0) {
 				truncated = true;
+				if (remainingDetailReads <= 0 && budgetYieldCause !== null) {
+					yielded = true;
+				}
 				break;
 			}
 			if (await shouldYield?.()) {
@@ -1461,6 +1526,9 @@ export async function readBoundedAttachmentInventory(
 		for (; !yielded && conversationIndex < conversations.length; conversationIndex += 1) {
 			if (remaining <= 0 || remainingDetailReads <= 0) {
 				truncated = true;
+				if (remainingDetailReads <= 0 && budgetYieldCause !== null) {
+					yielded = true;
+				}
 				break;
 			}
 			if (await shouldYield?.()) {
@@ -1583,6 +1651,7 @@ export async function readBoundedAttachmentInventory(
 						: conversationIndex,
 			conversationDetail: conversationDetailCursor,
 			yielded,
+			yieldCause: yielded && budgetYieldCause !== null ? budgetYieldCause : null,
 		}),
 		progress,
 	};
@@ -1649,10 +1718,11 @@ export async function readBoundedChatgptDetailInventory(
 	maxRows: number,
 	options:
 		| number
-		| {
-				maxDetailReads?: number;
-				cursor?: AttachmentInventoryCursor | null;
-				shouldYield?: () => Promise<boolean> | boolean;
+			| {
+					maxDetailReads?: number;
+					cursor?: AttachmentInventoryCursor | null;
+					budgetYieldCause?: AttachmentInventoryCursor["yieldCause"] | null;
+					shouldYield?: () => Promise<boolean> | boolean;
 				listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
 				pacer?: BrowserInteractionGovernor;
 				observation?: AccountMirrorDomDriftObservationContext;
@@ -1700,16 +1770,17 @@ export async function readBoundedChatgptDetailInventory(
 		conversations,
 		remainingRows,
 		typeof options === "number"
-			? {
-					maxDetailReads: options,
-					providerCallTimeoutMs,
-				}
-			: {
+				? {
+						maxDetailReads: options,
+						providerCallTimeoutMs,
+					}
+				: {
 					...options,
-					prioritizeConversations,
-					previousFiles: options.previousFiles,
-					providerCallTimeoutMs,
-				},
+						prioritizeConversations,
+						previousFiles: options.previousFiles,
+						budgetYieldCause: options.budgetYieldCause,
+						providerCallTimeoutMs,
+					},
 	);
 	return {
 		artifacts: mergeConversationArtifacts(library.artifacts, attachmentInventory.artifacts),
@@ -1774,6 +1845,7 @@ export async function readBoundedGeminiDetailInventory(
 	options: {
 		maxDetailReads?: number;
 		cursor?: AttachmentInventoryCursor | null;
+		budgetYieldCause?: AttachmentInventoryCursor["yieldCause"] | null;
 		shouldYield?: () => Promise<boolean> | boolean;
 		listOptions?: Parameters<BrowserAutomationClient["listProjectFiles"]>[1];
 		pacer?: BrowserInteractionGovernor;
@@ -1790,6 +1862,7 @@ export async function readBoundedGeminiDetailInventory(
 	const inventory = await readBoundedAttachmentInventory(client, projects, conversations, maxRows, {
 		...options,
 		prioritizeConversations: true,
+		budgetYieldCause: options.budgetYieldCause,
 		providerCallTimeoutMs: GEMINI_DETAIL_READ_TIMEOUT_MS,
 	});
 	return {
@@ -1855,6 +1928,7 @@ export async function readBoundedGrokDetailInventory(
 	options: {
 		maxDetailReads?: number;
 		cursor?: AttachmentInventoryCursor | null;
+		budgetYieldCause?: AttachmentInventoryCursor["yieldCause"] | null;
 		shouldYield?: () => Promise<boolean> | boolean;
 		listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
 		pacer?: BrowserInteractionGovernor;
@@ -1886,6 +1960,7 @@ export async function readBoundedGrokDetailInventory(
 		{
 			maxDetailReads: options.maxDetailReads,
 			cursor: options.cursor,
+			budgetYieldCause: options.budgetYieldCause,
 			shouldYield: options.shouldYield,
 			listOptions: options.listOptions,
 			pacer: options.pacer,
@@ -1928,6 +2003,7 @@ function createAttachmentInventoryCursor(
 		nextConversationIndex?: number;
 		conversationDetail?: AttachmentInventoryCursor["conversationDetail"];
 		yielded?: boolean;
+		yieldCause?: AttachmentInventoryCursor["yieldCause"] | null;
 	},
 ): AttachmentInventoryCursor {
 	return {
@@ -1944,6 +2020,7 @@ function createAttachmentInventoryCursor(
 		scannedConversations: input.scannedConversations,
 		conversationDetail: input.conversationDetail ?? null,
 		yielded: input.yielded === true,
+		yieldCause: input.yieldCause ?? null,
 	};
 }
 

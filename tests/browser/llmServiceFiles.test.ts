@@ -153,6 +153,121 @@ describe("llmService project name resolution", () => {
 		}
 	});
 
+	test("resolves ChatGPT project names from live discovery when the cache is empty", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-resolve-empty-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listProjects: vi.fn(async () => [
+				{ id: "g-p-lei", name: "Lei", provider: "chatgpt" as const },
+			]),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			const projectId = await service.resolveProjectIdByName("Lei", {
+				allowAutoRefresh: true,
+				listOptions: {},
+			});
+			expect(projectId).toBe("g-p-lei");
+			expect(provider.listProjects).toHaveBeenCalledTimes(1);
+			const refreshed = await store.readProjects(cacheContext);
+			expect(refreshed.items).toEqual([{ id: "g-p-lei", name: "Lei", provider: "chatgpt" }]);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("reports project_not_found only after ChatGPT live discovery completes without a match", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-resolve-miss-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listProjects: vi.fn(async () => []),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			await expect(
+				service.resolveProjectIdByName("Lei", {
+					allowAutoRefresh: true,
+					listOptions: {},
+				}),
+			).rejects.toMatchObject({
+				code: "project_not_found",
+				diagnostics: {
+					cacheState: "cache_empty",
+					liveRefreshState: "completed",
+					candidates: [],
+				},
+			});
+			await expect(
+				service.resolveProjectIdByName("Lei", {
+					allowAutoRefresh: true,
+					listOptions: {},
+				}),
+			).rejects.not.toThrow('No cached project named "Lei"');
+			expect(provider.listProjects).toHaveBeenCalledTimes(2);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("reports ChatGPT project discovery failures instead of cache-authority misses", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-resolve-failed-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listProjects: vi.fn(async () => {
+				throw new Error("ChatGPT account readiness blocked");
+			}),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			await expect(
+				service.resolveProjectIdByName("Lei", {
+					allowAutoRefresh: true,
+					listOptions: {},
+				}),
+			).rejects.toMatchObject({
+				code: "project_discovery_failed",
+				diagnostics: {
+					cacheState: "cache_empty",
+					liveRefreshState: "failed",
+					liveRefreshError: "ChatGPT account readiness blocked",
+				},
+			});
+			expect(provider.listProjects).toHaveBeenCalledTimes(1);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("can still use cached ChatGPT project ids when auto refresh is disabled", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-project-resolve-cache-"));
 		setAuracallHomeDirOverrideForTest(homeDir);

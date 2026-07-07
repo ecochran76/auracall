@@ -1,3 +1,53 @@
+## 2026-07-07 | Gemini Active Budget Cap
+
+- Focus: stop Gemini detail inventory from exceeding the live-follow active
+  interaction budget when a cycle has already spent reads on identity,
+  projects, and rails.
+- Result:
+  - detail inventory now receives only the active-interaction budget remaining
+    after identity, project index, root rail, project-conversation, and account
+    library reads;
+  - Gemini/Grok/ChatGPT detail inventory can accept a provider-interaction
+    budget yield cause when no detail reads remain;
+  - scrape-budget evidence now marks `providerInteractions.yielded=true` with
+    `yieldReason=provider-interaction-budget` whenever active provider
+    interactions consume the configured budget, even if the selected detail
+    frontier ended exactly on the last allowed read.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts -t "caps Gemini detail inventory" --maxWorkers 1`;
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1`;
+  - `pnpm run check`;
+  - `git diff --check`;
+  - installed user-runtime-service reinstall/restart, then forced one bounded
+    Gemini pass on `acctmirror_completion_2ee350f8-6135-403a-a3aa-e45d181db4b2`:
+    passCount advanced from 84 to 85, `providerInteractions.used=6`,
+    `remaining=0`, `yielded=true`,
+    `yieldReason=provider-interaction-budget`, active `chatLoads=3`, and the
+    pass materialized 2 assets.
+
+## 2026-07-07 | Gemini Materialization Churn Status Hydration
+
+- Focus: determine whether Gemini live-follow was progressing or reloading the
+  same chats without retiring completed materialization work.
+- Result:
+  - installed readback showed `auracall-gemini-pro` at `passCount=77`, but
+    `/status` still reported `localMaterialized.total=0` and 129 known remote
+    assets missing after successful terminal jobs;
+  - recent Gemini jobs proved real progress and churn at the same time:
+    `hmj_867f0481b45148cc926dce19bbf26d3f` succeeded with 2 assets from 3
+    conversations, while repeated reconciliation jobs kept reprocessing
+    `667691d5b0f04652`;
+  - root cause was status hydration returning early for multi-target status,
+    so terminal history materialization evidence was not applied to
+    `localMaterialized` counters unless only one account was present;
+  - `/status` now hydrates terminal history job evidence for every target while
+    preserving the previous guard that broad status does not scan archive
+    items.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "hydrates broad live-follow status from terminal history materialization jobs" --maxWorkers 1`;
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "broad account mirror status" --maxWorkers 1`;
+  - `pnpm run check`.
+
 ## 2026-07-07 | Plan 0153 Gemini Replacement Closeout
 
 - Focus: remove the last desired-enabled live-follow blocker by replacing the
@@ -40310,3 +40360,85 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `pnpm vitest run tests/browser/llmServiceFiles.test.ts --testNamePattern
   "project name resolution"`, `pnpm exec tsc --noEmit --pretty false`, and
   scoped Biome on the touched resolver/test files.
+- 2026-07-07: Tightened history materialization retry semantics for volatile
+  ChatGPT assets. Reconciliation now seeds its attempted-family set from prior
+  terminal failed/skipped materialization entries whose provider locations are
+  volatile (`sandbox:/...`, embedded sandbox ids, `sediment://...`, or
+  `chatgpt://file/...`) and whose reason confirms missing, expired, not found,
+  unavailable, or archive-linkage failure. This keeps expired sandbox outputs
+  and user-upload refs from being reselected on every live-follow
+  materialization cycle unless the operator uses force. Focused validation
+  passed with
+  `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`.
+- 2026-07-07: Installed and restarted the user API service to verify the
+  volatile-file materialization selector in the live runtime. The restarted
+  service ran as PID `14311` from `2026-07-07T17:56:21Z`. Proof job
+  `hmj_4563d253d031495d9bf7c69d056ca96e` on
+  `chatgpt/wsl-chrome-3` completed at `2026-07-07T17:57:56.987Z` with
+  `conversations=2`, `materialized=2`, `skipped=2`, `failed=0`; it did not
+  re-emit the prior terminal volatile failure
+  `sediment://file_0000000086e8722f88d657c40a159c62` from
+  `hmj_8ba10ee7c5e04c79b61f5c6b09140c02`. Restart interrupted Gemini job
+  `hmj_803f00bf294e400ab31dfe975bf92a89`, so replacement
+  `hmj_83cecfe91a6a4ff58d7d67c6bb8f27bc` was queued and completed at
+  `2026-07-07T18:00:24.458Z` with `conversations=3`, `materialized=2`,
+  `skipped=3`, `failed=0`. Final materialization queue readback:
+  `active=0`, `queued=0`.
+- 2026-07-07: Fixed Gemini scrape tab churn observed during materialization.
+  The Gemini adapter now honors `useProviderSession` / `providerSession` and
+  routes all provider closes through the same scoped-session lifecycle used by
+  ChatGPT, so a history-materialization context read plus artifact downloads can
+  reuse one Gemini CDP target instead of opening or closing tabs between each
+  step. The adapter also exposes the same disposable-tab lifecycle predicates as
+  ChatGPT for explicit inventory reads; ordinary scrape/materialization calls do
+  not force a new tab and still have no Gemini model-picker path. Focused
+  validation passed with
+  `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1` and
+  `pnpm exec tsc --noEmit --pretty false`.
+- 2026-07-07: Installed/restarted the patched runtime and smoke-checked Gemini
+  materialization target churn. `auracall-api.service` restarted as PID `33833`
+  at `2026-07-07T21:17:00Z`; active and queued history-materialization jobs
+  were both zero after startup. Capped installed-runtime probe
+  `hmj_393aa6e37ae14d4088f15ba2eb5c0e43` (`gemini`,
+  `gemini-stealthcdp`, reconciliation, `maxItems=1`, `assetKinds=artifacts`)
+  started at `2026-07-07T21:18:04.772Z` and skipped at
+  `2026-07-07T21:18:06.155Z` because cached reconciliation found no
+  downloadable Gemini assets. DevTools target sampling on port `45019` showed
+  three Gemini page targets before and throughout the probe; no additional
+  Gemini tab was created.
+- 2026-07-07: Observed the first real live-follow Gemini materialization after
+  the scoped-session patch. Job `hmj_157b5aa196104185b53e84b708e3269f`
+  (`gemini`, `auracall-gemini-pro`, `maxItems=3`, snapshot refresh) ran from
+  `2026-07-07T21:19:47.161Z` to `2026-07-07T21:20:07.267Z`, refreshed
+  conversation `667691d5b0f04652`, materialized
+  `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/667691d5b0f04652/files/gemini-artifact-667691d5b0f04652-1-0/a_morning_well_spent.mp4`
+  via `direct-remote-fetch`, and ended with `conversations=3`,
+  `materialized=1`, `skipped=3`, `failed=1`. DevTools sampling during the job
+  still showed exactly three Gemini page targets, but one artifact failed with
+  `WebSocket is not open: readyState 3 (CLOSED)` and later target sampling on
+  port `45019` returned `ECONNREFUSED`, so Gemini still needs a follow-up
+  retry/rebind path for provider target recycling during artifact transfer.
+- 2026-07-07: Implemented the Gemini CDP recycle retry/rebind follow-up.
+  `LlmService.withRetry` now treats `WebSocket is not open` like the existing
+  closed-WebSocket / `ECONNRESET` retryable connection churn, and scoped
+  conversation artifact materialization clears the retained provider session
+  before retrying so Gemini reattaches instead of reusing a dead CDP client.
+  Focused validation passed with
+  `pnpm vitest run tests/browser/llmServiceRateLimit.test.ts
+  tests/browser/geminiAdapter.test.ts --maxWorkers 1` and
+  `pnpm exec tsc --noEmit --pretty false`.
+- 2026-07-07: Installed/restarted the retry/rebind patch and reran the failing
+  Gemini conversation as a live proof. `auracall-api.service` restarted as PID
+  `23773` at `2026-07-07T21:35:00Z`; active and queued materialization jobs
+  were both zero after startup. Forced direct job
+  `hmj_2a9ec2c760ba470bb47c474ab6a49a0c` on conversation
+  `667691d5b0f04652` (`gemini`, `auracall-gemini-pro`,
+  `assetKinds=artifacts`, `maxItems=2`) ran from
+  `2026-07-07T21:35:27.254Z` to `2026-07-07T21:35:53.206Z` and materialized
+  both MP4 artifacts, including prior failed `Blueprint For Morning`, with
+  `materialized=2`, `failed=0`. Scrape telemetry recorded
+  `llmService.materializeConversationArtifacts.invokeProvider=3` and
+  `llmService.materializeConversationArtifacts.rebindScopedSession=1`, proving
+  one transfer retried after invalidating the retained scoped session. DevTools
+  sampling around the job showed the service-managed Gemini port reopening on
+  `45019` with three Gemini page targets and no tab-count growth.

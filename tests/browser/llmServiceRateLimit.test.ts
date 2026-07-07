@@ -70,6 +70,15 @@ class RateLimitTestLlmService extends LlmService {
 		return this.withRetry(fn, { action, retries });
 	}
 
+	async runGuardedWithRetryHook<T>(
+		action: string,
+		fn: () => Promise<T>,
+		retries: number,
+		beforeRetry: (error: unknown, attempt: number) => Promise<void> | void,
+	): Promise<T> {
+		return this.withRetry(fn, { action, retries, beforeRetry });
+	}
+
 	async runGuardedSkippingPostCommitQuiet<T>(action: string, fn: () => Promise<T>): Promise<T> {
 		return this.withRetry(fn, { action, retries: 0, skipPostCommitQuiet: true });
 	}
@@ -271,6 +280,60 @@ describe("llmService ChatGPT rate-limit guard", () => {
 			expect(delays).toHaveLength(1);
 			expect(delays[0]).toBeGreaterThanOrEqual(500);
 			expect(delays[0]).toBeLessThanOrEqual(750);
+		} finally {
+			setTimeoutSpy.mockRestore();
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("treats closed Gemini CDP WebSocket failures as retryable and runs retry hook", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-gemini-guard-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const provider = {
+			id: "gemini",
+			config: { id: "gemini", selectors: {} as never },
+		} satisfies LlmServiceAdapter;
+		const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+		const service = new RateLimitTestLlmService(userConfig, provider);
+		const errorMessage = "WebSocket is not open: readyState 3 (CLOSED)";
+		const retryHooks: Array<{ message: string; attempt: number }> = [];
+		const delays: number[] = [];
+		const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation(((
+			callback: TimerHandler,
+			ms?: number,
+		) => {
+			delays.push(typeof ms === "number" ? ms : 0);
+			if (typeof callback === "function") {
+				callback();
+			}
+			return 0 as unknown as ReturnType<typeof setTimeout>;
+		}) as unknown as typeof setTimeout);
+
+		let attempts = 0;
+		try {
+			await expect(
+				service.runGuardedWithRetryHook(
+					"materializeConversationArtifact",
+					async () => {
+						attempts += 1;
+						if (attempts === 1) {
+							throw new Error(errorMessage);
+						}
+						return { ok: true };
+					},
+					1,
+					(error, attempt) => {
+						retryHooks.push({
+							message: error instanceof Error ? error.message : String(error),
+							attempt,
+						});
+					},
+				),
+			).resolves.toEqual({ ok: true });
+
+			expect(attempts).toBe(2);
+			expect(retryHooks).toEqual([{ message: errorMessage, attempt: 0 }]);
+			expect(delays).toEqual([500]);
 		} finally {
 			setTimeoutSpy.mockRestore();
 			await rm(homeDir, { recursive: true, force: true });

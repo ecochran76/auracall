@@ -3336,6 +3336,186 @@ describe("history materialization service", () => {
 		});
 	});
 
+	it("does not reselect confirmed expired volatile ChatGPT artifacts during reconciliation", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-history-materialize-expired-volatile-"),
+		);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		let scheduled: (() => Promise<void>) | undefined;
+		const store = createInMemoryHistoryMaterializationJobStore([
+			buildHistoryMaterializationJob({
+				id: "hmj_expired_sandbox",
+				status: "succeeded",
+				request: {
+					provider: "chatgpt",
+					runtimeProfile: "default",
+					boundIdentityKey: "user@example.com",
+					reconcile: true,
+					assetKinds: ["artifacts"],
+				},
+				result: {
+					object: "history_materialization_result",
+					generatedAt: "2026-05-22T18:19:00.000Z",
+					status: "skipped",
+					target: null,
+					source: { type: "reconciliation", provider: "chatgpt" },
+					manifestPaths: [],
+					entries: [
+						{
+							kind: "artifact",
+							providerId:
+								"turn_1:download:sandbox:/mnt/data/expired_upload.csv",
+							title: "Expired upload.csv",
+							status: "failed",
+							localPath: null,
+							remoteUrl: "sandbox:/mnt/data/expired_upload.csv",
+							cacheKey: null,
+							checksumSha256: null,
+							mimeType: "text/csv",
+							size: null,
+							materializationMethod: null,
+							reason: "expired sandbox link not found",
+							archiveItemId: null,
+							assetRoute: null,
+						},
+					],
+					archiveItems: [],
+					metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 1 },
+					message: "Expired volatile artifact fixture.",
+				},
+			}),
+		]);
+		const readCatalog = vi.fn(async () => ({
+			object: "account_mirror_catalog" as const,
+			generatedAt: "2026-05-22T18:20:00.000Z",
+			kind: "conversations" as const,
+			limit: 500,
+			entries: [
+				{
+					provider: "chatgpt" as const,
+					runtimeProfileId: "default",
+					browserProfileId: "default",
+					boundIdentityKey: "user@example.com",
+					status: "eligible" as const,
+					reason: "eligible" as const,
+					mirrorCompleteness: {
+						state: "complete" as const,
+						summary: "Complete.",
+						remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+						signals: {
+							projectsTruncated: false,
+							conversationsTruncated: false,
+							attachmentInventoryTruncated: false,
+							attachmentCursorPresent: false,
+						},
+					},
+					counts: {
+						projects: 0,
+						conversations: 2,
+						artifacts: 2,
+						files: 0,
+						media: 0,
+					},
+					manifests: {
+						projects: [],
+						conversations: [
+							{
+								id: "conv_expired",
+								title: "Expired volatile artifact",
+								provider: "chatgpt" as const,
+								cachedArtifactCount: 1,
+								cachedFileCount: 0,
+							},
+							{
+								id: "conv_live",
+								title: "Live artifact",
+								provider: "chatgpt" as const,
+								cachedArtifactCount: 1,
+								cachedFileCount: 0,
+							},
+						],
+						artifacts: [
+							{
+								id: "turn_1:download:sandbox:/mnt/data/expired_upload.csv",
+								title: "Expired upload.csv",
+								provider: "chatgpt" as const,
+								conversationId: "conv_expired",
+								uri: "sandbox:/mnt/data/expired_upload.csv",
+								metadata: { source: "download" },
+							},
+							{
+								id: "turn_2:download:sandbox:/mnt/data/live_upload.csv",
+								title: "Live upload.csv",
+								provider: "chatgpt" as const,
+								conversationId: "conv_live",
+								uri: "sandbox:/mnt/data/live_upload.csv",
+								metadata: { source: "download" },
+							},
+						],
+						files: [],
+						media: [],
+					},
+				},
+			],
+			metrics: {
+				targets: 1,
+				projects: 0,
+				conversations: 2,
+				artifacts: 2,
+				files: 0,
+				media: 0,
+			},
+		}));
+		const materializeConversation = vi.fn(
+			async (target): Promise<HistoryMaterializationResult> => ({
+				object: "history_materialization_result",
+				generatedAt: "2026-05-22T18:21:00.000Z",
+				status: "skipped",
+				target,
+				source: { type: "reconciliation", provider: "chatgpt" },
+				manifestPaths: [],
+				entries: [],
+				archiveItems: [],
+				metrics: { conversations: 1, materialized: 0, skipped: 1, failed: 0 },
+				message: "No downloadable assets.",
+			}),
+		);
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog,
+				readItem: vi.fn(),
+			},
+			store,
+			generateId: () => "hmj_reconcile_after_expired",
+			now: sequenceNow([
+				"2026-05-22T18:20:00.000Z",
+				"2026-05-22T18:20:01.000Z",
+				"2026-05-22T18:20:02.000Z",
+			]),
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation,
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			runtimeProfile: "default",
+			boundIdentityKey: "user@example.com",
+			reconcile: true,
+			assetKinds: ["artifacts"],
+			maxItems: 5,
+		});
+		if (!scheduled) throw new Error("Expected job to be scheduled.");
+		await scheduled();
+
+		expect(materializeConversation).toHaveBeenCalledTimes(1);
+		expect(materializeConversation.mock.calls[0]?.[0]).toMatchObject({
+			conversationId: "conv_live",
+		});
+	});
+
 	it("deduplicates repeated reconciliation asset families and carries a remaining asset budget", async () => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-history-materialize-reconcile-dedupe-"),

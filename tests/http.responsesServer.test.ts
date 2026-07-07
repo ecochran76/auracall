@@ -2666,8 +2666,12 @@ describe("http responses adapter", () => {
 			});
 
 			expect(listArchiveItems).not.toHaveBeenCalled();
-			expect(listHistoryMaterializationJobs).not.toHaveBeenCalledWith(
-				expect.objectContaining({ status: "terminal" }),
+			expect(listHistoryMaterializationJobs).toHaveBeenCalledWith(
+				expect.objectContaining({
+					status: "terminal",
+					provider: "chatgpt",
+					runtimeProfile: "default",
+				}),
 			);
 		} finally {
 			await server.close();
@@ -2999,6 +3003,224 @@ describe("http responses adapter", () => {
 				`http://127.0.0.1:${server.port}/v1/account-mirrors/catalog/items/conv_1/asset?provider=chatgpt&runtimeProfile=default&kind=conversations`,
 			);
 			expect(missingAssetResponse.status).toBe(404);
+		} finally {
+			await server.close();
+		}
+	});
+
+	it("hydrates broad live-follow status from terminal history materialization jobs", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-http-account-mirror-status-history-hydration-"),
+		);
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const config = {
+			runtimeProfiles: {
+				default: {
+					browserProfile: "default",
+					defaultService: "chatgpt",
+					services: {
+						chatgpt: {
+							identity: { email: "operator@example.com" },
+							liveFollow: { enabled: true },
+						},
+					},
+				},
+				"auracall-gemini-pro": {
+					browserProfile: "auracall-gemini-pro",
+					defaultService: "gemini",
+					services: {
+						gemini: {
+							identity: { email: "operator@example.com" },
+							liveFollow: { enabled: true, materializationPolicy: "automatic" },
+						},
+					},
+				},
+			},
+		};
+		const assetInventory = {
+			state: "observed" as const,
+			summary: "Asset inventory was observed.",
+			detailScannedThisPass: { projects: 0, conversations: 1, total: 1 },
+			localMaterialized: { artifacts: 0, files: 0, media: 0 },
+			remoteKnownMissingLocal: { artifacts: 2, files: 0, media: 0 },
+			unknownOrDeferred: { artifacts: 0, files: 0, media: 0 },
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-07-07T21:50:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "operator@example.com",
+					metadataCounts: { projects: 0, conversations: 1, artifacts: 0, files: 0, media: 0 },
+					metadataEvidence: {
+						identitySource: "auth-session",
+						projectSampleIds: [],
+						conversationSampleIds: ["chatgpt_conv"],
+						truncated: { projects: false, conversations: false, artifacts: false },
+						assetInventory: {
+							...assetInventory,
+							remoteKnownMissingLocal: { artifacts: 0, files: 0, media: 0 },
+						},
+					},
+				},
+				"gemini:auracall-gemini-pro": {
+					detectedIdentityKey: "operator@example.com",
+					metadataCounts: { projects: 0, conversations: 1, artifacts: 2, files: 0, media: 0 },
+					metadataEvidence: {
+						identitySource: "auth-session",
+						projectSampleIds: [],
+						conversationSampleIds: ["667691d5b0f04652"],
+						truncated: { projects: false, conversations: false, artifacts: false },
+						assetInventory,
+					},
+				},
+			},
+		});
+		const listArchiveItems = vi.fn(async () => {
+			throw new Error("broad status must not list archive items");
+		});
+		const listHistoryMaterializationJobs = vi.fn(async (request) => ({
+			object: "history_materialization_jobs" as const,
+			generatedAt: "2026-07-07T21:50:00.000Z",
+			status: request?.status ?? null,
+			provider: request?.provider ?? null,
+			runtimeProfile: request?.runtimeProfile ?? null,
+			sourceType: request?.sourceType ?? null,
+			limit: request?.limit ?? 50,
+			jobs:
+				request?.provider === "gemini" && request?.runtimeProfile === "auracall-gemini-pro"
+					? [
+							{
+								object: "history_materialization_job" as const,
+								id: "hmj_gemini_done",
+								source: { type: "reconciliation" as const, provider: "gemini" as const },
+								request: {
+									provider: "gemini" as const,
+									runtimeProfile: "auracall-gemini-pro",
+									reconcile: true,
+									boundIdentityKey: "operator@example.com",
+								},
+								sourceKey: "{}",
+								status: "succeeded" as const,
+								createdAt: "2026-07-07T21:49:00.000Z",
+								updatedAt: "2026-07-07T21:49:30.000Z",
+								startedAt: "2026-07-07T21:49:01.000Z",
+								completedAt: "2026-07-07T21:49:30.000Z",
+								attemptCount: 1,
+								result: {
+									object: "history_materialization_result" as const,
+									generatedAt: "2026-07-07T21:49:30.000Z",
+									status: "materialized" as const,
+									target: {
+										provider: "gemini" as const,
+										runtimeProfile: "auracall-gemini-pro",
+										browserProfile: "auracall-gemini-pro",
+										boundIdentityKey: "operator@example.com",
+										conversationId: "667691d5b0f04652",
+										providerConversationUrl:
+											"https://gemini.google.com/app/667691d5b0f04652",
+										projectId: null,
+									},
+									source: { type: "reconciliation" as const, provider: "gemini" as const },
+									manifestPaths: [],
+									entries: [
+										{
+											kind: "artifact" as const,
+											providerId: "gemini-artifact:667691d5b0f04652:1:0",
+											title: "A Morning Well Spent",
+											status: "materialized" as const,
+											localPath: "/tmp/a_morning_well_spent.mp4",
+											remoteUrl: null,
+											cacheKey: null,
+											checksumSha256: null,
+											mimeType: "video/mp4",
+											size: 12,
+											materializationMethod: "download-button",
+											reason: null,
+											archiveItemId: null,
+											assetRoute: null,
+										},
+									],
+									archiveItems: [],
+									metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+									message: "History reconciliation materialized 1 asset.",
+								},
+								error: null,
+								message: "History reconciliation materialized 1 asset.",
+							} satisfies HistoryMaterializationJob,
+						]
+					: [],
+			metrics: {
+				total:
+					request?.provider === "gemini" && request?.runtimeProfile === "auracall-gemini-pro"
+						? 1
+						: 0,
+				byStatus:
+					request?.provider === "gemini" && request?.runtimeProfile === "auracall-gemini-pro"
+						? { succeeded: 1 }
+						: {},
+				active: 0,
+				terminal:
+					request?.provider === "gemini" && request?.runtimeProfile === "auracall-gemini-pro"
+						? 1
+						: 0,
+			},
+		}));
+
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0 },
+			{
+				now: () => new Date("2026-07-07T21:50:00.000Z"),
+				config,
+				accountMirrorStatusRegistry: registry,
+				runArchiveService: {
+					listItems: listArchiveItems,
+				} as unknown as RunArchiveService,
+				historyMaterializationService: {
+					listJobs: listHistoryMaterializationJobs,
+					createJob: vi.fn(),
+					readJob: vi.fn(),
+					cancelJob: vi.fn(),
+					runJob: vi.fn(),
+					recoverInterruptedJobs: vi.fn(async () => 0),
+				} as unknown as HistoryMaterializationService,
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			const payload = (await response.json()) as {
+				liveFollow: {
+					targets: {
+						accounts: Array<{
+							provider: string;
+							runtimeProfileId: string;
+							materializationBacklog: {
+								localMaterialized: { artifacts: number; total: number };
+								remoteKnownMissingLocal: { artifacts: number; total: number };
+							} | null;
+						}>;
+					};
+				};
+			};
+			const gemini = payload.liveFollow.targets.accounts.find(
+				(account) =>
+					account.provider === "gemini" &&
+					account.runtimeProfileId === "auracall-gemini-pro",
+			);
+			expect(gemini?.materializationBacklog).toMatchObject({
+				localMaterialized: { artifacts: 1, total: 1 },
+			});
+			expect(listArchiveItems).not.toHaveBeenCalled();
+			expect(listHistoryMaterializationJobs).toHaveBeenCalledWith(
+				expect.objectContaining({
+					status: "terminal",
+					provider: "gemini",
+					runtimeProfile: "auracall-gemini-pro",
+				}),
+			);
 		} finally {
 			await server.close();
 		}

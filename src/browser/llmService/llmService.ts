@@ -1648,6 +1648,16 @@ export abstract class LlmService {
 						{
 							action: "materializeConversationArtifact",
 							skipPostCommitQuiet: listOptions.useProviderSession === true,
+							beforeRetry:
+								listOptions.useProviderSession === true
+									? async () => {
+											recordBrowserScrapeProviderAction(
+												listOptions,
+												"llmService.materializeConversationArtifacts.rebindScopedSession",
+											);
+											await closeScopedProviderSession(listOptions);
+										}
+									: undefined,
 						},
 					);
 					if (!file) {
@@ -1740,7 +1750,19 @@ export abstract class LlmService {
 					options?.projectId,
 					listOptions,
 				) as Promise<FileRef | null>,
-			{ action: "materializeConversationArtifact" },
+			{
+				action: "materializeConversationArtifact",
+				beforeRetry:
+					listOptions.useProviderSession === true
+						? async () => {
+								recordBrowserScrapeProviderAction(
+									listOptions,
+									"llmService.materializeConversationArtifact.rebindScopedSession",
+								);
+								await closeScopedProviderSession(listOptions);
+							}
+						: undefined,
+			},
 		);
 	}
 
@@ -2336,9 +2358,39 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		const cacheContext = await this.resolveCacheContext(listOptions);
 		let cached = await this.cacheStore.readProjects(cacheContext);
+		const initialCacheState = resolveProjectResolutionCacheState(cached);
 		const allowAutoRefresh = options?.allowAutoRefresh ?? true;
 		let didRefresh = false;
+		let liveRefreshState: ProjectResolutionLiveRefreshState = "not_attempted";
+		let liveRefreshError: string | null = null;
 		const canList = Boolean(this.provider.listProjects);
+		const readLiveProjects = async (): Promise<Project[]> => {
+			try {
+				const items = await this.listProjects(listOptions);
+				await this.cacheStore.writeProjects(cacheContext, items);
+				cached = { items, fetchedAt: Date.now(), stale: false };
+				didRefresh = true;
+				liveRefreshState = "completed";
+				liveRefreshError = null;
+				return items;
+			} catch (error) {
+				liveRefreshState = "failed";
+				liveRefreshError = formatUnknownError(error);
+				throw createProjectResolutionError({
+					code: "project_discovery_failed",
+					provider: this.providerId,
+					projectName,
+					cacheState: initialCacheState,
+					cacheItemCount: cached.items.length,
+					liveRefreshState,
+					liveRefreshError,
+					candidates: cached.items,
+					runtimeProfile: getPreferredRuntimeProfileName(this.userConfig),
+					identityKey: cacheContext.identityKey ?? null,
+					configuredUrl: listOptions.configuredUrl ?? null,
+				});
+			}
+		};
 		const shouldRefreshBeforeCacheMatch =
 			this.providerId === "chatgpt" && allowAutoRefresh && canList && !options?.forceRefresh;
 		if (
@@ -2347,10 +2399,7 @@ export abstract class LlmService {
 				shouldRefreshBeforeCacheMatch) &&
 			canList
 		) {
-			const items = await this.listProjects(listOptions);
-			await this.cacheStore.writeProjects(cacheContext, items);
-			cached = { items, fetchedAt: Date.now(), stale: false };
-			didRefresh = true;
+			await readLiveProjects();
 		}
 		const { match, candidates } = resolveProjectNameMatch(cached.items, projectName, {
 			preferFirstCandidate: this.providerId === "chatgpt" && didRefresh,
@@ -2359,8 +2408,7 @@ export abstract class LlmService {
 			return match.id;
 		}
 		if (!didRefresh && allowAutoRefresh && canList) {
-			const items = await this.listProjects(listOptions);
-			await this.cacheStore.writeProjects(cacheContext, items);
+			const items = await readLiveProjects();
 			const retry = resolveProjectNameMatch(items, projectName, {
 				preferFirstCandidate: this.providerId === "chatgpt",
 			});
@@ -2375,9 +2423,21 @@ export abstract class LlmService {
 		if (options?.allowFallback && this.providerId === "grok") {
 			return projectName.trim();
 		}
-		throw new Error(
-			`No cached project named "${projectName}". Run "auracall projects" to refresh.`,
-		);
+		const resolutionCode =
+			allowAutoRefresh && canList && didRefresh ? "project_not_found" : "project_cache_miss";
+		throw createProjectResolutionError({
+			code: resolutionCode,
+			provider: this.providerId,
+			projectName,
+			cacheState: initialCacheState,
+			cacheItemCount: cached.items.length,
+			liveRefreshState,
+			liveRefreshError,
+			candidates: cached.items,
+			runtimeProfile: getPreferredRuntimeProfileName(this.userConfig),
+			identityKey: cacheContext.identityKey ?? null,
+			configuredUrl: listOptions.configuredUrl ?? null,
+		});
 	}
 
 	async resolveConversationIdByName(
@@ -2936,7 +2996,12 @@ export abstract class LlmService {
 
 	protected async withRetry<T>(
 		fn: () => Promise<T>,
-		options: { action: string; retries?: number; skipPostCommitQuiet?: boolean } = {
+		options: {
+			action: string;
+			retries?: number;
+			skipPostCommitQuiet?: boolean;
+			beforeRetry?: (error: unknown, attempt: number) => Promise<void> | void;
+		} = {
 			action: "operation",
 		},
 	): Promise<T> {
@@ -2954,6 +3019,7 @@ export abstract class LlmService {
 				if (attempt >= retries || !this.isRetryableError(nextError)) {
 					throw nextError;
 				}
+				await options.beforeRetry?.(nextError, attempt);
 				const delayMs = this.getRetryDelayMs(attempt, nextError);
 				await this.delay(delayMs);
 			}
@@ -3425,7 +3491,11 @@ export abstract class LlmService {
 		) {
 			return true;
 		}
-		return message.includes("WebSocket connection closed") || message.includes("ECONNRESET");
+		return (
+			message.includes("WebSocket connection closed") ||
+			message.includes("WebSocket is not open") ||
+			message.includes("ECONNRESET")
+		);
 	}
 
 	private getRetryDelayMs(attempt: number, error: unknown): number {
@@ -3504,6 +3574,85 @@ function resolveProjectNameMatch(
 		};
 	}
 	return result;
+}
+
+type ProjectResolutionErrorCode =
+	| "project_discovery_failed"
+	| "project_not_found"
+	| "project_cache_miss";
+type ProjectResolutionCacheState = "cache_empty" | "cache_stale" | "cache_available";
+type ProjectResolutionLiveRefreshState = "not_attempted" | "completed" | "failed";
+
+interface ProjectResolutionDiagnostics {
+	code: ProjectResolutionErrorCode;
+	provider: ProviderId;
+	projectName: string;
+	cacheState: ProjectResolutionCacheState;
+	cacheItemCount: number;
+	liveRefreshState: ProjectResolutionLiveRefreshState;
+	liveRefreshError: string | null;
+	candidates: string[];
+	runtimeProfile: string | null;
+	identityKey: string | null;
+	configuredUrl: string | null;
+}
+
+function resolveProjectResolutionCacheState(cached: {
+	items: Project[];
+	stale: boolean;
+}): ProjectResolutionCacheState {
+	if (cached.items.length === 0) return "cache_empty";
+	if (cached.stale) return "cache_stale";
+	return "cache_available";
+}
+
+function createProjectResolutionError(
+	input: Omit<ProjectResolutionDiagnostics, "candidates"> & {
+		candidates: Project[];
+	},
+): Error & {
+	code: ProjectResolutionErrorCode;
+	type: ProjectResolutionErrorCode;
+	diagnostics: ProjectResolutionDiagnostics;
+} {
+	const diagnostics: ProjectResolutionDiagnostics = {
+		...input,
+		candidates: input.candidates
+			.map((item) => item.name || item.id)
+			.filter(Boolean)
+			.slice(0, 25),
+	};
+	const message = formatProjectResolutionMessage(diagnostics);
+	return Object.assign(new Error(message), {
+		code: diagnostics.code,
+		type: diagnostics.code,
+		diagnostics,
+	});
+}
+
+function formatProjectResolutionMessage(diagnostics: ProjectResolutionDiagnostics): string {
+	const context = [
+		`provider=${diagnostics.provider}`,
+		`runtimeProfile=${diagnostics.runtimeProfile ?? "default"}`,
+		`identityKey=${diagnostics.identityKey ?? "unknown"}`,
+		`cacheState=${diagnostics.cacheState}`,
+		`cacheItems=${diagnostics.cacheItemCount}`,
+		`liveRefresh=${diagnostics.liveRefreshState}`,
+	];
+	const candidates = diagnostics.candidates.length
+		? ` candidates=${diagnostics.candidates.join(", ")}`
+		: " candidates=(none)";
+	if (diagnostics.code === "project_discovery_failed") {
+		return `Project discovery failed for "${diagnostics.projectName}" (${context.join(" ")}): ${diagnostics.liveRefreshError ?? "unknown error"}`;
+	}
+	if (diagnostics.code === "project_not_found") {
+		return `Project "${diagnostics.projectName}" was not found after live discovery (${context.join(" ")}).${candidates}`;
+	}
+	return `No cached project named "${diagnostics.projectName}" and live project discovery was not run (${context.join(" ")}). Run "auracall projects --target ${diagnostics.provider}" to refresh.${candidates}`;
+}
+
+function formatUnknownError(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }
 
 function resolveCacheStoreKind(value: unknown): CacheStoreKind {

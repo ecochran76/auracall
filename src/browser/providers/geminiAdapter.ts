@@ -2,32 +2,55 @@ import * as fs from "node:fs/promises";
 import path from "node:path";
 import CDP from "chrome-remote-interface";
 import type { Page } from "puppeteer-core";
+import type { BrowserToolsUiListResult } from "../../../packages/browser-service/src/browserTools.js";
 import {
 	connectToChromeTarget,
 	openOrReuseChromeTarget,
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
 import {
-	buildBrowserDomSearchExpression,
 	type BrowserDomSearchMatch,
 	type BrowserDomSearchOptions,
+	buildBrowserDomSearchExpression,
 } from "../../../packages/browser-service/src/service/domSearch.js";
 import { beginBrowserMutation } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import {
-	buildGeminiActivityEvidenceExpression,
-	coerceGeminiActivityEvidence,
-	type GeminiActivityEvidence,
-} from "./geminiEvidence.js";
-import type { BrowserToolsUiListResult } from "../../../packages/browser-service/src/browserTools.js";
+	requireBundledServiceBaseUrl,
+	requireBundledServiceCompatibleHosts,
+	requireBundledServiceRouteTemplate,
+	resolveBundledServiceComposerKnownLabels,
+	resolveBundledServiceFeatureDetector,
+	resolveBundledServiceFeatureFlagTokens,
+} from "../../services/registry.js";
+import { GeminiFeatureSchema } from "../llmService/providers/schema.js";
 import {
 	armDownloadCapture,
 	navigateAndSettle,
 	pressButton,
 	setInputValue,
 	submitInlineRename,
-	waitForPredicate,
 	waitForDownloadCapture,
+	waitForPredicate,
 } from "../service/ui.js";
 import type { ChromeClient } from "../types.js";
+import type {
+	Conversation,
+	ConversationArtifact,
+	ConversationContext,
+	ConversationMessage,
+	FileRef,
+	Project,
+	ProjectMemoryMode,
+} from "./domain.js";
+import {
+	buildGeminiActivityEvidenceExpression,
+	coerceGeminiActivityEvidence,
+	type GeminiActivityEvidence,
+} from "./geminiEvidence.js";
+import {
+	assertProviderIdentityPreflight,
+	checkProviderIdentityPreflight,
+	providerIdentityPreflightRequested,
+} from "./identityPreflight.js";
 import {
 	annotateClientMutationContext,
 	resolveMutationAudit,
@@ -42,29 +65,6 @@ import type {
 	BrowserProviderPromptResult,
 	ProviderUserIdentity,
 } from "./types.js";
-import {
-	assertProviderIdentityPreflight,
-	checkProviderIdentityPreflight,
-	providerIdentityPreflightRequested,
-} from "./identityPreflight.js";
-import type {
-	Conversation,
-	ConversationArtifact,
-	ConversationContext,
-	ConversationMessage,
-	FileRef,
-	Project,
-	ProjectMemoryMode,
-} from "./domain.js";
-import {
-	requireBundledServiceBaseUrl,
-	requireBundledServiceCompatibleHosts,
-	requireBundledServiceRouteTemplate,
-	resolveBundledServiceComposerKnownLabels,
-	resolveBundledServiceFeatureDetector,
-	resolveBundledServiceFeatureFlagTokens,
-} from "../../services/registry.js";
-import { GeminiFeatureSchema } from "../llmService/providers/schema.js";
 
 const GEMINI_BASE_URL = requireBundledServiceBaseUrl("gemini");
 const GEMINI_APP_URL = requireBundledServiceRouteTemplate("gemini", "app");
@@ -1125,16 +1125,32 @@ async function connectToGeminiTab(
 	host: string;
 	port: number;
 	usedExisting: boolean;
+	borrowedFromSession?: boolean;
 }> {
 	let host = options?.host ?? "127.0.0.1";
 	let port = options?.port ?? resolvePortFromEnv();
 	const preferredUrl = urlOverride ?? options?.configuredUrl ?? GEMINI_APP_URL;
+	const forceNewDisposableTab = shouldForceNewGeminiTabConnection(options);
+	if (port) {
+		const scopedConnection = readGeminiScopedSession(
+			options,
+			buildGeminiScopedSessionKey(host, port, preferredUrl),
+		);
+		if (scopedConnection) {
+			return {
+				...scopedConnection,
+				shouldClose: false,
+				usedExisting: true,
+				borrowedFromSession: true,
+			};
+		}
+	}
 	const allowDirectTabReuse = canReuseGeminiResolvedTabTarget(options?.tabUrl, preferredUrl);
 	if (options?.tabTargetId && port && allowDirectTabReuse) {
 		try {
 			const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
 			await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-			return {
+			const connection = {
 				client,
 				targetId: options.tabTargetId,
 				shouldClose: false,
@@ -1142,6 +1158,12 @@ async function connectToGeminiTab(
 				port,
 				usedExisting: true,
 			};
+			retainGeminiScopedSession(
+				options,
+				buildGeminiScopedSessionKey(host, port, preferredUrl),
+				connection,
+			);
+			return connection;
 		} catch {
 			// Resolve again below if the cached target id is stale.
 		}
@@ -1170,7 +1192,9 @@ async function connectToGeminiTab(
 		});
 		host = target.host ?? host;
 		port = target.port ?? port;
-		resolvedTargetIdFromService = resolveGeminiTargetId(target.tab);
+		resolvedTargetIdFromService = forceNewDisposableTab
+			? undefined
+			: resolveGeminiTargetId(target.tab);
 	}
 	if ((!port || !host) && options?.browserService) {
 		const target = await options.browserService.resolveDevToolsTarget({
@@ -1188,10 +1212,20 @@ async function connectToGeminiTab(
 		);
 	}
 
+	const sessionKey = buildGeminiScopedSessionKey(host, port, preferredUrl);
+	const scopedConnection = readGeminiScopedSession(options, sessionKey);
+	if (scopedConnection) {
+		return {
+			...scopedConnection,
+			shouldClose: false,
+			usedExisting: true,
+			borrowedFromSession: true,
+		};
+	}
 	const targets = await CDP.List({ host, port });
-	const candidates = targets.filter(
-		(target) => target.type === "page" && isGeminiUrl(target.url ?? ""),
-	);
+	const candidates = forceNewDisposableTab
+		? []
+		: targets.filter((target) => target.type === "page" && isGeminiUrl(target.url ?? ""));
 	const serviceResolved = resolvedTargetIdFromService
 		? candidates.find((target) => resolveGeminiTargetId(target) === resolvedTargetIdFromService)
 		: undefined;
@@ -1219,7 +1253,92 @@ async function connectToGeminiTab(
 	const client = await connectToChromeTarget({ host, port, target: targetId });
 	await Promise.all([client.Page.enable(), client.Runtime.enable()]);
 	annotateClientMutationContext(client, options, "provider:gemini");
-	return { client, targetId, shouldClose, host, port, usedExisting };
+	const connection = { client, targetId, shouldClose, host, port, usedExisting };
+	retainGeminiScopedSession(options, sessionKey, connection);
+	return connection;
+}
+
+type GeminiTabConnection = Awaited<ReturnType<typeof connectToGeminiTab>>;
+type GeminiScopedTabSessionValue = {
+	connection: GeminiTabConnection;
+};
+
+function shouldDisposeGeminiTabConnection(
+	connection: Pick<GeminiTabConnection, "shouldClose" | "targetId">,
+	options?: BrowserProviderListOptions,
+): boolean {
+	if (options?.tabLifecycle !== "dispose-new") return false;
+	if (options.preserveActiveTab === true) return false;
+	if (options.tabTargetId) return false;
+	return Boolean(connection.shouldClose && connection.targetId);
+}
+
+async function closeGeminiTabConnection(
+	connection: Pick<
+		GeminiTabConnection,
+		"client" | "targetId" | "shouldClose" | "host" | "port" | "borrowedFromSession"
+	>,
+	options?: BrowserProviderListOptions,
+): Promise<void> {
+	if (connection.borrowedFromSession) return;
+	const retainedSession = options?.providerSession?.value as
+		| Partial<GeminiScopedTabSessionValue>
+		| undefined;
+	if (options?.useProviderSession && retainedSession?.connection === connection) return;
+	await connection.client.close().catch(() => undefined);
+	if (!shouldDisposeGeminiTabConnection(connection, options)) return;
+	await CDP.Close({
+		host: connection.host,
+		port: connection.port,
+		id: connection.targetId as string,
+	}).catch(() => undefined);
+}
+
+export const closeGeminiTabConnectionForTest = closeGeminiTabConnection;
+export const shouldDisposeGeminiTabConnectionForTest = shouldDisposeGeminiTabConnection;
+
+function shouldForceNewGeminiTabConnection(options?: BrowserProviderListOptions): boolean {
+	if (options?.tabLifecycle !== "dispose-new") return false;
+	if (options.preserveActiveTab === true) return false;
+	if (options.tabTargetId) return false;
+	return true;
+}
+
+export const shouldForceNewGeminiTabConnectionForTest = shouldForceNewGeminiTabConnection;
+
+function buildGeminiScopedSessionKey(host: string, port: number, preferredUrl: string): string {
+	return `gemini:${host}:${port}:${preferredUrl}`;
+}
+
+function readGeminiScopedSession(
+	options: BrowserProviderListOptions | undefined,
+	key: string,
+): GeminiTabConnection | null {
+	const session = options?.providerSession;
+	if (!options?.useProviderSession || !session) return null;
+	if (session.providerId !== "gemini" || session.key !== key) return null;
+	const value = session.value as Partial<GeminiScopedTabSessionValue> | null;
+	return value?.connection ?? null;
+}
+
+function retainGeminiScopedSession(
+	options: BrowserProviderListOptions | undefined,
+	key: string,
+	connection: GeminiTabConnection,
+): void {
+	if (!options?.useProviderSession || options.providerSession) return;
+	options.providerSession = {
+		providerId: "gemini",
+		key,
+		value: { connection } satisfies GeminiScopedTabSessionValue,
+		close: async () => {
+			options.providerSession = undefined;
+			await closeGeminiTabConnection(connection, {
+				...options,
+				useProviderSession: false,
+			});
+		},
+	};
 }
 
 type GeminiProjectProbe = {
@@ -7290,48 +7409,48 @@ export function createGeminiAdapter(): Pick<
 		async getUserIdentity(
 			options?: BrowserProviderListOptions,
 		): Promise<ProviderUserIdentity | null> {
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(
+					options,
+					resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
+				);
 			try {
 				return await readGeminiUserIdentity(client);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(
+					options,
+					resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
+				);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				return await readGeminiFeatureSignature(client);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				GEMINI_GEMS_VIEW_URL,
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, GEMINI_GEMS_VIEW_URL);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await navigateToGeminiGemsViewPage(client);
 				return await scrapeGeminiProjects(client);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async listConversations(
@@ -7340,10 +7459,8 @@ export function createGeminiAdapter(): Pick<
 		): Promise<Conversation[]> {
 			const normalizedProjectId = normalizeGeminiProjectId(projectId);
 			const targetUrl = resolveGeminiConversationRailTargetUrl(options, normalizedProjectId);
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				targetUrl,
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, targetUrl);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await navigateToGeminiConversationSurface(client, targetUrl);
@@ -7358,10 +7475,10 @@ export function createGeminiAdapter(): Pick<
 				}
 				return await scrapeGeminiConversations(client, normalizedProjectId ?? undefined);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async runPrompt(
@@ -7372,10 +7489,8 @@ export function createGeminiAdapter(): Pick<
 				input.targetUrl ?? options?.configuredUrl,
 				GEMINI_APP_URL,
 			);
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				targetUrl,
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, targetUrl);
 			const emitProgress = async (event: BrowserProviderPromptProgressEvent) => {
 				await input.onProgress?.(event);
 			};
@@ -7503,10 +7618,10 @@ export function createGeminiAdapter(): Pick<
 				);
 				return { ...result, tabTargetId: targetId ?? null };
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async createProject(
@@ -7519,18 +7634,16 @@ export function createGeminiAdapter(): Pick<
 			},
 			options?: BrowserProviderListOptions,
 		): Promise<Project | null> {
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				GEMINI_GEM_CREATE_URL,
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, GEMINI_GEM_CREATE_URL);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				return await createGeminiProjectWithClient(client, input);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async readConversationContext(
@@ -7542,20 +7655,21 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedConversationId) {
 				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiConversationRailTargetUrl(options, _projectId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(
+					options,
+					resolveGeminiConversationRailTargetUrl(options, _projectId),
+				);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				return await readGeminiConversationContextWithClient(client, normalizedConversationId, {
 					allowNavigation: options?.preserveActiveTab !== true,
 				});
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async readActiveConversationArtifacts(
@@ -7569,12 +7683,13 @@ export function createGeminiAdapter(): Pick<
 			if (!options?.tabTargetId && options?.allowNavigation !== true) {
 				throw new Error("Gemini active artifact read requires the submitted tab target id.");
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				options?.allowNavigation === true && options?.preserveActiveTab !== true
-					? resolveGeminiConversationUrl(normalizedConversationId)
-					: (options?.tabUrl ?? options?.configuredUrl ?? GEMINI_APP_URL),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(
+					options,
+					options?.allowNavigation === true && options?.preserveActiveTab !== true
+						? resolveGeminiConversationUrl(normalizedConversationId)
+						: (options?.tabUrl ?? options?.configuredUrl ?? GEMINI_APP_URL),
+				);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
@@ -7592,10 +7707,10 @@ export function createGeminiAdapter(): Pick<
 				);
 				return normalizeGeminiConversationArtifacts(context.artifacts);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async materializeConversationArtifact(
@@ -7609,10 +7724,11 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedConversationId) {
 				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiConversationRailTargetUrl(options, _projectId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(
+					options,
+					resolveGeminiConversationRailTargetUrl(options, _projectId),
+				);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
@@ -7631,10 +7747,10 @@ export function createGeminiAdapter(): Pick<
 					},
 				);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async downloadConversationFile(
@@ -7647,10 +7763,8 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedConversationId) {
 				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiConversationRailTargetUrl(options),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiConversationRailTargetUrl(options));
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
@@ -7668,10 +7782,10 @@ export function createGeminiAdapter(): Pick<
 					},
 				);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async renameConversation(
@@ -7684,18 +7798,16 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedConversationId) {
 				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiConversationUrl(normalizedConversationId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiConversationUrl(normalizedConversationId));
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await renameGeminiConversationOnPage(client, normalizedConversationId, newTitle);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async deleteConversation(
@@ -7707,10 +7819,8 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedConversationId) {
 				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiConversationUrl(normalizedConversationId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiConversationUrl(normalizedConversationId));
 			const trace: GeminiDeleteTrace = [];
 			try {
 				await assertGeminiExpectedIdentity(client, options);
@@ -7724,10 +7834,10 @@ export function createGeminiAdapter(): Pick<
 				const message = error instanceof Error ? error.message : String(error);
 				throw new Error(`${message} trace=${traceSummary}`);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async validateConversationUrl(
@@ -7740,18 +7850,16 @@ export function createGeminiAdapter(): Pick<
 				throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
 			}
 			const targetUrl = resolveGeminiConversationUrl(normalizedConversationId);
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				targetUrl,
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, targetUrl);
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await validateGeminiConversationUrlWithClient(client, normalizedConversationId);
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async renameProject(
@@ -7763,10 +7871,8 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedProjectId) {
 				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiEditProjectUrl(normalizedProjectId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiEditProjectUrl(normalizedProjectId));
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await navigateToGeminiEditPage(client, normalizedProjectId);
@@ -7807,10 +7913,10 @@ export function createGeminiAdapter(): Pick<
 					);
 				}
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async uploadProjectFiles(
@@ -7823,10 +7929,8 @@ export function createGeminiAdapter(): Pick<
 				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
 			}
 			if (filePaths.length === 0) return;
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiEditProjectUrl(normalizedProjectId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiEditProjectUrl(normalizedProjectId));
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await navigateToGeminiEditPage(client, normalizedProjectId);
@@ -7880,10 +7984,10 @@ export function createGeminiAdapter(): Pick<
 					}
 				}
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async listProjectFiles(
@@ -7894,10 +7998,8 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedProjectId) {
 				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiEditProjectUrl(normalizedProjectId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiEditProjectUrl(normalizedProjectId));
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await navigateToGeminiEditPage(client, normalizedProjectId);
@@ -7911,10 +8013,10 @@ export function createGeminiAdapter(): Pick<
 				}
 				return files;
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async deleteProjectFile(
@@ -7926,10 +8028,8 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedProjectId) {
 				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiEditProjectUrl(normalizedProjectId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiEditProjectUrl(normalizedProjectId));
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await navigateToGeminiEditPage(client, normalizedProjectId);
@@ -7970,10 +8070,10 @@ export function createGeminiAdapter(): Pick<
 					);
 				}
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 		async selectRemoveProjectItem(
@@ -7997,10 +8097,8 @@ export function createGeminiAdapter(): Pick<
 			if (!normalizedProjectId) {
 				throw new Error(`Invalid Gemini Gem id: ${projectId}`);
 			}
-			const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
-				options,
-				resolveGeminiProjectUrl(normalizedProjectId),
-			);
+			const { client, targetId, shouldClose, host, port, borrowedFromSession } =
+				await connectToGeminiTab(options, resolveGeminiProjectUrl(normalizedProjectId));
 			try {
 				await assertGeminiExpectedIdentity(client, options);
 				await openGeminiProjectActionsMenuOnProjectPage(client, normalizedProjectId);
@@ -8027,10 +8125,10 @@ export function createGeminiAdapter(): Pick<
 					);
 				}
 			} finally {
-				await client.close().catch(() => undefined);
-				if (shouldClose && targetId) {
-					await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
-				}
+				await closeGeminiTabConnection(
+					{ client, targetId, shouldClose, host, port, borrowedFromSession },
+					options,
+				);
 			}
 		},
 	};

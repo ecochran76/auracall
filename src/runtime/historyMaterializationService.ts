@@ -653,6 +653,7 @@ export function createHistoryMaterializationService(
 						materializeAccountLibraryFiles,
 						listAccountLibraryFiles,
 						materializeProjectSources,
+						jobStore: store,
 						now,
 					}),
 				);
@@ -918,6 +919,7 @@ async function materializeHistoryRequest(input: {
 		files: FileRef[];
 		manifestPath: string | null;
 	}>;
+	jobStore: HistoryMaterializationJobStore;
 	now: () => Date;
 }): Promise<HistoryMaterializationResult> {
 	const request = input.request;
@@ -1853,6 +1855,7 @@ async function materializeReconciliation(input: {
 	materializeMediaGeneration: (
 		request: HistoryMediaGenerationMaterializeInput,
 	) => Promise<MediaGenerationResponse>;
+	jobStore: HistoryMaterializationJobStore;
 	now: () => Date;
 }): Promise<HistoryMaterializationResult> {
 	const maxTargets = normalizeMaxItems(input.request.maxItems) ?? 10;
@@ -1947,6 +1950,14 @@ async function materializeReconciliation(input: {
 				selectedKinds,
 			});
 			for (const signature of archiveSignatures) {
+				attemptedAssetFamilySignatures.add(signature);
+			}
+			const terminalVolatileSignatures = await terminalVolatileAssetFamilySignatures({
+				jobStore: input.jobStore,
+				request: input.request,
+				selectedKinds,
+			});
+			for (const signature of terminalVolatileSignatures) {
 				attemptedAssetFamilySignatures.add(signature);
 			}
 			for (const entry of catalog.entries) {
@@ -4015,6 +4026,37 @@ async function materializedArchiveAssetFamilySignatures(input: {
 	return Array.from(signatures);
 }
 
+async function terminalVolatileAssetFamilySignatures(input: {
+	jobStore: HistoryMaterializationJobStore;
+	request: HistoryMaterializationCreateRequest;
+	selectedKinds: HistoryMaterializationAssetKind[];
+}): Promise<string[]> {
+	const signatures = new Set<string>();
+	for (const job of await input.jobStore.listJobs()) {
+		if (isActiveStatus(job.status)) continue;
+		if (input.request.provider && job.request.provider !== input.request.provider) continue;
+		if (
+			input.request.runtimeProfile &&
+			job.request.runtimeProfile !== input.request.runtimeProfile
+		) {
+			continue;
+		}
+		if (
+			input.request.boundIdentityKey &&
+			job.request.boundIdentityKey !== input.request.boundIdentityKey
+		) {
+			continue;
+		}
+		for (const entry of job.result?.entries ?? []) {
+			if (!isConfirmedVolatileMissingEntry(entry)) continue;
+			for (const signature of historyEntryAssetFamilySignatures(entry, input.selectedKinds)) {
+				signatures.add(signature);
+			}
+		}
+	}
+	return Array.from(signatures);
+}
+
 async function materializedAccountLibraryFileFamilySignatures(input: {
 	runArchiveService: RunArchiveService;
 	request: HistoryMaterializationCreateRequest;
@@ -4033,6 +4075,57 @@ async function materializedAccountLibraryFileFamilySignatures(input: {
 		if (signature) signatures.add(signature);
 	}
 	return Array.from(signatures);
+}
+
+function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEntry): boolean {
+	if (entry.status !== "failed" && entry.status !== "skipped") return false;
+	if (!isVolatileProviderAssetLocation(entry.remoteUrl) && !isVolatileProviderAssetLocation(entry.providerId)) {
+		return false;
+	}
+	const reason = entry.reason?.trim().toLowerCase() ?? "";
+	if (!reason) return true;
+	return (
+		reason.includes("expired") ||
+		reason.includes("not found") ||
+		reason.includes("not_found") ||
+		reason.includes("missing") ||
+		reason.includes("unavailable") ||
+		reason.includes("tile_not_found") ||
+		reason.includes("archive_linkage_missing")
+	);
+}
+
+function isVolatileProviderAssetLocation(value: string | null | undefined): boolean {
+	const normalized = value?.trim().toLowerCase();
+	return Boolean(
+		normalized?.startsWith("sandbox:") ||
+			normalized?.includes(":sandbox:/") ||
+			normalized?.startsWith("sediment://") ||
+			normalized?.startsWith("chatgpt://file/"),
+	);
+}
+
+function historyEntryAssetFamilySignatures(
+	entry: HistoryMaterializationManifestEntry,
+	selectedKinds: HistoryMaterializationAssetKind[],
+): string[] {
+	const field =
+		entry.kind === "artifact" ? "artifacts" : entry.kind === "file" ? "files" : "media";
+	if (!selectedKinds.includes(field)) return [];
+	const title = normalizeAssetFamilyTitle(entry.title ?? entry.providerId);
+	if (!title) return [];
+	const kind = entry.kind;
+	const sources = new Set<string>();
+	const source =
+		readAssetFamilySourceFromId(entry.providerId) ??
+		readAssetFamilySourceFromId(entry.remoteUrl);
+	if (source) sources.add(source.trim().toLowerCase());
+	sources.add("unknown");
+	if (entry.kind === "file") {
+		sources.add("conversation");
+		sources.add("file");
+	}
+	return Array.from(sources).map((candidateSource) => `${kind}:${candidateSource}:${title}`);
 }
 
 function archiveItemAccountLibraryFileFamilySignature(item: RunArchiveItem): string | null {

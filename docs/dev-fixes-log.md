@@ -1,3 +1,16 @@
+- 2026-07-07: Gemini detail inventory must be capped by the remaining active
+  interaction budget, not only by `maxPageReadsPerCycle`. A cycle that has
+  already spent identity, project index, root rail, project-conversation, or
+  account-library reads can otherwise exceed
+  `maxBrowserInteractionsPerMinute` before detail scraping starts. Clamp
+  provider detail reads to the remaining budget and report
+  `providerInteractions.yielded=true` with
+  `yieldReason=provider-interaction-budget` whenever active interactions
+  consume the configured budget. Installed proof after restart advanced
+  `auracall-gemini-pro` from passCount 84 to 85 with
+  `providerInteractions.used=6`, `remaining=0`, `yielded=true`,
+  `active.chatLoads=3`, and 2 assets materialized.
+
 - 2026-07-07: Capped history materialization can progress safely after
   target-level live-follow resume, but larger batches can still fail on local
   stale-threshold handling. `hmj_287fe1033232432cbbd075db0ded0b12`
@@ -19118,3 +19131,43 @@ browser-stage lifecycle observability, not transcript truncation.
   no provider guard correlation, then materialization job
   `hmj_52051faa252d4b27bbad34505e673c4c` materialized 2 Gemini assets from 3
   conversations with 0 failures.
+- 2026-07-07: Volatile ChatGPT asset references must become terminal retry
+  evidence after confirmed missing/expired materialization. Treat failed or
+  skipped `sandbox:/...`, embedded sandbox ids, `sediment://...`, and
+  `chatgpt://file/...` entries with missing/expired/not-found/unavailable
+  reasons as already attempted asset families during reconciliation selection,
+  so live follow does not keep reopening the same expired downloadable output
+  or user upload forever. Use `force` when an operator explicitly wants to
+  retry a terminal volatile reference.
+- 2026-07-07: Gemini scrape/materialization must honor scoped provider
+  sessions. If `useProviderSession` is set, retain the first Gemini CDP
+  connection on `providerSession`, borrow it for subsequent context/artifact
+  reads, and skip per-call client/target close until the scoped session closes.
+  Keep model/capability chooser interactions isolated to `runPrompt`; passive
+  scrape paths should attach, read DOM/download links, and return without
+  touching chooser controls.
+- 2026-07-07: Gemini scoped-session tab churn is distinct from target recycling
+  during artifact transfer. Installed job
+  `hmj_157b5aa196104185b53e84b708e3269f` kept Gemini page target count at
+  three, but one artifact still failed with
+  `WebSocket is not open: readyState 3 (CLOSED)` and later port `45019`
+  sampling hit `ECONNREFUSED`; add a retry/rebind path for Gemini
+  materialization when the CDP target or browser port closes mid-transfer.
+- 2026-07-07: Closed Gemini CDP WebSocket failures must invalidate retained
+  scoped sessions before retry. Treat `WebSocket is not open` as retryable in
+  `LlmService.withRetry`; when a scoped conversation artifact transfer retries,
+  close and clear `providerSession` first so the next attempt rebinds to a live
+  Gemini target instead of borrowing the dead session.
+- 2026-07-07: Live proof for Gemini retry/rebind should include scrape
+  telemetry, not just terminal job status. Forced job
+  `hmj_2a9ec2c760ba470bb47c474ab6a49a0c` reprocessed conversation
+  `667691d5b0f04652`, materialized both MP4 artifacts, and reported
+  `invokeProvider=3` with `rebindScopedSession=1`; the previously failed
+  `Blueprint For Morning` artifact is now cached at
+  `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/667691d5b0f04652/files/gemini-artifact-667691d5b0f04652-3-0/blueprint_for_morning.mp4`.
+- 2026-07-07: Broad `/status` must hydrate terminal history materialization
+  evidence for all account-mirror targets, not only single-entry status
+  readbacks. Keep archive item scans gated to single-target status, but allow
+  bounded terminal job reads per target so successful Gemini downloads advance
+  `localMaterialized` and reduce false missing-local backlog instead of
+  requeueing the same chat forever.
