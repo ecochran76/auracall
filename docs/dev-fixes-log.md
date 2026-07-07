@@ -1,3 +1,16 @@
+- 2026-07-07: Capped history materialization can progress safely after
+  target-level live-follow resume, but larger batches can still fail on local
+  stale-threshold handling. `hmj_287fe1033232432cbbd075db0ded0b12`
+  materialized 2 assets for `chatgpt/wsl-chrome-3`, and
+  `hmj_1c1fd9a68ae642708972cdbe02f8a345` materialized 1 asset for
+  `chatgpt/wsl-chrome-4` without provider guards or rate-limit warnings. The
+  `chatgpt/default` `maxItems=3` probe
+  `hmj_e93bde050f8041889136a32242ab7695` failed on local
+  `History materialization job exceeded running stale threshold (120000ms)`;
+  retrying with `maxItems=1` reached terminal `skipped` with no downloadable
+  assets and 0 failures. Treat this as queue/runtime hardening, not a
+  rate-limit threshold tuning problem.
+
 - 2026-07-07: Live-follow target rows need one synthesized next-action
   decision, not only separate `resumePolicy`, `routineDecision`, and
   `materializationBacklog` fields. Expose `targetDecision` with state, action,

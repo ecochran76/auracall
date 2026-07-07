@@ -1,3 +1,28 @@
+## 2026-07-07 | Plan 0153 Bounded Resume And Materialization Proof
+
+- Focus: execute the target-level resume/materialization path after installing
+  `targetDecision`.
+- Result:
+  - resumed `chatgpt/wsl-chrome-3` through bounded `run-one-pass`; it returned
+    to `idle_waiting`, `passCount=8`, `llmServiceRequests=0`, CDP calls `8`,
+    and no provider guard;
+  - resumed `chatgpt/default` through the same explicit bounded control path;
+    it now reports `targetDecision=materialization_required` instead of
+    `operator_paused`;
+  - started capped history materialization jobs for ChatGPT targets:
+    `hmj_287fe1033232432cbbd075db0ded0b12` materialized 2 assets for
+    `wsl-chrome-3`, `hmj_1c1fd9a68ae642708972cdbe02f8a345` materialized 1
+    asset for `wsl-chrome-4`, and bounded `wsl-chrome-2` / `default` probes
+    reached terminal skipped status with no materializable assets in their
+    sampled conversations;
+  - installed `/status` now shows desired-enabled paused count reduced to `1`,
+    with Gemini as the remaining paused/provider-repair-required target.
+- Validation:
+  - installed `/status` target readback;
+  - `auracall api mirror-completion-status` for the resumed completions;
+  - `auracall api history-materialization-jobs` terminal job readback;
+  - active history materialization job count `0`.
+
 ## 2026-07-07 | Live-Follow Target Decision Surface
 
 - Focus: make the Plan 0153 resume/materialization decision tree explicit on

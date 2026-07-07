@@ -32,6 +32,52 @@
     `chatgpt/wsl-chrome-3` cycle and start or explicitly policy-gate
     materialization progress.
 
+## Turn 326 | 2026-07-07
+
+- Active plan:
+  `docs/dev/plans/0153-2026-07-06-live-follow-target-resume-readiness.md`
+- Goal: execute the target-level resume/materialization proof after installing
+  the `targetDecision` readback.
+- Result:
+  - `chatgpt/wsl-chrome-3` completion
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` ran one
+    bounded `run-one-pass`, returned to `idle_waiting`, advanced to
+    `passCount=8`, and preserved `llmServiceRequests=0`, CDP calls `8`, and no
+    provider guard;
+  - `chatgpt/default` completion
+    `acctmirror_completion_f9756e54-af2c-438f-9516-a2a1c063783e` moved from
+    `operator_paused` to `idle_waiting` through the same explicit bounded
+    control path;
+  - unrelated target posture stayed bounded: Gemini remained
+    `provider_repair_required`, and no broad unpause occurred;
+  - materialization work was started through capped history-materialization
+    jobs:
+    - `hmj_287fe1033232432cbbd075db0ded0b12` for
+      `chatgpt/wsl-chrome-3`: `succeeded`, 3 conversations, 2 assets
+      materialized, 0 failed;
+    - `hmj_1c1fd9a68ae642708972cdbe02f8a345` for
+      `chatgpt/wsl-chrome-4`: `succeeded`, 3 conversations, 1 asset
+      materialized, 0 failed;
+    - `hmj_1801628928404d4ab2d02ac00c7204d7` for
+      `chatgpt/wsl-chrome-2`: `skipped`, 3 conversations, no downloadable
+      assets found, 0 failed;
+    - `hmj_dd01c900f66d4c54a24566614f1bd6b9` for `chatgpt/default`:
+      `skipped`, 1 conversation, no downloadable assets found, 0 failed;
+    - the larger default probe `hmj_e93bde050f8041889136a32242ab7695` failed
+      on local stale threshold `120000ms`, not a provider rate-limit warning.
+- Validation:
+  - installed `/status` after execution showed desired-enabled targets `6`,
+    paused `1`, attention-needed `1`, complete `5`, in-progress `1`;
+  - all ChatGPT desired-enabled rows were `idle_waiting` and provider guard
+    `null`;
+  - `auracall api history-materialization-jobs --status active --json` showed
+    active job count `0`.
+- Remaining scope:
+  - Gemini `auracall-gemini-pro` is still the only paused desired-enabled
+    target and needs the provider-specific bounded-left-rail replacement path;
+  - default ChatGPT materialization needs queue/runtime hardening before larger
+    batches because the `maxItems=3` probe hit the local stale threshold.
+
 ## Turn 323 | 2026-07-06
 
 - Active plan:

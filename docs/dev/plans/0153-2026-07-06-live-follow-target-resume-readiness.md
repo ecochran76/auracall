@@ -66,6 +66,40 @@ Disabled or unconfigured rows remain out of the subscribed-target success
 definition: `gemini/default`, `grok/windows-chrome-test`,
 `grok/wsl-chrome-2`, and `grok/auracall-grok-auto`.
 
+## Execution Evidence | 2026-07-07
+
+- Installed service PID `59885` exposed `targetDecision` from `/status`, then
+  target-level controls resumed both operator-paused ChatGPT rows without broad
+  unpausing:
+  - `chatgpt/wsl-chrome-3` completion
+    `acctmirror_completion_a364044f-2779-4e00-b866-e6421f2f1aae` ran one
+    bounded pass, returned to `idle_waiting`, advanced to `passCount=8`, and
+    kept `llmServiceRequests=0`, CDP calls `8`, and provider guard `null`.
+  - `chatgpt/default` completion
+    `acctmirror_completion_f9756e54-af2c-438f-9516-a2a1c063783e` moved from
+    `operator_paused` to `idle_waiting` through the same bounded control path;
+    it now reports `targetDecision=materialization_required`.
+- Capped account-history materialization jobs were started after the ChatGPT
+  resume proof:
+  - `hmj_287fe1033232432cbbd075db0ded0b12` for
+    `chatgpt/wsl-chrome-3`: `succeeded`, 3 conversations, 2 assets
+    materialized, 0 failed.
+  - `hmj_1c1fd9a68ae642708972cdbe02f8a345` for
+    `chatgpt/wsl-chrome-4`: `succeeded`, 3 conversations, 1 asset
+    materialized, 0 failed.
+  - `hmj_1801628928404d4ab2d02ac00c7204d7` for
+    `chatgpt/wsl-chrome-2`: `skipped`, 3 conversations, no downloadable
+    assets found, 0 failed.
+  - `hmj_dd01c900f66d4c54a24566614f1bd6b9` for `chatgpt/default`: `skipped`,
+    1 conversation, no downloadable assets found, 0 failed. The prior default
+    `maxItems=3` probe, `hmj_e93bde050f8041889136a32242ab7695`, failed on the
+    local stale threshold after 120000 ms and needs queue/runtime hardening
+    before larger default materialization batches.
+- Final installed readback after the bounded work: desired-enabled targets `6`,
+  paused `1`, attention-needed `1`, complete `5`, in-progress `1`; all ChatGPT
+  rows are `idle_waiting` and guard-clear, while
+  `gemini/auracall-gemini-pro` remains `provider_repair_required`.
+
 ## Decision Tree
 
 1. If a target is already `safe_steady_follow`, keep it on cadence and do not
@@ -138,7 +172,7 @@ definition: `gemini/default`, `grok/windows-chrome-test`,
 - [x] Installed `/status` or an equivalent operator readback shows a target
   resume matrix with subscribed targets, `resumePolicy`, synthesized
   `targetDecision`, next permitted action, materialization posture, and blocker.
-- [ ] Operator-paused ChatGPT targets can only resume through explicit
+- [x] Operator-paused ChatGPT targets can only resume through explicit
   target-level controls, and one installed proof shows no unrelated paused
   target was upgraded.
 - [ ] Gemini provider-blocked live follow has a bounded repair/replacement path
@@ -146,7 +180,7 @@ definition: `gemini/default`, `grok/windows-chrome-test`,
 - [x] Grok false identity-blocked live follow no longer treats provider
   display/user labels as mismatches against configured browser tenant email,
   and stale mismatch readback no longer keeps the target blocked.
-- [ ] Materialization/account-library backlog remains separate from
+- [x] Materialization/account-library backlog remains separate from
   metadata-current live-follow freshness in status and scheduling behavior.
 - [ ] Installed broad reconciliation leaves no desired-enabled target in an
   ambiguous state: each is safe steady-follow, safe bounded resume, explicit
