@@ -58,6 +58,11 @@
     `allow-once`, disappearance confirmation, expected response completion,
     zero `always-allow`/`Answer now` clicks, and zero LitScout writes; see
     `docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`
+  - Plan 0290 provider-free-proved sequential-handler readiness and fresh
+    coordinates, but its sole two-call live prompt exposed only one confirmed
+    approval and a singular provider trace; do not cite its expected token as
+    two-call proof. See
+    `docs/dev/notes/2026-08-15-plan0290-approval-settle-live-inconclusive.json`
 - ChatGPT developer-app lifecycle:
   - provider-free contract tests:
     `pnpm vitest run tests/browser-service/devToolsConnection.test.ts tests/browser-service/browserServiceCore.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`

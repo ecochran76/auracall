@@ -15,15 +15,18 @@ Lane: P01
   LitScout effects and exact cleanup passed; a provider-free pre-click
   settle/fresh-coordinate repair is required before a successor canary.
 
-- Active ChatGPT approval pre-click settle and successor live proof:
+- Closed provider-free accepted ChatGPT approval settle; live proof inconclusive:
   [docs/dev/plans/0290-2026-08-15-chatgpt-approval-pre-click-settle.md](docs/dev/plans/0290-2026-08-15-chatgpt-approval-pre-click-settle.md)
   A provider-free public-seam regression will require a stable exact re-probe
   and fresh coordinates before one trusted pointer sequence. After the repair
   is green and pushed, one fresh zero-retry LitScout prompt may prove two
   sequential `Allow once` actions with zero canonical effects.
-  The red/green is now implemented: the affected gate passes 143/143 plus
-  typecheck, build, scoped lint, current CodeGraph, and diff hygiene. The one
-  fresh live canary remains.
+  Repair `d949935d` is pushed after 143/143 affected tests plus typecheck,
+  build, scoped lint, current CodeGraph, and diff hygiene. The sole live prompt
+  confirmed one exact `Allow once` and returned the expected token, but its
+  singular provider trace and absent rendered target evidence did not prove a
+  second call or approval. Zero LitScout effects and exact cleanup passed; no
+  retry ran.
 
 - Closed accepted browser-context liveness repair and LitScout approval proof:
   [docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md](docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md)

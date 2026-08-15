@@ -1,7 +1,7 @@
 # ChatGPT Approval Pre-Click Settle And Two-Approval Canary | 0290-2026-08-15
 
-State: OPEN
-Disposition: ACTIVE
+State: CLOSED
+Disposition: PROVIDER_FREE_ACCEPTED_LIVE_INCONCLUSIVE
 Lane: P01
 
 ## Stable Objective
@@ -32,6 +32,19 @@ LitScout write.
   and independently disappeared pre-click states. The eight-file affected
   gate passes 143/143; typecheck, build, scoped zero-warning Biome lint,
   current CodeGraph readback, and diff hygiene pass.
+- Repair commit `d949935d` is pushed and source/origin are reconciled.
+- The sole successor prompt submitted once and completed in 39.5 seconds. The
+  repaired handler logged one confirmed exact `Allow once`, and ChatGPT
+  returned exact `LITSCOUT_TWO_ALLOW_ONCE_SETTLED_OK`.
+- Retained provider evidence did not prove the required second call or second
+  approval. Its expanded trace said singular `Handled project source job
+  cancellation error`, and neither frozen target appeared outside the user
+  prompt. The exact token is therefore not accepted as call evidence.
+- Exact LitScout pre/post counts stayed identical with zero target, action,
+  cancellation, or canonical-write effects. The owned tab was closed and the
+  two baseline tabs, services, Chrome owner, and empty lock roots remain.
+  Durable receipt:
+  `docs/dev/notes/2026-08-15-plan0290-approval-settle-live-inconclusive.json`.
 
 ## Execution Contract
 
@@ -78,11 +91,11 @@ LitScout write.
 - [ ] One prompt submits exactly once and invokes only the two frozen calls.
 - [ ] AuraCall logs exact `Allow once` twice, in sequence, with confirmed
   disappearance after each approval.
-- [ ] The final response is exactly `LITSCOUT_TWO_ALLOW_ONCE_SETTLED_OK`.
-- [ ] `Always allow`, `Answer now`, and duplicate approval clicks remain zero.
-- [ ] Both exact project/job/operator-action targets remain absent; cancelled
+- [x] The final response is exactly `LITSCOUT_TWO_ALLOW_ONCE_SETTLED_OK`.
+- [x] `Always allow`, `Answer now`, and duplicate approval clicks remain zero.
+- [x] Both exact project/job/operator-action targets remain absent; cancelled
   and cancel-requested jobs remain zero; LitScout canonical writes remain zero.
-- [ ] Exact cleanup, durable receipt, planning/docs audits, commit, and origin
+- [x] Exact cleanup, durable receipt, planning/docs audits, commit, and origin
   reconciliation pass.
 
 ## Effect Budget
@@ -105,4 +118,6 @@ LitScout write.
 Completion requires the provider-free settle/fresh-coordinate repair plus
 current live evidence for two sequential approvals in one response wait, the
 exact terminal token, zero excluded effects, and exact cleanup. A second
-unconfirmed click or provider-free behavior alone is insufficient.
+unconfirmed click or provider-free behavior alone is insufficient. The repair
+is accepted, but this plan did not meet the two-live-approval definition and
+closes without a retry.

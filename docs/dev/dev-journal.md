@@ -46866,3 +46866,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Evidence: 12/12 focused tests, 143/143 affected tests, typecheck, production
   build, scoped zero-warning Biome lint, current CodeGraph readback, and diff
   hygiene pass. The fresh two-approval live canary remains.
+
+## 2026-08-15 | Plan 0290 closes live inconclusive
+
+- Pushed repair `d949935d` preceded one fresh source-direct canary. The prompt
+  submitted once, logged one confirmed exact `Allow once`, and returned exact
+  `LITSCOUT_TWO_ALLOW_ONCE_SETTLED_OK` in 39.5 seconds.
+- This is not two-approval acceptance. Retained provider evidence said singular
+  `Handled project source job cancellation error`; neither frozen target was
+  rendered outside the user prompt, and no second approval appeared. No retry
+  ran.
+- Exact LitScout pre/post counts remained 10 projects, 37 jobs, zero operator
+  actions, zero target rows, and zero cancel-requested/cancelled jobs. The
+  owned tab closed, leaving the two baseline tabs, unchanged services/Chrome,
+  and empty lock roots. The provider-free repair is accepted; live repetition
+  remains unproven.

@@ -18943,3 +18943,24 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   143/143. Typecheck, production build, scoped zero-warning Biome lint,
   current CodeGraph readback, and diff hygiene pass. No live/browser/LitScout
   effect occurred in this provider-free slice.
+
+## Turn 424 | 2026-08-15
+
+- Repair `d949935d` was pushed before the sole live canary. Exact preflight
+  preserved source/origin parity, the two baseline tabs, API PID 32268,
+  LitScout PID 52266, Chrome PID 66297/port 45015, empty lock roots, and zero
+  fresh target/action/cancellation rows.
+- The prompt submitted once and completed in 39.5 seconds. AuraCall logged one
+  confirmed exact `Allow once`; ChatGPT returned exact
+  `LITSCOUT_TWO_ALLOW_ONCE_SETTLED_OK`.
+- The live criterion remains unproven: the expanded provider trace used the
+  singular summary `Handled project source job cancellation error`, neither
+  frozen target rendered outside the user prompt, and no second approval was
+  observed. The exact token is not substituted for call evidence, and no retry
+  ran.
+- LitScout post-readback matched the baseline at 10 projects, 37 jobs, zero
+  operator actions, zero exact targets, and zero cancel-requested/cancelled
+  jobs. The exact owned tab closed; baseline tabs, services, Chrome ownership,
+  and empty locks remain. Plan 0290 closes
+  `PROVIDER_FREE_ACCEPTED_LIVE_INCONCLUSIVE` with receipt
+  `docs/dev/notes/2026-08-15-plan0290-approval-settle-live-inconclusive.json`.
