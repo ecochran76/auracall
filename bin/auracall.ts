@@ -297,6 +297,7 @@ import {
   LlmService,
   createLlmService,
 } from '../src/browser/llmService/index.js';
+import { resolveNonInteractiveBrowserContextIdentity } from '../src/browser/llmService/cache/browserContextIdentity.js';
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
 import type { BrowserAttachment, BrowserLogger, BrowserRunOptions } from '../src/browser/types.js';
@@ -9566,10 +9567,10 @@ async function buildBrowserContext({
   const projectName = options.projectName ? options.projectName.trim() : null;
   const conversationName = options.conversationName ? options.conversationName.trim() : null;
   const llmService = createLlmService(target, userConfig);
-  const listOptions = await llmService.buildListOptions({ configuredUrl });
+  const listOptions = await llmService.buildListOptions({ configuredUrl, skipFeatureSignature: true });
   let cacheKey: string | null = null;
   try {
-    const identity = await llmService.resolveCacheIdentity(listOptions, { prompt: false });
+    const identity = await resolveNonInteractiveBrowserContextIdentity(llmService, listOptions);
     if (identity.identityKey) {
       cacheKey = resolveProviderCacheKey({ provider: target, userConfig, listOptions, ...identity });
     }

@@ -46781,3 +46781,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   pushed source checkpoint precede live work. Up to three distinct canaries are
   bounded across the plan; identical retries, installs/restarts, scheduler
   controls, persistent consent, and LitScout mutations remain forbidden.
+- The new non-interactive identity seam is green: configured profile identity
+  resolves in 5 ms while never-settling provider identity and feature probes
+  remain uncalled. `buildBrowserContext()` now uses that seam; the actual
+  browser run's provider identity enforcement is unchanged.
+- The eight-file affected gate passes 123/123 and typecheck passes. Current
+  CodeGraph readback confirms the intended caller path. Build, lint, final
+  audits, commit/push, and the first Plan 0288 canary remain.

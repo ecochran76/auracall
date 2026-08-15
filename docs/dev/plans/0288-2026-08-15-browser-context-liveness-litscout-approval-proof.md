@@ -16,12 +16,16 @@ clicking `Always allow` or `Answer now`.
 - Plan 0287's sole live command timed out before `runBrowserMode()`, prompt
   submission, approval detection, or connector use. Cleanup and every excluded
   effect passed; receipt commit `4e8f067d` is pushed.
-- Current source computes optional browser-context cache metadata before the
-  prompt runner. `buildBrowserContext()` calls `resolveCacheIdentity()`, whose
-  live identity and feature-signature reads can remain pending indefinitely.
-- The actual browser run independently performs its own provider identity gate.
-  Pre-run cache metadata can therefore use configured identity/features without
-  touching the live provider.
+- Source now routes optional browser-context cache metadata through
+  `resolveNonInteractiveBrowserContextIdentity()`, which disables provider
+  identity detection and skips provider feature-signature detection.
+- The red regression first failed because the seam did not exist. It now
+  resolves configured identity in 5 ms while deliberately never-settling live
+  probes remain uncalled. The affected eight-file gate passes 123 tests and
+  typecheck passes.
+- The actual browser run independently retains its provider identity gate.
+  Production build, lint, final diff/planning audits, commit, and live proof
+  remain.
 
 ## Execution Contract
 
@@ -58,9 +62,9 @@ clicking `Always allow` or `Answer now`.
 
 ## Acceptance Criteria
 
-- [ ] A red regression proves never-settling live identity/feature probes do not
+- [x] A red regression proves never-settling live identity/feature probes do not
   participate in non-interactive browser-context metadata resolution.
-- [ ] The prompt startup path reaches `runBrowserMode()` without pre-run live
+- [x] The prompt startup path reaches `runBrowserMode()` without pre-run live
   provider enrichment and retains its actual provider identity gate.
 - [ ] Provider-free validation and source/remote readback pass before live work.
 - [ ] One current LitScout turn submits once, logs exact `Allow once`, confirms

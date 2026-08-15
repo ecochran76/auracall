@@ -14,6 +14,12 @@
   provider-free diagnosis/repair when needed. Each remains one prompt, one
   read-only LitScout `auth_session`, exact `allow-once`, and zero installs,
   runtime controls, persistent consent, or LitScout writes.
+- The tracer regression failed on the missing non-interactive seam. Source now
+  resolves browser-context identity with `detect=false` and
+  `skipFeatureSignature=true`; its never-settling live provider probes are not
+  called. The focused test passes in 5 ms, the affected gate passes 123/123,
+  typecheck passes, and CodeGraph confirms `buildBrowserContext()` is the sole
+  CLI caller while the actual browser-run identity gate is unchanged.
 
 ## Turn 457 | 2026-08-15
 

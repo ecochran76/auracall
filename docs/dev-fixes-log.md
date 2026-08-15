@@ -5,6 +5,9 @@
   settles. Give those reads a positive local deadline or skip live detection
   when a configured identity is sufficient, so the browser operation lock,
   prompt lifecycle, and their diagnostics can become reachable.
+  The prompt CLI now uses a dedicated non-interactive identity seam that sets
+  `detect=false` and `skipFeatureSignature=true`; live identity enforcement
+  remains in the actual browser-run preflight.
 
 - 2026-08-15: Treat ChatGPT third-party tool approval as an explicit operator
   policy, never generic auto-consent. Require one visible surface containing
