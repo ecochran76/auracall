@@ -21670,3 +21670,19 @@ browser-stage lifecycle observability, not transcript truncation.
 - Preserve global eligibility and candidate-funnel policy outside the attempt.
   This keeps eligible, selected, and materialized meanings distinct while the
   attempt remains the single locality for provider-work acceptance.
+
+## 2026-08-15 | Acceptance process mechanics belong behind one local harness
+
+- ChatGPT and Grok acceptance runs had independently accumulated the same
+  synchronous child-process setup, timeout and buffer policy, output joining,
+  exit interpretation, and JSON diagnostics. ChatGPT also carried compatible
+  version-1 resume/checkpoint and final-evidence mechanics.
+- Keep those stable mechanics behind one locally substitutable
+  `browserAcceptanceHarness`, with injected process, filesystem, and clock
+  dependencies for provider-free tests. Preserve exact command, error, and
+  output behavior.
+- Do not turn the harness into a provider workflow engine. Phase declarations,
+  commands, assertions, retry/guard rules, provider cleanup decisions, CLI
+  presentation, and summary fields stay in the ChatGPT and Grok scripts; do not
+  invent Grok state or resume behavior merely because the shared harness can
+  support optional state.

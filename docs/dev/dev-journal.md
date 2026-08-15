@@ -46982,3 +46982,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   materialization, browser/provider action, scheduler or completion control,
   install, or restart ran. Candidate 4 is active; the campaign audit remains
   unused.
+
+## 2026-08-15 | Plan 0291 Candidate 4 accepted with one acceptance harness
+
+- Three designs were reconciled around one narrow common-use-first seam. The
+  selected `browserAcceptanceHarness` owns synchronous AuraCall process
+  execution, default and per-command deadlines, bounded output, exact exit and
+  JSON diagnostics, optional version-1 state checkpoints, and final evidence
+  serialization. A workflow/state-machine layer and whole-provider lifecycle
+  callback were rejected because they would move volatile provider behavior
+  across the seam.
+- ChatGPT retains phase declarations, guard/cooldown retry, CLI-over-resume
+  precedence, assertions, and best-effort cleanup. Grok retains its commands,
+  assertions, `--keep-projects`, and cleanup, and gained no state contract.
+- Execution and independent testing passed 7/7 focused tests, both provider
+  help smokes, typecheck, production build, scoped zero-warning Biome lint,
+  diff hygiene, and current CodeGraph readback. No High finding remains. No
+  live acceptance, browser, provider, install, restart, scheduler, or
+  completion action ran; the sole campaign audit is next.

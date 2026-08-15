@@ -1,11 +1,16 @@
 #!/usr/bin/env tsx
 import { randomBytes } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
 import type { Dirent } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  createBrowserAcceptanceHarness,
+  parseAcceptanceJson as parseJson,
+  type AcceptanceCommandOptions as RunOptions,
+  type AcceptanceCommandResult as RunResult,
+} from './lib/browserAcceptanceHarness.js';
 
 type Project = {
   id: string;
@@ -79,17 +84,6 @@ type BrowserSessionMetadata = {
   promptPreview?: unknown;
   startedAt?: unknown;
   createdAt?: unknown;
-};
-
-type RunOptions = {
-  expectFailure?: boolean;
-  timeoutMs?: number;
-};
-
-type RunResult = {
-  stdout: string;
-  stderr: string;
-  combined: string;
 };
 
 type Args = {
@@ -188,58 +182,13 @@ function randomSuffix(length = 6): string {
   return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join('');
 }
 
-function buildAuracallArgs(args: Args, extra: string[]): string[] {
-  const cliArgs = ['tsx', 'bin/auracall.ts'];
-  if (args.profile) {
-    cliArgs.push('--profile', args.profile);
-  }
-  cliArgs.push(...extra);
-  return cliArgs;
-}
-
 function runAuracall(args: Args, extra: string[], options: RunOptions = {}): RunResult {
-  const cliArgs = buildAuracallArgs(args, extra);
-  const command = ['pnpm', ...cliArgs].join(' ');
-  logStep(`$ ${command}`);
-  const result = spawnSync('pnpm', cliArgs, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: options.timeoutMs ?? 60_000,
-    maxBuffer: 20 * 1024 * 1024,
-    env: {
-      ...process.env,
-      ORACLE_NO_BANNER: '1',
-      NODE_NO_WARNINGS: '1',
-    },
-  });
-  if (result.error) {
-    throw result.error;
-  }
-  const stdout = result.stdout ?? '';
-  const stderr = result.stderr ?? '';
-  const combined = [stdout, stderr].filter(Boolean).join('\n').trim();
-  if (options.expectFailure) {
-    if (result.status === 0) {
-      throw new Error(`Expected failure but command succeeded: ${command}`);
-    }
-    return { stdout, stderr, combined };
-  }
-  if (result.status !== 0) {
-    throw new Error(`Command failed (${result.status}): ${command}\n${combined}`);
-  }
-  return { stdout, stderr, combined };
-}
-
-function parseJson<T>(label: string, text: string): T {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    throw new Error(`${label} returned empty output.`);
-  }
-  try {
-    return JSON.parse(trimmed) as T;
-  } catch (error) {
-    throw new Error(`${label} did not return valid JSON.\n${trimmed}\n${error instanceof Error ? error.message : String(error)}`);
-  }
+  return createBrowserAcceptanceHarness({
+    rootDir: ROOT,
+    profile: args.profile,
+    commandTimeoutMs: 60_000,
+    log: logStep,
+  }).run(extra, options);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -387,6 +336,12 @@ async function waitForNewConversation(
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const acceptance = createBrowserAcceptanceHarness<AcceptanceSummary>({
+    rootDir: ROOT,
+    profile: args.profile,
+    commandTimeoutMs: 60_000,
+    log: logStep,
+  });
   const suffix = randomSuffix();
   const tempDir = await mkdtemp(path.join(tmpdir(), 'auracall-grok-acceptance-'));
   await writeFixtureFiles(tempDir);
@@ -550,7 +505,7 @@ async function main() {
     const mediumFailure = runAuracall(
       args,
       ['projects', 'files', 'add', renamedProject.id, '-f', mediumFilePath, '--target', 'grok'],
-      { expectFailure: true, timeoutMs: 180_000 },
+      { expect: 'failure', timeoutMs: 180_000 },
     );
     assert(
       mediumFailure.combined.includes(EXPECTED_MEDIUM_FILE_ERROR),
@@ -947,12 +902,13 @@ async function main() {
     await rm(tempDir, { recursive: true, force: true });
   }
 
+  const evidence = await acceptance.finalize(summary);
   if (args.json) {
-    console.log(JSON.stringify(summary, null, 2));
+    console.log(evidence.json);
     return;
   }
   logStep('PASS');
-  console.log(JSON.stringify(summary, null, 2));
+  console.log(evidence.json);
 }
 
 main().catch((error) => {

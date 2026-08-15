@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 463 | 2026-08-15
+
+- Plan 0291 Candidate 4 is provider-free accepted. One
+  `browserAcceptanceHarness` now owns synchronous AuraCall command execution,
+  per-command deadlines, 20 MiB output bounds, exact success/failure/any exit
+  projection, JSON diagnostics, optional version-1 state checkpoints, and
+  final summary evidence serialization for the ChatGPT and Grok acceptance
+  scripts.
+- ChatGPT phases, guard/cooldown retry, state merge precedence, assertions, and
+  best-effort cleanup remain in its script. Grok commands, assertions,
+  `--keep-projects`, and cleanup remain in its script; Grok gained no resume
+  contract or state flags.
+- Independent validation passed 7/7 focused tests, both safe help smokes,
+  typecheck, production build, scoped zero-warning lint, diff hygiene, and
+  current CodeGraph readback. No High finding remains and no live acceptance,
+  browser, or provider command ran. The sole campaign audit is next.
+
 ## Turn 462 | 2026-08-15
 
 - Plan 0291 Candidate 3 is provider-free accepted. One internal

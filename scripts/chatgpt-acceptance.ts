@@ -1,11 +1,18 @@
 #!/usr/bin/env tsx
 import { randomBytes } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
 import { readFileSync, type Dirent } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  createBrowserAcceptanceHarness,
+  parseAcceptanceJson as parseJson,
+  readAcceptanceResume,
+  type AcceptanceCommandOptions as RunOptions,
+  type AcceptanceCommandResult as RunResult,
+  type AcceptanceRunState,
+} from './lib/browserAcceptanceHarness.js';
 
 type Project = {
   id: string;
@@ -57,17 +64,6 @@ type BrowserSessionMetadata = {
   createdAt?: unknown;
 };
 
-type RunOptions = {
-  expectFailure?: boolean;
-  timeoutMs?: number;
-};
-
-type RunResult = {
-  stdout: string;
-  stderr: string;
-  combined: string;
-};
-
 type Args = {
   json: boolean;
   profile?: string;
@@ -102,12 +98,7 @@ type AcceptanceSummary = {
   attachmentFileName: string;
 };
 
-type AcceptanceState = {
-  version: 1;
-  updatedAt: string;
-  lastError?: string | null;
-  summary: AcceptanceSummary;
-};
+type AcceptanceState = AcceptanceRunState<AcceptanceSummary>;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_MODEL = 'gpt-5.2-thinking';
@@ -216,11 +207,6 @@ function logStep(message: string): void {
   console.log(`[chatgpt-acceptance] ${message}`);
 }
 
-function resolveCliPath(filePath: string): string {
-  const trimmed = filePath.trim();
-  return path.isAbsolute(trimmed) ? trimmed : path.resolve(ROOT, trimmed);
-}
-
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
@@ -233,46 +219,13 @@ function randomSuffix(length = 6): string {
   return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join('');
 }
 
-function buildAuracallArgs(args: Args, extra: string[]): string[] {
-  const cliArgs = ['tsx', 'bin/auracall.ts'];
-  if (args.profile) {
-    cliArgs.push('--profile', args.profile);
-  }
-  cliArgs.push(...extra);
-  return cliArgs;
-}
-
 function runAuracall(args: Args, extra: string[], options: RunOptions = {}): RunResult {
-  const cliArgs = buildAuracallArgs(args, extra);
-  const command = ['pnpm', ...cliArgs].join(' ');
-  logStep(`$ ${command}`);
-  const result = spawnSync('pnpm', cliArgs, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: options.timeoutMs ?? args.commandTimeoutMs,
-    maxBuffer: 20 * 1024 * 1024,
-    env: {
-      ...process.env,
-      ORACLE_NO_BANNER: '1',
-      NODE_NO_WARNINGS: '1',
-    },
-  });
-  if (result.error) {
-    throw result.error;
-  }
-  const stdout = result.stdout ?? '';
-  const stderr = result.stderr ?? '';
-  const combined = [stdout, stderr].filter(Boolean).join('\n').trim();
-  if (options.expectFailure) {
-    if (result.status === 0) {
-      throw new Error(`Expected failure but command succeeded: ${command}`);
-    }
-    return { stdout, stderr, combined };
-  }
-  if (result.status !== 0) {
-    throw new Error(`Command failed (${result.status}): ${command}\n${combined}`);
-  }
-  return { stdout, stderr, combined };
+  return createBrowserAcceptanceHarness({
+    rootDir: ROOT,
+    profile: args.profile,
+    commandTimeoutMs: args.commandTimeoutMs,
+    log: logStep,
+  }).run(extra, options);
 }
 
 function readChatgptGuardCooldownUntilMs(profile?: string | null): number | null {
@@ -342,40 +295,6 @@ function logChatgptGuardStatus(profile?: string | null): void {
   if (recentMutationCount > 0) {
     logStep(`Guard: ${recentMutationCount} recent ChatGPT writes recorded in the last 120s.`);
   }
-}
-
-async function readAcceptanceState(filePath: string): Promise<AcceptanceState | null> {
-  try {
-    const raw = await readFile(resolveCliPath(filePath), 'utf8');
-    const parsed = JSON.parse(raw) as Partial<AcceptanceState>;
-    if (!parsed || parsed.version !== 1 || !parsed.summary || typeof parsed.summary !== 'object') {
-      return null;
-    }
-    return {
-      version: 1,
-      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : new Date().toISOString(),
-      lastError: typeof parsed.lastError === 'string' ? parsed.lastError : null,
-      summary: parsed.summary as AcceptanceSummary,
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function writeAcceptanceState(
-  filePath: string,
-  summary: AcceptanceSummary,
-  lastError?: string | null,
-): Promise<void> {
-  const resolved = resolveCliPath(filePath);
-  await mkdir(path.dirname(resolved), { recursive: true });
-  const payload: AcceptanceState = {
-    version: 1,
-    updatedAt: new Date().toISOString(),
-    lastError: lastError ?? null,
-    summary,
-  };
-  await writeFile(resolved, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
 function mergeArgsWithAcceptanceState(args: Args, state: AcceptanceState | null): Args {
@@ -467,42 +386,8 @@ async function runChatgptMutation(args: Args, extra: string[], options: RunOptio
 }
 
 function probeAuracall(args: Args, extra: string[]): RunResult | null {
-  const cliArgs = buildAuracallArgs(args, extra);
-  const result = spawnSync('pnpm', cliArgs, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: args.commandTimeoutMs,
-    maxBuffer: 20 * 1024 * 1024,
-    env: {
-      ...process.env,
-      ORACLE_NO_BANNER: '1',
-      NODE_NO_WARNINGS: '1',
-    },
-  });
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    return null;
-  }
-  const stdout = result.stdout ?? '';
-  const stderr = result.stderr ?? '';
-  const combined = [stdout, stderr].filter(Boolean).join('\n').trim();
-  return { stdout, stderr, combined };
-}
-
-function parseJson<T>(label: string, text: string): T {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    throw new Error(`${label} returned empty output.`);
-  }
-  try {
-    return JSON.parse(trimmed) as T;
-  } catch (error) {
-    throw new Error(
-      `${label} did not return valid JSON.\n${trimmed}\n${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
+  const result = runAuracall(args, extra, { expect: 'any', log: false });
+  return result.status === 0 ? result : null;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -868,9 +753,17 @@ async function bestEffortCleanup(args: Args, summary: AcceptanceSummary): Promis
 
 async function main() {
   const parsedArgs = parseArgs(process.argv.slice(2));
-  const resumedState = parsedArgs.resumeFile ? await readAcceptanceState(parsedArgs.resumeFile) : null;
+  const resumed = await readAcceptanceResume<AcceptanceSummary>(ROOT, parsedArgs.resumeFile);
+  const resumedState = resumed?.state ?? null;
   const args = mergeArgsWithAcceptanceState(parsedArgs, resumedState);
   const stateFile = args.stateFile ?? args.resumeFile ?? null;
+  const acceptance = createBrowserAcceptanceHarness<AcceptanceSummary>({
+    rootDir: ROOT,
+    profile: args.profile,
+    commandTimeoutMs: args.commandTimeoutMs,
+    stateFile,
+    log: logStep,
+  });
   const priorSummary = resumedState?.summary ?? null;
   const suffix = priorSummary?.suffix?.trim() ? priorSummary.suffix.trim() : randomSuffix();
   const tempDir = await mkdtemp(path.join(tmpdir(), 'auracall-chatgpt-acceptance-'));
@@ -915,13 +808,12 @@ async function main() {
     attachmentFileName,
   };
   const persistSummary = async (lastError?: string | null): Promise<void> => {
-    if (!stateFile) return;
-    await writeAcceptanceState(stateFile, summary, lastError);
+    await acceptance.checkpoint(summary, lastError);
   };
 
   try {
     if (resumedState) {
-      logStep(`Resumed state from ${resolveCliPath(args.resumeFile ?? stateFile ?? '')}`);
+      logStep(`Resumed state from ${resumed?.path ?? ''}`);
       if (resumedState.lastError) {
         logStep(`Previous recorded failure: ${resumedState.lastError}`);
       }
@@ -1167,9 +1059,9 @@ async function main() {
     }
 
     summary.ok = true;
-    await persistSummary(null);
+    const evidence = await acceptance.finalize(summary);
     if (args.json) {
-      console.log(JSON.stringify(summary, null, 2));
+      console.log(evidence.json);
     } else {
       logStep(`PASS (${args.phase})`);
       if (summary.projectId) {
@@ -1181,9 +1073,9 @@ async function main() {
     }
   } catch (error) {
     summary.ok = false;
-    await persistSummary(error instanceof Error ? error.message : String(error));
+    const evidence = await acceptance.finalize(summary, error);
     if (args.json) {
-      console.log(JSON.stringify(summary, null, 2));
+      console.log(evidence.json);
     } else {
       console.error(`[chatgpt-acceptance] FAIL: ${error instanceof Error ? error.message : String(error)}`);
     }

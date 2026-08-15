@@ -20,7 +20,10 @@ Lane: P01
   and attachment fail-closed defects were repaired and independently
   reverified. Candidate 3, one materialization attempt, is provider-free
   accepted with durable receipt-first accounting and fail-closed evidence
-  persistence. Candidate 4, the browser acceptance harness, is the active
+  persistence. Candidate 4 is provider-free accepted: ChatGPT and Grok now
+  share one locally substitutable process/deadline/output/JSON/state/evidence
+  harness while their phases, assertions, guard/retry, and cleanup policies
+  remain provider-local. The sole integrated campaign audit is now the active
   critical-path unit.
 
 - Closed failed-safe two-sequential-approval LitScout live proof:

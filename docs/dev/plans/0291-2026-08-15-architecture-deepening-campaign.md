@@ -35,12 +35,26 @@ durable notes.
   safe verification, awaited Account Mirror evidence persistence, phase/result
   projection, durable receipt construction, and receipt-derived budget/guard
   accounting.
-- Candidate 4, the browser acceptance harness, is the active critical-path
-  unit.
-- Candidate 4 has observed process/timeout/JSON/state duplication in the
-  ChatGPT and Grok acceptance runs.
-- Candidates 1 through 3 have validated, pushed or ready-to-push checkpoints. No
-  live browser/provider or installed/runtime state was changed.
+- Candidate 4 is provider-free accepted. ChatGPT and Grok now use one locally
+  substitutable harness for AuraCall process execution, per-command deadlines,
+  output/exit projection, JSON diagnostics, optional version-1 state, and final
+  evidence serialization.
+- Candidate 4 design reconciliation selected one narrow common-use-first
+  `browserAcceptanceHarness` module. It owns synchronous AuraCall command
+  execution, deadlines, exact output/exit/JSON contracts, optional version-1
+  acceptance state, and final evidence serialization. Provider phase logic,
+  retries, cleanup decisions, assertions, CLI presentation, and summary fields
+  remain in the ChatGPT and Grok scripts. A proposed workflow/state-machine
+  layer was rejected as premature, and the minimal whole-run callback design
+  was rejected because it would move provider lifecycle ownership across the
+  seam.
+- Candidate 4 focused tests pass 7/7; both safe help smokes, typecheck, build,
+  scoped zero-warning Biome lint, diff hygiene, and current CodeGraph readback
+  pass. Independent testing found no High defect. Dynamic provider-level
+  PASS/FAIL/cleanup and CLI-over-resume coverage remains a nonblocking test gap;
+  no live acceptance command ran.
+- Candidates 1 through 4 have validated checkpoints. No live browser/provider
+  or installed/runtime state was changed.
 
 ## Domain Language
 
@@ -149,7 +163,7 @@ the primary orchestrator. Subagents must not spawn children.
   and Grok while provider-specific workflow remains adapter-local.
 - [x] C3 one materialization attempt owns its observable lifecycle and receipt
   semantics without weakening fail-closed behavior.
-- [ ] C4 ChatGPT and Grok acceptance runs share one deep harness while retaining
+- [x] C4 ChatGPT and Grok acceptance runs share one deep harness while retaining
   provider-specific phase behavior.
 - [ ] Subagent planning, execution, and testing receipts are reconciled for
   every candidate.
