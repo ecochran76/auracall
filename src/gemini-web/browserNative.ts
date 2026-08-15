@@ -4,15 +4,15 @@ import puppeteer from 'puppeteer-core';
 import type { Browser, Page, Target } from 'puppeteer-core';
 import { launchChrome, hideChromeWindow, wasChromeLaunchedByAuracall } from '../browser/chromeLifecycle.js';
 import { openOrReuseChromeTarget } from '../../packages/browser-service/src/chromeLifecycle.js';
-import { resolveBrowserConfig } from '../browser/config.js';
 import { bootstrapManagedProfile } from '../browser/profileStore.js';
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser/service/profileResolution.js';
+import { resolveBrowserLaunchPlan } from '../browser/service/browserLaunchPlan.js';
 import { captureActionPhaseDiagnostics, runOrderedSurfaceFallback, waitForAttachmentSignals } from '../browser/service/ui.js';
 import type {
   BrowserRunOptions,
   BrowserRunResult,
   BrowserLogger,
   BrowserPassiveObservation,
+  ResolvedBrowserConfig,
 } from '../browser/types.js';
 
 const GEMINI_PROMPT_SELECTOR = 'div[role="textbox"][aria-label="Enter a prompt for Gemini"]';
@@ -933,22 +933,21 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
   const startTime = Date.now();
   const logger = options.logger ?? (() => undefined);
   const passiveObservations: BrowserPassiveObservation[] = [];
-  const config = resolveBrowserConfig(
-    { ...(options.runOptions.config ?? {}), target: 'gemini' },
-    { auracallProfileName: options.runOptions.config?.auracallProfileName ?? null },
-  );
-  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: options.runOptions.config?.auracallProfileName ?? null,
-    browser: config,
-    target: 'gemini',
+  const plan = resolveBrowserLaunchPlan({
+    source: {
+      kind: 'session-config',
+      config: { ...(options.runOptions.config ?? {}), target: 'gemini' },
+    },
+    intent: { provider: 'gemini' },
   });
-  const userDataDir = launchContext.managedProfileDir;
-  const chromeProfile = launchContext.configuredChromeProfile;
+  const config = structuredClone(plan.launchPolicy) as ResolvedBrowserConfig;
+  const userDataDir = plan.managedBrowserProfile.directory;
+  const chromeProfile = plan.managedBrowserProfile.configuredProfileName;
   await mkdir(userDataDir, { recursive: true });
   await bootstrapManagedProfile({
     managedProfileDir: userDataDir,
     managedProfileName: chromeProfile,
-    sourceCookiePath: launchContext.bootstrapCookiePath,
+    sourceCookiePath: plan.sourceBrowserProfile.bootstrapCookiePath,
     logger,
   });
 

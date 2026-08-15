@@ -23,10 +23,11 @@ durable notes.
 
 - The visual architecture report is published at Previews session
   `a24fd8aff377` and records four evidence-backed candidates.
-- CodeGraph is healthy with 895 indexed files and no reported pending sync.
-- Candidate 1 aligns with the existing Plan 0008 phased browser-profile model,
-  but live callers still cross mutable configuration and profile-resolution
-  steps before obtaining a final launch plan.
+- CodeGraph is healthy with 898 indexed files and no reported pending sync.
+- Candidate 1 is provider-free accepted. Sixteen production function/method
+  callers now cross one immutable browser launch plan seam; the superseded
+  launch-context helpers and the config/profile-resolution cycle are removed.
+- Candidate 2, provider prompt execution, is the active critical-path unit.
 - Candidate 2 aligns with BrowserService Roadmap Phase 4: Gemini and Grok use
   the planned provider-prompt path while ChatGPT reconstructs browser options
   and detours through `runBrowserMode()`.
@@ -35,9 +36,9 @@ durable notes.
   Mirror planning.
 - Candidate 4 has observed process/timeout/JSON/state duplication in the
   ChatGPT and Grok acceptance runs.
-- No implementation change for this campaign exists yet. The only dirty state
-  at opening is the orchestrator-owned development-journal entry from the
-  architecture review.
+- Candidate 1 source, tests, and governing docs are ready for their validated
+  checkpoint commit. No live browser/provider or installed/runtime state was
+  changed.
 
 ## Domain Language
 
@@ -140,7 +141,7 @@ the primary orchestrator. Subagents must not spawn children.
 
 ## Acceptance Criteria
 
-- [ ] C1 callers obtain one browser launch plan through the deepened interface,
+- [x] C1 callers obtain one browser launch plan through the deepened interface,
   with current semantics and focused/affected validation green.
 - [ ] C2 provider prompt execution has one deep seam across ChatGPT, Gemini,
   and Grok while provider-specific workflow remains adapter-local.

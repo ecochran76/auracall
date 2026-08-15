@@ -6,13 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { runBrowserToolsCli, type BrowserToolsPortResolverOptions } from '../packages/browser-service/src/browserTools.js';
 import { resolveConfig } from '../src/schema/resolver.js';
-import { resolveBrowserConfig } from '../src/browser/config.js';
 import { launchManualLoginSession } from '../src/browser/manualLogin.js';
-import {
-  resolveBrowserProfileResolutionFromResolvedConfig,
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
-  resolveUserBrowserLaunchContext,
-} from '../src/browser/service/profileResolution.js';
+import { resolveBrowserLaunchPlan } from '../src/browser/service/browserLaunchPlan.js';
 import { resolveBrowserListTarget as resolveBrowserListTargetCore } from '../packages/browser-service/src/service/portResolution.js';
 import { getAuracallHomeDir } from '../src/auracallHome.js';
 import { isDevToolsResponsive } from '../packages/browser-service/src/processCheck.js';
@@ -58,7 +53,9 @@ async function resolvePortOrLaunch(options: BrowserToolsPortResolverOptions): Pr
     managedProfileDir;
   const copiedDir = await copyProfileIfRequested(baseDir, Boolean(options.copyProfile));
   const userDataDir = copiedDir ?? baseDir;
-  const debugPortRange = resolved.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
+  const debugPortRange = resolved.debugPortRange
+    ? [...resolved.debugPortRange] as [number, number]
+    : DEFAULT_DEBUG_PORT_RANGE;
   const logger = (message: string) => console.log(message);
   const { chrome } = await launchManualLoginSession({
     chromePath: options.chromePath ?? launchProfile.chromePath ?? resolved.chromePath ?? DEFAULT_CHROME_BIN,
@@ -92,9 +89,9 @@ async function resolveOperationProfile(options: BrowserToolsPortResolverOptions)
 }
 
 async function resolveManagedBrowserToolsContext(options: BrowserToolsPortResolverOptions): Promise<{
-  resolved: ReturnType<typeof resolveBrowserConfig>;
+  resolved: ReturnType<typeof resolveBrowserLaunchPlan>['launchPolicy'];
   browserTarget: 'chatgpt' | 'gemini' | 'grok';
-  launchProfile: ReturnType<typeof resolveBrowserProfileResolutionFromResolvedConfig>['launchProfile'];
+  launchProfile: ReturnType<typeof resolveBrowserLaunchPlan>['launchPolicy'];
   managedProfileDir: string;
 }> {
   const resolvedConfig = await resolveConfig({
@@ -102,37 +99,24 @@ async function resolveManagedBrowserToolsContext(options: BrowserToolsPortResolv
     browserTarget: options.browserTarget,
   });
   const browserTarget = (resolvedConfig.browser.target ?? options.browserTarget ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
-  const launchContext = resolveUserBrowserLaunchContext({
-    ...resolvedConfig,
-    browser: {
-      ...(resolvedConfig.browser ?? {}),
-      target: browserTarget,
+  const plan = resolveBrowserLaunchPlan({
+    source: {
+      kind: 'user-config',
+      config: {
+        ...resolvedConfig,
+        browser: {
+          ...(resolvedConfig.browser ?? {}),
+          target: browserTarget,
+        },
+      },
     },
-  }, browserTarget);
-  const resolved = resolveBrowserConfig({
-    ...(resolvedConfig.browser ?? {}),
-    target: browserTarget,
-  }, {
-    auracallProfileName: resolvedConfig.auracallProfile ?? null,
-    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
-  });
-  const resolution = resolveBrowserProfileResolutionFromResolvedConfig({
-    auracallProfile: resolvedConfig.auracallProfile ?? null,
-    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
-    browser: resolved,
-    target: browserTarget,
-  });
-  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: resolvedConfig.auracallProfile ?? null,
-    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
-    browser: resolved,
-    target: browserTarget,
+    intent: { provider: browserTarget },
   });
   return {
-    resolved,
+    resolved: plan.launchPolicy,
     browserTarget,
-    launchProfile: resolution.launchProfile,
-    managedProfileDir: managedLaunchContext.managedProfileDir,
+    launchProfile: plan.launchPolicy,
+    managedProfileDir: plan.managedBrowserProfile.directory,
   };
 }
 

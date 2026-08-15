@@ -6,10 +6,7 @@ import {
   resolveBrowserListTarget as resolveBrowserListTargetCore,
   type BrowserListTarget,
 } from '../../../packages/browser-service/src/service/portResolution.js';
-import {
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
-  resolveUserBrowserLaunchContext,
-} from './profileResolution.js';
+import { resolveBrowserLaunchPlan } from './browserLaunchPlan.js';
 
 export type { BrowserListTarget };
 
@@ -27,15 +24,12 @@ export async function resolveBrowserListTarget(
 ): Promise<BrowserListTarget | undefined> {
   const envPort = process.env.AURACALL_BROWSER_PORT ?? process.env.AURACALL_BROWSER_DEBUG_PORT ?? null;
   const target = serviceTarget ?? userConfig.browser?.target ?? 'chatgpt';
-  const { resolvedConfig: resolved } = resolveUserBrowserLaunchContext(userConfig, target);
-  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: userConfig.auracallProfile ?? null,
-    browserProfileName: launchContextBrowserProfileName(userConfig, target),
-    browser: resolved,
-    target,
+  const plan = resolveBrowserLaunchPlan({
+    source: { kind: 'user-config', config: userConfig },
+    intent: { provider: target },
   });
-  const profilePath = process.env.AURACALL_BROWSER_PROFILE_DIR ?? launchContext.managedProfileDir;
-  const profileName = launchContext.managedChromeProfile;
+  const profilePath = process.env.AURACALL_BROWSER_PROFILE_DIR ?? plan.managedBrowserProfile.directory;
+  const profileName = plan.managedBrowserProfile.activeProfileName;
   const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
   return resolveBrowserListTargetCore({
     envPort,
@@ -46,14 +40,4 @@ export async function resolveBrowserListTarget(
     registryPath,
     resolveHost: () => '127.0.0.1',
   });
-}
-
-function launchContextBrowserProfileName(
-  userConfig: ResolvedUserConfig,
-  target: BrowserProfileTarget,
-): string | null {
-  return resolveUserBrowserLaunchContext(
-    userConfig as ResolvedUserConfig & Record<string, unknown>,
-    target,
-  ).resolution.profileFamily.browserProfileId;
 }

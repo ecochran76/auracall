@@ -18,6 +18,13 @@
   outlive the caller's outer polling budget even without a separate inner bound.
 
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
+- Browser launch plan contract (provider-free):
+  `pnpm vitest run tests/browser/browserLaunchPlan.test.ts tests/browser/browserLaunchPlanStructure.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/configModel.test.ts`.
+  This proves one immutable launch-plan seam, runtime/browser selection
+  precedence, source and managed browser profile derivation, session parity,
+  exact error behavior, and the absence of the former config/profile-resolution
+  import cycle. Add the affected caller suites when changing a consumer; this
+  contract does not launch a browser or prove live account readiness.
 - Agent-browser RDP managed-profile contract (provider-free):
   `pnpm vitest run tests/browser/agentBrowserRdpLauncher.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser-service/platformPaths.test.ts`
   followed by `pnpm run typecheck`. This proves exact AuraCall profile-path

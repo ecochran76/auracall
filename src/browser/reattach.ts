@@ -7,12 +7,21 @@ import {
   ensureLoggedIn,
   ensurePromptReady,
 } from './pageActions.js';
-import type { BrowserLogger, BrowserSessionConfig, ChromeClient, CookieParam } from './types.js';
+import type {
+  BrowserLogger,
+  BrowserSessionConfig,
+  ChromeClient,
+  CookieParam,
+  ResolvedBrowserConfig,
+} from './types.js';
 import { launchChrome, connectToChrome, hideChromeWindow, wasChromeLaunchedByAuracall } from './chromeLifecycle.js';
 import { syncCookies } from './cookies.js';
 import { cleanupStaleProfileState } from './profileState.js';
 import { collectReattachRegistryDiagnostics } from './service/registryDiagnostics.js';
-import { resolveSessionBrowserLaunchContext } from './service/profileResolution.js';
+import {
+  resolveBrowserLaunchPlan,
+  type BrowserLaunchPlan,
+} from './service/browserLaunchPlan.js';
 import {
   pickTarget,
   extractConversationIdFromUrl,
@@ -46,7 +55,9 @@ export async function resumeBrowserSession(
   logger: BrowserLogger,
   deps: ReattachDeps = {},
 ): Promise<ReattachResult> {
-  const resolvedSession = resolveSessionBrowserLaunchContext(config);
+  const resolvedSession = resolveBrowserLaunchPlan({
+    source: { kind: 'session-config', config: config ?? {} },
+  });
   return resumeBrowserSessionCore(
     runtime,
     config,
@@ -93,7 +104,11 @@ export async function resumeBrowserSession(
     },
     {
       resolveBrowserConfig: (candidate) =>
-        candidate === config ? resolvedSession.resolvedConfig : resolveSessionBrowserLaunchContext(candidate).resolvedConfig,
+        candidate === config
+          ? structuredClone(resolvedSession.launchPolicy) as ResolvedBrowserConfig
+          : structuredClone(resolveBrowserLaunchPlan({
+              source: { kind: 'session-config', config: candidate ?? {} },
+            }).launchPolicy) as ResolvedBrowserConfig,
       launchChrome: async (config, userDataDir, logger) => {
         const chrome = await launchChrome(config, userDataDir, logger);
         return {
@@ -145,7 +160,7 @@ export type { ReattachFailureDetails, ReattachFailureKind };
 async function classifyRuntimeBrowserProfileFailure(
   runtime: BrowserRuntimeMetadata,
   config: BrowserSessionConfig | undefined,
-  resolvedSession: ReturnType<typeof resolveSessionBrowserLaunchContext>,
+  resolvedSession: BrowserLaunchPlan,
 ): Promise<ReattachFailureDetails | null> {
   if (!runtime.chromePort) {
     return null;

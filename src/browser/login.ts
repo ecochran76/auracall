@@ -9,10 +9,7 @@ import {
   resolveManagedProfileCookieExportPath,
   type ManagedProfileSeedPolicy,
 } from './profileStore.js';
-import {
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
-  resolveUserBrowserLaunchContext,
-} from './service/profileResolution.js';
+import { resolveBrowserLaunchPlan } from './service/browserLaunchPlan.js';
 import { registerInstance } from './service/stateRegistry.js';
 import { findChromePidUsingUserDataDir, findWindowsChromePidUsingTasklist } from './processCheck.js';
 import { launchManualLoginSession } from './manualLogin.js';
@@ -97,36 +94,33 @@ export function resolveBrowserLoginOptionsFromUserConfig(
   } = {},
 ): BrowserLoginOptions {
   const target = options.target ?? (userConfig.browser?.target as LoginTarget | undefined) ?? 'chatgpt';
-  const launchContext = resolveUserBrowserLaunchContext(userConfig, target);
-  const { resolvedConfig: resolved, launchProfile } = launchContext;
-  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: userConfig.auracallProfile ?? null,
-    browserProfileName: launchContext.resolution.profileFamily.browserProfileId,
-    browser: resolved,
-    target,
+  const plan = resolveBrowserLaunchPlan({
+    source: { kind: 'user-config', config: userConfig as ResolvedUserConfig },
+    intent: { provider: target },
   });
+  const resolved = plan.launchPolicy;
 
-  if (!launchProfile.chromePath) {
+  if (!resolved.chromePath) {
     throw new Error(`No browser chromePath resolved for ${target} login.`);
   }
 
   return {
     target,
-    chromePath: launchProfile.chromePath,
-    chromeProfile: managedLaunchContext.configuredChromeProfile,
-    manualLoginProfileDir: managedLaunchContext.managedProfileDir,
-    display: launchProfile.display ?? resolved.display,
-    cookiePath: launchProfile.chromeCookiePath,
-    bootstrapCookiePath: managedLaunchContext.bootstrapCookiePath ?? undefined,
+    chromePath: resolved.chromePath,
+    chromeProfile: plan.managedBrowserProfile.configuredProfileName,
+    manualLoginProfileDir: plan.managedBrowserProfile.directory,
+    display: resolved.display,
+    cookiePath: resolved.chromeCookiePath ?? undefined,
+    bootstrapCookiePath: plan.sourceBrowserProfile.bootstrapCookiePath ?? undefined,
     chatgptUrl: resolved.chatgptUrl,
     geminiUrl: resolved.geminiUrl,
     grokUrl: resolved.grokUrl,
     exportCookies: options.exportCookies,
     managedProfileSeedPolicy: options.managedProfileSeedPolicy,
-    debugPortStrategy: launchProfile.debugPortStrategy ?? null,
-    serviceTabLimit: launchProfile.serviceTabLimit ?? null,
-    blankTabLimit: launchProfile.blankTabLimit ?? null,
-    collapseDisposableWindows: launchProfile.collapseDisposableWindows,
+    debugPortStrategy: resolved.debugPortStrategy ?? null,
+    serviceTabLimit: resolved.serviceTabLimit ?? null,
+    blankTabLimit: resolved.blankTabLimit ?? null,
+    collapseDisposableWindows: resolved.collapseDisposableWindows,
   };
 }
 

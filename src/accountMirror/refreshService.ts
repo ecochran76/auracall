@@ -30,7 +30,7 @@ import {
 	summarizeBrowserOperationQueueObservationsByKey,
 } from "../browser/operationQueueObservations.js";
 import type { Conversation, ConversationArtifact, FileRef } from "../browser/providers/domain.js";
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
+import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { deriveAccountMirrorBackfillLedger } from "./backfillLedger.js";
 import {
@@ -1541,14 +1541,13 @@ export async function detectProviderGuardWithTargetCensus(
 	) {
 		return null;
 	}
-	const context = resolveManagedBrowserLaunchContextFromResolvedConfig({
-		auracallProfile: input.runtimeProfileId,
-		browserProfileName: input.browserProfileId,
-		browser: {
-			...input.config.browser,
-			target: input.provider,
+	const plan = resolveBrowserLaunchPlan({
+		source: { kind: "user-config", config: input.config },
+		intent: {
+			provider: input.provider,
+			runtimeProfileId: input.runtimeProfileId,
+			browserProfileId: input.browserProfileId,
 		},
-		target: input.provider,
 	});
 	const registryPath = path.join(getAuracallHomeDir(), "browser-state.json");
 	const instances = await listInstancesWithLiveness({ registryPath });
@@ -1557,8 +1556,8 @@ export async function detectProviderGuardWithTargetCensus(
 			alive &&
 			matchesManagedProfileForGuardCensus(
 				instance,
-				context.managedProfileDir,
-				context.managedChromeProfile,
+				plan.managedBrowserProfile.directory,
+				plan.managedBrowserProfile.activeProfileName,
 			),
 	);
 	for (const { instance } of matchingInstances) {
@@ -2401,17 +2400,15 @@ function resolveMirrorManagedProfileDir(input: {
 	browserProfileId: string | null;
 }): string {
 	const config = isRecord(input.config) ? input.config : {};
-	const browser = isRecord(config.browser) ? config.browser : {};
-	const context = resolveManagedBrowserLaunchContextFromResolvedConfig({
-		auracallProfile: input.runtimeProfileId,
-		browserProfileName: input.browserProfileId,
-		browser: {
-			...browser,
-			target: input.provider,
+	const plan = resolveBrowserLaunchPlan({
+		source: { kind: "user-config", config: config as ResolvedUserConfig },
+		intent: {
+			provider: input.provider,
+			runtimeProfileId: input.runtimeProfileId,
+			browserProfileId: input.browserProfileId,
 		},
-		target: input.provider,
 	});
-	return context.managedProfileDir;
+	return plan.managedBrowserProfile.directory;
 }
 
 async function readPreviousAccountMirrorFiles(input: {

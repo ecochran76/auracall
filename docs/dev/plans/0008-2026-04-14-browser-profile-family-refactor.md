@@ -409,3 +409,28 @@ Scope to defer to the broader config-model refactor:
 
 See:
 - [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
+
+## Status Update (2026-08-15)
+
+Plan 0291 Candidate 1 completed the launch-plan-consumption boundary without a
+schema or operator-workflow change:
+
+- `src/browser/service/browserLaunchPlan.ts` now exposes the single ordinary
+  caller interface, `resolveBrowserLaunchPlan({ source, intent })`
+- the plan resolves AuraCall runtime profile, browser profile, source browser
+  profile, managed browser profile, provider binding, and normalized launch
+  policy once, then returns a recursively frozen result
+- browser runtime, tools, diagnostics, reattach, Account Mirror, Gemini native,
+  media, and history callers now consume the plan instead of reconstructing
+  merge order
+- `src/browser/config.ts` is normalization-only and no longer imports profile
+  resolution, removing the former implementation cycle
+- the old user, managed, session, and flattened launch-context helpers are
+  removed; typed profile-resolution objects remain internal implementation
+  inputs and schema compatibility support
+
+The provider-free gate passed after an independent test caught and closed one
+explicit-selection defect: a newly selected browser profile must replace stale
+flattened browser-owned launch fields, while an intent that merely restates the
+current identity must preserve legitimate advanced overrides. Live/manual
+browser checks remain separately effect-gated.

@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 460 | 2026-08-15
+
+- Plan 0291 Candidate 1 is provider-free accepted. One discriminated
+  `resolveBrowserLaunchPlan({ source, intent })` seam now owns AuraCall runtime
+  profile, browser profile, source browser profile, managed browser profile,
+  provider binding, and final browser launch plan resolution.
+- Three design agents produced independent interfaces; one execution agent
+  landed the vertical tracers; an independent testing agent found a High
+  explicit-selection defect where stale flattened browser fields could retain
+  the prior executable. The bounded repair now discards those fields only when
+  selection identity genuinely changes and preserves restated-current-profile
+  compatibility overrides.
+- Final C1 evidence includes 95/95 seam tests, 107/107 direct-caller tests,
+  104/104 Account Mirror/history tests, typecheck, scoped zero-warning lint,
+  production build, plan audit, diff hygiene, and current CodeGraph readback
+  with 16 production callers and no superseded launch-context definitions.
+  No live browser/provider action ran. Candidate 2 is next; the sole campaign
+  audit remains unused and reserved for the final integrated state.
+
 ## Turn 459 | 2026-08-15
 
 - [Plan 0291](docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md)

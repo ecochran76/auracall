@@ -1,4 +1,7 @@
-import { resolveSelectedBrowserProfileResolution } from './profileResolution.js';
+import {
+  resolveSelectedBrowserProfileResolution,
+  type ResolvedBrowserProfileResolution,
+} from './profileResolution.js';
 import { resolveRuntimeSelection } from '../../config/model.js';
 import type { ResolvedUserConfig } from '../../config.js';
 
@@ -102,25 +105,19 @@ export function applyBrowserProfileOverrides(
   } else if (browser.debugPortRange === undefined && devRange !== undefined) {
     browser.debugPortRange = devRange;
   }
-  applyBrowserProfileDefaults(merged, profile, browser, { overrideExisting });
-  applyServiceDefaults(merged, profile, browser, { overrideExisting });
+  applyBrowserProfileDefaults(profile, browser, resolution, { overrideExisting });
+  applyServiceDefaults(merged, profile, browser, resolution, { overrideExisting });
   applyCacheDefaults(browser, resolution.profileFamily.cacheDefaults);
 }
 
 function applyBrowserProfileDefaults(
-  merged: MutableConfig,
   profile: Record<string, unknown>,
   browser: MutableBrowserConfig,
+  resolution: ResolvedBrowserProfileResolution,
   options: { overrideExisting?: boolean } = {},
 ): void {
   const overrideExisting = options.overrideExisting ?? false;
   const profileBrowser = isRecord(profile.browser) ? profile.browser : {};
-  const { resolution } = resolveSelectedBrowserProfileResolution({
-    merged,
-    explicitProfileName: asNonEmptyString(merged.auracallProfile) ?? null,
-    runtimeProfile: profile,
-    browser,
-  });
   const browserProfile = resolution.browserProfile;
 
   if (
@@ -274,15 +271,10 @@ function applyServiceDefaults(
   merged: MutableConfig,
   profile: Record<string, unknown>,
   browser: MutableBrowserConfig,
+  resolution: ResolvedBrowserProfileResolution,
   options: { overrideExisting?: boolean } = {},
 ): void {
   const overrideExisting = options.overrideExisting ?? false;
-  const { resolution } = resolveSelectedBrowserProfileResolution({
-    merged,
-    explicitProfileName: asNonEmptyString(merged.auracallProfile) ?? null,
-    runtimeProfile: profile,
-    browser,
-  });
 
   const currentChatgptUrl = asNonEmptyString(browser.chatgptUrl) ?? null;
   const currentGeminiUrl = asNonEmptyString(browser.geminiUrl) ?? null;

@@ -1,9 +1,6 @@
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
-import {
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
-  resolveUserBrowserLaunchContext,
-} from './profileResolution.js';
+import { resolveBrowserLaunchPlan } from './browserLaunchPlan.js';
 import type { ResolvedBrowserConfig } from '../types.js';
 import type { BrowserProfileTarget } from '../profileStore.js';
 import { matchesServiceUrl } from '../urlFamilies.js';
@@ -85,8 +82,11 @@ export class BrowserService extends BrowserServiceCore {
     target: BrowserProfileTarget,
     private readonly browserProcessOwner?: BrowserProcessOwnerAttribution,
   ) {
-    const launchContext = resolveUserBrowserLaunchContext(userConfig, target);
-    const { resolvedConfig } = launchContext;
+    const launchPlan = resolveBrowserLaunchPlan({
+      source: { kind: 'user-config', config: userConfig },
+      intent: { provider: target },
+    });
+    const resolvedConfig = structuredClone(launchPlan.launchPolicy) as ResolvedBrowserConfig;
     const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
     const deps: BrowserServiceDependencies = {
       resolveBrowserListTarget: () => resolveBrowserListTarget(userConfig, target),
@@ -107,7 +107,7 @@ export class BrowserService extends BrowserServiceCore {
             userDataDir: options.userDataDir,
             url: options.url,
             auracallRuntimeProfile: userConfig.auracallProfile ?? null,
-            browserProfileId: launchContext.resolution.profileFamily.browserProfileId,
+            browserProfileId: launchPlan.selection.browserProfileId,
             serviceTarget: target,
             logger: options.logger,
             abortSignal: options.abortSignal,
@@ -149,7 +149,7 @@ export class BrowserService extends BrowserServiceCore {
   summarizeBrowserOperationQueue(limit = 20): BrowserOperationQueueObservationSummary {
     const launchContext = this.resolveLaunchContext(this.serviceTarget);
     return summarizeBrowserOperationQueueObservations({
-      managedProfileDir: launchContext.managedProfileDir,
+      managedProfileDir: launchContext.managedBrowserProfile.directory,
       serviceTarget: this.serviceTarget,
     }, limit);
   }
@@ -159,9 +159,9 @@ export class BrowserService extends BrowserServiceCore {
   ): Promise<ServiceTargetResolution> {
     const launchContext = this.resolveLaunchContext(options.serviceId);
 		const selectionProvenance = {
-			browserProfile: launchContext.resolution.profileFamily.browserProfileId,
-			sourceBrowserProfile: launchContext.resolution.browserProfile.sourceProfileName ?? null,
-			managedBrowserProfile: launchContext.managedProfileDir,
+			browserProfile: launchContext.selection.browserProfileId,
+			sourceBrowserProfile: launchContext.sourceBrowserProfile.name,
+			managedBrowserProfile: launchContext.managedBrowserProfile.directory,
 		};
     let target = await this.resolveDevToolsTarget({
       host: undefined,
@@ -177,8 +177,8 @@ export class BrowserService extends BrowserServiceCore {
 
     options.onStage?.('browserTargetClassification');
     const classifiedInstances = await listInstancesWithLiveness({ registryPath: this.registryPath });
-    const expectedProfilePath = launchContext.managedProfileDir;
-    const expectedProfileName = launchContext.managedChromeProfile;
+    const expectedProfilePath = launchContext.managedBrowserProfile.directory;
+    const expectedProfileName = launchContext.managedBrowserProfile.activeProfileName;
     let matchedByPort = classifiedInstances.find(({ instance, alive }) =>
       alive && instance.port === target.port && (target.host ? instance.host === target.host : true),
     )?.instance;
@@ -331,7 +331,7 @@ export class BrowserService extends BrowserServiceCore {
     onStage?: (stage: string) => void;
   } = {}) {
     const launchContext = this.resolveLaunchContext(this.serviceTarget);
-    const fallbackDir = launchContext.managedProfileDir;
+    const fallbackDir = launchContext.managedBrowserProfile.directory;
     return super.resolveDevToolsTarget({
       ...options,
       defaultProfileDir: options.defaultProfileDir ?? fallbackDir,
@@ -339,17 +339,10 @@ export class BrowserService extends BrowserServiceCore {
   }
 
   private resolveLaunchContext(target: BrowserProfileTarget) {
-    return resolveManagedBrowserLaunchContextFromResolvedConfig({
-      auracallProfile: this.userConfig.auracallProfile ?? null,
-      browserProfileName: this.resolveLaunchBrowserProfileName(),
-      browser: this.getConfig(),
-      target,
+    return resolveBrowserLaunchPlan({
+      source: { kind: 'user-config', config: this.userConfig },
+      intent: { provider: target },
     });
-  }
-
-  private resolveLaunchBrowserProfileName(): string | null {
-    const context = resolveUserBrowserLaunchContext(this.userConfig, this.serviceTarget);
-    return context.resolution.profileFamily.browserProfileId;
   }
 
   private getMutationLog(): ReturnType<typeof createInMemoryBrowserMutationLog> {

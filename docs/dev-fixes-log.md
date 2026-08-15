@@ -21610,6 +21610,23 @@ browser-stage lifecycle observability, not transcript truncation.
 - Keep the post-click disappearance check and one-attempt fingerprint fence.
   A settle repair must never become permission for a second click.
 
+## 2026-08-15 | Explicit browser selection must invalidate flattened profile fields
+
+- A resolved top-level `browser` record may contain fields projected from the
+  currently selected browser profile. Reusing that record while explicitly
+  selecting a different AuraCall runtime profile or browser profile can report
+  the new identity yet launch with the old executable, display, managed path,
+  source profile, or port policy.
+- At the deep browser launch plan boundary, distinguish service/request fields
+  from browser-profile-owned fields. When selection identity genuinely changes,
+  discard the stale profile-owned projection before applying the newly selected
+  profile; when intent merely restates the current identity, preserve legitimate
+  advanced overrides.
+- Test the final public plan, not only intermediate profile records. Assert that
+  selection identity, browser profile, managed browser profile, provider
+  binding, and launch policy agree, and retain a same-identity compatibility
+  case beside the changed-identity regression.
+
 ## 2026-08-13 | Bound developer-app inventory at the operation boundary
 
 - Per-stage CDP timeouts are necessary but cannot prove that a composite

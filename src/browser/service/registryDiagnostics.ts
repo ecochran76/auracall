@@ -1,11 +1,10 @@
 import path from 'node:path';
 import { getAuracallHomeDir } from '../../auracallHome.js';
-import { resolveBrowserConfig } from '../config.js';
 import {
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
-  type ResolvedSessionBrowserLaunchContext,
-} from './profileResolution.js';
-import type { BrowserAutomationConfig, BrowserRuntimeMetadata, BrowserSessionConfig } from '../types.js';
+  resolveBrowserLaunchPlan,
+  type BrowserLaunchPlan,
+} from './browserLaunchPlan.js';
+import type { BrowserRuntimeMetadata, BrowserSessionConfig } from '../types.js';
 import type { BrowserSessionConfig as StoredBrowserSessionConfig } from '../../sessionManager.js';
 import {
   listInstancesWithLiveness,
@@ -116,27 +115,20 @@ export function collectSelectedPortRegistryCandidates(input: {
 export async function collectReattachRegistryDiagnostics(input: {
   runtime: Pick<BrowserRuntimeMetadata, 'chromePort' | 'chromeHost'>;
   config: ReattachRegistryConfig | undefined;
-  resolvedSession?: ResolvedSessionBrowserLaunchContext;
+  resolvedSession?: BrowserLaunchPlan;
   registryPath?: string;
 }): Promise<ReattachRegistryDiagnostics | null> {
   if (!input.runtime.chromePort) {
     return null;
   }
-  const resolved =
-    input.resolvedSession?.resolvedConfig ??
-    resolveBrowserConfig({
-      ...(input.config ?? {}),
-      target: input.config?.target ?? 'chatgpt',
-    } as BrowserAutomationConfig, { auracallProfileName: input.config?.auracallProfileName ?? null });
-  const launchContext =
-    input.resolvedSession?.managedLaunchContext ??
-    resolveManagedBrowserLaunchContextFromResolvedConfig({
-      auracallProfile: input.config?.auracallProfileName ?? null,
-      browser: resolved,
-      target: resolved.target ?? 'chatgpt',
-    });
-  const expectedProfilePath = launchContext.managedProfileDir;
-  const expectedProfileName = launchContext.managedChromeProfile;
+  const plan = input.resolvedSession ?? resolveBrowserLaunchPlan({
+    source: {
+      kind: 'session-config',
+      config: (input.config ?? {}) as BrowserSessionConfig,
+    },
+  });
+  const expectedProfilePath = plan.managedBrowserProfile.directory;
+  const expectedProfileName = plan.managedBrowserProfile.activeProfileName;
   const classifiedInstances = await listInstancesWithLiveness({
     registryPath: input.registryPath ?? path.join(getAuracallHomeDir(), 'browser-state.json'),
   });

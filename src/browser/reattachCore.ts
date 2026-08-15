@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import type { BrowserRuntimeMetadata, BrowserSessionConfig, ResolvedBrowserConfig } from './types.js';
 import type { BrowserLogger, ChromeClient } from './types.js';
 import { isDevToolsResponsive } from './processCheck.js';
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from './service/profileResolution.js';
+import { resolveBrowserLaunchPlan } from './service/browserLaunchPlan.js';
 import { navigateAndSettle } from './service/ui.js';
 import {
   connectToChromeTarget as connectToChromeTargetCore,
@@ -387,12 +387,17 @@ async function resumeBrowserSessionViaNewChrome(
     throw new Error('Reattach runtime dependencies missing; cannot launch new Chrome.');
   }
   const resolved = runtimeDeps.resolveBrowserConfig(config ?? {});
-  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: config?.auracallProfileName ?? null,
-    browser: resolved,
-    target: resolved.target ?? 'chatgpt',
+  const launchPlan = resolveBrowserLaunchPlan({
+    source: {
+      kind: 'session-config',
+      config: {
+        ...resolved,
+        auracallProfileName: config?.auracallProfileName ?? null,
+      },
+    },
+    intent: { provider: resolved.target ?? 'chatgpt' },
   });
-  const userDataDir = launchContext.managedProfileDir;
+  const userDataDir = launchPlan.managedBrowserProfile.directory;
   await mkdir(userDataDir, { recursive: true });
   const chrome = await runtimeDeps.launchChrome(resolved, userDataDir, logger);
   const chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';

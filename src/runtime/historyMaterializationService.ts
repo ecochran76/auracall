@@ -36,7 +36,7 @@ import {
 import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { BrowserProcessOwnerAttribution } from "../browser/service/browserService.js";
 import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "../browser/service/profileResolution.js";
+import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { createBrowserMediaGenerationMaterializer } from "../media/browserExecutor.js";
 import { createMediaGenerationService } from "../media/service.js";
@@ -6228,23 +6228,23 @@ async function cleanupHistoryMaterializationManagedBrowser(
 	const provider = normalizeProviderId(request.provider) ?? null;
 	if (!provider) return;
 	const runtimeProfile = request.runtimeProfile ?? null;
-	const runtimeConfig = withRuntimeProfileSelection(config, provider, runtimeProfile);
-	const browserConfig = isRecord(runtimeConfig.browser) ? runtimeConfig.browser : null;
 	const managedProfileDirs = new Set<string>();
 	const browserProfileName = resolveHistoryMaterializationBrowserProfileName(
 		config,
 		runtimeProfile,
 		request.browserProfile ?? null,
 	);
-	const manualLoginProfileDir = readRecordString(browserConfig, ["manualLoginProfileDir"]);
-	if (manualLoginProfileDir) managedProfileDirs.add(path.resolve(manualLoginProfileDir));
-	const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-		auracallProfile: readRecordString(runtimeConfig, ["auracallProfile"]) ?? runtimeProfile,
-		browserProfileName,
-		browser: browserConfig,
-		target: provider,
+	const launchPlan = resolveBrowserLaunchPlan({
+		source: { kind: "user-config", config: config as ResolvedUserConfig },
+		intent: {
+			provider,
+			runtimeProfileId: runtimeProfile,
+			browserProfileId: browserProfileName,
+		},
 	});
-	managedProfileDirs.add(path.resolve(launchContext.managedProfileDir));
+	const manualLoginProfileDir = launchPlan.launchPolicy.manualLoginProfileDir;
+	if (manualLoginProfileDir) managedProfileDirs.add(path.resolve(manualLoginProfileDir));
+	managedProfileDirs.add(path.resolve(launchPlan.managedBrowserProfile.directory));
 	for (const managedProfileDir of managedProfileDirs) {
 		const primaryPid = await findChromePidUsingUserDataDir(managedProfileDir).catch(() => null);
 		const pids = await findHistoryMaterializationManagedBrowserPids(managedProfileDir);

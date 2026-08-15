@@ -1,23 +1,10 @@
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { afterEach, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import {
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
   resolveBrowserProfileResolution,
-  resolveBrowserProfileResolutionFromResolvedConfig,
   resolveSelectedBrowserProfileResolution,
-  resolveSessionBrowserLaunchContext,
-  resolveUserBrowserLaunchContext,
 } from '../../src/browser/service/profileResolution.js';
 
 describe('resolveBrowserProfileResolution', () => {
-  const cleanup: string[] = [];
-
-  afterEach(async () => {
-    await Promise.all(cleanup.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
-  });
-
   test('builds typed resolved profile/browser/service/launch layers from the current merge shape', () => {
     const merged = {
       model: 'grok-4.1',
@@ -147,30 +134,6 @@ describe('resolveBrowserProfileResolution', () => {
       manualLogin: true,
       wslChromePreference: 'windows',
     });
-  });
-
-  test('derives a target-scoped launch profile from flattened resolved config', () => {
-    const result = resolveBrowserProfileResolutionFromResolvedConfig({
-      auracallProfile: 'mixed',
-      browser: {
-        target: 'chatgpt',
-        managedProfileRoot: '/tmp/managed-root',
-        chromeProfile: 'Profile 2',
-        debugPort: 45555,
-        debugPortStrategy: 'auto',
-        wslChromePreference: 'windows',
-      },
-      target: 'grok',
-    });
-
-    expect(result.launchProfile).toMatchObject({
-      target: 'grok',
-      chromeProfile: 'Profile 2',
-      debugPort: 45555,
-      debugPortStrategy: 'auto',
-      wslChromePreference: 'windows',
-    });
-    expect(result.launchProfile.manualLoginProfileDir).toBeUndefined();
   });
 
   test('drops manual-login profile path when manual login is explicitly disabled', () => {
@@ -419,52 +382,6 @@ describe('resolveBrowserProfileResolution', () => {
     });
   });
 
-  test('prefers the active signed-in managed subprofile for launchProfile.chromeProfile', async () => {
-    const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-launch-profile-'));
-    cleanup.push(managedRoot);
-    const managedProfileDir = path.join(managedRoot, 'wsl-chrome-2', 'chatgpt');
-    await fs.mkdir(path.join(managedProfileDir, 'Default'), { recursive: true });
-    await fs.mkdir(path.join(managedProfileDir, 'Profile 1'), { recursive: true });
-    await fs.writeFile(
-      path.join(managedProfileDir, 'Local State'),
-      JSON.stringify({
-        profile: {
-          last_used: 'Profile 1',
-          info_cache: {
-            // biome-ignore lint/complexity/useLiteralKeys: quoted Chrome profile key would trip naming-convention diagnostics.
-            ['Default']: {
-              name: 'Your Chrome',
-              user_name: '',
-              is_consented_primary_account: false,
-            },
-            'Profile 1': {
-              name: 'Person 1',
-              user_name: 'consult@polymerconsultinggroup.com',
-              is_consented_primary_account: true,
-            },
-          },
-        },
-      }),
-      'utf8',
-    );
-
-    const result = resolveBrowserProfileResolutionFromResolvedConfig({
-      auracallProfile: 'wsl-chrome-2',
-      browser: {
-        target: 'chatgpt',
-        managedProfileRoot: managedRoot,
-        chromeProfile: 'Default',
-      },
-      target: 'chatgpt',
-    });
-
-    expect(result.launchProfile).toMatchObject({
-      target: 'chatgpt',
-      chromeProfile: 'Profile 1',
-    });
-    expect(result.launchProfile.manualLoginProfileDir).toBeUndefined();
-  });
-
   test('merges named browser-family defaults before profile-local browser overrides', () => {
     const result = resolveBrowserProfileResolution({
       merged: {
@@ -667,144 +584,4 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.resolution.browserProfile.chromePath).toBe('/usr/bin/google-chrome');
   });
 
-  test('builds a reusable launch context directly from resolved user config', () => {
-    const result = resolveUserBrowserLaunchContext(
-      {
-        auracallProfile: 'wsl-chrome-2',
-        browser: {
-          target: 'chatgpt',
-          chromePath: '/usr/bin/google-chrome',
-          chromeProfile: 'Default',
-          chromeCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
-          bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
-          managedProfileRoot: '/home/test/.auracall/browser-profiles',
-          wslChromePreference: 'wsl',
-        },
-      } as never,
-      'chatgpt',
-    );
-
-    expect(result.resolvedConfig.target).toBe('chatgpt');
-    expect(result.launchProfile).toMatchObject({
-      target: 'chatgpt',
-      chromePath: '/usr/bin/google-chrome',
-      chromeProfile: 'Default',
-      manualLogin: true,
-      manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
-      wslChromePreference: 'wsl',
-    });
-    expect(result.resolution.launchProfile).toEqual(result.launchProfile);
-  });
-
-  test('uses selected browser family as managed browser profile namespace', () => {
-    const result = resolveUserBrowserLaunchContext(
-      {
-        auracallProfile: 'auracall-grok-auto',
-        browser: {
-          target: 'grok',
-          chromePath: '/usr/bin/google-chrome',
-          chromeProfile: 'Default',
-          managedProfileRoot: '/home/test/.auracall/browser-profiles',
-          manualLoginProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
-          wslChromePreference: 'wsl',
-        },
-        profiles: {
-          'auracall-grok-auto': {
-            browserFamily: 'default',
-            defaultService: 'grok',
-          },
-        },
-        browserFamilies: {
-          default: {
-            chromePath: '/usr/bin/google-chrome',
-          },
-        },
-      } as never,
-      'grok',
-    );
-
-    expect(result.resolution.profileFamily).toMatchObject({
-      profileName: 'auracall-grok-auto',
-      browserProfileId: 'default',
-      defaultService: 'grok',
-    });
-    expect(result.resolvedConfig.manualLoginProfileDir).toBe(
-      '/home/test/.auracall/browser-profiles/default/grok',
-    );
-    expect(result.launchProfile.manualLoginProfileDir).toBe(
-      '/home/test/.auracall/browser-profiles/default/grok',
-    );
-  });
-
-  test('derives managed browser profile identity from resolved browser config', async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-managed-launch-'));
-    const sourceCookiePath = path.join(tempRoot, 'source', 'Default', 'Network', 'Cookies');
-    await fs.mkdir(path.dirname(sourceCookiePath), { recursive: true });
-    await fs.writeFile(sourceCookiePath, '');
-    const result = resolveManagedBrowserLaunchContextFromResolvedConfig({
-      auracallProfile: 'wsl-chrome-2',
-      browser: {
-        target: 'chatgpt',
-        chromePath: '/usr/bin/google-chrome',
-        chromeProfile: 'Default',
-        chromeCookiePath: sourceCookiePath,
-        bootstrapCookiePath: sourceCookiePath,
-        managedProfileRoot: path.join(tempRoot, 'managed-root'),
-        manualLoginProfileDir: path.join(tempRoot, 'managed-root', 'wsl-chrome-2', 'chatgpt'),
-        wslChromePreference: 'wsl',
-      },
-      target: 'chatgpt',
-    });
-
-    expect(result.launchProfile.target).toBe('chatgpt');
-    expect(result.managedProfileDir).toBe(path.join(tempRoot, 'managed-root', 'wsl-chrome-2', 'chatgpt'));
-    expect(result.defaultManagedProfileDir).toBe(path.join(tempRoot, 'managed-root', 'wsl-chrome-2', 'chatgpt'));
-    expect(result.configuredChromeProfile).toBe('Default');
-    expect(result.managedChromeProfile).toBe('Default');
-    expect(result.bootstrapCookiePath).toBe(sourceCookiePath);
-  });
-
-  test('derives managed browser profile identity from browser profile namespace', async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-managed-browser-profile-'));
-    const result = resolveManagedBrowserLaunchContextFromResolvedConfig({
-      auracallProfile: 'auracall-grok-auto',
-      browserProfileName: 'default',
-      browser: {
-        target: 'grok',
-        chromePath: '/usr/bin/google-chrome',
-        chromeProfile: 'Default',
-        managedProfileRoot: path.join(tempRoot, 'managed-root'),
-        manualLoginProfileDir: path.join(tempRoot, 'managed-root', 'default', 'grok'),
-        wslChromePreference: 'wsl',
-      },
-      target: 'grok',
-    });
-
-    expect(result.managedProfileDir).toBe(path.join(tempRoot, 'managed-root', 'default', 'grok'));
-    expect(result.defaultManagedProfileDir).toBe(path.join(tempRoot, 'managed-root', 'default', 'grok'));
-  });
-
-  test('builds a reusable launch context from session config', async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-session-launch-'));
-    const sourceCookiePath = path.join(tempRoot, 'source', 'Default', 'Network', 'Cookies');
-    await fs.mkdir(path.dirname(sourceCookiePath), { recursive: true });
-    await fs.writeFile(sourceCookiePath, '');
-    const result = resolveSessionBrowserLaunchContext({
-      auracallProfileName: 'wsl-chrome-2',
-      target: 'chatgpt',
-      chromePath: '/usr/bin/google-chrome',
-      chromeProfile: 'Profile 1',
-      chromeCookiePath: sourceCookiePath,
-      bootstrapCookiePath: sourceCookiePath,
-      managedProfileRoot: path.join(tempRoot, 'managed-root'),
-      manualLoginProfileDir: path.join(tempRoot, 'managed-root', 'wsl-chrome-2', 'chatgpt'),
-    });
-
-    expect(result.resolvedConfig.target).toBe('chatgpt');
-    expect(result.managedLaunchContext.managedProfileDir).toBe(
-      path.join(tempRoot, 'managed-root', 'wsl-chrome-2', 'chatgpt'),
-    );
-    expect(result.managedLaunchContext.configuredChromeProfile).toBe('Profile 1');
-    expect(result.managedLaunchContext.bootstrapCookiePath).toBe(sourceCookiePath);
-  });
 });

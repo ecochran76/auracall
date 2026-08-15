@@ -1,8 +1,4 @@
-import {
-  resolveBootstrapSourceCookiePath,
-  resolveManagedProfileDir,
-  resolveManagedProfileName,
-} from '../profileStore.js';
+import { resolveManagedProfileName } from '../profileStore.js';
 import type {
   AgentBrowserBuild,
   AgentBrowserRdpConfig,
@@ -10,15 +6,12 @@ import type {
   DebugPortStrategy,
   ResolvedBrowserConfig,
 } from '../types.js';
-import type { BrowserSessionConfig } from '../types.js';
 import {
   getRuntimeProfileBrowserProfile,
   getRuntimeProfileBrowserProfileId,
   resolveRuntimeSelection,
   type ResolvedRuntimeSelection,
 } from '../../config/model.js';
-import type { ResolvedUserConfig } from '../../config.js';
-import { resolveBrowserConfig } from '../config.js';
 import { resolveCookiePath, resolveProfileDirectoryName } from './profile.js';
 
 type ServiceId = 'chatgpt' | 'gemini' | 'grok';
@@ -120,29 +113,6 @@ export interface ResolvedBrowserProfileResolution {
   launchProfile: ResolvedBrowserLaunchProfile;
 }
 
-export interface ResolvedUserBrowserLaunchContext {
-  resolvedConfig: ResolvedBrowserConfig;
-  resolution: ResolvedBrowserProfileResolution;
-  launchProfile: ResolvedBrowserLaunchProfile;
-}
-
-export interface ResolvedManagedBrowserLaunchContext {
-  resolution: ResolvedBrowserProfileResolution;
-  launchProfile: ResolvedBrowserLaunchProfile;
-  managedProfileDir: string;
-  userDataDir: string;
-  defaultManagedProfileDir: string;
-  configuredChromeProfile: string;
-  chromeProfile: string;
-  managedChromeProfile: string;
-  bootstrapCookiePath: string | null;
-}
-
-export interface ResolvedSessionBrowserLaunchContext {
-  resolvedConfig: ResolvedBrowserConfig;
-  managedLaunchContext: ResolvedManagedBrowserLaunchContext;
-}
-
 export interface ResolvedSelectedBrowserProfileResolution {
   runtimeSelection: ResolvedRuntimeSelection;
   resolution: ResolvedBrowserProfileResolution;
@@ -216,135 +186,6 @@ function asRemoteChrome(value: unknown): { host: string; port: number } | undefi
   return host && port ? { host, port } : undefined;
 }
 
-
-export function resolveBrowserProfileResolutionFromResolvedConfig(input: {
-  auracallProfile?: string | null;
-  browserProfileName?: string | null;
-  browser?: MutableBrowserConfig | null;
-  target?: ServiceId | null;
-}): ResolvedBrowserProfileResolution {
-  const rawBrowser = isRecord(input.browser) ? input.browser : {};
-  const target = input.target ?? (asNonEmptyString(rawBrowser.target) as ServiceId | undefined) ?? null;
-  const managedProfileName = input.browserProfileName ?? input.auracallProfile ?? 'default';
-  const manualLoginProfileDir =
-    asNonEmptyString(rawBrowser.manualLoginProfileDir) ??
-    (target
-      ? resolveManagedProfileDir({
-          managedProfileRoot: asNonEmptyString(rawBrowser.managedProfileRoot) ?? null,
-          auracallProfileName: managedProfileName,
-          target,
-        })
-      : undefined);
-  const browser = {
-    ...rawBrowser,
-    ...(target ? { target } : {}),
-    ...(manualLoginProfileDir ? { manualLoginProfileDir } : {}),
-  };
-  return resolveBrowserProfileResolution({
-    merged: { browser },
-    profileName: input.auracallProfile ?? null,
-    profile: input.browserProfileName ? { browserFamily: input.browserProfileName } : {},
-    browser,
-  });
-}
-
-export function resolveUserBrowserLaunchContext(
-  userConfig: Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'> & MutableConfig,
-  target: ServiceId,
-): ResolvedUserBrowserLaunchContext {
-  const browserProfileName = resolveSelectedBrowserProfileName(userConfig);
-  const resolvedConfig = resolveBrowserConfig({
-    ...(userConfig.browser ?? {}),
-    target,
-  }, {
-    auracallProfileName: userConfig.auracallProfile ?? null,
-    browserProfileName,
-  });
-  const resolution = resolveBrowserProfileResolutionFromResolvedConfig({
-    auracallProfile: userConfig.auracallProfile ?? null,
-    browserProfileName,
-    browser: resolvedConfig,
-    target,
-  });
-  return {
-    resolvedConfig,
-    resolution,
-    launchProfile: resolution.launchProfile,
-  };
-}
-
-export function resolveManagedBrowserLaunchContextFromResolvedConfig(input: {
-  auracallProfile?: string | null;
-  browserProfileName?: string | null;
-  browser?: MutableBrowserConfig | null;
-  target?: ServiceId | null;
-}): ResolvedManagedBrowserLaunchContext {
-  const rawBrowser = isRecord(input.browser) ? input.browser : {};
-  const target = input.target ?? (asNonEmptyString(rawBrowser.target) as ServiceId | undefined) ?? 'chatgpt';
-  const resolution = resolveBrowserProfileResolutionFromResolvedConfig({
-    auracallProfile: input.auracallProfile ?? null,
-    browserProfileName: input.browserProfileName ?? null,
-    browser: rawBrowser,
-    target,
-  });
-  const launchProfile = resolution.launchProfile;
-  const configuredChromeProfile =
-    launchProfile.chromeProfile ?? asNonEmptyString(rawBrowser.chromeProfile) ?? 'Default';
-  const managedProfileDir = resolveManagedProfileDir({
-    configuredDir:
-      launchProfile.manualLoginProfileDir ?? asNonEmptyString(rawBrowser.manualLoginProfileDir) ?? null,
-    managedProfileRoot:
-      launchProfile.managedProfileRoot ?? asNonEmptyString(rawBrowser.managedProfileRoot) ?? null,
-    auracallProfileName: input.browserProfileName ?? input.auracallProfile ?? 'default',
-    target,
-  });
-  const defaultManagedProfileDir = resolveManagedProfileDir({
-    configuredDir: null,
-    managedProfileRoot:
-      launchProfile.managedProfileRoot ?? asNonEmptyString(rawBrowser.managedProfileRoot) ?? null,
-    auracallProfileName: input.browserProfileName ?? input.auracallProfile ?? 'default',
-    target,
-  });
-  const managedChromeProfile = resolveManagedProfileName(managedProfileDir, configuredChromeProfile);
-  const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
-    configuredCookiePath:
-      launchProfile.bootstrapCookiePath ??
-      launchProfile.chromeCookiePath ??
-      asNonEmptyString(rawBrowser.bootstrapCookiePath) ??
-      asNonEmptyString(rawBrowser.chromeCookiePath) ??
-      null,
-    managedProfileDir,
-    managedProfileName: managedChromeProfile,
-  });
-  return {
-    resolution,
-    launchProfile,
-    managedProfileDir,
-    userDataDir: managedProfileDir,
-    defaultManagedProfileDir,
-    configuredChromeProfile,
-    chromeProfile: configuredChromeProfile,
-    managedChromeProfile,
-    bootstrapCookiePath,
-  };
-}
-
-export function resolveSessionBrowserLaunchContext(
-  sessionConfig: BrowserSessionConfig | undefined,
-): ResolvedSessionBrowserLaunchContext {
-  const resolvedConfig = resolveBrowserConfig(sessionConfig ?? {}, {
-    auracallProfileName: sessionConfig?.auracallProfileName ?? null,
-  });
-  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: sessionConfig?.auracallProfileName ?? null,
-    browser: resolvedConfig,
-    target: resolvedConfig.target ?? 'chatgpt',
-  });
-  return {
-    resolvedConfig,
-    managedLaunchContext,
-  };
-}
 
 export function resolveSelectedBrowserProfileResolution(input: {
   merged: MutableConfig;
@@ -586,13 +427,4 @@ export function resolveBrowserProfileResolution(input: {
     serviceBinding,
     launchProfile,
   };
-}
-
-function resolveSelectedBrowserProfileName(
-  userConfig: Pick<ResolvedUserConfig, 'auracallProfile'> & MutableConfig,
-): string | null {
-  const selection = resolveRuntimeSelection(userConfig, {
-    explicitProfileName: userConfig.auracallProfile ?? null,
-  });
-  return selection.browserProfileId ?? null;
 }

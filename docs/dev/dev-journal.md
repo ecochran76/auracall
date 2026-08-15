@@ -46906,3 +46906,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Candidate 1, browser launch resolution, is active. Provider-free source,
   tests, docs, and local Git work are in scope; every live/runtime effect
   remains excluded.
+
+## 2026-08-15 | Plan 0291 Candidate 1 accepted after bounded routing repair
+
+- Three independent interface designs converged on one discriminated
+  `resolveBrowserLaunchPlan({ source, intent })` seam. The selected design
+  centralizes AuraCall runtime profile, browser profile, source browser profile,
+  managed browser profile, provider binding, and final launch policy, and
+  returns a recursively frozen non-mutating plan.
+- Execution migrated 16 production function/method callers, removed the old
+  user/managed/session/flattened launch-context helpers, collapsed repeated
+  compatibility projection, and removed the `browser/config.ts` to profile
+  resolution dependency.
+- Independent testing found one High defect: changing AuraCall runtime/browser
+  identity could retain stale flattened browser-owned launch fields. The
+  public-seam reproducer failed with the newly selected browser identity but
+  the old `chromePath`. The bounded repair discards those fields only when
+  identity genuinely changes; restating `default/default` still preserves a
+  legitimate explicit managed directory.
+- Closed-world independent verification passed 95/95 seam/structure tests and
+  104/104 Account Mirror/history tests plus typecheck and exact two-case replay.
+  Execution validation also passed 107/107 direct-caller tests, scoped
+  zero-warning lint, production build, 291-plan audit, diff hygiene, and current
+  CodeGraph readback at 898 files with 16 production seam callers.
+- No live browser/provider action ran. No user-facing operator behavior or
+  config schema changed, so README changes were unnecessary. Candidate 2 is
+  active; the campaign-wide audit/repair cycle remains unused.

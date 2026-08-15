@@ -14,7 +14,9 @@ Lane: P01
   to an orchestrated subagent workflow. The campaign permits one audit/repair
   cycle total; only unresolved High-severity findings block completion and all
   lower-severity unresolved findings become durable notes. Candidate 1,
-  browser launch resolution, is the active critical-path unit.
+  browser launch resolution, is provider-free accepted after one independent
+  High routing defect was repaired and closed-world reverified. Candidate 2,
+  provider prompt execution, is the active critical-path unit.
 
 - Closed failed-safe two-sequential-approval LitScout live proof:
   [docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md](docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md)

@@ -140,7 +140,7 @@ import {
 } from "./providers/providerSessionAuthority.js";
 import type { ProviderUserIdentity } from "./providers/types.js";
 import { alignPromptEchoPair, buildPromptEchoMatcher } from "./reattachHelpers.js";
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from "./service/profileResolution.js";
+import { resolveBrowserLaunchPlan } from "./service/browserLaunchPlan.js";
 import { dismissOpenMenus, navigateAndSettle } from "./service/ui.js";
 import {
 	readSimpleProviderGuardState,
@@ -163,18 +163,6 @@ import { delay, estimateTokenCount, withRetries } from "./utils.js";
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from "./constants.js";
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from "./types.js";
 export { delay, isTemporaryChatUrl, normalizeChatgptUrl, parseDuration } from "./utils.js";
-
-export function resolveManagedBrowserLaunchContextForTest(
-	config: ReturnType<typeof resolveBrowserConfig>,
-	target: "chatgpt" | "grok" | "gemini",
-	auracallProfileName: string | null = null,
-) {
-	return resolveManagedBrowserLaunchContextFromResolvedConfig({
-		auracallProfile: auracallProfileName,
-		browser: config,
-		target,
-	});
-}
 
 async function captureChatgptDeepResearchReviewEvidence(input: {
 	Page: ChromeClient["Page"];
@@ -670,17 +658,22 @@ async function prepareManagedBrowserProfileLaunch(options: {
 	bootstrapCookiePath: string | null;
 	allowDestructiveProfileRetryReset: boolean;
 }> {
-	const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-		auracallProfile: options.auracallProfileName ?? null,
-		browser: options.config,
-		target: options.target,
+	const launchPlan = resolveBrowserLaunchPlan({
+		source: {
+			kind: "session-config",
+			config: {
+				...options.config,
+				auracallProfileName: options.auracallProfileName ?? null,
+			},
+		},
+		intent: { provider: options.target },
 	});
 	const {
-		managedProfileDir: userDataDir,
-		defaultManagedProfileDir,
-		configuredChromeProfile: chromeProfile,
-		bootstrapCookiePath,
-	} = launchContext;
+		directory: userDataDir,
+		defaultDirectory: defaultManagedProfileDir,
+		configuredProfileName: chromeProfile,
+	} = launchPlan.managedBrowserProfile;
+	const bootstrapCookiePath = launchPlan.sourceBrowserProfile.bootstrapCookiePath;
 	const allowDestructiveProfileRetryReset =
 		path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
 	await mkdir(userDataDir, { recursive: true });

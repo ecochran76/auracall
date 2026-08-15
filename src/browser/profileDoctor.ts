@@ -10,10 +10,7 @@ import {
   mergeGeminiFeatureProbes,
   normalizeGeminiFeatureSignature,
 } from './providers/geminiAdapter.js';
-import {
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
-  resolveUserBrowserLaunchContext,
-} from './service/profileResolution.js';
+import { resolveBrowserLaunchPlan } from './service/browserLaunchPlan.js';
 import type { ProviderUserIdentity } from './providers/types.js';
 import type { ProviderSessionProof } from './providers/providerSessionAuthority.js';
 import {
@@ -401,26 +398,23 @@ export async function inspectBrowserDoctorState(
   } = {},
 ): Promise<BrowserDoctorReport> {
   const target = options.target ?? (userConfig.browser?.target as BrowserDoctorTarget | undefined) ?? 'chatgpt';
-  const launchContext = resolveUserBrowserLaunchContext(userConfig, target);
-  const { resolvedConfig: resolved, launchProfile } = launchContext;
-  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: userConfig.auracallProfile ?? null,
-    browserProfileName: launchContext.resolution.profileFamily.browserProfileId,
-    browser: resolved,
-    target,
+  const plan = resolveBrowserLaunchPlan({
+    source: { kind: 'user-config', config: userConfig as ResolvedUserConfig },
+    intent: { provider: target },
   });
+  const resolved = plan.launchPolicy;
   const registryPath = options.registryPath ?? path.join(getAuracallHomeDir(), 'browser-state.json');
 
   const managedProfileRoot = resolveManagedProfileRoot(
-    launchProfile.managedProfileRoot ?? resolved.managedProfileRoot ?? null,
+    resolved.managedProfileRoot ?? null,
   );
-  const managedProfileDir = managedLaunchContext.managedProfileDir;
+  const managedProfileDir = plan.managedBrowserProfile.directory;
   const operationDispatcherKey = buildBrowserOperationKey({
     managedProfileDir,
     serviceTarget: target,
   });
-  const chromeProfile = managedLaunchContext.managedChromeProfile;
-  const sourceCookiePath = managedLaunchContext.bootstrapCookiePath ?? null;
+  const chromeProfile = plan.managedBrowserProfile.activeProfileName;
+  const sourceCookiePath = plan.sourceBrowserProfile.bootstrapCookiePath;
   const sourceProfile = inferSourceProfileFromCookiePath(sourceCookiePath);
 
   const beforeEntries = await classifyRegistryEntries(registryPath, managedProfileRoot);

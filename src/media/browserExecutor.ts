@@ -20,10 +20,7 @@ import {
 } from './grokBrowserExecutor.js';
 import { createChatgptBrowserMediaGenerationExecutor } from './chatgptBrowserExecutor.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
-import {
-  resolveManagedBrowserLaunchContextFromResolvedConfig,
-  resolveUserBrowserLaunchContext,
-} from '../browser/service/profileResolution.js';
+import { resolveBrowserLaunchPlan } from '../browser/service/browserLaunchPlan.js';
 import type { BrowserProfileTarget } from '../browser/profileStore.js';
 import {
   buildBrowserOperationKey,
@@ -294,14 +291,11 @@ function resolveBrowserMediaManagedProfileDir(
   userConfig: ResolvedUserConfig,
   provider: BrowserProfileTarget,
 ): string {
-  const launchContext = resolveUserBrowserLaunchContext(userConfig, provider);
-  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: userConfig.auracallProfile ?? null,
-    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
-    browser: launchContext.resolvedConfig,
-    target: provider,
+  const plan = resolveBrowserLaunchPlan({
+    source: { kind: 'user-config', config: userConfig },
+    intent: { provider },
   });
-  return managedLaunchContext.managedProfileDir;
+  return plan.managedBrowserProfile.directory;
 }
 
 function createBrowserOperationBusyError(result: BrowserOperationBusyResult): MediaGenerationExecutionError {
