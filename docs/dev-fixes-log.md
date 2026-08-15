@@ -1,3 +1,9 @@
+- 2026-08-14: Never bind ChatGPT developer-app auth status by display name.
+  Replacement apps can retain the old app's name while receiving a new id, so
+  a same-name fallback can falsely transfer ACTIVE or REAUTH_REQUIRED state.
+  Require exactly one normalized app-id/connector-id match and return null for
+  missing or ambiguous matches.
+
 - 2026-08-14: A whole-operation deadline can release a browser-operation lease
   while leaving its underlying DevTools attachment uncancellable and
   unobservable. Carry one abort/deadline/stage contract through target

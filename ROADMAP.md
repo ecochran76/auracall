@@ -7,6 +7,13 @@
 Status: active
 Lane: P01
 
+- Active provider-free ChatGPT developer-app exact auth binding repair:
+  [docs/dev/plans/0285-2026-08-14-developer-app-exact-auth-binding.md](docs/dev/plans/0285-2026-08-14-developer-app-exact-auth-binding.md)
+  LitScout governance proved a replacement app inherited `ACTIVE` only because
+  AuraCall joined a retained same-name OAuth link. The bounded source slice
+  removes display-name auth joining, fails closed on missing or ambiguous exact
+  identity, and excludes every install, browser, provider, and canonical effect.
+
 - Closed accepted installed DevTools attachment inventory replay:
   [docs/dev/plans/0284-2026-08-14-devtools-attachment-installed-inventory-replay.md](docs/dev/plans/0284-2026-08-14-devtools-attachment-installed-inventory-replay.md)
   The sole user-runtime install reached exact four-module parity without an API

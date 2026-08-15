@@ -1,3 +1,15 @@
+## 2026-08-14 | Plan 0285 Exact Developer-App Auth Binding
+
+- LitScout governance reconciled the Plan 0284 complete inventory against the
+  replacement app's exact OAuth subject and found that AuraCall had transferred
+  `ACTIVE` from an older same-name connector id.
+- Provider-free regressions reproduce both same-name/different-id crossover and
+  duplicate exact-link ambiguity. Auth status now comes only from one exact
+  app-id match; a missing or ambiguous match returns null while exact ACTIVE and
+  REAUTH_REQUIRED mappings remain intact.
+- This source slice authorizes no install, service restart, browser replay,
+  OAuth action, prompt, connector call, LitScout write, or Experiment 6 action.
+
 ## 2026-08-14 | Plan 0284 Installed Attachment Replay
 
 - The operator authorized one install and one replay after Plan 0283 closed

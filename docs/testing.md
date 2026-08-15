@@ -73,6 +73,8 @@
     `aria-checked="true"` before the named server URL input is addressed
   - `inventoryComplete: false` is a hard mutation stop; a timed-out installed
     apps response must never be interpreted as proof that zero apps exist
+  - inventory auth status is bound only by one exact app-id/connector-id match;
+    same-name replacement records and ambiguous exact matches return null
   - stop immediately on a provider rate-limit, CAPTCHA, or human-verification
     surface
   - OAuth create may report `awaiting-human` only when the post-submit target

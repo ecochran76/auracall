@@ -460,6 +460,95 @@ describe("deriveChatgptDeveloperAppState", () => {
 		});
 	});
 
+	it("does not transfer auth state from a same-name link with a different app id", () => {
+		const state = deriveChatgptDeveloperAppState({
+			identity: { email: "eric.cochran@soylei.com" },
+			developerMode: true,
+			observedAt: "2026-08-14T12:00:00.000Z",
+			featureSignature: JSON.stringify({
+				inventory_complete: true,
+				installed_apps: [
+					{
+						plugin_id: "plugin_asdk_app_new_litscout",
+						name: "LitScout",
+						app_ids: ["asdk_app_new_litscout"],
+						status: "ENABLED",
+						enabled: true,
+					},
+				],
+				linked_apps: [
+					{
+						connector_id: "asdk_app_old_litscout",
+						name: "LitScout",
+						auth_status: "ACTIVE",
+					},
+				],
+			}),
+		});
+
+		expect(state.apps[0]?.authStatus).toBeNull();
+	});
+
+	it("fails closed when more than one link matches the exact app id", () => {
+		const state = deriveChatgptDeveloperAppState({
+			identity: { email: "eric.cochran@soylei.com" },
+			developerMode: true,
+			observedAt: "2026-08-14T12:00:00.000Z",
+			featureSignature: JSON.stringify({
+				inventory_complete: true,
+				installed_apps: [
+					{
+						plugin_id: "plugin_asdk_app_litscout",
+						name: "LitScout",
+						app_ids: ["asdk_app_litscout"],
+						status: "ENABLED",
+						enabled: true,
+					},
+				],
+				linked_apps: [
+					{
+						connector_id: "asdk_app_litscout",
+						auth_status: "ACTIVE",
+					},
+					{
+						connector_id: "asdk_app_litscout",
+						auth_status: "REAUTH_REQUIRED",
+					},
+				],
+			}),
+		});
+
+		expect(state.apps[0]?.authStatus).toBeNull();
+	});
+
+	it("preserves reauthentication state from one exact app-id match", () => {
+		const state = deriveChatgptDeveloperAppState({
+			identity: { email: "eric.cochran@soylei.com" },
+			developerMode: true,
+			observedAt: "2026-08-14T12:00:00.000Z",
+			featureSignature: JSON.stringify({
+				inventory_complete: true,
+				installed_apps: [
+					{
+						plugin_id: "plugin_asdk_app_litscout",
+						name: "LitScout",
+						app_ids: ["asdk_app_litscout"],
+						status: "ENABLED",
+						enabled: true,
+					},
+				],
+				linked_apps: [
+					{
+						connector_id: "asdk_app_litscout",
+						auth_status: "REAUTH_REQUIRED",
+					},
+				],
+			}),
+		});
+
+		expect(state.apps[0]?.authStatus).toBe("REAUTH_REQUIRED");
+	});
+
 	it("does not treat a missing installed-app response as a complete empty inventory", () => {
 		const state = deriveChatgptDeveloperAppState({
 			identity: {

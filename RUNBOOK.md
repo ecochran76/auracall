@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 456 | 2026-08-14
+
+- [Plan 0285](docs/dev/plans/0285-2026-08-14-developer-app-exact-auth-binding.md)
+  opens provider-free after LitScout governance reconciled the Plan 0284
+  inventory against exact replacement-app OAuth state. The diagnosis proved
+  the new LitScout app id had inherited `ACTIVE` from an older same-name linked
+  record through AuraCall's display-name fallback.
+- The first exported-seam regression failed with `ACTIVE` for a same-name,
+  different-id link. After removing name matching it passed. A second red
+  proved duplicate exact links selected the first status; the join now accepts
+  exactly one exact app-id match and otherwise returns null. Existing exact
+  ACTIVE mapping remains green, and an exact REAUTH_REQUIRED fixture was added.
+- Source/tests/docs only are active. Install, service restart, browser action,
+  inventory replay, prompt, connector, app/OAuth mutation, LitScout canonical
+  write, and Experiment 6 effects remain zero.
+
 ## Turn 455 | 2026-08-14
 
 - [Plan 0284](docs/dev/plans/0284-2026-08-14-devtools-attachment-installed-inventory-replay.md)

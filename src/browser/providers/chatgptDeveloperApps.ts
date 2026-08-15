@@ -577,11 +577,10 @@ export function deriveChatgptDeveloperAppState(
 			const name = readString(record.name);
 			if (!pluginId || !name) return null;
 			const appIds = readStringArray(record.app_ids);
-			const link = links.find(
-				(candidate) =>
-					appIds.some((appId) => appIdentityMatches(appId, readString(candidate.connector_id))) ||
-					normalize(name) === normalize(readString(candidate.name)),
+			const matchingLinks = links.filter((candidate) =>
+				appIds.some((appId) => appIdentityMatches(appId, readString(candidate.connector_id))),
 			);
+			const link = matchingLinks.length === 1 ? matchingLinks[0] : null;
 			const scope = readString(record.scope);
 			const discoverability = readString(record.discoverability);
 			const providerName = readString(record.provider_name);
