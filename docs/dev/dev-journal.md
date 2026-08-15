@@ -46742,3 +46742,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   current CodeGraph readback, plan-library validation, CLI-help readback, and
   diff hygiene pass. No live or installed effect ran; one separately authorized
   live canary remains the exact current-DOM gate.
+
+## 2026-08-15 | Plan 0287 opens one LitScout allow-once canary
+
+- The operator authorized trying the new approval policy with LitScout. The
+  safe preference is fixed to `allow-once`; `always-allow` is not inferred.
+- One source-direct `wsl-chrome-3` Chat/current-model run may select exact app
+  `Corel33t`, submit one prompt, call only read-only `auth_session`, and click
+  exact `Allow once` at most once. The expected response is
+  `LITSCOUT_ALLOW_ONCE_OK` and retries are forbidden.
+- No install, restart, scheduler/completion/materialization control, generic
+  search/browse, LitScout research/action/canonical write, or app/OAuth
+  mutation is authorized. Any live gate failure closes the canary failed-safe.

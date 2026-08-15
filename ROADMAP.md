@@ -7,6 +7,13 @@
 Status: active
 Lane: P01
 
+- Active one-shot LitScout `allow-once` live canary:
+  [docs/dev/plans/0287-2026-08-15-litscout-tool-approval-live-canary.md](docs/dev/plans/0287-2026-08-15-litscout-tool-approval-live-canary.md)
+  One source-direct Chat-mode run on AuraCall runtime profile `wsl-chrome-3`
+  may select `Corel33t`, call only read-only `auth_session`, and consume at
+  most one exact `Allow once` click. It is zero-retry and authorizes no install,
+  scheduler control, LitScout mutation, or `always-allow` action.
+
 - Closed accepted provider-free ChatGPT third-party tool approval policy:
   [docs/dev/plans/0286-2026-08-15-chatgpt-tool-approval-policy.md](docs/dev/plans/0286-2026-08-15-chatgpt-tool-approval-policy.md)
   AuraCall detects exact paired `Allow once` / `Always allow` pauses during

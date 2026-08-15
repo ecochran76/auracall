@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 457 | 2026-08-15
+
+- [Plan 0287](docs/dev/plans/0287-2026-08-15-litscout-tool-approval-live-canary.md)
+  opens from the operator's explicit request to try the new approval handling
+  with LitScout. The bounded choice is `allow-once`, not persistent consent.
+- The sole source-direct run is fixed to AuraCall runtime profile
+  `wsl-chrome-3`, Chat/current model, exact app `Corel33t`, one read-only
+  `auth_session` call, one prompt, at most one approval click, and zero retry.
+- Install, restart, scheduler/completion/materialization controls, app/OAuth
+  mutation, generic search/browse, LitScout research/action/canonical writes,
+  `always-allow`, and `Answer now` remain excluded.
+
 ## Turn 456 | 2026-08-14
 
 - [Plan 0285](docs/dev/plans/0285-2026-08-14-developer-app-exact-auth-binding.md)
