@@ -7,7 +7,7 @@
 Status: active
 Lane: P01
 
-- Open sequential architecture deepening campaign:
+- Closed accepted sequential architecture deepening campaign:
   [docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md](docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md)
   The operator selected all four architecture-review candidates in order and
   delegated detailed planning, execution, testing, and one independent audit
@@ -23,8 +23,10 @@ Lane: P01
   persistence. Candidate 4 is provider-free accepted: ChatGPT and Grok now
   share one locally substitutable process/deadline/output/JSON/state/evidence
   harness while their phases, assertions, guard/retry, and cleanup policies
-  remain provider-local. The sole integrated campaign audit is now the active
-  critical-path unit.
+  remain provider-local. The sole integrated audit found zero High findings;
+  its retained Medium C4 dynamic-orchestration coverage gap is recorded in the
+  dated audit note. The full provider-free suite passes 2,922 tests, and the
+  campaign is closed without live browser/provider/runtime work.
 
 - Closed failed-safe two-sequential-approval LitScout live proof:
   [docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md](docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md)

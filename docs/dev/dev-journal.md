@@ -47000,3 +47000,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   diff hygiene, and current CodeGraph readback. No High finding remains. No
   live acceptance, browser, provider, install, restart, scheduler, or
   completion action ran; the sole campaign audit is next.
+
+## 2026-08-15 | Plan 0291 closes after sole audit and full integration gate
+
+- The one allowed discovery audit found zero High findings. One Medium gap is
+  retained: C4 tests dynamically prove the shared harness but do not execute
+  provider-main PASS/FAIL/cleanup or ChatGPT CLI-over-resume orchestration. A
+  Low current-state counter drift was reconciled: CodeGraph now has 905 files
+  and 15 current production launch-plan callers; C1 had 16 at its checkpoint
+  before C3 removed a superseded caller.
+- The first full-suite attempt had one Gemini spacing test observe 44 ms
+  against a 70 ms wall-clock threshold. Its exact replay and full file passed,
+  and the complete rerun passed 322 files / 2,922 tests with 65 live/PTY tests
+  skipped. Typecheck, build, scoped lint, plan audit, docs inventory, diff
+  hygiene, CodeGraph, commit ancestry, and origin agreement also pass.
+- No code repair cycle and no live browser/provider, installed-runtime,
+  scheduler, completion, restart, or service action ran. Lower-severity notes
+  are retained in
+  `docs/dev/notes/2026-08-15-plan0291-architecture-deepening-audit.md`.

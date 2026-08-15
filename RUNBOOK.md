@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 464 | 2026-08-15
+
+- Plan 0291 closes after all four sequential architecture candidates and the
+  sole audit. The audit found zero High findings, one retained Medium C4
+  provider-main dynamic-coverage gap, and one Low historical counter drift
+  reconciled in closeout docs. No code repair cycle ran.
+- The current CodeGraph is healthy at 905 files. Fifteen production
+  function/method callers now cross `resolveBrowserLaunchPlan`; the earlier C1
+  checkpoint correctly had sixteen before C3 removed a superseded caller.
+- Final integration passes 322 test files and 2,922 tests with 65 live/PTY
+  tests skipped by design, plus typecheck, production build, scoped lint,
+  plan audit, docs inventory, diff hygiene, CodeGraph, commit ancestry, and
+  origin readback. No live browser/provider, installed runtime, scheduler,
+  completion, restart, or service action ran. Retained notes:
+  `docs/dev/notes/2026-08-15-plan0291-architecture-deepening-audit.md`.
+
 ## Turn 463 | 2026-08-15
 
 - Plan 0291 Candidate 4 is provider-free accepted. One
@@ -69,7 +85,8 @@
 - Final C1 evidence includes 95/95 seam tests, 107/107 direct-caller tests,
   104/104 Account Mirror/history tests, typecheck, scoped zero-warning lint,
   production build, plan audit, diff hygiene, and current CodeGraph readback
-  with 16 production callers and no superseded launch-context definitions.
+  with 16 production callers at that C1 checkpoint and no superseded
+  launch-context definitions.
   No live browser/provider action ran. Candidate 2 is next; the sole campaign
   audit remains unused and reserved for the final integrated state.
 

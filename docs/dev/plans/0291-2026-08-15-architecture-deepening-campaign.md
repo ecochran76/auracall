@@ -1,6 +1,6 @@
 # Architecture Deepening Campaign | 0291-2026-08-15
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Stable Objective
@@ -23,9 +23,10 @@ durable notes.
 
 - The visual architecture report is published at Previews session
   `a24fd8aff377` and records four evidence-backed candidates.
-- CodeGraph is healthy with 902 indexed files and no reported pending sync.
-- Candidate 1 is provider-free accepted. Sixteen production function/method
-  callers now cross one immutable browser launch plan seam; the superseded
+- CodeGraph is healthy with 905 indexed files and no reported pending sync.
+- Candidate 1 is provider-free accepted. Fifteen current production
+  function/method callers cross one immutable browser launch plan seam; the C1
+  checkpoint had sixteen before C3 removed a superseded caller. The old
   launch-context helpers and the config/profile-resolution cycle are removed.
 - Candidate 2 is provider-free accepted. One base `LlmService.runPrompt(...)`
   lifecycle dispatches all three provider adapters; ChatGPT no longer
@@ -55,6 +56,11 @@ durable notes.
   no live acceptance command ran.
 - Candidates 1 through 4 have validated checkpoints. No live browser/provider
   or installed/runtime state was changed.
+- The sole campaign audit is complete with zero High findings, one retained
+  Medium C4 dynamic-orchestration test gap, and one Low evidence-counter drift
+  reconciled in closeout docs. One documentation-only reconciliation pass was
+  used; no code repair cycle ran. The integrated provider-free rerun passes 322
+  files and 2,922 tests with 65 live/PTY tests skipped by design.
 
 ## Domain Language
 
@@ -165,12 +171,12 @@ the primary orchestrator. Subagents must not spawn children.
   semantics without weakening fail-closed behavior.
 - [x] C4 ChatGPT and Grok acceptance runs share one deep harness while retaining
   provider-specific phase behavior.
-- [ ] Subagent planning, execution, and testing receipts are reconciled for
+- [x] Subagent planning, execution, and testing receipts are reconciled for
   every candidate.
-- [ ] The sole campaign audit is complete; every accepted High finding is
+- [x] The sole campaign audit is complete; every accepted High finding is
   repaired and verified or the affected criterion remains blocked.
-- [ ] Lower-severity unresolved findings, if any, are retained in a dated note.
-- [ ] Targeted and integration validation, CodeGraph, docs, plan audit, diff
+- [x] Lower-severity unresolved findings, if any, are retained in a dated note.
+- [x] Targeted and integration validation, CodeGraph, docs, plan audit, diff
   hygiene, commit history, and origin readback agree with the final state.
 
 ## Definition Of Done
