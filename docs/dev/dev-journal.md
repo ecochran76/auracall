@@ -9,6 +9,10 @@
   REAUTH_REQUIRED mappings remain intact.
 - This source slice authorizes no install, service restart, browser replay,
   OAuth action, prompt, connector call, LitScout write, or Experiment 6 action.
+- Focused validation passes 23/23 and the four-file affected gate passes
+  221/221; typecheck, build, scoped Biome, CodeGraph, plan-library validation,
+  and diff hygiene pass. Source candidate `0c9110e4` is pushed and Plan 0285
+  closes provider-free accepted. Installed verification remains separate.
 
 ## 2026-08-14 | Plan 0284 Installed Attachment Replay
 

@@ -1,7 +1,7 @@
 # Developer-App Exact Auth Binding | 0285-2026-08-14
 
-State: OPEN
-Disposition: PROVIDER-FREE SOURCE REPAIR
+State: CLOSED
+Disposition: PROVIDER-FREE SOURCE ACCEPTED
 Lane: P01
 
 ## Stable Objective
@@ -41,14 +41,14 @@ exact app/connector identity.
 
 ## Acceptance Criteria
 
-- [ ] Same-name/different-id and duplicate-exact-id fixtures reproduce the
+- [x] Same-name/different-id and duplicate-exact-id fixtures reproduce the
   prior fail-open behavior before source changes.
-- [ ] Auth status maps only from one exact app-id match; missing or ambiguous
+- [x] Auth status maps only from one exact app-id match; missing or ambiguous
   matches return null.
-- [ ] Exact ACTIVE and REAUTH_REQUIRED fixtures remain green.
-- [ ] Focused and affected provider-free validation, typecheck, build, lint,
+- [x] Exact ACTIVE and REAUTH_REQUIRED fixtures remain green.
+- [x] Focused and affected provider-free validation, typecheck, build, lint,
   CodeGraph, planning audits, and diff hygiene pass.
-- [ ] Source candidate and closeout receipt are committed and pushed.
+- [x] Source candidate and closeout receipt are committed and pushed.
 
 ## Effect Budget
 
@@ -67,3 +67,19 @@ exact app/connector identity.
 This plan closes after the exact-identity join is provider-free validated and
 the source candidate plus terminal receipt are pushed. Installed/read-only
 inventory verification remains a separately authorized boundary.
+
+## Terminal Checkpoint | Provider-Free Source Accepted
+
+- Same-name/different-id first failed with `ACTIVE` instead of null. Duplicate
+  exact matches then failed by selecting the first status. Both are green after
+  the exact-one join; focused validation passes 23/23 and affected validation
+  passes 221/221.
+- Typecheck, production build, scoped Biome, current CodeGraph readback, plan
+  library audit, and diff hygiene pass. The shared fleet active audit retains
+  25 pre-existing policy/legacy-plan findings and reports none for Plan 0285.
+- Exact pushed source candidate is `0c9110e43b73f9e0d44bc3ca36314c4f0f0e3065`.
+  Durable receipt:
+  [docs/dev/notes/2026-08-14-plan0285-exact-auth-binding.json](../notes/2026-08-14-plan0285-exact-auth-binding.json).
+- No install, service restart, browser action, inventory replay, prompt,
+  connector, app/OAuth mutation, LitScout canonical write, or Experiment 6
+  action ran. Installed verification remains a separate authority boundary.

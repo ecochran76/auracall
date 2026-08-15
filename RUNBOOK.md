@@ -15,6 +15,14 @@
 - Source/tests/docs only are active. Install, service restart, browser action,
   inventory replay, prompt, connector, app/OAuth mutation, LitScout canonical
   write, and Experiment 6 effects remain zero.
+- Focused validation passes 23/23 and the four-file affected gate passes
+  221/221. Typecheck, production build, scoped Biome, current CodeGraph,
+  plan-library validation, and diff hygiene pass. The shared fleet auditor's
+  25 findings are pre-existing policy/legacy-plan debt; none names Plan 0285.
+- Exact source candidate `0c9110e4` is pushed. Plan 0285 closes provider-free
+  accepted with receipt
+  [docs/dev/notes/2026-08-14-plan0285-exact-auth-binding.json](docs/dev/notes/2026-08-14-plan0285-exact-auth-binding.json).
+  Installed verification remains separately authorized.
 
 ## Turn 455 | 2026-08-14
 

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "plan_id": 285,
+  "recorded_at": "2026-08-14T22:59:00-05:00",
+  "disposition": "PROVIDER_FREE_SOURCE_ACCEPTED",
+  "candidate": {
+    "commit": "0c9110e43b73f9e0d44bc3ca36314c4f0f0e3065",
+    "tree": "f04702eca09e861d66cff9fd1046d11b1a68c43c",
+    "parent": "0877ea7cfbba8e6d53170060474d6065a13436b0",
+    "branch": "main",
+    "remote": "origin/main"
+  },
+  "cause": {
+    "function": "deriveChatgptDeveloperAppState",
+    "prior_join": "exact normalized app identity OR normalized display name",
+    "consequence": "a replacement app could inherit auth status from an older same-name linked connector"
+  },
+  "repair": {
+    "join": "exactly one normalized app-id/connector-id match",
+    "missing_match": "null",
+    "ambiguous_match": "null",
+    "display_name_join_removed": true
+  },
+  "artifacts": {
+    "source": {
+      "path": "src/browser/providers/chatgptDeveloperApps.ts",
+      "sha256": "5552713612d42e7ec834d4ef79ef50f84d009e0bd971a7d34d7c989885a5e5df"
+    },
+    "regression": {
+      "path": "tests/browser/chatgptDeveloperApps.test.ts",
+      "sha256": "20bddf433c15590b4a129322d8c7dc4d580885fee48a1b01c540ed56a5f1c336"
+    }
+  },
+  "red_green": {
+    "same_name_different_id_red": "1 failed, 20 passed; expected null, received ACTIVE",
+    "duplicate_exact_match_red": "1 failed, 21 passed; expected null, received ACTIVE",
+    "focused_green": "23 passed",
+    "affected_green": "221 passed across four files"
+  },
+  "validation": {
+    "typecheck": "PASS",
+    "production_build": "PASS",
+    "scoped_biome": "PASS",
+    "codegraph_current_readback": "PASS",
+    "plan_library_validation_errors": 0,
+    "fleet_active_audit": {
+      "ok": false,
+      "preexisting_findings": 25,
+      "plan_0285_findings": 0
+    },
+    "git_diff_check": "PASS"
+  },
+  "effects": {
+    "user_runtime_installs": 0,
+    "service_restarts": 0,
+    "browser_actions": 0,
+    "inventory_replays": 0,
+    "prompt_submissions": 0,
+    "connector_calls": 0,
+    "app_or_oauth_mutations": 0,
+    "litscout_canonical_writes": 0,
+    "experiment_6_runs": 0
+  },
+  "next_gate": "a separately authorized one-install and one-read-only-inventory packet may verify installed exact-id behavior; this receipt does not authorize it"
+}
