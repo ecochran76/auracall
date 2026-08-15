@@ -18915,3 +18915,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Exact tab and lock cleanup restored the two baseline tabs and Chrome PID
   66297/port 45015 ownership. Durable receipt:
   `docs/dev/notes/2026-08-15-plan0289-two-sequential-approval-failed-safe.json`.
+
+## Turn 422 | 2026-08-15
+
+- Plan 0290 opens under the standing operator objective after Plan 0289's
+  exact cleanup and zero-effect closeout. The provider-free repair will wait
+  briefly and require the same exact approval fingerprint/action on a fresh
+  re-probe before dispatching one trusted pointer sequence at fresh coordinates.
+- Changed or ambiguous pre-click surfaces dispatch no pointer event; a surface
+  that independently disappears reports no action. The repair must pass its
+  red/green and affected gates and be pushed before live work.
+- One successor prompt is bounded to two fresh nonexistent LitScout cancellation
+  targets, two sequential exact `Allow once` actions, and zero retry, install,
+  restart, scheduler/control, persistent-consent, `Answer now`, and LitScout
+  canonical-write effects.

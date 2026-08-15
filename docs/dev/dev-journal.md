@@ -46842,3 +46842,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The exact canary tab was closed; both services and Chrome remain unchanged,
   baseline tabs remain, and lock roots are empty. A provider-free settle and
   fresh-coordinate repair must precede any successor live proof.
+
+## 2026-08-15 | Plan 0290 opens approval pre-click settle repair
+
+- Current focus: reproduce the stale-initial-coordinate class at the public
+  approval-handler seam, then require a brief stable exact re-probe and use its
+  fresh coordinates for the one allowed trusted pointer sequence.
+- A changed or ambiguous surface before dispatch is fail-closed with zero
+  pointer events; independent disappearance is harmless and reports no action.
+- After the provider-free repair and affected gates are green and pushed, one
+  fresh zero-retry Corel33t prompt may invoke only the two exact nonexistent
+  Plan 0290 cancellation targets and approve each with exact `Allow once`.
