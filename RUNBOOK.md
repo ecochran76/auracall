@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 459 | 2026-08-15
+
+- [Plan 0291](docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md)
+  opens from the operator's selection of all four architecture-review
+  candidates in sequence: browser launch resolution, provider prompt
+  execution, one history materialization attempt, and the browser acceptance
+  harness.
+- The primary agent is the critical-path orchestrator. Bounded subagents own
+  detailed design alternatives, exact implementation scopes, independent
+  testing, and one final audit; child agents may not spawn further workers.
+- The campaign-wide audit/repair bound is one. Only unresolved High-severity
+  findings block acceptance; Medium, Low, and informational findings are
+  retained in one dated note.
+- Provider-free source, tests, docs, and local Git work are authorized. Live
+  browser/provider actions, installs, restarts, scheduler controls, and
+  completion controls remain excluded. Candidate 1 design is now active.
+
 ## Turn 458 | 2026-08-15
 
 - [Plan 0288](docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md)

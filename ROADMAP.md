@@ -7,6 +7,15 @@
 Status: active
 Lane: P01
 
+- Open sequential architecture deepening campaign:
+  [docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md](docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md)
+  The operator selected all four architecture-review candidates in order and
+  delegated detailed planning, execution, testing, and one independent audit
+  to an orchestrated subagent workflow. The campaign permits one audit/repair
+  cycle total; only unresolved High-severity findings block completion and all
+  lower-severity unresolved findings become durable notes. Candidate 1,
+  browser launch resolution, is the active critical-path unit.
+
 - Closed failed-safe two-sequential-approval LitScout live proof:
   [docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md](docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md)
   The sole prompt reached the first approval, but its trusted pointer sequence

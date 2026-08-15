@@ -46881,3 +46881,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   owned tab closed, leaving the two baseline tabs, unchanged services/Chrome,
   and empty lock roots. The provider-free repair is accepted; live repetition
   remains unproven.
+
+## 2026-08-15 | Architecture deepening review published
+
+- A provider-free CodeGraph review found four candidate deepening slices:
+  browser launch resolution, provider prompt execution, history
+  materialization attempts, and the browser acceptance harness.
+- The top recommendation is to deepen the existing browser launch resolution
+  seam. It is in-process, aligns with Plan 0008, and can concentrate mutable
+  merge order and managed browser profile derivation behind one interface.
+- The visual report is intentionally temporary and will be published through
+  Previews. No runtime, browser, provider, install, scheduler, or completion
+  effect ran. Candidate selection is the only next gate; no interface or code
+  change is proposed yet.
+
+## 2026-08-15 | Plan 0291 opens sequential architecture campaign
+
+- The operator selected all four review candidates in sequence and assigned
+  the primary agent as orchestrator with subagents for detailed planning,
+  execution, testing, and auditing.
+- The campaign-wide audit/repair loop is capped at one. Only unresolved High
+  findings block; lower-severity unresolved findings will be retained in one
+  dated note.
+- Candidate 1, browser launch resolution, is active. Provider-free source,
+  tests, docs, and local Git work are in scope; every live/runtime effect
+  remains excluded.
