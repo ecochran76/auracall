@@ -18861,3 +18861,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Slices B/C remain open and effect-gated. Current agent-browser binary/payload
   drift, duplicate-profile pressure, and unavailable route-pool capacity must
   converge before profile registration or a first noncritical activation.
+
+## Turn 418 | 2026-08-15
+
+- Plan 0288's provider-free liveness repair is pushed at `da7961be`; the
+  affected gate passes 123/123 plus typecheck, build, scoped lint, CodeGraph,
+  planning, and diff validation.
+- Live attempt 1 reached ChatGPT in 19.7 seconds. Retained-DOM readback proves
+  exact `Corel33t.auth_session` ran once and returned its authenticated contract
+  before `LITSCOUT_ALLOW_ONCE_OK`; no approval surface appeared or click logged.
+- LitScout source marks `auth_session` read-only. Revision A permits one bounded
+  second canary through mutation-annotated `project_source_ingest_job_cancel`
+  with a deliberately nonexistent project/job tuple. The target must fail
+  before cancellation, preserving zero LitScout writes while testing exact
+  `Allow once`; every other mutating target remains excluded.

@@ -7,8 +7,8 @@ Lane: P01
 ## Stable Objective
 
 Remove the proven pre-submit cache-context stall and obtain current live proof
-that AuraCall selects exact `Allow once` for one read-only LitScout call without
-clicking `Always allow` or `Answer now`.
+that AuraCall selects exact `Allow once` for one bounded LitScout call without
+clicking `Always allow` or `Answer now` and without producing a LitScout write.
 
 ## Current State
 
@@ -24,8 +24,22 @@ clicking `Always allow` or `Answer now`.
   probes remain uncalled. The affected eight-file gate passes 123 tests and
   typecheck passes.
 - The actual browser run independently retains its provider identity gate.
-  Production build, lint, final diff/planning audits, commit, and live proof
-  remain.
+  Production build, lint, final diff/planning audits, commit, and push passed at
+  `da7961be`.
+- Live attempt 1 reached ChatGPT in 19.7 seconds, called exact read-only
+  `auth_session` once, returned `LITSCOUT_ALLOW_ONCE_OK`, and exposed the real
+  authenticated tool result in the retained DOM. It did not expose or log an
+  approval action because LitScout correctly publishes `auth_session` with
+  `readOnlyHint=true`; this is valid connector evidence but not approval-path
+  acceptance.
+- Revision A changes only the second canary's tool target. It may call exact
+  mutation-annotated `project_source_ingest_job_cancel` once with project slug
+  `plan0288-approval-canary-nonexistent-20260815` and job id
+  `psi_plan0288_nonexistent_20260815`. Current LitScout source proves the tool
+  is marked non-read-only and resolves the account-owned project/job before
+  cancellation, so this deliberately nonexistent tuple is expected to return
+  not-found with zero LitScout mutation. The expected response token is
+  `LITSCOUT_ALLOW_ONCE_CANCEL_NOT_FOUND_OK`.
 
 ## Execution Contract
 
@@ -42,9 +56,11 @@ clicking `Always allow` or `Answer now`.
    profile `wsl-chrome-3`, managed browser profile
    `~/.auracall/browser-profiles/wsl-chrome-3/chatgpt`, Chat/current model,
    selected app `Corel33t`, and exact `allow-once`.
-6. Each live attempt may submit at most one prompt and call only read-only
-   LitScout `auth_session`. A distinct provider-free diagnosis/repair/green
-   commit is required before another attempt.
+6. Attempt 1 may call only read-only LitScout `auth_session`. Attempt 2 may call
+   only `project_source_ingest_job_cancel` with the exact deliberately
+   nonexistent project/job tuple recorded above. No other mutating tool or
+   target is eligible. A distinct source-grounded diagnosis and durable green
+   checkpoint is required before another attempt.
 7. Close only after exact approval logging, disappearance confirmation,
    expected token, cleanup, and excluded-effect evidence all pass, or after the
    bounded attempts reach a terminal failed-safe outcome.
@@ -53,7 +69,7 @@ clicking `Always allow` or `Answer now`.
 
 - No install, service restart, scheduler/completion/materialization control,
   app/OAuth mutation, generic search/browse, LitScout research/action/canonical
-  write, `always-allow`, or `Answer now`.
+  write, successful job cancellation, `always-allow`, or `Answer now`.
 - Stop the active attempt on CAPTCHA/human verification, account mismatch,
   unknown ownership, unexpected tool, ambiguous approval, unconfirmed click,
   prompt-submission uncertainty, or any material mutation outside the packet.
@@ -66,10 +82,10 @@ clicking `Always allow` or `Answer now`.
   participate in non-interactive browser-context metadata resolution.
 - [x] The prompt startup path reaches `runBrowserMode()` without pre-run live
   provider enrichment and retains its actual provider identity gate.
-- [ ] Provider-free validation and source/remote readback pass before live work.
+- [x] Provider-free validation and source/remote readback pass before live work.
 - [ ] One current LitScout turn submits once, logs exact `Allow once`, confirms
-  disappearance, invokes only `auth_session`, and returns exact token
-  `LITSCOUT_ALLOW_ONCE_OK`.
+  disappearance, invokes only the exact bounded LitScout tool for that attempt,
+  and returns its expected token.
 - [ ] No attempt clicks `Always allow` or `Answer now`; excluded effects remain
   zero and exact cleanup passes.
 - [ ] Durable receipts, plan/roadmap/runbook/journal, audits, commits, and origin
@@ -93,4 +109,5 @@ clicking `Always allow` or `Answer now`.
 Completion requires current live evidence for the exact operator preference,
 not merely green source tests. A failed attempt may drive another bounded
 provider-free repair within this plan, but acceptance remains false until one
-turn proves exact `Allow once`, the expected LitScout token, and cleanup.
+turn proves exact `Allow once`, the expected LitScout token, zero LitScout
+writes, and cleanup.

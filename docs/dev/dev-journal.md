@@ -46788,3 +46788,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The eight-file affected gate passes 123/123 and typecheck passes. Current
   CodeGraph readback confirms the intended caller path. Build, lint, final
   audits, commit/push, and the first Plan 0288 canary remain.
+
+## 2026-08-15 | Plan 0288 Revision A targets a zero-effect approval surface
+
+- Repair commit `da7961be` is pushed after 123/123 affected tests, typecheck,
+  build, scoped lint, CodeGraph readback, planning audit, and diff hygiene.
+- Live attempt 1 completed in 19.7 seconds and the retained conversation proves
+  one real `Corel33t.auth_session` request and authenticated response followed
+  by exact `LITSCOUT_ALLOW_ONCE_OK`. No approval action appeared or logged.
+- Current LitScout source explains the result: `auth_session` is published with
+  `readOnlyHint=true`. Revision A permits one second prompt using only
+  mutation-annotated `project_source_ingest_job_cancel` against the exact
+  deliberately nonexistent project/job tuple in Plan 0288. Ownership lookup
+  must fail before cancellation, keeping the intended and accepted LitScout
+  write count at zero while exercising ChatGPT's approval surface.
