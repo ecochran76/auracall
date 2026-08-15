@@ -1,6 +1,8 @@
 import type { ChromeClient, BrowserLogger, ChatgptToolApprovalPolicy } from "../types.js";
 import { BrowserAutomationError } from "../../oracle/errors.js";
 
+const CHATGPT_TOOL_APPROVAL_SETTLE_MS = 120;
+
 type ToolApprovalProbe =
 	| { status: "none" }
 	| { status: "ambiguous"; count: number }
@@ -70,21 +72,55 @@ export function createChatgptToolApprovalHandler(options: {
 				},
 			);
 		}
-		attemptedFingerprints.add(probe.fingerprint);
+
+		await new Promise((resolve) => setTimeout(resolve, CHATGPT_TOOL_APPROVAL_SETTLE_MS));
+		const settledProbe = await readProbe();
+		if (settledProbe.status === "none") return { status: "none" };
+		if (settledProbe.status === "ambiguous") {
+			throw new BrowserAutomationError(
+				`ChatGPT tool approval became ambiguous before click: ${settledProbe.count} approval surfaces are visible.`,
+				{
+					stage: "chatgpt-tool-approval",
+					code: "chatgpt-tool-approval-ambiguous",
+					count: settledProbe.count,
+				},
+			);
+		}
+		if (
+			settledProbe.fingerprint !== probe.fingerprint ||
+			settledProbe.actionLabel !== probe.actionLabel
+		) {
+			throw new BrowserAutomationError(
+				"ChatGPT tool approval changed while settling; refusing to click an unconfirmed surface.",
+				{
+					stage: "chatgpt-tool-approval",
+					code: "chatgpt-tool-approval-changed-before-click",
+					initialFingerprint: probe.fingerprint,
+					settledFingerprint: settledProbe.fingerprint,
+					initialActionLabel: probe.actionLabel,
+					settledActionLabel: settledProbe.actionLabel,
+				},
+			);
+		}
+		attemptedFingerprints.add(settledProbe.fingerprint);
 
 		const action = options.policy;
-		await options.client.Input.dispatchMouseEvent({ type: "mouseMoved", x: probe.x, y: probe.y });
+		await options.client.Input.dispatchMouseEvent({
+			type: "mouseMoved",
+			x: settledProbe.x,
+			y: settledProbe.y,
+		});
 		await options.client.Input.dispatchMouseEvent({
 			type: "mousePressed",
-			x: probe.x,
-			y: probe.y,
+			x: settledProbe.x,
+			y: settledProbe.y,
 			button: "left",
 			clickCount: 1,
 		});
 		await options.client.Input.dispatchMouseEvent({
 			type: "mouseReleased",
-			x: probe.x,
-			y: probe.y,
+			x: settledProbe.x,
+			y: settledProbe.y,
 			button: "left",
 			clickCount: 1,
 		});
@@ -95,7 +131,10 @@ export function createChatgptToolApprovalHandler(options: {
 				confirmed = true;
 				break;
 			}
-			if (after.status === "approval-required" && after.fingerprint !== probe.fingerprint) {
+			if (
+				after.status === "approval-required" &&
+				after.fingerprint !== settledProbe.fingerprint
+			) {
 				confirmed = true;
 				break;
 			}
@@ -104,22 +143,22 @@ export function createChatgptToolApprovalHandler(options: {
 		}
 		if (!confirmed) {
 			throw new BrowserAutomationError(
-				`ChatGPT tool approval surface did not disappear after selecting ${probe.actionLabel}.`,
+				`ChatGPT tool approval surface did not disappear after selecting ${settledProbe.actionLabel}.`,
 				{
 					stage: "chatgpt-tool-approval",
 					code: "chatgpt-tool-approval-not-confirmed",
-					fingerprint: probe.fingerprint,
+					fingerprint: settledProbe.fingerprint,
 					action,
 				},
 			);
 		}
-		attemptedFingerprints.delete(probe.fingerprint);
-		options.logger(`ChatGPT tool approval: ${probe.actionLabel}`);
+		attemptedFingerprints.delete(settledProbe.fingerprint);
+		options.logger(`ChatGPT tool approval: ${settledProbe.actionLabel}`);
 		return {
 			status: "approved",
 			action,
-			label: probe.actionLabel,
-			fingerprint: probe.fingerprint,
+			label: settledProbe.actionLabel,
+			fingerprint: settledProbe.fingerprint,
 		};
 	};
 }

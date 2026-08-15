@@ -21597,6 +21597,19 @@ browser-stage lifecycle observability, not transcript truncation.
   The managed profile directory remains AuraCall-owned and is passed by exact
   path without copying or conversion.
 
+## 2026-08-15 | Approval coordinates must be fresh at pointer dispatch
+
+- Detecting one exact ChatGPT approval surface does not prove that its first
+  measured button center remains current while the provider finishes laying
+  out the dialog. A trusted pointer sequence can become a no-op even though
+  the same enabled surface remains visible afterward.
+- Before the sole allowed click, wait briefly and re-probe the same exact
+  fingerprint and configured action. Use only the fresh coordinates; changed
+  or ambiguous state must dispatch zero pointer events, while independent
+  disappearance requires no action.
+- Keep the post-click disappearance check and one-attempt fingerprint fence.
+  A settle repair must never become permission for a second click.
+
 ## 2026-08-13 | Bound developer-app inventory at the operation boundary
 
 - Per-stage CDP timeouts are necessary but cannot prove that a composite

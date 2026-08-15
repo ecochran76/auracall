@@ -82,6 +82,17 @@ describe("ChatGPT tool approval handling", () => {
 					},
 				},
 			})
+			.mockResolvedValueOnce({
+				result: {
+					value: {
+						status: "approval-required",
+						fingerprint: "tool-approval-1",
+						actionLabel: "Allow once",
+						x: 120,
+						y: 240,
+					},
+				},
+			})
 			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
 		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
 		const logger = vi.fn();
@@ -103,6 +114,137 @@ describe("ChatGPT tool approval handling", () => {
 			y: 240,
 		});
 		expect(logger).toHaveBeenCalledWith("ChatGPT tool approval: Allow once");
+	});
+
+	it("waits for the approval surface to settle and clicks its fresh coordinates", async () => {
+		const initialApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "settling-tool-approval",
+					actionLabel: "Allow once",
+					x: 120,
+					y: 240,
+				},
+			},
+		};
+		const settledApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "settling-tool-approval",
+					actionLabel: "Allow once",
+					x: 180,
+					y: 300,
+				},
+			},
+		};
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce(initialApproval)
+			.mockResolvedValueOnce(settledApproval)
+			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
+		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).resolves.toMatchObject({ status: "approved" });
+		expect(dispatchMouseEvent).toHaveBeenNthCalledWith(1, {
+			type: "mouseMoved",
+			x: 180,
+			y: 300,
+		});
+	});
+
+	it("fails closed when the approval changes before click", async () => {
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce({
+				result: {
+					value: {
+						status: "approval-required",
+						fingerprint: "approval-before-settle",
+						actionLabel: "Allow once",
+						x: 120,
+						y: 240,
+					},
+				},
+			})
+			.mockResolvedValueOnce({
+				result: {
+					value: {
+						status: "approval-required",
+						fingerprint: "replacement-approval",
+						actionLabel: "Allow once",
+						x: 180,
+						y: 300,
+					},
+				},
+			});
+		const dispatchMouseEvent = vi.fn();
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).rejects.toThrow(/changed while settling/i);
+		expect(dispatchMouseEvent).not.toHaveBeenCalled();
+	});
+
+	it("fails closed when the approval becomes ambiguous before click", async () => {
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce({
+				result: {
+					value: {
+						status: "approval-required",
+						fingerprint: "approval-before-ambiguity",
+						actionLabel: "Allow once",
+						x: 120,
+						y: 240,
+					},
+				},
+			})
+			.mockResolvedValueOnce({ result: { value: { status: "ambiguous", count: 2 } } });
+		const dispatchMouseEvent = vi.fn();
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).rejects.toThrow(/became ambiguous.*2/i);
+		expect(dispatchMouseEvent).not.toHaveBeenCalled();
+	});
+
+	it("does not click when the approval disappears while settling", async () => {
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce({
+				result: {
+					value: {
+						status: "approval-required",
+						fingerprint: "disappearing-approval",
+						actionLabel: "Allow once",
+						x: 120,
+						y: 240,
+					},
+				},
+			})
+			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
+		const dispatchMouseEvent = vi.fn();
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).resolves.toEqual({ status: "none" });
+		expect(dispatchMouseEvent).not.toHaveBeenCalled();
 	});
 
 	it("fails fast without clicking when approval policy is manual", async () => {
@@ -221,7 +363,9 @@ describe("ChatGPT tool approval handling", () => {
 		const evaluate = vi
 			.fn()
 			.mockResolvedValueOnce(approval)
+			.mockResolvedValueOnce(approval)
 			.mockResolvedValueOnce(gone)
+			.mockResolvedValueOnce(approval)
 			.mockResolvedValueOnce(approval)
 			.mockResolvedValueOnce(gone);
 		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);

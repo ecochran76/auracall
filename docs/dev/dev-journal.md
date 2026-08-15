@@ -46853,3 +46853,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - After the provider-free repair and affected gates are green and pushed, one
   fresh zero-retry Corel33t prompt may invoke only the two exact nonexistent
   Plan 0290 cancellation targets and approve each with exact `Allow once`.
+
+## 2026-08-15 | Plan 0290 provider-free settle repair is green
+
+- The red public-seam fixture proved the old handler clicked stale initial
+  coordinates. The implementation now waits 120 ms, requires the same exact
+  fingerprint/action, and uses the second probe's center for the sole pointer
+  sequence.
+- Changed and ambiguous pre-click state dispatch zero pointer events;
+  independent disappearance returns no action. The post-click confirmation
+  and repeat-attempt fence remain intact.
+- Evidence: 12/12 focused tests, 143/143 affected tests, typecheck, production
+  build, scoped zero-warning Biome lint, current CodeGraph readback, and diff
+  hygiene pass. The fresh two-approval live canary remains.

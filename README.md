@@ -1860,9 +1860,12 @@ ChatGPT tool approval is always an operator preference. Use `allow-once` when
 each detected tool call should receive only the current approval, or
 `always-allow` when ChatGPT should persist approval for that third-party tool.
 AuraCall never upgrades `allow-once` to `always-allow`, never clicks `Answer
-now`, and fails closed on incomplete or ambiguous approval surfaces. The same
-preference can be stored as `browser.chatgptToolApproval` or on the selected
-`services.chatgpt` entry.
+now`, and fails closed on incomplete or ambiguous approval surfaces. Before
+the one allowed pointer sequence, AuraCall briefly settles and re-probes the
+same exact surface, then uses the fresh button center. A changed or ambiguous
+surface receives no click; one that independently disappears needs no action.
+The same preference can be stored as `browser.chatgptToolApproval` or on the
+selected `services.chatgpt` entry.
 
 Put defaults in `~/.auracall/config.json` (JSON5). Example:
 ```json5

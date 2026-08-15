@@ -183,9 +183,11 @@ oracle --profile wsl-chrome-3 --engine browser \
 ```
 
 The detector requires one visible surface containing exactly one of each
-approval action. It clicks only the configured exact label through trusted
-pointer input, verifies the surface disappears, and will not click the same
-surface twice. It never clicks `Answer now`.
+approval action. Before its one trusted pointer sequence, it briefly settles,
+re-probes the same exact surface/action, and uses the fresh button center. A
+changed or ambiguous surface receives no click; one that independently
+disappears needs no action. AuraCall verifies a clicked surface disappears and
+will not click the same surface twice. It never clicks `Answer now`.
 
 Current live proof: the 2026-08-15 `wsl-chrome-3` LitScout canary selected
 `allow-once`, logged exact `Allow once`, verified disappearance, and completed

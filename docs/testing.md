@@ -47,7 +47,8 @@
     explicit operator choices
   - run the provider-free action and propagation gate before any live canary:
     `pnpm vitest run tests/browser/chatgptToolApproval.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser/profileResolution.test.ts tests/cli/browserConfig.test.ts tests/runtime.configuredExecutor.test.ts tests/schema/chatgptMode.test.ts tests/schema/resolver.test.ts`
-  - provider-free fixtures must prove exact paired actions, ambiguity stops,
+  - provider-free fixtures must prove exact paired actions, stable pre-click
+    re-probe with fresh coordinates, zero-click changed/ambiguous handling,
     disappearance verification, one-attempt fencing, and `Answer now` exclusion
   - prompt startup must not perform live identity or feature detection merely
     to enrich optional browser-context cache metadata; run

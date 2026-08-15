@@ -18929,3 +18929,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   targets, two sequential exact `Allow once` actions, and zero retry, install,
   restart, scheduler/control, persistent-consent, `Answer now`, and LitScout
   canonical-write effects.
+
+## Turn 423 | 2026-08-15
+
+- The fresh-coordinate regression failed red exactly: current code clicked
+  the initial center `(120,240)` instead of the settled center `(180,300)`.
+  The minimum repair waits 120 ms, re-probes the same fingerprint and action,
+  and dispatches one trusted pointer sequence only at the fresh center.
+- Changed or ambiguous pre-click state now throws before pointer dispatch;
+  independent disappearance returns no action. Post-click disappearance and
+  the one-attempt fingerprint fence remain unchanged.
+- The focused suite passes 12/12 and the eight-file affected gate passes
+  143/143. Typecheck, production build, scoped zero-warning Biome lint,
+  current CodeGraph readback, and diff hygiene pass. No live/browser/LitScout
+  effect occurred in this provider-free slice.

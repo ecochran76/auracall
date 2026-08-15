@@ -162,12 +162,14 @@ record, follow the repo-local
 Tool approval is provider-owned and runs only during the post-submit ChatGPT
 response wait. `src/browser/actions/chatgptToolApproval.ts` requires one
 visible surface with exact paired `Allow once` and `Always allow` controls. It
-uses trusted CDP pointer input for only the operator-selected action, verifies
-that the surface disappears, and fences repeat attempts by surface
-fingerprint. The default `manual` policy detects and reports the pause without
-clicking. Keep this classifier out of generic browser-service blocking-surface
-recovery, and never widen it to broad `allow`, `continue`, or `Answer now`
-matching.
+briefly settles and re-probes the same fingerprint and selected action, then
+uses the fresh button center for one trusted CDP pointer sequence. Changed or
+ambiguous pre-click state dispatches no pointer input; independent disappearance
+reports no action. A clicked surface must disappear, and repeat attempts remain
+fenced by surface fingerprint. The default `manual` policy detects and reports
+the pause without clicking. Keep this classifier out of generic browser-service
+blocking-surface recovery, and never widen it to broad `allow`, `continue`, or
+`Answer now` matching.
 
 ## Core helpers (packages/browser-service/src/service/ui.ts)
 

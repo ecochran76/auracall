@@ -24,6 +24,14 @@ LitScout write.
   response wait so later approvals are eligible.
 - LitScout targets, cancellation state, canonical writes, services, browser
   ownership, tabs, and locks remained unchanged after the failed canary.
+- The public-seam regression first failed because the pointer used initial
+  coordinates rather than the re-probed center. The minimum repair now waits
+  120 ms, requires the same fingerprint and configured action, and uses only
+  the fresh coordinates for one trusted pointer sequence.
+- Focused coverage passes 12/12, including zero-pointer changed, ambiguous,
+  and independently disappeared pre-click states. The eight-file affected
+  gate passes 143/143; typecheck, build, scoped zero-warning Biome lint,
+  current CodeGraph readback, and diff hygiene pass.
 
 ## Execution Contract
 
@@ -63,9 +71,9 @@ LitScout write.
 
 ## Acceptance Criteria
 
-- [ ] A red-to-green provider-free regression proves fresh-coordinate dispatch
+- [x] A red-to-green provider-free regression proves fresh-coordinate dispatch
   after a stable pre-click re-probe.
-- [ ] Provider-free coverage proves changed/ambiguous surfaces dispatch zero
+- [x] Provider-free coverage proves changed/ambiguous surfaces dispatch zero
   pointer events; all focused and affected validation passes.
 - [ ] One prompt submits exactly once and invokes only the two frozen calls.
 - [ ] AuraCall logs exact `Allow once` twice, in sequence, with confirmed

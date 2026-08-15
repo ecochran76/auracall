@@ -21,6 +21,9 @@ Lane: P01
   and fresh coordinates before one trusted pointer sequence. After the repair
   is green and pushed, one fresh zero-retry LitScout prompt may prove two
   sequential `Allow once` actions with zero canonical effects.
+  The red/green is now implemented: the affected gate passes 143/143 plus
+  typecheck, build, scoped lint, current CodeGraph, and diff hygiene. The one
+  fresh live canary remains.
 
 - Closed accepted browser-context liveness repair and LitScout approval proof:
   [docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md](docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md)
