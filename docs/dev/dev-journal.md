@@ -46754,3 +46754,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - No install, restart, scheduler/completion/materialization control, generic
   search/browse, LitScout research/action/canonical write, or app/OAuth
   mutation is authorized. Any live gate failure closes the canary failed-safe.
+
+## 2026-08-15 | Plan 0287 closes pre-submit failed-safe
+
+- Opening gate `fb1ed232` was pushed. The sole actual source-direct command
+  emitted the root ChatGPT target and then reached its 600-second outer guard
+  before `runBrowserMode`, conversation creation, or prompt submission.
+- The approval handler was never reached: approval detections/clicks, LitScout
+  connector calls, expected tokens, installs/restarts, runtime controls, and
+  LitScout writes all remained zero. No provider retry ran.
+- Exact cleanup/readback preserved API PID 32268 with zero restarts, Chrome PID
+  66297 as sole port-45015 owner, an empty operation-lease directory, and the
+  unchanged LitScout/root tab pair with no blocking page.
+- CodeGraph localizes the blocker to pre-run `buildBrowserContext()` cache
+  identity/feature discovery, whose provider reads lack a local deadline. A
+  provider-free bound/skip repair is required before another live canary.

@@ -11,6 +11,19 @@
 - Install, restart, scheduler/completion/materialization controls, app/OAuth
   mutation, generic search/browse, LitScout research/action/canonical writes,
   `always-allow`, and `Answer now` remain excluded.
+- Opening gate `fb1ed232` was pushed. One inert `--no-notify` parse failure
+  occurred before browser access; removing that invalid flag did not constitute
+  a provider retry because every live-effect counter was still zero.
+- The sole actual command emitted its root target, opened CDP connections, and
+  then reached the 600-second outer guard without entering `runBrowserMode`,
+  creating a conversation, submitting a prompt, detecting approval, or calling
+  LitScout. No retry ran.
+- Exact-port readback found no blocking page and the unchanged retained
+  LitScout/root tab pair. Cleanup proves no canary process or lease, active API
+  PID 32268 with zero restarts, and sole Chrome PID 66297 on port 45015.
+- CodeGraph localizes the blocker to unbounded `buildBrowserContext()` cache
+  identity/feature discovery. Plan 0287 closes failed-safe; receipt:
+  [docs/dev/notes/2026-08-15-plan0287-litscout-allow-once-canary.json](docs/dev/notes/2026-08-15-plan0287-litscout-allow-once-canary.json).
 
 ## Turn 456 | 2026-08-14
 

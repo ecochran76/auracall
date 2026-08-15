@@ -1,3 +1,11 @@
+- 2026-08-15: Best-effort browser cache-context enrichment must not be an
+  unbounded prerequisite for a one-shot prompt. `buildBrowserContext()` calls
+  `resolveCacheIdentity()` before `runBrowserMode()`; catching a provider
+  identity or feature-signature rejection does not help when the promise never
+  settles. Give those reads a positive local deadline or skip live detection
+  when a configured identity is sufficient, so the browser operation lock,
+  prompt lifecycle, and their diagnostics can become reachable.
+
 - 2026-08-15: Treat ChatGPT third-party tool approval as an explicit operator
   policy, never generic auto-consent. Require one visible surface containing
   the exact paired `Allow once` and `Always allow` actions, select only the

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "planId": "0287-2026-08-15",
+  "openingCommit": "fb1ed232",
+  "implementationCommit": "4ce634c5",
+  "closeoutCommitBeforeCanary": "aa71b887",
+  "terminalDisposition": "LIVE_CANARY_FAILED_SAFE",
+  "target": {
+    "auracallRuntimeProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "browserProfile": "Default",
+    "developerApp": "Corel33t",
+    "composerMode": "chat",
+    "modelStrategy": "current",
+    "toolApprovalPolicy": "allow-once",
+    "expectedToken": "LITSCOUT_ALLOW_ONCE_OK"
+  },
+  "preflight": {
+    "gitUpstreamBehind": 0,
+    "gitUpstreamAhead": 0,
+    "apiServiceActive": true,
+    "apiMainPid": 32268,
+    "apiRestartCount": 0,
+    "chromePid": 66297,
+    "devtoolsPort": 45015,
+    "browserOperationLeaseCount": 0
+  },
+  "invocation": {
+    "sourceDirect": true,
+    "outerTimeoutSeconds": 600,
+    "auracallTimeoutSeconds": 480,
+    "providerRetries": 0,
+    "inertCliParseFailures": 1,
+    "inertCliParseFailure": "Commander rejected --no-notify before browser access",
+    "lastProgressLine": "[browser] target project=none conversation=new url=https://chatgpt.com/"
+  },
+  "terminalEvidence": {
+    "observedAt": "2026-08-15T11:14:06-05:00",
+    "result": "outer_timeout_pre_submit",
+    "newConversationObserved": false,
+    "approvalDetected": false,
+    "approvalLabelClicked": null,
+    "approvalDisappearanceConfirmed": false,
+    "connectorResultObserved": false,
+    "expectedTokenObserved": false,
+    "preAndPostTabUrls": [
+      "https://chatgpt.com/c/6a807616-36b0-83ea-b97c-1d6b84400320",
+      "https://chatgpt.com/"
+    ],
+    "blockingState": null
+  },
+  "actualEffects": {
+    "browserPromptRuns": 1,
+    "promptSubmissions": 0,
+    "litscoutConnectorCalls": 0,
+    "toolApprovalClicks": 0,
+    "installs": 0,
+    "serviceRestarts": 0,
+    "schedulerOrCompletionControls": 0,
+    "litscoutCanonicalWrites": 0
+  },
+  "cleanup": {
+    "canaryProcessesRemaining": 0,
+    "browserOperationLeaseCount": 0,
+    "apiMainPid": 32268,
+    "apiRestartCount": 0,
+    "chromePid": 66297,
+    "devtoolsPort": 45015,
+    "tabCensusUnchanged": true
+  },
+  "diagnosis": {
+    "classification": "pre_run_cache_context_stall",
+    "path": "runRootCommand -> buildBrowserContext -> resolveCacheIdentity -> getUserIdentity/getFeatureSignature",
+    "evidence": "The command opened CDP connections after the target-plan log but emitted no runBrowserMode progress, created no conversation, and reached the 600-second outer guard. The cache identity and feature reads catch rejection but have no local deadline."
+  }
+}

@@ -1,7 +1,7 @@
 # LitScout Tool Approval Live Canary | 0287-2026-08-15
 
-State: OPEN
-Disposition: LIVE CANARY AUTHORIZED
+State: CLOSED
+Disposition: LIVE CANARY FAILED SAFE
 Lane: P01
 
 ## Stable Objective
@@ -12,15 +12,15 @@ read-only LitScout call using the operator-selected safe preference
 
 ## Current State
 
-- Plan 0286 closed provider-free at implementation commit `4ce634c5` and
-  closeout commit `aa71b887`; both are pushed to `origin/main`.
-- The last installed inventory proved the LitScout developer app `Corel33t`
-  enabled on AuraCall runtime profile `wsl-chrome-3`, but current browser,
-  account, ownership, and selector state must still pass the live command's
-  fail-closed gates.
-- The new handler is not installed into the user runtime. This canary executes
-  the pushed source directly with `pnpm tsx bin/auracall.ts`; no install or
-  service restart is authorized.
+- Opening gate `fb1ed232` was pushed before browser access. The source-direct
+  command reached the target-plan log and then remained pre-submit until its
+  600-second outer guard terminated it.
+- No new conversation, approval detection, approval click, connector result,
+  or expected token was observed. The canary therefore did not reach the Plan
+  0286 handler and closes failed-safe without a provider retry.
+- Cleanup passed: API PID 32268 remains active with zero restarts, Chrome PID
+  66297 remains the sole port-45015 owner, the browser-operation lease
+  directory is empty, and the exact two-page tab census is unchanged.
 
 ## Execution Contract
 
@@ -53,15 +53,15 @@ read-only LitScout call using the operator-selected safe preference
 
 ## Acceptance Criteria
 
-- [ ] Opening gate is committed and pushed before browser access.
+- [x] Opening gate is committed and pushed before browser access.
 - [ ] Exactly one prompt is submitted with `allow-once`; no retry occurs.
 - [ ] Runtime evidence reports exact `Allow once` and the approval surface is
   confirmed gone without clicking `Always allow` or `Answer now`.
 - [ ] ChatGPT returns exact token `LITSCOUT_ALLOW_ONCE_OK` after only one
   read-only LitScout `auth_session` call.
-- [ ] Cleanup/lease evidence passes and every excluded control or mutation
+- [x] Cleanup/lease evidence passes and every excluded control or mutation
   remains zero.
-- [ ] Terminal evidence, audits, commit, and push bind the accepted or
+- [x] Terminal evidence, audits, commit, and push bind the accepted or
   failed-safe outcome.
 
 ## Effect Budget
@@ -79,7 +79,28 @@ read-only LitScout call using the operator-selected safe preference
 
 ## Definition Of Done
 
-The plan closes after the sole command reaches one terminal accepted or
-failed-safe result, cleanup is proven, and the exact outcome is committed and
-pushed. Success proves only this current LitScout `allow-once` surface; it does
-not authorize `always-allow`, broader tools, or unattended scheduler use.
+The plan closes failed-safe after the sole command reached its outer timeout
+before prompt submission and cleanup was proven. The live approval contract is
+not accepted. A provider-free successor should bound or skip pre-run cache
+identity/feature discovery before any separately authorized second canary.
+
+## Terminal Evidence
+
+- Preflight proved clean/upstream-exact Git, active API PID 32268 with zero
+  restarts, sole Chrome PID 66297 on port 45015, and an empty operation-lease
+  directory. One inert CLI parse failure rejected `--no-notify` before browser
+  access and consumed no live effect.
+- The sole actual run emitted only the resolved root target, then held three
+  CDP connections without creating a new conversation or emitting browser-run
+  progress. The 600-second outer guard ended the process; no provider retry ran.
+- A bounded exact-port tab inspection found no CAPTCHA/blocking page and the
+  same two pages before and after: retained `LitScout Project Execution` plus
+  the root ChatGPT page. No submitted canary conversation exists.
+- CodeGraph localizes the pre-run boundary to `buildBrowserContext()`, which
+  calls `resolveCacheIdentity()`. Its provider identity and feature-signature
+  reads catch rejection but carry no local deadline, so one pending read can
+  prevent `runBrowserMode()` and the approval handler from starting.
+- Actual effects: one browser command, zero prompt submissions, zero LitScout
+  connector calls, zero approval clicks, zero installs/restarts, zero runtime
+  controls, and zero LitScout canonical writes. Durable receipt:
+  [docs/dev/notes/2026-08-15-plan0287-litscout-allow-once-canary.json](../notes/2026-08-15-plan0287-litscout-allow-once-canary.json).
