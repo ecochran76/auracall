@@ -3431,6 +3431,9 @@ export function createGrokAdapter(): Pick<
       input: BrowserProviderPromptInput,
       options?: BrowserProviderListOptions,
     ): Promise<BrowserProviderPromptResult> {
+      if (input.attachments?.length) {
+        throw new Error('Grok browser prompt execution does not support attachments.');
+      }
       if (input.capabilityId !== 'grok.media.imagine_image' && input.capabilityId !== 'grok.media.imagine_video') {
         throw new Error(`Grok browser prompt execution only supports Grok Imagine image/video capabilities, got ${input.capabilityId ?? 'none'}.`);
       }

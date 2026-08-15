@@ -7489,6 +7489,9 @@ export function createGeminiAdapter(): Pick<
 			input: BrowserProviderPromptInput,
 			options?: BrowserProviderListOptions,
 		): Promise<BrowserProviderPromptResult> {
+			if (input.attachments?.length) {
+				throw new Error("Gemini browser prompt execution does not support attachments.");
+			}
 			const targetUrl = resolveGeminiConfiguredUrl(
 				input.targetUrl ?? options?.configuredUrl,
 				GEMINI_APP_URL,

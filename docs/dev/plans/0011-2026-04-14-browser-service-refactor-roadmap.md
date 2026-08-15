@@ -61,6 +61,14 @@ Status: complete (CLI list/resolve flows now use `llmService`; model picker fall
 - Move service-specific DOM and workflows into adapters (selectors, URLs, UI affordances).
 - Replace CLI glue with calls into the base classes.
 
+Status: provider-prompt execution completed through Plan 0291 Candidate 2 on
+2026-08-15. `LlmService.runPrompt(...)` is the single common lifecycle and all
+three subclasses inherit it. ChatGPT, Gemini, and Grok implement the existing
+provider `runPrompt` adapter seam; ChatGPT no longer reconstructs browser config
+or calls the CLI-oriented `runBrowserMode()` path. Provider-specific DOM,
+capability, attachment, authorization, submission, readback, and cleanup logic
+remain adapter-local.
+
 ### Phase 5: Externalize the browser core
 - Decide packaging: monorepo package vs separate repo.
 - Extract browserService into a reusable package with minimal dependencies.

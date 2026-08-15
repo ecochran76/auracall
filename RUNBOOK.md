@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 461 | 2026-08-15
+
+- Plan 0291 Candidate 2 is provider-free accepted. One concrete
+  `LlmService.runPrompt(...)` now owns option precedence, one target/destination
+  plan, exact provider-session authorization propagation, guard/retry, abort,
+  adapter dispatch, and unchanged result return.
+- ChatGPT now implements the existing provider `runPrompt` seam directly and
+  no longer reconstructs browser config or detours through `runBrowserMode`.
+  Its adapter keeps identity authorization before mutation, composer/model/
+  thinking/tool selection, attachments, prompt submission, bounded route
+  readback, and cleanup local. Gemini and Grok retain their adapter-local DOM
+  paths; all three service subclasses inherit the base lifecycle.
+- Independent testing found two High defects: a direct prompt URL could differ
+  between browser target resolution and adapter dispatch, and Gemini/Grok
+  silently ignored attachments. One precedence ladder now drives both targets,
+  and unsupported Gemini/Grok attachments fail before connection. Real Gemini
+  prompt fixtures and exact authorization non-retry are green. No live
+  browser/provider action ran. Candidate 3 is next; the sole campaign audit
+  remains unused.
+
 ## Turn 460 | 2026-08-15
 
 - Plan 0291 Candidate 1 is provider-free accepted. One discriminated

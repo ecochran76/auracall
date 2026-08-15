@@ -1,5 +1,6 @@
 import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
+import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
 import type { BrowserScrapeTelemetryRecorder } from "./scrapeTelemetry.js";
 import type {
@@ -97,11 +98,18 @@ export interface ProviderUserIdentity {
 
 export interface BrowserProviderPromptInput {
 	prompt: string;
+	attachments?: BrowserAttachment[];
 	capabilityId?: string | null;
 	completionMode?: "assistant_response" | "prompt_submitted";
 	projectId?: string | null;
 	conversationId?: string | null;
 	targetUrl?: string | null;
+	desiredModel?: string | null;
+	modelStrategy?: "select" | "current" | "ignore";
+	thinkingTime?: "light" | "standard" | "extended" | "heavy" | null;
+	chatgptMode?: "chat" | "work" | null;
+	workModel?: string | null;
+	modelSelector?: string | null;
 	timeoutMs?: number | null;
 	onProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void> | void;
 }

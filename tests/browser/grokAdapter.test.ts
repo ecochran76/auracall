@@ -910,6 +910,25 @@ describe('ensureGrokTabVisible', () => {
 });
 
 describe('Grok Imagine runPrompt mode selection', () => {
+	test('fails closed on prompt attachments before connecting to Grok', async () => {
+		grokRunPromptMocks.cdpList.mockReset();
+		grokRunPromptMocks.connectToChromeTarget.mockReset();
+		grokRunPromptMocks.openOrReuseChromeTarget.mockReset();
+
+		await expect(
+			createGrokAdapter().runPrompt?.({
+				prompt: 'Animate this attachment',
+				capabilityId: 'grok.media.imagine_video',
+				attachments: [
+					{ path: '/tmp/grok.png', displayPath: 'grok.png', sizeBytes: 24 },
+				],
+			}),
+		).rejects.toThrowError('Grok browser prompt execution does not support attachments.');
+		expect(grokRunPromptMocks.cdpList).not.toHaveBeenCalled();
+		expect(grokRunPromptMocks.connectToChromeTarget).not.toHaveBeenCalled();
+		expect(grokRunPromptMocks.openOrReuseChromeTarget).not.toHaveBeenCalled();
+	});
+
   test('emits verified Image mode selection before prompt insertion', async () => {
     const result = await runGrokImaginePromptModeSelectionTest({
       capabilityId: 'grok.media.imagine_image',

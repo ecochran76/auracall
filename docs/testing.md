@@ -25,6 +25,14 @@
   exact error behavior, and the absence of the former config/profile-resolution
   import cycle. Add the affected caller suites when changing a consumer; this
   contract does not launch a browser or prove live account readiness.
+- Provider prompt execution contract (provider-free):
+  `pnpm vitest run tests/browser/llmServicePrompt.test.ts tests/browser/llmServicePromptStructure.test.ts tests/browser/chatgptPromptAdapter.test.ts tests/browser/chatgptService.test.ts tests/browser/geminiAdapter.test.ts tests/browser/grokAdapter.test.ts`.
+  This proves one base `LlmService.runPrompt(...)` lifecycle, consistent launch
+  and prompt URL precedence, exact provider-session authorization propagation,
+  direct ChatGPT adapter execution, real Gemini prompt execution, Grok mode
+  behavior, and fail-closed unsupported attachment handling. Pair it with
+  `tests/browser/chatgptToolApproval.test.ts` whenever ChatGPT prompt actions
+  change so the `Answer now` prohibition remains explicit.
 - Agent-browser RDP managed-profile contract (provider-free):
   `pnpm vitest run tests/browser/agentBrowserRdpLauncher.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser-service/platformPaths.test.ts`
   followed by `pnpm run typecheck`. This proves exact AuraCall profile-path

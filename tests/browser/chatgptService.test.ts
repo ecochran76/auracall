@@ -2,21 +2,31 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LlmService } from '../../src/browser/llmService/llmService.js';
+import { BrowserService } from '../../src/browser/service/browserService.js';
 import type { ResolvedUserConfig } from '../../src/config.js';
 
-const runBrowserMode = vi.fn(async () => ({
-  answerMarkdown: '',
-  answerText: '',
-  conversationId: 'chatgpt-conversation-1',
-  tabUrl: 'https://chatgpt.com/c/chatgpt-conversation-1',
-  chromeTargetId: 'chatgpt-tab-1',
-  chromeHost: '127.0.0.1',
-  chromePort: 45011,
-}));
+const providerRunPrompt = vi.hoisted(() =>
+  vi.fn(async (input: { conversationId?: string | null; targetUrl?: string | null }) => ({
+    text: '',
+    conversationId: input.conversationId ?? 'chatgpt-conversation-1',
+    url: input.targetUrl ?? 'https://chatgpt.com/c/chatgpt-conversation-1',
+    tabTargetId: 'chatgpt-tab-1',
+    devtoolsHost: '127.0.0.1',
+    devtoolsPort: 45011,
+  })),
+);
 
-vi.mock('../../src/browser/index.js', () => ({
-  runBrowserMode,
-}));
+vi.mock('../../src/browser/providers/index.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../src/browser/providers/index.js')>();
+  return {
+    ...original,
+    getProvider: (id: 'chatgpt' | 'gemini' | 'grok') => {
+      const provider = original.getProvider(id);
+      return id === 'chatgpt' ? { ...provider, runPrompt: providerRunPrompt } : provider;
+    },
+  };
+});
 
 const tempRoots: string[] = [];
 
@@ -24,11 +34,13 @@ afterEach(async () => {
   for (const root of tempRoots.splice(0)) {
     await rm(root, { recursive: true, force: true, maxRetries: 2 });
   }
-  runBrowserMode.mockClear();
+  providerRunPrompt.mockClear();
+  vi.restoreAllMocks();
 });
 
 describe('ChatGPT llm service', () => {
-  it('skips model switching for ChatGPT image media runs before selecting Create image', async () => {
+  it('passes ChatGPT image capability intent to the provider adapter', async () => {
+    stubBrowserServiceTarget();
     const { ChatgptService } = await import(
       '../../src/browser/llmService/providers/chatgptService.js'
     );
@@ -46,19 +58,17 @@ describe('ChatGPT llm service', () => {
       completionMode: 'prompt_submitted',
     });
 
-    expect(runBrowserMode).toHaveBeenCalledWith(
+    expect(providerRunPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
-        config: expect.objectContaining({
-          target: 'chatgpt',
-          modelStrategy: 'ignore',
-          composerTool: 'create image',
-        }),
+        capabilityId: 'chatgpt.media.create_image',
+        modelStrategy: undefined,
       }),
+      expect.objectContaining({ browserService: expect.any(Object) }),
     );
   });
 
   it('passes configured account identity into ChatGPT browser runs', async () => {
-    runBrowserMode.mockClear();
+    stubBrowserServiceTarget();
     const { ChatgptService } = await import(
       '../../src/browser/llmService/providers/chatgptService.js'
     );
@@ -83,18 +93,17 @@ describe('ChatGPT llm service', () => {
       completionMode: 'prompt_submitted',
     });
 
-    expect(runBrowserMode).toHaveBeenCalledWith(
+    expect(providerRunPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: 'Say ok' }),
       expect.objectContaining({
-        config: expect.objectContaining({
-          providerSessionAuthorization: expect.objectContaining({
-            expectation: expect.objectContaining({
-              configuredIdentity: expect.objectContaining({
-                email: 'consult@polymerconsultinggroup.com',
-                accountLevel: 'Pro',
-              }),
-              configuredServiceAccountId:
-                'service-account:chatgpt:consult@polymerconsultinggroup.com',
+        providerSessionAuthorization: expect.objectContaining({
+          expectation: expect.objectContaining({
+            configuredIdentity: expect.objectContaining({
+              email: 'consult@polymerconsultinggroup.com',
+              accountLevel: 'Pro',
             }),
+            configuredServiceAccountId:
+              'service-account:chatgpt:consult@polymerconsultinggroup.com',
           }),
         }),
       }),
@@ -102,6 +111,7 @@ describe('ChatGPT llm service', () => {
   });
 
   it('passes prompt attachments into ChatGPT browser runs', async () => {
+    stubBrowserServiceTarget();
     const { ChatgptService } = await import(
       '../../src/browser/llmService/providers/chatgptService.js'
     );
@@ -117,15 +127,17 @@ describe('ChatGPT llm service', () => {
       attachments: [{ path: '/tmp/handoff.txt', displayPath: 'handoff.txt', sizeBytes: 42 }],
     });
 
-    expect(runBrowserMode).toHaveBeenCalledWith(
+    expect(providerRunPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: 'Continue with attached context.',
         attachments: [{ path: '/tmp/handoff.txt', displayPath: 'handoff.txt', sizeBytes: 42 }],
       }),
+      expect.any(Object),
     );
   });
 
   it('submits handoff compact context and selected files through the ChatGPT browser adapter', async () => {
+    stubBrowserServiceTarget();
     const root = await tempRoot('auracall-chatgpt-handoff-adapter-');
     const selectedPath = path.join(root, 'handoff-context.txt');
     await writeFile(selectedPath, 'selected handoff context', 'utf8');
@@ -208,7 +220,7 @@ describe('ChatGPT llm service', () => {
       targetAdapter: adapter,
     });
 
-    expect(runBrowserMode).toHaveBeenCalledWith(
+    expect(providerRunPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
         completionMode: 'prompt_submitted',
         prompt: expect.stringContaining('## Compact Context JSON'),
@@ -224,15 +236,13 @@ describe('ChatGPT llm service', () => {
             displayPath: '001-Selected_file-chatgpt_attachment',
           }),
         ],
-        config: expect.objectContaining({
-          target: 'chatgpt',
-          conversationId: 'target-chatgpt-handoff',
-          chatgptUrl: 'https://chatgpt.com/c/target-chatgpt-handoff',
-          desiredModel: 'GPT-5.6 Sol',
-          thinkingTime: 'extended',
-          modelStrategy: 'select',
-        }),
+        conversationId: 'target-chatgpt-handoff',
+        targetUrl: 'https://chatgpt.com/c/target-chatgpt-handoff',
+        desiredModel: 'GPT-5.6 Sol',
+        thinkingTime: 'extended',
+        modelStrategy: 'select',
       }),
+      expect.any(Object),
     );
     expect(submitRecovery).toMatchObject({
       recovery: {
@@ -246,6 +256,28 @@ describe('ChatGPT llm service', () => {
     });
   });
 });
+
+function stubBrowserServiceTarget(): void {
+  const promptGuard = LlmService.prototype as unknown as {
+    enforceProviderGuard: (action: string) => Promise<void>;
+    noteProviderGuardSuccess: (action: string) => Promise<void>;
+  };
+  vi.spyOn(promptGuard, 'enforceProviderGuard').mockResolvedValue(undefined);
+  vi.spyOn(promptGuard, 'noteProviderGuardSuccess').mockResolvedValue(undefined);
+  vi.spyOn(BrowserService.prototype, 'resolveServiceTarget').mockResolvedValue({
+    host: '127.0.0.1',
+    port: 45011,
+    browserProfile: 'default',
+    sourceBrowserProfile: 'Default',
+    managedBrowserProfile: '/managed/default/chatgpt',
+    browserProcessId: 1234,
+    tab: {
+      targetId: 'chatgpt-tab-1',
+      url: 'https://chatgpt.com/',
+    },
+  } as never);
+  vi.spyOn(BrowserService.prototype, 'getMutationAuditSink').mockReturnValue(undefined as never);
+}
 
 async function tempRoot(prefix: string): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), prefix));

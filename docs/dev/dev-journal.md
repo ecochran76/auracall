@@ -46932,3 +46932,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - No live browser/provider action ran. No user-facing operator behavior or
   config schema changed, so README changes were unnecessary. Candidate 2 is
   active; the campaign-wide audit/repair cycle remains unused.
+
+## 2026-08-15 | Plan 0291 Candidate 2 accepted after target and attachment repairs
+
+- Three interface designs converged on the existing provider adapter seam.
+  `LlmService.runPrompt(...)` now owns the common lifecycle once; ChatGPT,
+  Gemini, and Grok service subclasses inherit it, and their adapters retain all
+  provider-specific DOM behavior.
+- ChatGPT prompt execution moved out of `ChatgptService`'s reconstructed browser
+  config and `runBrowserMode()` detour. The adapter now owns authorization,
+  composer/model/thinking/tool selection, attachments, composer-scoped
+  submission, bounded abort-aware conversation-route readback, result
+  projection, and cleanup. `Answer now` remains excluded.
+- Independent testing found two High defects. First, direct prompt URL intent
+  could drive planning while browser target resolution used a different
+  configured URL. One precedence ladder now drives launch, planning, and
+  adapter dispatch. Second, Gemini and Grok silently dropped attachments;
+  both now reject nonempty prompt attachments before connection.
+- A real Gemini adapter prompt fixture proves authorization-before-mutation,
+  progress/completion/result projection, retained-session success, and
+  owned-connection failure cleanup. Exact `ProviderSessionAuthorityError` is
+  non-retryable even when adversarial text resembles a connection failure.
+- Independent closed-world verification passed 86/86 tests plus three exact
+  replays and typecheck. Execution validation passed 74/74 focused tests,
+  367/367 authority/adapter/media/handoff tests, 357/357 Account Mirror/history
+  tests, the ChatGPT action packet, typecheck, build, plan audit, diff hygiene,
+  scoped lint with only existing Grok fixture warnings, and synchronized
+  CodeGraph readback. No live browser/provider action ran. Candidate 3 is
+  active; the campaign audit remains unused.

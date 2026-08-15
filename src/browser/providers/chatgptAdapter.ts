@@ -9,6 +9,21 @@ import {
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
 import type { BrowserInteractionClass } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import {
+	ensureChatgptComposerMode,
+	resolveChatgptModelSelectionPlan,
+} from "../actions/chatgptComposerMode.js";
+import { ensureChatgptComposerTool } from "../actions/chatgptComposerTool.js";
+import { ensureChatgptWorkModelSelection } from "../actions/chatgptWorkModelSelection.js";
+import {
+	clearComposerAttachments,
+	uploadAttachmentFile,
+	waitForAttachmentCompletion,
+} from "../actions/attachments.js";
+import { ensureModelSelection } from "../actions/modelSelection.js";
+import { ensurePromptReady } from "../actions/navigation.js";
+import { submitPrompt } from "../actions/promptComposer.js";
+import { ensureThinkingTime } from "../actions/thinkingTime.js";
+import {
 	requireBundledServiceBaseUrl,
 	requireBundledServiceCompatibleHosts,
 	requireBundledServiceRouteTemplate,
@@ -59,7 +74,7 @@ import {
 	withBlockingSurfaceRecovery,
 	withUiDiagnostics,
 } from "../service/ui.js";
-import type { ChromeClient } from "../types.js";
+import type { BrowserLogger, ChromeClient } from "../types.js";
 import { CHATGPT_PROVIDER } from "./chatgpt.js";
 import {
 	buildChatgptArtifactControlExpectation,
@@ -97,6 +112,8 @@ import type {
 	BrowserProviderConversationFileDownloadInput,
 	BrowserProviderConversationFileDownloadResult,
 	BrowserProviderListOptions,
+	BrowserProviderPromptInput,
+	BrowserProviderPromptResult,
 	ProviderUserIdentity,
 } from "./types.js";
 
@@ -4471,6 +4488,29 @@ async function readChatgptLocationHref(Runtime: ChromeClient["Runtime"]): Promis
 		returnByValue: true,
 	});
 	return typeof result?.value === "string" && result.value.trim() ? result.value : null;
+}
+
+async function readSubmittedChatgptLocation(
+	Runtime: ChromeClient["Runtime"],
+	targetUrl: string,
+	options: { abortSignal?: AbortSignal; timeoutMs?: number | null },
+): Promise<string | null> {
+	let lastUrl = await readChatgptLocationHref(Runtime).catch(() => null);
+	if (lastUrl && extractChatgptConversationIdFromUrl(lastUrl)) return lastUrl;
+	if (extractChatgptConversationIdFromUrl(targetUrl)) return lastUrl ?? targetUrl;
+	const timeoutMs =
+		typeof options.timeoutMs === "number" && Number.isFinite(options.timeoutMs)
+			? Math.max(0, Math.min(options.timeoutMs, 15_000))
+			: 15_000;
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		options.abortSignal?.throwIfAborted();
+		const observedUrl = await readChatgptLocationHref(Runtime).catch(() => null);
+		if (observedUrl) lastUrl = observedUrl;
+		if (lastUrl && extractChatgptConversationIdFromUrl(lastUrl)) return lastUrl;
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	return lastUrl ?? targetUrl;
 }
 
 type ChatgptCreateProjectDialogState = {
@@ -12334,6 +12374,7 @@ export function createChatgptAdapter(): Pick<
 	| "materializeConversationArtifact"
 	| "renameConversation"
 	| "deleteConversation"
+	| "runPrompt"
 > {
 	return {
 		capabilities: {
@@ -12341,6 +12382,153 @@ export function createChatgptAdapter(): Pick<
 			conversations: true,
 			instructions: true,
 			files: true,
+		},
+		async runPrompt(
+			input: BrowserProviderPromptInput,
+			options?: BrowserProviderListOptions,
+		): Promise<BrowserProviderPromptResult> {
+			if (input.completionMode !== "prompt_submitted") {
+				throw new Error(
+					"ChatGPT llmService prompt execution currently supports completionMode=prompt_submitted only.",
+				);
+			}
+			await beforeChatgptBrowserInteraction(options, "upload-submit");
+			const targetUrl = input.targetUrl ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
+			const connection = await connectToChatgptTab(options, targetUrl);
+			const browserConfig = options?.browserService?.getConfig() as
+				| {
+						chatgptMode?: "chat" | "work" | null;
+						composerTool?: string | null;
+						desiredModel?: string | null;
+						inputTimeoutMs?: number | null;
+						modelStrategy?: "select" | "current" | "ignore";
+						thinkingTime?: "light" | "standard" | "extended" | "heavy" | null;
+						workModel?: string | null;
+				  }
+				| undefined;
+			const isImageGeneration = input.capabilityId === "chatgpt.media.create_image";
+			const chatgptMode = input.chatgptMode ?? browserConfig?.chatgptMode ?? "chat";
+			const desiredModel = input.desiredModel ?? browserConfig?.desiredModel ?? null;
+			const workModel = input.workModel ?? browserConfig?.workModel ?? null;
+			const modelStrategy = isImageGeneration
+				? "ignore"
+				: (input.modelStrategy ?? browserConfig?.modelStrategy ?? "select");
+			const thinkingTime = input.thinkingTime ?? browserConfig?.thinkingTime ?? null;
+			const composerTool = isImageGeneration
+				? "create image"
+				: (browserConfig?.composerTool ?? null);
+			const inputTimeoutMs = browserConfig?.inputTimeoutMs ?? 30_000;
+			const logger = ((message: string): void => {
+				void input.onProgress?.({
+					phase: "submit_path_observed",
+					details: { provider: "chatgpt", message },
+				});
+			}) as BrowserLogger;
+			logger.verbose = false;
+
+			return runWithChatgptAbortBoundConnection(connection, options, async (client) => {
+				await assertChatgptExpectedIdentity(client, options);
+				const { DOM, Input, Page, Runtime } = client;
+				await ensureChatgptComposerMode(Runtime, chatgptMode, logger);
+				await ensurePromptReady(Runtime, inputTimeoutMs, logger);
+				const modelSelectionPlan = resolveChatgptModelSelectionPlan({
+					mode: chatgptMode,
+					desiredModel,
+					workModel,
+					strategy: modelStrategy,
+				});
+				if (modelSelectionPlan.kind === "chat-model") {
+					await ensureModelSelection(
+						Runtime,
+						modelSelectionPlan.model,
+						logger,
+						modelSelectionPlan.strategy,
+					);
+				} else if (modelSelectionPlan.kind === "work-model") {
+					await ensureChatgptWorkModelSelection(
+						Runtime,
+						modelSelectionPlan.model,
+						logger,
+						modelSelectionPlan.strategy,
+					);
+				} else if (modelSelectionPlan.kind === "work-current") {
+					logger("Work model picker: preserving current selection");
+				} else {
+					logger("Model picker: skipped (strategy=ignore)");
+				}
+				if (
+					chatgptMode === "chat" &&
+					thinkingTime &&
+					desiredModel &&
+					/\b(sol|thinking|pro)\b/i.test(desiredModel)
+				) {
+					await ensureThinkingTime(Runtime, thinkingTime, logger);
+				}
+				if (composerTool) {
+					if (chatgptMode === "work") {
+						throw new Error(
+							"ChatGPT composer tools currently belong to Chat mode. Request Chat mode or omit --browser-composer-tool for Work.",
+						);
+					}
+					await ensureChatgptComposerTool(client, composerTool, logger);
+					await ensurePromptReady(Runtime, inputTimeoutMs, logger);
+				}
+				const attachments = input.attachments ?? [];
+				const attachmentNames = attachments.map((attachment) => path.basename(attachment.path));
+				let attachmentWaitTimedOut = false;
+				if (attachments.length > 0) {
+					if (!DOM) {
+						throw new Error("Chrome DOM domain unavailable while uploading attachments.");
+					}
+					await clearComposerAttachments(Runtime, 5_000, logger);
+					for (const [attachmentIndex, attachment] of attachments.entries()) {
+						logger(`Uploading attachment: ${attachment.displayPath}`);
+						await uploadAttachmentFile(
+							{ runtime: Runtime, dom: DOM, input: Input, page: Page },
+							attachment,
+							logger,
+							{ expectedCount: attachmentIndex + 1 },
+						);
+					}
+					const waitBudget = Math.max(inputTimeoutMs, 45_000) + (attachments.length - 1) * 20_000;
+					try {
+						await waitForAttachmentCompletion(Runtime, waitBudget, attachmentNames, logger);
+						logger("All attachments uploaded");
+					} catch (error) {
+						const message = error instanceof Error ? error.message : String(error);
+						if (!/Attachments did not finish uploading before timeout/i.test(message)) {
+							throw error;
+						}
+						attachmentWaitTimedOut = true;
+						logger(
+							`[browser] Attachment upload timed out after ${Math.round(waitBudget / 1_000)}s; continuing without confirmation.`,
+						);
+					}
+				}
+				await submitPrompt(
+					{
+						runtime: Runtime,
+						input: Input,
+						attachmentNames: attachmentWaitTimedOut ? [] : attachmentNames,
+						inputTimeoutMs,
+						onPromptDispatched: () => logger("Prompt dispatched"),
+					},
+					input.prompt,
+					logger,
+				);
+				const url = await readSubmittedChatgptLocation(Runtime, targetUrl, {
+					abortSignal: options?.abortSignal,
+					timeoutMs: input.timeoutMs,
+				});
+				return {
+					text: "",
+					conversationId: url ? extractChatgptConversationIdFromUrl(url) : null,
+					url,
+					tabTargetId: connection.targetId ?? null,
+					devtoolsHost: connection.host ?? null,
+					devtoolsPort: connection.port ?? null,
+				};
+			});
 		},
 		async getUserIdentity(
 			options?: BrowserProviderListOptions,

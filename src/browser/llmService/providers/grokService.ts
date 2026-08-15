@@ -1,6 +1,6 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
-import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../types.js';
+import type { LlmServiceAdapter, IdentityPrompt } from '../types.js';
 import {
   BrowserService,
   type BrowserProcessOwnerAttribution,
@@ -58,13 +58,6 @@ export class GrokService extends LlmService {
       { action: 'listConversations' },
     )) as Conversation[];
     return this.overlayConversationListFromCache(items, listOptions, projectId);
-  }
-
-  async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
-    return this.runPlannedPrompt({
-      ...input,
-      listOptions: options ?? input.listOptions,
-    });
   }
 
   async renameConversation(

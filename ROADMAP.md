@@ -16,7 +16,10 @@ Lane: P01
   lower-severity unresolved findings become durable notes. Candidate 1,
   browser launch resolution, is provider-free accepted after one independent
   High routing defect was repaired and closed-world reverified. Candidate 2,
-  provider prompt execution, is the active critical-path unit.
+  provider prompt execution, is also provider-free accepted after URL-routing
+  and attachment fail-closed defects were repaired and independently
+  reverified. Candidate 3, one materialization attempt, is the active
+  critical-path unit.
 
 - Closed failed-safe two-sequential-approval LitScout live proof:
   [docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md](docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md)

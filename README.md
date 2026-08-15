@@ -247,6 +247,10 @@ Current browser-mode default posture:
 - non-Windows managed Chrome launches include `--password-store=basic` and
   `--use-mock-keychain` so Linux/WSL automation profiles do not block behind
   desktop keyring prompts, including visible auth-mode launches
+- browser prompt execution uses one provider-adapter lifecycle. ChatGPT browser
+  prompts support file attachments; Gemini and Grok browser prompt adapters do
+  not currently support prompt attachments and fail before connection instead
+  of silently dropping them
 - stored team/API browser runs are non-interactive: if ChatGPT shows a logged
   out surface, Aura-Call fails fast and prints an auth-mode command such as
   `auracall --profile <name> login --target chatgpt` instead of waiting in the

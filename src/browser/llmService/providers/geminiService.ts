@@ -1,6 +1,6 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
-import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../types.js';
+import type { LlmServiceAdapter, IdentityPrompt } from '../types.js';
 import {
   BrowserService,
   type BrowserProcessOwnerAttribution,
@@ -57,13 +57,6 @@ export class GeminiService extends LlmService {
       () => this.provider.listConversations?.(projectId, listOptions) as Promise<Conversation[]>,
       { action: 'listConversations' },
     )) as Conversation[];
-  }
-
-  async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
-    return this.runPlannedPrompt({
-      ...input,
-      listOptions: options ?? input.listOptions,
-    });
   }
 
   async renameConversation(

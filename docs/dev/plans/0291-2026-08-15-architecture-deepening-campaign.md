@@ -27,18 +27,18 @@ durable notes.
 - Candidate 1 is provider-free accepted. Sixteen production function/method
   callers now cross one immutable browser launch plan seam; the superseded
   launch-context helpers and the config/profile-resolution cycle are removed.
-- Candidate 2, provider prompt execution, is the active critical-path unit.
-- Candidate 2 aligns with BrowserService Roadmap Phase 4: Gemini and Grok use
-  the planned provider-prompt path while ChatGPT reconstructs browser options
-  and detours through `runBrowserMode()`.
+- Candidate 2 is provider-free accepted. One base `LlmService.runPrompt(...)`
+  lifecycle dispatches all three provider adapters; ChatGPT no longer
+  reconstructs browser options or detours through `runBrowserMode()`.
+- Candidate 3, one history materialization attempt, is the active critical-path
+  unit.
 - Candidate 3 has observed call-order and receipt coupling across history
   materialization, provider materializers, archive persistence, and Account
   Mirror planning.
 - Candidate 4 has observed process/timeout/JSON/state duplication in the
   ChatGPT and Grok acceptance runs.
-- Candidate 1 source, tests, and governing docs are ready for their validated
-  checkpoint commit. No live browser/provider or installed/runtime state was
-  changed.
+- Candidates 1 and 2 have validated, pushed or ready-to-push checkpoints. No
+  live browser/provider or installed/runtime state was changed.
 
 ## Domain Language
 
@@ -143,7 +143,7 @@ the primary orchestrator. Subagents must not spawn children.
 
 - [x] C1 callers obtain one browser launch plan through the deepened interface,
   with current semantics and focused/affected validation green.
-- [ ] C2 provider prompt execution has one deep seam across ChatGPT, Gemini,
+- [x] C2 provider prompt execution has one deep seam across ChatGPT, Gemini,
   and Grok while provider-specific workflow remains adapter-local.
 - [ ] C3 one materialization attempt owns its observable lifecycle and receipt
   semantics without weakening fail-closed behavior.

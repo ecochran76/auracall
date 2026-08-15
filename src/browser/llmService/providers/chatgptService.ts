@@ -1,6 +1,6 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
-import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../types.js';
+import type { LlmServiceAdapter, IdentityPrompt } from '../types.js';
 import {
   BrowserService,
   type BrowserProcessOwnerAttribution,
@@ -8,16 +8,15 @@ import {
 import { LlmService } from '../llmService.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../providers/types.js';
 import type { Conversation, Project } from '../../providers/domain.js';
-import { runBrowserMode } from '../../index.js';
 
 export class ChatgptService extends LlmService {
   private constructor(
-    private readonly serviceUserConfig: ResolvedUserConfig,
+    userConfig: ResolvedUserConfig,
     provider: LlmServiceAdapter,
     browserService: BrowserService,
     options?: { identityPrompt?: IdentityPrompt },
   ) {
-    super(serviceUserConfig, provider, browserService, options);
+    super(userConfig, provider, browserService, options);
   }
 
   static create(
@@ -61,73 +60,6 @@ export class ChatgptService extends LlmService {
       () => this.provider.listConversations?.(projectId, listOptions) as Promise<Conversation[]>,
       { action: 'listConversations' },
     )) as Conversation[];
-  }
-
-  async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
-    if (input.completionMode !== 'prompt_submitted') {
-      throw new Error('ChatGPT llmService prompt execution currently supports completionMode=prompt_submitted only.');
-    }
-    const configuredUrl =
-      input.configuredUrl ??
-      input.listOptions?.configuredUrl ??
-      options?.configuredUrl ??
-      this.getConfiguredUrl();
-    const browserConfig = this.serviceUserConfig.browser ?? {};
-    const browserModelConfig = browserConfig as typeof browserConfig & {
-      desiredModel?: string | null;
-      thinkingTime?: 'light' | 'standard' | 'extended' | 'heavy' | null;
-      chatgptMode?: 'chat' | 'work' | null;
-      workModel?: string | null;
-    };
-    const isChatgptImageGeneration = input.capabilityId === 'chatgpt.media.create_image';
-    const listOptions = await this.buildListOptions(options, { ensurePort: false });
-    const result = await runBrowserMode({
-      prompt: input.prompt,
-      attachments: input.attachments,
-      completionMode: 'prompt_submitted',
-      skipBrowserExecutionOperation: true,
-      config: {
-        ...browserConfig,
-        target: 'chatgpt',
-        url: configuredUrl ?? browserConfig.chatgptUrl ?? browserConfig.url,
-        chatgptUrl: configuredUrl ?? browserConfig.chatgptUrl ?? browserConfig.url ?? null,
-        projectId: input.projectId ?? options?.projectId ?? null,
-        conversationId: input.conversationId ?? null,
-        timeoutMs: input.timeoutMs ?? browserConfig.timeoutMs,
-        keepBrowser: true,
-        auracallProfileName: this.serviceUserConfig.auracallProfile ?? null,
-        desiredModel: input.desiredModel ?? browserModelConfig.desiredModel ?? null,
-        chatgptMode: input.chatgptMode ?? browserModelConfig.chatgptMode ?? 'chat',
-        workModel: input.workModel ?? browserModelConfig.workModel ?? null,
-        modelStrategy: isChatgptImageGeneration ? 'ignore' : input.modelStrategy ?? browserConfig.modelStrategy,
-        thinkingTime: input.thinkingTime ?? browserModelConfig.thinkingTime,
-        composerTool: isChatgptImageGeneration ? 'create image' : (browserConfig.composerTool ?? null),
-		providerSessionAuthorization: listOptions.providerSessionAuthorization,
-      },
-      log: this.createProgressLogger(input.onProgress),
-    });
-    return {
-      text: result.answerMarkdown || result.answerText || '',
-      conversationId: result.conversationId ?? null,
-      url: result.tabUrl ?? null,
-      tabTargetId: result.chromeTargetId ?? null,
-      devtoolsHost: result.chromeHost ?? null,
-      devtoolsPort: result.chromePort ?? null,
-    };
-  }
-
-  private createProgressLogger(
-    onProgress?: PromptInput['onProgress'],
-  ): ((message: string) => void) | undefined {
-    if (!onProgress) {
-      return undefined;
-    }
-    return (message: string): void => {
-      void onProgress({
-        phase: 'submit_path_observed',
-        details: { provider: 'chatgpt', message },
-      });
-    };
   }
 
   async renameConversation(

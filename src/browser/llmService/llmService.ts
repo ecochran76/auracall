@@ -60,6 +60,7 @@ import type {
 import {
 	assertProviderSessionAuthorization,
 	createProviderSessionAuthority,
+	ProviderSessionAuthorityError,
 	type ProviderSessionAuthority,
 	type ProviderSessionContext,
 	type ProviderSessionProof,
@@ -1045,10 +1046,63 @@ export abstract class LlmService {
 		options?: BrowserProviderListOptions,
 	): Promise<ConversationListResult>;
 
-	abstract runPrompt(
+	async runPrompt(
 		input: PromptInput,
 		options?: BrowserProviderListOptions,
-	): Promise<PromptResult>;
+	): Promise<PromptResult> {
+		if (!this.provider.runPrompt) {
+			throw new Error(`Prompt execution is not supported for ${this.providerId}.`);
+		}
+		const configuredUrl =
+			input.configuredUrl ??
+			options?.configuredUrl ??
+			input.listOptions?.configuredUrl ??
+			this.getConfiguredUrl() ??
+			this.getDefaultLaunchUrl();
+		const listOptions = this.scopeConversationListOptions(
+			await this.buildListOptions(
+				{ ...(options ?? input.listOptions), configuredUrl },
+				{ ensurePort: true },
+			),
+			input.projectId ?? undefined,
+		);
+		const plan = await this.planPrompt({
+			configuredUrl,
+			projectId: input.projectId,
+			projectName: input.projectName,
+			conversationId: input.conversationId,
+			conversationName: input.conversationName,
+			noProject: input.noProject,
+			allowAutoRefresh: input.allowAutoRefresh,
+			forceProjectRefresh: input.forceProjectRefresh,
+			forceConversationRefresh: input.forceConversationRefresh,
+			listOptions,
+		});
+		return this.withRetry(
+			() =>
+				this.provider.runPrompt?.(
+					{
+						prompt: input.prompt,
+						attachments: input.attachments,
+						capabilityId: input.capabilityId,
+						completionMode: input.completionMode,
+						targetUrl: plan.targetUrl,
+						projectId: plan.projectId,
+						conversationId: plan.conversationId,
+						desiredModel: input.desiredModel,
+						modelStrategy: input.modelStrategy,
+						thinkingTime: input.thinkingTime,
+						chatgptMode: input.chatgptMode,
+						workModel: input.workModel,
+						modelSelector: input.modelSelector,
+						timeoutMs: input.timeoutMs,
+						onProgress: input.onProgress,
+					},
+					this.scopeConversationListOptions(listOptions, plan.projectId ?? undefined),
+				) as Promise<PromptResult>,
+			{ action: "runPrompt", abortSignal: listOptions.abortSignal },
+		);
+	}
 
 	abstract renameConversation(
 		conversationId: string,
@@ -2382,45 +2436,6 @@ export abstract class LlmService {
 			await this.refreshProjectKnowledgeCache(created.id, listOptions);
 		}
 		return created ?? null;
-	}
-
-	async runPlannedPrompt(input: PromptInput): Promise<PromptResult> {
-		if (!this.provider.runPrompt) {
-			throw new Error(`Prompt execution is not supported for ${this.providerId}.`);
-		}
-		const listOptions = this.scopeConversationListOptions(
-			await this.buildListOptions(input.listOptions, { ensurePort: true }),
-			input.projectId ?? undefined,
-		);
-		const plan = await this.planPrompt({
-			configuredUrl: input.configuredUrl,
-			projectId: input.projectId,
-			projectName: input.projectName,
-			conversationId: input.conversationId,
-			conversationName: input.conversationName,
-			noProject: input.noProject,
-			allowAutoRefresh: input.allowAutoRefresh,
-			forceProjectRefresh: input.forceProjectRefresh,
-			forceConversationRefresh: input.forceConversationRefresh,
-			listOptions,
-		});
-		return this.withRetry(
-			() =>
-				this.provider.runPrompt?.(
-					{
-						prompt: input.prompt,
-						capabilityId: input.capabilityId,
-						completionMode: input.completionMode,
-						targetUrl: plan.targetUrl,
-						projectId: plan.projectId,
-						conversationId: plan.conversationId,
-						timeoutMs: input.timeoutMs,
-						onProgress: input.onProgress,
-					},
-					this.scopeConversationListOptions(listOptions, plan.projectId ?? undefined),
-				) as Promise<PromptResult>,
-			{ action: "runPrompt" },
-		);
 	}
 
 	async toggleProjectSidebar(options?: {
@@ -3977,6 +3992,9 @@ export abstract class LlmService {
 	}
 
 	private isRetryableError(error: unknown): boolean {
+		if (error instanceof ProviderSessionAuthorityError) {
+			return false;
+		}
 		const message = error instanceof Error ? error.message : String(error);
 		if (this.providerId === "chatgpt" && isChatgptRateLimitMessage(message)) {
 			return true;

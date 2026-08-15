@@ -21627,6 +21627,22 @@ browser-stage lifecycle observability, not transcript truncation.
   binding, and launch policy agree, and retain a same-identity compatibility
   case beside the changed-identity regression.
 
+## 2026-08-15 | Provider prompt launch and destination must share one URL decision
+
+- Resolving a browser target from method/list options while independently
+  planning a provider prompt from a direct URL can attach to one provider page
+  and dispatch toward another. Resolve the URL precedence once and pass the
+  same value through browser target resolution, destination planning, and the
+  provider adapter.
+- Prompt fields that a provider cannot honor must fail closed before browser
+  connection or mutation. Forwarding attachments into a generic adapter type
+  is insufficient when a concrete provider ignores them; support them
+  explicitly or reject them with a stable provider-specific error.
+- Exercise each real adapter's prompt path provider-free. A shared seam test
+  cannot prove authorization-before-mutation, progress, result projection, or
+  cleanup inside Gemini, Grok, or ChatGPT, and progress events alone do not
+  prove mutation ordering.
+
 ## 2026-08-13 | Bound developer-app inventory at the operation boundary
 
 - Per-stage CDP timeouts are necessary but cannot prove that a composite
