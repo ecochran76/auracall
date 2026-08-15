@@ -7,6 +7,15 @@
 Status: active
 Lane: P01
 
+- Closed provider-free acceptance-main coverage closure:
+  [docs/dev/plans/0292-2026-08-15-provider-acceptance-main-tests.md](docs/dev/plans/0292-2026-08-15-provider-acceptance-main-tests.md)
+  This bounded successor closed Plan 0291's retained Medium by exercising
+  ChatGPT and Grok provider-main PASS, FAIL, cleanup, and ChatGPT
+  CLI-over-resume behavior through provider-local test adapters. The shared
+  harness remains a mechanics module. The focused packet passes 11/11 plus
+  typecheck, build, scoped lint, help smokes, CodeGraph, plan audit, and diff
+  hygiene.
+
 - Closed accepted sequential architecture deepening campaign:
   [docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md](docs/dev/plans/0291-2026-08-15-architecture-deepening-campaign.md)
   The operator selected all four architecture-review candidates in order and
@@ -24,9 +33,9 @@ Lane: P01
   share one locally substitutable process/deadline/output/JSON/state/evidence
   harness while their phases, assertions, guard/retry, and cleanup policies
   remain provider-local. The sole integrated audit found zero High findings;
-  its retained Medium C4 dynamic-orchestration coverage gap is recorded in the
-  dated audit note. The full provider-free suite passes 2,922 tests, and the
-  campaign is closed without live browser/provider/runtime work.
+  its retained Medium C4 dynamic-orchestration coverage gap was subsequently
+  closed by Plan 0292. The full provider-free suite passed 2,922 tests, and the
+  campaign remains closed.
 
 - Closed failed-safe two-sequential-approval LitScout live proof:
   [docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md](docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md)

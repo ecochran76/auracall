@@ -19071,3 +19071,31 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   and empty locks remain. Plan 0290 closes
   `PROVIDER_FREE_ACCEPTED_LIVE_INCONCLUSIVE` with receipt
   `docs/dev/notes/2026-08-15-plan0290-approval-settle-live-inconclusive.json`.
+
+## Turn 425 | 2026-08-15
+
+- Plan 0292 opens as the provider-free successor for Plan 0291's retained
+  Medium acceptance-main coverage gap.
+- The selected design adds one provider-local main interface per ChatGPT/Grok
+  script with narrow injected test adapters. It will dynamically prove PASS,
+  FAIL, cleanup, evidence/checkpoint ordering, and ChatGPT CLI-over-resume
+  precedence without turning the shared harness into a provider workflow
+  engine.
+- No live acceptance, browser, provider, install, restart, scheduler, or
+  completion effect is authorized or required.
+
+## Turn 426 | 2026-08-15
+
+- Plan 0292 closes the retained Medium. Four provider-main tests dynamically
+  prove ChatGPT CLI-over-resume precedence, PASS/FAIL checkpoint and evidence
+  ordering, full-run best-effort cleanup, and Grok PASS/FAIL/keep-projects/
+  cleanup presentation.
+- The shared harness remains mechanics-only. Provider workflows stay local,
+  imports are side-effect free, and direct CLI/help behavior is preserved.
+- Evidence is green: 11/11 focused tests, typecheck, build, scoped lint, both
+  help smokes, CodeGraph at 906 indexed files, 292-plan audit with zero errors,
+  and diff hygiene.
+- The initial red import tracer exposed the former auto-run defect. ChatGPT
+  failed at authorization before mutation; Grok entered and failed its first
+  create command. No test-owned process remained and exact generated names
+  were absent from local AuraCall state; no further provider command ran.

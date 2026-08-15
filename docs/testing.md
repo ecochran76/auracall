@@ -33,6 +33,15 @@
   behavior, and fail-closed unsupported attachment handling. Pair it with
   `tests/browser/chatgptToolApproval.test.ts` whenever ChatGPT prompt actions
   change so the `Answer now` prohibition remains explicit.
+- Browser acceptance main contract (provider-free):
+  `pnpm vitest run tests/scripts.browserAcceptanceMain.test.ts
+  tests/scripts.browserAcceptanceHarness.test.ts
+  tests/scripts.browserAcceptanceStructure.test.ts`.
+  This dynamically proves ChatGPT CLI-over-resume precedence, provider-main
+  PASS/FAIL evidence and checkpoint ordering, ChatGPT full-run cleanup, and
+  Grok cleanup/keep-projects policy through provider-local adapters. Importing
+  the scripts is side-effect free; this command must never launch a browser or
+  provider workflow.
 - Agent-browser RDP managed-profile contract (provider-free):
   `pnpm vitest run tests/browser/agentBrowserRdpLauncher.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser-service/platformPaths.test.ts`
   followed by `pnpm run typecheck`. This proves exact AuraCall profile-path

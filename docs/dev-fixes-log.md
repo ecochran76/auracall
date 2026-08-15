@@ -21686,3 +21686,17 @@ browser-stage lifecycle observability, not transcript truncation.
   presentation, and summary fields stay in the ChatGPT and Grok scripts; do not
   invent Grok state or resume behavior merely because the shared harness can
   support optional state.
+
+## 2026-08-15 | Executable acceptance scripts must be import-safe test modules
+
+- A provider-main test that imports an executable script can trigger its
+  top-level `main()` before the test reaches an injected seam. Guard direct
+  execution by exact script-path identity before adding dynamic imports.
+- Keep the injected main adapter provider-local. Replace provider execution and
+  cleanup commands in tests while exercising real argument resolution,
+  checkpoint/final evidence ordering, PASS/FAIL presentation, and cleanup
+  policy; do not promote those concerns into the shared mechanics harness.
+- Make import safety part of the focused contract. A red tracer that starts a
+  real provider command is a test-isolation failure: stop, verify exact owned
+  processes/local state, and issue no further provider command without explicit
+  authority.

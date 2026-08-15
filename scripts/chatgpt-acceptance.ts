@@ -64,7 +64,7 @@ type BrowserSessionMetadata = {
   createdAt?: unknown;
 };
 
-type Args = {
+export type ChatgptAcceptanceArgs = {
   json: boolean;
   profile?: string;
   model: string;
@@ -77,9 +77,11 @@ type Args = {
   resumeFile?: string;
 };
 
+type Args = ChatgptAcceptanceArgs;
+
 type AcceptancePhase = 'full' | 'project' | 'project-chat' | 'root-base' | 'root-followups' | 'cleanup';
 
-type AcceptanceSummary = {
+export type ChatgptAcceptanceSummary = {
   ok: boolean;
   phase: AcceptancePhase;
   profile: string | null;
@@ -96,6 +98,23 @@ type AcceptanceSummary = {
   renamedConversationName: string;
   sourceFileName: string;
   attachmentFileName: string;
+};
+
+type AcceptanceSummary = ChatgptAcceptanceSummary;
+
+type ChatgptAcceptanceCleanupMutation = (
+  args: Args,
+  extra: string[],
+  options?: RunOptions,
+) => Promise<RunResult>;
+
+export type ChatgptAcceptanceMainAdapter = {
+  execute?(context: {
+    args: Readonly<Args>;
+    summary: AcceptanceSummary;
+    checkpoint(error?: unknown): Promise<void>;
+  }): Promise<void>;
+  cleanupMutation?: ChatgptAcceptanceCleanupMutation;
 };
 
 type AcceptanceState = AcceptanceRunState<AcceptanceSummary>;
@@ -715,10 +734,14 @@ async function writeFixtureFiles(tempDir: string, instructionsFileName: string, 
   await writeFile(path.join(tempDir, attachmentFileName), 'ChatGPT conversation attachment acceptance\n', 'utf8');
 }
 
-async function bestEffortCleanup(args: Args, summary: AcceptanceSummary): Promise<void> {
+async function bestEffortCleanup(
+  args: Args,
+  summary: AcceptanceSummary,
+  cleanupMutation: ChatgptAcceptanceCleanupMutation = runChatgptMutation,
+): Promise<void> {
   if (summary.projectConversationId && summary.projectId) {
     try {
-      await runChatgptMutation(
+      await cleanupMutation(
         args,
         ['delete', summary.projectConversationId, '--target', 'chatgpt', '--project-id', summary.projectId, '--yes'],
         { timeoutMs: 120_000 },
@@ -729,7 +752,7 @@ async function bestEffortCleanup(args: Args, summary: AcceptanceSummary): Promis
   }
   if (summary.conversationId) {
     try {
-      await runChatgptMutation(
+      await cleanupMutation(
         args,
         ['delete', summary.conversationId, '--target', 'chatgpt', '--yes'],
         { timeoutMs: 120_000 },
@@ -740,7 +763,7 @@ async function bestEffortCleanup(args: Args, summary: AcceptanceSummary): Promis
   }
   if (summary.projectId) {
     try {
-      await runChatgptMutation(
+      await cleanupMutation(
         args,
         ['projects', 'remove', summary.projectId, '--target', 'chatgpt'],
         { timeoutMs: 120_000 },
@@ -751,8 +774,11 @@ async function bestEffortCleanup(args: Args, summary: AcceptanceSummary): Promis
   }
 }
 
-async function main() {
-  const parsedArgs = parseArgs(process.argv.slice(2));
+export async function runChatgptAcceptanceMain(
+  argv: readonly string[] = process.argv.slice(2),
+  adapter: ChatgptAcceptanceMainAdapter = {},
+): Promise<AcceptanceSummary> {
+  const parsedArgs = parseArgs([...argv]);
   const resumed = await readAcceptanceResume<AcceptanceSummary>(ROOT, parsedArgs.resumeFile);
   const resumedState = resumed?.state ?? null;
   const args = mergeArgsWithAcceptanceState(parsedArgs, resumedState);
@@ -834,7 +860,11 @@ async function main() {
       throw new Error('--phase cleanup requires --project-id, --conversation-id, or both.');
     }
 
-    if (args.phase === 'full' || args.phase === 'project') {
+    if (adapter.execute) {
+      await adapter.execute({ args, summary, checkpoint: persistSummary });
+    }
+
+    if (!adapter.execute && (args.phase === 'full' || args.phase === 'project')) {
       await runChatgptMutation(args, [
         'projects',
         'create',
@@ -876,7 +906,7 @@ async function main() {
       );
     }
 
-    if (args.phase === 'full' || args.phase === 'project-chat') {
+    if (!adapter.execute && (args.phase === 'full' || args.phase === 'project-chat')) {
       assert(workingProjectId, 'Project conversation phase requires a project id.');
       const projectConversationRun = await runChatgptMutation(
         args,
@@ -923,7 +953,7 @@ async function main() {
       await persistSummary(null);
     }
 
-    if (args.phase === 'full' || args.phase === 'root-base') {
+    if (!adapter.execute && (args.phase === 'full' || args.phase === 'root-base')) {
       const baseRun = await runChatgptMutation(
         args,
         ['--chatgpt', '--model', args.model, '--browser-thinking-time', args.thinkingTime, '--verbose', basePrompt],
@@ -952,7 +982,7 @@ async function main() {
       await persistSummary(null);
     }
 
-    if (args.phase === 'full' || args.phase === 'root-followups') {
+    if (!adapter.execute && (args.phase === 'full' || args.phase === 'root-followups')) {
       assert(workingConversationId, 'Root follow-up phase requires a conversation id.');
 
       await runChatgptMutation(
@@ -1041,7 +1071,7 @@ async function main() {
       await persistSummary(null);
     }
 
-    if (args.phase === 'full' || args.phase === 'cleanup') {
+    if (!adapter.execute && (args.phase === 'full' || args.phase === 'cleanup')) {
       if (workingConversationId) {
         await runChatgptMutation(args, ['delete', workingConversationId, '--target', 'chatgpt', '--yes']);
         await waitForConversationMissing(args, workingConversationId);
@@ -1082,15 +1112,19 @@ async function main() {
     throw error;
   } finally {
     if (args.phase === 'full') {
-      await bestEffortCleanup(args, summary).catch(() => undefined);
+      await bestEffortCleanup(args, summary, adapter.cleanupMutation).catch(() => undefined);
     }
     await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
   }
+
+  return summary;
 }
 
-main().catch((error) => {
-  if (!(error instanceof Error)) {
-    console.error(String(error));
-  }
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  runChatgptAcceptanceMain().catch((error) => {
+    if (!(error instanceof Error)) {
+      console.error(String(error));
+    }
+    process.exitCode = 1;
+  });
+}

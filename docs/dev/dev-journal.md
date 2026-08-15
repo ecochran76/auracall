@@ -47018,3 +47018,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   scheduler, completion, restart, or service action ran. Lower-severity notes
   are retained in
   `docs/dev/notes/2026-08-15-plan0291-architecture-deepening-audit.md`.
+
+## 2026-08-15 | Plan 0292 opens acceptance-main dynamic coverage
+
+- The operator selected the retained Medium from Plan 0291 for immediate
+  closure. The bounded successor keeps the shared harness unchanged and adds
+  provider-local main interfaces for ChatGPT and Grok.
+- Red/green tests will replace only provider execution through local test
+  adapters while exercising real CLI/resume resolution, PASS/FAIL evidence,
+  checkpoint ordering, and cleanup decisions. Live acceptance remains out of
+  scope.
+
+## 2026-08-15 | Plan 0292 closes the retained Medium
+
+- Each provider script now has one import-safe, provider-local main interface.
+  Tests inject provider execution and cleanup commands without changing the
+  shared harness or moving provider workflow policy across its seam.
+- Four dynamic tests cover ChatGPT CLI-over-resume precedence, initial/final
+  state ordering, PASS/FAIL presentation, full-run cleanup, and Grok
+  PASS/FAIL/keep-projects/project cleanup. The three-file packet passes 11/11;
+  typecheck, build, scoped lint, help smokes, CodeGraph, plan audit, and diff
+  hygiene pass.
+- The red import tracer auto-ran the preexisting script mains before their
+  missing exports failed. ChatGPT stopped at its authorization gate before
+  mutation; Grok entered and failed its first project-create command. Process
+  readback found no test-owned child and an exact local-state search found
+  neither generated project name. No further provider command ran.

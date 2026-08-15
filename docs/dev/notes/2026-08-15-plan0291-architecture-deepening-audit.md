@@ -19,8 +19,10 @@ Outcome: zero High findings; no code repair cycle
 - Reproducer: `pnpm vitest run tests/scripts.browserAcceptanceHarness.test.ts
   tests/scripts.browserAcceptanceStructure.test.ts` passes all seven tests
   without entering provider-main orchestration.
-- Disposition: nonblocking backlog. Prefer an injected provider-main seam in a
-  later test-only slice; do not invoke a live acceptance run to close this gap.
+- Disposition: resolved by provider-free successor Plan 0292. ChatGPT and Grok
+  now expose provider-local injectable main interfaces, and four dynamic tests
+  cover PASS, FAIL, cleanup/keep policy, checkpoint/evidence ordering, and
+  ChatGPT CLI-over-resume precedence. The shared harness remains mechanics-only.
 
 ## Retained Low | Formatter/import-order scope
 

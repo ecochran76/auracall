@@ -56,11 +56,13 @@ durable notes.
   no live acceptance command ran.
 - Candidates 1 through 4 have validated checkpoints. No live browser/provider
   or installed/runtime state was changed.
-- The sole campaign audit is complete with zero High findings, one retained
-  Medium C4 dynamic-orchestration test gap, and one Low evidence-counter drift
-  reconciled in closeout docs. One documentation-only reconciliation pass was
-  used; no code repair cycle ran. The integrated provider-free rerun passes 322
-  files and 2,922 tests with 65 live/PTY tests skipped by design.
+- The sole campaign audit is complete with zero High findings. Its retained
+  Medium C4 dynamic-orchestration test gap was closed provider-free by
+  successor Plan 0292; the Low evidence-counter drift was reconciled in the
+  original closeout docs. One documentation-only reconciliation pass was used;
+  no campaign code repair cycle ran. The original integrated provider-free
+  rerun passed 322 files and 2,922 tests with 65 live/PTY tests skipped by
+  design.
 
 ## Domain Language
 
