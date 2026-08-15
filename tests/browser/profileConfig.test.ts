@@ -268,6 +268,7 @@ describe('applyBrowserProfileOverrides', () => {
         modelStrategy: 'current',
         thinkingTime: 'extended',
         composerTool: 'canvas',
+        chatgptToolApproval: 'manual',
       },
     };
     const profile = {
@@ -281,6 +282,7 @@ describe('applyBrowserProfileOverrides', () => {
           modelStrategy: 'select',
           thinkingTime: 'light',
           composerTool: 'deep-research',
+          chatgptToolApproval: 'allow-once',
         },
       },
     };
@@ -293,6 +295,7 @@ describe('applyBrowserProfileOverrides', () => {
       modelStrategy: 'current',
       thinkingTime: 'extended',
       composerTool: 'canvas',
+      chatgptToolApproval: 'manual',
     };
 
     applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
@@ -305,6 +308,7 @@ describe('applyBrowserProfileOverrides', () => {
     expect(browser.modelStrategy).toBe('select');
     expect(browser.thinkingTime).toBe('light');
     expect(browser.composerTool).toBe('deep-research');
+    expect(browser.chatgptToolApproval).toBe('allow-once');
   });
 
   test('resolves per-request AuraCall runtime profile browser family before browser launch', () => {

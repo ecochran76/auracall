@@ -417,6 +417,7 @@ interface CliOptions extends OptionValues {
   browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   browserThinkingTime?: 'light' | 'standard' | 'extended' | 'heavy';
   browserChatgptMode?: 'chat' | 'work';
+  browserChatgptToolApproval?: 'manual' | 'allow-once' | 'always-allow';
   browserWorkModel?: string;
   browserComposerTool?: string;
   browserDeepResearchPlanAction?: 'start' | 'edit';
@@ -879,6 +880,12 @@ program
       '--browser-chatgpt-mode <mode>',
       'Select ChatGPT composer mode. Defaults to Chat; Work must be requested explicitly.',
     ).choices(['chat', 'work']),
+  )
+  .addOption(
+    new Option(
+      '--browser-chatgpt-tool-approval <policy>',
+      'Handle ChatGPT third-party tool approvals (manual | allow-once | always-allow).',
+    ).choices(['manual', 'allow-once', 'always-allow']),
   )
   .addOption(
     new Option(
@@ -9390,6 +9397,9 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
       browserTarget: target,
       browserChatgptMode:
         (cliOptions as CliOptions).browserChatgptMode ?? userConfig.browser.chatgptMode,
+      browserChatgptToolApproval:
+        (cliOptions as CliOptions).browserChatgptToolApproval ??
+        userConfig.browser.chatgptToolApproval,
       browserWorkModel: (cliOptions as CliOptions).browserWorkModel ?? userConfig.browser.workModel,
       browserManualLogin: true,
       browserManualLoginProfileDir: launchOptions.manualLoginProfileDir,
@@ -11112,6 +11122,8 @@ async function runRootCommand(options: CliOptions): Promise<void> {
           browserModelLabel: browserModelLabelOverride,
           chatgptSemanticModelSelection,
           browserChatgptMode: options.browserChatgptMode ?? config.browser.chatgptMode,
+          browserChatgptToolApproval:
+            options.browserChatgptToolApproval ?? config.browser.chatgptToolApproval,
           browserWorkModel: options.browserWorkModel ?? config.browser.workModel,
           browserManualLogin: config.browser.manualLogin ?? true,
           browserManualLoginProfileDir: config.browser.manualLoginProfileDir,

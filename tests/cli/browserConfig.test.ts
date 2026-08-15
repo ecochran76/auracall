@@ -26,9 +26,19 @@ describe('buildBrowserConfig', () => {
       hideWindow: undefined,
       desiredModel: 'GPT-5.6 Sol',
       chatgptMode: 'chat',
+      chatgptToolApproval: 'manual',
       debug: undefined,
       allowCookieErrors: true,
     });
+  });
+
+  test('preserves the explicit ChatGPT tool approval preference', async () => {
+    const config = await buildBrowserConfig({
+      model: 'gpt-5.2',
+      browserChatgptToolApproval: 'always-allow',
+    });
+
+    expect(config.chatgptToolApproval).toBe('always-allow');
   });
 
   test('requires an explicit request to enter Work and keeps its model separate', async () => {

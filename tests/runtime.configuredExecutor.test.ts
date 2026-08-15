@@ -932,6 +932,7 @@ describe('configured stored-step executor', () => {
             initialInputs: {
               auracall: {
                 chatgptMode: 'work',
+                chatgptToolApproval: 'allow-once',
                 workModel: 'Research',
                 composerTool: 'deep-research',
                 deepResearchPlanAction: 'edit',
@@ -961,6 +962,7 @@ describe('configured stored-step executor', () => {
           manualLogin: true,
           manualLoginWaitForSession: false,
           chatgptMode: 'work',
+          chatgptToolApproval: 'allow-once',
           workModel: 'Research',
           composerTool: 'deep-research',
           deepResearchPlanAction: 'edit',

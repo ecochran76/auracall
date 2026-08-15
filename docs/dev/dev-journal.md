@@ -46716,3 +46716,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   close, and abort propagation before DevTools attachment. No runtime install,
   restart, browser action, provider call, inventory retry, or app mutation was
   performed in this source-only slice.
+## 2026-08-15 | Plan 0286 opens ChatGPT tool-approval automation
+
+- Current focus: detect ChatGPT third-party tool approval pauses during the
+  existing post-submit passive response probe and act only on the operator's
+  explicit `allow-once` or `always-allow` preference.
+- The default remains manual/fail-closed. Exact paired action labels, trusted
+  pointer input, disappearance verification, one-attempt fencing, and the
+  existing `Answer now` prohibition define the provider-owned contract.
+- Provider-free code, tests, config, and docs are in scope. Browser launch,
+  live DOM inspection, prompts, tools/connectors, approval clicks, install,
+  restart, and scheduler/completion controls remain outside this checkpoint.

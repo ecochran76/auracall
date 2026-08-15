@@ -15,4 +15,17 @@ describe('ChatGPT mode config schema', () => {
   it('rejects unknown ChatGPT modes', () => {
     expect(() => ChatgptServiceConfigSchema.parse({ chatgptMode: 'agent' })).toThrow();
   });
+
+  it('accepts only explicit ChatGPT tool approval policies', () => {
+    expect(ChatgptServiceConfigSchema.parse({ chatgptToolApproval: 'manual' })).toEqual({
+      chatgptToolApproval: 'manual',
+    });
+    expect(ChatgptServiceConfigSchema.parse({ chatgptToolApproval: 'allow-once' })).toEqual({
+      chatgptToolApproval: 'allow-once',
+    });
+    expect(ChatgptServiceConfigSchema.parse({ chatgptToolApproval: 'always-allow' })).toEqual({
+      chatgptToolApproval: 'always-allow',
+    });
+    expect(() => ChatgptServiceConfigSchema.parse({ chatgptToolApproval: 'allow' })).toThrow();
+  });
 });

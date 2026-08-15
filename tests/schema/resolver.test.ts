@@ -494,6 +494,7 @@ describe('Config Resolver', () => {
     const result = await resolveConfig({
       browserModelStrategy: 'ignore',
       browserChatgptMode: 'work',
+      browserChatgptToolApproval: 'always-allow',
       browserWorkModel: 'Research',
       browserThinkingTime: 'extended',
       browserComposerTool: 'canvas',
@@ -502,12 +503,14 @@ describe('Config Resolver', () => {
 
     expect(result.browser.modelStrategy).toBe('ignore');
     expect(result.browser.chatgptMode).toBe('work');
+    expect(result.browser.chatgptToolApproval).toBe('always-allow');
     expect(result.browser.workModel).toBe('Research');
     expect(result.browser.thinkingTime).toBe('extended');
     expect(result.browser.composerTool).toBe('canvas');
     expect(result.browser.deepResearchPlanAction).toBe('edit');
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.modelStrategy).toBe('ignore');
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.chatgptMode).toBe('work');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.chatgptToolApproval).toBe('always-allow');
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.workModel).toBe('Research');
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.thinkingTime).toBe('extended');
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.composerTool).toBe('canvas');

@@ -7,6 +7,13 @@
 Status: active
 Lane: P01
 
+- Active provider-free ChatGPT third-party tool approval policy:
+  [docs/dev/plans/0286-2026-08-15-chatgpt-tool-approval-policy.md](docs/dev/plans/0286-2026-08-15-chatgpt-tool-approval-policy.md)
+  AuraCall will detect exact paired `Allow once` / `Always allow` pauses during
+  post-submit response waiting and take only the operator-configured action.
+  Manual remains fail-closed; provider-free implementation and validation are
+  in progress, with live DOM proof reserved for a separate authorized canary.
+
 - Closed accepted provider-free ChatGPT developer-app exact auth binding repair:
   [docs/dev/plans/0285-2026-08-14-developer-app-exact-auth-binding.md](docs/dev/plans/0285-2026-08-14-developer-app-exact-auth-binding.md)
   LitScout governance proved a replacement app inherited `ACTIVE` only because

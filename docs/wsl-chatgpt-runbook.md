@@ -165,6 +165,28 @@ computer` and the unrestricted `#upload-files` input without confusing them
 with `Add from library / Browse and search your files`, which is ChatGPT's
 separate provider-library drawer. Missing or ambiguous rows fail closed.
 
+Third-party tools can pause after prompt submission and ask for `Allow once`
+or `Always allow`. AuraCall defaults to `manual`, which detects the pause and
+returns an actionable error without clicking. For unattended runs, select the
+operator preference explicitly:
+
+```bash
+# Approve only the current tool call.
+oracle --profile wsl-chrome-3 --engine browser \
+  --browser-chatgpt-tool-approval allow-once \
+  -p "Use the selected tool, then summarize the result"
+
+# Persist ChatGPT approval for that third-party tool.
+oracle --profile wsl-chrome-3 --engine browser \
+  --browser-chatgpt-tool-approval always-allow \
+  -p "Use the selected tool, then summarize the result"
+```
+
+The detector requires one visible surface containing exactly one of each
+approval action. It clicks only the configured exact label through trusted
+pointer input, verifies the surface disappears, and will not click the same
+surface twice. It never clicks `Answer now`.
+
 ## Troubleshooting
 - **Chrome opens but the URL never changes**: Oracle is connecting to the wrong DevTools host.
   - Fix: set `AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1` for the run.

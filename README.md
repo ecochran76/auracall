@@ -1832,6 +1832,7 @@ npx -y auracall auracall-mcp
 | `--base-url <url>` | Point API runs at LiteLLM/Azure/OpenRouter/etc. |
 | `--chatgpt-url <url>` | Target a ChatGPT workspace/folder (browser). |
 | `--browser-chatgpt-mode <chat\|work>` | Select the ChatGPT composer mode. AuraCall defaults every ChatGPT browser run to `chat`; `work` must be requested explicitly. |
+| `--browser-chatgpt-tool-approval <manual\|allow-once\|always-allow>` | Handle a post-submit ChatGPT third-party tool approval pause. `manual` is the fail-closed default; the opt-in modes click only the exact corresponding action and verify that the approval surface disappears. |
 | `--browser-work-model <label>` | Select a model through Work's dedicated slider menu (advanced options -> Model). This is used only with `--browser-chatgpt-mode work` and never falls back to the Chat picker. Current labels include `GPT-5.6 Sol`, `GPT-5.6 Terra`, `GPT-5.6 Luna`, and `GPT-5.5`. |
 | `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (current keeps the active model; ignore skips the picker). |
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
@@ -1855,6 +1856,14 @@ npx -y auracall auracall-mcp
 
 ## Configuration
 
+ChatGPT tool approval is always an operator preference. Use `allow-once` when
+each detected tool call should receive only the current approval, or
+`always-allow` when ChatGPT should persist approval for that third-party tool.
+AuraCall never upgrades `allow-once` to `always-allow`, never clicks `Answer
+now`, and fails closed on incomplete or ambiguous approval surfaces. The same
+preference can be stored as `browser.chatgptToolApproval` or on the selected
+`services.chatgpt` entry.
+
 Put defaults in `~/.auracall/config.json` (JSON5). Example:
 ```json5
 {
@@ -1868,7 +1877,8 @@ Put defaults in `~/.auracall/config.json` (JSON5). Example:
     },
   },
   browser: {
-    chatgptUrl: "https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project"
+    chatgptUrl: "https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project",
+    chatgptToolApproval: "manual"
   }
 }
 ```

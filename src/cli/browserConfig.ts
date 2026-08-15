@@ -5,7 +5,7 @@ import type { ModelName, ThinkingTimeLevel } from '../oracle.js';
 import { CURRENT_OPENAI_PRO_ALIAS } from '../oracle.js';
 import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, isTemporaryChatUrl, normalizeChatgptUrl, parseDuration } from '../browserMode.js';
 import { normalizeBrowserModelStrategy } from '../browser/modelStrategy.js';
-import type { BrowserModelStrategy } from '../browser/types.js';
+import type { BrowserModelStrategy, ChatgptToolApprovalPolicy } from '../browser/types.js';
 import type { CookieParam } from '../browser/types.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { resolveManagedProfileCookieExportPath, resolveManagedProfileDir } from '../browser/profileStore.js';
@@ -51,6 +51,7 @@ export interface BrowserFlagOptions {
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   browserThinkingTime?: ThinkingTimeLevel;
   browserChatgptMode?: 'chat' | 'work';
+  browserChatgptToolApproval?: ChatgptToolApprovalPolicy;
   browserWorkModel?: string;
   browserComposerTool?: string;
   browserDeepResearchPlanAction?: 'start' | 'edit';
@@ -202,6 +203,8 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     hideWindow: options.browserHideWindow ? true : undefined,
     desiredModel,
     chatgptMode: target === 'chatgpt' ? options.browserChatgptMode ?? 'chat' : undefined,
+    chatgptToolApproval:
+      target === 'chatgpt' ? options.browserChatgptToolApproval ?? 'manual' : undefined,
     workModel: target === 'chatgpt' ? options.browserWorkModel?.trim() || null : null,
     modelStrategy,
     debug: options.verbose ? true : undefined,

@@ -47,6 +47,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   hideWindow: false,
   desiredModel: DEFAULT_MODEL_TARGET,
   chatgptMode: 'chat',
+  chatgptToolApproval: 'manual',
   workModel: null,
   modelStrategy: DEFAULT_MODEL_STRATEGY,
   composerTool: null,
@@ -97,6 +98,7 @@ export function resolveBrowserConfig(
     DEFAULT_BROWSER_CONFIG.modelStrategy ??
     DEFAULT_MODEL_STRATEGY;
   const chatgptMode = normalizeChatgptComposerMode(config?.chatgptMode);
+  const chatgptToolApproval = normalizeChatgptToolApprovalPolicy(config?.chatgptToolApproval);
   if (modelStrategy === 'select' && isTemporaryChatUrl(normalizedUrl) && /\bpro\b/i.test(desiredModel)) {
     throw new Error(
       'Temporary Chat mode does not expose Pro models in the ChatGPT model picker. ' +
@@ -256,6 +258,7 @@ export function resolveBrowserConfig(
       : launchProfile.hideWindow ?? config?.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
     desiredModel,
     chatgptMode,
+    chatgptToolApproval,
     workModel: config?.workModel?.trim() || null,
     modelStrategy,
     composerTool,
@@ -288,6 +291,13 @@ export function resolveBrowserConfig(
       config?.collapseDisposableWindows ??
       DEFAULT_BROWSER_CONFIG.collapseDisposableWindows,
   };
+}
+
+function normalizeChatgptToolApprovalPolicy(
+  value: BrowserAutomationConfig['chatgptToolApproval'],
+): ResolvedBrowserConfig['chatgptToolApproval'] {
+  if (value === 'allow-once' || value === 'always-allow') return value;
+  return 'manual';
 }
 
 function normalizeGenericBrowserUrl(value: string, fallback: string): string {

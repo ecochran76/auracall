@@ -42,6 +42,13 @@
   - use the repo-local
     [`auracall-chatgpt-browser` skill](../.agents/skills/auracall-chatgpt-browser/SKILL.md)
     for selector boundaries, live-effect gates, and cleanup evidence
+- ChatGPT third-party tool approval policy:
+  - `manual` is the fail-closed default; `allow-once` and `always-allow` are
+    explicit operator choices
+  - run the provider-free action and propagation gate before any live canary:
+    `pnpm vitest run tests/browser/chatgptToolApproval.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser/profileResolution.test.ts tests/cli/browserConfig.test.ts tests/runtime.configuredExecutor.test.ts tests/schema/chatgptMode.test.ts tests/schema/resolver.test.ts`
+  - provider-free fixtures must prove exact paired actions, ambiguity stops,
+    disappearance verification, one-attempt fencing, and `Answer now` exclusion
 - ChatGPT developer-app lifecycle:
   - provider-free contract tests:
     `pnpm vitest run tests/browser-service/devToolsConnection.test.ts tests/browser-service/browserServiceCore.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`

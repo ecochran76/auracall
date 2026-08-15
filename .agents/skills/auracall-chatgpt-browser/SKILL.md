@@ -1,6 +1,6 @@
 ---
 name: auracall-chatgpt-browser
-description: Configure, validate, and diagnose AuraCall ChatGPT browser runs while preserving the separate Chat and Work composer-mode contracts. Use for ChatGPT browser CLI/config changes, model-selector work, provider-free selector tests, live DOM inspection, browser canaries, or operator docs involving --browser-chatgpt-mode or --browser-work-model.
+description: Configure, validate, and diagnose AuraCall ChatGPT browser runs while preserving composer-mode and third-party tool-approval contracts. Use for ChatGPT browser CLI/config changes, model-selector or tool-approval work, provider-free selector tests, live DOM inspection, browser canaries, or related operator docs.
 ---
 
 # AuraCall ChatGPT browser modes
@@ -74,12 +74,26 @@ If current DOM evidence does not match either contract, stop and capture
 bounded diagnostics. Keep provider-specific trigger and label heuristics in the
 ChatGPT adapters unless the same shape repeats in another provider.
 
+## Preserve tool-approval preference
+
+Default `--browser-chatgpt-tool-approval` to `manual`. Use `allow-once` or
+`always-allow` only when the operator explicitly selected that preference.
+During post-submit response waiting:
+
+1. Require one visible approval surface containing exact `Allow once` and
+   `Always allow` controls.
+2. Click only the configured exact action with trusted pointer input.
+3. Verify that the surface disappears and never click the same surface twice.
+4. Fail closed on missing, duplicate, ambiguous, or unconfirmed surfaces.
+5. Never click ChatGPT's `Answer now` button.
+
 ## Validate provider-free first
 
 Run the focused contract suite before any installed or live proof:
 
 ```bash
 pnpm vitest run \
+  tests/browser/chatgptToolApproval.test.ts \
   tests/browser/chatgptComposerMode.test.ts \
   tests/browser/config.test.ts \
   tests/cli/browserConfig.test.ts \

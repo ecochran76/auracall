@@ -22,6 +22,7 @@ import {
 	startChatgptDeepResearchPlan,
 } from "./actions/chatgptDeepResearch.js";
 import { ensureChatgptWorkModelSelection } from "./actions/chatgptWorkModelSelection.js";
+import { createChatgptToolApprovalHandler } from "./actions/chatgptToolApproval.js";
 import {
 	ensureGrokLoggedIn,
 	ensureGrokPromptReady,
@@ -2656,6 +2657,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			}
 			return null;
 		};
+		const handleChatgptToolApproval = createChatgptToolApprovalHandler({
+			client: client as ChromeClient,
+			policy: config.chatgptToolApproval ?? "manual",
+			logger,
+		});
 		let answer = await raceWithDisconnect(
 			waitForAssistantResponseWithReload(
 				Runtime,
@@ -2664,13 +2670,15 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				logger,
 				baselineTurns ?? undefined,
 				{
-					onPassiveDomProbe: () =>
-						recordTargetBoundPassiveObservation({
+					onPassiveDomProbe: async () => {
+						await recordTargetBoundPassiveObservation({
 							state: "thinking",
 							source: "browser-service",
 							evidenceRef: "chatgpt-passive-dom-probe",
 							confidence: "low",
-						}),
+						});
+						await handleChatgptToolApproval();
+					},
 					onResponseIncoming: () =>
 						recordTargetBoundPassiveObservation({
 							state: "response-incoming",
@@ -3676,6 +3684,11 @@ async function runRemoteBrowserMode(
 			}
 			return null;
 		};
+		const handleChatgptToolApproval = createChatgptToolApprovalHandler({
+			client: client as ChromeClient,
+			policy: config.chatgptToolApproval ?? "manual",
+			logger,
+		});
 		let answer = await waitForAssistantResponseWithReload(
 			Runtime,
 			Page,
@@ -3683,13 +3696,14 @@ async function runRemoteBrowserMode(
 			logger,
 			baselineTurns ?? undefined,
 			{
-				onPassiveDomProbe: () => {
+				onPassiveDomProbe: async () => {
 					recordBrowserPassiveObservation(passiveObservations, {
 						state: "thinking",
 						source: "browser-service",
 						evidenceRef: "chatgpt-passive-dom-probe",
 						confidence: "low",
 					});
+					await handleChatgptToolApproval();
 				},
 				onResponseIncoming: () => {
 					recordBrowserPassiveObservation(passiveObservations, {

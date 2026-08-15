@@ -221,6 +221,12 @@ function applyBrowserProfileDefaults(
     browser.composerTool = profileBrowser.composerTool;
   }
   if (
+    (overrideExisting || browser.chatgptToolApproval === undefined) &&
+    profileBrowser.chatgptToolApproval !== undefined
+  ) {
+    browser.chatgptToolApproval = profileBrowser.chatgptToolApproval;
+  }
+  if (
     (overrideExisting || browser.deepResearchPlanAction === undefined) &&
     profileBrowser.deepResearchPlanAction !== undefined
   ) {
@@ -312,6 +318,7 @@ function applyServiceDefaults(
   const modelStrategy = asNonEmptyString(serviceConfig.modelStrategy);
   const thinkingTime = asNonEmptyString(serviceConfig.thinkingTime);
   const composerTool = asNonEmptyString(serviceConfig.composerTool);
+  const chatgptToolApproval = asNonEmptyString(serviceConfig.chatgptToolApproval);
   const deepResearchPlanAction = asNonEmptyString(serviceConfig.deepResearchPlanAction);
   const manualLogin = typeof serviceConfig.manualLogin === 'boolean' ? serviceConfig.manualLogin : undefined;
   const manualLoginProfileDir = asNonEmptyString(serviceConfig.manualLoginProfileDir);
@@ -339,6 +346,9 @@ function applyServiceDefaults(
   }
   if ((overrideExisting || browser.composerTool === undefined) && composerTool) {
     browser.composerTool = composerTool;
+  }
+  if ((overrideExisting || browser.chatgptToolApproval === undefined) && chatgptToolApproval) {
+    browser.chatgptToolApproval = chatgptToolApproval;
   }
   if ((overrideExisting || browser.deepResearchPlanAction === undefined) && deepResearchPlanAction) {
     browser.deepResearchPlanAction = deepResearchPlanAction;

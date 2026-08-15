@@ -14,6 +14,7 @@ export type {
 
 export type BrowserModelStrategy = 'select' | 'current' | 'ignore';
 export type ChatgptComposerMode = 'chat' | 'work';
+export type ChatgptToolApprovalPolicy = 'manual' | 'allow-once' | 'always-allow';
 export type ThinkingTimeLevel = 'light' | 'standard' | 'extended' | 'heavy';
 export type ChatgptDeepResearchPlanAction = 'start' | 'edit';
 export type BrowserPassiveObservationState =
@@ -51,6 +52,7 @@ type LlmBrowserFields = {
   chatgptUrl?: string | null;
   desiredModel?: string | null;
   chatgptMode?: ChatgptComposerMode;
+  chatgptToolApproval?: ChatgptToolApprovalPolicy;
   workModel?: string | null;
   modelStrategy?: BrowserModelStrategy;
   thinkingTime?: ThinkingTimeLevel;

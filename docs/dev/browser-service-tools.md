@@ -157,6 +157,18 @@ diagnostics. For the provider-free suite, live-effect gates, and cleanup
 record, follow the repo-local
 [`auracall-chatgpt-browser` skill](../../.agents/skills/auracall-chatgpt-browser/SKILL.md).
 
+## ChatGPT third-party tool approval boundary
+
+Tool approval is provider-owned and runs only during the post-submit ChatGPT
+response wait. `src/browser/actions/chatgptToolApproval.ts` requires one
+visible surface with exact paired `Allow once` and `Always allow` controls. It
+uses trusted CDP pointer input for only the operator-selected action, verifies
+that the surface disappears, and fences repeat attempts by surface
+fingerprint. The default `manual` policy detects and reports the pause without
+clicking. Keep this classifier out of generic browser-service blocking-surface
+recovery, and never widen it to broad `allow`, `continue`, or `Answer now`
+matching.
+
 ## Core helpers (packages/browser-service/src/service/ui.ts)
 
 Shared DevTools attachment is owned by

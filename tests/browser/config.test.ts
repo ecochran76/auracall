@@ -30,6 +30,7 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.url).toBe(CHATGPT_URL);
     expect(resolved.desiredModel).toBe('Instant');
     expect(resolved.chatgptMode).toBe('chat');
+    expect(resolved.chatgptToolApproval).toBe('manual');
     expect(resolved.workModel).toBeNull();
     const isWindows = process.platform === 'win32';
     expect(resolved.cookieSync).toBe(!isWindows);
@@ -51,6 +52,7 @@ describe('resolveBrowserConfig', () => {
       headless: true,
       desiredModel: 'Custom',
       chatgptMode: 'work',
+      chatgptToolApproval: 'always-allow',
       workModel: 'Research',
       composerTool: 'canvas',
       deepResearchPlanAction: 'edit',
@@ -69,6 +71,7 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.headless).toBe(true);
     expect(resolved.desiredModel).toBe('Custom');
     expect(resolved.chatgptMode).toBe('work');
+    expect(resolved.chatgptToolApproval).toBe('always-allow');
     expect(resolved.workModel).toBe('Research');
     expect(resolved.composerTool).toBe('canvas');
     expect(resolved.deepResearchPlanAction).toBe('edit');

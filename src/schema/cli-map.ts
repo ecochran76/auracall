@@ -62,6 +62,7 @@ export const CLI_MAPPING: Record<string, string> = {
   // Browser - Behavior
   'browserModelStrategy': 'browser.modelStrategy',
   'browserChatgptMode': 'browser.chatgptMode',
+  'browserChatgptToolApproval': 'browser.chatgptToolApproval',
   'browserWorkModel': 'browser.workModel',
   'browserThinkingTime': 'browser.thinkingTime',
   'browserComposerTool': 'browser.composerTool',

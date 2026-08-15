@@ -214,6 +214,9 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   const conversationName = asNonEmptyString((cliOptions as MutableConfig).conversationName);
   const modelStrategy = asNonEmptyString((cliOptions as MutableConfig).browserModelStrategy);
   const chatgptMode = asNonEmptyString((cliOptions as MutableConfig).browserChatgptMode);
+  const chatgptToolApproval = asNonEmptyString(
+    (cliOptions as MutableConfig).browserChatgptToolApproval,
+  );
   const workModel = asNonEmptyString((cliOptions as MutableConfig).browserWorkModel);
   const thinkingTime = asNonEmptyString((cliOptions as MutableConfig).browserThinkingTime);
   const composerTool = asNonEmptyString((cliOptions as MutableConfig).browserComposerTool);
@@ -225,6 +228,7 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
     !conversationName &&
     !modelStrategy &&
     !chatgptMode &&
+    !chatgptToolApproval &&
     !workModel &&
     !thinkingTime &&
     !composerTool &&
@@ -278,6 +282,9 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   }
   if (chatgptMode) {
     serviceConfig.chatgptMode = chatgptMode;
+  }
+  if (chatgptToolApproval) {
+    serviceConfig.chatgptToolApproval = chatgptToolApproval;
   }
   if (workModel) {
     serviceConfig.workModel = workModel;

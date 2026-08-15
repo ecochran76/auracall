@@ -227,6 +227,7 @@ describe('resolveBrowserProfileResolution', () => {
         modelStrategy: 'current',
         thinkingTime: 'extended',
         composerTool: 'canvas',
+        chatgptToolApproval: 'manual',
       },
     };
 
@@ -241,6 +242,7 @@ describe('resolveBrowserProfileResolution', () => {
           modelStrategy: 'select',
           thinkingTime: 'light',
           composerTool: 'deep-research',
+          chatgptToolApproval: 'allow-once',
         },
       },
     };
@@ -254,6 +256,7 @@ describe('resolveBrowserProfileResolution', () => {
       modelStrategy: 'current',
       thinkingTime: 'extended',
       composerTool: 'canvas',
+      chatgptToolApproval: 'manual',
     };
 
     const result = resolveBrowserProfileResolution({
@@ -272,6 +275,7 @@ describe('resolveBrowserProfileResolution', () => {
       modelStrategy: 'select',
       thinkingTime: 'light',
       composerTool: 'deep-research',
+      chatgptToolApproval: 'allow-once',
     });
   });
 

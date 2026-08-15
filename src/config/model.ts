@@ -266,6 +266,7 @@ const RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS = new Set([
   'modelStrategy',
   'thinkingTime',
   'composerTool',
+  'chatgptToolApproval',
   'deepResearchPlanAction',
 ]);
 const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manualLoginProfileDir']);

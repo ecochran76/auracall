@@ -2,7 +2,12 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import type { WriteStream } from 'node:fs';
-import type { BrowserModelStrategy, CookieParam, DebugPortStrategy } from './browser/types.js';
+import type {
+  BrowserModelStrategy,
+  ChatgptToolApprovalPolicy,
+  CookieParam,
+  DebugPortStrategy,
+} from './browser/types.js';
 import { isChromeAlive, isProcessAlive, isPortOpen, findAllChromeProcesses } from './browser/processCheck.js';
 import type { TransportFailureReason, AzureOptions, ModelName, ThinkingTimeLevel } from './oracle.js';
 import { DEFAULT_MODEL } from './oracle.js';
@@ -41,6 +46,8 @@ export interface BrowserSessionConfig {
   desiredModel?: string | null;
   /** ChatGPT composer mode. Defaults to Chat; Work must be explicit. */
   chatgptMode?: 'chat' | 'work';
+  /** ChatGPT third-party tool approval behavior. Defaults to manual. */
+  chatgptToolApproval?: ChatgptToolApprovalPolicy;
   /** Dedicated ChatGPT Work-mode model label. */
   workModel?: string | null;
   modelStrategy?: BrowserModelStrategy;
