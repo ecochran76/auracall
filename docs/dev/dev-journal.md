@@ -46829,3 +46829,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Success requires two sequential approval logs, exact
   `LITSCOUT_TWO_ALLOW_ONCE_OK`, zero LitScout target/action/cancellation/write
   effects, unchanged services/browser ownership, and exact tab/lock cleanup.
+
+## 2026-08-15 | Plan 0289 closes first-approval failed-safe
+
+- The sole prompt reached one exact Corel33t approval. One trusted pointer
+  sequence ran, but the same enabled surface remained visible through the
+  one-second confirmation window, so AuraCall returned
+  `chatgpt-tool-approval-not-confirmed` and did not click again.
+- Retained DOM confirmed a single approval surface and enabled `Allow once`
+  control. LitScout readback stayed at zero exact project/job/action rows, zero
+  cancel-requested/cancelled jobs, and zero canonical writes.
+- The exact canary tab was closed; both services and Chrome remain unchanged,
+  baseline tabs remain, and lock roots are empty. A provider-free settle and
+  fresh-coordinate repair must precede any successor live proof.

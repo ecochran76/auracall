@@ -18902,3 +18902,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   nonexistent cancellation targets. It has zero retry, install, restart,
   scheduler/control, persistent-consent, `Answer now`, and LitScout-write
   budget.
+
+## Turn 421 | 2026-08-15
+
+- Plan 0289 closes `LIVE_CANARY_FAILED_SAFE`. Its sole prompt submitted once
+  and detected the first Corel33t approval, but the one trusted pointer sequence
+  did not dismiss the same surface within the one-second confirmation window.
+  AuraCall stopped before connector dispatch, a second approval, or the token.
+- Retained DOM showed exactly one enabled `Allow once` button. LitScout exact
+  project/job/action, cancel-requested/cancelled, and canonical-write counts all
+  remained zero. Both services retained zero restarts.
+- Exact tab and lock cleanup restored the two baseline tabs and Chrome PID
+  66297/port 45015 ownership. Durable receipt:
+  `docs/dev/notes/2026-08-15-plan0289-two-sequential-approval-failed-safe.json`.

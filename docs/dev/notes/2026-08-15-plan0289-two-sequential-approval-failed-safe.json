@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "planId": "0289-2026-08-15",
+  "openingCommit": "3e0c6479",
+  "terminalDisposition": "LIVE_CANARY_FAILED_SAFE",
+  "target": {
+    "auracallRuntimeProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "browserProfile": "Default",
+    "developerApp": "Corel33t",
+    "toolApprovalPolicy": "allow-once",
+    "expectedToken": "LITSCOUT_TWO_ALLOW_ONCE_OK"
+  },
+  "providerFreePreflight": {
+    "focusedTestsPassed": 8,
+    "focusedTestsFailed": 0,
+    "planningAuditCandidates": 289,
+    "planningAuditErrors": 0
+  },
+  "liveAttempt": {
+    "observedAt": "2026-08-15T13:06:07-05:00",
+    "promptSubmissions": 1,
+    "approvalSurfacesDetected": 1,
+    "approvalPointerAttempts": 1,
+    "confirmedApprovals": 0,
+    "secondApprovalReached": false,
+    "expectedTokenObserved": false,
+    "terminalErrorCode": "chatgpt-tool-approval-not-confirmed",
+    "terminalError": "ChatGPT tool approval surface did not disappear after selecting Allow once.",
+    "fingerprint": "chatgpt said:corel33tallow chatgpt to use corel33t?cancels the project source job identified by slug and job id. see detailsalways allowdenyallow once",
+    "conversationUrl": "https://chatgpt.com/c/6a80aa25-de14-83ea-9ede-bc5ba8982e21",
+    "retryCount": 0
+  },
+  "retainedDom": {
+    "approvalStillVisible": true,
+    "allowOnceEnabled": true,
+    "allowOnceCenterHitElement": "SPAN within BUTTON",
+    "allowOncePointerEvents": "auto",
+    "simultaneousApprovalSurfaceCount": 1
+  },
+  "litscoutPostReadback": {
+    "exactProjectRows": 0,
+    "exactJobRows": 0,
+    "exactJobOperatorActionRows": 0,
+    "cancelRequestedJobs": 0,
+    "cancelledJobs": 0,
+    "canonicalWrites": 0
+  },
+  "actualEffects": {
+    "browserPromptRuns": 1,
+    "promptSubmissions": 1,
+    "litscoutConnectorCallsCompleted": 0,
+    "approvalPointerAttempts": 1,
+    "confirmedAllowOnceClicks": 0,
+    "alwaysAllowClicks": 0,
+    "answerNowClicks": 0,
+    "installs": 0,
+    "serviceRestarts": 0,
+    "schedulerOrCompletionControls": 0,
+    "litscoutCanonicalWrites": 0
+  },
+  "cleanup": {
+    "canaryTabsRemaining": 0,
+    "preexistingTabsRemaining": 2,
+    "browserOperationLeaseCount": 0,
+    "liveTestLockCount": 0,
+    "apiMainPid": 32268,
+    "apiRestartCount": 0,
+    "litscoutMainPid": 52266,
+    "litscoutRestartCount": 0,
+    "chromePid": 66297,
+    "devtoolsPort": 45015
+  }
+}

@@ -1,7 +1,7 @@
 # ChatGPT Two Sequential LitScout Approvals | 0289-2026-08-15
 
-State: OPEN
-Disposition: LIVE PROOF AUTHORIZED
+State: CLOSED
+Disposition: LIVE_CANARY_FAILED_SAFE
 Lane: P01
 
 ## Stable Objective
@@ -21,6 +21,17 @@ tool approval pauses with exact `Allow once`, without persistent consent,
 - The focused regression explicitly calls one handler twice with the same
   fingerprint and passes both approvals. A current two-approval live proof is
   the sole remaining criterion for this plan.
+- The sole live prompt submitted once and reached the first exact Corel33t
+  approval surface. AuraCall dispatched one trusted pointer sequence, but the
+  same surface remained visible through the one-second confirmation window;
+  it failed closed with `chatgpt-tool-approval-not-confirmed` before connector
+  dispatch, the second approval, or the expected token.
+- Retained DOM showed one enabled `Allow once` button whose center resolved to
+  its child span, with pointer events enabled. This is evidence for a
+  provider-surface settle/no-op class, not permission for an identical retry.
+- LitScout post-readback and cleanup passed with every target, cancellation,
+  write, restart, tab, and lock exclusion preserved. Durable receipt:
+  `docs/dev/notes/2026-08-15-plan0289-two-sequential-approval-failed-safe.json`.
 
 ## Execution Contract
 
@@ -54,7 +65,7 @@ tool approval pauses with exact `Allow once`, without persistent consent,
 
 ## Acceptance Criteria
 
-- [ ] Current provider-free repeated-approval regression passes.
+- [x] Current provider-free repeated-approval regression passes.
 - [ ] One prompt submits exactly once and invokes only the two frozen calls.
 - [ ] AuraCall logs exact `Allow once` twice, in sequence, with confirmed
   disappearance after each approval.
@@ -82,4 +93,6 @@ tool approval pauses with exact `Allow once`, without persistent consent,
 
 Completion requires current live evidence for two sequential approvals in one
 response wait, the exact terminal token, zero excluded effects, and exact
-cleanup. Provider-free behavior alone is insufficient.
+cleanup. Provider-free behavior alone is insufficient. This plan exhausted its
+sole live attempt without meeting completion; a successor must first add a
+provider-free pre-click settle/fresh-coordinate repair.
