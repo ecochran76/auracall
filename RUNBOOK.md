@@ -18890,3 +18890,15 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   preexisting tabs remain; Chrome PID 66297 still solely owns port 45015 and
   browser-operation/live-test lock roots are empty. Durable receipt:
   `docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`.
+
+## Turn 420 | 2026-08-15
+
+- Plan 0289 opens after explicit operator authorization to prove two sequential
+  approvals in one ChatGPT response. Current source polls one persistent
+  handler and releases a fingerprint only after confirmed disappearance; the
+  focused same-fingerprint regression is green.
+- The sole live command is bounded to `wsl-chrome-3`, Chat/current model,
+  Corel33t, one prompt, two exact `Allow once` actions, and two frozen
+  nonexistent cancellation targets. It has zero retry, install, restart,
+  scheduler/control, persistent-consent, `Answer now`, and LitScout-write
+  budget.

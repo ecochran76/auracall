@@ -46817,3 +46817,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   of port 45015, and browser-operation/live-test lock roots are empty.
 - Durable receipt:
   `docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`.
+
+## 2026-08-15 | Plan 0289 opens two sequential approval proof
+
+- The operator authorized a live follow-up after current source and the focused
+  regression showed one approval handler remains active throughout response
+  polling and re-enables a fingerprint after confirmed disappearance.
+- One source-direct `wsl-chrome-3`/Corel33t prompt may invoke only two exact
+  nonexistent `project_source_ingest_job_cancel` targets and click exact
+  `Allow once` at most twice. No prompt retry is allowed.
+- Success requires two sequential approval logs, exact
+  `LITSCOUT_TWO_ALLOW_ONCE_OK`, zero LitScout target/action/cancellation/write
+  effects, unchanged services/browser ownership, and exact tab/lock cleanup.

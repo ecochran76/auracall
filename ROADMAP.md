@@ -7,6 +7,13 @@
 Status: active
 Lane: P01
 
+- Active two-sequential-approval LitScout live proof:
+  [docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md](docs/dev/plans/0289-2026-08-15-chatgpt-two-sequential-litscout-approvals.md)
+  One `wsl-chrome-3`/Corel33t prompt may call the mutation-annotated
+  cancellation tool exactly twice against two frozen nonexistent targets.
+  Acceptance requires two sequential exact `Allow once` logs, the terminal
+  token, zero LitScout writes, and ownership-bounded cleanup; retries are zero.
+
 - Closed accepted browser-context liveness repair and LitScout approval proof:
   [docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md](docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md)
   Pushed repair `da7961be` removes live provider probes from optional pre-run
