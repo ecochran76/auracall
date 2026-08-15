@@ -1968,6 +1968,14 @@
   a materialization job completes, without provider or browser work.
 - History-backed materialization unit coverage is deterministic and browser-free:
   `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.searchProjectionService.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|history-materialized|mcp server service wiring|ChatGPT account mirror metadata collector"`.
+  The attempt-lifecycle contract is additionally locked by
+  `tests/runtime.historyMaterializationAttemptStructure.test.ts` and focused
+  history-service cases: one selected handoff must own refresh/provider
+  ordering, target and metric verification, awaited evidence persistence,
+  phase projection, durable receipt construction, and receipt-derived budget
+  and provider-guard accounting. Repeat provider work within one attempt must
+  reuse the exact context object. A target mismatch or evidence-write failure
+  must leave the terminal job with no accepted result or attempt receipt.
   Candidate-observability coverage additionally locks a fixture with seven
   globally missing-local assets, three eligible conversation candidates, and
   two selected candidates after within-job family deduplication/budget. The

@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 462 | 2026-08-15
+
+- Plan 0291 Candidate 3 is provider-free accepted. One internal
+  `HistoryMaterializationAttemptExecutor` now owns the selected conversation
+  handoff through optional refresh, provider materialization, target/metric
+  verification, awaited Account Mirror evidence persistence, phase projection,
+  durable receipt construction, and budget/provider-guard accounting.
+- Direct conversation, catalog item, archive item, selected-ID, and broad
+  reconciliation paths enter the executor. Global eligibility, ordering,
+  deduplication, and candidate-funnel policy remain in reconciliation. The
+  former `reconcileConversationTarget` seam is deleted.
+- Independent closed-world testing passed 80/80 focused tests and 383/383
+  affected integration tests plus typecheck and diff hygiene. No High finding
+  remains; no live materialization, browser/provider action, scheduler control,
+  completion control, install, or restart ran. Candidate 4 is next and the sole
+  campaign audit remains unused.
+
 ## Turn 461 | 2026-08-15
 
 - Plan 0291 Candidate 2 is provider-free accepted. One concrete

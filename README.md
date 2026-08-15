@@ -699,6 +699,14 @@ Terminology note:
   and composite `service-account:<provider>:` forms can match; conflicting,
   missing, malformed, or incomparable identity evidence remains excluded. The
   reason does not mean the underlying assets are absent or unavailable.
+  Conversation-backed results also expose optional `attempts` receipts and
+  `materializedCandidates`. Each receipt binds one selected target to its
+  before-budget, snapshot/materialization phases, awaited Account Mirror
+  evidence writes, budget consumption, provider-guard observation, and
+  terminal status. A receipt is published only after provider output passes
+  target/metric verification and its required evidence writes complete;
+  failed verification or persistence fails the job without accepting that
+  attempt.
   Direct single-conversation materialization readback includes
   `scrapeTelemetry` on successful results, and stale timeout recovery attaches
   the last progress snapshot to the failed job. Use it to verify that direct

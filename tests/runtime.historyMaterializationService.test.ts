@@ -290,6 +290,7 @@ describe("history materialization service", () => {
 				assetKinds: ["artifacts"],
 			}),
 			"hmj_test_1",
+			expect.any(Object),
 		);
 	});
 
@@ -2508,6 +2509,7 @@ describe("history materialization service", () => {
 		);
 		const service = createHistoryMaterializationService({
 			config: {},
+			store: createInMemoryHistoryMaterializationJobStore([]),
 			catalogService: {
 				readCatalog: vi.fn(),
 				readItem: vi.fn(),
@@ -2545,6 +2547,7 @@ describe("history materialization service", () => {
 			expect.objectContaining({ conversationId: "conv_refresh_1" }),
 			expect.objectContaining({ refreshSnapshot: true }),
 			"hmj_refresh_snapshot_1",
+			expect.any(Object),
 		);
 		expect(refreshConversationSnapshot.mock.invocationCallOrder[0]).toBeLessThan(
 			materializeConversation.mock.invocationCallOrder[0],
@@ -2570,9 +2573,25 @@ describe("history materialization service", () => {
 			}),
 		);
 		const completed = await service.readJob("hmj_refresh_snapshot_1");
+		expect(Object.isFrozen(snapshotRefresh)).toBe(false);
+		expect(Object.isFrozen(completed?.result?.phases)).toBe(false);
+		expect(Object.isFrozen(completed?.result?.attempts?.[0]?.phases)).toBe(true);
+		expect(
+			Object.isFrozen(completed?.result?.attempts?.[0]?.phases.snapshotRefresh?.target),
+		).toBe(true);
 		expect(completed).toMatchObject({
 			status: "succeeded",
 			result: {
+				attempts: [
+					{
+						origin: "direct",
+						index: 0,
+						evidence: {
+							status: "persisted",
+							writes: ["snapshot_refresh", "materialization"],
+						},
+					},
+				],
 				phases: {
 					snapshotRefresh: {
 						status: "refreshed",
@@ -2833,6 +2852,13 @@ describe("history materialization service", () => {
 			status: "skipped",
 			result: {
 				status: "skipped",
+				attempts: [
+					{
+						origin: "direct",
+						evidence: { status: "persisted", writes: ["snapshot_refresh"] },
+						accounting: { candidateMaterialized: false },
+					},
+				],
 				phases: {
 					snapshotRefresh: {
 						status: "failed",
@@ -3858,6 +3884,7 @@ describe("history materialization service", () => {
 				assetKinds: ["artifacts", "files"],
 			}),
 			"hmj_catalog_1",
+			expect.any(Object),
 		);
 	});
 
@@ -4605,9 +4632,22 @@ describe("history materialization service", () => {
 			source: { type: "reconciliation", provider: "chatgpt" },
 			result: {
 				status: "materialized",
+				attempts: [
+					{
+						index: 0,
+						budgetBefore: { targetLimit: 2, targetsConsumed: 0, assetsRemaining: 2 },
+						accounting: { targetConsumed: true, candidateMaterialized: true },
+					},
+					{
+						index: 1,
+						budgetBefore: { targetLimit: 2, targetsConsumed: 1, assetsRemaining: 1 },
+						accounting: { targetConsumed: true, candidateMaterialized: true },
+					},
+				],
 				metrics: {
 					conversations: 2,
 					materialized: 2,
+					materializedCandidates: 2,
 				},
 			},
 		});
@@ -4871,6 +4911,19 @@ describe("history materialization service", () => {
 		expect(materializeConversation).toHaveBeenCalledTimes(1);
 		expect(materializeConversation.mock.calls[0]?.[0]).toMatchObject({
 			conversationId: "conv_guard_1",
+		});
+		await expect(service.readJob("hmj_provider_guard")).resolves.toMatchObject({
+			result: {
+				attempts: [
+					{
+						index: 0,
+						accounting: {
+							providerGuardObserved: true,
+							candidateMaterialized: false,
+						},
+					},
+				],
+			},
 		});
 	});
 
@@ -6942,6 +6995,345 @@ describe("history materialization service", () => {
 		});
 	});
 
+	it("records a no-refresh selected materialization attempt after verified evidence persistence", async () => {
+		let scheduled: (() => Promise<void>) | undefined;
+		const operations: string[] = [];
+		const targetResult = (target: HistoryMaterializationTarget): HistoryMaterializationResult => ({
+			object: "history_materialization_result",
+			generatedAt: "2026-08-15T20:00:02.000Z",
+			status: "materialized",
+			target,
+			source: { type: "reconciliation", provider: "chatgpt" },
+			manifestPaths: ["/tmp/attempt-one.json"],
+			entries: [
+				{
+					kind: "artifact",
+					providerId: "artifact_attempt_one",
+					title: "attempt-one.json",
+					status: "materialized",
+					localPath: "/tmp/attempt-one.json",
+					remoteUrl: null,
+					cacheKey: null,
+					checksumSha256: null,
+					mimeType: "application/json",
+					size: 12,
+					materializationMethod: "provider-download",
+					reason: null,
+					archiveItemId: null,
+					assetRoute: null,
+				},
+			],
+			archiveItems: [],
+			metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+			message: "Materialized one selected asset.",
+		});
+		const materializeConversation = vi.fn(async (target: HistoryMaterializationTarget) => {
+			operations.push("materialize");
+			return targetResult(target);
+		});
+		const recordConversationEvidence = vi.fn(async () => {
+			operations.push("evidence");
+		});
+		const service = createHistoryMaterializationService({
+			config: {},
+			store: createInMemoryHistoryMaterializationJobStore([]),
+			catalogService: {
+				readCatalog: vi.fn(async () => ({
+					object: "account_mirror_catalog" as const,
+					generatedAt: "2026-08-15T20:00:00.000Z",
+					kind: "all" as const,
+					limit: 500,
+					entries: [],
+					metrics: {
+						targets: 0,
+						projects: 0,
+						conversations: 0,
+						artifacts: 0,
+						files: 0,
+						media: 0,
+					},
+				})),
+				readItem: vi.fn(),
+			},
+			generateId: () => "hmj_attempt_receipt_1",
+			now: sequenceNow([
+				"2026-08-15T20:00:00.000Z",
+				"2026-08-15T20:00:01.000Z",
+				"2026-08-15T20:00:03.000Z",
+				"2026-08-15T20:00:04.000Z",
+			]),
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation,
+			recordConversationEvidence,
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			runtimeProfile: "default",
+			conversationIds: ["conv_attempt_one"],
+			assetKinds: ["artifacts"],
+			maxItems: 1,
+		});
+		if (!scheduled) throw new Error("Expected selected attempt job to be scheduled.");
+		await scheduled();
+
+		expect(operations).toEqual(["materialize", "evidence"]);
+		const completed = await service.readJob("hmj_attempt_receipt_1");
+		const receipt = completed?.result?.attempts?.[0];
+		expect(receipt).toMatchObject({
+			object: "history_materialization_attempt_receipt",
+			version: 1,
+			origin: "selected_conversation_id",
+			index: 0,
+			target: { provider: "chatgpt", conversationId: "conv_attempt_one" },
+			budgetBefore: {
+				targetLimit: 1,
+				targetsConsumed: 0,
+				assetsRemaining: 1,
+			},
+			accounting: {
+				targetConsumed: true,
+				assetsAttempted: 1,
+				providerGuardObserved: false,
+				candidateMaterialized: true,
+			},
+			phases: {
+				snapshotRefresh: null,
+				materialization: { status: "materialized", entries: 1 },
+			},
+			evidence: { status: "persisted", writes: ["materialization"] },
+			status: "materialized",
+		});
+		expect(Object.isFrozen(receipt)).toBe(true);
+		expect(Object.isFrozen(receipt?.target)).toBe(true);
+		expect(completed?.result?.metrics).toMatchObject({
+			eligibleCandidates: 1,
+			selectedCandidates: 1,
+			materializedCandidates: 1,
+		});
+	});
+
+	it("reuses the exact provider work context when a materialize-first attempt falls back after refresh", async () => {
+		let scheduled: (() => Promise<void>) | undefined;
+		const operations: string[] = [];
+		const contexts: HistoryMaterializationProviderWorkContext[] = [];
+		let materializationCount = 0;
+		const materializeConversation = vi.fn(
+			async (
+				target: HistoryMaterializationTarget,
+				_request: HistoryMaterializationCreateRequest,
+				_jobId: string,
+				context?: HistoryMaterializationProviderWorkContext,
+			): Promise<HistoryMaterializationResult> => {
+				operations.push("materialize");
+				if (!context) throw new Error("Expected provider work context.");
+				contexts.push(context);
+				materializationCount += 1;
+				return {
+					object: "history_materialization_result",
+					generatedAt: `2026-08-15T21:00:0${materializationCount}.000Z`,
+					status: materializationCount === 1 ? "skipped" : "materialized",
+					target,
+					source: { type: "reconciliation", provider: "chatgpt" },
+					manifestPaths: [],
+					entries:
+						materializationCount === 1
+							? []
+							: [
+									{
+										kind: "artifact",
+										providerId: "artifact-after-refresh",
+										title: "after-refresh.json",
+										status: "materialized",
+										localPath: "/tmp/after-refresh.json",
+										remoteUrl: null,
+										cacheKey: null,
+										checksumSha256: null,
+										mimeType: "application/json",
+										size: 1,
+										materializationMethod: "provider-download",
+										reason: null,
+										archiveItemId: null,
+										assetRoute: null,
+									},
+								],
+					archiveItems: [],
+					metrics: {
+						conversations: 1,
+						materialized: materializationCount === 1 ? 0 : 1,
+						skipped: materializationCount === 1 ? 1 : 0,
+						failed: 0,
+					},
+					message: materializationCount === 1 ? "No cached asset." : "Materialized after refresh.",
+				};
+			},
+		);
+		const refreshConversationSnapshot = vi.fn(
+			async (target: HistoryMaterializationTarget): Promise<HistoryMaterializationSnapshotRefresh> => {
+				operations.push("refresh");
+				return {
+					object: "history_materialization_snapshot_refresh",
+					generatedAt: "2026-08-15T21:00:03.000Z",
+					status: "refreshed",
+					target,
+					routeabilityState: "routeable",
+					messageCount: 1,
+					fileCount: 1,
+					sourceCount: 0,
+					artifactCount: 0,
+					error: null,
+					message: "Refreshed.",
+				};
+			},
+		);
+		const recordConversationEvidence = vi.fn(async () => {
+			operations.push("evidence");
+		});
+		const service = createHistoryMaterializationService({
+			config: {},
+			store: createInMemoryHistoryMaterializationJobStore([]),
+			catalogService: {
+				readCatalog: vi.fn(async () => ({
+					object: "account_mirror_catalog" as const,
+					generatedAt: "2026-08-15T21:00:00.000Z",
+					kind: "all" as const,
+					limit: 500,
+					entries: [],
+					metrics: { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
+				})),
+				readItem: vi.fn(),
+			},
+			generateId: () => "hmj_attempt_context_1",
+			now: sequenceNow([
+				"2026-08-15T21:00:00.000Z",
+				"2026-08-15T21:00:01.000Z",
+				"2026-08-15T21:00:04.000Z",
+				"2026-08-15T21:00:05.000Z",
+			]),
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation,
+			refreshConversationSnapshot,
+			recordConversationEvidence,
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			conversationIds: ["conv_attempt_context"],
+			reconcile: true,
+			refreshSnapshot: true,
+			assetKinds: ["artifacts"],
+			maxItems: 1,
+		});
+		if (!scheduled) throw new Error("Expected fallback attempt job to be scheduled.");
+		await scheduled();
+
+		expect(operations).toEqual([
+			"materialize",
+			"evidence",
+			"refresh",
+			"evidence",
+			"materialize",
+			"evidence",
+		]);
+		expect(contexts).toHaveLength(2);
+		expect(contexts[1]).toBe(contexts[0]);
+		await expect(service.readJob("hmj_attempt_context_1")).resolves.toMatchObject({
+			status: "succeeded",
+			result: {
+				attempts: [
+					{
+						evidence: {
+							writes: ["materialization", "snapshot_refresh", "materialization"],
+						},
+						accounting: { candidateMaterialized: true },
+					},
+				],
+			},
+		});
+	});
+
+	it("fails closed before publishing an attempt receipt on target mismatch or evidence failure", async () => {
+		const runCase = async (input: {
+			jobId: string;
+			materializeConversation: (
+				target: HistoryMaterializationTarget,
+			) => Promise<HistoryMaterializationResult>;
+			recordConversationEvidence: () => Promise<void>;
+		}) => {
+			let scheduled: (() => Promise<void>) | undefined;
+			const service = createHistoryMaterializationService({
+				config: {},
+				store: createInMemoryHistoryMaterializationJobStore([]),
+				catalogService: { readCatalog: vi.fn(), readItem: vi.fn() },
+				generateId: () => input.jobId,
+				now: sequenceNow([
+					"2026-08-15T22:00:00.000Z",
+					"2026-08-15T22:00:01.000Z",
+					"2026-08-15T22:00:02.000Z",
+				]),
+				schedule: (work) => {
+					scheduled = work;
+				},
+				materializeConversation: input.materializeConversation,
+				recordConversationEvidence: input.recordConversationEvidence,
+			});
+			await service.createJob({
+				provider: "chatgpt",
+				conversationId: "conv_fail_closed",
+				assetKinds: ["artifacts"],
+			});
+			if (!scheduled) throw new Error("Expected fail-closed attempt job to be scheduled.");
+			await scheduled();
+			return service.readJob(input.jobId);
+		};
+		const resultFor = (
+			target: HistoryMaterializationTarget,
+		): HistoryMaterializationResult => ({
+			object: "history_materialization_result",
+			generatedAt: "2026-08-15T22:00:01.000Z",
+			status: "skipped",
+			target,
+			source: { type: "conversation", provider: "chatgpt", conversationId: target.conversationId },
+			manifestPaths: [],
+			entries: [],
+			archiveItems: [],
+			metrics: { conversations: 1, materialized: 0, skipped: 1, failed: 0 },
+			message: "No asset.",
+		});
+		const mismatchEvidence = vi.fn(async () => undefined);
+		const mismatch = await runCase({
+			jobId: "hmj_attempt_mismatch",
+			materializeConversation: async (target) =>
+				resultFor({ ...target, conversationId: "different_conversation" }),
+			recordConversationEvidence: mismatchEvidence,
+		});
+		expect(mismatchEvidence).not.toHaveBeenCalled();
+		expect(mismatch).toMatchObject({
+			status: "failed",
+			result: null,
+			error: {
+				message: "History materialization attempt result target did not match selected target.",
+			},
+		});
+
+		const evidenceFailure = await runCase({
+			jobId: "hmj_attempt_evidence_failure",
+			materializeConversation: async (target) => resultFor(target),
+			recordConversationEvidence: async () => {
+				throw new Error("account-mirror-evidence-write-failed");
+			},
+		});
+		expect(evidenceFailure).toMatchObject({
+			status: "failed",
+			result: null,
+			error: { message: "account-mirror-evidence-write-failed" },
+		});
+	});
+
 	it("skips a direct conversation asset family already materialized in the archive", async () => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-history-materialize-selected-archive-skip-"),
@@ -7227,6 +7619,7 @@ describe("history materialization service", () => {
 			expect.objectContaining({ conversationId: "chatgpt_missing_assets" }),
 			expect.objectContaining({ refreshSnapshot: true }),
 			"hmj_chatgpt_cache_first_1",
+			expect.any(Object),
 		);
 		expect(refreshConversationSnapshot).not.toHaveBeenCalled();
 		expect(recordConversationEvidence).toHaveBeenCalledWith(
@@ -7240,6 +7633,12 @@ describe("history materialization service", () => {
 		await expect(service.readJob("hmj_chatgpt_cache_first_1")).resolves.toMatchObject({
 			status: "succeeded",
 			result: {
+				attempts: [
+					{
+						origin: "reconciliation_candidate",
+						evidence: { writes: ["materialization"] },
+					},
+				],
 				metrics: {
 					conversations: 1,
 					materialized: 1,
@@ -7266,7 +7665,7 @@ describe("history materialization service", () => {
 				browserProfile: null,
 				boundIdentityKey: null,
 				conversationId: "conv_guard",
-				providerConversationUrl: null,
+				providerConversationUrl: "https://chatgpt.com/c/conv_guard",
 				projectId: null,
 			},
 			source: { type: "conversation", provider: "chatgpt", conversationId: "conv_guard" },
@@ -7705,6 +8104,7 @@ describe("history materialization service", () => {
 				assetKinds: ["artifacts"],
 			}),
 			"hmj_manifest_candidate_1",
+			expect.any(Object),
 		);
 		await expect(service.readJob("hmj_manifest_candidate_1")).resolves.toMatchObject({
 			status: "succeeded",

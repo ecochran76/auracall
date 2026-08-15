@@ -21654,3 +21654,19 @@ browser-stage lifecycle observability, not transcript truncation.
   timeout cannot misreport an ambiguous provider mutation.
 - A regression should use a never-resolving adapter read and close, proving the
   outer promise settles without a browser or provider action.
+
+## 2026-08-15 | Materialization accounting must follow an accepted attempt receipt
+
+- Advancing selected counts, target budgets, asset budgets, or provider-guard
+  control directly after a provider callback couples reconciliation policy to
+  refresh, verification, and persistence ordering. A provider result is not an
+  accepted attempt until its selected target and metrics are verified and all
+  required Account Mirror evidence writes complete.
+- Carry one immutable selected handoff through refresh and every provider pass,
+  reuse one exact work context within that attempt, and return one receipt that
+  owns phase projection plus accounting. Outer reconciliation consumes only
+  that receipt; verification or evidence failure must publish neither a result
+  nor a receipt.
+- Preserve global eligibility and candidate-funnel policy outside the attempt.
+  This keeps eligible, selected, and materialized meanings distinct while the
+  attempt remains the single locality for provider-work acceptance.

@@ -23,21 +23,23 @@ durable notes.
 
 - The visual architecture report is published at Previews session
   `a24fd8aff377` and records four evidence-backed candidates.
-- CodeGraph is healthy with 898 indexed files and no reported pending sync.
+- CodeGraph is healthy with 902 indexed files and no reported pending sync.
 - Candidate 1 is provider-free accepted. Sixteen production function/method
   callers now cross one immutable browser launch plan seam; the superseded
   launch-context helpers and the config/profile-resolution cycle are removed.
 - Candidate 2 is provider-free accepted. One base `LlmService.runPrompt(...)`
   lifecycle dispatches all three provider adapters; ChatGPT no longer
   reconstructs browser options or detours through `runBrowserMode()`.
-- Candidate 3, one history materialization attempt, is the active critical-path
+- Candidate 3 is provider-free accepted. One internal attempt executor owns a
+  selected conversation handoff through refresh/provider work, compatibility-
+  safe verification, awaited Account Mirror evidence persistence, phase/result
+  projection, durable receipt construction, and receipt-derived budget/guard
+  accounting.
+- Candidate 4, the browser acceptance harness, is the active critical-path
   unit.
-- Candidate 3 has observed call-order and receipt coupling across history
-  materialization, provider materializers, archive persistence, and Account
-  Mirror planning.
 - Candidate 4 has observed process/timeout/JSON/state duplication in the
   ChatGPT and Grok acceptance runs.
-- Candidates 1 and 2 have validated, pushed or ready-to-push checkpoints. No
+- Candidates 1 through 3 have validated, pushed or ready-to-push checkpoints. No
   live browser/provider or installed/runtime state was changed.
 
 ## Domain Language
@@ -145,7 +147,7 @@ the primary orchestrator. Subagents must not spawn children.
   with current semantics and focused/affected validation green.
 - [x] C2 provider prompt execution has one deep seam across ChatGPT, Gemini,
   and Grok while provider-specific workflow remains adapter-local.
-- [ ] C3 one materialization attempt owns its observable lifecycle and receipt
+- [x] C3 one materialization attempt owns its observable lifecycle and receipt
   semantics without weakening fail-closed behavior.
 - [ ] C4 ChatGPT and Grok acceptance runs share one deep harness while retaining
   provider-specific phase behavior.

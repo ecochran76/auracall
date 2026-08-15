@@ -46960,3 +46960,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   scoped lint with only existing Grok fixture warnings, and synchronized
   CodeGraph readback. No live browser/provider action ran. Candidate 3 is
   active; the campaign audit remains unused.
+
+## 2026-08-15 | Plan 0291 Candidate 3 accepted with receipt-first accounting
+
+- Three interface designs converged on a selected-attempt executor. The chosen
+  common-use-first design keeps global discovery, eligibility, ordering,
+  deduplication, and candidate-funnel policy in reconciliation while one
+  internal executor owns refresh/provider ordering, verification, Account
+  Mirror evidence persistence, phase projection, receipt construction, and
+  budget/provider-guard accounting.
+- Direct conversation, catalog item, archive item, selected-ID, and broad
+  reconciliation paths now emit optional durable attempt receipts. No-refresh
+  materialization records verified Account Mirror materialization evidence;
+  target mismatch or evidence-write failure produces no accepted result or
+  receipt. Repeated provider work inside one attempt shares the exact context,
+  while separate attempts receive distinct contexts.
+- Execution validation passed 80/80 history/structure tests, typecheck, scoped
+  lint, and current CodeGraph readback. Independent testing passed the same
+  focused packet plus 383/383 affected Account Mirror, recovery, completion,
+  MCP, HTTP, browser-files, and archive tests. No High finding remains. No live
+  materialization, browser/provider action, scheduler or completion control,
+  install, or restart ran. Candidate 4 is active; the campaign audit remains
+  unused.

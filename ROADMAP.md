@@ -18,7 +18,9 @@ Lane: P01
   High routing defect was repaired and closed-world reverified. Candidate 2,
   provider prompt execution, is also provider-free accepted after URL-routing
   and attachment fail-closed defects were repaired and independently
-  reverified. Candidate 3, one materialization attempt, is the active
+  reverified. Candidate 3, one materialization attempt, is provider-free
+  accepted with durable receipt-first accounting and fail-closed evidence
+  persistence. Candidate 4, the browser acceptance harness, is the active
   critical-path unit.
 
 - Closed failed-safe two-sequential-approval LitScout live proof:
