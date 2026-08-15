@@ -275,11 +275,25 @@ describe("ChatGPT tool approval handling", () => {
 		const answerNow = new FixtureElement("Answer now", { role: "button" });
 		const dialog = new FixtureElement("Allow once Answer now", { role: "dialog" });
 		dialog.append(allowOnce, answerNow);
+		const hiddenAllowOnce = new FixtureElement(
+			"Allow once",
+			{ role: "button" },
+			{ left: 0, top: 0, width: 0, height: 0 },
+		);
+		const hiddenAlwaysAllow = new FixtureElement(
+			"Always allow",
+			{ role: "button" },
+			{ left: 0, top: 0, width: 0, height: 0 },
+		);
+		const hiddenDialog = new FixtureElement("Allow once Always allow", { role: "dialog" });
+		hiddenDialog.append(hiddenAllowOnce, hiddenAlwaysAllow);
 		vi.stubGlobal("Element", FixtureElement);
 		vi.stubGlobal("HTMLElement", FixtureElement);
 		vi.stubGlobal("document", {
 			querySelectorAll: (selector: string) =>
-				selector === 'button,[role="button"]' ? [allowOnce, answerNow] : [],
+				selector === 'button,[role="button"]'
+					? [allowOnce, answerNow, hiddenAllowOnce, hiddenAlwaysAllow]
+					: [],
 		});
 
 		const result = new Function(

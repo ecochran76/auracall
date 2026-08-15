@@ -1,6 +1,6 @@
 # ChatGPT Tool Approval Policy | 0286-2026-08-15
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Stable Objective
@@ -11,12 +11,14 @@ pauses for approval, while clicking only the operator-selected exact action:
 
 ## Current State
 
-- ChatGPT response waiting already performs a bounded passive DOM probe while
-  the active conversation is generating.
-- AuraCall does not currently classify ChatGPT tool-approval surfaces, so a
-  tool-backed conversation can wait until the overall browser timeout.
-- Provider-free source, tests, config, and docs are authorized. Browser launch,
-  prompt submission, provider mutation, install, and service restart are not.
+- Provider-free source candidate `4ce634c5` adds the explicit policy across
+  CLI, config/schema resolution, browser profiles, stored execution, and both
+  local and remote response-wait paths.
+- The action requires one visible surface with exact paired `Allow once` and
+  `Always allow` controls, uses trusted pointer input, confirms disappearance,
+  and retains the retry fence only while a click is unconfirmed.
+- No browser, provider, install, service, scheduler, or completion-control
+  effect ran. Current ChatGPT DOM compatibility remains a separate live gate.
 
 ## Execution Contract
 
@@ -47,17 +49,17 @@ pauses for approval, while clicking only the operator-selected exact action:
 
 ## Acceptance Criteria
 
-- [ ] Default/manual mode detects a tool approval and fails fast with an
+- [x] Default/manual mode detects a tool approval and fails fast with an
   actionable operator message without clicking.
-- [ ] `allow-once` clicks only exact `Allow once`; `always-allow` clicks only
+- [x] `allow-once` clicks only exact `Allow once`; `always-allow` clicks only
   exact `Always allow`.
-- [ ] Unrelated dialogs, incomplete/ambiguous approval surfaces, hidden
+- [x] Unrelated dialogs, incomplete/ambiguous approval surfaces, hidden
   controls, and `Answer now` remain untouched.
-- [ ] A click must be confirmed by surface disappearance; the same approval is
+- [x] A click must be confirmed by surface disappearance; the same approval is
   never clicked twice in one browser run.
-- [ ] CLI/config/profile/stored-run preference propagation is provider-free
+- [x] CLI/config/profile/stored-run preference propagation is provider-free
   tested and documented.
-- [ ] Focused and affected validation, typecheck, build, lint, CodeGraph,
+- [x] Focused and affected validation, typecheck, build, lint, CodeGraph,
   planning audits, and diff hygiene pass.
 
 ## Effect Budget
@@ -73,6 +75,8 @@ pauses for approval, while clicking only the operator-selected exact action:
 
 ## Definition Of Done
 
-This plan closes when the exact preference contract is provider-free validated,
-documented, committed, and pushed. One separately authorized live canary remains
+This plan is provider-free accepted at source candidate `4ce634c5`. The affected
+gate passes 238 tests; typecheck, production build, scoped lint, current
+CodeGraph readback, plan-library validation, and diff hygiene pass. The commits
+are pushed together at closeout. One separately authorized live canary remains
 required to prove the current ChatGPT DOM matches the provider-free fixture.

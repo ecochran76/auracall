@@ -46727,3 +46727,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Provider-free code, tests, config, and docs are in scope. Browser launch,
   live DOM inspection, prompts, tools/connectors, approval clicks, install,
   restart, and scheduler/completion controls remain outside this checkpoint.
+
+## 2026-08-15 | Plan 0286 closes provider-free accepted
+
+- Source candidate `4ce634c5` adds `manual`, `allow-once`, and `always-allow`
+  through CLI, config/schema resolution, browser profiles, stored execution,
+  and both local and remote response-wait paths.
+- The provider action requires one visible exact paired approval surface,
+  dispatches trusted pointer input only to the configured label, confirms
+  disappearance, and retains a fingerprint fence only for an unconfirmed
+  click. A regression also proves a later confirmed call with the same visible
+  text remains eligible.
+- The affected gate passes 238 tests; typecheck, production build, scoped lint,
+  current CodeGraph readback, plan-library validation, CLI-help readback, and
+  diff hygiene pass. No live or installed effect ran; one separately authorized
+  live canary remains the exact current-DOM gate.

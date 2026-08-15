@@ -1,3 +1,11 @@
+- 2026-08-15: Treat ChatGPT third-party tool approval as an explicit operator
+  policy, never generic auto-consent. Require one visible surface containing
+  the exact paired `Allow once` and `Always allow` actions, select only the
+  configured label through trusted pointer input, and confirm disappearance.
+  Retain the fingerprint fence when confirmation fails, but release it after a
+  confirmed disappearance so a later legitimate call with identical visible
+  text can proceed. Keep `manual` fail-closed and never match `Answer now`.
+
 - 2026-08-14: Never bind ChatGPT developer-app auth status by display name.
   Replacement apps can retain the old app's name while receiving a new id, so
   a same-name fallback can falsely transfer ACTIVE or REAUTH_REQUIRED state.
