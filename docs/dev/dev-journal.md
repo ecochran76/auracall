@@ -46802,3 +46802,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   deliberately nonexistent project/job tuple in Plan 0288. Ownership lookup
   must fail before cancellation, keeping the intended and accepted LitScout
   write count at zero while exercising ChatGPT's approval surface.
+
+## 2026-08-15 | Plan 0288 closes live accepted
+
+- Live attempt 2 submitted once, logged exact `ChatGPT tool approval: Allow
+  once`, confirmed the approval surface disappeared, and returned exact
+  `LITSCOUT_ALLOW_ONCE_CANCEL_NOT_FOUND_OK` in 26.4 seconds.
+- Retained-DOM readback found no `Allow once`, `Always allow`, or `Answer now`
+  action after completion. LitScout installed/DB readback found zero exact
+  project, job, and operator-action rows; zero cancel-requested/cancelled jobs;
+  and zero canonical writes.
+- Both exact canary tabs were closed. The two preexisting tabs remain, both
+  services are active with zero restarts, Chrome PID 66297 remains sole owner
+  of port 45015, and browser-operation/live-test lock roots are empty.
+- Durable receipt:
+  `docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`.

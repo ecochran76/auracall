@@ -1,7 +1,7 @@
 # Browser Context Liveness And LitScout Approval Proof | 0288-2026-08-15
 
-State: OPEN
-Disposition: REPAIR AND LIVE PROOF AUTHORIZED
+State: CLOSED
+Disposition: LIVE_ACCEPTED
 Lane: P01
 
 ## Stable Objective
@@ -40,6 +40,15 @@ clicking `Always allow` or `Answer now` and without producing a LitScout write.
   cancellation, so this deliberately nonexistent tuple is expected to return
   not-found with zero LitScout mutation. The expected response token is
   `LITSCOUT_ALLOW_ONCE_CANCEL_NOT_FOUND_OK`.
+- Live attempt 2 passed in 26.4 seconds. AuraCall logged exact `Allow once`,
+  confirmed the surface disappeared, and returned the exact expected token.
+  Retained-DOM readback found none of `Allow once`, `Always allow`, or
+  `Answer now`. LitScout readback found zero rows for the project, job, and
+  operator action; zero cancel-requested jobs; zero cancelled jobs; and zero
+  canonical writes.
+- Exact cleanup closed both canary tabs and retained only the two preexisting
+  tabs. API PID 32268, LitScout PID 52266, and Chrome PID 66297 remain active
+  with zero service restarts and empty browser-operation/live-test lock roots.
 
 ## Execution Contract
 
@@ -83,12 +92,12 @@ clicking `Always allow` or `Answer now` and without producing a LitScout write.
 - [x] The prompt startup path reaches `runBrowserMode()` without pre-run live
   provider enrichment and retains its actual provider identity gate.
 - [x] Provider-free validation and source/remote readback pass before live work.
-- [ ] One current LitScout turn submits once, logs exact `Allow once`, confirms
+- [x] One current LitScout turn submits once, logs exact `Allow once`, confirms
   disappearance, invokes only the exact bounded LitScout tool for that attempt,
   and returns its expected token.
-- [ ] No attempt clicks `Always allow` or `Answer now`; excluded effects remain
+- [x] No attempt clicks `Always allow` or `Answer now`; excluded effects remain
   zero and exact cleanup passes.
-- [ ] Durable receipts, plan/roadmap/runbook/journal, audits, commits, and origin
+- [x] Durable receipts, plan/roadmap/runbook/journal, audits, commits, and origin
   agree with the terminal outcome.
 
 ## Effect Budget
@@ -110,4 +119,5 @@ Completion requires current live evidence for the exact operator preference,
 not merely green source tests. A failed attempt may drive another bounded
 provider-free repair within this plan, but acceptance remains false until one
 turn proves exact `Allow once`, the expected LitScout token, zero LitScout
-writes, and cleanup.
+writes, and cleanup. That evidence is preserved in
+`docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`.

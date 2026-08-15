@@ -187,6 +187,13 @@ approval action. It clicks only the configured exact label through trusted
 pointer input, verifies the surface disappears, and will not click the same
 surface twice. It never clicks `Answer now`.
 
+Current live proof: the 2026-08-15 `wsl-chrome-3` LitScout canary selected
+`allow-once`, logged exact `Allow once`, verified disappearance, and completed
+with the expected token. A deliberately nonexistent cancellation target kept
+LitScout project, job, cancellation, operator-action, and canonical-write
+effects at zero. The durable receipt is
+`docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`.
+
 ## Troubleshooting
 - **Chrome opens but the URL never changes**: Oracle is connecting to the wrong DevTools host.
   - Fix: set `AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1` for the run.

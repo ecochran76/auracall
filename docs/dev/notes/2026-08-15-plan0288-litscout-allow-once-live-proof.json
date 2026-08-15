@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "planId": "0288-2026-08-15",
+  "openingCommit": "7420ced8",
+  "repairCommit": "da7961be",
+  "liveRevisionCommit": "f31c7b55",
+  "implementationCommit": "4ce634c5",
+  "terminalDisposition": "LIVE_ACCEPTED",
+  "target": {
+    "auracallRuntimeProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "browserProfile": "Default",
+    "developerApp": "Corel33t",
+    "composerMode": "chat",
+    "modelStrategy": "current",
+    "toolApprovalPolicy": "allow-once"
+  },
+  "providerFreeRepair": {
+    "classification": "pre_run_cache_context_stall_removed",
+    "path": "runRootCommand -> buildBrowserContext -> resolveNonInteractiveBrowserContextIdentity",
+    "affectedTestFiles": 8,
+    "affectedTestsPassed": 123,
+    "typecheckPassed": true,
+    "buildPassed": true,
+    "lintPassed": true,
+    "codegraphReadbackPassed": true,
+    "planningAuditErrors": 0,
+    "diffCheckPassed": true
+  },
+  "preflight": {
+    "gitUpstreamBehind": 0,
+    "gitUpstreamAhead": 0,
+    "apiServiceActive": true,
+    "apiMainPid": 32268,
+    "apiRestartCount": 0,
+    "chromePid": 66297,
+    "devtoolsPort": 45015,
+    "browserOperationLeaseCount": 0
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "elapsedSeconds": 19.7,
+      "promptSubmissions": 1,
+      "tool": "auth_session",
+      "toolReadOnlyHint": true,
+      "approvalDetected": false,
+      "approvalLabelClicked": null,
+      "connectorResultObserved": true,
+      "expectedToken": "LITSCOUT_ALLOW_ONCE_OK",
+      "expectedTokenObserved": true,
+      "conversationUrl": "https://chatgpt.com/c/6a809d32-38a0-83ea-b97c-1d6b84400320",
+      "disposition": "VALID_CONNECTOR_CALL_NOT_APPROVAL_PROOF"
+    },
+    {
+      "attempt": 2,
+      "elapsedSeconds": 26.4,
+      "promptSubmissions": 1,
+      "tool": "project_source_ingest_job_cancel",
+      "toolReadOnlyHint": false,
+      "arguments": {
+        "slug": "plan0288-approval-canary-nonexistent-20260815",
+        "job_id": "psi_plan0288_nonexistent_20260815"
+      },
+      "approvalDetected": true,
+      "approvalLabelClicked": "Allow once",
+      "approvalDisappearanceConfirmed": true,
+      "alwaysAllowObservedAfterRun": false,
+      "answerNowObservedAfterRun": false,
+      "expectedToken": "LITSCOUT_ALLOW_ONCE_CANCEL_NOT_FOUND_OK",
+      "expectedTokenObserved": true,
+      "conversationUrl": "https://chatgpt.com/c/6a809ec0-ac14-83ea-993f-ce9abd1d3aee",
+      "disposition": "LIVE_ACCEPTED"
+    }
+  ],
+  "litscoutPostReadback": {
+    "observedAt": "2026-08-15T12:19:19-05:00",
+    "installedStatusSummaryHealthy": true,
+    "exactProjectRows": 0,
+    "exactJobRows": 0,
+    "exactJobOperatorActionRows": 0,
+    "cancelRequestedJobs": 0,
+    "cancelledJobs": 0,
+    "canonicalWrites": 0
+  },
+  "actualEffects": {
+    "browserPromptRuns": 2,
+    "promptSubmissions": 2,
+    "litscoutConnectorCalls": 2,
+    "toolApprovalClicks": 1,
+    "allowOnceClicks": 1,
+    "alwaysAllowClicks": 0,
+    "answerNowClicks": 0,
+    "installs": 0,
+    "serviceRestarts": 0,
+    "schedulerOrCompletionControls": 0,
+    "litscoutCanonicalWrites": 0
+  },
+  "cleanup": {
+    "canaryTabsRemaining": 0,
+    "preexistingTabsRemaining": 2,
+    "browserOperationLeaseCount": 0,
+    "liveTestLockCount": 0,
+    "apiMainPid": 32268,
+    "apiRestartCount": 0,
+    "litscoutMainPid": 52266,
+    "litscoutRestartCount": 0,
+    "chromePid": 66297,
+    "devtoolsPort": 45015
+  }
+}

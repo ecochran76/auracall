@@ -16,6 +16,11 @@
   Retain the fingerprint fence when confirmation fails, but release it after a
   confirmed disappearance so a later legitimate call with identical visible
   text can proceed. Keep `manual` fail-closed and never match `Answer now`.
+  Live validation must use a tool descriptor that actually requires approval:
+  read-only tools may execute without presenting the consent surface. The
+  accepted LitScout canary used one mutation-annotated action against an exact
+  nonexistent target, then proved `Allow once`, disappearance, expected
+  completion, and zero provider-side writes.
 
 - 2026-08-14: Never bind ChatGPT developer-app auth status by display name.
   Replacement apps can retain the old app's name while receiving a new id, so

@@ -18875,3 +18875,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   with a deliberately nonexistent project/job tuple. The target must fail
   before cancellation, preserving zero LitScout writes while testing exact
   `Allow once`; every other mutating target remains excluded.
+
+## Turn 419 | 2026-08-15
+
+- Plan 0288 closes `LIVE_ACCEPTED`. The second source-direct canary submitted
+  once, logged exact `ChatGPT tool approval: Allow once`, verified the surface
+  disappeared, and returned `LITSCOUT_ALLOW_ONCE_CANCEL_NOT_FOUND_OK` in 26.4
+  seconds. No `Always allow` or `Answer now` action was observed or clicked.
+- Current LitScout readback proves the exact nonexistent project, job, and
+  operator-action row counts are zero; cancel-requested and cancelled job
+  counts are zero; canonical writes are zero. Both services remain active with
+  zero restarts.
+- Both owned canary tabs were closed by exact target ID. Only the two
+  preexisting tabs remain; Chrome PID 66297 still solely owns port 45015 and
+  browser-operation/live-test lock roots are empty. Durable receipt:
+  `docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`.

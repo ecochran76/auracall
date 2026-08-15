@@ -7,12 +7,14 @@
 Status: active
 Lane: P01
 
-- Active browser-context liveness repair and LitScout approval proof:
+- Closed accepted browser-context liveness repair and LitScout approval proof:
   [docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md](docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md)
-  The pre-run cache-context path will stop performing unbounded live identity
-  and feature detection. After a pushed provider-free repair, bounded
-  source-direct canaries will continue until one proves exact `Allow once` and
-  the read-only LitScout token, or the frozen three-attempt ceiling is reached.
+  Pushed repair `da7961be` removes live provider probes from optional pre-run
+  cache context while preserving the actual browser identity gate. The second
+  bounded source-direct canary logged exact `Allow once`, confirmed approval
+  disappearance, returned the expected LitScout token, and left zero exact
+  target, cancellation, operator-action, or canonical-write rows. Exact tab,
+  lease, service, and browser cleanup passed.
 
 - Closed failed-safe one-shot LitScout `allow-once` live canary:
   [docs/dev/plans/0287-2026-08-15-litscout-tool-approval-live-canary.md](docs/dev/plans/0287-2026-08-15-litscout-tool-approval-live-canary.md)

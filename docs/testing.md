@@ -53,6 +53,10 @@
     to enrich optional browser-context cache metadata; run
     `pnpm vitest run tests/browser/browserContextIdentity.test.ts tests/browser/llmServiceIdentity.test.ts`
     to prove configured identity resolves even when live probes never settle
+  - the 2026-08-15 `wsl-chrome-3`/LitScout canary live-proved exact
+    `allow-once`, disappearance confirmation, expected response completion,
+    zero `always-allow`/`Answer now` clicks, and zero LitScout writes; see
+    `docs/dev/notes/2026-08-15-plan0288-litscout-allow-once-live-proof.json`
 - ChatGPT developer-app lifecycle:
   - provider-free contract tests:
     `pnpm vitest run tests/browser-service/devToolsConnection.test.ts tests/browser-service/browserServiceCore.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`
