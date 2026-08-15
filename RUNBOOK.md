@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 458 | 2026-08-15
+
+- [Plan 0288](docs/dev/plans/0288-2026-08-15-browser-context-liveness-litscout-approval-proof.md)
+  continues the operator's standing objective after Plan 0287 failed before
+  prompt submission. The repair removes live provider enrichment from optional
+  pre-run browser-context cache metadata while preserving the real browser-run
+  identity gate.
+- TDD will prove a never-settling provider identity/feature adapter cannot hold
+  prompt startup. A pushed green source checkpoint is required before any next
+  live attempt.
+- Up to three total canaries are authorized, each separated by a distinct
+  provider-free diagnosis/repair when needed. Each remains one prompt, one
+  read-only LitScout `auth_session`, exact `allow-once`, and zero installs,
+  runtime controls, persistent consent, or LitScout writes.
+
 ## Turn 457 | 2026-08-15
 
 - [Plan 0287](docs/dev/plans/0287-2026-08-15-litscout-tool-approval-live-canary.md)

@@ -46769,3 +46769,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - CodeGraph localizes the blocker to pre-run `buildBrowserContext()` cache
   identity/feature discovery, whose provider reads lack a local deadline. A
   provider-free bound/skip repair is required before another live canary.
+
+## 2026-08-15 | Plan 0288 opens browser-context liveness repair
+
+- The stable goal remains a current live LitScout `allow-once` proof. Plan 0287
+  is evidence for the first pre-submit blocker, not a substitute for that goal.
+- Optional browser-context cache metadata will use configured identity/features
+  only and make no live provider call. The actual browser run keeps its separate
+  provider-session identity enforcement.
+- One red-to-green public-seam regression, the affected validation gate, and a
+  pushed source checkpoint precede live work. Up to three distinct canaries are
+  bounded across the plan; identical retries, installs/restarts, scheduler
+  controls, persistent consent, and LitScout mutations remain forbidden.
