@@ -151,6 +151,8 @@ export interface BrowserRunOptions {
   browserOperationOwnerCommand?: string | null;
   /** Optional hook to persist runtime info (port/url/target) as soon as Chrome is ready. */
   runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
+  /** Cancels the complete browser run, including cleanup and operation-lock release. */
+  abortSignal?: AbortSignal;
 }
 
 export interface BrowserRunResult {

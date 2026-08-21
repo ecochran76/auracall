@@ -1,3 +1,13 @@
+- 2026-08-21: Treat browser `--timeout` and process signals as one owned,
+  cooperative session lifecycle. A CLI-level SIGINT race or browser-local
+  hard exit can bypass `finally`, strand the managed Chrome/operation lock, and
+  leave session/model metadata falsely `running`. Start one absolute browser
+  deadline before provider execution, propagate its abort signal through lock
+  queueing, launch, DevTools, and response waits, bound terminal cleanup, and
+  persist timeout as `error` versus operator interruption as `cancelled` before
+  the CLI exits. Node signal listeners receive no signal-name argument, so bind
+  one closure per signal rather than recording an undefined reason.
+
 - 2026-08-21: Bind ChatGPT tool-approval fingerprints to the exact current
   `data-testid="tool-approval-card"`, not the first 500 characters of its
   containing assistant turn. ChatGPT can emit several approval cards in one

@@ -159,6 +159,41 @@ describe("operationDispatcher (package)", () => {
 		}
 	});
 
+
+	test("queued acquisition stops immediately when the caller aborts", async () => {
+		const dispatcher = createBrowserOperationDispatcher({ isOwnerAlive: () => true });
+		const first = await dispatcher.acquire({
+			managedProfileDir: "/tmp/aura/default/chatgpt",
+			serviceTarget: "chatgpt",
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerPid: 130,
+		});
+		expect(first.acquired).toBe(true);
+		if (!first.acquired) return;
+
+		const controller = new AbortController();
+		const reason = new Error("overall browser timeout");
+		const queued = dispatcher.acquireQueued(
+			{
+				managedProfileDir: "/tmp/aura/default/chatgpt",
+				serviceTarget: "chatgpt",
+				kind: "browser-execution",
+				operationClass: "exclusive-mutating",
+				ownerPid: 131,
+			},
+			{
+				timeoutMs: 60_000,
+				pollMs: 30_000,
+				abortSignal: controller.signal,
+				onBlocked: () => controller.abort(reason),
+			},
+		);
+
+		await expect(queued).rejects.toBe(reason);
+		await first.release();
+	});
+
 	test("prunes stale in-process owners before acquiring", async () => {
 		const dispatcher = createBrowserOperationDispatcher({
 			isOwnerAlive: (pid) => pid !== 100,

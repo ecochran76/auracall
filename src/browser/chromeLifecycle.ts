@@ -25,6 +25,7 @@ export async function launchChrome(
     onWindowsRetry?: (context: { failedPort: number; nextPort: number; attempt: number }) => Promise<void>;
     ownedPids?: ReadonlySet<number>;
     ownedPorts?: ReadonlySet<number>;
+    abortSignal?: AbortSignal;
   } = {},
 ) {
   return launchChromeCore(config, userDataDir, logger, {
@@ -32,6 +33,7 @@ export async function launchChrome(
     onWindowsRetry: options.onWindowsRetry,
     ownedPids: options.ownedPids,
     ownedPorts: options.ownedPorts,
+    abortSignal: options.abortSignal,
   });
 }
 

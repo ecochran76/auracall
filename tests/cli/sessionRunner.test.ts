@@ -12,7 +12,6 @@ vi.mock('../../src/oracle.ts', async () => {
     runOracle: vi.fn(),
   };
 });
-
 vi.mock('../../src/oracle/multiModelRunner.ts', () => ({
   runMultiModelApiSession: vi.fn(),
 }));
@@ -47,7 +46,11 @@ vi.mock('../../src/sessionStore.ts', () => ({
 
 import type { SessionMetadata, SessionModelRun } from '../../src/sessionManager.ts';
 import type { ModelName } from '../../src/oracle.ts';
-import { performSessionRun } from '../../src/cli/sessionRunner.ts';
+import {
+  performSessionRun,
+  SessionRunCancelledError,
+  SessionRunTimeoutError,
+} from '../../src/cli/sessionRunner.ts';
 import { BrowserAutomationError, FileValidationError, OracleResponseError, OracleTransportError, runOracle } from '../../src/oracle.ts';
 import {
   runMultiModelApiSession,
@@ -670,6 +673,79 @@ describe('performSessionRun', () => {
 	      expect.objectContaining({ status: 'completed' }),
 	    );
 	  });
+
+  test('enforces the explicit overall timeout for browser sessions and persists a terminal error', async () => {
+    vi.mocked(runBrowserSessionExecution).mockImplementation(({ abortSignal }) => {
+      return new Promise<never>((_resolve, reject) => {
+        abortSignal?.addEventListener('abort', () => reject(abortSignal.reason), { once: true });
+      });
+    });
+
+    await expect(
+      performSessionRun({
+        sessionMeta: baseSessionMeta,
+        runOptions: { ...baseRunOptions, timeoutSeconds: 0.01 },
+        mode: 'browser',
+        browserConfig: { chromePath: null },
+        cwd: '/tmp',
+        log,
+        write,
+        version: cliVersion,
+      }),
+    ).rejects.toBeInstanceOf(SessionRunTimeoutError);
+
+    expect(vi.mocked(runBrowserSessionExecution)).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
+      expect.any(Object),
+    );
+    expect(sessionStoreMock.updateSession.mock.calls.at(-1)?.[1]).toMatchObject({
+      status: 'error',
+      completedAt: expect.any(String),
+      errorMessage: expect.stringContaining('timed out'),
+    });
+    expect(sessionStoreMock.updateModelRun).toHaveBeenLastCalledWith(
+      baseSessionMeta.id,
+      'gpt-5.2-pro',
+      expect.objectContaining({ status: 'error', completedAt: expect.any(String) }),
+    );
+  });
+
+  test('cancels an interrupted browser session and persists terminal cancelled state', async () => {
+    vi.mocked(runBrowserSessionExecution).mockImplementation(({ abortSignal }) => {
+      process.emit('SIGINT');
+      return new Promise<never>((_resolve, reject) => {
+        if (abortSignal?.aborted) {
+          reject(abortSignal.reason);
+          return;
+        }
+        abortSignal?.addEventListener('abort', () => reject(abortSignal.reason), { once: true });
+      });
+    });
+
+    await expect(
+      performSessionRun({
+        sessionMeta: baseSessionMeta,
+        runOptions: { ...baseRunOptions, timeoutSeconds: 60 },
+        mode: 'browser',
+        browserConfig: { chromePath: null },
+        cwd: '/tmp',
+        log,
+        write,
+        version: cliVersion,
+      }),
+    ).rejects.toBeInstanceOf(SessionRunCancelledError);
+
+    expect(sessionStoreMock.updateSession.mock.calls.at(-1)?.[1]).toMatchObject({
+      status: 'cancelled',
+      completedAt: expect.any(String),
+      errorMessage: expect.stringContaining('SIGINT'),
+    });
+    expect(sessionStoreMock.updateModelRun).toHaveBeenLastCalledWith(
+      baseSessionMeta.id,
+      'gpt-5.2-pro',
+      expect.objectContaining({ status: 'cancelled', completedAt: expect.any(String) }),
+    );
+  });
 
   test('writes browser answers to disk when writeOutputPath provided', async () => {
     vi.mocked(runBrowserSessionExecution).mockResolvedValue({

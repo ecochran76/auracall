@@ -755,13 +755,19 @@ export function registerTerminationHooks(
     });
   };
 
+  const handlers = new Map<NodeJS.Signals, () => void>();
   for (const signal of signals) {
-    process.on(signal, handleSignal);
+    const handler = (): void => handleSignal(signal);
+    handlers.set(signal, handler);
+    process.on(signal, handler);
   }
 
   return () => {
     for (const signal of signals) {
-      process.removeListener(signal, handleSignal);
+      const handler = handlers.get(signal);
+      if (handler) {
+        process.removeListener(signal, handler);
+      }
     }
   };
 }

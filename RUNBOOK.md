@@ -19,6 +19,18 @@
   exact supported residue reconciliation, provider-free and installed gates,
   then one distinct no-write LitScout readback. No concurrent or delegated lane
   exists.
+- Diagnosis proves `--timeout` governed only API execution, browser mode used a
+  separate stage timeout, and both root SIGINT handling and the browser signal
+  hook hard-exited before terminal cleanup/persistence. The shared repair now
+  propagates one browser abort signal through queued lock acquisition, launch,
+  DevTools, response work, bounded cleanup, exact release, and terminal session
+  and model persistence.
+- RED/GREEN covers explicit timeout, real SIGINT, unwrapped abort propagation,
+  and queued-lock cancellation. Affected `96/96`, typecheck, zero-warning lint,
+  build, and serial full provider-free `2,948/2,948` pass with 65 opt-in skips.
+  The two parallel-only timing misses each passed alone and in the serial full
+  gate. CodeGraph is current at 908 files / 17,102 nodes / 58,371 edges.
+  Install/restart/residue/browser/LitScout effects remain zero; P5 is next.
 
 ## Turn 473 | 2026-08-21
 

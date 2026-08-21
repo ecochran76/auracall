@@ -140,7 +140,7 @@ import {
 	summarizeProviderSessionAuthorization,
 } from "./providers/providerSessionAuthority.js";
 import type { ProviderUserIdentity } from "./providers/types.js";
-import { alignPromptEchoPair, buildPromptEchoMatcher } from "./reattachHelpers.js";
+import { alignPromptEchoPair, buildPromptEchoMatcher, withTimeout } from "./reattachHelpers.js";
 import { resolveBrowserLaunchPlan } from "./service/browserLaunchPlan.js";
 import { dismissOpenMenus, navigateAndSettle } from "./service/ui.js";
 import {
@@ -215,7 +215,6 @@ async function captureChatgptDeepResearchReviewEvidence(input: {
 		screenshotBytes,
 	};
 }
-
 function sanitizeDiagnosticsToken(value: string): string {
 	return (
 		value
@@ -726,6 +725,7 @@ async function acquireBrowserExecutionOperation(
 		queueTimeoutMs?: number;
 		queuePollMs?: number;
 		ownerCommand?: string | null;
+		abortSignal?: AbortSignal;
 	},
 	skipOperation = false,
 ): Promise<BrowserOperationAcquiredResult | null> {
@@ -752,6 +752,7 @@ async function acquireBrowserExecutionOperation(
 	const acquired = await dispatcher.acquireQueued(operationInput, {
 		timeoutMs: resolveBrowserExecutionQueueNumber(options.queueTimeoutMs, 10 * 60 * 1000),
 		pollMs: resolveBrowserExecutionQueueNumber(options.queuePollMs, 1000),
+		abortSignal: options.abortSignal,
 		onBlocked: (result, context) => {
 			if (seenBlockedOperationIds.has(result.blockedBy.id)) {
 				return;
@@ -1556,6 +1557,7 @@ function createWindowsManagedProfileRetryReset(options: {
 }
 
 export async function runBrowserMode(options: BrowserRunOptions): Promise<BrowserRunResult> {
+	options.abortSignal?.throwIfAborted();
 	const promptText = options.prompt?.trim();
 	if (!promptText) {
 		throw new Error("Prompt text is required when using browser mode.");
@@ -1564,6 +1566,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	const attachments: BrowserAttachment[] = options.attachments ?? [];
 	const fallbackSubmission = options.fallbackSubmission;
 	const { config, target, logger } = await resolveBrowserRuntimeEntryContext(options);
+	options.abortSignal?.throwIfAborted();
 	const runtimeHintCb = options.runtimeHintCb;
 	const runtimeEvidenceCb = options.runtimeEvidenceCb;
 	if (config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === "1") {
@@ -1755,12 +1758,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			logger,
 			auracallProfileName: options.config?.auracallProfileName ?? null,
 		});
+	options.abortSignal?.throwIfAborted();
 	const browserOperation = await acquireBrowserExecutionOperation(
 		{
 			managedProfileDir: userDataDir,
 			target,
 			logger,
 			ownerCommand: options.browserOperationOwnerCommand ?? null,
+			abortSignal: options.abortSignal,
 		},
 		options.skipBrowserExecutionOperation,
 	);
@@ -1771,8 +1776,12 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		}
 		browserOperationReleased = true;
 		try {
-			await browserOperation?.release();
 			if (browserOperation) {
+				await withTimeout(
+					browserOperation.release(),
+					5_000,
+					`Timed out releasing the ChatGPT browser operation after ${stage}.`,
+				);
 				const suffix = lastTargetId ? ` target=${lastTargetId}` : "";
 				logger(`[browser] released operation dispatcher lock after ${stage}${suffix}.`);
 			}
@@ -1781,7 +1790,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			logger(`[browser] failed to release operation dispatcher lock after ${stage}: ${message}`);
 		}
 	};
-	await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
 	const onWindowsRetry = createWindowsManagedProfileRetryReset({
 		config,
 		userDataDir,
@@ -1819,7 +1827,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		}
 	};
 	try {
+		options.abortSignal?.throwIfAborted();
+		await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
+		options.abortSignal?.throwIfAborted();
 		reusedChrome = await reuseRunningChromeProfile(userDataDir, logger);
+		options.abortSignal?.throwIfAborted();
 		chrome =
 			reusedChrome ??
 			(await launchChrome(
@@ -1829,7 +1841,12 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				},
 				userDataDir,
 				logger,
-				{ onWindowsRetry, ownedPids: ownedChromePids, ownedPorts: ownedChromePorts },
+				{
+					onWindowsRetry,
+					ownedPids: ownedChromePids,
+					ownedPorts: ownedChromePorts,
+					abortSignal: options.abortSignal,
+				},
 			));
 		if (!reusedChrome) {
 			rememberOwnedChrome(chrome);
@@ -1858,6 +1875,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			host: chromeHost,
 			target: targetId,
 			logger,
+			abortSignal: options.abortSignal,
 		});
 		logger("Connected to Chrome DevTools protocol");
 		await emitRuntimeHint();
@@ -1874,6 +1892,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	let removeDialogHandler: (() => void) | null = null;
 	let appliedCookies = 0;
 	let removeTerminationHooks: (() => void) | null = null;
+	let removeAbortHook: () => void = () => {};
 	let preserveBrowserOnError = false;
 	let runtimeForGuard: ChromeClient["Runtime"] | null = null;
 	const passiveObservations: BrowserPassiveObservation[] = [];
@@ -1931,7 +1950,12 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					},
 					userDataDir,
 					logger,
-					{ onWindowsRetry, ownedPids: ownedChromePids, ownedPorts: ownedChromePorts },
+					{
+					onWindowsRetry,
+					ownedPids: ownedChromePids,
+					ownedPorts: ownedChromePorts,
+					abortSignal: options.abortSignal,
+				},
 				);
 				rememberOwnedChrome(chrome);
 				chromeHost = (chrome as unknown as { host?: string }).host ?? "127.0.0.1";
@@ -1962,8 +1986,31 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		} catch {
 			// ignore failure; cleanup still happens below
 		}
+		if (options.abortSignal) {
+			// The session runner owns cooperative signal handling. Keeping the legacy
+			// hard-exit hook here would bypass this function's cleanup and lock release.
+			removeTerminationHooks?.();
+			removeTerminationHooks = null;
+		}
+		const abortPromise = new Promise<never>((_resolve, reject) => {
+			if (!options.abortSignal) {
+				return;
+			}
+			const handleAbort = (): void => {
+				reject(options.abortSignal?.reason);
+				void client?.close().catch(() => undefined);
+			};
+			options.abortSignal.addEventListener("abort", handleAbort, { once: true });
+			removeAbortHook = () => options.abortSignal?.removeEventListener("abort", handleAbort);
+			if (options.abortSignal.aborted) {
+				handleAbort();
+			}
+		});
 		const disconnectPromise = new Promise<never>((_, reject) => {
 			client?.on("disconnect", () => {
+				if (options.abortSignal?.aborted) {
+					return;
+				}
 				connectionClosedUnexpectedly = true;
 				logger("Chrome window closed; attempting to abort run.");
 				reject(
@@ -1974,7 +2021,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			});
 		});
 		const raceWithDisconnect = <T>(promise: Promise<T>): Promise<T> =>
-			Promise.race([promise, disconnectPromise]);
+			Promise.race([promise, disconnectPromise, abortPromise]);
 		const { Network, Page, Runtime, Input, DOM } = client;
 		runtimeForGuard = Runtime;
 
@@ -2943,6 +2990,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			controllerPid: process.pid,
 		};
 	} catch (error) {
+		if (options.abortSignal?.aborted) {
+			throw options.abortSignal.reason;
+		}
 		const normalizedError = error instanceof Error ? error : new Error(String(error));
 		const guardedError = await handleChatgptBrowserRateLimitFailure({
 			config,
@@ -3014,13 +3064,17 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		try {
 			try {
 				if (!connectionClosedUnexpectedly) {
-					await client?.close();
+					const closePromise = client?.close();
+					if (closePromise) {
+						await withTimeout(closePromise, 5_000, "Timed out closing the ChatGPT DevTools client.");
+					}
 				}
 			} catch {
 				// ignore
 			}
 			removeDialogHandler?.();
 			removeTerminationHooks?.();
+			removeAbortHook?.();
 			const keepBrowserOpen = shouldKeepManagedChatgptBrowserOpen({
 				keepBrowser: effectiveKeepBrowser,
 				preserveBrowserOnError,
@@ -3028,7 +3082,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			if (!keepBrowserOpen) {
 				if (!connectionClosedUnexpectedly) {
 					try {
-						await gracefulShutdownChrome(chrome, client ?? null, logger);
+						await withTimeout(
+							gracefulShutdownChrome(chrome, client ?? null, logger),
+							8_000,
+							"Timed out shutting down the ChatGPT browser.",
+						);
 					} catch {
 						// ignore kill failures
 					}

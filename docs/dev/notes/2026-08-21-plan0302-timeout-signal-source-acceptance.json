@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "auracall.plan0302.source-acceptance.v1",
+  "createdAt": "2026-08-21T23:34:07Z",
+  "plan": "0302",
+  "outcome": "source_accepted_install_pending",
+  "baseCommit": "11c7d5df94f8c57b38fa162d148a421a87a051fd",
+  "rootCause": {
+    "timeout": "CLI timeoutSeconds governed runOracle only; browser mode used a separate resettable stage timeout and had no absolute run deadline.",
+    "signals": "Root main and browser termination hooks hard-exited before runBrowserMode finally cleanup and performSessionRun terminal persistence.",
+    "signalName": "Node process signal events supply no signal-name argument; the old shared callback therefore observed undefined."
+  },
+  "repair": {
+    "deadlineOwner": "performSessionRun browser AbortController",
+    "defaultBrowserTimeoutSeconds": 3600,
+    "terminalTimeoutStatus": "error",
+    "terminalSignalStatus": "cancelled",
+    "abortSurfaces": [
+      "browser operation queue",
+      "Chrome launch",
+      "DevTools connection",
+      "ChatGPT response work"
+    ],
+    "cleanupBoundsMs": {
+      "devtoolsClose": 5000,
+      "chromeShutdown": 8000,
+      "operationRelease": 5000
+    },
+    "newLockOrQueue": false,
+    "providerSpecificWatchdog": false
+  },
+  "red": [
+    {
+      "test": "explicit browser timeout persists terminal error",
+      "result": "failed by 5000ms test timeout because no browser abort signal existed"
+    },
+    {
+      "test": "real SIGINT persists terminal cancelled state",
+      "result": "initially recorded undefined signal, exposing the Node event-argument defect"
+    },
+    {
+      "test": "queued browser operation stops on caller abort",
+      "result": "failed by 5000ms while sleeping inside the queue poll"
+    }
+  ],
+  "green": {
+    "affected": {
+      "filesPassed": 9,
+      "testsPassed": 96
+    },
+    "fullProviderFreeSerial": {
+      "filesPassed": 323,
+      "filesSkipped": 21,
+      "testsPassed": 2948,
+      "testsSkipped": 65
+    },
+    "parallelFlakeAudit": [
+      "responsesServer background-drain completion assertion passed alone and serially",
+      "llmService rate-limit 30ms lower-bound assertion passed alone and serially"
+    ],
+    "typecheck": "passed",
+    "scopedLint": "passed_zero_warnings",
+    "build": "passed",
+    "diffCheck": "passed",
+    "codegraph": {
+      "status": "current",
+      "files": 908,
+      "nodes": 17102,
+      "edges": 58371
+    }
+  },
+  "builtSha256": {
+    "sessionRunner": "2e62918a7563154074bb03ee5254124a314ef864ee1e60905796a3e1aae680af",
+    "browserIndex": "983d23f262e0cacc02148469961093d1a380440e7cae985a31d993050f484510",
+    "operationDispatcher": "e7efe3aed245d5fe821b8e2b81a5753f8cf99eac5628932611ea28e940cc368f",
+    "cli": "da06383fdbaabab52fa562280c695f24ce1f9abb0bc056fb5eaf0c6e5a01d77e"
+  },
+  "effects": {
+    "userRuntimeInstalls": 0,
+    "apiRestarts": 0,
+    "staleResidueMutations": 0,
+    "browserPromptSubmissions": 0,
+    "litscoutActions": 0,
+    "externalProviderCalls": 0,
+    "graphitiWrites": 0
+  },
+  "nextBoundary": "Commit and push source, then at exact idle ownership install once, reconcile only the named Plan-0436 residue through a supported path, and run one installed timeout probe plus one installed signal probe before the single no-write LitScout acceptance."
+}

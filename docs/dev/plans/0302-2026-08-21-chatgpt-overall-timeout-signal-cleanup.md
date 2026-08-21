@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P0 ACTIVATION
+Operational state: P4 SOURCE ACCEPTED / INSTALL PENDING
 
 ## Stable Objective
 
@@ -39,6 +39,26 @@ AuraCall runtime profile after the controlling CLI exits.
 - LitScout's terminal receipt is
   `docs/dev/validation/0436-auracall-timeout-cleanup-terminal.json` on pushed
   branch `plan/0436-auracall-post-submit-lock-live-acceptance` at `6c0e99b6`.
+- Source diagnosis is exact. CLI `--timeout` populated only the API-run option;
+  browser mode instead used a separate resettable stage timeout. The root CLI
+  also raced `parseAsync()` against SIGINT and called `process.exit(130)`, while
+  the browser termination hook separately hard-exited. Both paths bypassed
+  `runBrowserMode` final cleanup and `performSessionRun` terminal persistence.
+- One shared browser-run abort signal now begins before prompt assembly, uses
+  the explicit deadline or a 60-minute browser `auto` ceiling, cancels queued
+  operation acquisition, Chrome launch, DevTools connection, and in-flight
+  response work, then reaches bounded Chrome/DevTools cleanup and exact
+  operation release. SIGINT/SIGTERM/SIGQUIT use that same path; timeout is a
+  typed error and operator interruption is durably `cancelled`.
+- Deterministic RED/GREEN covers explicit timeout, real process SIGINT,
+  cancellation propagation without error wrapping, and abortable queued lock
+  acquisition. Affected validation passes `96/96`; typecheck, zero-warning
+  scoped lint, production build, and serial full provider-free validation pass
+  (`2,948 passed / 65 skipped`). Two unrelated wall-clock assertions failed
+  separately under parallel suite load, each passed alone, and both passed in
+  the serial full gate. CodeGraph is current at 908 files / 17,102 nodes /
+  58,371 edges. Install, API restart, residue cleanup, browser prompt, and
+  LitScout effects remain zero for this source slice.
 
 ## Planning Metadata
 

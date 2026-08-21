@@ -55,6 +55,7 @@ export interface BrowserOperationAcquireInput extends BrowserOperationKeyInput {
 export interface BrowserOperationAcquireQueuedOptions {
   timeoutMs?: number;
   pollMs?: number;
+  abortSignal?: AbortSignal;
   onBlocked?: (result: BrowserOperationBusyResult, context: BrowserOperationQueueWaitContext) => void | Promise<void>;
 }
 
@@ -349,18 +350,21 @@ async function acquireQueuedWithPolling(
   let lastBusy: BrowserOperationBusyResult | null = null;
 
   while (true) {
+	options.abortSignal?.throwIfAborted();
     attempt += 1;
     const result = await acquire();
+	options.abortSignal?.throwIfAborted();
     if (result.acquired) {
       return result;
     }
     lastBusy = result;
     const elapsedMs = Date.now() - startedAt;
     await options.onBlocked?.(result, { attempt, elapsedMs });
+	options.abortSignal?.throwIfAborted();
     if (elapsedMs >= timeoutMs) {
       return lastBusy;
     }
-    await delay(Math.min(pollMs, Math.max(0, timeoutMs - elapsedMs)));
+    await delay(Math.min(pollMs, Math.max(0, timeoutMs - elapsedMs)), options.abortSignal);
   }
 }
 
@@ -374,9 +378,21 @@ function normalizePositiveInteger(value: number | undefined, fallback: number): 
   return Math.max(1, Math.trunc(value));
 }
 
-function delay(ms: number): Promise<void> {
+function delay(ms: number, abortSignal?: AbortSignal): Promise<void> {
   if (ms <= 0) return Promise.resolve();
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  abortSignal?.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      abortSignal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      abortSignal?.removeEventListener('abort', onAbort);
+      reject(abortSignal?.reason);
+    };
+    abortSignal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 function isNodeError(error: unknown, code: string): boolean {

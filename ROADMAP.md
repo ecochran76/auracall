@@ -52,7 +52,11 @@ Lane: P01
   successor traces and repairs one overall deadline plus one awaited,
   idempotent terminal-cleanup seam, safely reconciles only the exact residue,
   and requires provider-free source/installed proof plus one no-write LitScout
-  connected-app terminal acceptance.
+  connected-app terminal acceptance. Source is now accepted: affected `96/96`,
+  serial full provider-free `2,948 passed / 65 skipped`, typecheck, lint, build,
+  and current CodeGraph all pass. Installation, exact residue reconciliation,
+  installed timeout/signal probes, and the one no-write LitScout acceptance
+  remain open.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

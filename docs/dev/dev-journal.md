@@ -47330,6 +47330,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `account-mirror-refresh:chatgpt:wsl-chrome-3` under foreground ownership and
   admitted it after release. This accepts installed contention mechanics but
   does not replace the required separately governed real LitScout acceptance.
+
 ## 2026-08-21 - Plan 0302 overall timeout and signal cleanup
 
 - Focus: preserve Plan 0301's live-proven lock result while repairing the
@@ -47341,3 +47342,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next: push the bounded activation, use CodeGraph to trace timeout and process
   signals through session/browser cleanup, then drive deterministic RED/GREEN
   before touching the exact stale runtime residue.
+- Diagnosis: root `--timeout` flowed only into `runOracle`; ChatGPT browser mode
+  retained its independent per-stage timeout. Root `main()` and browser
+  termination hooks both hard-exited on signals, so neither browser `finally`
+  nor session/model error persistence could complete.
+- Source repair: one absolute browser abort owner now covers explicit timeout
+  and 60-minute `auto`, process signals, operation-queue waiting, launch, CDP,
+  response work, bounded DevTools/Chrome cleanup, and exact operation release.
+  Runtime hints stop after abort, timeout persists as `error`, and SIGINT/
+  SIGTERM/SIGQUIT persist as `cancelled`.
+- Acceptance: focused/affected `96/96`, typecheck, zero-warning touched lint,
+  build, and serial full provider-free `2,948 passed / 65 skipped` are green.
+  Two unrelated timing assertions missed under separate parallel full runs;
+  each passed alone and both passed under the serial full gate. CodeGraph is
+  current at 908 files / 17,102 nodes / 58,371 edges. No install, restart,
+  stale-residue mutation, browser prompt, LitScout call, or Graphiti write has
+  occurred. Source receipt:
+  `docs/dev/notes/2026-08-21-plan0302-timeout-signal-source-acceptance.json`.

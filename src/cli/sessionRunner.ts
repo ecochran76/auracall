@@ -40,6 +40,7 @@ import { cwd as getCwd } from 'node:process';
 
 const isTty = process.stdout.isTTY;
 const dim = (text: string): string => (isTty ? kleur.dim(text) : text);
+const DEFAULT_BROWSER_OVERALL_TIMEOUT_SECONDS = 60 * 60;
 
 export interface SessionRunParams {
   sessionMeta: SessionMetadata;
@@ -53,6 +54,26 @@ export interface SessionRunParams {
   notifications?: NotificationSettings;
   browserDeps?: BrowserSessionRunnerDeps;
   muteStdout?: boolean;
+  abortSignal?: AbortSignal;
+}
+export class SessionRunTimeoutError extends Error {
+  readonly timeoutSeconds: number;
+
+  constructor(timeoutSeconds: number) {
+    super(`AuraCall session timed out after ${timeoutSeconds} seconds.`);
+    this.name = 'SessionRunTimeoutError';
+    this.timeoutSeconds = timeoutSeconds;
+  }
+}
+
+export class SessionRunCancelledError extends Error {
+  readonly signal: NodeJS.Signals;
+
+  constructor(signal: NodeJS.Signals) {
+    super(`AuraCall session cancelled by ${signal}.`);
+    this.name = 'SessionRunCancelledError';
+    this.signal = signal;
+  }
 }
 
 export async function performSessionRun({
@@ -67,22 +88,58 @@ export async function performSessionRun({
   notifications,
   browserDeps,
   muteStdout = false,
+  abortSignal,
 }: SessionRunParams): Promise<void> {
+  const browserAbortController = mode === 'browser' ? new AbortController() : null;
+  const forwardAbort = (): void => {
+    if (!browserAbortController || browserAbortController.signal.aborted) {
+      return;
+    }
+    browserAbortController.abort(abortSignal?.reason ?? new SessionRunCancelledError('SIGINT'));
+  };
+  if (abortSignal?.aborted) {
+    forwardAbort();
+  } else {
+    abortSignal?.addEventListener('abort', forwardAbort, { once: true });
+  }
+  const processSignals: NodeJS.Signals[] = mode === 'browser' ? ['SIGINT', 'SIGTERM', 'SIGQUIT'] : [];
+  const handleProcessSignal = (signal: NodeJS.Signals): void => {
+    if (!browserAbortController?.signal.aborted) {
+      browserAbortController?.abort(new SessionRunCancelledError(signal));
+    }
+  };
+  const processSignalHandlers = new Map<NodeJS.Signals, () => void>();
+  for (const signal of processSignals) {
+    const handler = (): void => handleProcessSignal(signal);
+    processSignalHandlers.set(signal, handler);
+    process.on(signal, handler);
+  }
+  const overallTimeoutSeconds = mode === 'browser'
+    ? typeof runOptions.timeoutSeconds === 'number' && runOptions.timeoutSeconds > 0
+      ? runOptions.timeoutSeconds
+      : DEFAULT_BROWSER_OVERALL_TIMEOUT_SECONDS
+    : null;
+  const overallTimeout =
+    browserAbortController && overallTimeoutSeconds !== null
+      ? setTimeout(() => {
+          browserAbortController.abort(new SessionRunTimeoutError(overallTimeoutSeconds));
+        }, overallTimeoutSeconds * 1000)
+      : null;
   const writeInline = (chunk: string): boolean => {
     // Keep session logs intact while still echoing inline output to the user.
     write(chunk);
     return muteStdout ? true : process.stdout.write(chunk);
   };
   const browserContext = sessionMeta.browser?.context;
-  await sessionStore.updateSession(sessionMeta.id, {
-    status: 'running',
-    startedAt: new Date().toISOString(),
-    mode,
-    ...(browserConfig ? { browser: { config: browserConfig, context: browserContext } } : {}),
-  });
   const notificationSettings = notifications ?? deriveNotificationSettingsFromMetadata(sessionMeta, process.env);
   const modelForStatus = runOptions.model ?? sessionMeta.model;
   try {
+    await sessionStore.updateSession(sessionMeta.id, {
+      status: 'running',
+      startedAt: new Date().toISOString(),
+      mode,
+      ...(browserConfig ? { browser: { config: browserConfig, context: browserContext } } : {}),
+    });
     if (mode === 'browser') {
       if (!browserConfig) {
         throw new Error('Missing browser configuration for session.');
@@ -96,13 +153,23 @@ export async function performSessionRun({
       const runnerDeps = {
         ...browserDeps,
         persistRuntimeHint: async (runtime: BrowserRuntimeMetadata) => {
+          if (browserAbortController?.signal.aborted) {
+            return;
+          }
           await sessionStore.updateSession(sessionMeta.id, {
             status: 'running',
             browser: { config: browserConfig, runtime, context: browserContext },
           });
         },
       };
-      const result = await runBrowserSessionExecution({ runOptions, browserConfig, cwd, log }, runnerDeps);
+      const result = await runBrowserSessionExecution(
+        { runOptions, browserConfig, cwd, log, abortSignal: browserAbortController?.signal },
+        runnerDeps,
+      );
+      browserAbortController?.signal.throwIfAborted();
+      if (overallTimeout) {
+        clearTimeout(overallTimeout);
+      }
       if (modelForStatus) {
         await sessionStore.updateModelRun(sessionMeta.id, modelForStatus, {
           status: 'completed',
@@ -439,8 +506,9 @@ export async function performSessionRun({
     if (transportLine) {
       log(dim(`Transport: ${transportLine}`));
     }
+    const terminalStatus = error instanceof SessionRunCancelledError ? 'cancelled' : 'error';
     await sessionStore.updateSession(sessionMeta.id, {
-      status: 'error',
+      status: terminalStatus,
       completedAt: new Date().toISOString(),
       errorMessage: message,
       mode,
@@ -462,11 +530,22 @@ export async function performSessionRun({
     });
     if (modelForStatus) {
       await sessionStore.updateModelRun(sessionMeta.id, modelForStatus, {
-        status: 'error',
+        status: terminalStatus,
         completedAt: new Date().toISOString(),
       });
     }
     throw error;
+  } finally {
+    if (overallTimeout) {
+      clearTimeout(overallTimeout);
+    }
+    abortSignal?.removeEventListener('abort', forwardAbort);
+    for (const signal of processSignals) {
+      const handler = processSignalHandlers.get(signal);
+      if (handler) {
+        process.removeListener(signal, handler);
+      }
+    }
   }
 }
 

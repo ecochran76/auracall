@@ -51,6 +51,7 @@ export interface BrowserSessionRunnerDeps {
     heartbeatIntervalMs?: number;
     verbose?: boolean;
     runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
+    abortSignal?: AbortSignal;
   }) => Promise<BrowserRunResult>;
   formatTokenCount: (value: number) => string;
   formatFinishLine: (options: {
@@ -76,10 +77,11 @@ export async function runBrowserSessionExecutionCore(
     browserConfig: BrowserSessionConfigLike;
     cwd: string;
     log: (message?: string) => void;
+    abortSignal?: AbortSignal;
   },
   deps: BrowserSessionRunnerDeps,
 ): Promise<BrowserExecutionResult> {
-  const { runOptions, browserConfig, cwd, log } = options;
+  const { runOptions, browserConfig, cwd, log, abortSignal } = options;
   const promptArtifacts = await deps.assemblePrompt(runOptions, { cwd });
   const color = deps.color ?? {};
   const dim = color.dim ?? ((value: string) => value);
@@ -143,8 +145,12 @@ export async function runBrowserSessionExecutionCore(
       runtimeHintCb: async (runtime) => {
         await persistRuntimeHint({ ...runtime, controllerPid: runtime.controllerPid ?? process.pid });
       },
+      abortSignal,
     });
   } catch (error) {
+    if (abortSignal?.aborted) {
+      throw abortSignal.reason;
+    }
     if (deps.errorWrapper) {
       throw deps.errorWrapper(error instanceof Error ? error.message : 'Browser automation failed.', error);
     }

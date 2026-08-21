@@ -4,7 +4,6 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import JSON5 from 'json5';
 import { fileURLToPath } from 'node:url';
-import { once } from 'node:events';
 import readline from 'node:readline/promises';
 import { Command, Option } from 'commander';
 import type { OptionValues } from 'commander';
@@ -244,7 +243,7 @@ import {
 import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../src/workbench/browserDiscovery.js';
 import { createBrowserWorkbenchCapabilityDiagnostics } from '../src/workbench/browserDiagnostics.js';
-import { performSessionRun } from '../src/cli/sessionRunner.js';
+import { performSessionRun, SessionRunCancelledError } from '../src/cli/sessionRunner.js';
 import { buildRootBrowserProviderSessionAuthorization } from '../src/cli/browserProviderSession.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -725,7 +724,7 @@ program
   .addOption(
     new Option(
       '--timeout <seconds|auto>',
-      'Overall timeout before aborting the API call (auto = 60m for Pro API runs, 120s otherwise).',
+      'Overall run timeout (auto = 60m for Pro API and browser runs, 120s for other API runs).',
     )
       .argParser(parseTimeoutOption)
       .default('auto'),
@@ -11553,15 +11552,13 @@ program.action(async function (this: Command) {
 
 async function main(): Promise<void> {
   try {
-    const parsePromise = program.parseAsync(process.argv);
-    const sigintPromise = once(process, 'SIGINT').then(() => 'sigint' as const);
-
-    const result = await Promise.race([parsePromise, sigintPromise]);
-    if (result === 'sigint') {
-      console.log(chalk.yellow('\nInterrupted.'));
-      process.exit(130);
-    }
+    await program.parseAsync(process.argv);
   } catch (error) {
+    if (error instanceof SessionRunCancelledError) {
+      console.log(chalk.yellow('\nInterrupted after browser cleanup completed.'));
+      process.exitCode = 130;
+      return;
+    }
     console.error(chalk.red('FATAL ERROR:'), error);
     process.exit(1);
   }

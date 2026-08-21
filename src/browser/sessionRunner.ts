@@ -19,8 +19,8 @@ interface RunBrowserSessionArgs {
   browserConfig: BrowserSessionConfig;
   cwd: string;
   log: (message?: string) => void;
+  abortSignal?: AbortSignal;
 }
-
 type ExecuteBrowserInput = Parameters<typeof runBrowserMode>[0] | Parameters<CoreBrowserSessionRunnerDeps['executeBrowser']>[0];
 
 export type BrowserSessionRunnerDeps = {
@@ -31,7 +31,7 @@ export type BrowserSessionRunnerDeps = {
 };
 
 export async function runBrowserSessionExecution(
-  { runOptions, browserConfig, cwd, log }: RunBrowserSessionArgs,
+  { runOptions, browserConfig, cwd, log, abortSignal }: RunBrowserSessionArgs,
   deps: BrowserSessionRunnerDeps = {},
 ): Promise<BrowserExecutionResult> {
   const assemblePrompt = async (
@@ -57,6 +57,7 @@ export async function runBrowserSessionExecution(
     heartbeatIntervalMs?: number;
     verbose?: boolean;
     runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
+    abortSignal?: AbortSignal;
   }) => {
     const baseConfig = options.config && options.config.timeoutMs == null
       ? { ...options.config, timeoutMs: undefined }
@@ -73,7 +74,7 @@ export async function runBrowserSessionExecution(
   const runOptionsForCore = { ...runOptions, runLabel: runOptions.model };
 
   return runBrowserSessionExecutionCore(
-    { runOptions: runOptionsForCore, browserConfig, cwd, log },
+    { runOptions: runOptionsForCore, browserConfig, cwd, log, abortSignal },
     {
       assemblePrompt,
       executeBrowser,
