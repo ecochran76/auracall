@@ -1,6 +1,6 @@
 # ChatGPT Local Upload Surface Independence | 0295-2026-08-20
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Stable Objective
@@ -58,7 +58,7 @@ while retaining fail-closed checks for the local action and unrestricted
 - [x] Local upload remains fail-closed when its own row or input contract drifts.
 - [x] Affected and full provider-free validation pass.
 - [x] Source candidate is committed and pushed before installation.
-- [ ] Installed runtime matches accepted source and passes a provider-free
+- [x] Installed runtime matches accepted source and passes a provider-free
   local-surface probe.
 
 ## Validation Evidence
@@ -77,6 +77,12 @@ while retaining fail-closed checks for the local action and unrestricted
 - Source candidate `22adc893` is committed on
   `fix/plan0295-chatgpt-local-upload-surface`, pushed, and upstream-exact before
   any installation or provider action.
+- Main and the feature branch are pushed at `ec1859ee`; one user-runtime
+  install and API restart produced healthy PID `84336`. Source and installed
+  resolver JavaScript share SHA-256
+  `5a9a6741c45b97086a12e0627804b759355e5ae2e953caa73c5b237eb4b19354`,
+  and the installed probe accepts the local surface without a library row
+  while retaining restricted-input and missing-local-action failures.
 
 ## Installed Runtime Activation
 

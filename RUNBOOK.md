@@ -1,5 +1,36 @@
 # RUNBOOK
 
+## Turn 467 | 2026-08-20
+
+- [Plan 0296](docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md)
+  opens after installed Plan 0295 cleared local upload but LitScout's sole
+  unchanged successor stopped before Send with `prompt-not-in-composer`.
+- The invocation's model log is empty and canonical LitScout bytes, action
+  token, provider calls, spend, response count, and grade count are unchanged.
+  The retained failure is pre-Send evidence, not a completed experiment.
+- CodeGraph localizes the mismatch to `submitPrompt(...)`: focus accepts the
+  first selector match, including broad textarea fallbacks, while insertion
+  fallback and verification read different exact nodes.
+- The expression-contract regression was RED because no visible target-binding
+  seam existed and is GREEN after exact selectors moved first, focus began
+  enumerating visible/enabled/composer-owned candidates, and the selected node
+  became authoritative for fallback and verification.
+- A behavior-level regression also proves the exact marked node may be the only
+  prompt-bearing node through pre-Send verification and successful commit.
+  Focused validation passes `11/11`; the wider related gate, typecheck, build,
+  scoped lint, plan audit, full functional suite (`323` files / `2,931` tests
+  before the final test-only addition), and diff hygiene pass.
+- The full suite exposed a separate isolation gap by opening canonical-profile
+  test PID `50790` despite a disposable `AURACALL_HOME`; that exact process was
+  terminated. Scheduler-owned PID `80587` was not touched and remains an
+  always-on low-priority live-follow owner, so installation must occur only at
+  an observed idle boundary.
+- Critical-path lane: `fix/plan0296-chatgpt-composer-target`; expected write set
+  is prompt-composer/provider selectors and tests plus Plan 0295/0296,
+  Roadmap/Runbook, fix log, and journal. No concurrent lane or subagent exists.
+  No provider action or next Experiment 9 invocation is authorized by this
+  AuraCall source plan.
+
 ## Turn 466 | 2026-08-20
 
 - [Plan 0295](docs/dev/plans/0295-2026-08-20-chatgpt-local-upload-surface-independence.md)

@@ -7,6 +7,15 @@
 Status: active
 Lane: P01
 
+- Active ChatGPT visible composer-target binding repair:
+  [docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md](docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md)
+  The installed upload repair cleared its original gate, but LitScout's sole
+  successor stopped before Send because AuraCall could focus a broad selector
+  candidate and then verify a different exact composer node. This bounded
+  repair makes one visible composer-owned node authoritative across focus,
+  fallback, and pre-Send verification. Any further Experiment 9 attempt remains
+  separately governed.
+
 - Active ChatGPT local-upload surface independence repair:
   [docs/dev/plans/0295-2026-08-20-chatgpt-local-upload-surface-independence.md](docs/dev/plans/0295-2026-08-20-chatgpt-local-upload-surface-independence.md)
   LitScout Experiment 9 reached the authenticated workbench but AuraCall

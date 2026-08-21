@@ -21763,3 +21763,9 @@ browser-stage lifecycle observability, not transcript truncation.
   optional observational metadata because no local transfer consumes it.
 - Regress the distinction through the resolver's public test seam and retain
   negative coverage for missing local actions and restricted inputs.
+- 2026-08-20: Prompt insertion and verification must share one exact visible
+  composer target. A selector list that focuses its first broad textarea but
+  verifies only `#prompt-textarea` can fail after valid attachment setup and
+  app selection, or worse, insert into an unrelated field. Enumerate matches,
+  reject hidden/disabled/non-composer candidates, prefer current exact inputs,
+  and carry the selected node identity through fallback and pre-Send checks.

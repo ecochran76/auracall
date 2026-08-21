@@ -341,15 +341,15 @@
       },
       "selectors": {
         "input": [
+          "#prompt-textarea",
+          "textarea[name=\"prompt-textarea\"]",
+          ".ProseMirror",
+          "[contenteditable=\"true\"][data-virtualkeyboard=\"true\"]",
+          "div[contenteditable=\"true\"][role=\"textbox\"]",
           "textarea[data-id=\"prompt-textarea\"]",
           "textarea[placeholder*=\"Send a message\"]",
           "textarea[aria-label=\"Message ChatGPT\"]",
-          "textarea:not([disabled])",
-          "textarea[name=\"prompt-textarea\"]",
-          "#prompt-textarea",
-          ".ProseMirror",
-          "[contenteditable=\"true\"][data-virtualkeyboard=\"true\"]",
-          "div[contenteditable=\"true\"][role=\"textbox\"]"
+          "textarea:not([disabled])"
         ],
         "sendButton": [
           "button[data-testid=\"send-button\"]",

@@ -47177,3 +47177,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   323 files / 2,929 tests with 65 opt-in/live tests skipped. Typecheck, build,
   scoped lint, plan audit, diff hygiene, and disposable-browser isolation also
   pass. Commit/push remains the next gate before one install and restart.
+# 2026-08-20 | Plan 0296 Visible Composer Target Binding
+
+- Installed Plan 0295 cleared LitScout Experiment 9's local-upload surface,
+  then the sole successor failed before Send with `prompt-not-in-composer`.
+- The shared prompt path could focus a broad first selector match but verify
+  only separate exact nodes. The repair makes one visible, enabled,
+  composer-owned node authoritative through focus, fallback, and verification,
+  and moves exact selectors before generic textarea fallbacks.
+- The public expression regression was RED before the seam existed and is now
+  GREEN. A behavior regression also carries a prompt found only on that exact
+  marked node through verification and commit. Focused `11/11`, wider related,
+  typecheck, build, scoped lint, plan audit, and the full functional suite pass.
+- The full suite opened exact canonical-profile test PID `50790` despite its
+  disposable home. That process was terminated while the independent
+  scheduler-owned PID `80587` remained untouched. Source push and one
+  idle-boundary install/restart remain.
