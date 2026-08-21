@@ -13,8 +13,16 @@
   positive active-route badge; implicit Chat on that route is rejected. The
   affected packet passes `309/309`, the full suite passes `2,940` with 65
   skipped, and typecheck, build, scoped lint, current CodeGraph, plan audit,
-  and diff hygiene pass. Push/install parity and separate installed no-prompt
-  Chat and Work probes remain before Plan 0299 closes.
+  and diff hygiene pass. Commit `cf12ddfa` is pushed to feature/main; one
+  idle-boundary install is byte-exact at `3b76e2b...a069f` and restarted the API
+  healthy at PID `35083` without replacing Chrome PID `49689` / port `45015`.
+- Separate installed-expression tabs returned `already-selected / chat` and
+  `switched / work`. The Work probe performed one mode switch but inserted and
+  sent no prompt and caused no model, connector, LitScout, or canonical effect.
+  Exact tab cleanup left one authenticated ChatGPT root tab. At closeout the
+  resumed scheduler had naturally started one untouched `wsl-chrome-3`
+  `backfill_history` completion; materialization remained zero and no scheduler
+  or completion control ran. Plan 0299 closes installed-accepted.
 
 ## Turn 470 | 2026-08-21
 

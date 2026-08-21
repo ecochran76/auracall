@@ -40,5 +40,55 @@
     "connectorCall": false,
     "canonicalWrite": false
   },
+  "installedAcceptance": {
+    "sourceCommit": "cf12ddfad1a6f910a435c08a038bd58dcb3dd675",
+    "builtAndInstalledArtifactSha256": "3b76e2b896b76888705d61edbe9e1c653e81d4c6f63747d32bde65e1ce4a069f",
+    "api": {
+      "active": true,
+      "mainPid": 35083
+    },
+    "retainedBrowser": {
+      "pidBeforeAndAfter": 49689,
+      "devtoolsPort": 45015,
+      "passwordStoreBasic": true,
+      "useMockKeychain": true
+    },
+    "admission": {
+      "activeCompletions": 0,
+      "activeHistoryMaterializationJobs": 0
+    },
+    "chatProbe": {
+      "desiredMode": "chat",
+      "result": {
+        "status": "already-selected",
+        "mode": "chat"
+      }
+    },
+    "workProbe": {
+      "desiredMode": "work",
+      "result": {
+        "status": "switched",
+        "mode": "work"
+      },
+      "composerModeSwitches": 1
+    },
+    "cleanup": {
+      "closedExactProbeTarget": "C4E5B1F2FB33F692A55656570F9D243B",
+      "remainingPageCount": 1,
+      "remainingPageUrl": "https://chatgpt.com/",
+      "browserPreserved": true
+    },
+    "closeoutRuntime": {
+      "schedulerOwnedCompletion": {
+        "id": "acctmirror_completion_e01af6e9-2351-4f57-8168-21ce90d49c99",
+        "status": "running",
+        "provider": "chatgpt",
+        "runtimeProfile": "wsl-chrome-3",
+        "phase": "backfill_history"
+      },
+      "activeHistoryMaterializationJobs": 0,
+      "schedulerOrCompletionControlActions": 0
+    }
+  },
   "conclusion": "The animated slider is model or thinking UI and cannot classify composer mode. Established Work is positively proven by the active current-route conversation badge with exact Work text; ordinary Chat remains the exact enabled editor with no explicit mode control and no active Work badge."
 }

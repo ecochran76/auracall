@@ -1,8 +1,8 @@
 # ChatGPT Work Marker Semantic Repair | 0299-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: SOURCE ACCEPTED / INSTALL AND LIVE PROBES PENDING
+Operational state: INSTALLED ACCEPTED / NO-PROMPT LIVE PROVEN
 
 ## Stable Objective
 
@@ -24,8 +24,8 @@ Work proof.
   `Work` badge. Chat lacks that badge even while showing `High`.
 - Provider-free RED/GREEN removes the shared slider from mode classification,
   accepts Chat-with-High, accepts explicit Work from the positive badge, and
-  rejects implicit Chat on that Work route. Source validation is green;
-  installed parity and separate no-prompt live probes remain.
+  rejects implicit Chat on that Work route. Source and installed validation are
+  green, and separate installed no-prompt Chat and Work probes passed.
 
 ## Required Work
 
@@ -48,8 +48,8 @@ Work proof.
 
 - [x] Ordinary Chat with a visible High thinking control is accepted.
 - [x] Work remains explicit and fail-closed from live-observed semantics.
-- [ ] Source and installed validation pass.
-- [ ] Separate live no-prompt Chat and Work probes pass before handoff.
+- [x] Source and installed validation pass.
+- [x] Separate live no-prompt Chat and Work probes pass before handoff.
 
 ## Source Verification
 
@@ -60,6 +60,25 @@ Work proof.
   65 skipped.
 - `pnpm run typecheck`, `pnpm run build`, scoped Biome lint, CodeGraph readback,
   plan audit (`299` keep, zero validation errors), and `git diff --check` pass.
+
+## Installed Verification
+
+- Pushed feature/main source commit: `cf12ddfa`.
+- Built and installed
+  `dist/src/browser/actions/chatgptComposerMode.js` are byte-exact at SHA-256
+  `3b76e2b896b76888705d61edbe9e1c653e81d4c6f63747d32bde65e1ce4a069f`.
+- One idle-boundary install restarted the API healthy at PID `35083` while
+  preserving authenticated Chrome PID `49689` / port `45015`; the browser root
+  retained `--password-store=basic --use-mock-keychain`.
+- The installed expression returned `already-selected / chat` on the known
+  ordinary Chat route and `switched / work` on the separate known Work route.
+  The Work probe performed one composer-mode switch but no prompt insertion,
+  Send, model call, connector call, or canonical write.
+- Exact probe-tab cleanup left one authenticated `https://chatgpt.com/` tab and
+  preserved the retained browser. Completion and history-materialization active
+  counts were zero at admission. At closeout the resumed scheduler had naturally
+  started one `wsl-chrome-3` `backfill_history` completion while materialization
+  remained zero; the plan took no scheduler/completion control action.
 
 ## Definition Of Done
 

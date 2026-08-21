@@ -47251,5 +47251,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   from the positive badge, and rejects implicit Chat on that Work route. The
   affected packet passes `309/309`; the full suite passes `2,940` with 65
   skipped, plus typecheck, build, scoped lint, CodeGraph, plan audit, and diff
-  hygiene. Install parity and separate installed no-prompt Chat/Work probes
-  remain before closure.
+  hygiene.
+- Commit `cf12ddfa` is pushed to feature/main. One idle-boundary install made
+  built and installed classifier artifacts byte-exact at
+  `3b76e2b...a069f`, restarted the API healthy at PID `35083`, and preserved
+  authenticated Chrome PID `49689` / port `45015` with both basic password-
+  store flags.
+- Separate installed-expression probes returned `already-selected / chat` on
+  the known Chat route and `switched / work` on the known Work route. The Work
+  probe performed one composer-mode switch but no prompt insertion, Send,
+  model/connector call, LitScout action, or canonical write. Exact tab cleanup
+  left one authenticated root tab. The resumed scheduler naturally started one
+  `wsl-chrome-3` `backfill_history` completion before closeout; it remained
+  untouched, materialization stayed zero, and no scheduler/completion control
+  ran. Plan 0299 closes installed-accepted.

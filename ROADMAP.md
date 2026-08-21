@@ -7,13 +7,14 @@
 Status: active
 Lane: P01
 
-- Active ChatGPT Work-marker semantic repair:
+- Completed installed ChatGPT Work-marker semantic repair:
   [docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)
   Read-only live evidence proved ordinary Chat's `High` thinking control shares
   `[data-animated-slider-trigger=true]`, while established Work is positively
   marked by the active current-route conversation's exact `Work` badge. The
-  provider-local repair and source gates pass; push/install parity and separate
-  installed no-prompt Chat and Work probes remain before closure.
+  provider-local repair is pushed and installed byte-exact. Separate installed
+  no-prompt probes accept ordinary Chat and enter explicit Work; exact cleanup
+  preserved the authenticated browser.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)
@@ -34,7 +35,8 @@ Lane: P01
   installed acceptance exposed a second pre-Send race: the predicate ran before
   the React composer mounted. The bounded 10-second exact-composer wait is
   source-green, installed byte-exact, and verified by an installed delayed-mount
-  probe. A separately governed LitScout successor may now consume it.
+  probe. Plan 0299 supersedes its rejected Work-marker assumption; any LitScout
+  successor remains separately governed.
 
 - Closed installed ChatGPT visible composer-target binding repair:
   [docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md](docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md)
