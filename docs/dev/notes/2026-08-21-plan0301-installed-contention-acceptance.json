@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "auracall.plan0301.installed-contention-acceptance.v1",
+  "createdAt": "2026-08-21T21:30:00Z",
+  "plan": "0301",
+  "outcome": "installed_contention_accepted_real_litscout_pending",
+  "source": {
+    "commit": "736556d48973b5f6d9c3a1c57a245a6ad12fbbb6",
+    "branch": "fix/plan0301-chatgpt-post-submit-profile-lock",
+    "upstreamExact": true
+  },
+  "install": {
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
+    "sourceBuiltJavaScript": "/home/ecochran76/workspace.local/auracall/dist/src/browser/index.js",
+    "installedJavaScript": "/home/ecochran76/.auracall/user-runtime/node_modules/auracall/dist/src/browser/index.js",
+    "sha256": "53a9f3ed7439162756884c912260928f1e0fba4b55b7cf28e7346b4fc553c6ea",
+    "apiPid": 23839,
+    "apiPort": 18095,
+    "apiActive": true,
+    "apiRestartsAfterInstall": 1
+  },
+  "browserLifecycle": {
+    "sessionSlug": "post-submit-lock-canary",
+    "status": "completed",
+    "startedAt": "2026-08-21T21:27:20.878Z",
+    "completedAt": "2026-08-21T21:27:33.351Z",
+    "answer": "POST SUBMIT LOCK CANARY COMPLETE",
+    "foregroundPid": 32312,
+    "operationId": "4fbe2854-5f23-4ea1-96a7-0e413e3d3642",
+    "operationKind": "browser-execution",
+    "operationClass": "exclusive-mutating",
+    "operationOwner": "browser-execution",
+    "managedProfileDir": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "operationPresentDuringRun": true,
+    "operationAbsentAfterTerminalCleanup": true,
+    "appOrConnectorRequested": false,
+    "limitation": "The model ignored the requested 45-second delay and completed in 12.5 seconds, so no natural account-mirror scheduler overlap was observed during this browser session."
+  },
+  "installedDispatcherContention": {
+    "module": "/home/ecochran76/.auracall/user-runtime/node_modules/auracall/dist/packages/browser-service/src/service/operationDispatcher.js",
+    "foregroundOwner": "browser-execution",
+    "accountMirrorOwner": "account-mirror-refresh:chatgpt:wsl-chrome-3",
+    "foregroundAcquired": true,
+    "accountMirrorBlockedDuringForeground": true,
+    "accountMirrorAdmittedAfterTerminalRelease": true,
+    "temporaryStateRemoved": true
+  },
+  "effects": {
+    "browserPromptSubmissions": 1,
+    "browserPromptResubmissions": 0,
+    "litscoutActions": 0,
+    "externalLiteratureOrPatentProviderCalls": 0,
+    "graphitiWrites": 0
+  },
+  "nextBoundary": "Freeze a distinct LitScout successor, obtain fresh Session-68 controller authority, then run one zero-retry real acceptance while observing the exact foreground operation through connected-app approval and reconciling durable receipts."
+}

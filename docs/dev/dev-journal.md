@@ -47319,3 +47319,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   admitted after release. Affected tests pass `77/77`; typecheck, scoped lint,
   build, isolated full provider-free `2,944 passed / 65 skipped`, current
   CodeGraph, and diff checks pass. Runtime/install/live effects remain zero.
+- Pushed source `736556d4` was installed once and the API restarted once to PID
+  `23839`; installed/source browser runtime bytes match
+  `53a9f3ed...c6ea`.
+- Harmless installed session `post-submit-lock-canary` completed once while its
+  foreground PID owned the exact managed-profile operation; terminal cleanup
+  removed it. The model ignored the requested delay and completed in 12.5
+  seconds, so natural scheduler overlap was not observed.
+- The installed dispatcher phase rejected exact account-mirror owner
+  `account-mirror-refresh:chatgpt:wsl-chrome-3` under foreground ownership and
+  admitted it after release. This accepts installed contention mechanics but
+  does not replace the required separately governed real LitScout acceptance.

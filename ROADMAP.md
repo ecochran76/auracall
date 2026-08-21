@@ -35,8 +35,12 @@ Lane: P01
   lost CDP. This bounded successor keeps the existing lock until terminal
   cleanup. The exact RED/GREEN, `77/77` affected tests, typecheck, lint, build,
   full provider-free `2,944 passed / 65 skipped`, and current CodeGraph are
-  source-accepted; commit/push, one install/restart, installed contention proof,
-  and one separately governed zero-retry LitScout acceptance remain.
+  source-accepted. Pushed `736556d4` is installed byte-exact at
+  `53a9f3ed...c6ea`; API PID 23839 is healthy after the plan's sole restart.
+  A real browser lifecycle run held and terminally released the exact profile
+  operation, and the installed dispatcher blocked the exact account-mirror
+  owner until release. One separately governed zero-retry LitScout acceptance
+  remains the end-to-end gate.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

@@ -28,6 +28,17 @@
   validation is `77/77`; typecheck, scoped lint, build, isolated full
   provider-free `2,944 passed / 65 skipped`, current CodeGraph, and diff checks
   pass. Install, restart, browser, provider, and LitScout effects remain zero.
+- Source is pushed at `736556d4`. The sole install/restart produced healthy API
+  PID `23839` and byte-exact installed/source `index.js` at
+  `53a9f3ed...c6ea`.
+- Installed session `post-submit-lock-canary` completed once with the exact
+  answer while foreground PID `32312` owned the exact profile operation; final
+  cleanup removed it. The model completed in 12.5 seconds, so a natural
+  scheduler overlap was not observed.
+- The installed dispatcher then rejected exact owner
+  `account-mirror-refresh:chatgpt:wsl-chrome-3` while foreground ownership was
+  active and admitted it after release. No LitScout/provider/Graphiti effect
+  occurred. P6 now requires a distinct pushed LitScout plan before one Send.
 
 ## Turn 472 | 2026-08-21
 

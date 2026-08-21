@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P3 SOURCE ACCEPTED; COMMIT/PUSH AND INSTALL PENDING
+Operational state: P6 INSTALLED CONTENTION ACCEPTED; DISTINCT LITSCOUT ACCEPTANCE PENDING
 
 ## Stable Objective
 
@@ -46,6 +46,21 @@ terminal answer.
   57,845 edges. No install, restart, browser prompt, LitScout action, provider
   call, or Graphiti write occurred. Receipt:
   `docs/dev/notes/2026-08-21-plan0301-post-submit-profile-lock-source-acceptance.json`.
+- Source is pushed and upstream-exact at `736556d4`. The plan-owned one install
+  and one API restart are consumed; API PID `23839` is active on loopback port
+  `18095`, and installed/source `dist/src/browser/index.js` bytes match SHA-256
+  `53a9f3ed...c6ea`.
+- One harmless installed browser lifecycle run completed exactly once at slug
+  `post-submit-lock-canary`. Foreground PID `32312` owned the exact managed
+  profile operation during the run; terminal cleanup removed the operation and
+  returned the exact requested answer. The model ignored the requested delay
+  and completed in 12.5 seconds, so no natural scheduler overlap was observed.
+- A second phase of the same installed contention packet imported the installed
+  dispatcher and proved the exact account-mirror owner was rejected while the
+  foreground operation existed and admitted after release. Temporary state was
+  removed. No LitScout action, literature/patent provider call, or Graphiti
+  write occurred. Receipt:
+  `docs/dev/notes/2026-08-21-plan0301-installed-contention-acceptance.json`.
 
 ## Planning Metadata
 
@@ -141,6 +156,9 @@ terminal answer.
   browser/process ownership.
 - `PSL-R7`: an installed contention canary proves the account mirror cannot
   take the managed profile during the foreground post-submit interval.
+  **PASS as a composite installed packet**: real foreground operation lifetime
+  and cleanup plus installed exact-owner contention/release passed. Natural
+  scheduler overlap was not observed because the model completed too quickly.
 - `PSL-R8`: one separately frozen real LitScout run reaches exact-card approval,
   returns a terminal AuraCall result, and reconciles to durable Session-68
   receipts with zero duplicate click, retry, replay, or out-of-envelope effect.
