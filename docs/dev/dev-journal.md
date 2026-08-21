@@ -47164,3 +47164,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   owner survived restart unchanged. No browser/provider action, prompt,
   LitScout effect, or grade occurred. The same Experiment 9 remains gated by a
   fresh LitScout request and activation.
+
+## 2026-08-20 | Plan 0295 opens ChatGPT local-upload surface independence repair
+
+- LitScout Experiment 9's sole post-recovery invocation reached the
+  authenticated Project workbench and stopped before transfer because AuraCall
+  required the unrelated provider-library row for local-upload readiness.
+- The exact resolver regression reproduced `library-action-not-found` with a
+  valid local row and unrestricted input. The minimum repair makes only library
+  metadata optional; the local action and input restrictions remain unchanged.
+- The affected packet passes 55 tests and the full provider-free suite passes
+  323 files / 2,929 tests with 65 opt-in/live tests skipped. Typecheck, build,
+  scoped lint, plan audit, diff hygiene, and disposable-browser isolation also
+  pass. Commit/push remains the next gate before one install and restart.

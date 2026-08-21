@@ -21751,3 +21751,15 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regress this at the public launch-plan seam with a real authorization object,
   and prove both snapshot exclusion and continued callability of the original
   authority.
+
+## 2026-08-20 | Local uploads must not depend on provider-library inventory
+
+- ChatGPT's `Add photos & files` local action and `Add from library` provider
+  drawer are independent workbench capabilities. Requiring both before local
+  upload creates a false-negative readiness gate when only the library row is
+  absent.
+- Keep the local-upload resolver fail-closed on its own exact action and one
+  unrestricted, multiple `#upload-files` input. Treat the exact library row as
+  optional observational metadata because no local transfer consumes it.
+- Regress the distinction through the resolver's public test seam and retain
+  negative coverage for missing local actions and restricted inputs.

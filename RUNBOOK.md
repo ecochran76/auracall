@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 466 | 2026-08-20
+
+- [Plan 0295](docs/dev/plans/0295-2026-08-20-chatgpt-local-upload-surface-independence.md)
+  opens from LitScout Experiment 9's sole post-recovery AuraCall invocation,
+  which reached the authenticated Project workbench but stopped before file
+  transfer or Send with `library-action-not-found`.
+- The critical-path lane is `fix/plan0295-chatgpt-local-upload-surface` in its
+  dedicated worktree. Expected write set: the ChatGPT attachment resolver and
+  its callers/tests, Plan 0295, Roadmap/Runbook, testing guidance if needed,
+  fix log, and dev journal. No concurrent AuraCall lane is active.
+- The exact defect is an over-coupled readiness contract: local upload uses the
+  exact `Add photos & files` row and unrestricted `#upload-files` input, but the
+  resolver also requires the independent `Add from library` row. One public
+  resolver regression will go RED before the implementation changes.
+- No retry, browser action, provider request, prompt submission, LitScout
+  effect, output, or grade is authorized by this AuraCall plan.
+- The public resolver tracer went RED with the exact observed
+  `library-action-not-found` result and GREEN after making only library metadata
+  optional. Missing local actions and restricted inputs remain fail-closed.
+- The affected packet passes 55 tests; the full provider-free suite passes 323
+  files and 2,929 tests with 65 opt-in/live tests skipped. Typecheck, production
+  build, scoped lint, plan audit across 295 plans, diff hygiene, and isolated
+  browser-home process readback pass. Next: commit and push the immutable source
+  candidate before installation.
+
 ## Turn 465 | 2026-08-20
 
 - [Plan 0294](docs/dev/plans/0294-2026-08-20-browser-launch-runtime-authorization-clone.md)

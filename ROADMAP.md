@@ -7,6 +7,15 @@
 Status: active
 Lane: P01
 
+- Active ChatGPT local-upload surface independence repair:
+  [docs/dev/plans/0295-2026-08-20-chatgpt-local-upload-surface-independence.md](docs/dev/plans/0295-2026-08-20-chatgpt-local-upload-surface-independence.md)
+  LitScout Experiment 9 reached the authenticated workbench but AuraCall
+  stopped before transfer because local-upload readiness incorrectly required
+  the unrelated provider-library row. This bounded repair keeps the exact
+  local action and unrestricted input fail-closed while making library-row
+  metadata optional. No retry is authorized until pushed, installed acceptance
+  returns control to LitScout's fresh successor gate.
+
 - Closed accepted browser-launch runtime-authorization clone repair:
   [docs/dev/plans/0294-2026-08-20-browser-launch-runtime-authorization-clone.md](docs/dev/plans/0294-2026-08-20-browser-launch-runtime-authorization-clone.md)
   LitScout Experiment 9 exposed a pre-browser `structuredClone` failure when

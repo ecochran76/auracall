@@ -356,13 +356,14 @@ export async function uploadAttachmentFile(
     if (workbenchSurface.status !== 'ready') {
       await logDomFailure(runtime, logger, `chatgpt-workbench-attachment-${workbenchSurface.status}`);
       throw new Error(
-        `ChatGPT workbench attachment surface is not ready (${workbenchSurface.status}). Expected the Add photos & files and Add from library rows plus one unrestricted #upload-files input.`,
+        `ChatGPT workbench attachment surface is not ready (${workbenchSurface.status}). Expected the Add photos & files row plus one unrestricted #upload-files input.`,
       );
     }
     preferredInputSelector = workbenchSurface.inputSelector;
-    logger(
-      `ChatGPT attachment surface ready: ${workbenchSurface.localFileLabel}; ${workbenchSurface.libraryLabel} is a separate library drawer`,
-    );
+    const libraryStatus = workbenchSurface.libraryLabel
+      ? `; ${workbenchSurface.libraryLabel} is a separate library drawer`
+      : '; separate library drawer is not present and is not required for local upload';
+    logger(`ChatGPT attachment surface ready: ${workbenchSurface.localFileLabel}${libraryStatus}`);
   }
 
   const documentNode = await dom.getDocument();

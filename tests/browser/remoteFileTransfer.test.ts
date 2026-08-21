@@ -58,7 +58,7 @@ describe('uploadAttachmentViaDataTransfer', () => {
   });
 
   test('fails before transfer when the current workbench attachment contract drifts', async () => {
-    prepareChatgptWorkbenchLocalAttachment.mockResolvedValue({ status: 'library-action-not-found' });
+    prepareChatgptWorkbenchLocalAttachment.mockResolvedValue({ status: 'local-file-action-not-found' });
     const runtime = { evaluate: vi.fn() } as unknown as ChromeClient['Runtime'];
     const dom = {} as ChromeClient['DOM'];
 
@@ -73,7 +73,7 @@ describe('uploadAttachmentViaDataTransfer', () => {
         { path: '/tmp/fixture.txt', displayPath: 'fixture.txt' },
         vi.fn() as BrowserLogger,
       ),
-    ).rejects.toThrow(/library-action-not-found/);
+    ).rejects.toThrow(/local-file-action-not-found/);
     expect(transferAttachmentViaDataTransfer).not.toHaveBeenCalled();
   });
 });
