@@ -56,7 +56,13 @@
     `--browser-chatgpt-mode work`
   - an established conversation with no rendered mode control may qualify as
     Chat only when its exact visible, enabled ChatGPT prompt editor is present
-    and no Work marker is visible; Work is never inferred
+    and the active current-route conversation has no exact `Work` badge
+  - `[data-animated-slider-trigger=true]` is model/thinking UI, not a mode
+    discriminator; ordinary Chat may expose it with text such as `High`
+  - established Work requires positive proof from the visible active
+    conversation link whose `href` matches `location.pathname` and whose
+    descendant `span` has exact normalized text `Work`; otherwise an explicit
+    Work request remains fail-closed
   - a named Work model requires `--browser-work-model` and must use Work's
     dedicated nested slider, never the Chat picker
   - run the provider-free contract suite before any authorized live canary:

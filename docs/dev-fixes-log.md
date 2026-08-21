@@ -21787,3 +21787,9 @@ browser-stage lifecycle observability, not transcript truncation.
   ordinary Chat uses it for the visible thinking-level control such as `High`.
   Require live-observed Work-specific semantics and test Chat-with-High before
   treating any selector as a mode discriminator.
+- 2026-08-21: Established ChatGPT Work conversations expose a positive mode
+  proof outside the shared slider: the visible active conversation link whose
+  resolved `href` pathname equals `location.pathname` contains a descendant
+  `span` with exact normalized text `Work`. Use that proof to accept explicit
+  Work and reject implicit Chat. If it is absent, keep explicit Work fail-
+  closed; do not substitute model labels, thinking depth, or stale rail rows.

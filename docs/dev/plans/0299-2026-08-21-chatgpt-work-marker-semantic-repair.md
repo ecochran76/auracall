@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: DIAGNOSED / IMPLEMENTATION NOT STARTED
+Operational state: SOURCE ACCEPTED / INSTALL AND LIVE PROBES PENDING
 
 ## Stable Objective
 
@@ -19,6 +19,13 @@ Work proof.
 - That selector is shared by Chat's thinking-level control and cannot prove
   Work mode. The installed product is therefore not live-accepted for implicit
   Chat despite source/install parity.
+- Bounded no-prompt DOM inspection proved established Work instead has a
+  visible active current-route conversation link with an exact descendant
+  `Work` badge. Chat lacks that badge even while showing `High`.
+- Provider-free RED/GREEN removes the shared slider from mode classification,
+  accepts Chat-with-High, accepts explicit Work from the positive badge, and
+  rejects implicit Chat on that Work route. Source validation is green;
+  installed parity and separate no-prompt live probes remain.
 
 ## Required Work
 
@@ -39,10 +46,20 @@ Work proof.
 
 ## Acceptance Criteria
 
-- [ ] Ordinary Chat with a visible High thinking control is accepted.
-- [ ] Work remains explicit and fail-closed from live-observed semantics.
+- [x] Ordinary Chat with a visible High thinking control is accepted.
+- [x] Work remains explicit and fail-closed from live-observed semantics.
 - [ ] Source and installed validation pass.
 - [ ] Separate live no-prompt Chat and Work probes pass before handoff.
+
+## Source Verification
+
+- Evidence:
+  `docs/dev/notes/2026-08-21-plan0299-chat-work-mode-dom-evidence.json`
+- Focused affected gate: 9 files, `309/309` passed.
+- Full provider-free suite: 323 files passed, 21 skipped; `2,940` tests passed,
+  65 skipped.
+- `pnpm run typecheck`, `pnpm run build`, scoped Biome lint, CodeGraph readback,
+  plan audit (`299` keep, zero validation errors), and `git diff --check` pass.
 
 ## Definition Of Done
 

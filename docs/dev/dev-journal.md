@@ -47241,6 +47241,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   Send because Plan 0297's supposed Work marker matched the ordinary Chat
   `High` thinking-level control. Exact enabled editor and zero radios were
   present, so this is a semantic false positive rather than render timing.
-- Plan 0297 is marked live-rejected and Plan 0299 opens. No implementation or
-  another live successor is authorized until both Chat and actual Work surfaces
-  have bounded no-prompt live evidence.
+- Bounded read-only inspection on an isolated owned browser proved ordinary
+  Chat has the exact editor plus a `High` shared slider, while established Work
+  has the exact editor plus an active current-route conversation badge with
+  exact `Work` text. No prompt, provider, connector, or canonical effect ran;
+  exact PID `87251` / port `45044` cleanup passed.
+- Provider-free RED/GREEN now removes the shared slider from mode
+  classification, accepts Chat-with-High, accepts explicit established Work
+  from the positive badge, and rejects implicit Chat on that Work route. The
+  affected packet passes `309/309`; the full suite passes `2,940` with 65
+  skipped, plus typecheck, build, scoped lint, CodeGraph, plan audit, and diff
+  hygiene. Install parity and separate installed no-prompt Chat/Work probes
+  remain before closure.

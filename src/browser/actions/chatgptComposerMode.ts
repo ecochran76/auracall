@@ -87,6 +87,22 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
     const isSelected = (node) =>
       node.getAttribute('aria-checked') === 'true' ||
       node.getAttribute('data-state') === 'on';
+    const hasActiveConversationWorkMarker = () =>
+      Array.from(document.querySelectorAll('a[href][data-active]'))
+        .filter(visible)
+        .some((node) => {
+          const href = node.getAttribute('href');
+          if (!href) return false;
+          let pathname = '';
+          try {
+            pathname = new URL(href, location.href).pathname;
+          } catch {
+            return false;
+          }
+          if (pathname !== location.pathname) return false;
+          return Array.from(node.querySelectorAll('span'))
+            .some((marker) => normalize(marker.textContent) === 'work');
+        });
     const radios = Array.from(document.querySelectorAll('[role="radio"]'))
       .filter(visible)
       .map((node) => ({ node, label: normalize(node.textContent) }))
@@ -112,9 +128,16 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       return { status: 'already-selected', mode: DESIRED_MODE };
     }
     if (!trigger) {
+      const activeConversationIsWork = hasActiveConversationWorkMarker();
+      if (activeConversationIsWork) {
+        return DESIRED_MODE === 'work'
+          ? { status: 'already-selected', mode: DESIRED_MODE }
+          : { status: 'mode-not-found', availableModes: ['Work'] };
+      }
       if (DESIRED_MODE === 'chat' && radios.length === 0) {
         const composerStartedAt = performance.now();
         while (performance.now() - composerStartedAt < 10000) {
+          if (hasActiveConversationWorkMarker()) break;
           const promptEditors = Array.from(document.querySelectorAll(
             '#prompt-textarea[role="textbox"][contenteditable="true"], textarea#prompt-textarea, textarea[name="prompt-textarea"]',
           )).filter((node) =>
@@ -122,9 +145,6 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
             node.getAttribute('aria-disabled') !== 'true' &&
             !('disabled' in node && node.disabled === true)
           );
-          const workMarkers = Array.from(document.querySelectorAll('[data-animated-slider-trigger="true"]'))
-            .filter(visible);
-          if (workMarkers.length > 0) break;
           if (promptEditors.length > 0) {
             return { status: 'already-selected', mode: DESIRED_MODE };
           }

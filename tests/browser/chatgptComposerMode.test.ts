@@ -11,6 +11,7 @@ class FixtureElement extends EventTarget {
 	private readonly attributes = new Map<string, string>();
 	onClick?: () => void;
 	closestResult: FixtureElement | null = null;
+	querySelectorAllResult: FixtureElement[] = [];
 
 	constructor(text: string, attributes: Record<string, string> = {}) {
 		super();
@@ -32,6 +33,10 @@ class FixtureElement extends EventTarget {
 
 	closest(): FixtureElement | null {
 		return this.closestResult;
+	}
+
+	querySelectorAll(): FixtureElement[] {
+		return this.querySelectorAllResult;
 	}
 
 	click(): void {
@@ -184,25 +189,73 @@ describe("ChatGPT composer mode", () => {
 		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
 	});
 
-	it("does not infer Chat when a visible Work marker is present", async () => {
+	it("accepts established Chat when the visible thinking control is High", async () => {
 		const promptEditor = new FixtureElement("", {
 			role: "textbox",
 			"aria-label": "Chat with ChatGPT",
 			contenteditable: "true",
 		});
-		const workMarker = new FixtureElement("");
+		const thinkingControl = new FixtureElement("High");
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
 			if (selector.includes("#prompt-textarea")) return [promptEditor];
-			if (selector === '[data-animated-slider-trigger="true"]') return [workMarker];
+			if (selector === '[data-animated-slider-trigger="true"]') return [thinkingControl];
 			return [];
 		});
 
 		const expression = buildChatgptComposerModeExpressionForTest("chat");
 		const result = await new Function(`return ${expression}`)();
 
-		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
+		expect(result).toEqual({ status: "already-selected", mode: "chat" });
+	});
+
+	it("accepts explicit Work from the active conversation Work badge", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Existing conversationWork", {
+			href: "/c/existing-work",
+			"data-active": "",
+		});
+		activeConversation.querySelectorAllResult = [workBadge];
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/c/existing-work",
+			pathname: "/c/existing-work",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("work");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "already-selected", mode: "work" });
+	});
+
+	it("rejects implicit Chat when the active conversation badge proves Work", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Existing conversationWork", {
+			href: "/c/existing-work",
+			"data-active": "",
+		});
+		activeConversation.querySelectorAllResult = [workBadge];
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/c/existing-work",
+			pathname: "/c/existing-work",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("chat");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "mode-not-found", availableModes: ["Work"] });
 	});
 
 	it("fails clearly when explicit Work is unavailable", async () => {

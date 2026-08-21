@@ -9,9 +9,11 @@ Lane: P01
 
 - Active ChatGPT Work-marker semantic repair:
   [docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)
-  Live acceptance disproved Plan 0297's Work-marker assumption: ordinary Chat's
-  `High` thinking control shares `[data-animated-slider-trigger=true]`. The next
-  repair must derive live Chat/Work semantics and prove both without a prompt.
+  Read-only live evidence proved ordinary Chat's `High` thinking control shares
+  `[data-animated-slider-trigger=true]`, while established Work is positively
+  marked by the active current-route conversation's exact `Work` badge. The
+  provider-local repair and source gates pass; push/install parity and separate
+  installed no-prompt Chat and Work probes remain before closure.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

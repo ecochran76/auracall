@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 471 | 2026-08-21
+
+- Plan 0299 captured bounded no-prompt DOM evidence from known Chat and Work
+  conversations on `wsl-chrome-3`. Chat showed a visible enabled exact editor
+  and shared slider text `High`; Work showed the editor, shared slider text
+  `5.6 TerraHigh`, and a visible active current-route conversation badge with
+  exact `Work` text. Exact inspection PID/port cleanup passed with zero prompt,
+  provider, connector, or canonical effects.
+- Provider-local RED/GREEN removes the shared slider from mode classification.
+  Ordinary Chat-with-High is accepted; explicit established Work requires its
+  positive active-route badge; implicit Chat on that route is rejected. The
+  affected packet passes `309/309`, the full suite passes `2,940` with 65
+  skipped, and typecheck, build, scoped lint, current CodeGraph, plan audit,
+  and diff hygiene pass. Push/install parity and separate installed no-prompt
+  Chat and Work probes remain before Plan 0299 closes.
+
 ## Turn 470 | 2026-08-21
 
 - The next exact LitScout run passed provider provenance, then disproved Plan

@@ -43,6 +43,9 @@ auracall --profile wsl-chrome-3 --engine browser \
   --browser-chatgpt-mode work \
   --browser-work-model "GPT-5.6 Terra" \
   -p "Reply exactly with: AURACALL_WORK_MODE_OK"
+# Established Chat may show a High thinking control. AuraCall does not use the
+# shared model/thinking slider as a mode marker; established Work requires the
+# active current-route conversation's exact Work badge and otherwise fails closed.
 
 # Preferred first-time browser onboarding (guided config + managed profile + live verification)
 auracall wizard

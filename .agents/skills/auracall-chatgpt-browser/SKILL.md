@@ -50,6 +50,8 @@ Reject or repair these invalid combinations:
   tools after selecting Work.
 - Do not infer Work from sticky browser state. Omitted mode means Chat.
 - Do not fall back to the Chat picker when the Work selector is absent.
+- Do not classify composer mode from `[data-animated-slider-trigger="true"]`;
+  that selector is shared by Chat thinking controls and Work model controls.
 
 ## Preserve selector separation
 
@@ -62,6 +64,12 @@ Support the verified mode-control families without broad text matching:
 - A persistent `radiogroup` exposes exact `Chat` and `Work` radios.
 - A compact exact `Chat` or `Work` menu trigger exposes exact
   `menuitemradio` choices.
+- On an established route without either control, explicit Work is proven only
+  by the visible active conversation link whose `href` resolves to the current
+  pathname and whose descendant `span` has exact normalized text `Work`.
+- Established Chat may use the exact visible enabled prompt editor only when
+  that active Work badge is absent. A visible `High` thinking control does not
+  disqualify Chat.
 
 Treat Work's model selector as a separate nested surface:
 

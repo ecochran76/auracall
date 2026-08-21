@@ -1,0 +1,44 @@
+{
+  "plan": "0299",
+  "capturedAt": "2026-08-21T15:15:00Z",
+  "scope": "bounded-read-only-chatgpt-dom-inspection",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "service": "chatgpt",
+  "managedBrowserProfile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+  "inspectionOwner": {
+    "pid": 87251,
+    "devtoolsPort": 45044,
+    "cleanup": "exact-owned-process-tree-killed-and-port-closed"
+  },
+  "chat": {
+    "sourceReceipt": "/home/ecochran76/.auracall/sessions/experiment-nine-enrichment-resume-provenance/meta.json",
+    "routeClass": "project-conversation",
+    "visibleEnabledExactEditor": true,
+    "visibleModeRadios": [],
+    "visibleModeMenuTriggers": [],
+    "visibleAnimatedSliderText": ["High"],
+    "activeConversationWorkBadge": false
+  },
+  "work": {
+    "sourceReceipt": "/home/ecochran76/.auracall/sessions/reply-exactly-auracall-work-mode/meta.json",
+    "routeClass": "root-conversation",
+    "visibleEnabledExactEditor": true,
+    "visibleModeRadios": [],
+    "visibleModeMenuTriggers": [],
+    "visibleAnimatedSliderText": ["5.6 TerraHigh"],
+    "activeConversationWorkBadge": {
+      "activeHrefMatchesLocationPathname": true,
+      "descendantElement": "span",
+      "normalizedExactText": "work"
+    }
+  },
+  "effects": {
+    "promptInserted": false,
+    "promptSent": false,
+    "providerCall": false,
+    "connectorCall": false,
+    "canonicalWrite": false
+  },
+  "conclusion": "The animated slider is model or thinking UI and cannot classify composer mode. Established Work is positively proven by the active current-route conversation badge with exact Work text; ordinary Chat remains the exact enabled editor with no explicit mode control and no active Work badge."
+}
