@@ -7,12 +7,14 @@
 Status: active
 Lane: P01
 
-- Active reused-browser provider-provenance repair:
+- Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)
   A local ChatGPT run can reuse the exact live managed browser while its launch
   handle omits PID, causing provider-session proof to fail despite a matching
   account and target. The repair recovers only an exact-profile-validated
   persisted PID; account/target proof and stale rejection remain fail-closed.
+  Pushed product `86ebba3e` is installed byte-exact and the installed resolver
+  recovers live exact-profile PID `58728`.
 
 - Completed ChatGPT implicit-Chat conversation-mode repair:
   [docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md](docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md)

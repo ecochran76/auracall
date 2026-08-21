@@ -1,8 +1,8 @@
 # Reused Browser Provider Provenance PID | 0298-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: SOURCE ACCEPTED / INSTALL PENDING
+Operational state: INSTALLED ACCEPTED
 
 ## Stable Objective
 
@@ -42,12 +42,20 @@ reuses a live managed browser whose launch handle omits the browser PID.
 - No prompt Send, provider call, identity bypass, account fallback, manual
   lease deletion, browser restart, or LitScout effect.
 
+## Installed Acceptance
+
+- Product commit `86ebba3e` is pushed to `origin/main`.
+- Built and installed `dist/src/browser/index.js` are byte-exact at SHA-256
+  `88a81b6377be2f0e7e99e00f1e9b10da01076d0e40477649c8492eebb8585f66`.
+- The installed resolver recovered PID `58728` from the exact live managed
+  profile and returned it only after exact-profile Chrome liveness validation.
+
 ## Acceptance Criteria
 
 - [x] Reused live managed-profile PID is recovered and profile-validated.
 - [x] Missing or stale PID remains fail-closed.
 - [x] Existing provider account and target proof remains unchanged.
-- [ ] Source and installed runtime are accepted before any separately governed
+- [x] Source and installed runtime are accepted before any separately governed
   LitScout successor.
 
 ## Definition Of Done

@@ -47231,3 +47231,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - A red/green resolver now prefers the launch PID, otherwise reads the exact
   managed profile's persisted PID and returns it only after exact-profile Chrome
   liveness validation. Stale PID remains null; provider authority is unchanged.
+- Pushed product `86ebba3e` is installed byte-exact at `88a81b63...585f66`;
+  the installed resolver returns PID `58728` for the exact live profile. Plan
+  0298 closes installed-accepted without a prompt or provider effect.

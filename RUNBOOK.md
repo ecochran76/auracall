@@ -10,7 +10,9 @@
   recovers a missing launch-handle PID only from the exact managed profile and
   only when `isChromeAlive` validates that PID/profile pair. Red/green coverage,
   `53/53` focused tests, `322/322` broad affected tests, typecheck, build,
-  scoped lint, plan audit, and diff hygiene pass. No concurrent lane exists.
+  scoped lint, plan audit, and diff hygiene pass. Pushed product `86ebba3e` is
+  installed byte-exact at `88a81b63...585f66`; its installed exact-profile
+  resolver returns PID `58728`. Plan 0298 closes. No concurrent lane exists.
 
 ## Turn 468 | 2026-08-21
 
