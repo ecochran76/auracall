@@ -30,6 +30,11 @@
   Roadmap/Runbook, fix log, and journal. No concurrent lane or subagent exists.
   No provider action or next Experiment 9 invocation is authorized by this
   AuraCall source plan.
+- Source `ddabb138` is pushed and exact on feature/main. One user-runtime
+  install and one API restart produced healthy PID `45962`; source/installed
+  hashes match for prompt composer, provider selectors, and bundled manifest.
+  The installed probe proves the target-binding contract and selector order.
+  Plan 0296 closes installed accepted with no prompt or LitScout effect.
 
 ## Turn 466 | 2026-08-20
 

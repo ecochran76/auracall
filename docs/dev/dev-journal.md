@@ -47191,5 +47191,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   typecheck, build, scoped lint, plan audit, and the full functional suite pass.
 - The full suite opened exact canonical-profile test PID `50790` despite its
   disposable home. That process was terminated while the independent
-  scheduler-owned PID `80587` remained untouched. Source push and one
-  idle-boundary install/restart remain.
+  scheduler-owned PID `80587` remained untouched.
+- Source `ddabb138` was pushed to feature/main, then one idle-boundary install
+  and restart produced healthy PID `45962`. Three changed runtime artifact
+  hashes are source/installed exact and the installed target/selector probe
+  passes. Plan 0296 closes without a prompt or LitScout effect.

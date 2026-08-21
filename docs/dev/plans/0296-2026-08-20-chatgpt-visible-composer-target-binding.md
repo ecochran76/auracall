@@ -1,8 +1,8 @@
 # ChatGPT Visible Composer Target Binding | 0296-2026-08-20
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: SOURCE ACCEPTED / INSTALL PENDING
+Operational state: INSTALLED RUNTIME ACCEPTED
 
 ## Stable Objective
 
@@ -65,6 +65,23 @@ cannot absorb the prompt while AuraCall verifies a different node.
   retained as a test-isolation gap; it did not issue an AuraCall prompt or
   change the repair's provider-free source assertions.
 
+## Installed Acceptance
+
+- Source candidate `ddabb138` is exact on the feature branch, `main`, and both
+  upstream refs before convergence.
+- One user-runtime install and one API restart produced healthy PID `45962`
+  with `NRestarts=0`.
+- Source and installed SHA-256 hashes match exactly:
+  - prompt composer: `3424fba0d1a621f27e353a5dac33a46838adf51f6de8c80b1b6626858fba8ef4`
+  - ChatGPT provider: `52a3bf5ddf1b278921367d5dbac43eadf0f55a448c65fe8da5af2c47d1704c5c`
+  - bundled manifest: `f7ac36ed55d414596748d7221521a9183549b652d4ecdad6f17dfafb76f5a910`
+- An installed-package probe confirms target marking, match enumeration,
+  hidden-node rejection, removal of first-query focus, and exact selectors in
+  positions `0-3` before the generic textarea at position `8`.
+- The restart-created account-mirror completion is idle with no managed
+  `wsl-chrome-3` browser process. Any same-Experiment-9 successor remains a
+  separate LitScout decision and effect budget.
+
 ## Non-Goals
 
 - No raw CDP inspection, manual Chrome, prompt edits, attachment weakening,
@@ -82,7 +99,7 @@ cannot absorb the prompt while AuraCall verifies a different node.
 - [x] Fallback and verification use the exact focused target.
 - [x] Affected and full functional validation pass; the unrelated full-suite
   canonical-home isolation escape is retained above.
-- [ ] Pushed source and installed runtime are byte-exact for touched runtime
+- [x] Pushed source and installed runtime are byte-exact for touched runtime
   modules.
 
 ## Definition Of Done
