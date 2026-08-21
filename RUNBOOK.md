@@ -22,8 +22,11 @@
 - The affected packet passes 55 tests; the full provider-free suite passes 323
   files and 2,929 tests with 65 opt-in/live tests skipped. Typecheck, production
   build, scoped lint, plan audit across 295 plans, diff hygiene, and isolated
-  browser-home process readback pass. Next: commit and push the immutable source
-  candidate before installation.
+  browser-home process readback pass.
+- Source candidate `22adc893` is pushed and upstream-exact. Plan 0295 now
+  activates one user-runtime install and one API restart against that accepted
+  code; it activates no browser navigation, provider request, or Experiment 9
+  retry.
 
 ## Turn 465 | 2026-08-20
 

@@ -57,7 +57,7 @@ while retaining fail-closed checks for the local action and unrestricted
 - [x] Exact regression is RED before the repair and GREEN after it.
 - [x] Local upload remains fail-closed when its own row or input contract drifts.
 - [x] Affected and full provider-free validation pass.
-- [ ] Source candidate is committed and pushed before installation.
+- [x] Source candidate is committed and pushed before installation.
 - [ ] Installed runtime matches accepted source and passes a provider-free
   local-surface probe.
 
@@ -74,14 +74,15 @@ while retaining fail-closed checks for the local action and unrestricted
   plans, diff hygiene, and disposable-browser isolation pass.
 - README already describes the correct interface: the exact local row and
   unrestricted input are required, while `Add from library` is separate.
+- Source candidate `22adc893` is committed on
+  `fix/plan0295-chatgpt-local-upload-surface`, pushed, and upstream-exact before
+  any installation or provider action.
 
 ## Installed Runtime Activation
 
-- Activation remains frozen until the accepted source candidate is committed,
-  pushed, and read back from its upstream.
-- After that gate, exactly one user-runtime install and one API restart are
-  authorized. They authorize no browser navigation, provider request, or
-  Experiment 9 retry.
+- Activation is frozen against pushed source candidate `22adc893`. Exactly one
+  user-runtime install and one API restart are now authorized. They authorize
+  no browser navigation, provider request, or Experiment 9 retry.
 - Installed acceptance requires source/installed JavaScript hash parity, a
   provider-free resolver probe, healthy service readback, and preserved
   `wsl-chrome-3` managed-browser ownership.
