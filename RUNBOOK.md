@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 470 | 2026-08-21
+
+- The next exact LitScout run passed provider provenance, then disproved Plan
+  0297's mode assumption before Send. Its established Chat conversation had the
+  exact enabled editor and no Chat/Work radios; the supposed Work marker was
+  Chat's visible `High` thinking-level control.
+- Plan 0297 remains closed as source/install evidence but is explicitly live-
+  rejected. [Plan 0299](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)
+  opens for read-only Chat/Work DOM evidence, corrected semantics, red/green,
+  install parity, and separate no-prompt live acceptance. No implementation or
+  further LitScout successor is active.
+
 ## Turn 469 | 2026-08-21
 
 - LitScout Plan 0432 stopped before Send with provider-session provenance

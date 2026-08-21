@@ -47234,3 +47234,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Pushed product `86ebba3e` is installed byte-exact at `88a81b63...585f66`;
   the installed resolver returns PID `58728` for the exact live profile. Plan
   0298 closes installed-accepted without a prompt or provider effect.
+
+# 2026-08-21 | Plan 0299 Work Marker Semantic Repair
+
+- A later exact-conversation run passed provider provenance but stopped before
+  Send because Plan 0297's supposed Work marker matched the ordinary Chat
+  `High` thinking-level control. Exact enabled editor and zero radios were
+  present, so this is a semantic false positive rather than render timing.
+- Plan 0297 is marked live-rejected and Plan 0299 opens. No implementation or
+  another live successor is authorized until both Chat and actual Work surfaces
+  have bounded no-prompt live evidence.

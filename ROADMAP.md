@@ -7,6 +7,12 @@
 Status: active
 Lane: P01
 
+- Active ChatGPT Work-marker semantic repair:
+  [docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)
+  Live acceptance disproved Plan 0297's Work-marker assumption: ordinary Chat's
+  `High` thinking control shares `[data-animated-slider-trigger=true]`. The next
+  repair must derive live Chat/Work semantics and prove both without a prompt.
+
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)
   A local ChatGPT run can reuse the exact live managed browser while its launch
@@ -16,7 +22,7 @@ Lane: P01
   Pushed product `86ebba3e` is installed byte-exact and the installed resolver
   recovers live exact-profile PID `58728`.
 
-- Completed ChatGPT implicit-Chat conversation-mode repair:
+- Source/install-completed but live-rejected ChatGPT implicit-Chat repair:
   [docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md](docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md)
   LitScout's enrichment-resume successor reached the exact existing
   conversation but stopped before Send because that ready route omitted the

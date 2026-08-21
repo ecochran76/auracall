@@ -21783,3 +21783,7 @@ browser-stage lifecycle observability, not transcript truncation.
   profile retains a live PID and DevTools target. For provider-session proof,
   recover that persisted PID only after validating it against the exact managed
   profile; never relax the account dimensions or target binding.
+- 2026-08-21: `[data-animated-slider-trigger=true]` is not a Work-mode marker;
+  ordinary Chat uses it for the visible thinking-level control such as `High`.
+  Require live-observed Work-specific semantics and test Chat-with-High before
+  treating any selector as a mode discriminator.

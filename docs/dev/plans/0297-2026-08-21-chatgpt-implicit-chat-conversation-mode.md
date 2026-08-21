@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P01
-Operational state: INSTALLED ACCEPTED
+Operational state: SOURCE AND INSTALL ACCEPTED / LIVE WORK-MARKER ASSUMPTION INVALID
 
 ## Stable Objective
 
@@ -76,6 +76,16 @@ keeping explicit Work selection and ambiguous surfaces fail-closed.
 - An isolated installed-expression probe mounted the exact enabled ChatGPT
   editor after 250 ms and returned `already-selected` Chat. The probe created
   and closed only its own `about:blank` target and made no provider call.
+
+## Live Rejection
+
+- A later exact-conversation run disproved the Work-marker assumption. On an
+  ordinary Chat conversation, `[data-animated-slider-trigger=true]` was the
+  visible `High` thinking-level control, not a Work-mode marker.
+- The exact enabled editor was present and no Chat/Work radios were exposed,
+  but the installed classifier rejected implicit Chat before Send.
+- Plan 0299 owns corrected mode semantics and must include live Chat plus Work
+  acceptance before any LitScout successor consumes them.
 
 ## Non-Goals
 
