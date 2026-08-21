@@ -21769,3 +21769,9 @@ browser-stage lifecycle observability, not transcript truncation.
   app selection, or worse, insert into an unrelated field. Enumerate matches,
   reject hidden/disabled/non-composer candidates, prefer current exact inputs,
   and carry the selected node identity through fallback and pre-Send checks.
+
+- 2026-08-21: An established ChatGPT conversation can expose a ready
+  `#prompt-textarea` while omitting both known Chat/Work controls. Treat only a
+  visible, enabled, exact ChatGPT prompt editor with no visible Work slider
+  marker and no explicit mode controls as implicit Chat. Never infer Work from
+  composer readiness; an explicit Work request remains fail-closed.

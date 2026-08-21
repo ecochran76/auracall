@@ -1,5 +1,34 @@
 # RUNBOOK
 
+## Turn 468 | 2026-08-21
+
+- [Plan 0297](docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md)
+  opens after LitScout's sole enrichment-resume invocation reached its exact
+  existing conversation and stopped before Send with
+  `Unable to find the ChatGPT Chat mode control.`
+- Exact LitScout reconciliation proves the controller remains at
+  `enrichment_planning`, the prior search/downselection receipts remain latest,
+  and the stopped invocation created no model, connector, provider, spend, or
+  session effect. No invocation retry belongs to this source slice.
+- The exact AuraCall-owned conversation DOM had a visible enabled
+  `#prompt-textarea[role="textbox"]` but no Chat/Work radio, trigger, or menu
+  item. The regression reproduced `mode-not-found` RED.
+- The minimum provider-local repair accepts that surface as implicit Chat only
+  when no explicit mode controls and no visible Work slider marker exist.
+  Work remains fail-closed without explicit proof. The focused suite passes
+  `11/11`; the affected five-file gate passes `211/211`; typecheck, production
+  build, scoped Biome, CodeGraph blast-radius readback, and plan audit pass.
+- The full provider-free run passed `321` files / `2,933` tests and skipped 65
+  opt-in/live tests. Its lease-heartbeat and Gemini-spacing timing assertions
+  failed under parallel load, then both exact tests passed in isolation; no
+  test-owned browser process remained.
+- Critical-path lane: `fix/plan0297-chatgpt-implicit-chat-conversation-mode`;
+  expected write set is the composer-mode expression/tests, Plan 0297,
+  Roadmap/Runbook, browser/testing guidance, fix log, and dev journal. No
+  concurrent AuraCall lane or subagent exists. One exact user-runtime
+  convergence remains before control returns to a separately governed LitScout
+  successor.
+
 ## Turn 467 | 2026-08-20
 
 - [Plan 0296](docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md)

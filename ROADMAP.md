@@ -7,6 +7,16 @@
 Status: active
 Lane: P01
 
+- Active ChatGPT implicit-Chat conversation-mode repair:
+  [docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md](docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md)
+  LitScout's enrichment-resume successor reached the exact existing
+  conversation but stopped before Send because that ready route omitted the
+  Chat/Work control. The provider-free repair recognizes only a visible,
+  enabled ChatGPT prompt editor with no explicit mode control and no Work
+  marker as implicit Chat; Work remains explicit and fail-closed. Source gates
+  are green and installed convergence remains before any separate LitScout
+  successor.
+
 - Closed installed ChatGPT visible composer-target binding repair:
   [docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md](docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md)
   The installed upload repair cleared its original gate, but LitScout's sole

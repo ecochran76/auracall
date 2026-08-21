@@ -47196,3 +47196,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   and restart produced healthy PID `45962`. Three changed runtime artifact
   hashes are source/installed exact and the installed target/selector probe
   passes. Plan 0296 closes without a prompt or LitScout effect.
+
+# 2026-08-21 | Plan 0297 Implicit Chat Conversation Mode
+
+- LitScout's sole enrichment-resume invocation reached the exact existing
+  authenticated conversation but stopped before Send because AuraCall required
+  a rendered Chat/Work control that this conversation route does not expose.
+- Exact controller readback remains `enrichment_planning`; the prior search and
+  downselection receipts remain latest, so no model, connector, provider, or
+  LitScout effect occurred and no invocation retry is authorized by this repair.
+- Current focus: reproduce the valid visible ChatGPT composer with no mode
+  control provider-free, then recognize only that narrow no-Work-marker surface
+  as implicit Chat while preserving fail-closed Work behavior.
+- The exact red/green and `211/211` affected gate pass with typecheck, build,
+  scoped lint, CodeGraph, and plan audit. The full suite passed `2,933` tests;
+  two unrelated parallel timing assertions failed and each passed in an exact
+  isolated rerun. No test-owned browser remained.

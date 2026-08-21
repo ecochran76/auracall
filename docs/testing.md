@@ -54,6 +54,9 @@
 - ChatGPT Chat/Work composer boundary:
   - normal browser runs default to Chat; Work requires
     `--browser-chatgpt-mode work`
+  - an established conversation with no rendered mode control may qualify as
+    Chat only when its exact visible, enabled ChatGPT prompt editor is present
+    and no Work marker is visible; Work is never inferred
   - a named Work model requires `--browser-work-model` and must use Work's
     dedicated nested slider, never the Chat picker
   - run the provider-free contract suite before any authorized live canary:

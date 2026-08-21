@@ -119,6 +119,67 @@ describe("ChatGPT composer mode", () => {
 		expect(logger).toHaveBeenCalledWith("ChatGPT mode: Chat (already selected)");
 	});
 
+	it("accepts a valid existing Chat conversation without an exposed mode control", async () => {
+		const promptEditor = new FixtureElement("", {
+			role: "textbox",
+			"aria-label": "Chat with ChatGPT",
+			contenteditable: "true",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector.includes("#prompt-textarea")) return [promptEditor];
+			if (selector === '[data-animated-slider-trigger="true"]') return [];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("chat");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "already-selected", mode: "chat" });
+	});
+
+	it("does not infer Work from a conversation composer without a mode control", async () => {
+		const promptEditor = new FixtureElement("", {
+			role: "textbox",
+			"aria-label": "Chat with ChatGPT",
+			contenteditable: "true",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector.includes("#prompt-textarea")) return [promptEditor];
+			if (selector === '[data-animated-slider-trigger="true"]') return [];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("work");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
+	});
+
+	it("does not infer Chat when a visible Work marker is present", async () => {
+		const promptEditor = new FixtureElement("", {
+			role: "textbox",
+			"aria-label": "Chat with ChatGPT",
+			contenteditable: "true",
+		});
+		const workMarker = new FixtureElement("");
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector.includes("#prompt-textarea")) return [promptEditor];
+			if (selector === '[data-animated-slider-trigger="true"]') return [workMarker];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("chat");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
+	});
+
 	it("fails clearly when explicit Work is unavailable", async () => {
 		const evaluate = vi.fn().mockResolvedValue({
 			result: { value: { status: "mode-not-found", availableModes: ["Chat"] } },

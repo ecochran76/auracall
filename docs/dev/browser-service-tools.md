@@ -145,15 +145,18 @@ Keep these provider-owned contracts separate:
 
 - `src/browser/actions/chatgptComposerMode.ts` selects and verifies exact
   `Chat` or `Work` state. It supports a persistent `radiogroup` and the compact
-  exact mode trigger whose menu choices are `menuitemradio` elements.
+  exact mode trigger whose menu choices are `menuitemradio` elements. An
+  established conversation may omit both controls; only a visible, enabled,
+  exact ChatGPT prompt editor with no Work slider marker may then prove
+  implicit Chat. Never infer Work from composer readiness.
 - `src/browser/actions/modelSelection.ts` owns the Chat picker.
 - `src/browser/actions/chatgptWorkModelSelection.ts` owns Work's animated
   slider, optional **Show advanced options** expansion, exact **Model ...**
   submenu, and final Work model `menuitemradio`.
 
-Do not generalize the Work path into the Chat picker. If current provider DOM
-does not expose a distinct Work selector, fail closed and collect bounded DOM
-diagnostics. For the provider-free suite, live-effect gates, and cleanup
+Do not generalize the Work path into the Chat picker. If Work is requested and
+the current provider DOM does not expose a distinct Work selector, fail closed
+and collect bounded DOM diagnostics. For the provider-free suite, live-effect gates, and cleanup
 record, follow the repo-local
 [`auracall-chatgpt-browser` skill](../../.agents/skills/auracall-chatgpt-browser/SKILL.md).
 
