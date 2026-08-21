@@ -1,5 +1,26 @@
 # RUNBOOK
 
+## Turn 473 | 2026-08-21
+
+- [Plan 0301](docs/dev/plans/0301-2026-08-21-chatgpt-post-submit-profile-lock.md)
+  opens from LitScout Plan 0435's receipt-backed post-Send failure. The one run
+  passed exact URL/mode/model/editor/Send gates, then lost CDP; Chrome PID
+  `41732` and DevTools `36605` remained live.
+- The operation record proves API PID `39605` acquired the same managed profile
+  for `account-mirror-refresh:chatgpt:wsl-chrome-3` one second before the CLI
+  errored. Source releases the foreground operation at prompt dispatch/
+  submission while response polling, tool approval, and answer extraction are
+  still active.
+- The successor strengthens only the existing browser-service ownership seam:
+  remove the two early ChatGPT releases, retain preflight/final cleanup, prove
+  deterministic same-profile contention, then run focused/affected/full gates.
+  No concurrent or delegated lane exists.
+- P4 permits one pushed-source user-runtime install and one exact API restart;
+  P5 requires a no-LitScout installed contention canary. Only afterward may a
+  distinct pushed LitScout plan authorize one new Send from fresh Session-68
+  controller state. Replay, retry, positive/unknown spend, Analyze, GraphRAG,
+  Graphiti, release, and unrelated process cleanup remain prohibited.
+
 ## Turn 472 | 2026-08-21
 
 - [Plan 0300](docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md)

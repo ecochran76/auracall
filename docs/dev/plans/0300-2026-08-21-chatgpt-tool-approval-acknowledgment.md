@@ -1,8 +1,8 @@
 # ChatGPT Tool-Approval Acknowledgment | 0300-2026-08-21
 
-State: OPEN
+State: CLOSED / EXACT-CARD SOURCE AND INSTALL ACCEPTED / LIVE ACCEPTANCE BLOCKED ON PLAN 0301
 Lane: P01
-Operational state: P4 SOURCE ACCEPTED; INSTALL AND REAL ACCEPTANCE PENDING
+Operational state: P6 CLOSED; EXACT-CARD REPAIR RETAINED; POST-SUBMIT LOCK SUCCESSOR ACTIVE
 
 ## Stable Objective
 
@@ -38,6 +38,12 @@ durable LitScout action.
   lint, build, and the full provider-free suite (`2942` passed, `65` skipped)
   pass. CodeGraph is current and reports both local and remote browser callers.
   Source is ready for commit/push before the single install/restart gate.
+- Product `fa831b02` is pushed, installed byte-exact, and served after one API
+  restart. The one real LitScout acceptance passed Send, then exposed a separate
+  browser-operation lifetime defect: account-mirror refresh acquired the same
+  profile while the foreground run still awaited tool approval. Chrome stayed
+  alive and LitScout recorded zero new effects. Plan 0301 owns that repair and
+  the separately frozen real acceptance; Plan 0300 is not reopened.
 
 ## Planning Metadata
 

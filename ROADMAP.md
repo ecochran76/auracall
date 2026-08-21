@@ -16,14 +16,25 @@ Lane: P01
   no-prompt probes accept ordinary Chat and enter explicit Work; exact cleanup
   preserved the authenticated browser.
 
-- Active ChatGPT tool-approval acknowledgment repair:
+- Completed ChatGPT tool-approval acknowledgment repair:
   [docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md](docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md)
   LitScout Plan 0434 and retained DOM prove sequential approval cards in one
   assistant turn collapsed to the same turn-prefix fingerprint: the first
   action succeeded, then AuraCall mistook the next card for the old one. This
   bounded successor fingerprints the exact current card without weakening
   paired-action, one-click, ambiguity, manual, or `Answer now` safeguards, then
-  requires installed and real LitScout proof.
+  is pushed and installed byte-exact. Its real LitScout acceptance passed Send
+  but exposed a separate profile-lock lifetime defect before tool approval;
+  Plan 0301 owns that successor and Plan 0300 is not reopened.
+
+- Active ChatGPT post-submit profile-lock repair:
+  [docs/dev/plans/0301-2026-08-21-chatgpt-post-submit-profile-lock.md](docs/dev/plans/0301-2026-08-21-chatgpt-post-submit-profile-lock.md)
+  The Plan-0435 foreground run released its shared managed-profile lock after
+  Send while still waiting for the response and connected-app approval. API
+  account-mirror refresh then acquired the same live Chrome profile and the CLI
+  lost CDP. This bounded successor keeps the existing lock until terminal
+  cleanup, proves same-profile contention deterministically and installed, then
+  requires one separately governed zero-retry LitScout acceptance.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

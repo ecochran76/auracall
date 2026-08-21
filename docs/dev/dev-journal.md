@@ -47288,3 +47288,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   CodeGraph is current and retains both local and remote browser-mode caller
   coverage. The source gate is accepted; no install or live approval click has
   occurred in this slice yet.
+
+## 2026-08-21 | Plan 0301 Post-Submit Profile Lock
+
+- Plan 0300 product `fa831b02` was installed byte-exact and its one real
+  LitScout acceptance passed Send. It then failed with a closed-window error,
+  although managed Chrome PID `41732` and DevTools port `36605` remained live.
+- The file-backed operation record shows API PID `39605` acquired the exact
+  same profile for account-mirror refresh one second before foreground CDP loss.
+  Fresh LitScout controller readback proves zero new action/provider/spend
+  effects and preserves the approved Work-2897 enrichment boundary.
+- Source localizes the defect to two ChatGPT early releases: prompt dispatch and
+  post-submission release the profile lock while response wait, tool approval,
+  and terminal extraction still own the target. Plan 0301 freezes the minimal
+  lifetime repair, deterministic/installed contention proof, one install and
+  API restart, then a separately governed one-Send LitScout acceptance.
