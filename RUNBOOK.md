@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 474 | 2026-08-21
+
+- [Plan 0302](docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md)
+  opens from LitScout Plan 0436's pushed terminal receipt. Plan 0301's lock is
+  live-proven: the exact `wsl-chrome-3` account-mirror attempt was rejected
+  while foreground PID `83793` retained operation `e9fc1c49...`.
+- LitScout executed the approved Work-2897 enrichment exactly once under
+  receipt `rar_d402c6c23d9910ca523b0ca52d8fa5c0`; its job completed with zero
+  yield and the final read-only continuation advanced to
+  `evidence_gap_review`. No enrichment replay or saturation action is allowed.
+- AuraCall outlived its configured `60m`; one normal SIGINT ended foreground
+  PID `83793` but left Chrome PID `85939`, the operation file, and session/model
+  `running` state. API PID `23839` remains healthy with `NRestarts=0` while the
+  stale operation continues to block scheduler acquisition.
+- The successor owns CodeGraph diagnosis, deterministic overall-deadline and
+  signal-cleanup RED/GREEN, one shared abort/idempotent terminalization seam,
+  exact supported residue reconciliation, provider-free and installed gates,
+  then one distinct no-write LitScout readback. No concurrent or delegated lane
+  exists.
+
 ## Turn 473 | 2026-08-21
 
 - [Plan 0301](docs/dev/plans/0301-2026-08-21-chatgpt-post-submit-profile-lock.md)

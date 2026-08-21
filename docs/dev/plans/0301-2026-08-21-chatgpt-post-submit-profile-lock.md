@@ -1,8 +1,8 @@
 # ChatGPT Post-Submit Profile Lock | 0301-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: P6 INSTALLED CONTENTION ACCEPTED; DISTINCT LITSCOUT ACCEPTANCE PENDING
+Operational state: LOCK LIVE ACCEPTED; TERMINALIZATION FAILED AND SUPERSEDED BY PLAN 0302
 
 ## Stable Objective
 
@@ -13,6 +13,15 @@ is still waiting for a response, handling tool approvals, or extracting its
 terminal answer.
 
 ## Current State
+
+- LitScout Plan 0436 live-proved this plan's lock repair: the exact same-profile
+  scheduler refresh was rejected while foreground PID `83793` retained the
+  operation. LitScout executed its approved action once and advanced.
+- The AuraCall run then exceeded configured `60m`; one normal SIGINT left its
+  Chrome PID, operation record, and session/model state nonterminal. This is a
+  distinct deadline/signal-cleanup defect, not a failure of the lock repair.
+  Plan 0302 owns it. Plan 0301 closes without claiming its original
+  end-to-end terminal-result definition of done.
 
 - Plan 0300's pushed exact-card repair at `fa831b02` is provider-free accepted,
   installed byte-exact, and served by API PID `39605` after one restart.

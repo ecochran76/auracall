@@ -27,7 +27,7 @@ Lane: P01
   but exposed a separate profile-lock lifetime defect before tool approval;
   Plan 0301 owns that successor and Plan 0300 is not reopened.
 
-- Active ChatGPT post-submit profile-lock repair:
+- Completed ChatGPT post-submit profile-lock repair:
   [docs/dev/plans/0301-2026-08-21-chatgpt-post-submit-profile-lock.md](docs/dev/plans/0301-2026-08-21-chatgpt-post-submit-profile-lock.md)
   The Plan-0435 foreground run released its shared managed-profile lock after
   Send while still waiting for the response and connected-app approval. API
@@ -39,8 +39,20 @@ Lane: P01
   `53a9f3ed...c6ea`; API PID 23839 is healthy after the plan's sole restart.
   A real browser lifecycle run held and terminally released the exact profile
   operation, and the installed dispatcher blocked the exact account-mirror
-  owner until release. One separately governed zero-retry LitScout acceptance
-  remains the end-to-end gate.
+  owner until release. The separate LitScout acceptance live-proved that guard
+  and executed its action once, then exposed a distinct overall-timeout and
+  signal-cleanup defect. Plan 0302 owns terminalization; Plan 0301 is not
+  reopened.
+
+- Active ChatGPT overall-timeout and signal-cleanup repair:
+  [docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md](docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md)
+  LitScout Plan 0436 proved the foreground lock remained correct, but AuraCall
+  outlived `--timeout 60m` and normal SIGINT left its exact session, model,
+  managed Chrome, and browser-operation state nonterminal. This bounded
+  successor traces and repairs one overall deadline plus one awaited,
+  idempotent terminal-cleanup seam, safely reconciles only the exact residue,
+  and requires provider-free source/installed proof plus one no-write LitScout
+  connected-app terminal acceptance.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

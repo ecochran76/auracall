@@ -47330,3 +47330,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `account-mirror-refresh:chatgpt:wsl-chrome-3` under foreground ownership and
   admitted it after release. This accepts installed contention mechanics but
   does not replace the required separately governed real LitScout acceptance.
+## 2026-08-21 - Plan 0302 overall timeout and signal cleanup
+
+- Focus: preserve Plan 0301's live-proven lock result while repairing the
+  distinct terminalization defect exposed by LitScout Plan 0436.
+- Evidence: one exact scheduler collision was blocked; LitScout action receipt
+  `rar_d402c6c23d9910ca523b0ca52d8fa5c0` succeeded once; AuraCall then
+  exceeded configured `60m`, and normal SIGINT left exact Chrome, operation,
+  session, and model state nonterminal.
+- Next: push the bounded activation, use CodeGraph to trace timeout and process
+  signals through session/browser cleanup, then drive deterministic RED/GREEN
+  before touching the exact stale runtime residue.
