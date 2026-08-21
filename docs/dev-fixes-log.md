@@ -21803,3 +21803,9 @@ browser-stage lifecycle observability, not transcript truncation.
   `span` with exact normalized text `Work`. Use that proof to accept explicit
   Work and reject implicit Chat. If it is absent, keep explicit Work fail-
   closed; do not substitute model labels, thinking depth, or stale rail rows.
+- 2026-08-21: A ChatGPT Send is not the end of the managed-profile operation.
+  Response polling, connected-app approval, deep-research plan handling, and
+  final answer extraction still own the same CDP target. Keep the existing
+  profile-wide browser operation until terminal cleanup so account-mirror
+  refresh or another same-profile owner cannot disconnect active foreground
+  work; browser retention policy remains independent of lock lifetime.

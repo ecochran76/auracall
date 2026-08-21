@@ -33,8 +33,10 @@ Lane: P01
   Send while still waiting for the response and connected-app approval. API
   account-mirror refresh then acquired the same live Chrome profile and the CLI
   lost CDP. This bounded successor keeps the existing lock until terminal
-  cleanup, proves same-profile contention deterministically and installed, then
-  requires one separately governed zero-retry LitScout acceptance.
+  cleanup. The exact RED/GREEN, `77/77` affected tests, typecheck, lint, build,
+  full provider-free `2,944 passed / 65 skipped`, and current CodeGraph are
+  source-accepted; commit/push, one install/restart, installed contention proof,
+  and one separately governed zero-retry LitScout acceptance remain.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

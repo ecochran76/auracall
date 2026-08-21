@@ -35055,6 +35055,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - fixed a runner-control CAS race found during installed-runtime dogfood:
     concurrent local-runner heartbeat and activity writes now retry against the
     latest runner revision instead of terminating the API service.
+- Later correction (Plan 0301, 2026-08-21): releasing the profile-wide lock
+  after Send permits account-mirror refresh to seize a target still owned for
+  response/tool-approval work. The current contract retains the lock through
+  terminal cleanup; concurrency belongs above the same-profile CDP operation.
 - Verification:
   - focused browser/runtime tests and typecheck pass.
   - installed user runtime was rebuilt, installed, and restarted under
@@ -36618,6 +36622,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     preserve-on-error state, not dispatcher lock release.
   - made the background conversation hint poll cancelable before the final
     post-response URL refresh.
+- Later correction (Plan 0301, 2026-08-21): browser retention remains
+  independent of dispatcher release, but same-profile probes are not unrelated
+  while the foreground run still owns CDP. The dispatcher lock now remains
+  held until terminal cleanup without changing keep-browser behavior.
   - unref'd kept AuraCall-launched Chrome processes so explicit browser
     retention does not block CLI exit.
   - made the root CLI force-exit after a successful inline browser `--wait`
@@ -47303,3 +47311,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   and terminal extraction still own the target. Plan 0301 freezes the minimal
   lifetime repair, deterministic/installed contention proof, one install and
   API restart, then a separately governed one-Send LitScout acceptance.
+- P0 activation is pushed at `b1768213`. The deterministic lock-lifetime test
+  failed RED with `1 failed / 23 passed` while the dispatch release remained.
+  Removing only the dispatch/submission releases made it GREEN.
+- A real file-backed dispatcher regression proves the exact same-profile
+  account-mirror owner is rejected during foreground post-submit ownership and
+  admitted after release. Affected tests pass `77/77`; typecheck, scoped lint,
+  build, isolated full provider-free `2,944 passed / 65 skipped`, current
+  CodeGraph, and diff checks pass. Runtime/install/live effects remain zero.

@@ -88,6 +88,11 @@
     exact `tool-approval-card` fingerprinting, disappearance or distinct-card
     replacement verification, two sequential cards in one assistant turn,
     one-attempt fencing for an unchanged card, and `Answer now` exclusion
+  - foreground ChatGPT lock lifetime must cover response wait, tool approval,
+    and final answer extraction, not only prompt dispatch. Run
+    `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser-service/operationDispatcher.test.ts tests/accountMirror/refreshService.test.ts tests/browser/chatgptToolApproval.test.ts`;
+    it must prove a same-profile account-mirror owner is rejected while the
+    foreground operation is active and admitted only after terminal release
   - prompt startup must not perform live identity or feature detection merely
     to enrich optional browser-context cache metadata; run
     `pnpm vitest run tests/browser/browserContextIdentity.test.ts tests/browser/llmServiceIdentity.test.ts`

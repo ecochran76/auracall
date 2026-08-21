@@ -869,9 +869,8 @@ export function shouldKeepManagedChatgptBrowserOpenForTest(options: {
 	browserOperationReleased?: boolean;
 }): boolean {
 	// Dispatcher release is not a browser-retention signal. ChatGPT runs release
-	// the mutating lock after prompt dispatch so passive DOM inspection can keep
-	// probing the running tab, but successful completion should still close the
-	// AuraCall-owned browser unless keep-browser or preserve-on-error requested it.
+	// the mutating lock during terminal cleanup, while browser retention remains
+	// governed only by keep-browser or preserve-on-error policy.
 	return shouldKeepManagedChatgptBrowserOpen(options);
 }
 
@@ -2406,7 +2405,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					inputTimeoutMs: config.inputTimeoutMs ?? undefined,
 					onPromptDispatched: async () => {
 						promptDispatchedAt = Date.now();
-						await releaseBrowserOperationLock("ChatGPT prompt dispatch");
 						recordPassiveObservation({
 							state: "response-incoming",
 							source: "browser-service",
@@ -2494,7 +2492,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				throw error;
 			}
 		}
-		await releaseBrowserOperationLock("ChatGPT prompt submission");
 		if (chatgptDeepResearchStage === "tool-selected") {
 			recordPassiveObservation({
 				state: "plan-ready",

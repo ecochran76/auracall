@@ -118,6 +118,14 @@ describe('browserMode exports', () => {
     ).toBe(true);
   });
 
+  test('holds the ChatGPT managed-profile operation through terminal cleanup', async () => {
+    const source = await fs.readFile(path.resolve('src/browser/index.ts'), 'utf8');
+
+    expect(source).not.toContain('releaseBrowserOperationLock("ChatGPT prompt dispatch")');
+    expect(source).not.toContain('releaseBrowserOperationLock("ChatGPT prompt submission")');
+    expect(source).toContain('releaseBrowserOperationLock("ChatGPT cleanup")');
+  });
+
   test('treats the same assistant message id as a stale reused response', () => {
     expect(
       shouldTreatChatgptAssistantResponseAsStaleForTest({
@@ -330,6 +338,59 @@ describe('browserMode exports', () => {
       await acquired?.release();
     } finally {
       setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('account mirror cannot acquire the profile during foreground post-submit ownership', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-post-submit-operation-'));
+    const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'wsl-chrome-3', 'chatgpt');
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: path.join(tempRoot, 'browser-operations'),
+      isOwnerAlive: () => true,
+    });
+    const foreground = await dispatcher.acquire({
+      managedProfileDir,
+      serviceTarget: 'chatgpt',
+      kind: 'browser-execution',
+      operationClass: 'exclusive-mutating',
+      ownerPid: process.pid,
+      ownerCommand: 'browser-execution',
+    });
+    let foregroundReleased = false;
+
+    try {
+      expect(foreground.acquired).toBe(true);
+      const blockedMirror = await dispatcher.acquire({
+        managedProfileDir,
+        serviceTarget: 'chatgpt',
+        kind: 'browser-execution',
+        operationClass: 'exclusive-probe',
+        ownerPid: process.pid + 1,
+        ownerCommand: 'account-mirror-refresh:chatgpt:wsl-chrome-3',
+      });
+      expect(blockedMirror.acquired).toBe(false);
+
+      if (foreground.acquired) {
+        await foreground.release();
+        foregroundReleased = true;
+      }
+      const admittedMirror = await dispatcher.acquire({
+        managedProfileDir,
+        serviceTarget: 'chatgpt',
+        kind: 'browser-execution',
+        operationClass: 'exclusive-probe',
+        ownerPid: process.pid + 1,
+        ownerCommand: 'account-mirror-refresh:chatgpt:wsl-chrome-3',
+      });
+      expect(admittedMirror.acquired).toBe(true);
+      if (admittedMirror.acquired) {
+        await admittedMirror.release();
+      }
+    } finally {
+      if (foreground.acquired && !foregroundReleased) {
+        await foreground.release();
+      }
       await fs.rm(tempRoot, { recursive: true, force: true });
     }
   });

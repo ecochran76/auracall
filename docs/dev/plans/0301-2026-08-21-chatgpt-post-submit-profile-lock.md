@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P0 ACTIVATION PENDING; SOURCE AND LIVE EFFECTS ZERO
+Operational state: P3 SOURCE ACCEPTED; COMMIT/PUSH AND INSTALL PENDING
 
 ## Stable Objective
 
@@ -35,6 +35,17 @@ terminal answer.
   execution: Session 68 remains `enrichment_ready` at 150/12/138 with the same
   approved Work-2897 full-text plan, no enrichment receipt, zero new provider
   calls/spend, and no completed-action replay authority.
+- P0 activation is pushed at `b1768213`. The deterministic ownership test was
+  RED with the two early release stages present and is GREEN after removing
+  only those calls. A real file-backed dispatcher regression proves an
+  account-mirror owner cannot acquire the same profile while foreground
+  post-submit ownership is active and can acquire after terminal release.
+- Focused/affected validation passes `77/77`; typecheck, scoped zero-warning
+  lint, production build, and isolated provider-free validation pass (`2,944`
+  passed / `65` skipped). CodeGraph is current at 906 files / 17,016 nodes /
+  57,845 edges. No install, restart, browser prompt, LitScout action, provider
+  call, or Graphiti write occurred. Receipt:
+  `docs/dev/notes/2026-08-21-plan0301-post-submit-profile-lock-source-acceptance.json`.
 
 ## Planning Metadata
 

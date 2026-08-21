@@ -20,6 +20,14 @@
   distinct pushed LitScout plan authorize one new Send from fresh Session-68
   controller state. Replay, retry, positive/unknown spend, Analyze, GraphRAG,
   Graphiti, release, and unrelated process cleanup remain prohibited.
+- P0 activation is upstream-exact at `b1768213`. The lock-lifetime assertion
+  failed RED with `1 failed / 23 passed`, directly on the dispatch release.
+- The minimal repair removes only the dispatch/submission releases and retains
+  final cleanup. The real file-backed dispatcher test proves account mirror is
+  blocked under foreground ownership and admitted after release. Affected
+  validation is `77/77`; typecheck, scoped lint, build, isolated full
+  provider-free `2,944 passed / 65 skipped`, current CodeGraph, and diff checks
+  pass. Install, restart, browser, provider, and LitScout effects remain zero.
 
 ## Turn 472 | 2026-08-21
 

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "auracall.plan0301.source-acceptance.v1",
+  "createdAt": "2026-08-21T21:22:00Z",
+  "plan": "0301",
+  "outcome": "source_accepted_install_pending",
+  "rootCause": "The ChatGPT browser path released its shared managed-profile operation at prompt dispatch/submission while it still used the CDP target for response wait, tool approval, and terminal answer extraction.",
+  "repair": {
+    "changedModule": "src/browser/index.ts",
+    "removedEarlyReleaseStages": [
+      "ChatGPT prompt dispatch",
+      "ChatGPT prompt submission"
+    ],
+    "retainedTerminalReleaseStage": "ChatGPT cleanup",
+    "newLockSurface": false,
+    "sourceSha256": "2babf849f4453fb036c03b1ae502647755799f31d4409519f638f47f379a227c",
+    "builtJavaScriptSha256": "53a9f3ed7439162756884c912260928f1e0fba4b55b7cf28e7346b4fc553c6ea"
+  },
+  "red": {
+    "command": "pnpm vitest run tests/browser/browserModeExports.test.ts",
+    "result": "1 failed, 23 passed",
+    "failingTest": "holds the ChatGPT managed-profile operation through terminal cleanup",
+    "failure": "source retained releaseBrowserOperationLock at ChatGPT prompt dispatch"
+  },
+  "green": {
+    "affectedCommand": "pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser-service/operationDispatcher.test.ts tests/accountMirror/refreshService.test.ts tests/browser/chatgptToolApproval.test.ts",
+    "affected": {
+      "filesPassed": 4,
+      "testsPassed": 77
+    },
+    "fullProviderFree": {
+      "filesPassed": 323,
+      "filesSkipped": 21,
+      "testsPassed": 2944,
+      "testsSkipped": 65
+    },
+    "typecheck": "passed",
+    "scopedLint": "passed_zero_warnings",
+    "build": "passed",
+    "diffCheck": "passed",
+    "codegraph": {
+      "status": "current",
+      "files": 906,
+      "nodes": 17016,
+      "edges": 57845
+    }
+  },
+  "effects": {
+    "userRuntimeInstalls": 0,
+    "apiRestarts": 0,
+    "browserPrompts": 0,
+    "litscoutActions": 0,
+    "providerCalls": 0,
+    "graphitiWrites": 0
+  },
+  "nextBoundary": "Commit and push accepted source, prove exact idle ownership, then use the plan-owned one install and one API restart before installed contention and separately governed LitScout acceptance."
+}

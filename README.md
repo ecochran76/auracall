@@ -1040,7 +1040,10 @@ Terminology note:
   refresh failures escalating from 2 minutes to a 10 minute cap; provider guard
   hard stops remain separate manual-clear blockers. Grok account-file listing
   closes its CDP client on abort so stale file-page work does not outlive the
-  browser-operation lock.
+  browser-operation lock. Foreground ChatGPT runs retain that same profile-wide
+  operation through response wait, tool approvals, and terminal answer
+  extraction; account-mirror refresh and other same-profile work must wait for
+  terminal cleanup rather than taking the profile immediately after Send.
   `/account-mirror` is the dedicated read-only account
   mirror page; it includes the same cache-only catalog browser with
   provider/profile/kind/search/limit controls backed by
