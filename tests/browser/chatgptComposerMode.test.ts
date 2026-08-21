@@ -139,6 +139,31 @@ describe("ChatGPT composer mode", () => {
 		expect(result).toEqual({ status: "already-selected", mode: "chat" });
 	});
 
+	it("waits for an existing Chat conversation composer to mount", async () => {
+		const promptEditor = new FixtureElement("", {
+			role: "textbox",
+			"aria-label": "Chat with ChatGPT",
+			contenteditable: "true",
+		});
+		let promptQueries = 0;
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector.includes("#prompt-textarea")) {
+				promptQueries += 1;
+				return promptQueries >= 2 ? [promptEditor] : [];
+			}
+			if (selector === '[data-animated-slider-trigger="true"]') return [];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("chat");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "already-selected", mode: "chat" });
+		expect(promptQueries).toBeGreaterThanOrEqual(2);
+	});
+
 	it("does not infer Work from a conversation composer without a mode control", async () => {
 		const promptEditor = new FixtureElement("", {
 			role: "textbox",

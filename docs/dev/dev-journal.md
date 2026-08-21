@@ -47212,3 +47212,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   scoped lint, CodeGraph, and plan audit. The full suite passed `2,933` tests;
   two unrelated parallel timing assertions failed and each passed in an exact
   isolated rerun. No test-owned browser remained.
+- The first installed successor remained pre-Send but disproved install drift:
+  the installed expression contained the repair, while both post-stop
+  conversation tabs showed the exact editor. A new RED regression captured the
+  render race; the expression now waits up to 10 seconds for only that exact
+  implicit-Chat surface and focused coverage passes `12/12`.

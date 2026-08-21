@@ -13,9 +13,10 @@ Lane: P01
   conversation but stopped before Send because that ready route omitted the
   Chat/Work control. The provider-free repair recognizes only a visible,
   enabled ChatGPT prompt editor with no explicit mode control and no Work
-  marker as implicit Chat; Work remains explicit and fail-closed. Source gates
-  are green and installed convergence remains before any separate LitScout
-  successor.
+  marker as implicit Chat; Work remains explicit and fail-closed. The first
+  installed acceptance exposed a second pre-Send race: the predicate ran before
+  the React composer mounted. A 10-second exact-composer wait is source-green;
+  installed convergence remains before any separate LitScout successor.
 
 - Closed installed ChatGPT visible composer-target binding repair:
   [docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md](docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md)

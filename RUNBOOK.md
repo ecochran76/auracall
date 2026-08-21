@@ -15,8 +15,12 @@
   item. The regression reproduced `mode-not-found` RED.
 - The minimum provider-local repair accepts that surface as implicit Chat only
   when no explicit mode controls and no visible Work slider marker exist.
-  Work remains fail-closed without explicit proof. The focused suite passes
-  `11/11`; the affected five-file gate passes `211/211`; typecheck, production
+  The first installed acceptance then stopped pre-Send because the conversation
+  composer had not mounted when the predicate ran; both post-stop conversation
+  tabs showed the exact enabled editor. The predicate now waits at most 10
+  seconds for that exact surface and exits on a visible Work marker. Work
+  remains fail-closed without explicit proof. The focused suite passes
+  `12/12`; the affected five-file gate passes `211/211`; typecheck, production
   build, scoped Biome, CodeGraph blast-radius readback, and plan audit pass.
 - The full provider-free run passed `321` files / `2,933` tests and skipped 65
   opt-in/live tests. Its lease-heartbeat and Gemini-spacing timing assertions
@@ -25,9 +29,9 @@
 - Critical-path lane: `fix/plan0297-chatgpt-implicit-chat-conversation-mode`;
   expected write set is the composer-mode expression/tests, Plan 0297,
   Roadmap/Runbook, browser/testing guidance, fix log, and dev journal. No
-  concurrent AuraCall lane or subagent exists. One exact user-runtime
-  convergence remains before control returns to a separately governed LitScout
-  successor.
+  concurrent AuraCall lane or subagent exists. The failed installed acceptance
+  is terminal. One exact user-runtime convergence remains before control returns
+  to a newly governed LitScout successor.
 
 ## Turn 467 | 2026-08-20
 

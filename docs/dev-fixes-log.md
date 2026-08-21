@@ -21775,3 +21775,7 @@ browser-stage lifecycle observability, not transcript truncation.
   visible, enabled, exact ChatGPT prompt editor with no visible Work slider
   marker and no explicit mode controls as implicit Chat. Never infer Work from
   composer readiness; an explicit Work request remains fail-closed.
+- 2026-08-21: Conversation navigation can complete before ChatGPT mounts the
+  prompt editor. When implicit Chat is the only admissible mode, poll only the
+  exact enabled ChatGPT composer for a bounded 10 seconds and stop early on a
+  visible Work marker; do not weaken the selector or infer Work.

@@ -112,22 +112,24 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       return { status: 'already-selected', mode: DESIRED_MODE };
     }
     if (!trigger) {
-      const promptEditors = Array.from(document.querySelectorAll(
-        '#prompt-textarea[role="textbox"][contenteditable="true"], textarea#prompt-textarea, textarea[name="prompt-textarea"]',
-      )).filter((node) =>
-        visible(node) &&
-        node.getAttribute('aria-disabled') !== 'true' &&
-        !('disabled' in node && node.disabled === true)
-      );
-      const workMarkers = Array.from(document.querySelectorAll('[data-animated-slider-trigger="true"]'))
-        .filter(visible);
-      if (
-        DESIRED_MODE === 'chat' &&
-        radios.length === 0 &&
-        promptEditors.length > 0 &&
-        workMarkers.length === 0
-      ) {
-        return { status: 'already-selected', mode: DESIRED_MODE };
+      if (DESIRED_MODE === 'chat' && radios.length === 0) {
+        const composerStartedAt = performance.now();
+        while (performance.now() - composerStartedAt < 10000) {
+          const promptEditors = Array.from(document.querySelectorAll(
+            '#prompt-textarea[role="textbox"][contenteditable="true"], textarea#prompt-textarea, textarea[name="prompt-textarea"]',
+          )).filter((node) =>
+            visible(node) &&
+            node.getAttribute('aria-disabled') !== 'true' &&
+            !('disabled' in node && node.disabled === true)
+          );
+          const workMarkers = Array.from(document.querySelectorAll('[data-animated-slider-trigger="true"]'))
+            .filter(visible);
+          if (workMarkers.length > 0) break;
+          if (promptEditors.length > 0) {
+            return { status: 'already-selected', mode: DESIRED_MODE };
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
       }
       return {
         status: 'mode-not-found',

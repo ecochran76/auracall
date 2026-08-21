@@ -24,12 +24,18 @@ keeping explicit Work selection and ambiguous surfaces fail-closed.
   or menu item.
 - The shared composer-mode expression currently returns `mode-not-found` when
   both explicit control variants are absent, regardless of composer readiness.
+- The first installed successor still stopped before Send. Post-stop CDP
+  readback found the exact enabled composer on both resulting conversation
+  tabs, proving the implicit-Chat predicate was installed but evaluated before
+  the React composer mounted.
 
 ## Selected Design
 
 - Add a provider-free regression for the exact existing-conversation DOM:
   visible ChatGPT prompt editor, no explicit mode controls, and no Work marker.
 - Treat that narrow surface as already-selected Chat only.
+- Poll that exact surface for at most 10 seconds so a normal conversation
+  render can settle; stop immediately when a visible Work marker appears.
 - Preserve existing explicit radio/menu selection behavior.
 - Keep implicit Work forbidden and reject any surface carrying a visible Work
   marker when no explicit mode control can prove the requested state.
@@ -49,7 +55,7 @@ keeping explicit Work selection and ambiguous surfaces fail-closed.
 
 - The exact established-conversation regression failed RED with
   `mode-not-found` and passes GREEN after the narrow implicit-Chat seam.
-- Focused mode coverage passes `11/11`; the five-file affected ChatGPT/browser
+- Focused mode coverage passes `12/12`; the five-file affected ChatGPT/browser
   packet passes `211/211`.
 - Typecheck, production build, scoped Biome, CodeGraph blast-radius readback,
   and the 297-plan library audit all pass.
@@ -58,7 +64,8 @@ keeping explicit Work selection and ambiguous surfaces fail-closed.
   load; each exact test passed immediately in isolated rerun. No test-owned
   browser process remained.
 - No browser/provider invocation, prompt, connector call, or LitScout effect
-  occurred during source implementation and validation.
+  occurred during source implementation and validation. The first installed
+  acceptance invocation stopped before Send and is terminal; it is not reused.
 
 ## Non-Goals
 
@@ -74,6 +81,7 @@ keeping explicit Work selection and ambiguous surfaces fail-closed.
 - [x] Explicit Chat/Work controls retain their current behavior.
 - [x] Only a visible, enabled, ChatGPT-specific prompt editor with no visible
   Work marker qualifies for implicit Chat.
+- [x] The implicit-Chat predicate tolerates bounded delayed composer mounting.
 - [x] Work remains fail-closed without an explicit selected/available control.
 - [ ] Source validation passes and the installed runtime is byte-exact before
   any separately governed LitScout successor invocation.
