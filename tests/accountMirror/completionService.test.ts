@@ -3433,6 +3433,95 @@ describe("account mirror completion service", () => {
 		});
 	});
 
+	test("continues live follow after a partial-success materialization job", async () => {
+		const initial: AccountMirrorCompletionOperation = {
+			object: "account_mirror_completion",
+			id: "acctmirror_partial_materialization_continue",
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			mode: "live_follow",
+			sweepMode: "full_sweep",
+			phase: "backfill_history",
+			status: "running",
+			startedAt: "2026-07-31T12:00:00.000Z",
+			completedAt: null,
+			nextAttemptAt: null,
+			maxPasses: null,
+			passCount: 35,
+			lastRefresh: createRefreshResult(),
+			materializationPolicy: "full_missing_assets",
+			materializationAssetKinds: ["all"],
+			materializationMaxItems: 6,
+			materializationRefreshSnapshot: true,
+			materializationForce: false,
+			materializationCursor: {
+				jobId: "hmj_partial_materialization_continue",
+				jobStatus: "running",
+				reused: false,
+				requestedAt: "2026-07-31T12:44:00.000Z",
+				passCount: 35,
+				request: {
+					provider: "chatgpt",
+					runtimeProfile: "default",
+					reconcile: true,
+					refreshSnapshot: true,
+					assetKinds: ["all"],
+					maxItems: 6,
+					force: false,
+				},
+			},
+			materializationOutcome: null,
+			mirrorCompleteness: completeMirror,
+			error: null,
+			lifecycleEvents: [],
+		};
+		const sleep = vi.fn(() => new Promise<void>(() => {}));
+		const service = createAccountMirrorCompletionService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-07-31T12:45:00.000Z"),
+			}),
+			refreshService: { requestRefresh: vi.fn(async () => createRefreshResult()) },
+			historyMaterializationService: {
+				createJob: vi.fn(),
+				readJob: vi.fn(async () => ({
+					id: "hmj_partial_materialization_continue",
+					status: "failed",
+					completedAt: "2026-07-31T12:44:30.000Z",
+					result: {
+						metrics: { conversations: 4, materialized: 2, skipped: 1, failed: 1 },
+						entries: [
+							{ status: "materialized", checksumSha256: "abc123" },
+							{ status: "materialized", checksumSha256: "def456" },
+							{ status: "failed", reason: "provider call timed out; retry allowed" },
+						],
+						message: "History reconciliation materialized 2 assets from 4 conversations.",
+					},
+				})),
+			},
+			initialOperations: [initial],
+			resumeActiveOperations: true,
+			now: () => new Date("2026-07-31T12:45:00.000Z"),
+			sleep,
+		});
+
+		await waitFor(
+			() => service.read(initial.id)?.status === "blocked" || sleep.mock.calls.length > 0,
+		);
+
+		expect(service.read(initial.id)).toMatchObject({
+			status: "idle_waiting",
+			completedAt: null,
+			error: null,
+			materializationOutcome: {
+				jobStatus: "failed",
+				materialized: 2,
+				failed: 1,
+			},
+		});
+		expect(sleep).toHaveBeenCalledWith(60_000);
+	});
+
 	test("upgrades idle live-follow completion into bounded full-sweep materialization", async () => {
 		const initial = {
 			object: "account_mirror_completion" as const,

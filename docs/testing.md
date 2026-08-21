@@ -649,8 +649,10 @@
       - an all-failed completion-owned materialization job is not a benign
         terminal event: bounded and live-follow operations become `blocked`
         with `account_mirror_materialization_failed` before completion or
-        another collector/provider pass; successful and genuinely skipped
-        live-follow jobs retain the normal post-materialization quiet window
+        another collector/provider pass; a failed job with one or more verified
+        materializations is partial success and retains the normal
+        post-materialization quiet window, as do successful and genuinely
+        skipped live-follow jobs
       - ChatGPT file-download regressions must cover both camel-case provider
         errors and the live snake-case `error_code` / `error_type` envelope;
         explicit not-found evidence is non-retryable `provider_unavailable`,

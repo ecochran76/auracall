@@ -629,10 +629,14 @@ Terminology note:
   asset transfer failure makes both the result and durable job `failed`, even
   when another selected asset materializes. Synthetic terminal routeability
   placeholders and provider-guard evidence retain their dedicated semantics;
-  they are not reclassified as ordinary transfer failures. A completion-owned failed job blocks its
-  live-follow operation before another provider pass; inspect and correct the
+  they are not reclassified as ordinary transfer failures. A completion-owned
+  failed job with zero verified materializations blocks its live-follow
+  operation before another provider pass; inspect and correct the
   materialization or account/browser condition, then start a fresh bounded
-  operation rather than relying on automatic retry.
+  operation rather than relying on automatic retry. When the same failed job
+  contains one or more verified materializations, live follow preserves the
+  partial-success receipt, observes its normal quiet window, and continues so
+  remaining retryable transfers can be revisited without discarding progress.
   Gemini reconciliation uses the loaded app/rail surface as its first
   conversation-opening path: direct `/app/<conversationId>` navigation is only a
   fallback when the conversation cannot be found/opened from the rail, or when

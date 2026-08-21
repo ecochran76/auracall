@@ -47044,3 +47044,88 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   mutation; Grok entered and failed its first project-create command. Process
   readback found no test-owned child and an exact local-state search found
   neither generated project name. No further provider command ran.
+
+## 2026-08-20 | Signed-out browser and keyring prompt runtime repair
+
+- Read-only process and CDP evidence separated two leaked disposable Vitest
+  Chrome roots under `/tmp/auracall-vitest-*` from the authenticated
+  `wsl-chrome-2`, `wsl-chrome-3`, and `wsl-chrome-4` managed browser profiles.
+  Exact identity smokes returned provider-session `match` without launching a
+  browser. The two disposable roots exited after `SIGTERM`; their exact test
+  directories were moved to trash. The three authenticated roots remained
+  alive on their original managed browser profile paths.
+- Every observed browser root had `--password-store=basic` and
+  `--use-mock-keychain`. The modal instead traced to the agent-browser
+  workstation runtime interlock calling bare `chpasswd` for its two Linux RDP
+  route users. Ubuntu routed that through `pam_gnome_keyring`, independently of
+  Chrome's credential-store policy.
+- The agent-browser source repair now selects a non-PAM SHA-512 `chpasswd`
+  contract, publishes that capability, and rejects the old helper as not ready.
+  Focused helper, installer-fixture, and Rust contract tests pass. Installation
+  is pending the intentional interactive `sudo -v` boundary. The five-minute
+  runtime-interlock timer is stopped but remains enabled so the old root-owned
+  helper cannot retrigger the modal before installation; no authenticated
+  browser, scheduler lane, or provider session was stopped.
+- At operator direction, live follow returned only on the previously active
+  `chatgpt/wsl-chrome-3` lane. The new unbounded completion
+  `acctmirror_completion_2adcca35-bff1-4f11-b724-480f19c7dae4` uses
+  `full_sweep`, `full_missing_assets`, asset kind `all`, six-item
+  materialization batches, and snapshot refresh. It advanced from queued to
+  running on the original PID 66297 managed browser profile with collector
+  progress and no new rate-limit detection. The global scheduler remains
+  operator-paused, so `default`, `wsl-chrome-2`, and `wsl-chrome-4` did not
+  resume.
+
+## 2026-08-20 | Post-reboot live-follow recovery
+
+- Reboot readback found AuraCall healthy but no managed ChatGPT browser. The
+  global scheduler's persisted operator pause had correctly suppressed startup
+  reconciliation, while the pre-reboot `wsl-chrome-3` completion had already
+  failed with `Cannot find default execution context`.
+- The scheduler was explicitly resumed. Its first bounded pass launched only
+  `/browser-profiles/wsl-chrome-3/chatgpt` with `--password-store=basic` and
+  `--use-mock-keychain`, completed without backpressure, and created durable
+  live-follow completion `acctmirror_completion_cfbb0df0-51e5-4d6a-be06-8cf38db0eaa0`.
+  The automatic wake at 09:49:54 CDT relaunched the same managed browser and
+  entered `detail-inventory`; all other ChatGPT, Gemini, and Grok completions
+  remained operator-paused.
+- Identity readback preserved the intended separation: Chrome's managed
+  `Default` profile records Google identity `ecochran76@gmail.com`, while the
+  ChatGPT mirror detected and remained bound to `eric.cochran@soylei.com`.
+- The agent-browser installer regenerated the merely disabled interlock timer
+  symlink after the first stop. The timer is now masked and inactive, so neither
+  reboot nor runtime reconciliation can invoke the old PAM-backed helper before
+  the pending privileged helper upgrade.
+
+## 2026-08-20 | Plan 0293 opens partial-materialization continuation repair
+
+- Current `chatgpt/wsl-chrome-3` receipts repeatedly preserved one or two
+  verified materializations plus one or two retryable failures, but the
+  completion runner classified the durable failed job as all-failed and
+  blocked live follow. Scheduler cadence then created a replacement completion.
+- A deterministic public completion-interface tracer reproduced the mismatch
+  twice in under two seconds: `materialized=2`, `failed=1` expected
+  `idle_waiting` but received `blocked`.
+- The selected repair leaves history-materialization job classification intact
+  and narrows only the completion consumer: zero-materialized failed jobs still
+  block; positive-materialization failed jobs use the existing quiet-window
+  continuation path. Agent-browser remains out of scope.
+
+## 2026-08-20 | Plan 0293 closes on installed mixed-result continuation
+
+- The completion consumer now blocks a failed history-materialization job only
+  when its result contains zero verified materializations. The permanent
+  mixed-result regression is GREEN, the all-failed regression remains GREEN,
+  and the full suite passed 323 files / 2,927 tests with 65 opt-in/live tests
+  skipped. Typecheck, build, six live-follow fixture smokes, scoped lint,
+  CodeGraph, plan audit, and diff hygiene also passed.
+- The validated checkout was installed into the user runtime. On service PID
+  87339, job `hmj_2b78e011f28343a59f9c6f0860f9bd53` terminated `failed` after
+  materializing one asset with three retryable failures and matching the
+  configured `chatgpt/wsl-chrome-3` provider session.
+- The same completion
+  `acctmirror_completion_431a3b29-71aa-4c45-8eb2-c8458ec96a73` preserved the
+  mixed receipt, stayed nonterminal with `error: null`, observed its quiet
+  window, and returned to `running` with fresh `detail-inventory:started`
+  progress at 12:26:25 CDT. No scheduler replacement was needed and
+  agent-browser remained untouched.

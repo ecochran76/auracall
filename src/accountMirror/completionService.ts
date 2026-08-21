@@ -457,7 +457,10 @@ export function createAccountMirrorCompletionService(input: {
 						update(id, { status: "running", nextAttemptAt: null });
 						continue;
 					}
-					if (operation.materializationCursor?.jobStatus === "failed") {
+					if (
+						operation.materializationCursor?.jobStatus === "failed" &&
+						(operation.materializationOutcome?.materialized ?? 0) === 0
+					) {
 						const message =
 							operation.materializationOutcome?.message ??
 							`History materialization job ${operation.materializationCursor.jobId} failed.`;

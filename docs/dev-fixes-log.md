@@ -21700,3 +21700,41 @@ browser-stage lifecycle observability, not transcript truncation.
   real provider command is a test-isolation failure: stop, verify exact owned
   processes/local state, and issue no further provider command without explicit
   authority.
+
+## 2026-08-20 | Chrome basic password-store cannot suppress PAM keyring prompts
+
+- A visible keyring modal alongside browser automation does not prove a managed
+  browser profile ignored `--password-store=basic`. Attribute the prompt from
+  process flags and system logs before reseeding or closing authenticated
+  browsers.
+- Linux account maintenance can invoke `pam_gnome_keyring` independently. In
+  this incident, recurring RDP route-user `chpasswd` calls caused the modal
+  while all browser roots had both basic-password-store flags.
+- Privileged route-user maintenance must select a non-PAM password-encryption
+  path and publish that capability as part of helper readiness. Byte-compatible
+  helper retention is unsafe when the missing semantic capability is precisely
+  what prevents an interactive prompt.
+- Disposable test browsers must be identified by exact PID and user-data
+  directory. Close only `/tmp/auracall-vitest-*` owners; preserve authenticated
+  `~/.auracall/browser-profiles/...` roots and verify their provider-session
+  authority separately from Google or Chrome account identity.
+- A stopped but enabled timer is not a durable quarantine when another runtime
+  component can regenerate its unit symlinks. Until the privileged helper is
+  upgraded, mask the exact timer and verify `LoadState=masked` plus
+  `ActiveState=inactive`; unmask and re-enable it only after helper capability
+  readback passes.
+
+## 2026-08-20 | Durable job failure and completion failure are different decisions
+
+- A durable materialization job can correctly remain `failed` when any selected
+  retryable transfer fails, even though the same receipt proves other selected
+  assets materialized. That job status preserves operator-visible failure
+  evidence; it does not by itself prove the whole completion attempt failed.
+- Completion policy must consume the receipt counts. Block when a failed job
+  has zero verified materializations or no usable result; preserve positive
+  materialization evidence and continue through the normal live-follow quiet
+  window when the result is partial success.
+- Keep both contracts independently tested: the history-materialization module
+  still marks mixed transfer results failed, while the completion module
+  distinguishes partial success from all-failed before changing lifecycle
+  state.
