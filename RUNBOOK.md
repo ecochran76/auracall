@@ -27,6 +27,11 @@
   activates one user-runtime install and one API restart against that accepted
   code; it activates no browser navigation, provider request, or Experiment 9
   retry.
+- Pre-install AuraCall control-plane readback reports API PID `40915` healthy,
+  no live `wsl-chrome-3` browser owner, and its latest completion terminal
+  `blocked` with provider work released. Installed acceptance therefore
+  requires no foreign owner to be introduced; LitScout's fresh successor must
+  recover the exact managed browser through AuraCall before retry.
 
 ## Turn 465 | 2026-08-20
 

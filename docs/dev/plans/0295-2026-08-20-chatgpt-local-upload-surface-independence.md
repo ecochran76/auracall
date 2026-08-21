@@ -84,8 +84,11 @@ while retaining fail-closed checks for the local action and unrestricted
   user-runtime install and one API restart are now authorized. They authorize
   no browser navigation, provider request, or Experiment 9 retry.
 - Installed acceptance requires source/installed JavaScript hash parity, a
-  provider-free resolver probe, healthy service readback, and preserved
-  `wsl-chrome-3` managed-browser ownership.
+  provider-free resolver probe, healthy service readback, and no foreign
+  browser owner. Pre-install AuraCall control-plane readback reports the prior
+  `wsl-chrome-3` browser absent and its latest completion terminal with provider
+  work released; the fresh LitScout gate must recover that exact managed
+  browser profile through AuraCall before retry.
 
 ## Definition Of Done
 
