@@ -61,7 +61,7 @@ authorization object.
 - [x] Runtime provider-session authorization remains callable and is absent
   only from the immutable launch snapshot.
 - [x] Affected provider-free and static validation passes.
-- [ ] Source candidate is committed and pushed before installation.
+- [x] Source candidate is committed and pushed before installation.
 - [ ] Installed runtime matches the accepted source and preserves the exact
   completion and browser-profile authority.
 
@@ -79,6 +79,23 @@ authorization object.
   naturally settled all-failed with zero materializations and four failures.
   The completion correctly became `blocked` and released provider work; the
   test suite did not control or replace it.
+- Source candidate `b2db6cbc` is committed on
+  `fix/plan0294-browser-launch-plan-function-clone` and matches its pushed
+  upstream exactly.
+
+## Installed Runtime Activation
+
+- Activation is frozen against source candidate `b2db6cbc` after its pushed
+  readback and all provider-free acceptance gates.
+- Exactly one `pnpm run install:user-runtime` from that checkout and one
+  `auracall-api.service` restart are authorized.
+- The exact live-follow completion is already terminal `blocked` after an
+  all-failed owned job and has released provider work; no pause, cancel,
+  replacement completion, browser launch, or provider request is authorized by
+  this activation.
+- Acceptance requires installed metadata/source readback, a new service PID,
+  the public regression against installed package bytes, unchanged exact
+  completion identity/state, and matching `wsl-chrome-3` browser ownership.
 
 ## Definition Of Done
 

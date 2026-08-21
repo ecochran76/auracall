@@ -17,6 +17,12 @@
 - No install, restart, browser launch, provider request, prompt submission,
   LitScout effect, or grade has occurred in this plan. The exact live-follow
   completion remains preserved; Experiment 9 remains unrun.
+- Source candidate `b2db6cbc` is pushed and upstream-exact after the 132-test
+  affected packet, 2,928-test full suite, typecheck, build, scoped lint, plan
+  audit, diff hygiene, and disposable-browser isolation. The exact completion
+  independently settled all-failed and released provider work. One install and
+  one API restart are now activated against that exact source; no provider or
+  browser action is included.
 
 ## Turn 464 | 2026-08-15
 

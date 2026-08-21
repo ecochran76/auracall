@@ -47148,3 +47148,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   materialization during validation. With zero verified materializations and
   four failures it correctly became `blocked` and released provider work,
   preserving Plan 0293's all-failed behavior.
+- Source candidate `b2db6cbc` is committed and pushed upstream-exact. Plan 0294
+  now activates one user-runtime install and one API restart against that
+  immutable candidate; it activates no browser/provider action and no
+  Experiment 9 retry.
