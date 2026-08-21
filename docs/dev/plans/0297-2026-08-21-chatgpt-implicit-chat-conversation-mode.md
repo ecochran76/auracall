@@ -1,8 +1,8 @@
 # ChatGPT Implicit Chat Conversation Mode | 0297-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: SOURCE ACCEPTED / INSTALL PENDING
+Operational state: INSTALLED ACCEPTED
 
 ## Stable Objective
 
@@ -67,6 +67,16 @@ keeping explicit Work selection and ambiguous surfaces fail-closed.
   occurred during source implementation and validation. The first installed
   acceptance invocation stopped before Send and is terminal; it is not reused.
 
+## Installed Acceptance
+
+- Commit `c0af02d4` is pushed to `origin/main`.
+- The built and installed composer-mode artifacts are byte-exact at SHA-256
+  `eccf5cbe0319ea62474b4546fce85a54ca036e285cf068cf8dc815fb2b0f9419`.
+- The installed artifact contains the bounded 10-second composer-mount wait.
+- An isolated installed-expression probe mounted the exact enabled ChatGPT
+  editor after 250 ms and returned `already-selected` Chat. The probe created
+  and closed only its own `about:blank` target and made no provider call.
+
 ## Non-Goals
 
 - No prompt Send, connector call, LitScout mutation, search/downselection
@@ -83,7 +93,7 @@ keeping explicit Work selection and ambiguous surfaces fail-closed.
   Work marker qualifies for implicit Chat.
 - [x] The implicit-Chat predicate tolerates bounded delayed composer mounting.
 - [x] Work remains fail-closed without an explicit selected/available control.
-- [ ] Source validation passes and the installed runtime is byte-exact before
+- [x] Source validation passes and the installed runtime is byte-exact before
   any separately governed LitScout successor invocation.
 
 ## Definition Of Done

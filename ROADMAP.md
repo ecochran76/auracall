@@ -7,7 +7,7 @@
 Status: active
 Lane: P01
 
-- Active ChatGPT implicit-Chat conversation-mode repair:
+- Completed ChatGPT implicit-Chat conversation-mode repair:
   [docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md](docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md)
   LitScout's enrichment-resume successor reached the exact existing
   conversation but stopped before Send because that ready route omitted the
@@ -15,8 +15,9 @@ Lane: P01
   enabled ChatGPT prompt editor with no explicit mode control and no Work
   marker as implicit Chat; Work remains explicit and fail-closed. The first
   installed acceptance exposed a second pre-Send race: the predicate ran before
-  the React composer mounted. A 10-second exact-composer wait is source-green;
-  installed convergence remains before any separate LitScout successor.
+  the React composer mounted. The bounded 10-second exact-composer wait is
+  source-green, installed byte-exact, and verified by an installed delayed-mount
+  probe. A separately governed LitScout successor may now consume it.
 
 - Closed installed ChatGPT visible composer-target binding repair:
   [docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md](docs/dev/plans/0296-2026-08-20-chatgpt-visible-composer-target-binding.md)

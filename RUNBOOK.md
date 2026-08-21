@@ -30,8 +30,10 @@
   expected write set is the composer-mode expression/tests, Plan 0297,
   Roadmap/Runbook, browser/testing guidance, fix log, and dev journal. No
   concurrent AuraCall lane or subagent exists. The failed installed acceptance
-  is terminal. One exact user-runtime convergence remains before control returns
-  to a newly governed LitScout successor.
+  is terminal. Commit `c0af02d4` is pushed to `origin/main`; built and installed
+  composer-mode artifacts are byte-exact at `eccf5cbe...f9419`, and the
+  installed delayed-mount probe returns already-selected Chat. Plan 0297 is
+  closed and control returns to a newly governed LitScout successor.
 
 ## Turn 467 | 2026-08-20
 

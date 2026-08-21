@@ -47217,3 +47217,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   conversation tabs showed the exact editor. A new RED regression captured the
   render race; the expression now waits up to 10 seconds for only that exact
   implicit-Chat surface and focused coverage passes `12/12`.
+- Commit `c0af02d4` is pushed to `origin/main`. The built and installed artifacts
+  are byte-exact at `eccf5cbe...f9419`; an installed expression probe with a
+  250 ms delayed exact editor returned already-selected Chat. Plan 0297 closes
+  installed-accepted without any provider or LitScout effect from the probe.
