@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
+import { createProviderSessionAuthorization } from '../../src/browser/providers/providerSessionAuthority.js';
 import { resolveBrowserLaunchPlan } from '../../src/browser/service/browserLaunchPlan.js';
 
 describe('resolveBrowserLaunchPlan', () => {
@@ -160,6 +161,35 @@ describe('resolveBrowserLaunchPlan', () => {
       managedDirectory: '/tmp/auracall-browser-launch-plan/session-profile/gemini',
       configuredProfileName: 'Profile 1',
     });
+  });
+
+  test('keeps runtime provider-session authorization outside the immutable launch snapshot', () => {
+    const providerSessionAuthorization = createProviderSessionAuthorization(
+      {},
+      {
+        providerId: 'chatgpt',
+        auracallRuntimeProfile: 'session-profile',
+        browserProfile: 'session-profile',
+        managedBrowserProfile: '/tmp/auracall-browser-launch-plan/session-profile/chatgpt',
+      },
+    );
+    const config = {
+      auracallProfileName: 'session-profile',
+      target: 'chatgpt' as const,
+      managedProfileRoot: '/tmp/auracall-browser-launch-plan',
+      providerSessionAuthorization,
+    };
+
+    const plan = resolveBrowserLaunchPlan({
+      source: { kind: 'session-config', config },
+      intent: { provider: 'chatgpt' },
+    });
+
+    expect(plan.launchPolicy.providerSessionAuthorization).toBeUndefined();
+    expect(config.providerSessionAuthorization).toBe(providerSessionAuthorization);
+    expect(providerSessionAuthorization.authority.resolveExpectation(
+      providerSessionAuthorization.context,
+    )).toEqual(providerSessionAuthorization.expectation);
   });
 
   test('binds the selected session provider to its resolved launch URL', () => {

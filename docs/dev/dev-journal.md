@@ -47129,3 +47129,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   window, and returned to `running` with fresh `detail-inventory:started`
   progress at 12:26:25 CDT. No scheduler replacement was needed and
   agent-browser remained untouched.
+
+## 2026-08-20 | Plan 0294 opens browser-launch authorization clone repair
+
+- LitScout Experiment 9's sole AuraCall invocation failed in 54 ms before
+  browser launch when `resolveBrowserLaunchPlan` attempted to
+  `structuredClone` function-bearing provider-session authorization.
+- A public-seam regression using a real authorization object reproduced the
+  exact `DataCloneError`. The minimum repair excludes only the runtime
+  authorization capability from the immutable launch snapshot and leaves the
+  original authorization callable on the live runtime config.
+- The focused launch/profile/runtime/authority packet passes 132 tests and the
+  full provider-free suite passes 323 files / 2,928 tests with 65 opt-in/live
+  tests skipped. Typecheck, production build, plan audit, scoped lint, diff
+  hygiene, and disposable-browser isolation also pass. The pushed source
+  checkpoint remains before any install or live successor.
+- The pre-existing exact completion independently finished its owned
+  materialization during validation. With zero verified materializations and
+  four failures it correctly became `blocked` and released provider work,
+  preserving Plan 0293's all-failed behavior.

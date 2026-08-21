@@ -22,9 +22,12 @@
   `pnpm vitest run tests/browser/browserLaunchPlan.test.ts tests/browser/browserLaunchPlanStructure.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/configModel.test.ts`.
   This proves one immutable launch-plan seam, runtime/browser selection
   precedence, source and managed browser profile derivation, session parity,
-  exact error behavior, and the absence of the former config/profile-resolution
-  import cycle. Add the affected caller suites when changing a consumer; this
-  contract does not launch a browser or prove live account readiness.
+  exact error behavior, runtime-only provider authorization exclusion, and the
+  absence of the former config/profile-resolution import cycle. Provider
+  authorization must remain on the live runtime config; it must not be cloned
+  or frozen into the immutable launch snapshot. Add the affected caller suites
+  when changing a consumer; this contract does not launch a browser or prove
+  live account readiness.
 - Provider prompt execution contract (provider-free):
   `pnpm vitest run tests/browser/llmServicePrompt.test.ts tests/browser/llmServicePromptStructure.test.ts tests/browser/chatgptPromptAdapter.test.ts tests/browser/chatgptService.test.ts tests/browser/geminiAdapter.test.ts tests/browser/grokAdapter.test.ts`.
   This proves one base `LlmService.runPrompt(...)` lifecycle, consistent launch

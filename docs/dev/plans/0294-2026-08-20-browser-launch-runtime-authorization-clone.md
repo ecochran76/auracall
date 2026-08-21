@@ -1,0 +1,88 @@
+# Browser Launch Runtime Authorization Clone Repair | 0294-2026-08-20
+
+State: OPEN
+Lane: P01
+
+## Stable Objective
+
+Allow a normal AuraCall browser run to resolve its immutable launch plan when
+the runtime browser configuration carries function-bearing provider-session
+authorization, without cloning, freezing, mutating, or weakening that live
+authorization object.
+
+## Current State
+
+- LitScout Experiment 9 made one exact AuraCall invocation after its source,
+  installed-runtime, database, identity, and completion gates passed.
+- AuraCall failed in 54 ms before browser launch because
+  `resolveBrowserLaunchPlan` passed the function-bearing
+  `providerSessionAuthorization` graph to `structuredClone`.
+- No browser navigation, prompt submission, tool call, model response, grade,
+  or LitScout canonical effect occurred. Experiment 9 remains unrun.
+- A focused public-seam regression reproduces the exact `DataCloneError` and
+  passes after excluding the runtime-only authorization capability from the
+  immutable launch-policy snapshot.
+
+## Selected Design
+
+- Keep `providerSessionAuthorization` on the live `runBrowserMode` config where
+  account identity verification and proof recording consume it.
+- Remove only that optional runtime capability from the browser launch-policy
+  value before the existing structured clone and deep freeze.
+- Preserve all serializable launch/profile/provider fields, input immutability,
+  and existing browser selection semantics.
+
+## TDD And Validation
+
+1. Add one public launch-plan regression using a real provider-session
+   authorization object and confirm the exact `DataCloneError` RED.
+2. Exclude only runtime authorization from the launch snapshot; confirm the
+   regression GREEN and the original authorization remains callable.
+3. Run the complete launch-plan contract, affected runtime callers,
+   provider-session authority tests, typecheck, build, scoped lint, plan audit,
+   CodeGraph readback, and diff hygiene.
+4. Commit and push the source candidate before any install or live retry.
+5. Pause only the exact completion after its owned provider work settles,
+   install once, restart once, and prove source/installed/runtime parity before
+   returning control to LitScout's separately governed same-Experiment-9
+   successor.
+
+## Non-Goals
+
+- No provider, selector, prompt, attachment, tool-approval, or grading change.
+- No live Experiment 9 submission from this AuraCall plan.
+- No change to provider-session identity proof or authorization enforcement.
+- No replacement completion, scheduler change, or unrelated browser-profile
+  action.
+
+## Acceptance Criteria
+
+- [x] Exact regression is RED before the repair and GREEN after it.
+- [x] Runtime provider-session authorization remains callable and is absent
+  only from the immutable launch snapshot.
+- [x] Affected provider-free and static validation passes.
+- [ ] Source candidate is committed and pushed before installation.
+- [ ] Installed runtime matches the accepted source and preserves the exact
+  completion and browser-profile authority.
+
+## Validation Evidence
+
+- The new public-seam test failed with the same `DataCloneError` at
+  `clone -> resolveBrowserLaunchPlan` before the repair and passed after it.
+- The affected launch/profile/runtime/authority packet passed 8 files and 132
+  tests. The full provider-free suite passed 323 files and 2,928 tests, with 21
+  files and 65 opt-in/live tests skipped by design.
+- Typecheck, production build, scoped zero-warning lint, plan audit across 294
+  plans, and diff hygiene pass. No Chrome process used a disposable
+  `/tmp/auracall-vitest-*` profile after the suite.
+- During validation, the pre-existing exact live-follow completion's owned job
+  naturally settled all-failed with zero materializations and four failures.
+  The completion correctly became `blocked` and released provider work; the
+  test suite did not control or replace it.
+
+## Definition Of Done
+
+The function-bearing authorization object can no longer crash browser launch
+planning, authorization remains live at its actual runtime consumers, source
+and installed runtime agree, and the same LitScout Experiment 9 may proceed
+only through its fresh request and activation gates.

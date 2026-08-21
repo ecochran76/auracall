@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 465 | 2026-08-20
+
+- [Plan 0294](docs/dev/plans/0294-2026-08-20-browser-launch-runtime-authorization-clone.md)
+  opens from LitScout Experiment 9's sole AuraCall invocation, which failed in
+  54 ms before Chrome launch because the immutable launch planner attempted to
+  `structuredClone` live provider-session authorization methods.
+- The critical-path lane is `fix/plan0294-browser-launch-plan-function-clone`
+  in its dedicated worktree. Expected write set: launch-plan source/test,
+  Plan 0294, Roadmap/Runbook, testing guidance, fix log, and dev journal. No
+  concurrent AuraCall lane is active and main is clean/pushed at `d1c99229`.
+- The exact public-seam regression reproduced `DataCloneError` before the
+  repair and passes after removing only `providerSessionAuthorization` from
+  the immutable launch snapshot. The original authorization remains callable;
+  affected validation and source acceptance are next.
+- No install, restart, browser launch, provider request, prompt submission,
+  LitScout effect, or grade has occurred in this plan. The exact live-follow
+  completion remains preserved; Experiment 9 remains unrun.
+
 ## Turn 464 | 2026-08-15
 
 - Plan 0291 closes after all four sequential architecture candidates and the

@@ -1,5 +1,5 @@
-import type { ResolvedUserConfig } from '../../config.js';
 import { resolveRuntimeSelection } from '../../config/model.js';
+import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
 import {
   resolveBootstrapSourceCookiePath,
@@ -142,6 +142,14 @@ function withoutUndefined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined),
   ) as Partial<T>;
+}
+
+function withoutRuntimeAuthorization(
+  browser: ResolvedBrowserConfig,
+): ResolvedBrowserConfig {
+  const launchPolicy = { ...browser };
+  delete launchPolicy.providerSessionAuthorization;
+  return launchPolicy;
 }
 
 function freezeDeep<T>(value: T): DeepReadonly<T> {
@@ -324,7 +332,7 @@ export function resolveBrowserLaunchPlan(input: Readonly<{
       provider,
     });
   }
-  const copiedConfig = clone(resolvedConfig);
+  const copiedConfig = clone(withoutRuntimeAuthorization(resolvedConfig));
   const copiedBrowserProfile = clone(resolution.browserProfile);
   const providerBinding = resolveProviderBinding({
     provider,

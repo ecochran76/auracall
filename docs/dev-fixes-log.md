@@ -21738,3 +21738,16 @@ browser-stage lifecycle observability, not transcript truncation.
   still marks mixed transfer results failed, while the completion module
   distinguishes partial success from all-failed before changing lifecycle
   state.
+
+## 2026-08-20 | Immutable launch plans must exclude live authorization capabilities
+
+- `ProviderSessionAuthorization` carries authority methods and an optional
+  proof callback. It is live runtime capability state, not serializable browser
+  launch policy; passing it to `structuredClone` fails before Chrome opens.
+- Keep authorization on the runtime browser config used by provider identity
+  gates. Remove only that optional field before cloning and freezing the launch
+  snapshot so the planner cannot freeze, duplicate, or weaken the live proof
+  channel.
+- Regress this at the public launch-plan seam with a real authorization object,
+  and prove both snapshot exclusion and continued callability of the original
+  authority.
