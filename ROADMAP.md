@@ -7,14 +7,16 @@
 Status: active
 Lane: P01
 
-- Active browser-launch runtime-authorization clone repair:
+- Closed accepted browser-launch runtime-authorization clone repair:
   [docs/dev/plans/0294-2026-08-20-browser-launch-runtime-authorization-clone.md](docs/dev/plans/0294-2026-08-20-browser-launch-runtime-authorization-clone.md)
   LitScout Experiment 9 exposed a pre-browser `structuredClone` failure when
   the immutable launch-plan seam received live provider-session authorization
   methods. The bounded repair keeps authorization on the runtime config,
-  excludes it only from the immutable launch snapshot, and requires pushed
-  provider-free acceptance before one installed-runtime convergence. The
-  experiment remains unrun and is not authorized by this plan.
+  excludes it only from the immutable launch snapshot, and passed pushed
+  provider-free acceptance plus one installed-runtime convergence. Source and
+  installed hashes match, the exact completion and browser owner survived the
+  restart, and the experiment remains unrun because its retry belongs to
+  LitScout's separate fresh request/activation gate.
 
 - Closed provider-free acceptance-main coverage closure:
   [docs/dev/plans/0292-2026-08-15-provider-acceptance-main-tests.md](docs/dev/plans/0292-2026-08-15-provider-acceptance-main-tests.md)

@@ -1,6 +1,6 @@
 # Browser Launch Runtime Authorization Clone Repair | 0294-2026-08-20
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Stable Objective
@@ -62,7 +62,7 @@ authorization object.
   only from the immutable launch snapshot.
 - [x] Affected provider-free and static validation passes.
 - [x] Source candidate is committed and pushed before installation.
-- [ ] Installed runtime matches the accepted source and preserves the exact
+- [x] Installed runtime matches the accepted source and preserves the exact
   completion and browser-profile authority.
 
 ## Validation Evidence
@@ -97,9 +97,24 @@ authorization object.
   the public regression against installed package bytes, unchanged exact
   completion identity/state, and matching `wsl-chrome-3` browser ownership.
 
+## Installed Runtime Evidence
+
+- Exactly one install completed from the pushed Plan 0294 checkout and exactly
+  one API restart produced healthy service PID `40915` with zero restarts.
+- Source and installed `browserLaunchPlan.js` both hash to
+  `8bf2c8cb5b607e25a7db867ae6c29cf34011ed5fdf4d5e3438dcb7a05f5ac930`.
+- A provider-free Node probe imported the installed package and proved launch
+  resolution succeeds, authorization is absent from the snapshot, the exact
+  input authorization object is preserved, and its authority remains callable.
+- Completion `acctmirror_completion_3854720c-d3f9-4e57-99fc-9d6f6d04c710`
+  remained the same terminal all-failed record across restart: `blocked`, pass
+  2, job `hmj_e9c4fc743d1e4f9c9e84260a9d74f265`, zero materialized, four failed.
+  The existing `wsl-chrome-3` Chrome owner remained in place; no browser or
+  provider operation was started by installation or validation.
+
 ## Definition Of Done
 
-The function-bearing authorization object can no longer crash browser launch
+The function-bearing authorization object no longer crashes browser launch
 planning, authorization remains live at its actual runtime consumers, source
 and installed runtime agree, and the same LitScout Experiment 9 may proceed
-only through its fresh request and activation gates.
+only through its fresh request and activation gates. This definition is met.

@@ -47152,3 +47152,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   now activates one user-runtime install and one API restart against that
   immutable candidate; it activates no browser/provider action and no
   Experiment 9 retry.
+
+## 2026-08-20 | Plan 0294 closes on installed launch-plan acceptance
+
+- Exactly one user-runtime install and one API restart produced healthy PID
+  `40915`. Source and installed launch-plan JavaScript hashes match exactly.
+- The installed package accepts a real function-bearing authorization object,
+  excludes it only from the immutable launch snapshot, preserves input object
+  identity, and leaves the authority callable.
+- The exact blocked all-failed completion and existing `wsl-chrome-3` Chrome
+  owner survived restart unchanged. No browser/provider action, prompt,
+  LitScout effect, or grade occurred. The same Experiment 9 remains gated by a
+  fresh LitScout request and activation.

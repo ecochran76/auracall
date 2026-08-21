@@ -23,6 +23,12 @@
   independently settled all-failed and released provider work. One install and
   one API restart are now activated against that exact source; no provider or
   browser action is included.
+- Plan 0294 is installed-runtime accepted and closed. One install plus one API
+  restart produced PID `40915`; source and installed launch-plan hashes match,
+  and an installed-package probe proves exact snapshot exclusion with the live
+  authorization preserved and callable. The exact blocked completion and
+  existing `wsl-chrome-3` browser owner survived unchanged. No browser/provider
+  action or Experiment 9 submission occurred.
 
 ## Turn 464 | 2026-08-15
 
