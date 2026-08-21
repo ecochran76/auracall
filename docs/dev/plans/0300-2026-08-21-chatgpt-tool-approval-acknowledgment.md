@@ -2,14 +2,14 @@
 
 State: OPEN
 Lane: P01
-Operational state: P0 DIAGNOSIS AND RED CONTRACT
+Operational state: P4 SOURCE ACCEPTED; INSTALL AND REAL ACCEPTANCE PENDING
 
 ## Stable Objective
 
-Make AuraCall reliably continue ChatGPT/LitScout runs when an exact configured
-tool-approval click has taken effect but ChatGPT retains the original approval
-surface, without double-clicking, treating arbitrary assistant text as proof,
-weakening exact-action matching, or replaying a durable LitScout action.
+Make AuraCall reliably distinguish sequential ChatGPT/LitScout approval cards
+inside one assistant turn, so a succeeded action can advance to the next exact
+card without double-clicking, weakening exact-action matching, or replaying a
+durable LitScout action.
 
 ## Current State
 
@@ -18,7 +18,7 @@ weakening exact-action matching, or replaying a durable LitScout action.
 - LitScout Plan 0434 used that installed runtime for one exact Chat/Sol High/
   `allow-once` submission. AuraCall clicked the approval and stopped with
   `chatgpt-tool-approval-not-confirmed` because the surface did not disappear.
-- LitScout independently proves that click took effect: Session 68 receipt
+- LitScout independently proves that the first click took effect: Session 68 receipt
   `rar_a67995bf6d112868a4afd5968ac83b06` succeeded `approve_enrichment` and
   wrote approved plan `rep_08cd75bbf4313f4c3b0077dcdf8a729f` for one
   zero-positive-spend full-text attempt on Work `2897`, with zero approval-time
@@ -27,11 +27,17 @@ weakening exact-action matching, or replaying a durable LitScout action.
   evidence synthesis, and claim/citation audit did not run. The exact resumable
   boundary is fresh authenticated `research_continue`; approval replay is
   prohibited.
-- CodeGraph localizes the failure to
-  `createChatgptToolApprovalHandler(...)`: after one fenced trusted click it
-  accepts only surface disappearance or replacement. Its caller already runs
-  inside assistant-response polling, but the handler has no positive
-  post-click acknowledgment input beyond the approval probe itself.
+- Read-only retained DOM localizes the failure more precisely. A distinct next
+  `data-testid="tool-approval-card"` for research execution remains enabled in
+  `conversation-turn-8`; the prior approval card is gone. The probe rooted at
+  the containing turn and truncated its first 500 characters, so sequential
+  cards in that turn received the same fingerprint and the handler falsely
+  reported that the original card had not disappeared.
+- The exact-card RED is GREEN after the one-line root repair. Fourteen focused
+  approval tests, 138 affected contract tests, typecheck, scoped zero-warning
+  lint, build, and the full provider-free suite (`2942` passed, `65` skipped)
+  pass. CodeGraph is current and reports both local and remote browser callers.
+  Source is ready for commit/push before the single install/restart gate.
 
 ## Planning Metadata
 
@@ -52,14 +58,14 @@ weakening exact-action matching, or replaying a durable LitScout action.
 1. Preserve the Plan-0434 failure/session, durable LitScout receipt, approved
    Work-2897 plan, repo/runtime identities, and zero-replay boundary.
 2. Add one fast deterministic public-seam regression that reproduces the exact
-   symptom: the clicked approval fingerprint remains visible while independent
-   positive ChatGPT response/tool progress proves the click was accepted.
+   symptom: a long shared assistant-turn prefix hides the exact current card
+   identity and collapses two sequential approvals to one fingerprint.
 3. Generate and test ranked falsifiable hypotheses against the RED seam and,
    if needed, bounded read-only DOM evidence from the retained conversation.
-4. Implement the smallest provider-owned acknowledgment state machine. It must
-   accept only explicit positive post-click progress, retain disappearance or
-   replacement success, and leave an unchanged surface without progress as a
-   fenced terminal error.
+4. Implement the smallest provider-owned repair: root discovery and
+   fingerprinting at the exact current `tool-approval-card`, retain
+   disappearance or distinct-card replacement success, and leave a truly
+   unchanged card as a fenced terminal error.
 5. Prove unchanged manual/ambiguous/changed-before-click/one-attempt/
    sequential-approval behavior and the categorical `Answer now` exclusion.
 6. Run focused and affected suites, typecheck, build, scoped zero-warning lint,
@@ -77,8 +83,9 @@ weakening exact-action matching, or replaying a durable LitScout action.
 
 - No Chat/Work classifier changes, broad selector relaxation, generic
   `allow`/`continue` matching, `Answer now` click, or `always-allow` widening.
-- No DOM disappearance bypass based only on elapsed time, pointer dispatch,
-  arbitrary assistant text, or an unbound external receipt.
+- No DOM disappearance bypass based on elapsed time, pointer dispatch,
+  arbitrary assistant text, generic turn growth, or an unbound external
+  receipt.
 - No replay of Session-68 search, downselection, or enrichment approval; no
   direct LitScout approval-store write or stale-token execution.
 - No positive or unknown marginal spend, OAuth widening, Graphiti write,
@@ -103,23 +110,23 @@ weakening exact-action matching, or replaying a durable LitScout action.
 
 ## Acceptance Criteria
 
-- `TAA-R1`: a fast deterministic regression goes RED on the exact persisted-
-  surface/positive-progress case and GREEN only after the repair.
-- `TAA-R2`: disappearance and new-fingerprint acknowledgment still succeed;
-  unchanged surface without positive progress still errors after one click.
+- `TAA-R1`: a fast deterministic regression goes RED on the exact whole-turn
+  prefix collision and GREEN only after exact-card rooting.
+- `TAA-R2`: disappearance and distinct-card acknowledgment still succeed;
+  an unchanged card still errors after one click.
 - `TAA-R3`: manual, ambiguity, pre-click drift, one-attempt fencing, repeated
   legitimate approvals, exact paired labels, and `Answer now` exclusion pass.
-- `TAA-R4`: acknowledgment evidence is post-click, target-local, monotonic, and
-  stronger than arbitrary text or time; no LitScout-specific receipt logic is
-  embedded in AuraCall.
+- `TAA-R4`: acknowledgment evidence is exact-card-local and stronger than
+  arbitrary turn text or time; no LitScout-specific receipt logic is embedded
+  in AuraCall.
 - `TAA-R5`: focused/affected/full provider-free tests, typecheck, build, scoped
   lint, CodeGraph, plan audit, and diff hygiene pass on the pushed source.
 - `TAA-R6`: installed affected artifacts are byte-exact with pushed source and
   AuraCall API plus managed-browser ownership recover healthy after install.
 - `TAA-R7`: one real LitScout run proves the installed handler can continue
-  past a retained approval surface or the live surface disappears normally;
-  the test returns a terminal response and durable receipt reconciliation with
-  zero duplicate clicks, retries, or completed-action replay.
+  from one succeeded approval to the next exact card in the same turn; the test
+  returns a terminal response and durable receipt reconciliation with zero
+  duplicate clicks, retries, or completed-action replay.
 - `TAA-R8`: Session 68, provider-call/spend effects, output, runtime, repo, and
   remote state are fully reconciled; any incomplete live result is reported as
   such and does not become a reliability claim.
@@ -140,7 +147,7 @@ weakening exact-action matching, or replaying a durable LitScout action.
 ## Definition Of Done
 
 AuraCall has a source-tested, installed, and real-LitScout-proven approval
-acknowledgment state machine that continues after positively proven post-click
-progress even when the old approval DOM persists, while unchanged ambiguous
-surfaces remain one-click fenced; the Session-68 approval is not replayed; and
-all source, runtime, controller, effect, repository, and remote evidence agrees.
+acknowledgment state machine that distinguishes sequential exact cards within
+one assistant turn while unchanged cards remain one-click fenced; the
+Session-68 approval is not replayed; and all source, runtime, controller,
+effect, repository, and remote evidence agrees.

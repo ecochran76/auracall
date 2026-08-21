@@ -18,11 +18,12 @@ Lane: P01
 
 - Active ChatGPT tool-approval acknowledgment repair:
   [docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md](docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md)
-  LitScout Plan 0434 proved `Allow once` can durably succeed while ChatGPT
-  retains the same approval surface, causing AuraCall to stop after the effect.
-  This bounded successor adds positive post-click progress acknowledgment
-  without weakening exact paired-action, one-click, ambiguity, manual, or
-  `Answer now` safeguards, then requires installed and real LitScout proof.
+  LitScout Plan 0434 and retained DOM prove sequential approval cards in one
+  assistant turn collapsed to the same turn-prefix fingerprint: the first
+  action succeeded, then AuraCall mistook the next card for the old one. This
+  bounded successor fingerprints the exact current card without weakening
+  paired-action, one-click, ambiguity, manual, or `Answer now` safeguards, then
+  requires installed and real LitScout proof.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

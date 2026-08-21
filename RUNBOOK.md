@@ -9,15 +9,23 @@
   `rar_a67995bf6d112868a4afd5968ac83b06` proves `approve_enrichment` succeeded
   and wrote approved Work-2897 plan
   `rep_08cd75bbf4313f4c3b0077dcdf8a729f` with zero provider calls.
-- CodeGraph localizes the defect to the provider-owned approval handler's
-  disappearance-only post-click confirmation. The assistant response poll
-  already supplies the surrounding lifecycle seam; the implementation must
-  accept only positive target-local post-click progress, never arbitrary text,
-  elapsed time, or an external LitScout receipt.
+- Retained current DOM resolves the ambiguity: `conversation-turn-8` contains
+  the next enabled `tool-approval-card` for `execute_action`, while the prior
+  `approve_enrichment` receipt is durable. The old probe rooted at the whole
+  turn and truncated its first 500 characters, so both sequential cards shared
+  one fingerprint. The focused RED proves that collapse; exact-card rooting and
+  a two-card handler regression are GREEN while unchanged-card fencing remains
+  intact.
 - P0 freezes one RED, one implementation plus at most one repair, full source
   gates, one install/restart, and one zero-retry real LitScout acceptance. The
   existing enrichment approval, search, and downselection replay ceilings are
   zero. No concurrent or delegated lane exists.
+- Source acceptance is complete: focused approval `14/14`, affected packet
+  `138/138`, typecheck, build, scoped zero-warning lint, plan/JSON/diff checks,
+  and isolated full provider-free `2942 passed / 65 skipped`. A concurrent
+  build/test run transiently lost the current Node executable for three MCP
+  subprocess suites; all three passed immediately in isolation and the clean
+  isolated full rerun passed. Install and real LitScout acceptance remain.
 
 ## Turn 471 | 2026-08-21
 

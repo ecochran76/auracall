@@ -181,7 +181,7 @@ function buildChatgptToolApprovalProbeExpression(policy: ChatgptToolApprovalPoli
     const roots = [];
     for (const control of approvalControls) {
       const root = control.closest(
-        '[role="dialog"], [aria-modal="true"], section[data-testid^="conversation-turn-"], article',
+        '[data-testid="tool-approval-card"], [role="dialog"], [aria-modal="true"], section[data-testid^="conversation-turn-"], article',
       ) || control.parentElement;
       if (root && visible(root) && !roots.includes(root)) roots.push(root);
     }

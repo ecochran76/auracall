@@ -47271,8 +47271,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   ChatGPT retained the exact `Allow once` surface after the click, but durable
   receipt `rar_a67995bf6d112868a4afd5968ac83b06` proves the bounded enrichment
   approval succeeded with zero provider calls.
-- The active successor owns a deterministic persisted-surface/positive-progress
+- The active successor owns a deterministic same-turn fingerprint-collision
   RED, the smallest provider-owned acknowledgment repair, complete source and
   installed acceptance, and one zero-retry real LitScout continuation. It may
   not replay the completed approval or infer success from pointer dispatch,
   elapsed time, arbitrary assistant text, or a LitScout-specific receipt.
+- Read-only retained DOM disproved the initial stale-card interpretation. The
+  successful approval was followed by a distinct enabled
+  `data-testid="tool-approval-card"` in the same `conversation-turn-8`; the old
+  500-character whole-turn prefix therefore made two actions look identical.
+  The repair roots the fingerprint at the exact card. Focused RED/GREEN,
+  unchanged-card fencing, two-card sequencing, affected provider-free tests,
+  typecheck, and scoped zero-warning lint are green.
+- Production build and the isolated full provider-free suite are green
+  (`323` files passed, `21` skipped; `2942` tests passed, `65` skipped).
+  CodeGraph is current and retains both local and remote browser-mode caller
+  coverage. The source gate is accepted; no install or live approval click has
+  occurred in this slice yet.

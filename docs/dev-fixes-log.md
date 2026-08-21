@@ -1,3 +1,13 @@
+- 2026-08-21: Bind ChatGPT tool-approval fingerprints to the exact current
+  `data-testid="tool-approval-card"`, not the first 500 characters of its
+  containing assistant turn. ChatGPT can emit several approval cards in one
+  turn; a successful first action and a newly promoted second action otherwise
+  share the same prefix and are misclassified as one unconfirmed card. Preserve
+  the exact paired `Allow once` / `Always allow` classifier, pre-click settle,
+  one trusted pointer sequence, ambiguity/manual fail-closed behavior, and the
+  unchanged-card one-attempt fence. Provider-free proof must include both the
+  exact-card fingerprint regression and two sequential same-turn cards.
+
 - 2026-08-15: Best-effort browser cache-context enrichment must not be an
   unbounded prerequisite for a one-shot prompt. `buildBrowserContext()` calls
   `resolveCacheIdentity()` before `runBrowserMode()`; catching a provider

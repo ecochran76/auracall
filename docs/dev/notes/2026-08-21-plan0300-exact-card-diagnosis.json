@@ -1,0 +1,49 @@
+{
+  "schema": "auracall.plan0300.exact-card-diagnosis.v1",
+  "observed_at": "2026-08-21T15:40:59-05:00",
+  "plan": "0300-2026-08-21-chatgpt-tool-approval-acknowledgment",
+  "source_branch": "fix/plan0300-chatgpt-tool-approval-acknowledgment",
+  "prior_failure": {
+    "session": "/home/ecochran76/.auracall/sessions/experiment-nine-enrichment-resume-work",
+    "code": "chatgpt-tool-approval-not-confirmed",
+    "message": "ChatGPT tool approval surface did not disappear after selecting Allow once."
+  },
+  "durable_litscout_effect": {
+    "action": "approve_enrichment",
+    "receipt": "rar_a67995bf6d112868a4afd5968ac83b06",
+    "plan_id": "rep_08cd75bbf4313f4c3b0077dcdf8a729f",
+    "provider_calls": 0,
+    "positive_external_spend_usd": 0.0
+  },
+  "retained_dom": {
+    "conversation_turn_test_id": "conversation-turn-8",
+    "current_approval_test_id": "tool-approval-card",
+    "current_approval_controls": [
+      "Always allow",
+      "Allow once"
+    ],
+    "current_action_summary": "Executes a research action for session 68 using an execution token and idempotency key.",
+    "current_card_distinct_from_completed_action": true,
+    "sensitive_action_token_recorded": false
+  },
+  "root_cause": {
+    "old_root": "containing assistant turn",
+    "old_fingerprint": "first 500 normalized characters of the containing turn",
+    "failure_mode": "Sequential approval cards in one assistant turn share the same prefix and collapse to one fingerprint.",
+    "repair": "Prefer the exact data-testid=tool-approval-card as the approval root before dialog or turn fallbacks."
+  },
+  "deterministic_proof": {
+    "red_test": "fingerprints the exact approval card instead of the shared assistant turn prefix",
+    "red_failure": "Expected the fingerprint to contain rea_current; it contained only the earlier assistant-turn prefix.",
+    "green_tests": [
+      "fingerprints the exact approval card instead of the shared assistant turn prefix",
+      "continues across sequential exact approval cards in one assistant turn",
+      "does not click the same approval twice when disappearance is unconfirmed"
+    ]
+  },
+  "live_effects_during_diagnosis": {
+    "approval_clicks": 0,
+    "prompt_submissions": 0,
+    "litscout_actions": 0
+  }
+}

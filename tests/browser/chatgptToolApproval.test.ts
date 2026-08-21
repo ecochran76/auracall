@@ -39,7 +39,17 @@ class FixtureElement {
 	closest(selector: string): FixtureElement | null {
 		let current: FixtureElement | null = this;
 		while (current) {
+			if (
+				selector.includes('[data-testid="tool-approval-card"]') &&
+				current.getAttribute("data-testid") === "tool-approval-card"
+			)
+				return current;
 			if (selector.includes('[role="dialog"]') && current.getAttribute("role") === "dialog")
+				return current;
+			if (
+				selector.includes('section[data-testid^="conversation-turn-"]') &&
+				current.getAttribute("data-testid")?.startsWith("conversation-turn-")
+			)
 				return current;
 			current = current.parentElement;
 		}
@@ -307,6 +317,36 @@ describe("ChatGPT tool approval handling", () => {
 		expect(result.fingerprint).toContain("litscout wants to use a tool");
 	});
 
+	it("fingerprints the exact approval card instead of the shared assistant turn prefix", () => {
+		const allowOnce = new FixtureElement("Allow once", { role: "button" });
+		const alwaysAllow = new FixtureElement("Always allow", { role: "button" });
+		const card = new FixtureElement(
+			"LitScout Execute research action token rea_current Always allow Deny Allow once",
+			{ "data-testid": "tool-approval-card" },
+		);
+		card.append(allowOnce, alwaysAllow);
+		const turn = new FixtureElement(
+			`${"Earlier assistant reasoning. ".repeat(30)}${card.textContent}`,
+			{ "data-testid": "conversation-turn-8" },
+		);
+		turn.append(card);
+		vi.stubGlobal("Element", FixtureElement);
+		vi.stubGlobal("HTMLElement", FixtureElement);
+		vi.stubGlobal("document", {
+			querySelectorAll: (selector: string) => {
+				if (selector === 'button,[role="button"]') return [allowOnce, alwaysAllow];
+				return [];
+			},
+		});
+
+		const expression = buildChatgptToolApprovalProbeExpressionForTest("allow-once");
+		const result = new Function(`return ${expression}`)();
+
+		expect(result).toMatchObject({ status: "approval-required" });
+		expect(result.fingerprint).toContain("rea_current");
+		expect(result.fingerprint).not.toContain("earlier assistant reasoning");
+	});
+
 	it("fails closed when more than one approval surface is visible", async () => {
 		const evaluate = vi.fn().mockResolvedValue({
 			result: { value: { status: "ambiguous", count: 2 } },
@@ -345,6 +385,55 @@ describe("ChatGPT tool approval handling", () => {
 		await expect(handle()).rejects.toThrow(/did not disappear/i);
 		await expect(handle()).rejects.toThrow(/already attempted/i);
 		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
+	});
+
+	it("continues across sequential exact approval cards in one assistant turn", async () => {
+		const firstApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "approve-enrichment-card-rea_first",
+					actionLabel: "Allow once",
+					x: 120,
+					y: 240,
+				},
+			},
+		};
+		const nextApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "execute-enrichment-card-rea_next",
+					actionLabel: "Allow once",
+					x: 140,
+					y: 260,
+				},
+			},
+		};
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce(firstApproval)
+			.mockResolvedValueOnce(firstApproval)
+			.mockResolvedValueOnce(nextApproval)
+			.mockResolvedValueOnce(nextApproval)
+			.mockResolvedValueOnce(nextApproval)
+			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
+		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).resolves.toMatchObject({
+			status: "approved",
+			fingerprint: "approve-enrichment-card-rea_first",
+		});
+		await expect(handle()).resolves.toMatchObject({
+			status: "approved",
+			fingerprint: "execute-enrichment-card-rea_next",
+		});
+		expect(dispatchMouseEvent).toHaveBeenCalledTimes(6);
 	});
 
 	it("allows a later confirmed approval with the same visible fingerprint", async () => {
