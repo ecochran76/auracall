@@ -21779,3 +21779,7 @@ browser-stage lifecycle observability, not transcript truncation.
   prompt editor. When implicit Chat is the only admissible mode, poll only the
   exact enabled ChatGPT composer for a bounded 10 seconds and stop early on a
   visible Work marker; do not weaken the selector or infer Work.
+- 2026-08-21: A reused managed-browser handle may omit PID even while the exact
+  profile retains a live PID and DevTools target. For provider-session proof,
+  recover that persisted PID only after validating it against the exact managed
+  profile; never relax the account dimensions or target binding.

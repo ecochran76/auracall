@@ -115,9 +115,10 @@ import {
 	DEFAULT_DEBUG_PORT_RANGE,
 	pickAvailableDebugPort,
 } from "./portSelection.js";
-import { isDevToolsResponsive, isProcessAlive } from "./processCheck.js";
+import { isChromeAlive, isDevToolsResponsive, isProcessAlive } from "./processCheck.js";
 import {
 	cleanupStaleProfileState,
+	readChromePid,
 	shouldCleanupManualLoginProfileState,
 	writeChromePid,
 	writeDevToolsActivePort,
@@ -587,6 +588,24 @@ async function assertChatgptAccountSessionPreflight(
 	}
 	return result.observation;
 }
+
+async function resolveChatgptProviderSessionProcessId(input: {
+	launchedPid: number | null | undefined;
+	userDataDir: string;
+	readChromePid?: typeof readChromePid;
+	isChromeAlive?: typeof isChromeAlive;
+}): Promise<number | null> {
+	if (typeof input.launchedPid === "number" && Number.isFinite(input.launchedPid) && input.launchedPid > 0) {
+		return Math.trunc(input.launchedPid);
+	}
+	const persistedPid = await (input.readChromePid ?? readChromePid)(input.userDataDir);
+	if (!persistedPid) return null;
+	const alive = await (input.isChromeAlive ?? isChromeAlive)(persistedPid, input.userDataDir);
+	return alive ? persistedPid : null;
+}
+
+export const resolveChatgptProviderSessionProcessIdForTest =
+	resolveChatgptProviderSessionProcessId;
 
 async function assertChatgptProModeAllowed(
 	Runtime: ChromeClient["Runtime"],
@@ -2045,9 +2064,13 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				managedProfileDir: config.manualLoginProfileDir,
 			}),
 		);
+		const providerSessionBrowserProcessId = await resolveChatgptProviderSessionProcessId({
+			launchedPid: chrome.pid,
+			userDataDir,
+		});
 		const verifiedChatgptIdentity = await raceWithDisconnect(
 			assertChatgptAccountSessionPreflight(Runtime, config, logger, {
-				browserProcessId: chrome.pid,
+				browserProcessId: providerSessionBrowserProcessId,
 				browserTargetId: lastTargetId ?? null,
 			}),
 		);

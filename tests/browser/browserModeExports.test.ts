@@ -7,6 +7,7 @@ import {
   formatChatgptBlockingSurfaceErrorForTest,
   logChatgptUnexpectedStateForTest,
   resolveBrowserRuntimeEntryContextForTest,
+  resolveChatgptProviderSessionProcessIdForTest,
   acquireBrowserExecutionOperationForTest,
   releaseBrowserExecutionOperationAfterPreflightFailureForTest,
   sanitizeThinkingTextForTest,
@@ -51,6 +52,33 @@ describe('browserMode exports', () => {
   test('re-exports runBrowserMode and constants', () => {
     expect(typeof runBrowserMode).toBe('function');
     expect(typeof CHATGPT_URL).toBe('string');
+  });
+
+  test('recovers live managed-profile pid for reused-browser provider provenance', async () => {
+    const readChromePid = vi.fn().mockResolvedValue(58728);
+    const isChromeAlive = vi.fn().mockResolvedValue(true);
+
+    await expect(
+      resolveChatgptProviderSessionProcessIdForTest({
+        launchedPid: undefined,
+        userDataDir: '/managed/chatgpt',
+        readChromePid,
+        isChromeAlive,
+      }),
+    ).resolves.toBe(58728);
+    expect(readChromePid).toHaveBeenCalledWith('/managed/chatgpt');
+    expect(isChromeAlive).toHaveBeenCalledWith(58728, '/managed/chatgpt');
+  });
+
+  test('rejects stale managed-profile pid for provider provenance', async () => {
+    await expect(
+      resolveChatgptProviderSessionProcessIdForTest({
+        launchedPid: undefined,
+        userDataDir: '/managed/chatgpt',
+        readChromePid: vi.fn().mockResolvedValue(58728),
+        isChromeAlive: vi.fn().mockResolvedValue(false),
+      }),
+    ).resolves.toBeNull();
   });
 
   test('preserves browser only for non-headless manual-clear challenges', () => {

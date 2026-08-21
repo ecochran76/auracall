@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 469 | 2026-08-21
+
+- LitScout Plan 0432 stopped before Send with provider-session provenance
+  missing: exact target `A4DB...` was present but browser PID was absent.
+  Managed state retained PID `58728`, and doctor then proved that PID/profile/
+  target plus the configured SoyLei Pro personal account all matched.
+- [Plan 0298](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)
+  recovers a missing launch-handle PID only from the exact managed profile and
+  only when `isChromeAlive` validates that PID/profile pair. Red/green coverage,
+  `53/53` focused tests, `322/322` broad affected tests, typecheck, build,
+  scoped lint, plan audit, and diff hygiene pass. No concurrent lane exists.
+
 ## Turn 468 | 2026-08-21
 
 - [Plan 0297](docs/dev/plans/0297-2026-08-21-chatgpt-implicit-chat-conversation-mode.md)

@@ -47221,3 +47221,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   are byte-exact at `eccf5cbe...f9419`; an installed expression probe with a
   250 ms delayed exact editor returned already-selected Chat. Plan 0297 closes
   installed-accepted without any provider or LitScout effect from the probe.
+
+# 2026-08-21 | Plan 0298 Reused Browser Provider Provenance PID
+
+- The next separately governed LitScout successor stopped before Send because
+  the reused-browser launch handle omitted PID. Its exact target was known and
+  fresh doctor immediately proved PID `58728`, profile, target, and provider
+  account all matched.
+- A red/green resolver now prefers the launch PID, otherwise reads the exact
+  managed profile's persisted PID and returns it only after exact-profile Chrome
+  liveness validation. Stale PID remains null; provider authority is unchanged.
