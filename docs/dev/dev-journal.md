@@ -47265,3 +47265,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `wsl-chrome-3` `backfill_history` completion before closeout; it remained
   untouched, materialization stayed zero, and no scheduler/completion control
   ran. Plan 0299 closes installed-accepted.
+## 2026-08-21 | Plan 0300 Tool-Approval Acknowledgment
+
+- LitScout Plan 0434 disproved AuraCall's disappearance-only confirmation:
+  ChatGPT retained the exact `Allow once` surface after the click, but durable
+  receipt `rar_a67995bf6d112868a4afd5968ac83b06` proves the bounded enrichment
+  approval succeeded with zero provider calls.
+- The active successor owns a deterministic persisted-surface/positive-progress
+  RED, the smallest provider-owned acknowledgment repair, complete source and
+  installed acceptance, and one zero-retry real LitScout continuation. It may
+  not replay the completed approval or infer success from pointer dispatch,
+  elapsed time, arbitrary assistant text, or a LitScout-specific receipt.

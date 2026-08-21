@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 472 | 2026-08-21
+
+- [Plan 0300](docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md)
+  opens from LitScout Plan 0434's reconciled post-click failure. AuraCall's sole
+  Send reached the exact `allow-once` surface and then errored because that DOM
+  remained visible, while LitScout receipt
+  `rar_a67995bf6d112868a4afd5968ac83b06` proves `approve_enrichment` succeeded
+  and wrote approved Work-2897 plan
+  `rep_08cd75bbf4313f4c3b0077dcdf8a729f` with zero provider calls.
+- CodeGraph localizes the defect to the provider-owned approval handler's
+  disappearance-only post-click confirmation. The assistant response poll
+  already supplies the surrounding lifecycle seam; the implementation must
+  accept only positive target-local post-click progress, never arbitrary text,
+  elapsed time, or an external LitScout receipt.
+- P0 freezes one RED, one implementation plus at most one repair, full source
+  gates, one install/restart, and one zero-retry real LitScout acceptance. The
+  existing enrichment approval, search, and downselection replay ceilings are
+  zero. No concurrent or delegated lane exists.
+
 ## Turn 471 | 2026-08-21
 
 - Plan 0299 captured bounded no-prompt DOM evidence from known Chat and Work

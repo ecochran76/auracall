@@ -16,6 +16,14 @@ Lane: P01
   no-prompt probes accept ordinary Chat and enter explicit Work; exact cleanup
   preserved the authenticated browser.
 
+- Active ChatGPT tool-approval acknowledgment repair:
+  [docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md](docs/dev/plans/0300-2026-08-21-chatgpt-tool-approval-acknowledgment.md)
+  LitScout Plan 0434 proved `Allow once` can durably succeed while ChatGPT
+  retains the same approval surface, causing AuraCall to stop after the effect.
+  This bounded successor adds positive post-click progress acknowledgment
+  without weakening exact paired-action, one-click, ambiguity, manual, or
+  `Answer now` safeguards, then requires installed and real LitScout proof.
+
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)
   A local ChatGPT run can reuse the exact live managed browser while its launch
