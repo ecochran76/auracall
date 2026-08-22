@@ -466,3 +466,112 @@ export function alignPromptEchoMarkdown(
   });
   return { answerText: aligned.answerText, answerMarkdown: aligned.answerMarkdown };
 }
+
+export type AssistantRepresentationDecision =
+  | 'captured-answer-only'
+  | 'captured-with-copied-markdown'
+  | 'copied-markdown-equivalent'
+  | 'stable-dom-no-copy'
+  | 'stable-dom-substantive-mismatch';
+
+export interface AssistantRepresentationEvidence {
+  decision: AssistantRepresentationDecision;
+  substantiveMismatch: boolean;
+  capturedTextChars: number;
+  copiedMarkdownChars: number;
+  finalDomTextChars: number;
+  copiedPlainFingerprint: string | null;
+  finalDomFingerprint: string | null;
+}
+
+export interface AssistantRepresentationResult {
+  answerText: string;
+  answerMarkdown: string;
+  decision: AssistantRepresentationDecision;
+  evidence: AssistantRepresentationEvidence;
+}
+
+export function reconcileAssistantRepresentations(input: {
+  capturedText: string;
+  copiedMarkdown: string | null | undefined;
+  finalDomText: string | null | undefined;
+  finalDomIsPromptEcho?: boolean;
+}): AssistantRepresentationResult {
+  const capturedText = input.capturedText.trim();
+  const copiedMarkdown = input.copiedMarkdown?.trim() ?? '';
+  const finalDomText = input.finalDomText?.trim() ?? '';
+  const finalDomEligible = Boolean(finalDomText) && input.finalDomIsPromptEcho !== true;
+  const copiedPlain = normalizeMarkdownForAssistantComparison(copiedMarkdown);
+  const finalPlain = normalizeAssistantRepresentationText(finalDomText);
+
+  let decision: AssistantRepresentationDecision;
+  let answerText: string;
+  let answerMarkdown: string;
+  let substantiveMismatch = false;
+
+  if (!finalDomEligible) {
+    decision = copiedMarkdown ? 'captured-with-copied-markdown' : 'captured-answer-only';
+    answerText = capturedText;
+    answerMarkdown = copiedMarkdown || capturedText;
+  } else if (!copiedMarkdown) {
+    decision = 'stable-dom-no-copy';
+    answerText = finalDomText;
+    answerMarkdown = finalDomText;
+  } else if (copiedPlain && copiedPlain === finalPlain) {
+    decision = 'copied-markdown-equivalent';
+    answerText = finalDomText;
+    answerMarkdown = copiedMarkdown;
+  } else {
+    decision = 'stable-dom-substantive-mismatch';
+    substantiveMismatch = true;
+    answerText = finalDomText;
+    answerMarkdown = finalDomText;
+  }
+
+  return {
+    answerText,
+    answerMarkdown,
+    decision,
+    evidence: {
+      decision,
+      substantiveMismatch,
+      capturedTextChars: capturedText.length,
+      copiedMarkdownChars: copiedMarkdown.length,
+      finalDomTextChars: finalDomText.length,
+      copiedPlainFingerprint: fingerprintAssistantRepresentation(copiedPlain),
+      finalDomFingerprint: fingerprintAssistantRepresentation(finalPlain),
+    },
+  };
+}
+
+function normalizeMarkdownForAssistantComparison(value: string): string {
+  const plain = value
+    .replace(/\r\n?/g, '\n')
+    .replace(/^\s*```[^\n]*$/gm, '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*[-+*]\s+\[[ xX]\]\s+/gm, '')
+    .replace(/^\s{0,3}(?:#{1,6}\s+|>\s*|[-+*•]\s+|\d+[.)]\s+)/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/(^|\s)\*([^*\n]+)\*(?=\s|[.,:;!?)]|$)/g, '$1$2')
+    .replace(/(^|\s)_([^_\n]+)_(?=\s|[.,:;!?)]|$)/g, '$1$2')
+    .replace(/\\([\\`*_[\]{}()#+.!~-])/g, '$1');
+  return normalizeAssistantRepresentationText(plain);
+}
+
+function normalizeAssistantRepresentationText(value: string): string {
+  return String(value || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function fingerprintAssistantRepresentation(value: string): string | null {
+  if (!value) return null;
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${value.length}:${hash >>> 0}`;
+}

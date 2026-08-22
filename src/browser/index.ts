@@ -143,7 +143,12 @@ import {
 	summarizeProviderSessionAuthorization,
 } from "./providers/providerSessionAuthority.js";
 import type { ProviderUserIdentity } from "./providers/types.js";
-import { alignPromptEchoPair, buildPromptEchoMatcher, withTimeout } from "./reattachHelpers.js";
+import {
+	alignPromptEchoPair,
+	buildPromptEchoMatcher,
+	reconcileAssistantRepresentations,
+	withTimeout,
+} from "./reattachHelpers.js";
 import { resolveBrowserLaunchPlan } from "./service/browserLaunchPlan.js";
 import { dismissOpenMenus, navigateAndSettle } from "./service/ui.js";
 import {
@@ -2866,8 +2871,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				},
 			),
 		).catch(() => null);
-		answerMarkdown = copiedMarkdown ?? answerText;
-
 		const promptEchoMatcher = buildPromptEchoMatcher(promptText);
 
 		// Final sanity check: ensure we didn't accidentally capture the user prompt instead of the assistant turn.
@@ -2875,20 +2878,18 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			() => null,
 		);
 		const finalText = typeof finalSnapshot?.text === "string" ? finalSnapshot.text.trim() : "";
-		if (finalText && finalText !== promptText.trim()) {
-			const trimmedMarkdown = answerMarkdown.trim();
-			const finalIsEcho = promptEchoMatcher ? promptEchoMatcher.isEcho(finalText) : false;
-			const lengthDelta = finalText.length - trimmedMarkdown.length;
-			const missingCopy = !copiedMarkdown && lengthDelta >= 0;
-			const likelyTruncatedCopy =
-				copiedMarkdown &&
-				trimmedMarkdown.length > 0 &&
-				lengthDelta >= Math.max(12, Math.floor(trimmedMarkdown.length * 0.75));
-			if ((missingCopy || likelyTruncatedCopy) && !finalIsEcho && finalText !== trimmedMarkdown) {
-				logger("Refreshed assistant response via final DOM snapshot");
-				answerText = finalText;
-				answerMarkdown = finalText;
-			}
+		const representation = reconcileAssistantRepresentations({
+			capturedText: answerText,
+			copiedMarkdown,
+			finalDomText: finalText,
+			finalDomIsPromptEcho: Boolean(promptEchoMatcher?.isEcho(finalText)),
+		});
+		answerText = representation.answerText;
+		answerMarkdown = representation.answerMarkdown;
+		if (representation.evidence.substantiveMismatch) {
+			logger(
+				`[browser] Stable DOM replaced substantively different copied markdown: ${JSON.stringify(representation.evidence)}`,
+			);
 		}
 
 		// Detect prompt echo using normalized comparison (whitespace-insensitive).
@@ -3900,26 +3901,27 @@ async function runRemoteBrowserMode(
 			},
 		).catch(() => null);
 
-		answerMarkdown = copiedMarkdown ?? answerText;
-
+		const promptEchoMatcher = buildPromptEchoMatcher(promptText);
 		// Final sanity check: ensure we didn't accidentally capture the user prompt instead of the assistant turn.
 		const finalSnapshot = await readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(
 			() => null,
 		);
 		const finalText = typeof finalSnapshot?.text === "string" ? finalSnapshot.text.trim() : "";
-		if (
-			finalText &&
-			finalText !== answerMarkdown.trim() &&
-			finalText !== promptText.trim() &&
-			finalText.length >= answerMarkdown.trim().length
-		) {
-			logger("Refreshed assistant response via final DOM snapshot");
-			answerText = finalText;
-			answerMarkdown = finalText;
+		const representation = reconcileAssistantRepresentations({
+			capturedText: answerText,
+			copiedMarkdown,
+			finalDomText: finalText,
+			finalDomIsPromptEcho: Boolean(promptEchoMatcher?.isEcho(finalText)),
+		});
+		answerText = representation.answerText;
+		answerMarkdown = representation.answerMarkdown;
+		if (representation.evidence.substantiveMismatch) {
+			logger(
+				`[browser] Stable DOM replaced substantively different copied markdown: ${JSON.stringify(representation.evidence)}`,
+			);
 		}
 
 		// Detect prompt echo using normalized comparison (whitespace-insensitive).
-		const promptEchoMatcher = buildPromptEchoMatcher(promptText);
 		const alignedEcho = alignPromptEchoPair(
 			answerText,
 			answerMarkdown,
