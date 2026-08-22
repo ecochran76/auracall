@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P1 DIAGNOSED / PROVIDER_FREE RED NEXT
+Operational state: P4 SOURCE ACCEPTED / INSTALLED-LIVE GATE FREEZE NEXT
 
 ## Stable Objective
 
@@ -28,6 +28,22 @@ cleanup have released the same durable operation fence.
   `browser-operations` fence is the cross-process authority.
 - Plan 0306 starts with zero install, restart, browser, provider, LitScout, or
   Graphiti effect authority.
+- Pushed product commit `929aec97` routes browser-backed materialization through
+  the existing file-backed exact-profile/service dispatcher. It holds all
+  resolved managed-profile operations through provider work and cleanup,
+  releases in reverse order, and makes stale recovery skip cleanup when another
+  exact-profile owner is active.
+- Provider-free acceptance is complete: the initial focused RED failed with
+  zero dispatcher acquisitions; the final focused file passes `84/84`, the
+  five-file affected set passes `372/372`, and the serial full suite passes 323
+  files / 2,970 tests with 21 files / 65 live-only tests skipped. Typecheck,
+  changed-file lint, full lint, production build, CodeGraph sync/readback, plan
+  audit, and diff hygiene pass. Full lint retains 208 pre-existing warnings in
+  unrelated files and reports no changed-file warning.
+- Source receipt:
+  `docs/dev/notes/2026-08-21-plan0306-history-browser-ownership-source-acceptance.json`.
+  No install, restart, browser launch, provider call, LitScout call, or Graphiti
+  write occurred in the source slice.
 
 ## Planning Metadata
 
@@ -89,6 +105,13 @@ cleanup have released the same durable operation fence.
 - `HMO-R7`: a later installed/live packet returns exact canonical Session 68
   counts after one new read-only call, zero canonical mutation, and exact
   terminal cleanup.
+
+## Source Acceptance
+
+- `HMO-R1` through `HMO-R6`: ACCEPTED at pushed product commit `929aec97`.
+- `HMO-R7`: NOT RUN. Freeze a distinct one-install, one-restart,
+  one-submission, zero-retry gate against this exact source commit before any
+  installed or live effect.
 
 ## Bounds And Stops
 

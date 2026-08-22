@@ -109,6 +109,10 @@ Lane: P01
   materialization cleanup later killed all matching profile PIDs without the
   shared file-backed browser-operation fence. This source-first successor must
   serialize provider work and cleanup with foreground use of the exact profile.
+  Pushed product `929aec97` is source-accepted: exact-profile provider work and
+  cleanup now share one durable file-backed operation, busy foreground and
+  stale-recovery paths fail safe, the affected set is `372/372`, and the serial
+  full suite is `2,970/2,970`. A separately frozen installed/live gate remains.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 487 | 2026-08-21
+
+- Plan 0306 product commit `929aec97` is pushed and source-accepted. History
+  materialization now acquires the existing durable exact managed-profile and
+  service operation before provider work, holds it through managed-browser
+  cleanup on success or failure, and releases only afterward.
+- Stale-running readback uses a non-waiting acquire. If a foreground owner holds
+  the exact profile, the stale job is terminalized but PID cleanup is skipped;
+  unrelated profiles remain independent. No second lock authority was added.
+- Deterministic RED first observed zero history dispatcher acquisitions. Final
+  provider-free evidence: focused history service `84/84`; affected five-file
+  set `372/372`; serial full suite 323 files / 2,970 tests passed with 21 files /
+  65 live-only tests skipped; typecheck, changed-file lint, full lint, build,
+  CodeGraph sync/readback, plan audit, and diff hygiene pass. Full lint retains
+  208 unrelated pre-existing warnings and reports none in the changed files.
+- Receipt:
+  `docs/dev/notes/2026-08-21-plan0306-history-browser-ownership-source-acceptance.json`.
+  No install/restart/browser/provider/LitScout/Graphiti effect occurred. Freeze
+  one exact installed/live acceptance packet before any runtime transition.
+
 ## Turn 486 | 2026-08-21
 
 - Plan 0305's sole `litscout-fidelity-live` submission started once at

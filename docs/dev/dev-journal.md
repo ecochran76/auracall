@@ -47434,3 +47434,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   unchanged and no retry ran.
 - Plan 0305 closes without integration. Plan 0306 owns the missing shared
   file-backed operation fence across history provider work and PID cleanup.
+- Plan 0306 pushed product `929aec97`: history provider work and cleanup now
+  hold the existing durable exact-profile/service operation, stale recovery
+  skips cleanup under another owner, and unrelated profiles remain independent.
+- Source acceptance passes focused `84/84`, affected `372/372`, serial full
+  `2,970/2,970`, typecheck, changed-file/full lint, build, CodeGraph, plan audit,
+  and diff hygiene. No installed or live effect occurred; one exact successor
+  gate remains to be frozen.

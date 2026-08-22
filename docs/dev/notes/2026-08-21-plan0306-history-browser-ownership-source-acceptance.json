@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "plan": "0306-2026-08-21-history-materialization-browser-ownership",
+  "recorded_at": "2026-08-22T02:38:30Z",
+  "outcome": "source_accepted_installed_live_not_run",
+  "product_commit": "929aec97",
+  "branch": "fix/plan0302-chatgpt-timeout-signal-cleanup",
+  "contract": {
+    "operation_key": "managed-profile:<resolved-directory>::service:<provider>",
+    "operation_kind": "browser-execution",
+    "operation_class": "exclusive-mutating",
+    "normal_owner": "history-materialization:<job-id>",
+    "stale_recovery_owner": "history-materialization-recovery:<job-id>",
+    "release_boundary": "after managed-browser cleanup",
+    "stale_busy_policy": "terminalize stale job and skip cleanup"
+  },
+  "red": {
+    "command": "pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 -t holds exact-profile browser ownership",
+    "result": "failed as expected",
+    "failure": "history dispatcher acquireQueued call count was zero"
+  },
+  "verification": {
+    "focused": {
+      "command": "pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1",
+      "files_passed": 1,
+      "tests_passed": 84
+    },
+    "affected": {
+      "command": "pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/accountMirror/completionService.test.ts tests/http.responsesServer.test.ts tests/mcp.historyMaterialization.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts --maxWorkers 1",
+      "files_passed": 5,
+      "tests_passed": 372
+    },
+    "full": {
+      "command": "pnpm vitest run --maxWorkers 1",
+      "files_passed": 323,
+      "files_skipped": 21,
+      "tests_passed": 2970,
+      "tests_skipped": 65,
+      "duration_seconds": 377.35
+    },
+    "typecheck": "passed",
+    "changed_file_lint": "passed with zero diagnostics",
+    "full_lint": "passed with 208 pre-existing unrelated warnings",
+    "production_build": "passed",
+    "plan_library_audit": "306 candidates, 0 validation errors",
+    "diff_check": "passed",
+    "codegraph": {
+      "files": 908,
+      "nodes": 17139,
+      "edges": 58667,
+      "sync": "up to date",
+      "flow": "createHistoryMaterializationService -> acquireHistoryMaterializationBrowserOperations -> resolveHistoryMaterializationBrowserOperationTarget"
+    }
+  },
+  "acceptance": {
+    "HMO-R1": "accepted",
+    "HMO-R2": "accepted",
+    "HMO-R3": "accepted",
+    "HMO-R4": "accepted",
+    "HMO-R5": "accepted",
+    "HMO-R6": "accepted",
+    "HMO-R7": "not_run"
+  },
+  "effects": {
+    "installed_runtime_changes": 0,
+    "service_restarts": 0,
+    "browser_launches": 0,
+    "provider_calls": 0,
+    "litscout_calls": 0,
+    "graphiti_writes": 0
+  },
+  "next": "Freeze a distinct one-install, one-restart, one-submission, zero-retry installed/live acceptance gate against product commit 929aec97."
+}
