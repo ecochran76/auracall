@@ -119,7 +119,7 @@ Lane: P01
   `research_continue`; zero retry is preserved and only the readback criterion
   carries forward.
 
-- Active LitScout discovery-aware readback acceptance:
+- Closed accepted LitScout discovery-aware readback acceptance:
   [docs/dev/plans/0307-2026-08-21-litscout-discovery-aware-readback.md](docs/dev/plans/0307-2026-08-21-litscout-discovery-aware-readback.md)
   Plan 0306 accepted the actual browser-ownership repair but exposed a narrower
   gate-contract contradiction. This no-code successor explicitly permits only
@@ -127,6 +127,11 @@ Lane: P01
   It authorizes zero install/restart, one distinct submission, zero retries,
   and requires exact `150 = 12 + 138`, one new LitScout request, zero canonical
   mutation, and exact terminal cleanup.
+  The sole submission passed in 20.6 seconds: exact `150/12/138`, one LitScout
+  request (`50 -> 51`), unchanged receipts/actions/membership, completed
+  session/model state, and no browser/operation/history residue. The carried
+  AuraCall/LitScout reliability goal is accepted at installed product
+  `929aec97`.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

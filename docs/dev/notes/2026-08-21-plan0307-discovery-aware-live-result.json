@@ -1,0 +1,131 @@
+{
+  "schemaVersion": "auracall.plan0307.discovery-aware-live-result.v1",
+  "recordedAt": "2026-08-22T03:13:31Z",
+  "plan": "0307-2026-08-21-litscout-discovery-aware-readback",
+  "outcome": "accepted",
+  "source": {
+    "acceptedProductCommit": "929aec97",
+    "planActivationCommit": "4ddf5064",
+    "gateRevisionCommit": "b007c259",
+    "branch": "fix/plan0302-chatgpt-timeout-signal-cleanup"
+  },
+  "budgetConsumed": {
+    "userRuntimeInstalls": 0,
+    "apiRestarts": 0,
+    "liveSubmissions": 1,
+    "retries": 0,
+    "researchActions": 0,
+    "approvalActions": 0
+  },
+  "preflight": {
+    "observedAt": "2026-08-22T03:12:39Z",
+    "repositoryCleanAndUpstreamExact": true,
+    "installedSourceParity": true,
+    "installedSha256": {
+      "historyMaterializationService": "dc0d191bce186796dd149d2ae95ca865ee3792316212fd6853c7414b8a1b2261",
+      "operationDispatcher": "e7efe3aed245d5fe821b8e2b81a5753f8cf99eac5628932611ea28e940cc368f",
+      "auracallHome": "27893c96c39ae80ac8f18b4e4be4a468c73556816e02c4d7c8409ce0e1fd2469"
+    },
+    "api": {
+      "pid": 49323,
+      "activeState": "active",
+      "subState": "running",
+      "nRestarts": 0,
+      "result": "success"
+    },
+    "canonicalLitScoutDbContract": "passed",
+    "session68": {
+      "lifecycleStage": "downselect",
+      "lifecycleStatus": "in_progress",
+      "corpusTotal": 150,
+      "keepCount": 12,
+      "removeCount": 138,
+      "receiptCount": 10,
+      "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+      "exactActionExecutionCount": 2
+    },
+    "litscoutCallToolRequestCount": 50,
+    "accountMirrorCompletion": {
+      "id": "acctmirror_completion_cf199b6b-741d-4d5b-8cd6-dee0b6aa117b",
+      "status": "idle_waiting",
+      "phase": "backfill_history",
+      "nextAttemptAt": "2026-08-22T03:14:11.804Z",
+      "latestLifecycleEvent": "provider_work_released",
+      "latestLifecycleEventAt": "2026-08-22T03:08:41.290Z"
+    },
+    "activeHistoryMaterializations": 0,
+    "browserOperationPresent": false,
+    "managedBrowserProcessAlive": false,
+    "devtoolsPort45015Listening": false
+  },
+  "live": {
+    "sessionPath": "/home/ecochran76/.auracall/sessions/litscout-discovery-aware-readback",
+    "slug": "litscout-discovery-aware-readback",
+    "profile": "wsl-chrome-3",
+    "model": "gpt-5.6-sol",
+    "mode": "browser",
+    "startedAt": "2026-08-22T03:12:56.262Z",
+    "completedAt": "2026-08-22T03:13:18.200Z",
+    "elapsedSeconds": 20.6,
+    "sessionStatus": "completed",
+    "modelStatus": "completed",
+    "usage": {
+      "inputTokens": 170,
+      "outputTokens": 54,
+      "reasoningTokens": 0,
+      "totalTokens": 224
+    },
+    "answer": {
+      "controller_stage": "evidence_gap_review",
+      "blockers": [],
+      "recommended_next_action": "accept_research_saturation",
+      "approval_required": false,
+      "corpus_total": 150,
+      "keep_count": 12,
+      "remove_count": 138,
+      "counts_consistent": true
+    },
+    "transportDiscovery": "permitted only as needed; not independently counted by AuraCall",
+    "substantiveLitScoutCall": "research_continue",
+    "substantiveLitScoutCallCount": 1,
+    "retries": 0
+  },
+  "postflight": {
+    "observedAt": "2026-08-22T03:13:31Z",
+    "litscoutCallToolRequestCount": 51,
+    "litscoutCallToolRequestDelta": 1,
+    "session68": {
+      "lifecycleStage": "downselect",
+      "lifecycleStatus": "in_progress",
+      "corpusTotal": 150,
+      "keepCount": 12,
+      "removeCount": 138,
+      "receiptCount": 10,
+      "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+      "exactActionExecutionCount": 2,
+      "changedFromBaseline": false
+    },
+    "activeHistoryMaterializations": 0,
+    "browserOperationPresent": false,
+    "managedBrowserProcessAlive": false,
+    "devtoolsPort45015Listening": false,
+    "accountMirrorCompletion": {
+      "id": "acctmirror_completion_cf199b6b-741d-4d5b-8cd6-dee0b6aa117b",
+      "status": "idle_waiting",
+      "latestLifecycleEvent": "provider_work_released",
+      "latestLifecycleEventAt": "2026-08-22T03:08:41.290Z"
+    },
+    "apiPid": 49323,
+    "apiHealthy": true,
+    "apiNRestarts": 0
+  },
+  "acceptance": {
+    "DAR-R1": "accepted",
+    "DAR-R2": "accepted",
+    "DAR-R3": "accepted",
+    "DAR-R4": "accepted",
+    "DAR-R5": "accepted",
+    "DAR-R6": "accepted"
+  },
+  "disposition": "The discovery-aware readback and the carried Plan 0306 criterion are accepted. AuraCall installed product 929aec97 reliably completed one exact read-only LitScout call with faithful terminal data, zero canonical mutation, and exact runtime cleanup. No further live retry is authorized or needed."
+}

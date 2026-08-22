@@ -1,8 +1,8 @@
 # LitScout Discovery-Aware Readback Acceptance | 0307-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: P0 FROZEN DISCOVERY-AWARE LIVE GATE / EXACT PREFLIGHT NEXT
+Operational state: DISCOVERY-AWARE LIVE ACCEPTED / INTEGRATION READY
 
 ## Stable Objective
 
@@ -37,6 +37,20 @@ terminal-fidelity, browser-ownership, zero-mutation, and cleanup guarantees.
   operation remains the admission authority if that completion wakes later.
 - Gate receipt:
   `docs/dev/notes/2026-08-21-plan0307-discovery-aware-live-gate.json`.
+- The sole `litscout-discovery-aware-readback` submission completed in 20.6
+  seconds. Session and model state are `completed`; the terminal JSON returned
+  `evidence_gap_review`, `accept_research_saturation`, approval `false`, and
+  exact `150 = 12 + 138` with `counts_consistent: true`.
+- LitScout's `CallToolRequest` count advanced exactly `50 -> 51`. Session 68
+  remained at ten receipts, latest `rar_d402c6...`, two exact-action executions,
+  and unchanged `150/12/138` membership. No research action, provider effect,
+  approval mutation, or retry occurred.
+- Terminal cleanup left no exact browser operation, managed Chrome process,
+  DevTools listener, foreground residue, or active history materialization. The
+  normal background completion remained only `idle_waiting` with its exact
+  prior `provider_work_released` evidence.
+- Durable result:
+  `docs/dev/notes/2026-08-21-plan0307-discovery-aware-live-result.json`.
 
 ## Planning Metadata
 
@@ -117,3 +131,8 @@ terminal-fidelity, browser-ownership, zero-mutation, and cleanup guarantees.
 One discovery-aware AuraCall browser submission returns exact canonical Session
 68 state after exactly one read-only LitScout request, changes no canonical or
 research state, terminalizes cleanly, and leaves no browser/runtime residue.
+
+Disposition: ACCEPTED. `DAR-R1` through `DAR-R6` pass. This closes the carried
+Plan 0306 readback criterion and accepts the overall AuraCall/LitScout
+reliability goal at installed product `929aec97`. Integration may now proceed
+through the normal branch gate; no further live prompt is needed.

@@ -1,5 +1,31 @@
 # RUNBOOK
 
+## Turn 489 | 2026-08-21
+
+- Plan 0307 exact preflight passed at pushed gate `b007c259`: clean/upstream
+  source, byte-exact installed product `929aec97`, healthy API PID `49323`,
+  canonical LitScout DB, Session 68 `150/12/138`, request-log baseline `50`, no
+  operation/history/Chrome/CDP activity, and only the explicitly released
+  `idle_waiting` background completion.
+- The sole `litscout-discovery-aware-readback` submission completed in 20.6
+  seconds with session/model `completed`. Its exact JSON returned
+  `evidence_gap_review`, no blockers, `accept_research_saturation`, approval
+  `false`, `150` total, `12` keep, `138` remove, and
+  `counts_consistent: true`.
+- LitScout's `CallToolRequest` count advanced exactly `50 -> 51`. Receipt count
+  remained ten, latest receipt remained `rar_d402c6...`, exact-action executions
+  remained two, and membership remained `150/12/138`. No research action,
+  provider effect, approval mutation, install, restart, or retry occurred.
+- Postflight found no foreground residue, exact browser operation, managed
+  Chrome, port 45015 listener, or active history materialization. The normal
+  background completion remained `idle_waiting` with its prior exact
+  `provider_work_released` event; API PID `49323` remained healthy with zero
+  restarts.
+- Plan 0307 closes accepted and closes the carried Plan 0306 readback criterion.
+  Overall AuraCall/LitScout reliability is accepted at installed product
+  `929aec97`. Result receipt:
+  `docs/dev/notes/2026-08-21-plan0307-discovery-aware-live-result.json`.
+
 ## Turn 488 | 2026-08-21
 
 - Plan 0306 consumed exactly one install, one API restart, one live submission,

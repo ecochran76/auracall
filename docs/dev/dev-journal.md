@@ -47459,3 +47459,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `nextAttemptAt`, and zero operation/history/Chrome/CDP ownership. Gate v2
   admits only that exact released steady state; queued/running provider work
   still blocks.
+- Exact preflight then passed at pushed gate `b007c259`. The sole discovery-
+  aware run completed in 20.6 seconds with exact canonical JSON:
+  `evidence_gap_review`, `accept_research_saturation`, approval `false`, and
+  `150 = 12 + 138` with consistency true.
+- LitScout request count advanced exactly `50 -> 51`; Session 68 receipts,
+  exact-action executions, and membership did not change. AuraCall session and
+  model terminalized completed, and no exact operation, Chrome/CDP, foreground,
+  or active history residue remained. No install, restart, action, provider
+  effect, or retry occurred. Plan 0307 and the overall AuraCall/LitScout
+  reliability goal close accepted at installed product `929aec97`.
