@@ -2,7 +2,7 @@
   "schemaVersion": "auracall.plan0305.installed-live-gate.v1",
   "createdAt": "2026-08-22T02:03:00Z",
   "plan": "0305",
-  "outcome": "frozen_unexecuted",
+  "outcome": "installed_accepted_live_pending",
   "sourceHead": "4f7b5c7b50f05935d4664958c730d5d2118d06d9",
   "sourceUpstream": "4f7b5c7b50f05935d4664958c730d5d2118d06d9",
   "acceptedProductCommit": "149d5bd1ea774fd9a189ea5efdb75faca65b4151",
@@ -36,12 +36,48 @@
     "secondInstallAllowed": false,
     "secondRestartAllowed": false
   },
+  "installed": {
+    "completedAt": "2026-08-22T02:04:07Z",
+    "packageVersion": "0.1.1",
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
+    "apiPid": 61182,
+    "apiNRestarts": 0,
+    "apiHealthy": true,
+    "byteExact": true,
+    "builtInstalledSha256": {
+      "assistantResponse": "9412ca6e59d1d2dd63177f557151dbca1b9eb8b5b1afe5927b6229ea452b4d2a",
+      "browserIndex": "ef198dbb775f2aa4b2ff05b711d0522f2509de5a6301203085316f91cbc73b48",
+      "pageActions": "534583319f34ec1fb8f843a7202f6062348066f262ca8df330c8760d9c947aea",
+      "reattachHelpers": "fd03f01f1c439db61e8df7116ac52781281aa67edb312e75ed3b7814adfdfa1c"
+    }
+  },
   "installedFixtures": {
     "providerCallsAllowed": 0,
     "browserLaunchesAllowed": 0,
     "digitMismatch": "captured and copied Markdown report 1 keep while eligible final DOM reports 12 keep; final DOM must be selected for text and Markdown with text-free mismatch evidence",
     "formattingEquivalent": "eligible final DOM and formatting-only copied Markdown must select final DOM text and preserve copied Markdown",
     "promptEcho": "final DOM equal to the prompt must be ineligible and preserve the captured answer"
+  },
+  "installedFixtureResults": {
+    "digitMismatch": {
+      "passed": true,
+      "decision": "stable-dom-substantive-mismatch",
+      "substantiveMismatch": true,
+      "copiedPlainFingerprint": "38:43249013",
+      "finalDomFingerprint": "39:2260824893",
+      "evidenceContainsText": false
+    },
+    "formattingEquivalent": {
+      "passed": true,
+      "decision": "copied-markdown-equivalent",
+      "substantiveMismatch": false
+    },
+    "promptEcho": {
+      "passed": true,
+      "decision": "captured-with-copied-markdown",
+      "substantiveMismatch": false
+    }
   },
   "liveBoundary": {
     "submissionsAllowed": 1,
@@ -79,8 +115,8 @@
     "any post-Send uncertainty; reconcile without retry"
   ],
   "effectsAtGate": {
-    "userRuntimeInstalls": 0,
-    "apiRestarts": 0,
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
     "browserLaunches": 0,
     "livePromptSubmissions": 0,
     "providerCalls": 0,

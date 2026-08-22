@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 485 | 2026-08-21
+
+- Plan 0305 consumed its one user-runtime install and one API restart. Exact
+  built/installed SHA-256 parity passes for assistant response, browser index,
+  page actions, and representation helpers. Installed CLI remains `0.1.1` and
+  API PID `61182` is active/running with `NRestarts=0`.
+- Three fixtures imported the installed reconciler directly. The live-shaped
+  `1 keep` versus `12 keep` mismatch selected stable DOM with text-free evidence;
+  formatting-only Markdown was preserved; a final prompt echo retained the
+  captured answer. No fixture launched a browser or contacted a provider.
+- Install/restart budgets are consumed. The one zero-retry live submission is
+  still unused and requires fresh exact source/upstream, idle profile ownership,
+  healthy API, canonical DB contract, and Session 68 readback before Send.
+
 ## Turn 484 | 2026-08-21
 
 - Plan 0305's installed/live packet is frozen at
