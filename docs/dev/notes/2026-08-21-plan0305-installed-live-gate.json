@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "auracall.plan0305.installed-live-gate.v1",
+  "createdAt": "2026-08-22T02:03:00Z",
+  "plan": "0305",
+  "outcome": "frozen_unexecuted",
+  "sourceHead": "4f7b5c7b50f05935d4664958c730d5d2118d06d9",
+  "sourceUpstream": "4f7b5c7b50f05935d4664958c730d5d2118d06d9",
+  "acceptedProductCommit": "149d5bd1ea774fd9a189ea5efdb75faca65b4151",
+  "preconditions": {
+    "branchCleanAndUpstreamExact": true,
+    "acceptedProductAncestor": true,
+    "api": {"pid": 78688, "activeState": "active", "subState": "running", "nRestarts": 0},
+    "profile": {"id": "wsl-chrome-3", "port": 45015, "operationRecords": 0, "browserProcesses": 0},
+    "litscout": {
+      "database": "/home/ecochran76/.local/share/litscout/state/db.sqlite3",
+      "dbContract": "passed",
+      "receiptCount": 10,
+      "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+      "totalMemberships": 150,
+      "keepMemberships": 12,
+      "removeMemberships": 138,
+      "priorCallToolRequestCount": 49
+    }
+  },
+  "expectedBuiltSha256": {
+    "assistantResponse": "9412ca6e59d1d2dd63177f557151dbca1b9eb8b5b1afe5927b6229ea452b4d2a",
+    "browserIndex": "ef198dbb775f2aa4b2ff05b711d0522f2509de5a6301203085316f91cbc73b48",
+    "pageActions": "534583319f34ec1fb8f843a7202f6062348066f262ca8df330c8760d9c947aea",
+    "reattachHelpers": "fd03f01f1c439db61e8df7116ac52781281aa67edb312e75ed3b7814adfdfa1c"
+  },
+  "runtimeBudget": {
+    "installCommand": "pnpm run install:user-runtime",
+    "userRuntimeInstallsAllowed": 1,
+    "restartCommand": "systemctl --user restart auracall-api.service",
+    "apiRestartsAllowed": 1,
+    "secondInstallAllowed": false,
+    "secondRestartAllowed": false
+  },
+  "installedFixtures": {
+    "providerCallsAllowed": 0,
+    "browserLaunchesAllowed": 0,
+    "digitMismatch": "captured and copied Markdown report 1 keep while eligible final DOM reports 12 keep; final DOM must be selected for text and Markdown with text-free mismatch evidence",
+    "formattingEquivalent": "eligible final DOM and formatting-only copied Markdown must select final DOM text and preserve copied Markdown",
+    "promptEcho": "final DOM equal to the prompt must be ineligible and preserve the captured answer"
+  },
+  "liveBoundary": {
+    "submissionsAllowed": 1,
+    "retriesAllowed": 0,
+    "profile": "wsl-chrome-3",
+    "model": "chatgpt:sol-high",
+    "conversationUrl": "https://chatgpt.com/g/g-p-6a09d3716d248191b70034773560947d-litscout/c/6a87c6b6-0324-83ea-b1be-12f4b3a927d2",
+    "slug": "litscout-fidelity-live",
+    "timeoutSeconds": 900,
+    "tool": "research_continue",
+    "sessionId": 68,
+    "readOnly": true,
+    "allowedToolCalls": 1,
+    "approvalActionsAllowed": 0,
+    "researchActionsAllowed": 0,
+    "providerCallsAllowedByLitScout": 0,
+    "positiveOrUnknownSpendAllowed": false,
+    "prompt": "Use LitScout exactly once. Call only read-only research_continue for Session 68. Do not call any other tool, do not approve or execute any action, and do not retry. Return exactly one JSON object with controller_stage, blockers, recommended_next_action, approval_required, corpus_total, keep_count, remove_count, and counts_consistent. Copy numeric fields exactly from the LitScout result and set counts_consistent only after verifying corpus_total equals keep_count plus remove_count. If the tool cannot be called or the state is ambiguous, return one JSON object stating that and stop."
+  },
+  "acceptance": [
+    "installed source bytes match all four expected hashes",
+    "all three installed provider-free fixtures pass",
+    "exactly one new LitScout CallToolRequest is observed",
+    "terminal JSON reports 150 total, 12 keep, 138 remove, and counts_consistent true",
+    "Session 68 receipts, latest receipt, memberships, action executions, and provider effects remain unchanged",
+    "exact controller, Chrome, and managed-profile operation ownership terminalize"
+  ],
+  "hardStops": [
+    "any preflight disagreement",
+    "installed byte mismatch",
+    "any installed fixture failure",
+    "ambiguous profile or conversation binding",
+    "more than one LitScout tool request",
+    "any LitScout action, approval, or provider call",
+    "any post-Send uncertainty; reconcile without retry"
+  ],
+  "effectsAtGate": {
+    "userRuntimeInstalls": 0,
+    "apiRestarts": 0,
+    "browserLaunches": 0,
+    "livePromptSubmissions": 0,
+    "providerCalls": 0,
+    "litscoutCalls": 0,
+    "graphitiWrites": 0
+  }
+}

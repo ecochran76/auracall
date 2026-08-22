@@ -96,7 +96,8 @@ Lane: P01
   stable DOM whenever substantive text differs. Pushed source `149d5bd1` is
   accepted: focused `124/124`, affected `1,547/1,547`, serial full provider-free
   `2,965/2,965`, typecheck, scoped lint, build, CodeGraph, planning audit, and
-  diff hygiene pass. A distinct installed/live gate remains unexecuted.
+  diff hygiene pass. A distinct one-install, one-restart, one-submission,
+  zero-retry installed/live gate is frozen and remains unexecuted.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

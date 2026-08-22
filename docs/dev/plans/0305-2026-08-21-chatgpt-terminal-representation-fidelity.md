@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P2 SOURCE ACCEPTED / INSTALLED_LIVE GATE NEXT
+Operational state: P3 INSTALLED_LIVE GATE FROZEN / TRANSITION NEXT
 
 ## Stable Objective
 
@@ -43,8 +43,10 @@ preserving Markdown when the two representations differ only by formatting.
   zero-warning scoped lint, production build, diff hygiene, and current
   CodeGraph at 908 files / 17,132 nodes / 58,587 edges.
 - No Plan 0305 install, restart, browser prompt, provider call, LitScout call,
-  or Graphiti write has occurred. A distinct installed/live gate must be
-  committed before any runtime transition.
+  or Graphiti write has occurred. The distinct one-install, one-restart,
+  one-submission, zero-retry gate is now frozen at
+  `docs/dev/notes/2026-08-21-plan0305-installed-live-gate.json` before any
+  runtime transition.
 
 ## Planning Metadata
 
@@ -87,8 +89,9 @@ preserving Markdown when the two representations differ only by formatting.
 - `TRF-R1` through `TRF-R6`: ACCEPTED at pushed product commit `149d5bd1`.
 - Receipt:
   `docs/dev/notes/2026-08-21-plan0305-terminal-representation-source-acceptance.json`.
-- `TRF-R7`: NOT RUN. Installed and live authority remains zero until a distinct
-  durable gate freezes exact budgets, prompt, baseline, and stop rules.
+- `TRF-R7`: NOT RUN. The durable gate now freezes exact budgets, prompt,
+  baseline, and stop rules. One transition and one submission are permitted;
+  no second install, restart, or submission is permitted.
 
 ## Non-Goals
 

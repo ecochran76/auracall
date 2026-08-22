@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 484 | 2026-08-21
+
+- Plan 0305's installed/live packet is frozen at
+  `docs/dev/notes/2026-08-21-plan0305-installed-live-gate.json` before runtime
+  transition. It permits one user-runtime install, at most one API restart,
+  three provider-free installed fixtures, and one zero-retry read-only LitScout
+  submission only after all exact preconditions pass.
+- Frozen source/upstream is `4f7b5c7b`; accepted product `149d5bd1` is an
+  ancestor. API PID `78688` is active/running with `NRestarts=0`; exact profile
+  ownership and port 45015 are idle. Canonical LitScout DB contract passes and
+  Session 68 remains at ten receipts, latest `rar_d402c6...`, and 150 members:
+  12 keep plus 138 remove.
+- The live prompt must call only read-only `research_continue` once, return one
+  JSON object, copy exact numeric fields, and assert the membership sum. It
+  permits no approval/action/provider effect, positive or unknown spend,
+  second tool call, retry, or Graphiti write. Any post-Send uncertainty is
+  reconciled without resubmission.
+
 ## Turn 483 | 2026-08-21
 
 - Plan 0305 reproduced the live-shaped copied-Markdown digit loss RED and
