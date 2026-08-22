@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P6 SOURCE ACCEPTED / INSTALLED GATE NEXT
+Operational state: P7 INSTALLED/LIVE GATE FROZEN / PREFLIGHT NEXT
 
 ## Stable Objective
 
@@ -147,3 +147,19 @@ installed behavior once end to end with zero canonical LitScout mutation.
   browser-mode regressions remain green and progress evidence is text-free.
 - `VTB-R6`: accepted and pushed at `571514c9`.
 - `VTB-R7` and `VTB-R8`: pending the separately frozen installed/live packet.
+
+## Frozen Installed And Live Packet
+
+- Durable gate:
+  `docs/dev/notes/2026-08-21-plan0304-installed-live-gate.json`.
+- Runtime budget: one `pnpm run install:user-runtime`, at most one explicit
+  `auracall-api.service` restart, and no second install or restart.
+- Installed proof must establish built/runtime byte parity and exercise the
+  installed expression builders for fresh stable identity below the positional
+  floor, reindexed baseline-text rejection, and tool-only rejection.
+- Live budget: one distinct `litscout-boundary-live` submission to the exact
+  retained LitScout conversation, one read-only `research_continue` for
+  Session 68, and zero retry after Send.
+- Stop before install unless source/upstream, service, operation ownership, and
+  canonical LitScout state are exact. Stop before Send unless installed parity
+  and all three installed fixtures pass.

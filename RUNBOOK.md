@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 480 | 2026-08-21
+
+- Plan 0304's pushed source acceptance is durable at docs commit `efbdbd09`.
+  The installed/live packet is now frozen at
+  `docs/dev/notes/2026-08-21-plan0304-installed-live-gate.json` before any
+  runtime transition.
+- It permits one user-runtime install, at most one explicit API restart, exact
+  byte parity, and three installed provider-free fixtures: fresh stable
+  identity below floor, reindexed baseline-text rejection, and tool-only
+  rejection. No second install/restart is permitted.
+- Only after those pass may one distinct `litscout-boundary-live` prompt submit
+  once to the retained conversation and call only read-only
+  `research_continue` for Session 68. Retry, research action approval, provider
+  work, positive/unknown spend, and a second tool call remain prohibited.
+- Preflight must re-prove exact source/upstream state, idle profile ownership,
+  healthy API, canonical LitScout DB contract, and unchanged Session 68
+  receipts/corpus before installation and again before Send.
+
 ## Turn 479 | 2026-08-21
 
 - Plan 0304 reproduced the virtualized boundary failure provider-free and
