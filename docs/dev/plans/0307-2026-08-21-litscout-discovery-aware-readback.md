@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P01
-Operational state: DISCOVERY-AWARE LIVE ACCEPTED / INTEGRATION READY
+Operational state: DISCOVERY-AWARE LIVE ACCEPTED / INTEGRATED ON MAIN
 
 ## Stable Objective
 
@@ -134,5 +134,6 @@ research state, terminalizes cleanly, and leaves no browser/runtime residue.
 
 Disposition: ACCEPTED. `DAR-R1` through `DAR-R6` pass. This closes the carried
 Plan 0306 readback criterion and accepts the overall AuraCall/LitScout
-reliability goal at installed product `929aec97`. Integration may now proceed
-through the normal branch gate; no further live prompt is needed.
+reliability goal at installed product `929aec97`. The accepted branch stack
+fast-forwarded `main` from `86c33891` to result commit `f7e1aa73`; no merge
+conflict or reconciliation was required. No further live prompt is needed.

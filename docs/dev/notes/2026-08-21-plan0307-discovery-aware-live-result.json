@@ -9,6 +9,14 @@
     "gateRevisionCommit": "b007c259",
     "branch": "fix/plan0302-chatgpt-timeout-signal-cleanup"
   },
+  "integration": {
+    "method": "fast-forward",
+    "target": "main",
+    "fromCommit": "86c33891",
+    "acceptedResultCommit": "f7e1aa73",
+    "conflicts": 0,
+    "remotePush": "succeeded"
+  },
   "budgetConsumed": {
     "userRuntimeInstalls": 0,
     "apiRestarts": 0,
@@ -127,5 +135,5 @@
     "DAR-R5": "accepted",
     "DAR-R6": "accepted"
   },
-  "disposition": "The discovery-aware readback and the carried Plan 0306 criterion are accepted. AuraCall installed product 929aec97 reliably completed one exact read-only LitScout call with faithful terminal data, zero canonical mutation, and exact runtime cleanup. No further live retry is authorized or needed."
+  "disposition": "The discovery-aware readback and the carried Plan 0306 criterion are accepted. AuraCall installed product 929aec97 reliably completed one exact read-only LitScout call with faithful terminal data, zero canonical mutation, and exact runtime cleanup. The accepted stack fast-forwarded to main at f7e1aa73. No further live retry is authorized or needed."
 }

@@ -131,7 +131,7 @@ Lane: P01
   request (`50 -> 51`), unchanged receipts/actions/membership, completed
   session/model state, and no browser/operation/history residue. The carried
   AuraCall/LitScout reliability goal is accepted at installed product
-  `929aec97`.
+  `929aec97`; the accepted stack fast-forwarded to `main` at `f7e1aa73`.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 490 | 2026-08-21
+
+- After Plan 0307 closed accepted, `origin/main` was an exact ancestor of the
+  feature branch with divergence `0 behind / 29 ahead`. The accepted stack
+  fast-forwarded `main` from `86c33891` to result commit `f7e1aa73` and pushed
+  successfully with zero conflicts.
+- This integrates the complete bounded repair chain: exact-card tool approval,
+  post-submit profile ownership, timeout/signal terminalization, post-tool
+  response extraction, virtualized turn identity, terminal representation
+  fidelity, and history-materialization browser ownership. Installed product
+  identity remains `929aec97`; later commits in the stack are governing docs
+  and live receipts.
+- No additional install, API restart, browser prompt, LitScout call, research
+  action, provider effect, or Graphiti write accompanied integration.
+
 ## Turn 489 | 2026-08-21
 
 - Plan 0307 exact preflight passed at pushed gate `b007c259`: clean/upstream
