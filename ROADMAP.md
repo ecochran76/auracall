@@ -44,19 +44,26 @@ Lane: P01
   signal-cleanup defect. Plan 0302 owns terminalization; Plan 0301 is not
   reopened.
 
-- Active ChatGPT overall-timeout and signal-cleanup repair:
+- Closed split-result ChatGPT overall-timeout and signal-cleanup repair:
   [docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md](docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md)
   LitScout Plan 0436 proved the foreground lock remained correct, but AuraCall
   outlived `--timeout 60m` and normal SIGINT left its exact session, model,
   managed Chrome, and browser-operation state nonterminal. This bounded
-  successor traces and repairs one overall deadline plus one awaited,
-  idempotent terminal-cleanup seam, safely reconciles only the exact residue,
-  and requires provider-free source/installed proof plus one no-write LitScout
-  connected-app terminal acceptance. Source is now accepted: affected `96/96`,
-  serial full provider-free `2,948 passed / 65 skipped`, typecheck, lint, build,
-  and current CodeGraph all pass. Installation, exact residue reconciliation,
-  installed timeout/signal probes, and the one no-write LitScout acceptance
-  remain open.
+  successor repaired one overall deadline plus one awaited, idempotent
+  terminal-cleanup seam and safely reconciled only the exact residue. Source,
+  installed byte parity, deterministic probes, and real 900-second cleanup are
+  accepted. The one no-write LitScout call executed exactly once, but AuraCall
+  returned no terminal assistant answer; Plan 0302 closes without integration
+  and Plan 0303 owns that distinct post-tool response failure.
+
+- Active ChatGPT post-tool terminal-response repair:
+  [docs/dev/plans/0303-2026-08-21-chatgpt-post-tool-terminal-response.md](docs/dev/plans/0303-2026-08-21-chatgpt-post-tool-terminal-response.md)
+  Plan 0302 live-proved safe timeout cleanup but the exact read-only LitScout
+  tool request was followed by no captured terminal assistant answer. This
+  source-first successor preserves the one-call/zero-write evidence, builds
+  deterministic post-tool fixtures, and adds bounded passive terminal-state
+  evidence without accepting tool or approval text as an answer. Install and a
+  distinct one-submit acceptance remain gated behind pushed source proof.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

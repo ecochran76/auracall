@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "auracall.plan0302.installed-live-terminalization.v1",
+  "createdAt": "2026-08-22T00:12:25Z",
+  "plan": "0302",
+  "outcome": "terminalization_live_accepted_terminal_answer_live_rejected",
+  "source": {
+    "branch": "fix/plan0302-chatgpt-timeout-signal-cleanup",
+    "commit": "3e25bbc4f1ab6bdcc66fa4ab2b46a3e4f680813e",
+    "upstreamExact": true
+  },
+  "installed": {
+    "installedAt": "2026-08-21T23:44:29.294Z",
+    "packageVersion": "0.1.1",
+    "apiPid": 14873,
+    "apiNRestarts": 0,
+    "apiHealthy": true,
+    "affectedSha256": {
+      "sessionRunner": "2e62918a7563154074bb03ee5254124a314ef864ee1e60905796a3e1aae680af",
+      "browserIndex": "983d23f262e0cacc02148469961093d1a380440e7cae985a31d993050f484510",
+      "operationDispatcher": "e7efe3aed245d5fe821b8e2b81a5753f8cf99eac5628932611ea28e940cc368f",
+      "cli": "da06383fdbaabab52fa562280c695f24ce1f9abb0bc056fb5eaf0c6e5a01d77e"
+    },
+    "sourceInstalledByteExact": true
+  },
+  "installedProviderFree": {
+    "timeout": {
+      "home": "/tmp/auracall-plan0302-timeout.D8Yng7",
+      "elapsedMs": 56,
+      "executeCalls": 1,
+      "abortObserved": true,
+      "caught": "SessionRunTimeoutError",
+      "sessionStatus": "error",
+      "modelStatus": "error",
+      "operations": [],
+      "signalListenerDeltas": {
+        "SIGINT": 0,
+        "SIGTERM": 0,
+        "SIGQUIT": 0
+      }
+    },
+    "signal": {
+      "home": "/tmp/auracall-plan0302-sigint.p8ZWZu",
+      "elapsedMs": 22,
+      "executeCalls": 1,
+      "abortObserved": true,
+      "caught": "SessionRunCancelledError",
+      "signal": "SIGINT",
+      "sessionStatus": "cancelled",
+      "modelStatus": "cancelled",
+      "operations": [],
+      "signalListenerDeltas": {
+        "SIGINT": 0,
+        "SIGTERM": 0,
+        "SIGQUIT": 0
+      }
+    }
+  },
+  "historicalResidue": {
+    "slug": "litscout-profile-lock-live-acceptance",
+    "controllerPid": 83793,
+    "chromePid": 85939,
+    "controllerDead": true,
+    "chromeDead": true,
+    "exactProfileMatched": true,
+    "operationDirectoryEmptyBeforeReconciliation": true,
+    "supportedSessionStoreReconciliation": true,
+    "rawFileDeletion": false,
+    "terminalStatus": "cancelled",
+    "completedAt": "2026-08-21T23:47:07.553Z"
+  },
+  "live": {
+    "slug": "litscout-readonly-live-acceptance",
+    "conversationUrl": "https://chatgpt.com/g/g-p-6a09d3716d248191b70034773560947d-litscout/c/6a87c6b6-0324-83ea-b1be-12f4b3a927d2",
+    "startedAt": "2026-08-21T23:48:22.541Z",
+    "completedAt": "2026-08-22T00:02:51.721Z",
+    "deadlineSeconds": 900,
+    "controllerPid": 44027,
+    "chromePid": 44295,
+    "operationId": "4d68bd96-928f-49b3-be46-d220cf5c2138",
+    "toolRequestsObserved": 1,
+    "toolRequestObservedAt": "2026-08-21T23:48:56Z",
+    "tool": "research_continue",
+    "sessionId": 68,
+    "writeAuthorized": false,
+    "retryCount": 0,
+    "terminal": {
+      "sessionStatus": "error",
+      "modelStatus": "error",
+      "errorType": "SessionRunTimeoutError",
+      "controllerDead": true,
+      "chromeDead": true,
+      "operationReleased": true,
+      "assistantOutputReturned": false
+    }
+  },
+  "litscout": {
+    "canonicalDb": "/home/ecochran76/.local/share/litscout/state/db.sqlite3",
+    "contractCheck": "passed",
+    "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+    "newReceiptsAfterLiveCall": 0,
+    "corpus": {
+      "total": 150,
+      "keep": 12,
+      "remove": 138
+    },
+    "controllerState": "evidence_gap_review",
+    "nextRecommendedAction": "accept_research_saturation",
+    "approvalExecuted": false,
+    "writesFromLiveCall": 0
+  },
+  "acceptance": {
+    "TSC-R1": "pass",
+    "TSC-R2": "pass",
+    "TSC-R3": "pass",
+    "TSC-R4": "pass",
+    "TSC-R5": "pass",
+    "TSC-R6": "pass",
+    "TSC-R7": "pass",
+    "TSC-R8": "pass",
+    "TSC-R9": "fail_no_terminal_assistant_answer",
+    "TSC-R10": "fail_no_closure_or_integration"
+  },
+  "effects": {
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
+    "livePromptSubmissions": 1,
+    "litscoutToolRequests": 1,
+    "litscoutWrites": 0,
+    "litscoutProviderCalls": 0,
+    "duplicateToolRequests": 0,
+    "graphitiWrites": 0
+  },
+  "disposition": "Close Plan 0302 as a split result without integration. Preserve the accepted timeout/signal repair on its pushed branch. Plan 0303 owns post-tool assistant-response diagnosis and must freeze a distinct live budget before another prompt."
+}

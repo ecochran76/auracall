@@ -8,6 +8,13 @@
   the CLI exits. Node signal listeners receive no signal-name argument, so bind
   one closure per signal rather than recording an undefined reason.
 
+- 2026-08-21: A successful connected-app tool request and clean browser
+  timeout do not prove AuraCall can return the terminal assistant answer.
+  Preserve exact one-call evidence, distinguish provider no-prose from
+  extractor drift, and capture a bounded passive final response-state
+  classification before cleanup. Never promote tool-card text, approval
+  labels, status copy, user text, or stale prior-turn prose into the answer.
+
 - 2026-08-21: Bind ChatGPT tool-approval fingerprints to the exact current
   `data-testid="tool-approval-card"`, not the first 500 characters of its
   containing assistant turn. ChatGPT can emit several approval cards in one

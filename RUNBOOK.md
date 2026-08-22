@@ -1,5 +1,33 @@
 # RUNBOOK
 
+## Turn 475 | 2026-08-21
+
+- [Plan 0302](docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md)
+  is a split live result. Pushed source `3e25bbc4` was installed once with all
+  affected bytes exact; installed timeout and SIGINT probes terminalized exact
+  session/model state, observed abort, removed operation ownership, and leaked
+  no signal listeners.
+- Exact historical Plan-0436 residue was reconciled through the installed
+  session store only after proving the controller/browser dead and exact
+  identity/empty ownership. No raw file deletion or unrelated cleanup ran.
+- The sole live acceptance submitted once. LitScout processed exactly one
+  read-only `research_continue` call at `2026-08-21T23:48:56Z`; canonical
+  receipts, 150/12/138 corpus, `evidence_gap_review`, and provider-call/write
+  counts remained unchanged.
+- At 900 seconds the new deadline cleanly persisted the session/model as
+  `error`, closed controller PID `44027` and Chrome PID `44295`, released exact
+  operation `4d68bd96...`, and left API PID `14873` healthy with zero restarts.
+  No terminal assistant answer was returned. `TSC-R1` through `TSC-R8` pass;
+  `TSC-R9`, `TSC-R10`, and the Definition of Done fail.
+- Plan 0302 closes live-rejected without integration. Its install/restart/live
+  budgets are consumed. Durable receipt:
+  `docs/dev/notes/2026-08-21-plan0302-installed-live-terminalization-receipt.json`.
+- [Plan 0303](docs/dev/plans/0303-2026-08-21-chatgpt-post-tool-terminal-response.md)
+  opens source-first. It must distinguish missing provider prose from extractor
+  drift through deterministic fixtures and bounded passive abort-time evidence,
+  while preserving exact answer, approval, deadline, lock, and cleanup guards.
+  No new install, restart, prompt, provider call, or browser mutation is active.
+
 ## Turn 474 | 2026-08-21
 
 - [Plan 0302](docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md)

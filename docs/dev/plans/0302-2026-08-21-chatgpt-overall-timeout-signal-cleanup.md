@@ -1,8 +1,8 @@
 # ChatGPT Overall Timeout And Signal Cleanup | 0302-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: P4 SOURCE ACCEPTED / INSTALL PENDING
+Operational state: TERMINALIZATION LIVE ACCEPTED / TERMINAL ANSWER LIVE REJECTED / SUPERSEDED BY PLAN 0303
 
 ## Stable Objective
 
@@ -28,14 +28,11 @@ AuraCall runtime profile after the controlling CLI exits.
   `--timeout 60m`, but remained nonterminal after that ceiling. One normal
   controlling-terminal SIGINT at approximately 65 minutes ended PID `83793`
   without persisting a terminal session/model result or configured output.
-- Exact owned residue remains: Chrome PID `85939` for managed browser profile
-  `wsl-chrome-3/chatgpt`; the operation file still names dead owner PID
-  `83793`; session `litscout-profile-lock-live-acceptance` and model
-  `gpt-5.6-sol` remain `running` with `completedAt=null`.
-- API PID `23839` remains active on loopback port `18095` with
-  `systemd NRestarts=0`. The stale operation continues to reject scheduler
-  attempts, so cleanup is an observed operational blocker rather than cosmetic
-  metadata drift.
+- The exact historical residue was reconciled through the installed session
+  store after proving controller PID `83793` and Chrome PID `85939` dead, the
+  exact profile and slug matched, and operation ownership was empty. The old
+  session/model now terminate as `cancelled`; no raw JSON or operation-file
+  deletion was used.
 - LitScout's terminal receipt is
   `docs/dev/validation/0436-auracall-timeout-cleanup-terminal.json` on pushed
   branch `plan/0436-auracall-post-submit-lock-live-acceptance` at `6c0e99b6`.
@@ -57,8 +54,29 @@ AuraCall runtime profile after the controlling CLI exits.
   (`2,948 passed / 65 skipped`). Two unrelated wall-clock assertions failed
   separately under parallel suite load, each passed alone, and both passed in
   the serial full gate. CodeGraph is current at 908 files / 17,102 nodes /
-  58,371 edges. Install, API restart, residue cleanup, browser prompt, and
-  LitScout effects remain zero for this source slice.
+  58,371 edges.
+- Source commit `3e25bbc4` is pushed/upstream-exact. One user-runtime install
+  completed at `2026-08-21T23:44:29.294Z`; all four affected installed
+  artifacts are byte-exact with source. The plan's sole API restart produced
+  healthy PID `14873` with `NRestarts=0`.
+- Installed provider-free timeout and SIGINT probes both terminalized the
+  session/model, observed cancellation, removed operation ownership, and left
+  all signal-listener deltas at zero. Their disposable homes are reproducible
+  evidence only, not the durable receipt.
+- The plan's sole live submission started at
+  `2026-08-21T23:48:22.541Z`. ChatGPT invoked exactly one LitScout
+  `CallToolRequest` at `2026-08-21T23:48:56Z`; canonical LitScout receipt and
+  corpus state remained unchanged, proving the call was read-only and was not
+  retried.
+- At the exact 900-second deadline AuraCall cleanly persisted the session and
+  model as `error`, closed controller PID `44027` and Chrome PID `44295`, and
+  released operation `4d68bd96-928f-49b3-be46-d220cf5c2138`. The API remained
+  healthy and unchanged.
+- No assistant answer was returned or captured after that successful tool
+  request. `TSC-R1` through `TSC-R8` pass, but `TSC-R9` and therefore
+  `TSC-R10` and the Definition of Done fail. Plan 0303 owns a distinct,
+  source-first post-tool response diagnosis; Plan 0302 closes without an
+  integration or reliability-complete claim.
 
 ## Planning Metadata
 
@@ -217,3 +235,9 @@ persists terminal session/model state, releases only exact owned browser state,
 and proves those semantics in source, installed deterministic probes, and one
 installed no-write LitScout turn that returns a terminal answer while canonical
 LitScout state and receipts remain unchanged.
+
+Disposition: **NOT MET**. Installed timeout/signal terminalization is
+live-accepted, but the one bounded LitScout turn did not return a terminal
+answer. See
+`docs/dev/notes/2026-08-21-plan0302-installed-live-terminalization-receipt.json`
+and successor Plan 0303.
