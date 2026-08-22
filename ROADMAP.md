@@ -56,7 +56,7 @@ Lane: P01
   returned no terminal assistant answer; Plan 0302 closes without integration
   and Plan 0303 owns that distinct post-tool response failure.
 
-- Active ChatGPT post-tool terminal-response repair:
+- Closed split-result ChatGPT post-tool terminal-response repair:
   [docs/dev/plans/0303-2026-08-21-chatgpt-post-tool-terminal-response.md](docs/dev/plans/0303-2026-08-21-chatgpt-post-tool-terminal-response.md)
   Plan 0302 live-proved safe timeout cleanup but the exact read-only LitScout
   tool request was followed by no captured terminal assistant answer. This
@@ -66,8 +66,19 @@ Lane: P01
   `28da74e5` is accepted: focused `10/10`, affected `1,030/1,030`, serial full
   provider-free `2,952/2,952`, typecheck, lint, build, and current CodeGraph
   pass. One idle-boundary install and one API restart are byte-exact and healthy;
-  corrected installed positive/no-answer fixtures pass. The distinct frozen
-  one-submit acceptance remains ready but unrun.
+  corrected installed positive/no-answer fixtures pass. The distinct live
+  prompt made exactly one read-only LitScout call and terminalized cleanly, but
+  returned no answer. Its diagnostic proved an absolute turn floor of 15 while
+  ChatGPT later mounted only 12 virtualized turn nodes. Plan 0304 owns that
+  stable-boundary defect; Plan 0303 closes without integration.
+
+- Active ChatGPT virtualized turn-boundary repair:
+  [docs/dev/plans/0304-2026-08-21-chatgpt-virtualized-turn-boundary.md](docs/dev/plans/0304-2026-08-21-chatgpt-virtualized-turn-boundary.md)
+  Plan 0303 live-proved exactly one LitScout request, zero canonical mutation,
+  exact timeout cleanup, and a durable `12 < 15` boundary classification. This
+  source-first successor replaces count-only eligibility with stable pre-submit
+  assistant identity across DOM shrink/reindex, while keeping positional fast
+  paths and all stale/tool/approval exclusions fail-closed.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

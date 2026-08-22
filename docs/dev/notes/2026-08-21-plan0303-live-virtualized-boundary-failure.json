@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "auracall.plan0303.live-virtualized-boundary-failure.v1",
+  "createdAt": "2026-08-22T01:06:00Z",
+  "plan": "0303",
+  "outcome": "terminal_diagnostic_accepted_live_answer_rejected",
+  "sourceCommit": "28da74e51e97738acff636fe2cc962d195ed4024",
+  "installedGateCommit": "8707b93cdd42a4646b2aed96932c92d367414e04",
+  "live": {
+    "requestedSlug": "litscout-post-tool-response-live-acceptance",
+    "persistedSessionId": "litscout-post-tool-response-live",
+    "startedAt": "2026-08-22T00:47:25.464Z",
+    "completedAt": "2026-08-22T01:01:48.660Z",
+    "deadlineSeconds": 900,
+    "controllerPid": 61398,
+    "chromePid": 61515,
+    "operationId": "fdd85f48-c186-4945-846b-3a44c167fa0f",
+    "toolRequestsObserved": 1,
+    "toolRequestObservedAt": "2026-08-21T19:47:45-05:00",
+    "tool": "research_continue",
+    "sessionId": 68,
+    "retryCount": 0,
+    "terminal": {
+      "sessionStatus": "error",
+      "modelStatus": "error",
+      "errorCategory": "browser-terminal-response",
+      "errorType": "SessionRunTimeoutError",
+      "controllerDead": true,
+      "chromeDead": true,
+      "operationReleased": true,
+      "assistantOutputReturned": false,
+      "browserResponseProgress": {
+        "state": "no-assistant-turn",
+        "url": "https://chatgpt.com/g/g-p-6a09d3716d248191b70034773560947d-litscout/c/6a87c6b6-0324-83ea-b1be-12f4b3a927d2",
+        "turnCount": 12,
+        "minTurnIndex": 15,
+        "assistantTurnIndex": null,
+        "assistantTextChars": 0,
+        "stopVisible": false,
+        "completionVisible": false,
+        "toolApprovalCardsVisible": 0,
+        "dialogVisible": false
+      }
+    }
+  },
+  "litscout": {
+    "canonicalDb": "/home/ecochran76/.local/share/litscout/state/db.sqlite3",
+    "contractCheck": "passed",
+    "receiptCount": 10,
+    "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+    "newReceiptsAfterLiveCall": 0,
+    "corpus": { "total": 150, "keep": 12, "remove": 138 },
+    "controllerState": "evidence_gap_review",
+    "nextRecommendedAction": "accept_research_saturation",
+    "approvalExecuted": false,
+    "writesFromLiveCall": 0,
+    "providerCallsFromLiveCall": 0
+  },
+  "runtime": {
+    "apiPid": 6690,
+    "apiNRestarts": 0,
+    "apiHealthy": true
+  },
+  "diagnosis": {
+    "classification": "virtualized_positional_turn_boundary",
+    "committedTurnCount": 16,
+    "derivedMinTurnIndex": 15,
+    "mountedTurnCountAtTimeout": 12,
+    "stableBaselineAssistantIdentityCapturedBeforeSubmit": true,
+    "stableIdentityUsedByResponsePolling": false
+  },
+  "effects": {
+    "livePromptSubmissions": 1,
+    "litscoutToolRequests": 1,
+    "litscoutWrites": 0,
+    "litscoutProviderCalls": 0,
+    "duplicateToolRequests": 0,
+    "graphitiWrites": 0
+  },
+  "disposition": "Close Plan 0303 as a split result without integration. Preserve its accepted extractor and diagnostic improvements. Plan 0304 owns stable assistant-response boundaries across virtualized or reindexed ChatGPT conversation DOM."
+}

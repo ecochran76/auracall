@@ -1,5 +1,27 @@
 # RUNBOOK
 
+## Turn 478 | 2026-08-21
+
+- Plan 0303's sole live prompt submitted once at
+  `2026-08-22T00:47:25.464Z`. LitScout logged exactly one `CallToolRequest` at
+  `2026-08-21T19:47:45-05:00`; Session 68 retained ten receipts and 150 corpus
+  members (12 keep, 138 remove) with no provider/action write.
+- At the 900-second boundary AuraCall persisted session/model `error` under
+  `browser-terminal-response`, closed controller PID `61398` and Chrome PID
+  `61515`, released operation `fdd85f48...`, and left API PID `6690` healthy
+  with zero restarts. No retry ran.
+- The installed diagnostic recorded `no-assistant-turn`, `turnCount=12`, and
+  `minTurnIndex=15`. Current source proves prompt commit observed 16 turns and
+  derived floor 15; later DOM virtualization mounted only 12, so every response
+  observer/snapshot path rejected the new assistant turn by absolute position.
+- Plan 0303 closes split-result without integration. Receipt:
+  `docs/dev/notes/2026-08-21-plan0303-live-virtualized-boundary-failure.json`.
+- [Plan 0304](docs/dev/plans/0304-2026-08-21-chatgpt-virtualized-turn-boundary.md)
+  opens source-first. It will thread pre-submit assistant message/turn identity
+  through observer, poller, recovery, refresh, and progress capture; stable
+  identity becomes authoritative only when positional DOM bounds are invalid.
+  No install, restart, browser, provider, or LitScout effect is active.
+
 ## Turn 477 | 2026-08-21
 
 - Plan 0303 passed an exact idle gate with zero browser-operation records and

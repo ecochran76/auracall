@@ -1,8 +1,8 @@
 # ChatGPT Post-Tool Terminal Response | 0303-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: P6 INSTALLED ACCEPTED / LIVE PROMPT READY_NOT_RUN
+Operational state: SOURCE/INSTALLED ACCEPTED / LIVE SPLIT_RESULT_SUPERSEDED
 
 ## Stable Objective
 
@@ -72,9 +72,24 @@ guards, or sacrificing Plan 0302's live-accepted cleanup.
   `tool-approval-visible` with zero answer characters and no query/tool text.
 - Installed receipt and frozen one-submit boundary:
   `docs/dev/notes/2026-08-21-plan0303-installed-fixtures-live-gate.json`.
-  No live prompt has been submitted. The remaining gate is one exact
-  Session-68 read-only `research_continue` submission after fresh canonical
-  LitScout and runtime preflight.
+  The one live prompt submitted at `2026-08-22T00:47:25.464Z`. LitScout logged
+  exactly one `CallToolRequest` at `2026-08-21T19:47:45-05:00`; canonical
+  receipts, corpus membership, and provider/action effects remained unchanged.
+- AuraCall terminalized the exact session/model at
+  `2026-08-22T01:01:48.660Z`, closed controller PID `61398` and Chrome PID
+  `61515`, released operation `fdd85f48-c186-4945-846b-3a44c167fa0f`, and
+  preserved healthy API PID `6690` with `NRestarts=0`.
+- The new diagnostic persisted `state=no-assistant-turn`, `turnCount=12`, and
+  `minTurnIndex=15` with zero answer chars/cards/dialogs. Source tracing proves
+  prompt commit converted the observed 16-turn count into a positional floor
+  of 15, while later ChatGPT DOM virtualization mounted only 12 turns. The
+  absolute DOM index therefore excluded every candidate after the tool call.
+- `PTR-R1` through `PTR-R7` are accepted; `PTR-R8` and the Definition of Done
+  fail because no terminal assistant answer was returned. Plan 0303 closes as
+  a split result without integration. Plan 0304 owns stable response-boundary
+  identity across virtualized/reindexed conversation DOM.
+- Live receipt:
+  `docs/dev/notes/2026-08-21-plan0303-live-virtualized-boundary-failure.json`.
 
 ## Planning Metadata
 
@@ -175,7 +190,7 @@ guards, or sacrificing Plan 0302's live-accepted cleanup.
 
 ## Definition Of Done
 
-AuraCall returns the correct terminal assistant answer after one LitScout tool
-request or fails with a durable, bounded post-tool state classification, while
-preserving the one-deadline/one-cleanup contract and proving one installed
-read-only LitScout turn end to end with no canonical research write or replay.
+Not met. Source and installed fixtures are accepted, and the live run safely
+persisted a bounded post-tool classification, but the installed end-to-end turn
+returned no terminal assistant answer. Plan 0304 supersedes the disproven
+positional response boundary.
