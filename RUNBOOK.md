@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 486 | 2026-08-21
+
+- Plan 0305's sole `litscout-fidelity-live` submission started once at
+  `2026-08-22T02:11:32.763Z` and failed safe 40.3 seconds later when adopted
+  Chrome PID `67609` closed. Session/model terminalized `error`; the exact
+  controller, profile operation, and Chrome process are gone; API PID `61182`
+  remains active with zero restarts. No retry ran.
+- Canonical LitScout state is unchanged: DB contract passes; Session 68 has ten
+  receipts, latest `rar_d402c6...`, two historical exact-action executions,
+  and 150 members: 12 keep plus 138 remove. AuraCall retained no answer or
+  prompt-commit evidence, so whether the remote prompt reached one read-only
+  `research_continue` call remains uncertain.
+- The exact competing completion was
+  `acctmirror_completion_31aee97a-eb15-4ae5-b6b4-63d9eee34e76`. Its refresh
+  phase released the browser-operation file at `02:10:17`, but history
+  materialization `hmj_49687afe...` remained under the provider-work lease until
+  `02:12:12.153`; Chrome's systemd scope ended at `02:12:13`, matching the
+  foreground CDP loss.
+- CodeGraph confirms history-materialization cleanup enumerates and terminates
+  every matching managed-profile PID without acquiring/checking the shared
+  file-backed browser operation. Plan 0305 closes source/installed accepted but
+  live blocked, without integration. Receipt:
+  `docs/dev/notes/2026-08-21-plan0305-live-browser-ownership-failure.json`.
+  Plan 0306 opens provider-free with zero install/restart/live-call authority.
+
 ## Turn 485 | 2026-08-21
 
 - Plan 0305 consumed its one user-runtime install and one API restart. Exact

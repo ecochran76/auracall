@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "auracall.plan0305.live-browser-ownership-failure.v1",
+  "createdAt": "2026-08-22T02:18:00Z",
+  "plan": "0305",
+  "outcome": "source_and_installed_accepted_live_blocked_by_distinct_lifecycle_failure",
+  "sourceProductCommit": "149d5bd1ea774fd9a189ea5efdb75faca65b4151",
+  "installedAcceptanceCommit": "9e66c264",
+  "live": {
+    "sessionId": "litscout-fidelity-live",
+    "model": "gpt-5.6-sol",
+    "startedAt": "2026-08-22T02:11:32.763Z",
+    "completedAt": "2026-08-22T02:12:13.108Z",
+    "elapsedMs": 40345,
+    "status": "error",
+    "submissions": 1,
+    "retries": 0,
+    "errorCategory": "browser-automation",
+    "errorStage": "execute-browser",
+    "errorMessage": "Chrome window closed before auracall finished. Please keep it open until completion.",
+    "answerRetained": false,
+    "promptCommitRetained": false,
+    "litscoutReadOnlyCallOutcome": "uncertain"
+  },
+  "competingWork": {
+    "completionId": "acctmirror_completion_31aee97a-eb15-4ae5-b6b4-63d9eee34e76",
+    "provider": "chatgpt",
+    "runtimeProfileId": "wsl-chrome-3",
+    "completionStartedAt": "2026-08-22T01:58:52.104Z",
+    "refreshPhaseUpdatedAt": "2026-08-22T02:10:17.239Z",
+    "historyMaterializationJobId": "hmj_49687afe24224f6e9cd648757b6fa882",
+    "historyMaterializationCompletedAt": "2026-08-22T02:12:12.153Z",
+    "completionEndedAt": "2026-08-22T02:12:19.033Z",
+    "chromePid": 67609,
+    "chromeScopeEndedAt": "2026-08-22T02:12:13-05:00"
+  },
+  "diagnosis": {
+    "proven": "History materialization cleanup resolves the managed profile and terminates all matching Chrome PIDs without acquiring or checking the shared file-backed browser operation.",
+    "falseIdleWindow": "The refresh browser-operation record released before the completion's provider work and materialization cleanup ended, allowing the foreground CLI to adopt the same Chrome.",
+    "successor": "Plan 0306"
+  },
+  "canonicalAfter": {
+    "database": "/home/ecochran76/.local/share/litscout/state/db.sqlite3",
+    "dbContract": "passed",
+    "receiptCount": 10,
+    "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+    "exactActionExecutionCount": 2,
+    "totalMemberships": 150,
+    "keepMemberships": 12,
+    "removeMemberships": 138,
+    "changedFromBaseline": false
+  },
+  "cleanup": {
+    "operationRecordsAfter": 0,
+    "chromePidAliveAfter": false,
+    "sessionStatus": "error",
+    "modelStatus": "error",
+    "apiPid": 61182,
+    "apiHealthyAfter": true,
+    "apiNRestarts": 0
+  },
+  "disposition": "Do not retry. Preserve Plan 0305 source and installed acceptance, close without integration, and repair history-materialization browser ownership provider-free in Plan 0306."
+}

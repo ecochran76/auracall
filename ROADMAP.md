@@ -87,7 +87,7 @@ Lane: P01
   incorrect `1 keep` against canonical `12 keep`. Plan 0304 closes without
   integration and Plan 0305 owns terminal representation fidelity.
 
-- Active ChatGPT terminal-response representation fidelity repair:
+- Closed split-result ChatGPT terminal-response representation fidelity repair:
   [docs/dev/plans/0305-2026-08-21-chatgpt-terminal-representation-fidelity.md](docs/dev/plans/0305-2026-08-21-chatgpt-terminal-representation-fidelity.md)
   Plan 0304 proved tool execution and fresh terminal capture, then exposed a
   smaller final-DOM/copied-Markdown disagreement that the local path ignores
@@ -96,8 +96,19 @@ Lane: P01
   stable DOM whenever substantive text differs. Pushed source `149d5bd1` is
   accepted: focused `124/124`, affected `1,547/1,547`, serial full provider-free
   `2,965/2,965`, typecheck, scoped lint, build, CodeGraph, planning audit, and
-  diff hygiene pass. A distinct one-install, one-restart, one-submission,
-  zero-retry installed/live gate is frozen and remains unexecuted.
+  diff hygiene pass. Installed byte parity and fixtures pass. The sole live
+  submission failed safe when an account-mirror history-materialization cleanup
+  killed the adopted managed Chrome after its earlier refresh lock released.
+  Canonical LitScout state remained unchanged and no retry ran. Plan 0306 owns
+  the missing shared-operation fence; Plan 0305 closes without integration.
+
+- Active history-materialization managed-browser ownership repair:
+  [docs/dev/plans/0306-2026-08-21-history-materialization-browser-ownership.md](docs/dev/plans/0306-2026-08-21-history-materialization-browser-ownership.md)
+  Plan 0305 live-proved a false-idle window: account-mirror completion retained
+  provider work after its refresh operation file released, while history
+  materialization cleanup later killed all matching profile PIDs without the
+  shared file-backed browser-operation fence. This source-first successor must
+  serialize provider work and cleanup with foreground use of the exact profile.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

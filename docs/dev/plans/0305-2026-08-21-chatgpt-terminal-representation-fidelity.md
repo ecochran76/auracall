@@ -1,8 +1,8 @@
 # ChatGPT Terminal Representation Fidelity | 0305-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: P4 INSTALLED ACCEPTED / LIVE PREFLIGHT NEXT
+Operational state: SOURCE_AND_INSTALLED_ACCEPTED / LIVE_BLOCKED_BY_PLAN0306
 
 ## Stable Objective
 
@@ -51,6 +51,19 @@ preserving Markdown when the two representations differ only by formatting.
   formatting-equivalence, and prompt-echo fixtures pass. API PID `61182` is
   active/running with `NRestarts=0`. The single live submission remains unused
   pending a fresh exact idle/canonical preflight.
+- The sole live submission started at `2026-08-22T02:11:32.763Z` and failed
+  safe at `02:12:13.108Z` when adopted Chrome PID `67609` closed. No retry ran.
+  Exact runtime state terminalized and canonical LitScout state remained
+  unchanged; whether the remote prompt reached one read-only tool call is not
+  provable from the retained AuraCall artifacts.
+- Account-mirror completion `acctmirror_completion_31aee97a...` retained its
+  provider-work lease after its refresh browser-operation record released. Its
+  history materialization finished at `02:12:12.153Z`; the Chrome systemd scope
+  ended at `02:12:13`, exactly when the foreground run lost CDP. Current source
+  confirms history-materialization cleanup kills every matching managed-profile
+  PID without acquiring or checking the shared file-backed browser operation.
+  Plan 0306 owns that distinct lifecycle defect. Plan 0305 closes without
+  integration; its representation repair remains source- and installed-accepted.
 
 ## Planning Metadata
 
@@ -93,9 +106,9 @@ preserving Markdown when the two representations differ only by formatting.
 - `TRF-R1` through `TRF-R6`: ACCEPTED at pushed product commit `149d5bd1`.
 - Receipt:
   `docs/dev/notes/2026-08-21-plan0305-terminal-representation-source-acceptance.json`.
-- `TRF-R7`: INSTALLED ACCEPTED / LIVE NOT RUN. Install and restart budgets are
-  consumed; one submission remains permitted after fresh preflight. No second
-  install, restart, or submission is permitted.
+- `TRF-R7`: REJECTED BY DISTINCT LIFECYCLE FAILURE. The one submission budget
+  is consumed; no retry is permitted. Plan 0306 must repair history
+  materialization browser ownership before any new live acceptance.
 
 ## Non-Goals
 

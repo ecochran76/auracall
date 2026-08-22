@@ -47427,3 +47427,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   provider-free `2,965/2,965`, typecheck, scoped lint, build, CodeGraph, and
   diff hygiene pass. No installed or live effect has occurred; a distinct gate
   is required before one bounded installed acceptance.
+- Installed hash parity and all three installed fixtures passed. The sole live
+  submission then failed safe when a still-active account-mirror completion's
+  history-materialization cleanup killed the adopted Chrome after its refresh
+  browser-operation record had released. Canonical LitScout state remained
+  unchanged and no retry ran.
+- Plan 0305 closes without integration. Plan 0306 owns the missing shared
+  file-backed operation fence across history provider work and PID cleanup.
