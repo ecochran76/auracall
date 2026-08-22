@@ -1,0 +1,37 @@
+{
+  "plan": "0305",
+  "date": "2026-08-21",
+  "lane": "p0305_chatgpt_terminal_representation_fidelity",
+  "state": "SOURCE_ACCEPTED",
+  "branch": "fix/plan0302-chatgpt-timeout-signal-cleanup",
+  "product_commit": "149d5bd1ea774fd9a189ea5efdb75faca65b4151",
+  "upstream_commit": "149d5bd1ea774fd9a189ea5efdb75faca65b4151",
+  "diagnosis": {
+    "red": "Copied Markdown containing 1 keep survived against eligible stable final DOM containing 12 keep under the former local large-delta heuristic.",
+    "live_attribution": "The prior live artifacts did not preserve both representations, so copied-Markdown corruption remains a source-grounded hypothesis rather than retrospective proof."
+  },
+  "repair": {
+    "contract": "One shared local and remote representation reconciler preserves copied Markdown only when normalized rendered text is equivalent to eligible stable final DOM; substantive differences select final DOM.",
+    "diagnostics": "Decision, eligibility, character counts, and bounded fingerprints only; no prompt, answer, tool, approval, query, or fragment text."
+  },
+  "verification": {
+    "reconciler": {"passed": 12, "failed": 0},
+    "focused": {"passed": 124, "failed": 0, "skipped": 1},
+    "affected": {"passed": 1547, "failed": 0, "skipped": 6},
+    "full_serial_provider_free": {"files_passed": 323, "files_skipped": 21, "tests_passed": 2965, "tests_skipped": 65, "failed": 0},
+    "typecheck": "PASS",
+    "scoped_lint": "PASS_ZERO_WARNINGS",
+    "production_build": "PASS",
+    "diff_hygiene": "PASS",
+    "codegraph": {"state": "CURRENT", "files": 908, "nodes": 17132, "edges": 58587}
+  },
+  "effects": {
+    "install": 0,
+    "restart": 0,
+    "browser_prompt": 0,
+    "provider_call": 0,
+    "litscout_call": 0,
+    "graphiti_write": 0
+  },
+  "next_gate": "Freeze and push one distinct installed/live packet before any runtime transition."
+}

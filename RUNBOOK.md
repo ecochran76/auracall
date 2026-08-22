@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 483 | 2026-08-21
+
+- Plan 0305 reproduced the live-shaped copied-Markdown digit loss RED and
+  pushed product repair `149d5bd1`. One shared local/remote reconciler now
+  preserves Markdown only for semantically equivalent rendered text and
+  selects stable final DOM for substantive digit, word, or omission changes.
+- Mismatch evidence is text-free: source choice, eligibility, character counts,
+  and bounded fingerprints only. Prompt echoes and ineligible/absent final DOM
+  retain the accepted captured representation.
+- Source evidence is green: reconciler `12/12`, focused browser `124/124` with
+  one skip, affected browser/CLI `1,547/1,547` with six skips, serial full
+  provider-free `2,965/2,965` with 65 live-only skips, typecheck, zero-warning
+  scoped lint, production build, diff hygiene, and current CodeGraph at 908
+  files / 17,132 nodes / 58,587 edges.
+- Source receipt:
+  `docs/dev/notes/2026-08-21-plan0305-terminal-representation-source-acceptance.json`.
+  Plan 0305 has made zero installed/browser/provider/LitScout/Graphiti effects.
+  A distinct installed/live gate must be frozen and pushed before transition.
+
 ## Turn 482 | 2026-08-21
 
 - Plan 0304's sole `litscout-boundary-live` prompt submitted once and completed

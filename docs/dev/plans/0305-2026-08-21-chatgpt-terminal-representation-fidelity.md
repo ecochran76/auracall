@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P1 DIAGNOSED / PROVIDER_FREE RED NEXT
+Operational state: P2 SOURCE ACCEPTED / INSTALLED_LIVE GATE NEXT
 
 ## Stable Objective
 
@@ -29,6 +29,22 @@ preserving Markdown when the two representations differ only by formatting.
 - Plan 0304's install, restart, and live-call budgets are consumed. This plan
   starts with zero install, restart, browser, provider, LitScout, or Graphiti
   effect authority.
+- Provider-free RED reproduced the live-shaped loss: copied Markdown with
+  `1 keep` defeated the former large-delta rule against stable DOM containing
+  `12 keep`.
+- Pushed source `149d5bd1` adds one local/remote representation reconciler.
+  It preserves Markdown only when normalized rendered text is equivalent;
+  substantive digit, word, or omission differences select stable final DOM.
+  Diagnostics expose only choice, eligibility, character counts, and bounded
+  fingerprints.
+- Source acceptance is green: reconciler fixtures `12/12`, focused browser
+  `124/124` with one skip, affected browser/CLI `1,547/1,547` with six skips,
+  serial full provider-free `2,965/2,965` with 65 live-only skips, typecheck,
+  zero-warning scoped lint, production build, diff hygiene, and current
+  CodeGraph at 908 files / 17,132 nodes / 58,587 edges.
+- No Plan 0305 install, restart, browser prompt, provider call, LitScout call,
+  or Graphiti write has occurred. A distinct installed/live gate must be
+  committed before any runtime transition.
 
 ## Planning Metadata
 
@@ -65,6 +81,14 @@ preserving Markdown when the two representations differ only by formatting.
    any installed transition.
 7. Only after source acceptance, freeze a distinct installed/live packet. Any
    future LitScout call is a new bounded acceptance, never a retry of Plan 0304.
+
+## Source Acceptance
+
+- `TRF-R1` through `TRF-R6`: ACCEPTED at pushed product commit `149d5bd1`.
+- Receipt:
+  `docs/dev/notes/2026-08-21-plan0305-terminal-representation-source-acceptance.json`.
+- `TRF-R7`: NOT RUN. Installed and live authority remains zero until a distinct
+  durable gate freezes exact budgets, prompt, baseline, and stop rules.
 
 ## Non-Goals
 

@@ -47413,3 +47413,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Deterministic, focused, and full serial provider-free gates pass, including
   tool/approval exclusions and text-free terminal diagnostics. Installed and
   live proof remain explicitly unexecuted pending a durable gate.
+
+## 2026-08-21 - Plan 0305 terminal representation fidelity
+
+- Provider-free RED reproduced the live-shaped failure: copied Markdown with
+  `1 keep` survived against stable final DOM containing `12 keep` under the old
+  large-delta replacement heuristic.
+- Pushed product `149d5bd1` replaces divergent local/remote heuristics with one
+  reconciler. Formatting-equivalent Markdown remains rich; substantive digit,
+  word, or omission changes select the eligible stable final DOM. Evidence is
+  bounded and text-free.
+- Reconciler `12/12`, focused `124/124`, affected `1,547/1,547`, serial full
+  provider-free `2,965/2,965`, typecheck, scoped lint, build, CodeGraph, and
+  diff hygiene pass. No installed or live effect has occurred; a distinct gate
+  is required before one bounded installed acceptance.

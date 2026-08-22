@@ -92,8 +92,11 @@ Lane: P01
   Plan 0304 proved tool execution and fresh terminal capture, then exposed a
   smaller final-DOM/copied-Markdown disagreement that the local path ignores
   unless the DOM is at least 12 characters longer. This source-first successor
-  must reconcile semantically equivalent formatting while preferring the final
-  stable DOM whenever substantive text differs.
+  now reconciles semantically equivalent formatting while preferring the final
+  stable DOM whenever substantive text differs. Pushed source `149d5bd1` is
+  accepted: focused `124/124`, affected `1,547/1,547`, serial full provider-free
+  `2,965/2,965`, typecheck, scoped lint, build, CodeGraph, planning audit, and
+  diff hygiene pass. A distinct installed/live gate remains unexecuted.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)
