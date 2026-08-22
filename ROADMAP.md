@@ -102,7 +102,7 @@ Lane: P01
   Canonical LitScout state remained unchanged and no retry ran. Plan 0306 owns
   the missing shared-operation fence; Plan 0305 closes without integration.
 
-- Active history-materialization managed-browser ownership repair:
+- Closed accepted history-materialization managed-browser ownership repair:
   [docs/dev/plans/0306-2026-08-21-history-materialization-browser-ownership.md](docs/dev/plans/0306-2026-08-21-history-materialization-browser-ownership.md)
   Plan 0305 live-proved a false-idle window: account-mirror completion retained
   provider work after its refresh operation file released, while history
@@ -112,7 +112,21 @@ Lane: P01
   Pushed product `929aec97` is source-accepted: exact-profile provider work and
   cleanup now share one durable file-backed operation, busy foreground and
   stale-recovery paths fail safe, the affected set is `372/372`, and the serial
-  full suite is `2,970/2,970`. A separately frozen installed/live gate remains.
+  full suite is `2,970/2,970`. Installed parity and the ownership fixture pass.
+  Its sole real browser run completed in 15.2 seconds without Chrome/CDP loss
+  and with exact cleanup. The frozen prompt made no LitScout call because it
+  prohibited the lazy transport-discovery call required to expose
+  `research_continue`; zero retry is preserved and only the readback criterion
+  carries forward.
+
+- Active LitScout discovery-aware readback acceptance:
+  [docs/dev/plans/0307-2026-08-21-litscout-discovery-aware-readback.md](docs/dev/plans/0307-2026-08-21-litscout-discovery-aware-readback.md)
+  Plan 0306 accepted the actual browser-ownership repair but exposed a narrower
+  gate-contract contradiction. This no-code successor explicitly permits only
+  transport discovery before exactly one read-only `research_continue` call.
+  It authorizes zero install/restart, one distinct submission, zero retries,
+  and requires exact `150 = 12 + 138`, one new LitScout request, zero canonical
+  mutation, and exact terminal cleanup.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 488 | 2026-08-21
+
+- Plan 0306 consumed exactly one install, one API restart, one live submission,
+  and zero retries. Installed/source hashes and the installed ownership fixture
+  passed; API PID `49323` remained healthy with `NRestarts=0`.
+- The sole `litscout-ownership-live` run completed session/model state in 15.2
+  seconds. It did not lose Chrome/CDP, retained no exact browser operation,
+  managed Chrome, active completion, or history materialization, and left
+  canonical Session 68 unchanged at ten receipts, two exact-action executions,
+  and `150 = 12 keep + 138 remove`.
+- The model made zero LitScout calls. Its JSON correctly reported that the
+  frozen `Do not call any other tool` instruction prohibited the lazy
+  transport-discovery call required to expose `research_continue`. This accepts
+  Plan 0306's browser-ownership/cleanup criterion but rejects its final readback
+  criterion as a contradictory gate contract; Plan 0306 is closed and never
+  retried. Result receipt:
+  `docs/dev/notes/2026-08-21-plan0306-installed-live-result.json`.
+- Plan 0307 opens as a no-code acceptance successor. Its frozen prompt permits
+  only transport discovery before exactly one substantive read-only LitScout
+  call. Budget: zero installs, zero API restarts, one distinct submission, zero
+  retries. Exact source/upstream, installed parity, API, canonical Session 68,
+  request-log, completion/materialization, operation, and managed-browser
+  preflight must pass before Send. Gate:
+  `docs/dev/notes/2026-08-21-plan0307-discovery-aware-live-gate.json`.
+
 ## Turn 487 | 2026-08-21
 
 - Plan 0306 product commit `929aec97` is pushed and source-accepted. History

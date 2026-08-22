@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "auracall.plan0307.discovery-aware-live-gate.v1",
+  "recordedAt": "2026-08-22T02:59:55Z",
+  "plan": "0307-2026-08-21-litscout-discovery-aware-readback",
+  "state": "frozen_not_run",
+  "basis": {
+    "acceptedProductCommit": "929aec97",
+    "plan0306GateCommit": "1b812d95cd3d8edef940f9e4f0961b57cb7b9797",
+    "plan0306LiveResult": "browser ownership and cleanup accepted; LitScout call absent because the prompt prohibited required lazy transport discovery",
+    "priorTransportProof": "Plan 0304 disclosed transport discovery and advanced the LitScout CallToolRequest count exactly 48 to 49 before one research_continue result"
+  },
+  "budgets": {
+    "userRuntimeInstalls": 0,
+    "apiRestarts": 0,
+    "liveSubmissions": 1,
+    "retries": 0,
+    "transportDiscoveryCalls": 1,
+    "substantiveLitScoutCalls": 1,
+    "otherToolCalls": 0,
+    "approvalActions": 0,
+    "researchActions": 0,
+    "positiveOrUnknownSpendAllowed": false
+  },
+  "live": {
+    "slug": "litscout-discovery-aware-readback",
+    "profile": "wsl-chrome-3",
+    "model": "chatgpt:sol-high",
+    "mode": "chat",
+    "toolApproval": "allow-once",
+    "prompt": "You may use the platform's tool-discovery mechanism only as needed to expose LitScout research_continue; this transport-only discovery is permitted and does not count as the one substantive LitScout call. Then call read-only LitScout research_continue for Session 68 exactly once. Do not call any other substantive tool or any other LitScout tool, do not approve or execute any action, and do not retry. Return exactly one JSON object with controller_stage, blockers, recommended_next_action, approval_required, corpus_total, keep_count, remove_count, and counts_consistent. Copy numeric fields exactly from the LitScout result and set counts_consistent only after verifying corpus_total equals keep_count plus remove_count. If research_continue cannot be exposed or called, or if the state is ambiguous, return one JSON object stating that and stop.",
+    "expectedCanonicalFields": {
+      "corpus_total": 150,
+      "keep_count": 12,
+      "remove_count": 138,
+      "counts_consistent": true
+    }
+  },
+  "requiredPreflight": [
+    "repository is clean and equals pushed upstream containing this gate",
+    "installed history-materialization and browser-operation artifacts remain byte-exact to accepted source",
+    "AuraCall API is active/running with zero unexpected restarts",
+    "canonical LitScout DB contract passes",
+    "Session 68 exact receipt, action-execution, and 150/12/138 membership baseline is captured",
+    "LitScout CallToolRequest baseline is captured",
+    "active chatgpt/wsl-chrome-3 account-mirror completions and history materializations are zero",
+    "exact browser-operation record is absent",
+    "managed Chrome process and DevTools port are idle"
+  ],
+  "acceptance": [
+    "one new LitScout CallToolRequest and no other substantive tool request",
+    "exact 150 total, 12 keep, 138 remove, and counts_consistent true",
+    "no exact-action execution, receipt, membership, provider, spend, or approval mutation",
+    "completed AuraCall session and model state",
+    "no retained foreground controller, browser operation, managed Chrome, completion, or history-materialization residue",
+    "zero retry"
+  ],
+  "stops": [
+    "stop before Send if any exact precondition is false or ambiguous",
+    "stop after any terminal result and reconcile without resubmission",
+    "do not widen discovery beyond exposing research_continue"
+  ]
+}

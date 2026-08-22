@@ -47441,3 +47441,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `2,970/2,970`, typecheck, changed-file/full lint, build, CodeGraph, plan audit,
   and diff hygiene. No installed or live effect occurred; one exact successor
   gate remains to be frozen.
+- Installed/source parity and the exact-profile provider-free ownership fixture
+  passed. After one install and one healthy API restart, the sole live run
+  completed in 15.2 seconds without Chrome/CDP loss and left exact runtime and
+  Session 68 state clean and unchanged.
+- The run made no LitScout call because its frozen prompt prohibited every
+  other tool while current ChatGPT lazy discovery requires one transport-only
+  discovery call before `research_continue` is exposed. This is a gate-contract
+  rejection, not evidence against the accepted ownership fix. Plan 0306 closes
+  split-result with zero retry.
+- Plan 0307 opens as a no-code, one-send successor. It explicitly permits only
+  transport discovery before one read-only `research_continue`, authorizes no
+  install/restart or canonical action, and requires exact `150 = 12 + 138`, one
+  new LitScout request, and exact terminal cleanup.

@@ -1,8 +1,8 @@
 # History Materialization Managed-Browser Ownership | 0306-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: P5 INSTALLED-LIVE GATE FROZEN / EXACT PREFLIGHT NEXT
+Operational state: SOURCE / INSTALLED / BROWSER-LIVE ACCEPTED; DISCOVERY-AWARE LITSCOUT READBACK DEFERRED TO PLAN 0307
 
 ## Stable Objective
 
@@ -50,6 +50,22 @@ cleanup have released the same durable operation fence.
   Session 68 submission, and zero retries. Preflight must prove both durable
   browser-operation state and active completion/materialization state; absence
   of an operation file alone is not an idle receipt.
+- The gate was consumed exactly once. Installed/source bytes matched, the
+  provider-free installed ownership fixture passed, API restart `61182 ->
+  49323` was healthy, and the single browser submission completed in 15.2
+  seconds without Chrome/CDP loss, retained ownership, or canonical LitScout
+  mutation.
+- The terminal answer did not call LitScout. It correctly reported that the
+  frozen instruction `Do not call any other tool` prohibited the platform's
+  lazy transport-discovery call required to expose `research_continue`.
+  Therefore `HMO-R1` through `HMO-R6` and the browser/cleanup portion of
+  `HMO-R7` are accepted, while the exact Session 68 readback portion is not.
+  This is a gate-contract rejection, not evidence of another browser-ownership
+  defect and not authorization to retry Plan 0306.
+- Durable result:
+  `docs/dev/notes/2026-08-21-plan0306-installed-live-result.json`. Plan 0307
+  owns one distinct discovery-aware, read-only successor acceptance with zero
+  install/restart and zero retry.
 
 ## Planning Metadata
 
@@ -115,9 +131,13 @@ cleanup have released the same durable operation fence.
 ## Source Acceptance
 
 - `HMO-R1` through `HMO-R6`: ACCEPTED at pushed product commit `929aec97`.
-- `HMO-R7`: NOT RUN. Freeze a distinct one-install, one-restart,
-  one-submission, zero-retry gate against this exact source commit before any
-  installed or live effect.
+- `HMO-R7` browser ownership and terminal cleanup: ACCEPTED. The sole installed
+  submission completed normally and left no exact operation, controller,
+  managed Chrome, completion, or materialization owner.
+- `HMO-R7` exact canonical Session 68 readback: REJECTED BY GATE CONTRACT. The
+  model made no LitScout call because the prompt prohibited the transport-only
+  discovery needed to expose `research_continue`. Canonical state remained
+  unchanged. Plan 0307 owns a distinct successor; Plan 0306 is never retried.
 
 ## Bounds And Stops
 
@@ -134,3 +154,9 @@ History materialization and its cleanup hold the same durable exact-profile
 operation used by foreground AuraCall, no cleanup path can kill a browser owned
 by another operation, and one later installed acceptance returns faithful
 canonical LitScout state without mutation.
+
+Disposition: the history-materialization ownership objective is accepted in
+source, installed fixtures, and a real browser run. The final LitScout readback
+was not exercised because the frozen acceptance prompt contradicted the current
+lazy tool-discovery transport. Preserve the accepted ownership repair and carry
+only the readback criterion into Plan 0307.

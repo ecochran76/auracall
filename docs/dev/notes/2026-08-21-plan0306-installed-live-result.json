@@ -1,0 +1,121 @@
+{
+  "schemaVersion": "auracall.plan0306.installed-live-result.v1",
+  "recordedAt": "2026-08-22T02:59:55Z",
+  "plan": "0306-2026-08-21-history-materialization-browser-ownership",
+  "outcome": "browser_ownership_live_accepted_litscout_readback_gate_rejected",
+  "source": {
+    "productCommit": "929aec97",
+    "sourceAcceptanceCommit": "109112ec",
+    "gateCommit": "1b812d95cd3d8edef940f9e4f0961b57cb7b9797",
+    "branch": "fix/plan0302-chatgpt-timeout-signal-cleanup"
+  },
+  "budgetConsumed": {
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
+    "liveSubmissions": 1,
+    "retries": 0
+  },
+  "installed": {
+    "sourceInstalledParity": true,
+    "sha256": {
+      "historyMaterializationService": "dc0d191bce186796dd149d2ae95ca865ee3792316212fd6853c7414b8a1b2261",
+      "operationDispatcher": "e7efe3aed245d5fe821b8e2b81a5753f8cf99eac5628932611ea28e940cc368f",
+      "auracallHome": "27893c96c39ae80ac8f18b4e4be4a468c73556816e02c4d7c8409ce0e1fd2469"
+    },
+    "providerFreeOwnershipFixture": {
+      "duringProviderForegroundAcquired": false,
+      "duringCleanupForegroundAcquired": false,
+      "afterCleanupForegroundAcquired": true,
+      "jobStatus": "succeeded"
+    },
+    "apiRestart": {
+      "oldPid": 61182,
+      "newPid": 49323,
+      "activeState": "active",
+      "subState": "running",
+      "nRestarts": 0,
+      "result": "success"
+    }
+  },
+  "preflight": {
+    "repositoryCleanAndUpstreamExact": true,
+    "canonicalLitScoutDbContract": "passed",
+    "session68": {
+      "lifecycleStage": "downselect",
+      "lifecycleStatus": "in_progress",
+      "corpusTotal": 150,
+      "keepCount": 12,
+      "removeCount": 138,
+      "receiptCount": 10,
+      "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+      "exactActionExecutionCount": 2
+    },
+    "activeHistoryMaterializations": 0,
+    "activeAccountMirrorCompletions": 0,
+    "browserOperationPresent": false,
+    "managedBrowserProcessAlive": false,
+    "devtoolsPort45015Listening": false
+  },
+  "live": {
+    "sessionPath": "/home/ecochran76/.auracall/sessions/litscout-ownership-live",
+    "slug": "litscout-ownership-live",
+    "profile": "wsl-chrome-3",
+    "model": "gpt-5.6-sol",
+    "mode": "browser",
+    "startedAt": "2026-08-22T02:55:29.626Z",
+    "completedAt": "2026-08-22T02:55:46.213Z",
+    "elapsedSeconds": 15.2,
+    "sessionStatus": "completed",
+    "modelStatus": "completed",
+    "usage": {
+      "inputTokens": 123,
+      "outputTokens": 121,
+      "reasoningTokens": 0,
+      "totalTokens": 244
+    },
+    "answer": {
+      "controller_stage": null,
+      "blockers": [
+        "LitScout research_continue cannot be called directly in the current tool state without first performing a separate tool-discovery call, which would violate the instruction to use LitScout exactly once and call no other tool."
+      ],
+      "recommended_next_action": "Make research_continue for Session 68 directly callable, then rerun this request.",
+      "approval_required": null,
+      "corpus_total": null,
+      "keep_count": null,
+      "remove_count": null,
+      "counts_consistent": null
+    },
+    "litscoutToolCalls": 0,
+    "approvalActions": 0,
+    "researchActions": 0,
+    "retries": 0
+  },
+  "postflight": {
+    "session68Unchanged": true,
+    "corpusTotal": 150,
+    "keepCount": 12,
+    "removeCount": 138,
+    "receiptCount": 10,
+    "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+    "exactActionExecutionCount": 2,
+    "activeHistoryMaterializations": 0,
+    "activeAccountMirrorCompletions": 0,
+    "browserOperationPresent": false,
+    "managedBrowserProcessAlive": false,
+    "devtoolsPort45015Listening": false,
+    "apiPid": 49323,
+    "apiHealthy": true,
+    "apiNRestarts": 0
+  },
+  "acceptance": {
+    "HMO-R1": "accepted",
+    "HMO-R2": "accepted",
+    "HMO-R3": "accepted",
+    "HMO-R4": "accepted",
+    "HMO-R5": "accepted",
+    "HMO-R6": "accepted",
+    "HMO-R7BrowserOwnershipAndCleanup": "accepted",
+    "HMO-R7ExactLitScoutReadback": "rejected_by_contradictory_discovery_gate"
+  },
+  "disposition": "Do not retry Plan 0306. Preserve the source, installed, and real-browser ownership acceptance. Plan 0307 may run one distinct discovery-aware read-only acceptance that explicitly permits only transport discovery before exactly one research_continue call."
+}
