@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "auracall.plan0304.source-acceptance.v1",
+  "createdAt": "2026-08-22T01:27:39Z",
+  "plan": "0304",
+  "outcome": "source_accepted_installed_packet_pending",
+  "activationCommit": "eff582cb7753d0c3d6b2aa53f8c8f61c361e955b",
+  "sourceCommit": "571514c97c6afa7137dafb32a6d086741cb07668",
+  "upstreamExact": true,
+  "rootCause": "Prompt commit observed 16 conversation turns and derived absolute floor 15. After the LitScout connected-app call, ChatGPT virtualized the conversation to 12 mounted turns, so every positional response reader rejected the fresh assistant turn.",
+  "repair": {
+    "boundaryFields": [
+      "minimum turn index",
+      "baseline assistant message ID",
+      "baseline assistant turn ID",
+      "normalized baseline text fingerprint"
+    ],
+    "sharedBy": [
+      "mutation observer",
+      "snapshot watchdog",
+      "recovery",
+      "reload retry",
+      "final refresh",
+      "terminal progress capture"
+    ],
+    "positionRemainsFastPath": true,
+    "stableIdentityRequiresInvalidPositionalBounds": true,
+    "matchingBaselineIdentityRejected": true,
+    "matchingBaselineFingerprintRejectedAfterReindex": true,
+    "toolApprovalTextEligible": false,
+    "toolOnlyTurnEligible": false,
+    "progressPersistsPromptOrAnswerText": false
+  },
+  "validation": {
+    "virtualizationFixtures": {
+      "filesPassed": 1,
+      "testsPassed": 13
+    },
+    "focusedBrowser": {
+      "filesPassed": 4,
+      "testsPassed": 76,
+      "testsSkipped": 1
+    },
+    "fullProviderFreeSerial": {
+      "filesPassed": 323,
+      "filesSkipped": 21,
+      "testsPassed": 2956,
+      "testsSkipped": 65,
+      "durationSeconds": 366.5
+    },
+    "typecheck": "passed",
+    "scopedLint": "passed_zero_warnings",
+    "build": "passed",
+    "diffCheck": "passed",
+    "codegraph": {
+      "status": "current",
+      "files": 908,
+      "nodes": 17125,
+      "edges": 58552
+    }
+  },
+  "sourceSha256": {
+    "assistantResponse": "6c626bd205d0c23c001a9a47a4922bf273ade505c872be79c1df491c1739b3ae",
+    "browserIndex": "72f9940d8d2533fefe35a5ec626ae39bb62be2e062e662b89b5f2a65bda03fc9",
+    "pageActions": "83fceecf4d4e0e349a61b4a0a8f0364ecb90d05efd9cb213036449964be727ee",
+    "fixture": "6390c5ca08a6458db5ddf704ac17d3ed6a16a5d59dd88437904eff92fc5c1cb8"
+  },
+  "builtSha256": {
+    "assistantResponse": "9412ca6e59d1d2dd63177f557151dbca1b9eb8b5b1afe5927b6229ea452b4d2a",
+    "browserIndex": "eb808e843b66c5075108a0d0e480639316e699e08171333e7c3cba9e7fbf3c3a",
+    "pageActions": "534583319f34ec1fb8f843a7202f6062348066f262ca8df330c8760d9c947aea"
+  },
+  "effects": {
+    "userRuntimeInstalls": 0,
+    "apiRestarts": 0,
+    "browserLaunches": 0,
+    "livePromptSubmissions": 0,
+    "providerCalls": 0,
+    "litscoutCalls": 0,
+    "graphitiWrites": 0
+  },
+  "nextBoundary": "Freeze and push one exact installed/live packet before any runtime transition. Then require exact idle ownership, one install, at most one API restart, byte parity, installed fresh/stale/tool-only fixtures, and one zero-retry read-only LitScout acceptance."
+}

@@ -21826,3 +21826,9 @@ browser-stage lifecycle observability, not transcript truncation.
   profile-wide browser operation until terminal cleanup so account-mirror
   refresh or another same-profile owner cannot disconnect active foreground
   work; browser retention policy remains independent of lock lifetime.
+- 2026-08-21: A pre-submit conversation-turn count is only a positional hint,
+  not a stable response identity. ChatGPT may virtualize or reindex the DOM
+  after a connected-app call. Carry the last assistant message ID, turn ID, and
+  bounded text fingerprint across every response-reader seam; accept a changed
+  stable identity only when positional bounds are invalid, and reject matching
+  baseline text even if its DOM identity changed.

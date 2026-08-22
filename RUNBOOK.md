@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 479 | 2026-08-21
+
+- Plan 0304 reproduced the virtualized boundary failure provider-free and
+  pushed repair `571514c9`. One shared response boundary now carries the
+  pre-submit assistant message ID, turn ID, and text fingerprint alongside the
+  positional hint through observer, watchdog, recovery, reload, final refresh,
+  and abort-time progress capture.
+- Stable identity is eligible only when the mounted DOM no longer satisfies
+  the absolute floor. Matching baseline identity or fingerprint remains stale;
+  approval/tool cards, tool-only turns, and user content remain ineligible.
+- Source evidence is green: virtualization `13/13`, focused browser `76/76`
+  with one skip, serial full provider-free `2,956/2,956` with 65 live-only
+  skips, typecheck, scoped zero-warning lint, build, diff hygiene, and current
+  CodeGraph at 908 files / 17,125 nodes / 58,552 edges.
+- Source receipt:
+  `docs/dev/notes/2026-08-21-plan0304-virtualized-boundary-source-acceptance.json`.
+  Plan 0304 has made zero installed/browser/provider/LitScout/Graphiti effects.
+  One installed packet and one zero-retry read-only LitScout acceptance remain.
+
 ## Turn 478 | 2026-08-21
 
 - Plan 0303's sole live prompt submitted once at

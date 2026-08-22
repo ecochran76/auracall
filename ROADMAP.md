@@ -78,7 +78,10 @@ Lane: P01
   exact timeout cleanup, and a durable `12 < 15` boundary classification. This
   source-first successor replaces count-only eligibility with stable pre-submit
   assistant identity across DOM shrink/reindex, while keeping positional fast
-  paths and all stale/tool/approval exclusions fail-closed.
+  paths and all stale/tool/approval exclusions fail-closed. Pushed source
+  `571514c9` is provider-free accepted: deterministic virtualization `13/13`,
+  focused browser `76/76`, serial full `2,956/2,956`, typecheck, lint, build,
+  CodeGraph, and diff hygiene pass. Installed and one-call live proof remain.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

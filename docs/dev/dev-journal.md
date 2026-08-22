@@ -47400,3 +47400,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   text-free terminal classification. The first harness-only attempt used the
   wrong selector and is retained as rejected evidence. Live submission remains
   zero at the frozen gate.
+
+## 2026-08-21 - Plan 0304 virtualized assistant boundary
+
+- The Plan 0303 live timeout was not another extractor miss: prompt commit saw
+  16 turns and set floor 15, while the later ChatGPT DOM exposed only 12 turns.
+  Every positional response reader therefore rejected the fresh assistant.
+- Source `571514c9` carries a pre-submit assistant message ID, turn ID, and
+  normalized text fingerprint with the positional hint. Position remains the
+  fast path; a different stable identity is accepted only after DOM shrink or
+  reindex, and matching baseline text stays stale even if its DOM ID changes.
+- Deterministic, focused, and full serial provider-free gates pass, including
+  tool/approval exclusions and text-free terminal diagnostics. Installed and
+  live proof remain explicitly unexecuted pending a durable gate.

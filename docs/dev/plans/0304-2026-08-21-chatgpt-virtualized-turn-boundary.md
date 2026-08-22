@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P1 DIAGNOSED / PROVIDER_FREE RED NEXT
+Operational state: P6 SOURCE ACCEPTED / INSTALLED GATE NEXT
 
 ## Stable Objective
 
@@ -30,6 +30,19 @@ tool-card, approval, deadline, lock, and cleanup safeguards.
 - Plan 0303's install, restart, and live-submit bounds are consumed. This plan
   begins provider-free and authorizes no install, restart, browser mutation,
   provider call, or LitScout call at activation.
+- Pushed source `571514c9` replaces the absolute response floor with one shared
+  positional-plus-stable-identity boundary. It rejects matching baseline text
+  even if virtualization reindexes the DOM identity, and keeps approval cards
+  and tool-only turns ineligible.
+- Deterministic virtualization fixtures pass `13/13`; the focused browser seam
+  passes `76/76` with one skip. Full serial provider-free validation passes
+  `2,956/2,956` across 323 files with 65 live-only skips. Typecheck, scoped
+  zero-warning lint, production build, diff hygiene, and current CodeGraph at
+  908 files / 17,125 nodes / 58,552 edges pass.
+- Source receipt:
+  `docs/dev/notes/2026-08-21-plan0304-virtualized-boundary-source-acceptance.json`.
+  No install, restart, browser/provider/LitScout call, or Graphiti write has
+  occurred in Plan 0304. The installed/live packet remains separately gated.
 
 ## Planning Metadata
 
@@ -120,3 +133,17 @@ AuraCall returns the correct fresh terminal assistant answer after exactly one
 LitScout tool request despite ChatGPT DOM virtualization, preserves all stale/
 tool/approval exclusions and terminal cleanup guarantees, and proves the
 installed behavior once end to end with zero canonical LitScout mutation.
+
+## Source Acceptance Status
+
+- `VTB-R1`: accepted by the retained `12 < 15` RED and the deterministic
+  provider-free virtualization fixture.
+- `VTB-R2`: accepted in source; the same boundary object reaches observer,
+  poller, recovery, reload, final refresh, and terminal progress capture.
+- `VTB-R3`: accepted in source by fresh stable message/turn identity fixtures.
+- `VTB-R4`: accepted in source for baseline identity, baseline text under a
+  changed DOM identity, approval/tool-only content, and user/stale exclusions.
+- `VTB-R5`: accepted provider-free; timeout, signal, reattach, approval, and
+  browser-mode regressions remain green and progress evidence is text-free.
+- `VTB-R6`: accepted and pushed at `571514c9`.
+- `VTB-R7` and `VTB-R8`: pending the separately frozen installed/live packet.
