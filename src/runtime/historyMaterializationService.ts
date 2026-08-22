@@ -9,6 +9,12 @@ import {
 	createBrowserInteractionGovernor,
 } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import {
+	type BrowserOperationAcquiredResult,
+	type BrowserOperationDispatcher,
+	createFileBackedBrowserOperationDispatcher,
+	formatBrowserOperationBusyResult,
+} from "../../packages/browser-service/src/service/operationDispatcher.js";
+import {
 	type AccountMirrorConversationEvidence,
 	createAccountMirrorPersistence,
 } from "../accountMirror/cachePersistence.js";
@@ -20,6 +26,7 @@ import {
 	createAccountMirrorCatalogService,
 } from "../accountMirror/catalogService.js";
 import { accountMirrorIdentityKeysMatch } from "../accountMirror/tenantBinding.js";
+import { getAuracallHomeDir } from "../auracallHome.js";
 import { createLlmService } from "../browser/llmService/providers/index.js";
 import type { ConversationContextReadReceipt } from "../browser/providers/cache.js";
 import type { ConversationArtifact, FileRef, ProviderId } from "../browser/providers/domain.js";
@@ -34,9 +41,9 @@ import {
 	snapshotBrowserScrapeTelemetry,
 } from "../browser/providers/scrapeTelemetry.js";
 import type { BrowserProviderListOptions } from "../browser/providers/types.js";
+import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
 import type { BrowserProcessOwnerAttribution } from "../browser/service/browserService.js";
 import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
-import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { createBrowserMediaGenerationMaterializer } from "../media/browserExecutor.js";
 import { createMediaGenerationService } from "../media/service.js";
@@ -528,6 +535,13 @@ export interface HistoryMaterializationServiceDeps {
 	schedule?: (work: () => Promise<void>) => void;
 	withForegroundWork?: <T>(work: () => Promise<T>) => Promise<T>;
 	cleanupManagedBrowserAfterProviderWork?: boolean;
+	browserOperationDispatcher?: BrowserOperationDispatcher;
+	browserOperationQueueTimeoutMs?: number;
+	browserOperationQueuePollMs?: number;
+	cleanupManagedBrowser?: (
+		config: ResolvedUserConfig | Record<string, unknown>,
+		request: HistoryMaterializationCreateRequest,
+	) => Promise<void>;
 	materializeConversation?: (
 		target: HistoryMaterializationTarget,
 		request: HistoryMaterializationCreateRequest,
@@ -843,6 +857,14 @@ export function createHistoryMaterializationService(
 		});
 	const withForegroundWork = deps.withForegroundWork ?? (async (work) => work());
 	const cleanupBrowserBackedProviderWork = deps.cleanupManagedBrowserAfterProviderWork === true;
+	const browserOperationDispatcher = cleanupBrowserBackedProviderWork
+		? (deps.browserOperationDispatcher ??
+			createFileBackedBrowserOperationDispatcher({
+				lockRoot: path.join(getAuracallHomeDir(), "browser-operations"),
+			}))
+		: null;
+	const cleanupManagedBrowser =
+		deps.cleanupManagedBrowser ?? cleanupHistoryMaterializationManagedBrowser;
 	let queue = Promise.resolve();
 	const scheduledJobIds = new Set<string>();
 	const providerWorkContexts = new Map<string, HistoryMaterializationProviderWorkContext>();
@@ -1131,25 +1153,41 @@ export function createHistoryMaterializationService(
 				if (running.request.providerWorkNotBefore) {
 					await waitForProviderWorkBoundary(running.request, now, sleep);
 				}
-				const materializationResult = await withForegroundWork(() =>
-					materializeHistoryRequest({
+				const materializationResult = await withForegroundWork(async () => {
+					const browserOperations = await acquireHistoryMaterializationBrowserOperations({
 						config: deps.config,
 						request: running.request,
 						jobId: running.id,
-						catalogService,
-						runArchiveService,
-						materializeConversation,
-						refreshConversationSnapshot,
+						dispatcher: browserOperationDispatcher,
+						queue: true,
+						queueTimeoutMs: deps.browserOperationQueueTimeoutMs,
+						queuePollMs: deps.browserOperationQueuePollMs,
+					});
+					try {
+						return await materializeHistoryRequest({
+							config: deps.config,
+							request: running.request,
+							jobId: running.id,
+							catalogService,
+							runArchiveService,
+							materializeConversation,
+							refreshConversationSnapshot,
 							recordConversationEvidence,
 							materializationAttemptExecutor,
-						materializeMediaGeneration,
-						materializeAccountLibraryFiles,
-						listAccountLibraryFiles,
-						materializeProjectSources,
-						jobStore: store,
-						now,
-					}),
-				);
+							materializeMediaGeneration,
+							materializeAccountLibraryFiles,
+							listAccountLibraryFiles,
+							materializeProjectSources,
+							jobStore: store,
+							now,
+						});
+					} finally {
+						if (cleanupBrowserBackedProviderWork) {
+							await cleanupManagedBrowser(deps.config, running.request);
+						}
+						await releaseHistoryMaterializationBrowserOperations(browserOperations);
+					}
+				});
 				const result: HistoryMaterializationResult = {
 					...materializationResult,
 					status: resolveHistoryMaterializationJobResultStatus(materializationResult),
@@ -1211,9 +1249,6 @@ export function createHistoryMaterializationService(
 				return withSchedulerDiagnostics(failed);
 			} finally {
 				providerWorkContexts.delete(running.id);
-				if (cleanupBrowserBackedProviderWork) {
-					await cleanupHistoryMaterializationManagedBrowser(deps.config, running.request);
-				}
 			}
 		},
 
@@ -1332,7 +1367,20 @@ export function createHistoryMaterializationService(
 			queue = Promise.resolve();
 		}
 		if (cleanupBrowserBackedProviderWork) {
-			await cleanupHistoryMaterializationManagedBrowser(deps.config, job.request);
+			const browserOperations = await acquireHistoryMaterializationBrowserOperations({
+				config: deps.config,
+				request: job.request,
+				jobId: job.id,
+				dispatcher: browserOperationDispatcher,
+				queue: false,
+			});
+			if (browserOperations) {
+				try {
+					await cleanupManagedBrowser(deps.config, job.request);
+				} finally {
+					await releaseHistoryMaterializationBrowserOperations(browserOperations);
+				}
+			}
 		}
 		return failed;
 	}
@@ -6408,14 +6456,74 @@ function withRuntimeProfileSelection(
 	}) as Record<string, unknown>;
 }
 
-async function cleanupHistoryMaterializationManagedBrowser(
+async function acquireHistoryMaterializationBrowserOperations(input: {
+	config: ResolvedUserConfig | Record<string, unknown>;
+	request: HistoryMaterializationCreateRequest;
+	jobId: string;
+	dispatcher: BrowserOperationDispatcher | null;
+	queue: boolean;
+	queueTimeoutMs?: number;
+	queuePollMs?: number;
+}): Promise<BrowserOperationAcquiredResult[] | null> {
+	if (!input.dispatcher) return [];
+	const target = resolveHistoryMaterializationBrowserOperationTarget(input.config, input.request);
+	if (!target) return [];
+	const acquiredOperations: BrowserOperationAcquiredResult[] = [];
+	try {
+		for (const managedProfileDir of target.managedProfileDirs) {
+			const operationInput = {
+				managedProfileDir,
+				serviceTarget: target.provider,
+				kind: "browser-execution",
+				operationClass: "exclusive-mutating",
+				ownerCommand: input.queue
+					? `history-materialization:${input.jobId}`
+					: `history-materialization-recovery:${input.jobId}`,
+			} as const;
+			const acquired = input.queue
+				? await input.dispatcher.acquireQueued(operationInput, {
+						timeoutMs: normalizeHistoryMaterializationBrowserQueueNumber(
+							input.queueTimeoutMs,
+							10 * 60 * 1000,
+						),
+						pollMs: normalizeHistoryMaterializationBrowserQueueNumber(
+							input.queuePollMs,
+							1000,
+						),
+					})
+				: await input.dispatcher.acquire(operationInput);
+			if (!acquired.acquired) {
+				if (input.queue) {
+					throw new Error(formatBrowserOperationBusyResult(acquired));
+				}
+				await releaseHistoryMaterializationBrowserOperations(acquiredOperations);
+				return null;
+			}
+			acquiredOperations.push(acquired);
+		}
+		return acquiredOperations;
+	} catch (error) {
+		await releaseHistoryMaterializationBrowserOperations(acquiredOperations);
+		throw error;
+	}
+}
+
+async function releaseHistoryMaterializationBrowserOperations(
+	operations: BrowserOperationAcquiredResult[] | null,
+): Promise<void> {
+	if (!operations) return;
+	for (const operation of [...operations].reverse()) {
+		await operation.release();
+	}
+}
+
+function resolveHistoryMaterializationBrowserOperationTarget(
 	config: ResolvedUserConfig | Record<string, unknown>,
 	request: HistoryMaterializationCreateRequest,
-): Promise<void> {
+): { provider: ProviderId; managedProfileDirs: string[] } | null {
 	const provider = normalizeProviderId(request.provider) ?? null;
-	if (!provider) return;
+	if (!provider) return null;
 	const runtimeProfile = request.runtimeProfile ?? null;
-	const managedProfileDirs = new Set<string>();
 	const browserProfileName = resolveHistoryMaterializationBrowserProfileName(
 		config,
 		runtimeProfile,
@@ -6429,10 +6537,30 @@ async function cleanupHistoryMaterializationManagedBrowser(
 			browserProfileId: browserProfileName,
 		},
 	});
-	const manualLoginProfileDir = launchPlan.launchPolicy.manualLoginProfileDir;
-	if (manualLoginProfileDir) managedProfileDirs.add(path.resolve(manualLoginProfileDir));
+	const managedProfileDirs = new Set<string>();
+	if (launchPlan.launchPolicy.manualLoginProfileDir) {
+		managedProfileDirs.add(path.resolve(launchPlan.launchPolicy.manualLoginProfileDir));
+	}
 	managedProfileDirs.add(path.resolve(launchPlan.managedBrowserProfile.directory));
-	for (const managedProfileDir of managedProfileDirs) {
+	return { provider, managedProfileDirs: [...managedProfileDirs].sort() };
+}
+
+function normalizeHistoryMaterializationBrowserQueueNumber(
+	value: number | undefined,
+	fallback: number,
+): number {
+	return typeof value === "number" && Number.isFinite(value) && value > 0
+		? Math.trunc(value)
+		: fallback;
+}
+
+async function cleanupHistoryMaterializationManagedBrowser(
+	config: ResolvedUserConfig | Record<string, unknown>,
+	request: HistoryMaterializationCreateRequest,
+): Promise<void> {
+	const target = resolveHistoryMaterializationBrowserOperationTarget(config, request);
+	if (!target) return;
+	for (const managedProfileDir of target.managedProfileDirs) {
 		const primaryPid = await findChromePidUsingUserDataDir(managedProfileDir).catch(() => null);
 		const pids = await findHistoryMaterializationManagedBrowserPids(managedProfileDir);
 		if (primaryPid) pids.add(primaryPid);

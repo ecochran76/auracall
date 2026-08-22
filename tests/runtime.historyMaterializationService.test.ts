@@ -2,6 +2,10 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+	type BrowserOperationDispatcher,
+	createFileBackedBrowserOperationDispatcher,
+} from "../packages/browser-service/src/service/operationDispatcher.js";
 import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
 import { createCacheStore } from "../src/browser/llmService/cache/store.js";
 import type { ProviderCacheContext } from "../src/browser/providers/cache.js";
@@ -3330,6 +3334,309 @@ describe("history materialization service", () => {
 		});
 	});
 
+	it("holds exact-profile browser ownership through provider work and managed-browser cleanup", async () => {
+		const events: string[] = [];
+		const release = vi.fn(async () => {
+			events.push("release");
+		});
+		const browserOperationDispatcher: BrowserOperationDispatcher = {
+			acquire: vi.fn(),
+			acquireQueued: vi.fn(async (input) => {
+				events.push("acquire");
+				return {
+					acquired: true as const,
+					operation: {
+						...input,
+						id: "history-operation",
+						key: `managed-profile:${path.resolve(input.managedProfileDir ?? "unknown")}::service:chatgpt`,
+						ownerPid: process.pid,
+						startedAt: "2026-08-22T02:30:00.000Z",
+						updatedAt: "2026-08-22T02:30:00.000Z",
+					},
+					release,
+				};
+			}),
+			getActive: vi.fn(async () => null),
+		};
+		const managedProfileDir = "/tmp/auracall-plan0306/chatgpt";
+		const store = createInMemoryHistoryMaterializationJobStore([
+			buildHistoryMaterializationJob({
+				id: "hmj_browser_ownership",
+				status: "queued",
+				request: {
+					provider: "chatgpt",
+					conversationId: "conv_browser_ownership",
+					assetKinds: ["artifacts"],
+				},
+			}),
+		]);
+		const service = createHistoryMaterializationService({
+			config: {
+				browser: {
+					target: "chatgpt",
+					manualLoginProfileDir: managedProfileDir,
+				},
+			},
+			store,
+			schedule: () => undefined,
+			cleanupManagedBrowserAfterProviderWork: true,
+			browserOperationDispatcher,
+			cleanupManagedBrowser: async () => {
+				events.push("cleanup");
+			},
+			materializeConversation: vi.fn(
+				async (target): Promise<HistoryMaterializationResult> => {
+					events.push("provider-work");
+					return {
+						object: "history_materialization_result",
+						generatedAt: "2026-08-22T02:30:01.000Z",
+						status: "materialized",
+						target,
+						source: {
+							type: "conversation",
+							provider: "chatgpt",
+							conversationId: "conv_browser_ownership",
+						},
+						manifestPaths: [],
+						entries: [],
+						archiveItems: [],
+						metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 0 },
+						message: "Provider work completed.",
+					};
+				},
+			),
+		});
+
+		await expect(service.runJob("hmj_browser_ownership")).resolves.toMatchObject({
+			status: "succeeded",
+		});
+
+		expect(browserOperationDispatcher.acquireQueued).toHaveBeenCalledWith(
+			expect.objectContaining({
+				managedProfileDir,
+				serviceTarget: "chatgpt",
+				kind: "browser-execution",
+				operationClass: "exclusive-mutating",
+				ownerCommand: "history-materialization:hmj_browser_ownership",
+			}),
+			expect.any(Object),
+		);
+		expect(events).toEqual(["acquire", "provider-work", "cleanup", "release"]);
+		expect(release).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the file-backed exact-profile fence held until cleanup while unrelated profiles remain independent", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-plan0306-fence-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const lockRoot = path.join(homeDir, "browser-operations");
+		const foregroundDispatcher = createFileBackedBrowserOperationDispatcher({ lockRoot });
+		const managedProfileDir = path.join(homeDir, "browser-profiles", "wsl-chrome-3", "chatgpt");
+		const unrelatedProfileDir = path.join(homeDir, "browser-profiles", "other", "chatgpt");
+		let providerStartedResolve: (() => void) | undefined;
+		const providerStarted = new Promise<void>((resolve) => {
+			providerStartedResolve = resolve;
+		});
+		let providerFinishedResolve: (() => void) | undefined;
+		const providerFinished = new Promise<void>((resolve) => {
+			providerFinishedResolve = resolve;
+		});
+		let cleanupStartedResolve: (() => void) | undefined;
+		const cleanupStarted = new Promise<void>((resolve) => {
+			cleanupStartedResolve = resolve;
+		});
+		let cleanupFinishedResolve: (() => void) | undefined;
+		const cleanupFinished = new Promise<void>((resolve) => {
+			cleanupFinishedResolve = resolve;
+		});
+		const store = createInMemoryHistoryMaterializationJobStore([
+			buildHistoryMaterializationJob({
+				id: "hmj_file_fence",
+				status: "queued",
+				request: {
+					provider: "chatgpt",
+					conversationId: "conv_file_fence",
+					assetKinds: ["artifacts"],
+				},
+			}),
+		]);
+		const service = createHistoryMaterializationService({
+			config: {
+				browser: {
+					target: "chatgpt",
+					manualLoginProfileDir: managedProfileDir,
+				},
+			},
+			store,
+			schedule: () => undefined,
+			cleanupManagedBrowserAfterProviderWork: true,
+			cleanupManagedBrowser: async () => {
+				cleanupStartedResolve?.();
+				await cleanupFinished;
+			},
+			materializeConversation: vi.fn(
+				async (target): Promise<HistoryMaterializationResult> => {
+					providerStartedResolve?.();
+					await providerFinished;
+					return {
+						object: "history_materialization_result",
+						generatedAt: "2026-08-22T02:31:00.000Z",
+						status: "materialized",
+						target,
+						source: {
+							type: "conversation",
+							provider: "chatgpt",
+							conversationId: "conv_file_fence",
+						},
+						manifestPaths: [],
+						entries: [],
+						archiveItems: [],
+						metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 0 },
+						message: "Provider work completed.",
+					};
+				},
+			),
+		});
+		const run = service.runJob("hmj_file_fence");
+		await providerStarted;
+
+		const sameProfileDuringProvider = await foregroundDispatcher.acquire({
+			managedProfileDir,
+			serviceTarget: "chatgpt",
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerCommand: "foreground-during-provider",
+		});
+		expect(sameProfileDuringProvider.acquired).toBe(false);
+		const unrelatedProfile = await foregroundDispatcher.acquire({
+			managedProfileDir: unrelatedProfileDir,
+			serviceTarget: "chatgpt",
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerCommand: "unrelated-profile",
+		});
+		expect(unrelatedProfile.acquired).toBe(true);
+		if (unrelatedProfile.acquired) await unrelatedProfile.release();
+
+		providerFinishedResolve?.();
+		await cleanupStarted;
+		const sameProfileDuringCleanup = await foregroundDispatcher.acquire({
+			managedProfileDir,
+			serviceTarget: "chatgpt",
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerCommand: "foreground-during-cleanup",
+		});
+		expect(sameProfileDuringCleanup.acquired).toBe(false);
+
+		cleanupFinishedResolve?.();
+		await expect(run).resolves.toMatchObject({ status: "succeeded" });
+		const sameProfileAfterCleanup = await foregroundDispatcher.acquire({
+			managedProfileDir,
+			serviceTarget: "chatgpt",
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerCommand: "foreground-after-cleanup",
+		});
+		expect(sameProfileAfterCleanup.acquired).toBe(true);
+		if (sameProfileAfterCleanup.acquired) await sameProfileAfterCleanup.release();
+	});
+
+	it("does not run provider work or cleanup when a foreground owner keeps the exact profile busy", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-plan0306-busy-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const managedProfileDir = path.join(homeDir, "browser-profiles", "wsl-chrome-3", "chatgpt");
+		const dispatcher = createFileBackedBrowserOperationDispatcher({
+			lockRoot: path.join(homeDir, "browser-operations"),
+		});
+		const foreground = await dispatcher.acquire({
+			managedProfileDir,
+			serviceTarget: "chatgpt",
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerCommand: "foreground-owner",
+		});
+		if (!foreground.acquired) throw new Error("Expected foreground fixture ownership.");
+		const cleanupManagedBrowser = vi.fn(async () => undefined);
+		const materializeConversation = vi.fn();
+		const service = createHistoryMaterializationService({
+			config: {
+				browser: {
+					target: "chatgpt",
+					manualLoginProfileDir: managedProfileDir,
+				},
+			},
+			store: createInMemoryHistoryMaterializationJobStore([
+				buildHistoryMaterializationJob({ id: "hmj_browser_busy", status: "queued" }),
+			]),
+			schedule: () => undefined,
+			cleanupManagedBrowserAfterProviderWork: true,
+			browserOperationDispatcher: dispatcher,
+			browserOperationQueueTimeoutMs: 1,
+			browserOperationQueuePollMs: 1,
+			cleanupManagedBrowser,
+			materializeConversation,
+		});
+
+		await expect(service.runJob("hmj_browser_busy")).resolves.toMatchObject({
+			status: "failed",
+			error: { type: "internal_error" },
+		});
+		expect(materializeConversation).not.toHaveBeenCalled();
+		expect(cleanupManagedBrowser).not.toHaveBeenCalled();
+		const stillOwned = await dispatcher.getActive(foreground.operation.key);
+		expect(stillOwned?.id).toBe(foreground.operation.id);
+		await foreground.release();
+	});
+
+	it("cleans up and releases browser ownership when provider work fails", async () => {
+		const events: string[] = [];
+		const browserOperationDispatcher: BrowserOperationDispatcher = {
+			acquire: vi.fn(),
+			acquireQueued: vi.fn(async (input) => ({
+				acquired: true as const,
+				operation: {
+					...input,
+					id: "history-operation-failure",
+					key: "managed-profile:/tmp/auracall-plan0306/failure::service:chatgpt",
+					ownerPid: process.pid,
+					startedAt: "2026-08-22T02:32:00.000Z",
+					updatedAt: "2026-08-22T02:32:00.000Z",
+				},
+				release: async () => {
+					events.push("release");
+				},
+			})),
+			getActive: vi.fn(async () => null),
+		};
+		const service = createHistoryMaterializationService({
+			config: {
+				browser: {
+					target: "chatgpt",
+					manualLoginProfileDir: "/tmp/auracall-plan0306/failure",
+				},
+			},
+			store: createInMemoryHistoryMaterializationJobStore([
+				buildHistoryMaterializationJob({ id: "hmj_browser_failure", status: "queued" }),
+			]),
+			schedule: () => undefined,
+			cleanupManagedBrowserAfterProviderWork: true,
+			browserOperationDispatcher,
+			cleanupManagedBrowser: async () => {
+				events.push("cleanup");
+			},
+			materializeConversation: vi.fn(async () => {
+				events.push("provider-failure");
+				throw new Error("provider failed");
+			}),
+		});
+
+		await expect(service.runJob("hmj_browser_failure")).resolves.toMatchObject({
+			status: "failed",
+			error: { message: "provider failed" },
+		});
+		expect(events).toEqual(["provider-failure", "cleanup", "release"]);
+	});
+
 	it("re-dispatches queued jobs and marks running jobs failed during startup recovery", async () => {
 		const store = createInMemoryHistoryMaterializationJobStore([
 			buildHistoryMaterializationJob({ id: "hmj_recover_queued", status: "queued" }),
@@ -3502,6 +3809,61 @@ describe("history materialization service", () => {
 				active: 0,
 			},
 		});
+	});
+
+	it("skips stale-recovery cleanup while a foreground owner holds the exact profile", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-plan0306-stale-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const managedProfileDir = path.join(homeDir, "browser-profiles", "wsl-chrome-3", "chatgpt");
+		const dispatcher = createFileBackedBrowserOperationDispatcher({
+			lockRoot: path.join(homeDir, "browser-operations"),
+		});
+		const foreground = await dispatcher.acquire({
+			managedProfileDir,
+			serviceTarget: "chatgpt",
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerCommand: "foreground-owner",
+		});
+		if (!foreground.acquired) throw new Error("Expected foreground fixture ownership.");
+		const cleanupManagedBrowser = vi.fn(async () => undefined);
+		const store = createInMemoryHistoryMaterializationJobStore([
+			buildHistoryMaterializationJob({
+				id: "hmj_stale_browser_ownership",
+				status: "running",
+				request: {
+					provider: "chatgpt",
+					conversationId: "conv_stale_browser_ownership",
+					assetKinds: ["artifacts"],
+				},
+				startedAt: "2026-08-22T01:00:00.000Z",
+				updatedAt: "2026-08-22T01:00:00.000Z",
+				completedAt: null,
+			}),
+		]);
+		const service = createHistoryMaterializationService({
+			config: {
+				browser: {
+					target: "chatgpt",
+					manualLoginProfileDir: managedProfileDir,
+				},
+			},
+			store,
+			now: sequenceNow(["2026-08-22T01:31:00.000Z"]),
+			schedule: () => undefined,
+			cleanupManagedBrowserAfterProviderWork: true,
+			browserOperationDispatcher: dispatcher,
+			cleanupManagedBrowser,
+			materializeConversation: vi.fn(),
+		});
+
+		await expect(service.readJob("hmj_stale_browser_ownership")).resolves.toMatchObject({
+			status: "failed",
+		});
+		expect(cleanupManagedBrowser).not.toHaveBeenCalled();
+		const stillOwned = await dispatcher.getActive(foreground.operation.key);
+		expect(stillOwned?.id).toBe(foreground.operation.id);
+		await foreground.release();
 	});
 
 	it("attaches partial scrape telemetry when stale running conversation jobs fail on readback", async () => {
