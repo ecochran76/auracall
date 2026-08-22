@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "plan": "0306-2026-08-21-history-materialization-browser-ownership",
+  "recorded_at": "2026-08-22T02:40:00Z",
+  "state": "frozen_not_run",
+  "source": {
+    "product_commit": "929aec97",
+    "source_acceptance_commit": "109112ec",
+    "branch": "fix/plan0302-chatgpt-timeout-signal-cleanup"
+  },
+  "budgets": {
+    "user_runtime_installs": 1,
+    "api_restarts": 1,
+    "live_submissions": 1,
+    "retries": 0
+  },
+  "required_preflight": [
+    "source branch is clean and equals its pushed upstream",
+    "canonical LitScout DB contract passes",
+    "Session 68 receipt, exact-action execution, and membership counts are captured",
+    "AuraCall API is active and its PID and restart count are captured",
+    "active account-mirror completions and history-materialization jobs for chatgpt/wsl-chrome-3 are zero",
+    "the exact managed-profile browser-operation record is absent",
+    "managed Chrome process and DevTools-port state are captured without launching or terminating Chrome"
+  ],
+  "install": {
+    "command": "pnpm install:user-runtime",
+    "parity_files": [
+      "dist/src/runtime/historyMaterializationService.js",
+      "dist/packages/browser-service/src/service/operationDispatcher.js",
+      "dist/src/auracallHome.js"
+    ],
+    "provider_free_fixture": "import the installed modules and prove exact-profile busy-through-cleanup plus post-release acquisition in a temporary AuraCall home"
+  },
+  "restart": {
+    "service": "auracall-api.service",
+    "maximum": 1,
+    "required_readback": [
+      "new active PID",
+      "active/running",
+      "NRestarts",
+      "no failed unit state"
+    ]
+  },
+  "live": {
+    "slug": "litscout-ownership-live",
+    "model": "chatgpt:sol-high",
+    "retention": "retain conversation and terminal artifacts",
+    "prompt": "Use LitScout exactly once. Call only read-only research_continue for Session 68. Do not call any other tool, do not approve or execute any action, and do not retry. Return exactly one JSON object with controller_stage, blockers, recommended_next_action, approval_required, corpus_total, keep_count, remove_count, and counts_consistent. Copy numeric fields exactly from the LitScout result and set counts_consistent only after verifying corpus_total equals keep_count plus remove_count. If the tool cannot be called or the state is ambiguous, return one JSON object stating that and stop.",
+    "acceptance": [
+      "one submission and zero retry",
+      "terminal completed session and model state",
+      "exact canonical corpus_total, keep_count, and remove_count",
+      "counts_consistent true only when the arithmetic is exact",
+      "no exact-action execution increment and no corpus mutation",
+      "no retained browser operation, active foreground controller, or orphaned managed Chrome after terminal cleanup",
+      "history materialization cannot terminate the foreground browser while its exact operation is held"
+    ]
+  },
+  "stops": [
+    "stop before install if preflight is ambiguous",
+    "stop before submission if installed parity or provider-free fixture fails",
+    "stop before submission if completion/materialization state or browser ownership is ambiguous",
+    "stop after any live terminal outcome; never retry"
+  ]
+}

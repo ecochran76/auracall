@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P4 SOURCE ACCEPTED / INSTALLED-LIVE GATE FREEZE NEXT
+Operational state: P5 INSTALLED-LIVE GATE FROZEN / EXACT PREFLIGHT NEXT
 
 ## Stable Objective
 
@@ -44,6 +44,12 @@ cleanup have released the same durable operation fence.
   `docs/dev/notes/2026-08-21-plan0306-history-browser-ownership-source-acceptance.json`.
   No install, restart, browser launch, provider call, LitScout call, or Graphiti
   write occurred in the source slice.
+- Installed/live gate:
+  `docs/dev/notes/2026-08-21-plan0306-installed-live-gate.json`. The immutable
+  budget is one user-runtime install, one API restart, one exact read-only
+  Session 68 submission, and zero retries. Preflight must prove both durable
+  browser-operation state and active completion/materialization state; absence
+  of an operation file alone is not an idle receipt.
 
 ## Planning Metadata
 
