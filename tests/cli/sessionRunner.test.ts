@@ -677,7 +677,17 @@ describe('performSessionRun', () => {
   test('enforces the explicit overall timeout for browser sessions and persists a terminal error', async () => {
     vi.mocked(runBrowserSessionExecution).mockImplementation(({ abortSignal }) => {
       return new Promise<never>((_resolve, reject) => {
-        abortSignal?.addEventListener('abort', () => reject(abortSignal.reason), { once: true });
+        abortSignal?.addEventListener('abort', () => {
+          const reason = abortSignal.reason as SessionRunTimeoutError & {
+            browserResponseProgress?: Record<string, unknown>;
+          };
+          reason.browserResponseProgress = {
+            state: 'tool-approval-visible',
+            assistantTextChars: 0,
+            toolApprovalCardsVisible: 1,
+          };
+          reject(reason);
+        }, { once: true });
       });
     });
 
@@ -702,11 +712,26 @@ describe('performSessionRun', () => {
       status: 'error',
       completedAt: expect.any(String),
       errorMessage: expect.stringContaining('timed out'),
+      error: {
+        category: 'browser-terminal-response',
+        message: expect.stringContaining('timed out'),
+        details: {
+          browserResponseProgress: {
+            state: 'tool-approval-visible',
+            assistantTextChars: 0,
+            toolApprovalCardsVisible: 1,
+          },
+        },
+      },
     });
     expect(sessionStoreMock.updateModelRun).toHaveBeenLastCalledWith(
       baseSessionMeta.id,
       'gpt-5.2-pro',
-      expect.objectContaining({ status: 'error', completedAt: expect.any(String) }),
+      expect.objectContaining({
+        status: 'error',
+        completedAt: expect.any(String),
+        error: expect.objectContaining({ category: 'browser-terminal-response' }),
+      }),
     );
   });
 

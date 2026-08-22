@@ -1,18 +1,228 @@
 import { describe, expect, test } from 'vitest';
+import { ASSISTANT_ROLE_SELECTOR, CONVERSATION_TURN_SELECTOR } from '../../src/browser/constants.ts';
 import {
   buildAssistantExtractorForTest,
+  buildAssistantResponseProgressExpressionForTest,
   buildConversationDebugExpressionForTest,
+  buildCopyExpressionForTest,
   buildMarkdownFallbackExtractorForTest,
   getAssistantCompletionWatchdogThresholdsForTest,
-  buildCopyExpressionForTest,
 } from '../../src/browser/pageActions.ts';
-import { CONVERSATION_TURN_SELECTOR, ASSISTANT_ROLE_SELECTOR } from '../../src/browser/constants.ts';
+
+class FixtureElement {
+  readonly dataset: Record<string, string> = {};
+
+  constructor(
+    private readonly attributes: Record<string, string> = {},
+    readonly innerText = '',
+    readonly textContent = innerText,
+    readonly innerHTML = '',
+    private readonly selectorMatches: string[] = [],
+    private readonly selectorChildren: Record<string, FixtureElement[]> = {},
+    private readonly closestMatches: Record<string, FixtureElement | null> = {},
+  ) {}
+
+  getAttribute(name: string): string | null {
+    return this.attributes[name] ?? null;
+  }
+
+  matches(selector: string): boolean {
+    return this.selectorMatches.includes(selector);
+  }
+
+  querySelector(selector: string): FixtureElement | null {
+    return this.querySelectorAll(selector)[0] ?? null;
+  }
+
+  querySelectorAll(selector: string): FixtureElement[] {
+    const exact = this.selectorChildren[selector];
+    if (exact) return exact;
+    const collected = selector.split(',').flatMap((part) => this.selectorChildren[part.trim()] ?? []);
+    return [...new Set(collected)];
+  }
+
+  closest(selector: string): FixtureElement | null {
+    const exact = this.closestMatches[selector];
+    if (exact !== undefined) return exact;
+    for (const [candidate, match] of Object.entries(this.closestMatches)) {
+      if (selector.includes(candidate)) return match;
+    }
+    return null;
+  }
+
+  getBoundingClientRect() {
+    return { width: 100, height: 20 };
+  }
+}
+
+function runAssistantExtractorFixture(turns: FixtureElement[]) {
+  const expression = buildAssistantExtractorForTest('capture');
+  const fixtureDocument = {
+    querySelectorAll(selector: string) {
+      return selector === CONVERSATION_TURN_SELECTOR ? turns : [];
+    },
+  };
+  return Function('document', 'HTMLElement', `${expression}; return capture();`)(fixtureDocument, FixtureElement) as {
+    text?: string;
+    turnIndex?: number;
+  } | null;
+}
+
+function runAssistantProgressFixture(input: {
+  turns: FixtureElement[];
+  toolCards?: FixtureElement[];
+  stopButtons?: FixtureElement[];
+  dialogs?: FixtureElement[];
+}) {
+  const expression = buildAssistantResponseProgressExpressionForTest(0);
+  const fixtureDocument = {
+    querySelectorAll(selector: string) {
+      if (selector === CONVERSATION_TURN_SELECTOR) return input.turns;
+      if (selector.includes('tool-approval')) return input.toolCards ?? [];
+      if (selector.includes('stop-button')) return input.stopButtons ?? [];
+      if (selector === '[role="dialog"]') return input.dialogs ?? [];
+      return [];
+    },
+  };
+  return Function(
+    'document',
+    'HTMLElement',
+    'window',
+    'location',
+    `return ${expression};`,
+  )(
+    fixtureDocument,
+    FixtureElement,
+    { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) },
+    { href: 'https://chatgpt.com/c/fixture?private=omitted', origin: 'https://chatgpt.com', pathname: '/c/fixture' },
+  );
+}
 
 describe('browser automation expressions', () => {
   test('assistant extractor references constants', () => {
     const expression = buildAssistantExtractorForTest('capture');
     expect(expression).toContain(JSON.stringify(CONVERSATION_TURN_SELECTOR));
     expect(expression).toContain(JSON.stringify(ASSISTANT_ROLE_SELECTOR));
+  });
+
+  test('assistant extractor skips an earlier tool card and returns later final prose in the same turn', () => {
+    const toolCard = new FixtureElement({ 'data-testid': 'tool-approval-card' });
+    const toolStatus = new FixtureElement(
+      {},
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      '<button>Allow once</button>',
+      ['.markdown'],
+      {},
+      { '[data-testid="tool-approval-card"]': toolCard },
+    );
+    const finalProse = new FixtureElement(
+      { 'data-message-id': 'final-message' },
+      'Session 68 remains at evidence gap review.',
+      'Session 68 remains at evidence gap review.',
+      '<p>Session 68 remains at evidence gap review.</p>',
+      ['.markdown'],
+    );
+    const turn = new FixtureElement(
+      { 'data-turn': 'assistant', 'data-testid': 'conversation-turn-9' },
+      '',
+      '',
+      '',
+      [],
+      {
+        button: [],
+        '.markdown': [toolStatus, finalProse],
+      },
+    );
+
+    expect(runAssistantExtractorFixture([turn])).toMatchObject({
+      text: 'Session 68 remains at evidence gap review.',
+      turnIndex: 0,
+    });
+  });
+
+  test('assistant extractor never returns approval-card text when no final prose exists', () => {
+    const toolCard = new FixtureElement({ 'data-testid': 'tool-approval-card' });
+    const toolStatus = new FixtureElement(
+      {},
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      '<button>Allow once</button>',
+      ['.markdown'],
+      {},
+      { '[data-testid="tool-approval-card"]': toolCard },
+    );
+    const turn = new FixtureElement({ 'data-turn': 'assistant' }, '', '', '', [], {
+      button: [],
+      '.markdown': [toolStatus],
+    });
+
+    expect(runAssistantExtractorFixture([turn])).toBeNull();
+  });
+
+  test('passive response progress classifies a tool-only turn without exposing tool text as answer text', () => {
+    const toolCard = new FixtureElement({ 'data-testid': 'tool-approval-card' });
+    const toolStatus = new FixtureElement(
+      {},
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      '',
+      ['.markdown'],
+      {},
+      { '[data-testid="tool-approval-card"]': toolCard },
+    );
+    const turn = new FixtureElement({ 'data-turn': 'assistant' }, '', '', '', [], {
+      '.markdown': [toolStatus],
+      '[data-testid="tool-approval-card"]': [toolCard],
+    });
+
+    expect(runAssistantProgressFixture({ turns: [turn], toolCards: [toolCard] })).toMatchObject({
+      state: 'tool-approval-visible',
+      assistantTextChars: 0,
+      toolApprovalCardsVisible: 1,
+      turnCount: 1,
+      assistantTurnIndex: 0,
+    });
+  });
+
+  test('passive response progress ignores approval cards from an older assistant turn', () => {
+    const staleToolCard = new FixtureElement({ 'data-testid': 'tool-approval-card' });
+    const staleTurn = new FixtureElement({ 'data-turn': 'assistant' }, '', '', '', [], {
+      '[data-testid="tool-approval-card"]': [staleToolCard],
+    });
+    const userTurn = new FixtureElement({ 'data-turn': 'user' });
+    const currentTurn = new FixtureElement({ 'data-turn': 'assistant' });
+
+    expect(
+      runAssistantProgressFixture({ turns: [staleTurn, userTurn, currentTurn], toolCards: [staleToolCard] }),
+    ).toMatchObject({
+      state: 'assistant-turn-no-text',
+      toolApprovalCardsVisible: 0,
+      assistantTurnIndex: 2,
+    });
+  });
+
+  test('passive response progress classifies later final prose without returning its text', () => {
+    const finalProse = new FixtureElement(
+      {},
+      'Session 68 remains at evidence gap review.',
+      'Session 68 remains at evidence gap review.',
+      '<p>Session 68 remains at evidence gap review.</p>',
+      ['.markdown'],
+    );
+    const turn = new FixtureElement({ 'data-turn': 'assistant' }, '', '', '', [], {
+      '.markdown': [finalProse],
+    });
+
+    const progress = runAssistantProgressFixture({ turns: [turn] });
+    expect(progress).toMatchObject({
+      state: 'assistant-text',
+      assistantTextChars: 'Session 68 remains at evidence gap review.'.length,
+      toolApprovalCardsVisible: 0,
+      url: 'https://chatgpt.com/c/fixture',
+    });
+    expect(JSON.stringify(progress)).not.toContain('Session 68');
+    expect(JSON.stringify(progress)).not.toContain('private');
   });
 
   test('conversation debug expression references conversation selector', () => {
@@ -26,6 +236,7 @@ describe('browser automation expressions', () => {
     expect(expression).toContain("role !== 'user'");
     expect(expression).toContain('copy-turn-action-button');
     expect(expression).toContain(CONVERSATION_TURN_SELECTOR);
+    expect(expression).toContain('[data-testid="tool-approval-card"]');
   });
 
   test('copy expression scopes to assistant turn buttons', () => {

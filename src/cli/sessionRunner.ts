@@ -466,6 +466,10 @@ export async function performSessionRun({
     log(`ERROR: ${message}`);
     markErrorLogged(error);
     const userError = asOracleUserError(error);
+    const browserResponseProgress =
+      error && typeof error === 'object' && 'browserResponseProgress' in error
+        ? (error as { browserResponseProgress?: Record<string, unknown> }).browserResponseProgress
+        : undefined;
     const browserRuntime =
       userError?.category === 'browser-automation'
         ? ((userError.details as { runtime?: BrowserRuntimeMetadata } | undefined)?.runtime ?? undefined)
@@ -526,12 +530,31 @@ export async function performSessionRun({
             message: userError.message,
             details: userError.details,
           }
-        : undefined,
+        : browserResponseProgress
+          ? {
+              category: 'browser-terminal-response',
+              message,
+              details: { browserResponseProgress },
+            }
+          : undefined,
     });
     if (modelForStatus) {
       await sessionStore.updateModelRun(sessionMeta.id, modelForStatus, {
         status: terminalStatus,
         completedAt: new Date().toISOString(),
+        error: userError
+          ? {
+              category: userError.category,
+              message: userError.message,
+              details: userError.details,
+            }
+          : browserResponseProgress
+            ? {
+                category: 'browser-terminal-response',
+                message,
+                details: { browserResponseProgress },
+              }
+            : undefined,
       });
     }
     throw error;

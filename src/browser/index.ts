@@ -103,6 +103,7 @@ import {
 	navigateToChatGPT,
 	navigateToPromptReadyWithFallback,
 	readAssistantSnapshot,
+	readAssistantResponseProgress,
 	readCurrentChatgptComposerTool,
 	submitPrompt,
 	uploadAttachmentFile,
@@ -1895,6 +1896,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	let removeAbortHook: () => void = () => {};
 	let preserveBrowserOnError = false;
 	let runtimeForGuard: ChromeClient["Runtime"] | null = null;
+	let responseBaselineTurns: number | null = null;
 	const passiveObservations: BrowserPassiveObservation[] = [];
 	const emitRuntimeEvidence = async (observation: BrowserPassiveObservation): Promise<void> => {
 		if (!runtimeEvidenceCb) {
@@ -1997,8 +1999,26 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				return;
 			}
 			const handleAbort = (): void => {
-				reject(options.abortSignal?.reason);
-				void client?.close().catch(() => undefined);
+				const reason = options.abortSignal?.reason;
+				void (async () => {
+					const progress = runtimeForGuard
+						? await withTimeout(
+								readAssistantResponseProgress(
+									runtimeForGuard,
+									responseBaselineTurns ?? undefined,
+								),
+								750,
+								"Timed out capturing final ChatGPT response state.",
+							).catch(() => null)
+						: null;
+					if (progress && reason && typeof reason === "object") {
+						(reason as { browserResponseProgress?: typeof progress }).browserResponseProgress =
+							progress;
+						logger(`[browser] terminal response state: ${JSON.stringify(progress)}`);
+					}
+					reject(reason);
+					await client?.close().catch(() => undefined);
+				})();
 			};
 			options.abortSignal.addEventListener("abort", handleAbort, { once: true });
 			removeAbortHook = () => options.abortSignal?.removeEventListener("abort", handleAbort);
@@ -2516,6 +2536,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		try {
 			const submission = await raceWithDisconnect(submitOnce(promptText, attachments));
 			baselineTurns = submission.baselineTurns;
+			responseBaselineTurns = baselineTurns;
 			baselineAssistantText = submission.baselineAssistantText;
 			baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
 			baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
@@ -2532,6 +2553,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					submitOnce(fallbackSubmission.prompt, fallbackSubmission.attachments),
 				);
 				baselineTurns = submission.baselineTurns;
+				responseBaselineTurns = baselineTurns;
 				baselineAssistantText = submission.baselineAssistantText;
 				baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
 				baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
