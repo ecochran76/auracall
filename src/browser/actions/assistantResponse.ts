@@ -19,17 +19,109 @@ export interface WaitForAssistantResponseOptions {
   onPassiveDomProbe?: () => void | Promise<void>;
 }
 
+export interface AssistantResponseBoundary {
+  minTurnIndex?: number | null;
+  baselineMessageId?: string | null;
+  baselineTurnId?: string | null;
+  baselineTextFingerprint?: string | null;
+}
+
+export type AssistantResponseBoundaryInput = number | AssistantResponseBoundary | null | undefined;
+
 export interface AssistantResponseProgress {
   state: 'assistant-text' | 'tool-approval-visible' | 'assistant-turn-no-text' | 'no-assistant-turn';
   url: string | null;
   turnCount: number;
   minTurnIndex: number | null;
+  boundaryState: 'position' | 'stable-identity' | 'stable-text' | 'unresolved' | 'none';
   assistantTurnIndex: number | null;
   assistantTextChars: number;
   stopVisible: boolean;
   completionVisible: boolean;
   toolApprovalCardsVisible: number;
   dialogVisible: boolean;
+}
+
+function normalizeBoundaryText(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+export function fingerprintAssistantResponseText(value: string | null | undefined): string | null {
+  const normalized = normalizeBoundaryText(value ?? '');
+  if (!normalized) return null;
+  let hash = 2166136261;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash ^= normalized.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${normalized.length}:${hash >>> 0}`;
+}
+
+function normalizeAssistantResponseBoundary(input: AssistantResponseBoundaryInput): Required<AssistantResponseBoundary> {
+  const source = typeof input === 'number' ? { minTurnIndex: input } : (input ?? {});
+  const minTurnIndex =
+    typeof source.minTurnIndex === 'number' && Number.isFinite(source.minTurnIndex) && source.minTurnIndex >= 0
+      ? Math.floor(source.minTurnIndex)
+      : null;
+  const clean = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim() ? value.trim() : null;
+  return {
+    minTurnIndex,
+    baselineMessageId: clean(source.baselineMessageId),
+    baselineTurnId: clean(source.baselineTurnId),
+    baselineTextFingerprint: clean(source.baselineTextFingerprint),
+  };
+}
+
+function buildResponseBoundaryHelpers(boundaryVariable = 'RESPONSE_BOUNDARY'): string {
+  return `
+    const fingerprintBoundaryText = (value) => {
+      const normalized = String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      if (!normalized) return null;
+      let hash = 2166136261;
+      for (let index = 0; index < normalized.length; index += 1) {
+        hash ^= normalized.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return normalized.length + ':' + (hash >>> 0);
+    };
+    const responseBoundaryState = (snapshot, turnCount) => {
+      if (!snapshot) return null;
+      const boundary = ${boundaryVariable} || {};
+      const minTurnIndex = Number.isFinite(boundary.minTurnIndex) ? boundary.minTurnIndex : null;
+      const turnIndex = Number.isFinite(snapshot.turnIndex) ? snapshot.turnIndex : null;
+      if (minTurnIndex === null) return 'none';
+      if (turnIndex !== null && turnIndex >= minTurnIndex) return 'position';
+      if (!Number.isFinite(turnCount) || turnCount > minTurnIndex) return null;
+      const baselineMessageId = boundary.baselineMessageId || null;
+      const baselineTurnId = boundary.baselineTurnId || null;
+      const messageId = snapshot.messageId || null;
+      const turnId = snapshot.turnId || null;
+      const fingerprint = fingerprintBoundaryText(snapshot.text || '');
+      if (
+        boundary.baselineTextFingerprint &&
+        fingerprint &&
+        fingerprint === boundary.baselineTextFingerprint
+      ) {
+        return null;
+      }
+      if (
+        (baselineMessageId && messageId && baselineMessageId === messageId) ||
+        (baselineTurnId && turnId && baselineTurnId === turnId)
+      ) {
+        return null;
+      }
+      if (
+        (baselineMessageId && messageId && baselineMessageId !== messageId) ||
+        (baselineTurnId && turnId && baselineTurnId !== turnId)
+      ) {
+        return 'stable-identity';
+      }
+      if (!baselineMessageId && !baselineTurnId && boundary.baselineTextFingerprint) {
+        if (fingerprint && fingerprint !== boundary.baselineTextFingerprint) return 'stable-text';
+      }
+      return null;
+    };`;
 }
 
 function isAnswerNowPlaceholderText(normalized: string): boolean {
@@ -48,7 +140,7 @@ export async function waitForAssistantResponse(
   Runtime: ChromeClient['Runtime'],
   timeoutMs: number,
   logger: BrowserLogger,
-  minTurnIndex?: number,
+  responseBoundary?: AssistantResponseBoundaryInput,
   options: WaitForAssistantResponseOptions = {},
 ): Promise<{
   text: string;
@@ -71,7 +163,7 @@ export async function waitForAssistantResponse(
   // Learned: two paths are needed:
   // 1) DOM observer (fast when mutations fire),
   // 2) snapshot poller (fallback when observers miss or JS stalls).
-  const expression = buildResponseObserverExpression(timeoutMs, minTurnIndex);
+  const expression = buildResponseObserverExpression(timeoutMs, responseBoundary);
   const evaluationPromise = Runtime.evaluate({
     expression,
     awaitPromise: true,
@@ -85,7 +177,7 @@ export async function waitForAssistantResponse(
   );
   // Stop the watchdog loop once the observer path wins so we do not keep polling until timeout.
   const pollerAbort = new AbortController();
-  const pollerPromise = pollAssistantCompletion(Runtime, timeoutMs, minTurnIndex, pollerAbort.signal, waitOptions).then(
+  const pollerPromise = pollAssistantCompletion(Runtime, timeoutMs, responseBoundary, pollerAbort.signal, waitOptions).then(
     (value) => {
       if (!value) {
         throw { source: 'poll' as const, error: new Error(ASSISTANT_POLL_TIMEOUT_ERROR) };
@@ -117,7 +209,7 @@ export async function waitForAssistantResponse(
       } else if (source === 'poll') {
         throw error;
       } else if (source === 'evaluation') {
-        const recovered = await recoverAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex, waitOptions);
+        const recovered = await recoverAssistantResponse(Runtime, timeoutMs, logger, responseBoundary, waitOptions);
         if (recovered) {
           await waitOptions.onResponseIncoming?.();
           return recovered;
@@ -139,7 +231,7 @@ export async function waitForAssistantResponse(
   if (!parsed) {
     let remainingMs = Math.max(0, timeoutMs - (Date.now() - start));
     if (remainingMs > 0) {
-      const recovered = await recoverAssistantResponse(Runtime, remainingMs, logger, minTurnIndex, waitOptions);
+      const recovered = await recoverAssistantResponse(Runtime, remainingMs, logger, responseBoundary, waitOptions);
       if (recovered) {
         return recovered;
       }
@@ -155,7 +247,7 @@ export async function waitForAssistantResponse(
     throw new Error('Unable to capture assistant response');
   }
 
-  const refreshed = await refreshAssistantSnapshot(Runtime, parsed, logger, minTurnIndex);
+  const refreshed = await refreshAssistantSnapshot(Runtime, parsed, logger, responseBoundary);
   const candidate = refreshed ?? parsed;
   // The evaluation path can race ahead of completion. If ChatGPT is still streaming, wait for the watchdog poller.
   const elapsedMs = Date.now() - start;
@@ -167,7 +259,7 @@ export async function waitForAssistantResponse(
     ]);
     if (stopVisible) {
       logger('Assistant still generating; waiting for completion');
-      const completed = await pollAssistantCompletion(Runtime, remainingMs, minTurnIndex, undefined, waitOptions);
+      const completed = await pollAssistantCompletion(Runtime, remainingMs, responseBoundary, undefined, waitOptions);
       if (completed) {
         await waitOptions.onResponseIncoming?.();
         return completed;
@@ -182,35 +274,25 @@ export async function waitForAssistantResponse(
 
 export async function readAssistantSnapshot(
   Runtime: ChromeClient['Runtime'],
-  minTurnIndex?: number,
+  responseBoundary?: AssistantResponseBoundaryInput,
 ): Promise<AssistantSnapshot | null> {
   const { result } = await Runtime.evaluate({
-    expression: buildAssistantSnapshotExpression(minTurnIndex),
+    expression: buildAssistantSnapshotExpression(responseBoundary),
     returnByValue: true,
   });
   const value = result?.value;
   if (value && typeof value === 'object') {
-    const snapshot = value as AssistantSnapshot;
-    if (typeof minTurnIndex === 'number' && Number.isFinite(minTurnIndex)) {
-      const turnIndex = typeof snapshot.turnIndex === 'number' ? snapshot.turnIndex : null;
-      if (turnIndex === null) {
-        return snapshot;
-      }
-      if (turnIndex < minTurnIndex) {
-        return null;
-      }
-    }
-    return snapshot;
+    return value as AssistantSnapshot;
   }
   return null;
 }
 
 export async function readAssistantResponseProgress(
   Runtime: ChromeClient['Runtime'],
-  minTurnIndex?: number,
+  responseBoundary?: AssistantResponseBoundaryInput,
 ): Promise<AssistantResponseProgress | null> {
   const { result } = await Runtime.evaluate({
-    expression: buildAssistantResponseProgressExpression(minTurnIndex),
+    expression: buildAssistantResponseProgressExpression(responseBoundary),
     returnByValue: true,
   });
   const value = result?.value;
@@ -248,8 +330,16 @@ export function buildAssistantExtractorForTest(name: string): string {
   return buildAssistantExtractor(name);
 }
 
-export function buildAssistantResponseProgressExpressionForTest(minTurnIndex?: number): string {
-  return buildAssistantResponseProgressExpression(minTurnIndex);
+export function buildAssistantSnapshotExpressionForTest(
+  responseBoundary?: AssistantResponseBoundaryInput,
+): string {
+  return buildAssistantSnapshotExpression(responseBoundary);
+}
+
+export function buildAssistantResponseProgressExpressionForTest(
+  responseBoundary?: AssistantResponseBoundaryInput,
+): string {
+  return buildAssistantResponseProgressExpression(responseBoundary);
 }
 
 export function buildConversationDebugExpressionForTest(): string {
@@ -257,7 +347,12 @@ export function buildConversationDebugExpressionForTest(): string {
 }
 
 export function buildMarkdownFallbackExtractorForTest(minTurnLiteral = '0'): string {
-  return buildMarkdownFallbackExtractor(minTurnLiteral);
+  return buildMarkdownFallbackExtractor(`{
+    minTurnIndex: ${minTurnLiteral},
+    baselineMessageId: null,
+    baselineTurnId: null,
+    baselineTextFingerprint: null
+  }`);
 }
 
 export function getAssistantCompletionWatchdogThresholdsForTest(currentLength: number): {
@@ -276,7 +371,7 @@ async function recoverAssistantResponse(
   Runtime: ChromeClient['Runtime'],
   timeoutMs: number,
   logger: BrowserLogger,
-  minTurnIndex?: number,
+  responseBoundary?: AssistantResponseBoundaryInput,
   options: WaitForAssistantResponseOptions = {},
 ): Promise<{
   text: string;
@@ -288,7 +383,7 @@ async function recoverAssistantResponse(
     return null;
   }
   const quickSnapshot = normalizeAssistantSnapshot(
-    await readAssistantSnapshot(Runtime, minTurnIndex).catch(() => null),
+    await readAssistantSnapshot(Runtime, responseBoundary).catch(() => null),
   );
   if (quickSnapshot) {
     await options.onPassiveDomProbe?.();
@@ -296,7 +391,7 @@ async function recoverAssistantResponse(
     logger('Recovered assistant response via immediate snapshot fallback');
     return quickSnapshot;
   }
-  const recovered = await pollAssistantCompletion(Runtime, recoveryTimeoutMs, minTurnIndex, undefined, options);
+  const recovered = await pollAssistantCompletion(Runtime, recoveryTimeoutMs, responseBoundary, undefined, options);
   if (recovered) {
     logger('Recovered assistant response via polling fallback');
     return recovered;
@@ -353,7 +448,7 @@ async function refreshAssistantSnapshot(
     meta: { turnId?: string | null; messageId?: string | null };
   },
   logger: BrowserLogger,
-  minTurnIndex?: number,
+  responseBoundary?: AssistantResponseBoundaryInput,
 ): Promise<{
   text: string;
   html?: string;
@@ -369,7 +464,7 @@ async function refreshAssistantSnapshot(
   const stableTarget = 3;
   while (Date.now() < deadline) {
     // Learned: short/fast answers can race; poll a few extra cycles to pick up messageId + full text.
-    const latestSnapshot = await readAssistantSnapshot(Runtime, minTurnIndex).catch(() => null);
+    const latestSnapshot = await readAssistantSnapshot(Runtime, responseBoundary).catch(() => null);
     const latest = normalizeAssistantSnapshot(latestSnapshot);
     if (latest) {
       if (!best || latest.text.length > best.text.length || (!best.meta.messageId && latest.meta.messageId)) {
@@ -413,7 +508,7 @@ async function terminateRuntimeExecution(Runtime: ChromeClient['Runtime']): Prom
 async function pollAssistantCompletion(
   Runtime: ChromeClient['Runtime'],
   timeoutMs: number,
-  minTurnIndex?: number,
+  responseBoundary?: AssistantResponseBoundaryInput,
   abortSignal?: AbortSignal,
   options: WaitForAssistantResponseOptions = {},
 ): Promise<{
@@ -431,7 +526,7 @@ async function pollAssistantCompletion(
     if (abortSignal?.aborted) {
       return null;
     }
-    const snapshot = await readAssistantSnapshot(Runtime, minTurnIndex);
+    const snapshot = await readAssistantSnapshot(Runtime, responseBoundary);
     const observedAt = Date.now();
     if (observedAt - lastPassiveProbeAt >= PASSIVE_DOM_PROBE_INTERVAL_MS) {
       lastPassiveProbeAt = observedAt;
@@ -575,16 +670,17 @@ function normalizeAssistantSnapshot(snapshot: AssistantSnapshot | null): {
   };
 }
 
-function buildAssistantSnapshotExpression(minTurnIndex?: number): string {
-  const minTurnLiteral =
-    typeof minTurnIndex === 'number' && Number.isFinite(minTurnIndex) && minTurnIndex >= 0
-      ? Math.floor(minTurnIndex)
-      : -1;
+function buildAssistantSnapshotExpression(responseBoundary?: AssistantResponseBoundaryInput): string {
+  const boundary = normalizeAssistantResponseBoundary(responseBoundary);
   return `(() => {
-    const MIN_TURN_INDEX = ${minTurnLiteral};
+    const RESPONSE_BOUNDARY = ${JSON.stringify(boundary)};
+    const MIN_TURN_INDEX = RESPONSE_BOUNDARY.minTurnIndex ?? -1;
+    ${buildResponseBoundaryHelpers()}
     // Learned: the default turn DOM misses project view; keep a fallback extractor.
     ${buildAssistantExtractor('extractAssistantTurn')}
-    const extracted = extractAssistantTurn();
+    const turnCount = document.querySelectorAll(${JSON.stringify(CONVERSATION_TURN_SELECTOR)}).length;
+    const extractedRaw = extractAssistantTurn();
+    const extracted = responseBoundaryState(extractedRaw, turnCount) ? extractedRaw : null;
     const isPlaceholder = (snapshot) => {
       const normalized = String(snapshot?.text ?? '').toLowerCase().trim();
       if (normalized === 'chatgpt said:' || normalized === 'chatgpt said') return true;
@@ -597,20 +693,20 @@ function buildAssistantSnapshotExpression(minTurnIndex?: number): string {
       return extracted;
     }
     // Fallback for ChatGPT project view: answers can live outside conversation turns.
-    const fallback = ${buildMarkdownFallbackExtractor('MIN_TURN_INDEX')};
+    const extractFromMarkdownFallback = ${buildMarkdownFallbackExtractor('RESPONSE_BOUNDARY')};
+    const fallback = extractFromMarkdownFallback();
     return fallback ?? extracted;
   })()`;
 }
 
-function buildAssistantResponseProgressExpression(minTurnIndex?: number): string {
-  const minTurnLiteral =
-    typeof minTurnIndex === 'number' && Number.isFinite(minTurnIndex) && minTurnIndex >= 0
-      ? Math.floor(minTurnIndex)
-      : -1;
+function buildAssistantResponseProgressExpression(responseBoundary?: AssistantResponseBoundaryInput): string {
+  const boundary = normalizeAssistantResponseBoundary(responseBoundary);
   const conversationLiteral = JSON.stringify(CONVERSATION_TURN_SELECTOR);
   const assistantLiteral = JSON.stringify(ASSISTANT_ROLE_SELECTOR);
   return `(() => {
-    const MIN_TURN_INDEX = ${minTurnLiteral};
+    const RESPONSE_BOUNDARY = ${JSON.stringify(boundary)};
+    const MIN_TURN_INDEX = RESPONSE_BOUNDARY.minTurnIndex ?? -1;
+    ${buildResponseBoundaryHelpers()}
     const CONVERSATION_SELECTOR = ${conversationLiteral};
     const ASSISTANT_SELECTOR = ${assistantLiteral};
     const CONTENT_SELECTOR = '.markdown,[data-message-content],[data-testid*="message"],[data-testid*="assistant"],.prose,[class*="markdown"]';
@@ -634,13 +730,25 @@ function buildAssistantResponseProgressExpression(minTurnIndex?: number): string
     const turns = Array.from(document.querySelectorAll(CONVERSATION_SELECTOR));
     let assistantTurn = null;
     let assistantTurnIndex = null;
+    let boundaryState = null;
     for (let index = turns.length - 1; index >= 0; index -= 1) {
-      if (MIN_TURN_INDEX >= 0 && index < MIN_TURN_INDEX) break;
-      if (isAssistantTurn(turns[index])) {
-        assistantTurn = turns[index];
-        assistantTurnIndex = index;
-        break;
-      }
+      const turn = turns[index];
+      if (!isAssistantTurn(turn)) continue;
+      const messageNode = turn.querySelector?.('[data-message-id]');
+      const candidateBoundaryState = responseBoundaryState(
+        {
+          text: '',
+          messageId: turn.getAttribute('data-message-id') || messageNode?.getAttribute?.('data-message-id') || null,
+          turnId: turn.getAttribute('data-testid') || null,
+          turnIndex: index,
+        },
+        turns.length,
+      );
+      if (!candidateBoundaryState) continue;
+      assistantTurn = turn;
+      assistantTurnIndex = index;
+      boundaryState = candidateBoundaryState;
+      break;
     }
     const candidates = [];
     if (assistantTurn) {
@@ -687,6 +795,7 @@ function buildAssistantResponseProgressExpression(minTurnIndex?: number): string
           : null,
       turnCount: turns.length,
       minTurnIndex: MIN_TURN_INDEX >= 0 ? MIN_TURN_INDEX : null,
+      boundaryState: boundaryState ?? (MIN_TURN_INDEX >= 0 ? 'unresolved' : 'none'),
       assistantTurnIndex,
       assistantTextChars,
       stopVisible,
@@ -697,14 +806,11 @@ function buildAssistantResponseProgressExpression(minTurnIndex?: number): string
   })()`;
 }
 
-function buildResponseObserverExpression(timeoutMs: number, minTurnIndex?: number): string {
+function buildResponseObserverExpression(timeoutMs: number, responseBoundary?: AssistantResponseBoundaryInput): string {
   const selectorsLiteral = JSON.stringify(ANSWER_SELECTORS);
   const conversationLiteral = JSON.stringify(CONVERSATION_TURN_SELECTOR);
   const assistantLiteral = JSON.stringify(ASSISTANT_ROLE_SELECTOR);
-  const minTurnLiteral =
-    typeof minTurnIndex === 'number' && Number.isFinite(minTurnIndex) && minTurnIndex >= 0
-      ? Math.floor(minTurnIndex)
-      : -1;
+  const boundary = normalizeAssistantResponseBoundary(responseBoundary);
   return `(() => {
     ${buildClickDispatcher()}
     const SELECTORS = ${selectorsLiteral};
@@ -735,20 +841,17 @@ function buildResponseObserverExpression(timeoutMs: number, minTurnIndex?: numbe
       return Boolean(node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
     };
 
-    const MIN_TURN_INDEX = ${minTurnLiteral};
+    const RESPONSE_BOUNDARY = ${JSON.stringify(boundary)};
+    const MIN_TURN_INDEX = RESPONSE_BOUNDARY.minTurnIndex ?? -1;
+    ${buildResponseBoundaryHelpers()}
     ${buildAssistantExtractor('extractFromTurns')}
     // Learned: some layouts (project view) render markdown without assistant turn wrappers.
-    const extractFromMarkdownFallback = ${buildMarkdownFallbackExtractor('MIN_TURN_INDEX')};
+    const extractFromMarkdownFallback = ${buildMarkdownFallbackExtractor('RESPONSE_BOUNDARY')};
 
     const acceptSnapshot = (snapshot) => {
       if (!snapshot) return null;
-      const index = typeof snapshot.turnIndex === 'number' ? snapshot.turnIndex : -1;
-      if (MIN_TURN_INDEX >= 0) {
-        if (index < 0 || index < MIN_TURN_INDEX) {
-          return null;
-        }
-      }
-      return snapshot;
+      const turnCount = document.querySelectorAll(CONVERSATION_SELECTOR).length;
+      return responseBoundaryState(snapshot, turnCount) ? snapshot : null;
     };
 
     const captureViaObserver = () =>
@@ -968,10 +1071,11 @@ function buildAssistantExtractor(functionName: string): string {
   };`;
 }
 
-function buildMarkdownFallbackExtractor(minTurnLiteral?: string): string {
-  const turnIndexValue = minTurnLiteral ? `(${minTurnLiteral} >= 0 ? ${minTurnLiteral} : null)` : 'null';
+function buildMarkdownFallbackExtractor(boundaryLiteral = '{}'): string {
   return `(() => {
-    const MIN_TURN_INDEX = ${turnIndexValue};
+    const FALLBACK_RESPONSE_BOUNDARY = ${boundaryLiteral};
+    const MIN_TURN_INDEX = FALLBACK_RESPONSE_BOUNDARY?.minTurnIndex ?? null;
+    ${buildResponseBoundaryHelpers('FALLBACK_RESPONSE_BOUNDARY')}
     const roots = [
       document.querySelector('section[data-testid="screen-threadFlyOut"]'),
       document.querySelector('[data-testid="chat-thread"]'),
@@ -1012,11 +1116,16 @@ function buildMarkdownFallbackExtractor(minTurnLiteral?: string): string {
       const idx = turnNodes.indexOf(turn);
       return idx >= 0 ? idx : null;
     };
-    const isAfterMinTurn = (node) => {
-      if (MIN_TURN_INDEX === null) return true;
-      if (!hasTurns) return true;
+    const readBoundarySnapshot = (node, text) => {
+      const turn = node?.closest?.(CONVERSATION_SELECTOR);
       const idx = resolveTurnIndex(node);
-      return idx !== null && idx >= MIN_TURN_INDEX;
+      const messageNode = node?.closest?.('[data-message-id]') || turn?.querySelector?.('[data-message-id]');
+      return {
+        text,
+        messageId: node?.getAttribute?.('data-message-id') || messageNode?.getAttribute?.('data-message-id') || null,
+        turnId: turn?.getAttribute?.('data-testid') || null,
+        turnIndex: idx,
+      };
     };
     const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
     const collectUserText = (scope) => {
@@ -1090,13 +1199,13 @@ function buildMarkdownFallbackExtractor(minTurnLiteral?: string): string {
     for (let i = candidates.length - 1; i >= 0; i -= 1) {
       const node = candidates[i];
       if (!node) continue;
-      if (!isAfterMinTurn(node)) continue;
       const text = (node.innerText || node.textContent || '').trim();
       if (!text) continue;
       if (isUserEcho(text)) continue;
+      const boundarySnapshot = readBoundarySnapshot(node, text);
+      if (!responseBoundaryState(boundarySnapshot, turnNodes.length)) continue;
       const html = node.innerHTML ?? '';
-      const turnIndex = resolveTurnIndex(node);
-      return { text, html, messageId: null, turnId: null, turnIndex };
+      return { text, html, ...boundarySnapshot };
     }
     return null;
   })`;

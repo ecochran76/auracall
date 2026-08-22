@@ -3,9 +3,11 @@ import { ASSISTANT_ROLE_SELECTOR, CONVERSATION_TURN_SELECTOR } from '../../src/b
 import {
   buildAssistantExtractorForTest,
   buildAssistantResponseProgressExpressionForTest,
+  buildAssistantSnapshotExpressionForTest,
   buildConversationDebugExpressionForTest,
   buildCopyExpressionForTest,
   buildMarkdownFallbackExtractorForTest,
+  fingerprintAssistantResponseText,
   getAssistantCompletionWatchdogThresholdsForTest,
 } from '../../src/browser/pageActions.ts';
 
@@ -68,13 +70,33 @@ function runAssistantExtractorFixture(turns: FixtureElement[]) {
   } | null;
 }
 
+function runAssistantSnapshotFixture(
+  turns: FixtureElement[],
+  responseBoundary: Parameters<typeof buildAssistantSnapshotExpressionForTest>[0],
+) {
+  const expression = buildAssistantSnapshotExpressionForTest(responseBoundary);
+  const fixtureDocument = {
+    querySelector: () => null,
+    querySelectorAll(selector: string) {
+      return selector === CONVERSATION_TURN_SELECTOR ? turns : [];
+    },
+  };
+  return Function('document', 'HTMLElement', `return ${expression};`)(fixtureDocument, FixtureElement) as {
+    text?: string;
+    messageId?: string | null;
+    turnId?: string | null;
+    turnIndex?: number | null;
+  } | null;
+}
+
 function runAssistantProgressFixture(input: {
   turns: FixtureElement[];
   toolCards?: FixtureElement[];
   stopButtons?: FixtureElement[];
   dialogs?: FixtureElement[];
+  responseBoundary?: Parameters<typeof buildAssistantResponseProgressExpressionForTest>[0];
 }) {
-  const expression = buildAssistantResponseProgressExpressionForTest(0);
+  const expression = buildAssistantResponseProgressExpressionForTest(input.responseBoundary ?? 0);
   const fixtureDocument = {
     querySelectorAll(selector: string) {
       if (selector === CONVERSATION_TURN_SELECTOR) return input.turns;
@@ -223,6 +245,143 @@ describe('browser automation expressions', () => {
     });
     expect(JSON.stringify(progress)).not.toContain('Session 68');
     expect(JSON.stringify(progress)).not.toContain('private');
+  });
+
+  test('passive response progress preserves a fresh assistant turn when virtualization shrinks below the committed turn count', () => {
+    const mountedTurns = Array.from(
+      { length: 11 },
+      (_, index) => new FixtureElement({ 'data-turn': index % 2 === 0 ? 'user' : 'assistant' }),
+    );
+    const finalProse = new FixtureElement(
+      { 'data-message-id': 'fresh-message' },
+      'Session 68 remains at evidence gap review.',
+      'Session 68 remains at evidence gap review.',
+      '<p>Session 68 remains at evidence gap review.</p>',
+      ['.markdown'],
+    );
+    mountedTurns.push(
+      new FixtureElement(
+        {
+          'data-turn': 'assistant',
+          'data-testid': 'conversation-turn-fresh',
+          'data-message-id': 'fresh-message',
+        },
+        '',
+        '',
+        '',
+        [],
+        { '.markdown': [finalProse] },
+      ),
+    );
+
+    expect(
+      runAssistantProgressFixture({
+        turns: mountedTurns,
+        responseBoundary: {
+          minTurnIndex: 15,
+          baselineMessageId: 'baseline-message',
+          baselineTurnId: 'conversation-turn-14',
+        },
+      }),
+    ).toMatchObject({
+      state: 'assistant-text',
+      turnCount: 12,
+      assistantTurnIndex: 11,
+      boundaryState: 'stable-identity',
+    });
+  });
+
+  test('snapshot boundary accepts a fresh stable identity below the positional floor and rejects the baseline identity', () => {
+    const finalProse = new FixtureElement(
+      { 'data-message-id': 'fresh-message' },
+      'Session 68 remains at evidence gap review.',
+      'Session 68 remains at evidence gap review.',
+      '<p>Session 68 remains at evidence gap review.</p>',
+      ['.markdown'],
+    );
+    const freshTurn = new FixtureElement(
+      {
+        'data-turn': 'assistant',
+        'data-testid': 'conversation-turn-fresh',
+        'data-message-id': 'fresh-message',
+      },
+      '',
+      '',
+      '',
+      [],
+      { button: [], '.markdown': [finalProse] },
+    );
+    const mountedTurns = Array.from({ length: 11 }, () => new FixtureElement({ 'data-turn': 'user' }));
+    mountedTurns.push(freshTurn);
+
+    expect(
+      runAssistantSnapshotFixture(mountedTurns, {
+        minTurnIndex: 15,
+        baselineMessageId: 'baseline-message',
+        baselineTurnId: 'conversation-turn-14',
+      }),
+    ).toMatchObject({
+      text: 'Session 68 remains at evidence gap review.',
+      messageId: 'fresh-message',
+      turnId: 'conversation-turn-fresh',
+      turnIndex: 11,
+    });
+
+    expect(
+      runAssistantSnapshotFixture(mountedTurns, {
+        minTurnIndex: 15,
+        baselineMessageId: 'fresh-message',
+        baselineTurnId: 'conversation-turn-fresh',
+      }),
+    ).toBeNull();
+
+    expect(
+      runAssistantSnapshotFixture(mountedTurns, {
+        minTurnIndex: 15,
+        baselineMessageId: 'reindexed-baseline-message',
+        baselineTurnId: 'reindexed-baseline-turn',
+        baselineTextFingerprint: fingerprintAssistantResponseText(
+          'Session 68 remains at evidence gap review.',
+        ),
+      }),
+    ).toBeNull();
+  });
+
+  test('snapshot boundary does not convert a fresh tool-only turn into assistant prose', () => {
+    const toolCard = new FixtureElement({ 'data-testid': 'tool-approval-card' });
+    const toolStatus = new FixtureElement(
+      {},
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      'Allow ChatGPT to use LitScout? Allow once Always allow',
+      '<button>Allow once</button>',
+      ['.markdown'],
+      {},
+      { '[data-testid="tool-approval-card"]': toolCard },
+    );
+    const toolTurn = new FixtureElement(
+      {
+        'data-turn': 'assistant',
+        'data-testid': 'conversation-turn-tool',
+        'data-message-id': 'tool-message',
+      },
+      '',
+      '',
+      '',
+      [],
+      {
+        button: [],
+        '.markdown': [toolStatus],
+        '[data-testid="tool-approval-card"]': [toolCard],
+      },
+    );
+
+    expect(
+      runAssistantSnapshotFixture([toolTurn], {
+        minTurnIndex: 15,
+        baselineMessageId: 'baseline-message',
+        baselineTurnId: 'conversation-turn-14',
+      }),
+    ).toBeNull();
   });
 
   test('conversation debug expression references conversation selector', () => {

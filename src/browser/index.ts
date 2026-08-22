@@ -91,6 +91,7 @@ import {
 } from "./domDebug.js";
 import { recordBrowserOperationQueueObservation } from "./operationQueueObservations.js";
 import {
+	type AssistantResponseBoundary,
 	captureAssistantMarkdown,
 	clearComposerAttachments,
 	clearPromptComposer,
@@ -99,6 +100,7 @@ import {
 	ensureModelSelection,
 	ensureNotBlocked,
 	ensurePromptReady,
+	fingerprintAssistantResponseText,
 	installJavaScriptDialogAutoDismissal,
 	navigateToChatGPT,
 	navigateToPromptReadyWithFallback,
@@ -1896,7 +1898,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	let removeAbortHook: () => void = () => {};
 	let preserveBrowserOnError = false;
 	let runtimeForGuard: ChromeClient["Runtime"] | null = null;
-	let responseBaselineTurns: number | null = null;
+	let responseBoundary: AssistantResponseBoundary | null = null;
 	const passiveObservations: BrowserPassiveObservation[] = [];
 	const emitRuntimeEvidence = async (observation: BrowserPassiveObservation): Promise<void> => {
 		if (!runtimeEvidenceCb) {
@@ -2005,7 +2007,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 						? await withTimeout(
 								readAssistantResponseProgress(
 									runtimeForGuard,
-									responseBaselineTurns ?? undefined,
+									responseBoundary ?? undefined,
 								),
 								750,
 								"Timed out capturing final ChatGPT response state.",
@@ -2536,7 +2538,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		try {
 			const submission = await raceWithDisconnect(submitOnce(promptText, attachments));
 			baselineTurns = submission.baselineTurns;
-			responseBaselineTurns = baselineTurns;
 			baselineAssistantText = submission.baselineAssistantText;
 			baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
 			baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
@@ -2553,7 +2554,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					submitOnce(fallbackSubmission.prompt, fallbackSubmission.attachments),
 				);
 				baselineTurns = submission.baselineTurns;
-				responseBaselineTurns = baselineTurns;
 				baselineAssistantText = submission.baselineAssistantText;
 				baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
 				baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
@@ -2561,6 +2561,13 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				throw error;
 			}
 		}
+		const assistantResponseBoundary: AssistantResponseBoundary = {
+			minTurnIndex: baselineTurns,
+			baselineMessageId: baselineAssistantMessageId,
+			baselineTurnId: baselineAssistantTurnId,
+			baselineTextFingerprint: fingerprintAssistantResponseText(baselineAssistantText),
+		};
+		responseBoundary = assistantResponseBoundary;
 		if (chatgptDeepResearchStage === "tool-selected") {
 			recordPassiveObservation({
 				state: "plan-ready",
@@ -2690,7 +2697,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			meta: { turnId?: string | null; messageId?: string | null };
 		} | null> => {
 			const snapshots = await Promise.all([
-				readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(() => null),
+				readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(() => null),
 				readAssistantSnapshot(Runtime).catch(() => null),
 			]);
 			let best: {
@@ -2750,7 +2757,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				Page,
 				config.timeoutMs,
 				logger,
-				baselineTurns ?? undefined,
+				assistantResponseBoundary,
 				{
 					onPassiveDomProbe: async () => {
 						await recordTargetBoundPassiveObservation({
@@ -2864,7 +2871,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		const promptEchoMatcher = buildPromptEchoMatcher(promptText);
 
 		// Final sanity check: ensure we didn't accidentally capture the user prompt instead of the assistant turn.
-		const finalSnapshot = await readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(
+		const finalSnapshot = await readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(
 			() => null,
 		);
 		const finalText = typeof finalSnapshot?.text === "string" ? finalSnapshot.text.trim() : "";
@@ -2904,7 +2911,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			let bestText: string | null = null;
 			let stableCount = 0;
 			while (Date.now() < deadline) {
-				const snapshot = await readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(
+				const snapshot = await readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(
 					() => null,
 				);
 				const text = typeof snapshot?.text === "string" ? snapshot.text.trim() : "";
@@ -2934,7 +2941,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			let bestText = answerText.trim();
 			let stableCycles = 0;
 			while (Date.now() < deadline) {
-				const snapshot = await readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(
+				const snapshot = await readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(
 					() => null,
 				);
 				const text = typeof snapshot?.text === "string" ? snapshot.text.trim() : "";
@@ -3614,6 +3621,12 @@ async function runRemoteBrowserMode(
 				throw error;
 			}
 		}
+		const assistantResponseBoundary: AssistantResponseBoundary = {
+			minTurnIndex: baselineTurns,
+			baselineMessageId: baselineAssistantMessageId,
+			baselineTurnId: baselineAssistantTurnId,
+			baselineTextFingerprint: fingerprintAssistantResponseText(baselineAssistantText),
+		};
 		if (chatgptDeepResearchStage === "tool-selected") {
 			recordBrowserPassiveObservation(passiveObservations, {
 				state: "plan-ready",
@@ -3728,7 +3741,7 @@ async function runRemoteBrowserMode(
 			meta: { turnId?: string | null; messageId?: string | null };
 		} | null> => {
 			const snapshots = await Promise.all([
-				readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(() => null),
+				readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(() => null),
 				readAssistantSnapshot(Runtime).catch(() => null),
 			]);
 			let best: {
@@ -3787,7 +3800,7 @@ async function runRemoteBrowserMode(
 			Page,
 			config.timeoutMs,
 			logger,
-			baselineTurns ?? undefined,
+			assistantResponseBoundary,
 			{
 				onPassiveDomProbe: async () => {
 					recordBrowserPassiveObservation(passiveObservations, {
@@ -3890,7 +3903,7 @@ async function runRemoteBrowserMode(
 		answerMarkdown = copiedMarkdown ?? answerText;
 
 		// Final sanity check: ensure we didn't accidentally capture the user prompt instead of the assistant turn.
-		const finalSnapshot = await readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(
+		const finalSnapshot = await readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(
 			() => null,
 		);
 		const finalText = typeof finalSnapshot?.text === "string" ? finalSnapshot.text.trim() : "";
@@ -3926,7 +3939,7 @@ async function runRemoteBrowserMode(
 			let bestText: string | null = null;
 			let stableCount = 0;
 			while (Date.now() < deadline) {
-				const snapshot = await readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(
+				const snapshot = await readAssistantSnapshot(Runtime, assistantResponseBoundary).catch(
 					() => null,
 				);
 				const text = typeof snapshot?.text === "string" ? snapshot.text.trim() : "";
@@ -4335,14 +4348,14 @@ async function waitForAssistantResponseWithReload(
 	Page: ChromeClient["Page"],
 	timeoutMs: number,
 	logger: BrowserLogger,
-	minTurnIndex?: number,
+	responseBoundary?: AssistantResponseBoundary,
 	options: {
 		onResponseIncoming?: () => void | Promise<void>;
 		onPassiveDomProbe?: () => void | Promise<void>;
 	} = {},
 ) {
 	try {
-		return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex, options);
+		return await waitForAssistantResponse(Runtime, timeoutMs, logger, responseBoundary, options);
 	} catch (error) {
 		if (!shouldReloadAfterAssistantError(error)) {
 			throw error;
@@ -4364,7 +4377,7 @@ async function waitForAssistantResponseWithReload(
 			throw error;
 		}
 		await delay(1000);
-		return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex, options);
+		return await waitForAssistantResponse(Runtime, timeoutMs, logger, responseBoundary, options);
 	}
 }
 

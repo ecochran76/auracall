@@ -16,12 +16,16 @@ export {
   waitForUserTurnAttachments,
 } from './actions/attachments.js';
 export {
+  type AssistantResponseBoundary,
+  type AssistantResponseBoundaryInput,
   type AssistantResponseProgress,
+  fingerprintAssistantResponseText,
   waitForAssistantResponse,
   readAssistantSnapshot,
   readAssistantResponseProgress,
   captureAssistantMarkdown,
   buildAssistantExtractorForTest,
+  buildAssistantSnapshotExpressionForTest,
   buildAssistantResponseProgressExpressionForTest,
   buildConversationDebugExpressionForTest,
   buildMarkdownFallbackExtractorForTest,
