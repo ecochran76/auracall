@@ -1,8 +1,8 @@
 # ChatGPT Virtualized Turn Boundary | 0304-2026-08-21
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: P7 INSTALLED ACCEPTED / LIVE IDLE PREFLIGHT WAIT
+Operational state: CLOSED / BOUNDARY LIVE ACCEPTED / TERMINAL FIDELITY REJECTED
 
 ## Stable Objective
 
@@ -169,3 +169,13 @@ installed behavior once end to end with zero canonical LitScout mutation.
 - The restarted API began its normal `account-mirror-refresh:chatgpt:wsl-chrome-3`
   probe. Live work is waiting for that exact owner to release naturally; it will
   not be interrupted or displaced.
+- The owner released naturally. The one frozen prompt then completed in 26.6
+  seconds, made exactly one LitScout `CallToolRequest`, returned a terminal
+  assistant answer, and cleaned its controller, managed Chrome, and operation
+  record. Canonical Session 68 remained unchanged.
+- The terminal answer reported `150 total; 1 keep; 138 remove`, which is
+  internally inconsistent and disagrees with the canonical `12 keep`. The model
+  also disclosed one transport-discovery call before `research_continue`.
+  Therefore `VTB-R8` is rejected and this plan closes without integration.
+- Receipt: `docs/dev/notes/2026-08-21-plan0304-live-terminal-fidelity-rejection.json`.
+  Plan 0305 owns the newly isolated copied-Markdown/final-DOM fidelity seam.

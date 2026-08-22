@@ -72,7 +72,7 @@ Lane: P01
   ChatGPT later mounted only 12 virtualized turn nodes. Plan 0304 owns that
   stable-boundary defect; Plan 0303 closes without integration.
 
-- Active ChatGPT virtualized turn-boundary repair:
+- Closed split-result ChatGPT virtualized turn-boundary repair:
   [docs/dev/plans/0304-2026-08-21-chatgpt-virtualized-turn-boundary.md](docs/dev/plans/0304-2026-08-21-chatgpt-virtualized-turn-boundary.md)
   Plan 0303 live-proved exactly one LitScout request, zero canonical mutation,
   exact timeout cleanup, and a durable `12 < 15` boundary classification. This
@@ -81,7 +81,19 @@ Lane: P01
   paths and all stale/tool/approval exclusions fail-closed. Pushed source
   `571514c9` is provider-free accepted: deterministic virtualization `13/13`,
   focused browser `76/76`, serial full `2,956/2,956`, typecheck, lint, build,
-  CodeGraph, and diff hygiene pass. Installed and one-call live proof remain.
+  CodeGraph, and diff hygiene pass. Installed byte parity and fixtures passed.
+  The one live prompt completed in 26.6 seconds with exactly one LitScout call
+  and clean terminalization, proving the stable boundary, but returned an
+  incorrect `1 keep` against canonical `12 keep`. Plan 0304 closes without
+  integration and Plan 0305 owns terminal representation fidelity.
+
+- Active ChatGPT terminal-response representation fidelity repair:
+  [docs/dev/plans/0305-2026-08-21-chatgpt-terminal-representation-fidelity.md](docs/dev/plans/0305-2026-08-21-chatgpt-terminal-representation-fidelity.md)
+  Plan 0304 proved tool execution and fresh terminal capture, then exposed a
+  smaller final-DOM/copied-Markdown disagreement that the local path ignores
+  unless the DOM is at least 12 characters longer. This source-first successor
+  must reconcile semantically equivalent formatting while preferring the final
+  stable DOM whenever substantive text differs.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

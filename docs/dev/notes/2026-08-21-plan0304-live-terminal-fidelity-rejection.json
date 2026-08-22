@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "auracall.plan0304.live-terminal-fidelity-rejection.v1",
+  "createdAt": "2026-08-22T01:42:00Z",
+  "plan": "0304",
+  "outcome": "boundary_live_accepted_terminal_fidelity_rejected",
+  "sourceCommit": "571514c97c6afa7137dafb32a6d086741cb07668",
+  "installedAcceptanceCommit": "75940b212283c042c83e8e578a07a6b1feba0688",
+  "live": {
+    "sessionId": "litscout-boundary-live",
+    "model": "gpt-5.6-sol",
+    "profile": "wsl-chrome-3",
+    "startedAt": "2026-08-22T01:40:24.970Z",
+    "completedAt": "2026-08-22T01:40:51.616Z",
+    "elapsedMs": 26593,
+    "status": "completed",
+    "submissions": 1,
+    "retries": 0,
+    "litscoutCallToolRequestsBefore": 48,
+    "litscoutCallToolRequestsAfter": 49,
+    "litscoutCallToolRequestsDelta": 1,
+    "transportDiscoveryDisclosedByAssistant": true,
+    "approvalActions": 0
+  },
+  "capturedAnswer": {
+    "controllerStage": "evidence_gap_review",
+    "controllerSubstage": "reassess",
+    "recommendedAction": "accept_research_saturation",
+    "approvalRequired": false,
+    "reportedTotal": 150,
+    "reportedKeep": 1,
+    "reportedRemove": 138,
+    "internallyConsistent": false,
+    "terminalResponseCaptured": true
+  },
+  "canonicalAfter": {
+    "database": "/home/ecochran76/.local/share/litscout/state/db.sqlite3",
+    "dbContract": "passed",
+    "receiptCount": 10,
+    "latestReceipt": "rar_d402c6c23d9910ca523b0ca52d8fa5c0",
+    "totalMemberships": 150,
+    "keepMemberships": 12,
+    "removeMemberships": 138,
+    "changedFromBaseline": false,
+    "researchActionsExecuted": 0,
+    "externalProviderCalls": 0
+  },
+  "cleanup": {
+    "controllerPid": 99898,
+    "controllerAliveAfter": false,
+    "chromePid": 80622,
+    "chromeAliveAfter": false,
+    "operationRecordsAfter": 0,
+    "apiPid": 78688,
+    "apiHealthyAfter": true,
+    "apiNRestarts": 0
+  },
+  "diagnosis": {
+    "proven": "Plan 0304 stable-boundary repair returned a fresh terminal answer and cleaned all exact runtime ownership.",
+    "rejected": "The answer was not semantically faithful to canonical corpus counts, so end-to-end reliability and VTB-R8 are not accepted.",
+    "sourceHypothesis": "Local browser mode keeps copied Markdown unless final DOM text is at least 12 characters or 75 percent longer. A one-character substantive divergence can therefore survive reconciliation; both representations were not persisted, so live attribution remains unproven.",
+    "successor": "Plan 0305"
+  },
+  "disposition": "Close Plan 0304 without integration. Retain its live-accepted stable response boundary. Begin Plan 0305 provider-free at the copied-Markdown versus stable-final-DOM fidelity seam; do not retry this live prompt."
+}

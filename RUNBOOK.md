@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 482 | 2026-08-21
+
+- Plan 0304's sole `litscout-boundary-live` prompt submitted once and completed
+  in 26.6 seconds. Session/model state is `completed`; the exact controller,
+  Chrome, and operation record are gone; API PID `78688` remains active with
+  zero restarts.
+- LitScout's request-log count advanced exactly `48 -> 49`. Session 68 remains
+  at ten receipts with latest `rar_d402c6...`, and 150 memberships: 12 keep,
+  138 remove. No research action, provider call, or canonical write occurred.
+- The captured answer proved terminal boundary recovery but reported
+  `150 total; 1 keep; 138 remove`, which neither sums nor matches canonical
+  state. It also disclosed one transport-discovery call before the single
+  `research_continue`; no retry ran.
+- Current local source trusts copied Markdown over final DOM unless the final
+  text is at least 12 characters longer, while the remote path already replaces
+  any different equal-or-longer final DOM text. A one-character semantic loss
+  is therefore eligible to escape local reconciliation. This is a source-based
+  hypothesis, not proof that the copied representation caused the live digit.
+- Plan 0304 closes boundary-live-accepted / terminal-fidelity-rejected without
+  integration. Receipt:
+  `docs/dev/notes/2026-08-21-plan0304-live-terminal-fidelity-rejection.json`.
+  Plan 0305 opens provider-free with zero install/restart/live-call authority.
+
 ## Turn 481 | 2026-08-21
 
 - Plan 0304 consumed its one user-runtime install and one API restart. Exact
