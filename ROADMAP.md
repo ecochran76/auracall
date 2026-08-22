@@ -62,8 +62,10 @@ Lane: P01
   tool request was followed by no captured terminal assistant answer. This
   source-first successor preserves the one-call/zero-write evidence, builds
   deterministic post-tool fixtures, and adds bounded passive terminal-state
-  evidence without accepting tool or approval text as an answer. Install and a
-  distinct one-submit acceptance remain gated behind pushed source proof.
+  evidence without accepting tool or approval text as an answer. Pushed source
+  `28da74e5` is accepted: focused `10/10`, affected `1,030/1,030`, serial full
+  provider-free `2,952/2,952`, typecheck, lint, build, and current CodeGraph
+  pass. The exact installed packet and distinct one-submit acceptance remain.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

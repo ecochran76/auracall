@@ -47382,3 +47382,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - No install, API restart, prompt, provider call, or browser mutation is
   authorized before pushed source acceptance and a durable installed/live
   packet update.
+- Source diagnosis is now exact: the primary extractor returned the first
+  matching node in a multi-part assistant turn, so an earlier approval/tool
+  node could mask later final prose. The focused fixture failed RED with the
+  approval text and passes after selecting the last safe candidate by selector
+  priority; both primary and fallback paths exclude tool approvals.
+- A bounded passive abort-time probe now preserves state/count/visibility and
+  query-free route evidence without persisting answer, tool, approval, or user
+  text. The typed terminal reason carries it into session/model error metadata.
+- Pushed source `28da74e5` passes focused `10/10`, affected `1,030/1,030`, full
+  serial provider-free `2,952/2,952`, typecheck, lint, build, diff checks, and
+  current CodeGraph. Receipt:
+  `docs/dev/notes/2026-08-21-plan0303-post-tool-response-source-acceptance.json`.

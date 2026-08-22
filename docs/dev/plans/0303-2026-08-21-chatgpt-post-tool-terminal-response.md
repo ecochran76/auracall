@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P0 ACTIVATION / SOURCE DIAGNOSIS PENDING
+Operational state: P4 SOURCE ACCEPTED / INSTALLED PACKET PENDING
 
 ## Stable Objective
 
@@ -32,6 +32,32 @@ guards, or sacrificing Plan 0302's live-accepted cleanup.
 - Plan 0302's install, restart, and live-submit bounds are consumed. This
   successor begins source-first and authorizes no prompt, provider call,
   install, restart, or browser mutation at activation.
+- Deterministic RED reproduced the exact unsafe extraction shape: one assistant
+  turn contained an earlier LitScout approval card and later final prose, and
+  the old primary extractor returned the approval text. The fixture failed
+  `1` test with `5` passing before implementation.
+- The repair evaluates the newest eligible assistant turn by selector priority,
+  chooses the last safe prose candidate, and excludes approval/tool-card
+  content in both the primary and markdown-fallback extractors. Tool-only
+  turns return no answer.
+- Before timeout closes DevTools, one bounded 750 ms passive probe now records
+  only state/count/boolean data and a query-free origin/path: eligible turn,
+  answer character count, generation/completion visibility, current-turn
+  approval count, and dialog visibility. It never persists answer, tool,
+  approval, user, query, or fragment text. That annotation is retained on the
+  typed timeout/cancellation reason and persisted to terminal session/model
+  metadata.
+- Pushed source `28da74e5` is upstream-exact. Focused expression tests pass
+  `10/10`; the affected browser/CLI lane passes `1,030/1,030` with one opt-in
+  skip; serial full provider-free validation passes `2,952/2,952` with 65
+  opt-in skips. Typecheck, zero-warning scoped lint, production build, diff
+  checks, and current CodeGraph at 908 files / 17,117 nodes / 58,490 edges
+  pass. No install, restart, browser, provider, LitScout, or Graphiti effect
+  occurred in the source packet.
+- Source receipt:
+  `docs/dev/notes/2026-08-21-plan0303-post-tool-response-source-acceptance.json`.
+  The next serialized gate is an exact idle/runtime check followed by the one
+  bounded installed packet; no live prompt precedes installed fixture proof.
 
 ## Planning Metadata
 

@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "auracall.plan0303.source-acceptance.v1",
+  "createdAt": "2026-08-22T00:36:14Z",
+  "plan": "0303",
+  "outcome": "source_accepted_installed_packet_pending",
+  "activationCommit": "08c4033a595e4be2c56da3d56099751e235f3973",
+  "sourceCommit": "28da74e51e97738acff636fe2cc962d195ed4024",
+  "upstreamExact": true,
+  "rootCause": {
+    "extractor": "The primary assistant extractor selected the first matching content node in the newest assistant turn. A pre-final tool or approval node could therefore mask later final prose or be returned as the answer.",
+    "fallback": "The markdown fallback did not explicitly exclude ChatGPT tool-approval cards.",
+    "diagnostics": "The overall timeout closed DevTools without persisting a bounded final response-state classification, leaving provider no-prose and extractor drift indistinguishable."
+  },
+  "red": {
+    "fixture": "one assistant turn with an earlier LitScout approval card and later final prose",
+    "result": "1 failed, 5 passed",
+    "received": "approval-card text",
+    "expected": "later final assistant prose"
+  },
+  "repair": {
+    "answerSelection": "selector-priority scan of the newest eligible assistant turn, choosing the last safe non-empty candidate",
+    "excludedAnswerSources": [
+      "tool approval card",
+      "tool approval container",
+      "composer",
+      "form",
+      "user turn",
+      "stale pre-boundary turn"
+    ],
+    "fallbackExclusion": true,
+    "terminalProbe": {
+      "passive": true,
+      "boundMs": 750,
+      "fields": [
+        "state",
+        "origin and pathname without query or fragment",
+        "turn count",
+        "minimum turn index",
+        "assistant turn index",
+        "assistant text character count",
+        "stop visibility",
+        "completion visibility",
+        "current assistant turn approval-card count",
+        "dialog visibility"
+      ],
+      "persistsAnswerText": false,
+      "persistsToolText": false,
+      "persistsUserText": false,
+      "persistsUrlQueryOrFragment": false,
+      "terminalSessionAndModelMetadata": true
+    },
+    "preservesPlan0302AbortAndCleanup": true
+  },
+  "validation": {
+    "focused": {
+      "filesPassed": 1,
+      "testsPassed": 10
+    },
+    "affectedBrowserCli": {
+      "filesPassed": 98,
+      "testsPassed": 1030,
+      "testsSkipped": 1
+    },
+    "fullProviderFreeSerial": {
+      "filesPassed": 323,
+      "filesSkipped": 21,
+      "testsPassed": 2952,
+      "testsSkipped": 65,
+      "durationSeconds": 385.3
+    },
+    "typecheck": "passed",
+    "scopedLint": "passed_zero_warnings",
+    "build": "passed",
+    "diffCheck": "passed",
+    "codegraph": {
+      "status": "current",
+      "files": 908,
+      "nodes": 17117,
+      "edges": 58490
+    }
+  },
+  "sourceSha256": {
+    "assistantResponse": "7c520d3b82f3d24a80e4dd122f66ea98f7ff88f79c2d66fec3bc4fe10ea271ec",
+    "browserIndex": "00c77a76453033d449682993d95af7551a57f1eac10b2f0c665ce7d2620fe91b",
+    "sessionRunner": "1911e275c037e9ed57e32ee4930dd839ad98b794418e8d24ca599b79954c3df4"
+  },
+  "builtSha256": {
+    "assistantResponse": "781ee31c6c37b8467c958efb8f746da4ac73ca56a1c0ce96cbdcfb3973698ee4",
+    "browserIndex": "89a4221c711722fdb30eb90a40e5b9c1e2a75d43e0957a8f41b17deb9b25c43d",
+    "sessionRunner": "733161fd43ae95b2e5dd00affe3d68b3016e355a2142e85502c2490bf618be6b"
+  },
+  "effects": {
+    "userRuntimeInstalls": 0,
+    "apiRestarts": 0,
+    "browserLaunches": 0,
+    "livePromptSubmissions": 0,
+    "providerCalls": 0,
+    "litscoutCalls": 0,
+    "graphitiWrites": 0
+  },
+  "nextBoundary": "At exact idle ownership, install once, restart the API at most once if required, prove installed byte parity and deterministic installed positive/no-answer fixtures, then stop before the single live prompt if any identity or fixture gate disagrees."
+}

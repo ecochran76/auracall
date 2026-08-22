@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 476 | 2026-08-21
+
+- Plan 0303 deterministic RED reproduced the post-tool extraction defect: an
+  earlier LitScout approval card and later final prose shared one assistant
+  turn, and the old primary extractor returned approval-card text (`1` failed,
+  `5` passed).
+- Pushed source `28da74e5` scans the newest eligible assistant turn by selector
+  priority, chooses the last safe prose candidate, and excludes approval cards
+  from both primary and fallback extraction. Tool-only turns return no answer.
+- One passive 750 ms abort-time probe records only bounded state/count/boolean
+  evidence plus query-free origin/path. It scopes approval cards to the current
+  eligible assistant turn and persists the classification on terminal session
+  and model metadata without answer/tool/user text.
+- Source acceptance passes focused `10/10`, affected browser/CLI
+  `1,030/1,030` with one skip, serial full provider-free `2,952/2,952` with 65
+  skips, typecheck, zero-warning scoped lint, build, diff checks, and current
+  CodeGraph at 908 files / 17,117 nodes / 58,490 edges.
+- Source receipt:
+  `docs/dev/notes/2026-08-21-plan0303-post-tool-response-source-acceptance.json`.
+  Source/install/browser/provider/LitScout/Graphiti effects remain zero. Next
+  is one exact-idle installed packet; no live prompt precedes installed fixture
+  proof.
+
 ## Turn 475 | 2026-08-21
 
 - [Plan 0302](docs/dev/plans/0302-2026-08-21-chatgpt-overall-timeout-signal-cleanup.md)
