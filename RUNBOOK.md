@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 477 | 2026-08-21
+
+- Plan 0303 passed an exact idle gate with zero browser-operation records and
+  no `wsl-chrome-3` owner. Its one install completed at
+  `2026-08-22T00:39:09.805Z`; its one API restart produced healthy PID `6690`
+  with `NRestarts=0`. All three affected installed artifacts are byte-exact
+  with accepted build `28da74e5`.
+- The first installed fixture harness guessed the conversation selector and
+  saw zero turns, so it stopped before a product assertion and caused no
+  browser/provider/LitScout effect. The bounded correction imported the exact
+  selector from the installed package.
+- Corrected installed fixtures return later final prose after an earlier tool
+  card, return `null` for tool-only content, and persist a text-free,
+  query-free `tool-approval-visible` classification with zero answer chars.
+- Receipt and exact live boundary:
+  `docs/dev/notes/2026-08-21-plan0303-installed-fixtures-live-gate.json`.
+  One read-only `research_continue` submission for Session 68 is ready after
+  fresh runtime/canonical preflight; zero retry or action approval is allowed.
+
 ## Turn 476 | 2026-08-21
 
 - Plan 0303 deterministic RED reproduced the post-tool extraction defect: an

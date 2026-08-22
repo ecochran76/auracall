@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P4 SOURCE ACCEPTED / INSTALLED PACKET PENDING
+Operational state: P6 INSTALLED ACCEPTED / LIVE PROMPT READY_NOT_RUN
 
 ## Stable Objective
 
@@ -58,6 +58,23 @@ guards, or sacrificing Plan 0302's live-accepted cleanup.
   `docs/dev/notes/2026-08-21-plan0303-post-tool-response-source-acceptance.json`.
   The next serialized gate is an exact idle/runtime check followed by the one
   bounded installed packet; no live prompt precedes installed fixture proof.
+- At an exact idle boundary with zero operation records and no
+  `wsl-chrome-3` browser owner, the plan's one install completed at
+  `2026-08-22T00:39:09.805Z` and its one API restart produced healthy PID
+  `6690` with `NRestarts=0`. Installed assistant-response, browser-index, and
+  session-runner artifacts are byte-exact with the accepted build.
+- The first installed fixture harness used a guessed conversation selector and
+  therefore saw zero turns; it did not reach the product assertion and caused
+  no runtime/provider effect. One bounded correction imported
+  `CONVERSATION_TURN_SELECTOR` from the installed package. The corrected packet
+  returned the later final prose after an earlier tool card, returned `null`
+  for a tool-only turn, and classified that turn as
+  `tool-approval-visible` with zero answer characters and no query/tool text.
+- Installed receipt and frozen one-submit boundary:
+  `docs/dev/notes/2026-08-21-plan0303-installed-fixtures-live-gate.json`.
+  No live prompt has been submitted. The remaining gate is one exact
+  Session-68 read-only `research_continue` submission after fresh canonical
+  LitScout and runtime preflight.
 
 ## Planning Metadata
 

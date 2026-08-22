@@ -47394,3 +47394,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   serial provider-free `2,952/2,952`, typecheck, lint, build, diff checks, and
   current CodeGraph. Receipt:
   `docs/dev/notes/2026-08-21-plan0303-post-tool-response-source-acceptance.json`.
+- Installed packet: exact idle ownership preceded one install and one API
+  restart. PID `6690` is healthy, installed/build hashes match, and corrected
+  installed fixtures prove final-prose selection plus tool-only rejection and
+  text-free terminal classification. The first harness-only attempt used the
+  wrong selector and is retained as rejected evidence. Live submission remains
+  zero at the frozen gate.

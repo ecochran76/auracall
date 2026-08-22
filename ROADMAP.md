@@ -65,7 +65,9 @@ Lane: P01
   evidence without accepting tool or approval text as an answer. Pushed source
   `28da74e5` is accepted: focused `10/10`, affected `1,030/1,030`, serial full
   provider-free `2,952/2,952`, typecheck, lint, build, and current CodeGraph
-  pass. The exact installed packet and distinct one-submit acceptance remain.
+  pass. One idle-boundary install and one API restart are byte-exact and healthy;
+  corrected installed positive/no-answer fixtures pass. The distinct frozen
+  one-submit acceptance remains ready but unrun.
 
 - Completed reused-browser provider-provenance repair:
   [docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md](docs/dev/plans/0298-2026-08-21-reused-browser-provider-provenance-pid.md)

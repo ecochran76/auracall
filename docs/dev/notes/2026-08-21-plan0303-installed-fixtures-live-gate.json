@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "auracall.plan0303.installed-fixtures-live-gate.v1",
+  "createdAt": "2026-08-22T00:40:00Z",
+  "plan": "0303",
+  "outcome": "installed_accepted_live_ready_not_run",
+  "sourceCommit": "28da74e51e97738acff636fe2cc962d195ed4024",
+  "docsCommitBeforeInstall": "35448486a822bd4926537b05988f6c8e645f11ce",
+  "installed": {
+    "installedAt": "2026-08-22T00:39:09.805Z",
+    "packageVersion": "0.1.1",
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
+    "apiPid": 6690,
+    "apiNRestarts": 0,
+    "apiHealthy": true,
+    "operationRecordsAtInstall": 0,
+    "wslChrome3OwnerAtInstall": false,
+    "builtInstalledSha256": {
+      "assistantResponse": "781ee31c6c37b8467c958efb8f746da4ac73ca56a1c0ce96cbdcfb3973698ee4",
+      "browserIndex": "89a4221c711722fdb30eb90a40e5b9c1e2a75d43e0957a8f41b17deb9b25c43d",
+      "sessionRunner": "733161fd43ae95b2e5dd00affe3d68b3016e355a2142e85502c2490bf618be6b"
+    },
+    "byteExact": true
+  },
+  "fixtures": {
+    "initialHarness": {
+      "outcome": "harness_rejected_before_product_assertion",
+      "reason": "hard-coded conversation selector did not equal the installed selector",
+      "browserLaunches": 0,
+      "providerCalls": 0,
+      "litscoutCalls": 0
+    },
+    "correctedHarness": {
+      "selectorImportedFromInstalledRuntime": true,
+      "positive": {
+        "expected": "Session 68 remains at evidence gap review.",
+        "actual": "Session 68 remains at evidence gap review.",
+        "turnIndex": 0,
+        "passed": true
+      },
+      "noAnswer": {
+        "extractor": null,
+        "progress": {
+          "state": "tool-approval-visible",
+          "url": "https://chatgpt.com/c/fixture",
+          "turnCount": 1,
+          "minTurnIndex": 0,
+          "assistantTurnIndex": 0,
+          "assistantTextChars": 0,
+          "stopVisible": false,
+          "completionVisible": false,
+          "toolApprovalCardsVisible": 1,
+          "dialogVisible": false
+        },
+        "excludedTextReturned": false,
+        "urlQueryReturned": false,
+        "passed": true
+      }
+    }
+  },
+  "liveBoundary": {
+    "submissionsAllowed": 1,
+    "retriesAllowed": 0,
+    "profile": "wsl-chrome-3",
+    "model": "chatgpt:sol-high",
+    "conversationUrl": "https://chatgpt.com/g/g-p-6a09d3716d248191b70034773560947d-litscout/c/6a87c6b6-0324-83ea-b1be-12f4b3a927d2",
+    "slug": "litscout-post-tool-response-live-acceptance",
+    "timeoutSeconds": 900,
+    "tool": "research_continue",
+    "sessionId": 68,
+    "readOnly": true,
+    "allowedToolCalls": 1,
+    "approvalActionsAllowed": 0,
+    "researchActionsAllowed": 0,
+    "providerCallsAllowedByLitScout": 0,
+    "positiveOrUnknownSpendAllowed": false,
+    "prompt": "Use LitScout exactly once. Call only read-only research_continue for Session 68. Do not call any other tool, do not approve or execute any action, and do not retry. Return a concise terminal answer with controller stage, blockers, recommended next action, whether approval is granted, and corpus total, keep, and remove counts. If the tool cannot be called or the state is ambiguous, state that and stop."
+  },
+  "effectsAtGate": {
+    "browserLaunches": 0,
+    "livePromptSubmissions": 0,
+    "providerCalls": 0,
+    "litscoutCalls": 0,
+    "graphitiWrites": 0
+  },
+  "nextBoundary": "Fresh runtime and canonical LitScout preflight, then the one frozen live submission. Stop without retry after Send and reconcile durable AuraCall and LitScout state."
+}
