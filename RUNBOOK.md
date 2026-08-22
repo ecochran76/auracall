@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 481 | 2026-08-21
+
+- Plan 0304 consumed its one user-runtime install and one API restart. Exact
+  built/installed SHA-256 parity passes for `assistantResponse.js`, browser
+  `index.js`, and `pageActions.js`; installed CLI reports `0.1.1` and API PID
+  `78688` is active/running with `NRestarts=0`.
+- Three fixtures imported the installed expression builders directly. A fresh
+  stable assistant identity at 12 mounted turns below floor 15 returned only
+  final prose with `stable-identity`; matching baseline text under changed IDs
+  returned `null`; a tool-only turn returned `null` with text-free
+  `tool-approval-visible` and zero answer characters.
+- The API restart naturally queued an account-mirror probe under exact owner
+  `account-mirror-refresh:chatgpt:wsl-chrome-3`. The live preflight is waiting
+  for that owner and managed Chrome to release without interruption. The one
+  live prompt remains unsubmitted and install/restart budgets are consumed.
+
 ## Turn 480 | 2026-08-21
 
 - Plan 0304's pushed source acceptance is durable at docs commit `efbdbd09`.

@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P01
-Operational state: P7 INSTALLED/LIVE GATE FROZEN / PREFLIGHT NEXT
+Operational state: P7 INSTALLED ACCEPTED / LIVE IDLE PREFLIGHT WAIT
 
 ## Stable Objective
 
@@ -163,3 +163,9 @@ installed behavior once end to end with zero canonical LitScout mutation.
 - Stop before install unless source/upstream, service, operation ownership, and
   canonical LitScout state are exact. Stop before Send unless installed parity
   and all three installed fixtures pass.
+- The single install and restart are consumed. Installed/source bytes match for
+  all three affected modules; API PID `78688` is active with zero restarts.
+  Installed fresh-identity, reindexed-baseline, and tool-only fixtures all pass.
+- The restarted API began its normal `account-mirror-refresh:chatgpt:wsl-chrome-3`
+  probe. Live work is waiting for that exact owner to release naturally; it will
+  not be interrupted or displaced.

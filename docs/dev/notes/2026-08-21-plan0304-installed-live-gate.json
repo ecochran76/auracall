@@ -2,7 +2,7 @@
   "schemaVersion": "auracall.plan0304.installed-live-gate.v1",
   "createdAt": "2026-08-22T01:31:00Z",
   "plan": "0304",
-  "outcome": "installed_and_live_packet_frozen_not_run",
+  "outcome": "installed_accepted_live_waiting_for_idle_preflight",
   "sourceCommit": "571514c97c6afa7137dafb32a6d086741cb07668",
   "sourceAcceptanceDocsCommit": "efbdbd09",
   "preconditions": [
@@ -27,12 +27,47 @@
     "browserIndex": "eb808e843b66c5075108a0d0e480639316e699e08171333e7c3cba9e7fbf3c3a",
     "pageActions": "534583319f34ec1fb8f843a7202f6062348066f262ca8df330c8760d9c947aea"
   },
+  "installed": {
+    "installedAtApprox": "2026-08-22T01:33:42Z",
+    "packageVersion": "0.1.1",
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
+    "apiPid": 78688,
+    "apiNRestarts": 0,
+    "apiHealthy": true,
+    "byteExact": true,
+    "builtInstalledSha256": {
+      "assistantResponse": "9412ca6e59d1d2dd63177f557151dbca1b9eb8b5b1afe5927b6229ea452b4d2a",
+      "browserIndex": "eb808e843b66c5075108a0d0e480639316e699e08171333e7c3cba9e7fbf3c3a",
+      "pageActions": "534583319f34ec1fb8f843a7202f6062348066f262ca8df330c8760d9c947aea"
+    }
+  },
   "installedFixtures": {
     "providerCallsAllowed": 0,
     "browserLaunchesAllowed": 0,
     "freshStableIdentityBelowFloor": "must return only the later final assistant prose with boundaryState stable-identity",
     "reindexedBaselineText": "must return null even when message and turn IDs differ",
     "toolOnlyTurn": "must return null and text-free zero-character progress"
+  },
+  "installedFixtureResults": {
+    "freshStableIdentityBelowFloor": {
+      "passed": true,
+      "turnCount": 12,
+      "minimumTurnIndex": 15,
+      "boundaryState": "stable-identity",
+      "returnedOnlyFinalProse": true
+    },
+    "reindexedBaselineText": {
+      "passed": true,
+      "snapshot": null
+    },
+    "toolOnlyTurn": {
+      "passed": true,
+      "snapshot": null,
+      "state": "tool-approval-visible",
+      "assistantTextChars": 0,
+      "persistedToolText": false
+    }
   },
   "liveBoundary": {
     "submissionsAllowed": 1,
@@ -62,12 +97,19 @@
     "any post-Send uncertainty; reconcile without retry"
   ],
   "effectsAtGate": {
-    "userRuntimeInstalls": 0,
-    "apiRestarts": 0,
+    "userRuntimeInstalls": 1,
+    "apiRestarts": 1,
     "browserLaunches": 0,
     "livePromptSubmissions": 0,
     "providerCalls": 0,
     "litscoutCalls": 0,
     "graphitiWrites": 0
+  },
+  "currentWait": {
+    "ownerCommand": "account-mirror-refresh:chatgpt:wsl-chrome-3",
+    "operationId": "b7c2ed2f-e3f5-4af3-8cd8-d5d7eb1025ac",
+    "startedAt": "2026-08-22T01:33:44.908Z",
+    "interventionAllowed": false,
+    "next": "Wait for exact owner and managed Chrome to release naturally, then repeat canonical and runtime preflight before Send."
   }
 }
