@@ -24,6 +24,12 @@
   request-log, completion/materialization, operation, and managed-browser
   preflight must pass before Send. Gate:
   `docs/dev/notes/2026-08-21-plan0307-discovery-aware-live-gate.json`.
+- Before Send, a normal always-on completion entered `idle_waiting` after an
+  exact `provider_work_released` lifecycle event, with no operation, active
+  history job, Chrome process, or DevTools listener. Gate v2 now admits only
+  that explicit idle/released state and still rejects queued/running or
+  provider-work-owning completion state. This revision occurred before any
+  Plan 0307 submission.
 
 ## Turn 487 | 2026-08-21
 

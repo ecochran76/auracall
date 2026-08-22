@@ -28,6 +28,13 @@ terminal-fidelity, browser-ownership, zero-mutation, and cleanup guarantees.
   install or API restart is required or authorized. This plan permits one
   distinct discovery-aware submission and zero retries after fresh exact
   preflight.
+- Pre-Send observation found the normal always-on completion in
+  `idle_waiting`, with its latest lifecycle event `provider_work_released`, no
+  browser-operation record, no managed Chrome/DevTools process, and no active
+  history job. The frozen gate is therefore revised before any submission to
+  reject queued/running or provider-work-owning completion state while allowing
+  only explicit idle/released background control. The shared exact-profile
+  operation remains the admission authority if that completion wakes later.
 - Gate receipt:
   `docs/dev/notes/2026-08-21-plan0307-discovery-aware-live-gate.json`.
 
@@ -51,9 +58,12 @@ terminal-fidelity, browser-ownership, zero-mutation, and cleanup guarantees.
    LitScout `research_continue`, then requires exactly one substantive LitScout
    call and forbids every other tool/action/retry.
 3. Before Send, prove clean pushed source, exact installed parity, healthy API,
-   idle account-mirror completion/materialization, idle exact browser operation,
-   idle managed Chrome/DevTools state, canonical DB contract, and exact Session
-   68 plus LitScout request-log baseline.
+   no queued/running or provider-work-owning account-mirror completion, no
+   active materialization, idle exact browser operation, idle managed
+   Chrome/DevTools state, canonical DB contract, and exact Session 68 plus
+   LitScout request-log baseline. An `idle_waiting` completion is admissible
+   only with an exact `provider_work_released` lifecycle event and future
+   `nextAttemptAt`.
 4. Submit once with `allow-once`; never approve or execute a LitScout research
    action. Stop after any terminal outcome and reconcile without resubmission.
 5. Accept only exact `150 = 12 + 138`, one new read-only LitScout request, zero
@@ -74,14 +84,17 @@ terminal-fidelity, browser-ownership, zero-mutation, and cleanup guarantees.
 - `DAR-R1`: the frozen prompt explicitly distinguishes permitted transport-only
   discovery from exactly one substantive LitScout `research_continue` call.
 - `DAR-R2`: fresh preflight proves exact installed/runtime, browser ownership,
-  and canonical Session 68 baselines without mutation.
+  background provider-work state, and canonical Session 68 baselines without
+  mutation.
 - `DAR-R3`: one submission produces exactly one new LitScout
   `CallToolRequest`, zero research actions/provider effects, and no retry.
 - `DAR-R4`: the terminal JSON reports exact canonical fields and verifies
   `150 = 12 + 138` with `counts_consistent: true`.
 - `DAR-R5`: AuraCall session/model terminalize completed and no foreground,
-  browser-operation, managed Chrome, completion, or history-materialization
-  residue remains.
+  browser-operation, managed Chrome, queued/running provider-owning completion,
+  or active history-materialization residue remains. A pre-existing normal
+  `idle_waiting` live-follow completion may remain only after exact
+  provider-work-release readback.
 - `DAR-R6`: one durable result receipt closes the carried Plan 0306 readback
   criterion and states whether the overall AuraCall/LitScout goal is accepted.
 
@@ -89,8 +102,9 @@ terminal-fidelity, browser-ownership, zero-mutation, and cleanup guarantees.
 
 - One live submission, zero retries, zero installs, and zero API restarts.
 - Stop before Send on any source/upstream drift, installed mismatch, canonical
-  DB ambiguity, active completion/materialization, exact operation owner,
-  managed Chrome/DevTools activity, or Session/request-log ambiguity.
+  DB ambiguity, queued/running or provider-work-owning completion, active
+  materialization, exact operation owner, managed Chrome/DevTools activity, or
+  Session/request-log ambiguity.
 - Stop after any live terminal outcome. Reconcile durable AuraCall and LitScout
   state without another prompt.
 - If the provider still cannot expose `research_continue` after explicitly

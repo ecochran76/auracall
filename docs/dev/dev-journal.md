@@ -47454,3 +47454,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   transport discovery before one read-only `research_continue`, authorizes no
   install/restart or canonical action, and requires exact `150 = 12 + 138`, one
   new LitScout request, and exact terminal cleanup.
+- Its pre-Send gate was corrected once after observing the normal always-on
+  completion in `idle_waiting` with `provider_work_released`, future
+  `nextAttemptAt`, and zero operation/history/Chrome/CDP ownership. Gate v2
+  admits only that exact released steady state; queued/running provider work
+  still blocks.
