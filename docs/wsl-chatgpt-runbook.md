@@ -10,7 +10,11 @@ Terminology for this runbook:
 
 ## Key behavior
 - WSL Chrome is the most reliable path; Windows Chrome/Brave from WSL often fails due to DevTools binding and profile locks.
-- Oracle defaults to the Windows host IP for DevTools on WSL; override to localhost for WSL Chrome with `AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1`.
+- AuraCall uses the resolver-derived Windows host for WSL-to-Windows DevTools
+  routing, but normalizes any resolver-derived `127.x` nameserver to
+  `127.0.0.1` because it is local to the WSL network namespace. An explicit
+  `AURACALL_BROWSER_REMOTE_DEBUG_HOST` remains authoritative and is not
+  rewritten.
 - AuraCall now defaults browser `DISPLAY` to `:0.0` on WSL unless you set `browser.display`, `AURACALL_BROWSER_DISPLAY`, or explicitly target Windows-hosted Chrome.
 - Aura-Call now uses a managed persistent profile under `~/.auracall/browser-profiles/<auracallProfile>/<service>` and bootstraps it from your existing Chrome profile on first use, so you only sign in once.
 - Aura-Call uses `--password-store=basic` and `--use-mock-keychain` for WSL

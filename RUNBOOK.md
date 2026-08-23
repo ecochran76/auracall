@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 500 | 2026-08-23
+
+- Plan 0309 Phase 3 adapts four narrow Oracle reliability lessons to current
+  AuraCall browser architecture: bounded exact Answer Now placeholders,
+  honored explicit local headless launches, WSL resolver loopback
+  normalization, and a typed unavailable-thinking-tier outcome.
+- Strict thinking-time selection now fails closed with
+  `ThinkingTierUnavailableError`; best-effort selection preserves the current
+  ChatGPT effort and logs the unavailable label/reason. Disabled rows are never
+  clicked. AuraCall still never clicks Answer Now.
+- Focused/affected evidence passes `85/85`, typecheck, scoped zero-warning
+  Biome lint, and diff hygiene. No browser or provider was launched.
+
 ## Turn 499 | 2026-08-23
 
 - Plan 0309 Phase 2 failed RED with eight parallel same-slug calls all claiming

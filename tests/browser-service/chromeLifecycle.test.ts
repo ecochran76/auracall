@@ -3,6 +3,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import {
   buildChromeFlags,
+  parseWslResolverHost,
   probeChromeDebuggerPort,
   resolveChromeLauncherTempPrefix,
   resolveUserDataBaseDir,
@@ -28,6 +29,17 @@ describe('chromeLifecycle (package)', () => {
   test('resolveWslHost prefers explicit env override', () => {
     process.env.BROWSER_SERVICE_BROWSER_REMOTE_DEBUG_HOST = '10.0.0.5';
     expect(resolveWslHost()).toBe('10.0.0.5');
+  });
+
+  test.each(['127.0.0.53', '127.0.0.54', '127.12.34.56'])(
+    'maps resolver-derived loopback host %s to local Chrome',
+    (host) => {
+      expect(parseWslResolverHost(`nameserver ${host}\n`)).toBe('127.0.0.1');
+    },
+  );
+
+  test('preserves a resolver-derived non-loopback host', () => {
+    expect(parseWslResolverHost('nameserver 172.28.224.1\n')).toBe('172.28.224.1');
   });
 
   test('resolveUserDataBaseDir keeps WSL Chrome on the Linux temp root', async () => {

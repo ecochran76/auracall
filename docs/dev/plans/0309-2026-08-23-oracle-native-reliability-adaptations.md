@@ -102,8 +102,10 @@ contracts while closing only gaps proved against current source.
 
 1. Bound Answer Now placeholder recognition to exact known short chrome text;
    preserve the invariant that AuraCall never clicks Answer Now.
-2. Honor an explicit headless request while rejecting incompatible
-   attach-running semantics and retaining safe defaults.
+2. Honor an explicit headless request while retaining safe defaults. If the
+   current architecture has an attach-running surface, reject an incompatible
+   combination; otherwise record that portion as not applicable rather than
+   inventing a new mode.
 3. Normalize resolver-derived WSL `127.x` nameservers to `127.0.0.1` without
    rewriting explicit operator overrides.
 4. Represent disabled/unavailable thinking tiers distinctly. Strict explicit
@@ -158,8 +160,9 @@ contracts while closing only gaps proved against current source.
 - `OA-R5`: substantial assistant text containing “Answer now” is retained,
   exact placeholders are ignored, and tool-approval tests continue to prove no
   Answer Now click.
-- `OA-R6`: explicit headless and attach-running behavior is deterministic and
-  documented; defaults remain safe.
+- `OA-R6`: explicit headless behavior is deterministic and documented;
+  defaults remain safe, and the absent attach-running surface is recorded as
+  not applicable.
 - `OA-R7`: resolver-derived WSL loopback addresses use the local route while
   explicit overrides and non-loopback resolver hosts retain their meaning.
 - `OA-R8`: unavailable thinking tiers produce an exact typed outcome and strict
@@ -186,15 +189,18 @@ contracts while closing only gaps proved against current source.
 
 ## Current Execution Record
 
-- State transition: `ready -> active -> phase-1-accepted -> phase-2-accepted`.
-- Acceptance state: `OA-R1` through `OA-R4` accepted; `OA-R5` through
-  `OA-R10` remain open.
+- State transition: `ready -> active -> phase-1-accepted -> phase-2-accepted ->
+  phase-3-accepted`.
+- Acceptance state: `OA-R1` through `OA-R8` accepted; `OA-R9` and `OA-R10`
+  remain open.
 - Progress classification: `outcome_progress` through strict duration/cache
-  bounds plus atomic owner-only session allocation and storage.
+  bounds, atomic owner-only session storage, and four browser-semantics gaps.
 - Evidence: Phase 1 focused `25/25`; Phase 2 RED reproduced duplicate IDs and
-  permissive existing/new modes, then GREEN passed focused/affected `69/69`,
-  typecheck, touched-file zero-warning lint, current CodeGraph at 909 files /
-  17,152 nodes / 58,770 edges, and diff hygiene.
+  permissive existing/new modes, then GREEN passed focused/affected `69/69`.
+  Phase 3 focused/affected `85/85`, typecheck, touched-file zero-warning Biome
+  lint, and diff hygiene pass. The attach-running clause is not applicable:
+  AuraCall has local-launch and separate remote-Chrome paths, but no current
+  attach-running option in browser config resolution.
 - Material blockers: none for provider-free source execution.
-- Next action: commit and push Phase 2, then test-drive bounded Answer Now and
-  explicit headless semantics.
+- Next action: commit and push Phase 3, then source-trace MCP output containment
+  and cookie bootstrap/sync ownership for `OA-R9`.

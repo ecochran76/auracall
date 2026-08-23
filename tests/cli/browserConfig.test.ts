@@ -139,7 +139,7 @@ describe('buildBrowserConfig', () => {
       inputTimeoutMs: 5_000,
       cookieSyncWaitMs: 4_000,
       cookieSync: false,
-      headless: undefined,
+      headless: true,
       hideWindow: true,
       keepBrowser: true,
       composerTool: 'web-search',

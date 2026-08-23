@@ -1761,15 +1761,19 @@ export function resolveWslHost(): string | null {
     return null;
   }
   try {
-    const resolv = readFileSync('/etc/resolv.conf', 'utf8');
-    for (const line of resolv.split('\n')) {
-      const match = line.match(/^nameserver\s+([0-9.]+)/);
-      if (match?.[1]) {
-        return match[1];
-      }
-    }
+    return parseWslResolverHost(readFileSync('/etc/resolv.conf', 'utf8'));
   } catch {
     // ignore; fall back to localhost
+  }
+  return null;
+}
+
+export function parseWslResolverHost(resolvConf: string): string | null {
+  for (const line of resolvConf.split('\n')) {
+    const match = line.match(/^nameserver\s+([0-9.]+)/);
+    if (match?.[1]) {
+      return match[1].startsWith('127.') ? '127.0.0.1' : match[1];
+    }
   }
   return null;
 }

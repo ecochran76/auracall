@@ -21873,3 +21873,25 @@ browser-stage lifecycle observability, not transcript truncation.
   crosses the session-storage boundary. Same-directory owner-only replacement
   also avoids partially written JSON and replaces a target symlink rather than
   following it.
+
+## 2026-08-23 | Treat disabled browser choices as state, not failed clicks
+
+- A visible selector row can be present but unavailable. Detect disabled state
+  before selected state or click dispatch using `aria-disabled`, Radix
+  `data-disabled`, disabled `data-state`, and native disabled attributes.
+- Strict explicit selection must fail closed with a typed browser-automation
+  error. A best-effort caller may preserve the current selection, but it must
+  say which requested tier was unavailable and include a bounded row-owned
+  reason when the page exposes one.
+- Keep provider chrome classifiers narrow. Matching `Answer now` anywhere in a
+  substantial response discards valid content; consume only exact short known
+  placeholder labels and retain the existing prohibition on clicking the gate.
+
+## 2026-08-23 | Preserve operator intent at browser routing boundaries
+
+- Boolean CLI resolution must distinguish an explicit `true` from an unset
+  value when downstream launch defaults own the latter. Discarding
+  `--browser-headless` makes a documented operator request ineffective.
+- On WSL, a resolver-derived `127.x` nameserver is local to the WSL network
+  namespace and should route to `127.0.0.1`; never rewrite an explicit operator
+  host override or a genuine non-loopback resolver address.

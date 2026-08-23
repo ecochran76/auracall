@@ -47599,3 +47599,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   current CodeGraph at 909 files / 17,152 nodes / 58,770 edges, and diff hygiene
   pass.
 - Next: commit/push Phase 2 and begin bounded Answer Now plus headless behavior.
+
+## 2026-08-23 - Plan 0309 Phase 3 browser-semantics acceptance
+
+- Bounded Answer Now recognition now consumes only short known provider-chrome
+  labels; substantial assistant text containing those words remains content,
+  and the existing no-click approval suite stays green.
+- Explicit `--browser-headless` now reaches local launch configuration.
+  AuraCall has no attach-running option at this layer; remote Chrome remains a
+  separate path whose docs already state that local launch flags are ignored.
+- Resolver-derived WSL `127.x` nameservers normalize to `127.0.0.1`; explicit
+  host overrides and non-loopback resolver hosts are preserved.
+- Disabled thinking tiers produce `option-disabled` without a click. Strict
+  selection throws typed `ThinkingTierUnavailableError`; best-effort selection
+  logs the condition and keeps the current ChatGPT effort.
+- Evidence: focused/affected `85/85`, typecheck, scoped zero-warning Biome
+  lint, and diff hygiene pass. Next: commit/push Phase 3 and adjudicate MCP
+  output containment plus cookie-sync ownership against current AuraCall.
