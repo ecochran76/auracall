@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { mkdtemp, rm, readFile, stat } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, rm, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
@@ -35,6 +35,48 @@ describe('session storage setup', () => {
     await sessionModule.ensureSessionStorage();
     const stats = await stat(sessionModule.getSessionsDir());
     expect(stats.isDirectory()).toBe(true);
+  });
+
+  test('ensureSessionStorage hardens existing artifacts without following symlinks', async () => {
+    if (process.platform === 'win32') return;
+    const migrationHome = await mkdtemp(path.join(os.tmpdir(), 'auracall-session-migration-'));
+    try {
+      const sessionsDir = path.join(migrationHome, 'sessions');
+      const sessionDir = path.join(sessionsDir, 'existing-session');
+      const modelsDir = path.join(sessionDir, 'models');
+      const outsideDir = path.join(migrationHome, 'outside-dir');
+      const outsideFile = path.join(migrationHome, 'outside.txt');
+      await mkdir(modelsDir, { recursive: true });
+      await mkdir(outsideDir);
+      await writeFile(path.join(sessionDir, 'output.log'), 'sensitive transcript', 'utf8');
+      await writeFile(path.join(modelsDir, 'gpt.json'), '{}', 'utf8');
+      await writeFile(outsideFile, 'outside', 'utf8');
+      await symlink(outsideDir, path.join(sessionDir, 'linked-dir'));
+      await symlink(outsideFile, path.join(sessionDir, 'linked-file'));
+      for (const directory of [sessionsDir, sessionDir, modelsDir, outsideDir]) {
+        await chmod(directory, 0o755);
+      }
+      for (const file of [path.join(sessionDir, 'output.log'), path.join(modelsDir, 'gpt.json'), outsideFile]) {
+        await chmod(file, 0o644);
+      }
+
+      setAuracallHomeDirOverrideForTest(migrationHome);
+      await sessionModule.ensureSessionStorage();
+
+      const mode = async (targetPath: string) => (await stat(targetPath)).mode & 0o777;
+      expect(await mode(sessionsDir)).toBe(0o700);
+      expect(await mode(sessionDir)).toBe(0o700);
+      expect(await mode(modelsDir)).toBe(0o700);
+      expect(await mode(path.join(sessionDir, 'output.log'))).toBe(0o600);
+      expect(await mode(path.join(modelsDir, 'gpt.json'))).toBe(0o600);
+      expect((await lstat(path.join(sessionDir, 'linked-dir'))).isSymbolicLink()).toBe(true);
+      expect((await lstat(path.join(sessionDir, 'linked-file'))).isSymbolicLink()).toBe(true);
+      expect(await mode(outsideDir)).toBe(0o755);
+      expect(await mode(outsideFile)).toBe(0o644);
+    } finally {
+      setAuracallHomeDirOverrideForTest(auracallHomeDir);
+      await rm(migrationHome, { recursive: true, force: true });
+    }
   });
 });
 
@@ -90,6 +132,24 @@ describe('session lifecycle', () => {
 	    const logContent = await readFile(path.join(baseDir, 'output.log'), 'utf8');
 	    expect(logContent).toBe('');
 	  });
+
+  test('creates session directories and artifacts with owner-only permissions', async () => {
+    if (process.platform === 'win32') return;
+    const metadata = await sessionModule.initializeSession(
+      { prompt: 'Sensitive local session', model: 'gpt-5.2-pro' },
+      '/tmp/cwd',
+    );
+    const baseDir = path.join(sessionModule.getSessionsDir(), metadata.id);
+    const mode = async (targetPath: string) => (await stat(targetPath)).mode & 0o777;
+
+    expect(await mode(sessionModule.getSessionsDir())).toBe(0o700);
+    expect(await mode(baseDir)).toBe(0o700);
+    expect(await mode(path.join(baseDir, 'models'))).toBe(0o700);
+    expect(await mode(path.join(baseDir, 'meta.json'))).toBe(0o600);
+    expect(await mode(path.join(baseDir, 'output.log'))).toBe(0o600);
+    expect(await mode(path.join(baseDir, 'models', 'gpt-5.2-pro.json'))).toBe(0o600);
+    expect(await mode(path.join(baseDir, 'models', 'gpt-5.2-pro.log'))).toBe(0o600);
+  });
 
   test('initializeSession persists selected agent provenance in stored options', async () => {
     const metadata = await sessionModule.initializeSession(
@@ -148,6 +208,24 @@ describe('session lifecycle', () => {
 	    );
     expect(first.id).toBe('alpha-beta-gamma');
     expect(second.id).toBe('alpha-beta-gamma-2');
+  });
+
+  test('initializeSession atomically allocates unique ids under parallel same-slug creation', async () => {
+    const sessions = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        sessionModule.initializeSession(
+          { prompt: `Parallel slug ${index}`, model: 'gpt-5.2-pro', slug: 'parallel slug race' },
+          '/tmp/cwd',
+        ),
+      ),
+    );
+    const ids = sessions.map((session) => session.id).sort();
+    expect(new Set(ids).size).toBe(sessions.length);
+    expect(ids).toContain('parallel-slug-race');
+    expect(ids).toContain('parallel-slug-race-8');
+    for (const session of sessions) {
+      expect((await sessionModule.readSessionMetadata(session.id))?.id).toBe(session.id);
+    }
   });
 
   test('marks stale running sessions as zombies after 60 minutes', async () => {

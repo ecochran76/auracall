@@ -1840,7 +1840,7 @@ npx -y auracall auracall-mcp
 - Azure endpoints supported via `--azure-endpoint/--azure-deployment/--azure-api-version` or `AZURE_OPENAI_*` envs.
 - File safety: globs/excludes, size guards, `--files-report`.
 - Sessions you can replay (`auracall status`, `auracall session <id> --render`).
-- Session logs and bundles live in `~/.auracall/sessions` (override with `AURACALL_HOME_DIR`).
+- Session logs and bundles live in `~/.auracall/sessions` (override with `AURACALL_HOME_DIR`). On POSIX systems AuraCall creates and repairs this sensitive session tree as owner-only (`0700` directories and `0600` files) without traversing symlinks.
 
 ## Flags you’ll actually use
 
@@ -1957,7 +1957,7 @@ Advanced flags
 
 | Area | Flags |
 | --- | --- |
-| Browser | `--browser-manual-login`, `--browser-chatgpt-mode`, `--browser-work-model`, `--browser-thinking-time`, `--browser-composer-tool`, `--browser-deep-research-plan-action`, `--browser-timeout`, `--browser-input-timeout`, `--browser-cookie-wait`, `--browser-inline-cookies[(-file)]`, `--browser-attachments`, `--browser-inline-files`, `--browser-bundle-files`, `--browser-keep-browser`, `--browser-headless`, `--browser-hide-window`, `--browser-no-cookie-sync`, `--browser-allow-cookie-errors`, `--browser-chrome-path`, `--browser-cookie-path`, `--browser-bootstrap-cookie-path`, `--chatgpt-url` |
+| Browser | `--browser-manual-login`, `--browser-chatgpt-mode`, `--browser-work-model`, `--browser-thinking-time`, `--browser-composer-tool`, `--browser-deep-research-plan-action`, `--browser-timeout`, `--browser-input-timeout`, `--browser-cookie-wait`, `--browser-cookie-sync`, `--browser-inline-cookies[(-file)]`, `--browser-attachments`, `--browser-inline-files`, `--browser-bundle-files`, `--browser-keep-browser`, `--browser-headless`, `--browser-hide-window`, `--browser-no-cookie-sync`, `--browser-allow-cookie-errors`, `--browser-chrome-path`, `--browser-cookie-path`, `--browser-bootstrap-cookie-path`, `--chatgpt-url` |
 | Azure/OpenAI | `--azure-endpoint`, `--azure-deployment`, `--azure-api-version`, `--base-url` |
 
 Remote browser example

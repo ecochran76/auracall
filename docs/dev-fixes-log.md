@@ -21846,3 +21846,65 @@ browser-stage lifecycle observability, not transcript truncation.
 - Preserve the old refs until cleanup is explicitly authorized. A successful
   semantic port establishes an archival disposition; it does not itself grant
   branch or worktree deletion authority.
+
+## 2026-08-23 | Duration tokens and credential-indexed caches need explicit bounds
+
+- A global duration regex can skip arbitrary text between otherwise valid
+  tokens. Require each match to begin exactly where the previous match ended;
+  checking only the final regex index does not reject prefixes or internal
+  gaps.
+- TTL alone does not bound a map when each credential creates a distinct cache
+  key. Remove expired entries and enforce a deterministic maximum population
+  after insertion so short-lived or rotated API keys cannot accumulate for the
+  life of the process.
+- Regress both boundaries directly: malformed token gaps must return the
+  caller's fallback, and inserting key 21 into a 20-entry cache must evict the
+  oldest key.
+
+## 2026-08-23 | Session identity and artifact privacy must be filesystem-enforced
+
+- Checking whether a slug exists and creating its directory later is a TOCTOU
+  race. Reserve the final directory atomically with non-recursive `mkdir` and
+  retry only exact `EEXIST` collisions.
+- Session prompts, attached context, metadata, and model output are sensitive.
+  Create directories/files as `0700/0600`, and explicitly repair modes because
+  create-time modes do not tighten an existing entry.
+- Migrations must use `lstat` and skip symlinks so permission hardening never
+  crosses the session-storage boundary. Same-directory owner-only replacement
+  also avoids partially written JSON and replaces a target symlink rather than
+  following it.
+
+## 2026-08-23 | Treat disabled browser choices as state, not failed clicks
+
+- A visible selector row can be present but unavailable. Detect disabled state
+  before selected state or click dispatch using `aria-disabled`, Radix
+  `data-disabled`, disabled `data-state`, and native disabled attributes.
+- Strict explicit selection must fail closed with a typed browser-automation
+  error. A best-effort caller may preserve the current selection, but it must
+  say which requested tier was unavailable and include a bounded row-owned
+  reason when the page exposes one.
+- Keep provider chrome classifiers narrow. Matching `Answer now` anywhere in a
+  substantial response discards valid content; consume only exact short known
+  placeholder labels and retain the existing prohibition on clicking the gate.
+
+## 2026-08-23 | Preserve operator intent at browser routing boundaries
+
+- Boolean CLI resolution must distinguish an explicit `true` from an unset
+  value when downstream launch defaults own the latter. Discarding
+  `--browser-headless` makes a documented operator request ineffective.
+- On WSL, a resolver-derived `127.x` nameserver is local to the WSL network
+  namespace and should route to `127.0.0.1`; never rewrite an explicit operator
+  host override or a genuine non-loopback resolver address.
+
+## 2026-08-23 | Copying a credential is still a source-session effect
+
+- A managed browser can rotate copied provider tokens and invalidate the
+  interactive source session even when automation never writes the source
+  cookie database. Make source browser profile cookie copying a positive
+  operator opt-in; reuse managed browser profile state by default.
+- Treat an explicit bootstrap path or interactive setup choice as affirmative
+  one-time bootstrap intent. Do not silently derive that intent from an
+  auto-discovered source cookie path.
+- Before porting an upstream path-containment patch, prove that caller input
+  reaches a write sink. A validated but unused `outputDir` field has contract
+  debt, but no symlink escape until a writer consumes it.

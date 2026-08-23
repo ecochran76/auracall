@@ -288,6 +288,7 @@ export const BrowserConfigSchema = z.object({
   
   // Cookies
   cookieNames: z.array(z.string()).optional().or(z.string().optional()), // CLI passes string
+  cookieSync: z.boolean().optional(),
   inlineCookies: z.string().optional(), // JSON or Base64 string
   inlineCookiesFile: z.string().optional(),
   allowCookieErrors: z.boolean().optional(),
@@ -348,6 +349,7 @@ export const OracleProfileBrowserSchema = z.object({
   inlineFiles: z.boolean().optional(),
   bundleFiles: z.boolean().optional(),
   cookieNames: z.array(z.string()).optional().or(z.string().optional()),
+  cookieSync: z.boolean().optional(),
   inlineCookies: z.string().optional(),
   inlineCookiesFile: z.string().optional(),
   allowCookieErrors: z.boolean().optional(),

@@ -184,13 +184,14 @@ function resolveManagedBrowserProfile(input: {
   });
   const activeProfileName = resolveManagedProfileName(directory, configuredProfileName);
   const sourceCookiePath = resolveBootstrapSourceCookiePath({
-    configuredCookiePath: input.browser.chromeCookiePath,
+    configuredCookiePath: input.browser.cookieSync ? input.browser.chromeCookiePath : null,
     managedProfileDir: directory,
     managedProfileName: activeProfileName,
   });
   const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
     configuredCookiePath:
-      input.browser.bootstrapCookiePath ?? input.browser.chromeCookiePath,
+      input.browser.bootstrapCookiePath ??
+      (input.browser.cookieSync ? input.browser.chromeCookiePath : null),
     managedProfileDir: directory,
     managedProfileName: activeProfileName,
   });

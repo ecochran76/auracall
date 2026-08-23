@@ -296,6 +296,7 @@ const AGENT_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
   'debugPortRange',
   'remoteChrome',
   'cookieNames',
+  'cookieSync',
   'inlineCookies',
   'inlineCookiesFile',
   'allowCookieErrors',

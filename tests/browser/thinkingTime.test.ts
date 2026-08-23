@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  ThinkingTierUnavailableError,
   buildThinkingTimeExpressionForTest,
+  ensureThinkingTime,
+  ensureThinkingTimeIfAvailable,
   evaluateChatgptProModeGate,
   formatChatgptProModeGateError,
   isChatgptProModelTarget,
@@ -219,6 +222,98 @@ describe('browser thinking-time selection expression', () => {
 
     await expect(resultPromise).resolves.toEqual({ status: 'switched', label: 'Extended' });
     expect(levelMenuOpen).toBe(true);
+  });
+
+  it('reports an unavailable tier without clicking its disabled row', async () => {
+    vi.useFakeTimers();
+    const chip = new FixtureElement('Thinking', { 'aria-haspopup': 'menu' });
+    const extended = new FixtureElement('Extended', {
+      role: 'menuitemradio',
+      'aria-disabled': 'true',
+      title: 'Limit reached until tomorrow.',
+    });
+    const levelMenu = new FixtureElement('Standard Extended', { role: 'menu' });
+    levelMenu.queryAll = (selector) => selector.includes('[role="menuitemradio"]') ? [extended] : [];
+    let menuOpen = false;
+    let clicks = 0;
+    chip.onClick = () => {
+      menuOpen = true;
+    };
+    extended.onClick = () => {
+      clicks += 1;
+    };
+
+    installFixtureDocument((selector) => {
+      if (selector.includes('button.__composer-pill, .__composer-pill-composite button')) return [chip];
+      if (
+        selector === '[data-testid="composer-footer-actions"] button[aria-haspopup="menu"]' ||
+        selector === 'button.__composer-pill[aria-haspopup="menu"]' ||
+        selector === '.__composer-pill-composite button[aria-haspopup="menu"]'
+      ) return [chip];
+      if (selector.includes('[role="dialog"]')) return [];
+      if (selector.includes('[role="menu"]') && selector.includes('[role="group"]')) {
+        return menuOpen ? [levelMenu] : [];
+      }
+      if (selector.includes('[role="menuitem"]')) return menuOpen ? [extended] : [];
+      return [];
+    });
+
+    const resultPromise = new Function(
+      `return ${buildThinkingTimeExpressionForTest('extended')}`,
+    )() as Promise<unknown>;
+    await vi.advanceTimersByTimeAsync(11_000);
+
+    await expect(resultPromise).resolves.toEqual({
+      status: 'option-disabled',
+      label: 'Extended',
+      notice: 'Limit reached until tomorrow.',
+    });
+    expect(clicks).toBe(0);
+  });
+});
+
+describe('unavailable thinking-time tiers', () => {
+  it('fails closed with a typed browser automation error for strict selection', async () => {
+    const runtime = {
+      evaluate: vi.fn().mockResolvedValue({
+        result: {
+          value: {
+            status: 'option-disabled',
+            label: 'Extended',
+            notice: 'Limit reached until tomorrow.',
+          },
+        },
+      }),
+    };
+    const logger = vi.fn();
+    Object.assign(logger, { verbose: false });
+
+    await expect(ensureThinkingTime(runtime as never, 'extended', logger as never)).rejects.toMatchObject({
+      name: 'ThinkingTierUnavailableError',
+      category: 'browser-automation',
+      requestedLevel: 'extended',
+      optionLabel: 'Extended',
+      notice: 'Limit reached until tomorrow.',
+      details: { stage: 'thinking-tier-unavailable' },
+    });
+    await expect(ensureThinkingTime(runtime as never, 'extended', logger as never)).rejects.toBeInstanceOf(
+      ThinkingTierUnavailableError,
+    );
+  });
+
+  it('keeps the current effort and reports false for best-effort selection', async () => {
+    const runtime = {
+      evaluate: vi.fn().mockResolvedValue({
+        result: { value: { status: 'option-disabled', label: 'Extended', notice: null } },
+      }),
+    };
+    const logger = vi.fn();
+    Object.assign(logger, { verbose: false });
+
+    await expect(ensureThinkingTimeIfAvailable(runtime as never, 'extended', logger as never)).resolves.toBe(false);
+    expect(logger).toHaveBeenCalledWith(
+      'Thinking time: Extended is unavailable on this account (no reason given); keeping the effort already selected in ChatGPT.',
+    );
   });
 });
 

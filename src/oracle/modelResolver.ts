@@ -54,10 +54,36 @@ interface OpenRouterModelInfo {
 
 const catalogCache = new Map<string, { fetchedAt: number; models: OpenRouterModelInfo[] }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 20;
+
+function pruneCatalogCache(now: number): void {
+  for (const [key, entry] of catalogCache) {
+    if (now - entry.fetchedAt >= CACHE_TTL_MS) {
+      catalogCache.delete(key);
+    }
+  }
+  while (catalogCache.size > MAX_CACHE_ENTRIES) {
+    let oldestKey: string | null = null;
+    let oldestFetchedAt = Number.POSITIVE_INFINITY;
+    for (const [key, entry] of catalogCache) {
+      if (entry.fetchedAt < oldestFetchedAt) {
+        oldestKey = key;
+        oldestFetchedAt = entry.fetchedAt;
+      }
+    }
+    if (oldestKey === null) break;
+    catalogCache.delete(oldestKey);
+  }
+}
+
+export function resetOpenRouterCatalogCacheForTests(): void {
+  catalogCache.clear();
+}
 
 async function fetchOpenRouterCatalog(apiKey: string, fetcher: FetchFn): Promise<OpenRouterModelInfo[]> {
-  const cached = catalogCache.get(apiKey);
   const now = Date.now();
+  pruneCatalogCache(now);
+  const cached = catalogCache.get(apiKey);
   if (cached && now - cached.fetchedAt < CACHE_TTL_MS) {
     return cached.models;
   }
@@ -72,6 +98,7 @@ async function fetchOpenRouterCatalog(apiKey: string, fetcher: FetchFn): Promise
   const json = (await response.json()) as { data?: OpenRouterModelInfo[] };
   const models = json?.data ?? [];
   catalogCache.set(apiKey, { fetchedAt: now, models });
+  pruneCatalogCache(now);
   return models;
 }
 

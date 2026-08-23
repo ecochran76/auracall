@@ -36,7 +36,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   debugPortStrategy: 'fixed',
   debugPortRange: [45000, 45100],
   inputTimeoutMs: 60_000,
-  cookieSync: true,
+  cookieSync: false,
   cookieNames: null,
   cookieSyncWaitMs: 0,
   inlineCookies: null,
@@ -104,9 +104,9 @@ export function resolveBrowserConfig(
         'Remove "temporary-chat=true" from your browser URL, or use a non-Pro model label (e.g. "Instant").',
     );
   }
-  const isWindows = process.platform === 'win32';
   const manualLogin = config?.manualLogin ?? DEFAULT_BROWSER_CONFIG.manualLogin;
-  const cookieSyncDefault = isWindows ? false : DEFAULT_BROWSER_CONFIG.cookieSync;
+  const cookieSyncDefault = DEFAULT_BROWSER_CONFIG.cookieSync;
+  const cookieSync = config?.cookieSync ?? cookieSyncDefault;
   const normalizedCookieNames = normalizeCookieNames(config?.cookieNames ?? DEFAULT_BROWSER_CONFIG.cookieNames);
   const normalizedInlineCookies = normalizeInlineCookies(config?.inlineCookies ?? DEFAULT_BROWSER_CONFIG.inlineCookies);
   const wslChromePreference = normalizeWslChromePreference(
@@ -137,7 +137,7 @@ export function resolveBrowserConfig(
   const resolvedBootstrapCookiePath = resolveConfiguredBrowserValue(
     process.env.AURACALL_BROWSER_BOOTSTRAP_COOKIE_PATH ??
       config?.bootstrapCookiePath ??
-      config?.chromeCookiePath ??
+      (cookieSync ? config?.chromeCookiePath ?? resolvedCookiePath : null) ??
       null,
   );
   const managedProfileRoot = resolveEffectiveManagedProfileRoot({
@@ -211,7 +211,7 @@ export function resolveBrowserConfig(
     debugPortStrategy,
     debugPortRange,
     inputTimeoutMs: config?.inputTimeoutMs ?? DEFAULT_BROWSER_CONFIG.inputTimeoutMs,
-    cookieSync: config?.cookieSync ?? cookieSyncDefault,
+    cookieSync,
     cookieNames: normalizedCookieNames,
     cookieSyncWaitMs: config?.cookieSyncWaitMs ?? DEFAULT_BROWSER_CONFIG.cookieSyncWaitMs,
     inlineCookies: normalizedInlineCookies,

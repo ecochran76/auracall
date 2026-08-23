@@ -1,5 +1,90 @@
 # RUNBOOK
 
+## Turn 502 | 2026-08-23
+
+- Plan 0309 reaches `INTEGRATION_READY`. Broad isolated-home validation passed
+  2,993 tests with 65 skipped before three failures: two doctor fixtures still
+  assumed implicit cookie sync, and one unrelated Grok wrapper timed out under
+  suite load. The fixtures now state explicit opt-in; the exact closed-world
+  rerun passes all `26/26`, including Grok.
+- Typecheck, production build, full lint (exit zero with the unchanged 208-
+  warning baseline), scoped zero-warning lint, plan-library/goal/active audits,
+  current CodeGraph, and diff hygiene pass. Post-test census found no process
+  under the isolated test home and preserved baseline DevTools listeners
+  `45013`, `45015`, and `45017`.
+
+## Turn 501 | 2026-08-23
+
+- Active authority:
+  `docs/dev/plans/0309-2026-08-23-oracle-native-reliability-adaptations.md`.
+- Plan 0309 Phase 4 classifies Oracle MCP output containment as not applicable:
+  AuraCall's MCP `media_generation.outputDir` is accepted but inert, and no
+  MCP-controlled path reaches a filesystem write. Local CLI write-output is a
+  separate operator surface.
+- Cookie copying required an AuraCall-native adaptation. It now defaults off on
+  every platform; `--browser-cookie-sync`, `browser.cookieSync=true`, or an
+  explicit bootstrap path supplies affirmative intent. Existing managed
+  browser profile state remains reusable without reading the source profile.
+- RED proved the prior default and source exposure; focused/affected GREEN is
+  `202/202` plus typecheck, scoped zero-warning Biome lint, current CodeGraph,
+  and diff hygiene. No browser/provider effect occurred.
+
+## Turn 500 | 2026-08-23
+
+- Plan 0309 Phase 3 adapts four narrow Oracle reliability lessons to current
+  AuraCall browser architecture: bounded exact Answer Now placeholders,
+  honored explicit local headless launches, WSL resolver loopback
+  normalization, and a typed unavailable-thinking-tier outcome.
+- Strict thinking-time selection now fails closed with
+  `ThinkingTierUnavailableError`; best-effort selection preserves the current
+  ChatGPT effort and logs the unavailable label/reason. Disabled rows are never
+  clicked. AuraCall still never clicks Answer Now.
+- Focused/affected evidence passes `85/85`, typecheck, scoped zero-warning
+  Biome lint, and diff hygiene. No browser or provider was launched.
+
+## Turn 499 | 2026-08-23
+
+- Plan 0309 Phase 2 failed RED with eight parallel same-slug calls all claiming
+  one ID and with new/existing session artifacts retaining permissive modes.
+- Session creation now reserves directories atomically with exact `EEXIST`
+  retry. New directories/files are `0700/0600`; one inode-scoped migration
+  hardens existing real entries recursively while leaving symlink targets
+  untouched. Metadata/model writes use owner-only same-directory replacement,
+  and log writers reject symlink/non-file targets before append.
+- Focused/affected `69/69`, typecheck, touched-file zero-warning lint, current
+  CodeGraph at 909 files / 17,152 nodes / 58,770 edges, and diff hygiene pass.
+  `OA-R3` and `OA-R4` are accepted with no runtime/provider effect.
+- Next: commit/push Phase 2 and test-drive Answer Now extraction plus explicit
+  headless configuration.
+
+## Turn 498 | 2026-08-23
+
+- Plan 0309 Phase 1 failed RED on `abc5s`, `10junk5s`, `1h!30m`, and the
+  21-key OpenRouter cache boundary. The native repair now requires contiguous
+  duration tokens and prunes stale/oldest catalog entries to a 20-entry cap.
+- Focused `25/25`, typecheck, touched-file zero-warning lint, current CodeGraph
+  at 909 files / 17,143 nodes / 58,715 edges, and diff hygiene pass.
+- `OA-R1` and `OA-R2` are accepted. No network, browser, provider, installed
+  runtime, or tenant effect occurred.
+- Next: commit and push the coherent Phase 1 packet, then drive atomic
+  owner-only session storage through parallel-creation and POSIX-mode tests.
+
+## Turn 497 | 2026-08-23
+
+- Operator authority opens Plan 0309 to plan and execute the material Oracle
+  reference findings as AuraCall-native adaptations. Oracle remains a separate
+  product and is not a synchronization target.
+- Fresh preflight proved clean `main == origin/main` at `03cae56c`, one
+  worktree, and no dirty overlap. The execution branch is
+  `feat/plan0309-oracle-adaptations`.
+- The bounded campaign owns eight proved candidate gaps plus source-backed
+  adjudication of cookie-sync and MCP output containment. It authorizes
+  provider-free source, tests, and documentation only; no install, restart,
+  browser launch, provider call, tenant mutation, or release is required.
+- Next: push the governing-plan checkpoint, publish exact branch custody in the
+  default-branch active-lane catalog, then test-drive strict duration parsing
+  and bounded OpenRouter cache behavior.
+
 ## Turn 496 | 2026-08-23
 
 - Operator authority activated Plan 0308's exact local cleanup packet. Fresh

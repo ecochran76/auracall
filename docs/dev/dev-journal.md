@@ -47558,3 +47558,92 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   then restored the primary repository checkout to clean `main`.
 - Preserved every remote branch and retained the one local historical
   compatibility ref. No remote prune or deletion occurred.
+
+## 2026-08-23 - Plan 0309 Oracle-native adaptation start
+
+- Focus: execute the bounded, current-source gaps found during the deeper
+  Oracle `083bba7e` review without treating Oracle as an upstream convergence
+  target.
+- Preflight: clean `main == origin/main` at `03cae56c`, one worktree, and no
+  dirty overlap. Execution uses `feat/plan0309-oracle-adaptations`.
+- Scope: strict duration parsing, bounded OpenRouter catalog caching, atomic
+  owner-only session storage, bounded Answer Now placeholder recognition,
+  explicit headless behavior, WSL loopback normalization, unavailable thinking
+  tiers, and source-backed cookie/MCP-path adjudication.
+- Authority: provider-free source/tests/docs only. No install, restart, browser
+  launch, provider call, tenant mutation, release, or Oracle synchronization.
+- Next: publish the plan checkpoint and exact lane custody, then drive Phase 1
+  through focused RED/GREEN tests.
+
+## 2026-08-23 - Plan 0309 Phase 1 parser and cache acceptance
+
+- RED: malformed compound durations with a valid trailing token were accepted,
+  and a 21st API-key-indexed OpenRouter catalog entry remained retained.
+- Repair: require every duration match to start at the prior match boundary;
+  prune expired catalog entries and enforce a deterministic 20-entry oldest-
+  first bound. The exported reset seam keeps cache tests isolated.
+- Evidence: focused `25/25`, typecheck, touched-file zero-warning lint, current
+  CodeGraph at 909 files / 17,143 nodes / 58,715 edges, and diff hygiene pass.
+- Next: commit/push Phase 1 and begin atomic owner-only session storage.
+
+## 2026-08-23 - Plan 0309 Phase 2 session-storage acceptance
+
+- RED: eight concurrent same-slug initializations returned one duplicate ID;
+  existing and newly created session artifacts retained group/world-readable
+  modes under a permissive umask.
+- Repair: reserve each session directory with non-recursive `mkdir` and retry
+  only `EEXIST`; create directories/files as `0700/0600`; atomically replace
+  private metadata/model files; harden existing real entries once per sessions
+  inode; never recurse through symlinks.
+- Evidence: focused/affected `69/69`, typecheck, touched-file zero-warning lint,
+  current CodeGraph at 909 files / 17,152 nodes / 58,770 edges, and diff hygiene
+  pass.
+- Next: commit/push Phase 2 and begin bounded Answer Now plus headless behavior.
+
+## 2026-08-23 - Plan 0309 Phase 3 browser-semantics acceptance
+
+- Bounded Answer Now recognition now consumes only short known provider-chrome
+  labels; substantial assistant text containing those words remains content,
+  and the existing no-click approval suite stays green.
+- Explicit `--browser-headless` now reaches local launch configuration.
+  AuraCall has no attach-running option at this layer; remote Chrome remains a
+  separate path whose docs already state that local launch flags are ignored.
+- Resolver-derived WSL `127.x` nameservers normalize to `127.0.0.1`; explicit
+  host overrides and non-loopback resolver hosts are preserved.
+- Disabled thinking tiers produce `option-disabled` without a click. Strict
+  selection throws typed `ThinkingTierUnavailableError`; best-effort selection
+  logs the condition and keeps the current ChatGPT effort.
+- Evidence: focused/affected `85/85`, typecheck, scoped zero-warning Biome
+  lint, and diff hygiene pass. Next: commit/push Phase 3 and adjudicate MCP
+  output containment plus cookie-sync ownership against current AuraCall.
+
+## 2026-08-23 - Plan 0309 Phase 4 security-policy adjudication
+
+- MCP output containment is not applicable to current AuraCall. The only MCP
+  destination-like field, `media_generation.outputDir`, has no write sink;
+  artifacts materialize under AuraCall-owned storage. The local CLI
+  write-output path is not MCP-controlled.
+- Cookie copying is now opt-in on every platform. Normal launch planning does
+  not expose the source browser profile unless cookie sync is positively
+  enabled; an explicit bootstrap path and interactive setup/login remain
+  affirmative bootstrap operations.
+- RED proved the previous default and implicit source exposure. Focused and
+  affected GREEN passes `202/202`, typecheck, scoped zero-warning Biome lint,
+  current CodeGraph, and diff hygiene. Next: broad provider-free validation
+  and integration.
+
+## 2026-08-23 - Plan 0309 integration-ready validation
+
+- Broad validation used isolated AuraCall home
+  `/tmp/auracall-plan0309-test.Jzspe0`. It passed 2,993 tests with 65 skipped
+  before three failures: two expected profile-doctor fixtures still assumed
+  implicit source-cookie copying, and one unrelated Grok response wrapper
+  timed out under full-suite load.
+- The doctor fixtures now explicitly enable cookie sync. Closed-world rerun of
+  both failed files passes `26/26`, including the Grok case without a source
+  change. Typecheck, production build, full lint (exit zero, unchanged 208-
+  warning baseline), scoped zero-warning lint, CodeGraph, and diff hygiene pass.
+- Fresh post-run census found no test-home-owned process and preserved the
+  baseline DevTools listeners on ports `45013`, `45015`, and `45017`.
+- Next: publish this exact feature checkpoint, reconcile P02 catalog custody,
+  merge to main, close the plan, and prove origin parity.

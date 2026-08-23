@@ -4,6 +4,7 @@ import type { ProviderUserIdentity } from '../providers/types.js';
 import { MENU_CONTAINER_SELECTOR, MENU_ITEM_SELECTOR } from '../constants.js';
 import { logDomFailure } from '../domDebug.js';
 import { buildClickDispatcher } from './domEvents.js';
+import { BrowserAutomationError } from '../../oracle/errors.js';
 
 export type ChatgptProMode = 'standard' | 'extended';
 
@@ -19,11 +20,35 @@ export type ChatgptProModeGate = {
 type ThinkingTimeOutcome =
   | { status: 'already-selected'; label?: string | null }
   | { status: 'switched'; label?: string | null }
+  | { status: 'option-disabled'; label?: string | null; notice?: string | null }
   | { status: 'chip-not-found' }
   | { status: 'menu-not-found' }
   | { status: 'option-not-found' };
 
 const THINKING_TIME_EVALUATE_TIMEOUT_MS = 25_000;
+
+export class ThinkingTierUnavailableError extends BrowserAutomationError {
+  readonly requestedLevel: ThinkingTimeLevel;
+  readonly optionLabel: string | null;
+  readonly notice: string | null;
+
+  constructor(level: ThinkingTimeLevel, optionLabel: string | null, notice: string | null) {
+    const requestedLabel = level.charAt(0).toUpperCase() + level.slice(1);
+    super(
+      `Thinking time: ${optionLabel ?? requestedLabel} is unavailable on this account (${notice ?? 'no reason given'}); refusing to submit without confirmed ${requestedLabel}.`,
+      {
+        stage: 'thinking-tier-unavailable',
+        requestedLevel: level,
+        optionLabel,
+        notice,
+      },
+    );
+    this.name = 'ThinkingTierUnavailableError';
+    this.requestedLevel = level;
+    this.optionLabel = optionLabel;
+    this.notice = notice;
+  }
+}
 
 /**
  * Selects a specific thinking time level in ChatGPT's composer pill menu.
@@ -44,6 +69,13 @@ export async function ensureThinkingTime(
     case 'switched':
       logger(`Thinking time: ${result.label ?? capitalizedLevel}`);
       return;
+    case 'option-disabled':
+      await logDomFailure(Runtime, logger, 'thinking-option-disabled');
+      throw new ThinkingTierUnavailableError(
+        level,
+        result.label ?? null,
+        result.notice ?? null,
+      );
     case 'chip-not-found': {
       await logDomFailure(Runtime, logger, 'thinking-chip');
       throw new Error('Unable to find the Thinking chip button in the composer area.');
@@ -84,6 +116,11 @@ export async function ensureThinkingTimeIfAvailable(
       case 'switched':
         logger(`Thinking time: ${result.label ?? capitalizedLevel}`);
         return true;
+      case 'option-disabled':
+        logger(
+          `Thinking time: ${result.label ?? capitalizedLevel} is unavailable on this account (${result.notice ?? 'no reason given'}); keeping the effort already selected in ChatGPT.`,
+        );
+        return false;
       case 'chip-not-found':
       case 'menu-not-found':
       case 'option-not-found':
@@ -355,6 +392,21 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
         return false;
       };
 
+      const optionIsDisabled = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const dataDisabled = node.getAttribute('data-disabled');
+        return node.getAttribute('aria-disabled') === 'true' ||
+          (dataDisabled !== null && dataDisabled.toLowerCase() !== 'false') ||
+          (node.getAttribute('data-state') || '').toLowerCase() === 'disabled' ||
+          Boolean(node.disabled) ||
+          node.getAttribute('disabled') !== null;
+      };
+
+      const disabledNotice = (node) => {
+        if (!(node instanceof HTMLElement)) return null;
+        return node.getAttribute('title') || node.getAttribute('aria-description') || null;
+      };
+
       let attempt;
 
       const attemptDirectMenu = () => {
@@ -378,10 +430,15 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
           return;
         }
 
+        const label = targetOption.textContent?.trim?.() || null;
+        if (optionIsDisabled(targetOption)) {
+          resolve({ status: 'option-disabled', label, notice: disabledNotice(targetOption) });
+          return;
+        }
+
         const alreadySelected =
           optionIsSelected(targetOption) ||
           optionIsSelected(targetOption.querySelector?.('[aria-checked="true"], [data-state="checked"], [data-state="selected"]'));
-        const label = targetOption.textContent?.trim?.() || null;
         if (alreadySelected) {
           resolve({ status: 'already-selected', label });
           return;
@@ -401,6 +458,10 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
           const dialogTarget = findTargetOption(dialog);
           if (dialogTarget) {
             const label = dialogTarget.textContent?.trim?.() || null;
+            if (optionIsDisabled(dialogTarget)) {
+              resolve({ status: 'option-disabled', label, notice: disabledNotice(dialogTarget) });
+              return true;
+            }
             if (
               optionIsSelected(dialogTarget) ||
               optionIsSelected(dialogTarget.querySelector?.('[aria-checked="true"], [data-state="checked"], [data-state="selected"]'))

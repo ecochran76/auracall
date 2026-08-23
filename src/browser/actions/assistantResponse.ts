@@ -124,16 +124,39 @@ function buildResponseBoundaryHelpers(boundaryVariable = 'RESPONSE_BOUNDARY'): s
     };`;
 }
 
-function isAnswerNowPlaceholderText(normalized: string): boolean {
-  const text = normalized.trim();
-  if (!text) return false;
-  // Learned: "Pro thinking" shows a placeholder turn that contains "Answer now".
-  // That is not the final answer and must be ignored in browser automation.
-  if (text === 'chatgpt said:' || text === 'chatgpt said') return true;
-  if (text.includes('file upload request') && (text.includes('pro thinking') || text.includes('chatgpt said'))) {
-    return true;
+// This predicate is also injected into renderer expressions through
+// buildAnswerNowPlaceholderPredicateJs, so keep it closure-free.
+export function isAnswerNowPlaceholderText(value: unknown): boolean {
+  let raw = '';
+  if (typeof value === 'string') {
+    raw = value;
+  } else if (value && typeof value === 'object' && 'text' in value) {
+    const candidate = (value as { text?: unknown }).text;
+    if (typeof candidate === 'string') raw = candidate;
   }
-  return text.includes('answer now') && (text.includes('pro thinking') || text.includes('chatgpt said'));
+  const text = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!text) return false;
+  if (text === 'chatgpt said:' || text === 'chatgpt said') return true;
+  if (text.length > 60) return false;
+  const chromeLabels = ['chatgpt said:', 'chatgpt said', 'file upload request', 'pro thinking', 'answer now'];
+  let rest = text;
+  let sawOwner = false;
+  let sawGate = false;
+  while (rest.length > 0) {
+    let matched = '';
+    for (const label of chromeLabels) {
+      if (label.length > matched.length && rest.startsWith(label)) matched = label;
+    }
+    if (!matched) return false;
+    if (matched === 'answer now' || matched === 'file upload request') sawGate = true;
+    else sawOwner = true;
+    rest = rest.slice(matched.length).replace(/^[\s:.,;|\u00b7\u2022-]+/, '');
+  }
+  return sawGate && sawOwner;
+}
+
+export function buildAnswerNowPlaceholderPredicateJs(functionName: string): string {
+  return `const ${functionName} = ${isAnswerNowPlaceholderText.toString()};`;
 }
 
 export async function waitForAssistantResponse(
@@ -681,14 +704,7 @@ function buildAssistantSnapshotExpression(responseBoundary?: AssistantResponseBo
     const turnCount = document.querySelectorAll(${JSON.stringify(CONVERSATION_TURN_SELECTOR)}).length;
     const extractedRaw = extractAssistantTurn();
     const extracted = responseBoundaryState(extractedRaw, turnCount) ? extractedRaw : null;
-    const isPlaceholder = (snapshot) => {
-      const normalized = String(snapshot?.text ?? '').toLowerCase().trim();
-      if (normalized === 'chatgpt said:' || normalized === 'chatgpt said') return true;
-      if (normalized.includes('file upload request') && (normalized.includes('pro thinking') || normalized.includes('chatgpt said'))) {
-        return true;
-      }
-      return normalized.includes('answer now') && (normalized.includes('pro thinking') || normalized.includes('chatgpt said'));
-    };
+    ${buildAnswerNowPlaceholderPredicateJs('isPlaceholder')}
     if (extracted && extracted.text && !isPlaceholder(extracted)) {
       return extracted;
     }
@@ -820,14 +836,7 @@ function buildResponseObserverExpression(timeoutMs: number, responseBoundary?: A
     const ASSISTANT_SELECTOR = ${assistantLiteral};
     // Learned: settling avoids capturing mid-stream HTML; keep short.
     const settleDelayMs = 800;
-    const isAnswerNowPlaceholder = (snapshot) => {
-      const normalized = String(snapshot?.text ?? '').toLowerCase().trim();
-      if (normalized === 'chatgpt said:' || normalized === 'chatgpt said') return true;
-      if (normalized.includes('file upload request') && (normalized.includes('pro thinking') || normalized.includes('chatgpt said'))) {
-        return true;
-      }
-      return normalized.includes('answer now') && (normalized.includes('pro thinking') || normalized.includes('chatgpt said'));
-    };
+    ${buildAnswerNowPlaceholderPredicateJs('isAnswerNowPlaceholder')}
 
     // Helper to detect assistant turns - must match buildAssistantExtractor logic for consistency.
     const isAssistantTurn = (node) => {
