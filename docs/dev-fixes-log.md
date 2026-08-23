@@ -21832,3 +21832,17 @@ browser-stage lifecycle observability, not transcript truncation.
   bounded text fingerprint across every response-reader seam; accept a changed
   stable identity only when positional bounds are invalid, and reject matching
   baseline text even if its DOM identity changed.
+
+## 2026-08-23 | Reconcile stale branches by semantics, not commit count
+
+- Two non-ancestral branches can report multiple patch-unique commits while
+  carrying the same functional change plus different plan-history commits.
+  Compare stable patches and current behavior before treating each commit as
+  missing product work.
+- Split stale mixed patches by current semantics. Here, later mainline work
+  already covered compact thinking-time controls, while compact and
+  aria-label-backed model controls were still absent. Port only the missing
+  slice into the current architecture and current tests.
+- Preserve the old refs until cleanup is explicitly authorized. A successful
+  semantic port establishes an archival disposition; it does not itself grant
+  branch or worktree deletion authority.

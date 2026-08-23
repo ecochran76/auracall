@@ -47473,3 +47473,65 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   stack fast-forwarded cleanly from `86c33891` to result commit `f7e1aa73` and
   pushed with zero conflicts. Integration caused no runtime/provider/LitScout
   effect.
+
+## 2026-08-22 - Repository Git and upstream true-up planning
+
+- Focus: establish a current, non-destructive branch/worktree/upstream census
+  and define the bounded path to reconcile repository custody.
+- Evidence: fresh no-tag fetches succeeded; `main == origin/main` at
+  `68da5063`; all seven linked worktrees are clean; 14 local topic branches are
+  ancestral to `main`; two selector branches retain patch-unique work; and
+  `runtime-service-foundation` is patch-equivalent despite non-ancestry.
+- Upstream boundary: common base `2408811f`, current upstream tip `083bba7e`,
+  and divergence `517 upstream-only / 1,784 downstream-only` across 428
+  upstream-changed files. The preserved long-lived-fork decision rules out a
+  blanket rebase and requires selective topic qualification.
+- Governance finding: the active planning audit passes with its exact accepted
+  baseline, while the active-lane audit fails because
+  `docs/dev/active-lanes.yaml` is absent from `origin/main`.
+- Next: execute Plan 0308 Phase 0/1 on a dedicated true-up branch/worktree,
+  publishing the custody ledger and catalog before any cleanup or upstream
+  source port. Destructive cleanup remains action-specifically gated.
+
+## 2026-08-23 - Plan 0308 Oracle relationship correction
+
+- Focus: correct the plan's assumption that AuraCall should converge with the
+  Git remote named `upstream`.
+- Operator decision: Oracle and AuraCall now serve entirely different purposes.
+  Oracle remains useful for studying narrow patches and transferable ideas, but
+  its divergent history is not synchronization debt.
+- Plan revision: Phase 2 now performs a bounded reference review. Candidates
+  must be classified as a compatible cherry-pick, an AuraCall-native adaptation,
+  already present, not applicable, or deferred. A concrete AuraCall problem and
+  acceptance criterion are required before implementation.
+- Next: keep Phase 0/1 focused on AuraCall branch/worktree custody and the
+  active-lane catalog. Oracle research is advisory and cannot block Git true-up.
+
+## 2026-08-23 - Plan 0308 execution start
+
+- Fresh no-tag fetches preserve `main == origin/main` at `68da5063` and
+  divergence `0/0`. Oracle remains only a research snapshot at `083bba7e`.
+- Plan state is `OPEN` on dedicated branch
+  `chore/plan0308-repository-true-up`. The first checkpoint is planning-only and
+  precedes catalog publication, branch adjudication, or cleanup.
+- Next: commit and push the recoverable planning checkpoint, then freeze the
+  exact branch/worktree custody ledger and create the active-lane catalog.
+
+## 2026-08-23 - Plan 0308 custody and reference adjudication
+
+- Published the closed-world reconciliation receipt for all current local
+  branches, linked worktrees, and remote-only origin refs. Cleanup candidates
+  remain intact because deletion authority is action-specific.
+- Compared both advanced-effort selector branches. Their functional commits
+  duplicate one another; current main supersedes the thinking-time portion but
+  lacked compact and aria-label-backed model controls. The minimal native port
+  passes the focused model-selection/thinking-time gate at 27/27.
+- Mapped the three non-ancestral runtime-foundation commits to exact mainline
+  patch equivalents. The Oracle reference review produced native adaptation
+  candidates rather than cherry-picks and caused no Oracle-derived code change.
+- Next: complete provider-free validation, push the coherent feature
+  checkpoint, publish the active-lane catalog on main, audit it, and integrate.
+- Validation passes adjacent 78/78 with one skipped, typecheck, changed-file
+  lint, build, and plan audit. One unrelated full-suite background-drain timing
+  assertion failed after 2,966 passes, then its exact 217-test file passed on
+  rerun. Full lint exits zero with the existing 208-warning baseline.

@@ -106,6 +106,17 @@ describe('browser model selection matchers', () => {
   it('plans the provider-free compact to advanced to model submenu path', () => {
     expect(
       chooseModelPickerNavigationActionForTest([
+        {
+          text: 'Advanced',
+          ariaLabel: 'Show advanced options',
+          role: 'menuitem',
+          expanded: 'false',
+        },
+      ]),
+    ).toEqual({ kind: 'open-advanced', index: 0 });
+
+    expect(
+      chooseModelPickerNavigationActionForTest([
         { text: 'Power', role: 'menuitem', expanded: null },
         { text: 'Show advanced options', role: 'menuitem', expanded: 'false' },
       ]),
@@ -114,8 +125,13 @@ describe('browser model selection matchers', () => {
     expect(
       chooseModelPickerNavigationActionForTest([
         { text: 'Show compact options', role: 'menuitem', expanded: 'true' },
-        { text: 'Model GPT-5.6 Sol', role: 'menuitem', expanded: 'false' },
-        { text: 'Effort Light', role: 'menuitem', expanded: 'false' },
+        {
+          text: 'ModelGPT-5.6 Sol',
+          ariaLabel: 'Model GPT-5.6 Sol',
+          role: 'menuitem',
+          expanded: 'false',
+        },
+        { text: 'EffortLight', role: 'menuitem', expanded: 'false' },
       ]),
     ).toEqual({ kind: 'open-model', index: 1 });
 

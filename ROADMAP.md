@@ -7,6 +7,23 @@
 Status: active
 Lane: P01
 
+- Active repository Git true-up and Oracle reference review:
+  [docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md](docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md)
+  Fresh fetches of `origin` and the Oracle-reference remote prove clean
+  `main == origin/main`, seven clean linked worktrees, 14 merged topic branches,
+  and three non-ancestral local branches. The Git remote named `upstream` points
+  to Oracle, which now serves a different purpose from AuraCall; its 517
+  Oracle-only commits are research input, not synchronization debt. The bounded
+  plan first restores the missing active-lane catalog and adjudicates exact
+  custody. A separate reference review may identify narrow cherry-pick
+  candidates or ideas worth adapting through AuraCall's own architecture.
+  Cleanup and Oracle-derived implementation remain separately gated actions.
+  Execution on `chore/plan0308-repository-true-up` has now published the full
+  custody/Oracle receipt, mapped the runtime-foundation commits, and resolved
+  the selector family by porting only the missing compact model-control
+  semantics. Focused validation passes `27/27`; catalog publication and final
+  integration remain.
+
 - Completed installed ChatGPT Work-marker semantic repair:
   [docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)
   Read-only live evidence proved ordinary Chat's `High` thinking control shares
