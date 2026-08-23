@@ -47631,3 +47631,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   affected GREEN passes `202/202`, typecheck, scoped zero-warning Biome lint,
   current CodeGraph, and diff hygiene. Next: broad provider-free validation
   and integration.
+
+## 2026-08-23 - Plan 0309 integration-ready validation
+
+- Broad validation used isolated AuraCall home
+  `/tmp/auracall-plan0309-test.Jzspe0`. It passed 2,993 tests with 65 skipped
+  before three failures: two expected profile-doctor fixtures still assumed
+  implicit source-cookie copying, and one unrelated Grok response wrapper
+  timed out under full-suite load.
+- The doctor fixtures now explicitly enable cookie sync. Closed-world rerun of
+  both failed files passes `26/26`, including the Grok case without a source
+  change. Typecheck, production build, full lint (exit zero, unchanged 208-
+  warning baseline), scoped zero-warning lint, CodeGraph, and diff hygiene pass.
+- Fresh post-run census found no test-home-owned process and preserved the
+  baseline DevTools listeners on ports `45013`, `45015`, and `45017`.
+- Next: publish this exact feature checkpoint, reconcile P02 catalog custody,
+  merge to main, close the plan, and prove origin parity.

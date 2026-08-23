@@ -1,7 +1,22 @@
 # RUNBOOK
 
+## Turn 502 | 2026-08-23
+
+- Plan 0309 reaches `INTEGRATION_READY`. Broad isolated-home validation passed
+  2,993 tests with 65 skipped before three failures: two doctor fixtures still
+  assumed implicit cookie sync, and one unrelated Grok wrapper timed out under
+  suite load. The fixtures now state explicit opt-in; the exact closed-world
+  rerun passes all `26/26`, including Grok.
+- Typecheck, production build, full lint (exit zero with the unchanged 208-
+  warning baseline), scoped zero-warning lint, plan-library/goal/active audits,
+  current CodeGraph, and diff hygiene pass. Post-test census found no process
+  under the isolated test home and preserved baseline DevTools listeners
+  `45013`, `45015`, and `45017`.
+
 ## Turn 501 | 2026-08-23
 
+- Active authority:
+  `docs/dev/plans/0309-2026-08-23-oracle-native-reliability-adaptations.md`.
 - Plan 0309 Phase 4 classifies Oracle MCP output containment as not applicable:
   AuraCall's MCP `media_generation.outputDir` is accepted but inert, and no
   MCP-controlled path reaches a filesystem write. Local CLI write-output is a

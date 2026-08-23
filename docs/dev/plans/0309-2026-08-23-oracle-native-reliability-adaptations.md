@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P02
-Operational state: ACTIVE / PROVIDER-FREE
+Operational state: INTEGRATION_READY / PROVIDER-FREE
 Branch: feat/plan0309-oracle-adaptations
 Target: main
 Integration: merge
@@ -191,7 +191,8 @@ contracts while closing only gaps proved against current source.
 
 - State transition: `ready -> active -> phase-1-accepted -> phase-2-accepted ->
   phase-3-accepted`.
-- Acceptance state: `OA-R1` through `OA-R9` accepted; `OA-R10` remains open.
+- Acceptance state: `OA-R1` through `OA-R9` accepted; `OA-R10` is accepted on
+  the feature checkpoint and awaits integrated-commit/origin-parity proof.
 - Progress classification: `outcome_progress` through strict duration/cache
   bounds, atomic owner-only session storage, and four browser-semantics gaps.
 - Evidence: Phase 1 focused `25/25`; Phase 2 RED reproduced duplicate IDs and
@@ -209,6 +210,14 @@ contracts while closing only gaps proved against current source.
   Phase 4 focused/affected validation passes `202/202`, typecheck, scoped
   zero-warning Biome lint, current CodeGraph at 910 files / 17,163 nodes /
   58,817 edges, and diff hygiene.
+- Phase 5 broad validation used an isolated AuraCall home. The first pass
+  produced 2,993 passes / 65 skips and three failures: two affected doctor
+  fixtures that assumed the old implicit cookie default, plus one Grok timing
+  failure under suite load. After making the fixtures explicit, the closed-
+  world rerun passes `26/26`; no Grok source repair was required. Production
+  build and full lint pass; the repository-wide warning count remains the
+  existing 208 while every touched source/test file is warning-free. Process
+  census preserved baseline DevTools ports and found no test-home process.
 - Material blockers: none for provider-free source execution.
-- Next action: run Phase 5 broad provider-free validation, reconcile exact lane
-  custody, integrate, and close the plan.
+- Next action: publish the exact integration-ready checkpoint, reconcile P02
+  catalog custody, merge to main, close the plan, and prove origin parity.
