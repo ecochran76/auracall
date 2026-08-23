@@ -10,6 +10,9 @@
 - No branch, remote ref, or non-root worktree was deleted. Every item has an
   explicit retained, archival, or cleanup-candidate disposition, and deletion
   still requires exact operator authority.
+- The plan-created `auracall-plan0308-main-catalog` worktree is the clean main
+  checkout and remains retained, bringing the closeout inventory to eight
+  worktrees without changing the frozen seven-worktree baseline.
 - Oracle remains a separate reference project. Its material candidates are
   recorded for future native AuraCall packets; none was implemented here.
 

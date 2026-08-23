@@ -73,6 +73,13 @@ worktree dirty only through its named source/test/doc write set.
 No process-use claim was made for the six non-root paths. Before any removal,
 recheck exact porcelain, branch/path ownership, and operator workflow use.
 
+After freezing that seven-worktree population, Plan 0308 created
+`/home/ecochran76/workspace.local/auracall-plan0308-main-catalog` as the clean
+`main` integration worktree so the default-branch catalog could be committed
+without changing feature-branch custody. It remains the current main checkout
+at closeout and is intentionally retained; removing even this plan-created
+worktree was not necessary for acceptance.
+
 ## Selector Family Adjudication
 
 The two selector branches were not merged. Their source commits `b27b0c99` and

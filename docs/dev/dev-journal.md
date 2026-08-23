@@ -47544,5 +47544,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   catalog custody to integrated and closed the plan accepted.
 - Preserved every old branch, remote ref, and non-root worktree. Their exact
   dispositions are documented, but no destructive cleanup was authorized.
+- Retained the plan-created clean main integration worktree and recorded it as
+  the eighth current worktree rather than silently removing it at closeout.
 - No Oracle-derived source, installed runtime, browser, provider, or tenant
   effect occurred.
