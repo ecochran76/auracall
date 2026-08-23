@@ -1,0 +1,18 @@
+schema_version: 1
+lanes:
+  - id: P01
+    objective: Reconcile AuraCall Git custody and review Oracle only as a separate reference project.
+    plan: docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md
+    plan_ref: refs/heads/chore/plan0308-repository-true-up
+    branch: chore/plan0308-repository-true-up
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 47d5e330c2fafc0f1906006fbb5fbba9181e3353
+    remote_ref: refs/remotes/origin/chore/plan0308-repository-true-up
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: source_green
+    validation_ref: 47d5e330c2fafc0f1906006fbb5fbba9181e3353
+    updated_at: 2026-08-23
