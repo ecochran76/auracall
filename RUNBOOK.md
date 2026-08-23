@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 497 | 2026-08-23
+
+- Operator authority opens Plan 0309 to plan and execute the material Oracle
+  reference findings as AuraCall-native adaptations. Oracle remains a separate
+  product and is not a synchronization target.
+- Fresh preflight proved clean `main == origin/main` at `03cae56c`, one
+  worktree, and no dirty overlap. The execution branch is
+  `feat/plan0309-oracle-adaptations`.
+- The bounded campaign owns eight proved candidate gaps plus source-backed
+  adjudication of cookie-sync and MCP output containment. It authorizes
+  provider-free source, tests, and documentation only; no install, restart,
+  browser launch, provider call, tenant mutation, or release is required.
+- Next: push the governing-plan checkpoint, publish exact branch custody in the
+  default-branch active-lane catalog, then test-drive strict duration parsing
+  and bounded OpenRouter cache behavior.
+
 ## Turn 496 | 2026-08-23
 
 - Operator authority activated Plan 0308's exact local cleanup packet. Fresh

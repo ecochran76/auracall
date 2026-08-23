@@ -47558,3 +47558,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   then restored the primary repository checkout to clean `main`.
 - Preserved every remote branch and retained the one local historical
   compatibility ref. No remote prune or deletion occurred.
+
+## 2026-08-23 - Plan 0309 Oracle-native adaptation start
+
+- Focus: execute the bounded, current-source gaps found during the deeper
+  Oracle `083bba7e` review without treating Oracle as an upstream convergence
+  target.
+- Preflight: clean `main == origin/main` at `03cae56c`, one worktree, and no
+  dirty overlap. Execution uses `feat/plan0309-oracle-adaptations`.
+- Scope: strict duration parsing, bounded OpenRouter catalog caching, atomic
+  owner-only session storage, bounded Answer Now placeholder recognition,
+  explicit headless behavior, WSL loopback normalization, unavailable thinking
+  tiers, and source-backed cookie/MCP-path adjudication.
+- Authority: provider-free source/tests/docs only. No install, restart, browser
+  launch, provider call, tenant mutation, release, or Oracle synchronization.
+- Next: publish the plan checkpoint and exact lane custody, then drive Phase 1
+  through focused RED/GREEN tests.
