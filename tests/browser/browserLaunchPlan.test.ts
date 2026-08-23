@@ -339,6 +339,7 @@ describe('resolveBrowserLaunchPlan', () => {
             target: 'chatgpt',
             chromeProfile: 'Default',
             chromeCookiePath: sourceCookiePath,
+            cookieSync: true,
             managedProfileRoot: managedRoot,
           },
         },
@@ -351,6 +352,39 @@ describe('resolveBrowserLaunchPlan', () => {
       expect(plan.sourceBrowserProfile).toMatchObject({
         name: 'Default',
         cookiePath: sourceCookiePath,
+      });
+    } finally {
+      await fs.rm(managedRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('does not expose a source browser profile for copying unless cookie sync is enabled', async () => {
+    const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-launch-plan-'));
+    try {
+      const sourceCookiePath = path.join(managedRoot, 'source', 'Default', 'Network', 'Cookies');
+      await fs.mkdir(path.dirname(sourceCookiePath), { recursive: true });
+      await fs.writeFile(sourceCookiePath, '');
+      const baseConfig = {
+        auracallProfileName: 'work',
+        target: 'chatgpt' as const,
+        chromeCookiePath: sourceCookiePath,
+        managedProfileRoot: managedRoot,
+      };
+
+      const defaultPlan = resolveBrowserLaunchPlan({
+        source: { kind: 'session-config', config: baseConfig },
+      });
+      const optedInPlan = resolveBrowserLaunchPlan({
+        source: { kind: 'session-config', config: { ...baseConfig, cookieSync: true } },
+      });
+
+      expect(defaultPlan.sourceBrowserProfile).toMatchObject({
+        cookiePath: null,
+        bootstrapCookiePath: null,
+      });
+      expect(optedInPlan.sourceBrowserProfile).toMatchObject({
+        cookiePath: sourceCookiePath,
+        bootstrapCookiePath: sourceCookiePath,
       });
     } finally {
       await fs.rm(managedRoot, { recursive: true, force: true });

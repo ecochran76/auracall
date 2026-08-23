@@ -41,6 +41,19 @@ describe('buildBrowserConfig', () => {
     expect(config.chatgptToolApproval).toBe('always-allow');
   });
 
+  test('requires an explicit opt-in to copy source browser profile cookies', async () => {
+    await expect(buildBrowserConfig({ model: 'gpt-5.2', browserCookieSync: true })).resolves.toMatchObject({
+      cookieSync: true,
+    });
+    await expect(
+      buildBrowserConfig({
+        model: 'gpt-5.2',
+        browserCookieSync: true,
+        browserNoCookieSync: true,
+      }),
+    ).rejects.toThrow(/cannot be combined/i);
+  });
+
   test('requires an explicit request to enter Work and keeps its model separate', async () => {
     const config = await buildBrowserConfig({
       model: 'gpt-5.2',

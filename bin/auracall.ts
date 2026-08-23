@@ -402,6 +402,7 @@ interface CliOptions extends OptionValues {
   browserTimeout?: string;
   browserInputTimeout?: string;
   browserCookieWait?: string;
+  browserCookieSync?: boolean;
   browserNoCookieSync?: boolean;
   browserInlineCookiesFile?: string;
   browserCookieNames?: string;
@@ -853,6 +854,12 @@ program
   )
   .addOption(
     new Option('--browser-inline-cookies-file <path>', 'Load inline cookies from file (JSON or base64 JSON).').hideHelp(),
+  )
+  .addOption(
+    new Option(
+      '--browser-cookie-sync',
+      'Copy cookies from a source browser profile (opt-in; token rotation may invalidate that source session).',
+    ),
   )
   .addOption(new Option('--browser-no-cookie-sync', 'Skip copying cookies from Chrome.').hideHelp())
   .addOption(
@@ -11458,6 +11465,7 @@ function printDebugHelp(cliName: string): void {
     ['--browser-timeout <ms|s|m>', 'Cap total wait time for the assistant response.'],
     ['--browser-input-timeout <ms|s|m>', 'Cap how long we wait for the composer textarea.'],
     ['--browser-cookie-wait <ms|s|m>', 'Wait before retrying cookie sync when Chrome cookies are empty or locked.'],
+    ['--browser-cookie-sync', 'Copy cookies from a source browser profile (explicit opt-in).'],
     ['--browser-no-cookie-sync', 'Skip copying cookies from your main profile.'],
     ['--browser-manual-login', 'Skip cookie copy; reuse a persistent automation profile and log in manually.'],
     ['--browser-headless', 'Launch Chrome in headless mode.'],

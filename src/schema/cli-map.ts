@@ -56,6 +56,7 @@ export const CLI_MAPPING: Record<string, string> = {
   'browserCookieNames': 'browser.cookieNames',
   'browserInlineCookies': 'browser.inlineCookies',
   'browserInlineCookiesFile': 'browser.inlineCookiesFile',
+  'browserCookieSync': 'browser.cookieSync',
   'browserNoCookieSync': 'browser.noCookieSync',
   'browserAllowCookieErrors': 'browser.allowCookieErrors',
   

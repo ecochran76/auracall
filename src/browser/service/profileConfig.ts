@@ -244,6 +244,9 @@ function applyBrowserProfileDefaults(
   if ((overrideExisting || browser.cookieNames === undefined) && profileBrowser.cookieNames !== undefined) {
     browser.cookieNames = profileBrowser.cookieNames;
   }
+  if ((overrideExisting || browser.cookieSync === undefined) && profileBrowser.cookieSync !== undefined) {
+    browser.cookieSync = profileBrowser.cookieSync;
+  }
   if ((overrideExisting || browser.inlineCookies === undefined) && profileBrowser.inlineCookies !== undefined) {
     browser.inlineCookies = profileBrowser.inlineCookies;
   }

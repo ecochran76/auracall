@@ -191,8 +191,7 @@ contracts while closing only gaps proved against current source.
 
 - State transition: `ready -> active -> phase-1-accepted -> phase-2-accepted ->
   phase-3-accepted`.
-- Acceptance state: `OA-R1` through `OA-R8` accepted; `OA-R9` and `OA-R10`
-  remain open.
+- Acceptance state: `OA-R1` through `OA-R9` accepted; `OA-R10` remains open.
 - Progress classification: `outcome_progress` through strict duration/cache
   bounds, atomic owner-only session storage, and four browser-semantics gaps.
 - Evidence: Phase 1 focused `25/25`; Phase 2 RED reproduced duplicate IDs and
@@ -201,6 +200,15 @@ contracts while closing only gaps proved against current source.
   lint, and diff hygiene pass. The attach-running clause is not applicable:
   AuraCall has local-launch and separate remote-Chrome paths, but no current
   attach-running option in browser config resolution.
+- Phase 4 source trace is recorded in
+  `docs/dev/notes/2026-08-23-plan0309-security-policy-adjudication.md`. Oracle's
+  MCP output containment is not applicable because no AuraCall MCP-controlled
+  path reaches a write sink. Cookie copying is implemented as opt-in because a
+  copied provider token can rotate in the managed browser and invalidate the
+  source session even though AuraCall never writes the source cookie database.
+  Phase 4 focused/affected validation passes `202/202`, typecheck, scoped
+  zero-warning Biome lint, current CodeGraph at 910 files / 17,163 nodes /
+  58,817 edges, and diff hygiene.
 - Material blockers: none for provider-free source execution.
-- Next action: commit and push Phase 3, then source-trace MCP output containment
-  and cookie bootstrap/sync ownership for `OA-R9`.
+- Next action: run Phase 5 broad provider-free validation, reconcile exact lane
+  custody, integrate, and close the plan.

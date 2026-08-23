@@ -47616,3 +47616,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Evidence: focused/affected `85/85`, typecheck, scoped zero-warning Biome
   lint, and diff hygiene pass. Next: commit/push Phase 3 and adjudicate MCP
   output containment plus cookie-sync ownership against current AuraCall.
+
+## 2026-08-23 - Plan 0309 Phase 4 security-policy adjudication
+
+- MCP output containment is not applicable to current AuraCall. The only MCP
+  destination-like field, `media_generation.outputDir`, has no write sink;
+  artifacts materialize under AuraCall-owned storage. The local CLI
+  write-output path is not MCP-controlled.
+- Cookie copying is now opt-in on every platform. Normal launch planning does
+  not expose the source browser profile unless cookie sync is positively
+  enabled; an explicit bootstrap path and interactive setup/login remain
+  affirmative bootstrap operations.
+- RED proved the previous default and implicit source exposure. Focused and
+  affected GREEN passes `202/202`, typecheck, scoped zero-warning Biome lint,
+  current CodeGraph, and diff hygiene. Next: broad provider-free validation
+  and integration.

@@ -32,8 +32,7 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.chatgptMode).toBe('chat');
     expect(resolved.chatgptToolApproval).toBe('manual');
     expect(resolved.workModel).toBeNull();
-    const isWindows = process.platform === 'win32';
-    expect(resolved.cookieSync).toBe(!isWindows);
+    expect(resolved.cookieSync).toBe(false);
     expect(resolved.headless).toBe(false);
     expect(resolved.manualLogin).toBe(true);
     expect(resolved.manualLoginProfileDir).toMatch(/browser-profiles\/default\/chatgpt$/);

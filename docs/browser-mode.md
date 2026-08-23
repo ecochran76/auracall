@@ -120,7 +120,8 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
   - Linux/macOS: `ps -ax | rg \"chrome.*remote-debugging-port\"` or `tr \"\\0\" \" \" < /proc/<pid>/cmdline | rg remote-debugging-port` to discover the active port.
   - Windows: `wmic process where \"name='chrome.exe'\" get ProcessId,CommandLine` or `Get-CimInstance Win32_Process -Filter \"Name = 'chrome.exe'\" | Select-Object ProcessId,CommandLine` to find the port flag.
 - `--browser-blocking-profile <fail|restart|restart-managed>`: choose what happens if Chrome is already running with the target profile but DevTools is not enabled. `restart-managed` (default) only restarts Aura-Call-managed profiles. (`restart-auracall` remains a supported alias.)
-- `--browser-no-cookie-sync`, `--browser-manual-login` (persistent automation profile + user-driven login), `--browser-headless`, `--browser-hide-window`, `--browser-keep-browser`, and the global `-v/--verbose` flag for detailed automation logs. An explicit `--browser-headless` is honored for a locally launched browser; visible/headful remains the safer default when human verification may be required. For `--remote-chrome`, AuraCall does not launch the browser, so local launch flags remain ignored as documented below.
+- `--browser-cookie-sync` explicitly copies cookies from a source browser profile into the managed browser profile. Copying is off by default because provider token rotation in the managed browser can invalidate the source browser session. Prefer signing in once in the managed browser profile or supply `--browser-bootstrap-cookie-path` when that one-time copy is intentional. `--browser-no-cookie-sync` remains a compatibility override for stored configurations that enable copying.
+- `--browser-manual-login` (persistent automation profile + user-driven login), `--browser-headless`, `--browser-hide-window`, `--browser-keep-browser`, and the global `-v/--verbose` flag provide launch controls and diagnostics. An explicit `--browser-headless` is honored for a locally launched browser; visible/headful remains the safer default when human verification may be required. For `--remote-chrome`, AuraCall does not launch the browser, so local launch flags remain ignored as documented below.
 - `--browser-url`: override ChatGPT base URL if needed.
 - `--browser-attachments <auto|never|always>`: control how `--file` inputs are delivered in browser mode. Default `auto` pastes file contents inline up to ~60k characters and switches to uploads above that.
 - `--browser-inline-files`: alias for `--browser-attachments never` (forces inline paste; never uploads attachments).
@@ -128,7 +129,11 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--force`: bypass the duplicate prompt guard if an identical prompt is already running. This does not control conversation reuse (a separate policy will handle reuse vs new conversation).
 - sqlite bindings: automatic rebuilds now require `AURACALL_ALLOW_SQLITE_REBUILD=1`. Without it, the CLI logs instructions instead of running `pnpm rebuild` on your behalf.
 - `--model`: the same flag used for API runs is accepted. ChatGPT automation supports **GPT-5.2** variants (Auto/Thinking/Instant/Pro): use `gpt-5.2`, `gpt-5.2-thinking`, `gpt-5.2-instant`, or `gpt-5.2-pro`. Grok automation defaults to `grok-4.20` / `grok` and still accepts explicit legacy `grok-4.1` values through the Grok model picker. Other GPT families still require API mode.
-- Cookie sync is mandatory—if we can’t copy cookies from Chrome, the run exits early. Use the hidden `--browser-allow-cookie-errors` flag only when you’re intentionally running logged out (it skips the early exit but still warns).
+- Source browser profile cookie copying is opt-in. When enabled with
+  `--browser-cookie-sync`, failure to copy still fails closed unless the hidden
+  `--browser-allow-cookie-errors` escape hatch is intentionally supplied.
+  Existing cookies in the managed browser profile are reused without reading
+  or modifying the source browser profile.
 - Experimental cookie controls (hidden flags/env):
   - `--browser-cookie-names <comma-list>` or `AURACALL_BROWSER_COOKIE_NAMES`: allowlist which cookies to sync. Useful for “only NextAuth/Cloudflare, drop the rest.”
   - `--browser-cookie-wait <ms|s|m>`: if cookie sync fails or returns no cookies, wait once and retry (helps when macOS Keychain prompts are slow).

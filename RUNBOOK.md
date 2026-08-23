@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 501 | 2026-08-23
+
+- Plan 0309 Phase 4 classifies Oracle MCP output containment as not applicable:
+  AuraCall's MCP `media_generation.outputDir` is accepted but inert, and no
+  MCP-controlled path reaches a filesystem write. Local CLI write-output is a
+  separate operator surface.
+- Cookie copying required an AuraCall-native adaptation. It now defaults off on
+  every platform; `--browser-cookie-sync`, `browser.cookieSync=true`, or an
+  explicit bootstrap path supplies affirmative intent. Existing managed
+  browser profile state remains reusable without reading the source profile.
+- RED proved the prior default and source exposure; focused/affected GREEN is
+  `202/202` plus typecheck, scoped zero-warning Biome lint, current CodeGraph,
+  and diff hygiene. No browser/provider effect occurred.
+
 ## Turn 500 | 2026-08-23
 
 - Plan 0309 Phase 3 adapts four narrow Oracle reliability lessons to current

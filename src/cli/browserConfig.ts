@@ -38,6 +38,7 @@ export interface BrowserFlagOptions {
   browserTimeout?: string;
   browserInputTimeout?: string;
   browserCookieWait?: string;
+  browserCookieSync?: boolean;
   browserNoCookieSync?: boolean;
   browserInlineCookiesFile?: string;
   browserCookieNames?: string;
@@ -94,6 +95,9 @@ export function normalizeChatGptModelForBrowser(model: ModelName): ModelName {
 }
 
 export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<BrowserSessionConfig> {
+  if (options.browserCookieSync && options.browserNoCookieSync) {
+    throw new Error('--browser-cookie-sync cannot be combined with --browser-no-cookie-sync.');
+  }
   const servicesRegistry = await ensureServicesRegistry();
   const desiredModelOverride = options.browserModelLabel?.trim();
   const normalizedOverride = desiredModelOverride?.toLowerCase() ?? '';
@@ -191,7 +195,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
       ? parseDuration(options.browserInputTimeout, DEFAULT_BROWSER_INPUT_TIMEOUT_MS)
       : undefined,
     cookieSyncWaitMs: options.browserCookieWait ? parseDuration(options.browserCookieWait, 0) : undefined,
-    cookieSync: options.browserNoCookieSync ? false : undefined,
+    cookieSync: options.browserNoCookieSync ? false : options.browserCookieSync ? true : undefined,
     cookieNames,
     inlineCookies: inline?.cookies,
     inlineCookiesSource: inline?.source ?? null,

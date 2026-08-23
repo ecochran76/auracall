@@ -16,7 +16,11 @@ Terminology for this runbook:
   `AURACALL_BROWSER_REMOTE_DEBUG_HOST` remains authoritative and is not
   rewritten.
 - AuraCall now defaults browser `DISPLAY` to `:0.0` on WSL unless you set `browser.display`, `AURACALL_BROWSER_DISPLAY`, or explicitly target Windows-hosted Chrome.
-- Aura-Call now uses a managed persistent profile under `~/.auracall/browser-profiles/<auracallProfile>/<service>` and bootstraps it from your existing Chrome profile on first use, so you only sign in once.
+- Aura-Call uses a managed persistent profile under
+  `~/.auracall/browser-profiles/<auracallProfile>/<service>`. Sign in once in
+  that managed browser profile. Copying a source browser profile is opt-in via
+  setup/bootstrap controls or `--browser-cookie-sync`, because provider token
+  rotation in the managed profile can invalidate the source browser session.
 - Aura-Call uses `--password-store=basic` and `--use-mock-keychain` for WSL
   Chrome managed-browser launches, including visible auth-mode launches, so
   managed browser profiles do not block behind a Linux desktop keyring prompt.

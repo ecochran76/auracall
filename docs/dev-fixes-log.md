@@ -21895,3 +21895,16 @@ browser-stage lifecycle observability, not transcript truncation.
 - On WSL, a resolver-derived `127.x` nameserver is local to the WSL network
   namespace and should route to `127.0.0.1`; never rewrite an explicit operator
   host override or a genuine non-loopback resolver address.
+
+## 2026-08-23 | Copying a credential is still a source-session effect
+
+- A managed browser can rotate copied provider tokens and invalidate the
+  interactive source session even when automation never writes the source
+  cookie database. Make source browser profile cookie copying a positive
+  operator opt-in; reuse managed browser profile state by default.
+- Treat an explicit bootstrap path or interactive setup choice as affirmative
+  one-time bootstrap intent. Do not silently derive that intent from an
+  auto-discovered source cookie path.
+- Before porting an upstream path-containment patch, prove that caller input
+  reaches a write sink. A validated but unused `outputDir` field has contract
+  debt, but no symlink escape until a writer consumes it.
