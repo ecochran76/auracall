@@ -17,9 +17,12 @@ Lane: P01
   plan first restores the missing active-lane catalog and adjudicates exact
   custody. A separate reference review may identify narrow cherry-pick
   candidates or ideas worth adapting through AuraCall's own architecture.
-  Cleanup and implementation remain separately gated actions. Execution is
-  active on `chore/plan0308-repository-true-up`; the first checkpoint preserves
-  the plan before catalog or custody changes.
+  Cleanup and Oracle-derived implementation remain separately gated actions.
+  Execution on `chore/plan0308-repository-true-up` has now published the full
+  custody/Oracle receipt, mapped the runtime-foundation commits, and resolved
+  the selector family by porting only the missing compact model-control
+  semantics. Focused validation passes `27/27`; catalog publication and final
+  integration remain.
 
 - Completed installed ChatGPT Work-marker semantic repair:
   [docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)

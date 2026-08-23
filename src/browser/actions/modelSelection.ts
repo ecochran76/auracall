@@ -75,6 +75,7 @@ type ModelOptionKind = 'instant' | 'thinking' | 'pro' | 'sol' | 'terra' | 'luna'
 
 type ModelPickerNavigationItem = {
   text: string;
+  ariaLabel?: string | null;
   role: string | null;
   expanded: string | null;
 };
@@ -93,10 +94,24 @@ function chooseModelPickerNavigationAction(
       .replace(/[^a-z0-9]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  const labels = (item: ModelPickerNavigationItem) =>
+    [item.text, item.ariaLabel ?? ''].map(normalize).filter(Boolean);
+  const isAdvancedControl = (item: ModelPickerNavigationItem) =>
+    labels(item).some(
+      (label) => label === 'advanced' || label.startsWith('show advanced options'),
+    );
+  const isModelControl = (item: ModelPickerNavigationItem) =>
+    labels(item).some(
+      (label) =>
+        label === 'model' ||
+        label.startsWith('model ') ||
+        label.startsWith('modelgpt ') ||
+        label.startsWith('modelchatgpt '),
+    );
   const advancedIndex = items.findIndex(
     (item) =>
       item.role === 'menuitem' &&
-      normalize(item.text).startsWith('show advanced options') &&
+      isAdvancedControl(item) &&
       item.expanded !== 'true',
   );
   if (advancedIndex >= 0) {
@@ -105,7 +120,7 @@ function chooseModelPickerNavigationAction(
   const modelIndex = items.findIndex(
     (item) =>
       item.role === 'menuitem' &&
-      normalize(item.text).startsWith('model ') &&
+      isModelControl(item) &&
       item.expanded !== 'true',
   );
   return modelIndex >= 0 ? { kind: 'open-model', index: modelIndex } : null;
@@ -440,19 +455,31 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
     };
     const findNavigationAction = () => {
       const nodes = collectOptionNodes();
+      const labelsForNode = (node) => [
+        normalizeText(node.textContent ?? ''),
+        normalizeText(node.getAttribute?.('aria-label') ?? ''),
+      ].filter(Boolean);
+      const isAdvancedControl = (node) => labelsForNode(node).some(
+        (label) => label === 'advanced' || label.startsWith('show advanced options')
+      );
+      const isModelControl = (node) => labelsForNode(node).some(
+        (label) =>
+          label === 'model' ||
+          label.startsWith('model ') ||
+          label.startsWith('modelgpt ') ||
+          label.startsWith('modelchatgpt ')
+      );
       const advancedIndex = nodes.findIndex((node) => {
-        const text = normalizeText([node.textContent ?? '', node.getAttribute?.('aria-label') ?? ''].join(' '));
         return node.getAttribute?.('role') === 'menuitem' &&
-          text.startsWith('show advanced options') &&
+          isAdvancedControl(node) &&
           node.getAttribute('aria-expanded') !== 'true';
       });
       if (advancedIndex >= 0) {
         return { kind: 'open-advanced', node: nodes[advancedIndex] };
       }
       const modelIndex = nodes.findIndex((node) => {
-        const text = normalizeText([node.textContent ?? '', node.getAttribute?.('aria-label') ?? ''].join(' '));
         return node.getAttribute?.('role') === 'menuitem' &&
-          text.startsWith('model ') &&
+          isModelControl(node) &&
           node.getAttribute('aria-expanded') !== 'true';
       });
       return modelIndex >= 0 ? { kind: 'open-model', node: nodes[modelIndex] } : null;

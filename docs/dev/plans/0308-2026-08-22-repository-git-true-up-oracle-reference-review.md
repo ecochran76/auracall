@@ -3,7 +3,10 @@
 State: OPEN
 Lane: P01
 Operational state: EXECUTION ACTIVE / PHASE 0 CHECKPOINT
-Revision: 3 | 2026-08-23
+Branch: chore/plan0308-repository-true-up
+Target: main
+Integration: merge
+Revision: 4 | 2026-08-23
 
 ## Stable Objective
 
@@ -60,6 +63,26 @@ The audit establishes this evidence baseline and one governance gap.
   `517 Oracle-only / 1,784 AuraCall-only`. The dedicated branch is
   `chore/plan0308-repository-true-up`; the initial planning checkpoint precedes
   catalog publication, branch adjudication, or cleanup.
+- The custody receipt at
+  `docs/dev/notes/2026-08-23-plan0308-git-custody-and-oracle-reference-review.md`
+  now classifies all 19 current local branches, all seven worktrees, and all 13
+  remote-only origin refs without deleting any custody.
+- Selector-family adjudication found the two old product commits functionally
+  duplicate. Main's later `7bca2532` supersedes their thinking-time half; the
+  compact model-control half remained absent and is ported natively on this
+  branch with focused `27/27` validation.
+- Stable patch IDs map all three `runtime-service-foundation` commits to
+  represented mainline commits, making that branch an evidence-backed archival
+  candidate.
+- The bounded Oracle review records four material AuraCall-native adaptation
+  candidates and no compatible direct cherry-pick. No Oracle-derived source
+  change is part of this plan.
+- Source validation passes: adjacent browser tests `78 passed / 1 skipped`,
+  typecheck, changed-file zero-warning lint, build, and plan audit. The full
+  provider-free run reached `2,966 passed / 11 skipped` with one unrelated
+  background-drain timing failure; its exact `responsesServer` file rerun then
+  passed `217/217`. Full lint exits zero at the established 208-warning
+  baseline, with no new warning in the changed source/test files.
 
 ## Planning Metadata
 

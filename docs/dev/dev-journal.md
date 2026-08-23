@@ -47516,3 +47516,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   precedes catalog publication, branch adjudication, or cleanup.
 - Next: commit and push the recoverable planning checkpoint, then freeze the
   exact branch/worktree custody ledger and create the active-lane catalog.
+
+## 2026-08-23 - Plan 0308 custody and reference adjudication
+
+- Published the closed-world reconciliation receipt for all current local
+  branches, linked worktrees, and remote-only origin refs. Cleanup candidates
+  remain intact because deletion authority is action-specific.
+- Compared both advanced-effort selector branches. Their functional commits
+  duplicate one another; current main supersedes the thinking-time portion but
+  lacked compact and aria-label-backed model controls. The minimal native port
+  passes the focused model-selection/thinking-time gate at 27/27.
+- Mapped the three non-ancestral runtime-foundation commits to exact mainline
+  patch equivalents. The Oracle reference review produced native adaptation
+  candidates rather than cherry-picks and caused no Oracle-derived code change.
+- Next: complete provider-free validation, push the coherent feature
+  checkpoint, publish the active-lane catalog on main, audit it, and integrate.
+- Validation passes adjacent 78/78 with one skipped, typecheck, changed-file
+  lint, build, and plan audit. One unrelated full-suite background-drain timing
+  assertion failed after 2,966 passes, then its exact 217-test file passed on
+  rerun. Full lint exits zero with the existing 208-warning baseline.

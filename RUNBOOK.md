@@ -1,5 +1,27 @@
 # RUNBOOK
 
+## Turn 494 | 2026-08-23
+
+- Plan 0308 now has an exact custody receipt for all 19 local branches, seven
+  worktrees, and 13 origin-only refs. No ref or worktree was deleted.
+- The competing selector branches contain the same functional patch. Current
+  main already supersedes their compact thinking-time behavior; this branch
+  ports only the missing compact/aria-label model-control behavior. Focused
+  model-selection and thinking-time validation passes 27/27.
+- All three `runtime-service-foundation` commits map by stable patch ID to
+  current main history. The bounded Oracle `083bba7e` review found no safe
+  direct cherry-pick and records native adaptation candidates for session-file
+  permissions, explicit headless handling, bounded `Answer now` extraction,
+  and unavailable effort tiers.
+- Next: run the proportional provider-free gates, publish the branch
+  checkpoint, publish and audit the active-lane catalog from main, then merge
+  and prove final `main == origin/main`.
+- Validation now passes adjacent `78/78` with one skipped, typecheck,
+  changed-file zero-warning lint, build, and plan audit. The full provider-free
+  run had one unrelated timing failure after 2,966 passes; the exact
+  `responsesServer` file rerun passed 217/217. Full lint retains its pre-existing
+  208-warning baseline and exits zero.
+
 ## Turn 493 | 2026-08-23
 
 - Plan 0308 execution opened after fresh no-tag fetches. `main` remains exact
