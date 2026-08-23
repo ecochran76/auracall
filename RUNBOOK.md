@@ -1,5 +1,53 @@
 # RUNBOOK
 
+## Turn 493 | 2026-08-23
+
+- Plan 0308 execution opened after fresh no-tag fetches. `main` remains exact
+  with `origin/main` at `68da5063` and divergence `0/0`; the Oracle reference
+  snapshot remains `083bba7e` with `517 Oracle-only / 1,784 AuraCall-only`.
+- The dedicated execution branch is
+  `chore/plan0308-repository-true-up`. The first recoverable checkpoint contains
+  only the governing plan, roadmap, runbook, and journal state.
+- No active-lane catalog, branch disposition, worktree removal, ref deletion,
+  Oracle-derived implementation, installed-runtime change, or provider effect
+  has occurred yet.
+
+## Turn 492 | 2026-08-23
+
+- Operator clarification supersedes the synchronization framing in Plan 0308:
+  Oracle and AuraCall now serve entirely different purposes. The Git remote
+  remains named `upstream`, but Oracle divergence is not AuraCall drift or a
+  true-up completion gate.
+- Plan 0308 revision 2 preserves the Git branch/worktree custody true-up and
+  recasts Oracle as a non-authoritative research source. A bounded review may
+  identify narrow fixes worth cherry-picking or ideas worth implementing
+  natively in AuraCall; it does not require exhaustive classification or
+  integration of Oracle's 517 commits.
+- The legacy upstream-sync plan remains historical evidence only. No Git ref,
+  worktree, source, installed runtime, or provider state changed in this
+  documentation correction.
+
+## Turn 491 | 2026-08-22
+
+- Fresh no-tag fetches from `origin` and `upstream` completed. Local `main` and
+  `origin/main` are exact at `68da5063`; public `upstream/main` is `083bba7e`
+  with 517 upstream-only and 1,784 downstream-only commits from common base
+  `2408811f`.
+- Git census found 18 local branches and seven linked worktrees. All worktrees
+  are clean. Four linked topic branches are merged into `main`; two linked
+  selector branches retain patch-unique commits. The third non-ancestral local
+  branch, `runtime-service-foundation`, is patch-equivalent to work represented
+  on `main`.
+- The active planning audit passes with its seven exact accepted baseline
+  findings. The active-lane audit fails because the adopted catalog
+  `docs/dev/active-lanes.yaml` is absent from `origin/main`.
+- [Plan 0308](docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md)
+  records a bounded true-up: freeze the custody ledger, publish and validate
+  the active-lane catalog, adjudicate competing selector work, gate exact
+  cleanup, and classify the frozen upstream delta by topic. No branch,
+  worktree, remote ref, source, installed runtime, or provider state was
+  changed during this audit.
+
 ## Turn 490 | 2026-08-21
 
 - After Plan 0307 closed accepted, `origin/main` was an exact ancestor of the
