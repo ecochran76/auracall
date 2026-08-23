@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 495 | 2026-08-23
+
+- Published the missing default-branch active-lane catalog at `14104c21`. Its
+  catalog-only audit passed against clean, pushed feature checkpoint
+  `47d5e330` with exact local/remote equality and assigned worktree custody.
+- Merged the validated Plan 0308 branch into main without conflict through
+  `bdb15952`. Final catalog state is `INTEGRATED`; the plan closes accepted.
+- No branch, remote ref, or non-root worktree was deleted. Every item has an
+  explicit retained, archival, or cleanup-candidate disposition, and deletion
+  still requires exact operator authority.
+- Oracle remains a separate reference project. Its material candidates are
+  recorded for future native AuraCall packets; none was implemented here.
+
 ## Turn 494 | 2026-08-23
 
 - Plan 0308 now has an exact custody receipt for all 19 local branches, seven

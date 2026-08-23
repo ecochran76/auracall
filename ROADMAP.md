@@ -7,7 +7,7 @@
 Status: active
 Lane: P01
 
-- Active repository Git true-up and Oracle reference review:
+- Completed repository Git true-up and Oracle reference review:
   [docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md](docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md)
   Fresh fetches of `origin` and the Oracle-reference remote prove clean
   `main == origin/main`, seven clean linked worktrees, 14 merged topic branches,
@@ -21,8 +21,10 @@ Lane: P01
   Execution on `chore/plan0308-repository-true-up` has now published the full
   custody/Oracle receipt, mapped the runtime-foundation commits, and resolved
   the selector family by porting only the missing compact model-control
-  semantics. Focused validation passes `27/27`; catalog publication and final
-  integration remain.
+  semantics. The catalog passed at `14104c21`, and validated feature checkpoint
+  `47d5e330` merged without conflict through `bdb15952`. All old refs and
+  worktrees remain recoverable cleanup candidates pending exact deletion
+  authority; Oracle-derived ideas remain separate future packets.
 
 - Completed installed ChatGPT Work-marker semantic repair:
   [docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)

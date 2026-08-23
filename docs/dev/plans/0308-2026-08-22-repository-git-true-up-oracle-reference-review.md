@@ -1,12 +1,12 @@
 # Repository Git True-Up And Oracle Reference Review | 0308-2026-08-22
 
-State: OPEN
+State: CLOSED
 Lane: P01
-Operational state: EXECUTION ACTIVE / PHASE 0 CHECKPOINT
+Operational state: ACCEPTED / INTEGRATED
 Branch: chore/plan0308-repository-true-up
 Target: main
 Integration: merge
-Revision: 4 | 2026-08-23
+Revision: 5 | 2026-08-23
 
 ## Stable Objective
 
@@ -272,3 +272,29 @@ no orphaned custody; Oracle is documented as a separate, non-authoritative
 research source with only material candidates recorded; any accepted
 cherry-pick or native adaptation is green and integrated; and fresh final
 evidence proves local `main` exactly equals `origin/main`.
+
+## Closeout
+
+Plan 0308 is accepted on 2026-08-23.
+
+- `TU-R1` and `TU-R2`: fresh no-tag fetches froze the exact baseline and all
+  seven original worktrees were clean. Plan-owned edits remained on the named
+  execution branch and were checkpointed before integration.
+- `TU-R3`: `docs/dev/active-lanes.yaml` was first published independently on
+  main at `14104c21`; its catalog-only audit passed against the exact clean,
+  pushed execution checkpoint. Final custody is `INTEGRATED`.
+- `TU-R4` through `TU-R6`: the reconciliation receipt gives every local branch
+  and worktree a retained or cleanup disposition, resolves both selector refs
+  semantically, and maps all three runtime-foundation commits to exact mainline
+  patch equivalents.
+- `TU-R7` and `TU-R8`: the bounded Oracle review at `083bba7e` records four
+  AuraCall-native adaptation candidates and no direct cherry-pick. No
+  Oracle-derived implementation, installed effect, or provider effect occurred.
+- The compact model-control port passes adjacent `78 passed / 1 skipped`,
+  typecheck, changed-file zero-warning lint, build, and plan audit. The full
+  provider-free run had one unrelated timing failure after `2,966` passes; the
+  exact failing file passed `217/217` on rerun. Full lint exits zero with the
+  established 208-warning baseline.
+- Validated feature checkpoint `47d5e330` merged without conflict through
+  `bdb15952`. Refs and non-root worktrees remain recoverable; cleanup was not
+  authorized and is not required to prove their disposition.
