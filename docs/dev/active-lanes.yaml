@@ -18,3 +18,20 @@ lanes:
     integration_receipt: bdb15952d16bf1e76d017bd45c402a98989def35
     disposition: Integrated into main; authorized local branch and worktree cleanup completed, with remote refs deliberately retained.
     updated_at: 2026-08-23
+  - id: P02
+    objective: Adapt proved Oracle reliability lessons natively into AuraCall without synchronizing product direction.
+    plan: docs/dev/plans/0309-2026-08-23-oracle-native-reliability-adaptations.md
+    plan_ref: refs/remotes/origin/feat/plan0309-oracle-adaptations
+    branch: feat/plan0309-oracle-adaptations
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: a5bf5a546de1bb850ec12f5b75dc720ea19b338b
+    remote_ref: refs/remotes/origin/feat/plan0309-oracle-adaptations
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: pending
+    validation_ref: a5bf5a546de1bb850ec12f5b75dc720ea19b338b
+    disposition: Provider-free execution active; Oracle is research provenance only and no direct synchronization is planned.
+    updated_at: 2026-08-23
