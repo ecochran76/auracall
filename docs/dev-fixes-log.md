@@ -21846,3 +21846,17 @@ browser-stage lifecycle observability, not transcript truncation.
 - Preserve the old refs until cleanup is explicitly authorized. A successful
   semantic port establishes an archival disposition; it does not itself grant
   branch or worktree deletion authority.
+
+## 2026-08-23 | Duration tokens and credential-indexed caches need explicit bounds
+
+- A global duration regex can skip arbitrary text between otherwise valid
+  tokens. Require each match to begin exactly where the previous match ended;
+  checking only the final regex index does not reject prefixes or internal
+  gaps.
+- TTL alone does not bound a map when each credential creates a distinct cache
+  key. Remove expired entries and enforce a deterministic maximum population
+  after insertion so short-lived or rotated API keys cannot accumulate for the
+  life of the process.
+- Regress both boundaries directly: malformed token gaps must return the
+  caller's fallback, and inserting key 21 into a 20-entry cache must evict the
+  oldest key.

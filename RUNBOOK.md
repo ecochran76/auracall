@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 498 | 2026-08-23
+
+- Plan 0309 Phase 1 failed RED on `abc5s`, `10junk5s`, `1h!30m`, and the
+  21-key OpenRouter cache boundary. The native repair now requires contiguous
+  duration tokens and prunes stale/oldest catalog entries to a 20-entry cap.
+- Focused `25/25`, typecheck, touched-file zero-warning lint, current CodeGraph
+  at 909 files / 17,143 nodes / 58,715 edges, and diff hygiene pass.
+- `OA-R1` and `OA-R2` are accepted. No network, browser, provider, installed
+  runtime, or tenant effect occurred.
+- Next: commit and push the coherent Phase 1 packet, then drive atomic
+  owner-only session storage through parallel-creation and POSIX-mode tests.
+
 ## Turn 497 | 2026-08-23
 
 - Operator authority opens Plan 0309 to plan and execute the material Oracle

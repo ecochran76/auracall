@@ -16,8 +16,8 @@ describe('parseDuration', () => {
     expect(parseDuration(input, fallback)).toBe(expected);
   });
 
-  test('falls back for invalid input', () => {
-    expect(parseDuration('oops', 987)).toBe(987);
+  test.each(['oops', 'abc5s', '10junk5s', '1h!30m', '5s-tail'])('falls back for invalid input %s', (input) => {
+    expect(parseDuration(input, 987)).toBe(987);
   });
 });
 

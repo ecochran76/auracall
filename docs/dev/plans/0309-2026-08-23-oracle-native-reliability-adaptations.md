@@ -186,12 +186,15 @@ contracts while closing only gaps proved against current source.
 
 ## Current Execution Record
 
-- State transition: `ready -> active`.
-- Acceptance state: all `OA-R1` through `OA-R10` open.
-- Progress classification: `outcome_progress` through a frozen candidate set,
-  branch, write surfaces, acceptance criteria, and validation contract.
-- Evidence: clean origin-equal base `03cae56c`; Oracle snapshot `083bba7e`;
-  current-source review recorded in the preceding inspection.
+- State transition: `ready -> active -> phase-1-accepted`.
+- Acceptance state: `OA-R1` and `OA-R2` accepted; `OA-R3` through `OA-R10`
+  remain open.
+- Progress classification: `outcome_progress` through strict token-contiguous
+  duration parsing and deterministic TTL/20-entry OpenRouter cache bounds.
+- Evidence: RED reproduced three skipped-junk duration cases and the 21-key
+  cache overflow; GREEN passes focused `25/25`, typecheck, touched-file
+  zero-warning lint, current CodeGraph at 909 files / 17,143 nodes / 58,715
+  edges, and diff hygiene.
 - Material blockers: none for provider-free source execution.
-- Next action: publish this plan checkpoint and default-branch lane custody,
-  then test-drive Phase 1.
+- Next action: commit and push Phase 1, then test-drive atomic owner-only
+  session storage.

@@ -47574,3 +47574,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   launch, provider call, tenant mutation, release, or Oracle synchronization.
 - Next: publish the plan checkpoint and exact lane custody, then drive Phase 1
   through focused RED/GREEN tests.
+
+## 2026-08-23 - Plan 0309 Phase 1 parser and cache acceptance
+
+- RED: malformed compound durations with a valid trailing token were accepted,
+  and a 21st API-key-indexed OpenRouter catalog entry remained retained.
+- Repair: require every duration match to start at the prior match boundary;
+  prune expired catalog entries and enforce a deterministic 20-entry oldest-
+  first bound. The exported reset seam keeps cache tests isolated.
+- Evidence: focused `25/25`, typecheck, touched-file zero-warning lint, current
+  CodeGraph at 909 files / 17,143 nodes / 58,715 edges, and diff hygiene pass.
+- Next: commit/push Phase 1 and begin atomic owner-only session storage.

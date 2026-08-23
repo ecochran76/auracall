@@ -1,7 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
-import { resolveModelConfig, safeModelSlug, isOpenRouterBaseUrl } from '../src/oracle/modelResolver.js';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import {
+  resetOpenRouterCatalogCacheForTests,
+  resolveModelConfig,
+  safeModelSlug,
+  isOpenRouterBaseUrl,
+} from '../src/oracle/modelResolver.js';
 
 describe('OpenRouter helpers', () => {
+  afterEach(() => {
+    resetOpenRouterCatalogCacheForTests();
+    vi.useRealTimers();
+  });
+
   it('slugifies model ids with slashes', () => {
     expect(safeModelSlug('minimax/minimax-m2')).toBe('minimax__minimax-m2');
   });
@@ -63,5 +73,42 @@ describe('OpenRouter helpers', () => {
     const grokId = grok.apiModel ?? grok.model;
     expect(grokId.includes('/')).toBe(false);
     expect(grokId.startsWith('grok-4')).toBe(true);
+  });
+
+  it('expires stale OpenRouter catalog entries', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [] }),
+    }) as unknown as typeof fetch;
+
+    await resolveModelConfig('vendor/model', { openRouterApiKey: 'ttl-key', fetcher });
+    await resolveModelConfig('vendor/model', { openRouterApiKey: 'ttl-key', fetcher });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await resolveModelConfig('vendor/model', { openRouterApiKey: 'ttl-key', fetcher });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('bounds the OpenRouter catalog cache to twenty API keys', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [] }),
+    }) as unknown as typeof fetch;
+
+    for (let index = 0; index < 21; index += 1) {
+      await resolveModelConfig('vendor/model', { openRouterApiKey: `bounded-key-${index}`, fetcher });
+      await vi.advanceTimersByTimeAsync(1);
+    }
+    expect(fetcher).toHaveBeenCalledTimes(21);
+
+    await resolveModelConfig('vendor/model', { openRouterApiKey: 'bounded-key-0', fetcher });
+    expect(fetcher).toHaveBeenCalledTimes(22);
   });
 });
