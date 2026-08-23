@@ -157,3 +157,28 @@ This receipt makes cleanup safe to propose, not authorized to execute. Exact
 branch deletions, remote deletions, and worktree removals require a subsequent
 operator instruction naming the targets. Until then, the refs and paths above
 remain recoverable custody.
+
+## Authorized Local Cleanup Receipt | 2026-08-23
+
+The operator subsequently authorized the recommended exact integrated local
+cleanup packet. A fresh preflight proved `main == origin/main`, every target
+worktree clean, no process working directory beneath any target path, merged
+ancestry for normal branches, and the recorded semantic/patch-equivalence
+adjudication for the three non-ancestral branches.
+
+- Removed the six pre-existing non-primary linked worktrees listed above and
+  the plan-created `auracall-plan0308-main-catalog` integration worktree.
+- Returned `/home/ecochran76/workspace.local/auracall` to `main`.
+- Deleted the 17 local branches classified as cleanup or archival candidates:
+  `chore/host-stranded-recovery`, `chore/plan0308-repository-true-up`, both
+  advanced-effort selector branches, `fix/chatgpt-app-refresh`,
+  `fix/chatgpt-app-test-current-model`, Plans 0294 through 0297, Plans 0299
+  through 0302, `runtime-service-foundation`, `runtime-service-mainline`, and
+  `runtime/responses-host-seam`.
+- Retained `sync/upstream-browser-reliability` as the documented historical
+  compatibility ref. Retained every remote branch; no remote deletion or prune
+  was in scope.
+
+Post-action inventory is one clean `main` worktree and two local branches:
+`main` plus the retained compatibility ref. The active-lane catalog now points
+its closed plan reference at retained remote custody.

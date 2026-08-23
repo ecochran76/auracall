@@ -298,3 +298,7 @@ Plan 0308 is accepted on 2026-08-23.
 - Validated feature checkpoint `47d5e330` merged without conflict through
   `bdb15952`. Refs and non-root worktrees remain recoverable; cleanup was not
   authorized and is not required to prove their disposition.
+- Subsequent exact operator authority permitted the recorded local cleanup
+  packet. Seven auxiliary worktrees and 17 local cleanup/archival branches were
+  removed after fresh clean/custody/process-use checks. Remote refs and the
+  historical `sync/upstream-browser-reliability` local ref remain intact.

@@ -3,7 +3,7 @@ lanes:
   - id: P01
     objective: Reconcile AuraCall Git custody and review Oracle only as a separate reference project.
     plan: docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md
-    plan_ref: refs/heads/chore/plan0308-repository-true-up
+    plan_ref: refs/remotes/origin/chore/plan0308-repository-true-up
     branch: chore/plan0308-repository-true-up
     target: main
     plan_state: CLOSED
@@ -16,5 +16,5 @@ lanes:
     validation_status: passed
     validation_ref: 47d5e330c2fafc0f1906006fbb5fbba9181e3353
     integration_receipt: bdb15952d16bf1e76d017bd45c402a98989def35
-    disposition: Integrated into main; retained refs and worktrees are cleanup candidates pending exact operator authority.
+    disposition: Integrated into main; authorized local branch and worktree cleanup completed, with remote refs deliberately retained.
     updated_at: 2026-08-23

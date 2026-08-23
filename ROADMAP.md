@@ -22,9 +22,10 @@ Lane: P01
   custody/Oracle receipt, mapped the runtime-foundation commits, and resolved
   the selector family by porting only the missing compact model-control
   semantics. The catalog passed at `14104c21`, and validated feature checkpoint
-  `47d5e330` merged without conflict through `bdb15952`. All old refs and
-  worktrees remain recoverable cleanup candidates pending exact deletion
-  authority; Oracle-derived ideas remain separate future packets.
+  `47d5e330` merged without conflict through `bdb15952`. A subsequent
+  authorized local cleanup removed seven auxiliary worktrees and 17 local
+  cleanup/archival branches. Remote refs and the historical compatibility ref
+  remain; Oracle-derived ideas remain separate future packets.
 
 - Completed installed ChatGPT Work-marker semantic repair:
   [docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md](docs/dev/plans/0299-2026-08-21-chatgpt-work-marker-semantic-repair.md)

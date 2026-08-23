@@ -47548,3 +47548,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   the eighth current worktree rather than silently removing it at closeout.
 - No Oracle-derived source, installed runtime, browser, provider, or tenant
   effect occurred.
+
+## 2026-08-23 - Plan 0308 authorized local cleanup
+
+- Revalidated all exact cleanup targets against fresh origin state, clean
+  porcelain, ancestry or the frozen semantic/patch-equivalence receipt, and a
+  `/proc` working-directory census with no target-path owners.
+- Removed seven auxiliary worktrees and 17 local cleanup/archival branches,
+  then restored the primary repository checkout to clean `main`.
+- Preserved every remote branch and retained the one local historical
+  compatibility ref. No remote prune or deletion occurred.

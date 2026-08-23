@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 496 | 2026-08-23
+
+- Operator authority activated Plan 0308's exact local cleanup packet. Fresh
+  preflight proved main sync, clean target porcelain, expected ancestry or
+  recorded non-ancestral adjudication, and no process working directory under
+  any target path.
+- Removed seven auxiliary worktrees, switched the primary repository root to
+  `main`, and deleted 17 local cleanup/archival branches. No force was used for
+  an ancestral branch; forced local deletion was limited to the two selector
+  refs and patch-equivalent runtime-foundation ref already adjudicated by the
+  Plan 0308 receipt.
+- Preserved all remote branches and retained local
+  `sync/upstream-browser-reliability` as a historical compatibility ref.
+- Post-action inventory is one clean main worktree and two local branches. The
+  catalog's closed plan reference now resolves through retained remote custody.
+
 ## Turn 495 | 2026-08-23
 
 - Published the missing default-branch active-lane catalog at `14104c21`. Its
