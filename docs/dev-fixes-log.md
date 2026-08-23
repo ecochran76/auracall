@@ -21860,3 +21860,16 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regress both boundaries directly: malformed token gaps must return the
   caller's fallback, and inserting key 21 into a 20-entry cache must evict the
   oldest key.
+
+## 2026-08-23 | Session identity and artifact privacy must be filesystem-enforced
+
+- Checking whether a slug exists and creating its directory later is a TOCTOU
+  race. Reserve the final directory atomically with non-recursive `mkdir` and
+  retry only exact `EEXIST` collisions.
+- Session prompts, attached context, metadata, and model output are sensitive.
+  Create directories/files as `0700/0600`, and explicitly repair modes because
+  create-time modes do not tighten an existing entry.
+- Migrations must use `lstat` and skip symlinks so permission hardening never
+  crosses the session-storage boundary. Same-directory owner-only replacement
+  also avoids partially written JSON and replaces a target symlink rather than
+  following it.

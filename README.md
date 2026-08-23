@@ -1840,7 +1840,7 @@ npx -y auracall auracall-mcp
 - Azure endpoints supported via `--azure-endpoint/--azure-deployment/--azure-api-version` or `AZURE_OPENAI_*` envs.
 - File safety: globs/excludes, size guards, `--files-report`.
 - Sessions you can replay (`auracall status`, `auracall session <id> --render`).
-- Session logs and bundles live in `~/.auracall/sessions` (override with `AURACALL_HOME_DIR`).
+- Session logs and bundles live in `~/.auracall/sessions` (override with `AURACALL_HOME_DIR`). On POSIX systems AuraCall creates and repairs this sensitive session tree as owner-only (`0700` directories and `0600` files) without traversing symlinks.
 
 ## Flags you’ll actually use
 

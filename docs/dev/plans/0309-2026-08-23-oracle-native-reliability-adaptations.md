@@ -186,15 +186,15 @@ contracts while closing only gaps proved against current source.
 
 ## Current Execution Record
 
-- State transition: `ready -> active -> phase-1-accepted`.
-- Acceptance state: `OA-R1` and `OA-R2` accepted; `OA-R3` through `OA-R10`
-  remain open.
-- Progress classification: `outcome_progress` through strict token-contiguous
-  duration parsing and deterministic TTL/20-entry OpenRouter cache bounds.
-- Evidence: RED reproduced three skipped-junk duration cases and the 21-key
-  cache overflow; GREEN passes focused `25/25`, typecheck, touched-file
-  zero-warning lint, current CodeGraph at 909 files / 17,143 nodes / 58,715
-  edges, and diff hygiene.
+- State transition: `ready -> active -> phase-1-accepted -> phase-2-accepted`.
+- Acceptance state: `OA-R1` through `OA-R4` accepted; `OA-R5` through
+  `OA-R10` remain open.
+- Progress classification: `outcome_progress` through strict duration/cache
+  bounds plus atomic owner-only session allocation and storage.
+- Evidence: Phase 1 focused `25/25`; Phase 2 RED reproduced duplicate IDs and
+  permissive existing/new modes, then GREEN passed focused/affected `69/69`,
+  typecheck, touched-file zero-warning lint, current CodeGraph at 909 files /
+  17,152 nodes / 58,770 edges, and diff hygiene.
 - Material blockers: none for provider-free source execution.
-- Next action: commit and push Phase 1, then test-drive atomic owner-only
-  session storage.
+- Next action: commit and push Phase 2, then test-drive bounded Answer Now and
+  explicit headless semantics.

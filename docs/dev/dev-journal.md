@@ -47585,3 +47585,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Evidence: focused `25/25`, typecheck, touched-file zero-warning lint, current
   CodeGraph at 909 files / 17,143 nodes / 58,715 edges, and diff hygiene pass.
 - Next: commit/push Phase 1 and begin atomic owner-only session storage.
+
+## 2026-08-23 - Plan 0309 Phase 2 session-storage acceptance
+
+- RED: eight concurrent same-slug initializations returned one duplicate ID;
+  existing and newly created session artifacts retained group/world-readable
+  modes under a permissive umask.
+- Repair: reserve each session directory with non-recursive `mkdir` and retry
+  only `EEXIST`; create directories/files as `0700/0600`; atomically replace
+  private metadata/model files; harden existing real entries once per sessions
+  inode; never recurse through symlinks.
+- Evidence: focused/affected `69/69`, typecheck, touched-file zero-warning lint,
+  current CodeGraph at 909 files / 17,152 nodes / 58,770 edges, and diff hygiene
+  pass.
+- Next: commit/push Phase 2 and begin bounded Answer Now plus headless behavior.

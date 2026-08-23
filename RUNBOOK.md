@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 499 | 2026-08-23
+
+- Plan 0309 Phase 2 failed RED with eight parallel same-slug calls all claiming
+  one ID and with new/existing session artifacts retaining permissive modes.
+- Session creation now reserves directories atomically with exact `EEXIST`
+  retry. New directories/files are `0700/0600`; one inode-scoped migration
+  hardens existing real entries recursively while leaving symlink targets
+  untouched. Metadata/model writes use owner-only same-directory replacement,
+  and log writers reject symlink/non-file targets before append.
+- Focused/affected `69/69`, typecheck, touched-file zero-warning lint, current
+  CodeGraph at 909 files / 17,152 nodes / 58,770 edges, and diff hygiene pass.
+  `OA-R3` and `OA-R4` are accepted with no runtime/provider effect.
+- Next: commit/push Phase 2 and test-drive Answer Now extraction plus explicit
+  headless configuration.
+
 ## Turn 498 | 2026-08-23
 
 - Plan 0309 Phase 1 failed RED on `abc5s`, `10junk5s`, `1h!30m`, and the

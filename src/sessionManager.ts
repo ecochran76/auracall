@@ -1,7 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { chmodSync, createWriteStream, lstatSync, mkdirSync } from 'node:fs';
 import type { WriteStream } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import type {
   BrowserModelStrategy,
   ChatgptToolApprovalPolicy,
@@ -261,13 +262,102 @@ const DEFAULT_SLUG = 'session';
 const MAX_SLUG_WORDS = 5;
 const MIN_CUSTOM_SLUG_WORDS = 3;
 const MAX_SLUG_WORD_LENGTH = 10;
+const SESSION_DIR_MODE = 0o700;
+const SESSION_FILE_MODE = 0o600;
+const sessionStorageHardening = new Map<string, Promise<void>>();
 
 async function ensureDir(dirPath: string): Promise<void> {
-  await fs.mkdir(dirPath, { recursive: true });
+  await fs.mkdir(dirPath, { recursive: true, mode: SESSION_DIR_MODE });
+  if (process.platform === 'win32') return;
+  const stats = await fs.lstat(dirPath);
+  if (stats.isSymbolicLink() || !stats.isDirectory()) {
+    throw new Error(`Session storage path is not a real directory: ${dirPath}`);
+  }
+  await fs.chmod(dirPath, SESSION_DIR_MODE);
+}
+
+function isFsErrorCode(error: unknown, code: string): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
+}
+
+async function hardenSessionStorageEntry(targetPath: string): Promise<void> {
+  let stats: Awaited<ReturnType<typeof fs.lstat>>;
+  try {
+    stats = await fs.lstat(targetPath);
+  } catch (error) {
+    if (isFsErrorCode(error, 'ENOENT')) return;
+    throw error;
+  }
+  if (stats.isSymbolicLink()) return;
+  if (stats.isDirectory()) {
+    await fs.chmod(targetPath, SESSION_DIR_MODE).catch((error) => {
+      if (!isFsErrorCode(error, 'ENOENT')) throw error;
+    });
+    const entries = await fs.readdir(targetPath).catch((error) => {
+      if (isFsErrorCode(error, 'ENOENT')) return [];
+      throw error;
+    });
+    await Promise.all(entries.map((entry) => hardenSessionStorageEntry(path.join(targetPath, entry))));
+    return;
+  }
+  if (stats.isFile()) {
+    await fs.chmod(targetPath, SESSION_FILE_MODE).catch((error) => {
+      if (!isFsErrorCode(error, 'ENOENT')) throw error;
+    });
+  }
+}
+
+async function writePrivateFile(targetPath: string, contents: string): Promise<void> {
+  const temporaryPath = `${targetPath}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(temporaryPath, contents, { encoding: 'utf8', mode: SESSION_FILE_MODE });
+    if (process.platform !== 'win32') {
+      await fs.chmod(temporaryPath, SESSION_FILE_MODE);
+    }
+    await fs.rename(temporaryPath, targetPath);
+  } finally {
+    await fs.rm(temporaryPath, { force: true }).catch(() => undefined);
+  }
+}
+
+function ensurePrivateDirSync(dirPath: string): void {
+  mkdirSync(dirPath, { recursive: true, mode: SESSION_DIR_MODE });
+  if (process.platform === 'win32') return;
+  const stats = lstatSync(dirPath);
+  if (stats.isSymbolicLink() || !stats.isDirectory()) {
+    throw new Error(`Session storage path is not a real directory: ${dirPath}`);
+  }
+  chmodSync(dirPath, SESSION_DIR_MODE);
+}
+
+function hardenLogTargetSync(targetPath: string): void {
+  if (process.platform === 'win32') return;
+  try {
+    const stats = lstatSync(targetPath);
+    if (stats.isSymbolicLink() || !stats.isFile()) {
+      throw new Error(`Session log path is not a real file: ${targetPath}`);
+    }
+    chmodSync(targetPath, SESSION_FILE_MODE);
+  } catch (error) {
+    if (!isFsErrorCode(error, 'ENOENT')) throw error;
+  }
 }
 
 export async function ensureSessionStorage(): Promise<void> {
-  await ensureDir(getSessionsDir());
+  const sessionsDir = getSessionsDir();
+  await ensureDir(sessionsDir);
+  if (process.platform === 'win32') return;
+  const stats = await fs.lstat(sessionsDir);
+  const identity = `${sessionsDir}:${stats.dev}:${stats.ino}`;
+  let hardening = sessionStorageHardening.get(identity);
+  if (!hardening) {
+    hardening = hardenSessionStorageEntry(sessionsDir).catch((error) => {
+      sessionStorageHardening.delete(identity);
+      throw error;
+    });
+    sessionStorageHardening.set(identity, hardening);
+  }
+  await hardening;
 }
 
 function slugify(text: string | undefined, maxWords = MAX_SLUG_WORDS): string {
@@ -342,14 +432,22 @@ async function fileExists(targetPath: string): Promise<boolean> {
   }
 }
 
-async function ensureUniqueSessionId(baseSlug: string): Promise<string> {
+async function reserveUniqueSessionDir(baseSlug: string): Promise<string> {
   let candidate = baseSlug;
   let suffix = 2;
-  while (await fileExists(sessionDir(candidate))) {
+  for (;;) {
+    try {
+      await fs.mkdir(sessionDir(candidate), { recursive: false, mode: SESSION_DIR_MODE });
+      if (process.platform !== 'win32') {
+        await fs.chmod(sessionDir(candidate), SESSION_DIR_MODE);
+      }
+      return candidate;
+    } catch (error) {
+      if (!isFsErrorCode(error, 'EEXIST')) throw error;
+    }
     candidate = `${baseSlug}-${suffix}`;
     suffix += 1;
   }
-  return candidate;
 }
 
 async function listModelRunFiles(sessionId: string): Promise<SessionModelRun[]> {
@@ -407,7 +505,7 @@ export async function updateModelRunMetadata(
     ...updates,
     model,
   });
-  await fs.writeFile(modelJsonPath(sessionId, model), JSON.stringify(next, null, 2), 'utf8');
+  await writePrivateFile(modelJsonPath(sessionId, model), JSON.stringify(next, null, 2));
   return next;
 }
 
@@ -422,9 +520,7 @@ export async function initializeSession(
 ): Promise<SessionMetadata> {
   await ensureSessionStorage();
   const baseSlug = createSessionId(options.prompt || DEFAULT_SLUG, options.slug);
-  const sessionId = await ensureUniqueSessionId(baseSlug);
-  const dir = sessionDir(sessionId);
-  await ensureDir(dir);
+  const sessionId = await reserveUniqueSessionDir(baseSlug);
   const mode = options.mode ?? 'api';
   const browserConfig = options.browserConfig;
   const modelList: ModelName[] =
@@ -476,7 +572,7 @@ export async function initializeSession(
     },
   };
   await ensureDir(modelsDir(sessionId));
-  await fs.writeFile(metaPath(sessionId), JSON.stringify(metadata, null, 2), 'utf8');
+  await writePrivateFile(metaPath(sessionId), JSON.stringify(metadata, null, 2));
   await Promise.all(
     (modelList.length > 0 ? modelList : [metadata.model ?? DEFAULT_MODEL]).map(async (modelName) => {
       const jsonPath = modelJsonPath(sessionId, modelName);
@@ -486,11 +582,11 @@ export async function initializeSession(
         status: 'pending',
         log: { path: path.relative(sessionDir(sessionId), logFilePath) },
       };
-      await fs.writeFile(jsonPath, JSON.stringify(modelRecord, null, 2), 'utf8');
-      await fs.writeFile(logFilePath, '', 'utf8');
+      await writePrivateFile(jsonPath, JSON.stringify(modelRecord, null, 2));
+      await writePrivateFile(logFilePath, '');
     }),
   );
-  await fs.writeFile(logPath(sessionId), '', 'utf8');
+  await writePrivateFile(logPath(sessionId), '');
   return metadata;
 }
 
@@ -518,7 +614,7 @@ export async function updateSessionMetadata(
     (await readLegacySessionMetadata(sessionId)) ??
     ({ id: sessionId } as SessionMetadata);
   const next = { ...existing, ...updates };
-  await fs.writeFile(metaPath(sessionId), JSON.stringify(next, null, 2), 'utf8');
+  await writePrivateFile(metaPath(sessionId), JSON.stringify(next, null, 2));
   return next;
 }
 
@@ -570,9 +666,10 @@ async function attachModelRuns(meta: SessionMetadata, sessionId: string): Promis
 export function createSessionLogWriter(sessionId: string, model?: string): SessionLogWriter {
   const targetPath = model ? modelLogPath(sessionId, model) : logPath(sessionId);
   if (model) {
-    void ensureDir(modelsDir(sessionId));
+    ensurePrivateDirSync(modelsDir(sessionId));
   }
-  const stream = createWriteStream(targetPath, { flags: 'a' });
+  hardenLogTargetSync(targetPath);
+  const stream = createWriteStream(targetPath, { flags: 'a', mode: SESSION_FILE_MODE });
   const logLine = (line = ''): void => {
     stream.write(`${line}\n`);
   };
@@ -794,7 +891,7 @@ async function markZombie(
     completedAt: new Date().toISOString(),
   };
   if (persist) {
-    await fs.writeFile(metaPath(meta.id), JSON.stringify(updated, null, 2), 'utf8');
+    await writePrivateFile(metaPath(meta.id), JSON.stringify(updated, null, 2));
   }
   return updated;
 }
@@ -847,7 +944,7 @@ async function markDeadBrowser(
     response,
   };
   if (persist) {
-    await fs.writeFile(metaPath(meta.id), JSON.stringify(updated, null, 2), 'utf8');
+    await writePrivateFile(metaPath(meta.id), JSON.stringify(updated, null, 2));
   }
   return updated;
 }
