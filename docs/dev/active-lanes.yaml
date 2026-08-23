@@ -26,12 +26,12 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: a5bf5a546de1bb850ec12f5b75dc720ea19b338b
+    checkpoint: a5bf5a54a8a99cd58a74a43c8db6fa1e6e46e35e
     remote_ref: refs/remotes/origin/feat/plan0309-oracle-adaptations
     integration: merge
     dependencies: []
     overlaps: []
     validation_status: pending
-    validation_ref: a5bf5a546de1bb850ec12f5b75dc720ea19b338b
+    validation_ref: a5bf5a54a8a99cd58a74a43c8db6fa1e6e46e35e
     disposition: Provider-free execution active; Oracle is research provenance only and no direct synchronization is planned.
     updated_at: 2026-08-23
