@@ -1,12 +1,12 @@
 # Oracle-Native Reliability Adaptations | 0309-2026-08-23
 
-State: OPEN
+State: CLOSED
 Lane: P02
-Operational state: INTEGRATION_READY / PROVIDER-FREE
+Operational state: ACCEPTED / INTEGRATED / PROVIDER-FREE
 Branch: feat/plan0309-oracle-adaptations
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-23
+Revision: 2 | 2026-08-23
 
 ## Stable Objective
 
@@ -18,6 +18,9 @@ contracts while closing only gaps proved against current source.
 
 ## Current State
 
+- Validated feature checkpoint `b412b0bc` merged into `main` through
+  `9c3486ad`. All ten acceptance criteria are accepted. Oracle remains a
+  research reference and no upstream synchronization occurred.
 - Plan 0308 closed the repository true-up and established that Oracle and
   AuraCall now serve different purposes.
 - Fresh inspection found 517 Oracle-only commits, including 447 non-merge
@@ -190,11 +193,10 @@ contracts while closing only gaps proved against current source.
 ## Current Execution Record
 
 - State transition: `ready -> active -> phase-1-accepted -> phase-2-accepted ->
-  phase-3-accepted`.
-- Acceptance state: `OA-R1` through `OA-R9` accepted; `OA-R10` is accepted on
-  the feature checkpoint and awaits integrated-commit/origin-parity proof.
-- Progress classification: `outcome_progress` through strict duration/cache
-  bounds, atomic owner-only session storage, and four browser-semantics gaps.
+  phase-3-accepted -> integration-ready -> accepted-integrated`.
+- Acceptance state: `OA-R1` through `OA-R10` accepted.
+- Progress classification: `objective_complete` through validated AuraCall-
+  native adaptations and source-backed non-applicability decisions.
 - Evidence: Phase 1 focused `25/25`; Phase 2 RED reproduced duplicate IDs and
   permissive existing/new modes, then GREEN passed focused/affected `69/69`.
   Phase 3 focused/affected `85/85`, typecheck, touched-file zero-warning Biome
@@ -218,6 +220,8 @@ contracts while closing only gaps proved against current source.
   build and full lint pass; the repository-wide warning count remains the
   existing 208 while every touched source/test file is warning-free. Process
   census preserved baseline DevTools ports and found no test-home process.
-- Material blockers: none for provider-free source execution.
-- Next action: publish the exact integration-ready checkpoint, reconcile P02
-  catalog custody, merge to main, close the plan, and prove origin parity.
+- Integration evidence: feature checkpoint `b412b0bc1becbe4ac64a24be680583873cd063fb`
+  merged without conflict through
+  `9c3486ad1a7095ce88bd8492a1bcb5b9b2772523`; P02 custody is integrated.
+- Next action: no Plan 0309 execution remains. Future Oracle review stays
+  topic-qualified and opens a new bounded plan only for a proved AuraCall gap.

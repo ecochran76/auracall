@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 503 | 2026-08-23
+
+- Plan 0309 closes `ACCEPTED / INTEGRATED / PROVIDER-FREE`. Exact validated
+  feature checkpoint `b412b0bc` merged without conflict through `9c3486ad`.
+- P02 catalog custody records the feature checkpoint, passed validation, and
+  integration receipt. All ten acceptance criteria are accepted; no live,
+  installed-runtime, provider, tenant, release, or Oracle synchronization
+  effect occurred.
+- Oracle remains a separate project and research provenance. Future reviews
+  must qualify one current AuraCall problem and open a new bounded plan rather
+  than treating Oracle commit distance as synchronization debt.
+
 ## Turn 502 | 2026-08-23
 
 - Plan 0309 reaches `INTEGRATION_READY`. Broad isolated-home validation passed

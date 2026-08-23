@@ -4,18 +4,19 @@
 
 ### Current Execution Board
 
-Status: active
-Lanes: P01, P02
+Status: integrated
+Lanes: P01, P02 (integrated)
 
-- Active Oracle-native reliability adaptation campaign:
+- Completed Oracle-native reliability adaptation campaign:
   [docs/dev/plans/0309-2026-08-23-oracle-native-reliability-adaptations.md](docs/dev/plans/0309-2026-08-23-oracle-native-reliability-adaptations.md)
   Oracle remains a non-authoritative research source. Plan 0309 accepts only
   current AuraCall gaps with explicit tests: strict duration parsing, bounded
   OpenRouter caching, atomic owner-only session storage, bounded Answer Now
   placeholder recognition, explicit headless semantics, WSL loopback routing,
-  and unavailable thinking-tier handling. Cookie-sync and MCP path ideas remain
-  architecture-specific adjudications, not presumed ports. The campaign is
-  provider-free and requires no installed or live effect.
+  and unavailable thinking-tier handling. Cookie copying now requires explicit
+  opt-in; the Oracle MCP output-containment patch was not applicable because no
+  AuraCall MCP-controlled path reaches a write sink. Validated checkpoint
+  `b412b0bc` merged through `9c3486ad` with no installed or live effect.
 
 - Completed repository Git true-up and Oracle reference review:
   [docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md](docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md)

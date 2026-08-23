@@ -47647,3 +47647,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   baseline DevTools listeners on ports `45013`, `45015`, and `45017`.
 - Next: publish this exact feature checkpoint, reconcile P02 catalog custody,
   merge to main, close the plan, and prove origin parity.
+
+## 2026-08-23 - Plan 0309 integrated closeout
+
+- Published integration-ready feature checkpoint `b412b0bc`, reconciled P02
+  catalog custody, and merged it without conflict through `9c3486ad`.
+- All ten criteria are accepted. Oracle remains research provenance; no rebase,
+  bulk cherry-pick, installed-runtime update, browser/provider execution,
+  tenant mutation, or release occurred.
+- Final closeout updates the plan and catalog on main. Remaining work is only
+  final audit, push, origin-parity readback, and safe removal of the plan-owned
+  temporary test directory/worktree.

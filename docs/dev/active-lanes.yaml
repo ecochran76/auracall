@@ -24,8 +24,8 @@ lanes:
     plan_ref: refs/remotes/origin/feat/plan0309-oracle-adaptations
     branch: feat/plan0309-oracle-adaptations
     target: main
-    plan_state: OPEN
-    custody_state: INTEGRATION_READY
+    plan_state: CLOSED
+    custody_state: INTEGRATED
     checkpoint: b412b0bc1becbe4ac64a24be680583873cd063fb
     remote_ref: refs/remotes/origin/feat/plan0309-oracle-adaptations
     integration: merge
@@ -33,5 +33,6 @@ lanes:
     overlaps: []
     validation_status: passed
     validation_ref: b412b0bc1becbe4ac64a24be680583873cd063fb
-    disposition: Provider-free feature checkpoint validated and pushed; ready for merge integration without Oracle synchronization.
+    integration_receipt: 9c3486ad1a7095ce88bd8492a1bcb5b9b2772523
+    disposition: Integrated the validated AuraCall-native adaptations into main; Oracle remains research provenance rather than a synchronization target.
     updated_at: 2026-08-23
