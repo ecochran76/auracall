@@ -7,7 +7,7 @@ export type BrowserInteractionClass =
   | 'generic';
 
 export interface BrowserInteractionGovernor {
-  beforeInteraction(kind?: BrowserInteractionClass): Promise<void>;
+  beforeInteraction(kind?: BrowserInteractionClass, abortSignal?: AbortSignal | null): Promise<void>;
 }
 
 export interface BrowserInteractionGovernorPolicy {
@@ -33,8 +33,9 @@ export function createBrowserInteractionGovernor(
   const lastByClass = new Map<BrowserInteractionClass, number>();
 
   return {
-    async beforeInteraction(kind = 'generic') {
-      throwIfAborted(policy.abortSignal);
+    async beforeInteraction(kind = 'generic', abortSignal) {
+      const activeAbortSignal = abortSignal ?? policy.abortSignal;
+      throwIfAborted(activeAbortSignal);
       const nowMs = now();
       const globalWaitMs =
         lastInteractionAtMs > 0 ? Math.max(0, lastInteractionAtMs + minSpacingMs - nowMs) : 0;
@@ -46,13 +47,44 @@ export function createBrowserInteractionGovernor(
           : Math.max(0, lastClassInteractionAtMs + classCooldownMs - nowMs);
       const waitMs = Math.max(globalWaitMs, classWaitMs);
       if (waitMs > 0) {
-        await sleep(waitMs, policy.abortSignal);
+        await waitForSleepWithAbort(sleep(waitMs, activeAbortSignal), activeAbortSignal);
       }
+      throwIfAborted(activeAbortSignal);
       const observedAtMs = now();
       lastInteractionAtMs = observedAtMs;
       lastByClass.set(kind, observedAtMs);
     },
   };
+}
+
+function waitForSleepWithAbort(
+  operation: Promise<void>,
+  signal: AbortSignal | null | undefined,
+): Promise<void> {
+  if (!signal) return operation;
+  if (signal.aborted) {
+    const reason = signal.reason;
+    return Promise.reject(reason instanceof Error ? reason : new Error('Browser interaction was aborted.'));
+  }
+  return new Promise<void>((resolve, reject) => {
+    const onAbort = () => {
+      cleanup();
+      const reason = signal.reason;
+      reject(reason instanceof Error ? reason : new Error('Browser interaction was aborted.'));
+    };
+    const cleanup = () => signal.removeEventListener('abort', onAbort);
+    signal.addEventListener('abort', onAbort, { once: true });
+    operation.then(
+      () => {
+        cleanup();
+        resolve();
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
 }
 
 function normalizeCooldownMs(value: number | null | undefined): number {

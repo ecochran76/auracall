@@ -1,3 +1,22 @@
+- 2026-08-24: Bind shared browser-interaction admission to the active provider
+  read, not only to a governor-wide lifetime. Race custom deterministic sleeps
+  against that signal and recheck cancellation before publishing timestamps so
+  a timed-out target cannot poison the next target. When pacing happens inside
+  a context read, budget `default acquisition deadline + maximum configured
+  pacing allowance` across every snapshot/artifact/file entry path; equal
+  cooldown and total deadline values make timeout deterministic.
+
+- 2026-08-24: Never configure a provider-read deadline equal to a required
+  interaction cooldown when fallback acquisition occurs inside that deadline.
+  A direct ChatGPT payload miss can enter renavigation pacing with less than
+  the full deadline remaining, making timeout deterministic even though the
+  payload fetch and CDP evaluation are locally bounded. Preserve the abort
+  signal when injecting a custom interaction-governor sleep; otherwise the
+  caller can fail closed while the detached cooldown later mutates shared
+  pacing state and poisons the next target. Provider-free coverage must combine
+  a cooldown longer than the remaining read budget, caller abort, no late
+  governor timestamp advance, and a prompt subsequent admission.
+
 - 2026-08-23: Archive and account-mirror reads must isolate inaccessible local
   assets. A stale or unavailable mount (`ENODEV`, `ESTALE`, `EIO`, `EACCES`,
   or `EPERM`) is evidence that one indexed asset cannot currently be read; it

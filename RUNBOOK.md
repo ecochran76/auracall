@@ -1,5 +1,75 @@
 # RUNBOOK
 
+## Turn 507 | 2026-08-24
+
+- Plan 0310 reaches `INTEGRATION_READY / PROVIDER-FREE`. Exact RED proved that
+  a context-read abort did not settle the shared governor's custom cooldown
+  sleep; the repair binds each admission to the active read signal and rejects
+  before publishing pacing state.
+- History snapshot, artifact, and file context reads now retain the default
+  120-second acquisition budget after the maximum configured pacing allowance.
+  The observed 120-second cooldown policy therefore receives a 240-second
+  context deadline without weakening provider pacing.
+- Exact and affected validation passes `329/329`; typecheck, scoped Biome,
+  production build, CodeGraph at 910 files / 17,166 nodes / 58,872 edges,
+  plan/goal audits, and diff hygiene pass. The broad provider-free suite passed
+  3,000 tests with 65 expected skips and one unrelated native-download fixture
+  failure; that exact fixture passed immediately in isolation, and the complete
+  174-test adapter suite passed twice in the affected gates. No installed,
+  browser, provider, scheduler, or live-follow effect occurred.
+
+## Turn 506 | 2026-08-24
+
+- Operator authority opens Plan 0310 to diagnose and repair the confirmed
+  live-follow cooldown/deadline collision. Branch
+  `fix/plan0310-live-follow-cooldown-abort` owns one serialized provider-free
+  RED/GREEN lifecycle slice.
+- Acceptance requires cooperative abort through the shared history-
+  materialization governor, no late interaction timestamp after caller
+  timeout, prompt subsequent admission, unchanged non-aborted pacing, and
+  affected/broad provider-free validation.
+- No installed runtime, API restart, browser, provider, scheduler, completion,
+  or live-follow retry effect is part of the source repair packet.
+
+## Turn 505 | 2026-08-24
+
+- Diagnosis-only follow-up on materialization job
+  `hmj_6173bac8f6ea4c39bbdc0aea13963c36` found a timeout-policy collision,
+  not a recurrence of `/mnt/h` and not an outdated installed adapter. Source
+  regressions for a hanging ChatGPT payload evaluation and sequential reads
+  pass `2/2`; installed `0.1.1` carries the same 9-second fetch abort and
+  10-second `Runtime.evaluate` bound.
+- The job combined a 120-second conversation-context deadline with a
+  120-second renavigation cooldown. After one successful 19.101-second read,
+  four reads reached `chatgpt.skipSameRouteNavigation`, entered pending
+  `chatgpt.readConversationPayload`, and timed out after 108.979-109.482
+  seconds because their remaining deadline expired while the fallback waited
+  for renavigation admission.
+- History materialization also injects `sleep: (ms) => sleep(ms)` into the
+  shared interaction governor without its abort signal. A timed-out caller can
+  therefore leave the cooldown sleep alive long enough to refresh shared
+  pacing state and reproduce the collision on the next target. No browser,
+  provider retry, source repair, install, restart, or completion control ran.
+
+## Turn 504 | 2026-08-23
+
+- Operator authority ran one exact `chatgpt/wsl-chrome-3` live-follow
+  `run-one-pass` on completion
+  `acctmirror_completion_a0336fc4-b147-4c79-bdb3-9b485b5f0526`; no broad
+  scheduler control or retry ran. The completion respected its minimum
+  interval and advanced from pass 1 to pass 2.
+- Post-`650ee819` archive isolation is accepted by live evidence: no `/mnt/h`
+  or `ENODEV` failure recurred, and provider identity matched all configured
+  dimensions. Owned materialization job
+  `hmj_6173bac8f6ea4c39bbdc0aea13963c36` instead failed on four independent
+  120-second ChatGPT conversation-context read timeouts, with 0 materialized,
+  3 skipped, and 4 failed entries.
+- The completion is blocked with `account_mirror_materialization_failed`; its
+  provider-work lease was released. Final OS readback found no
+  `wsl-chrome-3/chatgpt` browser process and no `45015` listener. Next work is
+  a separately bounded diagnosis of repeated context-read timeout/DevTools
+  lifecycle behavior, not another materialization retry.
+
 ## Turn 503 | 2026-08-23
 
 - Plan 0309 closes `ACCEPTED / INTEGRATED / PROVIDER-FREE`. Exact validated

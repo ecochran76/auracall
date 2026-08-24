@@ -4,8 +4,17 @@
 
 ### Current Execution Board
 
-Status: integrated
-Lanes: P01, P02 (integrated)
+Status: active
+Lanes: P01, P02 (integrated); P03 (active)
+
+- Active live-follow cooldown-abort repair:
+  [docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md](docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md)
+  Exact installed evidence proves a 120-second context deadline collides with
+  a 120-second fallback-renavigation cooldown, while history materialization's
+  custom governor sleep drops cancellation and can mutate shared pacing after
+  timeout. Plan 0310 is provider-free source-accepted and integration-ready:
+  per-read cancellation prevents late pacing state, and all snapshot/artifact/
+  file reads preserve the acquisition budget after their pacing allowance.
 
 - Completed Oracle-native reliability adaptation campaign:
   [docs/dev/plans/0309-2026-08-23-oracle-native-reliability-adaptations.md](docs/dev/plans/0309-2026-08-23-oracle-native-reliability-adaptations.md)

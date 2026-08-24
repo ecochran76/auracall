@@ -1,3 +1,72 @@
+## 2026-08-24 | Plan 0310 provider-free repair accepted
+
+- Captured the exact RED through the public history-materialization service:
+  after a seeded read, a 120-second custom governor sleep outlived the active
+  context-read abort instead of settling on its exact reason. A second RED
+  proved direct artifact/file materialization dropped the expanded deadline.
+- The shared governor now accepts a per-admission abort signal, races even a
+  non-cooperative injected sleep, checks cancellation before publishing state,
+  and leaves normal pacing unchanged. ChatGPT fallback admissions receive the
+  active context-read signal.
+- History materialization computes one context envelope as the default
+  120-second acquisition budget plus the maximum configured pacing allowance
+  and threads it through snapshot, artifact, and file reads. The live policy's
+  120-second cooldown now yields a 240-second envelope.
+- Exact/affected tests pass `329/329`. The broad provider-free gate passed
+  3,000 tests with 65 expected skips; its sole unrelated native-download
+  identity fixture passed on immediate exact rerun and in two complete adapter
+  runs. Typecheck, scoped Biome, build, CodeGraph, plan/goal audits, and diff
+  hygiene pass. No provider or installed-runtime effect ran.
+
+## 2026-08-24 | Plan 0310 live-follow cooldown-abort repair opened
+
+- Opened Plan 0310 on `fix/plan0310-live-follow-cooldown-abort` with one
+  provider-free critical path: exact cooldown/caller-abort RED, cooperative
+  governor repair, no-late-state regression, and proportional validation.
+- The frozen behavior preserves configured pacing when admitted, but an
+  aborted governor wait must settle promptly and must not update shared
+  interaction state after its caller has already timed out.
+
+## 2026-08-24 | Live-follow context timeout policy collision diagnosis
+
+- Diagnosed owned materialization job
+  `hmj_6173bac8f6ea4c39bbdc0aea13963c36` without launching a browser or
+  retrying provider work. The installed `0.1.1` payload reader matches source:
+  its authenticated fetch aborts at 9 seconds and its CDP evaluation is
+  bounded at 10 seconds.
+- The provider-free hanging-evaluation and sequential-listener regressions pass
+  `2/2`. The live receipt instead proves a pacing collision: its interaction
+  policy sets both the renavigation cooldown and context deadline to 120
+  seconds. Four reads spent 108.979-109.482 seconds pending
+  `provider:chatgpt.readConversationPayload` after
+  `chatgpt.skipSameRouteNavigation`, exhausting the deadline while fallback
+  renavigation awaited governor admission.
+- History materialization supplies the shared governor a custom sleep that
+  ignores the governor abort signal. The context caller can time out while its
+  underlying cooldown remains alive and later advances shared pacing state,
+  explaining the repeated near-identical failures. Existing tests prove
+  shared cooldown spacing but do not cover aborting a cooldown/timeout
+  collision. Repair and another live canary remain separate authority.
+
+## 2026-08-23 | Bounded post-isolation live-follow recovery proof
+
+- Operator authority covered one exact `chatgpt/wsl-chrome-3` live-follow
+  `run-one-pass` control with no retry. Completion
+  `acctmirror_completion_a0336fc4-b147-4c79-bdb3-9b485b5f0526` advanced from
+  pass 1 to pass 2 after respecting the configured minimum interval.
+- The archive isolation repair held: neither the collector nor owned
+  materialization job reported `/mnt/h`, `ENODEV`, or another local-archive
+  availability failure. Provider-session identity matched on email, plan,
+  structure, and account-level evidence.
+- Owned materialization job `hmj_6173bac8f6ea4c39bbdc0aea13963c36`
+  failed closed after four selected ChatGPT conversation-context reads each
+  reached the 120-second deadline. It materialized 0 assets, skipped 3, failed
+  4, and left the completion blocked with
+  `account_mirror_materialization_failed`; no retry ran.
+- The provider-work lease was released. Fresh process/listener readback found
+  no process using managed browser profile `wsl-chrome-3/chatgpt` and no
+  listener on its DevTools port `45015`; the API service remained active.
+
 ## 2026-08-23 | Isolate unavailable archive assets during exact materialization
 
 - LitScout Plan 0444 used AuraCall's exact `wsl-chrome-3` account-mirror

@@ -604,7 +604,110 @@ describe("history materialization service", () => {
 
 		expect(governors).toHaveLength(2);
 		expect(governors[1]).toBe(governors[0]);
+		expect(
+			(refreshConversationSnapshot.mock.calls[0]?.[3] as HistoryMaterializationProviderWorkContext)
+				.contextTimeoutMs,
+		).toBe(180_000);
 		expect(sleep).toHaveBeenCalledWith(60_000);
+	});
+
+	it("aborts a shared interaction-governor cooldown with the active provider read", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-history-materialize-abort-governor-"),
+		);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		let scheduled: (() => Promise<void>) | undefined;
+		const nowMs = Date.parse("2026-08-24T04:00:00.000Z");
+		const sleep = vi.fn(() => new Promise<void>(() => undefined));
+		const abortController = new AbortController();
+		const abortReason = new Error("conversation context deadline expired");
+		let releaseMaterializeStarted: (() => void) | undefined;
+		const materializeStarted = new Promise<void>((resolve) => {
+			releaseMaterializeStarted = resolve;
+		});
+		let materializeOutcome: unknown = null;
+		const refreshConversationSnapshot = vi.fn(async (target, _request, _jobId, context) => {
+			await context?.interactionGovernor?.beforeInteraction("renavigation");
+			return {
+				object: "history_materialization_snapshot_refresh" as const,
+				generatedAt: new Date(nowMs).toISOString(),
+				status: "refreshed" as const,
+				target,
+				routeabilityState: "routeable" as const,
+				messageCount: 1,
+				fileCount: 0,
+				sourceCount: 0,
+				artifactCount: 1,
+				error: null,
+				message: "Conversation snapshot refreshed.",
+			};
+		});
+		const materializeConversation = vi.fn(async (target, _request, _jobId, context) => {
+			releaseMaterializeStarted?.();
+			try {
+				await (
+					context?.interactionGovernor as {
+						beforeInteraction: (kind: "renavigation", abortSignal: AbortSignal) => Promise<void>;
+					}
+				)?.beforeInteraction("renavigation", abortController.signal);
+				materializeOutcome = "admitted";
+			} catch (error) {
+				materializeOutcome = error;
+			}
+			return {
+				object: "history_materialization_result" as const,
+				generatedAt: new Date(nowMs).toISOString(),
+				status: "skipped" as const,
+				target,
+				source: {
+					type: "conversation" as const,
+					provider: "chatgpt" as const,
+					conversationId: "conv_abort_governor_1",
+				},
+				manifestPaths: [],
+				entries: [],
+				archiveItems: [],
+				metrics: { conversations: 1, materialized: 0, skipped: 1, failed: 0 },
+				message: "No materializable assets.",
+			};
+		});
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: { readCatalog: vi.fn(), readItem: vi.fn() },
+			generateId: () => "hmj_abort_governor_1",
+			now: () => new Date(nowMs),
+			sleep,
+			schedule: (work) => {
+				scheduled = work;
+			},
+			refreshConversationSnapshot,
+			materializeConversation,
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			runtimeProfile: "default",
+			conversationId: "conv_abort_governor_1",
+			refreshSnapshot: true,
+			interactionPolicy: {
+				maxInteractionsPerMinute: 6,
+				conversationReadCooldownMs: 120_000,
+				pageRefreshCooldownMs: 120_000,
+				renavigationCooldownMs: 120_000,
+			},
+			assetKinds: ["artifacts"],
+		});
+		if (!scheduled) throw new Error("Expected job to be scheduled.");
+		const work = scheduled();
+		await materializeStarted;
+		expect(sleep).toHaveBeenCalledWith(120_000);
+
+		abortController.abort(abortReason);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(materializeOutcome).toBe(abortReason);
+		await work;
 	});
 
 	it("persists and runs a ChatGPT project source materialization job", async () => {
