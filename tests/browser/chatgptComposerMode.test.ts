@@ -391,10 +391,41 @@ describe("ChatGPT composer mode", () => {
 		expect(expression).toContain("label === 'show advanced options'");
 		expect(expression).toContain("label.startsWith('model ')");
 		expect(expression).toContain('[role="menuitemradio"]');
+		expect(expression).toContain("hasActiveConversationWorkMarker");
 		expect(expression).toContain("replace(/^gpt\\s+/, '')");
 		expect(expression).not.toContain("model-switcher-dropdown-button");
 		expect(expression).not.toContain("Switch model");
 		expect(expression).toContain("performance.now() - startedAt < 5000");
+	});
+
+	it("accepts the current Work model on an active Project Work conversation", async () => {
+		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
+			href: "/g/g-p-project/c/conversation-1",
+			"data-active": "",
+			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
+		});
+		const triggerMarker = new FixtureElement("5.6 Sol High");
+		const trigger = new FixtureElement("5.6 Sol High", {
+			"aria-haspopup": "menu",
+			"aria-expanded": "false",
+		});
+		triggerMarker.closestResult = trigger;
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-project/c/conversation-1",
+			pathname: "/g/g-p-project/c/conversation-1",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"], [role="menuitemradio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			if (selector === '[data-animated-slider-trigger="true"]') return [triggerMarker];
+			return [];
+		});
+
+		const expression = buildChatgptWorkModelSelectionExpressionForTest("GPT-5.6 Sol");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "already-selected", label: "5.6 Sol High" });
 	});
 
 	it("selects an observed nested Work model provider-free", async () => {

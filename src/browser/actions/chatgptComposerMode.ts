@@ -24,6 +24,29 @@ export function normalizeChatgptComposerMode(
 	throw new Error(`Invalid ChatGPT mode: "${value}". Expected "chat" or "work".`);
 }
 
+export function buildActiveChatgptWorkConversationMarkerDefinition(): string {
+	return `const hasActiveConversationWorkMarker = () =>
+      Array.from(document.querySelectorAll('a[href][data-active]'))
+        .filter(visible)
+        .some((node) => {
+          const href = node.getAttribute('href');
+          if (!href) return false;
+          let pathname = '';
+          try {
+            pathname = new URL(href, location.href).pathname;
+          } catch {
+            return false;
+          }
+          if (pathname !== location.pathname) return false;
+          const ariaLabel = normalize(node.getAttribute('aria-label'));
+          if (ariaLabel === 'work' || ariaLabel.endsWith(', work') || ariaLabel.endsWith(' work')) {
+            return true;
+          }
+          return Array.from(node.querySelectorAll('span'))
+            .some((marker) => normalize(marker.textContent) === 'work');
+        });`;
+}
+
 export async function ensureChatgptComposerMode(
 	Runtime: ChromeClient["Runtime"],
 	desiredMode: ChatgptComposerMode,
@@ -87,24 +110,7 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
     const isSelected = (node) =>
       node.getAttribute('aria-checked') === 'true' ||
       node.getAttribute('data-state') === 'on';
-    const hasActiveConversationWorkMarker = () =>
-      Array.from(document.querySelectorAll('a[href][data-active]'))
-        .filter(visible)
-        .some((node) => {
-          const href = node.getAttribute('href');
-          if (!href) return false;
-          let pathname = '';
-          try {
-            pathname = new URL(href, location.href).pathname;
-          } catch {
-            return false;
-          }
-          if (pathname !== location.pathname) return false;
-          const ariaLabel = normalize(node.getAttribute('aria-label'));
-          if (ariaLabel === 'work' || ariaLabel.endsWith(', work')) return true;
-          return Array.from(node.querySelectorAll('span'))
-            .some((marker) => normalize(marker.textContent) === 'work');
-        });
+    ${buildActiveChatgptWorkConversationMarkerDefinition()}
     const collectRadios = () => Array.from(document.querySelectorAll('[role="radio"]'))
       .filter(visible)
       .map((node) => ({ node, label: normalize(node.textContent) }))
