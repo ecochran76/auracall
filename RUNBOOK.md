@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 513 | 2026-08-24
+
+- P05 established durable scheduler isolation with one supported pause, then
+  issued the sole exact `run-one-pass` on completion
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41`.
+- Exact managed browser PID `63902` / port 45015 started under API PID `57888`,
+  but the parent failed at `15:53:14Z` on `Timed out waiting for predicate after
+  587ms`, stayed at pass 1, and created no fresh materialization child. Its
+  provider-work lease was released and no provider guard appeared.
+- The browser remained after the 30-minute observation ceiling with zero active
+  target jobs. One exact SIGTERM removed only PID `63902`; port 45015 is clear
+  and the API remains healthy. P05 closes `C4_hard_stop`; scheduler resume and
+  retry remain unconsumed, and the scheduler stays paused.
+
 ## Turn 512 | 2026-08-24
 
 - Operator `ok go` opens Plan 0312 under P05: one supported scheduler pause,

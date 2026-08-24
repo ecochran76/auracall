@@ -78,14 +78,14 @@ lanes:
     plan_ref: refs/remotes/origin/ops/plan0312-scheduler-isolated-live-follow-canary
     branch: ops/plan0312-scheduler-isolated-live-follow-canary
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
     checkpoint: ecc69dff5b2ebf282b710a522bfedb96930e3a73
     remote_ref: refs/remotes/origin/ops/plan0312-scheduler-isolated-live-follow-canary
     integration: merge
     dependencies: [P03, P04]
     overlaps: []
-    validation_status: effect-gated
+    validation_status: terminal-hard-stop
     validation_ref: ecc69dff5b2ebf282b710a522bfedb96930e3a73
-    disposition: One scheduler pause and one exact zero-retry completion pass are authorized; resume is conditional on clean acceptance and cleanup.
+    disposition: Scheduler isolation prevented fanout, but the sole control failed at pass 1 on a 587 ms predicate timeout and retained an owned browser until exact bounded cleanup; scheduler remains paused.
     updated_at: 2026-08-24
