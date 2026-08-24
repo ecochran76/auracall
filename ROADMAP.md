@@ -4,8 +4,8 @@
 
 ### Current Execution Board
 
-Status: installed-effect hard stop recorded
-Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop)
+Status: installed-effect hard stop integrated
+Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop, integrated)
 
 - Terminal installed live-follow cooldown canary:
   [docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md](docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md)
@@ -14,6 +14,7 @@ Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop)
   the frozen manual control. P04 stopped under `C4_hard_stop`: no manual
   control, retry, scheduler mutation, substitute-target use, or browser cleanup
   ran. A successor requires explicit scheduler-isolation authority.
+  Terminal checkpoint `725b0433` merged through `0a54b7b5`.
 
 - Completed live-follow cooldown-abort repair:
   [docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md](docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md)

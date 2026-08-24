@@ -1,3 +1,13 @@
+## 2026-08-24 | Plan 0311 hard-stop receipt integrated
+
+- Published terminal checkpoint `725b0433` and merged it to `main` through
+  `0a54b7b5` without conflict. P04 is closed/integrated with validation status
+  `terminal-hard-stop`; the failed isolation gate is not promoted to live
+  canary acceptance.
+- The integration is documentation/custody only. No additional install,
+  restart, completion or scheduler control, provider retry, browser action, or
+  cleanup occurred.
+
 ## 2026-08-24 | Plan 0311 installed canary hard stop
 
 - Consumed the sole install/restart successfully. API PID `57888` is

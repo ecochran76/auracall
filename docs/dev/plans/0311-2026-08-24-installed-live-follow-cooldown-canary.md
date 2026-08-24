@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P04
-Operational state: TERMINAL_HARD_STOP / C4
+Operational state: TERMINAL_HARD_STOP / C4 / INTEGRATED
 Branch: ops/plan0311-installed-live-follow-canary
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-24
+Revision: 3 | 2026-08-24
 
 ## Stable Objective
 
@@ -134,6 +134,8 @@ deadline and cancellation semantics under installed provider work.
 - Exact remaining gate: any successor installed canary must explicitly own a
   scheduler-isolation boundary before service restart and then re-freeze one
   completion after restart. This plan grants no such control or another canary.
+- Durable receipts: terminal checkpoint `725b0433` merged to `main` through
+  `0a54b7b5`; P04 catalog custody is integrated without changing the C4 result.
 
 ## Definition Of Done
 

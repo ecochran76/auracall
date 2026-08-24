@@ -61,13 +61,14 @@ lanes:
     branch: ops/plan0311-installed-live-follow-canary
     target: main
     plan_state: CLOSED
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: e1bd2f09143919a7421706e13aa019c361828026
+    custody_state: INTEGRATED
+    checkpoint: 725b04336ed768a7478a46350bd98fc94b234b84
     remote_ref: refs/remotes/origin/ops/plan0311-installed-live-follow-canary
     integration: merge
     dependencies: [P03]
     overlaps: []
     validation_status: terminal-hard-stop
-    validation_ref: e1bd2f09143919a7421706e13aa019c361828026
-    disposition: Install and restart reached byte parity; autonomous scheduler fanout triggered C4 before the frozen manual control, which remained unconsumed.
+    validation_ref: 725b04336ed768a7478a46350bd98fc94b234b84
+    integration_receipt: 0a54b7b50c3c73dc151d09d2c53cebc0b18e64b4
+    disposition: Integrated terminal receipt; install and restart reached byte parity, but autonomous scheduler fanout triggered C4 before the frozen manual control.
     updated_at: 2026-08-24

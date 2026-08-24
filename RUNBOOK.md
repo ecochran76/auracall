@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 511 | 2026-08-24
+
+- Published P04 terminal checkpoint `725b0433` and merged it without conflict
+  to `main` through `0a54b7b5`. The catalog now records closed/integrated
+  custody while preserving `terminal-hard-stop` validation.
+- Integration changes only durable documentation and custody. It grants no
+  retry, scheduler control, completion control, browser action, or cleanup of
+  the still-autonomous runtime work.
+
 ## Turn 510 | 2026-08-24
 
 - The sole `install:user-runtime-service` completed successfully: API PID
