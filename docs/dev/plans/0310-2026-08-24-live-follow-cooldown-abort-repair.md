@@ -1,12 +1,12 @@
 # Live-Follow Cooldown Abort Repair | 0310-2026-08-24
 
-State: OPEN
+State: CLOSED
 Lane: P03
-Operational state: INTEGRATION_READY / PROVIDER-FREE
+Operational state: ACCEPTED / INTEGRATED / PROVIDER-FREE
 Branch: fix/plan0310-live-follow-cooldown-abort
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-24
+Revision: 3 | 2026-08-24
 
 ## Stable Objective
 
@@ -42,6 +42,9 @@ from mutating shared pacing state or delaying the next target.
   diff hygiene pass. The broad suite passed 3,000 tests with 65 expected skips;
   its one unrelated native-download fixture failure passed on exact rerun and
   in two complete adapter runs.
+- Validated source checkpoint `c1da8609c60eabced87fadfde2b948747be8fc58`
+  and lane-custody checkpoint `9e8757c8` merged to `main` through integration
+  receipt `828bb3f854cbf9befaec5c23855e78cad49e6aaf`.
 
 ## Planning Metadata
 

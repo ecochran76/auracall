@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 508 | 2026-08-24
+
+- Plan 0310 closes `ACCEPTED / INTEGRATED / PROVIDER-FREE`. Validated repair
+  checkpoint `c1da8609` and lane checkpoint `9e8757c8` merged without conflict
+  through `828bb3f8`.
+- P03 custody now records the validated source checkpoint and integration
+  receipt. Source diagnosis and repair are complete; installed-runtime adoption
+  and an exact live-follow canary remain separate effect work, not implied by
+  source acceptance.
+
 ## Turn 507 | 2026-08-24
 
 - Plan 0310 reaches `INTEGRATION_READY / PROVIDER-FREE`. Exact RED proved that

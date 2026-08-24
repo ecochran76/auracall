@@ -1,3 +1,12 @@
+## 2026-08-24 | Plan 0310 integrated provider-free
+
+- Published validated source checkpoint `c1da8609` and lane checkpoint
+  `9e8757c8`, then merged both to current `main` through `828bb3f8` with no
+  divergence or conflict.
+- P03 is closed/integrated. This closes the source defect only; no package
+  installation, service restart, browser launch, provider read, scheduler
+  control, completion retry, or live canary occurred.
+
 ## 2026-08-24 | Plan 0310 provider-free repair accepted
 
 - Captured the exact RED through the public history-materialization service:

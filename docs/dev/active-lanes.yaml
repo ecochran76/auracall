@@ -42,8 +42,8 @@ lanes:
     plan_ref: refs/remotes/origin/fix/plan0310-live-follow-cooldown-abort
     branch: fix/plan0310-live-follow-cooldown-abort
     target: main
-    plan_state: OPEN
-    custody_state: INTEGRATION_READY
+    plan_state: CLOSED
+    custody_state: INTEGRATED
     checkpoint: c1da8609c60eabced87fadfde2b948747be8fc58
     remote_ref: refs/remotes/origin/fix/plan0310-live-follow-cooldown-abort
     integration: merge
@@ -51,5 +51,6 @@ lanes:
     overlaps: []
     validation_status: passed
     validation_ref: c1da8609c60eabced87fadfde2b948747be8fc58
-    disposition: Provider-free source repair accepted and published; installed-runtime update and exact live canary remain separate effect work.
+    integration_receipt: 828bb3f854cbf9befaec5c23855e78cad49e6aaf
+    disposition: Provider-free source repair integrated into main; installed-runtime update and exact live canary remain separate effect work.
     updated_at: 2026-08-24
