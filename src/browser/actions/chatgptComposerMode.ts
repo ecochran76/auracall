@@ -116,7 +116,7 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
     let radios = collectRadios();
     let modeTriggers = collectModeTriggers();
     const controlsStartedAt = performance.now();
-    while (radios.length === 0 && modeTriggers.length === 0 && performance.now() - controlsStartedAt < 10000) {
+    while (radios.length === 0 && modeTriggers.length === 0 && performance.now() - controlsStartedAt < 30000) {
       if (hasActiveConversationWorkMarker()) break;
       if (DESIRED_MODE === 'chat') {
         const promptEditors = Array.from(document.querySelectorAll(

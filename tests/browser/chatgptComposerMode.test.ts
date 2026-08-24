@@ -75,6 +75,7 @@ describe("ChatGPT composer mode", () => {
 		expect(expression).toContain("label === 'chat' || label === 'work'");
 		expect(expression).toContain("getAttribute('aria-checked') === 'true'");
 		expect(expression).toContain("getAttribute('data-state') === 'on'");
+		expect(expression).toContain("controlsStartedAt < 30000");
 	});
 
 	it("supports the current mode trigger plus menuitemradio surface", () => {
