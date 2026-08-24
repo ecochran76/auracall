@@ -139,7 +139,7 @@ describe("ChatGPT composer mode", () => {
 				return radioQueries >= 2 ? [chatRadio, workRadio] : [];
 			}
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href][data-active]") return [];
+			if (selector === "a[href]") return [];
 			return [];
 		});
 
@@ -253,7 +253,7 @@ describe("ChatGPT composer mode", () => {
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href][data-active]") return [activeConversation];
+			if (selector === "a[href]") return [activeConversation];
 			return [];
 		});
 
@@ -263,10 +263,9 @@ describe("ChatGPT composer mode", () => {
 		expect(result).toEqual({ status: "already-selected", mode: "work" });
 	});
 
-	it("accepts explicit Work from the active Project conversation aria label", async () => {
+	it("accepts explicit Work from the exact Project conversation aria label without data-active", async () => {
 		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
 			href: "/g/g-p-project/c/conversation-1",
-			"data-active": "",
 			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
 		});
 		vi.stubGlobal("location", {
@@ -276,7 +275,7 @@ describe("ChatGPT composer mode", () => {
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href][data-active]") return [activeConversation];
+			if (selector === "a[href]") return [activeConversation];
 			return [];
 		});
 
@@ -299,7 +298,7 @@ describe("ChatGPT composer mode", () => {
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href][data-active]") return [activeConversation];
+			if (selector === "a[href]") return [activeConversation];
 			return [];
 		});
 
@@ -323,7 +322,7 @@ describe("ChatGPT composer mode", () => {
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href][data-active]") return [activeConversation];
+			if (selector === "a[href]") return [activeConversation];
 			return [];
 		});
 
@@ -417,7 +416,7 @@ describe("ChatGPT composer mode", () => {
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"], [role="menuitemradio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href][data-active]") return [activeConversation];
+			if (selector === "a[href]") return [activeConversation];
 			if (selector === '[data-animated-slider-trigger="true"]') return [triggerMarker];
 			return [];
 		});
