@@ -36,3 +36,20 @@ lanes:
     integration_receipt: 9c3486ad1a7095ce88bd8492a1bcb5b9b2772523
     disposition: Integrated the validated AuraCall-native adaptations into main; Oracle remains research provenance rather than a synchronization target.
     updated_at: 2026-08-23
+  - id: P03
+    objective: Repair live-follow context reads that collide with provider pacing and leave detached cooldown state.
+    plan: docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md
+    plan_ref: refs/remotes/origin/fix/plan0310-live-follow-cooldown-abort
+    branch: fix/plan0310-live-follow-cooldown-abort
+    target: main
+    plan_state: OPEN
+    custody_state: INTEGRATION_READY
+    checkpoint: c1da8609c60eabced87fadfde2b948747be8fc58
+    remote_ref: refs/remotes/origin/fix/plan0310-live-follow-cooldown-abort
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: passed
+    validation_ref: c1da8609c60eabced87fadfde2b948747be8fc58
+    disposition: Provider-free source repair accepted and published; installed-runtime update and exact live canary remain separate effect work.
+    updated_at: 2026-08-24
