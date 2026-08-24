@@ -750,6 +750,54 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
+	test("threads the caller context deadline through artifact and file materialization reads", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(),
+			downloadConversationFile: vi.fn(),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+		const contextRead = vi.spyOn(service, "getConversationContext").mockResolvedValue({
+			provider: "chatgpt",
+			conversationId: "conversation-deadline",
+			messages: [],
+			artifacts: [],
+			files: [],
+		});
+
+		try {
+			await service.materializeConversationArtifacts("conversation-deadline", {
+				contextTimeoutMs: 240_000,
+			});
+			await service.materializeConversationFiles("conversation-deadline", {
+				contextTimeoutMs: 240_000,
+			});
+
+			expect(contextRead).toHaveBeenNthCalledWith(
+				1,
+				"conversation-deadline",
+				expect.objectContaining({ timeoutMs: 240_000 }),
+			);
+			expect(contextRead).toHaveBeenNthCalledWith(
+				2,
+				"conversation-deadline",
+				expect.objectContaining({ timeoutMs: 240_000 }),
+			);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("materializeConversationArtifacts writes a sidecar fetch manifest without changing the attachment manifest shape", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
 		setAuracallHomeDirOverrideForTest(homeDir);

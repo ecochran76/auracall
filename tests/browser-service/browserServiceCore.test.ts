@@ -310,4 +310,36 @@ describe('browser interaction governor', () => {
 
     expect(sleeps).toEqual([9_000, 109_000]);
   });
+
+  test('does not publish late pacing state after a caller aborts admission', async () => {
+    let nowMs = 1_000;
+    let releaseSleep: (() => void) | undefined;
+    const sleep = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseSleep = resolve;
+        }),
+    );
+    const governor = createBrowserInteractionGovernor({
+      maxInteractionsPerMinute: 6,
+      cooldownsByClass: { renavigation: 120_000 },
+      now: () => nowMs,
+      sleep,
+    });
+    await governor.beforeInteraction('renavigation');
+    const abortController = new AbortController();
+    const abortReason = new Error('conversation context deadline expired');
+    const abortedAdmission = governor.beforeInteraction('renavigation', abortController.signal);
+    await Promise.resolve();
+    expect(sleep).toHaveBeenCalledTimes(1);
+
+    abortController.abort(abortReason);
+    await expect(abortedAdmission).rejects.toBe(abortReason);
+    nowMs += 120_000;
+    releaseSleep?.();
+    await Promise.resolve();
+    await governor.beforeInteraction('renavigation');
+
+    expect(sleep).toHaveBeenCalledTimes(1);
+  });
 });

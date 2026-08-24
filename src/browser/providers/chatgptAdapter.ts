@@ -9,21 +9,6 @@ import {
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
 import type { BrowserInteractionClass } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import {
-	ensureChatgptComposerMode,
-	resolveChatgptModelSelectionPlan,
-} from "../actions/chatgptComposerMode.js";
-import { ensureChatgptComposerTool } from "../actions/chatgptComposerTool.js";
-import { ensureChatgptWorkModelSelection } from "../actions/chatgptWorkModelSelection.js";
-import {
-	clearComposerAttachments,
-	uploadAttachmentFile,
-	waitForAttachmentCompletion,
-} from "../actions/attachments.js";
-import { ensureModelSelection } from "../actions/modelSelection.js";
-import { ensurePromptReady } from "../actions/navigation.js";
-import { submitPrompt } from "../actions/promptComposer.js";
-import { ensureThinkingTime } from "../actions/thinkingTime.js";
-import {
 	requireBundledServiceBaseUrl,
 	requireBundledServiceCompatibleHosts,
 	requireBundledServiceRouteTemplate,
@@ -41,6 +26,21 @@ import {
 	resolveEffectiveServiceUiLabelSet,
 } from "../../services/registry.js";
 import { transferAttachmentViaDataTransfer } from "../actions/attachmentDataTransfer.js";
+import {
+	clearComposerAttachments,
+	uploadAttachmentFile,
+	waitForAttachmentCompletion,
+} from "../actions/attachments.js";
+import {
+	ensureChatgptComposerMode,
+	resolveChatgptModelSelectionPlan,
+} from "../actions/chatgptComposerMode.js";
+import { ensureChatgptComposerTool } from "../actions/chatgptComposerTool.js";
+import { ensureChatgptWorkModelSelection } from "../actions/chatgptWorkModelSelection.js";
+import { ensureModelSelection } from "../actions/modelSelection.js";
+import { ensurePromptReady } from "../actions/navigation.js";
+import { submitPrompt } from "../actions/promptComposer.js";
+import { ensureThinkingTime } from "../actions/thinkingTime.js";
 import {
 	extractChatgptRateLimitSummary,
 	isChatgptRateLimitMessage,
@@ -1371,6 +1371,10 @@ async function beforeChatgptBrowserInteraction(
 ): Promise<void> {
 	if (kind === "conversation-read" && options?.useProviderSession && options.providerSession) {
 		recordBrowserScrapeProviderAction(options, "chatgpt.skipScopedInteractionGovernor");
+		return;
+	}
+	if (options?.abortSignal) {
+		await options.interactionGovernor?.beforeInteraction(kind, options.abortSignal);
 		return;
 	}
 	await options?.interactionGovernor?.beforeInteraction(kind);

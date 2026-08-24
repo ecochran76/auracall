@@ -27,6 +27,7 @@ import {
 } from "../accountMirror/catalogService.js";
 import { accountMirrorIdentityKeysMatch } from "../accountMirror/tenantBinding.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import { DEFAULT_CONVERSATION_CONTEXT_TIMEOUT_MS } from "../browser/llmService/llmService.js";
 import { createLlmService } from "../browser/llmService/providers/index.js";
 import type { ConversationContextReadReceipt } from "../browser/providers/cache.js";
 import type { ConversationArtifact, FileRef, ProviderId } from "../browser/providers/domain.js";
@@ -107,6 +108,7 @@ export interface HistoryMaterializationInteractionPolicy {
 
 export interface HistoryMaterializationProviderWorkContext {
 	interactionGovernor: BrowserInteractionGovernor | null;
+	contextTimeoutMs: number;
 	excludedAssetFamilySignatures?: string[];
 	selectedCatalogAsset?: HistoryMaterializationSelectedCatalogAsset;
 	providerSessionProofSummary?: ProviderSessionProofSummary | null;
@@ -198,7 +200,12 @@ export interface HistoryMaterializationAttemptReceipt {
 	object: "history_materialization_attempt_receipt";
 	version: 1;
 	generatedAt: string;
-	origin: "direct" | "catalog_item" | "archive_item" | "selected_conversation_id" | "reconciliation_candidate";
+	origin:
+		| "direct"
+		| "catalog_item"
+		| "archive_item"
+		| "selected_conversation_id"
+		| "reconciliation_candidate";
 	index: number;
 	target: HistoryMaterializationTarget;
 	budgetBefore: {
@@ -692,7 +699,12 @@ function createHistoryMaterializationAttemptExecutor(input: {
 						shouldReuseCollectorSnapshot(attempt.candidate.target, attempt.request)
 					) {
 						result = initialMaterialization;
-						return projectHistoryMaterializationAttemptOutcome(attempt, result, evidenceWrites, input.now);
+						return projectHistoryMaterializationAttemptOutcome(
+							attempt,
+							result,
+							evidenceWrites,
+							input.now,
+						);
 					}
 				}
 				let snapshotRefresh: HistoryMaterializationSnapshotRefresh;
@@ -726,7 +738,12 @@ function createHistoryMaterializationAttemptExecutor(input: {
 					result = withSnapshotRefreshPhase(materialization, snapshotRefresh);
 				}
 			}
-			return projectHistoryMaterializationAttemptOutcome(attempt, result, evidenceWrites, input.now);
+			return projectHistoryMaterializationAttemptOutcome(
+				attempt,
+				result,
+				evidenceWrites,
+				input.now,
+			);
 		},
 	};
 }
@@ -800,7 +817,10 @@ function verifyHistoryMaterializationAttemptResult(
 	if (result.object !== "history_materialization_result") {
 		throw new Error("History materialization attempt returned an invalid result object.");
 	}
-	if (!result.target || !historyMaterializationTargetsEqual(result.target, attempt.candidate.target)) {
+	if (
+		!result.target ||
+		!historyMaterializationTargetsEqual(result.target, attempt.candidate.target)
+	) {
 		throw new Error("History materialization attempt result target did not match selected target.");
 	}
 	for (const metric of ["conversations", "materialized", "skipped", "failed"] as const) {
@@ -885,9 +905,16 @@ export function createHistoryMaterializationService(
 							renavigation: policy.renavigationCooldownMs,
 						},
 						now: () => now().getTime(),
-						sleep: (ms) => sleep(ms),
+						...(deps.sleep
+							? {
+									sleep: async (ms: number) => {
+										await deps.sleep?.(ms);
+									},
+								}
+							: {}),
 					})
 				: null,
+			contextTimeoutMs: resolveHistoryMaterializationContextTimeoutMs(request),
 			providerSessionProofSummary: null,
 		};
 		context.onProviderSessionProof = (proof) => {
@@ -919,6 +946,7 @@ export function createHistoryMaterializationService(
 					jobId,
 					now,
 					interactionGovernor: context.interactionGovernor,
+					contextTimeoutMs: context.contextTimeoutMs,
 					excludedAssetFamilySignatures: workContext?.excludedAssetFamilySignatures ?? [],
 					selectedCatalogAsset: workContext?.selectedCatalogAsset,
 					onProviderSessionProof: context.onProviderSessionProof,
@@ -941,6 +969,7 @@ export function createHistoryMaterializationService(
 					jobId,
 					now,
 					interactionGovernor: context.interactionGovernor,
+					contextTimeoutMs: context.contextTimeoutMs,
 					onProviderSessionProof: context.onProviderSessionProof,
 				});
 	};
@@ -1665,16 +1694,16 @@ async function materializeHistoryRequest(input: {
 			});
 		}
 		const target: HistoryMaterializationTarget = {
-				provider: request.provider,
-				runtimeProfile: request.runtimeProfile ?? null,
-				browserProfile: request.browserProfile ?? null,
-				boundIdentityKey: request.boundIdentityKey ?? null,
-				conversationId: request.conversationId,
-				providerConversationUrl:
-					request.providerConversationUrl ??
-					resolveProviderConversationUrl(request.provider, request.conversationId),
-				projectId: request.projectId ?? null,
-			};
+			provider: request.provider,
+			runtimeProfile: request.runtimeProfile ?? null,
+			browserProfile: request.browserProfile ?? null,
+			boundIdentityKey: request.boundIdentityKey ?? null,
+			conversationId: request.conversationId,
+			providerConversationUrl:
+				request.providerConversationUrl ??
+				resolveProviderConversationUrl(request.provider, request.conversationId),
+			projectId: request.projectId ?? null,
+		};
 		return (
 			await input.materializationAttemptExecutor.execute({
 				jobId: input.jobId,
@@ -2891,8 +2920,7 @@ async function materializeReconciliation(input: {
 				break;
 			}
 			remainingAssetBudget =
-				decrementRemaining(remainingAssetBudget, outcome.accounting.assetsAttempted) ??
-				0;
+				decrementRemaining(remainingAssetBudget, outcome.accounting.assetsAttempted) ?? 0;
 			if (outcome.accounting.targetConsumed) {
 				consumedTargetBudget += 1;
 			}
@@ -3752,6 +3780,7 @@ async function refreshConversationSnapshotTarget(input: {
 	jobId?: string | null;
 	now: () => Date;
 	interactionGovernor?: BrowserInteractionGovernor | null;
+	contextTimeoutMs?: number;
 	onProviderSessionProof?: (proof: ProviderSessionProof) => void;
 }): Promise<HistoryMaterializationSnapshotRefresh> {
 	const llmService = createLlmService(
@@ -3785,6 +3814,7 @@ async function refreshConversationSnapshotTarget(input: {
 			projectId: input.target.projectId ?? undefined,
 			refresh: true,
 			allowCacheFallback: false,
+			timeoutMs: input.contextTimeoutMs,
 			listOptions,
 			onReceipt: (receipt) => {
 				contextReadReceipt = receipt;
@@ -4025,6 +4055,7 @@ async function materializeConversationTarget(input: {
 	jobId: string;
 	now: () => Date;
 	interactionGovernor?: BrowserInteractionGovernor | null;
+	contextTimeoutMs?: number;
 	excludedAssetFamilySignatures?: string[];
 	selectedCatalogAsset?: HistoryMaterializationSelectedCatalogAsset;
 	onProviderSessionProof?: (proof: ProviderSessionProof) => void;
@@ -4133,6 +4164,7 @@ async function materializeConversationTarget(input: {
 						{
 							projectId: input.target.projectId ?? undefined,
 							listOptions,
+							contextTimeoutMs: input.contextTimeoutMs,
 							refresh: refreshMaterializationSource,
 							maxItems: remaining,
 							excludeArtifact,
@@ -4182,6 +4214,7 @@ async function materializeConversationTarget(input: {
 					fileFetch = await llmService.materializeConversationFiles(input.target.conversationId, {
 						projectId: input.target.projectId ?? undefined,
 						listOptions,
+						contextTimeoutMs: input.contextTimeoutMs,
 						refresh: refreshMaterializationSource,
 						maxItems: remaining,
 						excludeFile,
@@ -6174,6 +6207,27 @@ function normalizeHistoryMaterializationInteractionPolicy(
 	};
 }
 
+function resolveHistoryMaterializationContextTimeoutMs(
+	request: HistoryMaterializationCreateRequest,
+): number {
+	const policy = request.interactionPolicy;
+	if (!policy) return DEFAULT_CONVERSATION_CONTEXT_TIMEOUT_MS;
+	const maxInteractionsPerMinute = normalizeInteractionPolicyCount(
+		policy.maxInteractionsPerMinute,
+		20,
+	);
+	const pacingAllowanceMs = Math.max(
+		Math.ceil(60_000 / maxInteractionsPerMinute),
+		normalizeInteractionPolicyCooldown(policy.conversationReadCooldownMs),
+		normalizeInteractionPolicyCooldown(policy.pageRefreshCooldownMs),
+		normalizeInteractionPolicyCooldown(policy.renavigationCooldownMs),
+	);
+	return Math.min(
+		Number.MAX_SAFE_INTEGER,
+		DEFAULT_CONVERSATION_CONTEXT_TIMEOUT_MS + pacingAllowanceMs,
+	);
+}
+
 function normalizeInteractionPolicyCount(value: unknown, fallback: number): number {
 	return typeof value === "number" && Number.isFinite(value) && value > 0
 		? Math.max(1, Math.floor(value))
@@ -6486,10 +6540,7 @@ async function acquireHistoryMaterializationBrowserOperations(input: {
 							input.queueTimeoutMs,
 							10 * 60 * 1000,
 						),
-						pollMs: normalizeHistoryMaterializationBrowserQueueNumber(
-							input.queuePollMs,
-							1000,
-						),
+						pollMs: normalizeHistoryMaterializationBrowserQueueNumber(input.queuePollMs, 1000),
 					})
 				: await input.dispatcher.acquire(operationInput);
 			if (!acquired.acquired) {

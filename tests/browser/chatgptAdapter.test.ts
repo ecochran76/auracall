@@ -1853,6 +1853,21 @@ describe("beforeChatgptBrowserInteraction", () => {
 
 		expect(beforeInteraction).toHaveBeenCalledWith("conversation-read");
 	});
+
+	test("binds fallback pacing to the active context-read abort signal", async () => {
+		const beforeInteraction = vi.fn(async () => undefined);
+		const abortController = new AbortController();
+
+		await beforeChatgptBrowserInteractionForTest(
+			{
+				interactionGovernor: { beforeInteraction },
+				abortSignal: abortController.signal,
+			},
+			"renavigation",
+		);
+
+		expect(beforeInteraction).toHaveBeenCalledWith("renavigation", abortController.signal);
+	});
 });
 
 describe("isChatgptTargetReusableForPreferredUrl", () => {

@@ -60,8 +60,8 @@ import type {
 import {
 	assertProviderSessionAuthorization,
 	createProviderSessionAuthority,
-	ProviderSessionAuthorityError,
 	type ProviderSessionAuthority,
+	ProviderSessionAuthorityError,
 	type ProviderSessionContext,
 	type ProviderSessionProof,
 } from "../providers/providerSessionAuthority.js";
@@ -1046,10 +1046,7 @@ export abstract class LlmService {
 		options?: BrowserProviderListOptions,
 	): Promise<ConversationListResult>;
 
-	async runPrompt(
-		input: PromptInput,
-		options?: BrowserProviderListOptions,
-	): Promise<PromptResult> {
+	async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
 		if (!this.provider.runPrompt) {
 			throw new Error(`Prompt execution is not supported for ${this.providerId}.`);
 		}
@@ -1700,7 +1697,11 @@ export abstract class LlmService {
 
 	async listConversationFiles(
 		conversationId: string,
-		options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+		options?: {
+			projectId?: string;
+			listOptions?: BrowserProviderListOptions;
+			contextTimeoutMs?: number;
+		},
 	): Promise<FileRef[]> {
 		const listOptions = this.scopeConversationListOptions(
 			options?.listOptions?.useProviderSession
@@ -1717,6 +1718,7 @@ export abstract class LlmService {
 		}
 		const context = await this.getConversationContext(conversationId, {
 			projectId: options?.projectId,
+			timeoutMs: options?.contextTimeoutMs,
 			listOptions,
 		});
 		const normalizedFiles = Array.isArray(context.files) ? context.files : [];
@@ -1730,6 +1732,7 @@ export abstract class LlmService {
 		options?: {
 			projectId?: string;
 			listOptions?: BrowserProviderListOptions;
+			contextTimeoutMs?: number;
 			refresh?: boolean;
 			maxItems?: number | null;
 			excludeArtifact?: (
@@ -1757,6 +1760,7 @@ export abstract class LlmService {
 			const context = await this.getConversationContext(conversationId, {
 				projectId: options?.projectId,
 				refresh: options?.refresh ?? true,
+				timeoutMs: options?.contextTimeoutMs,
 				listOptions,
 			});
 			const contextArtifacts = Array.isArray(context.artifacts) ? context.artifacts : [];
@@ -2014,6 +2018,7 @@ export abstract class LlmService {
 		options?: {
 			projectId?: string;
 			listOptions?: BrowserProviderListOptions;
+			contextTimeoutMs?: number;
 			refresh?: boolean;
 			maxItems?: number | null;
 			excludeFile?: (file: FileRef) => boolean;
@@ -2079,6 +2084,7 @@ export abstract class LlmService {
 					listedConversationFiles = await Promise.race([
 						this.listConversationFiles(conversationId, {
 							projectId: options?.projectId,
+							contextTimeoutMs: options?.contextTimeoutMs,
 							listOptions,
 						}),
 						timeoutAfter<FileRef[]>(
