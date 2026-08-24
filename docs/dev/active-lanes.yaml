@@ -90,3 +90,21 @@ lanes:
     integration_receipt: f133601ee2249508b6918331d8cd92ac12364b1e
     disposition: Integrated terminal receipt; scheduler isolation prevented fanout, but the sole control failed at pass 1 on a 587 ms predicate timeout and retained an owned browser until exact cleanup.
     updated_at: 2026-08-24
+  - id: P06
+    objective: Repair the ChatGPT sidebar predicate fallback and forced terminal live-follow browser cleanup provider-free.
+    plan: docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md
+    plan_ref: refs/heads/fix/plan0313-live-follow-predicate-cleanup
+    branch: fix/plan0313-live-follow-predicate-cleanup
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: refs/remotes/origin/fix/plan0313-live-follow-predicate-cleanup
+    integration: merge
+    dependencies: [P05]
+    overlaps: []
+    validation_status: pending
+    validation_ref: null
+    integration_receipt: null
+    disposition: Provider-free repair in progress; installed adoption and any canary remain separately gated.
+    updated_at: 2026-08-24

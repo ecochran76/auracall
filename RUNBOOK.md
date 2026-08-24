@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 515 | 2026-08-24
+
+- Operator `ok go` opens Plan 0313/P06 as a provider-free repair for the two
+  Plan 0312 defects. The 800 ms ChatGPT sidebar readiness probe currently lets
+  its own predicate transport timeout bypass the existing open/recheck path;
+  completion cleanup policy currently excludes forced ChatGPT live-follow.
+- The packet permits exact RED/GREEN fixtures, narrow source/docs changes, and
+  provider-free validation only. Scheduler remains durably paused; install,
+  restart, browser/provider work, completion/materialization control, prompt,
+  and canary effects are zero.
+
 ## Turn 514 | 2026-08-24
 
 - Published P05 terminal checkpoint `193fd1e8` and merged it without conflict

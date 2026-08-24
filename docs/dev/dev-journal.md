@@ -1,3 +1,15 @@
+## 2026-08-24 | Plan 0313 provider-free repair opened
+
+- Operator `ok go` authorizes the bounded source successor to Plan 0312. P06
+  owns one ChatGPT sidebar readiness-fallback regression and one forced
+  terminal live-follow cleanup-policy regression.
+- The shared predicate deadline remains fail-fast. The provider caller will
+  recover only its exact bounded readiness timeout; unrelated CDP failures
+  remain visible. Completion cleanup expands only to an explicit force ceiling,
+  not ordinary indefinite live follow.
+- Scheduler remains paused and no install, restart, browser/provider,
+  completion, materialization, prompt, or canary effect is authorized.
+
 ## 2026-08-24 | Plan 0312 hard-stop receipt integrated
 
 - Published terminal checkpoint `193fd1e8` and merged it to `main` through
