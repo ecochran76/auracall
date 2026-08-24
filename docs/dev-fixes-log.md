@@ -1,3 +1,10 @@
+- 2026-08-23: Archive and account-mirror reads must isolate inaccessible local
+  assets. A stale or unavailable mount (`ENODEV`, `ESTALE`, `EIO`, `EACCES`,
+  or `EPERM`) is evidence that one indexed asset cannot currently be read; it
+  must not abort search or exact catalog-item materialization for unrelated
+  evidence. Record the path and error code on that item, omit its checksum and
+  size, and keep unexpected errors fail-closed.
+
 - 2026-08-21: Treat browser `--timeout` and process signals as one owned,
   cooperative session lifecycle. A CLI-level SIGINT race or browser-local
   hard exit can bypass `finally`, strand the managed Chrome/operation lock, and

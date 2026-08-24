@@ -1,3 +1,22 @@
+## 2026-08-23 | Isolate unavailable archive assets during exact materialization
+
+- LitScout Plan 0444 used AuraCall's exact `wsl-chrome-3` account-mirror
+  catalog to select one conversation file, but the existing materialization
+  job failed pre-provider because archive metadata refresh encountered an
+  unrelated `/mnt/h` asset with `ENODEV`.
+- CodeGraph localized the shared defect to archive file inspection: checksum,
+  access, and size probes rethrew device, stale-handle, I/O, and permission
+  failures, aborting the complete archive read instead of classifying the one
+  local asset as unavailable.
+- The bounded repair keeps unexpected programming errors fail-closed while
+  turning `ENODEV`, `ESTALE`, `EIO`, `EACCES`, and `EPERM` into per-item
+  unavailable evidence. It adds no endpoint and performs no provider work.
+- The exact archive/search/history suites pass 99 tests. Typecheck, scoped
+  Biome, production build, plan-library audit, and diff hygiene pass. The full
+  suite passed 2,984 tests with 65 expected skips but timed out 13 tests under
+  parallel load; all 11 affected files then passed 280 tests with one skip in a
+  serial 30-second-ceiling rerun.
+
 ## 2026-08-14 | Plan 0285 Exact Developer-App Auth Binding
 
 - LitScout governance reconciled the Plan 0284 complete inventory against the

@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import fs, { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createRunArchiveService, type RunArchiveItem } from '../src/runtime/archiveService.js';
@@ -24,7 +24,48 @@ import { createMediaGenerationService } from '../src/media/service.js';
 
 describe('run archive service', () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     setAuracallHomeDirOverrideForTest(null);
+  });
+
+  test('keeps archive reads available when one indexed local asset is on an unavailable device', async () => {
+    const unavailablePath = '/mnt/unavailable/archive-source.docx';
+    const deviceError = Object.assign(new Error('device unavailable'), { code: 'ENODEV' });
+    vi.spyOn(fs, 'readFile').mockRejectedValueOnce(deviceError);
+    vi.spyOn(fs, 'access').mockRejectedValueOnce(deviceError);
+    vi.spyOn(fs, 'stat').mockRejectedValueOnce(deviceError);
+    const indexStore = {
+      readIndex: vi.fn(async () => ({
+        object: 'run_archive_index' as const,
+        version: 1,
+        updatedAt: '2026-08-24T02:00:00.000Z',
+        itemCount: 1,
+        items: [createArchiveItemFixture({
+          id: 'upload:unavailable-device',
+          kind: 'upload',
+          localPath: unavailablePath,
+          fileAvailable: true,
+        })],
+      })),
+      writeIndex: vi.fn(),
+      upsertItems: vi.fn(),
+      readItem: vi.fn(),
+      listItems: vi.fn(),
+    } as unknown as RunArchiveIndexStore;
+    const service = createRunArchiveService({ indexStore });
+
+    await expect(service.listItems({ kind: 'upload' })).resolves.toMatchObject({
+      metrics: { total: 1 },
+      items: [{
+        id: 'upload:unavailable-device',
+        fileAvailable: false,
+        metadata: expect.objectContaining({
+          unavailableReason: 'local-file-unavailable',
+          unavailableLocalPath: unavailablePath,
+          unavailableErrorCode: 'ENODEV',
+        }),
+      }],
+    });
   });
 
   test('hydrates only items that can match stable list filters', async () => {
