@@ -61,7 +61,10 @@ function installFixtureDocument(query: (selector: string) => FixtureElement[]): 
 	vi.stubGlobal("document", { querySelectorAll: query });
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+	vi.useRealTimers();
+	vi.unstubAllGlobals();
+});
 
 describe("ChatGPT composer mode", () => {
 	it("targets exact Chat and Work radios and verifies Radix selected state", () => {
@@ -124,6 +127,28 @@ describe("ChatGPT composer mode", () => {
 		expect(logger).toHaveBeenCalledWith("ChatGPT mode: Chat (already selected)");
 	});
 
+	it("waits for the Project landing Chat and Work radios to mount", async () => {
+		const chatRadio = new FixtureElement("Chat", { role: "radio", "aria-checked": "true" });
+		const workRadio = new FixtureElement("Work", { role: "radio", "aria-checked": "false" });
+		let radioQueries = 0;
+		workRadio.onClick = () => workRadio.setAttribute("aria-checked", "true");
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') {
+				radioQueries += 1;
+				return radioQueries >= 2 ? [chatRadio, workRadio] : [];
+			}
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("work");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "switched", mode: "work" });
+		expect(radioQueries).toBeGreaterThanOrEqual(2);
+	});
+
 	it("accepts a valid existing Chat conversation without an exposed mode control", async () => {
 		const promptEditor = new FixtureElement("", {
 			role: "textbox",
@@ -170,6 +195,7 @@ describe("ChatGPT composer mode", () => {
 	});
 
 	it("does not infer Work from a conversation composer without a mode control", async () => {
+		vi.useFakeTimers();
 		const promptEditor = new FixtureElement("", {
 			role: "textbox",
 			"aria-label": "Chat with ChatGPT",
@@ -184,7 +210,9 @@ describe("ChatGPT composer mode", () => {
 		});
 
 		const expression = buildChatgptComposerModeExpressionForTest("work");
-		const result = await new Function(`return ${expression}`)();
+		const resultPromise = new Function(`return ${expression}`)();
+		await vi.runAllTimersAsync();
+		const result = await resultPromise;
 
 		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
 	});
