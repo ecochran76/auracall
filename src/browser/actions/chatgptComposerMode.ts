@@ -100,6 +100,8 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
             return false;
           }
           if (pathname !== location.pathname) return false;
+          const ariaLabel = normalize(node.getAttribute('aria-label'));
+          if (ariaLabel === 'work' || ariaLabel.endsWith(', work')) return true;
           return Array.from(node.querySelectorAll('span'))
             .some((marker) => normalize(marker.textContent) === 'work');
         });

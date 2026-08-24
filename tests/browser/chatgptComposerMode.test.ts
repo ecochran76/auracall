@@ -262,6 +262,52 @@ describe("ChatGPT composer mode", () => {
 		expect(result).toEqual({ status: "already-selected", mode: "work" });
 	});
 
+	it("accepts explicit Work from the active Project conversation aria label", async () => {
+		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
+			href: "/g/g-p-project/c/conversation-1",
+			"data-active": "",
+			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
+		});
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-project/c/conversation-1",
+			pathname: "/g/g-p-project/c/conversation-1",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("work");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "already-selected", mode: "work" });
+	});
+
+	it("does not misclassify an active Project Work conversation as Chat", async () => {
+		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
+			href: "/g/g-p-project/c/conversation-1",
+			"data-active": "",
+			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
+		});
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-project/c/conversation-1",
+			pathname: "/g/g-p-project/c/conversation-1",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("chat");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "mode-not-found", availableModes: ["Work"] });
+	});
+
 	it("rejects implicit Chat when the active conversation badge proves Work", async () => {
 		const workBadge = new FixtureElement("Work");
 		const activeConversation = new FixtureElement("Existing conversationWork", {
