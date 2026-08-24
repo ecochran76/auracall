@@ -1,5 +1,33 @@
 # RUNBOOK
 
+## Turn 510 | 2026-08-24
+
+- The sole `install:user-runtime-service` completed successfully: API PID
+  `78882` became healthy PID `57888`, `NRestarts=0`, and all four repaired
+  installed JavaScript modules match current source byte-for-byte.
+- Before the frozen manual control, the enabled scheduler autonomously opened
+  exact managed browser `wsl-chrome-3/chatgpt` as PID `60513` / port 45015 and
+  created substitute completion
+  `acctmirror_completion_85756c59-a414-45b3-bdac-766fb586595a`, running at pass
+  0 from `2026-08-24T14:16:51.385Z` with no provider guard or child yet.
+- P04 closes `C4_hard_stop`. The intended completion remained blocked/pass 1;
+  no manual completion control, retry, scheduler control, substitution,
+  cancellation, prompt, browser mutation, or cleanup ran. A successor must own
+  scheduler isolation before restart.
+
+## Turn 509 | 2026-08-24
+
+- Operator `ok go` opens Plan 0311 as the separate installed-effect packet for
+  Plan 0310: one user-runtime install, one API restart, and one exact zero-retry
+  `wsl-chrome-3` `run-one-pass` canary.
+- Pre-effect readback binds completion
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` at blocked pass 1
+  and terminal old-runtime child `hmj_c2936e24ae094be39284b197759b94ab`
+  with 0 materialized / 3 skipped / 4 failed and zero active target jobs.
+- The installed API is PID 78882. Its exact managed browser child is PID 73391
+  on port 45015; provider-work quietness and ownership must be re-read before
+  the sole install/restart. No effect has been consumed yet.
+
 ## Turn 508 | 2026-08-24
 
 - Plan 0310 closes `ACCEPTED / INTEGRATED / PROVIDER-FREE`. Validated repair

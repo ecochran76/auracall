@@ -1,3 +1,11 @@
+- 2026-08-24: Treat an enabled account-mirror scheduler as an active race across
+  user-runtime service restart. A healthy replacement API can immediately
+  create a new completion and own the managed browser before a frozen manual
+  canary control is issued. If acceptance requires one exact preselected
+  completion, the packet must explicitly own scheduler isolation before the
+  restart and re-read completion/browser ownership afterward; otherwise any
+  autonomous substitute completion is a terminal hard stop, not canary proof.
+
 - 2026-08-24: Bind shared browser-interaction admission to the active provider
   read, not only to a governor-wide lifetime. Race custom deterministic sleeps
   against that signal and recheck cancellation before publishing timestamps so
