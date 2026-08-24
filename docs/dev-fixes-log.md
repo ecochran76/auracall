@@ -1,3 +1,12 @@
+- 2026-08-24: A surviving managed-browser listener proves process ownership,
+  not completion liveness. A completion can fail and release its provider-work
+  lease while its API-owned Chrome remains healthy on the configured DevTools
+  port. Bind terminal monitoring to both the persisted parent/job state and
+  exact process ownership; after proving zero active jobs and released work,
+  classify the retained process as an exact orphan and clean only that PID.
+  Scheduler isolation prevents autonomous fanout but does not repair a
+  sub-second predicate timeout or failed-run cleanup.
+
 - 2026-08-24: Treat an enabled account-mirror scheduler as an active race across
   user-runtime service restart. A healthy replacement API can immediately
   create a new completion and own the managed browser before a frozen manual

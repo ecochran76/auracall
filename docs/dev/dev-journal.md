@@ -1,3 +1,16 @@
+## 2026-08-24 | Plan 0312 scheduler-isolated canary hard stop
+
+- Provider-free ChatGPT contracts passed `135/135`; one scheduler pause then
+  established durable execute-mode isolation with no autonomous fanout.
+- The sole exact completion control launched API-owned Chrome PID `63902` on
+  port 45015. The parent failed at pass 1 on a 587 ms predicate timeout before
+  creating a fresh child, released its provider-work lease, and raised no
+  provider guard.
+- Chrome remained after the 30-minute observation ceiling despite zero active
+  jobs. One exact SIGTERM removed PID `63902`; API PID `57888` remained healthy.
+  Closed P05 as `C4_hard_stop`, left scheduler paused, and consumed no resume,
+  retry, install, restart, prompt, manual browser action, or wider control.
+
 ## 2026-08-24 | Plan 0312 scheduler-isolated canary opened
 
 - Operator `ok go` authorizes one scheduler pause, one exact zero-retry control

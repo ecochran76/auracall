@@ -1,12 +1,12 @@
 # Scheduler-Isolated Live-Follow Cooldown Canary | 0312-2026-08-24
 
-State: OPEN
+State: CLOSED
 Lane: P05
-Operational state: ACTIVE / INSTALLED-EFFECT
+Operational state: TERMINAL_HARD_STOP / C4
 Branch: ops/plan0312-scheduler-isolated-live-follow-canary
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-24
+Revision: 2 | 2026-08-24
 
 ## Stable Objective
 
@@ -15,25 +15,30 @@ zero-retry `chatgpt/wsl-chrome-3` completion pass that proves the installed
 Plan 0310 cooldown-abort repair without autonomous completion fanout. Restore
 normal scheduling only after a clean terminal canary and exact cleanup.
 
-## Current State
+## Terminal State
 
-- Source and remote are clean at
-  `4b06b401518f91e444bab3652063fc5e7dcf6624`; the user runtime is already
-  byte-exact for the four repaired modules and API PID `57888` is healthy with
-  `NRestarts=0` on port 18095.
-- The scheduler is enabled in execute mode at 600000 ms, scheduled, and not
-  paused. The supported isolation control is one local `POST /status` with
-  `accountMirrorScheduler.action=pause`; no config edit or restart is required.
-- The Plan 0311 autonomous completion
-  `acctmirror_completion_85756c59-a414-45b3-bdac-766fb586595a` is terminal
-  failed at pass 2. Its two installed-runtime children settled skipped with
-  zero failed materializations, but the parent later failed on a separate
-  `Timed out waiting for predicate after 800ms` error. It is not this canary.
-- Exact target completion
-  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` remains blocked
-  at pass 1 with null force ceiling, no provider guard, and old-runtime child
-  `hmj_c2936e24ae094be39284b197759b94ab` (0 materialized / 3 skipped /
-  4 failed). No target job or managed browser is active.
+- Plan and P05 custody were published on canonical `main` through `a894156a`
+  before effects. The seven-file provider-free ChatGPT contract gate passed
+  135 tests.
+- One supported scheduler `pause` returned `ok=true` and established
+  `enabled=true`, `dryRun=false`, `state=paused`, `paused=true`. No scheduler
+  pass or autonomous completion started afterward.
+- One exact `run-one-pass` on completion
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` queued the
+  frozen parent with force ceiling 2. Its initial eligibility checks deferred
+  first for failure backoff and then foreground work; no second control ran.
+- The provider operation launched exact managed browser PID `63902` on port
+  45015 under API PID `57888`. The parent failed at
+  `2026-08-24T15:53:14.132Z` with `Timed out waiting for predicate after
+  587ms`, released its provider-work lease, remained at pass 1, and created no
+  fresh materialization child. No provider guard was raised.
+- The failed parent left Chrome PID `63902` listening for more than the
+  30-minute observation ceiling despite zero active target jobs. Exact orphan
+  cleanup sent one SIGTERM only to PID `63902`; the process and port 45015 then
+  disappeared. API PID `57888` remained active/running with `NRestarts=0`.
+- Classification is `C4_hard_stop`: predicate failure prevented the canary
+  pass, and terminal cleanup did not occur within the bounded envelope. The
+  scheduler remains durably paused; conditional resume was not entered.
 
 ## Authority And Effect Budget
 
@@ -121,3 +126,26 @@ normal scheduling only after a clean terminal canary and exact cleanup.
 - Plan, roadmap, runbook, journal, lane catalog, Git refs, runtime receipts, and
   remote readback agree.
 
+## Acceptance Result And Effect Accounting
+
+- `SILF-R1`: accepted. Canonical plan/custody checkpoint `a894156a` preceded
+  all runtime effects.
+- `SILF-R2`: accepted. One pause established durable execute-mode isolation;
+  no autonomous completion or child fanout followed.
+- `SILF-R3`: rejected. The one control was consumed, but the parent failed at
+  pass 1 before advancement and created zero fresh children.
+- `SILF-R4` and `SILF-R5`: not accepted. The intended materialization child
+  never existed; the exact new blocker is a 587 ms predicate timeout before
+  pass advancement, followed by a retained owned browser.
+- `SILF-R6`: accepted for the hard-stop path. Scheduler resume remained `0/1`,
+  the scheduler is paused, exact orphan cleanup succeeded, and service/runtime
+  ownership is reconciled.
+- Effects: scheduler pauses `1/1`; scheduler resumes `0/1`; completion controls
+  `1/1`; pass advances `0/1`; fresh children `0/1`; retries `0`; exact orphan
+  SIGTERM cleanup `1`; installs/restarts/config edits/scheduler run-once/
+  completion creates/prompts/manual browser mutations/`Answer now` actions/
+  direct runtime edits all `0`.
+- Exact remaining gate: provider-free diagnosis must localize the sub-second
+  predicate timeout and why failed completion cleanup retained the managed
+  browser after provider-work release. Plan 0312 grants no retry or successor
+  live effect.

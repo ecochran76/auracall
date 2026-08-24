@@ -4,15 +4,15 @@
 
 ### Current Execution Board
 
-Status: scheduler-isolated installed canary active
-Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop, integrated); P05 (active)
+Status: scheduler-isolated installed canary hard stop
+Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop, integrated); P05 (terminal hard stop)
 
-- Active scheduler-isolated live-follow cooldown canary:
+- Terminal scheduler-isolated live-follow cooldown canary:
   [docs/dev/plans/0312-2026-08-24-scheduler-isolated-live-follow-canary.md](docs/dev/plans/0312-2026-08-24-scheduler-isolated-live-follow-canary.md)
-  One durable scheduler pause will isolate the exact blocked/pass-1
-  `wsl-chrome-3` completion before one zero-retry control and at most one fresh
-  child. Resume is allowed only after a clean terminal result and cleanup;
-  every hard stop leaves the scheduler paused.
+  Scheduler isolation succeeded and prevented fanout. The sole frozen control
+  instead failed at pass 1 on a 587 ms predicate timeout before creating a
+  fresh child, then retained its API-owned browser past the observation bound.
+  Exact orphan cleanup succeeded; scheduler remains paused and no retry ran.
 
 - Terminal installed live-follow cooldown canary:
   [docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md](docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md)
