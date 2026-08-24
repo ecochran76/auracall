@@ -263,10 +263,16 @@ describe("ChatGPT composer mode", () => {
 		expect(result).toEqual({ status: "already-selected", mode: "work" });
 	});
 
-	it("accepts explicit Work from the exact Project conversation aria label without data-active", async () => {
+	it("accepts explicit Work from the exact Project conversation aria label in a collapsed sidebar", async () => {
 		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
 			href: "/g/g-p-project/c/conversation-1",
 			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
+		});
+		activeConversation.getBoundingClientRect = () => ({
+			left: 0,
+			top: 0,
+			width: 0,
+			height: 0,
 		});
 		vi.stubGlobal("location", {
 			href: "https://chatgpt.com/g/g-p-project/c/conversation-1",

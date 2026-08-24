@@ -27,7 +27,6 @@ export function normalizeChatgptComposerMode(
 export function buildActiveChatgptWorkConversationMarkerDefinition(): string {
 	return `const hasActiveConversationWorkMarker = () =>
       Array.from(document.querySelectorAll('a[href]'))
-        .filter(visible)
         .some((node) => {
           const href = node.getAttribute('href');
           if (!href) return false;
