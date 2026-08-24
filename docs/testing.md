@@ -17,6 +17,17 @@
   This is provider-free and proves an unacknowledged `Runtime.evaluate` cannot
   outlive the caller's outer polling budget even without a separate inner bound.
 
+- ChatGPT sidebar timeout recovery regression:
+  `pnpm vitest run tests/browser/chatgptAdapter.test.ts -t "ChatGPT sidebar readiness recovery"`.
+  The named first readiness timeout enters the existing sidebar opener, while
+  unrelated CDP failures remain visible; shared predicate semantics are not
+  relaxed.
+
+- Forced live-follow cleanup regression:
+  `pnpm vitest run tests/accountMirror/completionService.test.ts -t "forces one live-follow pass|defaults to live follow"`.
+  This proves an explicit one-pass ceiling requests managed-browser cleanup and
+  ordinary indefinite live follow retains its existing ownership policy.
+
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
 - Browser launch plan contract (provider-free):
   `pnpm vitest run tests/browser/browserLaunchPlan.test.ts tests/browser/browserLaunchPlanStructure.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/configModel.test.ts`.

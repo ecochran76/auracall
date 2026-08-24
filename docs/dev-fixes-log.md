@@ -21951,3 +21951,12 @@ browser-stage lifecycle observability, not transcript truncation.
 - Before porting an upstream path-containment patch, prove that caller input
   reaches a write sink. A validated but unused `outputDir` field has contract
   debt, but no symlink escape until a writer consumes it.
+- 2026-08-24: A bounded readiness probe can intentionally time out before its
+  recovery action. Give the probe a unique description and catch only its own
+  generated deadline error at the provider boundary; do not weaken the shared
+  CDP predicate deadline or swallow unrelated transport failures.
+- 2026-08-24: Cleanup policy must model explicit terminal intent, not only
+  bounded mode and provider. A live-follow `run-one-pass` force ceiling is a
+  terminal pass for browser ownership even though the subscription remains
+  indefinite. Regress both the forced cleanup request and ordinary indefinite
+  retention.

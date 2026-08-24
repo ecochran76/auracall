@@ -216,6 +216,7 @@ const CHATGPT_PROJECTS_LABEL = "projects";
 const CHATGPT_OPEN_SIDEBAR_LABEL = normalizeUiText(
 	resolveBundledServiceUiLabel("chatgpt", "open_sidebar", "open sidebar"),
 ).toLowerCase();
+const CHATGPT_SIDEBAR_READINESS_DESCRIPTION = "ChatGPT sidebar readiness";
 const CHATGPT_CONVERSATION_PROMPT_INPUT_LABEL = resolveBundledServiceUiLabel(
 	"chatgpt",
 	"conversation_prompt_input",
@@ -4665,10 +4666,21 @@ async function dismissCreateProjectDialogIfOpen(
 	return after.present ? after : before;
 }
 
-async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
-	const sidebarReady = await waitForPredicate(
-		client.Runtime,
-		`(() => {
+async function ensureChatgptSidebarOpen(
+	client: ChromeClient,
+	openSidebar: () => Promise<{ ok: boolean }> = () =>
+		pressButton(client.Runtime, {
+			match: { exact: [CHATGPT_OPEN_SIDEBAR_LABEL] },
+			requireVisible: true,
+			timeoutMs: 2000,
+		}),
+): Promise<void> {
+	let sidebarReady = false;
+	try {
+		sidebarReady = (
+			await waitForPredicate(
+				client.Runtime,
+				`(() => {
       const sidebarMarkers = [
         ...Array.from(document.querySelectorAll('button,a,[role="button"]'))
           .map((node) => String(node.getAttribute('aria-label') || node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase()),
@@ -4678,14 +4690,17 @@ async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
         sidebarMarkers.includes(${JSON.stringify(CHATGPT_PROJECTS_LABEL)})
       ) ? { ok: true } : null;
     })()`,
-		{ timeoutMs: 800 },
-	);
-	if (sidebarReady.ok) return;
-	const opened = await pressButton(client.Runtime, {
-		match: { exact: [CHATGPT_OPEN_SIDEBAR_LABEL] },
-		requireVisible: true,
-		timeoutMs: 2000,
-	});
+				{
+					timeoutMs: 800,
+					description: CHATGPT_SIDEBAR_READINESS_DESCRIPTION,
+				},
+			)
+		).ok;
+	} catch (error) {
+		if (!isChatgptSidebarReadinessProbeTimeout(error)) throw error;
+	}
+	if (sidebarReady) return;
+	const opened = await openSidebar();
 	if (!opened.ok) {
 		return;
 	}
@@ -4698,6 +4713,15 @@ async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
       }) || null)()`,
 		{ timeoutMs: 3000 },
 	);
+}
+
+export const ensureChatgptSidebarOpenForTest = ensureChatgptSidebarOpen;
+
+function isChatgptSidebarReadinessProbeTimeout(error: unknown): boolean {
+	if (!(error instanceof Error)) return false;
+	const prefix = `Timed out waiting for ${CHATGPT_SIDEBAR_READINESS_DESCRIPTION} after `;
+	if (!error.message.startsWith(prefix) || !error.message.endsWith("ms.")) return false;
+	return /^\d+$/.test(error.message.slice(prefix.length, -3));
 }
 
 async function navigateToChatgptUrl(
