@@ -1,3 +1,12 @@
+## 2026-08-24 | Plan 0312 hard-stop receipt integrated
+
+- Published terminal checkpoint `193fd1e8` and merged it to `main` through
+  `f133601e` without conflict. P05 is closed/integrated with validation status
+  `terminal-hard-stop`; scheduler isolation success is not promoted to canary
+  acceptance.
+- Integration is documentation/custody only. Scheduler remains paused and no
+  retry, resume, install, restart, provider action, or browser mutation ran.
+
 ## 2026-08-24 | Plan 0312 scheduler-isolated canary hard stop
 
 - Provider-free ChatGPT contracts passed `135/135`; one scheduler pause then

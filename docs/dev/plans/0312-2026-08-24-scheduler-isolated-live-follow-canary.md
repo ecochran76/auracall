@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P05
-Operational state: TERMINAL_HARD_STOP / C4
+Operational state: TERMINAL_HARD_STOP / C4 / INTEGRATED
 Branch: ops/plan0312-scheduler-isolated-live-follow-canary
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-24
+Revision: 3 | 2026-08-24
 
 ## Stable Objective
 
@@ -149,3 +149,5 @@ normal scheduling only after a clean terminal canary and exact cleanup.
   predicate timeout and why failed completion cleanup retained the managed
   browser after provider-work release. Plan 0312 grants no retry or successor
   live effect.
+- Durable receipts: terminal checkpoint `193fd1e8` merged to `main` through
+  `f133601e`; P05 custody is integrated without changing the C4 result.

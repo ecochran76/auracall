@@ -79,13 +79,14 @@ lanes:
     branch: ops/plan0312-scheduler-isolated-live-follow-canary
     target: main
     plan_state: CLOSED
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: ecc69dff5b2ebf282b710a522bfedb96930e3a73
+    custody_state: INTEGRATED
+    checkpoint: 193fd1e8c5687f9fd0910fc2845664c2f3c230ae
     remote_ref: refs/remotes/origin/ops/plan0312-scheduler-isolated-live-follow-canary
     integration: merge
     dependencies: [P03, P04]
     overlaps: []
     validation_status: terminal-hard-stop
-    validation_ref: ecc69dff5b2ebf282b710a522bfedb96930e3a73
-    disposition: Scheduler isolation prevented fanout, but the sole control failed at pass 1 on a 587 ms predicate timeout and retained an owned browser until exact bounded cleanup; scheduler remains paused.
+    validation_ref: 193fd1e8c5687f9fd0910fc2845664c2f3c230ae
+    integration_receipt: f133601ee2249508b6918331d8cd92ac12364b1e
+    disposition: Integrated terminal receipt; scheduler isolation prevented fanout, but the sole control failed at pass 1 on a 587 ms predicate timeout and retained an owned browser until exact cleanup.
     updated_at: 2026-08-24

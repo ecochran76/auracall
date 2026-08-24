@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 514 | 2026-08-24
+
+- Published P05 terminal checkpoint `193fd1e8` and merged it without conflict
+  to `main` through `f133601e`. Catalog custody is closed/integrated while
+  preserving `terminal-hard-stop` validation.
+- Integration changes only durable documentation and custody. The scheduler
+  remains paused; no retry, resume, install, restart, provider action, or
+  browser mutation is implied by the merge.
+
 ## Turn 513 | 2026-08-24
 
 - P05 established durable scheduler isolation with one supported pause, then

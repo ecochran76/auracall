@@ -4,8 +4,8 @@
 
 ### Current Execution Board
 
-Status: scheduler-isolated installed canary hard stop
-Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop, integrated); P05 (terminal hard stop)
+Status: scheduler-isolated installed canary hard stop integrated
+Lanes: P01, P02, P03 (integrated); P04, P05 (terminal hard stop, integrated)
 
 - Terminal scheduler-isolated live-follow cooldown canary:
   [docs/dev/plans/0312-2026-08-24-scheduler-isolated-live-follow-canary.md](docs/dev/plans/0312-2026-08-24-scheduler-isolated-live-follow-canary.md)
@@ -13,6 +13,7 @@ Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop, integrated); P05 (te
   instead failed at pass 1 on a 587 ms predicate timeout before creating a
   fresh child, then retained its API-owned browser past the observation bound.
   Exact orphan cleanup succeeded; scheduler remains paused and no retry ran.
+  Terminal checkpoint `193fd1e8` merged through `f133601e`.
 
 - Terminal installed live-follow cooldown canary:
   [docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md](docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md)
