@@ -2003,6 +2003,18 @@ export function isChatgptTargetReusableForPreferredUrl(
 	return !targetConversationId;
 }
 
+export function isChatgptPromptWorkbenchAtTarget(
+	targetUrl: string | null | undefined,
+	preferredUrl: string | null | undefined,
+): boolean {
+	const preferred = String(preferredUrl ?? "").trim();
+	const preferredProjectId = extractChatgptProjectIdFromUrl(preferred);
+	if (preferredProjectId) {
+		return extractChatgptProjectIdFromUrl(String(targetUrl ?? "").trim()) === preferredProjectId;
+	}
+	return isChatgptTargetReusableForPreferredUrl(targetUrl, preferredUrl);
+}
+
 export function findChatgptProjectByName<T extends { id: string; name: string; url?: string }>(
 	projects: readonly T[],
 	name: string,
@@ -12362,6 +12374,7 @@ async function prepareChatgptPromptWorkbenchInClient(
 	},
 	browserConfig: ChatgptPromptWorkbenchConfig | undefined,
 	logger: BrowserLogger,
+	options?: BrowserProviderListOptions,
 ): Promise<{
 	chatgptMode: "chat" | "work";
 	inputTimeoutMs: number;
@@ -12375,6 +12388,25 @@ async function prepareChatgptPromptWorkbenchInClient(
 	const thinkingTime = input.thinkingTime ?? browserConfig?.thinkingTime ?? null;
 	const inputTimeoutMs = input.inputTimeoutMs ?? browserConfig?.inputTimeoutMs ?? 30_000;
 	const { Runtime } = client;
+	const targetUrl = normalizeUiText(input.targetUrl);
+	if (targetUrl) {
+		const currentUrl = await readChatgptLocationHref(Runtime).catch(() => null);
+		if (!isChatgptPromptWorkbenchAtTarget(currentUrl, targetUrl)) {
+			await navigateToChatgptUrl(
+				client,
+				targetUrl,
+				extractChatgptProjectIdFromUrl(targetUrl) ?? undefined,
+				options,
+			);
+			const observedUrl = await readChatgptLocationHref(Runtime).catch(() => null);
+			if (!isChatgptPromptWorkbenchAtTarget(observedUrl, targetUrl)) {
+				throw new Error(
+					`ChatGPT prompt workbench remained on ${observedUrl ?? "(unknown URL)"}, not the requested ${targetUrl}.`,
+				);
+			}
+			logger(`ChatGPT workbench target: ${observedUrl}`);
+		}
+	}
 
 	await ensureChatgptComposerMode(Runtime, chatgptMode, logger);
 	await ensurePromptReady(Runtime, inputTimeoutMs, logger);
@@ -12489,6 +12521,7 @@ export function createChatgptAdapter(): Pick<
 					input,
 					browserConfig,
 					logger,
+					options,
 				);
 				const locationResult = await client.Runtime.evaluate({
 					expression: "location.href",
@@ -12549,6 +12582,7 @@ export function createChatgptAdapter(): Pick<
 					},
 					browserConfig,
 					logger,
+					options,
 				);
 				const { chatgptMode, inputTimeoutMs } = prepared;
 				if (composerTool) {

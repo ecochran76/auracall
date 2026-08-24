@@ -97,9 +97,15 @@ describe("ChatGPT provider prompt adapter", () => {
 	test("prepares Work with the requested model without inserting or sending a prompt", async () => {
 		const targetUrl =
 			"https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/project";
+		let locationReads = 0;
 		const Runtime = {
 			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
-				if (expression === "location.href") return { result: { value: targetUrl } };
+				if (expression === "location.href") {
+					locationReads += 1;
+					return {
+						result: { value: locationReads <= 2 ? "https://chatgpt.com/" : targetUrl },
+					};
+				}
 				return {
 					result: { value: { user: { email: "operator@example.com" }, account: null } },
 				};
@@ -107,7 +113,7 @@ describe("ChatGPT provider prompt adapter", () => {
 		};
 		const client = {
 			Runtime,
-			Page: {},
+			Page: { navigate: vi.fn(async () => ({ frameId: "frame-1" })) },
 			Input: {},
 			DOM: {},
 			close: vi.fn(async () => undefined),
@@ -173,6 +179,7 @@ describe("ChatGPT provider prompt adapter", () => {
 			"work",
 			expect.any(Function),
 		);
+		expect(client.Page.navigate).toHaveBeenCalledWith({ url: targetUrl });
 		expect(promptActionMocks.ensureChatgptWorkModelSelection).toHaveBeenCalledWith(
 			Runtime,
 			"GPT-5.6 Sol",
