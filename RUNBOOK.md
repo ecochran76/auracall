@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 517 | 2026-08-24
+
+- Published validated P06 checkpoint `0bab4710`, reconciled branch custody,
+  and merged the provider-free repair to `main` without conflict through
+  `a8a9f96e`.
+- Plan 0313 is closed/integrated. The merge adopts source, tests, and docs only;
+  the user runtime remains unchanged, scheduler remains paused, and no browser,
+  provider, completion, materialization, or canary effect occurred.
+
 ## Turn 516 | 2026-08-24
 
 - Plan 0313/P06 is provider-free accepted. The named 800 ms ChatGPT sidebar

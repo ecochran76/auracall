@@ -1,12 +1,12 @@
 # Live-Follow Predicate And Cleanup Repair | 0313-2026-08-24
 
-State: OPEN
+State: CLOSED
 Lane: P06
-Operational state: PROVIDER_FREE_ACCEPTED / INTEGRATION_PENDING
+Operational state: ACCEPTED / INTEGRATED / PROVIDER-FREE
 Branch: fix/plan0313-live-follow-predicate-cleanup
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-24
+Revision: 3 | 2026-08-24
 
 ## Stable Objective
 
@@ -120,3 +120,5 @@ failure.
   passed.
 - Installed adoption, API restart, browser/provider work, scheduler or
   completion control, and a canary remain unconsumed separate effect work.
+- No-fast-forward integration receipt:
+  `a8a9f96ece737b85e6f5c09d4b243a94e3232b2c`.

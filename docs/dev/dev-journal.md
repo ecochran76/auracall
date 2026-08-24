@@ -47843,6 +47843,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Final closeout updates the plan and catalog on main. Remaining work is only
   final audit, push, origin-parity readback, and safe removal of the plan-owned
   temporary test directory/worktree.
+## 2026-08-24 - Plan 0313 integrated closeout
+
+- Published validated repair `0bab4710` and custody checkpoint `de74f3c8`, then
+  merged P06 to main through `a8a9f96e` without conflict.
+- Plan and active-lane custody are closed/integrated. This is source-only
+  adoption; installed runtime, scheduler, browser/provider, completion, and
+  canary effects remain unconsumed and separately gated.
+
 ## 2026-08-24 - Plan 0313 provider-free acceptance
 
 - RED reproduced both Plan 0312 defects: the named sidebar readiness probe

@@ -4,10 +4,10 @@
 
 ### Current Execution Board
 
-Status: provider-free live-follow predicate and cleanup repair accepted; integration pending
-Lanes: P01, P02, P03 (integrated); P04, P05 (terminal hard stop, integrated); P06 (accepted)
+Status: provider-free live-follow predicate and cleanup repair integrated
+Lanes: P01, P02, P03, P06 (integrated); P04, P05 (terminal hard stop, integrated)
 
-- Accepted provider-free live-follow predicate and cleanup repair:
+- Completed provider-free live-follow predicate and cleanup repair:
   [docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md](docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md)
   P06 owns the two source defects exposed by Plan 0312: the bounded ChatGPT
   sidebar readiness timeout must enter its existing recovery path, and an
@@ -15,7 +15,8 @@ Lanes: P01, P02, P03 (integrated); P04, P05 (terminal hard stop, integrated); P0
   cleanup. Exact RED/GREEN contracts, the affected tests, the 135-test ChatGPT
   provider-free gate, typecheck, build, and scoped lint pass. Scheduler remains
   paused; install, restart, browser/provider work, completion control, and
-  another canary remain excluded.
+  another canary remain excluded. Validated checkpoint `0bab4710` merged
+  through `a8a9f96e`.
 
 - Terminal scheduler-isolated live-follow cooldown canary:
   [docs/dev/plans/0312-2026-08-24-scheduler-isolated-live-follow-canary.md](docs/dev/plans/0312-2026-08-24-scheduler-isolated-live-follow-canary.md)

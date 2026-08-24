@@ -93,11 +93,11 @@ lanes:
   - id: P06
     objective: Repair the ChatGPT sidebar predicate fallback and forced terminal live-follow browser cleanup provider-free.
     plan: docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md
-    plan_ref: refs/heads/fix/plan0313-live-follow-predicate-cleanup
+    plan_ref: refs/remotes/origin/fix/plan0313-live-follow-predicate-cleanup
     branch: fix/plan0313-live-follow-predicate-cleanup
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
+    plan_state: CLOSED
+    custody_state: INTEGRATED
     checkpoint: 0bab471019139ae359d750433b39bd84d72191e7
     remote_ref: refs/remotes/origin/fix/plan0313-live-follow-predicate-cleanup
     integration: merge
@@ -105,6 +105,6 @@ lanes:
     overlaps: []
     validation_status: provider-free-accepted
     validation_ref: 0bab471019139ae359d750433b39bd84d72191e7
-    integration_receipt: null
-    disposition: Provider-free repair accepted; integration pending, with installed adoption and any canary separately gated.
+    integration_receipt: a8a9f96ece737b85e6f5c09d4b243a94e3232b2c
+    disposition: Integrated provider-free repair; installed adoption and any canary remain separately gated.
     updated_at: 2026-08-24
