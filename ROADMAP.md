@@ -4,8 +4,15 @@
 
 ### Current Execution Board
 
-Status: no active implementation lanes
-Lanes: P01, P02, P03 (integrated)
+Status: active installed-effect verification
+Lanes: P01, P02, P03 (integrated); P04 (active)
+
+- Active installed live-follow cooldown canary:
+  [docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md](docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md)
+  One user-runtime install, one API restart, and one exact zero-retry
+  `wsl-chrome-3` completion control will test Plan 0310 under installed provider
+  work. Scheduler controls, wider completions, prompts, manual browser actions,
+  retries, and safety-control weakening are excluded.
 
 - Completed live-follow cooldown-abort repair:
   [docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md](docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md)

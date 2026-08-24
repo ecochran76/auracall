@@ -1,3 +1,16 @@
+## 2026-08-24 | Plan 0311 installed canary gate opened
+
+- Froze one installed-effect packet after operator `ok go`: one
+  `install:user-runtime-service`, one exact completion `run-one-pass`, one fresh
+  child maximum, zero retries, and no scheduler/wider/prompt/manual-browser
+  control.
+- Current old-runtime evidence is target completion
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` blocked at pass 1
+  after child `hmj_c2936e24ae094be39284b197759b94ab` failed with four retryable
+  entries. Active target history jobs are zero; the API-owned managed browser
+  remains observable on PID 73391 / port 45015 pending final quiet-boundary
+  recheck.
+
 ## 2026-08-24 | Plan 0310 integrated provider-free
 
 - Published validated source checkpoint `c1da8609` and lane checkpoint
