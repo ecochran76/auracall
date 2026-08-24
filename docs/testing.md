@@ -36,6 +36,11 @@
   behavior, and fail-closed unsupported attachment handling. Pair it with
   `tests/browser/chatgptToolApproval.test.ts` whenever ChatGPT prompt actions
   change so the `Answer now` prohibition remains explicit.
+- Browser list-option provenance is also provider-free: a caller may prebuild
+  list options and pass them through a service method that builds again. The
+  second build retains managed-profile/process provenance only when the same
+  service authority and compatible DevTools endpoint are present. Run
+  `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/browser/providerSessionAuthority.test.ts tests/browser/chatgptService.test.ts`.
 - Browser acceptance main contract (provider-free):
   `pnpm vitest run tests/scripts.browserAcceptanceMain.test.ts
   tests/scripts.browserAcceptanceHarness.test.ts

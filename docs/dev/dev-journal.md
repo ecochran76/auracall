@@ -1,3 +1,16 @@
+## 2026-08-23 | Preserve provider-session provenance across option rebuilds
+
+- LitScout Plan 0444 used AuraCall for ChatGPT project discovery after an exact
+  app/account preflight. ChatGPT exposed the expected Pro identity, but project
+  listing failed before its read because the CLI's second `buildListOptions`
+  call dropped the already-resolved managed-profile/process provenance.
+- The repair stays in the shared `LlmService` seam. It inherits provenance only
+  from the same authority and only while host/port remain compatible; changed
+  endpoints and other service instances remain fail-closed.
+- Provider-free validation passes the new retain/drop regressions, the complete
+  66-test service/authority packet, and typecheck. Installation and one exact
+  live project-list replay remain separately governed by LitScout Plan 0444.
+
 ## 2026-08-23 | Isolate unavailable archive assets during exact materialization
 
 - LitScout Plan 0444 used AuraCall's exact `wsl-chrome-3` account-mirror

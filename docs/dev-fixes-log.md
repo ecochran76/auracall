@@ -1,3 +1,12 @@
+- 2026-08-23: Rebuilding browser list options must preserve provenance from the
+  same `LlmService` when the resolved DevTools endpoint is unchanged. The
+  projects CLI intentionally prebuilds options for cache identity, then passes
+  them through `listProjects`, which builds again. Treating explicit host/port
+  as provenance-free dropped the managed browser profile and process ID even
+  though ChatGPT returned the exact expected account. Reuse only an
+  authorization created by the same service authority at the same endpoint;
+  discard foreign-authority or changed-endpoint provenance fail-closed.
+
 - 2026-08-23: Archive and account-mirror reads must isolate inaccessible local
   assets. A stale or unavailable mount (`ENODEV`, `ESTALE`, `EIO`, `EACCES`,
   or `EPERM`) is evidence that one indexed asset cannot currently be read; it

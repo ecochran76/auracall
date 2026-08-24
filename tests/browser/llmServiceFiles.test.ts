@@ -2080,6 +2080,76 @@ describe("llmService project file cache writes", () => {
 		expect(result.configuredUrl).toBe("https://grok.com/c/conversation-123");
 	});
 
+	test("buildListOptions preserves its own provider-session provenance across a second build", async () => {
+		const browserService = {
+			resolveServiceTarget: vi.fn(async () => ({
+				host: "127.0.0.1",
+				port: 45015,
+				browserProfile: "wsl-chrome-3",
+				sourceBrowserProfile: "Default",
+				managedBrowserProfile: "/tmp/managed/wsl-chrome-3/chatgpt",
+				browserProcessId: 70950,
+				tab: { targetId: "chatgpt-project-list", url: CHATGPT_URL },
+			})),
+		};
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+		};
+		const service = new BuildListOptionsLlmService(
+			{ auracallProfile: "wsl-chrome-3", browser: { cache: {} } } as ResolvedUserConfig,
+			provider as never,
+			browserService,
+		);
+
+		const first = await service.buildListOptions();
+		const second = await service.buildListOptions(first);
+
+		expect(browserService.resolveServiceTarget).toHaveBeenCalledTimes(1);
+		expect(second.providerSessionAuthorization?.context).toMatchObject({
+			providerId: "chatgpt",
+			browserProfile: "wsl-chrome-3",
+			sourceBrowserProfile: "Default",
+			managedBrowserProfile: "/tmp/managed/wsl-chrome-3/chatgpt",
+			browserProcessId: 70950,
+			devtoolsHost: "127.0.0.1",
+			devtoolsPort: 45015,
+		});
+	});
+
+	test("buildListOptions drops inherited provenance when the explicit endpoint changes", async () => {
+		const browserService = {
+			resolveServiceTarget: vi.fn(async () => ({
+				host: "127.0.0.1",
+				port: 45015,
+				browserProfile: "wsl-chrome-3",
+				managedBrowserProfile: "/tmp/managed/wsl-chrome-3/chatgpt",
+				browserProcessId: 70950,
+				tab: { targetId: "chatgpt-project-list", url: CHATGPT_URL },
+			})),
+		};
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+		};
+		const service = new BuildListOptionsLlmService(
+			{ auracallProfile: "wsl-chrome-3", browser: { cache: {} } } as ResolvedUserConfig,
+			provider as never,
+			browserService,
+		);
+
+		const first = await service.buildListOptions();
+		const second = await service.buildListOptions({ ...first, port: 45016 });
+
+		expect(second.providerSessionAuthorization?.context).toMatchObject({
+			browserProfile: null,
+			managedBrowserProfile: null,
+			browserProcessId: null,
+			devtoolsHost: "127.0.0.1",
+			devtoolsPort: 45016,
+		});
+	});
+
 	test("getConversationContext preserves same-service resolved provider-session provenance", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-context-provenance-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
