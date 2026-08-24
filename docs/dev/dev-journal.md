@@ -7,6 +7,10 @@
 - The integration is documentation/custody only. No additional install,
   restart, completion or scheduler control, provider retry, browser action, or
   cleanup occurred.
+- Final read-only reconciliation found the autonomous completion
+  `idle_waiting` at pass 1 with running child
+  `hmj_ab7c103aa06745598ac46b73fb2dd353`; its API-owned Chrome remains on PID
+  `60513` / port 45015. That work is reported but not adopted as P04 evidence.
 
 ## 2026-08-24 | Plan 0311 installed canary hard stop
 

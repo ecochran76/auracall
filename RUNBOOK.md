@@ -8,6 +8,9 @@
 - Integration changes only durable documentation and custody. It grants no
   retry, scheduler control, completion control, browser action, or cleanup of
   the still-autonomous runtime work.
+- Final read-only state: the autonomous completion is `idle_waiting` at pass 1;
+  child `hmj_ab7c103aa06745598ac46b73fb2dd353` is running, and API-owned Chrome
+  PID `60513` still listens on 45015. The frozen target remains blocked/pass 1.
 
 ## Turn 510 | 2026-08-24
 

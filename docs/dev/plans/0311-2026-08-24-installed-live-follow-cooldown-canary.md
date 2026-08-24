@@ -38,6 +38,11 @@ deadline and cancellation semantics under installed provider work.
 - Unexpected completion fanout and nonterminal provider work are frozen hard
   stops. The manual `run-one-pass` was withheld; the autonomous completion was
   not substituted, cancelled, paused, or otherwise controlled.
+- Final read-only reconciliation found the autonomous completion at
+  `idle_waiting`, pass 1, and its child
+  `hmj_ab7c103aa06745598ac46b73fb2dd353` running from
+  `2026-08-24T14:22:37.735Z`. API PID `57888` and its exact Chrome child PID
+  `60513` / port 45015 remained healthy/owned; neither is orphan cleanup scope.
 
 ## Authority And Effect Budget
 
@@ -125,7 +130,8 @@ deadline and cancellation semantics under installed provider work.
   no claim is made about installed provider-read liveness or backlog yield.
 - `ILFC-R6`: accepted for the terminal hard-stop state: service, scheduler,
   target/substitute completions, jobs, process ownership, Git, plan, and lane
-  receipts are reconciled without a retry or unauthorized control.
+  receipts are reconciled without a retry or unauthorized control. The final
+  autonomous child remains running and is reported, not adopted as canary work.
 - Effects: installs `1/1`; API restarts `1/1`; manual completion controls `0/1`;
   retries `0`; scheduler controls `0`; other completion controls `0`; prompts
   `0`; manual browser mutations `0`; `Answer now` actions `0`; direct runtime
