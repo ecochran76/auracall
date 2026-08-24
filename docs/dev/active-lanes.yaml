@@ -98,13 +98,13 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 7a28cd737feaaf70029b74cc9433885035814ca8
+    checkpoint: 0bab471019139ae359d750433b39bd84d72191e7
     remote_ref: refs/remotes/origin/fix/plan0313-live-follow-predicate-cleanup
     integration: merge
     dependencies: [P05]
     overlaps: []
-    validation_status: pending
-    validation_ref: null
+    validation_status: provider-free-accepted
+    validation_ref: 0bab471019139ae359d750433b39bd84d72191e7
     integration_receipt: null
-    disposition: Provider-free repair in progress; installed adoption and any canary remain separately gated.
+    disposition: Provider-free repair accepted; integration pending, with installed adoption and any canary separately gated.
     updated_at: 2026-08-24

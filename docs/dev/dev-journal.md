@@ -47843,3 +47843,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Final closeout updates the plan and catalog on main. Remaining work is only
   final audit, push, origin-parity readback, and safe removal of the plan-owned
   temporary test directory/worktree.
+## 2026-08-24 - Plan 0313 provider-free acceptance
+
+- RED reproduced both Plan 0312 defects: the named sidebar readiness probe
+  rejected at 800 ms before its opener, and forced ChatGPT live-follow omitted
+  refresh cleanup.
+- Repair catches only that provider-local timeout and treats an explicit force
+  ceiling as terminal cleanup. Ordinary indefinite follow retains its browser;
+  shared predicate semantics and unrelated CDP failure visibility are intact.
+- Evidence: focused GREEN, affected 326/328 plus the two load-sensitive
+  fixtures 2/2 isolated, ChatGPT provider-free gate 135/135, typecheck,
+  production build, and scoped zero-warning lint. No live/runtime effect ran.
+- Next: publish the validated checkpoint, reconcile P06 custody, and integrate
+  to main; installed adoption and any canary remain separately gated.

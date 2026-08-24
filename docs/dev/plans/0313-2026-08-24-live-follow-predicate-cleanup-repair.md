@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P06
-Operational state: PROVIDER_FREE / IMPLEMENTATION_PENDING
+Operational state: PROVIDER_FREE_ACCEPTED / INTEGRATION_PENDING
 Branch: fix/plan0313-live-follow-predicate-cleanup
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-24
+Revision: 2 | 2026-08-24
 
 ## Stable Objective
 
@@ -97,3 +97,26 @@ failure.
   CodeGraph, and current paused-runtime evidence agree.
 - No installed, browser, provider, scheduler, completion, materialization, or
   canary effect occurred; those remain separately gated.
+
+## Acceptance Receipt
+
+- Validated topic-branch checkpoint:
+  `0bab471019139ae359d750433b39bd84d72191e7`.
+- RED proved the first sidebar readiness probe rejected at its own 800 ms
+  transport deadline before invoking the existing opener. The completion
+  fixture independently proved a forced ChatGPT live-follow pass omitted
+  `cleanupManagedBrowserAfterRefresh`.
+- The provider repair names that one readiness probe and catches only its
+  generated timeout; unrelated `Runtime.evaluate` failures still reject. The
+  shared `waitForPredicate(...)` implementation is unchanged.
+- Completion cleanup now treats an explicit `forceRunUntilPassCount` ceiling
+  as terminal. The forced ChatGPT regression requests cleanup, ordinary
+  indefinite live follow continues to omit it, and existing refresh success,
+  refresh failure, and bounded Gemini cleanup coverage remains green.
+- Affected validation passed 326/328 in the combined run; the two unrelated
+  five-second refresh fixtures passed 2/2 immediately in isolation. The full
+  required ChatGPT provider-free gate passed 135/135 with a 15-second runner
+  timeout. Typecheck, production build, and scoped zero-warning Biome check
+  passed.
+- Installed adoption, API restart, browser/provider work, scheduler or
+  completion control, and a canary remain unconsumed separate effect work.

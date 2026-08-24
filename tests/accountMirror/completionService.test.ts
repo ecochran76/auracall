@@ -1737,6 +1737,7 @@ describe("account mirror completion service", () => {
 		expect(requestRefresh).toHaveBeenCalledTimes(1);
 		expect(requestRefresh).toHaveBeenCalledWith(
 			expect.objectContaining({
+				cleanupManagedBrowserAfterRefresh: true,
 				explicitRefresh: true,
 				ignoreMinimumInterval: false,
 				requestedPhase: null,
@@ -1903,6 +1904,9 @@ describe("account mirror completion service", () => {
 		);
 
 		expect(requestRefresh).toHaveBeenCalledTimes(2);
+		for (const [refreshRequest] of requestRefresh.mock.calls) {
+			expect(refreshRequest).not.toHaveProperty("cleanupManagedBrowserAfterRefresh");
+		}
 		expect(sleep).toHaveBeenCalledWith(60_000);
 		expect(service.read("acctmirror_live_follow")).toMatchObject({
 			status: "idle_waiting",

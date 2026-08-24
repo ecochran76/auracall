@@ -22,6 +22,7 @@ import {
 	createChatgptAdapter,
 	downloadChatgptConversationFilesWithClientForTest,
 	ensureChatgptConversationSurfaceReadyForReadForTest,
+	ensureChatgptSidebarOpenForTest,
 	extractChatgptArtifactFileNameFromUriForTest,
 	extractChatgptConversationArtifactsFromPayload,
 	extractChatgptConversationIdFromUrl,
@@ -90,6 +91,51 @@ import {
 	createBrowserScrapeTelemetryRecorder,
 	withBrowserScrapePendingOperation,
 } from "../../src/browser/providers/scrapeTelemetry.js";
+
+describe("ChatGPT sidebar readiness recovery", () => {
+	test("falls through to the sidebar opener when the readiness transport times out", async () => {
+		vi.useFakeTimers();
+		try {
+			const openSidebar = vi.fn(async () => ({ ok: false }));
+			const outcome = ensureChatgptSidebarOpenForTest(
+				{
+					// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
+					Runtime: {
+						evaluate: vi.fn(() => new Promise<never>(() => undefined)),
+					},
+				} as never,
+				openSidebar,
+			);
+			const assertion = expect(outcome).resolves.toBeUndefined();
+
+			await vi.advanceTimersByTimeAsync(801);
+
+			await assertion;
+			expect(openSidebar).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("preserves unrelated Runtime.evaluate failures", async () => {
+		const openSidebar = vi.fn(async () => ({ ok: false }));
+
+		await expect(
+			ensureChatgptSidebarOpenForTest(
+				{
+					// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
+					Runtime: {
+						evaluate: vi.fn(async () => {
+							throw new Error("CDP disconnected");
+						}),
+					},
+				} as never,
+				openSidebar,
+			),
+		).rejects.toThrow("CDP disconnected");
+		expect(openSidebar).not.toHaveBeenCalled();
+	});
+});
 
 describe("browser scrape pending-operation telemetry", () => {
 	test("restores the prior operation only after the nested operation settles", async () => {

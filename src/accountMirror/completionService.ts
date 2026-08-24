@@ -2188,11 +2188,15 @@ function shouldCleanupManagedBrowserAfterRefresh(
 	operation: AccountMirrorCompletionOperation,
 	currentPassCount: number,
 ): boolean {
+	const reachesForcedPassCeiling =
+		typeof operation.forceRunUntilPassCount === "number" &&
+		currentPassCount + 1 >= operation.forceRunUntilPassCount;
 	return (
-		operation.provider === "gemini" &&
-		operation.mode === "bounded" &&
-		operation.maxPasses !== null &&
-		currentPassCount + 1 >= operation.maxPasses
+		reachesForcedPassCeiling ||
+		(operation.provider === "gemini" &&
+			operation.mode === "bounded" &&
+			operation.maxPasses !== null &&
+			currentPassCount + 1 >= operation.maxPasses)
 	);
 }
 

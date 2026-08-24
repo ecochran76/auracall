@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 516 | 2026-08-24
+
+- Plan 0313/P06 is provider-free accepted. The named 800 ms ChatGPT sidebar
+  readiness timeout now enters the existing open/recheck path, while unrelated
+  CDP failures and shared predicate liveness remain fail-closed.
+- An explicit forced-pass ceiling now requests managed-browser cleanup. Exact
+  regressions prove forced ChatGPT cleanup and unchanged indefinite follow;
+  existing refresh success/failure and bounded Gemini cleanup remain covered.
+- Validation passed the exact RED/GREEN pair, affected contracts with two
+  load-sensitive unrelated fixtures reconfirmed 2/2 in isolation, the required
+  ChatGPT gate 135/135, typecheck, build, and scoped zero-warning lint. No
+  installed, browser/provider, scheduler, completion, or canary effect ran.
+
 ## Turn 515 | 2026-08-24
 
 - Operator `ok go` opens Plan 0313/P06 as a provider-free repair for the two
