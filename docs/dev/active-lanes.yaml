@@ -54,3 +54,20 @@ lanes:
     integration_receipt: 828bb3f854cbf9befaec5c23855e78cad49e6aaf
     disposition: Provider-free source repair integrated into main; installed-runtime update and exact live canary remain separate effect work.
     updated_at: 2026-08-24
+  - id: P04
+    objective: Install the live-follow cooldown repair and prove it through one exact zero-retry wsl-chrome-3 canary.
+    plan: docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md
+    plan_ref: refs/remotes/origin/ops/plan0311-installed-live-follow-canary
+    branch: ops/plan0311-installed-live-follow-canary
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: e1bd2f09143919a7421706e13aa019c361828026
+    remote_ref: refs/remotes/origin/ops/plan0311-installed-live-follow-canary
+    integration: merge
+    dependencies: [P03]
+    overlaps: []
+    validation_status: effect-gated
+    validation_ref: e1bd2f09143919a7421706e13aa019c361828026
+    disposition: One install, one API restart, and one exact zero-retry wsl-chrome-3 completion control are authorized; effects are not yet consumed.
+    updated_at: 2026-08-24
