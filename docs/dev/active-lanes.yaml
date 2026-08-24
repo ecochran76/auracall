@@ -75,17 +75,17 @@ lanes:
   - id: P05
     objective: Prove the installed live-follow cooldown repair under durable scheduler isolation with one exact zero-retry wsl-chrome-3 pass.
     plan: docs/dev/plans/0312-2026-08-24-scheduler-isolated-live-follow-canary.md
-    plan_ref: refs/heads/main
+    plan_ref: refs/remotes/origin/ops/plan0312-scheduler-isolated-live-follow-canary
     branch: ops/plan0312-scheduler-isolated-live-follow-canary
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 4b06b401518f91e444bab3652063fc5e7dcf6624
+    checkpoint: ecc69dff5b2ebf282b710a522bfedb96930e3a73
     remote_ref: refs/remotes/origin/ops/plan0312-scheduler-isolated-live-follow-canary
     integration: merge
     dependencies: [P03, P04]
     overlaps: []
     validation_status: effect-gated
-    validation_ref: 4b06b401518f91e444bab3652063fc5e7dcf6624
+    validation_ref: ecc69dff5b2ebf282b710a522bfedb96930e3a73
     disposition: One scheduler pause and one exact zero-retry completion pass are authorized; resume is conditional on clean acceptance and cleanup.
     updated_at: 2026-08-24
