@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 512 | 2026-08-24
+
+- Operator `ok go` opens Plan 0312 under P05: one supported scheduler pause,
+  one exact zero-retry `wsl-chrome-3` completion pass, and one conditional
+  scheduler resume only after clean acceptance and cleanup.
+- Installed parity remains accepted at source `4b06b401` and API PID `57888`.
+  The scheduler is execute-mode/scheduled/not-paused; exact target
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` remains
+  blocked/pass 1 with no active job, browser, or provider guard.
+- The Plan 0311 autonomous completion is terminal failed/pass 2 after two
+  zero-failure skipped children and a separate 800 ms predicate timeout. It is
+  evidence only and cannot substitute for the frozen P05 target.
+
 ## Turn 511 | 2026-08-24
 
 - Published P04 terminal checkpoint `725b0433` and merged it without conflict

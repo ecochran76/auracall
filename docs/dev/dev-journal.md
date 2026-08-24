@@ -1,3 +1,16 @@
+## 2026-08-24 | Plan 0312 scheduler-isolated canary opened
+
+- Operator `ok go` authorizes one scheduler pause, one exact zero-retry control
+  on the original blocked/pass-1 `chatgpt/wsl-chrome-3` completion, and one
+  conditional resume only after clean terminal acceptance and cleanup.
+- Current runtime is quiet: no target job or browser owner, no provider guard,
+  healthy API PID `57888`, and installed parity retained. Scheduler isolation
+  will use the supported local `POST /status` pause control without config edit
+  or service restart.
+- The autonomous Plan 0311 completion is now terminal failed/pass 2 and is not
+  adopted as the canary. P05 permits no substitute, retry, prompt, manual
+  browser action, install, restart, or broader completion/scheduler control.
+
 ## 2026-08-24 | Plan 0311 hard-stop receipt integrated
 
 - Published terminal checkpoint `725b0433` and merged it to `main` through
