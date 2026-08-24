@@ -100,6 +100,8 @@ failure.
 
 ## Acceptance Receipt
 
+- Validated topic-branch checkpoint:
+  `0bab471019139ae359d750433b39bd84d72191e7`.
 - RED proved the first sidebar readiness probe rejected at its own 800 ms
   transport deadline before invoking the existing opener. The completion
   fixture independently proved a forced ChatGPT live-follow pass omitted
