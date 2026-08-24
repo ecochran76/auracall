@@ -11,7 +11,10 @@ import {
   normalizeGeminiFeatureSignature,
 } from './providers/geminiAdapter.js';
 import { resolveBrowserLaunchPlan } from './service/browserLaunchPlan.js';
-import type { ProviderUserIdentity } from './providers/types.js';
+import type {
+  BrowserProviderPromptWorkbenchResult,
+  ProviderUserIdentity,
+} from './providers/types.js';
 import type { ProviderSessionProof } from './providers/providerSessionAuthority.js';
 import {
   findBrowserCookieFile,
@@ -158,6 +161,8 @@ export interface AuracallBrowserDoctorContract {
   identityStatus: BrowserDoctorIdentityReport | null;
   identityReconciliation: BrowserDoctorIdentityReconciliation | null;
   featureStatus: BrowserDoctorFeatureReport | null;
+  promptWorkbench?: BrowserProviderPromptWorkbenchResult | null;
+  promptWorkbenchError?: string | null;
   runtime: {
     operation?: BrowserOperationRecord | null;
     browserTools: BrowserToolsDoctorContract | null;
@@ -192,6 +197,8 @@ export function createAuracallBrowserDoctorContract(
     identityStatus?: BrowserDoctorIdentityReport | null;
     identityReconciliation?: BrowserDoctorIdentityReconciliation | null;
     featureStatus?: BrowserDoctorFeatureReport | null;
+    promptWorkbench?: BrowserProviderPromptWorkbenchResult | null;
+    promptWorkbenchError?: string | null;
     browserTools?: BrowserToolsDoctorContract | null;
     browserToolsError?: string | null;
     operation?: BrowserOperationRecord | null;
@@ -214,6 +221,8 @@ export function createAuracallBrowserDoctorContract(
     identityStatus: input.identityStatus ?? null,
     identityReconciliation: input.identityReconciliation ?? null,
     featureStatus: input.featureStatus ?? null,
+    promptWorkbench: input.promptWorkbench ?? null,
+    promptWorkbenchError: input.promptWorkbenchError ?? null,
     runtime: {
       operation: input.operation ?? null,
       browserTools: input.browserTools ?? null,

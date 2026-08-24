@@ -98,6 +98,8 @@ import type {
 	PromptInput,
 	PromptPlan,
 	PromptResult,
+	PromptWorkbenchInput,
+	PromptWorkbenchResult,
 } from "./types.js";
 
 const DEFAULT_HISTORY_LIMIT = 2000;
@@ -1065,6 +1067,37 @@ export abstract class LlmService {
 		projectId?: string,
 		options?: BrowserProviderListOptions,
 	): Promise<ConversationListResult>;
+
+	async preparePromptWorkbench(
+		input: PromptWorkbenchInput,
+		options?: BrowserProviderListOptions,
+	): Promise<PromptWorkbenchResult> {
+		if (!this.provider.preparePromptWorkbench) {
+			throw new Error(`Prompt workbench preparation is not supported for ${this.providerId}.`);
+		}
+		const configuredUrl =
+			input.configuredUrl ??
+			options?.configuredUrl ??
+			input.listOptions?.configuredUrl ??
+			this.getConfiguredUrl() ??
+			this.getDefaultLaunchUrl();
+		const listOptions = await this.buildListOptions(
+			{ ...(options ?? input.listOptions), configuredUrl },
+			{ ensurePort: true },
+		);
+		return this.provider.preparePromptWorkbench(
+			{
+				targetUrl: configuredUrl,
+				desiredModel: input.desiredModel,
+				modelStrategy: input.modelStrategy,
+				chatgptMode: input.chatgptMode,
+				workModel: input.workModel,
+				inputTimeoutMs: input.inputTimeoutMs,
+				onProgress: input.onProgress,
+			},
+			listOptions,
+		);
+	}
 
 	async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
 		if (!this.provider.runPrompt) {

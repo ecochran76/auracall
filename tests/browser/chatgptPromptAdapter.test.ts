@@ -25,7 +25,9 @@ const chatgptConnectionMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../packages/browser-service/src/chromeLifecycle.js", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../../packages/browser-service/src/chromeLifecycle.js")>()),
+	...(await importOriginal<
+		typeof import("../../packages/browser-service/src/chromeLifecycle.js")
+	>()),
 	connectToChromeTarget: chatgptConnectionMocks.connectToChromeTarget,
 }));
 
@@ -90,6 +92,104 @@ describe("ChatGPT provider prompt adapter", () => {
 		).rejects.toThrow(
 			"ChatGPT llmService prompt execution currently supports completionMode=prompt_submitted only.",
 		);
+	});
+
+	test("prepares Work with the requested model without inserting or sending a prompt", async () => {
+		const targetUrl =
+			"https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/project";
+		const Runtime = {
+			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+				if (expression === "location.href") return { result: { value: targetUrl } };
+				return {
+					result: { value: { user: { email: "operator@example.com" }, account: null } },
+				};
+			}),
+		};
+		const client = {
+			Runtime,
+			Page: {},
+			Input: {},
+			DOM: {},
+			close: vi.fn(async () => undefined),
+		};
+		const host = "127.0.0.1";
+		const port = 45005;
+		const targetId = "chatgpt-workbench-target";
+		const connection = {
+			client,
+			targetId,
+			shouldClose: false,
+			host,
+			port,
+			usedExisting: true,
+		};
+		const authority = createProviderSessionAuthority({
+			services: { chatgpt: { identity: { email: "operator@example.com" } } },
+		});
+		const context = {
+			providerId: "chatgpt" as const,
+			auracallRuntimeProfile: "default",
+			browserProfile: "default",
+			sourceBrowserProfile: "Default",
+			managedBrowserProfile: "/managed/default/chatgpt",
+			browserProcessId: 1234,
+			browserTargetId: targetId,
+			devtoolsHost: host,
+			devtoolsPort: port,
+		};
+		const messages: string[] = [];
+		const result = await createChatgptAdapter().preparePromptWorkbench?.(
+			{
+				targetUrl,
+				chatgptMode: "work",
+				workModel: "GPT-5.6 Sol",
+				modelStrategy: "select",
+				onProgress: (event) => {
+					const message = event.details?.message;
+					if (typeof message === "string") messages.push(message);
+				},
+			},
+			{
+				host,
+				port,
+				configuredUrl: targetUrl,
+				useProviderSession: true,
+				providerSession: {
+					providerId: "chatgpt",
+					key: `chatgpt:${host}:${port}:${targetUrl}`,
+					value: { connection },
+					close: vi.fn(async () => undefined),
+				},
+				providerSessionAuthorization: {
+					authority,
+					context,
+					expectation: authority.resolveExpectation(context),
+				},
+			},
+		);
+
+		expect(promptActionMocks.ensureChatgptComposerMode).toHaveBeenCalledWith(
+			Runtime,
+			"work",
+			expect.any(Function),
+		);
+		expect(promptActionMocks.ensureChatgptWorkModelSelection).toHaveBeenCalledWith(
+			Runtime,
+			"GPT-5.6 Sol",
+			expect.any(Function),
+			"select",
+		);
+		expect(promptActionMocks.submitPrompt).not.toHaveBeenCalled();
+		expect(result).toEqual({
+			chatgptMode: "work",
+			modelSelectionKind: "work-model",
+			model: "GPT-5.6 Sol",
+			messages,
+			url: targetUrl,
+			tabTargetId: targetId,
+			devtoolsHost: host,
+			devtoolsPort: port,
+		});
 	});
 
 	test("authorizes before submitting and projects a prompt-submitted result", async () => {
