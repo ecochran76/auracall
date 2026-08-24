@@ -1076,6 +1076,7 @@ export abstract class LlmService {
 			throw new Error(`Prompt workbench preparation is not supported for ${this.providerId}.`);
 		}
 		const configuredUrl =
+			input.targetUrl ??
 			input.configuredUrl ??
 			options?.configuredUrl ??
 			input.listOptions?.configuredUrl ??

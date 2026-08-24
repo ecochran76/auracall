@@ -70,7 +70,7 @@ describe("LlmService provider prompt", () => {
 
 		await expect(
 			service.preparePromptWorkbench({
-				configuredUrl: result.url,
+				targetUrl: result.url,
 				chatgptMode: "work",
 				workModel: "GPT-5.6 Sol",
 				modelStrategy: "select",
