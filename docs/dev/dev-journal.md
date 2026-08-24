@@ -1,3 +1,17 @@
+## 2026-08-24 | Plan 0311 installed canary hard stop
+
+- Consumed the sole install/restart successfully. API PID `57888` is
+  active/running with zero restarts, `/status` returns HTTP 200, and all four
+  repaired installed modules match current source SHA-256 values exactly.
+- The enabled scheduler raced the post-restart canary gate and created separate
+  completion `acctmirror_completion_85756c59-a414-45b3-bdac-766fb586595a` for
+  `chatgpt/wsl-chrome-3`, owning Chrome PID `60513` / port 45015 while running
+  at pass 0. The frozen completion remained blocked/pass 1 with no new child.
+- Closed P04 as `C4_hard_stop`. No manual completion control, retry, scheduler
+  control, substitute-target use, cancellation, prompt, browser mutation, or
+  cleanup ran. A successor needs explicit scheduler-isolation authority before
+  service restart.
+
 ## 2026-08-24 | Plan 0311 installed canary gate opened
 
 - Froze one installed-effect packet after operator `ok go`: one

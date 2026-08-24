@@ -60,14 +60,14 @@ lanes:
     plan_ref: refs/remotes/origin/ops/plan0311-installed-live-follow-canary
     branch: ops/plan0311-installed-live-follow-canary
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
     checkpoint: e1bd2f09143919a7421706e13aa019c361828026
     remote_ref: refs/remotes/origin/ops/plan0311-installed-live-follow-canary
     integration: merge
     dependencies: [P03]
     overlaps: []
-    validation_status: effect-gated
+    validation_status: terminal-hard-stop
     validation_ref: e1bd2f09143919a7421706e13aa019c361828026
-    disposition: One install, one API restart, and one exact zero-retry wsl-chrome-3 completion control are authorized; effects are not yet consumed.
+    disposition: Install and restart reached byte parity; autonomous scheduler fanout triggered C4 before the frozen manual control, which remained unconsumed.
     updated_at: 2026-08-24

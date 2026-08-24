@@ -4,15 +4,16 @@
 
 ### Current Execution Board
 
-Status: active installed-effect verification
-Lanes: P01, P02, P03 (integrated); P04 (active)
+Status: installed-effect hard stop recorded
+Lanes: P01, P02, P03 (integrated); P04 (terminal hard stop)
 
-- Active installed live-follow cooldown canary:
+- Terminal installed live-follow cooldown canary:
   [docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md](docs/dev/plans/0311-2026-08-24-installed-live-follow-cooldown-canary.md)
-  One user-runtime install, one API restart, and one exact zero-retry
-  `wsl-chrome-3` completion control will test Plan 0310 under installed provider
-  work. Scheduler controls, wider completions, prompts, manual browser actions,
-  retries, and safety-control weakening are excluded.
+  The one install and API restart reached byte-exact current-build parity, but
+  the enabled scheduler created a different `wsl-chrome-3` completion before
+  the frozen manual control. P04 stopped under `C4_hard_stop`: no manual
+  control, retry, scheduler mutation, substitute-target use, or browser cleanup
+  ran. A successor requires explicit scheduler-isolation authority.
 
 - Completed live-follow cooldown-abort repair:
   [docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md](docs/dev/plans/0310-2026-08-24-live-follow-cooldown-abort-repair.md)

@@ -1,12 +1,12 @@
 # Installed Live-Follow Cooldown Canary | 0311-2026-08-24
 
-State: OPEN
+State: CLOSED
 Lane: P04
-Operational state: ACTIVE / INSTALLED-EFFECT
+Operational state: TERMINAL_HARD_STOP / C4
 Branch: ops/plan0311-installed-live-follow-canary
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-24
+Revision: 2 | 2026-08-24
 
 ## Stable Objective
 
@@ -15,24 +15,29 @@ user-scoped AuraCall runtime, restart the one owned API service, and run one
 exact zero-retry `wsl-chrome-3` live-follow canary that proves the repaired
 deadline and cancellation semantics under installed provider work.
 
-## Current State
+## Terminal State
 
-- Source `main == origin/main == ccac5c0ee48991ae9a8fc4c1cca2a39f388a2c60`;
-  Plan 0310 source checkpoint `c1da8609` merged through `828bb3f8`.
-- Installed AuraCall reports `0.1.1`; `auracall-api.service` is active/running
-  as PID `78882`, started 2026-08-23 21:14:08 CDT on port 18095.
-- The configured scheduler is enabled, execute-mode, scheduled, and not
-  operator-paused. No scheduler control is authorized in this packet.
-- Exact target completion
-  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` is blocked at
-  pass 1 with `account_mirror_materialization_failed` and a null force ceiling.
-- Its latest old-runtime child
-  `hmj_c2936e24ae094be39284b197759b94ab` ran once from 13:56:14Z to 14:05:56Z,
-  failed terminally with 0 materialized / 3 skipped / 4 failed, and left zero
-  active `chatgpt/wsl-chrome-3` history jobs.
-- Managed browser profile `wsl-chrome-3/chatgpt` is currently owned by the API
-  service at PID 73391 / port 45015. Installation must wait for a terminal,
-  non-provider-working boundary; the service restart may close this exact child.
+- The one authorized `pnpm run install:user-runtime-service` completed with
+  exit zero. It replaced API PID `78882` with active/running PID `57888` at
+  2026-08-24 09:16:43 CDT, `NRestarts=0`, and HTTP 200 on `/status` at port
+  18095. Installed AuraCall reports `0.1.1`.
+- Source and installed SHA-256 values match exactly for all four repaired
+  modules: interaction governor `28128a4a...a4737a1d4`, LLM service
+  `9954cff5...a36bed49`, ChatGPT adapter `2ca264fa...ee70139`, and history
+  materialization service `7af53fa1...da859f`.
+- The frozen completion
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` remained blocked
+  at pass 1 with null force ceiling, no provider guard, and old child
+  `hmj_c2936e24ae094be39284b197759b94ab`; no new child was attached to it.
+- Before the authorized manual control, the enabled scheduler autonomously
+  created substitute completion
+  `acctmirror_completion_85756c59-a414-45b3-bdac-766fb586595a` for the same
+  `chatgpt/wsl-chrome-3` target. It started at `2026-08-24T14:16:51.385Z`, was
+  running at pass 0 with no provider guard or materialization child, and owned
+  Chrome PID `60513` on port 45015 under the new API PID.
+- Unexpected completion fanout and nonterminal provider work are frozen hard
+  stops. The manual `run-one-pass` was withheld; the autonomous completion was
+  not substituted, cancelled, paused, or otherwise controlled.
 
 ## Authority And Effect Budget
 
@@ -105,6 +110,30 @@ deadline and cancellation semantics under installed provider work.
    reason other than the repaired timeout/cooldown collision; record and stop.
 4. `C4_hard_stop`: a safety boundary triggers before or during the canary;
    preserve evidence and stop without retry.
+
+## Acceptance Result And Effect Accounting
+
+- Classification: `C4_hard_stop` due to post-restart autonomous completion
+  fanout before the frozen manual-control gate.
+- `ILFC-R1`: accepted. Plan checkpoint `e1bd2f09` and P04 custody checkpoint
+  `5eccd0c2` were published before effects.
+- `ILFC-R2`: accepted. Exactly one install and one API restart produced healthy
+  PID `57888` and exact four-module installed parity.
+- `ILFC-R3`: not entered. Completion controls `0/1`, pass advances attributable
+  to this packet `0/1`, and fresh children attributable to this packet `0/1`.
+- `ILFC-R4` and `ILFC-R5`: not entered. The intended canary did not start, so
+  no claim is made about installed provider-read liveness or backlog yield.
+- `ILFC-R6`: accepted for the terminal hard-stop state: service, scheduler,
+  target/substitute completions, jobs, process ownership, Git, plan, and lane
+  receipts are reconciled without a retry or unauthorized control.
+- Effects: installs `1/1`; API restarts `1/1`; manual completion controls `0/1`;
+  retries `0`; scheduler controls `0`; other completion controls `0`; prompts
+  `0`; manual browser mutations `0`; `Answer now` actions `0`; direct runtime
+  edits `0`; cleanup mutations `0` because the browser remained owned by the
+  autonomous API work rather than orphaned.
+- Exact remaining gate: any successor installed canary must explicitly own a
+  scheduler-isolation boundary before service restart and then re-freeze one
+  completion after restart. This plan grants no such control or another canary.
 
 ## Definition Of Done
 

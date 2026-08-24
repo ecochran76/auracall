@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 510 | 2026-08-24
+
+- The sole `install:user-runtime-service` completed successfully: API PID
+  `78882` became healthy PID `57888`, `NRestarts=0`, and all four repaired
+  installed JavaScript modules match current source byte-for-byte.
+- Before the frozen manual control, the enabled scheduler autonomously opened
+  exact managed browser `wsl-chrome-3/chatgpt` as PID `60513` / port 45015 and
+  created substitute completion
+  `acctmirror_completion_85756c59-a414-45b3-bdac-766fb586595a`, running at pass
+  0 from `2026-08-24T14:16:51.385Z` with no provider guard or child yet.
+- P04 closes `C4_hard_stop`. The intended completion remained blocked/pass 1;
+  no manual completion control, retry, scheduler control, substitution,
+  cancellation, prompt, browser mutation, or cleanup ran. A successor must own
+  scheduler isolation before restart.
+
 ## Turn 509 | 2026-08-24
 
 - Operator `ok go` opens Plan 0311 as the separate installed-effect packet for
