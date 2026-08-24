@@ -4,8 +4,16 @@
 
 ### Current Execution Board
 
-Status: provider-free live-follow predicate and cleanup repair integrated
-Lanes: P01, P02, P03, P06 (integrated); P04, P05 (terminal hard stop, integrated)
+Status: bounded live-follow recovery open
+Lanes: P01, P02, P03, P06 (integrated); P04, P05 (terminal hard stop, integrated); P07 (open)
+
+- Active bounded live-follow recovery:
+  [docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md](docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md)
+  P07 replaces the failed-live-follow zero-retry terminal with explicit
+  one-pass re-arm semantics, then owns current-runtime installation, no more
+  than three diagnosis-driven attempts, and one conditional scheduler resume.
+  Scheduler remains paused until a controlled pass succeeds and exact browser
+  cleanup is proven.
 
 - Completed provider-free live-follow predicate and cleanup repair:
   [docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md](docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md)

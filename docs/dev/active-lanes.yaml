@@ -108,3 +108,21 @@ lanes:
     integration_receipt: a8a9f96ece737b85e6f5c09d4b243a94e3232b2c
     disposition: Integrated provider-free repair; installed adoption and any canary remain separately gated.
     updated_at: 2026-08-24
+  - id: P07
+    objective: Restore wsl-chrome-3 live follow with bounded diagnosis-driven retries and normal scheduler operation.
+    plan: docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md
+    plan_ref: refs/heads/fix/plan0314-bounded-live-follow-recovery
+    branch: fix/plan0314-bounded-live-follow-recovery
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: a932f3b6f4c1bc1e5d926404b0432fd1bb34de30
+    remote_ref: refs/remotes/origin/fix/plan0314-bounded-live-follow-recovery
+    integration: merge
+    dependencies: [P06]
+    overlaps: []
+    validation_status: pending
+    validation_ref: null
+    integration_receipt: null
+    disposition: Bounded recovery in progress; scheduler remains paused until controlled-pass success and exact browser cleanup.
+    updated_at: 2026-08-24

@@ -47864,3 +47864,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   production build, and scoped zero-warning lint. No live/runtime effect ran.
 - Next: publish the validated checkpoint, reconcile P06 custody, and integrate
   to main; installed adoption and any canary remain separately gated.
+## 2026-08-24 - Plan 0314 bounded live-follow recovery opened
+
+- Current runtime is not healthy despite systemd status: API PID 57888 accepts
+  TCP but returns no `/status` bytes, while current installed source hashes are
+  stale. Scheduler stays paused and the exact managed browser is absent.
+- Exact completion is failed/pass 1 after the old predicate timeout. Existing
+  `run_one_pass` accepts only blocked live follow, so a diagnosed retry cannot
+  be issued. First source slice will re-arm failed live follow for one bounded
+  pass without reopening bounded or cancelled terminal operations.
+- Bounds: two adoption attempts, three serialized exact pass controls, and a
+  required diagnosis/remediation transition before retry 2 or 3. CAPTCHA,
+  identity conflict, provider guard, and unknown ownership remain hard stops.

@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 518 | 2026-08-24
+
+- Operator opens Plan 0314/P07 under a standing goal of getting live follow
+  running again within ten continuation turns. Retry policy is now bounded and
+  diagnosis-driven rather than globally zero-retry: at most three new exact
+  completion controls, with fresh diagnosis/remediation before attempts 2/3.
+- Current API PID `57888` is systemd-active but `/status` and installed CLI
+  status return no bytes before their deadlines. Installed completion and
+  ChatGPT adapter hashes differ from current source; scheduler is paused, port
+  45015 is closed, and no exact managed browser exists.
+- The retained `wsl-chrome-3` completion is failed/pass 1 with force ceiling 2.
+  Current control code refuses to re-arm failed live follow, so P07 first owns
+  that exact provider-free control repair, then install/restart and live proof.
+
 ## Turn 517 | 2026-08-24
 
 - Published validated P06 checkpoint `0bab4710`, reconciled branch custody,
