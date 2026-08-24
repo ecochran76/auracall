@@ -98,7 +98,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: null
+    checkpoint: 7a28cd737feaaf70029b74cc9433885035814ca8
     remote_ref: refs/remotes/origin/fix/plan0313-live-follow-predicate-cleanup
     integration: merge
     dependencies: [P05]

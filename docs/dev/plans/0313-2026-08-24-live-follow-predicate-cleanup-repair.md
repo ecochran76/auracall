@@ -33,6 +33,8 @@ failure.
 - The scheduler is durably paused. API PID `57888` is healthy with zero
   restarts, exact managed-browser port 45015 is closed, and `main ==
   origin/main` at `28e46b01` before this packet.
+- Plan and P06 custody were published on canonical `main` through `7a28cd73`
+  before source edits.
 
 ## Authority And Effect Budget
 
