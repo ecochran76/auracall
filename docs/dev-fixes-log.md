@@ -21960,3 +21960,8 @@ browser-stage lifecycle observability, not transcript truncation.
   terminal pass for browser ownership even though the subscription remains
   indefinite. Regress both the forced cleanup request and ordinary indefinite
   retention.
+- 2026-08-24: A terminal `failed` state must not erase explicit bounded retry
+  authority. Let `run_one_pass` re-arm blocked or failed live follow for one
+  pass-count ceiling, while completed/cancelled live follow and all bounded
+  completions remain terminal. Put diagnosis/remediation and total-attempt
+  bounds in the operating packet instead of encoding a global zero-retry rule.

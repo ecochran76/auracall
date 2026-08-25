@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P07
-Operational state: LIVE_RECOVERY / IMPLEMENTATION_PENDING
+Operational state: PROVIDER_FREE_ACCEPTED / INTEGRATION_PENDING
 Branch: fix/plan0314-bounded-live-follow-recovery
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-24
+Revision: 2 | 2026-08-25
 
 ## Stable Objective
 
@@ -29,9 +29,12 @@ then restoring normal scheduled operation.
 - Exact completion
   `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` is failed at
   pass 1 with force ceiling 2 and the pre-repair 587 ms predicate error.
-- Current control semantics reject `run_one_pass` for a failed live-follow
-  operation; only `blocked` live follow can be re-armed. That makes a diagnosed,
-  explicitly bounded retry impossible without a source repair.
+- Provider-free source checkpoint `776556bf` admits blocked or failed terminal
+  live follow through `run_one_pass` for exactly one additional pass. Bounded,
+  completed, and cancelled terminal operations remain closed.
+- Fresh validation passes 102/102 affected tests, typecheck, scoped Biome,
+  production build, CodeGraph status, plan-library and goal-policy audits, and
+  diff hygiene. Installed adoption and live proof have not yet run.
 
 ## Authority And Bounds
 

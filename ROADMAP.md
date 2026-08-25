@@ -12,6 +12,7 @@ Lanes: P01, P02, P03, P06 (integrated); P04, P05 (terminal hard stop, integrated
   P07 replaces the failed-live-follow zero-retry terminal with explicit
   one-pass re-arm semantics, then owns current-runtime installation, no more
   than three diagnosis-driven attempts, and one conditional scheduler resume.
+  Provider-free checkpoint `776556bf` is accepted and awaiting integration.
   Scheduler remains paused until a controlled pass succeeds and exact browser
   cleanup is proven.
 

@@ -47876,3 +47876,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Bounds: two adoption attempts, three serialized exact pass controls, and a
   required diagnosis/remediation transition before retry 2 or 3. CAPTCHA,
   identity conflict, provider guard, and unknown ownership remain hard stops.
+
+## 2026-08-24 - Plan 0314 failed-live-follow re-arm acceptance
+
+- RED proved `run_one_pass` returned the unchanged failed operation and issued
+  no refresh. The repair admits only blocked/failed live follow through the
+  existing one-pass ceiling; completed/cancelled live follow and bounded
+  terminals remain closed.
+- GREEN proves failed live follow queues once, clears its prior error, requests
+  managed-browser cleanup, returns idle with the force ceiling cleared, and
+  cannot be re-armed after cancellation. Fresh review restored direct coverage
+  for both blocked and failed bounded terminals; affected completion/API/MCP
+  coverage passes 102/102.

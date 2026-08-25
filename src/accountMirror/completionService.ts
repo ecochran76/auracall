@@ -1014,10 +1014,7 @@ export function createAccountMirrorCompletionService(input: {
 				return evented ?? resumed;
 			}
 			if (request.action === "run_one_pass") {
-				if (
-					isTerminalOperation(operation) &&
-					!(operation.mode === "live_follow" && operation.status === "blocked")
-				) {
+				if (isTerminalOperation(operation) && !isRetryableTerminalLiveFollow(operation)) {
 					return operation;
 				}
 				if (shouldBlockGeminiResume(operation)) {
@@ -2197,6 +2194,13 @@ function shouldCleanupManagedBrowserAfterRefresh(
 			operation.mode === "bounded" &&
 			operation.maxPasses !== null &&
 			currentPassCount + 1 >= operation.maxPasses)
+	);
+}
+
+function isRetryableTerminalLiveFollow(operation: AccountMirrorCompletionOperation): boolean {
+	return (
+		operation.mode === "live_follow" &&
+		(operation.status === "blocked" || operation.status === "failed")
 	);
 }
 

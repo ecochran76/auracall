@@ -116,13 +116,13 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: a932f3b6f4c1bc1e5d926404b0432fd1bb34de30
+    checkpoint: 776556bfbe0acfe3bad4a302da030cf81f868c0b
     remote_ref: refs/remotes/origin/fix/plan0314-bounded-live-follow-recovery
     integration: merge
     dependencies: [P06]
     overlaps: []
-    validation_status: pending
-    validation_ref: null
+    validation_status: provider-free-accepted
+    validation_ref: 776556bfbe0acfe3bad4a302da030cf81f868c0b
     integration_receipt: null
-    disposition: Bounded recovery in progress; scheduler remains paused until controlled-pass success and exact browser cleanup.
-    updated_at: 2026-08-24
+    disposition: Provider-free one-pass re-arm accepted; integration and installed recovery remain pending, with scheduler paused.
+    updated_at: 2026-08-25
