@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P08
-Operational state: IMPLEMENTATION_ACCEPTED_PENDING_INSTALLED_PROOF
+Operational state: IMPLEMENTATION_ACCEPTED_BLOCKED_ON_INSTALLED_PROOF
 Branch: fix/plan0315-aggregate-status-latency
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-25
+Revision: 3 | 2026-08-25
 
 ## Stable Objective
 
@@ -35,9 +35,12 @@ or launching provider/browser work.
   independent aggregate projections. No status field or evidence class moved.
 - Three instrumented source probes succeeded inside the five-second HTTP
   budget at 4.76 s, 4.18 s, and 1.53 s. Temporary instrumentation is removed.
-  Final installed acceptance is deferred until unrelated host load returns to
-  a valid proof posture; the latest readback was load average 42.67 with
-  substantial CPU pressure and 31/32 GiB swap consumed.
+  Final installed acceptance is blocked until both runtime and host state meet
+  the plan's existing hard-stop contract. The latest readback found load
+  average 36.73 with substantial CPU pressure, exact managed ChatGPT browsers
+  present for `wsl-chrome-2` and `wsl-chrome-4`, and a Gemini
+  `manual_clear_required` `google-sorry` provider guard. The scheduler itself
+  was healthy/idle with zero queued or running completions.
 
 ## Diagnosis And Repair Evidence
 
@@ -58,6 +61,9 @@ or launching provider/browser work.
   order-dependent test-state leak: the identity-keyed archive test passes in
   isolation but can inherit prior history hydration. It is recorded as a
   validation caveat and did not justify weakening runtime semantics.
+- Checkpoint `02545347` is pushed on the plan branch. The one scheduler pause,
+  install/restart, and resume allowances remain unused; no provider/browser
+  effect was attempted after the exact ownership and guard readback.
 
 ## Authority And Bounds
 

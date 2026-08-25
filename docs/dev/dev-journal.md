@@ -47935,3 +47935,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Installed adoption is intentionally waiting: unrelated LitScout, Canva, and
   browser workloads drove load average to 42.67, CPU pressure near 58%, and
   swap to 31/32 GiB. Those conditions cannot produce valid latency evidence.
+
+## 2026-08-25 - Plan 0315 installed adoption hard stop
+
+- Published the bounded source repair as checkpoint `02545347`; plan audit,
+  diff hygiene, and origin parity are clean. The implementation remains ready
+  for one installed adoption after the runtime gate clears.
+- A 30-second-budget installed read completed from API PID `62038` in 10.39 s
+  and showed the scheduler healthy/idle, zero queued/running completions, and
+  no foreground work. Host load remained non-diagnostic at 36.73 with roughly
+  46% short-window CPU pressure.
+- The same readback found exact managed ChatGPT browser ownership for
+  `wsl-chrome-2` and `wsl-chrome-4`, plus a Gemini `manual_clear_required`
+  `google-sorry` guard. These are explicit Plan 0315 hard stops. No scheduler
+  pause, install/restart, resume, provider action, browser action, or guard
+  clear was consumed.
