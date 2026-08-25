@@ -144,3 +144,21 @@ lanes:
     integration_receipt: null
     disposition: Default aggregate status times out 3/3; diagnosis and provider-free repair are active, with live provider/browser effects excluded.
     updated_at: 2026-08-25
+  - id: P09
+    objective: Restore exact ChatGPT Work-mode proof when a loaded Project conversation route includes its human-readable slug.
+    plan: docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md
+    plan_ref: refs/remotes/origin/fix/plan0316-project-slug-work-marker
+    branch: fix/plan0316-project-slug-work-marker
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 987c4297420b5e08d1bba9acdc8725615b38b29a
+    remote_ref: refs/remotes/origin/fix/plan0316-project-slug-work-marker
+    integration: merge
+    dependencies: [P07]
+    overlaps: []
+    validation_status: provider-free-passed
+    validation_ref: 987c4297420b5e08d1bba9acdc8725615b38b29a
+    integration_receipt: null
+    disposition: Exact canonical-versus-slugged Project route repair is published; installed byte parity and one no-prompt exact-target preflight remain.
+    updated_at: 2026-08-25

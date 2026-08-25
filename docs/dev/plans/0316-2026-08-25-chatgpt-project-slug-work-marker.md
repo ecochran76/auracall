@@ -6,7 +6,7 @@ Operational state: REPAIR
 Branch: fix/plan0316-project-slug-work-marker
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-25
+Revision: 2 | 2026-08-25
 
 ## Stable Objective
 
@@ -37,6 +37,9 @@ weakening exact Project, conversation, active-link, or `Work` badge checks.
   hygiene also pass.
 - Provider-free source acceptance is complete. Installed byte parity and the
   one no-prompt exact-target preflight remain before P09 can close.
+- Published provider-free checkpoint: `987c4297` on
+  `origin/fix/plan0316-project-slug-work-marker`; P09 is registered in the
+  active-lane catalog without overlap with P08.
 
 ## Authority And Bounds
 
