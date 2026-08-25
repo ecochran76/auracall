@@ -148,7 +148,11 @@ Keep these provider-owned contracts separate:
   exact mode trigger whose menu choices are `menuitemradio` elements. An
   established conversation may omit both controls; only a visible, enabled,
   exact ChatGPT prompt editor with no Work slider marker may then prove
-  implicit Chat. Never infer Work from composer readiness.
+  implicit Chat. Explicit Work may use the visible active conversation link's
+  exact `Work` badge only when its route has the same exact ChatGPT Project ID
+  and conversation ID; ChatGPT may omit the loaded route's human-readable
+  Project slug from that canonical link. Never infer Work from composer
+  readiness or accept any other route mismatch.
 - `src/browser/actions/modelSelection.ts` owns the Chat picker.
 - `src/browser/actions/chatgptWorkModelSelection.ts` owns Work's animated
   slider, optional **Show advanced options** expansion, exact **Model ...**

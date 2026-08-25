@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 522 | 2026-08-25
+
+- LitScout Plan 0444's frozen CHECKPOINT-4 recovery prompt remains unsent after
+  two bounded AuraCall attempts failed before prompt insertion at the explicit
+  Work-mode gate. The expected `wsl-chrome-3` Pro personal identity is proven.
+- Read-only live DOM evidence isolates exact route drift: the visible active
+  link is `/g/<project-id>/c/<conversation-id>` with an exact `Work` span, while
+  the loaded route adds `-<project-slug>` after the same Project ID. Current
+  byte-identical pathname comparison rejects that genuine pair.
+- P09 opens as an urgent provider-local repair with exact positive/negative
+  fixtures, one provider-free implementation/validation slice, one conditional
+  install, and one no-prompt exact-target preflight. P08 remains separately
+  owned and has no expected write overlap.
+
 ## Turn 521 | 2026-08-25
 
 - Operator approved the separate bounded aggregate-status performance repair.

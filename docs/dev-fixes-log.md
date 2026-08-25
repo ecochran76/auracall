@@ -1,3 +1,13 @@
+- 2026-08-25: ChatGPT can load a Project conversation at
+  `/g/<project-id>-<slug>/c/<conversation-id>` while its visible active sidebar
+  link uses `/g/<project-id>/c/<conversation-id>`. A byte-identical pathname
+  test rejects the genuine active `Work` badge and blocks AuraCall before Send.
+  Canonicalize only this provider-owned route pair: require one visible
+  `data-active` link, the same exact `g-p-...` Project ID, the same exact
+  conversation ID, and a descendant span whose normalized text is exactly
+  `Work`. Different Projects/conversations and generic Work text remain
+  fail-closed.
+
 - 2026-08-24: A surviving managed-browser listener proves process ownership,
   not completion liveness. A completion can fail and release its provider-work
   lease while its API-owned Chrome remains healthy on the configured DevTools

@@ -45,7 +45,9 @@ auracall --profile wsl-chrome-3 --engine browser \
   -p "Reply exactly with: AURACALL_WORK_MODE_OK"
 # Established Chat may show a High thinking control. AuraCall does not use the
 # shared model/thinking slider as a mode marker; established Work requires the
-# active current-route conversation's exact Work badge and otherwise fails closed.
+# active same-Project/same-conversation route's exact Work badge and otherwise
+# fails closed. ChatGPT may omit the human-readable Project slug from that
+# active-link route while retaining the same exact Project ID and conversation ID.
 
 # Preferred first-time browser onboarding (guided config + managed profile + live verification)
 auracall wizard

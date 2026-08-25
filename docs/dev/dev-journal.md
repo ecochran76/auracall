@@ -1,3 +1,18 @@
+## 2026-08-25 | Plan 0316 Project-slug Work-marker repair
+
+- LitScout Plan 0444's existing-conversation continuation failed twice before
+  prompt insertion because AuraCall could not prove explicit Work mode. The
+  expected `wsl-chrome-3` Pro personal identity and exact conversation were
+  healthy.
+- Read-only retained-DOM evidence proved the active link omits the loaded
+  Project URL's human-readable slug while preserving the same Project ID,
+  conversation ID, `data-active` marker, and exact descendant `Work` span.
+- The live-derived tracer fixture failed alone, then passed after one
+  provider-local canonical route comparison. Different-Project,
+  different-conversation, and implicit-Chat negatives pass. The final focused
+  ChatGPT browser contract gate discovered 7 files and passed `139/139` tests;
+  the composer-mode file itself passed `18/18`.
+
 ## 2026-08-24 | Plan 0313 provider-free repair opened
 
 - Operator `ok go` authorizes the bounded source successor to Plan 0312. P06
