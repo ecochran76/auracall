@@ -20,6 +20,7 @@ import {
   type ExecuteStoredRunStepResult,
 } from './runner.js';
 import { acquireExecutionRunLease, expireExecutionRunLeases } from './lease.js';
+import { createExecutionRunDispatchPlan } from './dispatcher.js';
 import { createExecutionRunnerRecord, createExecutionRunEvent } from './model.js';
 import { ExecutionRunRecordBundleSchema } from './schema.js';
 import {
@@ -31,7 +32,11 @@ import {
   repairStoredExecutionRunLease,
   type ExecutionRunRepairPosture,
 } from './repair.js';
-import { selectStoredExecutionRunLocalClaim, type ExecutionRunLocalClaimResult } from './claims.js';
+import {
+  selectExecutionRunLocalClaim,
+  selectStoredExecutionRunLocalClaim,
+  type ExecutionRunLocalClaimResult,
+} from './claims.js';
 import {
   evaluateStoredExecutionRunSchedulerAuthority,
   type ExecutionRunSchedulerAuthorityDecision,
@@ -1007,23 +1012,24 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         eligibilityNote: 'service host local claim summary liveness sweep',
       });
 
-      for (const candidate of await listCandidateRuns(control, options)) {
-        const inspection = await control.inspectRun(candidate.runId);
-        if (!inspection) continue;
+      const localRunner = (await runnersControl.readRunner(runnerId))?.runner ?? null;
 
-        const localClaim = await selectStoredExecutionRunLocalClaim(
+      for (const candidate of await listCandidateRuns(control, options)) {
+        const inspection: ExecutionRunInspection = {
+          record: candidate,
+          dispatchPlan: createExecutionRunDispatchPlan(candidate.bundle),
+        };
+
+        const localClaim = selectExecutionRunLocalClaim(
           {
             runId: candidate.runId,
             runnerId,
             now: livenessSweepAt,
             affinity: createRunAffinity(inspection),
           },
-          {
-            control,
-            runnersControl,
-          },
+          inspection,
+          localRunner,
         );
-        if (!localClaim) continue;
 
         if (localClaim.reason) {
           summary.reasonsByRunId[candidate.runId] = localClaim.reason;

@@ -207,6 +207,7 @@ export interface RunArchiveEvidenceResult {
 export interface RunArchiveService {
   listItems(request?: RunArchiveListRequest): Promise<RunArchiveListResult>;
   listItemsBatch?(requests: RunArchiveListRequest[]): Promise<RunArchiveListResult[]>;
+  listItemsBatchAvailability?(requests: RunArchiveListRequest[]): Promise<RunArchiveListResult[]>;
   readItem(id: string): Promise<RunArchiveItemResult | null>;
   readAsset(id: string): Promise<RunArchiveAssetResult | null>;
   lookupAsset(request: RunArchiveAssetLookupRequest): Promise<RunArchiveAssetLookupResult>;
@@ -253,6 +254,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
   const now = deps.now ?? (() => new Date());
   async function readIndexedItems(
     scope: (item: RunArchiveItem) => boolean = () => true,
+    refreshMode: 'full' | 'availability' = 'full',
   ): Promise<RunArchiveItem[]> {
     const index = await indexStore.readIndex();
     if (index) {
@@ -260,6 +262,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
       return refreshIndexedFileMetadata(scopedItems, {
         indexStore,
         updatedAt: now().toISOString(),
+        refreshMode,
       });
     }
     return backfillIndexItems({
@@ -291,6 +294,18 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
       }));
       const items = await readIndexedItems((item) =>
         normalizedRequests.some((request) => matchesStableRequest(item, request))
+      );
+      const generatedAt = now().toISOString();
+      return requests.map((request) => createRunArchiveListResult(items, request, generatedAt));
+    },
+    async listItemsBatchAvailability(requests) {
+      const normalizedRequests = requests.map((request) => ({
+        ...request,
+        kind: normalizeKind(request.kind),
+      }));
+      const items = await readIndexedItems(
+        (item) => normalizedRequests.some((request) => matchesStableRequest(item, request)),
+        'availability',
       );
       const generatedAt = now().toISOString();
       return requests.map((request) => createRunArchiveListResult(items, request, generatedAt));
@@ -588,9 +603,12 @@ async function refreshIndexedFileMetadata(
   input: {
     indexStore: RunArchiveIndexStore;
     updatedAt: string;
+    refreshMode: 'full' | 'availability';
   },
 ): Promise<RunArchiveItem[]> {
-  const refreshed = await enrichFileMetadata(items);
+  const refreshed = await enrichFileMetadata(items, {
+    includeChecksum: input.refreshMode === 'full',
+  });
   const changed = refreshed.filter((item, index) => fileMetadataChanged(items[index], item));
   if (changed.length > 0) {
     await input.indexStore.upsertItems(changed, {
@@ -1296,7 +1314,10 @@ function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {
   return haystack.includes(needle);
 }
 
-async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveItem[]> {
+async function enrichFileMetadata(
+  items: RunArchiveItem[],
+  options: { includeChecksum?: boolean } = {},
+): Promise<RunArchiveItem[]> {
   return Promise.all(items.map(async (item) => {
     const cachedConversationEvidence = item.localPath ? null : await findCachedConversationAttachmentEvidence(item);
     const cachedConversationAsset = cachedConversationEvidence?.file ?? null;
@@ -1304,9 +1325,9 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       item.localPath ??
       cachedConversationAsset?.localPath ??
       await findExistingMaterializedArchiveFile(item);
-    const localFile = await inspectArchiveLocalFile(discoveredLocalPath);
+    const localFile = await inspectArchiveLocalFile(discoveredLocalPath, options.includeChecksum ?? true);
     const liveChecksumSha256 = localFile.checksumSha256;
-    const checksumSha256 = liveChecksumSha256 ?? readRecordString(item.metadata, ['checksumSha256']);
+    const checksumSha256 = liveChecksumSha256 ?? item.checksumSha256 ?? readRecordString(item.metadata, ['checksumSha256']);
     const pathExists = localFile.pathExists;
     const unavailableEvidence: Record<string, unknown> | null =
       localFile.unavailableErrorCode
@@ -1490,7 +1511,7 @@ function normalizeArchiveComparableString(value: unknown): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
-async function inspectArchiveLocalFile(localPath: string | null): Promise<{
+async function inspectArchiveLocalFile(localPath: string | null, includeChecksum = true): Promise<{
   checksumSha256: string | null;
   pathExists: boolean | null;
   fileSizeBytes: number | null;
@@ -1503,6 +1524,26 @@ async function inspectArchiveLocalFile(localPath: string | null): Promise<{
       fileSizeBytes: null,
       unavailableErrorCode: null,
     };
+  }
+  if (!includeChecksum) {
+    try {
+      const stats = await fs.stat(localPath);
+      return {
+        checksumSha256: null,
+        pathExists: true,
+        fileSizeBytes: stats.size,
+        unavailableErrorCode: null,
+      };
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        return { checksumSha256: null, pathExists: false, fileSizeBytes: null, unavailableErrorCode: null };
+      }
+      const unavailableErrorCode = readUnavailableArchiveAssetErrorCode(error);
+      if (unavailableErrorCode) {
+        return { checksumSha256: null, pathExists: false, fileSizeBytes: null, unavailableErrorCode };
+      }
+      throw error;
+    }
   }
   let checksumSha256: string | null = null;
   try {

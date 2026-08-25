@@ -6,6 +6,7 @@ import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { getActiveExecutionRunLease } from '../src/runtime/contract.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { createExecutionRunRecordBundleFromTeamRun } from '../src/runtime/model.js';
+import { createExecutionRunRecordStore } from '../src/runtime/store.js';
 import { createTeamRunBundle } from '../src/teams/model.js';
 
 function createBundle(runId = 'team_run_control') {
@@ -126,6 +127,34 @@ describe('runtime control module', () => {
 
     const listed = await control.listRuns({ limit: 10 });
     expect(listed.map((record) => record.runId).sort()).toEqual(['team_run_alpha', 'team_run_beta']);
+  });
+
+  it('lists stored records without rereading each record after the bulk scan', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const store = createExecutionRunRecordStore();
+    const writer = createExecutionRuntimeControl(store);
+    await writer.createRun(createBundle('team_run_bulk_alpha'));
+    await writer.createRun(createBundle('team_run_bulk_beta'));
+
+    let readRecordCalls = 0;
+    const control = createExecutionRuntimeControl({
+      ...store,
+      async readRecord(runId) {
+        readRecordCalls += 1;
+        return store.readRecord(runId);
+      },
+    });
+
+    const listed = await control.listRuns({ limit: 10 });
+
+    expect(listed.map((record) => record.runId).sort()).toEqual([
+      'team_run_bulk_alpha',
+      'team_run_bulk_beta',
+    ]);
+    expect(readRecordCalls).toBe(0);
   });
 
   it('persists patched run bundles via the control persist route', async () => {

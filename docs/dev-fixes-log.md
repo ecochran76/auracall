@@ -21975,3 +21975,10 @@ browser-stage lifecycle observability, not transcript truncation.
   code, responsive narrow control endpoints, and an explicit aggregate-status
   budget; record a too-short default client timeout as performance debt rather
   than silently treating systemd `active` as API health.
+- 2026-08-25: Aggregate status must reuse already-loaded runtime records and
+  one local-runner snapshot instead of stacking bulk enumeration with
+  per-candidate store reads. When status consumes only current file
+  availability, expose a dedicated availability refresh seam and preserve full
+  content checksum refresh for archive consumers that actually return it.
+  Parallel projections must start from one cloned registry snapshot so the
+  response cannot mix generations while live-follow state changes.

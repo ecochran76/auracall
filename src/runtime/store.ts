@@ -11,7 +11,7 @@ const RUNS_DIRNAME = 'runs';
 const BUNDLE_FILENAME = 'bundle.json';
 const RECORD_FILENAME = 'record.json';
 const JSON_READ_RETRY_DELAYS_MS = [10, 25, 50];
-const RUNTIME_RECORD_READ_CONCURRENCY = 4;
+const RUNTIME_RECORD_READ_CONCURRENCY = 16;
 
 export interface ListExecutionRunRecordOptions {
   limit?: number;
@@ -40,6 +40,7 @@ export interface ExecutionRunRecordStore {
   readRecord(runId: string): Promise<ExecutionRunStoredRecord | null>;
   writeRecord(bundle: ExecutionRunRecordBundle, options?: WriteExecutionRunRecordOptions): Promise<ExecutionRunStoredRecord>;
   listBundles(options?: ListExecutionRunRecordOptions): Promise<ExecutionRunRecordBundle[]>;
+  listRecords?(options?: ListExecutionRunRecordOptions): Promise<ExecutionRunStoredRecord[]>;
 }
 
 export function getRuntimeDir(): string {
@@ -121,6 +122,62 @@ export async function listExecutionRunRecordBundles(
     return filtered.slice(0, options.limit);
   }
   return filtered;
+}
+
+export async function listExecutionRunStoredRecords(
+  options: ListExecutionRunRecordOptions = {},
+): Promise<ExecutionRunStoredRecord[]> {
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(getExecutionRunsDir(), { withFileTypes: true });
+  } catch (error) {
+    if (isMissingFileError(error)) return [];
+    throw error;
+  }
+
+  const runEntries = entries.filter((entry) => entry.isDirectory());
+  const candidateEntries = options.updatedSince
+    ? await filterRunEntriesUpdatedSince(runEntries, options.updatedSince)
+    : runEntries;
+  const statuses = options.statuses?.length ? new Set(options.statuses) : null;
+  const filtered = (
+    await mapWithConcurrency(
+      candidateEntries,
+      RUNTIME_RECORD_READ_CONCURRENCY,
+      async (entry): Promise<ExecutionRunStoredRecord | null> => {
+        const stored = await readExecutionRunStoredRecord(entry.name);
+        const record = stored ?? (await createLegacyStoredRecord(entry.name));
+        if (!record) return null;
+        const { run } = record.bundle;
+        if (options.status && run.status !== options.status) return null;
+        if (statuses && !statuses.has(run.status)) return null;
+        if (options.sourceKind && run.sourceKind !== options.sourceKind) return null;
+        return record;
+      },
+    )
+  ).filter((record): record is ExecutionRunStoredRecord => record !== null);
+
+  filtered.sort((left, right) => right.bundle.run.createdAt.localeCompare(left.bundle.run.createdAt));
+  if (typeof options.limit === 'number' && options.limit >= 0) {
+    return filtered.slice(0, options.limit);
+  }
+  return filtered;
+}
+
+async function createLegacyStoredRecord(runId: string): Promise<ExecutionRunStoredRecord | null> {
+  const bundlePath = getExecutionRunBundlePath(runId);
+  try {
+    const bundle = await readJsonFileWithRetries(bundlePath, (value) => ExecutionRunRecordBundleSchema.parse(value));
+    return {
+      runId: bundle.run.id,
+      revision: 0,
+      persistedAt: bundle.run.updatedAt,
+      bundle,
+    };
+  } catch (error) {
+    if (isMissingFileError(error)) return null;
+    throw error;
+  }
 }
 
 async function mapWithConcurrency<T, R>(
@@ -227,6 +284,7 @@ export function createExecutionRunRecordStore(): ExecutionRunRecordStore {
     readRecord: readExecutionRunStoredRecord,
     writeRecord: writeExecutionRunStoredRecord,
     listBundles: listExecutionRunRecordBundles,
+    listRecords: listExecutionRunStoredRecords,
   };
 }
 

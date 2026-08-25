@@ -1856,20 +1856,51 @@ export async function createResponsesHttpServer(
 							sourceKind: statusSourceKind,
 						})
 					: undefined;
-				const statusResponseLocalClaimSummary = await host.summarizeLocalClaimState({
-					sourceKind: "direct",
-				});
-				const runnerTopology = compactRunnerTopologyForStatus(
-					await host.summarizeRunnerTopology(),
-					statusQuery.runnerTopologyMode,
-				);
-				const accountMirrorStatus = await hydrateAccountMirrorStatusMaterializationEvidence(
+				const rawAccountMirrorStatus = structuredClone(
 					accountMirrorStatusRegistry.readStatus({
 						provider: statusQuery.accountMirrorProvider,
 						runtimeProfileId: statusQuery.accountMirrorRuntimeProfileId,
 					}),
-					historyMaterializationService,
-					runArchiveService,
+				);
+				const rawScopedAccountMirrorStatus = scopeAccountMirrorStatusForProofScope(
+					rawAccountMirrorStatus,
+					accountMirrorProofScope,
+				);
+				const localClaimPromise = host.summarizeLocalClaimState({
+					sourceKind: "direct",
+				});
+				const runnerTopologyPromise = localClaimPromise.then(() => host.summarizeRunnerTopology());
+				const [
+					statusResponseLocalClaimSummary,
+					rawRunnerTopology,
+					accountMirrorStatus,
+					accountLibraryActiveJobs,
+					accountLibraryBrowserProcessStatus,
+					tenantExecutionLimits,
+					accountMirrorCompletions,
+					preflight,
+				] = await Promise.all([
+					localClaimPromise,
+					runnerTopologyPromise,
+					hydrateAccountMirrorStatusMaterializationEvidence(
+						rawAccountMirrorStatus,
+						historyMaterializationService,
+						runArchiveService,
+					),
+					readActiveAccountLibraryMaterializationJobs({ service: historyMaterializationService }),
+					deps.accountMirrorBrowserProcessStatus === undefined
+						? readAccountLibraryBrowserProcessStatus({
+								status: rawScopedAccountMirrorStatus,
+								now,
+							})
+						: Promise.resolve(deps.accountMirrorBrowserProcessStatus),
+					readTenantExecutionLimitsStatus(statusQuery.tenantExecutionLimitsMode === "usage"),
+					createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
+					readPreflightStatusSummary(preflightRunner),
+				]);
+				const runnerTopology = compactRunnerTopologyForStatus(
+					rawRunnerTopology,
+					statusQuery.runnerTopologyMode,
 				);
 				const statusResponseAccountMirrorStatus = scopeAccountMirrorStatusForProofScope(
 					accountMirrorStatus,
@@ -1879,16 +1910,6 @@ export async function createResponsesHttpServer(
 					status: statusResponseAccountMirrorStatus,
 					service: historyMaterializationService,
 				});
-				const accountLibraryActiveJobs = await readActiveAccountLibraryMaterializationJobs({
-					service: historyMaterializationService,
-				});
-				const accountLibraryBrowserProcessStatus =
-					deps.accountMirrorBrowserProcessStatus === undefined
-						? await readAccountLibraryBrowserProcessStatus({
-								status: statusResponseAccountMirrorStatus,
-								now,
-							})
-						: deps.accountMirrorBrowserProcessStatus;
 				const statusResponse = await createHttpStatusResponse({
 					now,
 					host: boundHost,
@@ -1901,19 +1922,14 @@ export async function createResponsesHttpServer(
 					runnerTopology,
 					runner: runnerState,
 					backgroundDrain: backgroundDrainState,
-					tenantExecutionLimits: await readTenantExecutionLimitsStatus(
-						statusQuery.tenantExecutionLimitsMode === "usage",
-					),
+					tenantExecutionLimits,
 					accountMirrorScheduler: accountMirrorSchedulerState,
 					accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
 					accountMirrorStatus: statusResponseAccountMirrorStatus,
 					accountMirrorAccountLibraryPreviews: accountLibraryPreviews,
 					accountMirrorAccountLibraryActiveJobs: accountLibraryActiveJobs,
 					accountMirrorBrowserProcessStatus: accountLibraryBrowserProcessStatus,
-					accountMirrorCompletions: await createAccountMirrorCompletionStatusSummary(
-						accountMirrorCompletionService,
-						now,
-					),
+					accountMirrorCompletions,
 					accountMirrorProofScope: createAccountMirrorProofScopeStatus(
 						accountMirrorProofScope,
 						accountMirrorStatus,
@@ -1924,7 +1940,7 @@ export async function createResponsesHttpServer(
 							backgroundDrainIntervalMs,
 						},
 					),
-					preflight: await readPreflightStatusSummary(preflightRunner),
+					preflight,
 					auth: apiAuthPolicy,
 				});
 				sendJson(res, 200, statusResponse);
@@ -6189,6 +6205,11 @@ async function hydrateAccountMirrorStatusMaterializationEvidence(
 	const [archiveResults, jobResults] = await Promise.all([
 		(async () => {
 			if (!runArchiveService) return archiveRequests.map(() => null);
+			if (runArchiveService.listItemsBatchAvailability) {
+				return runArchiveService.listItemsBatchAvailability(archiveRequests).catch(() =>
+					archiveRequests.map(() => null),
+				);
+			}
 			if (runArchiveService.listItemsBatch) {
 				return runArchiveService.listItemsBatch(archiveRequests).catch(() =>
 					archiveRequests.map(() => null),

@@ -165,6 +165,47 @@ describe('run archive service', () => {
     ]);
   });
 
+  test('refreshes status availability without rereading local asset contents', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-run-archive-availability-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const assetPath = path.join(homeDir, 'asset.txt');
+    await writeFile(assetPath, 'status only needs current file availability', 'utf8');
+    const indexStore = {
+      readIndex: vi.fn(async () => ({
+        object: 'run_archive_index' as const,
+        version: 1,
+        updatedAt: '2026-08-25T16:00:00.000Z',
+        itemCount: 1,
+        items: [createArchiveItemFixture({
+          id: 'generated-artifact:availability-only',
+          kind: 'generated_artifact',
+          provider: 'chatgpt',
+          runtimeProfile: 'default',
+          localPath: assetPath,
+          fileAvailable: true,
+          checksumSha256: 'existing-checksum',
+        })],
+      })),
+      writeIndex: vi.fn(),
+      upsertItems: vi.fn(),
+      readItem: vi.fn(),
+      listItems: vi.fn(),
+    } as unknown as RunArchiveIndexStore;
+    const service = createRunArchiveService({ indexStore });
+    const readFile = vi.spyOn(fs, 'readFile');
+
+    const results = await service.listItemsBatchAvailability?.([
+      { provider: 'chatgpt', runtimeProfile: 'default', assetAvailability: 'available' },
+    ]);
+
+    expect(readFile).not.toHaveBeenCalled();
+    expect(results?.[0]?.items[0]).toMatchObject({
+      id: 'generated-artifact:availability-only',
+      fileAvailable: true,
+      checksumSha256: 'existing-checksum',
+    });
+  });
+
   test('projects existing runtime, batch, media, upload, artifact, and provider conversation records', async () => {
     const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-run-archive-'));
     setAuracallHomeDirOverrideForTest(homeDir);

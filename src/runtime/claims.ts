@@ -1,4 +1,4 @@
-import type { ExecutionRuntimeControlContract } from './contract.js';
+import type { ExecutionRunInspection, ExecutionRuntimeControlContract } from './contract.js';
 import { createExecutionRuntimeControl } from './control.js';
 import { createExecutionRunQueueProjection, type ExecutionRunQueueProjection } from './projection.js';
 import { createExecutionRunnerControl, type ExecutionRunnerControlContract } from './runnersControl.js';
@@ -138,12 +138,19 @@ export async function evaluateStoredExecutionRunLocalClaim(
 
   const inspection = await control.inspectRun(input.runId);
   if (!inspection) return null;
+  const runnerRecord = await runnersControl.readRunner(input.runnerId);
+  return evaluateExecutionRunLocalClaim(input, inspection, runnerRecord?.runner ?? null);
+}
 
+export function evaluateExecutionRunLocalClaim(
+  input: EvaluateStoredExecutionRunLocalClaimInput,
+  inspection: ExecutionRunInspection,
+  runner: ExecutionRunnerRecord | null,
+): ExecutionRunLocalClaimResult {
   const queue = createExecutionRunQueueProjection(inspection, {
     affinity: input.affinity ?? null,
   });
-  const runnerRecord = await runnersControl.readRunner(input.runnerId);
-  if (!runnerRecord) {
+  if (!runner) {
     return {
       runId: inspection.record.runId,
       runnerId: input.runnerId,
@@ -161,16 +168,16 @@ export async function evaluateStoredExecutionRunLocalClaim(
 
   const projection = createExecutionRunQueueProjection(inspection, {
     affinity: input.affinity ?? null,
-    runner: runnerRecord.runner,
+    runner,
   });
 
   return {
     runId: inspection.record.runId,
-    runnerId: runnerRecord.runner.id,
-    hostId: runnerRecord.runner.hostId,
-    status: classifyExecutionRunLocalClaimStatus(queue, runnerRecord.runner, projection, input.now ?? null),
+    runnerId: runner.id,
+    hostId: runner.hostId,
+    status: classifyExecutionRunLocalClaimStatus(queue, runner, projection, input.now ?? null),
     selected: false,
-    reason: createExecutionRunLocalClaimReason(queue, runnerRecord.runner, projection, input.now ?? null),
+    reason: createExecutionRunLocalClaimReason(queue, runner, projection, input.now ?? null),
     queueState: projection.queueState,
     claimState: projection.claimState,
     affinityStatus: projection.affinity.status,
@@ -185,6 +192,18 @@ export async function selectStoredExecutionRunLocalClaim(
 ): Promise<ExecutionRunLocalClaimResult | null> {
   const evaluated = await evaluateStoredExecutionRunLocalClaim(input, deps);
   if (!evaluated) return null;
+  return {
+    ...evaluated,
+    selected: evaluated.status === 'eligible',
+  };
+}
+
+export function selectExecutionRunLocalClaim(
+  input: SelectStoredExecutionRunLocalClaimInput,
+  inspection: ExecutionRunInspection,
+  runner: ExecutionRunnerRecord | null,
+): ExecutionRunLocalClaimResult {
+  const evaluated = evaluateExecutionRunLocalClaim(input, inspection, runner);
   return {
     ...evaluated,
     selected: evaluated.status === 'eligible',

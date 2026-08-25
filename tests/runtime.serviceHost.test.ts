@@ -3153,6 +3153,59 @@ describe('runtime service host', () => {
     });
   });
 
+  it('summarizes local claims from the bulk run snapshot without repeated store reads', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_local_claim_bulk_1', '2026-04-08T15:00:00.000Z'));
+    await control.createRun(createDirectBundle('run_local_claim_bulk_2', '2026-04-08T15:01:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:local-claim-bulk',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    let inspectRunCalls = 0;
+    let readRunnerCalls = 0;
+    const host = createExecutionServiceHost({
+      control: {
+        ...control,
+        async inspectRun(runId) {
+          inspectRunCalls += 1;
+          return control.inspectRun(runId);
+        },
+      },
+      runnersControl: {
+        ...runnersControl,
+        async readRunner(runnerId) {
+          readRunnerCalls += 1;
+          return runnersControl.readRunner(runnerId);
+        },
+      },
+      runnerId: 'runner:local-claim-bulk',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const summary = await host.summarizeLocalClaimState({ sourceKind: 'direct' });
+
+    expect(summary?.selectedRunIds).toEqual([
+      'run_local_claim_bulk_1',
+      'run_local_claim_bulk_2',
+    ]);
+    expect(inspectRunCalls).toBe(0);
+    expect(readRunnerCalls).toBe(1);
+  });
+
   it('blocks local claim when configured service account affinity is missing from the runner', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);

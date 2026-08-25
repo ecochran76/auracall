@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P08
-Operational state: DIAGNOSIS
+Operational state: IMPLEMENTATION_ACCEPTED_PENDING_INSTALLED_PROOF
 Branch: fix/plan0315-aggregate-status-latency
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-25
+Revision: 2 | 2026-08-25
 
 ## Stable Objective
 
@@ -24,9 +24,40 @@ or launching provider/browser work.
   `exit 124` after 7.2-7.8 seconds.
 - API PID `62038` is active/running with zero restarts. The latest scheduled
   live-follow pass completed without backpressure and exact browser cleanup.
-- The aggregate response combines several persisted/runtime projections. The
-  expensive component and multiplicity are not yet proved; source changes are
-  forbidden until a measured, falsifiable diagnosis identifies them.
+- Profiling isolated three dominant costs on the current corpus: local-claim
+  evaluation over 400 persisted runs, archive/materialization availability
+  hydration over a 1,875-item/29 MB index, and repeated active-job/browser
+  readback. The original local-claim loop reread each run twice after the bulk
+  scan and reread the same local runner for every candidate.
+- The repair evaluates claims from the already-loaded record snapshot, reads
+  the local runner once, exposes a one-pass stored-record list, refreshes
+  archive availability without rereading asset contents, and overlaps
+  independent aggregate projections. No status field or evidence class moved.
+- Three instrumented source probes succeeded inside the five-second HTTP
+  budget at 4.76 s, 4.18 s, and 1.53 s. Temporary instrumentation is removed.
+  Final installed acceptance is deferred until unrelated host load returns to
+  a valid proof posture; the latest readback was load average 42.67 with
+  substantial CPU pressure and 31/32 GiB swap consumed.
+
+## Diagnosis And Repair Evidence
+
+- Baseline real-corpus profile: local claim 5.1 s, archive hydration 3.9-6.0 s,
+  active materialization jobs 0.45-0.94 s, browser process status 1.3-3.1 s,
+  runner topology 0.06 s. The 579 KB response size was secondary.
+- RED regressions proved four `inspectRun` calls for two local-claim candidates
+  and two redundant `readRecord` calls after a two-record bulk scan.
+- GREEN requires zero per-candidate `inspectRun` calls, one local-runner read,
+  zero post-scan record rereads, and availability-only archive refresh that
+  retains the indexed checksum without reading asset contents.
+- Rejected alternatives: a larger client timeout, field removal, stale cached
+  status, unchecked checksum suppression on ordinary archive reads, and broad
+  persisted cache architecture.
+- Validation so far: focused regressions, runtime store/control/archive suites,
+  isolated affected status hydration tests, typecheck, production build, and
+  zero-warning scoped lint pass. A combined-file status sequence retains an
+  order-dependent test-state leak: the identity-keyed archive test passes in
+  isolation but can inherit prior history hydration. It is recorded as a
+  validation caveat and did not justify weakening runtime semantics.
 
 ## Authority And Bounds
 

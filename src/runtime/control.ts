@@ -40,6 +40,9 @@ export function createExecutionRuntimeControl(
     },
 
     async listRuns(input: ListStoredExecutionRunsInput = {}) {
+      if (store.listRecords) {
+        return store.listRecords(input);
+      }
       const bundles = await store.listBundles(input);
       const records = await Promise.all(bundles.map(async (bundle) => store.readRecord(bundle.run.id)));
       return records.filter((record): record is ExecutionRunStoredRecord => record !== null);

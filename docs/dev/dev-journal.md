@@ -47915,3 +47915,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   work is excluded.
 - Next: minimize the cost seam, publish 3-5 falsifiable hypotheses, profile one
   bounded pass, and write the regression before the repair.
+
+## 2026-08-25 - Plan 0315 source repair accepted pending clean-host adoption
+
+- Real-corpus timing isolated local-claim traversal and archive availability
+  hydration as the dominant costs. The 400-run local-claim path performed a
+  bulk scan, two more record reads per candidate, and one identical runner read
+  per candidate; the archive status path reread asset contents for checksums
+  that aggregate status never exposes.
+- The repair reuses bulk records, reads the local runner once, adds one-pass
+  stored-record listing at bounded concurrency, retains full checksum refresh
+  for ordinary archive reads, and gives aggregate status a current
+  availability-only service seam. Independent status projections overlap from
+  one cloned account-mirror snapshot.
+- RED/GREEN call-count and content-read regressions pass. Typecheck, build,
+  source lint, focused runtime suites, and isolated affected HTTP status tests
+  pass. Instrumented real-corpus HTTP stages completed at 4.76 s, 4.18 s, and
+  1.53 s with every response field retained; instrumentation was removed.
+- Installed adoption is intentionally waiting: unrelated LitScout, Canva, and
+  browser workloads drove load average to 42.67, CPU pressure near 58%, and
+  swap to 31/32 GiB. Those conditions cannot produce valid latency evidence.
