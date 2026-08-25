@@ -157,8 +157,8 @@ lanes:
     integration: merge
     dependencies: [P07]
     overlaps: []
-    validation_status: provider-free-passed
+    validation_status: live-passed-reconciliation-pending
     validation_ref: e76a8407af5df7e38fccfa532500c63a708fe127
     integration_receipt: null
-    disposition: Exact route and established-Work model-proof repairs are published; installed byte parity and exact no-prompt acceptance remain.
+    disposition: Installed exact-target Work and GPT-5.6 Sol acceptance passed with no prompt or Send; integration awaits reconciliation with fix/plan0444-provider-provenance.
     updated_at: 2026-08-25

@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P09
-Operational state: REPAIR
+Operational state: LIVE_ACCEPTED / RECONCILIATION_PENDING
 Branch: fix/plan0316-project-slug-work-marker
 Target: main
 Integration: merge
-Revision: 3 | 2026-08-25
+Revision: 4 | 2026-08-25
 
 ## Stable Objective
 
@@ -49,6 +49,16 @@ weakening exact Project, conversation, active-link, or `Work` badge checks.
   the Work-model selector. Its live-derived positive tracer failed before the
   change and now passes; a different-Project negative remains fail-closed.
   No prompt was inserted and no Send occurred during diagnosis.
+- Source and installed artifacts are byte-identical. On the ready exact target,
+  the installed action logged `ChatGPT mode: Work (already selected)` and
+  `Work model picker: 5.6 SolHigh`; the composer remained empty and Send was
+  not invoked. Receipt:
+  `docs/dev/notes/2026-08-25-plan0316-installed-live-acceptance.json`.
+- P09 is live-accepted but not integration-complete. The pre-existing
+  `fix/plan0444-provider-provenance` worktree changes the same two source files;
+  Git reconciliation is required before either branch lands on `main`. This
+  custody issue does not invalidate the installed acceptance or block the
+  already-authorized LitScout writer continuation.
 
 ## Authority And Bounds
 

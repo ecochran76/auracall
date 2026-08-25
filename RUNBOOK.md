@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 523 | 2026-08-25
+
+- P09 source and installed artifacts are byte-identical. The exact ready-page
+  no-prompt probe passed Work and `GPT-5.6 Sol`, with an empty composer and no
+  Send. The retained AuraCall-owned browser is PID 58478 / port 37169.
+- The first installed probe exposed and then closed one adjacent established-
+  Work model-proof gap. Connection and early-hydration failures had no page,
+  prompt, or provider effect and were resolved through AuraCall lifecycle plus
+  exact readiness evidence rather than request replay.
+- P09 remains open only for Git reconciliation: pre-existing branch
+  `fix/plan0444-provider-provenance` overlaps both repaired source files. Do not
+  silently merge or overwrite it. Installed acceptance is sufficient to resume
+  LitScout Plan 0444's frozen writer packet.
+
 ## Turn 522 | 2026-08-25
 
 - LitScout Plan 0444's frozen CHECKPOINT-4 recovery prompt remains unsent after
