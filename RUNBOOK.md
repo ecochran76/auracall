@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 521 | 2026-08-25
+
+- Operator approved the separate bounded aggregate-status performance repair.
+  P08 freezes server-side latency reduction and payload parity; a timeout-only
+  client change, provider/browser work, and live-follow semantic changes cannot
+  satisfy the plan.
+- Installed default `auracall api status --json` reproduced the exact symptom
+  in 3/3 probes: `exit 124` after 7.2-7.8 seconds. Narrow scheduler and
+  completion endpoints remain the responsive comparison surface.
+- Next is a minimized timing harness and 3-5 ranked falsifiable hypotheses
+  before any source change. Installed adoption is bounded to one restart under
+  clean scheduler isolation.
+
 ## Turn 520 | 2026-08-25
 
 - Integrated P07 through `af17fa89`, installed current `main` once, and

@@ -4,8 +4,15 @@
 
 ### Current Execution Board
 
-Status: bounded live-follow recovery integrated and live accepted
-Lanes: P01, P02, P03, P06, P07 (integrated); P04, P05 (terminal hard stop, integrated)
+Status: aggregate status latency diagnosis open
+Lanes: P01, P02, P03, P06, P07 (integrated); P04, P05 (terminal hard stop, integrated); P08 (open)
+
+- Active aggregate status latency repair:
+  [docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md](docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md)
+  P08 owns a measured server-side repair for aggregate `/status` exceeding the
+  existing default five-second client budget. Three installed baseline probes
+  timed out in 7.2-7.8 seconds. Payload semantics, provider/browser behavior,
+  and live-follow policy remain frozen.
 
 - Completed bounded live-follow recovery:
   [docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md](docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md)

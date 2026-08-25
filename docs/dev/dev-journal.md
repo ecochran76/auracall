@@ -47904,3 +47904,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Aggregate status requires a larger client timeout on the current corpus:
   30-second reads completed in 11-22 seconds, while the default 5-second CLI
   timeout can abort. Narrow operational endpoints remained responsive.
+
+## 2026-08-25 - Plan 0315 aggregate status latency diagnosis opened
+
+- Three consecutive installed default-status probes reproduced the same
+  timeout with `exit 124` after 7.2-7.8 seconds. This is the P08 red-capable
+  runtime loop; narrow account-mirror endpoints are the healthy comparison.
+- The plan requires measured server-side diagnosis and payload parity. Raising
+  only the CLI timeout, deleting status fields, or launching provider/browser
+  work is excluded.
+- Next: minimize the cost seam, publish 3-5 falsifiable hypotheses, profile one
+  bounded pass, and write the regression before the repair.
