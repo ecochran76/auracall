@@ -73,6 +73,19 @@ decisions can be audited without inferring from completion status alone:
 operator classification layer, not a provider-safety bypass; provider guards,
 foreground preemption, and cadence checks still apply before provider work.
 
+## Explicit Bounded Retry
+
+`run_one_pass` is the retry boundary for a terminal live-follow operation. It
+may re-arm `blocked` or `failed` live follow for exactly one additional pass,
+preserving the subscription mode while setting a pass-count ceiling. It never
+re-arms completed or cancelled live follow, and it never reopens a bounded
+completion.
+
+Repeated controls are an operator/runtime policy decision, not an automatic
+loop: diagnose the prior terminal class and apply a reasonable remediation or
+wait for a materially changed condition before another attempt. Every forced
+terminal pass requests managed-browser cleanup on both success and failure.
+
 ## Scheduler Operator Authority
 
 Scheduler pause/resume is operator control state, not transient process state.

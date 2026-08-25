@@ -733,9 +733,10 @@
         `{"action":"pause|resume|run_one_pass|cancel"}`; paused operations stay
         discoverable in active readback, resume relaunches the service-owned
         loop, `run_one_pass` wakes one bounded live-follow pass while preserving
-        safety gates; it may also explicitly re-arm a blocked live-follow
-        completion after the underlying fault is repaired, but does not re-arm
-        completed, failed, cancelled, or bounded operations. The forced pass
+        safety gates; it may also explicitly re-arm a blocked or failed
+        live-follow completion after the underlying fault is diagnosed and
+        repaired, but does not re-arm completed, cancelled, or bounded
+        operations. The forced pass
         retains ownership through any completion-owned
         materialization terminal, and blocks on an all-failed result before
         returning; successful/skipped materialization settles before the forced

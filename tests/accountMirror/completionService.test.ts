@@ -1818,21 +1818,25 @@ describe("account mirror completion service", () => {
 		});
 	});
 
-	test("does not re-arm a blocked bounded completion with run-one-pass", () => {
+	test.each([
+		"blocked",
+		"failed",
+	] as const)("does not re-arm a %s bounded completion with run-one-pass", (status) => {
 		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const id = `acctmirror_bounded_${status}`;
 		const service = createAccountMirrorCompletionService({
 			registry: createAccountMirrorStatusRegistry({ config }),
 			refreshService: { requestRefresh },
 			initialOperations: [
 				{
 					object: "account_mirror_completion",
-					id: "acctmirror_bounded_blocked",
+					id,
 					provider: "chatgpt",
 					runtimeProfileId: "default",
 					mode: "bounded",
 					sweepMode: "steady_follow",
 					phase: "steady_follow",
-					status: "blocked",
+					status,
 					startedAt: "2026-07-31T11:45:00.000Z",
 					completedAt: "2026-07-31T11:59:00.000Z",
 					nextAttemptAt: null,
@@ -1842,22 +1846,102 @@ describe("account mirror completion service", () => {
 					materializationPolicy: "metadata_only",
 					mirrorCompleteness: null,
 					error: {
-						message: "Provider guard blocked the bounded run.",
-						code: "account_mirror_provider_cooldown",
+						message:
+							status === "blocked"
+								? "Provider guard blocked the bounded run."
+								: "The bounded collector failed.",
+						code:
+							status === "blocked"
+								? "account_mirror_provider_cooldown"
+								: "account_mirror_collector_failed",
 					},
 					lifecycleEvents: [],
 				},
 			],
 		});
 
-		expect(
-			service.control({ id: "acctmirror_bounded_blocked", action: "run_one_pass" }),
-		).toMatchObject({
-			status: "blocked",
+		expect(service.control({ id, action: "run_one_pass" })).toMatchObject({
+			status,
 			passCount: 0,
 			lifecycleEvents: [],
 		});
 		expect(requestRefresh).not.toHaveBeenCalled();
+	});
+
+	test("re-arms one failed live-follow pass without opening an unbounded retry loop", async () => {
+		const requestRefresh = vi.fn(async () => createRefreshResult());
+		const service = createAccountMirrorCompletionService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-08-24T16:30:00.000Z"),
+			}),
+			refreshService: { requestRefresh },
+			initialOperations: [
+				{
+					object: "account_mirror_completion",
+					id: "acctmirror_force_failed_one",
+					provider: "chatgpt",
+					runtimeProfileId: "wsl-chrome-3",
+					mode: "live_follow",
+					sweepMode: "steady_follow",
+					phase: "steady_follow",
+					status: "failed",
+					startedAt: "2026-08-24T15:45:00.000Z",
+					completedAt: "2026-08-24T16:00:00.000Z",
+					nextAttemptAt: null,
+					maxPasses: null,
+					passCount: 1,
+					forceRunUntilPassCount: 2,
+					lastRefresh: createRefreshResult(),
+					materializationPolicy: "metadata_only",
+					mirrorCompleteness: completeMirror,
+					error: {
+						message: "Timed out waiting for ChatGPT sidebar readiness after 587ms.",
+						code: null,
+					},
+					lifecycleEvents: [],
+				},
+			],
+			now: () => new Date("2026-08-24T16:30:00.000Z"),
+		});
+
+		expect(
+			service.control({ id: "acctmirror_force_failed_one", action: "run_one_pass" }),
+		).toMatchObject({
+			status: "queued",
+			completedAt: null,
+			forceRunUntilPassCount: 2,
+			error: null,
+			lifecycleEvents: [
+				{
+					type: "operator_forced_pass",
+					status: "queued",
+					previousStatus: "failed",
+				},
+			],
+		});
+
+		await waitFor(() => service.read("acctmirror_force_failed_one")?.passCount === 2);
+
+		expect(requestRefresh).toHaveBeenCalledWith(
+			expect.objectContaining({ cleanupManagedBrowserAfterRefresh: true }),
+		);
+		expect(service.read("acctmirror_force_failed_one")).toMatchObject({
+			status: "idle_waiting",
+			passCount: 2,
+			forceRunUntilPassCount: null,
+			error: null,
+		});
+		expect(requestRefresh).toHaveBeenCalledTimes(1);
+
+		expect(service.control({ id: "acctmirror_force_failed_one", action: "cancel" })).toMatchObject({
+			status: "cancelled",
+			passCount: 2,
+		});
+		expect(
+			service.control({ id: "acctmirror_force_failed_one", action: "run_one_pass" }),
+		).toMatchObject({ status: "cancelled", passCount: 2 });
+		expect(requestRefresh).toHaveBeenCalledTimes(1);
 	});
 
 	test("defaults to live follow and keeps running after a complete refresh", async () => {
