@@ -21965,3 +21965,13 @@ browser-stage lifecycle observability, not transcript truncation.
   pass-count ceiling, while completed/cancelled live follow and all bounded
   completions remain terminal. Put diagnosis/remediation and total-attempt
   bounds in the operating packet instead of encoding a global zero-retry rule.
+- 2026-08-25: Treat a successful forced live-follow pass and its completion-owned
+  materialization as one acceptance chain. Do not resume the scheduler merely
+  when pass count advances: wait for materialization to settle, the force
+  ceiling and error to clear, the provider-work lease to release, and exact
+  managed-browser ownership to clean.
+- 2026-08-25: Service liveness and aggregate status latency are separate. Bind
+  recovery proof to a fresh PID, zero restart loop, byte-identical installed
+  code, responsive narrow control endpoints, and an explicit aggregate-status
+  budget; record a too-short default client timeout as performance debt rather
+  than silently treating systemd `active` as API health.

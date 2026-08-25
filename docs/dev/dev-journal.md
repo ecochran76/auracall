@@ -47888,3 +47888,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   cannot be re-armed after cancellation. Fresh review restored direct coverage
   for both blocked and failed bounded terminals; affected completion/API/MCP
   coverage passes 102/102.
+
+## 2026-08-25 - Plan 0314 installed live recovery and closeout
+
+- Merged the accepted repair through `af17fa89`, then used the supported
+  installer once. Installed completion-service and ChatGPT-adapter hashes match
+  current `dist`; API PID `62038` is active/running with zero restarts.
+- One exact control advanced the retained `wsl-chrome-3` completion from
+  failed/pass 1 to idle/pass 2. Identity evidence matched, no provider guard
+  appeared, the error/force ceiling cleared, and completion-owned
+  materialization settled skipped with zero failures.
+- Exact browser ownership cleaned before the single scheduler resume. The
+  first post-resume scheduled pass completed at `2026-08-25T14:48:18.960Z`
+  with no backpressure and cleaned port 45015. P07 is closed/live-accepted.
+- Aggregate status requires a larger client timeout on the current corpus:
+  30-second reads completed in 11-22 seconds, while the default 5-second CLI
+  timeout can abort. Narrow operational endpoints remained responsive.

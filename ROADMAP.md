@@ -4,17 +4,19 @@
 
 ### Current Execution Board
 
-Status: bounded live-follow recovery open
-Lanes: P01, P02, P03, P06 (integrated); P04, P05 (terminal hard stop, integrated); P07 (open)
+Status: bounded live-follow recovery integrated and live accepted
+Lanes: P01, P02, P03, P06, P07 (integrated); P04, P05 (terminal hard stop, integrated)
 
-- Active bounded live-follow recovery:
+- Completed bounded live-follow recovery:
   [docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md](docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md)
   P07 replaces the failed-live-follow zero-retry terminal with explicit
   one-pass re-arm semantics, then owns current-runtime installation, no more
   than three diagnosis-driven attempts, and one conditional scheduler resume.
-  Provider-free checkpoint `776556bf` is accepted and awaiting integration.
-  Scheduler remains paused until a controlled pass succeeds and exact browser
-  cleanup is proven.
+  Provider-free checkpoint `776556bf` merged through `af17fa89`. One installed
+  controlled pass advanced the retained completion from pass 1 to pass 2,
+  cleared its force ceiling/error, and cleaned exact browser ownership. One
+  scheduler resume then completed a normal `chatgpt/wsl-chrome-3` pass with no
+  backpressure; P07 is closed and live accepted.
 
 - Completed provider-free live-follow predicate and cleanup repair:
   [docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md](docs/dev/plans/0313-2026-08-24-live-follow-predicate-cleanup-repair.md)

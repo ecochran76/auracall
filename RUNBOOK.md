@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 520 | 2026-08-25
+
+- Integrated P07 through `af17fa89`, installed current `main` once, and
+  replaced stale API PID `57888` with byte-identical PID `62038`; the service
+  stayed active/running with zero restarts.
+- One exact `run-one-pass` advanced completion
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` from failed/pass
+  1 to idle/pass 2. Its error and force ceiling cleared after materialization
+  job `hmj_543a8a0948774cbb9367b3e40017b814` settled skipped with zero failures;
+  the exact browser cleaned before resume.
+- Resumed the scheduler exactly once. Its first scheduled
+  `chatgpt/wsl-chrome-3` pass completed `refresh-completed` with no
+  backpressure, healthy posture, no duplicate same-profile owner, and clean
+  port 45015 teardown. P07 is closed/live-accepted.
+- Aggregate status completes with a 30-second budget but can exceed the
+  default 5-second CLI timeout on this corpus. Narrow completion and scheduler
+  diagnostics remained responsive; status performance is separate follow-up.
+
 ## Turn 519 | 2026-08-25
 
 - Fresh review retained the failed-live-follow one-pass repair and restored the

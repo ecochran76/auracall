@@ -1,12 +1,12 @@
 # Bounded Live-Follow Recovery | 0314-2026-08-24
 
-State: OPEN
+State: CLOSED
 Lane: P07
-Operational state: PROVIDER_FREE_ACCEPTED / INTEGRATION_PENDING
-Branch: fix/plan0314-bounded-live-follow-recovery
+Operational state: LIVE_ACCEPTED / INTEGRATED
+Branch: main
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-25
+Revision: 3 | 2026-08-25
 
 ## Stable Objective
 
@@ -17,24 +17,27 @@ then restoring normal scheduled operation.
 
 ## Current State
 
-- Canonical source is clean and published at `a932f3b6`; Plan 0313 repaired the
-  provider-local sidebar timeout fallback and forced-pass browser cleanup.
-- The installed runtime is stale: its completion-service and ChatGPT-adapter
-  JavaScript hashes differ from current `dist`.
-- API PID `57888` is systemd-active with zero restarts but operationally
-  unhealthy: both installed CLI status and direct `/status` timed out without
-  bytes. It uses about 1.5 GiB RSS plus 73 MiB swap.
-- Scheduler control is durably paused. Exact managed-browser port 45015 is
-  closed and no exact `wsl-chrome-3/chatgpt` managed browser process exists.
-- Exact completion
-  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41` is failed at
-  pass 1 with force ceiling 2 and the pre-repair 587 ms predicate error.
-- Provider-free source checkpoint `776556bf` admits blocked or failed terminal
-  live follow through `run_one_pass` for exactly one additional pass. Bounded,
-  completed, and cancelled terminal operations remain closed.
-- Fresh validation passes 102/102 affected tests, typecheck, scoped Biome,
-  production build, CodeGraph status, plan-library and goal-policy audits, and
-  diff hygiene. Installed adoption and live proof have not yet run.
+- Provider-free repair `776556bf` and documentation checkpoint `51287ed7`
+  merged to `main` through `af17fa89`; source and installed completion-service
+  and ChatGPT-adapter JavaScript hashes are byte-identical.
+- The supported installer replaced API PID `57888` with PID `62038`. The user
+  service is active/running with zero restarts and no swap use.
+- One exact `run-one-pass` control re-armed completion
+  `acctmirror_completion_d383abe4-f12e-4763-81da-402a9443ed41`. It advanced
+  from failed/pass 1 to idle/pass 2, cleared its error and force ceiling, and
+  settled materialization job `hmj_543a8a0948774cbb9367b3e40017b814`
+  as skipped with zero failures.
+- The controlled pass and its completion-owned materialization each cleaned
+  the exact managed browser. No process or listener remained for
+  `wsl-chrome-3/chatgpt` / port 45015 at the resume gate.
+- Scheduler resume ran exactly once at `2026-08-25T14:42:34.211Z`. Its first
+  scheduled pass completed at `2026-08-25T14:48:18.960Z` for
+  `chatgpt/wsl-chrome-3` with `refresh-completed`, no backpressure, healthy
+  posture, and a clean exact-browser teardown.
+- Aggregate status is responsive with a 30-second client budget, observed in
+  11-22 seconds on the current corpus. The default 5-second CLI budget remains
+  a separate performance caveat; narrow completion and scheduler diagnostics
+  stayed responsive throughout recovery.
 
 ## Authority And Bounds
 
@@ -102,3 +105,22 @@ then restoring normal scheduled operation.
   provider-free or installed-ready.
 - Retry and restart counters, every diagnosis/remediation transition, and exact
   browser ownership are durably recorded.
+
+## Closeout Evidence
+
+- `BLFR-R1`: focused and affected provider-free coverage passes 102/102;
+  bounded failed/blocked and cancelled/completed terminal behavior remains
+  closed as specified.
+- `BLFR-R2`: one install/restart attempt; PID `62038`, `NRestarts=0`, active and
+  running; both installed repair hashes equal current `dist`.
+- `BLFR-R3`: one new exact completion control; pass count advanced 1 -> 2 with
+  matching ChatGPT identity evidence and no provider guard.
+- `BLFR-R4`: completion is `idle_waiting`, `forceRunUntilPassCount=null`,
+  `error=null`; materialization settled without failure and exact browser
+  ownership cleaned before resume.
+- `BLFR-R5`: one scheduler resume; durable control is unpaused and the first
+  post-resume pass completed successfully without backpressure or duplicate
+  same-profile ownership.
+- `BLFR-R6`: tests, typecheck, scoped Biome, build, CodeGraph, plan and goal
+  audits, clean Git custody, installed hashes, one restart, one completion
+  control, and one scheduler resume agree. P07 is closed and integrated.

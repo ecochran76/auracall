@@ -111,18 +111,18 @@ lanes:
   - id: P07
     objective: Restore wsl-chrome-3 live follow with bounded diagnosis-driven retries and normal scheduler operation.
     plan: docs/dev/plans/0314-2026-08-24-bounded-live-follow-recovery.md
-    plan_ref: refs/heads/fix/plan0314-bounded-live-follow-recovery
+    plan_ref: refs/remotes/origin/fix/plan0314-bounded-live-follow-recovery
     branch: fix/plan0314-bounded-live-follow-recovery
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
+    plan_state: CLOSED
+    custody_state: INTEGRATED
     checkpoint: 776556bfbe0acfe3bad4a302da030cf81f868c0b
     remote_ref: refs/remotes/origin/fix/plan0314-bounded-live-follow-recovery
     integration: merge
     dependencies: [P06]
     overlaps: []
-    validation_status: provider-free-accepted
+    validation_status: live-accepted
     validation_ref: 776556bfbe0acfe3bad4a302da030cf81f868c0b
-    integration_receipt: null
-    disposition: Provider-free one-pass re-arm accepted; integration and installed recovery remain pending, with scheduler paused.
+    integration_receipt: af17fa89c961129c9fe97e165209a6f2a9519433
+    disposition: Integrated, installed, and live accepted; one controlled pass recovered wsl-chrome-3 and one scheduler resume returned normal operation.
     updated_at: 2026-08-25
