@@ -173,6 +173,7 @@ Read and follow:
 - `docs/dev/policies/0026-memory-service-runtime-governance.md`
 - `docs/dev/policies/0027-preview-artifact-review.md`
 - `docs/dev/policies/0028-active-lane-coordination.md`
+- `docs/dev/policies/0029-code-testing-discipline.md`
 
 ## Scope
 
