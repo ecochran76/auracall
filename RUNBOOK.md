@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 519 | 2026-08-25
+
+- Fresh review retained the failed-live-follow one-pass repair and restored the
+  displaced blocked-bounded terminal regression. `run_one_pass` now admits only
+  blocked/failed terminal live follow; bounded, completed, and cancelled
+  terminals remain closed.
+- Provider-free checkpoint `776556bf` is published on the P07 branch. Validation
+  passes 102/102 affected tests, typecheck, scoped Biome, production build,
+  CodeGraph health, plan-library and goal-policy audits, and diff hygiene.
+- No install, restart, browser/provider action, completion control, or scheduler
+  control ran. Scheduler remains paused; next is integration, then the single
+  authorized install/restart attempt.
+
 ## Turn 518 | 2026-08-24
 
 - Operator opens Plan 0314/P07 under a standing goal of getting live follow
