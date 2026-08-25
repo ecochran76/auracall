@@ -153,6 +153,9 @@ Keep these provider-owned contracts separate:
   and conversation ID; ChatGPT may omit the loaded route's human-readable
   Project slug from that canonical link. Never infer Work from composer
   readiness or accept any other route mismatch.
+- The dedicated Work-model selector reuses that same active-conversation Work
+  proof on established conversations where ChatGPT omits the Chat/Work control;
+  the shared animated model/thinking pill alone never proves Work.
 - `src/browser/actions/modelSelection.ts` owns the Chat picker.
 - `src/browser/actions/chatgptWorkModelSelection.ts` owns Work's animated
   slider, optional **Show advanced options** expansion, exact **Model ...**

@@ -6,7 +6,10 @@
   `data-active` link, the same exact `g-p-...` Project ID, the same exact
   conversation ID, and a descendant span whose normalized text is exactly
   `Work`. Different Projects/conversations and generic Work text remain
-  fail-closed.
+  fail-closed. Established Work can also omit its Chat/Work control while still
+  showing the dedicated animated model pill. Work-model confirmation must reuse
+  the exact active-conversation Work proof before accepting that pill; the pill
+  alone is shared with Chat and remains insufficient.
 
 - 2026-08-24: A surviving managed-browser listener proves process ownership,
   not completion liveness. A completion can fail and release its provider-work

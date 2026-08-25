@@ -6,7 +6,7 @@ Operational state: REPAIR
 Branch: fix/plan0316-project-slug-work-marker
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-25
+Revision: 3 | 2026-08-25
 
 ## Stable Objective
 
@@ -40,13 +40,23 @@ weakening exact Project, conversation, active-link, or `Work` badge checks.
 - Published provider-free checkpoint: `987c4297` on
   `origin/fix/plan0316-project-slug-work-marker`; P09 is registered in the
   active-lane catalog without overlap with P08.
+- Installed byte parity then proved the repaired Work-mode gate on the exact
+  live conversation. The same no-prompt preflight exposed one adjacent,
+  effect-free gate: established Work had the visible `5.6 SolHigh` model pill
+  but no Chat/Work radio or menu trigger, so Work-model confirmation returned
+  `trigger-not-found` after Work itself had already been proven.
+- The follow-through repair reuses the same exact active-Work route proof in
+  the Work-model selector. Its live-derived positive tracer failed before the
+  change and now passes; a different-Project negative remains fail-closed.
+  No prompt was inserted and no Send occurred during diagnosis.
 
 ## Authority And Bounds
 
 - This is an urgent bounded harness repair under the standing LitScout Plan
   0444 execution goal; one critical-path owner and no subagents.
-- Write set: `src/browser/actions/chatgptComposerMode.ts`, its focused tests,
-  the Work-mode contract docs, and P09 planning/validation records.
+- Write set: `src/browser/actions/chatgptComposerMode.ts`,
+  `src/browser/actions/chatgptWorkModelSelection.ts`, their focused tests, the
+  Work-mode contract docs, and P09 planning/validation records.
 - P08 owns aggregate status latency and has no expected source overlap. P09
   must not change API status, scheduler, account-mirror, provider pacing, or
   completion semantics.

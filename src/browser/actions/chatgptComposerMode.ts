@@ -72,21 +72,8 @@ export function resolveChatgptModelSelectionPlan(input: {
 		: { kind: "ignore" };
 }
 
-function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): string {
-	const desiredLiteral = JSON.stringify(desiredMode);
-	return `(async () => {
-    ${buildClickDispatcher()}
-    const DESIRED_MODE = ${desiredLiteral};
-    const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
-    const visible = (node) => {
-      if (!(node instanceof HTMLElement)) return false;
-      const rect = node.getBoundingClientRect();
-      const style = getComputedStyle(node);
-      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
-    };
-    const isSelected = (node) =>
-      node.getAttribute('aria-checked') === 'true' ||
-      node.getAttribute('data-state') === 'on';
+export function buildChatgptActiveConversationWorkMarkerHelpers(): string {
+	return `
     const projectConversationRoute = (pathname) => {
       const segments = String(pathname ?? '').split('/').filter(Boolean);
       if (segments.length !== 4 || segments[0] !== 'g' || segments[2] !== 'c') return null;
@@ -122,7 +109,25 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
           if (!isCurrentConversationRoute(pathname)) return false;
           return Array.from(node.querySelectorAll('span'))
             .some((marker) => normalize(marker.textContent) === 'work');
-        });
+        });`;
+}
+
+function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): string {
+	const desiredLiteral = JSON.stringify(desiredMode);
+	return `(async () => {
+    ${buildClickDispatcher()}
+    const DESIRED_MODE = ${desiredLiteral};
+    const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const visible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+    };
+    const isSelected = (node) =>
+      node.getAttribute('aria-checked') === 'true' ||
+      node.getAttribute('data-state') === 'on';
+    ${buildChatgptActiveConversationWorkMarkerHelpers()}
     const radios = Array.from(document.querySelectorAll('[role="radio"]'))
       .filter(visible)
       .map((node) => ({ node, label: normalize(node.textContent) }))

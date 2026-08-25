@@ -12,6 +12,13 @@
   different-conversation, and implicit-Chat negatives pass. The final focused
   ChatGPT browser contract gate discovered 7 files and passed `139/139` tests;
   the composer-mode file itself passed `18/18`.
+- The first installed no-prompt exact-target probe passed Work-mode proof, then
+  failed at the adjacent Work-model gate because established Work exposed the
+  visible `5.6 SolHigh` pill without a Chat/Work control. A second live-derived
+  tracer failed exactly as observed. The source now centralizes active Work
+  route proof and reuses it before model selection; the positive and
+  different-Project cases pass without using the shared model pill as a Work
+  inference. No prompt insertion or Send occurred.
 
 ## 2026-08-24 | Plan 0313 provider-free repair opened
 
