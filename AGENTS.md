@@ -174,6 +174,33 @@ Read and follow:
 - `docs/dev/policies/0027-preview-artifact-review.md`
 - `docs/dev/policies/0028-active-lane-coordination.md`
 - `docs/dev/policies/0029-code-testing-discipline.md`
+- `docs/dev/policies/0030-policy-management.md`
+- `docs/dev/policies/0031-policy-upgrade-management.md`
+- `docs/dev/policies/0032-policy-adoption-feedback-loop.md`
+- `docs/dev/policies/0033-notes-and-memories.md`
+- `docs/dev/policies/0034-graph-backed-memory-usage.md`
+- `docs/dev/policies/0035-codegraph-usage.md`
+- `docs/dev/policies/0036-code-testing-discipline.md`
+- `docs/dev/policies/0037-planning-discipline.md`
+- `docs/dev/policies/0038-goal-execution-governance.md`
+- `docs/dev/policies/0039-parallel-plan-design.md`
+- `docs/dev/policies/0040-git-worktree-hygiene.md`
+- `docs/dev/policies/0041-commit-history-discipline.md`
+- `docs/dev/policies/0042-branch-and-integration-strategy.md`
+- `docs/dev/policies/0043-commit-and-push-cadence.md`
+- `docs/dev/policies/0044-multi-agent-reconciliation.md`
+- `docs/dev/policies/0045-subagent-workflow-optimization.md`
+- `docs/dev/policies/0046-versioning-and-release.md`
+- `docs/dev/policies/0047-turn-closeout.md`
+- `docs/dev/policies/0048-policy-harvest-loop.md`
+- `docs/dev/policies/0049-validation-and-handoff.md`
+- `docs/dev/policies/0050-subagent-runtime-governance.md`
+- `docs/dev/policies/0051-memory-service-runtime-governance.md`
+- `docs/dev/policies/0052-architecture-guardrails.md`
+- `docs/dev/policies/0053-documentation-change-control.md`
+- `docs/dev/policies/0054-preview-artifact-review.md`
+- `docs/dev/policies/0055-active-lane-coordination.md`
+- `docs/dev/policies/0056-upstream-fork-maintenance.md`
 
 ## Scope
 
