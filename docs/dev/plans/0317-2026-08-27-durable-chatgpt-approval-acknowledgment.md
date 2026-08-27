@@ -1,12 +1,12 @@
 # Durable ChatGPT Approval Acknowledgment | 0317-2026-08-27
 
-State: OPEN
+State: CLOSED
 Lane: P10
-Operational state: LIVE_ACCEPTED / RECONCILIATION_PENDING
+Operational state: INTEGRATED / LIVE_ACCEPTED
 Branch: fix/plan0317-durable-chatgpt-approval
 Target: main
 Integration: merge-after-p09-reconciliation
-Revision: 2 | 2026-08-27
+Revision: 3 | 2026-08-27
 
 ## Stable Objective
 
@@ -51,6 +51,9 @@ approval card without weakening the unchanged-card one-click fence.
   stayed `14/52/4`.
 - Live receipt:
   `docs/dev/notes/2026-08-27-plan0317-durable-approval-live-proof.json`.
+- The provider-provenance/P09 overlap was reconciled first, then P10 merged to
+  `main` through `79a57806`. Focused integration validation passes 142/142;
+  typecheck, scoped Biome, build, and plan-library audit pass.
 - P08 owns aggregate-status latency. P09 owns Project-slug Work-mode proof and
   is live-accepted/reconciliation-pending. P10 changes neither source surface.
 

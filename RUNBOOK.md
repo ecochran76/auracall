@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 525 | 2026-08-27
+
+- Reconciled the stale `fix/plan0444-provider-provenance` work with P09 by
+  retaining its endpoint-bound provider provenance and no-send preflight seams
+  while adopting P09's stricter exact Project/conversation Work proof.
+- Merged P10 after P09, preserving the exact DOM-bound `Always allow`
+  activation and identical-successor-card handling. Focused browser validation
+  passes 142/142, typecheck and scoped Biome pass, the production build passed
+  during locked dependency sync, and the plan-library audit reports zero
+  errors.
+- Integration landed on `main` through `79a57806`; P09 and P10 are closed.
+  P08 remains isolated in its original worktree. Next is one installed-runtime
+  parity check followed by the fresh bounded Frakktal Pro conversation.
+
 ## Turn 524 | 2026-08-27
 
 - P10 revision 2 is installed and live-accepted at source `31a8fc0a`. Exact

@@ -1,12 +1,12 @@
 # ChatGPT Project-Slug Work Marker | 0316-2026-08-25
 
-State: OPEN
+State: CLOSED
 Lane: P09
-Operational state: LIVE_ACCEPTED / RECONCILIATION_PENDING
+Operational state: INTEGRATED / LIVE_ACCEPTED
 Branch: fix/plan0316-project-slug-work-marker
 Target: main
 Integration: merge
-Revision: 4 | 2026-08-25
+Revision: 5 | 2026-08-27
 
 ## Stable Objective
 
@@ -54,11 +54,14 @@ weakening exact Project, conversation, active-link, or `Work` badge checks.
   `Work model picker: 5.6 SolHigh`; the composer remained empty and Send was
   not invoked. Receipt:
   `docs/dev/notes/2026-08-25-plan0316-installed-live-acceptance.json`.
-- P09 is live-accepted but not integration-complete. The pre-existing
-  `fix/plan0444-provider-provenance` worktree changes the same two source files;
-  Git reconciliation is required before either branch lands on `main`. This
-  custody issue does not invalidate the installed acceptance or block the
-  already-authorized LitScout writer continuation.
+- P09 was live-accepted before integration. The pre-existing
+  `fix/plan0444-provider-provenance` worktree changed the same two source files,
+  so those lanes were explicitly reconciled before either repair landed on
+  `main`.
+- Reconciliation retained the older lane's endpoint-bound provider provenance
+  and no-send workbench seams while selecting P09's stricter exact
+  Project/conversation Work proof. P09 and its P10 successor merged to `main`
+  through `79a57806`; focused integration validation passes 142/142.
 
 ## Authority And Bounds
 
