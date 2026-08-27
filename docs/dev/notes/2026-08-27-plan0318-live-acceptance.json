@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
   "planId": "0318-2026-08-27",
-  "terminalDisposition": "LIVE_ACCEPTED_READY_FOR_INTEGRATION",
+  "terminalDisposition": "LIVE_ACCEPTED_INTEGRATED",
+  "integrationReceipt": "af13ca5ae9b5efb1bc2dfe06e302212cbe690864",
   "sourceCommit": "579ed6509b6bcd2b1127e9a073b8fbe205cdcdff",
   "target": {
     "runtimeProfile": "wsl-chrome-3",

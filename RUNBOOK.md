@@ -33,8 +33,9 @@
   calls. OAuth remained healthy and `Answer now` was never selected.
 - P11's final source repair waits boundedly for the same exact control to become
   enabled before trusted-pointer dispatch. No further provider submission is
-  authorized; remaining work is provider-free validation, final installed
-  parity, runtime cleanup/restoration, and Git closeout.
+  authorized. Provider-free validation, final installed parity, experiment
+  cleanup, account-mirror restoration, and Git integration all completed; P11
+  merged to `main` through `af13ca5a`.
 
 ## Turn 525 | 2026-08-27
 

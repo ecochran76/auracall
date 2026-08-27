@@ -187,14 +187,14 @@ lanes:
     branch: fix/plan0318-cdp-observed-chatgpt-approval
     target: main
     plan_state: CLOSED
-    custody_state: PUBLISHED_READY_FOR_INTEGRATION
-    checkpoint: 579ed6509b6bcd2b1127e9a073b8fbe205cdcdff
+    custody_state: INTEGRATED
+    checkpoint: af13ca5ae9b5efb1bc2dfe06e302212cbe690864
     remote_ref: refs/remotes/origin/fix/plan0318-cdp-observed-chatgpt-approval
     integration: merge
     dependencies: [P10]
     overlaps: []
     validation_status: source-installed-live-accepted
     validation_ref: 579ed6509b6bcd2b1127e9a073b8fbe205cdcdff
-    integration_receipt: null
-    disposition: Exact disabled-to-enabled control transition and trusted direct activation accepted; final readiness-wait repair is byte-identical installed and ready for fast-forward integration.
+    integration_receipt: af13ca5ae9b5efb1bc2dfe06e302212cbe690864
+    disposition: Exact disabled-to-enabled control transition and trusted direct activation accepted; final readiness-wait repair is byte-identical installed and integrated to main.
     updated_at: 2026-08-27

@@ -1,7 +1,7 @@
 # CDP-observed ChatGPT approval recovery | 0318-2026-08-27
 
 State: CLOSED
-Operational state: LIVE_ACCEPTED / READY_FOR_INTEGRATION
+Operational state: LIVE_ACCEPTED / INTEGRATED
 Lane: P11
 Branch: fix/plan0318-cdp-observed-chatgpt-approval
 Target: main
@@ -145,5 +145,5 @@ effect are directly observed, the causal approval behavior is repaired or
 truthfully isolated, all runtime ownership is reconciled, and the validated
 source plus durable evidence are integrated and pushed.
 
-All six acceptance criteria are satisfied. The bounded lane is published and
-ready for a fast-forward integration to `main`.
+All six acceptance criteria are satisfied. The bounded lane is integrated to
+`main` through `af13ca5ae9b5efb1bc2dfe06e302212cbe690864`.
