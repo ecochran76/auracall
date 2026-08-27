@@ -1,11 +1,11 @@
 # ChatGPT composer replacement and exact-turn proof | 0319-2026-08-27
 
 State: OPEN
-Operational state: PROVIDER_RATE_LIMIT_COOLDOWN_REPAIR
+Operational state: LIVE_ACCEPTED_INTEGRATION_PENDING
 Lane: P12
 Branch: fix/plan0319-chatgpt-composer-replacement
 Target: main
-Revision: 1 | 2026-08-27
+Revision: 2 | 2026-08-27
 
 ## Stable Objective
 
@@ -47,9 +47,30 @@ research-to-draft experiment.
   tree on port 9222 was closed.
 - The next provider-free repair reads committed authored text by walking the live
   turn DOM while excluding buttons/turn controls. Focused tests pass 11/11,
-  typecheck passes, and the production build passes. No further provider run is
-  permitted until the warning has cooled down and the new build is installed and
-  proven byte-identical.
+  typecheck passes, and the production build passes. The repair was installed at
+  source/runtime SHA-256
+  `316b6a678315c08e5c4a4202958cd49ae0ece90c2aa90e4d4f0505a94decb557`;
+  the API returned healthy with zero restarts.
+- One fresh run created conversation
+  `6a90b04b-c77c-83ea-97d5-dfa59a279c42`. Direct retained-CDP readback proved
+  exactly one user turn and exact normalized equality with the intended
+  2,548-character assembled prompt. No rate-limit warning or duplicate submit
+  appeared.
+- ChatGPT actively used LitScout across three research cycles: 12 external calls
+  with USD 0.018 estimated usage, 108 session members, 42 active works, 66
+  removals, 39 keeps, 3 priorities, 19 evidence assessments, and completed
+  enrichment jobs. Session 73 stopped honestly at `evidence_gap_review` because
+  patent-provider economics could not establish a hard-cap estimate and the
+  patent sources therefore remained outside the LitScout Work corpus.
+- ChatGPT nevertheless produced a substantive 2,736-word feasibility proposal.
+  A separate terminal-output defect selected the visible 55-character
+  `Connection interrupted` banner over the substantively different 22,227-
+  character writing block. The full block was recovered through the retained
+  CDP session and preserved beside the AuraCall session metadata. That adjacent
+  extractor defect is not a composer-replacement acceptance failure and requires
+  a bounded successor slice.
+- Browser port 9222 is closed, the pre-existing account-mirror completion is
+  resumed, and no further provider submission is authorized in this plan.
 - P08 remains active in its own worktree. It has no expected source overlap with
   this prompt-composer lane.
 
@@ -97,6 +118,17 @@ research-to-draft experiment.
 - `CPR-R6`: one fresh rerun contains only the intended prompt, produces attributable
   LitScout research/writing evidence or a typed failure, and leaves browser,
   background-completion, OAuth, provider-spend, and repository custody reconciled.
+
+## Acceptance Readback
+
+- `CPR-R1` through `CPR-R5`: PASS. Regression, exact replacement/equality,
+  provider-free gates, installed parity, and service health are recorded in the
+  branch history and acceptance receipt.
+- `CPR-R6`: PASS for the composer lane. One exact turn produced attributable
+  LitScout effects and a recovered proposal; browser and background ownership
+  were restored. The persisted LitScout terminal state and the AuraCall output
+  extractor defect are explicit rather than masked.
+- Integration and push remain the only Plan 0319 closeout gate.
 
 ## Non-Goals
 

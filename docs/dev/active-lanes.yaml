@@ -205,14 +205,14 @@ lanes:
     branch: fix/plan0319-chatgpt-composer-replacement
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: null
+    custody_state: ACCEPTED_WORKTREE
+    checkpoint: a284bacb
     remote_ref: null
     integration: merge
     dependencies: [P11]
     overlaps: []
-    validation_status: provider-free-repair-active
-    validation_ref: null
+    validation_status: source-installed-live-accepted
+    validation_ref: a284bacb
     integration_receipt: null
-    disposition: RED reproduced composer and commit containment; provider-free repair and validation are active before one installed fresh rerun.
+    disposition: Exact-one-turn composer acceptance passed in fresh CDP-observed research run; terminal output selection is a separate successor defect, and integration/push remain.
     updated_at: 2026-08-27

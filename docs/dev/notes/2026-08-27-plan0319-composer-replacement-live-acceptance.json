@@ -1,0 +1,62 @@
+{
+  "schema_version": "auracall.plan0319.acceptance.v1",
+  "plan": "0319-2026-08-27-chatgpt-composer-replacement",
+  "branch": "fix/plan0319-chatgpt-composer-replacement",
+  "source_checkpoint": "a284bacb",
+  "installed_source_sha256": "316b6a678315c08e5c4a4202958cd49ae0ece90c2aa90e4d4f0505a94decb557",
+  "auracall_slug": "frakktal-litscout-research-accepted",
+  "conversation_id": "6a90b04b-c77c-83ea-97d5-dfa59a279c42",
+  "prompt": {
+    "metadata_characters": 2374,
+    "assembled_characters": 2548,
+    "observed_user_turn_count": 1,
+    "observed_raw_characters": 2539,
+    "observed_normalized_characters": 2500,
+    "exact_normalized_match": true,
+    "too_many_requests_visible": false
+  },
+  "litscout": {
+    "project_slug": "plan-0459-pro-rerun-frakktal-biobased-bis-cyanate-ester-feasibility",
+    "session_id": 73,
+    "terminal_state": "evidence_gap_review",
+    "membership_count": 108,
+    "active_count": 42,
+    "remove_count": 66,
+    "keep_count": 39,
+    "priority_count": 3,
+    "evidence_assessment_count": 19,
+    "external_provider_calls": 12,
+    "estimated_usage_usd": 0.018,
+    "billed_spend_recorded": false,
+    "blocker": "Patent providers could not establish hard-cap economics metadata; patent sources remained outside the LitScout Work corpus."
+  },
+  "proposal": {
+    "writing_block_characters": 22227,
+    "recovered_lines": 211,
+    "recovered_words": 2736,
+    "recovered_bytes": 22314,
+    "recovered_path": "/home/ecochran76/.auracall/sessions/frakktal-litscout-research-accepted/recovered-writing-block.md"
+  },
+  "adjacent_defect": {
+    "kind": "terminal_output_selection",
+    "saved_output_characters": 55,
+    "saved_text": "Connection interrupted. Waiting for the complete answer",
+    "result": "AuraCall selected the visible terminal banner instead of the substantively different writing block."
+  },
+  "ownership": {
+    "browser_port": 9222,
+    "browser_closed": true,
+    "api_main_pid": 46488,
+    "api_restart_count": 0,
+    "preexisting_completion_resumed": "acctmirror_completion_24831e4d-70b7-419c-86f5-53ae1bb5a93b"
+  },
+  "acceptance": {
+    "CPR-R1": "PASS",
+    "CPR-R2": "PASS",
+    "CPR-R3": "PASS",
+    "CPR-R4": "PASS",
+    "CPR-R5": "PASS",
+    "CPR-R6": "PASS"
+  },
+  "next_provider_action": "none"
+}

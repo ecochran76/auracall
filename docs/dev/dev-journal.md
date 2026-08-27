@@ -1,3 +1,19 @@
+## 2026-08-27 | Plan 0319 exact-turn acceptance and research experiment
+
+- The installed committed-turn reader excludes ChatGPT presentation controls
+  while retaining exact normalized authored-text equality. A fresh observed run
+  produced one and only one intended user turn in conversation
+  `6a90b04b-c77c-83ea-97d5-dfa59a279c42`, with no rate-limit warning.
+- ChatGPT used LitScout actively across three research cycles. Session 73 reached
+  `evidence_gap_review` with 108 members, 42 active works, 19 evidence
+  assessments, 12 external calls, and USD 0.018 estimated usage. Patent-provider
+  hard-cap preflight remained the honest source-class blocker.
+- ChatGPT produced a substantive 2,736-word feasibility proposal. The run exposed
+  a separate terminal-output selection defect: the saved result was the visible
+  55-character interruption banner, while a 22,227-character writing block was
+  present and recovered through retained CDP. The recovered draft is preserved
+  beside the AuraCall session metadata for successor diagnosis.
+
 ## 2026-08-27 | Plan 0318 CDP-observed ChatGPT approval recovery
 
 - LitScout Plan 0459 proved OAuth stayed healthy while a real materialized

@@ -1,5 +1,30 @@
 # RUNBOOK
 
+## Turn 529 | 2026-08-27
+
+- Plan 0319's committed-turn control exclusion was installed byte-identically at
+  SHA-256 `316b6a678315c08e5c4a4202958cd49ae0ece90c2aa90e4d4f0505a94decb557`;
+  the API is healthy at PID 46488 with zero restarts.
+- The one fresh scored run created ChatGPT conversation
+  `6a90b04b-c77c-83ea-97d5-dfa59a279c42`. Direct CDP proved exactly one intended
+  user turn, no `too many requests` warning, and a 22,227-character writing
+  block. Port 9222 is closed after observation.
+- LitScout Session 73 advanced from zero members to `evidence_gap_review`: 108
+  members, 42 active works, 66 removals, 39 keeps, 3 priorities, 19 evidence
+  assessments, 12 external provider calls, and USD 0.018 estimated usage.
+  Patent-provider hard-cap preflight prevented patent Work ingestion, so P1-P3
+  remain source-class blockers and Analyze did not begin.
+- The research product is materially useful: a recovered 2,736-word feasibility
+  proposal recommends eugenol-derived cyanate ester as lead, renewable
+  biopolyphenol/creosol as backup, and treats Opuntia as a falsification side
+  experiment rather than the critical path. Carbon fiber is not assumed RF
+  transparent; the draft recommends a zoned quartz/glass aperture architecture.
+- A distinct output-selection defect remains: AuraCall marked the run complete
+  but saved only the 55-character interruption banner instead of the substantive
+  writing block. The full draft is preserved at
+  `~/.auracall/sessions/frakktal-litscout-research-accepted/recovered-writing-block.md`.
+  Plan 0319 is live-accepted; integration/push is its remaining gate.
+
 ## Turn 528 | 2026-08-27
 
 - The installed composer replacement submitted the exact intended prompt, but
