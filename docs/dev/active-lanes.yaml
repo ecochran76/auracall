@@ -222,15 +222,15 @@ lanes:
     plan_ref: refs/heads/fix/plan0320-chatgpt-terminal-output-selection
     branch: fix/plan0320-chatgpt-terminal-output-selection
     target: main
-    plan_state: OPEN
-    custody_state: INTEGRATION_READY
-    checkpoint: 86ec7f5e
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: d045f68c
+    remote_ref: refs/remotes/origin/fix/plan0320-chatgpt-terminal-output-selection
     integration: merge
     dependencies: [P12]
     overlaps: []
     validation_status: source-installed-provider-free-accepted
     validation_ref: 86ec7f5e
-    integration_receipt: null
-    disposition: Exact incident RED, 209-test GREEN, byte-identical install, and installed-module semantic smoke pass; integration/push remain.
+    integration_receipt: d045f68c
+    disposition: Exact incident RED, 209-test GREEN, byte-identical installed-module smoke, and non-forced main integration complete without a provider effect.
     updated_at: 2026-08-27

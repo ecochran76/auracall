@@ -1,7 +1,7 @@
 # ChatGPT terminal-output selection | 0320-2026-08-27
 
-State: OPEN
-Operational state: INSTALLED_ACCEPTED_INTEGRATION_PENDING
+State: CLOSED
+Operational state: SOURCE_INSTALLED_PROVIDER_FREE_ACCEPTED_INTEGRATED
 Lane: P13
 Branch: fix/plan0320-chatgpt-terminal-output-selection
 Target: main
@@ -78,7 +78,8 @@ ordinary substantive response mismatches.
 
 ## Acceptance Readback
 
-- `TOR-R1` through `TOR-R5`: PASS. Integration and push remain.
+- `TOR-R1` through `TOR-R5`: PASS. Acceptance checkpoint `d045f68c` was
+  pushed to the feature ref and `origin/main` by non-forced fast-forward.
 
 ## Non-Goals
 

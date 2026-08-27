@@ -25,7 +25,8 @@
   `439a3645a...a3260`. The installed module preserved all 23,210 fixture
   characters for both representations. API PID 21419 is healthy with zero
   restarts; the existing mirror remains `idle_waiting` at pass 17 and port 9222
-  is closed. Integration/push remain; no provider action is required.
+  is closed. Acceptance checkpoint `d045f68c` is pushed to the feature ref and
+  integrated into `origin/main` by non-forced fast-forward. P13 is complete.
 
 ## Turn 529 | 2026-08-27
 
