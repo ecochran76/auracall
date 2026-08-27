@@ -7,6 +7,36 @@
   authorization created by the same service authority at the same endpoint;
   discard foreign-authority or changed-endpoint provenance fail-closed.
 
+- 2026-08-27: A stable ChatGPT approval card after an exact CDP coordinate
+  sequence is not proof that the connector authentication lapsed. Live
+  LitScout receipts showed `auth_session` succeeded while the mutation tool
+  never began, proving the coordinate action missed. Bind the single action to
+  the settled exact DOM control, focus and invoke it inside a CDP user-gesture
+  evaluation, and retain the same identity, ambiguity, paired-label, and
+  one-attempt fences.
+
+- 2026-08-27: Do not classify ChatGPT's third-party tool-consent card as an
+  OAuth authentication lapse. A successful approval can synchronously promote
+  a new exact `tool-approval-card` with identical visible text, so fingerprint
+  comparison alone cannot distinguish replacement from the unchanged clicked
+  card. Assign each mounted exact card a stable page-lifetime WeakMap identity;
+  acknowledge disappearance or a new DOM identity, and retain the one-click
+  fence for the same identity. Never use this identity to broaden paired-label,
+  manual, ambiguity, or `Answer now` safeguards.
+
+- 2026-08-25: ChatGPT can load a Project conversation at
+  `/g/<project-id>-<slug>/c/<conversation-id>` while its visible active sidebar
+  link uses `/g/<project-id>/c/<conversation-id>`. A byte-identical pathname
+  test rejects the genuine active `Work` badge and blocks AuraCall before Send.
+  Canonicalize only this provider-owned route pair: require one visible
+  `data-active` link, the same exact `g-p-...` Project ID, the same exact
+  conversation ID, and a descendant span whose normalized text is exactly
+  `Work`. Different Projects/conversations and generic Work text remain
+  fail-closed. Established Work can also omit its Chat/Work control while still
+  showing the dedicated animated model pill. Work-model confirmation must reuse
+  the exact active-conversation Work proof before accepting that pill; the pill
+  alone is shared with Chat and remains insufficient.
+
 - 2026-08-24: A surviving managed-browser listener proves process ownership,
   not completion liveness. A completion can fail and release its provider-work
   lease while its API-owned Chrome remains healthy on the configured DevTools

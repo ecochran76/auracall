@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "planId": "0317-2026-08-27",
+  "terminalDisposition": "LIVE_ACCEPTED_RECONCILIATION_PENDING",
+  "sourceCommit": "31a8fc0aa5f832c1df83e14b51cd07970b70291b",
+  "target": {
+    "runtimeProfile": "wsl-chrome-3",
+    "providerAccount": "eric.cochran@soylei.com",
+    "developerApp": "Corel33t",
+    "composerMode": "chat",
+    "model": "GPT-5.6 Sol",
+    "thinkingTime": "High",
+    "toolApprovalPolicy": "always-allow",
+    "appReconnects": 0,
+    "appRefreshes": 0,
+    "appReplacements": 0
+  },
+  "providerFree": {
+    "focusedApprovalTests": "17/17",
+    "approvalConfigTests": "142/142",
+    "browserOwnershipApprovalTests": "81/81",
+    "typecheck": "passed",
+    "scopedLint": "passed",
+    "productionBuild": "passed"
+  },
+  "installed": {
+    "version": "0.1.1",
+    "sourceArtifactSha256": "8d8042fe49337a582059149e90bbbf4fbfa913847e8ac9ac54e3a440121998b4",
+    "installedArtifactSha256": "8d8042fe49337a582059149e90bbbf4fbfa913847e8ac9ac54e3a440121998b4",
+    "apiMainPid": 24047,
+    "apiActiveState": "active",
+    "apiRestartCount": 0
+  },
+  "diagnosticRuns": [
+    {
+      "disposition": "pre_effect_project_resolution_failure",
+      "promptSubmissions": 0,
+      "reason": "Unnecessary project-name resolution lacked provider-session provenance."
+    },
+    {
+      "disposition": "live_red_coordinate_activation_missed",
+      "promptSubmissions": 1,
+      "litscoutCalls": ["auth_session:success"],
+      "approvalError": "chatgpt-tool-approval-not-confirmed",
+      "finding": "The same DOM card remained and no mutation invocation began; OAuth was healthy."
+    },
+    {
+      "disposition": "premature_terminal_extraction",
+      "promptSubmissions": 1,
+      "litscoutCalls": ["auth_session:success"],
+      "capturedAnswer": "Thinking",
+      "finding": "The transient UI label was captured as terminal output before the requested multi-call sequence."
+    }
+  ],
+  "acceptedRun": {
+    "sessionSlug": "plan0317-minimal-multicall-live",
+    "conversationId": "6a9043ce-7f64-83ea-a25c-7488b76e18f3",
+    "elapsedSeconds": 55.3,
+    "promptSubmissions": 1,
+    "approvalLogs": ["ChatGPT tool approval: Always allow"],
+    "litscoutInvocations": [
+      {
+        "invocationId": "mti_bd1882d37b9c4c5aa6b86455493eb5bf",
+        "tool": "auth_session",
+        "outcome": "success"
+      },
+      {
+        "invocationId": "mti_594cbe5704c341ffa7824130a1788076",
+        "tool": "project_source_ingest_job_cancel",
+        "outcome": "expected_error"
+      }
+    ],
+    "expectedToken": "LITSCOUT_DURABLE_APPROVAL_OK",
+    "expectedTokenObserved": true
+  },
+  "oauth": {
+    "authenticationOutcome": "success",
+    "refreshTokensBefore": 89,
+    "refreshTokensAfter": 89,
+    "unconsumedRefreshTokensBefore": 19,
+    "unconsumedRefreshTokensAfter": 19,
+    "latestRefreshExpiry": "2026-09-26T13:50:32.446783+00:00",
+    "invalidTokenErrors": 0,
+    "invalidGrantErrors": 0
+  },
+  "canonicalState": {
+    "projectsBefore": 14,
+    "projectsAfter": 14,
+    "jobsBefore": 52,
+    "jobsAfter": 52,
+    "operatorActionsBefore": 4,
+    "operatorActionsAfter": 4,
+    "exactCanaryProjectsAfter": 0,
+    "exactCanaryJobsAfter": 0
+  },
+  "cleanup": {
+    "browserOperationLeases": 0,
+    "managedBrowserProcesses": 0,
+    "apiActive": true
+  }
+}

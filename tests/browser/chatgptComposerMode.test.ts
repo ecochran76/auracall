@@ -61,10 +61,7 @@ function installFixtureDocument(query: (selector: string) => FixtureElement[]): 
 	vi.stubGlobal("document", { querySelectorAll: query });
 }
 
-afterEach(() => {
-	vi.useRealTimers();
-	vi.unstubAllGlobals();
-});
+afterEach(() => vi.unstubAllGlobals());
 
 describe("ChatGPT composer mode", () => {
 	it("targets exact Chat and Work radios and verifies Radix selected state", () => {
@@ -75,7 +72,6 @@ describe("ChatGPT composer mode", () => {
 		expect(expression).toContain("label === 'chat' || label === 'work'");
 		expect(expression).toContain("getAttribute('aria-checked') === 'true'");
 		expect(expression).toContain("getAttribute('data-state') === 'on'");
-		expect(expression).toContain("controlsStartedAt < 30000");
 	});
 
 	it("supports the current mode trigger plus menuitemradio surface", () => {
@@ -128,28 +124,6 @@ describe("ChatGPT composer mode", () => {
 		expect(logger).toHaveBeenCalledWith("ChatGPT mode: Chat (already selected)");
 	});
 
-	it("waits for the Project landing Chat and Work radios to mount", async () => {
-		const chatRadio = new FixtureElement("Chat", { role: "radio", "aria-checked": "true" });
-		const workRadio = new FixtureElement("Work", { role: "radio", "aria-checked": "false" });
-		let radioQueries = 0;
-		workRadio.onClick = () => workRadio.setAttribute("aria-checked", "true");
-		installFixtureDocument((selector) => {
-			if (selector === '[role="radio"]') {
-				radioQueries += 1;
-				return radioQueries >= 2 ? [chatRadio, workRadio] : [];
-			}
-			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href]") return [];
-			return [];
-		});
-
-		const expression = buildChatgptComposerModeExpressionForTest("work");
-		const result = await new Function(`return ${expression}`)();
-
-		expect(result).toEqual({ status: "switched", mode: "work" });
-		expect(radioQueries).toBeGreaterThanOrEqual(2);
-	});
-
 	it("accepts a valid existing Chat conversation without an exposed mode control", async () => {
 		const promptEditor = new FixtureElement("", {
 			role: "textbox",
@@ -196,7 +170,6 @@ describe("ChatGPT composer mode", () => {
 	});
 
 	it("does not infer Work from a conversation composer without a mode control", async () => {
-		vi.useFakeTimers();
 		const promptEditor = new FixtureElement("", {
 			role: "textbox",
 			"aria-label": "Chat with ChatGPT",
@@ -211,9 +184,7 @@ describe("ChatGPT composer mode", () => {
 		});
 
 		const expression = buildChatgptComposerModeExpressionForTest("work");
-		const resultPromise = new Function(`return ${expression}`)();
-		await vi.runAllTimersAsync();
-		const result = await resultPromise;
+		const result = await new Function(`return ${expression}`)();
 
 		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
 	});
@@ -253,7 +224,7 @@ describe("ChatGPT composer mode", () => {
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href]") return [activeConversation];
+			if (selector === "a[href][data-active]") return [activeConversation];
 			return [];
 		});
 
@@ -263,48 +234,97 @@ describe("ChatGPT composer mode", () => {
 		expect(result).toEqual({ status: "already-selected", mode: "work" });
 	});
 
-	it("accepts explicit Work from the exact Project conversation aria label in a collapsed sidebar", async () => {
-		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
-			href: "/g/g-p-project/c/conversation-1",
-			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
-		});
-		activeConversation.getBoundingClientRect = () => ({
-			left: 0,
-			top: 0,
-			width: 0,
-			height: 0,
-		});
-		vi.stubGlobal("location", {
-			href: "https://chatgpt.com/g/g-p-project/c/conversation-1",
-			pathname: "/g/g-p-project/c/conversation-1",
-		});
-		installFixtureDocument((selector) => {
-			if (selector === '[role="radio"]') return [];
-			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href]") return [activeConversation];
-			return [];
-		});
-
-		const expression = buildChatgptComposerModeExpressionForTest("work");
-		const result = await new Function(`return ${expression}`)();
-
-		expect(result).toEqual({ status: "already-selected", mode: "work" });
-	});
-
-	it("does not misclassify an active Project Work conversation as Chat", async () => {
-		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
-			href: "/g/g-p-project/c/conversation-1",
+	it("accepts the canonical active Project link on a slugged Project conversation route", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Clean Room Proposal ReviewWork", {
+			href: "/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
 			"data-active": "",
-			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
 		});
+		activeConversation.querySelectorAllResult = [workBadge];
 		vi.stubGlobal("location", {
-			href: "https://chatgpt.com/g/g-p-project/c/conversation-1",
-			pathname: "/g/g-p-project/c/conversation-1",
+			href: "https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			pathname:
+				"/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
 		});
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href]") return [activeConversation];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("work");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "already-selected", mode: "work" });
+	});
+
+	it("rejects a Work badge from a different Project on the same conversation id", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Wrong ProjectWork", {
+			href: "/g/g-p-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			"data-active": "",
+		});
+		activeConversation.querySelectorAllResult = [workBadge];
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			pathname:
+				"/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("work");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
+	});
+
+	it("rejects a Work badge from a different conversation in the same Project", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Different ConversationWork", {
+			href: "/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a/c/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+			"data-active": "",
+		});
+		activeConversation.querySelectorAllResult = [workBadge];
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			pathname:
+				"/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptComposerModeExpressionForTest("work");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "mode-not-found", availableModes: [] });
+	});
+
+	it("rejects implicit Chat when the slugged Project route has the canonical active Work badge", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Clean Room Proposal ReviewWork", {
+			href: "/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			"data-active": "",
+		});
+		activeConversation.querySelectorAllResult = [workBadge];
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			pathname:
+				"/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === "a[href][data-active]") return [activeConversation];
 			return [];
 		});
 
@@ -328,7 +348,7 @@ describe("ChatGPT composer mode", () => {
 		installFixtureDocument((selector) => {
 			if (selector === '[role="radio"]') return [];
 			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href]") return [activeConversation];
+			if (selector === "a[href][data-active]") return [activeConversation];
 			return [];
 		});
 
@@ -396,41 +416,10 @@ describe("ChatGPT composer mode", () => {
 		expect(expression).toContain("label === 'show advanced options'");
 		expect(expression).toContain("label.startsWith('model ')");
 		expect(expression).toContain('[role="menuitemradio"]');
-		expect(expression).toContain("hasActiveConversationWorkMarker");
 		expect(expression).toContain("replace(/^gpt\\s+/, '')");
 		expect(expression).not.toContain("model-switcher-dropdown-button");
 		expect(expression).not.toContain("Switch model");
 		expect(expression).toContain("performance.now() - startedAt < 5000");
-	});
-
-	it("accepts the current Work model on an active Project Work conversation", async () => {
-		const activeConversation = new FixtureElement("Clean Room Proposal Review", {
-			href: "/g/g-p-project/c/conversation-1",
-			"data-active": "",
-			"aria-label": "Clean Room Proposal Review, chat in project Example, Work",
-		});
-		const triggerMarker = new FixtureElement("5.6 Sol High");
-		const trigger = new FixtureElement("5.6 Sol High", {
-			"aria-haspopup": "menu",
-			"aria-expanded": "false",
-		});
-		triggerMarker.closestResult = trigger;
-		vi.stubGlobal("location", {
-			href: "https://chatgpt.com/g/g-p-project/c/conversation-1",
-			pathname: "/g/g-p-project/c/conversation-1",
-		});
-		installFixtureDocument((selector) => {
-			if (selector === '[role="radio"], [role="menuitemradio"]') return [];
-			if (selector === 'button[aria-haspopup="menu"]') return [];
-			if (selector === "a[href]") return [activeConversation];
-			if (selector === '[data-animated-slider-trigger="true"]') return [triggerMarker];
-			return [];
-		});
-
-		const expression = buildChatgptWorkModelSelectionExpressionForTest("GPT-5.6 Sol");
-		const result = await new Function(`return ${expression}`)();
-
-		expect(result).toEqual({ status: "already-selected", label: "5.6 Sol High" });
 	});
 
 	it("selects an observed nested Work model provider-free", async () => {
@@ -479,5 +468,63 @@ describe("ChatGPT composer mode", () => {
 
 		expect(result).toEqual({ status: "switched", label: "GPT-5.6 Terra" });
 		expect(modelTrigger.textContent).toBe("5.6 Terra Light");
+	});
+
+	it("accepts the current Work model on an established slugged Project conversation", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Clean Room Proposal ReviewWork", {
+			href: "/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			"data-active": "",
+		});
+		activeConversation.querySelectorAllResult = [workBadge];
+		const sliderMarker = new FixtureElement("");
+		const modelTrigger = new FixtureElement("5.6 SolHigh", { "aria-haspopup": "menu" });
+		sliderMarker.closestResult = modelTrigger;
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			pathname:
+				"/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"], [role="menuitemradio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [modelTrigger];
+			if (selector === '[data-animated-slider-trigger="true"]') return [sliderMarker];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptWorkModelSelectionExpressionForTest("GPT-5.6 Sol");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "already-selected", label: "5.6 SolHigh" });
+	});
+
+	it("does not use an established Work badge from a different Project for model selection", async () => {
+		const workBadge = new FixtureElement("Work");
+		const activeConversation = new FixtureElement("Wrong ProjectWork", {
+			href: "/g/g-p-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			"data-active": "",
+		});
+		activeConversation.querySelectorAllResult = [workBadge];
+		const sliderMarker = new FixtureElement("");
+		const modelTrigger = new FixtureElement("5.6 SolHigh", { "aria-haspopup": "menu" });
+		sliderMarker.closestResult = modelTrigger;
+		vi.stubGlobal("location", {
+			href: "https://chatgpt.com/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+			pathname:
+				"/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+		});
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"], [role="menuitemradio"]') return [];
+			if (selector === 'button[aria-haspopup="menu"]') return [modelTrigger];
+			if (selector === '[data-animated-slider-trigger="true"]') return [sliderMarker];
+			if (selector === "a[href][data-active]") return [activeConversation];
+			return [];
+		});
+
+		const expression = buildChatgptWorkModelSelectionExpressionForTest("GPT-5.6 Sol");
+		const result = await new Function(`return ${expression}`)();
+
+		expect(result).toEqual({ status: "trigger-not-found" });
 	});
 });

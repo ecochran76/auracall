@@ -1,0 +1,68 @@
+{
+  "contract": "auracall.plan0316.installed-live-acceptance",
+  "version": 1,
+  "generated_at": "2026-08-25T18:36:00Z",
+  "result": "ACCEPT",
+  "source_checkpoint": "e76a8407af5df7e38fccfa532500c63a708fe127",
+  "installed_parity": {
+    "chatgpt_composer_mode_sha256": "3eeb7bec4c8f595b915d28ed6009a72ab03e6b0a6ebcdcf564edb8fbf8dbca5b",
+    "chatgpt_work_model_selection_sha256": "7d484b1366b39b665b67268c4c1268339895c9d5d3db7a4ef868960c23c9524a",
+    "source_installed_exact": true
+  },
+  "runtime": {
+    "profile": "wsl-chrome-3",
+    "browser_pid": 58478,
+    "devtools_port": 37169,
+    "target_id": "25F0E9D3D90AD0CC11BB3E1DC0E99690",
+    "identity_email": "eric.cochran@soylei.com",
+    "account_level": "Pro",
+    "account_plan_type": "pro",
+    "account_structure": "personal",
+    "provider_session_verdict": "match"
+  },
+  "target": {
+    "pathname": "/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a-frakktal-t3cp-clean-room-proposal-replay/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+    "active_href": "/g/g-p-6a8bc9d6f0408191bba2b2cbf816e63a/c/6a8be0ba-011c-83ea-96b7-6c3cd3ff3ea4",
+    "active_work_marker": "Work",
+    "model_pill": "5.6 SolHigh"
+  },
+  "installed_action": {
+    "composer_mode_log": "ChatGPT mode: Work (already selected)",
+    "work_model_log": "Work model picker: 5.6 SolHigh",
+    "prompt_text": "",
+    "prompt_value": "",
+    "prompt_inserted": false,
+    "send_invoked": false
+  },
+  "recovery_history": [
+    {
+      "stage": "initial_installed_probe",
+      "outcome": "work_mode_passed_then_work_model_trigger_not_found",
+      "effect": "none",
+      "followup": "live-derived provider-free model-proof repair"
+    },
+    {
+      "stage": "post_install_connection",
+      "outcome": "devtools_connection_refused_after_prior_browser_exited",
+      "effect": "none",
+      "followup": "AuraCall identity smoke launched a fresh managed browser"
+    },
+    {
+      "stage": "fresh_navigation_probe",
+      "outcome": "work_marker_not_yet_hydrated",
+      "effect": "none",
+      "followup": "waited for exact editor, active route, Work marker, and model pill readiness"
+    },
+    {
+      "stage": "ready_page_probe",
+      "outcome": "accepted",
+      "effect": "no_prompt_no_send"
+    }
+  ],
+  "custody": {
+    "p09_branch": "fix/plan0316-project-slug-work-marker",
+    "integration_state": "reconciliation_pending",
+    "overlapping_branch": "fix/plan0444-provider-provenance",
+    "reason": "The pre-existing branch changes the same composer-mode and Work-model source surfaces and must not be silently overwritten."
+  }
+}

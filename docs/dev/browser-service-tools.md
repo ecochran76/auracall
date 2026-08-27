@@ -148,7 +148,14 @@ Keep these provider-owned contracts separate:
   exact mode trigger whose menu choices are `menuitemradio` elements. An
   established conversation may omit both controls; only a visible, enabled,
   exact ChatGPT prompt editor with no Work slider marker may then prove
-  implicit Chat. Never infer Work from composer readiness.
+  implicit Chat. Explicit Work may use the visible active conversation link's
+  exact `Work` badge only when its route has the same exact ChatGPT Project ID
+  and conversation ID; ChatGPT may omit the loaded route's human-readable
+  Project slug from that canonical link. Never infer Work from composer
+  readiness or accept any other route mismatch.
+- The dedicated Work-model selector reuses that same active-conversation Work
+  proof on established conversations where ChatGPT omits the Chat/Work control;
+  the shared animated model/thinking pill alone never proves Work.
 - `src/browser/actions/modelSelection.ts` owns the Chat picker.
 - `src/browser/actions/chatgptWorkModelSelection.ts` owns Work's animated
   slider, optional **Show advanced options** expansion, exact **Model ...**
@@ -166,13 +173,14 @@ Tool approval is provider-owned and runs only during the post-submit ChatGPT
 response wait. `src/browser/actions/chatgptToolApproval.ts` requires one
 visible surface with exact paired `Allow once` and `Always allow` controls. It
 briefly settles and re-probes the same fingerprint and selected action, then
-uses the fresh button center for one trusted CDP pointer sequence. Changed or
-ambiguous pre-click state dispatches no pointer input; independent disappearance
-reports no action. Current ChatGPT cards are rooted at the exact
+focuses and invokes that exact verified DOM control inside one CDP user-gesture
+evaluation. Changed or ambiguous pre-activation state invokes no control;
+independent disappearance reports no action. Current ChatGPT cards are rooted at the exact
 `data-testid="tool-approval-card"`, not the containing assistant turn, so a
-distinct sequential card in the same turn has its own action-bound fingerprint.
-The clicked card must disappear or be replaced by that different exact-card
-fingerprint; a truly unchanged card remains one-attempt fenced. The default
+mounted card receives a stable page-lifetime identity in a private WeakMap.
+The clicked card must disappear or be replaced by a different DOM card; the
+replacement may have the same action-bound fingerprint and visible text, while
+a truly unchanged mounted card remains one-attempt fenced. The default
 `manual` policy detects and reports the pause without clicking. Keep this
 classifier out of generic browser-service blocking-surface recovery, and never
 widen it to broad `allow`, `continue`, or `Answer now` matching.

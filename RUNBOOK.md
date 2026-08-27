@@ -1,5 +1,69 @@
 # RUNBOOK
 
+## Turn 524 | 2026-08-27
+
+- P10 revision 2 is installed and live-accepted at source `31a8fc0a`. Exact
+  source/installed approval artifacts match SHA-256
+  `8d8042fe...121998b4`; the API is active at PID 24047 with zero restarts.
+- The accepted `plan0317-minimal-multicall-live` Sol/High turn logged confirmed
+  `Always allow`, then LitScout recorded `auth_session:success` and the expected
+  nonexistent `project_source_ingest_job_cancel:error`. ChatGPT returned exact
+  `LITSCOUT_DURABLE_APPROVAL_OK` in 55.3 seconds.
+- OAuth and consent are reconciled separately: refresh-token counts remained
+  89 total / 19 unconsumed with latest expiry 2026-09-26; no invalid-token,
+  invalid-grant, app refresh, replacement, disconnect, or reconnect occurred.
+  Canonical project/job/operator-action counts remained 14/52/4, exact canary
+  rows remain zero, browser locks/processes cleaned, and the API stayed healthy.
+- P10 is live-complete and remains open only for serialized Git reconciliation
+  after P09. Durable receipt:
+  `docs/dev/notes/2026-08-27-plan0317-durable-approval-live-proof.json`.
+
+- The operator requested that durable LitScout connection behavior be planned
+  and executed after Plan 0458 was incorrectly summarized as an authentication
+  lapse. Current evidence proves OAuth authentication succeeded; AuraCall
+  stopped at the separate ChatGPT `Always allow` acknowledgment surface.
+- P10 opens on top of P09's live-accepted checkpoint with no expected source
+  overlap with P08 status work or P09 Work-mode work. Its exact RED is an
+  identical-fingerprint successor approval card after one trusted click; the
+  unchanged original card must remain fenced.
+- Live acceptance will reuse the existing app, OAuth client, account, and
+  managed browser profile. App refresh/replacement/reconnect is prohibited;
+  ordinary refresh-token rotation is recorded separately from tool consent.
+- The exact RED reproduced `chatgpt-tool-approval-not-confirmed` in 1.4 seconds.
+  Stable exact-card DOM identity makes identical replacement pass while the
+  unchanged card remains one-click fenced. Focused `16/16`, propagation
+  `141/141`, ownership/approval `80/80`, typecheck, lint, build, plan-library,
+  CodeGraph, and diff checks pass at provider-free checkpoint `6447bdc7`.
+  Install/live acceptance remain.
+
+## Turn 523 | 2026-08-25
+
+- P09 source and installed artifacts are byte-identical. The exact ready-page
+  no-prompt probe passed Work and `GPT-5.6 Sol`, with an empty composer and no
+  Send. The retained AuraCall-owned browser is PID 58478 / port 37169.
+- The first installed probe exposed and then closed one adjacent established-
+  Work model-proof gap. Connection and early-hydration failures had no page,
+  prompt, or provider effect and were resolved through AuraCall lifecycle plus
+  exact readiness evidence rather than request replay.
+- P09 remains open only for Git reconciliation: pre-existing branch
+  `fix/plan0444-provider-provenance` overlaps both repaired source files. Do not
+  silently merge or overwrite it. Installed acceptance is sufficient to resume
+  LitScout Plan 0444's frozen writer packet.
+
+## Turn 522 | 2026-08-25
+
+- LitScout Plan 0444's frozen CHECKPOINT-4 recovery prompt remains unsent after
+  two bounded AuraCall attempts failed before prompt insertion at the explicit
+  Work-mode gate. The expected `wsl-chrome-3` Pro personal identity is proven.
+- Read-only live DOM evidence isolates exact route drift: the visible active
+  link is `/g/<project-id>/c/<conversation-id>` with an exact `Work` span, while
+  the loaded route adds `-<project-slug>` after the same Project ID. Current
+  byte-identical pathname comparison rejects that genuine pair.
+- P09 opens as an urgent provider-local repair with exact positive/negative
+  fixtures, one provider-free implementation/validation slice, one conditional
+  install, and one no-prompt exact-target preflight. P08 remains separately
+  owned and has no expected write overlap.
+
 ## Turn 521 | 2026-08-25
 
 - Operator approved the separate bounded aggregate-status performance repair.

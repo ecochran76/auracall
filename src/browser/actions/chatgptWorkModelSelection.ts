@@ -1,6 +1,6 @@
 import { logDomFailure } from "../domDebug.js";
 import type { BrowserLogger, BrowserModelStrategy, ChromeClient } from "../types.js";
-import { buildActiveChatgptWorkConversationMarkerDefinition } from "./chatgptComposerMode.js";
+import { buildChatgptActiveConversationWorkMarkerHelpers } from "./chatgptComposerMode.js";
 import { buildClickDispatcher } from "./domEvents.js";
 
 type WorkModelOutcome =
@@ -59,16 +59,16 @@ function buildChatgptWorkModelSelectionExpression(
       const style = getComputedStyle(node);
       return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
     };
-    ${buildActiveChatgptWorkConversationMarkerDefinition()}
-    const isSelected = (node) => node.getAttribute('aria-checked') === 'true' ||
-      node.getAttribute('aria-selected') === 'true' || node.getAttribute('data-state') === 'on';
-    const selectedWork = Array.from(document.querySelectorAll('[role="radio"], [role="menuitemradio"]'))
-      .find((node) => visible(node) && normalize(node.textContent) === 'work' && isSelected(node));
-    const workTrigger = Array.from(document.querySelectorAll('button[aria-haspopup="menu"]'))
-      .find((node) => visible(node) && normalize(node.textContent) === 'work');
-    if (!selectedWork && !workTrigger && !hasActiveConversationWorkMarker()) {
-      return { status: 'trigger-not-found' };
-    }
+	    const isSelected = (node) => node.getAttribute('aria-checked') === 'true' ||
+	      node.getAttribute('aria-selected') === 'true' || node.getAttribute('data-state') === 'on';
+	    ${buildChatgptActiveConversationWorkMarkerHelpers()}
+	    const selectedWork = Array.from(document.querySelectorAll('[role="radio"], [role="menuitemradio"]'))
+	      .find((node) => visible(node) && normalize(node.textContent) === 'work' && isSelected(node));
+	    const workTrigger = Array.from(document.querySelectorAll('button[aria-haspopup="menu"]'))
+	      .find((node) => visible(node) && normalize(node.textContent) === 'work');
+	    if (!selectedWork && !workTrigger && !hasActiveConversationWorkMarker()) {
+	      return { status: 'trigger-not-found' };
+	    }
     const triggerMarker = Array.from(document.querySelectorAll('[data-animated-slider-trigger="true"]'))
       .find(visible);
 			const trigger = triggerMarker?.closest('button[aria-haspopup="menu"]');
