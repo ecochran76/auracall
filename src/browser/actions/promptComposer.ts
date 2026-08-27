@@ -642,6 +642,8 @@ async function verifyPromptCommitted(
 	      text = text.replace(/\`\`\`[^\\n]*\\n([\\s\\S]*?)\`\`\`/g, ' $1 ');
 	      text = text.replace(/\`\`\`/g, ' ');
 	      text = text.replace(/\`([^\`]*)\`/g, '$1');
+	      text = text.replace(/^\\s{0,3}#{1,6}\\s+/gm, '');
+	      text = text.replace(/^\\s*(?:[-*+]\\s+|\\d+[.)]\\s+)/gm, '');
 	      return text.replace(/\\s+/g, ' ').trim();
 	    };
 	    const normalizedPrompt = normalize(${encodedPrompt});

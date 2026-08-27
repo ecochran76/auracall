@@ -299,5 +299,8 @@ describe("promptComposer", () => {
 		expect(input.insertText).toHaveBeenCalledWith({ text: prompt });
 		expect(input.dispatchKeyEvent).not.toHaveBeenCalled();
 		expect(runtime.evaluate).toHaveBeenCalledTimes(8);
+		const commitExpression = runtime.evaluate.mock.calls.at(-1)?.[0]?.expression as string;
+		expect(commitExpression).toContain("#{1,6}");
+		expect(commitExpression).toContain("\\d+");
 	});
 });
