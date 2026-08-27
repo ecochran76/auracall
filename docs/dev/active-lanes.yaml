@@ -144,3 +144,39 @@ lanes:
     integration_receipt: null
     disposition: Default aggregate status times out 3/3; diagnosis and provider-free repair are active, with live provider/browser effects excluded.
     updated_at: 2026-08-25
+  - id: P09
+    objective: Restore exact ChatGPT Work-mode proof when a loaded Project conversation route includes its human-readable slug.
+    plan: docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md
+    plan_ref: refs/remotes/origin/fix/plan0316-project-slug-work-marker
+    branch: fix/plan0316-project-slug-work-marker
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: e76a8407af5df7e38fccfa532500c63a708fe127
+    remote_ref: refs/remotes/origin/fix/plan0316-project-slug-work-marker
+    integration: merge
+    dependencies: [P07]
+    overlaps: []
+    validation_status: live-passed-reconciliation-pending
+    validation_ref: e76a8407af5df7e38fccfa532500c63a708fe127
+    integration_receipt: null
+    disposition: Installed exact-target Work and GPT-5.6 Sol acceptance passed with no prompt or Send; integration awaits reconciliation with fix/plan0444-provider-provenance.
+    updated_at: 2026-08-25
+  - id: P10
+    objective: Keep one authenticated LitScout connector usable across identical-looking sequential ChatGPT approval cards without weakening the one-click fence.
+    plan: docs/dev/plans/0317-2026-08-27-durable-chatgpt-approval-acknowledgment.md
+    plan_ref: refs/heads/fix/plan0317-durable-chatgpt-approval
+    branch: fix/plan0317-durable-chatgpt-approval
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 31a8fc0aa5f832c1df83e14b51cd07970b70291b
+    remote_ref: refs/remotes/origin/fix/plan0317-durable-chatgpt-approval
+    integration: merge-after-p09-reconciliation
+    dependencies: [P09]
+    overlaps: []
+    validation_status: live-passed-reconciliation-pending
+    validation_ref: 31a8fc0aa5f832c1df83e14b51cd07970b70291b
+    integration_receipt: null
+    disposition: Exact DOM-bound approval activation is installed and live-accepted in one multi-call LitScout turn with no reconnect or canonical write; integration waits behind P09 reconciliation.
+    updated_at: 2026-08-27

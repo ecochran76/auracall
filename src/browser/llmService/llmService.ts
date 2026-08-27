@@ -98,6 +98,8 @@ import type {
 	PromptInput,
 	PromptPlan,
 	PromptResult,
+	PromptWorkbenchInput,
+	PromptWorkbenchResult,
 } from "./types.js";
 
 const DEFAULT_HISTORY_LIMIT = 2000;
@@ -833,17 +835,37 @@ export abstract class LlmService {
 		const host = target?.host ?? overrides.host;
 		const port = target?.port ?? overrides.port;
 		const attachResolvedServiceTab = shouldAttachResolvedServiceTab(overrides);
+		const inheritedAuthorization = overrides.providerSessionAuthorization;
+		const inheritedContextCandidate =
+			inheritedAuthorization?.authority === this.providerSessionAuthority &&
+			inheritedAuthorization.context.providerId === this.providerId
+				? inheritedAuthorization.context
+				: null;
+		const inheritedEndpointMatches =
+			inheritedContextCandidate !== null &&
+			(inheritedContextCandidate.devtoolsHost === null ||
+				host === undefined ||
+				inheritedContextCandidate.devtoolsHost === host) &&
+			(inheritedContextCandidate.devtoolsPort === null ||
+				port === undefined ||
+				inheritedContextCandidate.devtoolsPort === port);
+		const inheritedContext = inheritedEndpointMatches ? inheritedContextCandidate : null;
 		const providerSessionContext: ProviderSessionContext = {
 			providerId: this.providerId,
 			auracallRuntimeProfile: this.resolveActiveProfileName(),
-			browserProfile: target?.browserProfile ?? null,
-			sourceBrowserProfile: target?.sourceBrowserProfile ?? null,
-			managedBrowserProfile: target?.managedBrowserProfile ?? null,
-			browserProcessId: target?.browserProcessId ?? null,
+			browserProfile: target?.browserProfile ?? inheritedContext?.browserProfile ?? null,
+			sourceBrowserProfile:
+				target?.sourceBrowserProfile ?? inheritedContext?.sourceBrowserProfile ?? null,
+			managedBrowserProfile:
+				target?.managedBrowserProfile ?? inheritedContext?.managedBrowserProfile ?? null,
+			browserProcessId: target?.browserProcessId ?? inheritedContext?.browserProcessId ?? null,
 			browserTargetId:
-				overrides.tabTargetId ?? (attachResolvedServiceTab ? target?.tab?.targetId : null) ?? null,
-			devtoolsHost: target?.host ?? overrides.host ?? null,
-			devtoolsPort: target?.port ?? overrides.port ?? null,
+				overrides.tabTargetId ??
+				(attachResolvedServiceTab ? target?.tab?.targetId : null) ??
+				inheritedContext?.browserTargetId ??
+				null,
+			devtoolsHost: target?.host ?? overrides.host ?? inheritedContext?.devtoolsHost ?? null,
+			devtoolsPort: target?.port ?? overrides.port ?? inheritedContext?.devtoolsPort ?? null,
 		};
 		const providerSessionExpectation =
 			this.providerSessionAuthority.resolveExpectation(providerSessionContext);
@@ -1046,6 +1068,37 @@ export abstract class LlmService {
 		options?: BrowserProviderListOptions,
 	): Promise<ConversationListResult>;
 
+	async preparePromptWorkbench(
+		input: PromptWorkbenchInput,
+		options?: BrowserProviderListOptions,
+	): Promise<PromptWorkbenchResult> {
+		if (!this.provider.preparePromptWorkbench) {
+			throw new Error(`Prompt workbench preparation is not supported for ${this.providerId}.`);
+		}
+		const configuredUrl =
+			input.targetUrl ??
+			input.configuredUrl ??
+			options?.configuredUrl ??
+			input.listOptions?.configuredUrl ??
+			this.getConfiguredUrl() ??
+			this.getDefaultLaunchUrl();
+		const listOptions = await this.buildListOptions(
+			{ ...(options ?? input.listOptions), configuredUrl },
+			{ ensurePort: true },
+		);
+		return this.provider.preparePromptWorkbench(
+			{
+				targetUrl: configuredUrl,
+				desiredModel: input.desiredModel,
+				modelStrategy: input.modelStrategy,
+				chatgptMode: input.chatgptMode,
+				workModel: input.workModel,
+				inputTimeoutMs: input.inputTimeoutMs,
+				onProgress: input.onProgress,
+			},
+			listOptions,
+		);
+	}
 	async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
 		if (!this.provider.runPrompt) {
 			throw new Error(`Prompt execution is not supported for ${this.providerId}.`);

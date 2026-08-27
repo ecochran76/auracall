@@ -5266,6 +5266,11 @@ program
   .option('--local-only', 'Inspect managed browser profile/bootstrap/browser-state only; do not attach to Chrome.')
   .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.')
   .option('--save-snapshot', 'Save a semantic snapshot of the page even if checks pass.')
+  .option('--prepare-composer', 'Prepare and verify the ChatGPT composer without inserting or sending a prompt.')
+  .option('--target-url <url>', 'Open or attach to this exact ChatGPT URL before preparing the composer.')
+  .option('--chatgpt-mode <chat|work>', 'Composer mode to select for --prepare-composer.', 'chat')
+  .option('--desired-model <label>', 'Chat model label to select for --prepare-composer.')
+  .option('--work-model <label>', 'Work model label to select for --prepare-composer.')
   .addOption(
     new Option(
       '--operation-timeout <seconds|auto>',
@@ -5301,6 +5306,8 @@ program
     let browserToolsError: string | null = null;
     let runtimeBlockingState: any = null;
     let featureStatus: Awaited<ReturnType<typeof inspectBrowserDoctorFeatures>> | null = null;
+    let promptWorkbench: Awaited<ReturnType<BrowserAutomationClient['preparePromptWorkbench']>> | null = null;
+    let promptWorkbenchError: string | null = null;
     let selectorDiagnosis: any = null;
     let selectorDiagnosisError: string | null = null;
 
@@ -5329,6 +5336,25 @@ program
               localReport,
               browserTools,
             });
+
+            if (commandOptions.prepareComposer) {
+              if (target !== 'chatgpt') {
+                promptWorkbenchError = '--prepare-composer is currently supported only for ChatGPT.';
+              } else {
+                try {
+                  const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+                  promptWorkbench = await client.preparePromptWorkbench({
+                    targetUrl: commandOptions.targetUrl ?? null,
+                    chatgptMode: commandOptions.chatgptMode,
+                    desiredModel: commandOptions.desiredModel ?? null,
+                    workModel: commandOptions.workModel ?? null,
+                    modelStrategy: 'select',
+                  });
+                } catch (error) {
+                  promptWorkbenchError = error instanceof Error ? error.message : String(error);
+                }
+              }
+            }
 
             if (target !== 'gemini' && !runtimeBlockingState?.requiresHuman) {
               try {
@@ -5359,6 +5385,8 @@ program
         identityStatus,
         identityReconciliation: reconcileBrowserDoctorIdentities(userConfig, target, localReport, identityStatus),
         featureStatus,
+        promptWorkbench,
+        promptWorkbenchError,
         operation,
         browserTools,
         browserToolsError,
@@ -5368,6 +5396,7 @@ program
       console.log(JSON.stringify(contract, null, 2));
       if (
         selectorDiagnosisError ||
+        promptWorkbenchError ||
         (selectorDiagnosis && !selectorDiagnosis.report.allPassed) ||
         runtimeBlockingState?.requiresHuman
       ) {
@@ -5383,6 +5412,21 @@ program
       browserTools,
       browserToolsError,
     });
+
+    if (commandOptions.prepareComposer) {
+      if (promptWorkbenchError) {
+        console.error(`Composer preparation failed: ${promptWorkbenchError}`);
+        process.exit(1);
+      }
+      const preparedWorkbench = promptWorkbench as
+        | Awaited<ReturnType<BrowserAutomationClient['preparePromptWorkbench']>>
+        | null;
+      if (preparedWorkbench) {
+        console.log(
+          `- promptWorkbench: ${preparedWorkbench.chatgptMode} / ${preparedWorkbench.model ?? preparedWorkbench.modelSelectionKind}`,
+        );
+      }
+    }
 
     if (commandOptions.localOnly) {
       return;

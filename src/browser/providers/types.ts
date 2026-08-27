@@ -2,11 +2,11 @@ import type { BrowserInteractionGovernor } from "../../../packages/browser-servi
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
-import type { BrowserScrapeTelemetryRecorder } from "./scrapeTelemetry.js";
 import type {
 	ProviderSessionAuthorization,
 	ProviderSessionProof,
 } from "./providerSessionAuthority.js";
+import type { BrowserScrapeTelemetryRecorder } from "./scrapeTelemetry.js";
 
 export type SelectorList = readonly string[];
 
@@ -123,6 +123,27 @@ export interface BrowserProviderPromptResult {
 	devtoolsPort?: number | null;
 }
 
+export interface BrowserProviderPromptWorkbenchInput {
+	targetUrl?: string | null;
+	desiredModel?: string | null;
+	modelStrategy?: "select" | "current" | "ignore";
+	chatgptMode?: "chat" | "work" | null;
+	workModel?: string | null;
+	inputTimeoutMs?: number | null;
+	onProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void> | void;
+}
+
+export interface BrowserProviderPromptWorkbenchResult {
+	chatgptMode: "chat" | "work";
+	modelSelectionKind: "chat-model" | "work-model" | "work-current" | "ignore";
+	model: string | null;
+	messages: string[];
+	url: string;
+	tabTargetId?: string | null;
+	devtoolsHost?: string | null;
+	devtoolsPort?: number | null;
+}
+
 export interface BrowserProviderActiveMediaMaterializationInput {
 	capabilityId?: string | null;
 	mediaType?: string | null;
@@ -163,7 +184,7 @@ export type BrowserProviderConversationFileDownloadResult =
 			error: string;
 			failureKind?: "provider_unavailable" | "retrieval_failed";
 			retryable?: boolean;
-		};
+	  };
 
 export interface BrowserProvider {
 	id: BrowserProviderConfig["id"];
@@ -266,6 +287,10 @@ export interface BrowserProvider {
 		conversationId: string,
 		options?: BrowserProviderListOptions,
 	) => Promise<ConversationArtifact[]>;
+	preparePromptWorkbench?: (
+		input: BrowserProviderPromptWorkbenchInput,
+		options?: BrowserProviderListOptions,
+	) => Promise<BrowserProviderPromptWorkbenchResult>;
 	runPrompt?: (
 		input: BrowserProviderPromptInput,
 		options?: BrowserProviderListOptions,

@@ -1,3 +1,66 @@
+## 2026-08-23 | Preserve provider-session provenance across option rebuilds
+
+- LitScout Plan 0444 used AuraCall for ChatGPT project discovery after an exact
+  app/account preflight. ChatGPT exposed the expected Pro identity, but project
+  listing failed before its read because the CLI's second `buildListOptions`
+  call dropped the already-resolved managed-profile/process provenance.
+- The repair stays in the shared `LlmService` seam. It inherits provenance only
+  from the same authority and only while host/port remain compatible; changed
+  endpoints and other service instances remain fail-closed.
+- Provider-free validation passes the new retain/drop regressions, the complete
+  66-test service/authority packet, and typecheck. Installation and one exact
+  live project-list replay remain separately governed by LitScout Plan 0444.
+
+## 2026-08-27 | Plan 0317 durable ChatGPT approval acknowledgment
+
+- The first installed live acceptance falsified the replacement-card
+  hypothesis: root Chat reached `Corel33t`, `auth_session` succeeded, and exact
+  `Always allow` was selected, but the same card stayed mounted and no
+  cancellation invocation began. OAuth was healthy; the coordinate activation
+  missed.
+- Revision 2 replaces coordinates with one exact DOM-bound activation inside a
+  CDP user-gesture evaluation. The settled fingerprint, action, and DOM identity
+  must all still match; changed, ambiguous, or independently disappeared state
+  remains zero-action, and a persistent card remains one-attempt fenced.
+- Focused revision-2 tests pass 17/17, including an executable fixture that
+  proves only the exact bound `Always allow` control is focused and invoked.
+
+- LitScout Plan 0458 proves connector OAuth succeeded and both `auth_session`
+  calls completed. AuraCall's terminal error came from the separate ChatGPT
+  `Always allow` tool-consent card.
+- The exact 1.4-second RED presents one stable pre-click card and then an
+  identical-fingerprint replacement with a different DOM identity. Existing
+  source ignored identity and reproduced `chatgpt-tool-approval-not-confirmed`.
+- The provider-local repair stores exact mounted-card identities in a
+  page-lifetime WeakMap without changing provider DOM. All 16 focused approval
+  tests and the 141-test approval/config propagation gate pass; the unchanged
+  exact card remains one-click fenced and `Answer now` remains excluded.
+- Next: finish source validation and planning audits, publish/install at an
+  idle boundary, then execute one multi-call LitScout acceptance without app
+  refresh, replacement, disconnect, or reconnect.
+
+## 2026-08-25 | Plan 0316 Project-slug Work-marker repair
+
+- LitScout Plan 0444's existing-conversation continuation failed twice before
+  prompt insertion because AuraCall could not prove explicit Work mode. The
+  expected `wsl-chrome-3` Pro personal identity and exact conversation were
+  healthy.
+- Read-only retained-DOM evidence proved the active link omits the loaded
+  Project URL's human-readable slug while preserving the same Project ID,
+  conversation ID, `data-active` marker, and exact descendant `Work` span.
+- The live-derived tracer fixture failed alone, then passed after one
+  provider-local canonical route comparison. Different-Project,
+  different-conversation, and implicit-Chat negatives pass. The final focused
+  ChatGPT browser contract gate discovered 7 files and passed `139/139` tests;
+  the composer-mode file itself passed `18/18`.
+- The first installed no-prompt exact-target probe passed Work-mode proof, then
+  failed at the adjacent Work-model gate because established Work exposed the
+  visible `5.6 SolHigh` pill without a Chat/Work control. A second live-derived
+  tracer failed exactly as observed. The source now centralizes active Work
+  route proof and reuses it before model selection; the positive and
+  different-Project cases pass without using the shared model pill as a Work
+  inference. No prompt insertion or Send occurred.
+
 ## 2026-08-24 | Plan 0313 provider-free repair opened
 
 - Operator `ok go` authorizes the bounded source successor to Plan 0312. P06
@@ -163,7 +226,6 @@
 - The provider-work lease was released. Fresh process/listener readback found
   no process using managed browser profile `wsl-chrome-3/chatgpt` and no
   listener on its DevTools port `45015`; the API service remained active.
-
 ## 2026-08-23 | Isolate unavailable archive assets during exact materialization
 
 - LitScout Plan 0444 used AuraCall's exact `wsl-chrome-3` account-mirror

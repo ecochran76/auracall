@@ -45,7 +45,9 @@ auracall --profile wsl-chrome-3 --engine browser \
   -p "Reply exactly with: AURACALL_WORK_MODE_OK"
 # Established Chat may show a High thinking control. AuraCall does not use the
 # shared model/thinking slider as a mode marker; established Work requires the
-# active current-route conversation's exact Work badge and otherwise fails closed.
+# active same-Project/same-conversation route's exact Work badge and otherwise
+# fails closed. ChatGPT may omit the human-readable Project slug from that
+# active-link route while retaining the same exact Project ID and conversation ID.
 
 # Preferred first-time browser onboarding (guided config + managed profile + live verification)
 auracall wizard
@@ -1881,11 +1883,17 @@ npx -y auracall auracall-mcp
 ChatGPT tool approval is always an operator preference. Use `allow-once` when
 each detected tool call should receive only the current approval, or
 `always-allow` when ChatGPT should persist approval for that third-party tool.
+This consent is separate from connector OAuth authentication; seeing a tool
+approval card does not mean the connector login expired. AuraCall assigns a
+page-lifetime identity to the exact mounted approval card, so a clicked card
+may be acknowledged when ChatGPT replaces it with an identical-looking next
+card while one unchanged card remains protected from a second click.
 AuraCall never upgrades `allow-once` to `always-allow`, never clicks `Answer
 now`, and fails closed on incomplete or ambiguous approval surfaces. Before
-the one allowed pointer sequence, AuraCall briefly settles and re-probes the
-same exact surface, then uses the fresh button center. A changed or ambiguous
-surface receives no click; one that independently disappears needs no action.
+the one allowed activation, AuraCall briefly settles and re-probes the same
+exact surface, then focuses and invokes that exact verified DOM control under
+a CDP user gesture. A changed or ambiguous surface receives no activation; one
+that independently disappears needs no action.
 The same preference can be stored as `browser.chatgptToolApproval` or on the
 selected `services.chatgpt` entry.
 

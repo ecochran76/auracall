@@ -19,6 +19,10 @@ import {
   summarizeBrowserToolsDoctorReport,
   summarizeBrowserToolsPageProbe,
 } from '../../packages/browser-service/src/browserTools.js';
+import {
+  BROWSER_DOM_SEARCH_OUTPUT_TEXT_LIMIT,
+  buildBrowserDomSearchExpression,
+} from '../../packages/browser-service/src/service/domSearch.js';
 import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 
 describe('selectBrowserToolsPageIndex', () => {
@@ -381,6 +385,28 @@ describe('selectBrowserToolsPageIndex', () => {
         }),
       ],
     });
+  });
+
+  test('DOM search requires each requested predicate and bounds safe visible text output', () => {
+    const expression = buildBrowserDomSearchExpression({
+      text: ['Work'],
+      ariaLabel: ['Composer mode'],
+      tag: ['button'],
+    });
+
+    expect(expression).toContain(
+      'if (Array.isArray(options.text) && options.text.length > 0 && !includesAny(textHaystack, options.text)) continue;',
+    );
+    expect(expression).toContain(
+      'if (Array.isArray(options.ariaLabel) && options.ariaLabel.length > 0',
+    );
+    expect(expression).toContain("const rawText = normalize(node.innerText || '');");
+    expect(expression).not.toContain('node.textContent');
+    expect(expression).toContain("tag === 'script'");
+    expect(expression).toContain(
+      `const outputTextLimit = ${BROWSER_DOM_SEARCH_OUTPUT_TEXT_LIMIT};`,
+    );
+    expect(BROWSER_DOM_SEARCH_OUTPUT_TEXT_LIMIT).toBe(500);
   });
 
   test('collectBrowserToolsUiList returns grouped visible interactive controls', async () => {
