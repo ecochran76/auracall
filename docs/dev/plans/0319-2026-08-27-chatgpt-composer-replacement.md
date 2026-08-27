@@ -1,7 +1,7 @@
 # ChatGPT composer replacement and exact-turn proof | 0319-2026-08-27
 
 State: OPEN
-Operational state: PROVIDER_FREE_REPAIR_ACTIVE
+Operational state: PROVIDER_RATE_LIMIT_COOLDOWN_REPAIR
 Lane: P12
 Branch: fix/plan0319-chatgpt-composer-replacement
 Target: main
@@ -34,6 +34,22 @@ research-to-draft experiment.
   though the live composer displayed the exact paragraphs. The final repair
   traverses the live composer, skips only protected app-pill subtrees, and emits
   explicit block boundaries before equality normalization.
+- The first scored submission after installation did commit, but the verifier
+  rejected it because the committed user-turn container appended ChatGPT's
+  presentation-only `Show more` button text. A second observed attempt then
+  restored the first conversation and committed the same prompt again, producing
+  two exact 2,549-character rendered user turns in conversation
+  `6a90a894-c3a4-83e9-adc7-602e5761a4c4` and a visible provider
+  `too many requests` warning.
+- The active run was cancelled before approving the LitScout action. Authoritative
+  Session 73 readback remained `gather_ready` with zero members, the unchanged
+  execution token, and zero new receipts/provider calls. The exact owned Chrome
+  tree on port 9222 was closed.
+- The next provider-free repair reads committed authored text by walking the live
+  turn DOM while excluding buttons/turn controls. Focused tests pass 11/11,
+  typecheck passes, and the production build passes. No further provider run is
+  permitted until the warning has cooled down and the new build is installed and
+  proven byte-identical.
 - P08 remains active in its own worktree. It has no expected source overlap with
   this prompt-composer lane.
 

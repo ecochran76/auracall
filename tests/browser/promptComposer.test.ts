@@ -56,6 +56,14 @@ describe("promptComposer", () => {
 		expect(expression).not.toContain("cloneNode");
 	});
 
+	test("excludes ChatGPT presentation controls from committed user-turn text", () => {
+		const expression = promptComposer.buildReadCommittedTurnTextFunction();
+		expect(expression).toContain("button");
+		expect(expression).toContain("collapsible-user-message-toggle");
+		expect(expression).toContain("-turn-action-button");
+		expect(expression).toContain("window.getComputedStyle(current).display");
+	});
+
 	test("rejects a newly committed turn that only contains the requested prompt", async () => {
 		vi.useFakeTimers();
 		try {

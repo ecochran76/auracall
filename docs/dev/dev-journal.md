@@ -48016,3 +48016,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   detached-clone `innerText` collapsed all block boundaries, while live DOM
   retained them. The final reader walks live text nodes, skips exact app-pill
   subtrees, and inserts boundaries for block/list/table/flex/grid elements.
+- The installed scored submission then exposed a distinct committed-turn
+  reader defect: the live user-turn container appended ChatGPT's `Show more`
+  control. The exact prompt was submitted, but the verifier treated that
+  presentation text as authored content and timed out. Reopening the persistent
+  profile for an observed attempt restored the prior conversation and submitted
+  the prompt a second time, producing a visible `too many requests` warning.
+- The run was cancelled before LitScout approval. Session 73 stayed
+  `gather_ready`, with zero corpus members and no new receipt/provider call; the
+  owned Chrome tree was closed. Local repair now walks committed-turn authored
+  text while excluding buttons and turn controls. Focused 11/11, typecheck, and
+  production build pass. Provider rerun is paused for cooldown.

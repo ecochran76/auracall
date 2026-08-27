@@ -1,0 +1,23 @@
+{
+  "schema_version": "auracall.plan0319.incident.v1",
+  "plan": "0319-2026-08-27-chatgpt-composer-replacement",
+  "conversation_id": "6a90a894-c3a4-83e9-adc7-602e5761a4c4",
+  "observed_user_turn_count": 2,
+  "observed_user_turn_lengths": [2549, 2549],
+  "turns_equal": true,
+  "presentation_suffix": "Show more",
+  "provider_warning": "too many requests",
+  "run_cancelled": true,
+  "browser_port": 9222,
+  "browser_closed": true,
+  "litscout": {
+    "project_slug": "plan-0459-pro-rerun-frakktal-biobased-bis-cyanate-ester-feasibility",
+    "session_id": 73,
+    "state": "gather_ready",
+    "membership_count": 0,
+    "new_receipts": 0,
+    "provider_calls": 0,
+    "execution_token_unchanged": true
+  },
+  "next_provider_action": "none_until_cooldown_and_installed_parity"
+}

@@ -87,6 +87,36 @@ function buildReadComposerUserTextFunction(): string {
 	}`;
 }
 
+function buildReadCommittedTurnTextFunction(): string {
+	return `(node) => {
+	  if (!node) return '';
+	  const presentationOnlySelector = [
+	    'button',
+	    '[role="button"]',
+	    '[data-testid="collapsible-user-message-toggle"]',
+	    '[data-testid$="-turn-action-button"]',
+	  ].join(', ');
+	  const chunks = [];
+	  const appendBoundary = () => {
+	    if (chunks.length > 0 && !/\\s$/.test(chunks[chunks.length - 1] || '')) chunks.push('\\n');
+	  };
+	  const walk = (current) => {
+	    if (current.nodeType === Node.TEXT_NODE) {
+	      chunks.push(current.textContent || '');
+	      return;
+	    }
+	    if (!(current instanceof Element) || current.matches(presentationOnlySelector)) return;
+	    const display = window.getComputedStyle(current).display;
+	    const blockBoundary = /^(block|list-item|table-row|flex|grid)$/.test(display);
+	    if (blockBoundary) appendBoundary();
+	    current.childNodes.forEach(walk);
+	    if (blockBoundary) appendBoundary();
+	  };
+	  node.childNodes.forEach(walk);
+	  return chunks.join('');
+	}`;
+}
+
 async function preparePromptComposer(
 	Runtime: ChromeClient["Runtime"],
 	logger: BrowserLogger,
@@ -637,7 +667,7 @@ async function verifyPromptCommitted(
 	    const fallback = document.querySelector(${fallbackSelectorLiteral});
 	    const inputSelectors = ${inputSelectorsLiteral};
 	    const normalize = (value) => {
-	      let text = value?.toLowerCase?.() ?? '';
+	      let text = String(value ?? '');
 	      // Strip markdown *markers* but keep content (ChatGPT renders fence markers differently).
 	      text = text.replace(/\`\`\`[^\\n]*\\n([\\s\\S]*?)\`\`\`/g, ' $1 ');
 	      text = text.replace(/\`\`\`/g, ' ');
@@ -657,7 +687,8 @@ async function verifyPromptCommitted(
 	      return role === 'user' || Boolean(node.querySelector?.('[data-message-author-role="user"], [data-turn="user"]'));
 	    });
 	    const candidateArticles = userArticles.length > 0 ? userArticles : articles;
-	    const normalizedTurns = candidateArticles.map((node) => normalize(node?.innerText));
+	    const readCommittedTurnText = ${buildReadCommittedTurnTextFunction()};
+	    const normalizedTurns = candidateArticles.map((node) => normalize(readCommittedTurnText(node)));
 	    const readValue = (node) => {
 	      if (!node) return '';
 	      if (node instanceof HTMLTextAreaElement) return node.value ?? '';
@@ -772,6 +803,7 @@ export const __test__ = {
 	normalizedComposerText,
 	promptMismatchDiagnostics,
 	buildReadComposerUserTextFunction,
+	buildReadCommittedTurnTextFunction,
 	preparePromptComposer,
 	verifyPromptCommitted,
 	waitForComposerReadyToSubmit,

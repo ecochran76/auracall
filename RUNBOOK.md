@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 528 | 2026-08-27
+
+- The installed composer replacement submitted the exact intended prompt, but
+  committed-turn verification included ChatGPT's presentation-only `Show more`
+  control and falsely timed out. The persistent profile restored that
+  conversation during the instrumented attempt and committed the same prompt a
+  second time in conversation `6a90a894-c3a4-83e9-adc7-602e5761a4c4`.
+- Direct CDP observed two equal 2,549-character user turns and the provider
+  displayed `too many requests`. The active run was cancelled before LitScout
+  approval and the exact owned Chrome tree on port 9222 was closed.
+- Authoritative LitScout Session 73 remains `gather_ready`, with zero corpus
+  members, the same execution token, and no new receipts/provider calls.
+- P12 is in provider cooldown. The local committed-turn reader now walks live
+  authored text while excluding buttons and turn controls; focused 11/11,
+  typecheck, and production build pass. Next is provider-free install/parity,
+  followed by at most one fresh observed experiment after cooldown. Do not
+  reuse the duplicated conversation.
+
 ## Turn 527 | 2026-08-27
 
 - The first scored Frakktal/LitScout research-to-draft experiment is invalid:
