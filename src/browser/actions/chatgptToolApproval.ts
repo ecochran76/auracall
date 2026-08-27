@@ -2,6 +2,8 @@ import { BrowserAutomationError } from "../../oracle/errors.js";
 import type { BrowserLogger, ChatgptToolApprovalPolicy, ChromeClient } from "../types.js";
 
 const CHATGPT_TOOL_APPROVAL_SETTLE_MS = 120;
+const CHATGPT_TOOL_APPROVAL_READY_ATTEMPTS = 600;
+const CHATGPT_TOOL_APPROVAL_READY_INTERVAL_MS = 100;
 const CHATGPT_TOOL_APPROVAL_CONFIRM_ATTEMPTS = 30;
 const CHATGPT_TOOL_APPROVAL_CONFIRM_INTERVAL_MS = 100;
 
@@ -39,7 +41,7 @@ type ToolApprovalProbe =
 	  };
 
 export type ChatgptToolApprovalObservation = {
-	phase: "detected" | "settled" | "pointer-dispatched" | "post-action";
+	phase: "detected" | "settled" | "waiting-ready" | "ready" | "pointer-dispatched" | "post-action";
 	observedAt: string;
 	confirmationAttempt?: number;
 	status: ToolApprovalProbe["status"];
@@ -75,6 +77,14 @@ export function createChatgptToolApprovalHandler(options: {
 			: probe.surfaceId
 				? `surface:${probe.surfaceId}`
 				: `fingerprint:${probe.fingerprint}`;
+	const controlIsBlocked = (probe: Extract<ToolApprovalProbe, { status: "approval-required" }>) =>
+		Boolean(
+			probe.control &&
+				(probe.control.disabled ||
+					probe.control.ariaDisabled === "true" ||
+					probe.control.isConnected === false ||
+					probe.control.pointerEvents === "none"),
+		);
 	const observe = (
 		phase: ChatgptToolApprovalObservation["phase"],
 		probe: ToolApprovalProbe,
@@ -151,7 +161,7 @@ export function createChatgptToolApprovalHandler(options: {
 		}
 
 		await new Promise((resolve) => setTimeout(resolve, CHATGPT_TOOL_APPROVAL_SETTLE_MS));
-		const settledProbe = await readProbe({
+		let settledProbe = await readProbe({
 			fingerprint: probe.fingerprint,
 			surfaceId: probe.surfaceId,
 			controlId: probe.controlId,
@@ -190,6 +200,70 @@ export function createChatgptToolApprovalHandler(options: {
 					settledActionLabel: settledProbe.actionLabel,
 				},
 			);
+		}
+		if (controlIsBlocked(settledProbe)) {
+			observe("waiting-ready", settledProbe, 1);
+			let becameReady = false;
+			for (let attempt = 1; attempt < CHATGPT_TOOL_APPROVAL_READY_ATTEMPTS; attempt += 1) {
+				await new Promise((resolve) =>
+					setTimeout(resolve, CHATGPT_TOOL_APPROVAL_READY_INTERVAL_MS),
+				);
+				const candidate = await readProbe({
+					fingerprint: probe.fingerprint,
+					surfaceId: probe.surfaceId,
+					controlId: probe.controlId,
+					actionLabel: probe.actionLabel,
+				});
+				if (candidate.status === "none") return { status: "none" };
+				if (candidate.status === "ambiguous") {
+					throw new BrowserAutomationError(
+						`ChatGPT tool approval became ambiguous while waiting for the control: ${candidate.count} approval surfaces are visible.`,
+						{
+							stage: "chatgpt-tool-approval",
+							code: "chatgpt-tool-approval-ambiguous",
+							count: candidate.count,
+						},
+					);
+				}
+				if (
+					candidate.fingerprint !== probe.fingerprint ||
+					candidate.actionLabel !== probe.actionLabel ||
+					((candidate.surfaceId || probe.surfaceId) && candidate.surfaceId !== probe.surfaceId) ||
+					((candidate.controlId || probe.controlId) && candidate.controlId !== probe.controlId)
+				) {
+					throw new BrowserAutomationError(
+						"ChatGPT tool approval changed while waiting for its exact control to become enabled.",
+						{
+							stage: "chatgpt-tool-approval",
+							code: "chatgpt-tool-approval-changed-before-click",
+							initialFingerprint: probe.fingerprint,
+							settledFingerprint: candidate.fingerprint,
+							initialSurfaceId: probe.surfaceId,
+							settledSurfaceId: candidate.surfaceId,
+							initialControlId: probe.controlId,
+							settledControlId: candidate.controlId,
+						},
+					);
+				}
+				settledProbe = candidate;
+				if (!controlIsBlocked(settledProbe)) {
+					observe("ready", settledProbe, attempt + 1);
+					becameReady = true;
+					break;
+				}
+			}
+			if (!becameReady) {
+				throw new BrowserAutomationError(
+					"ChatGPT tool approval exact control did not become enabled within 60 seconds.",
+					{
+						stage: "chatgpt-tool-approval",
+						code: "chatgpt-tool-approval-not-ready",
+						fingerprint: settledProbe.fingerprint,
+						surfaceId: settledProbe.surfaceId,
+						controlId: settledProbe.controlId,
+					},
+				);
+			}
 		}
 		const settledApprovalKey = approvalKey(settledProbe);
 		attemptedSurfaces.add(settledApprovalKey);

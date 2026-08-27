@@ -8,6 +8,12 @@
   action, and card uniqueness are proven; `Answer now` remains prohibited.
 - The live continuation reuses Project 15 / Session 73 and the existing OAuth
   connection. P08 is a separate non-overlapping lane.
+- Direct CDP evidence isolated the real material-card difference: the exact
+  `Allow once` control remains disabled while ChatGPT's safety check runs and
+  later enables without changing card/control identity. One exact enabled
+  activation produced trusted pointer/click events, card disappearance, and
+  LitScout receipt `rar_da1ff16f021fc98bc1744257d6619d46` with zero provider
+  calls. The final repair waits boundedly for that readiness transition.
 
 ## 2026-08-23 | Preserve provider-session provenance across option rebuilds
 

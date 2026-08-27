@@ -15,6 +15,7 @@ enforceRawDevToolsEscapeHatchForCli();
 type Options = {
 	host: string;
 	port: number;
+	targetId: string | null;
 	urlContains: string;
 	policy: Exclude<ChatgptToolApprovalPolicy, "manual">;
 	expectedFingerprintContains: string | null;
@@ -67,6 +68,7 @@ function parseOptions(argv: string[]): Options {
 	return {
 		host: readValue(argv, "--host") ?? "127.0.0.1",
 		port: Number(portValue),
+		targetId: readValue(argv, "--target-id"),
 		urlContains,
 		policy: policyValue,
 		expectedFingerprintContains,
@@ -115,7 +117,10 @@ async function main(): Promise<void> {
 	const options = parseOptions(process.argv.slice(2));
 	const startedAt = new Date().toISOString();
 	const targets = (await CDP.List({ host: options.host, port: options.port })).filter(
-		(target) => target.type === "page" && target.url.includes(options.urlContains),
+		(target) =>
+			target.type === "page" &&
+			target.url.includes(options.urlContains) &&
+			(!options.targetId || target.id === options.targetId),
 	);
 	if (targets.length !== 1) {
 		throw new Error(

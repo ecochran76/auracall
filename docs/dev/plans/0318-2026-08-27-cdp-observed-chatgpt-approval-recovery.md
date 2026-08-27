@@ -4,7 +4,7 @@ State: OPEN
 Lane: P11
 Branch: fix/plan0318-cdp-observed-chatgpt-approval
 Target: main
-Revision: 1 | 2026-08-27
+Revision: 2 | 2026-08-27
 
 ## Stable Objective
 
@@ -28,6 +28,15 @@ state.
   timestamped post-action DOM transition.
 - Final Plan 0459 cleanup left no experiment Chrome process. AuraCall API and
   LitScout hosted services remain healthy.
+- The exact live P11 trace found the adjacent missing state: ChatGPT initially
+  rendered the verified `Allow once` control disabled while its safety check
+  ran, then enabled the same control about 30 seconds later. Direct CDP
+  activation on the enabled control emitted one trusted pointer/click sequence,
+  removed the card, and produced successful LitScout receipt
+  `rar_da1ff16f021fc98bc1744257d6619d46` with zero provider calls.
+- The source repair now waits up to 60 seconds for that same exact settled
+  card/control to become enabled; identity, ambiguity, hit-test, one-click, and
+  `Answer now` fences remain unchanged.
 
 ## Authority And Bounds
 
@@ -79,8 +88,10 @@ state.
 3. Add provider-free tests that prove the observation contract and preserve
    manual, ambiguity, one-click, changed-card, paired-label, and `Answer now`
    fences.
-4. Validate, commit, install once at an idle browser-operation boundary, and
-   prove source/installed parity.
+4. Validate, commit, and install the instrumented checkpoint at an idle
+   browser-operation boundary. If the exact direct trace discovers one
+   adjacent approval-state defect, apply and install that final bounded repair
+   without another provider submission, then prove source/installed parity.
 5. Resume the exact ChatGPT conversation. Observe the card directly through
    its DevTools port and let the instrumented handler act. If it stalls and all
    exact gates remain true, directly activate the same verified control once

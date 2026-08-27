@@ -21,6 +21,20 @@
   AuraCall retains browser lifecycle; direct CDP attaches only after AuraCall
   publishes the exact live port and target.
 - P08 remains active in its own worktree with no expected P11 write overlap.
+- The first exact turn reached two `research_continue` reads but ChatGPT
+  reported an OpenAI safety-check stop before LitScout received the executor.
+  The single changed-tactic retry exposed the card directly on port 9222,
+  target `D80B6F79A9D4A873B993557BF9A67552`: its exact `Allow once` control was
+  initially disabled, then enabled on the same card/control identity.
+- Direct CDP activation of that enabled control recorded one trusted
+  pointerdown/mousedown/mouseup/click sequence and immediate card disappearance.
+  LitScout then recorded `research_action_execute:success`, receipt
+  `rar_da1ff16f021fc98bc1744257d6619d46`, state `gather_ready`, and zero provider
+  calls. OAuth remained healthy and `Answer now` was never selected.
+- P11's final source repair waits boundedly for the same exact control to become
+  enabled before trusted-pointer dispatch. No further provider submission is
+  authorized; remaining work is provider-free validation, final installed
+  parity, runtime cleanup/restoration, and Git closeout.
 
 ## Turn 525 | 2026-08-27
 

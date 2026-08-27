@@ -192,6 +192,55 @@ describe("ChatGPT tool approval handling", () => {
 		expect(evaluate).toHaveBeenNthCalledWith(2, expect.objectContaining({ userGesture: true }));
 	});
 
+	it("waits for the exact approval control to become enabled before dispatching a trusted pointer", async () => {
+		const blockedApproval = {
+			status: "approval-required",
+			fingerprint: "safety-checking-approval",
+			surfaceId: "surface-1",
+			controlId: "control-1",
+			actionLabel: "Allow once",
+			activated: true,
+			x: 120,
+			y: 240,
+			control: {
+				disabled: true,
+				ariaDisabled: null,
+				isConnected: true,
+				hitTargetIsControl: true,
+				pointerEvents: "auto",
+			},
+		};
+		const readyApproval = {
+			...blockedApproval,
+			control: { ...blockedApproval.control, disabled: false },
+		};
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce({ result: { value: blockedApproval } })
+			.mockResolvedValueOnce({ result: { value: blockedApproval } })
+			.mockResolvedValueOnce({ result: { value: readyApproval } })
+			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
+		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
+		const observations: Array<{ phase: string }> = [];
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+			onObservation: (observation) => observations.push(observation),
+		});
+
+		await expect(handle()).resolves.toMatchObject({ status: "approved" });
+		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
+		expect(observations.map(({ phase }) => phase)).toEqual([
+			"detected",
+			"settled",
+			"waiting-ready",
+			"ready",
+			"pointer-dispatched",
+			"post-action",
+		]);
+	});
+
 	it("fails closed when the approval changes before click", async () => {
 		const evaluate = vi
 			.fn()
