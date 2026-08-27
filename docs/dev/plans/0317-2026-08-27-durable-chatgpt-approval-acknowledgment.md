@@ -5,7 +5,7 @@ Lane: P10
 Operational state: PROVIDER_FREE_ACCEPTED / INSTALL_PENDING
 Branch: fix/plan0317-durable-chatgpt-approval
 Target: main
-Integration: merge after P09 reconciliation
+Integration: merge-after-p09-reconciliation
 Revision: 1 | 2026-08-27
 
 ## Stable Objective
@@ -36,6 +36,7 @@ approval card without weakening the unchanged-card one-click fence.
   propagation `141/141`, browser ownership/approval `80/80`, typecheck, scoped
   zero-warning Biome, production build, plan-library validation with zero
   errors, current CodeGraph, and diff hygiene.
+- Provider-free checkpoint: `6447bdc7`.
 - P08 owns aggregate-status latency. P09 owns Project-slug Work-mode proof and
   is live-accepted/reconciliation-pending. P10 changes neither source surface.
 

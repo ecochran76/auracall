@@ -170,13 +170,13 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 51327ee04572fe0f7db84c3b636bd9a022c16447
-    remote_ref: null
+    checkpoint: 6447bdc7b0f1cb4bd53beaa5f3152855332b67d6
+    remote_ref: refs/remotes/origin/fix/plan0317-durable-chatgpt-approval
     integration: merge-after-p09-reconciliation
     dependencies: [P09]
     overlaps: []
     validation_status: provider-free-passed-install-pending
-    validation_ref: null
+    validation_ref: 6447bdc7b0f1cb4bd53beaa5f3152855332b67d6
     integration_receipt: null
     disposition: Exact identical-successor-card RED is repaired and provider-free accepted; install and multi-call live proof remain, with app refresh, replacement, reconnect, and OAuth widening excluded.
     updated_at: 2026-08-27

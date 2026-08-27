@@ -17,7 +17,8 @@
   Stable exact-card DOM identity makes identical replacement pass while the
   unchanged card remains one-click fenced. Focused `16/16`, propagation
   `141/141`, ownership/approval `80/80`, typecheck, lint, build, plan-library,
-  CodeGraph, and diff checks pass. Install/live acceptance remain.
+  CodeGraph, and diff checks pass at provider-free checkpoint `6447bdc7`.
+  Install/live acceptance remain.
 
 ## Turn 523 | 2026-08-25
 
