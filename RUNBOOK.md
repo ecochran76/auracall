@@ -23,6 +23,13 @@
   assembled prompt. No conversation or LitScout call occurred, the owned browser
   cleaned, and the single changed-tactic retry remains available after a bounded
   presentation-normalization repair.
+- The changed-tactic attempt also stopped before Send. Direct retained-CDP
+  comparison proved the remaining mismatch was AuraCall's detached-clone reader:
+  it collapsed live paragraph boundaries into `Session 73.Conduct...`. Zero user
+  turns and an empty conversation route were observed. The final provider-free
+  repair reads live text nodes, skips only app-pill subtrees, and restores block
+  boundaries; one actual scored submission remains because both attempts were
+  proven pre-effect safety stops.
 
 ## Turn 526 | 2026-08-27
 

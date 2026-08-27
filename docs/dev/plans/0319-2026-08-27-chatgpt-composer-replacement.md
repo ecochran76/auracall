@@ -29,6 +29,11 @@ research-to-draft experiment.
   conversation or LitScout call. The adjacent repair now treats only bounded
   markdown/list presentation differences as equivalent and records mismatch
   hashes plus the first normalized divergence.
+- Retained-CDP comparison then localized the divergence: reading `innerText` from
+  a detached clone collapsed every block boundary (`Session 73.Conduct...`) even
+  though the live composer displayed the exact paragraphs. The final repair
+  traverses the live composer, skips only protected app-pill subtrees, and emits
+  explicit block boundaries before equality normalization.
 - P08 remains active in its own worktree. It has no expected source overlap with
   this prompt-composer lane.
 

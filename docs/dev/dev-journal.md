@@ -48012,3 +48012,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   25 characters shorter. This adjacent case now normalizes only code markers,
   headings, and list markers while retaining equality, and adds SHA-256 plus
   normalized first-divergence diagnostics for any future mismatch.
+- The retained browser made the mismatch directly inspectable without Send:
+  detached-clone `innerText` collapsed all block boundaries, while live DOM
+  retained them. The final reader walks live text nodes, skips exact app-pill
+  subtrees, and inserts boundaries for block/list/table/flex/grid elements.

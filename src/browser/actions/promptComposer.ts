@@ -60,6 +60,33 @@ function promptMismatchDiagnostics(value: string, prompt: string) {
 	};
 }
 
+function buildReadComposerUserTextFunction(): string {
+	return `(node) => {
+	  if (!node) return '';
+	  if (node instanceof HTMLTextAreaElement) return node.value ?? '';
+	  const protectedSelector =
+	    '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
+	  const chunks = [];
+	  const appendBoundary = () => {
+	    if (chunks.length > 0 && !/\\s$/.test(chunks[chunks.length - 1] || '')) chunks.push('\\n');
+	  };
+	  const walk = (current) => {
+	    if (current.nodeType === Node.TEXT_NODE) {
+	      chunks.push(current.textContent || '');
+	      return;
+	    }
+	    if (!(current instanceof Element) || current.matches(protectedSelector)) return;
+	    const display = window.getComputedStyle(current).display;
+	    const blockBoundary = /^(block|list-item|table-row|flex|grid)$/.test(display);
+	    if (blockBoundary) appendBoundary();
+	    current.childNodes.forEach(walk);
+	    if (blockBoundary) appendBoundary();
+	  };
+	  node.childNodes.forEach(walk);
+	  return chunks.join('');
+	}`;
+}
+
 async function preparePromptComposer(
 	Runtime: ChromeClient["Runtime"],
 	logger: BrowserLogger,
@@ -71,12 +98,7 @@ async function preparePromptComposer(
 	    if (!target) return { cleared: false, reason: 'missing-target' };
 	    const protectedSelector =
 	      '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
-	    const readUserText = (node) => {
-	      if (node instanceof HTMLTextAreaElement) return node.value ?? '';
-	      const clone = node.cloneNode(true);
-	      clone.querySelectorAll(protectedSelector).forEach((candidate) => candidate.remove());
-	      return clone.innerText ?? clone.textContent ?? '';
-	    };
+	    const readUserText = ${buildReadComposerUserTextFunction()};
 	    const before = readUserText(target);
 	    if (target instanceof HTMLTextAreaElement) {
 	      target.value = '';
@@ -228,16 +250,7 @@ export async function submitPrompt(
       const fallback = document.querySelector(${fallbackSelectorLiteral});
       const target = document.querySelector(${promptTargetSelectorLiteral});
       const readText = (node) => node instanceof HTMLTextAreaElement ? node.value ?? '' : node?.innerText ?? node?.textContent ?? '';
-      const readUserText = (node) => {
-        if (!node) return '';
-        const clone = node.cloneNode(true);
-        clone
-          .querySelectorAll(
-            '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]',
-          )
-          .forEach((candidate) => candidate.remove());
-        return clone instanceof HTMLTextAreaElement ? clone.value ?? '' : clone.innerText ?? clone.textContent ?? '';
-      };
+	      const readUserText = ${buildReadComposerUserTextFunction()};
       return {
         editorText: editor?.innerText ?? '',
         fallbackValue: fallback?.value ?? '',
@@ -318,16 +331,7 @@ export async function submitPrompt(
       const fallback = document.querySelector(${fallbackSelectorLiteral});
       const target = document.querySelector(${promptTargetSelectorLiteral});
       const readText = (node) => node instanceof HTMLTextAreaElement ? node.value ?? '' : node?.innerText ?? node?.textContent ?? '';
-      const readUserText = (node) => {
-        if (!node) return '';
-        const clone = node.cloneNode(true);
-        clone
-          .querySelectorAll(
-            '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]',
-          )
-          .forEach((candidate) => candidate.remove());
-        return clone instanceof HTMLTextAreaElement ? clone.value ?? '' : clone.innerText ?? clone.textContent ?? '';
-      };
+	      const readUserText = ${buildReadComposerUserTextFunction()};
       return {
         editorText: editor?.innerText ?? '',
         fallbackValue: fallback?.value ?? '',
@@ -765,6 +769,7 @@ export const __test__ = {
 	composerContainsPrompt,
 	normalizedComposerText,
 	promptMismatchDiagnostics,
+	buildReadComposerUserTextFunction,
 	preparePromptComposer,
 	verifyPromptCommitted,
 	waitForComposerReadyToSubmit,

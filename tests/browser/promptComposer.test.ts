@@ -49,6 +49,13 @@ describe("promptComposer", () => {
 		);
 	});
 
+	test("reads live block boundaries instead of detached clone text", () => {
+		const expression = promptComposer.buildReadComposerUserTextFunction();
+		expect(expression).toContain("window.getComputedStyle(current).display");
+		expect(expression).toContain("block|list-item|table-row|flex|grid");
+		expect(expression).not.toContain("cloneNode");
+	});
+
 	test("rejects a newly committed turn that only contains the requested prompt", async () => {
 		vi.useFakeTimers();
 		try {
