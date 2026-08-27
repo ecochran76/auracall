@@ -14,6 +14,11 @@
 - The focused/affected provider-free packet passes 209 tests, with typecheck,
   build, scoped lint, release lint, and diff hygiene green. Release lint reports
   the unchanged warning-debt surface rather than failing the gate.
+- The committed compiled helper installed byte-identically at SHA-256
+  `439a3645a238166d3a1f9a49ac7e5614173bb666bdbd379cbff34d9aafea3260`.
+  The installed module returned the complete 23,210-character fixture for both
+  representations. The API restarted healthy without launching a browser or
+  changing the pre-existing mirror's pass-17 `idle_waiting` ownership.
 
 ## 2026-08-27 | Plan 0319 exact-turn acceptance and research experiment
 

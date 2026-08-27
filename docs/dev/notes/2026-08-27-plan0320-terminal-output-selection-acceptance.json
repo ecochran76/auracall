@@ -1,0 +1,50 @@
+{
+  "schema_version": "auracall.plan0320.acceptance.v1",
+  "plan": "0320-2026-08-27-chatgpt-terminal-output-selection",
+  "branch": "fix/plan0320-chatgpt-terminal-output-selection",
+  "source_checkpoint": "86ec7f5e",
+  "defect_fixture": {
+    "captured_text_characters": 55,
+    "final_dom_text_characters": 55,
+    "copied_markdown_characters": 23210,
+    "status": "Connection interrupted. Waiting for the complete answer",
+    "prior_decision": "stable-dom-substantive-mismatch",
+    "accepted_decision": "copied-markdown-terminal-status"
+  },
+  "validation": {
+    "focused_tests": 13,
+    "affected_tests": 209,
+    "typecheck": "PASS",
+    "build": "PASS",
+    "scoped_lint": "PASS",
+    "release_lint": "PASS_WITH_208_EXISTING_WARNINGS",
+    "plan_audit_errors": 0,
+    "codegraph": "FRESH_AND_READ_BACK",
+    "diff_hygiene": "PASS"
+  },
+  "installed_runtime": {
+    "compiled_helper_sha256": "439a3645a238166d3a1f9a49ac7e5614173bb666bdbd379cbff34d9aafea3260",
+    "semantic_smoke_decision": "copied-markdown-terminal-status",
+    "semantic_smoke_text_characters": 23210,
+    "semantic_smoke_markdown_characters": 23210,
+    "api_pid": 21419,
+    "api_restart_count": 0,
+    "api_ok": true
+  },
+  "ownership": {
+    "browser_port": 9222,
+    "browser_closed": true,
+    "provider_submissions": 0,
+    "litscout_actions": 0,
+    "account_mirror_completion_id": "acctmirror_completion_24831e4d-70b7-419c-86f5-53ae1bb5a93b",
+    "account_mirror_status": "idle_waiting",
+    "account_mirror_pass_count": 17
+  },
+  "acceptance": {
+    "TOR-R1": "PASS",
+    "TOR-R2": "PASS",
+    "TOR-R3": "PASS",
+    "TOR-R4": "PASS",
+    "TOR-R5": "PASS"
+  }
+}

@@ -21,6 +21,11 @@
 - GREEN passes the helper suite 13/13 and the affected reattach/ChatGPT adapter
   packet 209/209. Typecheck, build, scoped lint, release lint, and diff hygiene
   pass; release lint retains 208 unrelated warning-level diagnostics.
+- Checkpoint `86ec7f5e` installed with source/runtime compiled-helper SHA-256
+  `439a3645a...a3260`. The installed module preserved all 23,210 fixture
+  characters for both representations. API PID 21419 is healthy with zero
+  restarts; the existing mirror remains `idle_waiting` at pass 17 and port 9222
+  is closed. Integration/push remain; no provider action is required.
 
 ## Turn 529 | 2026-08-27
 

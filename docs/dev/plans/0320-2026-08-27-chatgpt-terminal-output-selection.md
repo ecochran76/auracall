@@ -1,7 +1,7 @@
 # ChatGPT terminal-output selection | 0320-2026-08-27
 
 State: OPEN
-Operational state: SOURCE_GREEN_INSTALL_PENDING
+Operational state: INSTALLED_ACCEPTED_INTEGRATION_PENDING
 Lane: P13
 Branch: fix/plan0320-chatgpt-terminal-output-selection
 Target: main
@@ -30,7 +30,14 @@ ordinary substantive response mismatches.
   non-status copy, and then preserves that copy for both output representations.
 - The complete helper suite passes 13/13; affected reattach and ChatGPT adapter
   coverage passes 209/209. Typecheck, production build, scoped lint, release
-  lint, and diff hygiene pass. Installation/parity and final planning audit remain.
+  lint, and diff hygiene pass.
+- Commit `86ec7f5e` installed at compiled helper SHA-256
+  `439a3645a238166d3a1f9a49ac7e5614173bb666bdbd379cbff34d9aafea3260`.
+  Direct invocation of the installed module returned all 23,210 fixture
+  characters for text and markdown with `copied-markdown-terminal-status`.
+- The API restarted healthy at PID 21419 with zero restarts. The pre-existing
+  account-mirror completion remained `idle_waiting` at pass 17, port 9222 stayed
+  closed, and no browser, provider, or LitScout action occurred.
 
 ## Authority And Bounds
 
@@ -71,8 +78,7 @@ ordinary substantive response mismatches.
 
 ## Acceptance Readback
 
-- `TOR-R1` through `TOR-R4`: PASS at the source checkpoint pending commit.
-- `TOR-R5`: pending commit, idle install, byte parity, and service readback.
+- `TOR-R1` through `TOR-R5`: PASS. Integration and push remain.
 
 ## Non-Goals
 

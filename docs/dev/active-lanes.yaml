@@ -223,14 +223,14 @@ lanes:
     branch: fix/plan0320-chatgpt-terminal-output-selection
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: null
+    custody_state: INTEGRATION_READY
+    checkpoint: 86ec7f5e
     remote_ref: null
     integration: merge
     dependencies: [P12]
     overlaps: []
-    validation_status: source-green-install-pending
-    validation_ref: null
+    validation_status: source-installed-provider-free-accepted
+    validation_ref: 86ec7f5e
     integration_receipt: null
-    disposition: Exact incident RED and 209-test affected GREEN prove the bounded terminal-status selector; commit, install parity, and integration remain.
+    disposition: Exact incident RED, 209-test GREEN, byte-identical install, and installed-module semantic smoke pass; integration/push remain.
     updated_at: 2026-08-27
