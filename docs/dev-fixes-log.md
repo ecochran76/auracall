@@ -22013,3 +22013,17 @@ browser-stage lifecycle observability, not transcript truncation.
   code, responsive narrow control endpoints, and an explicit aggregate-status
   budget; record a too-short default client timeout as performance debt rather
   than silently treating systemd `active` as API health.
+# 2026-08-27 — Preserve copied ChatGPT answer over terminal interruption chrome
+
+- Symptom: a completed 23,210-character copied writing block was discarded
+  because both captured response text and final DOM exposed only `Connection
+  interrupted. Waiting for the complete answer`.
+- Cause: `reconcileAssistantRepresentations` treated every eligible substantive
+  stable-DOM mismatch as authored content, even when the DOM value was exact
+  provider status chrome.
+- Repair: prefer copied markdown for both output representations only when the
+  captured and final-DOM texts independently match the exact normalized
+  interruption status, the copy is longer, and the copy is not itself status.
+  Ordinary substantive DOM mismatches remain authoritative.
+- Regression: `tests/browser/reattachHelpers.test.ts` freezes the 55-versus-
+  23,210 character incident at the production selector seam.

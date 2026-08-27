@@ -470,6 +470,7 @@ export function alignPromptEchoMarkdown(
 export type AssistantRepresentationDecision =
   | 'captured-answer-only'
   | 'captured-with-copied-markdown'
+  | 'copied-markdown-terminal-status'
   | 'copied-markdown-equivalent'
   | 'stable-dom-no-copy'
   | 'stable-dom-substantive-mismatch';
@@ -503,13 +504,24 @@ export function reconcileAssistantRepresentations(input: {
   const finalDomEligible = Boolean(finalDomText) && input.finalDomIsPromptEcho !== true;
   const copiedPlain = normalizeMarkdownForAssistantComparison(copiedMarkdown);
   const finalPlain = normalizeAssistantRepresentationText(finalDomText);
+  const terminalStatusReplacedByCopy =
+    Boolean(copiedMarkdown) &&
+    copiedPlain.length > finalPlain.length &&
+    isChatgptTerminalAssistantStatus(capturedText) &&
+    isChatgptTerminalAssistantStatus(finalDomText) &&
+    !isChatgptTerminalAssistantStatus(copiedMarkdown);
 
   let decision: AssistantRepresentationDecision;
   let answerText: string;
   let answerMarkdown: string;
   let substantiveMismatch = false;
 
-  if (!finalDomEligible) {
+  if (terminalStatusReplacedByCopy) {
+    decision = 'copied-markdown-terminal-status';
+    substantiveMismatch = true;
+    answerText = copiedMarkdown;
+    answerMarkdown = copiedMarkdown;
+  } else if (!finalDomEligible) {
     decision = copiedMarkdown ? 'captured-with-copied-markdown' : 'captured-answer-only';
     answerText = capturedText;
     answerMarkdown = copiedMarkdown || capturedText;
@@ -542,6 +554,15 @@ export function reconcileAssistantRepresentations(input: {
       finalDomFingerprint: fingerprintAssistantRepresentation(finalPlain),
     },
   };
+}
+
+function isChatgptTerminalAssistantStatus(value: string): boolean {
+  const normalized = String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  return normalized === 'connection interrupted waiting for the complete answer';
 }
 
 function normalizeMarkdownForAssistantComparison(value: string): string {

@@ -216,3 +216,21 @@ lanes:
     integration_receipt: e660c71a5f8ff684f53df3926ce63f5086633a69
     disposition: Exact-one-turn composer acceptance passed in a fresh CDP-observed research run and integrated to main; terminal output selection remains a separate successor defect.
     updated_at: 2026-08-27
+  - id: P13
+    objective: Preserve a substantive copied ChatGPT writing block when the terminal DOM contains only an explicit interruption status.
+    plan: docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md
+    plan_ref: refs/heads/fix/plan0320-chatgpt-terminal-output-selection
+    branch: fix/plan0320-chatgpt-terminal-output-selection
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: null
+    integration: merge
+    dependencies: [P12]
+    overlaps: []
+    validation_status: source-green-install-pending
+    validation_ref: null
+    integration_receipt: null
+    disposition: Exact incident RED and 209-test affected GREEN prove the bounded terminal-status selector; commit, install parity, and integration remain.
+    updated_at: 2026-08-27

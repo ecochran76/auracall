@@ -1,5 +1,27 @@
 # RUNBOOK
 
+## Turn 530 | 2026-08-27
+
+- Operator authorized the best recommended successor after Plan 0319. P13 opens
+  [Plan 0320](docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md)
+  on `fix/plan0320-chatgpt-terminal-output-selection`.
+- The live defect contract is frozen: captured text and final DOM both contained
+  the 55-character `Connection interrupted` status while ChatGPT's successful
+  copy surface returned 23,210 characters of substantive markdown. Existing
+  `reconcileAssistantRepresentations` treats every non-echo stable DOM mismatch
+  as authoritative and therefore discarded the complete writing block.
+- The bounded repair will recognize only an explicit terminal-status DOM result
+  when substantive copied markdown exists. Ordinary digit/word mismatches,
+  prompt echoes, missing copy results, composer behavior, provider approval,
+  and research execution remain unchanged. No provider submission is planned.
+- RED reproduced `stable-dom-substantive-mismatch` discarding the exact
+  23,210-character fixture. The confirmed cause is unconditional stable-DOM
+  precedence for status chrome. The repair requires the exact status on both
+  captured and final-DOM surfaces plus a longer non-status copy.
+- GREEN passes the helper suite 13/13 and the affected reattach/ChatGPT adapter
+  packet 209/209. Typecheck, build, scoped lint, release lint, and diff hygiene
+  pass; release lint retains 208 unrelated warning-level diagnostics.
+
 ## Turn 529 | 2026-08-27
 
 - Plan 0319's committed-turn control exclusion was installed byte-identically at

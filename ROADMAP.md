@@ -4,8 +4,15 @@
 
 ### Current Execution Board
 
-Status: aggregate status latency open; ChatGPT composer replacement integrated
-Lanes: P01, P02, P03, P06, P07, P09, P10, P11, P12 (integrated); P04, P05 (terminal hard stop, integrated); P08 (open)
+Status: aggregate status latency and ChatGPT terminal-output selection open
+Lanes: P01, P02, P03, P06, P07, P09, P10, P11, P12 (integrated); P04, P05 (terminal hard stop, integrated); P08, P13 (open)
+
+- Active ChatGPT terminal-output selection repair:
+  [docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md](docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md)
+  P13 freezes Plan 0319's recovered writing-block versus interruption-banner
+  evidence as a provider-free regression. It changes only the final response
+  representation selector, preserves ordinary substantive-DOM mismatch safety,
+  and requires installed-runtime parity before closeout.
 
 - Integrated ChatGPT composer replacement and exact-turn proof:
   [docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md](docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md)

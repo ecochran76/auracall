@@ -33,6 +33,30 @@ describe('alignPromptEchoPair', () => {
 });
 
 describe('reconcileAssistantRepresentations', () => {
+  test('preserves copied writing block when captured and final DOM contain only interruption status', () => {
+    const interruptionStatus = 'Connection interrupted. Waiting for the complete answer';
+    const copiedMarkdownBody = `# Feasibility proposal\n\n${'Substantive evidence and recommendation.\n'.repeat(700)}`;
+    const copiedMarkdown = `${copiedMarkdownBody.slice(0, 23_209)}x`;
+
+    const result = reconcileAssistantRepresentations({
+      capturedText: interruptionStatus,
+      copiedMarkdown,
+      finalDomText: interruptionStatus,
+    });
+
+    expect(result).toMatchObject({
+      answerText: copiedMarkdown,
+      answerMarkdown: copiedMarkdown,
+      decision: 'copied-markdown-terminal-status',
+    });
+    expect(result.evidence).toMatchObject({
+      substantiveMismatch: true,
+      capturedTextChars: 55,
+      copiedMarkdownChars: 23_210,
+      finalDomTextChars: 55,
+    });
+  });
+
   test('prefers stable DOM when copied markdown loses one substantive digit', () => {
     const result = reconcileAssistantRepresentations({
       capturedText: 'Corpus: 150 total; 12 keep; 138 remove.',

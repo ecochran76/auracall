@@ -1,3 +1,20 @@
+## 2026-08-27 | Plan 0320 terminal-output selection repair
+
+- Plan 0319 recovered a complete ChatGPT writing block after AuraCall persisted
+  only the terminal `Connection interrupted` status. The existing selector gives
+  every stable non-echo DOM mismatch precedence over copied markdown, even when
+  the DOM text is provider status chrome rather than authored response content.
+- P13 will add the exact incident shape as a deterministic provider-free RED,
+  then narrowly prefer successful copied markdown only for classified terminal
+  status text. Ordinary substantive mismatches continue to prefer stable DOM.
+- The RED failed exactly: 23,210 copied characters were replaced by the 55-byte
+  status. The repair requires that exact normalized status independently on the
+  captured and final-DOM surfaces, a longer copy, and a copy that is not itself
+  status text. It does not implement generic length precedence.
+- The focused/affected provider-free packet passes 209 tests, with typecheck,
+  build, scoped lint, release lint, and diff hygiene green. Release lint reports
+  the unchanged warning-debt surface rather than failing the gate.
+
 ## 2026-08-27 | Plan 0319 exact-turn acceptance and research experiment
 
 - The installed committed-turn reader excludes ChatGPT presentation controls
