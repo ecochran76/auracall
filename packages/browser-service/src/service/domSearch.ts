@@ -34,6 +34,8 @@ export interface BrowserDomSearchOptions {
   maxScan?: number;
 }
 
+export const BROWSER_DOM_SEARCH_OUTPUT_TEXT_LIMIT = 500;
+
 export function normalizeBrowserDomSearchOptions(
   options: BrowserDomSearchOptions = {},
 ): Required<Omit<BrowserDomSearchOptions, 'checked' | 'expanded'>> & {
@@ -60,9 +62,16 @@ export function normalizeBrowserDomSearchOptions(
 export function buildBrowserDomSearchExpression(options: BrowserDomSearchOptions = {}): string {
   const normalizedOptions = normalizeBrowserDomSearchOptions(options);
   const optionsJson = JSON.stringify(normalizedOptions);
+  const outputTextLimit = BROWSER_DOM_SEARCH_OUTPUT_TEXT_LIMIT;
   return `(() => {
     const options = ${optionsJson};
+    const outputTextLimit = ${outputTextLimit};
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const clip = (value, limit = outputTextLimit) => {
+      const normalized = normalize(value);
+      if (!normalized) return null;
+      return normalized.length > limit ? normalized.slice(0, limit) + '…' : normalized;
+    };
     const normalizeMatch = (value) => {
       const text = normalize(value);
       return options.caseSensitive ? text : text.toLowerCase();
@@ -90,23 +99,25 @@ export function buildBrowserDomSearchExpression(options: BrowserDomSearchOptions
       const visible = isVisible(node);
       if (options.visibleOnly && !visible) continue;
       const tag = String(node.tagName || '').toLowerCase();
-      const role = normalize(node.getAttribute('role') || '') || null;
-      const text = normalize(node.textContent || '') || null;
-      const ariaLabel = normalize(node.getAttribute('aria-label') || '') || null;
-      const title = normalize(node.getAttribute('title') || '') || null;
-      const dataTestId = normalize(node.getAttribute('data-test-id') || '') || null;
-      const className = normalize(node.className || '') || null;
-      const href = node instanceof HTMLAnchorElement ? normalize(node.href || '') || null : null;
+      if (tag === 'script' || tag === 'style' || tag === 'noscript' || tag === 'template') continue;
+      const role = clip(node.getAttribute('role') || '');
+      const rawText = normalize(node.innerText || '');
+      const text = clip(rawText);
+      const ariaLabel = clip(node.getAttribute('aria-label') || '');
+      const title = clip(node.getAttribute('title') || '');
+      const dataTestId = clip(node.getAttribute('data-test-id') || '');
+      const className = clip(node.className || '');
+      const href = node instanceof HTMLAnchorElement ? clip(node.href || '', 2048) : null;
       const checkedAttr = node.getAttribute('aria-checked');
       const expandedAttr = node.getAttribute('aria-expanded');
       const checked = checkedAttr === 'true' ? true : checkedAttr === 'false' ? false : null;
       const expanded = expandedAttr === 'true' ? true : expandedAttr === 'false' ? false : null;
-      const textHaystack = normalizeMatch([text, ariaLabel, title].filter(Boolean).join(' '));
+      const textHaystack = normalizeMatch([rawText, ariaLabel, title].filter(Boolean).join(' '));
       const roleHaystack = normalizeMatch(role || '');
       const dataTestIdHaystack = normalizeMatch(dataTestId || '');
       const classHaystack = normalizeMatch(className || '');
       const tagHaystack = normalizeMatch(tag);
-      if (!includesAny(textHaystack, options.text) && !includesAny(textHaystack, options.ariaLabel)) continue;
+      if (Array.isArray(options.text) && options.text.length > 0 && !includesAny(textHaystack, options.text)) continue;
       if (Array.isArray(options.ariaLabel) && options.ariaLabel.length > 0 && !includesAny(normalizeMatch(ariaLabel || ''), options.ariaLabel)) continue;
       if (Array.isArray(options.role) && options.role.length > 0 && !includesAny(roleHaystack, options.role)) continue;
       if (Array.isArray(options.dataTestId) && options.dataTestId.length > 0 && !includesAny(dataTestIdHaystack, options.dataTestId)) continue;
@@ -116,7 +127,7 @@ export function buildBrowserDomSearchExpression(options: BrowserDomSearchOptions
       if (options.expanded !== null && expanded !== options.expanded) continue;
       matches.push({
         tag,
-        id: normalize(node.id || '') || null,
+        id: clip(node.id || ''),
         role,
         text,
         ariaLabel,

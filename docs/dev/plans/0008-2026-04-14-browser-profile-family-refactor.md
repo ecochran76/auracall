@@ -5,6 +5,12 @@ Lane: P01
 
 ## Current State
 
+- 2026-08-23 maintenance slice: the projects CLI prebuilds browser list options
+  for cache identity and the provider service builds them again. The second
+  build must retain same-authority managed-profile/process provenance only when
+  the resolved DevTools endpoint remains compatible; it must discard foreign
+  authority or changed-endpoint context. This closes a concrete profile-family
+  mismatch without adding a new workflow or weakening account authorization.
 - roadmap classification: maintenance-only unless a concrete browser-profile
   family mismatch blocks the primary service/runner lane
 - this browser-profile refactor plan is still a live authority document from

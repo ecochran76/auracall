@@ -37,6 +37,57 @@ class PromptTestLlmService extends LlmService {
 }
 
 describe("LlmService provider prompt", () => {
+	test("prepares a provider workbench through the shared service seam without planning a prompt", async () => {
+		const result = {
+			chatgptMode: "work" as const,
+			modelSelectionKind: "work-model" as const,
+			model: "GPT-5.6 Sol",
+			messages: ["Work model picker: GPT-5.6 Sol selected"],
+			url: "https://chatgpt.com/g/project",
+		};
+		const preparePromptWorkbench = vi.fn(async () => result);
+		const service = new PromptTestLlmService(
+			{ auracallProfile: "default", browser: { cache: {} } } as ResolvedUserConfig,
+			{
+				id: "chatgpt",
+				config: { id: "chatgpt", selectors: {} as never },
+				preparePromptWorkbench,
+			} satisfies LlmServiceAdapter,
+			{
+				resolveServiceTarget: vi.fn(async () => ({
+					host: "127.0.0.1",
+					port: 45002,
+					browserProfile: "default",
+					sourceBrowserProfile: "Default",
+					managedBrowserProfile: "/managed/default/chatgpt",
+					browserProcessId: 1234,
+					tab: { targetId: "target-workbench", url: result.url },
+				})),
+				getMutationAuditSink: () => undefined,
+			},
+		);
+		const planPrompt = vi.spyOn(service, "planPrompt");
+
+		await expect(
+			service.preparePromptWorkbench({
+				targetUrl: result.url,
+				chatgptMode: "work",
+				workModel: "GPT-5.6 Sol",
+				modelStrategy: "select",
+			}),
+		).resolves.toBe(result);
+		expect(planPrompt).not.toHaveBeenCalled();
+		expect(preparePromptWorkbench).toHaveBeenCalledWith(
+			expect.objectContaining({
+				targetUrl: result.url,
+				chatgptMode: "work",
+				workModel: "GPT-5.6 Sol",
+				modelStrategy: "select",
+			}),
+			expect.objectContaining({ host: "127.0.0.1", port: 45002 }),
+		);
+	});
+
 	test("fails with the exact unsupported-provider error before planning", async () => {
 		const service = new PromptTestLlmService(
 			{ browser: { cache: {} } } as ResolvedUserConfig,

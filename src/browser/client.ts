@@ -4,6 +4,8 @@ import type {
   BrowserProvider,
   BrowserProviderActiveMediaMaterializationInput,
   BrowserProviderListOptions,
+  BrowserProviderPromptWorkbenchInput,
+  BrowserProviderPromptWorkbenchResult,
 } from './providers/types.js';
 import { diagnoseProvider, type DiagnosisReport } from '../inspector/doctor.js';
 import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
@@ -111,6 +113,13 @@ export class BrowserAutomationClient {
     options?: BrowserProviderListOptions,
   ): Promise<PromptResult> {
     return this.llmService.runPrompt(input, options);
+  }
+
+  async preparePromptWorkbench(
+    input: BrowserProviderPromptWorkbenchInput,
+    options?: BrowserProviderListOptions,
+  ): Promise<BrowserProviderPromptWorkbenchResult> {
+    return this.llmService.preparePromptWorkbench(input, options);
   }
 
   async getConversationContext(

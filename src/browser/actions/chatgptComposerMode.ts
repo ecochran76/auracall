@@ -24,6 +24,28 @@ export function normalizeChatgptComposerMode(
 	throw new Error(`Invalid ChatGPT mode: "${value}". Expected "chat" or "work".`);
 }
 
+export function buildActiveChatgptWorkConversationMarkerDefinition(): string {
+	return `const hasActiveConversationWorkMarker = () =>
+      Array.from(document.querySelectorAll('a[href]'))
+        .some((node) => {
+          const href = node.getAttribute('href');
+          if (!href) return false;
+          let pathname = '';
+          try {
+            pathname = new URL(href, location.href).pathname;
+          } catch {
+            return false;
+          }
+          if (pathname !== location.pathname) return false;
+          const ariaLabel = normalize(node.getAttribute('aria-label'));
+          if (ariaLabel === 'work' || ariaLabel.endsWith(', work') || ariaLabel.endsWith(' work')) {
+            return true;
+          }
+          return Array.from(node.querySelectorAll('span'))
+            .some((marker) => normalize(marker.textContent) === 'work');
+        });`;
+}
+
 export async function ensureChatgptComposerMode(
 	Runtime: ChromeClient["Runtime"],
 	desiredMode: ChatgptComposerMode,
@@ -87,26 +109,36 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
     const isSelected = (node) =>
       node.getAttribute('aria-checked') === 'true' ||
       node.getAttribute('data-state') === 'on';
-    const hasActiveConversationWorkMarker = () =>
-      Array.from(document.querySelectorAll('a[href][data-active]'))
-        .filter(visible)
-        .some((node) => {
-          const href = node.getAttribute('href');
-          if (!href) return false;
-          let pathname = '';
-          try {
-            pathname = new URL(href, location.href).pathname;
-          } catch {
-            return false;
-          }
-          if (pathname !== location.pathname) return false;
-          return Array.from(node.querySelectorAll('span'))
-            .some((marker) => normalize(marker.textContent) === 'work');
-        });
-    const radios = Array.from(document.querySelectorAll('[role="radio"]'))
+    ${buildActiveChatgptWorkConversationMarkerDefinition()}
+    const collectRadios = () => Array.from(document.querySelectorAll('[role="radio"]'))
       .filter(visible)
       .map((node) => ({ node, label: normalize(node.textContent) }))
       .filter(({ label }) => label === 'chat' || label === 'work');
+    const collectModeTriggers = () => Array.from(document.querySelectorAll('button[aria-haspopup="menu"]'))
+      .filter(visible)
+      .map((node) => ({ node, label: normalize(node.textContent) }))
+      .filter(({ label }) => label === 'chat' || label === 'work');
+    let radios = collectRadios();
+    let modeTriggers = collectModeTriggers();
+    const controlsStartedAt = performance.now();
+    while (radios.length === 0 && modeTriggers.length === 0 && performance.now() - controlsStartedAt < 30000) {
+      if (hasActiveConversationWorkMarker()) break;
+      if (DESIRED_MODE === 'chat') {
+        const promptEditors = Array.from(document.querySelectorAll(
+          '#prompt-textarea[role="textbox"][contenteditable="true"], textarea#prompt-textarea, textarea[name="prompt-textarea"]',
+        )).filter((node) =>
+          visible(node) &&
+          node.getAttribute('aria-disabled') !== 'true' &&
+          !('disabled' in node && node.disabled === true)
+        );
+        if (promptEditors.length > 0) {
+          return { status: 'already-selected', mode: DESIRED_MODE };
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      radios = collectRadios();
+      modeTriggers = collectModeTriggers();
+    }
     const radioTarget = radios.find(({ label }) => label === DESIRED_MODE);
     if (radioTarget) {
       if (isSelected(radioTarget.node)) return { status: 'already-selected', mode: DESIRED_MODE };
@@ -118,10 +150,6 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       }
       return { status: 'selection-not-confirmed', mode: DESIRED_MODE };
     }
-    const modeTriggers = Array.from(document.querySelectorAll('button[aria-haspopup="menu"]'))
-      .filter(visible)
-      .map((node) => ({ node, label: normalize(node.textContent) }))
-      .filter(({ label }) => label === 'chat' || label === 'work');
     const trigger = modeTriggers[0];
     const triggerLabel = trigger?.label;
     if (triggerLabel === DESIRED_MODE) {
@@ -133,23 +161,6 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
         return DESIRED_MODE === 'work'
           ? { status: 'already-selected', mode: DESIRED_MODE }
           : { status: 'mode-not-found', availableModes: ['Work'] };
-      }
-      if (DESIRED_MODE === 'chat' && radios.length === 0) {
-        const composerStartedAt = performance.now();
-        while (performance.now() - composerStartedAt < 10000) {
-          if (hasActiveConversationWorkMarker()) break;
-          const promptEditors = Array.from(document.querySelectorAll(
-            '#prompt-textarea[role="textbox"][contenteditable="true"], textarea#prompt-textarea, textarea[name="prompt-textarea"]',
-          )).filter((node) =>
-            visible(node) &&
-            node.getAttribute('aria-disabled') !== 'true' &&
-            !('disabled' in node && node.disabled === true)
-          );
-          if (promptEditors.length > 0) {
-            return { status: 'already-selected', mode: DESIRED_MODE };
-          }
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
       }
       return {
         status: 'mode-not-found',

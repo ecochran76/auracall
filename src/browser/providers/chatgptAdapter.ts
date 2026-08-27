@@ -114,6 +114,8 @@ import type {
 	BrowserProviderListOptions,
 	BrowserProviderPromptInput,
 	BrowserProviderPromptResult,
+	BrowserProviderPromptWorkbenchInput,
+	BrowserProviderPromptWorkbenchResult,
 	ProviderUserIdentity,
 } from "./types.js";
 
@@ -2004,6 +2006,18 @@ export function isChatgptTargetReusableForPreferredUrl(
 		return targetConversationId === preferredConversationId;
 	}
 	return !targetConversationId;
+}
+
+export function isChatgptPromptWorkbenchAtTarget(
+	targetUrl: string | null | undefined,
+	preferredUrl: string | null | undefined,
+): boolean {
+	const preferred = String(preferredUrl ?? "").trim();
+	const preferredProjectId = extractChatgptProjectIdFromUrl(preferred);
+	if (preferredProjectId) {
+		return extractChatgptProjectIdFromUrl(String(targetUrl ?? "").trim()) === preferredProjectId;
+	}
+	return isChatgptTargetReusableForPreferredUrl(targetUrl, preferredUrl);
 }
 
 export function findChatgptProjectByName<T extends { id: string; name: string; url?: string }>(
@@ -12372,6 +12386,102 @@ async function materializeChatgptConversationArtifactWithClient(
 	);
 }
 
+type ChatgptPromptWorkbenchConfig = {
+	chatgptMode?: "chat" | "work" | null;
+	desiredModel?: string | null;
+	inputTimeoutMs?: number | null;
+	modelStrategy?: "select" | "current" | "ignore";
+	thinkingTime?: "light" | "standard" | "extended" | "heavy" | null;
+	workModel?: string | null;
+};
+
+async function prepareChatgptPromptWorkbenchInClient(
+	client: ChromeClient,
+	input: BrowserProviderPromptWorkbenchInput & {
+		thinkingTime?: "light" | "standard" | "extended" | "heavy" | null;
+	},
+	browserConfig: ChatgptPromptWorkbenchConfig | undefined,
+	logger: BrowserLogger,
+	options?: BrowserProviderListOptions,
+): Promise<{
+	chatgptMode: "chat" | "work";
+	inputTimeoutMs: number;
+	modelSelectionKind: BrowserProviderPromptWorkbenchResult["modelSelectionKind"];
+	model: string | null;
+}> {
+	const chatgptMode = input.chatgptMode ?? browserConfig?.chatgptMode ?? "chat";
+	const desiredModel = input.desiredModel ?? browserConfig?.desiredModel ?? null;
+	const workModel = input.workModel ?? browserConfig?.workModel ?? null;
+	const modelStrategy = input.modelStrategy ?? browserConfig?.modelStrategy ?? "select";
+	const thinkingTime = input.thinkingTime ?? browserConfig?.thinkingTime ?? null;
+	const inputTimeoutMs = input.inputTimeoutMs ?? browserConfig?.inputTimeoutMs ?? 30_000;
+	const { Runtime } = client;
+	const targetUrl = normalizeUiText(input.targetUrl);
+	if (targetUrl) {
+		const currentUrl = await readChatgptLocationHref(Runtime).catch(() => null);
+		if (!isChatgptPromptWorkbenchAtTarget(currentUrl, targetUrl)) {
+			await navigateToChatgptUrl(
+				client,
+				targetUrl,
+				extractChatgptProjectIdFromUrl(targetUrl) ?? undefined,
+				options,
+			);
+			const observedUrl = await readChatgptLocationHref(Runtime).catch(() => null);
+			if (!isChatgptPromptWorkbenchAtTarget(observedUrl, targetUrl)) {
+				throw new Error(
+					`ChatGPT prompt workbench remained on ${observedUrl ?? "(unknown URL)"}, not the requested ${targetUrl}.`,
+				);
+			}
+			logger(`ChatGPT workbench target: ${observedUrl}`);
+		}
+	}
+
+	await ensureChatgptComposerMode(Runtime, chatgptMode, logger);
+	await ensurePromptReady(Runtime, inputTimeoutMs, logger);
+	const modelSelectionPlan = resolveChatgptModelSelectionPlan({
+		mode: chatgptMode,
+		desiredModel,
+		workModel,
+		strategy: modelStrategy,
+	});
+	if (modelSelectionPlan.kind === "chat-model") {
+		await ensureModelSelection(
+			Runtime,
+			modelSelectionPlan.model,
+			logger,
+			modelSelectionPlan.strategy,
+		);
+	} else if (modelSelectionPlan.kind === "work-model") {
+		await ensureChatgptWorkModelSelection(
+			Runtime,
+			modelSelectionPlan.model,
+			logger,
+			modelSelectionPlan.strategy,
+		);
+	} else if (modelSelectionPlan.kind === "work-current") {
+		logger("Work model picker: preserving current selection");
+	} else {
+		logger("Model picker: skipped (strategy=ignore)");
+	}
+	if (
+		chatgptMode === "chat" &&
+		thinkingTime &&
+		desiredModel &&
+		/\b(sol|thinking|pro)\b/i.test(desiredModel)
+	) {
+		await ensureThinkingTime(Runtime, thinkingTime, logger);
+	}
+	return {
+		chatgptMode,
+		inputTimeoutMs,
+		modelSelectionKind: modelSelectionPlan.kind,
+		model:
+			modelSelectionPlan.kind === "chat-model" || modelSelectionPlan.kind === "work-model"
+				? modelSelectionPlan.model
+				: null,
+	};
+}
+
 export function createChatgptAdapter(): Pick<
 	BrowserProvider,
 	| "capabilities"
@@ -12402,6 +12512,7 @@ export function createChatgptAdapter(): Pick<
 	| "materializeConversationArtifact"
 	| "renameConversation"
 	| "deleteConversation"
+	| "preparePromptWorkbench"
 	| "runPrompt"
 > {
 	return {
@@ -12410,6 +12521,54 @@ export function createChatgptAdapter(): Pick<
 			conversations: true,
 			instructions: true,
 			files: true,
+		},
+		async preparePromptWorkbench(
+			input: BrowserProviderPromptWorkbenchInput,
+			options?: BrowserProviderListOptions,
+		): Promise<BrowserProviderPromptWorkbenchResult> {
+			await beforeChatgptBrowserInteraction(options, "generic");
+			const targetUrl = input.targetUrl ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
+			const connection = await connectToChatgptTab(options, targetUrl);
+			const browserConfig = options?.browserService?.getConfig() as
+				| ChatgptPromptWorkbenchConfig
+				| undefined;
+			const messages: string[] = [];
+			const logger = ((message: string): void => {
+				messages.push(message);
+				void input.onProgress?.({
+					phase: "composer_ready",
+					details: { provider: "chatgpt", message },
+				});
+			}) as BrowserLogger;
+			logger.verbose = false;
+
+			return runWithChatgptAbortBoundConnection(connection, options, async (client) => {
+				await assertChatgptExpectedIdentity(client, options);
+				const prepared = await prepareChatgptPromptWorkbenchInClient(
+					client,
+					input,
+					browserConfig,
+					logger,
+					options,
+				);
+				const locationResult = await client.Runtime.evaluate({
+					expression: "location.href",
+					returnByValue: true,
+				});
+				return {
+					chatgptMode: prepared.chatgptMode,
+					modelSelectionKind: prepared.modelSelectionKind,
+					model: prepared.model,
+					messages,
+					url:
+						typeof locationResult.result?.value === "string"
+							? locationResult.result.value
+							: targetUrl,
+					tabTargetId: connection.targetId ?? null,
+					devtoolsHost: connection.host ?? null,
+					devtoolsPort: connection.port ?? null,
+				};
+			});
 		},
 		async runPrompt(
 			input: BrowserProviderPromptInput,
@@ -12424,28 +12583,14 @@ export function createChatgptAdapter(): Pick<
 			const targetUrl = input.targetUrl ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
 			const connection = await connectToChatgptTab(options, targetUrl);
 			const browserConfig = options?.browserService?.getConfig() as
-				| {
-						chatgptMode?: "chat" | "work" | null;
+				| (ChatgptPromptWorkbenchConfig & {
 						composerTool?: string | null;
-						desiredModel?: string | null;
-						inputTimeoutMs?: number | null;
-						modelStrategy?: "select" | "current" | "ignore";
-						thinkingTime?: "light" | "standard" | "extended" | "heavy" | null;
-						workModel?: string | null;
-				  }
+				  })
 				| undefined;
 			const isImageGeneration = input.capabilityId === "chatgpt.media.create_image";
-			const chatgptMode = input.chatgptMode ?? browserConfig?.chatgptMode ?? "chat";
-			const desiredModel = input.desiredModel ?? browserConfig?.desiredModel ?? null;
-			const workModel = input.workModel ?? browserConfig?.workModel ?? null;
-			const modelStrategy = isImageGeneration
-				? "ignore"
-				: (input.modelStrategy ?? browserConfig?.modelStrategy ?? "select");
-			const thinkingTime = input.thinkingTime ?? browserConfig?.thinkingTime ?? null;
 			const composerTool = isImageGeneration
 				? "create image"
 				: (browserConfig?.composerTool ?? null);
-			const inputTimeoutMs = browserConfig?.inputTimeoutMs ?? 30_000;
 			const logger = ((message: string): void => {
 				void input.onProgress?.({
 					phase: "submit_path_observed",
@@ -12457,41 +12602,17 @@ export function createChatgptAdapter(): Pick<
 			return runWithChatgptAbortBoundConnection(connection, options, async (client) => {
 				await assertChatgptExpectedIdentity(client, options);
 				const { DOM, Input, Page, Runtime } = client;
-				await ensureChatgptComposerMode(Runtime, chatgptMode, logger);
-				await ensurePromptReady(Runtime, inputTimeoutMs, logger);
-				const modelSelectionPlan = resolveChatgptModelSelectionPlan({
-					mode: chatgptMode,
-					desiredModel,
-					workModel,
-					strategy: modelStrategy,
-				});
-				if (modelSelectionPlan.kind === "chat-model") {
-					await ensureModelSelection(
-						Runtime,
-						modelSelectionPlan.model,
-						logger,
-						modelSelectionPlan.strategy,
-					);
-				} else if (modelSelectionPlan.kind === "work-model") {
-					await ensureChatgptWorkModelSelection(
-						Runtime,
-						modelSelectionPlan.model,
-						logger,
-						modelSelectionPlan.strategy,
-					);
-				} else if (modelSelectionPlan.kind === "work-current") {
-					logger("Work model picker: preserving current selection");
-				} else {
-					logger("Model picker: skipped (strategy=ignore)");
-				}
-				if (
-					chatgptMode === "chat" &&
-					thinkingTime &&
-					desiredModel &&
-					/\b(sol|thinking|pro)\b/i.test(desiredModel)
-				) {
-					await ensureThinkingTime(Runtime, thinkingTime, logger);
-				}
+				const prepared = await prepareChatgptPromptWorkbenchInClient(
+					client,
+					{
+						...input,
+						modelStrategy: isImageGeneration ? "ignore" : input.modelStrategy,
+					},
+					browserConfig,
+					logger,
+					options,
+				);
+				const { chatgptMode, inputTimeoutMs } = prepared;
 				if (composerTool) {
 					if (chatgptMode === "work") {
 						throw new Error(

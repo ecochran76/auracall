@@ -1,6 +1,8 @@
 import type {
   BrowserProvider,
   BrowserProviderListOptions,
+  BrowserProviderPromptWorkbenchInput,
+  BrowserProviderPromptWorkbenchResult,
   BrowserProviderPromptProgressEvent,
   BrowserProviderPromptResult,
   ProviderUserIdentity,
@@ -45,6 +47,11 @@ export type CacheContext = CacheSettings & {
 export type ProjectListResult = Project[];
 export type ConversationListResult = Conversation[];
 export type PromptResult = BrowserProviderPromptResult;
+export type PromptWorkbenchInput = BrowserProviderPromptWorkbenchInput & {
+  configuredUrl?: string | null;
+  listOptions?: BrowserProviderListOptions;
+};
+export type PromptWorkbenchResult = BrowserProviderPromptWorkbenchResult;
 
 export type IdentityPrompt = (provider: ProviderId) => Promise<ProviderUserIdentity | null>;
 
