@@ -1,7 +1,7 @@
 # ChatGPT composer replacement and exact-turn proof | 0319-2026-08-27
 
-State: OPEN
-Operational state: LIVE_ACCEPTED_INTEGRATION_PENDING
+State: CLOSED
+Operational state: SOURCE_INSTALLED_LIVE_ACCEPTED_INTEGRATED
 Lane: P12
 Branch: fix/plan0319-chatgpt-composer-replacement
 Target: main
@@ -128,7 +128,8 @@ research-to-draft experiment.
   LitScout effects and a recovered proposal; browser and background ownership
   were restored. The persisted LitScout terminal state and the AuraCall output
   extractor defect are explicit rather than masked.
-- Integration and push remain the only Plan 0319 closeout gate.
+- `e660c71a` was pushed to both the feature ref and `origin/main` by
+  non-forced fast-forward. Plan 0319 is complete.
 
 ## Non-Goals
 

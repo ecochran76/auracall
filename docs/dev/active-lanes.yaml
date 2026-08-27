@@ -204,15 +204,15 @@ lanes:
     plan_ref: refs/heads/fix/plan0319-chatgpt-composer-replacement
     branch: fix/plan0319-chatgpt-composer-replacement
     target: main
-    plan_state: OPEN
-    custody_state: ACCEPTED_WORKTREE
-    checkpoint: a284bacb
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: e660c71a5f8ff684f53df3926ce63f5086633a69
+    remote_ref: refs/remotes/origin/fix/plan0319-chatgpt-composer-replacement
     integration: merge
     dependencies: [P11]
     overlaps: []
     validation_status: source-installed-live-accepted
     validation_ref: a284bacb
-    integration_receipt: null
-    disposition: Exact-one-turn composer acceptance passed in fresh CDP-observed research run; terminal output selection is a separate successor defect, and integration/push remain.
+    integration_receipt: e660c71a5f8ff684f53df3926ce63f5086633a69
+    disposition: Exact-one-turn composer acceptance passed in a fresh CDP-observed research run and integrated to main; terminal output selection remains a separate successor defect.
     updated_at: 2026-08-27

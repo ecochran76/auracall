@@ -23,7 +23,8 @@
   but saved only the 55-character interruption banner instead of the substantive
   writing block. The full draft is preserved at
   `~/.auracall/sessions/frakktal-litscout-research-accepted/recovered-writing-block.md`.
-  Plan 0319 is live-accepted; integration/push is its remaining gate.
+  Acceptance checkpoint `e660c71a` is pushed to the feature ref and integrated
+  into `origin/main` by non-forced fast-forward. Plan 0319 is complete.
 
 ## Turn 528 | 2026-08-27
 
