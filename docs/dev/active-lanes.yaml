@@ -170,13 +170,13 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 6447bdc7b0f1cb4bd53beaa5f3152855332b67d6
+    checkpoint: 31a8fc0aa5f832c1df83e14b51cd07970b70291b
     remote_ref: refs/remotes/origin/fix/plan0317-durable-chatgpt-approval
     integration: merge-after-p09-reconciliation
     dependencies: [P09]
     overlaps: []
-    validation_status: provider-free-passed-install-pending
-    validation_ref: 6447bdc7b0f1cb4bd53beaa5f3152855332b67d6
+    validation_status: live-passed-reconciliation-pending
+    validation_ref: 31a8fc0aa5f832c1df83e14b51cd07970b70291b
     integration_receipt: null
-    disposition: Exact identical-successor-card RED is repaired and provider-free accepted; install and multi-call live proof remain, with app refresh, replacement, reconnect, and OAuth widening excluded.
+    disposition: Exact DOM-bound approval activation is installed and live-accepted in one multi-call LitScout turn with no reconnect or canonical write; integration waits behind P09 reconciliation.
     updated_at: 2026-08-27

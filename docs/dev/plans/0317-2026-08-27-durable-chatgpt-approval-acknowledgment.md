@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P10
-Operational state: LIVE_RED / REVISION_2_PROVIDER_FREE_GREEN
+Operational state: LIVE_ACCEPTED / RECONCILIATION_PENDING
 Branch: fix/plan0317-durable-chatgpt-approval
 Target: main
 Integration: merge-after-p09-reconciliation
@@ -43,7 +43,14 @@ approval card without weakening the unchanged-card one-click fence.
   proving OAuth was healthy and the coordinate action missed.
 - Revision 2 binds the sole activation to the settled exact DOM control under
   a CDP user gesture. Focused validation passes `17/17`; installed adoption and
-  one successor live acceptance remain.
+  one successor live acceptance passed at source commit `31a8fc0a`.
+- The accepted Sol/High turn completed `auth_session`, confirmed exact `Always
+  allow`, attempted the deliberately nonexistent cancellation, and returned
+  `LITSCOUT_DURABLE_APPROVAL_OK`. OAuth retained 19 unconsumed refresh tokens,
+  no refresh/app reconnect occurred, and project/job/operator-action counts
+  stayed `14/52/4`.
+- Live receipt:
+  `docs/dev/notes/2026-08-27-plan0317-durable-approval-live-proof.json`.
 - P08 owns aggregate-status latency. P09 owns Project-slug Work-mode proof and
   is live-accepted/reconciliation-pending. P10 changes neither source surface.
 
@@ -106,6 +113,9 @@ approval card without weakening the unchanged-card one-click fence.
 - `DCA-R6`: installed artifacts are byte-identical and one real multi-call
   LitScout turn completes without app refresh/replacement/reconnect; evidence
   separately reports OAuth authentication and ChatGPT tool consent.
+
+All six acceptance criteria are satisfied. Git reconciliation remains behind
+P09 because this branch is intentionally based on P09's live-accepted source.
 
 ## Non-Goals
 

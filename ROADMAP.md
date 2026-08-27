@@ -4,16 +4,16 @@
 
 ### Current Execution Board
 
-Status: aggregate status latency, Project-slug Work-marker reconciliation, and durable ChatGPT approval acknowledgment open
+Status: aggregate status latency and Project-slug Work-marker reconciliation open; durable ChatGPT approval live-accepted pending reconciliation
 Lanes: P01, P02, P03, P06, P07 (integrated); P04, P05 (terminal hard stop, integrated); P08, P09, P10 (open)
 
 - Active durable ChatGPT approval acknowledgment repair:
   [docs/dev/plans/0317-2026-08-27-durable-chatgpt-approval-acknowledgment.md](docs/dev/plans/0317-2026-08-27-durable-chatgpt-approval-acknowledgment.md)
-  P10 preserves LitScout's existing rotating OAuth connection and repairs the
-  separate AuraCall acknowledgment gap when ChatGPT replaces a clicked tool
-  approval card with an identical-looking next card. Stable DOM-instance proof
-  must distinguish replacement from one unchanged card without weakening the
-  exact-action or one-click fence. P10 does not overlap P08 or P09 source.
+  P10 is installed and live-accepted. One Sol/High turn completed
+  `auth_session`, exact `Always allow`, and one deliberately nonexistent
+  mutation call without app reconnect, OAuth failure, or canonical write.
+  Integration remains serialized behind P09 reconciliation; P10 does not
+  overlap P08 or P09 source.
 
 - Active urgent ChatGPT Project-slug Work-marker repair:
   [docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md](docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md)

@@ -2,6 +2,22 @@
 
 ## Turn 524 | 2026-08-27
 
+- P10 revision 2 is installed and live-accepted at source `31a8fc0a`. Exact
+  source/installed approval artifacts match SHA-256
+  `8d8042fe...121998b4`; the API is active at PID 24047 with zero restarts.
+- The accepted `plan0317-minimal-multicall-live` Sol/High turn logged confirmed
+  `Always allow`, then LitScout recorded `auth_session:success` and the expected
+  nonexistent `project_source_ingest_job_cancel:error`. ChatGPT returned exact
+  `LITSCOUT_DURABLE_APPROVAL_OK` in 55.3 seconds.
+- OAuth and consent are reconciled separately: refresh-token counts remained
+  89 total / 19 unconsumed with latest expiry 2026-09-26; no invalid-token,
+  invalid-grant, app refresh, replacement, disconnect, or reconnect occurred.
+  Canonical project/job/operator-action counts remained 14/52/4, exact canary
+  rows remain zero, browser locks/processes cleaned, and the API stayed healthy.
+- P10 is live-complete and remains open only for serialized Git reconciliation
+  after P09. Durable receipt:
+  `docs/dev/notes/2026-08-27-plan0317-durable-approval-live-proof.json`.
+
 - The operator requested that durable LitScout connection behavior be planned
   and executed after Plan 0458 was incorrectly summarized as an authentication
   lapse. Current evidence proves OAuth authentication succeeded; AuraCall
