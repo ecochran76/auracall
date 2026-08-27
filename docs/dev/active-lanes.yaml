@@ -183,18 +183,18 @@ lanes:
   - id: P11
     objective: Directly observe and reliably activate the exact ChatGPT connected-app approval control through the AuraCall wsl-chrome-3 DevTools port.
     plan: docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md
-    plan_ref: refs/heads/fix/plan0318-cdp-observed-chatgpt-approval
+    plan_ref: refs/remotes/origin/fix/plan0318-cdp-observed-chatgpt-approval
     branch: fix/plan0318-cdp-observed-chatgpt-approval
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: null
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: PUBLISHED_READY_FOR_INTEGRATION
+    checkpoint: 579ed6509b6bcd2b1127e9a073b8fbe205cdcdff
+    remote_ref: refs/remotes/origin/fix/plan0318-cdp-observed-chatgpt-approval
     integration: merge
     dependencies: [P10]
     overlaps: []
-    validation_status: instrumentation-open
-    validation_ref: null
+    validation_status: source-installed-live-accepted
+    validation_ref: 579ed6509b6bcd2b1127e9a073b8fbe205cdcdff
     integration_receipt: null
-    disposition: Instrument and directly observe the exact Plan 0459 approval card before applying the smallest evidence-backed repair.
+    disposition: Exact disabled-to-enabled control transition and trusted direct activation accepted; final readiness-wait repair is byte-identical installed and ready for fast-forward integration.
     updated_at: 2026-08-27

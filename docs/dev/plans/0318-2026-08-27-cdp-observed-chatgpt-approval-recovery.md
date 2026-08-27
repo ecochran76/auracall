@@ -1,6 +1,7 @@
 # CDP-observed ChatGPT approval recovery | 0318-2026-08-27
 
-State: OPEN
+State: CLOSED
+Operational state: LIVE_ACCEPTED / READY_FOR_INTEGRATION
 Lane: P11
 Branch: fix/plan0318-cdp-observed-chatgpt-approval
 Target: main
@@ -37,6 +38,15 @@ state.
 - The source repair now waits up to 60 seconds for that same exact settled
   card/control to become enabled; identity, ambiguity, hit-test, one-click, and
   `Answer now` fences remain unchanged.
+- Focused validation passes 23/23 and the affected approval/config gate passes
+  128/128; typecheck, scoped Biome, production build, plan-library audit, and
+  diff hygiene pass. Final source/installed approval and observer artifacts are
+  byte-identical.
+- The experiment-owned port-9222 browser was terminated. The temporarily
+  paused pre-existing account-mirror completion was resumed and owns its normal
+  API-managed port-45015 browser; that process is not an experiment leak.
+- Durable receipt:
+  `docs/dev/notes/2026-08-27-plan0318-live-acceptance.json`.
 
 ## Authority And Bounds
 
@@ -134,3 +144,6 @@ Plan 0318 closes when the exact live card transition and downstream LitScout
 effect are directly observed, the causal approval behavior is repaired or
 truthfully isolated, all runtime ownership is reconciled, and the validated
 source plus durable evidence are integrated and pushed.
+
+All six acceptance criteria are satisfied. The bounded lane is published and
+ready for a fast-forward integration to `main`.

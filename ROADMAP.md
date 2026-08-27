@@ -4,12 +4,12 @@
 
 ### Current Execution Board
 
-Status: aggregate status latency and CDP-observed ChatGPT approval recovery open; Project-slug Work marker and prior durable approval integrated
-Lanes: P01, P02, P03, P06, P07, P09, P10 (integrated); P04, P05 (terminal hard stop, integrated); P08, P11 (open)
+Status: aggregate status latency open; CDP-observed ChatGPT approval recovery live-accepted and ready for integration
+Lanes: P01, P02, P03, P06, P07, P09, P10 (integrated); P04, P05 (terminal hard stop, integrated); P08 (open); P11 (closed, ready for integration)
 
 - Active CDP-observed ChatGPT approval recovery:
   [docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md](docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md)
-  P11 instruments the exact connected-app approval control and directly
+  P11 instrumented the exact connected-app approval control and directly
   observes/manipulates it through the real `wsl-chrome-3` DevTools port. It
   resumes LitScout Project 15 / Session 73 rather than reconnecting OAuth or
   creating new research state. P08 remains isolated and non-overlapping.
