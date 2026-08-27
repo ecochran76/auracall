@@ -173,9 +173,9 @@ Tool approval is provider-owned and runs only during the post-submit ChatGPT
 response wait. `src/browser/actions/chatgptToolApproval.ts` requires one
 visible surface with exact paired `Allow once` and `Always allow` controls. It
 briefly settles and re-probes the same fingerprint and selected action, then
-uses the fresh button center for one trusted CDP pointer sequence. Changed or
-ambiguous pre-click state dispatches no pointer input; independent disappearance
-reports no action. Current ChatGPT cards are rooted at the exact
+focuses and invokes that exact verified DOM control inside one CDP user-gesture
+evaluation. Changed or ambiguous pre-activation state invokes no control;
+independent disappearance reports no action. Current ChatGPT cards are rooted at the exact
 `data-testid="tool-approval-card"`, not the containing assistant turn, so a
 mounted card receives a stable page-lifetime identity in a private WeakMap.
 The clicked card must disappear or be replaced by a different DOM card; the

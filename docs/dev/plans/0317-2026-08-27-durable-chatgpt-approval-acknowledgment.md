@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P10
-Operational state: PROVIDER_FREE_ACCEPTED / INSTALL_PENDING
+Operational state: LIVE_RED / REVISION_2_PROVIDER_FREE_GREEN
 Branch: fix/plan0317-durable-chatgpt-approval
 Target: main
 Integration: merge-after-p09-reconciliation
-Revision: 1 | 2026-08-27
+Revision: 2 | 2026-08-27
 
 ## Stable Objective
 
@@ -37,6 +37,13 @@ approval card without weakening the unchanged-card one-click fence.
   zero-warning Biome, production build, plan-library validation with zero
   errors, current CodeGraph, and diff hygiene.
 - Provider-free checkpoint: `6447bdc7`.
+- The first installed live turn reached the exact app and completed
+  `auth_session`, then stopped because the same mounted approval card remained
+  after the coordinate action. LitScout recorded no mutation-tool invocation,
+  proving OAuth was healthy and the coordinate action missed.
+- Revision 2 binds the sole activation to the settled exact DOM control under
+  a CDP user gesture. Focused validation passes `17/17`; installed adoption and
+  one successor live acceptance remain.
 - P08 owns aggregate-status latency. P09 owns Project-slug Work-mode proof and
   is live-accepted/reconciliation-pending. P10 changes neither source surface.
 

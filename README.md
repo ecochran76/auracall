@@ -1890,9 +1890,10 @@ may be acknowledged when ChatGPT replaces it with an identical-looking next
 card while one unchanged card remains protected from a second click.
 AuraCall never upgrades `allow-once` to `always-allow`, never clicks `Answer
 now`, and fails closed on incomplete or ambiguous approval surfaces. Before
-the one allowed pointer sequence, AuraCall briefly settles and re-probes the
-same exact surface, then uses the fresh button center. A changed or ambiguous
-surface receives no click; one that independently disappears needs no action.
+the one allowed activation, AuraCall briefly settles and re-probes the same
+exact surface, then focuses and invokes that exact verified DOM control under
+a CDP user gesture. A changed or ambiguous surface receives no activation; one
+that independently disappears needs no action.
 The same preference can be stored as `browser.chatgptToolApproval` or on the
 selected `services.chatgpt` entry.
 

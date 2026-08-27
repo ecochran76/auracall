@@ -1,3 +1,11 @@
+- 2026-08-27: A stable ChatGPT approval card after an exact CDP coordinate
+  sequence is not proof that the connector authentication lapsed. Live
+  LitScout receipts showed `auth_session` succeeded while the mutation tool
+  never began, proving the coordinate action missed. Bind the single action to
+  the settled exact DOM control, focus and invoke it inside a CDP user-gesture
+  evaluation, and retain the same identity, ambiguity, paired-label, and
+  one-attempt fences.
+
 - 2026-08-27: Do not classify ChatGPT's third-party tool-consent card as an
   OAuth authentication lapse. A successful approval can synchronously promote
   a new exact `tool-approval-card` with identical visible text, so fingerprint

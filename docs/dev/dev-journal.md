@@ -1,5 +1,17 @@
 ## 2026-08-27 | Plan 0317 durable ChatGPT approval acknowledgment
 
+- The first installed live acceptance falsified the replacement-card
+  hypothesis: root Chat reached `Corel33t`, `auth_session` succeeded, and exact
+  `Always allow` was selected, but the same card stayed mounted and no
+  cancellation invocation began. OAuth was healthy; the coordinate activation
+  missed.
+- Revision 2 replaces coordinates with one exact DOM-bound activation inside a
+  CDP user-gesture evaluation. The settled fingerprint, action, and DOM identity
+  must all still match; changed, ambiguous, or independently disappeared state
+  remains zero-action, and a persistent card remains one-attempt fenced.
+- Focused revision-2 tests pass 17/17, including an executable fixture that
+  proves only the exact bound `Always allow` control is focused and invoked.
+
 - LitScout Plan 0458 proves connector OAuth succeeded and both `auth_session`
   calls completed. AuraCall's terminal error came from the separate ChatGPT
   `Always allow` tool-consent card.
