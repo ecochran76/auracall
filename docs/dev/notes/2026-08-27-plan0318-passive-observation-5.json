@@ -1,0 +1,20 @@
+{
+  "schema": "auracall.chatgpt-tool-approval-cdp-observation.v1",
+  "startedAt": "2026-08-27T16:01:15.486Z",
+  "finishedAt": "2026-08-27T16:01:15.536Z",
+  "mode": "observe",
+  "endpoint": {
+    "host": "127.0.0.1",
+    "port": 9222
+  },
+  "target": {
+    "id": "62C75577FAFB42266DBA82712E1E0446",
+    "url": "https://chatgpt.com/c/6a904bcd-d578-83e9-8f53-b0e71b3b1365"
+  },
+  "initial": {
+    "status": "none",
+    "fingerprintLength": 0,
+    "fingerprintSha256": null,
+    "expectedFingerprintMatched": null
+  }
+}

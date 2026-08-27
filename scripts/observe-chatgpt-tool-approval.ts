@@ -20,6 +20,7 @@ type Options = {
 	expectedFingerprintContains: string | null;
 	activate: boolean;
 	output: string | null;
+	waitMs: number;
 };
 
 type ApprovalProbe = {
@@ -49,7 +50,11 @@ function parseOptions(argv: string[]): Options {
 	const activate = argv.includes("--activate");
 	const output = readValue(argv, "--output");
 	const expectedFingerprintContains = readValue(argv, "--expected-fingerprint-contains");
+	const waitValue = readValue(argv, "--wait-ms") ?? "0";
 	if (!portValue || !/^\d+$/.test(portValue)) throw new Error("--port must be an integer.");
+	if (!/^\d+$/.test(waitValue) || Number(waitValue) > 60_000) {
+		throw new Error("--wait-ms must be an integer between 0 and 60000.");
+	}
 	if (!urlContains) throw new Error("--url-contains is required.");
 	if (policyValue !== "allow-once" && policyValue !== "always-allow") {
 		throw new Error("--policy must be allow-once or always-allow.");
@@ -67,6 +72,7 @@ function parseOptions(argv: string[]): Options {
 		expectedFingerprintContains,
 		activate,
 		output,
+		waitMs: Number(waitValue),
 	};
 }
 
@@ -129,11 +135,21 @@ async function main(): Promise<void> {
 	try {
 		await client.Runtime.enable();
 		await client.Page.enable();
-		const initialResult = await client.Runtime.evaluate({
-			expression: buildChatgptToolApprovalProbeExpressionForTest(options.policy),
-			returnByValue: true,
-		});
-		const initial = (initialResult.result.value ?? { status: "none" }) as ApprovalProbe;
+		const waitStartedAt = Date.now();
+		let probeAttempts = 0;
+		let initial: ApprovalProbe = { status: "none" };
+		let continuePolling = true;
+		while (continuePolling) {
+			probeAttempts += 1;
+			const initialResult = await client.Runtime.evaluate({
+				expression: buildChatgptToolApprovalProbeExpressionForTest(options.policy),
+				returnByValue: true,
+			});
+			initial = (initialResult.result.value ?? { status: "none" }) as ApprovalProbe;
+			continuePolling = initial.status === "none" && Date.now() - waitStartedAt < options.waitMs;
+			if (continuePolling) await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+		const waitElapsedMs = Date.now() - waitStartedAt;
 		const initialSanitized = sanitizeProbe(initial, options.expectedFingerprintContains);
 		if (!options.activate) {
 			await writeReceipt(options.output, {
@@ -143,6 +159,7 @@ async function main(): Promise<void> {
 				mode: "observe",
 				endpoint: { host: options.host, port: options.port },
 				target: { id: target.id, url: target.url },
+				wait: { requestedMs: options.waitMs, elapsedMs: waitElapsedMs, probeAttempts },
 				initial: initialSanitized,
 			});
 			return;
@@ -194,6 +211,7 @@ async function main(): Promise<void> {
 			mode: "activate",
 			endpoint: { host: options.host, port: options.port },
 			target: { id: target.id, url: target.url },
+			wait: { requestedMs: options.waitMs, elapsedMs: waitElapsedMs, probeAttempts },
 			policy: options.policy,
 			initial: initialSanitized,
 			observations,
