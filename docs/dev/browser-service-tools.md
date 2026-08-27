@@ -177,9 +177,10 @@ uses the fresh button center for one trusted CDP pointer sequence. Changed or
 ambiguous pre-click state dispatches no pointer input; independent disappearance
 reports no action. Current ChatGPT cards are rooted at the exact
 `data-testid="tool-approval-card"`, not the containing assistant turn, so a
-distinct sequential card in the same turn has its own action-bound fingerprint.
-The clicked card must disappear or be replaced by that different exact-card
-fingerprint; a truly unchanged card remains one-attempt fenced. The default
+mounted card receives a stable page-lifetime identity in a private WeakMap.
+The clicked card must disappear or be replaced by a different DOM card; the
+replacement may have the same action-bound fingerprint and visible text, while
+a truly unchanged mounted card remains one-attempt fenced. The default
 `manual` policy detects and reports the pause without clicking. Keep this
 classifier out of generic browser-service blocking-surface recovery, and never
 widen it to broad `allow`, `continue`, or `Answer now` matching.

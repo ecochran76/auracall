@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 524 | 2026-08-27
+
+- The operator requested that durable LitScout connection behavior be planned
+  and executed after Plan 0458 was incorrectly summarized as an authentication
+  lapse. Current evidence proves OAuth authentication succeeded; AuraCall
+  stopped at the separate ChatGPT `Always allow` acknowledgment surface.
+- P10 opens on top of P09's live-accepted checkpoint with no expected source
+  overlap with P08 status work or P09 Work-mode work. Its exact RED is an
+  identical-fingerprint successor approval card after one trusted click; the
+  unchanged original card must remain fenced.
+- Live acceptance will reuse the existing app, OAuth client, account, and
+  managed browser profile. App refresh/replacement/reconnect is prohibited;
+  ordinary refresh-token rotation is recorded separately from tool consent.
+- The exact RED reproduced `chatgpt-tool-approval-not-confirmed` in 1.4 seconds.
+  Stable exact-card DOM identity makes identical replacement pass while the
+  unchanged card remains one-click fenced. Focused `16/16`, propagation
+  `141/141`, ownership/approval `80/80`, typecheck, lint, build, plan-library,
+  CodeGraph, and diff checks pass. Install/live acceptance remain.
+
 ## Turn 523 | 2026-08-25
 
 - P09 source and installed artifacts are byte-identical. The exact ready-page

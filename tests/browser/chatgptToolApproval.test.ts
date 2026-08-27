@@ -347,6 +347,38 @@ describe("ChatGPT tool approval handling", () => {
 		expect(result.fingerprint).not.toContain("earlier assistant reasoning");
 	});
 
+	it("assigns stable identity to one exact card and new identity to its replacement", () => {
+		const firstAllowOnce = new FixtureElement("Allow once", { role: "button" });
+		const firstAlwaysAllow = new FixtureElement("Always allow", { role: "button" });
+		const firstCard = new FixtureElement("LitScout Same action Allow once Always allow", {
+			"data-testid": "tool-approval-card",
+		});
+		firstCard.append(firstAllowOnce, firstAlwaysAllow);
+		let controls = [firstAllowOnce, firstAlwaysAllow];
+		vi.stubGlobal("Element", FixtureElement);
+		vi.stubGlobal("HTMLElement", FixtureElement);
+		vi.stubGlobal("document", {
+			querySelectorAll: (selector: string) =>
+				selector === 'button,[role="button"]' ? controls : [],
+		});
+		const expression = buildChatgptToolApprovalProbeExpressionForTest("always-allow");
+
+		const first = new Function(`return ${expression}`)();
+		const same = new Function(`return ${expression}`)();
+		const replacementAllowOnce = new FixtureElement("Allow once", { role: "button" });
+		const replacementAlwaysAllow = new FixtureElement("Always allow", { role: "button" });
+		const replacementCard = new FixtureElement("LitScout Same action Allow once Always allow", {
+			"data-testid": "tool-approval-card",
+		});
+		replacementCard.append(replacementAllowOnce, replacementAlwaysAllow);
+		controls = [replacementAllowOnce, replacementAlwaysAllow];
+		const replacement = new Function(`return ${expression}`)();
+
+		expect(same.surfaceId).toBe(first.surfaceId);
+		expect(replacement.fingerprint).toBe(first.fingerprint);
+		expect(replacement.surfaceId).not.toBe(first.surfaceId);
+	});
+
 	it("fails closed when more than one approval surface is visible", async () => {
 		const evaluate = vi.fn().mockResolvedValue({
 			result: { value: { status: "ambiguous", count: 2 } },
@@ -368,6 +400,7 @@ describe("ChatGPT tool approval handling", () => {
 				value: {
 					status: "approval-required",
 					fingerprint: "persistent-tool-approval",
+					surfaceId: "persistent-surface-1",
 					actionLabel: "Always allow",
 					x: 120,
 					y: 240,
@@ -434,6 +467,51 @@ describe("ChatGPT tool approval handling", () => {
 			fingerprint: "execute-enrichment-card-rea_next",
 		});
 		expect(dispatchMouseEvent).toHaveBeenCalledTimes(6);
+	});
+
+	it("acknowledges an identical-looking successor card by exact DOM instance", async () => {
+		const firstApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "identical-visible-tool-approval",
+					surfaceId: "approval-surface-1",
+					actionLabel: "Always allow",
+					x: 120,
+					y: 240,
+				},
+			},
+		};
+		const replacementApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "identical-visible-tool-approval",
+					surfaceId: "approval-surface-2",
+					actionLabel: "Always allow",
+					x: 120,
+					y: 240,
+				},
+			},
+		};
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce(firstApproval)
+			.mockResolvedValueOnce(firstApproval)
+			.mockResolvedValue(replacementApproval);
+		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "always-allow",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).resolves.toMatchObject({
+			status: "approved",
+			fingerprint: "identical-visible-tool-approval",
+			surfaceId: "approval-surface-1",
+		});
+		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
 	});
 
 	it("allows a later confirmed approval with the same visible fingerprint", async () => {

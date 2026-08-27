@@ -96,9 +96,11 @@
     `pnpm vitest run tests/browser/chatgptToolApproval.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser/profileResolution.test.ts tests/cli/browserConfig.test.ts tests/runtime.configuredExecutor.test.ts tests/schema/chatgptMode.test.ts tests/schema/resolver.test.ts`
   - provider-free fixtures must prove exact paired actions, stable pre-click
     re-probe with fresh coordinates, zero-click changed/ambiguous handling,
-    exact `tool-approval-card` fingerprinting, disappearance or distinct-card
-    replacement verification, two sequential cards in one assistant turn,
-    one-attempt fencing for an unchanged card, and `Answer now` exclusion
+    exact `tool-approval-card` fingerprinting, stable page-lifetime DOM identity,
+    disappearance or distinct-card replacement verification even when the
+    replacement has identical visible text, two sequential cards in one
+    assistant turn, one-attempt fencing for an unchanged DOM card, and `Answer
+    now` exclusion
   - foreground ChatGPT lock lifetime must cover response wait, tool approval,
     and final answer extraction, not only prompt dispatch. Run
     `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser-service/operationDispatcher.test.ts tests/accountMirror/refreshService.test.ts tests/browser/chatgptToolApproval.test.ts`;

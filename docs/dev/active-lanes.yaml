@@ -162,3 +162,21 @@ lanes:
     integration_receipt: null
     disposition: Installed exact-target Work and GPT-5.6 Sol acceptance passed with no prompt or Send; integration awaits reconciliation with fix/plan0444-provider-provenance.
     updated_at: 2026-08-25
+  - id: P10
+    objective: Keep one authenticated LitScout connector usable across identical-looking sequential ChatGPT approval cards without weakening the one-click fence.
+    plan: docs/dev/plans/0317-2026-08-27-durable-chatgpt-approval-acknowledgment.md
+    plan_ref: refs/heads/fix/plan0317-durable-chatgpt-approval
+    branch: fix/plan0317-durable-chatgpt-approval
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 51327ee04572fe0f7db84c3b636bd9a022c16447
+    remote_ref: null
+    integration: merge-after-p09-reconciliation
+    dependencies: [P09]
+    overlaps: []
+    validation_status: provider-free-passed-install-pending
+    validation_ref: null
+    integration_receipt: null
+    disposition: Exact identical-successor-card RED is repaired and provider-free accepted; install and multi-call live proof remain, with app refresh, replacement, reconnect, and OAuth widening excluded.
+    updated_at: 2026-08-27

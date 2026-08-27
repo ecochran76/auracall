@@ -1,3 +1,19 @@
+## 2026-08-27 | Plan 0317 durable ChatGPT approval acknowledgment
+
+- LitScout Plan 0458 proves connector OAuth succeeded and both `auth_session`
+  calls completed. AuraCall's terminal error came from the separate ChatGPT
+  `Always allow` tool-consent card.
+- The exact 1.4-second RED presents one stable pre-click card and then an
+  identical-fingerprint replacement with a different DOM identity. Existing
+  source ignored identity and reproduced `chatgpt-tool-approval-not-confirmed`.
+- The provider-local repair stores exact mounted-card identities in a
+  page-lifetime WeakMap without changing provider DOM. All 16 focused approval
+  tests and the 141-test approval/config propagation gate pass; the unchanged
+  exact card remains one-click fenced and `Answer now` remains excluded.
+- Next: finish source validation and planning audits, publish/install at an
+  idle boundary, then execute one multi-call LitScout acceptance without app
+  refresh, replacement, disconnect, or reconnect.
+
 ## 2026-08-25 | Plan 0316 Project-slug Work-marker repair
 
 - LitScout Plan 0444's existing-conversation continuation failed twice before

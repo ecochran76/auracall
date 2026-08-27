@@ -1883,6 +1883,11 @@ npx -y auracall auracall-mcp
 ChatGPT tool approval is always an operator preference. Use `allow-once` when
 each detected tool call should receive only the current approval, or
 `always-allow` when ChatGPT should persist approval for that third-party tool.
+This consent is separate from connector OAuth authentication; seeing a tool
+approval card does not mean the connector login expired. AuraCall assigns a
+page-lifetime identity to the exact mounted approval card, so a clicked card
+may be acknowledged when ChatGPT replaces it with an identical-looking next
+card while one unchanged card remains protected from a second click.
 AuraCall never upgrades `allow-once` to `always-allow`, never clicks `Answer
 now`, and fails closed on incomplete or ambiguous approval surfaces. Before
 the one allowed pointer sequence, AuraCall briefly settles and re-probes the

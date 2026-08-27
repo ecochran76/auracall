@@ -1,3 +1,12 @@
+- 2026-08-27: Do not classify ChatGPT's third-party tool-consent card as an
+  OAuth authentication lapse. A successful approval can synchronously promote
+  a new exact `tool-approval-card` with identical visible text, so fingerprint
+  comparison alone cannot distinguish replacement from the unchanged clicked
+  card. Assign each mounted exact card a stable page-lifetime WeakMap identity;
+  acknowledge disappearance or a new DOM identity, and retain the one-click
+  fence for the same identity. Never use this identity to broaden paired-label,
+  manual, ambiguity, or `Answer now` safeguards.
+
 - 2026-08-25: ChatGPT can load a Project conversation at
   `/g/<project-id>-<slug>/c/<conversation-id>` while its visible active sidebar
   link uses `/g/<project-id>/c/<conversation-id>`. A byte-identical pathname
