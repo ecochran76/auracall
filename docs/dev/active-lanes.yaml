@@ -198,3 +198,21 @@ lanes:
     integration_receipt: af13ca5ae9b5efb1bc2dfe06e302212cbe690864
     disposition: Exact disabled-to-enabled control transition and trusted direct activation accepted; final readiness-wait repair is byte-identical installed and integrated to main.
     updated_at: 2026-08-27
+  - id: P12
+    objective: Replace retained ChatGPT composer text and prove exact submitted user-turn identity before rerunning the Frakktal LitScout experiment.
+    plan: docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md
+    plan_ref: refs/heads/fix/plan0319-chatgpt-composer-replacement
+    branch: fix/plan0319-chatgpt-composer-replacement
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: null
+    integration: merge
+    dependencies: [P11]
+    overlaps: []
+    validation_status: provider-free-repair-active
+    validation_ref: null
+    integration_receipt: null
+    disposition: RED reproduced composer and commit containment; provider-free repair and validation are active before one installed fresh rerun.
+    updated_at: 2026-08-27

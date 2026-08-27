@@ -4,8 +4,16 @@
 
 ### Current Execution Board
 
-Status: aggregate status latency open; CDP-observed ChatGPT approval recovery live-accepted and integrated
-Lanes: P01, P02, P03, P06, P07, P09, P10, P11 (integrated); P04, P05 (terminal hard stop, integrated); P08 (open)
+Status: aggregate status latency open; ChatGPT composer replacement active
+Lanes: P01, P02, P03, P06, P07, P09, P10, P11 (integrated); P04, P05 (terminal hard stop, integrated); P08, P12 (open)
+
+- Active ChatGPT composer replacement and exact-turn proof:
+  [docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md](docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md)
+  P12 owns the live-reproduced stale-draft concatenation defect. It replaces
+  user-authored text on the exact focused composer while preserving connected-app
+  pills, then requires exact pre-send and newly committed user-turn equality.
+  Provider-free repair and installation precede one distinct fresh
+  Frakktal/LitScout experiment. P08 remains isolated and non-overlapping.
 
 - Completed CDP-observed ChatGPT approval recovery:
   [docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md](docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md)

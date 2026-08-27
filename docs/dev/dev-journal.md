@@ -47994,3 +47994,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   work is excluded.
 - Next: minimize the cost seam, publish 3-5 falsifiable hypotheses, profile one
   bounded pass, and write the regression before the repair.
+## 2026-08-27 | Plan 0319 ChatGPT composer replacement
+
+- A live scored run proved AuraCall appended the intended prompt after retained
+  ChatGPT drafts. The exact conversation turn contained three prompts while the
+  AuraCall session metadata contained only the newest one; LitScout therefore
+  received only the obsolete first canary.
+- Source diagnosis found two matching containment contracts in
+  `promptComposer`: focused `Input.insertText` did not clear retained user text,
+  and prompt commitment accepted any turn containing the requested prompt.
+- Deterministic RED failed both stale-composer and non-exact committed-turn cases.
+  The repair now clears only user-authored composer text, preserves selected app
+  pills, fails before Send on mismatch, and requires exact normalized committed
+  user-turn equality. Focused GREEN passes 8/8 and typecheck passes.

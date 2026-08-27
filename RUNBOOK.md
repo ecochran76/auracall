@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 527 | 2026-08-27
+
+- The first scored Frakktal/LitScout research-to-draft experiment is invalid:
+  AuraCall metadata contained only the current prompt, but the live ChatGPT user
+  turn concatenated two stale drafts before it and executed the obsolete first
+  canary. LitScout Session 73 remained byte-identical with zero research calls.
+- [Plan 0319](docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md)
+  opens on `fix/plan0319-chatgpt-composer-replacement`. RED proves both defects:
+  composer containment accepts stale+new text, and commit containment accepts a
+  newly created user turn with extra text.
+- The provider-free repair clears user-authored text on the exact marked target
+  while retaining connected-app pills, requires exact pre-send equality, and
+  requires exact normalized equality for the newly committed user turn. Focused
+  GREEN passes 8/8 and typecheck passes. No install, browser, provider, or LitScout
+  effect has run in P12 yet.
+- P08 remains active in its separate worktree with no expected P12 write overlap.
+
 ## Turn 526 | 2026-08-27
 
 - Plan 0459 falsified the breadth of P10's live acceptance: its simple
