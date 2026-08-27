@@ -1,5 +1,27 @@
 # RUNBOOK
 
+## Turn 526 | 2026-08-27
+
+- Plan 0459 falsified the breadth of P10's live acceptance: its simple
+  nonexistent mutation card passed, but the real materialized
+  `research_action_execute` card remained visible under both `always-allow`
+  and `allow-once`. OAuth stayed healthy and LitScout received no executor.
+- [Plan 0318](docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md)
+  opens on clean current `main` as
+  `fix/plan0318-cdp-observed-chatgpt-approval`. The operator explicitly
+  requires timestamped instrumentation and direct agentic observation/control
+  through the actual Chrome DevTools port.
+- The live target is frozen to AuraCall `wsl-chrome-3`, the existing app and
+  account, ChatGPT conversation `6a904bcd-d578-83e9-8f53-b0e71b3b1365`, and
+  LitScout Project 15 / Session 73. No OAuth reconnect, replacement Project,
+  `Answer now`, or unrelated browser action is permitted.
+- Agent Browser access planning was used as a lifecycle check. Its generic
+  catalog selected an unrelated `stealthcdp-default` record with a terminal
+  stale owner, so it is not a launch route for this AuraCall-owned profile.
+  AuraCall retains browser lifecycle; direct CDP attaches only after AuraCall
+  publishes the exact live port and target.
+- P08 remains active in its own worktree with no expected P11 write overlap.
+
 ## Turn 525 | 2026-08-27
 
 - Reconciled the stale `fix/plan0444-provider-provenance` work with P09 by

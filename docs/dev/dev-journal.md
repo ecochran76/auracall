@@ -1,3 +1,14 @@
+## 2026-08-27 | Plan 0318 CDP-observed ChatGPT approval recovery
+
+- LitScout Plan 0459 proved OAuth stayed healthy while a real materialized
+  research-action consent card resisted both AuraCall approval policies.
+- The successor adds bounded event/DOM/geometry/identity evidence and requires
+  direct observation through the actual Chrome DevTools port. One exact direct
+  control activation is allowed only after target, conversation, app, account,
+  action, and card uniqueness are proven; `Answer now` remains prohibited.
+- The live continuation reuses Project 15 / Session 73 and the existing OAuth
+  connection. P08 is a separate non-overlapping lane.
+
 ## 2026-08-23 | Preserve provider-session provenance across option rebuilds
 
 - LitScout Plan 0444 used AuraCall for ChatGPT project discovery after an exact

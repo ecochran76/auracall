@@ -180,3 +180,21 @@ lanes:
     integration_receipt: 79a57806af00efe78290f5b7812cf97a980555c7
     disposition: Exact DOM-bound approval activation is installed and live-accepted in one multi-call LitScout turn with no reconnect or canonical write; merged to main after P09 reconciliation.
     updated_at: 2026-08-27
+  - id: P11
+    objective: Directly observe and reliably activate the exact ChatGPT connected-app approval control through the AuraCall wsl-chrome-3 DevTools port.
+    plan: docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md
+    plan_ref: refs/heads/fix/plan0318-cdp-observed-chatgpt-approval
+    branch: fix/plan0318-cdp-observed-chatgpt-approval
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: null
+    integration: merge
+    dependencies: [P10]
+    overlaps: []
+    validation_status: instrumentation-open
+    validation_ref: null
+    integration_receipt: null
+    disposition: Instrument and directly observe the exact Plan 0459 approval card before applying the smallest evidence-backed repair.
+    updated_at: 2026-08-27
