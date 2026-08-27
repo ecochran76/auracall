@@ -48007,3 +48007,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   The repair now clears only user-authored composer text, preserves selected app
   pills, fails before Send on mismatch, and requires exact normalized committed
   user-turn equality. Focused GREEN passes 8/8 and typecheck passes.
+- Installed checkpoint `b11cbc46` reached byte parity and failed safely before
+  Send when the exact assembled markdown became a rich-composer representation
+  25 characters shorter. This adjacent case now normalizes only code markers,
+  headings, and list markers while retaining equality, and adds SHA-256 plus
+  normalized first-divergence diagnostics for any future mismatch.

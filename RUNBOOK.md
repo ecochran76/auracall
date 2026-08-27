@@ -13,9 +13,16 @@
 - The provider-free repair clears user-authored text on the exact marked target
   while retaining connected-app pills, requires exact pre-send equality, and
   requires exact normalized equality for the newly committed user turn. Focused
-  GREEN passes 8/8 and typecheck passes. No install, browser, provider, or LitScout
-  effect has run in P12 yet.
+  GREEN passed 8/8 with typecheck before the installed gate; no prompt, provider,
+  or LitScout effect had run at that checkpoint.
 - P08 remains active in its separate worktree with no expected P12 write overlap.
+- Committed checkpoint `b11cbc46` installed byte-identically at prompt-composer
+  SHA-256 `2a1bf533...e68a1c`; the API restarted healthy at PID 30925 with zero
+  restarts. The primary live attempt stopped before Send because ChatGPT's rich
+  composer removed 25 markdown-presentation characters from the 2,548-character
+  assembled prompt. No conversation or LitScout call occurred, the owned browser
+  cleaned, and the single changed-tactic retry remains available after a bounded
+  presentation-normalization repair.
 
 ## Turn 526 | 2026-08-27
 

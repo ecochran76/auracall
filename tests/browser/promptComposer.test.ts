@@ -23,6 +23,32 @@ describe("promptComposer", () => {
 		).toBe(true);
 	});
 
+	test("treats markdown and rich-composer list presentation as equivalent", () => {
+		const markdown = [
+			"Use project `plan-0459`.",
+			"",
+			"### Deliverables",
+			"1. Technical feasibility",
+			"2. Commercial feasibility",
+			"",
+			"```",
+			"Source-locked evidence",
+			"```",
+		].join("\n");
+		const richText = [
+			"Use project plan-0459.",
+			"Deliverables",
+			"Technical feasibility",
+			"Commercial feasibility",
+			"Source-locked evidence",
+		].join("\n");
+
+		expect(promptComposer.composerContainsPrompt(richText, markdown)).toBe(true);
+		expect(promptComposer.composerContainsPrompt(`Retained draft\n${richText}`, markdown)).toBe(
+			false,
+		);
+	});
+
 	test("rejects a newly committed turn that only contains the requested prompt", async () => {
 		vi.useFakeTimers();
 		try {

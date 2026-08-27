@@ -23,8 +23,12 @@ research-to-draft experiment.
   the current selection without clearing user text, and both composer/commit
   checks accept containment instead of equality.
 - Focused RED failed in two cases, then passed after exact composer replacement
-  and exact normalized committed-turn checks. No browser/provider effect has run
-  in this lane yet.
+  and exact normalized committed-turn checks. The first installed no-send attempt
+  then correctly rejected
+  ChatGPT's rich-text rendering of the exact assembled markdown; it produced no
+  conversation or LitScout call. The adjacent repair now treats only bounded
+  markdown/list presentation differences as equivalent and records mismatch
+  hashes plus the first normalized divergence.
 - P08 remains active in its own worktree. It has no expected source overlap with
   this prompt-composer lane.
 

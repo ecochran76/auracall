@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { BrowserAutomationError } from "../../oracle/errors.js";
 import {
 	ASSISTANT_ROLE_SELECTOR,
@@ -24,12 +25,39 @@ const PROMPT_TARGET_ATTRIBUTE = "data-auracall-prompt-target";
 const PROMPT_TARGET_SELECTOR = `[${PROMPT_TARGET_ATTRIBUTE}="true"]`;
 
 function normalizedComposerText(value: string): string {
-	return value.replace(/\s+/g, " ").trim();
+	return value
+		.replace(/```[^\n]*\n([\s\S]*?)```/g, "$1")
+		.replace(/```/g, " ")
+		.replace(/`([^`]*)`/g, "$1")
+		.replace(/^\s{0,3}#{1,6}\s+/gm, "")
+		.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/gm, "")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 function composerContainsPrompt(value: string, prompt: string): boolean {
 	const normalizedPrompt = normalizedComposerText(prompt);
 	return Boolean(normalizedPrompt) && normalizedComposerText(value) === normalizedPrompt;
+}
+
+function promptMismatchDiagnostics(value: string, prompt: string) {
+	const observed = normalizedComposerText(value);
+	const expected = normalizedComposerText(prompt);
+	let commonPrefixLength = 0;
+	while (
+		commonPrefixLength < observed.length &&
+		commonPrefixLength < expected.length &&
+		observed[commonPrefixLength] === expected[commonPrefixLength]
+	) {
+		commonPrefixLength += 1;
+	}
+	return {
+		expectedNormalizedLength: expected.length,
+		observedNormalizedLength: observed.length,
+		commonPrefixLength,
+		expectedSha256: createHash("sha256").update(expected).digest("hex"),
+		observedSha256: createHash("sha256").update(observed).digest("hex"),
+	};
 }
 
 async function preparePromptComposer(
@@ -278,6 +306,7 @@ export async function submitPrompt(
 				code: "prompt-composer-mismatch",
 				promptLength: prompt.length,
 				observedLength: observedInitialText.length,
+				...promptMismatchDiagnostics(observedInitialText, prompt),
 			},
 		);
 	}
@@ -734,6 +763,8 @@ async function verifyPromptCommitted(
 
 export const __test__ = {
 	composerContainsPrompt,
+	normalizedComposerText,
+	promptMismatchDiagnostics,
 	preparePromptComposer,
 	verifyPromptCommitted,
 	waitForComposerReadyToSubmit,
