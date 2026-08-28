@@ -48065,3 +48065,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   owned Chrome tree was closed. Local repair now walks committed-turn authored
   text while excluding buttons and turn controls. Focused 11/11, typecheck, and
   production build pass. Provider rerun is paused for cooldown.
+## 2026-08-28 | Plan 0321 ChatGPT timeout-unit and turn-control acceptance
+
+- The exact prior-experiment symptom is reproducible provider-free:
+  `parseTimeoutOption("60m")` returned `60`, and partial invalid tokens were
+  accepted because the parser used `Number.parseFloat`.
+- Strict full-token duration parsing is GREEN. Existing exact composer,
+  committed-turn, virtualized response-boundary, interruption-output, and
+  timeout/signal terminalization tests are also GREEN (`94/94`).
+- Wider ChatGPT/browser acceptance is `385/385` with one declared skip;
+  typecheck, scoped lint, build, plan audit, diff hygiene, and CodeGraph pass.
+- Next: widen provider-free validation, commit/install the candidate, inspect
+  the live ChatGPT app/OAuth surface, and run one no-effect same-turn canary.

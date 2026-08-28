@@ -724,8 +724,8 @@ program
   )
   .addOption(
     new Option(
-      '--timeout <seconds|auto>',
-      'Overall run timeout (auto = 60m for Pro API and browser runs, 120s for other API runs).',
+      '--timeout <seconds|duration|auto>',
+      'Overall run timeout; accepts seconds or units such as 90s, 60m, and 1h30m (auto = 60m for Pro API and browser runs, 120s for other API runs).',
     )
       .argParser(parseTimeoutOption)
       .default('auto'),

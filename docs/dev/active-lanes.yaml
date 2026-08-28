@@ -234,3 +234,21 @@ lanes:
     integration_receipt: d045f68c
     disposition: Exact incident RED, 209-test GREEN, byte-identical installed-module smoke, and non-forced main integration complete without a provider effect.
     updated_at: 2026-08-27
+  - id: P14
+    objective: Repair human-readable overall timeout parsing and accept the integrated exact-turn browser path before the next LitScout experiment.
+    plan: docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md
+    plan_ref: refs/heads/fix/plan0321-reliable-turn-control
+    branch: fix/plan0321-reliable-turn-control
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 989faab312756bc88d9224005815afae7d19cbf7
+    remote_ref: null
+    integration: fast-forward
+    dependencies: [P12, P13]
+    overlaps: []
+    validation_status: source-repair-green
+    validation_ref: null
+    integration_receipt: null
+    disposition: Timeout RED/GREEN is complete; install, live app inventory, and one no-effect same-turn canary remain pending.
+    updated_at: 2026-08-28

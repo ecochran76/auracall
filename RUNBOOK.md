@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 531 | 2026-08-28
+
+- P14 opens [Plan 0321](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)
+  on `fix/plan0321-reliable-turn-control`, based on integrated `origin/main`
+  `989faab3`. It is serial and has no source overlap with open P08.
+- Exact RED proved `parseTimeoutOption("60m")` returned `60` and permissive
+  `parseFloat` accepted invalid suffixes. Strict full-string parsing now returns
+  `3600`, supports compounds such as `1h30m`, preserves numeric seconds/`auto`,
+  and rejects malformed expressions.
+- Focused source GREEN is `94/94` across timeout parsing, browser session
+  terminalization, exact composer/committed-turn proof, response-boundary
+  virtualization, and terminal-output reconciliation. Install, live app
+  inventory, and the one no-effect canary remain pending.
+- Wider provider-free acceptance passes `385/385` with one declared skip;
+  typecheck, scoped lint, build, plan audit, diff hygiene, and current CodeGraph
+  also pass.
+
 ## Turn 530 | 2026-08-27
 
 - Operator authorized the best recommended successor after Plan 0319. P13 opens

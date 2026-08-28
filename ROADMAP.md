@@ -4,8 +4,14 @@
 
 ### Current Execution Board
 
-Status: aggregate status latency open; ChatGPT terminal-output selection integrated
-Lanes: P01, P02, P03, P06, P07, P09, P10, P11, P12, P13 (integrated); P04, P05 (terminal hard stop, integrated); P08 (open)
+Status: ChatGPT timeout/turn-control acceptance and aggregate status latency open
+Lanes: P01, P02, P03, P06, P07, P09, P10, P11, P12, P13 (integrated); P04, P05 (terminal hard stop, integrated); P08, P14 (open)
+
+- Active ChatGPT timeout-unit and turn-control acceptance:
+  [docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)
+  P14 repairs the live-proven `60m -> 60 seconds` CLI defect, revalidates the
+  integrated composer/output boundaries, installs the exact candidate, and
+  proves one no-effect same-turn canary before the next LitScout experiment.
 
 - Integrated ChatGPT terminal-output selection repair:
   [docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md](docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md)

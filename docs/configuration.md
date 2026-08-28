@@ -849,6 +849,8 @@ Under the hood, pruning removes entire session directories (metadata + logs). Th
 
 ## API timeouts
 
-- `--timeout <seconds|auto>` controls the overall API deadline for a run.
+- `--timeout <seconds|duration|auto>` controls the overall run deadline. Bare
+  numbers are seconds; human-readable units and compounds such as `90s`, `60m`,
+  and `1h30m` are accepted.
 - Defaults: `auto` = 60 m for `gpt-5.1-pro`; non-pro API models use `120s` if you don’t set a value.
 - Heartbeat messages print the live remaining time so you can see when the client-side deadline will fire.

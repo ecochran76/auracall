@@ -22027,3 +22027,13 @@ browser-stage lifecycle observability, not transcript truncation.
   Ordinary substantive DOM mismatches remain authoritative.
 - Regression: `tests/browser/reattachHelpers.test.ts` freezes the 55-versus-
   23,210 character incident at the production selector seam.
+
+## 2026-08-28 | Parse the complete timeout token before accepting it
+
+- `Number.parseFloat("60m")` returns `60`, so a human-readable one-hour timeout
+  silently became one minute; the same parser accepted arbitrary suffixes.
+- Parse bare numeric values as seconds, otherwise consume the complete ordered
+  duration expression with explicit `ms`, `s`, `m`, or `h` units. Reject any
+  gap or suffix rather than accepting a numeric prefix.
+- Keep the production CLI parser under a focused regression for `60m`,
+  `1h30m`, numeric seconds, `auto`, and malformed partial tokens.
