@@ -174,11 +174,31 @@ export function parseTimeoutOption(value: string | undefined): number | 'auto' |
   if (value == null) return undefined;
   const normalized = value.trim().toLowerCase();
   if (normalized === 'auto') return 'auto';
-  const parsed = Number.parseFloat(normalized);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    throw new InvalidArgumentError('Timeout must be a positive number of seconds or "auto".');
+  if (/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized)) {
+    const seconds = Number(normalized);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds;
   }
-  return parsed;
+  const token = /(\d+(?:\.\d+)?|\.\d+)(ms|s|m|h)/g;
+  const scale: Record<string, number> = { ms: 0.001, s: 1, m: 60, h: 3_600 };
+  let seconds = 0;
+  let cursor = 0;
+  let match: RegExpExecArray | null = token.exec(normalized);
+  while (match !== null) {
+    if (match.index !== cursor) {
+      throw new InvalidArgumentError(
+        'Timeout must be positive seconds, a duration such as "60m" or "1h30m", or "auto".',
+      );
+    }
+    seconds += Number(match[1]) * scale[match[2]];
+    cursor = token.lastIndex;
+    match = token.exec(normalized);
+  }
+  if (cursor === normalized.length && seconds > 0 && Number.isFinite(seconds)) {
+    return seconds;
+  }
+  throw new InvalidArgumentError(
+    'Timeout must be positive seconds, a duration such as "60m" or "1h30m", or "auto".',
+  );
 }
 
 export function resolveApiModel(modelValue: string): ModelName {

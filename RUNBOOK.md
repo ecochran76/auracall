@@ -1,6 +1,23 @@
 # RUNBOOK
 
-## Turn 533 | 2026-08-29
+## Turn 535 | 2026-08-29
+
+- P14 installed the exact candidate once and proved byte parity for the CLI
+  option parser and production entrypoint. `auracall-api.service` is active at
+  PID `9496`, `NRestarts=0`, and the installed API status probe passes.
+- Provider-free acceptance passes `181/181` across eight focused files plus
+  typecheck, production build, and scoped zero-warning lint.
+- Read-only inventory on AuraCall runtime profile `wsl-chrome-3` proved an
+  authenticated ChatGPT Pro surface with Developer mode enabled and exactly one
+  enabled, active, private, user-scoped LitScout app.
+- One normal-Chat/current-model/manual-approval canary used `--timeout 60m`,
+  committed one prompt, returned exactly `AURACALL_TIMEOUT_TURN_OK` in 14.8
+  seconds, and reported zero retries. The exact owned Chrome PID was terminated
+  and port `45015` closed; no scheduler or materialization control ran.
+- Plan 0321 is closed and ready for non-forced merge to `main`. The LitScout
+  experiment remains governed by LitScout Plan 0463.
+
+## Turn 534 | 2026-08-29
 
 - P15 merged without conflict through `16832289`. The final catalog binds the
   maintenance checkpoint and integration receipt; P08 and P14 remain open,
@@ -8,7 +25,7 @@
 - Final actions are limited to pushing main, removing P15's temporary local and
   origin custody, and proving clean default-ref catalog and parity readbacks.
 
-## Turn 532 | 2026-08-29
+## Turn 533 | 2026-08-29
 
 - P14 is published and equal to its origin branch; its plan now explicitly
   declares the cataloged merge integration method. P08 and P14 remain unmerged
@@ -20,7 +37,7 @@
   divergent or remote-only unknown-custody branch. P15 is integration-ready;
   final main reconciliation and catalog audit remain.
 
-## Turn 531 | 2026-08-29
+## Turn 532 | 2026-08-29
 
 - Operator requested complete Git maintenance across open branches and linked
   worktrees. [Plan 0322](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
@@ -33,6 +50,23 @@
   current `origin/main`, and have no process working directory under their
   paths. Cleanup is limited to exact proved targets; no runtime or provider
   effect is in scope.
+
+## Turn 531 | 2026-08-28
+
+- P14 opens [Plan 0321](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)
+  on `fix/plan0321-reliable-turn-control`, based on integrated `origin/main`
+  `989faab3`. It is serial and has no source overlap with open P08.
+- Exact RED proved `parseTimeoutOption("60m")` returned `60` and permissive
+  `parseFloat` accepted invalid suffixes. Strict full-string parsing now returns
+  `3600`, supports compounds such as `1h30m`, preserves numeric seconds/`auto`,
+  and rejects malformed expressions.
+- Focused source GREEN is `94/94` across timeout parsing, browser session
+  terminalization, exact composer/committed-turn proof, response-boundary
+  virtualization, and terminal-output reconciliation. Install, live app
+  inventory, and the one no-effect canary remain pending.
+- Wider provider-free acceptance passes `385/385` with one declared skip;
+  typecheck, scoped lint, build, plan audit, diff hygiene, and current CodeGraph
+  also pass.
 
 ## Turn 530 | 2026-08-27
 
