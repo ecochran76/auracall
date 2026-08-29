@@ -242,7 +242,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: be6407298da52ff0670eb75a355a37d6d60ed6fa
+    checkpoint: be640729ad2ee540c61601deb27dcff51dbeb3ba
     remote_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
     integration: merge
     dependencies: [P13]
