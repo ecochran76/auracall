@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 539 | 2026-08-29
+
+- Refreshed P08 by merging current `origin/main`; only two append-only history
+  files conflicted and no source conflict occurred.
+- Reacceptance passes `91/91` focused tests, typecheck, production build, and
+  zero-warning changed-source lint. The installed aggregate status read takes
+  8.76 seconds against its 30-second request budget, confirming the installed
+  runtime still lacks P08's repair.
+- Scheduler posture is healthy/idle, queued and running completions are zero,
+  no managed browser is present, and host pressure is improved. Installation
+  remains correctly blocked because `auracall-gemini-pro` still reports
+  `manual_clear_required` / `google-sorry`.
+- No scheduler, install, browser, provider, materialization, or guard-clear
+  effect ran. P08 remains source-accepted and blocked on the same human-clear
+  precondition.
+
 ## Turn 538 | 2026-08-29
 
 - Read-only ownership evidence proved the browser blocking P14 cleanup was not

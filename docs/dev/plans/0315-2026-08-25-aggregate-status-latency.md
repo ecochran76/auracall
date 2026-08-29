@@ -6,7 +6,7 @@ Operational state: IMPLEMENTATION_ACCEPTED_BLOCKED_ON_INSTALLED_PROOF
 Branch: fix/plan0315-aggregate-status-latency
 Target: main
 Integration: merge
-Revision: 3 | 2026-08-25
+Revision: 4 | 2026-08-29
 
 ## Stable Objective
 
@@ -35,12 +35,21 @@ or launching provider/browser work.
   independent aggregate projections. No status field or evidence class moved.
 - Three instrumented source probes succeeded inside the five-second HTTP
   budget at 4.76 s, 4.18 s, and 1.53 s. Temporary instrumentation is removed.
-  Final installed acceptance is blocked until both runtime and host state meet
-  the plan's existing hard-stop contract. The latest readback found load
-  average 36.73 with substantial CPU pressure, exact managed ChatGPT browsers
-  present for `wsl-chrome-2` and `wsl-chrome-4`, and a Gemini
-  `manual_clear_required` `google-sorry` provider guard. The scheduler itself
-  was healthy/idle with zero queued or running completions.
+  Final installed acceptance remains blocked until runtime state meets the
+  plan's existing hard-stop contract.
+- Refreshed the published shared branch by merge with current `origin/main`;
+  there were no source conflicts. Provider-free reacceptance passes `91/91`
+  across the focused archive/control/service-host suites, plus typecheck,
+  production build, and zero-warning changed-source lint.
+- The current installed aggregate command completes in 8.76 seconds with the
+  larger 30-second request budget, still above the default five-second target.
+  API PID `9496` is healthy, the scheduler is idle/healthy with zero queued or
+  running completions, no managed browser is present, and host load is much
+  lower than the prior blocked readback.
+- The `auracall-gemini-pro` target still carries a persisted
+  `manual_clear_required` / `google-sorry` provider guard. This is an explicit
+  hard stop, so the scheduler pause, install/restart, and resume allowances
+  remain unused. Clearing or bypassing that provider state is outside P08.
 
 ## Diagnosis And Repair Evidence
 

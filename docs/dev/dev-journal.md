@@ -48183,3 +48183,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Revalidated P14's clean/equal/ancestral custody and removed its worktree,
   local branch, and remote branch. The catalog no longer carries a cleanup
   blocker.
+
+## 2026-08-29 | Plan 0315 refreshed acceptance remains provider-guard blocked
+
+- Merged current `origin/main` into the published P08 branch without a source
+  conflict. Focused archive/control/service-host tests pass `91/91`, followed
+  by typecheck, production build, and zero-warning changed-source lint.
+- Installed aggregate status completed in 8.76 seconds with a 30-second request
+  budget. API PID `9496` remains healthy; scheduler posture is healthy/idle,
+  queued and running completions are zero, and no managed browser is present.
+- Host pressure is materially lower than the prior attempt, but
+  `auracall-gemini-pro` still carries `manual_clear_required` / `google-sorry`.
+  Per P08's hard-stop contract, no scheduler pause, install/restart, resume,
+  browser, provider, materialization, or guard-clear action ran.
