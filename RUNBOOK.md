@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 532 | 2026-08-29
+
+- P14 is published and equal to its origin branch; its plan now explicitly
+  declares the cataloged merge integration method. P08 and P14 remain unmerged
+  and no install, browser, provider, or scheduler action ran.
+- Removed four clean, process-unowned integrated worktrees and 12 merged local
+  topic branches. Deleted 29 exact origin refs limited to integrated catalog
+  lanes and Plan 0308's previously adjudicated cleanup candidates.
+- Retained both active branches, the historical compatibility ref, and every
+  divergent or remote-only unknown-custody branch. P15 is integration-ready;
+  final main reconciliation and catalog audit remain.
+
 ## Turn 531 | 2026-08-29
 
 - Operator requested complete Git maintenance across open branches and linked

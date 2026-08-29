@@ -48077,3 +48077,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The bounded cleanup will publish P14, remove only exact integrated custody,
   retain unknown/divergent historical refs, reconcile the catalog, and finish
   with clean `main == origin/main` evidence.
+
+## 2026-08-29 | Plan 0322 cleanup packet accepted
+
+- Published P14, corrected its missing integration metadata, and retained P08
+  and P14 as the only unfinished product lanes.
+- Removed four clean process-unowned integrated worktrees, 12 merged local
+  topic branches, and 29 exact integrated or previously adjudicated origin
+  refs. Divergent, unknown-custody, and compatibility history remains intact.
+- P15 is ready for main integration. Final acceptance still requires the
+  default-ref catalog audit, clean parity, and removal of P15's temporary
+  branch/worktree custody.

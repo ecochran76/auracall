@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P15
-Operational state: CUSTODY_FROZEN / CLEANUP_IN_PROGRESS
+Operational state: CLEANUP_ACCEPTED / INTEGRATION_READY
 Branch: chore/plan0322-git-maintenance-closeout
 Target: main
 Integration: merge
@@ -31,6 +31,13 @@ merged custody that no longer needs a working ref or directory.
 - The active-lane audit's apparent P11-P13 integration ambiguity was caused by
   stale local `main`; fast-forwarding that local ref restored ancestry proof.
   Remaining audit findings are checkpoint metadata drift.
+- Four clean integrated worktrees and 12 merged local topic branches are now
+  removed. Twenty-nine exact origin refs were deleted: cataloged integrated
+  lanes plus the cleanup candidates previously adjudicated by Plan 0308.
+- Remaining custody is intentional: P08, P14, this temporary integration lane,
+  local historical compatibility ref `sync/upstream-browser-reliability`, and
+  remote-only divergent or unknown-custody history. P14 is published and its
+  plan metadata now declares the cataloged merge method.
 
 ## Execution Graph
 
@@ -74,3 +81,17 @@ The only linked worktrees and local topic branches are active or deliberately
 retained, completed branch custody is closed locally and remotely within the
 frozen target list, P08/P14 remain published and unmerged, the lane catalog is
 current, and `main` is clean and equal to `origin/main`.
+
+## Integration-Ready Evidence
+
+- `GM-R1`: fresh fetch, worktree porcelain, ancestry/divergence counts, GitHub
+  PR inventory, and the catalog auditor froze the complete local population.
+- `GM-R2`: P08 remains equal to its origin branch; P14 is now published and
+  equal to its origin branch. Neither was merged or executed live.
+- `GM-R3`: all four removed worktrees were clean, integrated, and had no exact
+  `/proc/*/cwd` owner beneath their paths.
+- `GM-R4`: all 12 deleted local refs were ancestral to `origin/main`. Remote
+  deletion was limited to integrated catalog lanes and Plan 0308's exact prior
+  cleanup adjudications; divergent and unknown-custody refs were retained.
+- `GM-R5`: final main integration, catalog audit, parity, and removal of this
+  temporary lane remain the last serialized closeout step.
