@@ -250,8 +250,7 @@ lanes:
     validation_status: passed
     validation_ref: 1ad5aa4dfa5da49d16adb831c877a08f7dd8badb
     integration_receipt: 1659bdbb2f0c54459e728f420a82eddfb06d6126
-    blocker: An unrelated browser process retains the local worktree cwd; local worktree and branch cleanup is deferred pending natural process exit or separately authorized ownership resolution.
-    disposition: Integrated strict duration parsing after all acceptance gates passed; exact local and remote recovery custody remains while process-blocked worktree cleanup is deferred.
+    disposition: Integrated strict duration parsing after all acceptance gates passed; verified inactive browser cleanup released the cwd interlock and all P14 worktree plus local and remote topic custody is removed.
     updated_at: 2026-08-29
   - id: P15
     objective: Reconcile current Git custody and close exact integrated branch and worktree refs while preserving unfinished lanes.

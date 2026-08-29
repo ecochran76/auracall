@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 538 | 2026-08-29
+
+- Read-only ownership evidence proved the browser blocking P14 cleanup was not
+  serving LitScout: its only page was the ChatGPT root, port `37523` had no CDP
+  client, AuraCall's `default` target was paused with no foreground request or
+  proof scope, and LitScout API/MCP/workers were independent processes.
+- With operator authority, sent SIGTERM only to exact Chrome PID `712`. The
+  entire `default/chatgpt` Chrome tree exited, port `37523` closed, and AuraCall
+  reported the paused target idle with no browser process.
+- Re-proved P14 clean, equal local/remote tip, ancestry to `main`, and zero cwd
+  owners; removed its worktree, local branch, and remote branch. Only P08 now
+  retains product-lane worktree custody.
+
 ## Turn 537 | 2026-08-29
 
 - Pushed `main` through `071afeaf` and proved exact equality with

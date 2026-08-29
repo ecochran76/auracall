@@ -48140,3 +48140,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   recovery custody while its local branch remains. Local cleanup is deferred
   because a separately owned `default` browser-profile Chrome tree retains a
   cwd in the clean worktree; no unrelated runtime process was terminated.
+- Follow-up ownership checks showed that Chrome tree was inactive and not used
+  by LitScout: no CDP client, only the ChatGPT root page, a paused AuraCall
+  target, and no foreground request or proof scope. After explicit operator
+  authority, exact PID `712` exited on SIGTERM, its tree and port `37523`
+  disappeared, and the cwd interlock cleared.
+- Revalidated P14's clean/equal/ancestral custody and removed its worktree,
+  local branch, and remote branch. The catalog no longer carries a cleanup
+  blocker.

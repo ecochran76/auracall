@@ -6,7 +6,7 @@ Operational state: ACCEPTED / INTEGRATED
 Branch: fix/plan0321-reliable-turn-control
 Target: main
 Integration: merge
-Revision: 3 | 2026-08-29
+Revision: 4 | 2026-08-29
 
 ## Stable Objective
 
@@ -49,6 +49,10 @@ local retry advice or stale answer capture.
   Plan 0463 under that plan's authority and gates.
 - The accepted branch merged non-forced to `main` at integration receipt
   `1659bdbb2f0c54459e728f420a82eddfb06d6126`.
+- Follow-up ownership proof established that the separate `default` browser
+  blocking worktree cleanup was inactive and not serving LitScout. With exact
+  operator authority it was terminated, after which P14's clean worktree plus
+  local and remote topic branches were removed.
 
 ## Execution Graph
 
