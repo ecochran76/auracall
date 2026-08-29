@@ -242,13 +242,13 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATION_READY
-    checkpoint: c081d9d5c6d74df8c2d58cb03c28a922dbeb1d49
+    checkpoint: b413d15bce9a03d989e70ce40eefd99f78d021b1
     remote_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
     integration: merge
     dependencies: [P13]
     overlaps: []
     validation_status: source-installed-live-accepted
-    validation_ref: c081d9d5c6d74df8c2d58cb03c28a922dbeb1d49
+    validation_ref: b413d15bce9a03d989e70ce40eefd99f78d021b1
     integration_receipt: null
     disposition: Strict duration parsing, provider-free gates, installed byte parity, authenticated canonical LitScout inventory, one exact-token same-turn canary, and exact owned-browser cleanup pass; main integration remains.
     updated_at: 2026-08-29
