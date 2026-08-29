@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 537 | 2026-08-29
+
+- Pushed `main` through `071afeaf` and proved exact equality with
+  `origin/main`. An attempted integrated remote-ref cleanup was restored at the
+  exact published P14 tip when the final catalog audit correctly required
+  remote recovery custody while the local branch remains.
+- Local P14 worktree removal stopped at the process-cwd interlock: a separately
+  owned Chrome tree for the `default` browser profile retains a cwd under that
+  worktree. It is not the accepted `wsl-chrome-3` browser and was not
+  terminated. The clean, integrated local worktree plus equal local/remote
+  branch custody remain until the process exits naturally or separate ownership
+  authority is supplied.
+
 ## Turn 536 | 2026-08-29
 
 - The default-branch active-lane catalog proved P14 `integration_ready` with

@@ -48135,3 +48135,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   active-lane auditor classified P14 `integration_ready` with no findings.
 - Merged P14 non-forced to `main` at `1659bdbb`. The final catalog records that
   receipt and leaves P08 as the only open product lane.
+- Pushed `main` through `071afeaf`. The remote P14 ref was briefly deleted, then
+  restored at the exact published tip because catalog policy requires remote
+  recovery custody while its local branch remains. Local cleanup is deferred
+  because a separately owned `default` browser-profile Chrome tree retains a
+  cwd in the clean worktree; no unrelated runtime process was terminated.
