@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 533 | 2026-08-29
+
+- P15 merged without conflict through `16832289`. The final catalog binds the
+  maintenance checkpoint and integration receipt; P08 and P14 remain open,
+  published, clean, and unmerged.
+- Final actions are limited to pushing main, removing P15's temporary local and
+  origin custody, and proving clean default-ref catalog and parity readbacks.
+
 ## Turn 532 | 2026-08-29
 
 - P14 is published and equal to its origin branch; its plan now explicitly

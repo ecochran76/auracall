@@ -258,15 +258,15 @@ lanes:
     plan_ref: refs/remotes/origin/chore/plan0322-git-maintenance-closeout
     branch: chore/plan0322-git-maintenance-closeout
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: a0abbfd512686a02cf5a97c12e0a238693026995
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: a25230e2043c3720e58da8600464a8acc4dd2c9d
     remote_ref: refs/remotes/origin/chore/plan0322-git-maintenance-closeout
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: custody-frozen
-    validation_ref: a0abbfd512686a02cf5a97c12e0a238693026995
-    integration_receipt: null
-    disposition: Exact cleanup is in progress; P08, P14, historical compatibility, divergent, and unknown-custody refs are retained.
+    validation_status: passed
+    validation_ref: a25230e2043c3720e58da8600464a8acc4dd2c9d
+    integration_receipt: 168322897e9d7dd0e652e14d44b82482ad83c5ec
+    disposition: Integrated exact Git custody cleanup; P08, P14, historical compatibility, divergent, and unknown-custody refs are retained.
     updated_at: 2026-08-29

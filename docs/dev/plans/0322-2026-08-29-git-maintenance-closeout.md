@@ -1,12 +1,12 @@
 # Git Maintenance Closeout | 0322-2026-08-29
 
-State: OPEN
+State: CLOSED
 Lane: P15
-Operational state: CLEANUP_ACCEPTED / INTEGRATION_READY
+Operational state: ACCEPTED / INTEGRATED
 Branch: chore/plan0322-git-maintenance-closeout
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-29
+Revision: 2 | 2026-08-29
 
 ## Stable Objective
 
@@ -95,3 +95,12 @@ current, and `main` is clean and equal to `origin/main`.
   cleanup adjudications; divergent and unknown-custody refs were retained.
 - `GM-R5`: final main integration, catalog audit, parity, and removal of this
   temporary lane remain the last serialized closeout step.
+
+## Closeout
+
+- P15 merged without conflict through `16832289`. The catalog binds its exact
+  feature checkpoint and merge receipt while P08 and P14 remain open, clean,
+  published, and unmerged.
+- Final cleanup removes the P15 worktree and local/origin branch refs, then
+  verifies the catalog from `origin/main`, clean remaining worktrees, and exact
+  local/remote main parity.

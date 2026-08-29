@@ -4,10 +4,10 @@
 
 ### Current Execution Board
 
-Status: Git maintenance active; aggregate status latency and timeout-unit acceptance open
-Lanes: P01-P07, P09-P13 (integrated); P08, P14, P15 (open)
+Status: Git maintenance integrated; aggregate status latency and timeout-unit acceptance open
+Lanes: P01-P07, P09-P13, P15 (integrated); P08, P14 (open)
 
-- Active Git maintenance closeout:
+- Integrated Git maintenance closeout:
   [docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
   P15 preserves the unfinished P08 and P14 lanes while removing only exact
   clean, integrated worktree and branch custody. Final acceptance requires a
