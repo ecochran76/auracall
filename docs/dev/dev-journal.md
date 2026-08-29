@@ -48077,3 +48077,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   typecheck, scoped lint, build, plan audit, diff hygiene, and CodeGraph pass.
 - Next: widen provider-free validation, commit/install the candidate, inspect
   the live ChatGPT app/OAuth surface, and run one no-effect same-turn canary.
+
+## 2026-08-29 | Plan 0322 Git maintenance closeout opened
+
+- Fresh fetch and closed-world Git census found six clean worktrees. Four are
+  attached to integrated branches and have no process working-directory owner;
+  P08 and P14 remain open and are explicitly retained.
+- Local `main` was 16 commits behind `origin/main`; fast-forwarding the local
+  ref restored ancestry proof for Plans 0318-0320. Remaining catalog failures
+  are branch-tip checkpoint drift, not missing integration.
+- The bounded cleanup will publish P14, remove only exact integrated custody,
+  retain unknown/divergent historical refs, reconcile the catalog, and finish
+  with clean `main == origin/main` evidence.
+
+## 2026-08-29 | Plan 0322 cleanup packet accepted
+
+- Published P14, corrected its missing integration metadata, and retained P08
+  and P14 as the only unfinished product lanes.
+- Removed four clean process-unowned integrated worktrees, 12 merged local
+  topic branches, and 29 exact integrated or previously adjudicated origin
+  refs. Divergent, unknown-custody, and compatibility history remains intact.
+- P15 is ready for main integration. Final acceptance still requires the
+  default-ref catalog audit, clean parity, and removal of P15's temporary
+  branch/worktree custody.
+
+## 2026-08-29 | Plan 0322 integrated
+
+- Merged the documentation/custody closeout without conflict through
+  `16832289`; no source, runtime, browser, provider, or scheduler effect ran.
+- P08 and P14 remain the only active local product worktrees. Final cleanup and
+  audits remove P15's temporary custody and bind this state to pushed main.

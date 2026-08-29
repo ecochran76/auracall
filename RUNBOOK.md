@@ -1,5 +1,39 @@
 # RUNBOOK
 
+## Turn 534 | 2026-08-29
+
+- P15 merged without conflict through `16832289`. The final catalog binds the
+  maintenance checkpoint and integration receipt; P08 and P14 remain open,
+  published, clean, and unmerged.
+- Final actions are limited to pushing main, removing P15's temporary local and
+  origin custody, and proving clean default-ref catalog and parity readbacks.
+
+## Turn 533 | 2026-08-29
+
+- P14 is published and equal to its origin branch; its plan now explicitly
+  declares the cataloged merge integration method. P08 and P14 remain unmerged
+  and no install, browser, provider, or scheduler action ran.
+- Removed four clean, process-unowned integrated worktrees and 12 merged local
+  topic branches. Deleted 29 exact origin refs limited to integrated catalog
+  lanes and Plan 0308's previously adjudicated cleanup candidates.
+- Retained both active branches, the historical compatibility ref, and every
+  divergent or remote-only unknown-custody branch. P15 is integration-ready;
+  final main reconciliation and catalog audit remain.
+
+## Turn 532 | 2026-08-29
+
+- Operator requested complete Git maintenance across open branches and linked
+  worktrees. [Plan 0322](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
+  freezes the refreshed custody set on `chore/plan0322-git-maintenance-closeout`.
+- [P08](docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md) remains
+  open at its published tip because installed status-latency proof is blocked
+  by its existing browser/guard hard stop. P14 remains source-green but
+  unmerged pending separately bounded install/live acceptance.
+- P09, P10, P13, and the provider-provenance worktrees are clean, ancestral to
+  current `origin/main`, and have no process working directory under their
+  paths. Cleanup is limited to exact proved targets; no runtime or provider
+  effect is in scope.
+
 ## Turn 531 | 2026-08-28
 
 - P14 opens [Plan 0321](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)

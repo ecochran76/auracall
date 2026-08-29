@@ -22028,6 +22028,16 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regression: `tests/browser/reattachHelpers.test.ts` freezes the 55-versus-
   23,210 character incident at the production selector seam.
 
+## 2026-08-29 | Refresh the local integration target before lane ancestry audit
+
+- A stale local `main` made already integrated branches appear ambiguous even
+  when the auditor loaded its catalog from `origin/main`.
+- Fast-forward the local target ref after fetch before interpreting integration
+  findings. The catalog source ref and the target ancestry ref are separate
+  inputs; refreshing only the former is insufficient.
+- Delete worktree and branch custody only after exact cleanliness, ancestry or
+  prior semantic-equivalence, remote-tip, and process-working-directory proof.
+
 ## 2026-08-28 | Parse the complete timeout token before accepting it
 
 - `Number.parseFloat("60m")` returns `60`, so a human-readable one-hour timeout
