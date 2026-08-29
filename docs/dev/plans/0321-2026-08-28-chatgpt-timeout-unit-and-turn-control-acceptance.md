@@ -5,6 +5,7 @@ Lane: P14
 Operational state: SOURCE_REPAIR_GREEN / INSTALL_AND_LIVE_ACCEPTANCE_PENDING
 Branch: fix/plan0321-reliable-turn-control
 Target: main
+Integration: merge
 Revision: 1 | 2026-08-28
 
 ## Stable Objective
