@@ -1,7 +1,29 @@
-import type { ChromeClient, BrowserLogger, ChatgptToolApprovalPolicy } from "../types.js";
 import { BrowserAutomationError } from "../../oracle/errors.js";
+import type { BrowserLogger, ChatgptToolApprovalPolicy, ChromeClient } from "../types.js";
 
 const CHATGPT_TOOL_APPROVAL_SETTLE_MS = 120;
+const CHATGPT_TOOL_APPROVAL_READY_ATTEMPTS = 600;
+const CHATGPT_TOOL_APPROVAL_READY_INTERVAL_MS = 100;
+const CHATGPT_TOOL_APPROVAL_CONFIRM_ATTEMPTS = 30;
+const CHATGPT_TOOL_APPROVAL_CONFIRM_INTERVAL_MS = 100;
+
+type ToolApprovalControlObservation = {
+	tagName: string;
+	role: string | null;
+	disabled: boolean;
+	ariaDisabled: string | null;
+	dataState: string | null;
+	isConnected: boolean;
+	hitTargetIsControl: boolean;
+	hitTargetLabel: string | null;
+	pointerEvents: string | null;
+	eventReceipt?: {
+		counts: Record<string, number>;
+		trustedCounts: Record<string, number>;
+		lastType: string | null;
+		lastTrusted: boolean | null;
+	};
+};
 
 type ToolApprovalProbe =
 	| { status: "none" }
@@ -9,10 +31,27 @@ type ToolApprovalProbe =
 	| {
 			status: "approval-required";
 			fingerprint: string;
+			surfaceId?: string;
+			controlId?: string;
 			actionLabel: "Allow once" | "Always allow";
+			activated?: boolean;
 			x: number;
 			y: number;
+			control?: ToolApprovalControlObservation;
 	  };
+
+export type ChatgptToolApprovalObservation = {
+	phase: "detected" | "settled" | "waiting-ready" | "ready" | "pointer-dispatched" | "post-action";
+	observedAt: string;
+	confirmationAttempt?: number;
+	status: ToolApprovalProbe["status"];
+	actionLabel?: "Allow once" | "Always allow";
+	surfaceId?: string;
+	controlId?: string;
+	x?: number;
+	y?: number;
+	control?: ToolApprovalControlObservation;
+};
 
 export type ChatgptToolApprovalOutcome =
 	| { status: "none" }
@@ -21,24 +60,72 @@ export type ChatgptToolApprovalOutcome =
 			action: Exclude<ChatgptToolApprovalPolicy, "manual">;
 			label: "Allow once" | "Always allow";
 			fingerprint: string;
+			surfaceId?: string;
+			controlId?: string;
 	  };
 
 export function createChatgptToolApprovalHandler(options: {
 	client: Pick<ChromeClient, "Runtime" | "Input">;
 	policy: ChatgptToolApprovalPolicy;
 	logger: BrowserLogger;
+	onObservation?: (observation: ChatgptToolApprovalObservation) => void;
 }): () => Promise<ChatgptToolApprovalOutcome> {
-	const attemptedFingerprints = new Set<string>();
-	const readProbe = async (): Promise<ToolApprovalProbe> => {
+	const attemptedSurfaces = new Set<string>();
+	const approvalKey = (probe: Extract<ToolApprovalProbe, { status: "approval-required" }>) =>
+		probe.controlId
+			? `control:${probe.controlId}`
+			: probe.surfaceId
+				? `surface:${probe.surfaceId}`
+				: `fingerprint:${probe.fingerprint}`;
+	const controlIsBlocked = (probe: Extract<ToolApprovalProbe, { status: "approval-required" }>) =>
+		Boolean(
+			probe.control &&
+				(probe.control.disabled ||
+					probe.control.ariaDisabled === "true" ||
+					probe.control.isConnected === false ||
+					probe.control.pointerEvents === "none"),
+		);
+	const observe = (
+		phase: ChatgptToolApprovalObservation["phase"],
+		probe: ToolApprovalProbe,
+		confirmationAttempt?: number,
+	) => {
+		const observation: ChatgptToolApprovalObservation = {
+			phase,
+			observedAt: new Date().toISOString(),
+			confirmationAttempt,
+			status: probe.status,
+			...(probe.status === "approval-required"
+				? {
+						actionLabel: probe.actionLabel,
+						surfaceId: probe.surfaceId,
+						controlId: probe.controlId,
+						x: probe.x,
+						y: probe.y,
+						control: probe.control,
+					}
+				: {}),
+		};
+		options.onObservation?.(observation);
+		options.logger(`ChatGPT tool approval observation: ${JSON.stringify(observation)}`);
+	};
+	const readProbe = async (activation?: {
+		fingerprint: string;
+		surfaceId?: string;
+		controlId?: string;
+		actionLabel: "Allow once" | "Always allow";
+	}): Promise<ToolApprovalProbe> => {
 		const { result } = await options.client.Runtime.evaluate({
-			expression: buildChatgptToolApprovalProbeExpression(options.policy),
+			expression: buildChatgptToolApprovalProbeExpression(options.policy, activation),
 			returnByValue: true,
+			userGesture: Boolean(activation),
 		});
 		return (result?.value as ToolApprovalProbe | null | undefined) ?? { status: "none" };
 	};
 	return async () => {
 		const probe = await readProbe();
 		if (probe.status === "none") return { status: "none" };
+		observe("detected", probe);
 		if (probe.status === "ambiguous") {
 			throw new BrowserAutomationError(
 				`ChatGPT tool approval is ambiguous: ${probe.count} approval surfaces are visible.`,
@@ -62,7 +149,7 @@ export function createChatgptToolApprovalHandler(options: {
 			);
 		}
 
-		if (attemptedFingerprints.has(probe.fingerprint)) {
+		if (attemptedSurfaces.has(approvalKey(probe))) {
 			throw new BrowserAutomationError(
 				"ChatGPT tool approval was already attempted for this visible approval surface; refusing to click it twice.",
 				{
@@ -74,7 +161,12 @@ export function createChatgptToolApprovalHandler(options: {
 		}
 
 		await new Promise((resolve) => setTimeout(resolve, CHATGPT_TOOL_APPROVAL_SETTLE_MS));
-		const settledProbe = await readProbe();
+		let settledProbe = await readProbe({
+			fingerprint: probe.fingerprint,
+			surfaceId: probe.surfaceId,
+			controlId: probe.controlId,
+			actionLabel: probe.actionLabel,
+		});
 		if (settledProbe.status === "none") return { status: "none" };
 		if (settledProbe.status === "ambiguous") {
 			throw new BrowserAutomationError(
@@ -86,9 +178,12 @@ export function createChatgptToolApprovalHandler(options: {
 				},
 			);
 		}
+		observe("settled", settledProbe);
 		if (
 			settledProbe.fingerprint !== probe.fingerprint ||
-			settledProbe.actionLabel !== probe.actionLabel
+			settledProbe.actionLabel !== probe.actionLabel ||
+			((settledProbe.surfaceId || probe.surfaceId) && settledProbe.surfaceId !== probe.surfaceId) ||
+			((settledProbe.controlId || probe.controlId) && settledProbe.controlId !== probe.controlId)
 		) {
 			throw new BrowserAutomationError(
 				"ChatGPT tool approval changed while settling; refusing to click an unconfirmed surface.",
@@ -97,14 +192,106 @@ export function createChatgptToolApprovalHandler(options: {
 					code: "chatgpt-tool-approval-changed-before-click",
 					initialFingerprint: probe.fingerprint,
 					settledFingerprint: settledProbe.fingerprint,
+					initialSurfaceId: probe.surfaceId,
+					settledSurfaceId: settledProbe.surfaceId,
+					initialControlId: probe.controlId,
+					settledControlId: settledProbe.controlId,
 					initialActionLabel: probe.actionLabel,
 					settledActionLabel: settledProbe.actionLabel,
 				},
 			);
 		}
-		attemptedFingerprints.add(settledProbe.fingerprint);
-
-		const action = options.policy;
+		if (controlIsBlocked(settledProbe)) {
+			observe("waiting-ready", settledProbe, 1);
+			let becameReady = false;
+			for (let attempt = 1; attempt < CHATGPT_TOOL_APPROVAL_READY_ATTEMPTS; attempt += 1) {
+				await new Promise((resolve) =>
+					setTimeout(resolve, CHATGPT_TOOL_APPROVAL_READY_INTERVAL_MS),
+				);
+				const candidate = await readProbe({
+					fingerprint: probe.fingerprint,
+					surfaceId: probe.surfaceId,
+					controlId: probe.controlId,
+					actionLabel: probe.actionLabel,
+				});
+				if (candidate.status === "none") return { status: "none" };
+				if (candidate.status === "ambiguous") {
+					throw new BrowserAutomationError(
+						`ChatGPT tool approval became ambiguous while waiting for the control: ${candidate.count} approval surfaces are visible.`,
+						{
+							stage: "chatgpt-tool-approval",
+							code: "chatgpt-tool-approval-ambiguous",
+							count: candidate.count,
+						},
+					);
+				}
+				if (
+					candidate.fingerprint !== probe.fingerprint ||
+					candidate.actionLabel !== probe.actionLabel ||
+					((candidate.surfaceId || probe.surfaceId) && candidate.surfaceId !== probe.surfaceId) ||
+					((candidate.controlId || probe.controlId) && candidate.controlId !== probe.controlId)
+				) {
+					throw new BrowserAutomationError(
+						"ChatGPT tool approval changed while waiting for its exact control to become enabled.",
+						{
+							stage: "chatgpt-tool-approval",
+							code: "chatgpt-tool-approval-changed-before-click",
+							initialFingerprint: probe.fingerprint,
+							settledFingerprint: candidate.fingerprint,
+							initialSurfaceId: probe.surfaceId,
+							settledSurfaceId: candidate.surfaceId,
+							initialControlId: probe.controlId,
+							settledControlId: candidate.controlId,
+						},
+					);
+				}
+				settledProbe = candidate;
+				if (!controlIsBlocked(settledProbe)) {
+					observe("ready", settledProbe, attempt + 1);
+					becameReady = true;
+					break;
+				}
+			}
+			if (!becameReady) {
+				throw new BrowserAutomationError(
+					"ChatGPT tool approval exact control did not become enabled within 60 seconds.",
+					{
+						stage: "chatgpt-tool-approval",
+						code: "chatgpt-tool-approval-not-ready",
+						fingerprint: settledProbe.fingerprint,
+						surfaceId: settledProbe.surfaceId,
+						controlId: settledProbe.controlId,
+					},
+				);
+			}
+		}
+		const settledApprovalKey = approvalKey(settledProbe);
+		attemptedSurfaces.add(settledApprovalKey);
+		if (!settledProbe.activated) {
+			throw new BrowserAutomationError(
+				"ChatGPT tool approval could not focus and activate the exact settled control.",
+				{
+					stage: "chatgpt-tool-approval",
+					code: "chatgpt-tool-approval-activation-failed",
+					fingerprint: settledProbe.fingerprint,
+					surfaceId: settledProbe.surfaceId,
+					action: options.policy,
+				},
+			);
+		}
+		if (settledProbe.control && !settledProbe.control.hitTargetIsControl) {
+			throw new BrowserAutomationError(
+				"ChatGPT tool approval exact control is not the topmost hit-test target at its center.",
+				{
+					stage: "chatgpt-tool-approval",
+					code: "chatgpt-tool-approval-hit-target-mismatch",
+					fingerprint: settledProbe.fingerprint,
+					surfaceId: settledProbe.surfaceId,
+					controlId: settledProbe.controlId,
+					hitTargetLabel: settledProbe.control?.hitTargetLabel,
+				},
+			);
+		}
 		await options.client.Input.dispatchMouseEvent({
 			type: "mouseMoved",
 			x: settledProbe.x,
@@ -124,22 +311,34 @@ export function createChatgptToolApprovalHandler(options: {
 			button: "left",
 			clickCount: 1,
 		});
+		observe("pointer-dispatched", settledProbe);
+
+		const action = options.policy;
 		let confirmed = false;
-		for (let attempt = 0; attempt < 10; attempt += 1) {
+		for (let attempt = 0; attempt < CHATGPT_TOOL_APPROVAL_CONFIRM_ATTEMPTS; attempt += 1) {
 			const after = await readProbe();
+			observe("post-action", after, attempt + 1);
 			if (after.status === "none") {
 				confirmed = true;
 				break;
 			}
 			if (
 				after.status === "approval-required" &&
-				after.fingerprint !== settledProbe.fingerprint
+				(after.fingerprint !== settledProbe.fingerprint ||
+					Boolean(
+						after.surfaceId && settledProbe.surfaceId && after.surfaceId !== settledProbe.surfaceId,
+					) ||
+					Boolean(
+						after.controlId && settledProbe.controlId && after.controlId !== settledProbe.controlId,
+					))
 			) {
 				confirmed = true;
 				break;
 			}
 			if (after.status === "ambiguous") break;
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await new Promise((resolve) =>
+				setTimeout(resolve, CHATGPT_TOOL_APPROVAL_CONFIRM_INTERVAL_MS),
+			);
 		}
 		if (!confirmed) {
 			throw new BrowserAutomationError(
@@ -152,19 +351,30 @@ export function createChatgptToolApprovalHandler(options: {
 				},
 			);
 		}
-		attemptedFingerprints.delete(settledProbe.fingerprint);
+		attemptedSurfaces.delete(settledApprovalKey);
 		options.logger(`ChatGPT tool approval: ${settledProbe.actionLabel}`);
 		return {
 			status: "approved",
 			action,
 			label: settledProbe.actionLabel,
 			fingerprint: settledProbe.fingerprint,
+			surfaceId: settledProbe.surfaceId,
+			controlId: settledProbe.controlId,
 		};
 	};
 }
 
-function buildChatgptToolApprovalProbeExpression(policy: ChatgptToolApprovalPolicy): string {
+function buildChatgptToolApprovalProbeExpression(
+	policy: ChatgptToolApprovalPolicy,
+	activation?: {
+		fingerprint: string;
+		surfaceId?: string;
+		controlId?: string;
+		actionLabel: "Allow once" | "Always allow";
+	},
+): string {
 	const desiredLabel = policy === "always-allow" ? "always allow" : "allow once";
+	const activationJson = JSON.stringify(activation ?? null);
 	return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
     const visible = (node) => {
@@ -173,6 +383,24 @@ function buildChatgptToolApprovalProbeExpression(policy: ChatgptToolApprovalPoli
       return rect.width > 0 && rect.height > 0;
     };
     const labelOf = (node) => normalize(node.getAttribute('aria-label') || node.textContent || '');
+    const identityKey = '__auracallChatgptToolApprovalIdentityV1';
+    let identityState = globalThis[identityKey];
+    if (!identityState || !(identityState.ids instanceof WeakMap)) {
+      identityState = { ids: new WeakMap(), events: new Map(), next: 0 };
+      Object.defineProperty(globalThis, identityKey, {
+        value: identityState,
+        configurable: true,
+      });
+    }
+    if (!(identityState.events instanceof Map)) identityState.events = new Map();
+    const identityFor = (node, prefix) => {
+      const existing = identityState.ids.get(node);
+      if (existing) return existing;
+      identityState.next += 1;
+      const created = prefix + '-' + identityState.next;
+      identityState.ids.set(node, created);
+      return created;
+    };
     const controls = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible);
     const approvalControls = controls.filter((node) => {
       const label = labelOf(node);
@@ -196,19 +424,89 @@ function buildChatgptToolApprovalProbeExpression(policy: ChatgptToolApprovalPoli
       matches.push({
         status: 'approval-required',
         fingerprint: normalize(root.textContent || '').slice(0, 500),
+        surfaceId: identityFor(root, 'approval-surface'),
+        controlId: identityFor(target, 'approval-control'),
         actionLabel: labelOf(target) === 'always allow' ? 'Always allow' : 'Allow once',
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
+        target,
       });
     }
     if (matches.length === 0) return { status: 'none' };
     if (matches.length > 1) return { status: 'ambiguous', count: matches.length };
-    return matches[0];
+    const match = matches[0];
+    let eventReceipt = identityState.events.get(match.controlId);
+    if (!eventReceipt) {
+      eventReceipt = {
+        counts: { pointerdown: 0, mousedown: 0, mouseup: 0, click: 0 },
+        trustedCounts: { pointerdown: 0, mousedown: 0, mouseup: 0, click: 0 },
+        lastType: null,
+        lastTrusted: null,
+      };
+      for (const type of ['pointerdown', 'mousedown', 'mouseup', 'click']) {
+        match.target.addEventListener?.(type, (event) => {
+          eventReceipt.counts[type] += 1;
+          if (event.isTrusted) eventReceipt.trustedCounts[type] += 1;
+          eventReceipt.lastType = type;
+          eventReceipt.lastTrusted = Boolean(event.isTrusted);
+        }, true);
+      }
+      identityState.events.set(match.controlId, eventReceipt);
+    }
+    const activation = ${activationJson};
+    let activated = false;
+    if (activation) {
+      const exactSurface = !activation.surfaceId || activation.surfaceId === match.surfaceId;
+      const exactControl = !activation.controlId || activation.controlId === match.controlId;
+      const exactMatch = exactSurface && exactControl &&
+        activation.fingerprint === match.fingerprint &&
+        activation.actionLabel === match.actionLabel;
+      if (exactMatch) {
+        match.target.focus();
+        activated = true;
+      }
+    }
+    const hitTarget = document.elementFromPoint?.(match.x, match.y) || match.target;
+    const hitTargetIsControl = hitTarget === match.target || Boolean(match.target.contains?.(hitTarget));
+    const computed = globalThis.getComputedStyle?.(match.target);
+    return {
+      status: match.status,
+      fingerprint: match.fingerprint,
+      surfaceId: match.surfaceId,
+      controlId: match.controlId,
+      actionLabel: match.actionLabel,
+      activated,
+      x: match.x,
+      y: match.y,
+      control: {
+        tagName: String(match.target.tagName || '').toLowerCase(),
+        role: match.target.getAttribute('role'),
+        disabled: Boolean(match.target.disabled || match.target.hasAttribute?.('disabled')),
+        ariaDisabled: match.target.getAttribute('aria-disabled'),
+        dataState: match.target.getAttribute('data-state'),
+        isConnected: match.target.isConnected !== false,
+        hitTargetIsControl,
+        hitTargetLabel: hitTarget ? labelOf(hitTarget) : null,
+        pointerEvents: computed?.pointerEvents || null,
+        eventReceipt: {
+          counts: { ...eventReceipt.counts },
+          trustedCounts: { ...eventReceipt.trustedCounts },
+          lastType: eventReceipt.lastType,
+          lastTrusted: eventReceipt.lastTrusted,
+        },
+      },
+    };
   })()`;
 }
 
 export function buildChatgptToolApprovalProbeExpressionForTest(
 	policy: ChatgptToolApprovalPolicy,
+	activation?: {
+		fingerprint: string;
+		surfaceId?: string;
+		controlId?: string;
+		actionLabel: "Allow once" | "Always allow";
+	},
 ): string {
-	return buildChatgptToolApprovalProbeExpression(policy);
+	return buildChatgptToolApprovalProbeExpression(policy, activation);
 }

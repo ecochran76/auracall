@@ -4,8 +4,61 @@
 
 ### Current Execution Board
 
-Status: aggregate status latency diagnosis open
-Lanes: P01, P02, P03, P06, P07 (integrated); P04, P05 (terminal hard stop, integrated); P08 (open)
+Status: Git maintenance and timeout-unit acceptance integrated; aggregate status latency open
+Lanes: P01-P07, P09-P15 (integrated); P08 (open)
+
+- Integrated Git maintenance closeout:
+  [docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
+  P15 preserves the unfinished P08 and P14 lanes while removing only exact
+  clean, integrated worktree and branch custody. Final acceptance requires a
+  passing catalog audit and clean local/remote main parity.
+
+- Integrated ChatGPT timeout-unit and turn-control acceptance:
+  [docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)
+  P14's strict duration parser, installed-runtime parity, authenticated app
+  inventory, exact same-turn canary, and owned-browser cleanup are accepted.
+  Non-forced `main` integration is complete at `1659bdbb`.
+
+- Integrated ChatGPT terminal-output selection repair:
+  [docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md](docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md)
+  P13 froze Plan 0319's recovered writing-block versus interruption-banner
+  evidence as a provider-free regression. It changes only the final response
+  representation selector, preserves ordinary substantive-DOM mismatch safety,
+  and proved installed-runtime parity before integration.
+
+- Integrated ChatGPT composer replacement and exact-turn proof:
+  [docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md](docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md)
+  P12 resolved the live-reproduced stale-draft concatenation defect. It replaces
+  user-authored text on the exact focused composer while preserving connected-app
+  pills, then requires exact pre-send and newly committed user-turn equality.
+  Provider-free repair and installation preceded one distinct fresh
+  Frakktal/LitScout experiment. P08 remains isolated and non-overlapping.
+
+- Completed CDP-observed ChatGPT approval recovery:
+  [docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md](docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md)
+  P11 instrumented the exact connected-app approval control and directly
+  observes/manipulates it through the real `wsl-chrome-3` DevTools port. It
+  resumes LitScout Project 15 / Session 73 rather than reconnecting OAuth or
+  creating new research state. P11 merged through `af13ca5a`; P08 remains
+  isolated and non-overlapping.
+
+- Completed durable ChatGPT approval acknowledgment repair:
+  [docs/dev/plans/0317-2026-08-27-durable-chatgpt-approval-acknowledgment.md](docs/dev/plans/0317-2026-08-27-durable-chatgpt-approval-acknowledgment.md)
+  P10 is installed and live-accepted. One Sol/High turn completed
+  `auth_session`, exact `Always allow`, and one deliberately nonexistent
+  mutation call without app reconnect, OAuth failure, or canonical write.
+  The overlapping provider-provenance lane and P09 were explicitly reconciled;
+  P10 then merged through `79a57806` without changing P08.
+
+- Completed urgent ChatGPT Project-slug Work-marker repair:
+  [docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md](docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md)
+  P09 owns the exact provider-local route normalization needed when ChatGPT's
+  loaded Project conversation URL includes a human-readable slug but its active
+  sidebar link uses the canonical project-ID-only route. Exact Project ID,
+  conversation ID, active-link, and Work-badge proof remain fail-closed. The
+  slice merged through `79a57806` after explicit reconciliation with
+  `fix/plan0444-provider-provenance` and does not overlap P08's aggregate-status
+  source surface.
 
 - Active aggregate status latency repair:
   [docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md](docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md)

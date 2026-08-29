@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { BrowserAutomationError } from "../../oracle/errors.js";
 import {
 	ASSISTANT_ROLE_SELECTOR,
@@ -24,12 +25,161 @@ const PROMPT_TARGET_ATTRIBUTE = "data-auracall-prompt-target";
 const PROMPT_TARGET_SELECTOR = `[${PROMPT_TARGET_ATTRIBUTE}="true"]`;
 
 function normalizedComposerText(value: string): string {
-	return value.replace(/\s+/g, " ").trim();
+	return value
+		.replace(/```[^\n]*\n([\s\S]*?)```/g, "$1")
+		.replace(/```/g, " ")
+		.replace(/`([^`]*)`/g, "$1")
+		.replace(/^\s{0,3}#{1,6}\s+/gm, "")
+		.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/gm, "")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 function composerContainsPrompt(value: string, prompt: string): boolean {
 	const normalizedPrompt = normalizedComposerText(prompt);
-	return Boolean(normalizedPrompt) && normalizedComposerText(value).includes(normalizedPrompt);
+	return Boolean(normalizedPrompt) && normalizedComposerText(value) === normalizedPrompt;
+}
+
+function promptMismatchDiagnostics(value: string, prompt: string) {
+	const observed = normalizedComposerText(value);
+	const expected = normalizedComposerText(prompt);
+	let commonPrefixLength = 0;
+	while (
+		commonPrefixLength < observed.length &&
+		commonPrefixLength < expected.length &&
+		observed[commonPrefixLength] === expected[commonPrefixLength]
+	) {
+		commonPrefixLength += 1;
+	}
+	return {
+		expectedNormalizedLength: expected.length,
+		observedNormalizedLength: observed.length,
+		commonPrefixLength,
+		expectedSha256: createHash("sha256").update(expected).digest("hex"),
+		observedSha256: createHash("sha256").update(observed).digest("hex"),
+	};
+}
+
+function buildReadComposerUserTextFunction(): string {
+	return `(node) => {
+	  if (!node) return '';
+	  if (node instanceof HTMLTextAreaElement) return node.value ?? '';
+	  const protectedSelector =
+	    '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
+	  const chunks = [];
+	  const appendBoundary = () => {
+	    if (chunks.length > 0 && !/\\s$/.test(chunks[chunks.length - 1] || '')) chunks.push('\\n');
+	  };
+	  const walk = (current) => {
+	    if (current.nodeType === Node.TEXT_NODE) {
+	      chunks.push(current.textContent || '');
+	      return;
+	    }
+	    if (!(current instanceof Element) || current.matches(protectedSelector)) return;
+	    const display = window.getComputedStyle(current).display;
+	    const blockBoundary = /^(block|list-item|table-row|flex|grid)$/.test(display);
+	    if (blockBoundary) appendBoundary();
+	    current.childNodes.forEach(walk);
+	    if (blockBoundary) appendBoundary();
+	  };
+	  node.childNodes.forEach(walk);
+	  return chunks.join('');
+	}`;
+}
+
+function buildReadCommittedTurnTextFunction(): string {
+	return `(node) => {
+	  if (!node) return '';
+	  const presentationOnlySelector = [
+	    'button',
+	    '[role="button"]',
+	    '[data-testid="collapsible-user-message-toggle"]',
+	    '[data-testid$="-turn-action-button"]',
+	  ].join(', ');
+	  const chunks = [];
+	  const appendBoundary = () => {
+	    if (chunks.length > 0 && !/\\s$/.test(chunks[chunks.length - 1] || '')) chunks.push('\\n');
+	  };
+	  const walk = (current) => {
+	    if (current.nodeType === Node.TEXT_NODE) {
+	      chunks.push(current.textContent || '');
+	      return;
+	    }
+	    if (!(current instanceof Element) || current.matches(presentationOnlySelector)) return;
+	    const display = window.getComputedStyle(current).display;
+	    const blockBoundary = /^(block|list-item|table-row|flex|grid)$/.test(display);
+	    if (blockBoundary) appendBoundary();
+	    current.childNodes.forEach(walk);
+	    if (blockBoundary) appendBoundary();
+	  };
+	  node.childNodes.forEach(walk);
+	  return chunks.join('');
+	}`;
+}
+
+async function preparePromptComposer(
+	Runtime: ChromeClient["Runtime"],
+	logger: BrowserLogger,
+): Promise<void> {
+	const promptTargetSelectorLiteral = JSON.stringify(PROMPT_TARGET_SELECTOR);
+	const result = await Runtime.evaluate({
+		expression: `(() => {
+	    const target = document.querySelector(${promptTargetSelectorLiteral});
+	    if (!target) return { cleared: false, reason: 'missing-target' };
+	    const protectedSelector =
+	      '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
+	    const readUserText = ${buildReadComposerUserTextFunction()};
+	    const before = readUserText(target);
+	    if (target instanceof HTMLTextAreaElement) {
+	      target.value = '';
+	      target.dispatchEvent(
+	        new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }),
+	      );
+	      target.dispatchEvent(new Event('change', { bubbles: true }));
+	    } else {
+	      const protectedNodes = new Set(Array.from(target.querySelectorAll(protectedSelector)));
+	      const walker = target.ownerDocument.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+	      const removable = [];
+	      let current = walker.nextNode();
+	      while (current) {
+	        const protectedAncestor = Array.from(protectedNodes).some(
+	          (protectedNode) => protectedNode === current.parentElement || protectedNode.contains(current),
+	        );
+	        if (!protectedAncestor) removable.push(current);
+	        current = walker.nextNode();
+	      }
+	      removable.forEach((node) => { node.textContent = ''; });
+	      target.dispatchEvent(
+	        new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }),
+	      );
+	    }
+	    if (typeof target.focus === 'function') target.focus();
+	    const selection = target.ownerDocument?.getSelection?.();
+	    if (selection && !(target instanceof HTMLTextAreaElement)) {
+	      const range = target.ownerDocument.createRange();
+	      range.selectNodeContents(target);
+	      range.collapse(false);
+	      selection.removeAllRanges();
+	      selection.addRange(range);
+	    }
+	    const after = readUserText(target);
+	    return { cleared: !after.trim(), beforeLength: before.length, afterLength: after.length };
+	  })()`,
+		returnByValue: true,
+	});
+	if (!result.result?.value?.cleared) {
+		await logDomFailure(Runtime, logger, "prepare-composer");
+		throw new BrowserAutomationError(
+			"Prompt composer retained user-authored text; refusing to submit.",
+			{
+				stage: "submit-prompt",
+				code: "prompt-composer-not-cleared",
+				beforeLength: result.result?.value?.beforeLength,
+				afterLength: result.result?.value?.afterLength,
+				reason: result.result?.value?.reason,
+			},
+		);
+	}
 }
 
 function buildPromptFocusExpression(): string {
@@ -114,6 +264,7 @@ export async function submitPrompt(
 		throw new Error("Failed to focus prompt textarea");
 	}
 
+	await preparePromptComposer(runtime, logger);
 	await input.insertText({ text: prompt });
 
 	// Some pages (notably ChatGPT when subscriptions/widgets load) need a brief settle
@@ -129,16 +280,7 @@ export async function submitPrompt(
       const fallback = document.querySelector(${fallbackSelectorLiteral});
       const target = document.querySelector(${promptTargetSelectorLiteral});
       const readText = (node) => node instanceof HTMLTextAreaElement ? node.value ?? '' : node?.innerText ?? node?.textContent ?? '';
-      const readUserText = (node) => {
-        if (!node) return '';
-        const clone = node.cloneNode(true);
-        clone
-          .querySelectorAll(
-            '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]',
-          )
-          .forEach((candidate) => candidate.remove());
-        return clone instanceof HTMLTextAreaElement ? clone.value ?? '' : clone.innerText ?? clone.textContent ?? '';
-      };
+	      const readUserText = ${buildReadComposerUserTextFunction()};
       return {
         editorText: editor?.innerText ?? '',
         fallbackValue: fallback?.value ?? '',
@@ -150,71 +292,66 @@ export async function submitPrompt(
 		returnByValue: true,
 	});
 
-	const editorTextRaw = verification.result?.value?.editorText ?? "";
 	const fallbackValueRaw = verification.result?.value?.fallbackValue ?? "";
 	const editorUserTextRaw = verification.result?.value?.editorUserText ?? "";
-	const targetTextRaw = verification.result?.value?.targetText ?? "";
 	const targetUserTextRaw = verification.result?.value?.targetUserText ?? "";
-	const observedInitialText =
-		targetUserTextRaw || targetTextRaw || editorUserTextRaw || editorTextRaw || fallbackValueRaw;
+	const observedInitialText = targetUserTextRaw || editorUserTextRaw || fallbackValueRaw;
 	if (!observedInitialText.trim()) {
-		// Learned: occasionally Input.insertText doesn't land in the editor; force textContent/value + input events.
+		// Input.insertText occasionally misses a pill-bearing ProseMirror editor.
+		// Insert at the editable tail without replacing the selected app pill.
 		await runtime.evaluate({
 			expression: `(() => {
-        const target = document.querySelector(${promptTargetSelectorLiteral});
-        const fallback = target instanceof HTMLTextAreaElement ? target : document.querySelector(${fallbackSelectorLiteral});
-        if (fallback) {
+	        const target = document.querySelector(${promptTargetSelectorLiteral});
+	        const fallback = target instanceof HTMLTextAreaElement ? target : document.querySelector(${fallbackSelectorLiteral});
+	        if (fallback) {
           fallback.value = ${encodedPrompt};
           fallback.dispatchEvent(new InputEvent('input', { bubbles: true, data: ${encodedPrompt}, inputType: 'insertFromPaste' }));
           fallback.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        const editor = target && !(target instanceof HTMLTextAreaElement) ? target : document.querySelector(${primarySelectorLiteral});
-        if (editor) {
-          editor.textContent = ${encodedPrompt};
-          // Nudge ProseMirror to register the textContent write so its state/send-button updates
-          editor.dispatchEvent(new InputEvent('input', { bubbles: true, data: ${encodedPrompt}, inputType: 'insertFromPaste' }));
-        }
-      })()`,
+	        }
+	        const editor = target && !(target instanceof HTMLTextAreaElement) ? target : document.querySelector(${primarySelectorLiteral});
+	        if (editor) {
+	          if (typeof editor.focus === 'function') editor.focus();
+	          const selection = editor.ownerDocument?.getSelection?.();
+	          if (selection) {
+	            const range = editor.ownerDocument.createRange();
+	            range.selectNodeContents(editor);
+	            range.collapse(false);
+	            selection.removeAllRanges();
+	            selection.addRange(range);
+	          }
+	          const inserted =
+	            typeof document.execCommand === 'function' &&
+	            document.execCommand('insertText', false, ${encodedPrompt});
+	          if (!inserted) {
+	            const tail = editor.querySelector('p:last-child') || editor;
+	            tail.appendChild(editor.ownerDocument.createTextNode(${encodedPrompt}));
+	            editor.dispatchEvent(
+	              new InputEvent('input', {
+	                bubbles: true,
+	                data: ${encodedPrompt},
+	                inputType: 'insertText',
+	              }),
+	            );
+	          }
+	        }
+	      })()`,
 		});
 	} else if (
 		!composerContainsPrompt(targetUserTextRaw, prompt) &&
-		!composerContainsPrompt(targetTextRaw, prompt) &&
 		!composerContainsPrompt(editorUserTextRaw, prompt) &&
 		!composerContainsPrompt(fallbackValueRaw, prompt)
 	) {
-		// A selected ChatGPT app is rendered as an inline pill inside #prompt-textarea.
-		// That pill makes the composer look non-empty even when Input.insertText did
-		// not land, so append at the editable tail without replacing the app pill.
-		await runtime.evaluate({
-			expression: `(() => {
-        const editor = document.querySelector(${promptTargetSelectorLiteral}) || document.querySelector(${primarySelectorLiteral});
-        if (!editor) return { inserted: false };
-        if (typeof editor.focus === 'function') editor.focus();
-        const selection = editor.ownerDocument?.getSelection?.();
-        if (selection) {
-          const range = editor.ownerDocument.createRange();
-          range.selectNodeContents(editor);
-          range.collapse(false);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-        const inserted =
-          typeof document.execCommand === 'function' &&
-          document.execCommand('insertText', false, ${encodedPrompt});
-        if (!inserted) {
-          const target = editor.querySelector('p:last-child') || editor;
-          target.appendChild(editor.ownerDocument.createTextNode(${encodedPrompt}));
-          editor.dispatchEvent(
-            new InputEvent('input', {
-              bubbles: true,
-              data: ${encodedPrompt},
-              inputType: 'insertText',
-            }),
-          );
-        }
-        return { inserted: true };
-      })()`,
-		});
+		await logDomFailure(runtime, logger, "prompt-composer-mismatch");
+		throw new BrowserAutomationError(
+			"Prompt composer contains text other than the requested prompt; refusing to submit.",
+			{
+				stage: "submit-prompt",
+				code: "prompt-composer-mismatch",
+				promptLength: prompt.length,
+				observedLength: observedInitialText.length,
+				...promptMismatchDiagnostics(observedInitialText, prompt),
+			},
+		);
 	}
 
 	const promptLength = prompt.length;
@@ -224,16 +361,7 @@ export async function submitPrompt(
       const fallback = document.querySelector(${fallbackSelectorLiteral});
       const target = document.querySelector(${promptTargetSelectorLiteral});
       const readText = (node) => node instanceof HTMLTextAreaElement ? node.value ?? '' : node?.innerText ?? node?.textContent ?? '';
-      const readUserText = (node) => {
-        if (!node) return '';
-        const clone = node.cloneNode(true);
-        clone
-          .querySelectorAll(
-            '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]',
-          )
-          .forEach((candidate) => candidate.remove());
-        return clone instanceof HTMLTextAreaElement ? clone.value ?? '' : clone.innerText ?? clone.textContent ?? '';
-      };
+	      const readUserText = ${buildReadComposerUserTextFunction()};
       return {
         editorText: editor?.innerText ?? '',
         fallbackValue: fallback?.value ?? '',
@@ -251,7 +379,6 @@ export async function submitPrompt(
 	const observedTargetUserText = postVerification.result?.value?.targetUserText ?? "";
 	if (
 		!composerContainsPrompt(observedTargetUserText, prompt) &&
-		!composerContainsPrompt(observedTarget, prompt) &&
 		!composerContainsPrompt(observedEditorUserText, prompt) &&
 		!composerContainsPrompt(observedFallback, prompt)
 	) {
@@ -533,24 +660,35 @@ async function verifyPromptCommitted(
 		}
 	}
 	const baselineLiteral = baseline ?? -1;
-	// Learned: ChatGPT can echo/format text; normalize markdown and use prefix matches to detect the sent prompt.
+	// Require the newly committed user turn to equal the requested prompt after
+	// presentation-only markdown and whitespace normalization.
 	const script = `(() => {
 	    const editor = document.querySelector(${primarySelectorLiteral});
 	    const fallback = document.querySelector(${fallbackSelectorLiteral});
 	    const inputSelectors = ${inputSelectorsLiteral};
 	    const normalize = (value) => {
-	      let text = value?.toLowerCase?.() ?? '';
+	      let text = String(value ?? '');
 	      // Strip markdown *markers* but keep content (ChatGPT renders fence markers differently).
 	      text = text.replace(/\`\`\`[^\\n]*\\n([\\s\\S]*?)\`\`\`/g, ' $1 ');
 	      text = text.replace(/\`\`\`/g, ' ');
 	      text = text.replace(/\`([^\`]*)\`/g, '$1');
+	      text = text.replace(/^\\s{0,3}#{1,6}\\s+/gm, '');
+	      text = text.replace(/^\\s*(?:[-*+]\\s+|\\d+[.)]\\s+)/gm, '');
 	      return text.replace(/\\s+/g, ' ').trim();
 	    };
 	    const normalizedPrompt = normalize(${encodedPrompt});
 	    const normalizedPromptPrefix = normalizedPrompt.slice(0, 120);
 	    const CONVERSATION_SELECTOR = ${JSON.stringify(CONVERSATION_TURN_SELECTOR)};
 	    const articles = Array.from(document.querySelectorAll(CONVERSATION_SELECTOR));
-	    const normalizedTurns = articles.map((node) => normalize(node?.innerText));
+	    const userArticles = articles.filter((node) => {
+	      const role = String(
+	        node.getAttribute?.('data-message-author-role') || node.getAttribute?.('data-turn') || '',
+	      ).toLowerCase();
+	      return role === 'user' || Boolean(node.querySelector?.('[data-message-author-role="user"], [data-turn="user"]'));
+	    });
+	    const candidateArticles = userArticles.length > 0 ? userArticles : articles;
+	    const readCommittedTurnText = ${buildReadCommittedTurnTextFunction()};
+	    const normalizedTurns = candidateArticles.map((node) => normalize(readCommittedTurnText(node)));
 	    const readValue = (node) => {
 	      if (!node) return '';
 	      if (node instanceof HTMLTextAreaElement) return node.value ?? '';
@@ -576,8 +714,9 @@ async function verifyPromptCommitted(
 	      normalizedPrompt.length > 0 &&
 	      (lastTurn.includes(normalizedPrompt) ||
 	        (normalizedPromptPrefix.length > 30 && lastTurn.includes(normalizedPromptPrefix)));
+	    const lastExactMatched = normalizedPrompt.length > 0 && lastTurn === normalizedPrompt;
 	    const baseline = ${baselineLiteral};
-	    const hasNewTurn = baseline < 0 ? false : normalizedTurns.length > baseline;
+	    const hasNewTurn = baseline < 0 ? false : articles.length > baseline;
       const stopVisible = Boolean(document.querySelector(${stopSelectorLiteral}));
       const assistantVisible = Boolean(
         document.querySelector(${assistantSelectorLiteral}) ||
@@ -596,6 +735,7 @@ async function verifyPromptCommitted(
       userMatched,
       prefixMatched,
       lastMatched,
+	  lastExactMatched,
       hasNewTurn,
       stopVisible,
       assistantVisible,
@@ -605,7 +745,7 @@ async function verifyPromptCommitted(
       fallbackValue,
       editorValue,
       lastTurn,
-      turnsCount: normalizedTurns.length,
+	      turnsCount: articles.length,
     };
   })()`;
 
@@ -615,6 +755,7 @@ async function verifyPromptCommitted(
 			userMatched?: boolean;
 			prefixMatched?: boolean;
 			lastMatched?: boolean;
+			lastExactMatched?: boolean;
 			hasNewTurn?: boolean;
 			stopVisible?: boolean;
 			assistantVisible?: boolean;
@@ -624,17 +765,10 @@ async function verifyPromptCommitted(
 			baseline?: number;
 		};
 		const turnsCount = (result.value as { turnsCount?: number } | undefined)?.turnsCount;
-		const matchesPrompt = Boolean(info?.lastMatched || info?.userMatched || info?.prefixMatched);
+		const matchesPrompt = Boolean(info?.lastExactMatched);
 		const baselineUnknown =
 			typeof info?.baseline === "number" ? info.baseline < 0 : baselineLiteral < 0;
 		if (matchesPrompt && (baselineUnknown || info?.hasNewTurn)) {
-			return typeof turnsCount === "number" && Number.isFinite(turnsCount) ? turnsCount : null;
-		}
-		const fallbackCommit =
-			info?.composerCleared &&
-			Boolean(info?.hasNewTurn) &&
-			((info?.stopVisible ?? false) || info?.assistantVisible || info?.inConversation);
-		if (fallbackCommit) {
 			return typeof turnsCount === "number" && Number.isFinite(turnsCount) ? turnsCount : null;
 		}
 		await delay(100);
@@ -666,6 +800,11 @@ async function verifyPromptCommitted(
 
 export const __test__ = {
 	composerContainsPrompt,
+	normalizedComposerText,
+	promptMismatchDiagnostics,
+	buildReadComposerUserTextFunction,
+	buildReadCommittedTurnTextFunction,
+	preparePromptComposer,
 	verifyPromptCommitted,
 	waitForComposerReadyToSubmit,
 };

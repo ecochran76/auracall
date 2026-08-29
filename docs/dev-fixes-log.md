@@ -1,3 +1,42 @@
+- 2026-08-23: Rebuilding browser list options must preserve provenance from the
+  same `LlmService` when the resolved DevTools endpoint is unchanged. The
+  projects CLI intentionally prebuilds options for cache identity, then passes
+  them through `listProjects`, which builds again. Treating explicit host/port
+  as provenance-free dropped the managed browser profile and process ID even
+  though ChatGPT returned the exact expected account. Reuse only an
+  authorization created by the same service authority at the same endpoint;
+  discard foreign-authority or changed-endpoint provenance fail-closed.
+
+- 2026-08-27: A stable ChatGPT approval card after an exact CDP coordinate
+  sequence is not proof that the connector authentication lapsed. Live
+  LitScout receipts showed `auth_session` succeeded while the mutation tool
+  never began, proving the coordinate action missed. Bind the single action to
+  the settled exact DOM control, focus and invoke it inside a CDP user-gesture
+  evaluation, and retain the same identity, ambiguity, paired-label, and
+  one-attempt fences.
+
+- 2026-08-27: Do not classify ChatGPT's third-party tool-consent card as an
+  OAuth authentication lapse. A successful approval can synchronously promote
+  a new exact `tool-approval-card` with identical visible text, so fingerprint
+  comparison alone cannot distinguish replacement from the unchanged clicked
+  card. Assign each mounted exact card a stable page-lifetime WeakMap identity;
+  acknowledge disappearance or a new DOM identity, and retain the one-click
+  fence for the same identity. Never use this identity to broaden paired-label,
+  manual, ambiguity, or `Answer now` safeguards.
+
+- 2026-08-25: ChatGPT can load a Project conversation at
+  `/g/<project-id>-<slug>/c/<conversation-id>` while its visible active sidebar
+  link uses `/g/<project-id>/c/<conversation-id>`. A byte-identical pathname
+  test rejects the genuine active `Work` badge and blocks AuraCall before Send.
+  Canonicalize only this provider-owned route pair: require one visible
+  `data-active` link, the same exact `g-p-...` Project ID, the same exact
+  conversation ID, and a descendant span whose normalized text is exactly
+  `Work`. Different Projects/conversations and generic Work text remain
+  fail-closed. Established Work can also omit its Chat/Work control while still
+  showing the dedicated animated model pill. Work-model confirmation must reuse
+  the exact active-conversation Work proof before accepting that pill; the pill
+  alone is shared with Chat and remains insufficient.
+
 - 2026-08-24: A surviving managed-browser listener proves process ownership,
   not completion liveness. A completion can fail and release its provider-work
   lease while its API-owned Chrome remains healthy on the configured DevTools
@@ -33,7 +72,6 @@
   pacing state and poisons the next target. Provider-free coverage must combine
   a cooldown longer than the remaining read budget, caller abort, no late
   governor timestamp advance, and a prompt subsequent admission.
-
 - 2026-08-23: Archive and account-mirror reads must isolate inaccessible local
   assets. A stale or unavailable mount (`ENODEV`, `ESTALE`, `EIO`, `EACCES`,
   or `EPERM`) is evidence that one indexed asset cannot currently be read; it
@@ -21982,3 +22020,49 @@ browser-stage lifecycle observability, not transcript truncation.
   content checksum refresh for archive consumers that actually return it.
   Parallel projections must start from one cloned registry snapshot so the
   response cannot mix generations while live-follow state changes.
+
+# 2026-08-27 — Preserve copied ChatGPT answer over terminal interruption chrome
+
+- Symptom: a completed 23,210-character copied writing block was discarded
+  because both captured response text and final DOM exposed only `Connection
+  interrupted. Waiting for the complete answer`.
+- Cause: `reconcileAssistantRepresentations` treated every eligible substantive
+  stable-DOM mismatch as authored content, even when the DOM value was exact
+  provider status chrome.
+- Repair: prefer copied markdown for both output representations only when the
+  captured and final-DOM texts independently match the exact normalized
+  interruption status, the copy is longer, and the copy is not itself status.
+  Ordinary substantive DOM mismatches remain authoritative.
+- Regression: `tests/browser/reattachHelpers.test.ts` freezes the 55-versus-
+  23,210 character incident at the production selector seam.
+
+## 2026-08-29 | Refresh the local integration target before lane ancestry audit
+
+- A stale local `main` made already integrated branches appear ambiguous even
+  when the auditor loaded its catalog from `origin/main`.
+- Fast-forward the local target ref after fetch before interpreting integration
+  findings. The catalog source ref and the target ancestry ref are separate
+  inputs; refreshing only the former is insufficient.
+- Delete worktree and branch custody only after exact cleanliness, ancestry or
+  prior semantic-equivalence, remote-tip, and process-working-directory proof.
+
+## 2026-08-29 | Bind live browser acceptance to exact owned-process cleanup
+
+- A read-only developer-app inventory may retain the managed browser for a
+  following canary, so command completion alone does not prove browser cleanup.
+- Record the exact browser PID and DevTools port launched by the authorized
+  operation, reuse only that known owner for the bounded follow-up, then close
+  that exact PID and prove both process and listening-port absence.
+- Keep scheduler ownership separate: foreground work may defer a scheduled
+  pass, but acceptance cleanup must not pause, resume, cancel, or claim custody
+  over that separately governed work.
+
+## 2026-08-28 | Parse the complete timeout token before accepting it
+
+- `Number.parseFloat("60m")` returns `60`, so a human-readable one-hour timeout
+  silently became one minute; the same parser accepted arbitrary suffixes.
+- Parse bare numeric values as seconds, otherwise consume the complete ordered
+  duration expression with explicit `ms`, `s`, `m`, or `h` units. Reject any
+  gap or suffix rather than accepting a numeric prefix.
+- Keep the production CLI parser under a focused regression for `60m`,
+  `1h30m`, numeric seconds, `auto`, and malformed partial tokens.

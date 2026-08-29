@@ -1,0 +1,209 @@
+{
+  "schema": "auracall.chatgpt-tool-approval-cdp-observation.v1",
+  "startedAt": "2026-08-27T16:04:58.902Z",
+  "finishedAt": "2026-08-27T16:04:59.288Z",
+  "mode": "activate",
+  "endpoint": {
+    "host": "127.0.0.1",
+    "port": 9222
+  },
+  "target": {
+    "id": "D80B6F79A9D4A873B993557BF9A67552",
+    "url": "https://chatgpt.com/c/6a904bcd-d578-83e9-8f53-b0e71b3b1365"
+  },
+  "wait": {
+    "requestedMs": 0,
+    "elapsedMs": 3,
+    "probeAttempts": 1
+  },
+  "policy": "allow-once",
+  "initial": {
+    "status": "approval-required",
+    "actionLabel": "Allow once",
+    "surfaceId": "approval-surface-1",
+    "controlId": "approval-control-2",
+    "x": 1007.4140625,
+    "y": 559.5,
+    "control": {
+      "tagName": "button",
+      "role": null,
+      "disabled": false,
+      "ariaDisabled": null,
+      "dataState": null,
+      "isConnected": true,
+      "hitTargetIsControl": true,
+      "hitTargetLabel": "allow once",
+      "pointerEvents": "auto",
+      "eventReceipt": {
+        "counts": {
+          "pointerdown": 0,
+          "mousedown": 0,
+          "mouseup": 0,
+          "click": 0
+        },
+        "trustedCounts": {
+          "pointerdown": 0,
+          "mousedown": 0,
+          "mouseup": 0,
+          "click": 0
+        },
+        "lastType": null,
+        "lastTrusted": null
+      }
+    },
+    "fingerprintLength": 215,
+    "fingerprintSha256": "99cf354cccc1daefb3046ed88b263a4715388def3b2cd97b0f028a42cb26def2",
+    "expectedFingerprintMatched": true
+  },
+  "observations": [
+    {
+      "phase": "detected",
+      "observedAt": "2026-08-27T16:04:58.951Z",
+      "status": "approval-required",
+      "actionLabel": "Allow once",
+      "surfaceId": "approval-surface-1",
+      "controlId": "approval-control-2",
+      "x": 1007.4140625,
+      "y": 559.5,
+      "control": {
+        "tagName": "button",
+        "role": null,
+        "disabled": false,
+        "ariaDisabled": null,
+        "dataState": null,
+        "isConnected": true,
+        "hitTargetIsControl": true,
+        "hitTargetLabel": "allow once",
+        "pointerEvents": "auto",
+        "eventReceipt": {
+          "counts": {
+            "pointerdown": 0,
+            "mousedown": 0,
+            "mouseup": 0,
+            "click": 0
+          },
+          "trustedCounts": {
+            "pointerdown": 0,
+            "mousedown": 0,
+            "mouseup": 0,
+            "click": 0
+          },
+          "lastType": null,
+          "lastTrusted": null
+        }
+      }
+    },
+    {
+      "phase": "settled",
+      "observedAt": "2026-08-27T16:04:59.113Z",
+      "status": "approval-required",
+      "actionLabel": "Allow once",
+      "surfaceId": "approval-surface-1",
+      "controlId": "approval-control-2",
+      "x": 1007.4140625,
+      "y": 559.5,
+      "control": {
+        "tagName": "button",
+        "role": null,
+        "disabled": false,
+        "ariaDisabled": null,
+        "dataState": null,
+        "isConnected": true,
+        "hitTargetIsControl": true,
+        "hitTargetLabel": "allow once",
+        "pointerEvents": "auto",
+        "eventReceipt": {
+          "counts": {
+            "pointerdown": 0,
+            "mousedown": 0,
+            "mouseup": 0,
+            "click": 0
+          },
+          "trustedCounts": {
+            "pointerdown": 0,
+            "mousedown": 0,
+            "mouseup": 0,
+            "click": 0
+          },
+          "lastType": null,
+          "lastTrusted": null
+        }
+      }
+    },
+    {
+      "phase": "pointer-dispatched",
+      "observedAt": "2026-08-27T16:04:59.274Z",
+      "status": "approval-required",
+      "actionLabel": "Allow once",
+      "surfaceId": "approval-surface-1",
+      "controlId": "approval-control-2",
+      "x": 1007.4140625,
+      "y": 559.5,
+      "control": {
+        "tagName": "button",
+        "role": null,
+        "disabled": false,
+        "ariaDisabled": null,
+        "dataState": null,
+        "isConnected": true,
+        "hitTargetIsControl": true,
+        "hitTargetLabel": "allow once",
+        "pointerEvents": "auto",
+        "eventReceipt": {
+          "counts": {
+            "pointerdown": 0,
+            "mousedown": 0,
+            "mouseup": 0,
+            "click": 0
+          },
+          "trustedCounts": {
+            "pointerdown": 0,
+            "mousedown": 0,
+            "mouseup": 0,
+            "click": 0
+          },
+          "lastType": null,
+          "lastTrusted": null
+        }
+      }
+    },
+    {
+      "phase": "post-action",
+      "observedAt": "2026-08-27T16:04:59.283Z",
+      "confirmationAttempt": 1,
+      "status": "none"
+    }
+  ],
+  "outcome": {
+    "status": "approved",
+    "action": "allow-once",
+    "label": "Allow once",
+    "surfaceId": "approval-surface-1",
+    "controlId": "approval-control-2",
+    "fingerprintSha256": "99cf354cccc1daefb3046ed88b263a4715388def3b2cd97b0f028a42cb26def2"
+  },
+  "failure": null,
+  "eventReceipt": {
+    "counts": {
+      "pointerdown": 1,
+      "mousedown": 1,
+      "mouseup": 1,
+      "click": 1
+    },
+    "trustedCounts": {
+      "pointerdown": 1,
+      "mousedown": 1,
+      "mouseup": 1,
+      "click": 1
+    },
+    "lastType": "click",
+    "lastTrusted": true
+  },
+  "log": [
+    "ChatGPT tool approval observation: {\"phase\":\"detected\",\"observedAt\":\"2026-08-27T16:04:58.951Z\",\"status\":\"approval-required\",\"actionLabel\":\"Allow once\",\"surfaceId\":\"approval-surface-1\",\"controlId\":\"approval-control-2\",\"x\":1007.4140625,\"y\":559.5,\"control\":{\"tagName\":\"button\",\"role\":null,\"disabled\":false,\"ariaDisabled\":null,\"dataState\":null,\"isConnected\":true,\"hitTargetIsControl\":true,\"hitTargetLabel\":\"allow once\",\"pointerEvents\":\"auto\",\"eventReceipt\":{\"counts\":{\"pointerdown\":0,\"mousedown\":0,\"mouseup\":0,\"click\":0},\"trustedCounts\":{\"pointerdown\":0,\"mousedown\":0,\"mouseup\":0,\"click\":0},\"lastType\":null,\"lastTrusted\":null}}}",
+    "ChatGPT tool approval observation: {\"phase\":\"settled\",\"observedAt\":\"2026-08-27T16:04:59.113Z\",\"status\":\"approval-required\",\"actionLabel\":\"Allow once\",\"surfaceId\":\"approval-surface-1\",\"controlId\":\"approval-control-2\",\"x\":1007.4140625,\"y\":559.5,\"control\":{\"tagName\":\"button\",\"role\":null,\"disabled\":false,\"ariaDisabled\":null,\"dataState\":null,\"isConnected\":true,\"hitTargetIsControl\":true,\"hitTargetLabel\":\"allow once\",\"pointerEvents\":\"auto\",\"eventReceipt\":{\"counts\":{\"pointerdown\":0,\"mousedown\":0,\"mouseup\":0,\"click\":0},\"trustedCounts\":{\"pointerdown\":0,\"mousedown\":0,\"mouseup\":0,\"click\":0},\"lastType\":null,\"lastTrusted\":null}}}",
+    "ChatGPT tool approval observation: {\"phase\":\"pointer-dispatched\",\"observedAt\":\"2026-08-27T16:04:59.274Z\",\"status\":\"approval-required\",\"actionLabel\":\"Allow once\",\"surfaceId\":\"approval-surface-1\",\"controlId\":\"approval-control-2\",\"x\":1007.4140625,\"y\":559.5,\"control\":{\"tagName\":\"button\",\"role\":null,\"disabled\":false,\"ariaDisabled\":null,\"dataState\":null,\"isConnected\":true,\"hitTargetIsControl\":true,\"hitTargetLabel\":\"allow once\",\"pointerEvents\":\"auto\",\"eventReceipt\":{\"counts\":{\"pointerdown\":0,\"mousedown\":0,\"mouseup\":0,\"click\":0},\"trustedCounts\":{\"pointerdown\":0,\"mousedown\":0,\"mouseup\":0,\"click\":0},\"lastType\":null,\"lastTrusted\":null}}}",
+    "ChatGPT tool approval observation: {\"phase\":\"post-action\",\"observedAt\":\"2026-08-27T16:04:59.283Z\",\"confirmationAttempt\":1,\"status\":\"none\"}",
+    "ChatGPT tool approval: Allow once"
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "planId": "0318-2026-08-27",
+  "terminalDisposition": "LIVE_ACCEPTED_INTEGRATED",
+  "integrationReceipt": "af13ca5ae9b5efb1bc2dfe06e302212cbe690864",
+  "sourceCommit": "579ed6509b6bcd2b1127e9a073b8fbe205cdcdff",
+  "target": {
+    "runtimeProfile": "wsl-chrome-3",
+    "providerAccount": "eric.cochran@soylei.com",
+    "conversationId": "6a904bcd-d578-83e9-8f53-b0e71b3b1365",
+    "chromePort": 9222,
+    "chromeTargetId": "D80B6F79A9D4A873B993557BF9A67552",
+    "projectId": 15,
+    "sessionId": 73,
+    "appReconnects": 0,
+    "appRefreshes": 0,
+    "answerNowActivations": 0
+  },
+  "directObservation": {
+    "initialControlDisabled": true,
+    "sameControlEnabledLater": true,
+    "actionLabel": "Allow once",
+    "surfaceId": "approval-surface-1",
+    "controlId": "approval-control-2",
+    "hitTargetIsControl": true,
+    "fingerprintSha256": "99cf354cccc1daefb3046ed88b263a4715388def3b2cd97b0f028a42cb26def2",
+    "trustedEvents": {"pointerdown": 1, "mousedown": 1, "mouseup": 1, "click": 1},
+    "cardDisappearedOnConfirmationAttempt": 1,
+    "receipt": "docs/dev/notes/2026-08-27-plan0318-direct-activation.json"
+  },
+  "litscout": {
+    "invocationId": "mti_cba160bf4f204af585b17af1cdcdac95",
+    "tool": "research_action_execute",
+    "outcome": "success",
+    "receiptId": "rar_da1ff16f021fc98bc1744257d6619d46",
+    "action": "approve_search_plan",
+    "stateAfter": "gather_ready",
+    "nextAction": "execute_search_plan",
+    "providerCalls": 0,
+    "positiveMarginalSpendUsd": 0
+  },
+  "repair": {
+    "cause": "The real research-action card mounted its exact approval control disabled while ChatGPT safety checks ran, then enabled the same control later.",
+    "behavior": "Wait up to 60 seconds for the same exact card and control to become enabled before trusted pointer dispatch.",
+    "focusedTests": "23/23",
+    "affectedTests": "128/128",
+    "typecheck": "passed",
+    "scopedLint": "passed",
+    "productionBuild": "passed",
+    "planLibraryAuditErrors": 0
+  },
+  "installed": {
+    "version": "0.1.1",
+    "approvalSourceSha256": "a4090b0fb900c17d064b706238b427222ca85524f6200d1e4e4985e3d5852385",
+    "approvalInstalledSha256": "a4090b0fb900c17d064b706238b427222ca85524f6200d1e4e4985e3d5852385",
+    "observerSourceSha256": "62773afa4921475d555ebaae40c80155e735b5d47692104b4032ce1c4a93065b",
+    "observerInstalledSha256": "62773afa4921475d555ebaae40c80155e735b5d47692104b4032ce1c4a93065b",
+    "apiMainPid": 18069,
+    "apiActive": true
+  },
+  "cleanup": {
+    "experimentBrowserPort9222Processes": 0,
+    "accountMirrorCompletionRestored": true,
+    "restoredCompletionId": "acctmirror_completion_24831e4d-70b7-419c-86f5-53ae1bb5a93b",
+    "restoredCompletionStatus": "running",
+    "restoredBrowserOwnership": "api-owned background completion on port 45015"
+  }
+}

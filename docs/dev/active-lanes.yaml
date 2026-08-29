@@ -44,7 +44,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: c1da8609c60eabced87fadfde2b948747be8fc58
+    checkpoint: 9e8757c8b7ee378fec64b67b429b3ee9d6bbb9f4
     remote_ref: refs/remotes/origin/fix/plan0310-live-follow-cooldown-abort
     integration: merge
     dependencies: []
@@ -98,7 +98,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 0bab471019139ae359d750433b39bd84d72191e7
+    checkpoint: de74f3c8b24aa87b5dc0f93a4d3b885a939ab9ac
     remote_ref: refs/remotes/origin/fix/plan0313-live-follow-predicate-cleanup
     integration: merge
     dependencies: [P05]
@@ -116,7 +116,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 776556bfbe0acfe3bad4a302da030cf81f868c0b
+    checkpoint: 51287ed743901fc529869552440167bc309a171a
     remote_ref: refs/remotes/origin/fix/plan0314-bounded-live-follow-recovery
     integration: merge
     dependencies: [P06]
@@ -129,18 +129,144 @@ lanes:
   - id: P08
     objective: Reduce aggregate API status latency below the existing default five-second client budget without weakening status semantics.
     plan: docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md
-    plan_ref: refs/heads/fix/plan0315-aggregate-status-latency
+    plan_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     branch: fix/plan0315-aggregate-status-latency
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 11ad85830abfd168786c82f2f8c2d17484eeedf1
+    checkpoint: d461cb56527db9b14e57286622a51582a2b09b41
     remote_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     integration: merge
     dependencies: [P07]
     overlaps: []
-    validation_status: diagnosis-open
-    validation_ref: null
+    validation_status: implementation-accepted-installed-proof-blocked
+    validation_ref: 025453473c5957fb72abb7ed787cb6d1266951e6
     integration_receipt: null
-    disposition: Default aggregate status times out 3/3; diagnosis and provider-free repair are active, with live provider/browser effects excluded.
-    updated_at: 2026-08-25
+    disposition: Provider-free repair is accepted; installed proof remains blocked by the plan's exact managed-browser and provider-guard hard stop.
+    updated_at: 2026-08-29
+  - id: P09
+    objective: Restore exact ChatGPT Work-mode proof when a loaded Project conversation route includes its human-readable slug.
+    plan: docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md
+    plan_ref: refs/remotes/origin/fix/plan0316-project-slug-work-marker
+    branch: fix/plan0316-project-slug-work-marker
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 51327ee04572fe0f7db84c3b636bd9a022c16447
+    remote_ref: refs/remotes/origin/fix/plan0316-project-slug-work-marker
+    integration: merge
+    dependencies: [P07]
+    overlaps: []
+    validation_status: live-passed-integrated
+    validation_ref: e76a8407af5df7e38fccfa532500c63a708fe127
+    integration_receipt: 79a57806af00efe78290f5b7812cf97a980555c7
+    disposition: Installed exact-target Work and GPT-5.6 Sol acceptance passed with no prompt or Send; provider-provenance overlap was reconciled and merged to main.
+    updated_at: 2026-08-27
+  - id: P10
+    objective: Keep one authenticated LitScout connector usable across identical-looking sequential ChatGPT approval cards without weakening the one-click fence.
+    plan: docs/dev/plans/0317-2026-08-27-durable-chatgpt-approval-acknowledgment.md
+    plan_ref: refs/heads/fix/plan0317-durable-chatgpt-approval
+    branch: fix/plan0317-durable-chatgpt-approval
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: ff3de8478b15d19f76e7f5a2aad241ccc9a48a1d
+    remote_ref: refs/remotes/origin/fix/plan0317-durable-chatgpt-approval
+    integration: merge-after-p09-reconciliation
+    dependencies: [P09]
+    overlaps: []
+    validation_status: live-passed-integrated
+    validation_ref: 31a8fc0aa5f832c1df83e14b51cd07970b70291b
+    integration_receipt: 79a57806af00efe78290f5b7812cf97a980555c7
+    disposition: Exact DOM-bound approval activation is installed and live-accepted in one multi-call LitScout turn with no reconnect or canonical write; merged to main after P09 reconciliation.
+    updated_at: 2026-08-27
+  - id: P11
+    objective: Directly observe and reliably activate the exact ChatGPT connected-app approval control through the AuraCall wsl-chrome-3 DevTools port.
+    plan: docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md
+    plan_ref: refs/remotes/origin/fix/plan0318-cdp-observed-chatgpt-approval
+    branch: fix/plan0318-cdp-observed-chatgpt-approval
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: db0a5f26e582fbc23a81001756f459f383f37a8a
+    remote_ref: refs/remotes/origin/fix/plan0318-cdp-observed-chatgpt-approval
+    integration: merge
+    dependencies: [P10]
+    overlaps: []
+    validation_status: source-installed-live-accepted
+    validation_ref: 579ed6509b6bcd2b1127e9a073b8fbe205cdcdff
+    integration_receipt: af13ca5ae9b5efb1bc2dfe06e302212cbe690864
+    disposition: Exact disabled-to-enabled control transition and trusted direct activation accepted; final readiness-wait repair is byte-identical installed and integrated to main.
+    updated_at: 2026-08-27
+  - id: P12
+    objective: Replace retained ChatGPT composer text and prove exact submitted user-turn identity before rerunning the Frakktal LitScout experiment.
+    plan: docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md
+    plan_ref: refs/heads/fix/plan0319-chatgpt-composer-replacement
+    branch: fix/plan0319-chatgpt-composer-replacement
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 00eea2a58d799a95e113bf30a4edb5a2d82554fb
+    remote_ref: refs/remotes/origin/fix/plan0319-chatgpt-composer-replacement
+    integration: merge
+    dependencies: [P11]
+    overlaps: []
+    validation_status: source-installed-live-accepted
+    validation_ref: a284bacb
+    integration_receipt: e660c71a5f8ff684f53df3926ce63f5086633a69
+    disposition: Exact-one-turn composer acceptance passed in a fresh CDP-observed research run and integrated to main; terminal output selection remains a separate successor defect.
+    updated_at: 2026-08-27
+  - id: P13
+    objective: Preserve a substantive copied ChatGPT writing block when the terminal DOM contains only an explicit interruption status.
+    plan: docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md
+    plan_ref: refs/heads/fix/plan0320-chatgpt-terminal-output-selection
+    branch: fix/plan0320-chatgpt-terminal-output-selection
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 989faab312756bc88d9224005815afae7d19cbf7
+    remote_ref: refs/remotes/origin/fix/plan0320-chatgpt-terminal-output-selection
+    integration: merge
+    dependencies: [P12]
+    overlaps: []
+    validation_status: source-installed-provider-free-accepted
+    validation_ref: 86ec7f5e
+    integration_receipt: d045f68c
+    disposition: Exact incident RED, 209-test GREEN, byte-identical installed-module smoke, and non-forced main integration complete without a provider effect.
+    updated_at: 2026-08-27
+  - id: P14
+    objective: Parse complete timeout durations and prove reliable same-turn ChatGPT control before the next research experiment.
+    plan: docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md
+    plan_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
+    branch: fix/plan0321-reliable-turn-control
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 1ad5aa4dfa5da49d16adb831c877a08f7dd8badb
+    remote_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
+    integration: merge
+    dependencies: [P13]
+    overlaps: []
+    validation_status: passed
+    validation_ref: 1ad5aa4dfa5da49d16adb831c877a08f7dd8badb
+    integration_receipt: 1659bdbb2f0c54459e728f420a82eddfb06d6126
+    disposition: Integrated strict duration parsing after all acceptance gates passed; verified inactive browser cleanup released the cwd interlock and all P14 worktree plus local and remote topic custody is removed.
+    updated_at: 2026-08-29
+  - id: P15
+    objective: Reconcile current Git custody and close exact integrated branch and worktree refs while preserving unfinished lanes.
+    plan: docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md
+    plan_ref: refs/remotes/origin/chore/plan0322-git-maintenance-closeout
+    branch: chore/plan0322-git-maintenance-closeout
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: a25230e2043c3720e58da8600464a8acc4dd2c9d
+    remote_ref: refs/remotes/origin/chore/plan0322-git-maintenance-closeout
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: passed
+    validation_ref: a25230e2043c3720e58da8600464a8acc4dd2c9d
+    integration_receipt: 168322897e9d7dd0e652e14d44b82482ad83c5ec
+    disposition: Integrated exact Git custody cleanup; P08, P14, historical compatibility, divergent, and unknown-custody refs are retained.
+    updated_at: 2026-08-29

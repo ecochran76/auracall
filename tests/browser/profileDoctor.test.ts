@@ -916,6 +916,8 @@ describe('profileDoctor', () => {
         error: null,
         reason: null,
       },
+      promptWorkbench: null,
+      promptWorkbenchError: null,
       runtime: {
         operation: null,
         browserTools: {

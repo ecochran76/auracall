@@ -72,6 +72,46 @@ export function resolveChatgptModelSelectionPlan(input: {
 		: { kind: "ignore" };
 }
 
+export function buildChatgptActiveConversationWorkMarkerHelpers(): string {
+	return `
+    const projectConversationRoute = (pathname) => {
+      const segments = String(pathname ?? '').split('/').filter(Boolean);
+      if (segments.length !== 4 || segments[0] !== 'g' || segments[2] !== 'c') return null;
+      const projectRoute = segments[1];
+      const conversationId = segments[3];
+      const projectId = projectRoute.match(/^(g-p-[a-z0-9]{20,})(?:-|$)/i)?.[1] ?? null;
+      if (!projectId || !conversationId) return null;
+      return { projectId, conversationId };
+    };
+    const isCurrentConversationRoute = (pathname) => {
+      if (pathname === location.pathname) return true;
+      const candidate = projectConversationRoute(pathname);
+      const current = projectConversationRoute(location.pathname);
+      return Boolean(
+        candidate &&
+        current &&
+        candidate.projectId === current.projectId &&
+        candidate.conversationId === current.conversationId
+      );
+    };
+    const hasActiveConversationWorkMarker = () =>
+      Array.from(document.querySelectorAll('a[href][data-active]'))
+        .filter(visible)
+        .some((node) => {
+          const href = node.getAttribute('href');
+          if (!href) return false;
+          let pathname = '';
+          try {
+            pathname = new URL(href, location.href).pathname;
+          } catch {
+            return false;
+          }
+          if (!isCurrentConversationRoute(pathname)) return false;
+          return Array.from(node.querySelectorAll('span'))
+            .some((marker) => normalize(marker.textContent) === 'work');
+        });`;
+}
+
 function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): string {
 	const desiredLiteral = JSON.stringify(desiredMode);
 	return `(async () => {
@@ -87,22 +127,7 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
     const isSelected = (node) =>
       node.getAttribute('aria-checked') === 'true' ||
       node.getAttribute('data-state') === 'on';
-    const hasActiveConversationWorkMarker = () =>
-      Array.from(document.querySelectorAll('a[href][data-active]'))
-        .filter(visible)
-        .some((node) => {
-          const href = node.getAttribute('href');
-          if (!href) return false;
-          let pathname = '';
-          try {
-            pathname = new URL(href, location.href).pathname;
-          } catch {
-            return false;
-          }
-          if (pathname !== location.pathname) return false;
-          return Array.from(node.querySelectorAll('span'))
-            .some((marker) => normalize(marker.textContent) === 'work');
-        });
+    ${buildChatgptActiveConversationWorkMarkerHelpers()}
     const radios = Array.from(document.querySelectorAll('[role="radio"]'))
       .filter(visible)
       .map((node) => ({ node, label: normalize(node.textContent) }))

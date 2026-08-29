@@ -7,6 +7,8 @@ import {
 class FixtureElement {
 	textContent: string;
 	parentElement: FixtureElement | null = null;
+	focusCount = 0;
+	clickCount = 0;
 	private readonly attributes = new Map<string, string>();
 	private readonly children: FixtureElement[] = [];
 	private readonly rect: { left: number; top: number; width: number; height: number };
@@ -34,6 +36,14 @@ class FixtureElement {
 
 	getBoundingClientRect() {
 		return this.rect;
+	}
+
+	focus(): void {
+		this.focusCount += 1;
+	}
+
+	click(): void {
+		this.clickCount += 1;
 	}
 
 	closest(selector: string): FixtureElement | null {
@@ -70,7 +80,10 @@ class FixtureElement {
 
 afterEach(() => vi.unstubAllGlobals());
 
-function createClient(evaluate: ReturnType<typeof vi.fn>, dispatchMouseEvent: ReturnType<typeof vi.fn>) {
+function createClient(
+	evaluate: ReturnType<typeof vi.fn>,
+	dispatchMouseEvent: ReturnType<typeof vi.fn>,
+) {
 	return Object.fromEntries([
 		["Runtime", { evaluate }],
 		["Input", { dispatchMouseEvent }],
@@ -78,7 +91,7 @@ function createClient(evaluate: ReturnType<typeof vi.fn>, dispatchMouseEvent: Re
 }
 
 describe("ChatGPT tool approval handling", () => {
-	it("clicks exact Allow once when the operator selected allow-once", async () => {
+	it("activates exact Allow once when the operator selected allow-once", async () => {
 		const evaluate = vi
 			.fn()
 			.mockResolvedValueOnce({
@@ -98,6 +111,7 @@ describe("ChatGPT tool approval handling", () => {
 						status: "approval-required",
 						fingerprint: "tool-approval-1",
 						actionLabel: "Allow once",
+						activated: true,
 						x: 120,
 						y: 240,
 					},
@@ -106,10 +120,12 @@ describe("ChatGPT tool approval handling", () => {
 			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
 		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
 		const logger = vi.fn();
+		const observations: Array<{ phase: string; status: string }> = [];
 		const handle = createChatgptToolApprovalHandler({
 			client: createClient(evaluate, dispatchMouseEvent),
 			policy: "allow-once",
 			logger,
+			onObservation: (observation) => observations.push(observation),
 		});
 
 		await expect(handle()).resolves.toMatchObject({
@@ -118,15 +134,21 @@ describe("ChatGPT tool approval handling", () => {
 			label: "Allow once",
 		});
 		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
-		expect(dispatchMouseEvent).toHaveBeenNthCalledWith(1, {
-			type: "mouseMoved",
-			x: 120,
-			y: 240,
-		});
+		expect(dispatchMouseEvent).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({ type: "mousePressed", x: 120, y: 240, button: "left" }),
+		);
+		expect(evaluate).toHaveBeenNthCalledWith(2, expect.objectContaining({ userGesture: true }));
 		expect(logger).toHaveBeenCalledWith("ChatGPT tool approval: Allow once");
+		expect(observations.map(({ phase, status }) => ({ phase, status }))).toEqual([
+			{ phase: "detected", status: "approval-required" },
+			{ phase: "settled", status: "approval-required" },
+			{ phase: "pointer-dispatched", status: "approval-required" },
+			{ phase: "post-action", status: "none" },
+		]);
 	});
 
-	it("waits for the approval surface to settle and clicks its fresh coordinates", async () => {
+	it("waits for the approval surface to settle and activates that exact control", async () => {
 		const initialApproval = {
 			result: {
 				value: {
@@ -144,6 +166,7 @@ describe("ChatGPT tool approval handling", () => {
 					status: "approval-required",
 					fingerprint: "settling-tool-approval",
 					actionLabel: "Allow once",
+					activated: true,
 					x: 180,
 					y: 300,
 				},
@@ -162,11 +185,60 @@ describe("ChatGPT tool approval handling", () => {
 		});
 
 		await expect(handle()).resolves.toMatchObject({ status: "approved" });
-		expect(dispatchMouseEvent).toHaveBeenNthCalledWith(1, {
-			type: "mouseMoved",
-			x: 180,
-			y: 300,
+		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
+		expect(dispatchMouseEvent).toHaveBeenLastCalledWith(
+			expect.objectContaining({ type: "mouseReleased", x: 180, y: 300, button: "left" }),
+		);
+		expect(evaluate).toHaveBeenNthCalledWith(2, expect.objectContaining({ userGesture: true }));
+	});
+
+	it("waits for the exact approval control to become enabled before dispatching a trusted pointer", async () => {
+		const blockedApproval = {
+			status: "approval-required",
+			fingerprint: "safety-checking-approval",
+			surfaceId: "surface-1",
+			controlId: "control-1",
+			actionLabel: "Allow once",
+			activated: true,
+			x: 120,
+			y: 240,
+			control: {
+				disabled: true,
+				ariaDisabled: null,
+				isConnected: true,
+				hitTargetIsControl: true,
+				pointerEvents: "auto",
+			},
+		};
+		const readyApproval = {
+			...blockedApproval,
+			control: { ...blockedApproval.control, disabled: false },
+		};
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce({ result: { value: blockedApproval } })
+			.mockResolvedValueOnce({ result: { value: blockedApproval } })
+			.mockResolvedValueOnce({ result: { value: readyApproval } })
+			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
+		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
+		const observations: Array<{ phase: string }> = [];
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+			onObservation: (observation) => observations.push(observation),
 		});
+
+		await expect(handle()).resolves.toMatchObject({ status: "approved" });
+		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
+		expect(observations.map(({ phase }) => phase)).toEqual([
+			"detected",
+			"settled",
+			"waiting-ready",
+			"ready",
+			"pointer-dispatched",
+			"post-action",
+		]);
 	});
 
 	it("fails closed when the approval changes before click", async () => {
@@ -347,6 +419,74 @@ describe("ChatGPT tool approval handling", () => {
 		expect(result.fingerprint).not.toContain("earlier assistant reasoning");
 	});
 
+	it("assigns stable identity to one exact card and new identity to its replacement", () => {
+		const firstAllowOnce = new FixtureElement("Allow once", { role: "button" });
+		const firstAlwaysAllow = new FixtureElement("Always allow", { role: "button" });
+		const firstCard = new FixtureElement("LitScout Same action Allow once Always allow", {
+			"data-testid": "tool-approval-card",
+		});
+		firstCard.append(firstAllowOnce, firstAlwaysAllow);
+		let controls = [firstAllowOnce, firstAlwaysAllow];
+		vi.stubGlobal("Element", FixtureElement);
+		vi.stubGlobal("HTMLElement", FixtureElement);
+		vi.stubGlobal("document", {
+			querySelectorAll: (selector: string) =>
+				selector === 'button,[role="button"]' ? controls : [],
+		});
+		const expression = buildChatgptToolApprovalProbeExpressionForTest("always-allow");
+
+		const first = new Function(`return ${expression}`)();
+		const same = new Function(`return ${expression}`)();
+		const replacementAllowOnce = new FixtureElement("Allow once", { role: "button" });
+		const replacementAlwaysAllow = new FixtureElement("Always allow", { role: "button" });
+		const replacementCard = new FixtureElement("LitScout Same action Allow once Always allow", {
+			"data-testid": "tool-approval-card",
+		});
+		replacementCard.append(replacementAllowOnce, replacementAlwaysAllow);
+		controls = [replacementAllowOnce, replacementAlwaysAllow];
+		const replacement = new Function(`return ${expression}`)();
+
+		expect(same.surfaceId).toBe(first.surfaceId);
+		expect(same.controlId).toBe(first.controlId);
+		expect(replacement.fingerprint).toBe(first.fingerprint);
+		expect(replacement.surfaceId).not.toBe(first.surfaceId);
+		expect(replacement.controlId).not.toBe(first.controlId);
+	});
+
+	it("activates the exact DOM control bound by the settled probe", () => {
+		const allowOnce = new FixtureElement("Allow once", { role: "button" });
+		const alwaysAllow = new FixtureElement("Always allow", { role: "button" });
+		const card = new FixtureElement("Corel33t Same action Allow once Always allow", {
+			"data-testid": "tool-approval-card",
+		});
+		card.append(allowOnce, alwaysAllow);
+		vi.stubGlobal("Element", FixtureElement);
+		vi.stubGlobal("HTMLElement", FixtureElement);
+		vi.stubGlobal("document", {
+			querySelectorAll: (selector: string) =>
+				selector === 'button,[role="button"]' ? [allowOnce, alwaysAllow] : [],
+		});
+		const probe = new Function(
+			`return ${buildChatgptToolApprovalProbeExpressionForTest("always-allow")}`,
+		)();
+		const activated = new Function(
+			`return ${buildChatgptToolApprovalProbeExpressionForTest("always-allow", {
+				fingerprint: probe.fingerprint,
+				surfaceId: probe.surfaceId,
+				actionLabel: "Always allow",
+			})}`,
+		)();
+
+		expect(activated).toMatchObject({
+			status: "approval-required",
+			activated: true,
+			surfaceId: probe.surfaceId,
+		});
+		expect(alwaysAllow.focusCount).toBe(1);
+		expect(alwaysAllow.clickCount).toBe(0);
+		expect(allowOnce.clickCount).toBe(0);
+	});
+
 	it("fails closed when more than one approval surface is visible", async () => {
 		const evaluate = vi.fn().mockResolvedValue({
 			result: { value: { status: "ambiguous", count: 2 } },
@@ -362,13 +502,53 @@ describe("ChatGPT tool approval handling", () => {
 		expect(dispatchMouseEvent).not.toHaveBeenCalled();
 	});
 
+	it("fails closed before pointer dispatch when the exact control loses the center hit test", async () => {
+		const initial = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "covered-tool-approval",
+					surfaceId: "approval-surface-covered",
+					controlId: "approval-control-covered",
+					actionLabel: "Always allow",
+					activated: true,
+					x: 120,
+					y: 240,
+					control: {
+						tagName: "button",
+						role: null,
+						disabled: false,
+						ariaDisabled: null,
+						dataState: null,
+						isConnected: true,
+						hitTargetIsControl: false,
+						hitTargetLabel: "overlay",
+						pointerEvents: "auto",
+					},
+				},
+			},
+		};
+		const evaluate = vi.fn().mockResolvedValue(initial);
+		const dispatchMouseEvent = vi.fn();
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "always-allow",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).rejects.toThrow(/not the topmost hit-test target/i);
+		expect(dispatchMouseEvent).not.toHaveBeenCalled();
+	});
+
 	it("does not click the same approval twice when disappearance is unconfirmed", async () => {
 		const persistentApproval = {
 			result: {
 				value: {
 					status: "approval-required",
 					fingerprint: "persistent-tool-approval",
+					surfaceId: "persistent-surface-1",
 					actionLabel: "Always allow",
+					activated: true,
 					x: 120,
 					y: 240,
 				},
@@ -394,6 +574,7 @@ describe("ChatGPT tool approval handling", () => {
 					status: "approval-required",
 					fingerprint: "approve-enrichment-card-rea_first",
 					actionLabel: "Allow once",
+					activated: true,
 					x: 120,
 					y: 240,
 				},
@@ -405,6 +586,7 @@ describe("ChatGPT tool approval handling", () => {
 					status: "approval-required",
 					fingerprint: "execute-enrichment-card-rea_next",
 					actionLabel: "Allow once",
+					activated: true,
 					x: 140,
 					y: 260,
 				},
@@ -436,6 +618,52 @@ describe("ChatGPT tool approval handling", () => {
 		expect(dispatchMouseEvent).toHaveBeenCalledTimes(6);
 	});
 
+	it("acknowledges an identical-looking successor card by exact DOM instance", async () => {
+		const firstApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "identical-visible-tool-approval",
+					surfaceId: "approval-surface-1",
+					actionLabel: "Always allow",
+					activated: true,
+					x: 120,
+					y: 240,
+				},
+			},
+		};
+		const replacementApproval = {
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "identical-visible-tool-approval",
+					surfaceId: "approval-surface-2",
+					actionLabel: "Always allow",
+					x: 120,
+					y: 240,
+				},
+			},
+		};
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce(firstApproval)
+			.mockResolvedValueOnce(firstApproval)
+			.mockResolvedValue(replacementApproval);
+		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "always-allow",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).resolves.toMatchObject({
+			status: "approved",
+			fingerprint: "identical-visible-tool-approval",
+			surfaceId: "approval-surface-1",
+		});
+		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
+	});
+
 	it("allows a later confirmed approval with the same visible fingerprint", async () => {
 		const approval = {
 			result: {
@@ -443,6 +671,7 @@ describe("ChatGPT tool approval handling", () => {
 					status: "approval-required",
 					fingerprint: "repeated-tool-approval",
 					actionLabel: "Allow once",
+					activated: true,
 					x: 120,
 					y: 240,
 				},

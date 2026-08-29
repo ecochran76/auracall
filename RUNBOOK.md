@@ -1,5 +1,327 @@
 # RUNBOOK
 
+## Turn 538 | 2026-08-29
+
+- Read-only ownership evidence proved the browser blocking P14 cleanup was not
+  serving LitScout: its only page was the ChatGPT root, port `37523` had no CDP
+  client, AuraCall's `default` target was paused with no foreground request or
+  proof scope, and LitScout API/MCP/workers were independent processes.
+- With operator authority, sent SIGTERM only to exact Chrome PID `712`. The
+  entire `default/chatgpt` Chrome tree exited, port `37523` closed, and AuraCall
+  reported the paused target idle with no browser process.
+- Re-proved P14 clean, equal local/remote tip, ancestry to `main`, and zero cwd
+  owners; removed its worktree, local branch, and remote branch. Only P08 now
+  retains product-lane worktree custody.
+
+## Turn 537 | 2026-08-29
+
+- Pushed `main` through `071afeaf` and proved exact equality with
+  `origin/main`. An attempted integrated remote-ref cleanup was restored at the
+  exact published P14 tip when the final catalog audit correctly required
+  remote recovery custody while the local branch remains.
+- Local P14 worktree removal stopped at the process-cwd interlock: a separately
+  owned Chrome tree for the `default` browser profile retains a cwd under that
+  worktree. It is not the accepted `wsl-chrome-3` browser and was not
+  terminated. The clean, integrated local worktree plus equal local/remote
+  branch custody remain until the process exits naturally or separate ownership
+  authority is supplied.
+
+## Turn 536 | 2026-08-29
+
+- The default-branch active-lane catalog proved P14 `integration_ready` with
+  local tip, remote tip, checkpoint, and validation ref equal at `1ad5aa4d`.
+- P14 merged non-forced to `main` at `1659bdbb`. Final documentary closeout
+  binds that integration receipt and leaves P08 as the only open product lane.
+- Remaining Git effects are the final validation/push and exact removal of the
+  now-integrated P14 branch/worktree custody; the installed runtime remains the
+  accepted candidate.
+
+## Turn 535 | 2026-08-29
+
+- P14 installed the exact candidate once and proved byte parity for the CLI
+  option parser and production entrypoint. `auracall-api.service` is active at
+  PID `9496`, `NRestarts=0`, and the installed API status probe passes.
+- Provider-free acceptance passes `181/181` across eight focused files plus
+  typecheck, production build, and scoped zero-warning lint.
+- Read-only inventory on AuraCall runtime profile `wsl-chrome-3` proved an
+  authenticated ChatGPT Pro surface with Developer mode enabled and exactly one
+  enabled, active, private, user-scoped LitScout app.
+- One normal-Chat/current-model/manual-approval canary used `--timeout 60m`,
+  committed one prompt, returned exactly `AURACALL_TIMEOUT_TURN_OK` in 14.8
+  seconds, and reported zero retries. The exact owned Chrome PID was terminated
+  and port `45015` closed; no scheduler or materialization control ran.
+- Plan 0321 is closed and ready for non-forced merge to `main`. The LitScout
+  experiment remains governed by LitScout Plan 0463.
+
+## Turn 534 | 2026-08-29
+
+- P15 merged without conflict through `16832289`. The final catalog binds the
+  maintenance checkpoint and integration receipt; P08 and P14 remain open,
+  published, clean, and unmerged.
+- Final actions are limited to pushing main, removing P15's temporary local and
+  origin custody, and proving clean default-ref catalog and parity readbacks.
+
+## Turn 533 | 2026-08-29
+
+- P14 is published and equal to its origin branch; its plan now explicitly
+  declares the cataloged merge integration method. P08 and P14 remain unmerged
+  and no install, browser, provider, or scheduler action ran.
+- Removed four clean, process-unowned integrated worktrees and 12 merged local
+  topic branches. Deleted 29 exact origin refs limited to integrated catalog
+  lanes and Plan 0308's previously adjudicated cleanup candidates.
+- Retained both active branches, the historical compatibility ref, and every
+  divergent or remote-only unknown-custody branch. P15 is integration-ready;
+  final main reconciliation and catalog audit remain.
+
+## Turn 532 | 2026-08-29
+
+- Operator requested complete Git maintenance across open branches and linked
+  worktrees. [Plan 0322](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
+  freezes the refreshed custody set on `chore/plan0322-git-maintenance-closeout`.
+- [P08](docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md) remains
+  open at its published tip because installed status-latency proof is blocked
+  by its existing browser/guard hard stop. P14 remains source-green but
+  unmerged pending separately bounded install/live acceptance.
+- P09, P10, P13, and the provider-provenance worktrees are clean, ancestral to
+  current `origin/main`, and have no process working directory under their
+  paths. Cleanup is limited to exact proved targets; no runtime or provider
+  effect is in scope.
+
+## Turn 531 | 2026-08-28
+
+- P14 opens [Plan 0321](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)
+  on `fix/plan0321-reliable-turn-control`, based on integrated `origin/main`
+  `989faab3`. It is serial and has no source overlap with open P08.
+- Exact RED proved `parseTimeoutOption("60m")` returned `60` and permissive
+  `parseFloat` accepted invalid suffixes. Strict full-string parsing now returns
+  `3600`, supports compounds such as `1h30m`, preserves numeric seconds/`auto`,
+  and rejects malformed expressions.
+- Focused source GREEN is `94/94` across timeout parsing, browser session
+  terminalization, exact composer/committed-turn proof, response-boundary
+  virtualization, and terminal-output reconciliation. Install, live app
+  inventory, and the one no-effect canary remain pending.
+- Wider provider-free acceptance passes `385/385` with one declared skip;
+  typecheck, scoped lint, build, plan audit, diff hygiene, and current CodeGraph
+  also pass.
+
+## Turn 530 | 2026-08-27
+
+- Operator authorized the best recommended successor after Plan 0319. P13 opens
+  [Plan 0320](docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md)
+  on `fix/plan0320-chatgpt-terminal-output-selection`.
+- The live defect contract is frozen: captured text and final DOM both contained
+  the 55-character `Connection interrupted` status while ChatGPT's successful
+  copy surface returned 23,210 characters of substantive markdown. Existing
+  `reconcileAssistantRepresentations` treats every non-echo stable DOM mismatch
+  as authoritative and therefore discarded the complete writing block.
+- The bounded repair will recognize only an explicit terminal-status DOM result
+  when substantive copied markdown exists. Ordinary digit/word mismatches,
+  prompt echoes, missing copy results, composer behavior, provider approval,
+  and research execution remain unchanged. No provider submission is planned.
+- RED reproduced `stable-dom-substantive-mismatch` discarding the exact
+  23,210-character fixture. The confirmed cause is unconditional stable-DOM
+  precedence for status chrome. The repair requires the exact status on both
+  captured and final-DOM surfaces plus a longer non-status copy.
+- GREEN passes the helper suite 13/13 and the affected reattach/ChatGPT adapter
+  packet 209/209. Typecheck, build, scoped lint, release lint, and diff hygiene
+  pass; release lint retains 208 unrelated warning-level diagnostics.
+- Checkpoint `86ec7f5e` installed with source/runtime compiled-helper SHA-256
+  `439a3645a...a3260`. The installed module preserved all 23,210 fixture
+  characters for both representations. API PID 21419 is healthy with zero
+  restarts; the existing mirror remains `idle_waiting` at pass 17 and port 9222
+  is closed. Acceptance checkpoint `d045f68c` is pushed to the feature ref and
+  integrated into `origin/main` by non-forced fast-forward. P13 is complete.
+
+## Turn 529 | 2026-08-27
+
+- Plan 0319's committed-turn control exclusion was installed byte-identically at
+  SHA-256 `316b6a678315c08e5c4a4202958cd49ae0ece90c2aa90e4d4f0505a94decb557`;
+  the API is healthy at PID 46488 with zero restarts.
+- The one fresh scored run created ChatGPT conversation
+  `6a90b04b-c77c-83ea-97d5-dfa59a279c42`. Direct CDP proved exactly one intended
+  user turn, no `too many requests` warning, and a 22,227-character writing
+  block. Port 9222 is closed after observation.
+- LitScout Session 73 advanced from zero members to `evidence_gap_review`: 108
+  members, 42 active works, 66 removals, 39 keeps, 3 priorities, 19 evidence
+  assessments, 12 external provider calls, and USD 0.018 estimated usage.
+  Patent-provider hard-cap preflight prevented patent Work ingestion, so P1-P3
+  remain source-class blockers and Analyze did not begin.
+- The research product is materially useful: a recovered 2,736-word feasibility
+  proposal recommends eugenol-derived cyanate ester as lead, renewable
+  biopolyphenol/creosol as backup, and treats Opuntia as a falsification side
+  experiment rather than the critical path. Carbon fiber is not assumed RF
+  transparent; the draft recommends a zoned quartz/glass aperture architecture.
+- A distinct output-selection defect remains: AuraCall marked the run complete
+  but saved only the 55-character interruption banner instead of the substantive
+  writing block. The full draft is preserved at
+  `~/.auracall/sessions/frakktal-litscout-research-accepted/recovered-writing-block.md`.
+  Acceptance checkpoint `e660c71a` is pushed to the feature ref and integrated
+  into `origin/main` by non-forced fast-forward. Plan 0319 is complete.
+
+## Turn 528 | 2026-08-27
+
+- The installed composer replacement submitted the exact intended prompt, but
+  committed-turn verification included ChatGPT's presentation-only `Show more`
+  control and falsely timed out. The persistent profile restored that
+  conversation during the instrumented attempt and committed the same prompt a
+  second time in conversation `6a90a894-c3a4-83e9-adc7-602e5761a4c4`.
+- Direct CDP observed two equal 2,549-character user turns and the provider
+  displayed `too many requests`. The active run was cancelled before LitScout
+  approval and the exact owned Chrome tree on port 9222 was closed.
+- Authoritative LitScout Session 73 remains `gather_ready`, with zero corpus
+  members, the same execution token, and no new receipts/provider calls.
+- P12 is in provider cooldown. The local committed-turn reader now walks live
+  authored text while excluding buttons and turn controls; focused 11/11,
+  typecheck, and production build pass. Next is provider-free install/parity,
+  followed by at most one fresh observed experiment after cooldown. Do not
+  reuse the duplicated conversation.
+
+## Turn 527 | 2026-08-27
+
+- The first scored Frakktal/LitScout research-to-draft experiment is invalid:
+  AuraCall metadata contained only the current prompt, but the live ChatGPT user
+  turn concatenated two stale drafts before it and executed the obsolete first
+  canary. LitScout Session 73 remained byte-identical with zero research calls.
+- [Plan 0319](docs/dev/plans/0319-2026-08-27-chatgpt-composer-replacement.md)
+  opens on `fix/plan0319-chatgpt-composer-replacement`. RED proves both defects:
+  composer containment accepts stale+new text, and commit containment accepts a
+  newly created user turn with extra text.
+- The provider-free repair clears user-authored text on the exact marked target
+  while retaining connected-app pills, requires exact pre-send equality, and
+  requires exact normalized equality for the newly committed user turn. Focused
+  GREEN passed 8/8 with typecheck before the installed gate; no prompt, provider,
+  or LitScout effect had run at that checkpoint.
+- P08 remains active in its separate worktree with no expected P12 write overlap.
+- Committed checkpoint `b11cbc46` installed byte-identically at prompt-composer
+  SHA-256 `2a1bf533...e68a1c`; the API restarted healthy at PID 30925 with zero
+  restarts. The primary live attempt stopped before Send because ChatGPT's rich
+  composer removed 25 markdown-presentation characters from the 2,548-character
+  assembled prompt. No conversation or LitScout call occurred, the owned browser
+  cleaned, and the single changed-tactic retry remains available after a bounded
+  presentation-normalization repair.
+- The changed-tactic attempt also stopped before Send. Direct retained-CDP
+  comparison proved the remaining mismatch was AuraCall's detached-clone reader:
+  it collapsed live paragraph boundaries into `Session 73.Conduct...`. Zero user
+  turns and an empty conversation route were observed. The final provider-free
+  repair reads live text nodes, skips only app-pill subtrees, and restores block
+  boundaries; one actual scored submission remains because both attempts were
+  proven pre-effect safety stops.
+
+## Turn 526 | 2026-08-27
+
+- Plan 0459 falsified the breadth of P10's live acceptance: its simple
+  nonexistent mutation card passed, but the real materialized
+  `research_action_execute` card remained visible under both `always-allow`
+  and `allow-once`. OAuth stayed healthy and LitScout received no executor.
+- [Plan 0318](docs/dev/plans/0318-2026-08-27-cdp-observed-chatgpt-approval-recovery.md)
+  opens on clean current `main` as
+  `fix/plan0318-cdp-observed-chatgpt-approval`. The operator explicitly
+  requires timestamped instrumentation and direct agentic observation/control
+  through the actual Chrome DevTools port.
+- The live target is frozen to AuraCall `wsl-chrome-3`, the existing app and
+  account, ChatGPT conversation `6a904bcd-d578-83e9-8f53-b0e71b3b1365`, and
+  LitScout Project 15 / Session 73. No OAuth reconnect, replacement Project,
+  `Answer now`, or unrelated browser action is permitted.
+- Agent Browser access planning was used as a lifecycle check. Its generic
+  catalog selected an unrelated `stealthcdp-default` record with a terminal
+  stale owner, so it is not a launch route for this AuraCall-owned profile.
+  AuraCall retains browser lifecycle; direct CDP attaches only after AuraCall
+  publishes the exact live port and target.
+- P08 remains active in its own worktree with no expected P11 write overlap.
+- The first exact turn reached two `research_continue` reads but ChatGPT
+  reported an OpenAI safety-check stop before LitScout received the executor.
+  The single changed-tactic retry exposed the card directly on port 9222,
+  target `D80B6F79A9D4A873B993557BF9A67552`: its exact `Allow once` control was
+  initially disabled, then enabled on the same card/control identity.
+- Direct CDP activation of that enabled control recorded one trusted
+  pointerdown/mousedown/mouseup/click sequence and immediate card disappearance.
+  LitScout then recorded `research_action_execute:success`, receipt
+  `rar_da1ff16f021fc98bc1744257d6619d46`, state `gather_ready`, and zero provider
+  calls. OAuth remained healthy and `Answer now` was never selected.
+- P11's final source repair waits boundedly for the same exact control to become
+  enabled before trusted-pointer dispatch. No further provider submission is
+  authorized. Provider-free validation, final installed parity, experiment
+  cleanup, account-mirror restoration, and Git integration all completed; P11
+  merged to `main` through `af13ca5a`.
+
+## Turn 525 | 2026-08-27
+
+- Reconciled the stale `fix/plan0444-provider-provenance` work with P09 by
+  retaining its endpoint-bound provider provenance and no-send preflight seams
+  while adopting P09's stricter exact Project/conversation Work proof.
+- Merged P10 after P09, preserving the exact DOM-bound `Always allow`
+  activation and identical-successor-card handling. Focused browser validation
+  passes 142/142, typecheck and scoped Biome pass, the production build passed
+  during locked dependency sync, and the plan-library audit reports zero
+  errors.
+- Integration landed on `main` through `79a57806`; P09 and P10 are closed.
+  P08 remains isolated in its original worktree. Next is one installed-runtime
+  parity check followed by the fresh bounded Frakktal Pro conversation.
+
+## Turn 524 | 2026-08-27
+
+- P10 revision 2 is installed and live-accepted at source `31a8fc0a`. Exact
+  source/installed approval artifacts match SHA-256
+  `8d8042fe...121998b4`; the API is active at PID 24047 with zero restarts.
+- The accepted `plan0317-minimal-multicall-live` Sol/High turn logged confirmed
+  `Always allow`, then LitScout recorded `auth_session:success` and the expected
+  nonexistent `project_source_ingest_job_cancel:error`. ChatGPT returned exact
+  `LITSCOUT_DURABLE_APPROVAL_OK` in 55.3 seconds.
+- OAuth and consent are reconciled separately: refresh-token counts remained
+  89 total / 19 unconsumed with latest expiry 2026-09-26; no invalid-token,
+  invalid-grant, app refresh, replacement, disconnect, or reconnect occurred.
+  Canonical project/job/operator-action counts remained 14/52/4, exact canary
+  rows remain zero, browser locks/processes cleaned, and the API stayed healthy.
+- P10 is live-complete and remains open only for serialized Git reconciliation
+  after P09. Durable receipt:
+  `docs/dev/notes/2026-08-27-plan0317-durable-approval-live-proof.json`.
+
+- The operator requested that durable LitScout connection behavior be planned
+  and executed after Plan 0458 was incorrectly summarized as an authentication
+  lapse. Current evidence proves OAuth authentication succeeded; AuraCall
+  stopped at the separate ChatGPT `Always allow` acknowledgment surface.
+- P10 opens on top of P09's live-accepted checkpoint with no expected source
+  overlap with P08 status work or P09 Work-mode work. Its exact RED is an
+  identical-fingerprint successor approval card after one trusted click; the
+  unchanged original card must remain fenced.
+- Live acceptance will reuse the existing app, OAuth client, account, and
+  managed browser profile. App refresh/replacement/reconnect is prohibited;
+  ordinary refresh-token rotation is recorded separately from tool consent.
+- The exact RED reproduced `chatgpt-tool-approval-not-confirmed` in 1.4 seconds.
+  Stable exact-card DOM identity makes identical replacement pass while the
+  unchanged card remains one-click fenced. Focused `16/16`, propagation
+  `141/141`, ownership/approval `80/80`, typecheck, lint, build, plan-library,
+  CodeGraph, and diff checks pass at provider-free checkpoint `6447bdc7`.
+  Install/live acceptance remain.
+
+## Turn 523 | 2026-08-25
+
+- P09 source and installed artifacts are byte-identical. The exact ready-page
+  no-prompt probe passed Work and `GPT-5.6 Sol`, with an empty composer and no
+  Send. The retained AuraCall-owned browser is PID 58478 / port 37169.
+- The first installed probe exposed and then closed one adjacent established-
+  Work model-proof gap. Connection and early-hydration failures had no page,
+  prompt, or provider effect and were resolved through AuraCall lifecycle plus
+  exact readiness evidence rather than request replay.
+- P09 remains open only for Git reconciliation: pre-existing branch
+  `fix/plan0444-provider-provenance` overlaps both repaired source files. Do not
+  silently merge or overwrite it. Installed acceptance is sufficient to resume
+  LitScout Plan 0444's frozen writer packet.
+
+## Turn 522 | 2026-08-25
+
+- LitScout Plan 0444's frozen CHECKPOINT-4 recovery prompt remains unsent after
+  two bounded AuraCall attempts failed before prompt insertion at the explicit
+  Work-mode gate. The expected `wsl-chrome-3` Pro personal identity is proven.
+- Read-only live DOM evidence isolates exact route drift: the visible active
+  link is `/g/<project-id>/c/<conversation-id>` with an exact `Work` span, while
+  the loaded route adds `-<project-slug>` after the same Project ID. Current
+  byte-identical pathname comparison rejects that genuine pair.
+- P09 opens as an urgent provider-local repair with exact positive/negative
+  fixtures, one provider-free implementation/validation slice, one conditional
+  install, and one no-prompt exact-target preflight. P08 remains separately
+  owned and has no expected write overlap.
+
 ## Turn 521 | 2026-08-25
 
 - Operator approved the separate bounded aggregate-status performance repair.
