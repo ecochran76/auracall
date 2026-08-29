@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 536 | 2026-08-29
+
+- The default-branch active-lane catalog proved P14 `integration_ready` with
+  local tip, remote tip, checkpoint, and validation ref equal at `1ad5aa4d`.
+- P14 merged non-forced to `main` at `1659bdbb`. Final documentary closeout
+  binds that integration receipt and leaves P08 as the only open product lane.
+- Remaining Git effects are the final validation/push and exact removal of the
+  now-integrated P14 branch/worktree custody; the installed runtime remains the
+  accepted candidate.
+
 ## Turn 535 | 2026-08-29
 
 - P14 installed the exact candidate once and proved byte parity for the CLI

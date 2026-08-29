@@ -4,8 +4,8 @@
 
 ### Current Execution Board
 
-Status: Git maintenance integrated; timeout-unit acceptance integration-ready; aggregate status latency open
-Lanes: P01-P07, P09-P13, P15 (integrated); P14 (integration-ready); P08 (open)
+Status: Git maintenance and timeout-unit acceptance integrated; aggregate status latency open
+Lanes: P01-P07, P09-P15 (integrated); P08 (open)
 
 - Integrated Git maintenance closeout:
   [docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
@@ -13,11 +13,11 @@ Lanes: P01-P07, P09-P13, P15 (integrated); P14 (integration-ready); P08 (open)
   clean, integrated worktree and branch custody. Final acceptance requires a
   passing catalog audit and clean local/remote main parity.
 
-- Integration-ready ChatGPT timeout-unit and turn-control acceptance:
+- Integrated ChatGPT timeout-unit and turn-control acceptance:
   [docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)
   P14's strict duration parser, installed-runtime parity, authenticated app
   inventory, exact same-turn canary, and owned-browser cleanup are accepted.
-  Only non-forced integration to `main` remains.
+  Non-forced `main` integration is complete at `1659bdbb`.
 
 - Integrated ChatGPT terminal-output selection repair:
   [docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md](docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md)

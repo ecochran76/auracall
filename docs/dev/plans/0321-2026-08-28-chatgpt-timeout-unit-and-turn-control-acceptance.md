@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P14
-Operational state: ACCEPTED / INTEGRATION_READY
+Operational state: ACCEPTED / INTEGRATED
 Branch: fix/plan0321-reliable-turn-control
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-29
+Revision: 3 | 2026-08-29
 
 ## Stable Objective
 
@@ -47,6 +47,8 @@ local retry advice or stale answer capture.
   scheduler remained under its own cadence.
 - The LitScout experiment remains outside this plan and returns to LitScout
   Plan 0463 under that plan's authority and gates.
+- The accepted branch merged non-forced to `main` at integration receipt
+  `1659bdbb2f0c54459e728f420a82eddfb06d6126`.
 
 ## Execution Graph
 
