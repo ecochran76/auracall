@@ -4,8 +4,19 @@
 
 ### Current Execution Board
 
-Status: aggregate status latency open; ChatGPT terminal-output selection integrated
-Lanes: P01, P02, P03, P06, P07, P09, P10, P11, P12, P13 (integrated); P04, P05 (terminal hard stop, integrated); P08 (open)
+Status: Git maintenance active; aggregate status latency and timeout-unit acceptance open
+Lanes: P01-P07, P09-P13 (integrated); P08, P14, P15 (open)
+
+- Active Git maintenance closeout:
+  [docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
+  P15 preserves the unfinished P08 and P14 lanes while removing only exact
+  clean, integrated worktree and branch custody. Final acceptance requires a
+  passing catalog audit and clean local/remote main parity.
+
+- Active ChatGPT timeout-unit and turn-control acceptance:
+  [docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md](docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md)
+  P14's strict duration parser and provider-free acceptance are green. The
+  branch remains unmerged pending its bounded install and live acceptance.
 
 - Integrated ChatGPT terminal-output selection repair:
   [docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md](docs/dev/plans/0320-2026-08-27-chatgpt-terminal-output-selection.md)

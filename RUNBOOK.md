@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 531 | 2026-08-29
+
+- Operator requested complete Git maintenance across open branches and linked
+  worktrees. [Plan 0322](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
+  freezes the refreshed custody set on `chore/plan0322-git-maintenance-closeout`.
+- [P08](docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md) remains
+  open at its published tip because installed status-latency proof is blocked
+  by its existing browser/guard hard stop. P14 remains source-green but
+  unmerged pending separately bounded install/live acceptance.
+- P09, P10, P13, and the provider-provenance worktrees are clean, ancestral to
+  current `origin/main`, and have no process working directory under their
+  paths. Cleanup is limited to exact proved targets; no runtime or provider
+  effect is in scope.
+
 ## Turn 530 | 2026-08-27
 
 - Operator authorized the best recommended successor after Plan 0319. P13 opens
