@@ -48065,3 +48065,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   owned Chrome tree was closed. Local repair now walks committed-turn authored
   text while excluding buttons and turn controls. Focused 11/11, typecheck, and
   production build pass. Provider rerun is paused for cooldown.
+
+## 2026-08-29 | Plan 0322 Git maintenance closeout opened
+
+- Fresh fetch and closed-world Git census found six clean worktrees. Four are
+  attached to integrated branches and have no process working-directory owner;
+  P08 and P14 remain open and are explicitly retained.
+- Local `main` was 16 commits behind `origin/main`; fast-forwarding the local
+  ref restored ancestry proof for Plans 0318-0320. Remaining catalog failures
+  are branch-tip checkpoint drift, not missing integration.
+- The bounded cleanup will publish P14, remove only exact integrated custody,
+  retain unknown/divergent historical refs, reconcile the catalog, and finish
+  with clean `main == origin/main` evidence.
+
+## 2026-08-29 | Plan 0322 cleanup packet accepted
+
+- Published P14, corrected its missing integration metadata, and retained P08
+  and P14 as the only unfinished product lanes.
+- Removed four clean process-unowned integrated worktrees, 12 merged local
+  topic branches, and 29 exact integrated or previously adjudicated origin
+  refs. Divergent, unknown-custody, and compatibility history remains intact.
+- P15 is ready for main integration. Final acceptance still requires the
+  default-ref catalog audit, clean parity, and removal of P15's temporary
+  branch/worktree custody.

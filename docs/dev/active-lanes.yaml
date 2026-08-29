@@ -44,7 +44,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: c1da8609c60eabced87fadfde2b948747be8fc58
+    checkpoint: 9e8757c8b7ee378fec64b67b429b3ee9d6bbb9f4
     remote_ref: refs/remotes/origin/fix/plan0310-live-follow-cooldown-abort
     integration: merge
     dependencies: []
@@ -98,7 +98,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 0bab471019139ae359d750433b39bd84d72191e7
+    checkpoint: de74f3c8b24aa87b5dc0f93a4d3b885a939ab9ac
     remote_ref: refs/remotes/origin/fix/plan0313-live-follow-predicate-cleanup
     integration: merge
     dependencies: [P05]
@@ -116,7 +116,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 776556bfbe0acfe3bad4a302da030cf81f868c0b
+    checkpoint: 51287ed743901fc529869552440167bc309a171a
     remote_ref: refs/remotes/origin/fix/plan0314-bounded-live-follow-recovery
     integration: merge
     dependencies: [P06]
@@ -129,21 +129,21 @@ lanes:
   - id: P08
     objective: Reduce aggregate API status latency below the existing default five-second client budget without weakening status semantics.
     plan: docs/dev/plans/0315-2026-08-25-aggregate-status-latency.md
-    plan_ref: refs/heads/fix/plan0315-aggregate-status-latency
+    plan_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     branch: fix/plan0315-aggregate-status-latency
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 11ad85830abfd168786c82f2f8c2d17484eeedf1
+    checkpoint: d461cb56527db9b14e57286622a51582a2b09b41
     remote_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     integration: merge
     dependencies: [P07]
     overlaps: []
-    validation_status: diagnosis-open
-    validation_ref: null
+    validation_status: implementation-accepted-installed-proof-blocked
+    validation_ref: 025453473c5957fb72abb7ed787cb6d1266951e6
     integration_receipt: null
-    disposition: Default aggregate status times out 3/3; diagnosis and provider-free repair are active, with live provider/browser effects excluded.
-    updated_at: 2026-08-25
+    disposition: Provider-free repair is accepted; installed proof remains blocked by the plan's exact managed-browser and provider-guard hard stop.
+    updated_at: 2026-08-29
   - id: P09
     objective: Restore exact ChatGPT Work-mode proof when a loaded Project conversation route includes its human-readable slug.
     plan: docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md
@@ -152,7 +152,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 79a57806af00efe78290f5b7812cf97a980555c7
+    checkpoint: 51327ee04572fe0f7db84c3b636bd9a022c16447
     remote_ref: refs/remotes/origin/fix/plan0316-project-slug-work-marker
     integration: merge
     dependencies: [P07]
@@ -170,7 +170,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 79a57806af00efe78290f5b7812cf97a980555c7
+    checkpoint: ff3de8478b15d19f76e7f5a2aad241ccc9a48a1d
     remote_ref: refs/remotes/origin/fix/plan0317-durable-chatgpt-approval
     integration: merge-after-p09-reconciliation
     dependencies: [P09]
@@ -188,7 +188,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: af13ca5ae9b5efb1bc2dfe06e302212cbe690864
+    checkpoint: db0a5f26e582fbc23a81001756f459f383f37a8a
     remote_ref: refs/remotes/origin/fix/plan0318-cdp-observed-chatgpt-approval
     integration: merge
     dependencies: [P10]
@@ -206,7 +206,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: e660c71a5f8ff684f53df3926ce63f5086633a69
+    checkpoint: 00eea2a58d799a95e113bf30a4edb5a2d82554fb
     remote_ref: refs/remotes/origin/fix/plan0319-chatgpt-composer-replacement
     integration: merge
     dependencies: [P11]
@@ -224,7 +224,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: d045f68c
+    checkpoint: 989faab312756bc88d9224005815afae7d19cbf7
     remote_ref: refs/remotes/origin/fix/plan0320-chatgpt-terminal-output-selection
     integration: merge
     dependencies: [P12]
@@ -234,3 +234,39 @@ lanes:
     integration_receipt: d045f68c
     disposition: Exact incident RED, 209-test GREEN, byte-identical installed-module smoke, and non-forced main integration complete without a provider effect.
     updated_at: 2026-08-27
+  - id: P14
+    objective: Parse complete timeout durations and prove reliable same-turn ChatGPT control before the next research experiment.
+    plan: docs/dev/plans/0321-2026-08-28-chatgpt-timeout-unit-and-turn-control-acceptance.md
+    plan_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
+    branch: fix/plan0321-reliable-turn-control
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: be640729ad2ee540c61601deb27dcff51dbeb3ba
+    remote_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
+    integration: merge
+    dependencies: [P13]
+    overlaps: []
+    validation_status: source-provider-free-accepted
+    validation_ref: b50b0dcdb0511b4a819ae63f2bf384cabcee52b7
+    integration_receipt: null
+    disposition: Strict duration parsing and the wider provider-free gate pass; install and one no-effect live acceptance remain pending.
+    updated_at: 2026-08-29
+  - id: P15
+    objective: Reconcile current Git custody and close exact integrated branch and worktree refs while preserving unfinished lanes.
+    plan: docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md
+    plan_ref: refs/remotes/origin/chore/plan0322-git-maintenance-closeout
+    branch: chore/plan0322-git-maintenance-closeout
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: a0abbfd512686a02cf5a97c12e0a238693026995
+    remote_ref: refs/remotes/origin/chore/plan0322-git-maintenance-closeout
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: custody-frozen
+    validation_ref: a0abbfd512686a02cf5a97c12e0a238693026995
+    integration_receipt: null
+    disposition: Exact cleanup is in progress; P08, P14, historical compatibility, divergent, and unknown-custody refs are retained.
+    updated_at: 2026-08-29
