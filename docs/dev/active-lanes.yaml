@@ -240,17 +240,17 @@ lanes:
     plan_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
     branch: fix/plan0321-reliable-turn-control
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: be640729ad2ee540c61601deb27dcff51dbeb3ba
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 1ad5aa4dfa5da49d16adb831c877a08f7dd8badb
     remote_ref: refs/remotes/origin/fix/plan0321-reliable-turn-control
     integration: merge
     dependencies: [P13]
     overlaps: []
-    validation_status: source-provider-free-accepted
-    validation_ref: b50b0dcdb0511b4a819ae63f2bf384cabcee52b7
+    validation_status: passed
+    validation_ref: 1ad5aa4dfa5da49d16adb831c877a08f7dd8badb
     integration_receipt: null
-    disposition: Strict duration parsing and the wider provider-free gate pass; install and one no-effect live acceptance remain pending.
+    disposition: Published integration-ready branch passes strict duration parsing, provider-free gates, installed byte parity, canonical LitScout inventory, one exact-token same-turn canary, and exact owned-browser cleanup.
     updated_at: 2026-08-29
   - id: P15
     objective: Reconcile current Git custody and close exact integrated branch and worktree refs while preserving unfinished lanes.
