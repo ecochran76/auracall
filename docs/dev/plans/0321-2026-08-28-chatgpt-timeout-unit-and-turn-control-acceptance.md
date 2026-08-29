@@ -1,12 +1,12 @@
 # ChatGPT timeout unit and turn-control acceptance | 0321-2026-08-28
 
-State: OPEN
+State: CLOSED
 Lane: P14
-Operational state: SOURCE_REPAIR_GREEN / INSTALL_AND_LIVE_ACCEPTANCE_PENDING
+Operational state: ACCEPTED / INTEGRATION_READY
 Branch: fix/plan0321-reliable-turn-control
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-28
+Revision: 2 | 2026-08-29
 
 ## Stable Objective
 
@@ -31,8 +31,22 @@ local retry advice or stale answer capture.
   browser lifecycle, CLI timeout, and session terminalization surfaces.
 - Typecheck, scoped zero-warning lint, production build, plan audit, diff
   hygiene, and current CodeGraph pass.
-- Install, live no-effect canary, app inventory, and the LitScout experiment
-  remain pending. No provider/browser/runtime mutation occurred in source work.
+- The exact candidate is installed in the user runtime. The installed CLI and
+  production CLI entrypoint match the built source bytes, API PID `9496` is
+  healthy with zero service restarts, and installed `auracall --version`
+  reports `0.1.1`.
+- The current `wsl-chrome-3` ChatGPT surface is authenticated with Developer
+  mode enabled and exposes exactly one enabled, active, private, user-scoped
+  LitScout app.
+- One normal-Chat, current-model, manual-approval canary committed exactly one
+  prompt with `--timeout 60m`, returned exactly
+  `AURACALL_TIMEOUT_TURN_OK` in 14.8 seconds, and reported zero retries.
+- The exact Chrome PID launched for inventory/canary reuse was terminated after
+  the run; port `45015` closed, the managed browser readback became idle, and no
+  scheduler or materialization control action ran. The separately pre-existing
+  scheduler remained under its own cadence.
+- The LitScout experiment remains outside this plan and returns to LitScout
+  Plan 0463 under that plan's authority and gates.
 
 ## Execution Graph
 

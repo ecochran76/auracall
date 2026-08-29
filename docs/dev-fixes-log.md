@@ -22038,6 +22038,17 @@ browser-stage lifecycle observability, not transcript truncation.
 - Delete worktree and branch custody only after exact cleanliness, ancestry or
   prior semantic-equivalence, remote-tip, and process-working-directory proof.
 
+## 2026-08-29 | Bind live browser acceptance to exact owned-process cleanup
+
+- A read-only developer-app inventory may retain the managed browser for a
+  following canary, so command completion alone does not prove browser cleanup.
+- Record the exact browser PID and DevTools port launched by the authorized
+  operation, reuse only that known owner for the bounded follow-up, then close
+  that exact PID and prove both process and listening-port absence.
+- Keep scheduler ownership separate: foreground work may defer a scheduled
+  pass, but acceptance cleanup must not pause, resume, cancel, or claim custody
+  over that separately governed work.
+
 ## 2026-08-28 | Parse the complete timeout token before accepting it
 
 - `Number.parseFloat("60m")` returns `60`, so a human-readable one-hour timeout

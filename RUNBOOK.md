@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 535 | 2026-08-29
+
+- P14 installed the exact candidate once and proved byte parity for the CLI
+  option parser and production entrypoint. `auracall-api.service` is active at
+  PID `9496`, `NRestarts=0`, and the installed API status probe passes.
+- Provider-free acceptance passes `181/181` across eight focused files plus
+  typecheck, production build, and scoped zero-warning lint.
+- Read-only inventory on AuraCall runtime profile `wsl-chrome-3` proved an
+  authenticated ChatGPT Pro surface with Developer mode enabled and exactly one
+  enabled, active, private, user-scoped LitScout app.
+- One normal-Chat/current-model/manual-approval canary used `--timeout 60m`,
+  committed one prompt, returned exactly `AURACALL_TIMEOUT_TURN_OK` in 14.8
+  seconds, and reported zero retries. The exact owned Chrome PID was terminated
+  and port `45015` closed; no scheduler or materialization control ran.
+- Plan 0321 is closed and ready for non-forced merge to `main`. The LitScout
+  experiment remains governed by LitScout Plan 0463.
+
 ## Turn 534 | 2026-08-29
 
 - P15 merged without conflict through `16832289`. The final catalog binds the

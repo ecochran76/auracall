@@ -48107,3 +48107,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `16832289`; no source, runtime, browser, provider, or scheduler effect ran.
 - P08 and P14 remain the only active local product worktrees. Final cleanup and
   audits remove P15's temporary custody and bind this state to pushed main.
+
+## 2026-08-29 | Plan 0321 installed and live acceptance complete
+
+- Re-ran the bounded provider-free gate in an isolated AuraCall home: eight
+  focused files pass `181/181`, with typecheck, production build, and scoped
+  zero-warning lint also green.
+- Installed once through `pnpm run install:user-runtime-service`. The installed
+  option parser and production CLI entrypoint are byte-identical to `dist`, the
+  API service is active at PID `9496` with `NRestarts=0`, and API status passes.
+- Read-only app inventory on AuraCall runtime profile and browser profile
+  `wsl-chrome-3` found an authenticated ChatGPT Pro account, Developer mode on,
+  and one enabled, active, private, user-scoped LitScout app.
+- The only provider canary ran in normal Chat mode with current-model selection,
+  manual tool approval, and `--timeout 60m`. It committed one prompt and
+  returned exactly `AURACALL_TIMEOUT_TURN_OK` in 14.8 seconds with zero retries.
+- The advertised `--no-notify` form was rejected before browser execution; it
+  caused no provider turn and is a separate nonblocking CLI-help mismatch.
+- The exact Chrome PID opened for inventory/canary reuse was terminated and
+  port `45015` closed. No scheduler or materialization control action ran; the
+  existing scheduler later continued on its own cadence.
