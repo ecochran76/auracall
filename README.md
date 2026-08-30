@@ -96,6 +96,9 @@ auracall --profile wsl-chrome-3 apps --target chatgpt list --json
 # same-name older connector never supplies auth state to a replacement app.
 auracall --profile wsl-chrome-3 apps --target chatgpt test Corel33t \
   --expected-account eric.cochran@soylei.com --json
+# With `--submit --prompt ... --yes`, AuraCall stages the same exact
+# ID-verified ecosystem mention and retains it through prompt replacement. A
+# developer app is not routed through the built-in composer-tool selector.
 # Create, refresh, submitted tests, and uninstall require --expected-account
 # plus --yes. OAuth, MFA, consent, CAPTCHA, and verification remain human gates.
 # `awaiting-human` is emitted only after AuraCall observes a fresh OAuth or

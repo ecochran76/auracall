@@ -48148,3 +48148,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Revalidated P14's clean/equal/ancestral custody and removed its worktree,
   local branch, and remote branch. The catalog no longer carries a cleanup
   blocker.
+## 2026-08-30 | Plan 0323 developer-app submit selection
+
+- A refreshed private LitScout app passed exact no-submit app selection, but
+  `apps test --submit` failed before Send because the submit path copied the
+  app display name into `browser.composerTool`. That surface is for built-in
+  ChatGPT workbench tools, not ID-bound ecosystem mentions.
+- RED proved the stale routing. The repair reuses `selectForTest` with an
+  explicit retained-selection option, verifies the exact plugin/app ID, removes
+  any inherited composer-tool field, preserves the current model, and then
+  enters normal prompt replacement/dispatch.
+- Focused provider-free validation passes 63/63 across developer apps, CLI,
+  composer selection, and prompt replacement. Typecheck, build, and scoped
+  Biome also pass. Install and the one no-research LitScout auth canary remain.

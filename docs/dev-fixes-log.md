@@ -22058,3 +22058,10 @@ browser-stage lifecycle observability, not transcript truncation.
   gap or suffix rather than accepting a numeric prefix.
 - Keep the production CLI parser under a focused regression for `60m`,
   `1h30m`, numeric seconds, `auto`, and malformed partial tokens.
+- 2026-08-30: ChatGPT developer apps are ecosystem mentions, not generic
+  built-in composer tools. A no-submit app test already selected and verified
+  the exact app ID, while the submit variant discarded that path and set the
+  app name as `browser.composerTool`, causing a false `did not stay selected`
+  failure before Send. Reuse the exact mention selector with retained
+  selection, remove any inherited composer-tool field, and let exact composer
+  replacement preserve the app pill through prompt submission.

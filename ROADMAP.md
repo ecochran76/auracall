@@ -4,8 +4,16 @@
 
 ### Current Execution Board
 
-Status: Git maintenance and timeout-unit acceptance integrated; aggregate status latency open
-Lanes: P01-P07, P09-P15 (integrated); P08 (open)
+Status: Developer-app submit selection and aggregate status latency open
+Lanes: P01-P07, P09-P15 (integrated); P08, P16 (open)
+
+- Active ChatGPT developer-app submit selection repair:
+  [docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md](docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md)
+  P16 corrects the developer-app submit path to use the existing exact
+  ecosystem-mention selection rather than the built-in composer-tool selector.
+  It owns one provider-free repair, one exact install, and one no-research
+  LitScout authentication canary; the research experiment remains separately
+  governed by LitScout Plan 0475.
 
 - Integrated Git maintenance closeout:
   [docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)

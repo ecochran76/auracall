@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 540 | 2026-08-30
+
+- P16 opens
+  [Plan 0323](docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md)
+  on `fix/plan0323-developer-app-mention`, based on current `origin/main`
+  `3de74115`. It does not overlap P08's aggregate-status source surface.
+- Live evidence from the refreshed private LitScout app proves no-submit exact
+  app selection succeeds, while submit fails before Send because it routes the
+  app name through the built-in composer-tool selector. The existing exact
+  ecosystem-mention path is the bounded repair seam.
+- No prompt was submitted by the failed canaries and no LitScout research,
+  project/session mutation, provider request, or OAuth reconnect ran.
+- Provider-free RED/GREEN now proves exact retained ecosystem-mention staging
+  and removal of the stale composer-tool field. Focused validation passes
+  `63/63`, typecheck, production build, and scoped Biome; install and the single
+  auth-only canary remain.
+
 ## Turn 538 | 2026-08-29
 
 - Read-only ownership evidence proved the browser blocking P14 cleanup was not

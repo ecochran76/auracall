@@ -191,7 +191,7 @@ describe("deriveChatgptDeveloperAppState", () => {
 		}
 	});
 
-	it("preserves the active model when submitting a developer-app test", async () => {
+	it("preserves the active model without routing a developer app through the built-in composer-tool selector", async () => {
 		const runPrompt = vi.fn(async () => ({
 			conversationId: "conversation-1",
 			url: "https://chatgpt.com/c/conversation-1",
@@ -208,22 +208,29 @@ describe("deriveChatgptDeveloperAppState", () => {
 			} as never,
 			createBrowser as never,
 		);
+		const app = {
+			pluginId: "plugin_asdk_app_litscout",
+			appIds: ["asdk_app_litscout"],
+			name: "LitScout",
+		};
+		const selectForTest = vi.spyOn(adapter, "selectForTest").mockResolvedValue({
+			status: "completed",
+			message: "LitScout selected and retained.",
+			app,
+		});
 
-		await adapter.submitTest(
-			{
-				pluginId: "plugin_asdk_app_litscout",
-				appIds: ["asdk_app_litscout"],
-				name: "LitScout",
-			},
-			"Use only LitScout.",
-		);
+		await adapter.submitTest(app, "Use only LitScout.");
+
+		expect(selectForTest).toHaveBeenCalledWith(app, { preserveSelection: true });
 
 		expect(createBrowser).toHaveBeenCalledWith(
 			expect.objectContaining({
-				browser: expect.objectContaining({
-					composerTool: "LitScout",
-					modelStrategy: "current",
-				}),
+				browser: expect.objectContaining({ modelStrategy: "current" }),
+			}),
+		);
+		expect(createBrowser).toHaveBeenCalledWith(
+			expect.objectContaining({
+				browser: expect.not.objectContaining({ composerTool: expect.anything() }),
 			}),
 		);
 		expect(runPrompt).toHaveBeenCalledWith({

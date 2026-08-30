@@ -329,6 +329,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 
 	async selectForTest(
 		app: ChatgptDeveloperAppBrowserTarget,
+		options: { preserveSelection?: boolean } = {},
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
 		const client = await this.ensureClient();
 		await navigateChatgpt(client, "https://chatgpt.com/");
@@ -342,12 +343,16 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			}
 			return {
 				status: "completed",
-				message: `${app.name} selected without prompt submission; the blank composer was cleared afterward.`,
+				message: options.preserveSelection
+					? `${app.name} selected without prompt submission and retained for the pending prompt.`
+					: `${app.name} selected without prompt submission; the blank composer was cleared afterward.`,
 				currentUrl: await readCurrentUrl(client),
 				app,
 			};
 		} finally {
-			await clearDeveloperAppComposer(client);
+			if (!options.preserveSelection) {
+				await clearDeveloperAppComposer(client);
+			}
 		}
 	}
 
@@ -355,11 +360,13 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		app: ChatgptDeveloperAppBrowserTarget,
 		prompt: string,
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
+		await this.selectForTest(app, { preserveSelection: true });
+		const { composerTool: _composerTool, ...browserWithoutComposerTool } =
+			this.browser.userConfig.browser ?? {};
 		const testConfig: ResolvedUserConfig = {
 			...this.browser.userConfig,
 			browser: {
-				...(this.browser.userConfig.browser ?? {}),
-				composerTool: app.name,
+				...browserWithoutComposerTool,
 				modelStrategy: "current",
 			},
 		};
