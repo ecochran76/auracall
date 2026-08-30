@@ -49,6 +49,15 @@
   adapter/developer-app/CLI packet passes `52/52`, followed by typecheck,
   production build, scoped Biome, and the plan audit. Reinstall and the one
   governed Experiment 18 Send remain.
+- Operator-directed live-follow shutdown paused completion
+  `acctmirror_completion_8cec5bd0-24a7-4bba-bd5f-bc523c028881`, allowed its
+  in-flight provider read to drain, and released the browser/provider-work
+  leases. `wsl-chrome-3` live follow is now disabled in user configuration.
+  Durable requirement note:
+  `docs/dev/notes/2026-08-30-plan0323-foreground-priority-live-follow.md`.
+  Foreground work must preempt background admission, trigger cooperative
+  checkpoint/yield, and allow cursor-preserving resume after foreground
+  terminal release.
 
 ## Turn 538 | 2026-08-29
 

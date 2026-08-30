@@ -16,6 +16,12 @@
   boundary and services the existing `manual|allow-once` approval handler from
   the response watcher's passive DOM probes. A provider-free integration test
   covers the actual adapter seam, not only the developer-app fake client.
+- A subsequent installed preflight exposed a scheduler boundary rather than an
+  app-auth failure: persisted `wsl-chrome-3` live follow repeatedly reacquired
+  exclusive browser work and starved the explicit foreground run. The operator
+  paused the completion and disabled live follow for that runtime profile.
+  Foreground admission now has a recorded product requirement for bounded
+  cooperative background yield and checkpoint-preserving resume.
 
 ## 2026-08-27 | Plan 0320 terminal-output selection repair
 

@@ -1,3 +1,12 @@
+- 2026-08-30: Background live follow must never make an explicit foreground
+  request wait for an entire inventory or materialization pass. A same-profile
+  foreground reservation must stop new background admission, cooperatively
+  drain active browser/provider work to a bounded checkpoint, preserve the
+  live-follow cursor, admit foreground work, and resume exactly once after the
+  foreground terminal release. Apply the same ordering during persisted-job
+  recovery after API restart. See
+  `docs/dev/notes/2026-08-30-plan0323-foreground-priority-live-follow.md`.
+
 - 2026-08-30: A caller-level `assistant_response` regression is insufficient
   when the lower provider adapter still accepts only `prompt_submitted`.
   Terminal developer-app execution must be proven through the actual ChatGPT
