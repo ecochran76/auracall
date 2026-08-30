@@ -48169,3 +48169,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   ecosystem-pill label before the authored prompt, causing a verifier false
   negative. The second RED/GREEN excludes only that exact pill from committed
   text. The widened packet passes 74/74 plus typecheck and build.
+- A later no-submit cleanup exposed ChatGPT's atomic-pill deletion semantics:
+  the first select-all/backspace can unwrap the pill into literal `@LitScout`
+  instead of emptying the editor. A focused production-seam regression failed
+  under the single-pass implementation and passes with one bounded second
+  pass; unchanged composers still stop after the first verified blank state.
+  The widened six-file packet passes `72/72`, typecheck, production build,
+  scoped Biome, and the plan-library audit.

@@ -22071,3 +22071,7 @@ browser-stage lifecycle observability, not transcript truncation.
   only `[data-inline-selection-pill][data-symbol="ecosystemMention"]` from the
   committed text walker; do not weaken equality for ordinary prefixes, stale
   drafts, or other controls.
+- 2026-08-30: Clearing a ChatGPT ecosystem mention is a two-stage operation in
+  the current editor: the first select-all/backspace may unwrap the atomic pill
+  into literal mention text. Check the blank postcondition after each pass,
+  allow exactly one second pass, and retain the hard failure if text remains.

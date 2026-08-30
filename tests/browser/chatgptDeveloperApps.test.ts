@@ -4,6 +4,7 @@ import {
 	CHATGPT_DEVELOPER_APP_SERVER_URL_SELECTOR,
 	chatgptDeveloperAppSelectionMatchesForTest,
 	classifyChatgptDeveloperAppCreatePostconditionForTest,
+	clearDeveloperAppComposerForTest,
 	createChatgptDeveloperAppBrowserAdapter,
 	deriveChatgptDeveloperAppState,
 	isCompleteChatgptInstalledAppsPayloadForTest,
@@ -398,6 +399,34 @@ describe("deriveChatgptDeveloperAppState", () => {
 			2,
 			expect.objectContaining({ type: "keyUp", key: " ", code: "Space" }),
 		);
+	});
+
+	it("clears an ecosystem mention that first unwraps into literal composer text", async () => {
+		let clearChecks = 0;
+		const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
+			if (expression.includes("Boolean(document.querySelector")) {
+				return { result: { value: true } };
+			}
+			if (expression.includes("editor.focus()")) {
+				return { result: { value: true } };
+			}
+			if (expression.includes("innerText")) {
+				clearChecks += 1;
+				return { result: { value: clearChecks >= 2 } };
+			}
+			throw new Error(`Unexpected evaluation: ${expression}`);
+		});
+		const dispatchKeyEvent = vi.fn(async () => undefined);
+
+		await clearDeveloperAppComposerForTest({
+			// biome-ignore lint/style/useNamingConvention: CDP protocol domains use canonical capitalized names.
+			Runtime: { evaluate } as never,
+			// biome-ignore lint/style/useNamingConvention: CDP protocol domains use canonical capitalized names.
+			Input: { dispatchKeyEvent } as never,
+		} as never);
+
+		expect(clearChecks).toBe(2);
+		expect(dispatchKeyEvent).toHaveBeenCalledTimes(12);
 	});
 
 	it("maps private user-owned installed metadata and active OAuth link state", () => {

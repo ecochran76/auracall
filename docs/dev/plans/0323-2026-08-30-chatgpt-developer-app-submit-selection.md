@@ -6,7 +6,7 @@ Operational state: IMPLEMENTING
 Branch: fix/plan0323-developer-app-mention
 Target: main
 Integration: merge
-Revision: 1 | 2026-08-30
+Revision: 2 | 2026-08-30
 
 ## Current State
 
@@ -25,6 +25,12 @@ Revision: 1 | 2026-08-30
 - Focused developer-app, CLI, prompt-replacement, committed-turn, and composer
   tests pass `74/74`; typecheck, production build, and scoped Biome pass with
   one unchanged naming-convention warning on the existing `__test__` export.
+- The first post-OAuth no-submit selection exposed a second current-DOM edge:
+  deleting an ecosystem pill can unwrap it into literal `@LitScout` text.
+  Provider-free RED/GREEN now proves one bounded second select-all/backspace
+  pass clears that residual text while ordinary composers stop after one pass.
+  The widened six-file packet passes `72/72`, with typecheck, production build,
+  scoped Biome, and the plan-library audit also green.
 - Reinstall/source-runtime parity and the final no-research authenticated
   canary remain pending.
 
@@ -54,7 +60,8 @@ ecosystem-mention path as the existing no-submit selection smoke.
    does not set a built-in `composerTool`.
 2. Reuse the existing mention selector and exact app-identity verifier in
    `submitTest`; preserve current-model selection and normal prompt dispatch.
-3. Run focused developer-app, composer-replacement, and ChatGPT prompt tests,
+3. Clear an atomic ecosystem mention with at most two verified deletion passes,
+   then run focused developer-app, composer-replacement, and ChatGPT prompt tests,
    then typecheck and build.
 4. Install the exact candidate and run one no-research LitScout `auth_session`
    canary. Return the browser to the LitScout experiment only if the canary
@@ -65,7 +72,8 @@ ecosystem-mention path as the existing no-submit selection smoke.
 - `DAS-R1`: provider-free RED/GREEN proves submit uses an exact verified
   ecosystem mention and leaves `browser.composerTool` unset.
 - `DAS-R2`: prompt replacement retains the connected-app pill and focused
-  developer-app/composer/ChatGPT prompt contracts pass.
+  developer-app/composer/ChatGPT prompt contracts pass, including the atomic
+  pill-to-literal cleanup transition.
 - `DAS-R3`: typecheck, build, and source/installed parity pass.
 - `DAS-R4`: one authorized live `auth_session` canary submits once, invokes
   LitScout once, returns the expected authenticated account, and creates no

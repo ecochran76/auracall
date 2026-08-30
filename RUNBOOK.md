@@ -25,6 +25,12 @@
   committed user-turn reader. The widened source packet passes `74/74`,
   typecheck, build, and scoped Biome with one pre-existing `__test__` warning.
   One reinstall and final auth-only canary remain.
+- The next no-submit selection did not send a prompt, but its final cleanup
+  failed after ChatGPT converted the deleted ecosystem pill into literal
+  `@LitScout` text. A production-seam RED reproduced that exact two-stage
+  transition; bounded two-pass cleanup is GREEN and the full developer-app
+  browser file passes `24/24`. The widened six-file packet passes `72/72`,
+  followed by typecheck, production build, scoped Biome, and plan audit.
 
 ## Turn 538 | 2026-08-29
 
