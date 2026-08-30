@@ -10,6 +10,12 @@
   returns the terminal response. Submit-only
   behavior remains the default so auth canaries do not silently become long
   browser runs.
+- Live pre-effect execution exposed a second lifecycle boundary: the lower
+  ChatGPT provider adapter rejected `assistant_response` before Send. The
+  repaired adapter now binds terminal capture to a pre-send assistant/turn
+  boundary and services the existing `manual|allow-once` approval handler from
+  the response watcher's passive DOM probes. A provider-free integration test
+  covers the actual adapter seam, not only the developer-app fake client.
 
 ## 2026-08-27 | Plan 0320 terminal-output selection repair
 

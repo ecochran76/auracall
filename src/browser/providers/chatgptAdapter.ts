@@ -25,6 +25,12 @@ import {
 	resolveBundledServiceUiLabelSet,
 	resolveEffectiveServiceUiLabelSet,
 } from "../../services/registry.js";
+import {
+	captureAssistantMarkdown,
+	fingerprintAssistantResponseText,
+	readAssistantSnapshot,
+	waitForAssistantResponse,
+} from "../actions/assistantResponse.js";
 import { transferAttachmentViaDataTransfer } from "../actions/attachmentDataTransfer.js";
 import {
 	clearComposerAttachments,
@@ -36,6 +42,7 @@ import {
 	resolveChatgptModelSelectionPlan,
 } from "../actions/chatgptComposerMode.js";
 import { ensureChatgptComposerTool } from "../actions/chatgptComposerTool.js";
+import { createChatgptToolApprovalHandler } from "../actions/chatgptToolApproval.js";
 import { ensureChatgptWorkModelSelection } from "../actions/chatgptWorkModelSelection.js";
 import { ensureModelSelection } from "../actions/modelSelection.js";
 import { ensurePromptReady } from "../actions/navigation.js";
@@ -45,6 +52,7 @@ import {
 	extractChatgptRateLimitSummary,
 	isChatgptRateLimitMessage,
 } from "../chatgptRateLimitGuard.js";
+import { CONVERSATION_TURN_SELECTOR } from "../constants.js";
 import { captureBrowserPostmortemSnapshot, persistBrowserPostmortemRecord } from "../domDebug.js";
 import { recordDomDriftObservation } from "../domDriftObservations.js";
 import { ChatgptFeatureSchema } from "../llmService/providers/schema.js";
@@ -12393,6 +12401,7 @@ type ChatgptPromptWorkbenchConfig = {
 	modelStrategy?: "select" | "current" | "ignore";
 	thinkingTime?: "light" | "standard" | "extended" | "heavy" | null;
 	workModel?: string | null;
+	chatgptToolApproval?: "manual" | "allow-once" | "always-allow";
 };
 
 async function prepareChatgptPromptWorkbenchInClient(
@@ -12574,9 +12583,12 @@ export function createChatgptAdapter(): Pick<
 			input: BrowserProviderPromptInput,
 			options?: BrowserProviderListOptions,
 		): Promise<BrowserProviderPromptResult> {
-			if (input.completionMode !== "prompt_submitted") {
+			if (
+				input.completionMode !== "prompt_submitted" &&
+				input.completionMode !== "assistant_response"
+			) {
 				throw new Error(
-					"ChatGPT llmService prompt execution currently supports completionMode=prompt_submitted only.",
+					`ChatGPT llmService prompt execution does not support completionMode=${input.completionMode}.`,
 				);
 			}
 			await beforeChatgptBrowserInteraction(options, "upload-submit");
@@ -12602,6 +12614,21 @@ export function createChatgptAdapter(): Pick<
 			return runWithChatgptAbortBoundConnection(connection, options, async (client) => {
 				await assertChatgptExpectedIdentity(client, options);
 				const { DOM, Input, Page, Runtime } = client;
+				const waitForTerminalResponse = input.completionMode === "assistant_response";
+				const baselineSnapshot = waitForTerminalResponse
+					? await readAssistantSnapshot(Runtime).catch(() => null)
+					: null;
+				let baselineTurns: number | null = null;
+				if (waitForTerminalResponse) {
+					const turnCount = await Runtime.evaluate({
+						expression: `document.querySelectorAll(${JSON.stringify(CONVERSATION_TURN_SELECTOR)}).length`,
+						returnByValue: true,
+					});
+					baselineTurns =
+						typeof turnCount.result?.value === "number" && Number.isFinite(turnCount.result.value)
+							? Math.max(0, Math.floor(turnCount.result.value))
+							: null;
+				}
 				const prepared = await prepareChatgptPromptWorkbenchInClient(
 					client,
 					{
@@ -12654,7 +12681,7 @@ export function createChatgptAdapter(): Pick<
 						);
 					}
 				}
-				await submitPrompt(
+				const committedTurns = await submitPrompt(
 					{
 						runtime: Runtime,
 						input: Input,
@@ -12665,10 +12692,53 @@ export function createChatgptAdapter(): Pick<
 					input.prompt,
 					logger,
 				);
+				if (
+					waitForTerminalResponse &&
+					typeof committedTurns === "number" &&
+					Number.isFinite(committedTurns) &&
+					(baselineTurns === null || committedTurns > baselineTurns)
+				) {
+					baselineTurns = Math.max(0, committedTurns - 1);
+				}
 				const url = await readSubmittedChatgptLocation(Runtime, targetUrl, {
 					abortSignal: options?.abortSignal,
 					timeoutMs: input.timeoutMs,
 				});
+				if (waitForTerminalResponse) {
+					const responseBoundary = {
+						minTurnIndex: baselineTurns,
+						baselineMessageId: baselineSnapshot?.messageId ?? null,
+						baselineTurnId: baselineSnapshot?.turnId ?? null,
+						baselineTextFingerprint: fingerprintAssistantResponseText(baselineSnapshot?.text),
+					};
+					const handleChatgptToolApproval = createChatgptToolApprovalHandler({
+						client,
+						policy: browserConfig?.chatgptToolApproval ?? "manual",
+						logger,
+					});
+					const answer = await waitForAssistantResponse(
+						Runtime,
+						input.timeoutMs ?? 120_000,
+						logger,
+						responseBoundary,
+						{
+							onPassiveDomProbe: async () => {
+								await handleChatgptToolApproval();
+							},
+						},
+					);
+					const markdown = await captureAssistantMarkdown(Runtime, answer.meta, logger).catch(
+						() => null,
+					);
+					return {
+						text: markdown || answer.text,
+						conversationId: url ? extractChatgptConversationIdFromUrl(url) : null,
+						url,
+						tabTargetId: connection.targetId ?? null,
+						devtoolsHost: connection.host ?? null,
+						devtoolsPort: connection.port ?? null,
+					};
+				}
 				return {
 					text: "",
 					conversationId: url ? extractChatgptConversationIdFromUrl(url) : null,

@@ -41,6 +41,14 @@
   grant durable approval. The two focused
   files pass `47/47`; typecheck and scoped Biome pass. Install and the single
   Plan-0477-governed live Send remain.
+- The first terminal launch stopped before Send because the lower ChatGPT
+  provider adapter still rejected `assistant_response`. A production-seam RED
+  reproduced the mismatch. The adapter now captures the pre-send assistant
+  boundary, waits for the fresh response, invokes the existing approval
+  handler during passive probes, and returns captured Markdown. The focused
+  adapter/developer-app/CLI packet passes `52/52`, followed by typecheck,
+  production build, scoped Biome, and the plan audit. Reinstall and the one
+  governed Experiment 18 Send remain.
 
 ## Turn 538 | 2026-08-29
 

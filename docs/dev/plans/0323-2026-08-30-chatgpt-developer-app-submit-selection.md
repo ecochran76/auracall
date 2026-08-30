@@ -6,7 +6,7 @@ Operational state: IMPLEMENTING
 Branch: fix/plan0323-developer-app-mention
 Target: main
 Integration: merge
-Revision: 3 | 2026-08-30
+Revision: 4 | 2026-08-30
 
 ## Current State
 
@@ -38,6 +38,13 @@ Revision: 3 | 2026-08-30
   and tool-approval handling, while submit-only remains the default. Its
   approval policy is explicit and bounded to `manual` or `allow-once`; the
   experiment selects `allow-once` and never grants durable approval.
+- The first installed terminal launch then failed before Send at a lower seam:
+  the ChatGPT provider adapter rejected `assistant_response` even though the
+  developer-app caller requested it correctly. Provider-free RED/GREEN now
+  proves that adapter captures a pre-send response boundary, waits for the
+  fresh terminal assistant turn, services the existing approval handler on
+  passive DOM probes, and returns captured Markdown. Focused tests pass
+  `52/52`; typecheck, production build, scoped Biome, and plan audit pass.
 - Reinstall/source-runtime parity and one governed terminal-response validation
   through LitScout Experiment 18 remain pending.
 

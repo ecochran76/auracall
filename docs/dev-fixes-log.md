@@ -1,3 +1,10 @@
+- 2026-08-30: A caller-level `assistant_response` regression is insufficient
+  when the lower provider adapter still accepts only `prompt_submitted`.
+  Terminal developer-app execution must be proven through the actual ChatGPT
+  adapter: capture the pre-send response boundary, wait for a fresh assistant
+  turn, run the bounded tool-approval handler on passive probes, and return the
+  captured terminal Markdown. Preserve submit-only as the default.
+
 - 2026-08-30: Selecting and committing a ChatGPT developer-app mention is not
   sufficient for a multi-call research run if the caller requests only
   `prompt_submitted`. That releases the response loop before third-party tool
