@@ -365,7 +365,11 @@ export class ChatgptDeveloperAppBrowserAdapter {
 	async submitTest(
 		app: ChatgptDeveloperAppBrowserTarget,
 		prompt: string,
-		options: { waitForResponse?: boolean; timeoutMs?: number } = {},
+		options: {
+			waitForResponse?: boolean;
+			timeoutMs?: number;
+			toolApproval?: "manual" | "allow-once";
+		} = {},
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
 		await this.selectForTest(app, { preserveSelection: true });
 		const { composerTool: _composerTool, ...browserWithoutComposerTool } =
@@ -375,6 +379,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			browser: {
 				...browserWithoutComposerTool,
 				modelStrategy: "current",
+				...(options.toolApproval ? { chatgptToolApproval: options.toolApproval } : {}),
 			},
 		};
 		const testBrowser = await this.createBrowser(testConfig);

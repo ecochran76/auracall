@@ -35,7 +35,9 @@ Revision: 3 | 2026-08-30
   `prompt_submitted` boundary would release AuraCall before its ordinary
   response watcher could service third-party tool approvals. An explicit
   `--wait-for-response` mode now retains normal assistant-response completion
-  and tool-approval handling, while submit-only remains the default.
+  and tool-approval handling, while submit-only remains the default. Its
+  approval policy is explicit and bounded to `manual` or `allow-once`; the
+  experiment selects `allow-once` and never grants durable approval.
 - Reinstall/source-runtime parity and one governed terminal-response validation
   through LitScout Experiment 18 remain pending.
 
@@ -85,7 +87,8 @@ ecosystem-mention path as the existing no-submit selection smoke.
 - `DAS-R3`: typecheck, build, and source/installed parity pass.
 - `DAS-R4`: provider-free RED/GREEN proves the opt-in terminal mode requests
   `assistant_response`, forwards its bounded timeout, and returns the captured
-  terminal response while leaving submit-only behavior unchanged.
+  terminal response while leaving submit-only behavior unchanged; an explicit
+  `allow-once` policy reaches the ordinary response watcher.
 - `DAS-R5`: one authorized live Experiment 18 Send proves exact app selection,
   continued tool approvals, and terminal response capture on the expected
   account; its LitScout effects are governed and audited by Plan 0477.

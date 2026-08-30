@@ -6,7 +6,8 @@
   making it unsuitable for an instrumented multi-call LitScout experiment.
 - An explicit `--wait-for-response` mode now selects normal
   `assistant_response` completion, keeps the existing approval watcher alive,
-  accepts a bounded timeout, and returns the terminal response. Submit-only
+  accepts a bounded timeout and explicit `manual|allow-once` policy, and
+  returns the terminal response. Submit-only
   behavior remains the default so auth canaries do not silently become long
   browser runs.
 

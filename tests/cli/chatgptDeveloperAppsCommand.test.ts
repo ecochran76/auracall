@@ -675,6 +675,7 @@ describe("executeChatgptDeveloperAppOperation", () => {
 				prompt: "Research deeply.",
 				waitForResponse: true,
 				timeoutMs: 7_200_000,
+				toolApproval: "allow-once",
 				confirmed: true,
 				expectedAccount: "eric.cochran@soylei.com",
 			},
@@ -684,7 +685,7 @@ describe("executeChatgptDeveloperAppOperation", () => {
 		expect(submitTest).toHaveBeenCalledWith(
 			expect.objectContaining({ name: "Corel33t" }),
 			"Research deeply.",
-			{ waitForResponse: true, timeoutMs: 7_200_000 },
+			{ waitForResponse: true, timeoutMs: 7_200_000, toolApproval: "allow-once" },
 		);
 	});
 

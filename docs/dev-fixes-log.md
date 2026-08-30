@@ -3,7 +3,8 @@
   `prompt_submitted`. That releases the response loop before third-party tool
   approvals appear. Keep submit-only as the safe default, but expose an
   explicit terminal-response mode that reuses the ordinary response watcher,
-  tool-approval policy, bounded timeout, and captured terminal response.
+  explicit `manual|allow-once` tool-approval policy, bounded timeout, and
+  captured terminal response. Do not silently promote it to durable approval.
 
 - 2026-08-23: Rebuilding browser list options must preserve provenance from the
   same `LlmService` when the resolved DevTools endpoint is unchanged. The

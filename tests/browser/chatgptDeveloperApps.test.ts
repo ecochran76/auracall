@@ -247,9 +247,10 @@ describe("deriveChatgptDeveloperAppState", () => {
 			conversationId: "conversation-18",
 			url: "https://chatgpt.com/c/conversation-18",
 		}));
+		const createBrowser = vi.fn(async () => ({ runPrompt }));
 		const adapter = createChatgptDeveloperAppBrowserAdapter(
 			{ userConfig: { browser: {} } } as never,
-			async () => ({ runPrompt }) as never,
+			createBrowser as never,
 		);
 		const app = {
 			pluginId: "plugin_asdk_app_litscout",
@@ -265,7 +266,14 @@ describe("deriveChatgptDeveloperAppState", () => {
 		const outcome = await adapter.submitTest(app, "Research deeply.", {
 			waitForResponse: true,
 			timeoutMs: 7_200_000,
+			toolApproval: "allow-once",
 		});
+
+		expect(createBrowser).toHaveBeenCalledWith(
+			expect.objectContaining({
+				browser: expect.objectContaining({ chatgptToolApproval: "allow-once" }),
+			}),
+		);
 
 		expect(runPrompt).toHaveBeenCalledWith({
 			prompt: "Research deeply.",

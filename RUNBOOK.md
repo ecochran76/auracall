@@ -36,7 +36,9 @@
   approving LitScout actions. A provider-free RED reproduced that lifecycle
   gap. The bounded opt-in `--wait-for-response` path is GREEN: it uses normal
   `assistant_response` completion, preserves the submit-only default, forwards
-  an explicit timeout, and returns terminal response evidence. The two focused
+  an explicit timeout and `manual|allow-once` approval policy, and returns
+  terminal response evidence. Experiment 18 binds `allow-once`; it does not
+  grant durable approval. The two focused
   files pass `47/47`; typecheck and scoped Biome pass. Install and the single
   Plan-0477-governed live Send remain.
 

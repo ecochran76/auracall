@@ -5590,6 +5590,7 @@ appsCommand
   .option('--prompt <text>', 'Prompt to submit when --submit is used.')
 	.option('--wait-for-response', 'Keep the response and tool-approval watcher active until ChatGPT is terminal.', false)
 	.option('--timeout-ms <number>', 'Terminal-response timeout in milliseconds.', (value) => Number(value))
+	.option('--tool-approval <manual|allow-once>', 'Approval policy while waiting for a terminal response.', 'manual')
   .option('--yes', 'Confirm prompt submission.', false)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async function (this: Command, app: string) {
@@ -5600,6 +5601,7 @@ appsCommand
       prompt: typeof options.prompt === 'string' ? options.prompt : null,
 		waitForResponse: Boolean(options.waitForResponse),
 		timeoutMs: typeof options.timeoutMs === 'number' ? options.timeoutMs : null,
+		toolApproval: String(options.toolApproval ?? 'manual') as 'manual' | 'allow-once',
       expectedAccount: String(options.expectedAccount ?? ''),
       confirmed: Boolean(options.yes),
     }));

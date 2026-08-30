@@ -47,7 +47,11 @@ export interface ChatgptDeveloperAppAdapter {
 	submitTest(
 		app: ChatgptDeveloperApp,
 		prompt: string,
-		options?: { waitForResponse?: boolean; timeoutMs?: number },
+		options?: {
+			waitForResponse?: boolean;
+			timeoutMs?: number;
+			toolApproval?: "manual" | "allow-once";
+		},
 	): Promise<ChatgptDeveloperAppMutationOutcome>;
 	uninstall(app: ChatgptDeveloperApp): Promise<ChatgptDeveloperAppMutationOutcome>;
 }
@@ -121,6 +125,7 @@ export type ChatgptDeveloperAppOperationInput =
 			prompt?: string | null;
 			waitForResponse?: boolean;
 			timeoutMs?: number | null;
+			toolApproval?: "manual" | "allow-once";
 			confirmed: boolean;
 			expectedAccount: string;
 	  }
@@ -287,6 +292,7 @@ export async function executeChatgptDeveloperAppOperation(
 			? await adapter.submitTest(app, normalizeTestPrompt(input.prompt), {
 					waitForResponse: input.waitForResponse === true,
 					timeoutMs: normalizeOptionalTestTimeout(input.timeoutMs),
+					toolApproval: normalizeTestToolApproval(input.toolApproval),
 				})
 			: await adapter.selectForTest(app);
 		return {
@@ -556,4 +562,14 @@ function normalizeOptionalTestTimeout(value: number | null | undefined): number 
 		throw new Error("ChatGPT developer-app test --timeout-ms must be a positive number.");
 	}
 	return Math.floor(value);
+}
+
+function normalizeTestToolApproval(
+	value: "manual" | "allow-once" | undefined,
+): "manual" | "allow-once" | undefined {
+	if (value == null) return undefined;
+	if (value !== "manual" && value !== "allow-once") {
+		throw new Error("ChatGPT developer-app test --tool-approval must be manual or allow-once.");
+	}
+	return value;
 }
