@@ -48161,3 +48161,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focused provider-free validation passes 63/63 across developer apps, CLI,
   composer selection, and prompt replacement. Typecheck, build, and scoped
   Biome also pass. Install and the one no-research LitScout auth canary remain.
+- The installed pre-auth probe committed once but returned `plugin_not_found`;
+  LitScout received zero calls. Direct exact-app settings inspection found the
+  unconnected replacement, and the authorized OAuth flow produced an `ACTIVE`
+  machine-readable inventory record.
+- ChatGPT's committed user-turn representation included the retained LitScout
+  ecosystem-pill label before the authored prompt, causing a verifier false
+  negative. The second RED/GREEN excludes only that exact pill from committed
+  text. The widened packet passes 74/74 plus typecheck and build.

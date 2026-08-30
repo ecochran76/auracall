@@ -13,9 +13,19 @@ Revision: 1 | 2026-08-30
 - Provider-free RED reproduced the stale `composerTool: "LitScout"` routing.
 - GREEN reuses exact ecosystem-mention selection with retained state and
   removes the inherited built-in composer-tool field before normal dispatch.
-- Focused developer-app, CLI, prompt-replacement, and composer tests pass
-  `63/63`; typecheck, production build, and scoped Biome pass.
-- Installation, source/runtime parity, and the one no-research authenticated
+- The first installed pre-auth probe committed one exact user turn, but
+  ChatGPT returned `plugin_not_found` and LitScout received zero calls. Exact
+  settings inspection exposed the missing `Connection -> Connect` state; the
+  operator-authorized OAuth flow completed and current inventory now reports
+  the replacement LitScout app `ACTIVE`.
+- That committed turn also exposed one verifier defect: ChatGPT presents the
+  retained ecosystem pill label as a prefix to authored user text. The bounded
+  repair excludes only the exact ecosystem-mention pill from committed-turn
+  text, matching the existing composer-preservation boundary.
+- Focused developer-app, CLI, prompt-replacement, committed-turn, and composer
+  tests pass `74/74`; typecheck, production build, and scoped Biome pass with
+  one unchanged naming-convention warning on the existing `__test__` export.
+- Reinstall/source-runtime parity and the final no-research authenticated
   canary remain pending.
 
 ## Stable Objective

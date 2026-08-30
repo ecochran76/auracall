@@ -95,6 +95,7 @@ function buildReadCommittedTurnTextFunction(): string {
 	    '[role="button"]',
 	    '[data-testid="collapsible-user-message-toggle"]',
 	    '[data-testid$="-turn-action-button"]',
+	    '[data-inline-selection-pill][data-symbol="ecosystemMention"]',
 	  ].join(', ');
 	  const chunks = [];
 	  const appendBoundary = () => {

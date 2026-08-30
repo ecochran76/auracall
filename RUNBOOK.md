@@ -16,6 +16,15 @@
   and removal of the stale composer-tool field. Focused validation passes
   `63/63`, typecheck, production build, and scoped Biome; install and the single
   auth-only canary remain.
+- Installed selection advanced to one committed user turn, then ChatGPT
+  returned `plugin_not_found` with zero LitScout calls. Exact Developer-mode
+  inspection proved the replacement app had not yet been connected. The
+  authorized OAuth flow completed, and machine-readable inventory now reports
+  the exact replacement app `ACTIVE`.
+- RED/GREEN also excludes only the retained ecosystem-mention pill from the
+  committed user-turn reader. The widened source packet passes `74/74`,
+  typecheck, build, and scoped Biome with one pre-existing `__test__` warning.
+  One reinstall and final auth-only canary remain.
 
 ## Turn 538 | 2026-08-29
 

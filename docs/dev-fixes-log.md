@@ -22065,3 +22065,9 @@ browser-stage lifecycle observability, not transcript truncation.
   failure before Send. Reuse the exact mention selector with retained
   selection, remove any inherited composer-tool field, and let exact composer
   replacement preserve the app pill through prompt submission.
+- 2026-08-30: A retained ecosystem mention is rendered as visible text inside
+  ChatGPT's committed user turn even though it is presentation metadata, not
+  user-authored prompt text. Preserve exact committed-turn equality by omitting
+  only `[data-inline-selection-pill][data-symbol="ecosystemMention"]` from the
+  committed text walker; do not weaken equality for ordinary prefixes, stale
+  drafts, or other controls.
