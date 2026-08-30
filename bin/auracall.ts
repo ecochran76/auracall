@@ -5588,6 +5588,8 @@ appsCommand
   .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
   .option('--submit', 'Submit the test prompt after selecting the app.', false)
   .option('--prompt <text>', 'Prompt to submit when --submit is used.')
+	.option('--wait-for-response', 'Keep the response and tool-approval watcher active until ChatGPT is terminal.', false)
+	.option('--timeout-ms <number>', 'Terminal-response timeout in milliseconds.', (value) => Number(value))
   .option('--yes', 'Confirm prompt submission.', false)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async function (this: Command, app: string) {
@@ -5596,6 +5598,8 @@ appsCommand
       app,
       submit: Boolean(options.submit),
       prompt: typeof options.prompt === 'string' ? options.prompt : null,
+		waitForResponse: Boolean(options.waitForResponse),
+		timeoutMs: typeof options.timeoutMs === 'number' ? options.timeoutMs : null,
       expectedAccount: String(options.expectedAccount ?? ''),
       confirmed: Boolean(options.yes),
     }));

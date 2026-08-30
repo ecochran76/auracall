@@ -661,6 +661,33 @@ describe("executeChatgptDeveloperAppOperation", () => {
 		).rejects.toThrow("requires --yes");
 	});
 
+	it("forwards explicit terminal-response waiting without changing the submit confirmation gate", async () => {
+		const submitTest = vi.fn(async () => ({
+			status: "completed" as const,
+			message: "Corel33t terminal response captured.",
+		}));
+
+		await executeChatgptDeveloperAppOperation(
+			{
+				action: "test",
+				app: "Corel33t",
+				submit: true,
+				prompt: "Research deeply.",
+				waitForResponse: true,
+				timeoutMs: 7_200_000,
+				confirmed: true,
+				expectedAccount: "eric.cochran@soylei.com",
+			},
+			createAdapter({ submitTest }),
+		);
+
+		expect(submitTest).toHaveBeenCalledWith(
+			expect.objectContaining({ name: "Corel33t" }),
+			"Research deeply.",
+			{ waitForResponse: true, timeoutMs: 7_200_000 },
+		);
+	});
+
 	it("uninstalls only the exact resolved app after confirmation", async () => {
 		const uninstalled: string[] = [];
 		const result = await executeChatgptDeveloperAppOperation(

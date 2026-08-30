@@ -1,3 +1,10 @@
+- 2026-08-30: Selecting and committing a ChatGPT developer-app mention is not
+  sufficient for a multi-call research run if the caller requests only
+  `prompt_submitted`. That releases the response loop before third-party tool
+  approvals appear. Keep submit-only as the safe default, but expose an
+  explicit terminal-response mode that reuses the ordinary response watcher,
+  tool-approval policy, bounded timeout, and captured terminal response.
+
 - 2026-08-23: Rebuilding browser list options must preserve provenance from the
   same `LlmService` when the resolved DevTools endpoint is unchanged. The
   projects CLI intentionally prebuilds options for cache identity, then passes

@@ -44,7 +44,11 @@ export interface ChatgptDeveloperAppAdapter {
 	create(input: ChatgptDeveloperAppCreateInput): Promise<ChatgptDeveloperAppMutationOutcome>;
 	delete(app: ChatgptDeveloperApp): Promise<ChatgptDeveloperAppMutationOutcome>;
 	selectForTest(app: ChatgptDeveloperApp): Promise<ChatgptDeveloperAppMutationOutcome>;
-	submitTest(app: ChatgptDeveloperApp, prompt: string): Promise<ChatgptDeveloperAppMutationOutcome>;
+	submitTest(
+		app: ChatgptDeveloperApp,
+		prompt: string,
+		options?: { waitForResponse?: boolean; timeoutMs?: number },
+	): Promise<ChatgptDeveloperAppMutationOutcome>;
 	uninstall(app: ChatgptDeveloperApp): Promise<ChatgptDeveloperAppMutationOutcome>;
 }
 
@@ -81,6 +85,11 @@ export interface ChatgptDeveloperAppMutationOutcome {
 	message: string;
 	currentUrl?: string | null;
 	app?: ChatgptDeveloperApp | null;
+	response?: {
+		text: string;
+		conversationId?: string | null;
+		url?: string | null;
+	};
 	recovery?: {
 		action: "create";
 		input: ChatgptDeveloperAppCreateInput;
@@ -110,6 +119,8 @@ export type ChatgptDeveloperAppOperationInput =
 			app: string;
 			submit: boolean;
 			prompt?: string | null;
+			waitForResponse?: boolean;
+			timeoutMs?: number | null;
 			confirmed: boolean;
 			expectedAccount: string;
 	  }
@@ -273,7 +284,10 @@ export async function executeChatgptDeveloperAppOperation(
 	if (input.action === "test") {
 		const app = resolveExactApp(state.apps, input.app);
 		const outcome = input.submit
-			? await adapter.submitTest(app, normalizeTestPrompt(input.prompt))
+			? await adapter.submitTest(app, normalizeTestPrompt(input.prompt), {
+					waitForResponse: input.waitForResponse === true,
+					timeoutMs: normalizeOptionalTestTimeout(input.timeoutMs),
+				})
 			: await adapter.selectForTest(app);
 		return {
 			action: "test",
@@ -534,4 +548,12 @@ function normalizeTestPrompt(value: string | null | undefined): string {
 		throw new Error("ChatGPT developer-app submitted test requires --prompt.");
 	}
 	return prompt;
+}
+
+function normalizeOptionalTestTimeout(value: number | null | undefined): number | undefined {
+	if (value == null) return undefined;
+	if (!Number.isFinite(value) || value <= 0) {
+		throw new Error("ChatGPT developer-app test --timeout-ms must be a positive number.");
+	}
+	return Math.floor(value);
 }

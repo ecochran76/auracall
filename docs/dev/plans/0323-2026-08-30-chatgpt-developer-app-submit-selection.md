@@ -6,7 +6,7 @@ Operational state: IMPLEMENTING
 Branch: fix/plan0323-developer-app-mention
 Target: main
 Integration: merge
-Revision: 2 | 2026-08-30
+Revision: 3 | 2026-08-30
 
 ## Current State
 
@@ -31,8 +31,13 @@ Revision: 2 | 2026-08-30
   pass clears that residual text while ordinary composers stop after one pass.
   The widened six-file packet passes `72/72`, with typecheck, production build,
   scoped Biome, and the plan-library audit also green.
-- Reinstall/source-runtime parity and the final no-research authenticated
-  canary remain pending.
+- A pre-experiment audit found that the submit test's fixed
+  `prompt_submitted` boundary would release AuraCall before its ordinary
+  response watcher could service third-party tool approvals. An explicit
+  `--wait-for-response` mode now retains normal assistant-response completion
+  and tool-approval handling, while submit-only remains the default.
+- Reinstall/source-runtime parity and one governed terminal-response validation
+  through LitScout Experiment 18 remain pending.
 
 ## Stable Objective
 
@@ -63,9 +68,12 @@ ecosystem-mention path as the existing no-submit selection smoke.
 3. Clear an atomic ecosystem mention with at most two verified deletion passes,
    then run focused developer-app, composer-replacement, and ChatGPT prompt tests,
    then typecheck and build.
-4. Install the exact candidate and run one no-research LitScout `auth_session`
-   canary. Return the browser to the LitScout experiment only if the canary
-   proves the expected account and no project/session/provider effects.
+4. Add an opt-in terminal-response mode that keeps the ordinary ChatGPT
+   response and tool-approval watcher active; preserve `prompt_submitted` as
+   the default.
+5. Install the exact candidate and use separately governed LitScout Experiment
+   18 as the one terminal-response live validation. Do not consume an extra
+   research Send merely to duplicate the submit proof.
 
 ## Acceptance Criteria
 
@@ -75,18 +83,23 @@ ecosystem-mention path as the existing no-submit selection smoke.
   developer-app/composer/ChatGPT prompt contracts pass, including the atomic
   pill-to-literal cleanup transition.
 - `DAS-R3`: typecheck, build, and source/installed parity pass.
-- `DAS-R4`: one authorized live `auth_session` canary submits once, invokes
-  LitScout once, returns the expected authenticated account, and creates no
-  project, session, or external-provider effect.
+- `DAS-R4`: provider-free RED/GREEN proves the opt-in terminal mode requests
+  `assistant_response`, forwards its bounded timeout, and returns the captured
+  terminal response while leaving submit-only behavior unchanged.
+- `DAS-R5`: one authorized live Experiment 18 Send proves exact app selection,
+  continued tool approvals, and terminal response capture on the expected
+  account; its LitScout effects are governed and audited by Plan 0477.
 
 ## Bounds
 
-- One source implementation plus one evidence-driven repair.
-- One install and one no-research canary.
-- No research, project/session mutation, provider request, app recreation,
-  OAuth reconnect, scheduler mutation, or unrelated browser cleanup.
+- One source implementation plus evidence-driven composer and terminal-watcher
+  repairs.
+- One install and one Plan-0477-governed experiment Send.
+- No app recreation, OAuth reconnect, scheduler mutation, unrelated browser
+  cleanup, or extra canary Send.
 
 ## Definition Of Done
 
-All four criteria have current evidence and the repaired app-submit path is
-ready to stage the separately governed LitScout Experiment 16.
+All five criteria have current evidence and the repaired app-submit path has
+completed separately governed LitScout Experiment 18 without an extra canary
+Send.

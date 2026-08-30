@@ -63,6 +63,11 @@ export interface ChatgptDeveloperAppBrowserMutationOutcome {
 	message: string;
 	currentUrl?: string | null;
 	app?: ChatgptDeveloperAppBrowserTarget | null;
+	response?: {
+		text: string;
+		conversationId?: string | null;
+		url?: string | null;
+	};
 }
 
 export interface ChatgptDeveloperAppBrowserCreateInput {
@@ -125,9 +130,10 @@ export interface ChatgptDeveloperAppBrowserClient {
 	): Promise<{ client: ChromeClient; port: number }>;
 	runPrompt(input: {
 		prompt: string;
-		completionMode: "prompt_submitted";
+		completionMode: "assistant_response" | "prompt_submitted";
 		timeoutMs?: number | null;
 	}): Promise<{
+		text?: string;
 		conversationId?: string | null;
 		url?: string | null;
 	}>;
@@ -359,6 +365,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 	async submitTest(
 		app: ChatgptDeveloperAppBrowserTarget,
 		prompt: string,
+		options: { waitForResponse?: boolean; timeoutMs?: number } = {},
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
 		await this.selectForTest(app, { preserveSelection: true });
 		const { composerTool: _composerTool, ...browserWithoutComposerTool } =
@@ -373,14 +380,23 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		const testBrowser = await this.createBrowser(testConfig);
 		const result = await testBrowser.runPrompt({
 			prompt,
-			completionMode: "prompt_submitted",
-			timeoutMs: 120_000,
+			completionMode: options.waitForResponse ? "assistant_response" : "prompt_submitted",
+			timeoutMs: options.timeoutMs ?? 120_000,
 		});
 		return {
 			status: "completed",
-			message: `${app.name} test prompt submitted${result.conversationId ? ` in conversation ${result.conversationId}` : ""}.`,
+			message: `${app.name} test prompt ${options.waitForResponse ? "completed" : "submitted"}${result.conversationId ? ` in conversation ${result.conversationId}` : ""}.`,
 			currentUrl: result.url ?? null,
 			app,
+			...(options.waitForResponse
+				? {
+						response: {
+							text: result.text ?? "",
+							conversationId: result.conversationId ?? null,
+							url: result.url ?? null,
+						},
+					}
+				: {}),
 		};
 	}
 

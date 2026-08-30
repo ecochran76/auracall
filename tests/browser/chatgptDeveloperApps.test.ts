@@ -241,6 +241,44 @@ describe("deriveChatgptDeveloperAppState", () => {
 		});
 	});
 
+	it("can retain the tool-approval watcher until a developer-app response is terminal", async () => {
+		const runPrompt = vi.fn(async () => ({
+			text: "Research complete.",
+			conversationId: "conversation-18",
+			url: "https://chatgpt.com/c/conversation-18",
+		}));
+		const adapter = createChatgptDeveloperAppBrowserAdapter(
+			{ userConfig: { browser: {} } } as never,
+			async () => ({ runPrompt }) as never,
+		);
+		const app = {
+			pluginId: "plugin_asdk_app_litscout",
+			appIds: ["asdk_app_litscout"],
+			name: "LitScout",
+		};
+		vi.spyOn(adapter, "selectForTest").mockResolvedValue({
+			status: "completed",
+			message: "LitScout selected and retained.",
+			app,
+		});
+
+		const outcome = await adapter.submitTest(app, "Research deeply.", {
+			waitForResponse: true,
+			timeoutMs: 7_200_000,
+		});
+
+		expect(runPrompt).toHaveBeenCalledWith({
+			prompt: "Research deeply.",
+			completionMode: "assistant_response",
+			timeoutMs: 7_200_000,
+		});
+		expect(outcome.response).toEqual({
+			text: "Research complete.",
+			conversationId: "conversation-18",
+			url: "https://chatgpt.com/c/conversation-18",
+		});
+	});
+
 	it("does not claim an OAuth human gate when no app or fresh handoff exists", () => {
 		expect(
 			classifyChatgptDeveloperAppCreatePostconditionForTest({

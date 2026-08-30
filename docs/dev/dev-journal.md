@@ -1,3 +1,15 @@
+## 2026-08-30 | Plan 0323 developer-app terminal watcher
+
+- The retained ecosystem mention repaired app selection, but `submitTest`
+  still hard-coded `prompt_submitted`. That completion mode returns before the
+  normal ChatGPT response watcher can service subsequent tool-approval cards,
+  making it unsuitable for an instrumented multi-call LitScout experiment.
+- An explicit `--wait-for-response` mode now selects normal
+  `assistant_response` completion, keeps the existing approval watcher alive,
+  accepts a bounded timeout, and returns the terminal response. Submit-only
+  behavior remains the default so auth canaries do not silently become long
+  browser runs.
+
 ## 2026-08-27 | Plan 0320 terminal-output selection repair
 
 - Plan 0319 recovered a complete ChatGPT writing block after AuraCall persisted

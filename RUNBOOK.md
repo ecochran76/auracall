@@ -31,6 +31,14 @@
   transition; bounded two-pass cleanup is GREEN and the full developer-app
   browser file passes `24/24`. The widened six-file packet passes `72/72`,
   followed by typecheck, production build, scoped Biome, and plan audit.
+- Pre-Experiment-18 inspection found the submit helper stopped at
+  `prompt_submitted`, before the normal response watcher could continue
+  approving LitScout actions. A provider-free RED reproduced that lifecycle
+  gap. The bounded opt-in `--wait-for-response` path is GREEN: it uses normal
+  `assistant_response` completion, preserves the submit-only default, forwards
+  an explicit timeout, and returns terminal response evidence. The two focused
+  files pass `47/47`; typecheck and scoped Biome pass. Install and the single
+  Plan-0477-governed live Send remain.
 
 ## Turn 538 | 2026-08-29
 
