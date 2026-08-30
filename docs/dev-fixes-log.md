@@ -1,3 +1,9 @@
+- 2026-08-30: A developer-app submission that promises to preserve the current
+  ChatGPT model must bind `modelStrategy: current` on the lower prompt request,
+  not only on a derived browser configuration. Otherwise service-level stale
+  model names can regain precedence before Send even though caller-level tests
+  appear correct.
+
 - 2026-08-30: Background live follow must never make an explicit foreground
   request wait for an entire inventory or materialization pass. A same-profile
   foreground reservation must stop new background admission, cooperatively

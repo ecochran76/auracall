@@ -58,6 +58,11 @@
   Foreground work must preempt background admission, trigger cooperative
   checkpoint/yield, and allow cursor-preserving resume after foreground
   terminal release.
+- The next pre-Send launch selected the exact LitScout pill but stopped before
+  dispatch because the lower request omitted `modelStrategy: current` and
+  attempted stale configured option `gpt-5.2-pro`. Zero ChatGPT turns and zero
+  LitScout calls resulted. The prompt request now binds current-model strategy
+  explicitly; the focused `52/52` packet, typecheck, build, and Biome pass.
 
 ## Turn 538 | 2026-08-29
 

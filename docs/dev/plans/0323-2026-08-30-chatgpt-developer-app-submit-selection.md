@@ -45,6 +45,12 @@ Revision: 4 | 2026-08-30
   fresh terminal assistant turn, services the existing approval handler on
   passive DOM probes, and returns captured Markdown. Focused tests pass
   `52/52`; typecheck, production build, scoped Biome, and plan audit pass.
+- A later zero-turn launch exposed a second propagation gap: the derived test
+  browser carried `modelStrategy: current`, but the lower prompt input omitted
+  it and therefore retried the stale configured `gpt-5.2-pro` selector.
+  Developer-app submissions now bind `modelStrategy: current` on the prompt
+  request itself. The same `52/52` focused packet, typecheck, production build,
+  and scoped Biome pass.
 - Reinstall/source-runtime parity and one governed terminal-response validation
   through LitScout Experiment 18 remain pending.
 

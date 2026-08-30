@@ -132,6 +132,7 @@ export interface ChatgptDeveloperAppBrowserClient {
 		prompt: string;
 		completionMode: "assistant_response" | "prompt_submitted";
 		timeoutMs?: number | null;
+		modelStrategy?: "current";
 	}): Promise<{
 		text?: string;
 		conversationId?: string | null;
@@ -387,6 +388,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			prompt,
 			completionMode: options.waitForResponse ? "assistant_response" : "prompt_submitted",
 			timeoutMs: options.timeoutMs ?? 120_000,
+			modelStrategy: "current",
 		});
 		return {
 			status: "completed",

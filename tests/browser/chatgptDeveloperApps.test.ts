@@ -238,6 +238,7 @@ describe("deriveChatgptDeveloperAppState", () => {
 			prompt: "Use only LitScout.",
 			completionMode: "prompt_submitted",
 			timeoutMs: 120_000,
+			modelStrategy: "current",
 		});
 	});
 
@@ -279,6 +280,7 @@ describe("deriveChatgptDeveloperAppState", () => {
 			prompt: "Research deeply.",
 			completionMode: "assistant_response",
 			timeoutMs: 7_200_000,
+			modelStrategy: "current",
 		});
 		expect(outcome.response).toEqual({
 			text: "Research complete.",

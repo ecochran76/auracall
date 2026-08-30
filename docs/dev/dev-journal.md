@@ -22,6 +22,11 @@
   paused the completion and disabled live follow for that runtime profile.
   Foreground admission now has a recorded product requirement for bounded
   cooperative background yield and checkpoint-preserving resume.
+- Exact app selection then reached prompt preparation and exposed a stale-model
+  propagation defect. Setting current-model strategy only on the derived
+  browser configuration was insufficient; the lower prompt input retained its
+  default selection behavior. Developer-app submissions now bind
+  `modelStrategy: current` directly on that request.
 
 ## 2026-08-27 | Plan 0320 terminal-output selection repair
 
