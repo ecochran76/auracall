@@ -302,8 +302,8 @@ lanes:
     integration: direct
     dependencies: [P17]
     overlaps: [P08]
-    validation_status: provider-guard-hard-stop
+    validation_status: ready-gemini-disabled
     validation_ref: 87fec070638981f87095f1e2830192a0ba3cd9a3
     integration_receipt: 87fec070638981f87095f1e2830192a0ba3cd9a3
-    disposition: Await human clearance of the existing auracall-gemini-pro google-sorry page before one supported install/restart and one zero-retry wsl-chrome-3 run-one-pass canary.
+    disposition: Operator directed Gemini to remain disabled with its guard untouched; proceed only with one supported install/restart and one zero-retry ChatGPT wsl-chrome-3 run-one-pass canary after a fresh clean ownership gate.
     updated_at: 2026-09-01

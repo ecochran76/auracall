@@ -48187,3 +48187,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `manual_clear_required` / `google-sorry`. Per the human-verification hard
   stop, no runtime install, API restart, provider-guard mutation, or bounded
   canary ran. P18 records the exact resumption gate.
+
+## 2026-09-01 | Plan 0325 Gemini exclusion authorized
+
+- The operator directed AuraCall to leave Gemini disabled. The guarded
+  `auracall-gemini-pro` target has no completion and remains blocked from
+  scheduling; the legacy Gemini completion remains paused and
+  startup-resume-blocked.
+- P18 will retain the Gemini guard without browser inspection or automation and
+  scope installed adoption plus one zero-retry canary strictly to ChatGPT
+  `wsl-chrome-3`; ChatGPT `default` remains paused.
