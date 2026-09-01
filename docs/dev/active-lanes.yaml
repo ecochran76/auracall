@@ -278,14 +278,32 @@ lanes:
     branch: fix/plan0324-history-materialization-fairness
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
+    custody_state: INTEGRATED
     checkpoint: c8cc682eadc2d2b520289c984ed640a6eaafa23c
     remote_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
     integration: merge
     dependencies: []
     overlaps: [P08]
-    validation_status: provider-free-accepted
+    validation_status: provider-free-accepted-installed-blocked
     validation_ref: c8cc682eadc2d2b520289c984ed640a6eaafa23c
-    integration_receipt: null
-    disposition: Provider-free source repair is accepted and ready for integration; installed adoption and live proof remain separately gated while both exact targets stay operator-paused.
+    integration_receipt: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    disposition: Integrated provider-free repair; installed adoption stopped before mutation on the existing auracall-gemini-pro manual-clear google-sorry guard while both exact ChatGPT targets remain operator-paused.
+    updated_at: 2026-09-01
+  - id: P18
+    objective: Adopt integrated history-materialization fairness into the installed runtime and prove one bounded wsl-chrome-3 pass without resuming continuous live follow.
+    plan: docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md
+    plan_ref: refs/heads/main
+    branch: main
+    target: main
+    plan_state: OPEN
+    custody_state: INTEGRATED
+    checkpoint: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    remote_ref: refs/remotes/origin/main
+    integration: direct
+    dependencies: [P17]
+    overlaps: [P08]
+    validation_status: provider-guard-hard-stop
+    validation_ref: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    integration_receipt: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    disposition: Await human clearance of the existing auracall-gemini-pro google-sorry page before one supported install/restart and one zero-retry wsl-chrome-3 run-one-pass canary.
     updated_at: 2026-09-01

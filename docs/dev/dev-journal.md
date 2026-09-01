@@ -48174,3 +48174,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The accepted lane is published at
   `refs/remotes/origin/fix/plan0324-history-materialization-fairness` for
   review and integration.
+
+## 2026-09-01 | Plan 0324 integrated; installed canary gated
+
+- Merge `87fec070` is published on `main` after integration iteration 1 passed
+  166 focused/adjacent tests, five HTTP wiring tests, typecheck, build, scoped
+  lint, diff hygiene, and the zero-error plan audit.
+- Installed readback found API PID `98408` active with zero restarts, zero
+  active history-materialization jobs, no exact managed browser process for
+  ChatGPT `default` or `wsl-chrome-3`, and both exact completions still paused.
+- The existing `auracall-gemini-pro` provider guard remains
+  `manual_clear_required` / `google-sorry`. Per the human-verification hard
+  stop, no runtime install, API restart, provider-guard mutation, or bounded
+  canary ran. P18 records the exact resumption gate.

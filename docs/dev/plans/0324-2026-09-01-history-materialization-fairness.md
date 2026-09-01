@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P17
-Operational state: PROVIDER_FREE_ACCEPTED_AWAITING_INSTALLED_ADOPTION
+Operational state: INTEGRATED_AWAITING_INSTALLED_ADOPTION
 Branch: fix/plan0324-history-materialization-fairness
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-01
+Revision: 3 | 2026-09-01
 
 ## Stable Objective
 
@@ -31,6 +31,10 @@ completion depend on retrievable rather than raw missing-local assets.
   CodeGraph sync/readback, diff hygiene, and a zero-error plan-library audit.
 - Installed adoption, API-service restart, and any live proof remain separate
   effect work. Both operator-paused live-follow targets remain paused.
+- Merge receipt `87fec070` is published on `main`. The supported installed
+  adoption gate was evaluated without mutation and stopped on the existing
+  `auracall-gemini-pro` `manual_clear_required` / `google-sorry` provider
+  guard; no install, restart, or canary ran.
 
 ## Execution Graph
 
@@ -84,3 +88,7 @@ separate effect work.
 - `HMF-R4`: checkpoint `c8cc682e` passed the complete provider-free gate named
   in Current State. No live, installed-runtime, scheduler, browser, or provider
   action was used as evidence.
+- Integration iteration 1 repeated the same 166 focused/adjacent tests, five
+  HTTP wiring tests, typecheck, build, scoped lint, diff hygiene, and zero-error
+  plan audit against pending merge `87fec070`; all passed before `main` was
+  published.
