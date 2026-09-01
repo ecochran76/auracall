@@ -277,15 +277,15 @@ lanes:
     plan_ref: refs/heads/fix/plan0324-history-materialization-fairness
     branch: fix/plan0324-history-materialization-fairness
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 3de741155ebd2492d2daf88e89e89182b3ad5f38
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: c8cc682eadc2d2b520289c984ed640a6eaafa23c
     remote_ref: null
     integration: merge
     dependencies: []
     overlaps: [P08]
-    validation_status: implementing-provider-free
-    validation_ref: null
+    validation_status: provider-free-accepted
+    validation_ref: c8cc682eadc2d2b520289c984ed640a6eaafa23c
     integration_receipt: null
-    disposition: Live follow remains operator-paused; source repair and provider-free acceptance are in progress.
+    disposition: Provider-free source repair is accepted and ready for integration; installed adoption and live proof remain separately gated while both exact targets stay operator-paused.
     updated_at: 2026-09-01

@@ -1,12 +1,12 @@
 # History Materialization Fairness | 0324-2026-09-01
 
-State: OPEN
+State: CLOSED
 Lane: P17
-Operational state: IMPLEMENTING_PROVIDER_FREE
+Operational state: PROVIDER_FREE_ACCEPTED_AWAITING_INSTALLED_ADOPTION
 Branch: fix/plan0324-history-materialization-fairness
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-01
+Revision: 2 | 2026-09-01
 
 ## Stable Objective
 
@@ -23,7 +23,14 @@ completion depend on retrievable rather than raw missing-local assets.
   entries consume the transfer budget while remaining correctly retryable.
 - Raw missing-local counts also retain unsupported metadata-only and static
   false-positive assets after the actionable recovery inventory is smaller.
-- Source implementation and provider-free validation remain pending.
+- Source checkpoint `c8cc682e` implements one durable job-store snapshot,
+  concrete-asset transfer accounting, never/least-recent retry ordering, and
+  recovery-planner gating at both live-follow materialization queue seams.
+- Provider-free acceptance passes 166 focused/adjacent tests plus five HTTP
+  wiring tests, typecheck, production build, scoped zero-warning Biome lint,
+  CodeGraph sync/readback, diff hygiene, and a zero-error plan-library audit.
+- Installed adoption, API-service restart, and any live proof remain separate
+  effect work. Both operator-paused live-follow targets remain paused.
 
 ## Execution Graph
 
@@ -63,3 +70,17 @@ completion depend on retrievable rather than raw missing-local assets.
 All four criteria have provider-free evidence on the plan branch, docs record
 the new semantics, and installed adoption plus any live proof remain explicitly
 separate effect work.
+
+## Closeout Evidence
+
+- `HMF-R1`: two consecutive public-service jobs advance from conversations
+  one/two to three/four while preserving skipped zero-asset attempts as
+  retryable durable receipts.
+- `HMF-R2`: four conversations run under `maxItems: 4` despite two synthetic
+  entries apiece; every receipt reports `assetsAttempted: 0`.
+- `HMF-R3`: a five-asset retrievable backlog queues materialization, while the
+  same raw inventory with zero retrievable and zero deferred assets proceeds to
+  ordinary cadence without creating a history-materialization job.
+- `HMF-R4`: checkpoint `c8cc682e` passed the complete provider-free gate named
+  in Current State. No live, installed-runtime, scheduler, browser, or provider
+  action was used as evidence.

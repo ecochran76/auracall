@@ -48158,3 +48158,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Plan 0324 will freeze public-seam regressions, repair fair retry ordering and
   budget accounting, then align completion with retrievable assets without an
   install, restart, browser action, scheduler resume, or provider canary.
+
+## 2026-09-01 | Plan 0324 provider-free repair accepted
+
+- Checkpoint `c8cc682e` stops synthetic no-asset evidence from spending the
+  transfer budget, rotates retryable conversations from durable attempts, and
+  gates both live-follow materialization queue paths on the recovery planner's
+  retrievable plus unknown/deferred backlog.
+- Acceptance passes 166 focused/adjacent tests, five HTTP wiring tests,
+  typecheck, production build, scoped zero-warning lint, CodeGraph readback,
+  diff hygiene, and a zero-error plan audit.
+- No installed-runtime mutation, API restart, browser/provider action,
+  scheduler control, or live canary ran. `default` and `wsl-chrome-3` live
+  follow remain operator-paused pending separately authorized adoption.
