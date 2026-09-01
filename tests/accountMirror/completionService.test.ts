@@ -2449,6 +2449,10 @@ describe("account mirror completion service", () => {
 				status: "queued",
 			},
 		}));
+		const readMaterializationBacklog = vi.fn(async () => ({
+			retrievableMissing: 5,
+			unknownOrDeferred: 0,
+		}));
 		const requestRefresh = vi.fn(async () => createRefreshResult());
 		const registry = createAccountMirrorStatusRegistry({
 			config,
@@ -2485,6 +2489,7 @@ describe("account mirror completion service", () => {
 			registry,
 			refreshService: { requestRefresh },
 			historyMaterializationService: { createJob },
+			readMaterializationBacklog,
 			now: () => new Date("2026-04-30T12:00:00.000Z"),
 			generateId: () => "acctmirror_complete_ledger_shortcut",
 			sleep: () => new Promise<void>(() => {}),
@@ -2500,6 +2505,7 @@ describe("account mirror completion service", () => {
 		await waitFor(() => createJob.mock.calls.length === 1);
 		const operation = service.read("acctmirror_complete_ledger_shortcut");
 		expect(requestRefresh).not.toHaveBeenCalled();
+		expect(readMaterializationBacklog).toHaveBeenCalledTimes(1);
 		expect(createJob).toHaveBeenCalledWith(
 			expect.objectContaining({
 				provider: "chatgpt",
@@ -2527,6 +2533,87 @@ describe("account mirror completion service", () => {
 			]),
 		);
 		service.control({ id: "acctmirror_complete_ledger_shortcut", action: "cancel" });
+	});
+
+	test("does not queue raw missing assets when the recovery backlog is non-actionable", async () => {
+		const createJob = vi.fn();
+		const requestRefresh = vi
+			.fn()
+			.mockResolvedValueOnce(createRefreshResult())
+			.mockRejectedValue(
+				new AccountMirrorRefreshError(
+					409,
+					"account_mirror_not_eligible",
+					"Account mirror chatgpt/default is delayed: minimum-interval.",
+					{
+						provider: "chatgpt",
+						runtimeProfileId: "default",
+						reason: "minimum-interval",
+						eligibleAt: "2026-09-01T16:10:00.000Z",
+					},
+				),
+			);
+		const readMaterializationBacklog = vi.fn(async () => ({
+			retrievableMissing: 0,
+			unknownOrDeferred: 0,
+		}));
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-09-01T16:00:00.000Z"),
+			initialState: {
+				"chatgpt:default": {
+					detectedIdentityKey: "ecochran76@gmail.com",
+					metadataCounts: {
+						projects: 1,
+						conversations: 3,
+						artifacts: 3,
+						files: 2,
+						media: 0,
+					},
+					metadataEvidence: {
+						identitySource: "test",
+						projectSampleIds: ["project_1"],
+						conversationSampleIds: ["conversation_1"],
+						assetInventory: {
+							state: "observed",
+							summary: "Raw inventory contains only non-actionable assets.",
+							detailScannedThisPass: { projects: 1, conversations: 3, total: 4 },
+							localMaterialized: { artifacts: 0, files: 0, media: 0 },
+							remoteKnownMissingLocal: { artifacts: 3, files: 2, media: 0 },
+							unknownOrDeferred: { artifacts: 0, files: 0, media: 0 },
+						},
+						truncated: { projects: false, conversations: false, artifacts: false },
+					},
+					backfillLedger: completeBackfillLedger,
+				},
+			},
+		});
+		const service = createAccountMirrorCompletionService({
+			registry,
+			refreshService: { requestRefresh },
+			historyMaterializationService: { createJob },
+			readMaterializationBacklog,
+			now: () => new Date("2026-09-01T16:00:00.000Z"),
+			generateId: () => "acctmirror_non_actionable_backlog",
+			sleep: () => new Promise<void>(() => {}),
+		});
+
+		service.start({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			sweepMode: "full_sweep",
+			materializationPolicy: "full_missing_assets",
+		});
+
+		await waitFor(
+			() =>
+				service.read("acctmirror_non_actionable_backlog")?.nextAttemptAt ===
+				"2026-09-01T16:10:00.000Z",
+		);
+		expect(readMaterializationBacklog).toHaveBeenCalled();
+		expect(createJob).not.toHaveBeenCalled();
+		expect(requestRefresh).toHaveBeenCalledTimes(2);
+		service.control({ id: "acctmirror_non_actionable_backlog", action: "cancel" });
 	});
 
 	test("settles complete-ledger materialization before ending a forced pass", async () => {

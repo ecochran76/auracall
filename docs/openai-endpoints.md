@@ -422,9 +422,13 @@ Current limits:
   `materializationAssetKinds`, `materializationMaxItems`,
   `materializationRefreshSnapshot`, and `materializationForce` in camelCase or
   snake_case. `sweepMode: "full_sweep"` defaults to snapshot refresh plus
-  `full_missing_assets`; each successful refresh pass queues an account-mirror
-  history materialization job and records the latest handoff in
-  `materializationCursor`. `GET /v1/account-mirrors/completions`,
+  `full_missing_assets`; after a successful refresh, the completion consults
+  the recovery planner and queues account-mirror history materialization only
+  for retrievable missing assets or unknown/deferred detail work. Raw
+  missing-local counts made entirely of duplicate, unsupported, static,
+  retrieval-failed, or terminal rows do not reopen materialization. The latest
+  queued handoff is recorded in `materializationCursor`.
+  `GET /v1/account-mirrors/completions`,
   `GET /v1/account-mirrors/completions/{completion_id}`, and
   `POST /v1/account-mirrors/completions/{completion_id}` remain the list,
   status, and pause/resume/cancel surfaces. GET list/status defaults to a

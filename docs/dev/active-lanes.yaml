@@ -271,3 +271,21 @@ lanes:
     integration_receipt: 168322897e9d7dd0e652e14d44b82482ad83c5ec
     disposition: Integrated exact Git custody cleanup; P08, P14, historical compatibility, divergent, and unknown-custody refs are retained.
     updated_at: 2026-08-29
+  - id: P17
+    objective: Prevent retryable no-asset conversations from stalling history materialization and use actionable backlog for completion.
+    plan: docs/dev/plans/0324-2026-09-01-history-materialization-fairness.md
+    plan_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
+    branch: fix/plan0324-history-materialization-fairness
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: c8cc682eadc2d2b520289c984ed640a6eaafa23c
+    remote_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
+    integration: merge
+    dependencies: []
+    overlaps: [P08]
+    validation_status: provider-free-accepted
+    validation_ref: c8cc682eadc2d2b520289c984ed640a6eaafa23c
+    integration_receipt: null
+    disposition: Provider-free source repair is accepted and ready for integration; installed adoption and live proof remain separately gated while both exact targets stay operator-paused.
+    updated_at: 2026-09-01

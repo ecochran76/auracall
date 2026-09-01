@@ -650,6 +650,11 @@ Terminology note:
   bounded target budget: fresh/complete conversation rows are skipped unless
   forced, while stale, partial, or missing-assets rows can still be refreshed
   even when stale cached asset counts are zero.
+  The asset-transfer budget counts only entries bound to a concrete provider or
+  local asset; synthetic `no-materializable-*` and `known-files-excluded`
+  evidence does not spend it. Retryable zero-asset conversations remain
+  eligible, but later jobs order them by least-recent attempt so the same stable
+  front rows cannot monopolize every bounded pass.
   Selected `conversationIds` batches honor the operator-provided order before
   catalog order; terminal Gemini bare-`/app` misses do not consume `maxItems`,
   so the same bounded request can continue to the next routeable selected id.
@@ -834,7 +839,11 @@ Terminology note:
   optional `--materialization-asset-kind`, `--materialization-max-items`,
   `--materialization-refresh-snapshot`, and `--materialization-force`. A
   successful refresh pass queues a history-materialization job through the
-  same provider/politeness path and records the job handoff in the completion
+  same provider/politeness path only when the recovery planner reports
+  retrievable missing assets or unknown/deferred detail work. Raw missing-local
+  rows classified as duplicate, unsupported metadata-only, static false
+  positives, retrieval failures, or terminal failures do not keep reopening
+  materialization. A queued handoff is recorded in the completion
   `materializationCursor`. Per-service `liveFollow` config can set the same
   sweep/materialization fields for startup reconciliation; ordinary
   `liveFollow.enabled: true` remains metadata-only steady follow by default.

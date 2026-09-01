@@ -363,6 +363,18 @@ export async function createMcpServicesFromConfig(
     initialOperations: await accountMirrorCompletionStore.listOperations({ activeOnly: false, limit: null }),
     resumeActiveOperations: true,
     historyMaterializationService,
+    readMaterializationBacklog: async ({ provider, runtimeProfileId }) => {
+      const plan = await accountMirrorArtifactRecoveryPlanner.plan({
+        provider,
+        runtimeProfileId,
+        includeSearchRows: false,
+        limit: 100,
+      });
+      return {
+        retrievableMissing: plan.metrics.retrievableMissingLocal.total,
+        unknownOrDeferred: plan.metrics.unknownOrDeferred.total,
+      };
+    },
   });
   const accountMirrorReconciliationCampaignService = createAccountMirrorReconciliationCampaignService({
     registry: accountMirrorStatusRegistry,
