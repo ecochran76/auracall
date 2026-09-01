@@ -48171,3 +48171,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - No installed-runtime mutation, API restart, browser/provider action,
   scheduler control, or live canary ran. `default` and `wsl-chrome-3` live
   follow remain operator-paused pending separately authorized adoption.
+- The accepted lane is published at
+  `refs/remotes/origin/fix/plan0324-history-materialization-fairness` for
+  review and integration.

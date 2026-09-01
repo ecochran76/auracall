@@ -274,13 +274,13 @@ lanes:
   - id: P17
     objective: Prevent retryable no-asset conversations from stalling history materialization and use actionable backlog for completion.
     plan: docs/dev/plans/0324-2026-09-01-history-materialization-fairness.md
-    plan_ref: refs/heads/fix/plan0324-history-materialization-fairness
+    plan_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
     branch: fix/plan0324-history-materialization-fairness
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATION_READY
     checkpoint: c8cc682eadc2d2b520289c984ed640a6eaafa23c
-    remote_ref: null
+    remote_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
     integration: merge
     dependencies: []
     overlaps: [P08]
