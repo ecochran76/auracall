@@ -1181,6 +1181,10 @@ export async function createResponsesHttpServer(
 	let historyMaterializationService = deps.historyMaterializationService;
 	let searchProjectionService: SearchProjectionService;
 	let accountMirrorArtifactRecoveryPlanner: AccountMirrorArtifactRecoveryPlanner;
+	let resolveAccountMirrorArtifactRecoveryPlannerReady: () => void = () => {};
+	const accountMirrorArtifactRecoveryPlannerReady = new Promise<void>((resolve) => {
+		resolveAccountMirrorArtifactRecoveryPlannerReady = resolve;
+	});
 	const accountMirrorSchedulerLedger =
 		deps.accountMirrorSchedulerLedger ??
 			createAccountMirrorSchedulerPassLedger({
@@ -1242,6 +1246,20 @@ export async function createResponsesHttpServer(
 				async readJob(id) {
 					return historyMaterializationService ? historyMaterializationService.readJob(id) : null;
 				},
+			},
+			readMaterializationBacklog: async ({ provider, runtimeProfileId }) => {
+				await accountMirrorArtifactRecoveryPlannerReady;
+				const planner = accountMirrorArtifactRecoveryPlanner;
+				const plan = await planner.plan({
+					provider,
+					runtimeProfileId,
+					includeSearchRows: false,
+					limit: 100,
+				});
+				return {
+					retrievableMissing: plan.metrics.retrievableMissingLocal.total,
+					unknownOrDeferred: plan.metrics.unknownOrDeferred.total,
+				};
 			},
 			providerWorkCoordinator: accountMirrorProviderWorkCoordinator,
 			onPersistError: (error, operation) => {
@@ -1518,6 +1536,7 @@ export async function createResponsesHttpServer(
 			historyMaterializationService,
 			now,
 		});
+	resolveAccountMirrorArtifactRecoveryPlannerReady();
 	const reserveForegroundAuraCallDrain = () => {
 		foregroundAuraCallDrainReservations += 1;
 		accountMirrorFollowUpAfterNextDrain = true;

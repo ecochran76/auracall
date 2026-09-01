@@ -48148,3 +48148,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Revalidated P14's clean/equal/ancestral custody and removed its worktree,
   local branch, and remote branch. The catalog no longer carries a cleanup
   blocker.
+## 2026-09-01 | Plan 0324 history-materialization fairness opened
+
+- Paused exact live-follow targets remain paused while source diagnosis moves
+  into a provider-free repair lane.
+- Durable job receipts show synthetic no-materializable skips consume the
+  transfer budget and repeat the same stable front candidates across jobs;
+  raw missing-local totals also exceed the actionable recovery backlog.
+- Plan 0324 will freeze public-seam regressions, repair fair retry ordering and
+  budget accounting, then align completion with retrievable assets without an
+  install, restart, browser action, scheduler resume, or provider canary.

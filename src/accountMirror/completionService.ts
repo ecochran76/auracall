@@ -241,6 +241,14 @@ export interface AccountMirrorCompletionService {
 	prepareForShutdown?(): AccountMirrorCompletionOperation[];
 }
 
+type AccountMirrorMaterializationBacklogReader = (input: {
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+}) => Promise<{
+	retrievableMissing: number;
+	unknownOrDeferred: number;
+} | null>;
+
 export function projectAccountMirrorCompletionForMonitoring(
 	operation: AccountMirrorCompletionOperation,
 ): AccountMirrorCompletionOperation {
@@ -344,6 +352,7 @@ export function createAccountMirrorCompletionService(input: {
 	generateId?: () => string;
 	sleep?: (ms: number) => Promise<void>;
 	historyMaterializationService?: AccountMirrorHistoryMaterializationService | null;
+	readMaterializationBacklog?: AccountMirrorMaterializationBacklogReader;
 	providerWorkCoordinator?: AccountMirrorProviderWorkCoordinator | null;
 	shouldYieldToForegroundWork?: () => AccountMirrorCompletionBackpressure | null;
 	foregroundRetryDelayMs?: number;
@@ -628,7 +637,13 @@ export function createAccountMirrorCompletionService(input: {
 						update(id, { status: "running", nextAttemptAt: null });
 						continue;
 					}
-					if (shouldQueueMaterializationFromCompleteLedger(refreshOperation, phaseStatusEntry)) {
+					if (
+						await shouldQueueMaterializationFromCompleteLedger(
+							refreshOperation,
+							phaseStatusEntry,
+							input.readMaterializationBacklog,
+						)
+					) {
 						if (!(await acquireProviderWorkLease(id))) return;
 						const nextPassCount = pass + 1;
 						pass = nextPassCount;
@@ -774,7 +789,12 @@ export function createAccountMirrorCompletionService(input: {
 					});
 				}
 				const queuedCompletionMaterialization = Boolean(
-					refreshed && shouldQueueMaterialization(refreshed),
+					refreshed &&
+						(await shouldQueueMaterialization(
+							refreshed,
+							refreshedStatusEntry,
+							input.readMaterializationBacklog,
+						)),
 				);
 				if (refreshed && queuedCompletionMaterialization) {
 					await queueCompletionMaterialization(refreshed, {
@@ -1740,19 +1760,28 @@ function readNestedString(value: unknown, path: string[]): string | null {
 	return typeof current === "string" && current.trim().length > 0 ? current.trim() : null;
 }
 
-function shouldQueueMaterialization(operation: AccountMirrorCompletionOperation): boolean {
+async function shouldQueueMaterialization(
+	operation: AccountMirrorCompletionOperation,
+	statusEntry: AccountMirrorStatusEntry | null | undefined,
+	readMaterializationBacklog: AccountMirrorMaterializationBacklogReader | undefined,
+): Promise<boolean> {
 	if (operation.lastRefresh?.status !== "completed") return false;
 	if (operation.materializationPolicy === "metadata_only") return false;
 	if (!operation.materializationPolicy && operation.sweepMode !== "full_sweep") return false;
 	if (operation.materializationCursor?.passCount === operation.passCount) return false;
 	if (operation.provider === "gemini" && isGeminiShellOnlyRouteChurn(operation)) return false;
-	return true;
+	return hasActionableMaterializationBacklog(
+		operation,
+		statusEntry,
+		readMaterializationBacklog,
+	);
 }
 
-function shouldQueueMaterializationFromCompleteLedger(
+async function shouldQueueMaterializationFromCompleteLedger(
 	operation: AccountMirrorCompletionOperation,
 	statusEntry: AccountMirrorStatusEntry | null | undefined,
-): boolean {
+	readMaterializationBacklog: AccountMirrorMaterializationBacklogReader | undefined,
+): Promise<boolean> {
 	if (operation.mode !== "live_follow" || operation.lastRefresh !== null) return false;
 	if (operation.materializationPolicy === "metadata_only") return false;
 	if (!operation.materializationPolicy && operation.sweepMode !== "full_sweep") return false;
@@ -1765,7 +1794,33 @@ function shouldQueueMaterializationFromCompleteLedger(
 		return false;
 	}
 	const missing = statusEntry.mirrorCompleteness.assetInventory?.remoteKnownMissingLocal;
-	return (missing?.artifacts ?? 0) + (missing?.files ?? 0) + (missing?.media ?? 0) > 0;
+	if ((missing?.artifacts ?? 0) + (missing?.files ?? 0) + (missing?.media ?? 0) <= 0) {
+		return false;
+	}
+	return hasActionableMaterializationBacklog(
+		operation,
+		statusEntry,
+		readMaterializationBacklog,
+	);
+}
+
+async function hasActionableMaterializationBacklog(
+	operation: AccountMirrorCompletionOperation,
+	statusEntry: AccountMirrorStatusEntry | null | undefined,
+	readMaterializationBacklog: AccountMirrorMaterializationBacklogReader | undefined,
+): Promise<boolean> {
+	if (!readMaterializationBacklog) return true;
+	if (!statusEntry) return false;
+	try {
+		const backlog = await readMaterializationBacklog({
+			provider: operation.provider,
+			runtimeProfileId: operation.runtimeProfileId,
+		});
+		if (!backlog) return true;
+		return backlog.retrievableMissing > 0 || backlog.unknownOrDeferred > 0;
+	} catch {
+		return false;
+	}
 }
 
 function deriveAccountLibraryCooldownUntil(entry: AccountMirrorStatusEntry): string | null {
