@@ -48197,3 +48197,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - P18 will retain the Gemini guard without browser inspection or automation and
   scope installed adoption plus one zero-retry canary strictly to ChatGPT
   `wsl-chrome-3`; ChatGPT `default` remains paused.
+
+## 2026-09-01 | Plan 0325 foreground-browser hard stop
+
+- The pre-install gate found external BYOP Chrome PID `1933` on the exact
+  `wsl-chrome-3` managed browser profile with a ChatGPT home tab. Agent Browser
+  reports no active profile lease or registered browser, AuraCall has no
+  operation lock or active materialization job, and current run metadata does
+  not attribute the PID.
+- PID `1933` remained live through five bounded 15-second polls. It is treated
+  as unrelated foreground work and was neither terminated nor reused.
+- No install, service restart, or canary ran. Gemini remains disabled and
+  untouched; both ChatGPT completions remain paused.

@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P18
-Operational state: AUTHORIZED_GEMINI_DISABLED_READY_FOR_ADOPTION
+Operational state: BLOCKED_ON_EXTERNAL_FOREGROUND_BROWSER
 Branch: main
 Target: main
 Integration: direct
-Revision: 2 | 2026-09-01
+Revision: 3 | 2026-09-01
 
 ## Stable Objective
 
@@ -29,6 +29,14 @@ work without resuming continuous live follow.
   `google-sorry` provider guard. The legacy Gemini completion remains paused
   and startup-resume-blocked. P18 will not clear, inspect, or automate either
   Gemini browser profile.
+- The fresh pre-install gate found external BYOP Chrome PID `1933` using the
+  exact `wsl-chrome-3` managed browser profile and showing the ChatGPT home
+  page. Agent Browser reports no active lease or registered browser for that
+  process, AuraCall reports no operation lock or active materialization job,
+  and no current run metadata attributes the PID. The process remained live
+  through five bounded polls, so it is treated as unrelated foreground work.
+- No install, restart, or canary allowance has been consumed. P18 resumes only
+  after PID `1933` exits and a fresh ownership gate remains clean.
 
 ## Execution Graph
 
@@ -86,3 +94,9 @@ The operator explicitly directed AuraCall to leave Gemini disabled. The
 existing Google unusual-traffic guard must remain untouched. Installed adoption
 and the bounded canary are authorized only for the ChatGPT `wsl-chrome-3`
 surface after a fresh clean ownership gate.
+
+## Exact Unblocker
+
+External foreground Chrome PID `1933` must exit normally. Do not terminate or
+reuse it for P18. After process absence is proven, repeat the complete
+ChatGPT/Gemini-disabled ownership gate before consuming either effect allowance.
