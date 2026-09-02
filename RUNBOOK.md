@@ -1,5 +1,77 @@
 # RUNBOOK
 
+## Turn 550 | 2026-09-02
+
+- The P22 hard stop remains exact and stable: one recoverable canary editor,
+  unchanged API/Chrome PIDs, and no operation lock; no live mutation ran.
+- Three-way P16 reconciliation found only a textual CLI insertion conflict.
+  Preserve P16's three `apps test` response-wait options and P22's separate
+  `skills` command when integrating; do not merge or alter unfinished P16 now.
+
+## Turn 549 | 2026-09-02
+
+- The single authorized Skill Create saved exactly one v1 canary at a stable
+  `/skills/editor/<32-hex-id>` route. The installed client expected only the
+  query-detail route, returned `outcome-unknown`, and retained the exact editor.
+- P22's hard stop is active: no Create retry and no update/delete occurred. API
+  PID `98408`/zero restarts and Chrome PID `1933` are stable, with no operation
+  lock. The preserved editor requires operator adjudication before mutation.
+- Provider-free route and root-inventory handling now cover the observed route;
+  33 tests, typecheck, build, scoped lint, and diff hygiene pass. The repair is
+  published-ready but deliberately not installed or exercised live this turn.
+
+## Turn 548 | 2026-09-02
+
+- The next P22 create reached a fully enabled disposable editor but stopped
+  before submit because parent CodeMirror text concatenated its visual lines.
+  No Skill artifact exists and the original three tabs are restored.
+- Line-aware content readback and post-dispatch outcome fencing are green in the
+  33-test focused packet plus typecheck, scoped lint, and diff hygiene. Rebuild,
+  publish/reinstall, and the still-unused CRUD mutation sequence remain.
+
+## Turn 547 | 2026-09-02
+
+- Reinstalled exact-account inventory passed with 11 existing stable IDs. The
+  first create stopped before submit because menu rendering discarded the
+  trusted-click listener receipt; no Skill mutation occurred.
+- P22 now treats the exact rendered Create menu as the postcondition after the
+  trusted pointer dispatch. The 33-test packet, typecheck, build, scoped lint,
+  and diff hygiene pass; reinstall and the still-unused CRUD canary remain.
+
+## Turn 546 | 2026-09-02
+
+- The first installed P22 list stopped before mutation because current Skill
+  cards omit `skill_id` anchors. Bounded read-only inspection identified the
+  separate authenticated installed/created inventory responses and restored
+  all original tabs.
+- A red/green repair now requires both complete response payloads and reconciles
+  overlap by exact ID with created-by-me precedence. The 33-test focused and
+  adjacent packet, typecheck, scoped zero-warning lint, and diff hygiene pass;
+  rebuild/reinstall and the one zero-retry CRUD canary remain.
+
+## Turn 545 | 2026-09-02
+
+- P22 completed exact-account, no-submit Skill editor discovery and restored
+  the original three-tab state while preserving Chrome PID `1933`/port `45015`.
+- Exact-ID Skill list/show/create/update/delete is provider-free accepted with
+  complete-inventory and account gates, explicit mutation confirmation,
+  deterministic source hashing, optimistic update, fresh postconditions, and
+  terminal no-retry uncertain outcomes.
+- The pre-install packet passes 32 focused/adjacent tests, typecheck, build,
+  scoped zero-warning lint, diff hygiene, and the 328-candidate zero-error plan
+  audit. Commit/publish and one installed disposable CRUD canary remain.
+
+## Turn 544 | 2026-09-02
+
+- Opened [Plan 0329](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)
+  as P22 after Plan 0328 integrated and passed installed/live acceptance.
+- P22 will first open and close the exact-account Skill create surface without
+  upload or submit, then implement exact-ID list/show/create/update/delete with
+  provider-free TDD and one disposable zero-retry live canary.
+- The lane permits no skill invocation, prompt Send, `Answer now`, scheduler,
+  completion, materialization, developer-app, OAuth, API restart, or unrelated
+  browser effect. P16 remains unfinished and is an explicit integration overlap.
+
 ## Turn 543 | 2026-09-02
 
 - Plan 0328 closes `INSTALLED_LIVE_ACCEPTED`. The second canary timed out at 30

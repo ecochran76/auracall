@@ -22123,3 +22123,55 @@ browser-stage lifecycle observability, not transcript truncation.
   current ChatGPT skill detail contract supplies a stable 32-hex `skill_id`,
   owner display, file-tree inventory, and review state, while invocation remains
   a separate `Try in chat` action and version/enabled state remain unobserved.
+- 2026-09-02: Treat ChatGPT Skill CRUD as an exact-ID, content-addressed
+  lifecycle rather than a display-name action. Require exact account and
+  complete inventory before every mutation, bind create/update to fresh
+  `SKILL.md` hashes, make update optimistic on the prior hash, and prove delete
+  by fresh absence. An uncertain dispatched outcome is a terminal manual-review
+  state, never retry authority.
+- 2026-09-02: Do not derive ChatGPT Skill inventory completeness from visible
+  root-card anchors: current cards are role buttons and omit stable IDs from the
+  DOM. Capture both authenticated installed and created inventory responses,
+  require both payload arrays, and reconcile overlap by exact ID with
+  created-by-me precedence before authorizing any mutation.
+- 2026-09-02: A trusted pointer can synchronously open a React menu while the
+  rerender discards a window-scoped click-listener receipt. For a provider
+  control whose click dispatch is already trusted, accept the exact visible
+  menu postcondition as activation proof; never proceed from dispatch alone.
+- 2026-09-02: CodeMirror's `.cm-content.textContent` can concatenate visual
+  lines without newline separators. Hash and verify editor content by joining
+  ordered `.cm-line` text, preserving non-empty raw whitespace until canonical
+  hashing. After any prepared mutation pointer dispatch, missing click receipt
+  means postcondition observation or `outcome-unknown`, never a retryable error.
+- 2026-09-02: ChatGPT Skill Create may persist successfully at
+  `/skills/editor/<stable-id>` instead of redirecting to
+  `/skills?skill_id=<stable-id>`. Recognize both only with exact 32-hex identity;
+  navigate editor routes to the root before inventory capture. An older client
+  that reports unknown after this exact save remains subject to its no-retry
+  hard stop even when later read-only evidence recovers the artifact.
+- 2026-09-02: ChatGPT exposes different Skill action menus on the saved editor
+  and root collection cards. Treat the editor route as the exact-ID update
+  surface; before Delete, bind the requested ID and display name through a
+  fresh complete created-inventory response, require exactly one matching card
+  inside the `Created by me` section, then use trusted menu and confirmation
+  presses. A delete postcondition must reject both the query-detail and editor
+  URL forms for the target ID; checking only `skill_id` makes an editor URL a
+  false success.
+- 2026-09-02: For exact ChatGPT Skill source hashing, prefer the persisted
+  `/skills/editor/<stable-id>` surface over query-detail extraction. The editor
+  binds the ID in the route and exposes name, description, and ordered
+  CodeMirror lines in one surface; normalize and hash those lines directly.
+  Keep collection/review ownership sourced from the separate complete
+  inventory responses rather than inferring it from the editor.
+- 2026-09-02: Browser expressions generated inside TypeScript template strings
+  need a double-escaped newline delimiter. A source-level `join('\\n')` can
+  become a literal newline inside the emitted JavaScript string and fail at
+  runtime even though TypeScript, build, and lint pass. Export the expression
+  builder and execute it in a regression with representative CodeMirror lines.
+- 2026-09-02: ChatGPT's current `Created by me` Skill-card `Delete` action is
+  immediately destructive; it does not open a second confirmation dialog.
+  Treat the exact menu item press as the single mutation boundary, disable any
+  attempt to restore the now-deleted editor URL immediately, and determine the
+  outcome from a fresh complete authenticated inventory. If the exact ID is
+  still present or inventory is incomplete, return `outcome-unknown` and never
+  retry the action.

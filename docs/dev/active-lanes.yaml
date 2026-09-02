@@ -363,3 +363,22 @@ lanes:
     blocker: null
     disposition: Installed/live accepted; pre-answer expiry remains running, exact progress identity overrides stale synthetic runtime routing, and read-only reattach recovered the same 1800-line turn with zero resend.
     updated_at: 2026-09-02
+  - id: P22
+    objective: Implement and prove exact-account exact-ID ChatGPT Skill create, read, update, and delete with one disposable canary and exact cleanup.
+    plan: docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md
+    plan_ref: refs/heads/feat/plan0329-chatgpt-skill-crud
+    branch: feat/plan0329-chatgpt-skill-crud
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: fc32eede1a2c1c713d5c777404c13e6646fa7ee8
+    remote_ref: null
+    integration: merge
+    dependencies: [P20, P21]
+    overlaps: [P16]
+    validation_status: read-only-create-surface-discovery-ready
+    validation_ref: fc32eede1a2c1c713d5c777404c13e6646fa7ee8
+    integration_receipt: null
+    blocker: null
+    disposition: Read-only create-surface discovery precedes provider-free exact-ID lifecycle implementation and one disposable zero-retry CRUD canary.
+    updated_at: 2026-09-02

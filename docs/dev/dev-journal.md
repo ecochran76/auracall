@@ -1,3 +1,92 @@
+## 2026-09-02 | Plan 0329 ChatGPT Skill CRUD opened
+
+- Plan 0328 is integrated and installed/live accepted, so the handoff's timeout
+  gate is clear. P22 now owns exact-account, exact-ID Skill CRUD.
+- The first gate is one read-only create-surface open/close on `wsl-chrome-3`.
+  Provider-free implementation and validation must precede any upload or
+  submit; live proof is limited to one disposable create/update/delete with
+  zero retries and exact absence proof.
+- P16 remains unfinished and overlaps CLI registration plus generic ChatGPT
+  browser primitives. P22 keeps Skill lifecycle semantics in separate modules
+  and must reconcile that branch before integration.
+
+## 2026-09-02 | Plan 0329 provider-free Skill CRUD accepted
+
+- Exact-account read-only discovery observed `/skills/editor`, the bounded
+  Create menu, fields, CodeMirror `SKILL.md`, Upload, and Back without upload or
+  submit; cleanup restored the original three-tab state and preserved Chrome
+  PID `1933`/port `45015`.
+- Separate Skill CLI/browser modules now implement exact-account list/show and
+  guarded exact-ID create/update/delete. Complete inventory, `--yes`, source
+  hash readback, optimistic update hash, fresh absence, and no-retry uncertain
+  outcomes are enforced.
+- The pre-install packet passes 32 focused/adjacent tests, typecheck, production
+  build, scoped zero-warning lint, diff hygiene, and a 328-candidate zero-error
+  plan audit. One published install and one disposable zero-retry CRUD canary
+  remain.
+
+## 2026-09-02 | Plan 0329 live inventory fail-closed repair
+
+- The first installed `skills list` stopped before mutation because current
+  Skill cards carry no `skill_id` links. One bounded read-only inspection found
+  separate authenticated installed and created `hazelnuts` responses; the
+  original three tabs were restored afterward.
+- Inventory capture now accepts only complete successful responses for both
+  scopes, preserves duplicate names and exact IDs, and gives created-by-me
+  precedence when the installed scope overlaps it. The new red/green regression
+  brings the focused/adjacent packet to 33 passing tests; typecheck, scoped
+  zero-warning lint, and diff hygiene also pass. Rebuild/reinstall remains.
+
+## 2026-09-02 | Plan 0329 Create menu pre-submit repair
+
+- The repaired installed inventory returned complete exact-account state for
+  11 existing IDs. The first create command then stopped before submit because
+  the trusted-pointer helper lost its window-scoped click receipt as the menu
+  rendered; no Skill was created and all mutation allowances remain unused.
+- The Skill adapter now requires the exact visible Create-menu postcondition
+  after trusted pointer dispatch rather than treating an ephemeral listener
+  receipt as stronger than the rendered provider state. The 33-test packet,
+  typecheck, build, scoped zero-warning lint, and diff hygiene pass.
+
+## 2026-09-02 | Plan 0329 editor line-readback repair
+
+- The next create reached the editor and stopped before submit: CodeMirror's
+  parent text concatenates `.cm-line` nodes, so exact newline-preserving source
+  readback could not pass. A disposable no-submit draft proved name,
+  description, and instruction fields accepted and Create enabled; it was
+  closed with the original three tabs restored.
+- Detail and editor verification now join CodeMirror lines explicitly and
+  preserve instruction whitespace for hashing. If submit or delete pointer
+  dispatch loses its receipt during navigation, the adapter observes the exact
+  postcondition and otherwise returns terminal `outcome-unknown`; it cannot
+  surface false retry authority.
+
+## 2026-09-02 | Plan 0329 live Create hard stop
+
+- The single authorized Create dispatch saved exactly one recoverable canary
+  to a stable `/skills/editor/<32-hex-id>` route with the expected v1 name,
+  description, and instructions. The installed adapter expected only the query
+  detail route, returned `outcome-unknown`, and correctly retained the editor.
+- Per P22 bounds, Create was not retried and update/delete were not attempted.
+  API PID `98408` with zero restarts and Chrome PID `1933` remain stable; the
+  operation-lock root is empty. The retained editor is the exact unblocker.
+- Provider-free route parsing now accepts the observed saved-editor identity,
+  and read-only inventory capture navigates from editor routes to root before
+  awaiting both scopes. The 33-test packet, typecheck, build, scoped lint, and
+  diff hygiene pass; this follow-up was not installed or used on the canary.
+
+## 2026-09-02 | Plan 0329 P16 integration reconciliation
+
+- Revalidated the retained canary editor, API PID `98408`/zero restarts,
+  Chrome PID `1933`, and empty operation-lock root without provider mutation.
+- A three-way audit against preserved P16 commit `bd8738da` finds a textual
+  `bin/auracall.ts` conflict but no lifecycle-semantic overlap. P16 adds three
+  guarded response-wait options to `apps test`; P22 owns a separate `skills`
+  command and separate CLI/browser modules.
+- Future integration must retain both command blocks and should rebase or
+  manually resolve P16 after P22 reaches `main`. The unfinished P16 worktree
+  and branch remain untouched.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules
@@ -48340,3 +48429,48 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - P21 now owns one identity smoke, one no-retry long-response timeout canary,
   and one read-only recovery of that same turn. No scheduler or skill effect is
   in scope.
+
+## 2026-09-02 | Plan 0329 recovered Skill canary resumed
+
+- The operator accepted the recovered exact-ID Skill artifact as the one
+  successful Create and authorized one update plus one delete on that same
+  canary; Create will not be retried.
+- Read-only inspection localized update to the saved editor and destructive
+  actions to the `Created by me` card menu. The adapter now requires fresh
+  complete API identity binding before it marks that one exact card and uses
+  trusted pointers for Delete plus confirmation.
+- The false-positive delete route check is repaired across both observed
+  exact-ID URL forms. Provider-free gates pass; the remaining gate is one
+  install followed by exact-hash update readback and fresh-inventory absence.
+- Installed `show` then failed closed before mutation when query-detail source
+  extraction returned no exact record. Read-only retained-editor inspection
+  confirmed the exact editor is the durable content-addressed read surface, so
+  `show` and optimistic update preflight now read the ID and source there.
+  Provider-free gates pass again; the canary remains unchanged at v1.
+- Workspace-runtime proof found a second read-only failure before mutation: the
+  generated editor probe contained a literal newline inside its JavaScript
+  string delimiter. Escaping the delimiter and evaluating the generated probe
+  in a regression restored exact v1 hash readback. The 34-test packet and all
+  static/build gates pass; the final installed mutation sequence is still
+  untouched.
+- Installed update then completed once on the same exact ID and independently
+  read back the deterministic v2 hash. The one Delete menu action proved
+  immediately destructive: no confirmation dialog existed, the command
+  stopped expecting one, and no Delete retry was attempted. Fresh complete
+  inventory nevertheless proves the target absent.
+- Delete handling now treats that menu selection as the sole destructive
+  dispatch, prevents restoration to the removed editor immediately, and
+  requires fresh exact-ID inventory absence before returning `completed`.
+  Thirty-five focused/adjacent tests and all static/build gates pass.
+- The final published runtime is byte-identical and its fresh complete
+  inventory proves the canary absent. Cleanup preserved Chrome PID `1933` on
+  port `45015`, API PID `98408`, and the two existing chat tabs; the stale
+  deleted-editor tab was returned to `/skills`, with no operation lock left.
+- The resumed loop used four published installs because installed diagnostics
+  exposed three successive provider/readback mismatches. Each stopped before
+  any new mutation boundary; the one Create was not retried, update ran once,
+  Delete ran once, and all process identities remained stable.
+- Final gates pass 35 tests, typecheck, production build, scoped lint, diff
+  hygiene, and the zero-error plan audit. `pnpm audit --audit-level=high`
+  reports the existing 94-advisory repository baseline; P22 has no dependency
+  manifest or lockfile delta.

@@ -4,8 +4,19 @@
 
 ### Current Execution Board
 
-Status: Installed long-observation recovery accepted; ChatGPT Skill CRUD is the next bounded lane
-Lanes: P01-P07, P09-P15, P17, P19-P21 (integrated); P08, P18 (open)
+Status: ChatGPT Skill CRUD active after installed long-observation acceptance
+Lanes: P01-P07, P09-P15, P17, P19-P21 (integrated); P08, P18, P22 (open)
+
+- Active ChatGPT Skill CRUD:
+  [docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)
+  P22 is bounded to read-only create-surface discovery, provider-free exact-ID
+  list/show/create/update/delete, and one disposable zero-retry CRUD canary.
+  Skill invocation, prompts, developer apps, and scheduler effects are out of
+  scope. Discovery and provider-free validation are accepted. The single Create
+  saved one exact recoverable canary but the installed client classified its
+  newly observed editor route as `outcome-unknown`; update/delete are hard
+  stopped pending operator adjudication. The route repair is green but not
+  installed. P16 overlap must be reconciled before integration.
 
 - Active installed long-observation recovery canary:
   [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)

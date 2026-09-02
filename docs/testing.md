@@ -124,6 +124,23 @@
     approval and a singular provider trace; do not cite its expected token as
     two-call proof. See
     `docs/dev/notes/2026-08-15-plan0290-approval-settle-live-inconclusive.json`
+- ChatGPT Skill lifecycle:
+  - provider-free contract tests:
+    `pnpm vitest run tests/browser/chatgptSkills.test.ts tests/cli/chatgptSkillsCommand.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`
+  - read-only inventory smoke:
+    `pnpm tsx bin/auracall.ts --profile <runtime> skills list --expected-account <email> --json`
+  - `list` and `show` require the exact expected account; all mutations also
+    require `--yes`, a complete inventory, and an exact 32-hex ID after create
+  - `update` requires the exact prior `SKILL.md` SHA-256 reported by `show`;
+    stale or unavailable content fails before dispatch
+  - source loading accepts only a regular `SKILL.md` or directory containing
+    one, rejects symbolic links, normalizes line endings, and caps content at
+    1 MiB
+  - an `outcome-unknown` create, update, or delete is a hard stop and must not
+    be retried; retain the visible provider surface for operator inspection
+  - do not use Skill mutation commands as routine live tests. One authorized
+    canary must bind the returned ID and hashes, perform at most one create,
+    one update, and one delete, and finish with fresh absence proof
 - ChatGPT developer-app lifecycle:
   - provider-free contract tests:
     `pnpm vitest run tests/browser-service/devToolsConnection.test.ts tests/browser-service/browserServiceCore.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`
