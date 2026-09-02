@@ -86,6 +86,25 @@ auracall capabilities --target grok --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json
 
+# Guarded ChatGPT Skill lifecycle on the selected AuraCall runtime profile
+auracall --profile wsl-chrome-3 skills list \
+  --expected-account <chatgpt-email> --json
+auracall --profile wsl-chrome-3 skills show <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --json
+# Mutations additionally require --yes. Create returns the exact stable ID;
+# update requires that ID plus the exact prior SKILL.md SHA-256 from show.
+auracall --profile wsl-chrome-3 skills create \
+  --source ./my-skill --name "My skill" \
+  --expected-account <chatgpt-email> --yes --json
+auracall --profile wsl-chrome-3 skills update <32-hex-skill-id> \
+  --source ./my-skill-v2 --name "My skill" \
+  --expected-hash <64-hex-sha256> --expected-account <chatgpt-email> --yes --json
+auracall --profile wsl-chrome-3 skills delete <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --yes --json
+# Sources must be a regular SKILL.md file or a directory containing one.
+# Incomplete inventory, identity drift, stale hashes, CAPTCHA/MFA, and uncertain
+# provider outcomes stop the operation. Never retry an outcome-unknown mutation.
+
 # Guarded ChatGPT developer-app lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 apps --target chatgpt list --json
 # The read-only list operation has a 45-second outer deadline. DevTools target

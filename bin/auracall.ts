@@ -229,6 +229,12 @@ import {
   type ChatgptDeveloperAppOperationInput,
 } from '../src/cli/chatgptDeveloperAppsCommand.js';
 import {
+  formatChatgptSkillOperationResult,
+  loadChatgptSkillSource,
+  runChatgptSkillOperationForCli,
+  type ChatgptSkillOperationInput,
+} from '../src/cli/chatgptSkillsCommand.js';
+import {
   buildProfileIdentitySmokeBatchReport,
   buildProfileIdentitySmokeReport,
   formatProfileIdentitySmokeBatchReport,
@@ -5521,6 +5527,136 @@ async function runChatgptDeveloperAppsCliAction(
     await acquired.release();
   }
 }
+
+async function runChatgptSkillsCliAction(
+  command: Command,
+  buildInput: (options: OptionValues) => Promise<ChatgptSkillOperationInput> | ChatgptSkillOperationInput,
+): Promise<void> {
+  const parentOptions =
+    typeof command.parent?.opts === 'function' ? (command.parent.opts() as OptionValues) : ({} as OptionValues);
+  const ownOptions = typeof command.opts === 'function' ? (command.opts() as OptionValues) : ({} as OptionValues);
+  const commandOptions = {
+    ...(program.opts?.() ?? {}),
+    ...parentOptions,
+    ...ownOptions,
+  } as OptionValues;
+  if (commandOptions.target && commandOptions.target !== 'chatgpt') {
+    throw new Error('Skill lifecycle currently supports --target chatgpt only.');
+  }
+  const input = await buildInput(commandOptions);
+  const userConfig = await resolveConfig(commandOptions, process.cwd(), process.env);
+  const dispatcher = createFileBackedBrowserOperationDispatcher({
+    lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
+  });
+  const acquired = await dispatcher.acquire({
+    managedProfileDir: resolveManagedProfileDirForUserConfig(userConfig, 'chatgpt'),
+    serviceTarget: 'chatgpt',
+    kind: 'browser-tools',
+    operationClass: input.action === 'list' || input.action === 'show'
+      ? 'exclusive-probe'
+      : 'exclusive-mutating',
+    ownerCommand: `skills:${input.action}`,
+  });
+  if (!acquired.acquired) throw new Error(formatBrowserOperationBusyResult(acquired));
+  try {
+    const result = await runChatgptSkillOperationForCli(userConfig, input);
+    console.log(commandOptions.json ? JSON.stringify(result, null, 2) : formatChatgptSkillOperationResult(result));
+  } finally {
+    await acquired.release();
+  }
+}
+
+const skillsCommand = program
+  .command('skills')
+  .description('Inventory and operate guarded ChatGPT Skills.')
+  .option('--target <chatgpt>', 'Provider target (currently chatgpt only).', 'chatgpt');
+
+skillsCommand
+  .command('list')
+  .description('List ChatGPT Skills by exact account without mutation.')
+  .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command) {
+    await runChatgptSkillsCliAction(this, (options) => ({
+      action: 'list',
+      expectedAccount: String(options.expectedAccount ?? ''),
+    }));
+  });
+
+skillsCommand
+  .command('show <skill-id>')
+  .description('Read one ChatGPT Skill by its exact 32-hex ID.')
+  .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command, skillId: string) {
+    await runChatgptSkillsCliAction(this, (options) => ({
+      action: 'show',
+      skillId,
+      expectedAccount: String(options.expectedAccount ?? ''),
+    }));
+  });
+
+skillsCommand
+  .command('create')
+  .description('Create one ChatGPT Skill from a deterministic SKILL.md source.')
+  .requiredOption('--source <path>', 'SKILL.md file or directory containing SKILL.md.')
+  .requiredOption('--name <name>', 'Skill display name.')
+  .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
+  .option('--description <text>', 'Skill description.')
+  .option('--yes', 'Confirm creation.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command) {
+    await runChatgptSkillsCliAction(this, async (options) => ({
+      action: 'create',
+      expectedAccount: String(options.expectedAccount ?? ''),
+      confirmed: Boolean(options.yes),
+      source: await loadChatgptSkillSource({
+        sourcePath: String(options.source ?? ''),
+        name: String(options.name ?? ''),
+        description: typeof options.description === 'string' ? options.description : null,
+      }),
+    }));
+  });
+
+skillsCommand
+  .command('update <skill-id>')
+  .description('Update one exact ChatGPT Skill with an optimistic prior-hash guard.')
+  .requiredOption('--source <path>', 'Replacement SKILL.md file or directory containing SKILL.md.')
+  .requiredOption('--name <name>', 'Replacement skill display name.')
+  .requiredOption('--expected-hash <sha256>', 'Exact previously observed SKILL.md SHA-256.')
+  .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
+  .option('--description <text>', 'Replacement skill description.')
+  .option('--yes', 'Confirm update.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command, skillId: string) {
+    await runChatgptSkillsCliAction(this, async (options) => ({
+      action: 'update',
+      skillId,
+      expectedHash: String(options.expectedHash ?? ''),
+      expectedAccount: String(options.expectedAccount ?? ''),
+      confirmed: Boolean(options.yes),
+      source: await loadChatgptSkillSource({
+        sourcePath: String(options.source ?? ''),
+        name: String(options.name ?? ''),
+        description: typeof options.description === 'string' ? options.description : null,
+      }),
+    }));
+  });
+
+skillsCommand
+  .command('delete <skill-id>')
+  .description('Permanently delete one exact ChatGPT Skill and prove absence.')
+  .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
+  .option('--yes', 'Confirm exact permanent deletion.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command, skillId: string) {
+    await runChatgptSkillsCliAction(this, (options) => ({
+      action: 'delete',
+      skillId,
+      expectedAccount: String(options.expectedAccount ?? ''),
+      confirmed: Boolean(options.yes),
+    }));
+  });
 
 const appsCommand = program
   .command('apps')

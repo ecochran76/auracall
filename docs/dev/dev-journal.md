@@ -10,6 +10,21 @@
   browser primitives. P22 keeps Skill lifecycle semantics in separate modules
   and must reconcile that branch before integration.
 
+## 2026-09-02 | Plan 0329 provider-free Skill CRUD accepted
+
+- Exact-account read-only discovery observed `/skills/editor`, the bounded
+  Create menu, fields, CodeMirror `SKILL.md`, Upload, and Back without upload or
+  submit; cleanup restored the original three-tab state and preserved Chrome
+  PID `1933`/port `45015`.
+- Separate Skill CLI/browser modules now implement exact-account list/show and
+  guarded exact-ID create/update/delete. Complete inventory, `--yes`, source
+  hash readback, optimistic update hash, fresh absence, and no-retry uncertain
+  outcomes are enforced.
+- The pre-install packet passes 32 focused/adjacent tests, typecheck, production
+  build, scoped zero-warning lint, diff hygiene, and a 328-candidate zero-error
+  plan audit. One published install and one disposable zero-retry CRUD canary
+  remain.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules

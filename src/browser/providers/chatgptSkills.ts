@@ -1,0 +1,536 @@
+import { createHash } from "node:crypto";
+
+import type { DevToolsConnectionOptions } from "../../../packages/browser-service/src/types.js";
+import type {
+	ChatgptSkill,
+	ChatgptSkillMutationOutcome,
+	ChatgptSkillSource,
+	ChatgptSkillState,
+} from "../../cli/chatgptSkillsCommand.js";
+import type { ResolvedUserConfig } from "../../config.js";
+import {
+	navigateAndSettle,
+	openAndSelectMenuItem,
+	pressButtonWithTrustedPointer,
+	setInputValue,
+	waitForPredicate,
+} from "../service/ui.js";
+import type { ChromeClient } from "../types.js";
+import { classifyChatgptBlockingSurfaceProbe } from "./chatgptAdapter.js";
+
+type SkillIdentity = {
+	email?: string | null;
+	accountPlanType?: string | null;
+	accountLevel?: string | null;
+};
+
+export interface ChatgptSkillInventoryProbe {
+	complete: boolean;
+	entries: Array<{
+		id: string;
+		name: string;
+		collection?: string | null;
+		reviewStatus?: string | null;
+	}>;
+}
+
+export interface ChatgptSkillDetailProbe {
+	id: string;
+	name: string;
+	owner?: string | null;
+	description?: string | null;
+	filePaths?: string[];
+	instructions?: string | null;
+}
+
+export interface ChatgptSkillBrowserClient {
+	readonly userConfig: ResolvedUserConfig;
+	getUserIdentity(options?: { abortSignal?: AbortSignal }): Promise<SkillIdentity | null>;
+	connectDevTools(options?: DevToolsConnectionOptions): Promise<{ client: ChromeClient; port: number }>;
+}
+
+export function hashChatgptSkillInstructions(value: string): string {
+	return createHash("sha256").update(normalizeInstructions(value), "utf8").digest("hex");
+}
+
+export function normalizeInstructions(value: string): string {
+	return `${String(value).replace(/\r\n?/g, "\n").trimEnd()}\n`;
+}
+
+export function readChatgptSkillIdFromUrl(value: string): string | null {
+	try {
+		const url = new URL(value);
+		if (url.origin !== "https://chatgpt.com" || url.pathname !== "/skills") return null;
+		const id = url.searchParams.get("skill_id")?.toLowerCase() ?? "";
+		return /^[a-f0-9]{32}$/.test(id) ? id : null;
+	} catch {
+		return null;
+	}
+}
+
+export function deriveChatgptSkillState(input: {
+	identity: SkillIdentity | null;
+	inventory: ChatgptSkillInventoryProbe;
+	observedAt: string;
+}): ChatgptSkillState {
+	const seen = new Set<string>();
+	const skills = input.inventory.entries
+		.map((entry): ChatgptSkill | null => {
+			const id = entry.id.trim().toLowerCase();
+			const name = entry.name.trim();
+			if (!/^[a-f0-9]{32}$/.test(id) || !name || seen.has(id)) return null;
+			seen.add(id);
+			const collection = normalizeCollection(entry.collection);
+			return {
+				id,
+				name,
+				collection,
+				reviewStatus: normalizeReviewStatus(entry.reviewStatus),
+				owner: null,
+				description: null,
+				files: [],
+				contentHash: null,
+			};
+		})
+		.filter((skill): skill is ChatgptSkill => skill !== null);
+	return {
+		account: {
+			email: readString(input.identity?.email),
+			plan: readString(input.identity?.accountPlanType ?? input.identity?.accountLevel),
+		},
+		inventoryComplete: input.inventory.complete === true,
+		skills,
+		observedAt: input.observedAt,
+	};
+}
+
+export function deriveChatgptSkillDetail(input: ChatgptSkillDetailProbe): ChatgptSkill {
+	const instructions = readString(input.instructions);
+	const contentHash = instructions ? hashChatgptSkillInstructions(instructions) : null;
+	const paths = [...new Set((input.filePaths ?? []).map((path) => path.trim()).filter(Boolean))];
+	return {
+		id: input.id.trim().toLowerCase(),
+		name: input.name.trim(),
+		collection: "unknown",
+		reviewStatus: "unknown",
+		owner: readString(input.owner),
+		description: readString(input.description),
+		files: paths.map((path) => ({
+			path,
+			sha256: path.toLowerCase() === "skill.md" ? contentHash : null,
+		})),
+		contentHash,
+	};
+}
+
+export class ChatgptSkillBrowserAdapter {
+	private cdpClient: ChromeClient | null = null;
+	private originalUrl: string | null = null;
+	private restoreOriginalUrl = true;
+
+	constructor(
+		private readonly browser: ChatgptSkillBrowserClient,
+		private readonly abortSignal?: AbortSignal,
+	) {}
+
+	async readState(): Promise<ChatgptSkillState> {
+		this.throwIfAborted();
+		const identity = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
+		const client = await this.ensureClient();
+		await navigateSkills(client, "https://chatgpt.com/skills");
+		const inventory = await readInventoryProbe(client);
+		return deriveChatgptSkillState({ identity, inventory, observedAt: new Date().toISOString() });
+	}
+
+	async readSkill(id: string): Promise<ChatgptSkill | null> {
+		if (!/^[a-f0-9]{32}$/.test(id)) return null;
+		const client = await this.ensureClient();
+		await navigateSkills(client, `https://chatgpt.com/skills?skill_id=${id}`);
+		await assertNoBlockingSurface(client, `read skill ${id}`);
+		const exactRoute = await waitForPredicate(
+			client.Runtime,
+			`new URL(location.href).searchParams.get('skill_id') === ${JSON.stringify(id)}`,
+			{ timeoutMs: 8_000, description: `skill detail ${id}` },
+		);
+		if (!exactRoute.ok) return null;
+		await pressButtonWithTrustedPointer(client, {
+			match: { exact: ["skill.md"] },
+			requireVisible: true,
+			timeoutMs: 3_000,
+		}).catch(() => ({ ok: false }));
+		const probe = await readDetailProbe(client, id);
+		return probe ? deriveChatgptSkillDetail(probe) : null;
+	}
+
+	async create(source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome> {
+		const client = await this.ensureClient();
+		await navigateSkills(client, "https://chatgpt.com/skills");
+		await assertNoBlockingSurface(client, "create skill");
+		const opened = await pressButtonWithTrustedPointer(client, {
+			selector: 'button[aria-label="Create"]',
+			requireVisible: true,
+			postSelector: '[role="menu"][aria-label="Create skill menu"]',
+			timeoutMs: 8_000,
+		});
+		if (!opened.ok) throw new Error(`Unable to open ChatGPT skill Create menu: ${opened.reason}.`);
+		const editor = await pressButtonWithTrustedPointer(client, {
+			rootSelectors: ['[role="menu"][aria-label="Create skill menu"]'],
+			match: { exact: ["create with editor"] },
+			requireVisible: true,
+			timeoutMs: 8_000,
+		});
+		if (!editor.ok) throw new Error(`Unable to open ChatGPT skill editor: ${editor.reason}.`);
+		await waitForEditor(client, null);
+		await setEditorSource(client, source);
+		const outcome = await submitEditor(client, source, "create");
+		if (outcome.status !== "completed") this.restoreOriginalUrl = false;
+		return outcome;
+	}
+
+	async update(skill: ChatgptSkill, source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome> {
+		const client = await this.ensureClient();
+		await navigateSkills(client, `https://chatgpt.com/skills?skill_id=${skill.id}`);
+		await assertNoBlockingSurface(client, `update skill ${skill.id}`);
+		const selected = await openAndSelectMenuItem(client.Runtime, {
+			trigger: { selector: 'button[aria-label="More"]', requireVisible: true },
+			itemMatch: { exact: ["edit"] },
+			timeoutMs: 8_000,
+		});
+		if (!selected) throw new Error(`ChatGPT skill ${skill.id} did not expose one exact Edit action.`);
+		await waitForEditor(client, skill.id);
+		await setEditorSource(client, source);
+		const outcome = await submitEditor(client, source, "update", skill.id);
+		if (outcome.status !== "completed") this.restoreOriginalUrl = false;
+		return outcome;
+	}
+
+	async delete(skill: ChatgptSkill): Promise<ChatgptSkillMutationOutcome> {
+		const client = await this.ensureClient();
+		await navigateSkills(client, `https://chatgpt.com/skills?skill_id=${skill.id}`);
+		await assertNoBlockingSurface(client, `delete skill ${skill.id}`);
+		const selected = await openAndSelectMenuItem(client.Runtime, {
+			trigger: { selector: 'button[aria-label="More"]', requireVisible: true },
+			itemMatch: { exact: ["delete"] },
+			timeoutMs: 8_000,
+		});
+		if (!selected) throw new Error(`ChatGPT skill ${skill.id} did not expose one exact Delete action.`);
+		const confirmed = await pressButtonWithTrustedPointer(client, {
+			rootSelectors: ['[role="dialog"]'],
+			match: { exact: ["delete"] },
+			requireVisible: true,
+			timeoutMs: 8_000,
+		});
+		if (!confirmed.ok) throw new Error(`Unable to confirm exact deletion of ChatGPT skill ${skill.id}.`);
+		const absent = await waitForPredicate(
+			client.Runtime,
+			`new URL(location.href).searchParams.get('skill_id') !== ${JSON.stringify(skill.id)}`,
+			{ timeoutMs: 15_000, description: `skill ${skill.id} delete navigation` },
+		);
+		const outcome: ChatgptSkillMutationOutcome = absent.ok
+			? { status: "completed", message: `${skill.id} delete submitted.`, skillId: skill.id }
+			: {
+					status: "outcome-unknown",
+					message: `${skill.id} delete was dispatched but the provider postcondition was not observed; do not retry.`,
+					skillId: skill.id,
+			  };
+		if (outcome.status !== "completed") this.restoreOriginalUrl = false;
+		return outcome;
+	}
+
+	async close(): Promise<void> {
+		const client = this.cdpClient;
+		this.cdpClient = null;
+		if (client && this.restoreOriginalUrl && this.originalUrl?.startsWith("https://chatgpt.com/")) {
+			const currentUrl = await readCurrentUrl(client).catch(() => null);
+			if (currentUrl !== this.originalUrl) {
+				await navigateSkills(client, this.originalUrl).catch(() => undefined);
+			}
+		}
+		await client?.close().catch(() => undefined);
+	}
+
+	private async ensureClient(): Promise<ChromeClient> {
+		this.throwIfAborted();
+		if (this.cdpClient) return this.cdpClient;
+		const connected = await this.browser.connectDevTools({
+			abortSignal: this.abortSignal,
+			stageTimeoutMs: 10_000,
+		});
+		this.cdpClient = connected.client;
+		await this.cdpClient.Runtime.enable();
+		await this.cdpClient.Page.enable();
+		this.originalUrl = await readCurrentUrl(this.cdpClient);
+		return this.cdpClient;
+	}
+
+	private throwIfAborted(): void {
+		this.abortSignal?.throwIfAborted();
+	}
+}
+
+export function createChatgptSkillBrowserAdapter(
+	browser: ChatgptSkillBrowserClient,
+	options: { abortSignal?: AbortSignal } = {},
+): ChatgptSkillBrowserAdapter {
+	return new ChatgptSkillBrowserAdapter(browser, options.abortSignal);
+}
+
+async function navigateSkills(client: ChromeClient, url: string): Promise<void> {
+	const settled = await navigateAndSettle(client, {
+		url,
+		timeoutMs: 12_000,
+		mutationSource: "chatgpt-skills:navigate",
+	});
+	if (!settled.ok) throw new Error(`ChatGPT Skill navigation did not settle: ${settled.reason}.`);
+}
+
+async function readInventoryProbe(client: ChromeClient): Promise<ChatgptSkillInventoryProbe> {
+	const result = await client.Runtime.evaluate({
+		expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+      const entries = [];
+      for (const anchor of Array.from(document.querySelectorAll('a[href*="skill_id="]')).filter(visible)) {
+        const url = new URL(anchor.href, location.href);
+        const id = String(url.searchParams.get('skill_id') || '').toLowerCase();
+        if (!/^[a-f0-9]{32}$/.test(id)) continue;
+        const card = anchor.closest('article,li,section,[role="listitem"]') || anchor.parentElement || anchor;
+        const name = normalize(anchor.querySelector('h1,h2,h3,h4,[role="heading"]')?.textContent || anchor.getAttribute('aria-label') || anchor.textContent);
+        if (!name) continue;
+        let scope = card;
+        let collection = 'unknown';
+        for (let i = 0; scope && i < 5; i += 1, scope = scope.parentElement) {
+          const heading = normalize(scope.querySelector?.('h1,h2,h3,h4,[role="heading"]')?.textContent).toLowerCase();
+          if (heading.includes('created by me')) { collection = 'created-by-me'; break; }
+          if (heading.includes('installed') || heading.includes('added')) { collection = 'installed'; break; }
+        }
+        const text = normalize(card.textContent);
+        entries.push({ id, name, collection, reviewStatus: /needs review/i.test(text) ? 'Needs review' : null });
+      }
+      const routeReady = location.origin === 'https://chatgpt.com' && location.pathname === '/skills';
+      const skillsTab = Array.from(document.querySelectorAll('a')).some((a) => normalize(a.textContent) === 'Skills' && visible(a));
+      return { complete: routeReady && skillsTab && document.readyState === 'complete', entries };
+    })()`,
+		returnByValue: true,
+	});
+	const value = isRecord(result.result?.value) ? result.result.value : {};
+	return {
+		complete: value.complete === true,
+		entries: Array.isArray(value.entries)
+			? value.entries.filter(isRecord).map((entry) => ({
+					id: readString(entry.id) ?? "",
+					name: readString(entry.name) ?? "",
+					collection: readString(entry.collection),
+					reviewStatus: readString(entry.reviewStatus),
+			  }))
+			: [],
+	};
+}
+
+async function readDetailProbe(
+	client: ChromeClient,
+	id: string,
+): Promise<ChatgptSkillDetailProbe | null> {
+	const result = await client.Runtime.evaluate({
+		expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+      const id = new URL(location.href).searchParams.get('skill_id');
+      if (id !== ${JSON.stringify(id)}) return null;
+      const headings = Array.from(document.querySelectorAll('h1,h2,h3,[role="heading"]')).filter(visible).map((n) => normalize(n.textContent)).filter(Boolean);
+      const name = headings.find((value) => value.toLowerCase() !== 'skills') || '';
+      const text = String(document.body?.innerText || '');
+      const ownerMatch = text.match(/(?:created by|owner)\\s*[:\\n]?\\s*([^\\n]+)/i);
+      const descriptionNode = document.querySelector('[data-testid*="description"], [class*="description"]');
+      const filePaths = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible).map((n) => normalize(n.textContent)).filter((value) => /(?:^|\\/)[^\\/]+\\.[a-z0-9]+$/i.test(value));
+      const editor = document.querySelector('.cm-content');
+      const pre = Array.from(document.querySelectorAll('pre,code')).find(visible);
+      const instructions = editor?.textContent || pre?.textContent || null;
+      return { id, name, owner: ownerMatch?.[1] || null, description: normalize(descriptionNode?.textContent) || null, filePaths, instructions };
+    })()`,
+		returnByValue: true,
+	});
+	const value = isRecord(result.result?.value) ? result.result.value : null;
+	if (!value) return null;
+	return {
+		id: readString(value.id) ?? "",
+		name: readString(value.name) ?? "",
+		owner: readString(value.owner),
+		description: readString(value.description),
+		filePaths: readStringArray(value.filePaths),
+		instructions: readString(value.instructions),
+	};
+}
+
+async function waitForEditor(client: ChromeClient, id: string | null): Promise<void> {
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`location.origin === 'https://chatgpt.com' && location.pathname === '/skills/editor' && Boolean(document.querySelector('.cm-content[contenteditable="true"]')) && ${
+			id
+				? `new URL(location.href).searchParams.get('skill_id') === ${JSON.stringify(id)}`
+				: "true"
+		}`,
+		{ timeoutMs: 10_000, description: "ChatGPT Skill editor" },
+	);
+	if (!ready.ok) throw new Error("ChatGPT Skill editor did not become ready.");
+}
+
+async function setEditorSource(client: ChromeClient, source: ChatgptSkillSource): Promise<void> {
+	const writes = [
+		await setInputValue(client.Runtime, {
+			selector: 'input[id$="-name"]',
+			value: source.name,
+			requireVisible: true,
+			timeoutMs: 5_000,
+		}),
+		await setInputValue(client.Runtime, {
+			selector: 'textarea[id$="-description"]',
+			value: source.description ?? "",
+			requireVisible: true,
+			timeoutMs: 5_000,
+		}),
+		await setCodeMirrorValue(client, normalizeInstructions(source.instructions)),
+	];
+	if (writes.some((written) => !written)) {
+		throw new Error("Unable to populate the complete ChatGPT Skill editor source.");
+	}
+	const enabled = await waitForPredicate(
+		client.Runtime,
+		`Array.from(document.querySelectorAll('button')).some((b) => ['Create','Save','Update'].includes(String(b.textContent || '').trim()) && !b.disabled)`,
+		{ timeoutMs: 8_000, description: "enabled ChatGPT Skill submit control" },
+	);
+	if (!enabled.ok) throw new Error("ChatGPT Skill editor did not accept the source fields.");
+}
+
+async function setCodeMirrorValue(client: ChromeClient, value: string): Promise<boolean> {
+	const focused = await client.Runtime.evaluate({
+		expression: `(() => {
+      const editor = document.querySelector('.cm-content[contenteditable="true"]');
+      if (!(editor instanceof HTMLElement)) return false;
+      const rect = editor.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      editor.focus();
+      return document.activeElement === editor;
+    })()`,
+		returnByValue: true,
+	});
+	if (focused.result?.value !== true) return false;
+	await client.Input.dispatchKeyEvent({
+		type: "rawKeyDown",
+		key: "a",
+		code: "KeyA",
+		modifiers: 2,
+		windowsVirtualKeyCode: 65,
+		nativeVirtualKeyCode: 65,
+	});
+	await client.Input.dispatchKeyEvent({
+		type: "keyUp",
+		key: "a",
+		code: "KeyA",
+		modifiers: 2,
+		windowsVirtualKeyCode: 65,
+		nativeVirtualKeyCode: 65,
+	});
+	await client.Input.insertText({ text: value });
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`String(document.querySelector('.cm-content')?.textContent || '').replace(/\\r\\n?/g, '\\n').trimEnd() === ${JSON.stringify(
+			value.trimEnd(),
+		)}`,
+		{ timeoutMs: 5_000, description: "exact ChatGPT Skill editor content" },
+	);
+	return ready.ok;
+}
+
+async function submitEditor(
+	client: ChromeClient,
+	source: ChatgptSkillSource,
+	action: "create" | "update",
+	expectedId?: string,
+): Promise<ChatgptSkillMutationOutcome> {
+	await assertNoBlockingSurface(client, `${action} skill`);
+	const submitted = await pressButtonWithTrustedPointer(client, {
+		match: { exact: action === "create" ? ["create"] : ["save", "update"] },
+		requireVisible: true,
+		timeoutMs: 8_000,
+	});
+	if (!submitted.ok) throw new Error(`Unable to submit ChatGPT Skill ${action}: ${submitted.reason}.`);
+	const settled = await waitForPredicate(
+		client.Runtime,
+		`location.pathname === '/skills' && /^[a-f0-9]{32}$/.test(new URL(location.href).searchParams.get('skill_id') || '')`,
+		{ timeoutMs: 20_000, description: `ChatGPT Skill ${action} detail redirect` },
+	);
+	if (!settled.ok) {
+		return {
+			status: "outcome-unknown",
+			message: `${source.name} ${action} was dispatched but no exact detail redirect was observed; do not retry.`,
+		};
+	}
+	const currentUrl = await readCurrentUrl(client);
+	const skillId = currentUrl ? readChatgptSkillIdFromUrl(currentUrl) : null;
+	if (!skillId || (expectedId && skillId !== expectedId)) {
+		return {
+			status: "outcome-unknown",
+			message: `${source.name} ${action} redirected without the expected exact skill identity; do not retry.`,
+			currentUrl,
+		};
+	}
+	return {
+		status: "completed",
+		message: `${source.name} ${action} redirected to exact skill ${skillId}.`,
+		skillId,
+		currentUrl,
+	};
+}
+
+async function assertNoBlockingSurface(client: ChromeClient, action: string): Promise<void> {
+	const result = await client.Runtime.evaluate({
+		expression: `(() => {
+      const visible = (element) => { const rect = element.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; };
+      return {
+        text: String(document.body?.innerText || '').slice(0, 12000),
+        ariaLabel: '',
+        buttonLabels: Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible).map((n) => String(n.textContent || n.getAttribute('aria-label') || '').trim()).filter(Boolean).slice(0, 80),
+      };
+    })()`,
+		returnByValue: true,
+	});
+	const probe = isRecord(result.result?.value) ? result.result.value : {};
+	const match = classifyChatgptBlockingSurfaceProbe({
+		text: readString(probe.text),
+		ariaLabel: readString(probe.ariaLabel),
+		buttonLabels: readStringArray(probe.buttonLabels),
+	});
+	if (match) throw new Error(`Cannot ${action}: ${match.summary}`);
+}
+
+async function readCurrentUrl(client: ChromeClient): Promise<string | null> {
+	const result = await client.Runtime.evaluate({ expression: "location.href", returnByValue: true });
+	return readString(result.result?.value);
+}
+
+function normalizeCollection(value: string | null | undefined): ChatgptSkill["collection"] {
+	const normalized = String(value ?? "").trim().toLowerCase();
+	return normalized === "installed" || normalized === "created-by-me" ? normalized : "unknown";
+}
+
+function normalizeReviewStatus(value: string | null | undefined): ChatgptSkill["reviewStatus"] {
+	const normalized = String(value ?? "").trim().toLowerCase();
+	if (normalized === "needs review" || normalized === "needs-review") return "needs-review";
+	if (normalized === "ready") return "ready";
+	return "unknown";
+}
+
+function readString(value: unknown): string | null {
+	return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readStringArray(value: unknown): string[] {
+	return Array.isArray(value)
+		? value.map(readString).filter((entry): entry is string => entry !== null)
+		: [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}

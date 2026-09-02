@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 545 | 2026-09-02
+
+- P22 completed exact-account, no-submit Skill editor discovery and restored
+  the original three-tab state while preserving Chrome PID `1933`/port `45015`.
+- Exact-ID Skill list/show/create/update/delete is provider-free accepted with
+  complete-inventory and account gates, explicit mutation confirmation,
+  deterministic source hashing, optimistic update, fresh postconditions, and
+  terminal no-retry uncertain outcomes.
+- The pre-install packet passes 32 focused/adjacent tests, typecheck, build,
+  scoped zero-warning lint, diff hygiene, and the 328-candidate zero-error plan
+  audit. Commit/publish and one installed disposable CRUD canary remain.
+
 ## Turn 544 | 2026-09-02
 
 - Opened [Plan 0329](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)

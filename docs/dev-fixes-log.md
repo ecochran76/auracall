@@ -22123,3 +22123,9 @@ browser-stage lifecycle observability, not transcript truncation.
   current ChatGPT skill detail contract supplies a stable 32-hex `skill_id`,
   owner display, file-tree inventory, and review state, while invocation remains
   a separate `Try in chat` action and version/enabled state remain unobserved.
+- 2026-09-02: Treat ChatGPT Skill CRUD as an exact-ID, content-addressed
+  lifecycle rather than a display-name action. Require exact account and
+  complete inventory before every mutation, bind create/update to fresh
+  `SKILL.md` hashes, make update optimistic on the prior hash, and prove delete
+  by fresh absence. An uncertain dispatched outcome is a terminal manual-review
+  state, never retry authority.

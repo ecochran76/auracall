@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: READ_ONLY_CREATE_SURFACE_DISCOVERY_READY
+Operational state: PROVIDER_FREE_ACCEPTED_INSTALL_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-02
+Revision: 2 | 2026-09-02
 
 ## Stable Objective
 
@@ -25,9 +25,18 @@ and leaving no provider artifact behind.
 - The unfinished P16 developer-app submit lane is preserved. P22 may share CLI
   registration and generic browser primitives, but must not edit or borrow
   developer-app identity/lifecycle semantics without explicit reconciliation.
-- Provider create/update/delete controls, upload contract, confirmation steps,
-  and postcondition timing remain unobserved. Read-only create-surface
-  inspection is therefore the first gate.
+- Exact-account read-only discovery observed the separate editor route, name
+  and description fields, CodeMirror `SKILL.md`, disabled-until-valid Create,
+  Upload, and Back surfaces. It submitted nothing and restored the original
+  three-tab browser state.
+- Provider-free exact-ID list/show/create/update/delete is implemented in a
+  separate Skill adapter and CLI module. Mutations require expected account,
+  explicit confirmation, complete inventory, and fresh hash/absence readback;
+  update additionally requires the exact prior content hash.
+- The focused and adjacent packet passes 32 tests plus typecheck, production
+  build, scoped zero-warning lint, diff hygiene, and a 328-candidate zero-error
+  plan audit. The next gate is commit/publish, one runtime install, then the
+  single zero-retry disposable CRUD canary.
 
 ## Execution Graph
 
