@@ -1,5 +1,8 @@
+import type { BrowserRuntimeMetadata } from './types.js';
+
 export type BrowserResponseProgressEvidence = {
   state?: unknown;
+  url?: unknown;
   assistantTextChars?: unknown;
   stopVisible?: unknown;
   completionVisible?: unknown;
@@ -87,6 +90,33 @@ export function readBrowserResponseProgressEvidence(
   return progress && typeof progress === 'object'
     ? (progress as BrowserResponseProgressEvidence)
     : undefined;
+}
+
+export function reconcileBrowserRuntimeWithResponseProgress(
+  runtime: BrowserRuntimeMetadata | undefined,
+  progress: Pick<BrowserResponseProgressEvidence, 'url'> | null | undefined,
+): BrowserRuntimeMetadata | undefined {
+  if (!runtime || typeof progress?.url !== 'string') {
+    return runtime;
+  }
+  try {
+    const url = new URL(progress.url);
+    if (url.protocol !== 'https:' || url.hostname !== 'chatgpt.com') {
+      return runtime;
+    }
+    const match = url.pathname.match(/\/c\/([a-zA-Z0-9-]+)(?:\/|$)/);
+    const conversationId = match?.[1];
+    if (!conversationId) {
+      return runtime;
+    }
+    return {
+      ...runtime,
+      tabUrl: `${url.origin}${url.pathname}`,
+      conversationId,
+    };
+  } catch {
+    return runtime;
+  }
 }
 
 export function isActiveGenerationObservationExpiry(error: unknown): boolean {

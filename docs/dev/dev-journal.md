@@ -1,3 +1,23 @@
+## 2026-09-02 | Plan 0328 reattach identity repair
+
+- The installed second canary correctly classified zero-text active generation
+  as running at 30 seconds with the recovery reason and exact target ID. The
+  first read-only attach observed continued generation, then its timeout
+  fallback trusted a stale synthetic `WEB:...` runtime route and navigated away
+  from the real progress `/c/` conversation. The attach process was stopped;
+  no Send, Stop, retry, scheduler, or skill action occurred.
+- Red/green CLI contracts now reconcile a validated ChatGPT progress `/c/<id>`
+  into both future timeout persistence and existing Session reattachment while
+  preserving target ID and port. No provider-specific navigation or mutation
+  is added to the reconciliation module.
+- Both prompt allowances are exhausted. Revision 3 permits one remedial
+  read-only attach to the existing second conversation only after this repair
+  is committed, installed, and byte-identical.
+- The revision 3 affected packet passes 88 tests plus typecheck, production
+  build, scoped zero-warning lint, diff hygiene, and the zero-error plan audit;
+  the earlier full-suite result remains 3,041 passed with its one documented
+  unrelated allowlist mismatch.
+
 ## 2026-09-02 | Plan 0328 pre-answer timeout repair
 
 - The first installed canary submitted once on the exact expected account and

@@ -1189,6 +1189,9 @@
       browser and conversation evidence must survive for `auracall session
       <id>` read-only reattachment, with assistant identity and text
       fingerprint added once that turn mounts
+    - if the last runtime URL is stale or synthetic, the validated final
+      ChatGPT progress `/c/<id>` URL must replace only runtime URL/conversation
+      identity before reattach; target ID and port must remain unchanged
     - healthy assistant fingerprint/length progress must not refresh the page;
       only positively stale or interrupted observation may refresh, only the
       same conversation may be targeted, and one Runtime may refresh at most

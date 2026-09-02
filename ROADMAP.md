@@ -9,9 +9,10 @@ Lanes: P01-P07, P09-P15, P17, P19-P20 (integrated); P08, P18, P21 (open)
 
 - Active installed long-observation recovery canary:
   [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
-  P21's first zero-retry canary exposed a pre-answer classifier gap while the
-  exact provider turn later completed normally. The provider-free repair is
-  green and permits one distinct second canary after install/parity proof.
+  P21's first zero-retry canary exposed a pre-answer classifier gap; the second
+  proved that repair but exposed stale runtime/progress conversation identity
+  during read-only fallback. Both prompt allowances are exhausted. A
+  provider-free identity repair and one remedial zero-send attach remain.
   Skill CRUD begins only after this gate settles.
 
 - Integrated ChatGPT skill lifecycle discovery:

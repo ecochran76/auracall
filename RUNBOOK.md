@@ -16,6 +16,11 @@
   requested output without resend while AuraCall had recorded terminal error.
   Revision 2 carries the focused provider-free repair and permits one distinct
   post-install canary before Skill CRUD implementation.
+- The second canary correctly remained running at observer expiry, but its
+  read-only attach later trusted a stale synthetic runtime route instead of the
+  real progress conversation. Revision 3 adds exact progress/runtime identity
+  reconciliation and permits one remedial attach to the existing conversation;
+  no further prompt is allowed.
 
 ## Turn 541 | 2026-09-02
 

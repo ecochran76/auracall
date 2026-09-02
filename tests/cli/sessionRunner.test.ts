@@ -778,8 +778,8 @@ describe('performSessionRun', () => {
         chromePort: 45015,
         chromeHost: '127.0.0.1',
         chromeTargetId: 'target-experiment-52',
-        tabUrl: 'https://chatgpt.com/c/experiment-52',
-        conversationId: 'experiment-52',
+        tabUrl: 'https://chatgpt.com/c/WEB:stale-runtime-hint',
+        conversationId: 'WEB',
         userDataDir: '/tmp/auracall/browser-profiles/wsl-chrome-3/chatgpt',
         controllerPid: process.pid,
       });
@@ -825,6 +825,13 @@ describe('performSessionRun', () => {
       response: {
         status: 'running',
         incompleteReason: 'observation_expired_generation_active',
+      },
+      browser: {
+        runtime: expect.objectContaining({
+          chromeTargetId: 'target-experiment-52',
+          tabUrl: 'https://chatgpt.com/c/experiment-52',
+          conversationId: 'experiment-52',
+        }),
       },
       error: {
         category: 'browser-observation-expired',

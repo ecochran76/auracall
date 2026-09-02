@@ -357,9 +357,9 @@ lanes:
     integration: merge
     dependencies: [P19]
     overlaps: []
-    validation_status: provider-free-repair-accepted-second-canary-ready
+    validation_status: second-canary-classified-reattach-identity-repair-ready
     validation_ref: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
     integration_receipt: null
     blocker: null
-    disposition: First zero-retry canary exposed a pre-answer active-generation classifier gap and later completed normally without resend; focused repair is green and one distinct second canary remains after install parity.
+    disposition: Second canary correctly persisted running but read-only fallback trusted a stale synthetic runtime route; both prompts are exhausted and one identity-reconciled remedial attach remains after provider-free validation and install parity.
     updated_at: 2026-09-02

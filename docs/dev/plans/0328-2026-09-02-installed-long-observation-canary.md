@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P21
-Operational state: PROVIDER_FREE_REPAIR_ACCEPTED_SECOND_CANARY_READY
+Operational state: SECOND_CANARY_CLASSIFIED_REATTACH_IDENTITY_REPAIR_READY
 Branch: ops/plan0328-installed-timeout-canary
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-02
+Revision: 3 | 2026-09-02
 
 ## Stable Objective
 
@@ -41,6 +41,23 @@ read-only recovery of the same turn without another Send.
   stale raw-DevTools allowlist entry for an existing non-mutating approval
   observation script. A second, distinct zero-retry canary is permitted only
   after committing, installing, and proving byte parity for this repair.
+- The second distinct prompt allowance is now exhausted. Its 30-second expiry
+  correctly persisted the Session/model run as running with the recovery
+  reason and the same target ID. The first read-only reattach selected that
+  target and observed active generation, but its later timeout fallback used a
+  stale synthetic `WEB:...` runtime route instead of the real progress `/c/`
+  URL and navigated away. The attach process was stopped without Send, Stop,
+  retry, or any other provider mutation.
+- Two further red/green contracts now reconcile only the URL and conversation
+  fields from a validated same-provider progress `/c/<id>` URL while preserving
+  the exact target/port. They cover future timeout persistence and recovery of
+  already-stranded Sessions. One remedial read-only reattach to the existing
+  second conversation is pending after commit, install, and parity proof; no
+  further prompt is allowed.
+- The revision 3 affected packet passes 88 tests plus typecheck, production
+  build, scoped zero-warning lint, diff hygiene, and the zero-error plan audit.
+  The earlier full-suite evidence remains 3,041 passed with only its documented
+  unrelated allowlist mismatch.
 
 ## Execution Graph
 
@@ -55,9 +72,11 @@ read-only recovery of the same turn without another Send.
 5. Require the persisted Session/model state to remain running with
    `observation_expired_generation_active`, exact browser target and
    conversation identity, and bounded progress instrumentation.
-6. Reattach read-only to that exact Session and recover the same turn without
-   invoking the prompt runner or causing another Send.
-7. Preserve the pre-existing Chrome process, release the foreground operation,
+6. Record the stale-runtime fallback failure, repair exact progress/runtime
+   identity reconciliation provider-free, and install that repair once.
+7. Reattach read-only to the already-created second conversation and recover
+   the same turn without invoking the prompt runner or causing another Send.
+8. Preserve the pre-existing Chrome process, release the foreground operation,
    and record installed/live evidence before integrating the receipt.
 
 ## Acceptance Criteria
@@ -78,8 +97,11 @@ read-only recovery of the same turn without another Send.
 ## Bounds
 
 - One identity smoke, at most two distinct prompts, zero prompt retries, and
-  one read-only Session recovery attempt for the second canary. The first
-  prompt allowance is exhausted and must never be replayed.
+  at most two read-only Session recovery attempts for the second canary. Both
+  prompt allowances and the first recovery attempt are exhausted. The second
+  recovery is remedial, may run only after the identity repair is installed,
+  and must use the already-recorded progress conversation; no prompt may be
+  replayed.
 - Normal Chat mode with current-model selection. Never click `Answer now`.
 - CAPTCHA, verification, identity mismatch, ambiguous target, or missing
   positive active-generation evidence is a hard stop.

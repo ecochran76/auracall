@@ -1,3 +1,12 @@
+- 2026-09-02: Observation-expired reattachment must reconcile runtime identity
+  from the final positive progress readback before any fallback navigation.
+  ChatGPT can expose the real `/c/<id>` location while the last emitted runtime
+  hint still contains a synthetic `WEB:...` route. Accept only a validated
+  `https://chatgpt.com/.../c/<id>` progress URL, replace only the persisted
+  URL/conversation fields, and preserve the exact DevTools target and port.
+  Apply the same reconciliation when reading an already-stranded Session so
+  recovery never navigates to the stale synthetic route.
+
 - 2026-09-02: Keep long-prompt browser retention separate from manual-clear
   preservation. Observation expiry is resumable with a visible Stop control,
   no completion/dialog signal, and exact browser plus conversation identity,

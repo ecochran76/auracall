@@ -234,6 +234,9 @@ effects at zero. The durable receipt is
     browser target and conversation. AuraCall keeps healthy growing output in
     place and permits a same-conversation refresh only for stale/interrupted
     observation, at most once per 15 minutes.
+  - Reattachment reconciles a validated final progress `/c/<id>` URL ahead of
+    any stale synthetic runtime route while retaining the exact target and
+    DevTools port.
 - **Using Windows Chrome from WSL**:
   - Keep `manualLoginProfileDir` as a WSL path if you override it; Aura-Call converts it to the `\\wsl.localhost\...` path for Windows Chrome.
   - If DevTools can’t be reached, open the Windows firewall for the chosen port or pin a port with `AURACALL_BROWSER_PORT`.

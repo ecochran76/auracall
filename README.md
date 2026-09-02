@@ -1899,7 +1899,9 @@ keeps the Session running with
 `observation_expired_generation_active`, and allows `auracall session <id>` to
 reattach read-only without resending the prompt. A physical refresh is reserved
 for positively stale or interrupted observation and is limited to the same
-conversation at most once per 15 minutes.
+conversation at most once per 15 minutes. Before reattachment or fallback
+navigation, a validated final progress `/c/<id>` URL supersedes a stale
+synthetic runtime route while the exact DevTools target and port stay fixed.
 
 ## Configuration
 
