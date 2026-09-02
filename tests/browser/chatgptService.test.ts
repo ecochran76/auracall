@@ -4,7 +4,14 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
 import { BrowserService } from '../../src/browser/service/browserService.js';
+import { resolveBrowserLaunchPlan } from '../../src/browser/service/browserLaunchPlan.js';
 import type { ResolvedUserConfig } from '../../src/config.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
+import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
+import {
+  clearBrowserOperationQueueObservationsForTest,
+  summarizeBrowserOperationQueueObservations,
+} from '../../src/browser/operationQueueObservations.js';
 
 const providerRunPrompt = vi.hoisted(() =>
   vi.fn(async (input: { conversationId?: string | null; targetUrl?: string | null }) => ({
@@ -35,7 +42,9 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true, maxRetries: 2 });
   }
   providerRunPrompt.mockClear();
+  clearBrowserOperationQueueObservationsForTest();
   vi.restoreAllMocks();
+  setAuracallHomeDirOverrideForTest(null);
 });
 
 describe('ChatGPT llm service', () => {
@@ -139,6 +148,8 @@ describe('ChatGPT llm service', () => {
   it('submits handoff compact context and selected files through the ChatGPT browser adapter', async () => {
     stubBrowserServiceTarget();
     const root = await tempRoot('auracall-chatgpt-handoff-adapter-');
+    const auracallHome = await tempRoot('auracall-chatgpt-handoff-operation-');
+    setAuracallHomeDirOverrideForTest(auracallHome);
     const selectedPath = path.join(root, 'handoff-context.txt');
     await writeFile(selectedPath, 'selected handoff context', 'utf8');
     const {
@@ -159,22 +170,23 @@ describe('ChatGPT llm service', () => {
       sourceRef: 'https://gemini.google.com/app/source',
       targetProvider: 'chatgpt',
       targetRuntimeProfile: 'target-pro',
-      targetRef: 'https://chatgpt.com/c/target-chatgpt-handoff',
-      targetModelSelector: 'chatgpt:pro-extended',
+      targetRef: null,
+      targetModelSelector: null,
       sourceContext: { messages: [{ role: 'user', content: 'handoff adapter' }] },
       sourceManifest: {
         items: [manifestItemFixture({ id: 'chatgpt_attachment', localPath: selectedPath })],
       },
       generatedAt: '2026-06-07T14:00:00.000Z',
     });
-    const adapter = createChatgptBrowserHandoffTargetAdapter({
+    const adapterConfig = {
       auracallProfile: 'target-pro',
       browser: {
         target: 'chatgpt',
         keepBrowser: true,
       },
       runtimeProfiles: fixtureConfig().runtimeProfiles,
-    } as ResolvedUserConfig);
+    } as ResolvedUserConfig;
+    const adapter = createChatgptBrowserHandoffTargetAdapter(adapterConfig);
 
     await approveHandoffTargetUpload({
       handoffId: 'chatgpt-browser-adapter-fixture',
@@ -213,12 +225,66 @@ describe('ChatGPT llm service', () => {
       outputRoot: root,
       packageDigest: prepared.targetPackage.packageDigest,
     });
-    const submitRecovery = await recoverHandoffLive({
-      handoffId: 'chatgpt-browser-adapter-fixture',
-      outputRoot: root,
-      generatedAt: '2026-06-07T14:02:00.000Z',
-      targetAdapter: adapter,
+    const launchPlan = resolveBrowserLaunchPlan({
+      source: { kind: 'user-config', config: adapterConfig },
+      intent: { provider: 'chatgpt' },
     });
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: path.join(auracallHome, 'browser-operations'),
+      isOwnerAlive: () => true,
+    });
+    const activeOperation = await dispatcher.acquire({
+      managedProfileDir: launchPlan.managedBrowserProfile.directory,
+      serviceTarget: 'chatgpt',
+      kind: 'browser-execution',
+      operationClass: 'exclusive-mutating',
+      ownerPid: process.pid,
+      ownerCommand: 'competing-chatgpt-job',
+    });
+    expect(activeOperation.acquired).toBe(true);
+
+    let submitPromise: ReturnType<typeof recoverHandoffLive> | null = null;
+    try {
+      submitPromise = recoverHandoffLive({
+        handoffId: 'chatgpt-browser-adapter-fixture',
+        outputRoot: root,
+        generatedAt: '2026-06-07T14:02:00.000Z',
+        targetAdapter: adapter,
+      });
+      await vi.waitFor(() => {
+        const observations = summarizeBrowserOperationQueueObservations({
+          managedProfileDir: launchPlan.managedBrowserProfile.directory,
+          serviceTarget: 'chatgpt',
+        });
+        expect(observations.items.some((item) => item.event === 'queued')).toBe(true);
+      });
+      expect(providerRunPrompt).not.toHaveBeenCalled();
+    } finally {
+      if (activeOperation.acquired) {
+        await activeOperation.release();
+      }
+    }
+    if (!submitPromise) {
+      throw new Error('ChatGPT handoff submission did not start.');
+    }
+    const submitRecovery = await submitPromise;
+    expect(
+      summarizeBrowserOperationQueueObservations({
+        managedProfileDir: launchPlan.managedBrowserProfile.directory,
+        serviceTarget: 'chatgpt',
+      }).items.map((item) => item.event),
+    ).toEqual(['queued', 'acquired']);
+    const replacementOperation = await dispatcher.acquire({
+      managedProfileDir: launchPlan.managedBrowserProfile.directory,
+      serviceTarget: 'chatgpt',
+      kind: 'browser-execution',
+      operationClass: 'exclusive-mutating',
+      ownerCommand: 'post-handoff-verification',
+    });
+    expect(replacementOperation.acquired).toBe(true);
+    if (replacementOperation.acquired) {
+      await replacementOperation.release();
+    }
 
     expect(providerRunPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -236,13 +302,16 @@ describe('ChatGPT llm service', () => {
             displayPath: '001-Selected_file-chatgpt_attachment',
           }),
         ],
-        conversationId: 'target-chatgpt-handoff',
-        targetUrl: 'https://chatgpt.com/c/target-chatgpt-handoff',
-        desiredModel: 'GPT-5.6 Sol',
-        thinkingTime: 'extended',
-        modelStrategy: 'select',
+        conversationId: null,
+        targetUrl: 'https://chatgpt.com/',
+        desiredModel: null,
+        thinkingTime: null,
+        modelStrategy: 'current',
       }),
-      expect.any(Object),
+      expect.objectContaining({
+        tabLifecycle: 'retain-new',
+        mutationSourcePrefix: 'handoff:chatgpt-target-submit',
+      }),
     );
     expect(submitRecovery).toMatchObject({
       recovery: {

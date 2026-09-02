@@ -382,3 +382,21 @@ lanes:
     blocker: null
     disposition: Exact-account exact-ID Skill CRUD is integrated and installed/live accepted; one recovered Create, one in-place update, and one immediate Delete completed with exact hash and fresh absence proof, leaving no canary artifact. Clean local topic custody is temporarily retained because pre-existing identity-smoke PID 44328 holds the worktree cwd.
     updated_at: 2026-09-02
+  - id: P23
+    objective: Serialize provider-native ChatGPT handoff submission and retain one fresh tab for a new target conversation.
+    plan: docs/dev/plans/0330-2026-09-02-chatgpt-handoff-tab-affinity.md
+    plan_ref: refs/heads/fix/plan0330-chatgpt-tab-affinity
+    branch: fix/plan0330-chatgpt-tab-affinity
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: de13541fefeca435012b3b8696d9dff8c73218ad
+    remote_ref: refs/remotes/origin/fix/plan0330-chatgpt-tab-affinity
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: provider-free-accepted
+    validation_ref: de13541fefeca435012b3b8696d9dff8c73218ad
+    blocker: null
+    disposition: Provider-free handoff serialization, fresh retained-tab affinity, current-model preservation, and composer-local upload drift repair are accepted; install and live retry remain separate effects.
+    updated_at: 2026-09-02

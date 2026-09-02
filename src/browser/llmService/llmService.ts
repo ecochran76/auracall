@@ -4107,7 +4107,7 @@ export abstract class LlmService {
 
 function shouldAttachResolvedServiceTab(overrides: BrowserProviderListOptions): boolean {
 	if (overrides.tabTargetId) return true;
-	return overrides.tabLifecycle !== "dispose-new";
+	return overrides.tabLifecycle !== "dispose-new" && overrides.tabLifecycle !== "retain-new";
 }
 
 function isRateLimitBlockingSurfaceError(error: unknown): boolean {

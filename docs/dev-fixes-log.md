@@ -22175,3 +22175,9 @@ browser-stage lifecycle observability, not transcript truncation.
   outcome from a fresh complete authenticated inventory. If the exact ID is
   still present or inventory is incomplete, return `outcome-unknown` and never
   retry the action.
+- 2026-09-02: Provider-native ChatGPT handoff submission must acquire the same
+  managed-browser-profile operation key as ordinary browser execution. Direct
+  `ChatgptService.runPrompt()` use does not inherit the lease from
+  `runBrowserMode()`. For a handoff with no existing target conversation, use
+  the explicit `retain-new` lifecycle so selection cannot borrow an unrelated
+  generic root tab and the submitted tab remains available for commit evidence.

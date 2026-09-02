@@ -59,7 +59,13 @@ export type ChatgptWorkbenchAttachmentSurface =
 
 type ChatgptWorkbenchAttachmentInventory = {
   rows: Array<{ label: string; description: string }>;
-  inputs: Array<{ id: string; accept: string | null; multiple: boolean }>;
+  inputs: Array<{
+    id: string;
+    accept: string | null;
+    multiple: boolean;
+    composerLocal?: boolean;
+    composerTriggerLabel?: string | null;
+  }>;
 };
 
 const COMPOSER_TOOL_ALIASES = resolveBundledServiceComposerAliases('chatgpt', {});
@@ -253,7 +259,7 @@ function resolveChatgptWorkbenchAttachmentSurface(
       normalizeComposerToolLabel(row.label) === CHATGPT_LOCAL_FILE_ACTION_LABEL &&
       normalizeComposerToolLabel(row.description) === 'upload from computer',
   );
-  if (localRows.length !== 1) {
+  if (localRows.length > 1) {
     return { status: 'local-file-action-not-found' };
   }
   const libraryRows = inventory.rows.filter(
@@ -272,10 +278,17 @@ function resolveChatgptWorkbenchAttachmentSurface(
   if (!input.multiple || (typeof input.accept === 'string' && input.accept.trim().length > 0)) {
     return { status: 'file-input-restricted' };
   }
+  const composerTriggerLabel = normalizeComposerToolLabel(input.composerTriggerLabel ?? '');
+  if (
+    localRows.length === 0 &&
+    !(input.composerLocal === true && composerTriggerLabel === 'add files and more')
+  ) {
+    return { status: 'local-file-action-not-found' };
+  }
   return {
     status: 'ready',
     inputSelector: '#upload-files',
-    localFileLabel: localRows[0].label,
+    localFileLabel: localRows[0]?.label ?? input.composerTriggerLabel ?? 'Add files and more',
     libraryLabel: libraryRows.length === 1 ? libraryRows[0].label : null,
   };
 }
@@ -592,11 +605,18 @@ export async function prepareChatgptWorkbenchLocalAttachment(
             })
             .filter((row) => row.label)
         : [];
-      const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => ({
-        id: input.id || '',
-        accept: input.getAttribute('accept'),
-        multiple: input.hasAttribute('multiple'),
-      }));
+      const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => {
+        const composer = input.closest('form');
+        const prompt = composer?.querySelector('#prompt-textarea, [contenteditable="true"]');
+        const trigger = composer?.querySelector(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)});
+        return {
+          id: input.id || '',
+          accept: input.getAttribute('accept'),
+          multiple: input.hasAttribute('multiple'),
+          composerLocal: Boolean(composer && prompt && trigger),
+          composerTriggerLabel: trigger?.getAttribute('aria-label') || trigger?.textContent || null,
+        };
+      });
       return { rows, inputs };
     })()`,
     returnByValue: true,

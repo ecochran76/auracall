@@ -48,7 +48,7 @@ export interface BrowserProviderListOptions {
 	historySince?: string;
 	allowNavigation?: boolean;
 	preserveActiveTab?: boolean;
-	tabLifecycle?: "retain" | "dispose-new";
+	tabLifecycle?: "retain" | "retain-new" | "dispose-new";
 	downloadVariantLabel?: string | null;
 	discoveryAction?: "grok-imagine-video-mode" | null;
 	includeInstalledApps?: boolean;

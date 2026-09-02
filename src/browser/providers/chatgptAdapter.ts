@@ -4443,7 +4443,9 @@ async function runWithChatgptAbortBoundConnection<T>(
 export const runWithChatgptAbortBoundConnectionForTest = runWithChatgptAbortBoundConnection;
 
 function shouldForceNewChatgptTabConnection(options?: BrowserProviderListOptions): boolean {
-	if (options?.tabLifecycle !== "dispose-new") return false;
+	if (options?.tabLifecycle !== "dispose-new" && options?.tabLifecycle !== "retain-new") {
+		return false;
+	}
 	if (options.preserveActiveTab === true) return false;
 	if (options.tabTargetId) return false;
 	return true;

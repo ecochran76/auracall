@@ -248,6 +248,20 @@ describe("ChatGPT tab lifecycle", () => {
 		).toBe(true);
 	});
 
+	test("opens a fresh retained tab for isolated prompt submission", async () => {
+		const retained = createConnection({});
+		const options = { tabLifecycle: "retain-new" as const };
+
+		expect(shouldAttachResolvedServiceTabForTest(options)).toBe(false);
+		expect(shouldForceNewChatgptTabConnectionForTest(options)).toBe(true);
+		expect(shouldDisposeChatgptTabConnectionForTest(retained, options)).toBe(false);
+
+		await closeChatgptTabConnectionForTest(asClosableConnection(retained), options);
+
+		expect(retained.client.close).toHaveBeenCalledTimes(1);
+		expect(chatgptTabLifecycleMocks.cdpClose).not.toHaveBeenCalled();
+	});
+
 	test("keeps explicit submitted tabs eligible for attachment", () => {
 		expect(
 			shouldAttachResolvedServiceTabForTest({
