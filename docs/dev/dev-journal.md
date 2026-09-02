@@ -48442,3 +48442,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The false-positive delete route check is repaired across both observed
   exact-ID URL forms. Provider-free gates pass; the remaining gate is one
   install followed by exact-hash update readback and fresh-inventory absence.
+- Installed `show` then failed closed before mutation when query-detail source
+  extraction returned no exact record. Read-only retained-editor inspection
+  confirmed the exact editor is the durable content-addressed read surface, so
+  `show` and optimistic update preflight now read the ID and source there.
+  Provider-free gates pass again; the canary remains unchanged at v1.

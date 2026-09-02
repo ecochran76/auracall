@@ -186,26 +186,10 @@ export class ChatgptSkillBrowserAdapter {
 	async readSkill(id: string): Promise<ChatgptSkill | null> {
 		if (!/^[a-f0-9]{32}$/.test(id)) return null;
 		const client = await this.ensureClient();
-		await navigateSkills(client, `https://chatgpt.com/skills?skill_id=${id}`);
+		await navigateSkills(client, `https://chatgpt.com/skills/editor/${id}`);
 		await assertNoBlockingSurface(client, `read skill ${id}`);
-		const exactRoute = await waitForPredicate(
-			client.Runtime,
-			`new URL(location.href).searchParams.get('skill_id') === ${JSON.stringify(id)}`,
-			{ timeoutMs: 8_000, description: `skill detail ${id}` },
-		);
-		if (!exactRoute.ok) return null;
-		const detailReady = await waitForPredicate(
-			client.Runtime,
-			`Array.from(document.querySelectorAll('button,[role="button"]')).some((node) => { const rect = node.getBoundingClientRect(); return rect.width > 0 && rect.height > 0 && String(node.textContent || '').trim().toLowerCase() === 'skill.md'; })`,
-			{ timeoutMs: 12_000, description: `skill detail content ${id}` },
-		);
-		if (!detailReady.ok) return null;
-		await pressButtonWithTrustedPointer(client, {
-			match: { exact: ["skill.md"] },
-			requireVisible: true,
-			timeoutMs: 3_000,
-		}).catch(() => ({ ok: false }));
-		const probe = await readDetailProbe(client, id);
+		await waitForEditor(client, id);
+		const probe = await readEditorProbe(client, id);
 		return probe ? deriveChatgptSkillDetail(probe) : null;
 	}
 
@@ -435,27 +419,22 @@ async function captureSkillInventory(client: ChromeClient): Promise<ChatgptSkill
 	return normalizeChatgptSkillInventoryPayloads(await payloadPromise);
 }
 
-async function readDetailProbe(
+async function readEditorProbe(
 	client: ChromeClient,
 	id: string,
 ): Promise<ChatgptSkillDetailProbe | null> {
 	const result = await client.Runtime.evaluate({
 		expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const visible = (node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-      const id = new URL(location.href).searchParams.get('skill_id');
-      if (id !== ${JSON.stringify(id)}) return null;
-      const headings = Array.from(document.querySelectorAll('h1,h2,h3,[role="heading"]')).filter(visible).map((n) => normalize(n.textContent)).filter(Boolean);
-      const name = headings.find((value) => value.toLowerCase() !== 'skills') || '';
-      const text = String(document.body?.innerText || '');
-      const ownerMatch = text.match(/(?:created by|owner)\\s*[:\\n]?\\s*([^\\n]+)/i);
-      const descriptionNode = document.querySelector('[data-testid*="description"], [class*="description"]');
-      const filePaths = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible).map((n) => normalize(n.textContent)).filter((value) => /(?:^|\\/)[^\\/]+\\.[a-z0-9]+$/i.test(value));
+      const route = location.pathname.match(/^\\/skills\\/editor\\/([a-f0-9]{32})$/i);
+      const routeId = route?.[1]?.toLowerCase() || '';
+      if (routeId !== ${JSON.stringify(id)}) return null;
+      const name = document.querySelector('input[id$="-name"]')?.value || '';
+      const description = document.querySelector('textarea[id$="-description"]')?.value || '';
       const editor = document.querySelector('.cm-content');
-	  const pre = Array.from(document.querySelectorAll('pre,code')).find(visible);
 	  const editorLines = editor ? Array.from(editor.querySelectorAll('.cm-line')).map((line) => line.textContent || '') : [];
-	  const instructions = editor ? editorLines.join('\n') : pre?.textContent || null;
-      return { id, name, owner: ownerMatch?.[1] || null, description: normalize(descriptionNode?.textContent) || null, filePaths, instructions };
+	  const instructions = editor ? editorLines.join('\n') : null;
+      return { id: routeId, name: normalize(name), owner: null, description: normalize(description) || null, filePaths: ['SKILL.md'], instructions };
     })()`,
 		returnByValue: true,
 	});

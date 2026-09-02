@@ -22157,3 +22157,9 @@ browser-stage lifecycle observability, not transcript truncation.
   presses. A delete postcondition must reject both the query-detail and editor
   URL forms for the target ID; checking only `skill_id` makes an editor URL a
   false success.
+- 2026-09-02: For exact ChatGPT Skill source hashing, prefer the persisted
+  `/skills/editor/<stable-id>` surface over query-detail extraction. The editor
+  binds the ID in the route and exposes name, description, and ordered
+  CodeMirror lines in one surface; normalize and hash those lines directly.
+  Keep collection/review ownership sourced from the separate complete
+  inventory responses rather than inferring it from the editor.

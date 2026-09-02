@@ -6,7 +6,7 @@ Operational state: LIVE_RESUMED_UPDATE_DELETE_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 7 | 2026-09-02
+Revision: 8 | 2026-09-02
 
 ## Stable Objective
 
@@ -88,6 +88,14 @@ and leaving no provider artifact behind.
   typecheck, production build, scoped zero-warning lint, diff hygiene, and the
   328-candidate zero-error plan audit. Commit/publish, one runtime install, and
   the one update/read/delete/absence live sequence remain.
+- The first resumed installed `show` failed closed before mutation because the
+  query-detail surface did not become a reliable programmatic source readback
+  in the retained tab. The exact saved-editor route still exposed the stable
+  ID, name, description, and newline-preserving `SKILL.md`; readback now uses
+  that exact-ID editor directly. The repair again passes the 33-test packet,
+  typecheck, production build, scoped lint, and diff hygiene. One corrective
+  reinstall is required before the canary may proceed; no update or delete has
+  been dispatched.
 
 ## Execution Graph
 
