@@ -1,12 +1,12 @@
 # ChatGPT Handoff Tab Affinity | 0330-2026-09-02
 
-State: OPEN
+State: CLOSED
 Lane: P23
-Operational state: PROVIDER_FREE_IMPLEMENTATION
+Operational state: PROVIDER_FREE_ACCEPTED
 Branch: fix/plan0330-chatgpt-tab-affinity
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-02
+Revision: 2 | 2026-09-02
 
 ## Stable Objective
 
@@ -27,6 +27,21 @@ fresh retained browser tab from preparation through provider commit readback.
 - The original checkout contains unrelated P08/P17 reconciliation state and an
   unresolved journal conflict. This lane is isolated in its own worktree and
   must not modify or resolve that custody.
+- Commit `de13541f` queues handoff submission on the exact managed
+  browser profile, adds the fresh retained-tab lifecycle, preserves the current
+  ChatGPT model when no selector is supplied, and accepts the exact
+  composer-local upload input after provider label drift.
+- The focused packet passes 78 tests. Typecheck, production build, scoped
+  zero-warning lint, diff hygiene, and the 329-candidate zero-error plan audit
+  pass.
+- The isolated comprehensive lane passes 3,058 tests with 65 policy-skipped
+  live/TTY tests. Its sole failure is the pre-existing raw-CDP allowlist entry
+  for deleted `scripts/observe-chatgpt-tool-approval.ts`, already recorded by
+  Plan 0326 and unrelated to this diff.
+- Audit found developer-app and Skill CLI browser mutations that do not yet
+  share this queue. Their separate retained custody and exact-account mutation
+  contracts remain unchanged and are explicit follow-up scope, not an
+  unreviewed expansion of P23.
 
 ## Scope
 
@@ -47,14 +62,14 @@ fresh retained browser tab from preparation through provider commit readback.
 
 ## Acceptance Criteria
 
-- [ ] A handoff submit queues while a competing mutation owns the same managed
+- [x] A handoff submit queues while a competing mutation owns the same managed
       browser profile and does not invoke the provider before acquisition.
-- [ ] A new-conversation handoff opens and retains a fresh ChatGPT tab.
-- [ ] An explicit target conversation remains eligible for exact-tab reuse.
-- [ ] Focused handoff, prompt-service, tab-lifecycle, and dispatcher tests pass.
-- [ ] Typecheck, production build, scoped lint, diff hygiene, and planning audit
+- [x] A new-conversation handoff opens and retains a fresh ChatGPT tab.
+- [x] An explicit target conversation remains eligible for exact-tab reuse.
+- [x] Focused handoff, prompt-service, tab-lifecycle, and dispatcher tests pass.
+- [x] Typecheck, production build, scoped lint, diff hygiene, and planning audit
       pass or any unrelated baseline failure is recorded precisely.
-- [ ] No provider or installed-runtime mutation occurs in this lane.
+- [x] No provider or installed-runtime mutation occurs in this lane.
 
 ## Definition of Done
 

@@ -388,15 +388,15 @@ lanes:
     plan_ref: refs/heads/fix/plan0330-chatgpt-tab-affinity
     branch: fix/plan0330-chatgpt-tab-affinity
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 23ea192220b4a8c6e07aa530e12be698214a7d41
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: de13541fefeca435012b3b8696d9dff8c73218ad
+    remote_ref: refs/remotes/origin/fix/plan0330-chatgpt-tab-affinity
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: provider-free-implementation
-    validation_ref: null
+    validation_status: provider-free-accepted
+    validation_ref: de13541fefeca435012b3b8696d9dff8c73218ad
     blocker: null
-    disposition: Isolated implementation; no installed-runtime or provider effect is authorized in this lane.
+    disposition: Provider-free handoff serialization, fresh retained-tab affinity, current-model preservation, and composer-local upload drift repair are accepted; install and live retry remain separate effects.
     updated_at: 2026-09-02
