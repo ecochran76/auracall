@@ -4,10 +4,10 @@
 
 ### Current Execution Board
 
-Status: ChatGPT skill capability truthfulness accepted with live discovery ownership-blocked; installed materialization canary and aggregate status latency remain independently open
-Lanes: P01-P07, P09-P15, P17, P19 (integrated); P08, P18 (open); P20 (provider-free accepted, live discovery blocked)
+Status: ChatGPT skill capability truthfulness integrated with live discovery ownership-blocked; installed materialization canary and aggregate status latency remain independently open
+Lanes: P01-P07, P09-P15, P17, P19-P20 (integrated); P08, P18 (open)
 
-- Provider-free accepted ChatGPT skill lifecycle discovery:
+- Integrated provider-free ChatGPT skill lifecycle discovery:
   [docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)
   P20 corrects label-only capability evidence. Its exact-account read-only
   discovery attempt stopped before attachment because `wsl-chrome-3` has a

@@ -19,7 +19,9 @@
   without an AuraCall controller/operation lease. The browser policy requires a
   hard stop before attachment, so Plan 0327 closes provider-free accepted with
   live exact-account discovery ownership-blocked and zero provider mutations.
-- Provider-free checkpoint: `c8097717`; main integration remains pending.
+- Provider-free checkpoint: `c8097717`; acceptance checkpoint: `687767ab`;
+  non-forced merge receipt: `1c126b96`. Main integration is complete; the
+  exact-account live discovery ownership stop remains.
 
 ## Turn 539 | 2026-09-02
 
