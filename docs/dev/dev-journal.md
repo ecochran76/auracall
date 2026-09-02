@@ -48274,3 +48274,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   chat` action. The redacted fixture preserves only contract shape.
 - Cleanup restored the tab to ChatGPT home and preserved PID `1933`/port
   `45015`; there were no browser-operation locks or skill/provider mutations.
+
+## 2026-09-02 | Plan 0328 installed long-observation canary
+
+- Git maintenance removed only clean, ancestry-proven integrated P17/P19/P20
+  local custody. P08 and P16 remain preserved because they carry unfinished
+  owner work; local `main` now equals `origin/main`.
+- The Plan 0326 focused packet passes 27 tests plus typecheck. One user-runtime
+  install completed with byte-identical affected modules, API PID `98408`
+  unchanged, and exact managed Chrome PID `1933`/port `45015` preserved.
+- P21 now owns one identity smoke, one no-retry long-response timeout canary,
+  and one read-only recovery of that same turn. No scheduler or skill effect is
+  in scope.

@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 542 | 2026-09-02
+
+- Reconciled current Git custody. Clean integrated P17, P19, and P20 worktrees
+  plus local branches were removed; their remote recovery refs remain. The
+  dirty/conflicted P08 lane and clean but unintegrated P16 lane were preserved.
+  The clean local `main` worktree was fast-forwarded to exact `origin/main` at
+  `61ff5ca4`.
+- Plan 0326's focused timeout/instrumentation packet passes 27 tests plus
+  typecheck. One authorized user-runtime install completed without API restart;
+  the three affected installed modules are byte-identical to the current build.
+- Opened [Plan 0328](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
+  as P21 for one exact-account identity smoke, one zero-retry long prompt, and
+  one read-only same-turn recovery before Skill CRUD implementation.
+
 ## Turn 541 | 2026-09-02
 
 - The operator explicitly transferred operational control of exact
