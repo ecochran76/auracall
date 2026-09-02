@@ -1,7 +1,15 @@
 import { createHash } from "node:crypto";
+import path from "node:path";
+import { getAuracallHomeDir } from "../auracallHome.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { resolveChatgptSemanticModelSelector } from "../config/modelSelector.js";
 import { ChatgptService } from "../browser/llmService/providers/chatgptService.js";
+import { recordBrowserOperationQueueObservation } from "../browser/operationQueueObservations.js";
+import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
+import {
+	createFileBackedBrowserOperationDispatcher,
+	formatBrowserOperationBusyResult,
+} from "../../packages/browser-service/src/service/operationDispatcher.js";
 import {
 	createProviderNativeHandoffTargetAdapter,
 	type HandoffProviderNativePromptInput,
@@ -47,12 +55,72 @@ export function createChatgptBrowserHandoffTargetAdapter(
 	});
 	return createProviderNativeHandoffTargetAdapter(
 		{
-			submit: (input) => submitChatgptHandoffPrompt(service, input),
+			submit: (input) =>
+				withChatgptHandoffBrowserOperation(userConfig, () =>
+					submitChatgptHandoffPrompt(service, input),
+				),
 		},
 		{
 			upload: stageChatgptPromptAttachments,
 		},
 	);
+}
+
+async function withChatgptHandoffBrowserOperation<T>(
+	userConfig: ResolvedUserConfig,
+	run: () => Promise<T>,
+): Promise<T> {
+	const launchPlan = resolveBrowserLaunchPlan({
+		source: { kind: "user-config", config: userConfig },
+		intent: { provider: "chatgpt" },
+	});
+	const operationInput = {
+		managedProfileDir: launchPlan.managedBrowserProfile.directory,
+		serviceTarget: "chatgpt",
+		kind: "browser-execution",
+		operationClass: "exclusive-mutating",
+		ownerCommand: `handoff-target-submit:${userConfig.auracallProfile ?? "default"}`,
+	} as const;
+	const dispatcher = createFileBackedBrowserOperationDispatcher({
+		lockRoot: path.join(getAuracallHomeDir(), "browser-operations"),
+	});
+	const blockedOperationIds = new Set<string>();
+	const acquired = await dispatcher.acquireQueued(operationInput, {
+		timeoutMs: 10 * 60 * 1000,
+		pollMs: 250,
+		onBlocked: (result, context) => {
+			if (blockedOperationIds.has(result.blockedBy.id)) return;
+			blockedOperationIds.add(result.blockedBy.id);
+			recordBrowserOperationQueueObservation({
+				event: "queued",
+				key: result.key,
+				requested: operationInput,
+				blockedBy: result.blockedBy,
+				attempt: context.attempt,
+				elapsedMs: context.elapsedMs,
+			});
+		},
+	});
+	if (!acquired.acquired) {
+		recordBrowserOperationQueueObservation({
+			event: "busy-timeout",
+			key: acquired.key,
+			requested: operationInput,
+			blockedBy: acquired.blockedBy,
+		});
+		throw new Error(formatBrowserOperationBusyResult(acquired));
+	}
+	recordBrowserOperationQueueObservation({
+		event: "acquired",
+		key: acquired.operation.key,
+		requested: operationInput,
+		operation: acquired.operation,
+	});
+	try {
+		return await run();
+	} finally {
+		await acquired.release();
+	}
 }
 
 async function stageChatgptPromptAttachments(
@@ -100,7 +168,10 @@ async function submitChatgptHandoffPrompt(
 		modelSelector: input.modelSelector,
 		desiredModel: semanticSelection?.desiredModel ?? null,
 		thinkingTime: semanticSelection?.thinkingTime ?? null,
-		modelStrategy: semanticSelection ? "select" : undefined,
+		modelStrategy: input.modelSelector == null ? "current" : semanticSelection ? "select" : undefined,
+	}, {
+		tabLifecycle: input.conversationRef ? "retain" : "retain-new",
+		mutationSourcePrefix: "handoff:chatgpt-target-submit",
 	});
 	const targetConversationRef =
 		normalizeString(result.url) ??

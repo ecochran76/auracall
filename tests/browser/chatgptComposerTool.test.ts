@@ -223,6 +223,26 @@ describe('chatgpt composer tool selection', () => {
     });
   });
 
+  test('accepts one unrestricted upload input bound to the active composer when the popover row label drifts', () => {
+    expect(
+      resolveChatgptWorkbenchAttachmentSurfaceForTest({
+        rows: [{ label: 'Upload file', description: '' }],
+        inputs: [{
+          id: 'upload-files',
+          accept: null,
+          multiple: true,
+          composerLocal: true,
+          composerTriggerLabel: 'Add files and more',
+        }],
+      }),
+    ).toEqual({
+      status: 'ready',
+      inputSelector: '#upload-files',
+      localFileLabel: 'Add files and more',
+      libraryLabel: null,
+    });
+  });
+
   test('fails closed when the exact local upload input contract drifts', () => {
     expect(
       resolveChatgptWorkbenchAttachmentSurfaceForTest({

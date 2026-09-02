@@ -275,6 +275,11 @@ Current browser-mode default posture:
   prompts support file attachments; Gemini and Grok browser prompt adapters do
   not currently support prompt attachments and fail before connection instead
   of silently dropping them
+- provider-native ChatGPT handoff submission shares the exclusive managed
+  browser profile operation queue with ordinary browser execution. A handoff
+  without an existing target conversation opens one fresh retained tab instead
+  of borrowing another job's generic ChatGPT tab; this is isolation within a
+  serialized profile lane, not concurrent per-tab mutation support
 - stored team/API browser runs are non-interactive: if ChatGPT shows a logged
   out surface, Aura-Call fails fast and prints an auth-mode command such as
   `auracall --profile <name> login --target chatgpt` instead of waiting in the

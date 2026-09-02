@@ -48474,3 +48474,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   hygiene, and the zero-error plan audit. `pnpm audit --audit-level=high`
   reports the existing 94-advisory repository baseline; P22 has no dependency
   manifest or lockfile delta.
+
+## 2026-09-02 | Plan 0330 ChatGPT handoff tab-affinity repair
+
+- Isolated P23 from the conflicted P08/P17 checkout on a clean branch from
+  current `main`.
+- A focused regression proved that provider-native handoff submission bypassed
+  the managed-profile operation dispatcher and could reach ChatGPT while a
+  competing same-profile mutation remained active.
+- The handoff boundary now queues as an exclusive mutating operation. A target
+  without an existing conversation uses a fresh retained tab; an explicit
+  conversation remains on the exact reuse path.
+- This slice is provider-free. It does not install the runtime, restart a
+  service, submit a live handoff, or claim true concurrent per-tab mutation.
