@@ -1,3 +1,19 @@
+## 2026-09-02 | LitScout Experiment 51 monitoring and skill-lifecycle handoffs
+
+- Added two independent durable handoffs from the corrected LitScout
+  Experiment 51 debrief. Note 0002 covers renewable long-prompt observation,
+  nonterminal observation-lease expiry, existing monitoring/reattachment reuse,
+  and a cooldown-bound same-conversation refresh no more frequently than every
+  15 minutes when connection liveness is suspect.
+- Note 0003 covers discovery-first ChatGPT plugins/skills lifecycle support,
+  potential exact-account skill CRUD/install/readback/version/rollback
+  capabilities, and the existing deterministic ZIP composer-attachment bridge
+  for LitScout skill development.
+- The handoffs deliberately do not implement or authorize browser, prompt,
+  provider, install, restart, tab-refresh, or ChatGPT skill mutations. They are
+  separate so prompt-monitoring reliability can proceed without waiting for
+  skill CRUD.
+
 ## 2026-08-27 | Plan 0320 terminal-output selection repair
 
 - Plan 0319 recovered a complete ChatGPT writing block after AuraCall persisted

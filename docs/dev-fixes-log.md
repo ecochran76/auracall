@@ -1,3 +1,20 @@
+- 2026-09-02: A browser observer deadline is not a model deadline. LitScout
+  Experiment 51 reached AuraCall's 3,600-second wait with 33,688 assistant-text
+  characters and active-generation evidence, then completed without another
+  Send and was recovered by read-only reattachment. Preserve active generation
+  as resumable, reuse runtime evidence and response-progress instrumentation,
+  and separate renewable observation from terminal model state. A guarded
+  same-conversation refresh may run no more frequently than every 15 minutes
+  when connection liveness is stale; it must never replay the prompt.
+
+- 2026-09-02: ChatGPT skill visibility is not skill lifecycle proof. Existing
+  workbench discovery can report skill labels and existing attachment ZIPs can
+  support development, but mature managed skills need discovery-first,
+  exact-account identity/version readback and separately guarded
+  install/create, update/replacement, enable/disable, uninstall/delete, and
+  invocation semantics. Keep skill CRUD distinct from developer-app CRUD and
+  never infer installation or use from a visible label alone.
+
 - 2026-08-23: Rebuilding browser list options must preserve provenance from the
   same `LlmService` when the resolved DevTools endpoint is unchanged. The
   projects CLI intentionally prebuilds options for cache identity, then passes
