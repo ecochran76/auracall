@@ -32,6 +32,11 @@ activation, stable identity, version, invocation, or CRUD readiness.
   `1933`, DevTools port `45015`, with no AuraCall controller or operation lease.
   Per browser policy this is foreign/unknown ownership, so no attach,
   navigation, identity read, or provider fixture capture was attempted.
+- A second read-only preflight at `2026-09-02T08:44:26-05:00` confirmed PID
+  `1933` remains live with the same managed browser profile and still has no
+  controller, owner, or browser-operation record. Configured-identity
+  comparison found no other AuraCall runtime profile bound to the same ChatGPT
+  account, so switching browser profiles cannot safely bypass the stop.
 
 ## Execution Graph
 
@@ -88,5 +93,9 @@ exact hard stop, and every mutation remains separately gated.
 - Live discovery stopped before attachment on foreign/unknown Chrome ownership.
   Exact account, inventory, and provider contract remain unobserved. No browser
   or provider mutation occurred.
+- The stop was revalidated against the live PID, browser-state registry,
+  operation-lock directory, and configured identity bindings. The exact
+  unblocker is human-owner closure or explicit ownership transfer of PID
+  `1933`; AuraCall must not infer ownership from the managed directory alone.
 - Provider-free checkpoint: `c8097717`; acceptance checkpoint: `687767ab`;
   non-forced merge receipt: `1c126b96`.

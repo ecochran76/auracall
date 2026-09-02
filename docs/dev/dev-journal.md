@@ -48261,3 +48261,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   typecheck, build, lint, plan audit, and diff hygiene pass. The bounded live
   attempt stopped before attachment because `wsl-chrome-3` PID `1933` has no
   AuraCall controller/lease. Exact-account inventory remains unobserved.
+- Revalidation proved the same PID and port remain live, no operation record
+  exists, and no other configured AuraCall runtime profile shares the account
+  binding. This removes profile-switching as a safe workaround and leaves one
+  exact external ownership unblocker.

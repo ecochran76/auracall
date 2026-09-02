@@ -341,6 +341,6 @@ lanes:
     validation_status: provider-free-accepted-integrated-live-discovery-ownership-blocked
     validation_ref: c8097717cf224a3729cad7ec5d70311676424177
     integration_receipt: 1c126b96c0e32afef6490497a69019362ba12e12
-    blocker: The wsl-chrome-3 managed Chrome PID 1933 has no AuraCall controller or operation lease; exact-account skill discovery cannot attach until ownership is safely resolved.
+    blocker: The live wsl-chrome-3 managed Chrome PID 1933 on port 45015 has no AuraCall controller, owner, or operation lease, and no alternate runtime profile shares its configured ChatGPT identity; exact-account skill discovery requires human-owner closure or explicit ownership transfer.
     disposition: Provider-free skill capability truthfulness accepted; exact-account inventory and all lifecycle mutations remain unobserved and gated.
     updated_at: 2026-09-02

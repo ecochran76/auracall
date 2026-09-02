@@ -22,6 +22,11 @@
 - Provider-free checkpoint: `c8097717`; acceptance checkpoint: `687767ab`;
   non-forced merge receipt: `1c126b96`. Main integration is complete; the
   exact-account live discovery ownership stop remains.
+- Revalidated the stop at `2026-09-02T08:44:26-05:00`: PID `1933` still owns
+  `wsl-chrome-3` port `45015`, browser state has no controller/owner, the
+  operation-lock directory is empty, and no alternate AuraCall runtime profile
+  shares the configured ChatGPT identity. Do not attach or switch profiles;
+  human-owner closure or explicit ownership transfer is required.
 
 ## Turn 539 | 2026-09-02
 
