@@ -11,6 +11,10 @@
 - Feature checkpoint `ce610227` merged non-forced at `ac1f4aed`; post-merge
   validation passes 35 tests, typecheck, build, scoped lint, diff hygiene, and
   the zero-error plan audit. P16 remains untouched at `bd8738da`.
+- Git maintenance cannot yet remove the clean integrated P22 worktree/local
+  branch because pre-existing identity-smoke PID `44328` holds its cwd. Leave
+  that process and custody intact; remove them only after a fresh empty cwd
+  census. The dirty/conflicted P08 and clean unfinished P16 remain preserved.
 
 ## Turn 550 | 2026-09-02
 

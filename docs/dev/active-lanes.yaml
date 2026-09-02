@@ -380,5 +380,5 @@ lanes:
     validation_ref: d278b01554c1b639f0f50947fd337053d09afbc3
     integration_receipt: ac1f4aed0206560f00a943f9ad84e95da705e68c
     blocker: null
-    disposition: Exact-account exact-ID Skill CRUD is integrated and installed/live accepted; one recovered Create, one in-place update, and one immediate Delete completed with exact hash and fresh absence proof, leaving no canary artifact.
+    disposition: Exact-account exact-ID Skill CRUD is integrated and installed/live accepted; one recovered Create, one in-place update, and one immediate Delete completed with exact hash and fresh absence proof, leaving no canary artifact. Clean local topic custody is temporarily retained because pre-existing identity-smoke PID 44328 holds the worktree cwd.
     updated_at: 2026-09-02

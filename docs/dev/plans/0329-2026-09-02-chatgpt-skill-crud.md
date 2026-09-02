@@ -6,7 +6,7 @@ Operational state: INTEGRATED_INSTALLED_LIVE_ACCEPTED
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 12 | 2026-09-02
+Revision: 13 | 2026-09-02
 
 ## Stable Objective
 
@@ -142,6 +142,11 @@ and leaving no provider artifact behind.
   328-candidate zero-error plan audit. P16 remains clean, unintegrated, and
   unchanged at `bd8738da`; its future integration must retain both its
   developer-app options and P22's separate `skills` command.
+- Final git maintenance left the clean integrated P22 worktree and local topic
+  branch in place because pre-existing identity-smoke PID `44328` has its cwd
+  inside that worktree. The remote feature ref remains the recovery reference.
+  Remove local custody only after that external process exits and a fresh cwd
+  census is empty; it was not terminated or repurposed by this lane.
 
 ## Execution Graph
 
