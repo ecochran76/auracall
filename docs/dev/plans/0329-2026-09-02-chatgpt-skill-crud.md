@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: EDITOR_READBACK_REPAIR_ACCEPTED_REINSTALL_READY
+Operational state: LIVE_HARD_STOP_RECOVERABLE_CANARY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 5 | 2026-09-02
+Revision: 6 | 2026-09-02
 
 ## Stable Objective
 
@@ -55,6 +55,17 @@ and leaving no provider artifact behind.
   fields accepted and Create enabled. Line-aware readback now preserves exact
   source hashing, and post-dispatch submit/confirm loss proceeds only to exact
   postcondition observation or terminal `outcome-unknown`.
+- The one authorized Create was dispatched and returned `outcome-unknown`
+  because ChatGPT saved to the newly observed `/skills/editor/<32-hex-id>`
+  route rather than the expected query-detail route. Read-only inspection
+  proves exactly one recoverable canary with the expected v1 fields and stable
+  ID. Per the lane hard stop, Create was not retried and update/delete did not
+  run; the exact editor is intentionally preserved for operator adjudication.
+- The provider-free route contract now accepts both observed exact detail and
+  saved-editor routes, and inventory capture navigates from an editor to the
+  root before waiting for both scopes. The repair passes 33 tests, typecheck,
+  build, scoped lint, and diff hygiene but is not reinstalled or used to mutate
+  the preserved canary in this turn.
 
 ## Execution Graph
 

@@ -22143,3 +22143,9 @@ browser-stage lifecycle observability, not transcript truncation.
   ordered `.cm-line` text, preserving non-empty raw whitespace until canonical
   hashing. After any prepared mutation pointer dispatch, missing click receipt
   means postcondition observation or `outcome-unknown`, never a retryable error.
+- 2026-09-02: ChatGPT Skill Create may persist successfully at
+  `/skills/editor/<stable-id>` instead of redirecting to
+  `/skills?skill_id=<stable-id>`. Recognize both only with exact 32-hex identity;
+  navigate editor routes to the root before inventory capture. An older client
+  that reports unknown after this exact save remains subject to its no-retry
+  hard stop even when later read-only evidence recovers the artifact.

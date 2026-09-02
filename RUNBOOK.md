@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 549 | 2026-09-02
+
+- The single authorized Skill Create saved exactly one v1 canary at a stable
+  `/skills/editor/<32-hex-id>` route. The installed client expected only the
+  query-detail route, returned `outcome-unknown`, and retained the exact editor.
+- P22's hard stop is active: no Create retry and no update/delete occurred. API
+  PID `98408`/zero restarts and Chrome PID `1933` are stable, with no operation
+  lock. The preserved editor requires operator adjudication before mutation.
+- Provider-free route and root-inventory handling now cover the observed route;
+  33 tests, typecheck, build, scoped lint, and diff hygiene pass. The repair is
+  published-ready but deliberately not installed or exercised live this turn.
+
 ## Turn 548 | 2026-09-02
 
 - The next P22 create reached a fully enabled disposable editor but stopped

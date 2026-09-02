@@ -12,10 +12,11 @@ Lanes: P01-P07, P09-P15, P17, P19-P21 (integrated); P08, P18, P22 (open)
   P22 is bounded to read-only create-surface discovery, provider-free exact-ID
   list/show/create/update/delete, and one disposable zero-retry CRUD canary.
   Skill invocation, prompts, developer apps, and scheduler effects are out of
-  scope. Discovery and provider-free validation are accepted. The first
-  installed inventory stopped safely on DOM drift; its bounded response-capture
-  repair is green, and reinstall plus the one live canary remain. P16 overlap
-  must be reconciled before integration.
+  scope. Discovery and provider-free validation are accepted. The single Create
+  saved one exact recoverable canary but the installed client classified its
+  newly observed editor route as `outcome-unknown`; update/delete are hard
+  stopped pending operator adjudication. The route repair is green but not
+  installed. P16 overlap must be reconciled before integration.
 
 - Active installed long-observation recovery canary:
   [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)

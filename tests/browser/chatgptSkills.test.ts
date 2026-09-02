@@ -89,11 +89,15 @@ describe("ChatGPT Skill provider contracts", () => {
 		expect(detail.files).toEqual([{ path: "SKILL.md", sha256: detail.contentHash }]);
 	});
 
-	it("accepts only the observed exact 32-hex skill_id route", () => {
+	it("accepts only observed exact detail and editor routes", () => {
 		expect(readChatgptSkillIdFromUrl(`https://chatgpt.com/skills?skill_id=${"b".repeat(32)}`)).toBe(
 			"b".repeat(32),
 		);
+		expect(readChatgptSkillIdFromUrl(`https://chatgpt.com/skills/editor/${"c".repeat(32)}`)).toBe(
+			"c".repeat(32),
+		);
 		expect(readChatgptSkillIdFromUrl("https://chatgpt.com/skills?skill_id=Canary")).toBeNull();
+		expect(readChatgptSkillIdFromUrl("https://chatgpt.com/skills/editor/Canary")).toBeNull();
 		expect(readChatgptSkillIdFromUrl(`https://example.com/skills?skill_id=${"b".repeat(32)}`)).toBeNull();
 	});
 });

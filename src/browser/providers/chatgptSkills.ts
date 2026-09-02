@@ -65,8 +65,12 @@ export function joinChatgptCodeMirrorLines(lines: string[]): string {
 export function readChatgptSkillIdFromUrl(value: string): string | null {
 	try {
 		const url = new URL(value);
-		if (url.origin !== "https://chatgpt.com" || url.pathname !== "/skills") return null;
-		const id = url.searchParams.get("skill_id")?.toLowerCase() ?? "";
+		if (url.origin !== "https://chatgpt.com") return null;
+		const editorMatch = url.pathname.match(/^\/skills\/editor\/([a-f0-9]{32})$/i);
+		const id =
+			url.pathname === "/skills"
+				? (url.searchParams.get("skill_id")?.toLowerCase() ?? "")
+				: (editorMatch?.[1]?.toLowerCase() ?? "");
 		return /^[a-f0-9]{32}$/.test(id) ? id : null;
 	} catch {
 		return null;
@@ -386,7 +390,12 @@ async function captureSkillInventory(client: ChromeClient): Promise<ChatgptSkill
 		});
 	});
 	const currentUrl = await readCurrentUrl(client);
-	if (currentUrl?.startsWith("https://chatgpt.com/skills")) {
+	const parsedCurrentUrl = currentUrl ? new URL(currentUrl) : null;
+	if (
+		parsedCurrentUrl?.origin === "https://chatgpt.com" &&
+		parsedCurrentUrl.pathname === "/skills" &&
+		!parsedCurrentUrl.searchParams.has("skill_id")
+	) {
 		const reloaded = await reloadAndSettle(client, {
 			ignoreCache: true,
 			timeoutMs: 10_000,
@@ -440,9 +449,9 @@ async function readDetailProbe(
 async function waitForEditor(client: ChromeClient, id: string | null): Promise<void> {
 	const ready = await waitForPredicate(
 		client.Runtime,
-		`location.origin === 'https://chatgpt.com' && location.pathname === '/skills/editor' && Boolean(document.querySelector('.cm-content[contenteditable="true"]')) && ${
+		`location.origin === 'https://chatgpt.com' && (location.pathname === '/skills/editor' || /^\\/skills\\/editor\\/[a-f0-9]{32}$/.test(location.pathname)) && Boolean(document.querySelector('.cm-content[contenteditable="true"]')) && ${
 			id
-				? `new URL(location.href).searchParams.get('skill_id') === ${JSON.stringify(id)}`
+				? `(new URL(location.href).searchParams.get('skill_id') === ${JSON.stringify(id)} || location.pathname === ${JSON.stringify(`/skills/editor/${id}`)})`
 				: "true"
 		}`,
 		{ timeoutMs: 10_000, description: "ChatGPT Skill editor" },
@@ -534,7 +543,7 @@ async function submitEditor(
 	}
 	const settled = await waitForPredicate(
 		client.Runtime,
-		`location.pathname === '/skills' && /^[a-f0-9]{32}$/.test(new URL(location.href).searchParams.get('skill_id') || '')`,
+		`(location.pathname === '/skills' && /^[a-f0-9]{32}$/.test(new URL(location.href).searchParams.get('skill_id') || '')) || /^\\/skills\\/editor\\/[a-f0-9]{32}$/.test(location.pathname)`,
 		{ timeoutMs: 20_000, description: `ChatGPT Skill ${action} detail redirect` },
 	);
 	if (!settled.ok) {

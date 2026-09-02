@@ -61,6 +61,20 @@
   postcondition and otherwise returns terminal `outcome-unknown`; it cannot
   surface false retry authority.
 
+## 2026-09-02 | Plan 0329 live Create hard stop
+
+- The single authorized Create dispatch saved exactly one recoverable canary
+  to a stable `/skills/editor/<32-hex-id>` route with the expected v1 name,
+  description, and instructions. The installed adapter expected only the query
+  detail route, returned `outcome-unknown`, and correctly retained the editor.
+- Per P22 bounds, Create was not retried and update/delete were not attempted.
+  API PID `98408` with zero restarts and Chrome PID `1933` remain stable; the
+  operation-lock root is empty. The retained editor is the exact unblocker.
+- Provider-free route parsing now accepts the observed saved-editor identity,
+  and read-only inventory capture navigates from editor routes to root before
+  awaiting both scopes. The 33-test packet, typecheck, build, scoped lint, and
+  diff hygiene pass; this follow-up was not installed or used on the canary.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules
