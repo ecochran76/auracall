@@ -1,8 +1,8 @@
 # Installed Long-Observation Recovery Canary | 0328-2026-09-02
 
-State: OPEN
+State: CLOSED
 Lane: P21
-Operational state: SECOND_CANARY_CLASSIFIED_REATTACH_IDENTITY_REPAIR_READY
+Operational state: INSTALLED_LIVE_ACCEPTED
 Branch: ops/plan0328-installed-timeout-canary
 Target: main
 Integration: merge
@@ -58,6 +58,14 @@ read-only recovery of the same turn without another Send.
   build, scoped zero-warning lint, diff hygiene, and the zero-error plan audit.
   The earlier full-suite evidence remains 3,041 passed with only its documented
   unrelated allowlist mismatch.
+- Checkpoint `ac851379` is published and its three affected installed modules
+  are byte-identical. The API remained PID `98408` with zero restarts and the
+  transferred Chrome remained PID `1933` on port `45015`.
+- The remedial read-only attach reconciled the real progress conversation,
+  recovered exactly 1,800 numbered lines plus the terminal sentinel, and
+  marked the same Session completed with 18,634 output tokens. No Send, Stop,
+  retry, scheduler, completion, materialization, or skill action occurred.
+  The operation-lock root is empty and the pre-existing Chrome remains healthy.
 
 ## Execution Graph
 
@@ -113,3 +121,17 @@ read-only recovery of the same turn without another Send.
 All five criteria have current installed/live evidence for the repaired
 runtime, both prompt outcomes are durable, and the result is integrated before
 Skill CRUD implementation begins.
+
+## Acceptance Receipt
+
+- `ILC-R1`: ACCEPTED — installed parity is exact; API PID/restart count did not
+  change.
+- `ILC-R2`: ACCEPTED — two distinct prompts total, zero retries, and no
+  scheduler/completion/materialization/skill effect.
+- `ILC-R3`: ACCEPTED — the second timeout persisted running with
+  `observation_expired_generation_active`, visible Stop, zero assistant text,
+  and exact target/progress evidence.
+- `ILC-R4`: ACCEPTED — installed read-only recovery returned the same 1,800-line
+  response and sentinel without another Send.
+- `ILC-R5`: ACCEPTED — PID `1933`, port `45015`, API PID `98408`, and empty
+  operation-lock state remained stable.

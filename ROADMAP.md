@@ -4,16 +4,16 @@
 
 ### Current Execution Board
 
-Status: Installed long-observation recovery canary active; ChatGPT Skill CRUD follows only after its acceptance
-Lanes: P01-P07, P09-P15, P17, P19-P20 (integrated); P08, P18, P21 (open)
+Status: Installed long-observation recovery accepted; ChatGPT Skill CRUD is the next bounded lane
+Lanes: P01-P07, P09-P15, P17, P19-P20 (integrated); P21 (accepted); P08, P18 (open)
 
 - Active installed long-observation recovery canary:
   [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
-  P21's first zero-retry canary exposed a pre-answer classifier gap; the second
-  proved that repair but exposed stale runtime/progress conversation identity
-  during read-only fallback. Both prompt allowances are exhausted. A
-  provider-free identity repair and one remedial zero-send attach remain.
-  Skill CRUD begins only after this gate settles.
+  P21 is installed/live accepted. Pre-answer expiry remains resumable, exact
+  progress identity overrides a stale synthetic runtime route, and the
+  remedial read-only attach recovered the same 1,800-line turn with zero
+  resend. PID/port, API restart count, and empty operation-lock state remained
+  stable. Skill CRUD may now open as a separate bounded lane.
 
 - Integrated ChatGPT skill lifecycle discovery:
   [docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)

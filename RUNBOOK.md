@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 543 | 2026-09-02
+
+- Plan 0328 closes `INSTALLED_LIVE_ACCEPTED`. The second canary timed out at 30
+  seconds before an assistant node mounted and correctly persisted the Session
+  as running with `observation_expired_generation_active` and zero resend.
+- Its first read-only attach exposed a stale synthetic runtime route. The
+  provider-free repair now reconciles only URL/conversation identity from the
+  validated progress `/c/<id>` while preserving target ID and port; 88 affected
+  tests, typecheck, build, scoped zero-warning lint, diff hygiene, and plan
+  audit pass.
+- Installed parity is exact. The remedial read-only attach recovered all 1,800
+  numbered lines plus the sentinel from the same existing conversation and
+  marked the Session completed. API PID `98408` retained zero restarts; Chrome
+  PID `1933`/port `45015` and empty operation locks remained stable. ChatGPT
+  Skill CRUD may now proceed in its own lane.
+
 ## Turn 542 | 2026-09-02
 
 - Reconciled current Git custody. Clean integrated P17, P19, and P20 worktrees

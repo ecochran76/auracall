@@ -350,16 +350,16 @@ lanes:
     plan_ref: refs/heads/ops/plan0328-installed-timeout-canary
     branch: ops/plan0328-installed-timeout-canary
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
+    plan_state: CLOSED
+    custody_state: READY_FOR_INTEGRATION
+    checkpoint: ac85137977902fdece01297dd97f88b22596fcea
     remote_ref: refs/remotes/origin/ops/plan0328-installed-timeout-canary
     integration: merge
     dependencies: [P19]
     overlaps: []
-    validation_status: second-canary-classified-reattach-identity-repair-ready
-    validation_ref: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
+    validation_status: installed-live-accepted
+    validation_ref: ac85137977902fdece01297dd97f88b22596fcea
     integration_receipt: null
     blocker: null
-    disposition: Second canary correctly persisted running but read-only fallback trusted a stale synthetic runtime route; both prompts are exhausted and one identity-reconciled remedial attach remains after provider-free validation and install parity.
+    disposition: Installed/live accepted; pre-answer expiry remains running, exact progress identity overrides stale synthetic runtime routing, and read-only reattach recovered the same 1800-line turn with zero resend.
     updated_at: 2026-09-02

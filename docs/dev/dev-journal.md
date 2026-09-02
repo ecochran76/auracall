@@ -1,3 +1,16 @@
+## 2026-09-02 | Plan 0328 installed/live accepted
+
+- Checkpoint `ac851379` is published and the three affected installed modules
+  are byte-identical. The API remained PID `98408` with zero restarts; exact
+  transferred Chrome PID `1933`/port `45015` remained healthy.
+- The remedial read-only attach used the validated progress conversation,
+  recovered exactly 1,800 numbered lines plus the sentinel from the same
+  existing turn, and marked the Session completed with 18,634 output tokens.
+  No Send, Stop, retry, scheduler, completion, materialization, or skill action
+  occurred, and the operation-lock root is empty.
+- All five Plan 0328 criteria are accepted. The lane can integrate before the
+  separate ChatGPT Skill CRUD plan opens.
+
 ## 2026-09-02 | Plan 0328 reattach identity repair
 
 - The installed second canary correctly classified zero-text active generation
