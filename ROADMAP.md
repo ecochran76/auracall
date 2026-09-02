@@ -5,7 +5,7 @@
 ### Current Execution Board
 
 Status: Installed long-observation recovery accepted; ChatGPT Skill CRUD is the next bounded lane
-Lanes: P01-P07, P09-P15, P17, P19-P20 (integrated); P21 (accepted); P08, P18 (open)
+Lanes: P01-P07, P09-P15, P17, P19-P21 (integrated); P08, P18 (open)
 
 - Active installed long-observation recovery canary:
   [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)

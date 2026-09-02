@@ -15,6 +15,9 @@
   marked the Session completed. API PID `98408` retained zero restarts; Chrome
   PID `1933`/port `45015` and empty operation locks remained stable. ChatGPT
   Skill CRUD may now proceed in its own lane.
+- P21 merged non-forced to `main` at `73b982ee` and is published. Installed
+  source bytes remain those of the accepted implementation checkpoint; the
+  merge adds only the integrated custody receipt beyond that checkpoint.
 
 ## Turn 542 | 2026-09-02
 

@@ -10,6 +10,8 @@
   occurred, and the operation-lock root is empty.
 - All five Plan 0328 criteria are accepted. The lane can integrate before the
   separate ChatGPT Skill CRUD plan opens.
+- P21 merged non-forced and was published to `main` at `73b982ee`; its catalog
+  now records integrated custody and that exact receipt.
 
 ## 2026-09-02 | Plan 0328 reattach identity repair
 
