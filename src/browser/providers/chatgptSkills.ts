@@ -203,10 +203,16 @@ export class ChatgptSkillBrowserAdapter {
 		const opened = await pressButtonWithTrustedPointer(client, {
 			selector: 'button[aria-label="Create"]',
 			requireVisible: true,
-			postSelector: '[role="menu"][aria-label="Create skill menu"]',
 			timeoutMs: 8_000,
 		});
-		if (!opened.ok) throw new Error(`Unable to open ChatGPT skill Create menu: ${opened.reason}.`);
+		const menu = await waitForPredicate(
+			client.Runtime,
+			`Boolean(document.querySelector('[role="menu"][aria-label="Create skill menu"]'))`,
+			{ timeoutMs: 2_000, description: "ChatGPT Skill Create menu" },
+		);
+		if (!menu.ok) {
+			throw new Error(`Unable to open ChatGPT skill Create menu: ${opened.reason}.`);
+		}
 		const editor = await pressButtonWithTrustedPointer(client, {
 			rootSelectors: ['[role="menu"][aria-label="Create skill menu"]'],
 			match: { exact: ["create with editor"] },

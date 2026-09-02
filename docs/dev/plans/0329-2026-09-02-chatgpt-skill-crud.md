@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: LIVE_INVENTORY_REPAIR_ACCEPTED_REINSTALL_READY
+Operational state: CREATE_PRESUBMIT_REPAIR_ACCEPTED_REINSTALL_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 3 | 2026-09-02
+Revision: 4 | 2026-09-02
 
 ## Stable Objective
 
@@ -43,6 +43,12 @@ and leaving no provider artifact behind.
   plan audit for the first checkpoint. The inventory repair passes focused
   tests, typecheck, scoped lint, and diff hygiene; rebuild/reinstall and the
   single zero-retry disposable CRUD canary remain.
+- Reinstalled inventory readback is complete. The first create command stopped
+  before submit when the trusted-pointer click listener lost its ephemeral
+  activation receipt during the menu render. The exact visible Create-menu
+  postcondition is now authoritative after the trusted CDP pointer dispatch;
+  no provider mutation or canary artifact occurred. Focused tests, typecheck,
+  build, scoped lint, and diff hygiene pass for the repair.
 
 ## Execution Graph
 

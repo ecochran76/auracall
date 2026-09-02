@@ -37,6 +37,17 @@
   brings the focused/adjacent packet to 33 passing tests; typecheck, scoped
   zero-warning lint, and diff hygiene also pass. Rebuild/reinstall remains.
 
+## 2026-09-02 | Plan 0329 Create menu pre-submit repair
+
+- The repaired installed inventory returned complete exact-account state for
+  11 existing IDs. The first create command then stopped before submit because
+  the trusted-pointer helper lost its window-scoped click receipt as the menu
+  rendered; no Skill was created and all mutation allowances remain unused.
+- The Skill adapter now requires the exact visible Create-menu postcondition
+  after trusted pointer dispatch rather than treating an ephemeral listener
+  receipt as stronger than the rendered provider state. The 33-test packet,
+  typecheck, build, scoped zero-warning lint, and diff hygiene pass.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules

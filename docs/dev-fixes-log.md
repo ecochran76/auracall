@@ -22134,3 +22134,7 @@ browser-stage lifecycle observability, not transcript truncation.
   DOM. Capture both authenticated installed and created inventory responses,
   require both payload arrays, and reconcile overlap by exact ID with
   created-by-me precedence before authorizing any mutation.
+- 2026-09-02: A trusted pointer can synchronously open a React menu while the
+  rerender discards a window-scoped click-listener receipt. For a provider
+  control whose click dispatch is already trusted, accept the exact visible
+  menu postcondition as activation proof; never proceed from dispatch alone.

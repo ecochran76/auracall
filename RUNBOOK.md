@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 547 | 2026-09-02
+
+- Reinstalled exact-account inventory passed with 11 existing stable IDs. The
+  first create stopped before submit because menu rendering discarded the
+  trusted-click listener receipt; no Skill mutation occurred.
+- P22 now treats the exact rendered Create menu as the postcondition after the
+  trusted pointer dispatch. The 33-test packet, typecheck, build, scoped lint,
+  and diff hygiene pass; reinstall and the still-unused CRUD canary remain.
+
 ## Turn 546 | 2026-09-02
 
 - The first installed P22 list stopped before mutation because current Skill
