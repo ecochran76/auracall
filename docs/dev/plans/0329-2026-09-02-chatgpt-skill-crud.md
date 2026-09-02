@@ -1,12 +1,12 @@
 # ChatGPT Skill CRUD | 0329-2026-09-02
 
-State: OPEN
+State: CLOSED
 Lane: P22
-Operational state: INSTALLED_LIVE_ACCEPTED_INTEGRATION_READY
+Operational state: INTEGRATED_INSTALLED_LIVE_ACCEPTED
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 11 | 2026-09-02
+Revision: 12 | 2026-09-02
 
 ## Stable Objective
 
@@ -136,6 +136,12 @@ and leaving no provider artifact behind.
   plan audit. The repository-wide dependency audit separately reports the
   unchanged pre-existing baseline of 94 advisories; this lane changes neither
   dependency manifest nor lockfile.
+- Feature checkpoint `ce610227` merged non-forced to `main` at `ac1f4aed`.
+  Post-merge integration validation repeated the 35-test packet, typecheck,
+  production build, scoped zero-warning lint, diff hygiene, and the
+  328-candidate zero-error plan audit. P16 remains clean, unintegrated, and
+  unchanged at `bd8738da`; its future integration must retain both its
+  developer-app options and P22's separate `skills` command.
 
 ## Execution Graph
 

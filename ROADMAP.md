@@ -4,19 +4,17 @@
 
 ### Current Execution Board
 
-Status: ChatGPT Skill CRUD active after installed long-observation acceptance
-Lanes: P01-P07, P09-P15, P17, P19-P21 (integrated); P08, P18, P22 (open)
+Status: ChatGPT Skill CRUD integrated and installed/live accepted
+Lanes: P01-P07, P09-P15, P17, P19-P22 (integrated); P08, P18 (open)
 
-- Active ChatGPT Skill CRUD:
+- Integrated ChatGPT Skill CRUD:
   [docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)
-  P22 is bounded to read-only create-surface discovery, provider-free exact-ID
-  list/show/create/update/delete, and one disposable zero-retry CRUD canary.
-  Skill invocation, prompts, developer apps, and scheduler effects are out of
-  scope. Discovery and provider-free validation are accepted. The single Create
-  saved one exact recoverable canary but the installed client classified its
-  newly observed editor route as `outcome-unknown`; update/delete are hard
-  stopped pending operator adjudication. The route repair is green but not
-  installed. P16 overlap must be reconciled before integration.
+  P22 provides guarded exact-account, exact-ID list/show/create/update/delete.
+  Installed/live acceptance recovered the one authorized Create, updated the
+  same stable ID once with exact v2 hash readback, and deleted it once with
+  fresh complete-inventory absence. No skill invocation or prompt occurred;
+  Chrome/API identities remained stable. P16 remains a separate unfinished
+  developer-app lane and must preserve both CLI blocks when later integrated.
 
 - Active installed long-observation recovery canary:
   [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)

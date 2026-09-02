@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 551 | 2026-09-02
+
+- P22 is integrated and installed/live accepted. Exact-account Skill CRUD used
+  the one recovered Create, one in-place update with independent v2 hash
+  readback, and one immediate Delete with fresh complete-inventory absence.
+- Final runtime bytes match the published implementation. Chrome PID `1933` on
+  port `45015`, API PID `98408`, the two existing chat tabs, and empty operation
+  locks were preserved; the deleted editor tab was cleaned to `/skills`.
+- Feature checkpoint `ce610227` merged non-forced at `ac1f4aed`; post-merge
+  validation passes 35 tests, typecheck, build, scoped lint, diff hygiene, and
+  the zero-error plan audit. P16 remains untouched at `bd8738da`.
+
 ## Turn 550 | 2026-09-02
 
 - The P22 hard stop remains exact and stable: one recoverable canary editor,

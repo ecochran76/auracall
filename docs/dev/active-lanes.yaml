@@ -369,16 +369,16 @@ lanes:
     plan_ref: refs/heads/feat/plan0329-chatgpt-skill-crud
     branch: feat/plan0329-chatgpt-skill-crud
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: fc32eede1a2c1c713d5c777404c13e6646fa7ee8
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: ce610227225a78773c60a96af4c62e924ad69626
+    remote_ref: refs/remotes/origin/main
     integration: merge
     dependencies: [P20, P21]
     overlaps: [P16]
-    validation_status: read-only-create-surface-discovery-ready
-    validation_ref: fc32eede1a2c1c713d5c777404c13e6646fa7ee8
-    integration_receipt: null
+    validation_status: installed-live-accepted
+    validation_ref: d278b01554c1b639f0f50947fd337053d09afbc3
+    integration_receipt: ac1f4aed0206560f00a943f9ad84e95da705e68c
     blocker: null
-    disposition: Read-only create-surface discovery precedes provider-free exact-ID lifecycle implementation and one disposable zero-retry CRUD canary.
+    disposition: Exact-account exact-ID Skill CRUD is integrated and installed/live accepted; one recovered Create, one in-place update, and one immediate Delete completed with exact hash and fresh absence proof, leaving no canary artifact.
     updated_at: 2026-09-02
