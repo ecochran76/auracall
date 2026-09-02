@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P23
-Operational state: PROVIDER_FREE_ACCEPTED
+Operational state: INTEGRATED_PROVIDER_FREE_ACCEPTED
 Branch: fix/plan0330-chatgpt-tab-affinity
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-02
+Revision: 3 | 2026-09-02
 
 ## Stable Objective
 
@@ -42,6 +42,9 @@ fresh retained browser tab from preparation through provider commit readback.
   share this queue. Their separate retained custody and exact-account mutation
   contracts remain unchanged and are explicit follow-up scope, not an
   unreviewed expansion of P23.
+- Merge `1c27bfc3` integrates the accepted provider-free repair into
+  canonical `main`. Runtime installation and a live Hagenson handoff retry
+  remain explicitly unexecuted.
 
 ## Scope
 

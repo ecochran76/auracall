@@ -48491,3 +48491,5 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   scoped lint, diff hygiene, and the zero-error plan audit. The final isolated
   comprehensive run passes 3,058 tests; its one failure is the unrelated known
   stale raw-CDP allowlist expectation from Plan 0326.
+- Merge `1c27bfc3` integrates P23 into `main`; no runtime install,
+  service restart, or provider submission accompanied integration.
