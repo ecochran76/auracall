@@ -333,13 +333,13 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 0d9d8026564947cd0e98368dbbf711464b0da922
-    remote_ref: null
+    checkpoint: c8097717cf224a3729cad7ec5d70311676424177
+    remote_ref: refs/remotes/origin/feat/plan0327-chatgpt-skill-discovery
     integration: merge
     dependencies: [P19]
     overlaps: []
     validation_status: provider-free-accepted-live-discovery-ownership-blocked
-    validation_ref: 0d9d8026564947cd0e98368dbbf711464b0da922
+    validation_ref: c8097717cf224a3729cad7ec5d70311676424177
     integration_receipt: null
     blocker: The wsl-chrome-3 managed Chrome PID 1933 has no AuraCall controller or operation lease; exact-account skill discovery cannot attach until ownership is safely resolved.
     disposition: Provider-free skill capability truthfulness accepted; exact-account inventory and all lifecycle mutations remain unobserved and gated.

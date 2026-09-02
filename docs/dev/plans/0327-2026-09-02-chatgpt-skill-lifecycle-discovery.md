@@ -6,7 +6,7 @@ Operational state: PROVIDER_FREE_ACCEPTED_LIVE_DISCOVERY_BLOCKED
 Branch: feat/plan0327-chatgpt-skill-discovery
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-02
+Revision: 2 | 2026-09-02
 
 ## Stable Objective
 
@@ -88,3 +88,4 @@ exact hard stop, and every mutation remains separately gated.
 - Live discovery stopped before attachment on foreign/unknown Chrome ownership.
   Exact account, inventory, and provider contract remain unobserved. No browser
   or provider mutation occurred.
+- Provider-free checkpoint: `c8097717`; main integration remains pending.
