@@ -22138,3 +22138,8 @@ browser-stage lifecycle observability, not transcript truncation.
   rerender discards a window-scoped click-listener receipt. For a provider
   control whose click dispatch is already trusted, accept the exact visible
   menu postcondition as activation proof; never proceed from dispatch alone.
+- 2026-09-02: CodeMirror's `.cm-content.textContent` can concatenate visual
+  lines without newline separators. Hash and verify editor content by joining
+  ordered `.cm-line` text, preserving non-empty raw whitespace until canonical
+  hashing. After any prepared mutation pointer dispatch, missing click receipt
+  means postcondition observation or `outcome-unknown`, never a retryable error.

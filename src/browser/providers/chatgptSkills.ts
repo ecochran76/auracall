@@ -58,6 +58,10 @@ export function normalizeInstructions(value: string): string {
 	return `${String(value).replace(/\r\n?/g, "\n").trimEnd()}\n`;
 }
 
+export function joinChatgptCodeMirrorLines(lines: string[]): string {
+	return lines.join("\n");
+}
+
 export function readChatgptSkillIdFromUrl(value: string): string | null {
 	try {
 		const url = new URL(value);
@@ -140,7 +144,7 @@ export function normalizeChatgptSkillInventoryPayloads(input: {
 }
 
 export function deriveChatgptSkillDetail(input: ChatgptSkillDetailProbe): ChatgptSkill {
-	const instructions = readString(input.instructions);
+	const instructions = readNonEmptyText(input.instructions);
 	const contentHash = instructions ? hashChatgptSkillInstructions(instructions) : null;
 	const paths = [...new Set((input.filePaths ?? []).map((path) => path.trim()).filter(Boolean))];
 	return {
@@ -219,7 +223,9 @@ export class ChatgptSkillBrowserAdapter {
 			requireVisible: true,
 			timeoutMs: 8_000,
 		});
-		if (!editor.ok) throw new Error(`Unable to open ChatGPT skill editor: ${editor.reason}.`);
+		if (!editor.ok && !editor.matchedLabel) {
+			throw new Error(`Unable to open ChatGPT skill editor: ${editor.reason}.`);
+		}
 		await waitForEditor(client, null);
 		await setEditorSource(client, source);
 		const outcome = await submitEditor(client, source, "create");
@@ -260,7 +266,9 @@ export class ChatgptSkillBrowserAdapter {
 			requireVisible: true,
 			timeoutMs: 8_000,
 		});
-		if (!confirmed.ok) throw new Error(`Unable to confirm exact deletion of ChatGPT skill ${skill.id}.`);
+		if (!confirmed.ok && !confirmed.matchedLabel) {
+			throw new Error(`Unable to confirm exact deletion of ChatGPT skill ${skill.id}.`);
+		}
 		const absent = await waitForPredicate(
 			client.Runtime,
 			`new URL(location.href).searchParams.get('skill_id') !== ${JSON.stringify(skill.id)}`,
@@ -410,8 +418,9 @@ async function readDetailProbe(
       const descriptionNode = document.querySelector('[data-testid*="description"], [class*="description"]');
       const filePaths = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible).map((n) => normalize(n.textContent)).filter((value) => /(?:^|\\/)[^\\/]+\\.[a-z0-9]+$/i.test(value));
       const editor = document.querySelector('.cm-content');
-      const pre = Array.from(document.querySelectorAll('pre,code')).find(visible);
-      const instructions = editor?.textContent || pre?.textContent || null;
+	  const pre = Array.from(document.querySelectorAll('pre,code')).find(visible);
+	  const editorLines = editor ? Array.from(editor.querySelectorAll('.cm-line')).map((line) => line.textContent || '') : [];
+	  const instructions = editor ? editorLines.join('\n') : pre?.textContent || null;
       return { id, name, owner: ownerMatch?.[1] || null, description: normalize(descriptionNode?.textContent) || null, filePaths, instructions };
     })()`,
 		returnByValue: true,
@@ -424,7 +433,7 @@ async function readDetailProbe(
 		owner: readString(value.owner),
 		description: readString(value.description),
 		filePaths: readStringArray(value.filePaths),
-		instructions: readString(value.instructions),
+		instructions: readNonEmptyText(value.instructions),
 	};
 }
 
@@ -500,7 +509,7 @@ async function setCodeMirrorValue(client: ChromeClient, value: string): Promise<
 	await client.Input.insertText({ text: value });
 	const ready = await waitForPredicate(
 		client.Runtime,
-		`String(document.querySelector('.cm-content')?.textContent || '').replace(/\\r\\n?/g, '\\n').trimEnd() === ${JSON.stringify(
+		`Array.from(document.querySelectorAll('.cm-content .cm-line')).map((line) => line.textContent || '').join('\\n').replace(/\\r\\n?/g, '\\n').trimEnd() === ${JSON.stringify(
 			value.trimEnd(),
 		)}`,
 		{ timeoutMs: 5_000, description: "exact ChatGPT Skill editor content" },
@@ -520,7 +529,9 @@ async function submitEditor(
 		requireVisible: true,
 		timeoutMs: 8_000,
 	});
-	if (!submitted.ok) throw new Error(`Unable to submit ChatGPT Skill ${action}: ${submitted.reason}.`);
+	if (!submitted.ok && !submitted.matchedLabel) {
+		throw new Error(`Unable to submit ChatGPT Skill ${action}: ${submitted.reason}.`);
+	}
 	const settled = await waitForPredicate(
 		client.Runtime,
 		`location.pathname === '/skills' && /^[a-f0-9]{32}$/.test(new URL(location.href).searchParams.get('skill_id') || '')`,
@@ -593,6 +604,10 @@ function normalizeReviewStatus(value: string | null | undefined): ChatgptSkill["
 
 function readString(value: unknown): string | null {
 	return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readNonEmptyText(value: unknown): string | null {
+	return typeof value === "string" && value.trim() ? value : null;
 }
 
 function readStringArray(value: unknown): string[] {

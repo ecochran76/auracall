@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: CREATE_PRESUBMIT_REPAIR_ACCEPTED_REINSTALL_READY
+Operational state: EDITOR_READBACK_REPAIR_ACCEPTED_REINSTALL_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 4 | 2026-09-02
+Revision: 5 | 2026-09-02
 
 ## Stable Objective
 
@@ -49,6 +49,12 @@ and leaving no provider artifact behind.
   postcondition is now authoritative after the trusted CDP pointer dispatch;
   no provider mutation or canary artifact occurred. Focused tests, typecheck,
   build, scoped lint, and diff hygiene pass for the repair.
+- The next create attempt reached the editor and stopped before submit because
+  CodeMirror exposes newline-separated `.cm-line` elements whose parent
+  `textContent` concatenates lines. A disposable no-submit draft proved all
+  fields accepted and Create enabled. Line-aware readback now preserves exact
+  source hashing, and post-dispatch submit/confirm loss proceeds only to exact
+  postcondition observation or terminal `outcome-unknown`.
 
 ## Execution Graph
 

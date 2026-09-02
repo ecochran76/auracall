@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 548 | 2026-09-02
+
+- The next P22 create reached a fully enabled disposable editor but stopped
+  before submit because parent CodeMirror text concatenated its visual lines.
+  No Skill artifact exists and the original three tabs are restored.
+- Line-aware content readback and post-dispatch outcome fencing are green in the
+  33-test focused packet plus typecheck, scoped lint, and diff hygiene. Rebuild,
+  publish/reinstall, and the still-unused CRUD mutation sequence remain.
+
 ## Turn 547 | 2026-09-02
 
 - Reinstalled exact-account inventory passed with 11 existing stable IDs. The

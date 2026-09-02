@@ -48,6 +48,19 @@
   receipt as stronger than the rendered provider state. The 33-test packet,
   typecheck, build, scoped zero-warning lint, and diff hygiene pass.
 
+## 2026-09-02 | Plan 0329 editor line-readback repair
+
+- The next create reached the editor and stopped before submit: CodeMirror's
+  parent text concatenates `.cm-line` nodes, so exact newline-preserving source
+  readback could not pass. A disposable no-submit draft proved name,
+  description, and instruction fields accepted and Create enabled; it was
+  closed with the original three tabs restored.
+- Detail and editor verification now join CodeMirror lines explicitly and
+  preserve instruction whitespace for hashing. If submit or delete pointer
+  dispatch loses its receipt during navigation, the adapter observes the exact
+  postcondition and otherwise returns terminal `outcome-unknown`; it cannot
+  surface false retry authority.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules

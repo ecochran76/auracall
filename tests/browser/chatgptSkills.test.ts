@@ -4,6 +4,7 @@ import {
 	deriveChatgptSkillDetail,
 	deriveChatgptSkillState,
 	hashChatgptSkillInstructions,
+	joinChatgptCodeMirrorLines,
 	normalizeChatgptSkillInventoryPayloads,
 	readChatgptSkillIdFromUrl,
 } from "../../src/browser/providers/chatgptSkills.js";
@@ -72,6 +73,9 @@ describe("ChatGPT Skill provider contracts", () => {
 	});
 
 	it("hashes canonical SKILL.md readback and binds it to the exact detail id", () => {
+		expect(joinChatgptCodeMirrorLines(["# Canary", "", "Do one thing.", ""])).toBe(
+			"# Canary\n\nDo one thing.\n",
+		);
 		const detail = deriveChatgptSkillDetail({
 			id: "a".repeat(32),
 			name: "Canary",
