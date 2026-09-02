@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 544 | 2026-09-02
+
+- Opened [Plan 0329](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)
+  as P22 after Plan 0328 integrated and passed installed/live acceptance.
+- P22 will first open and close the exact-account Skill create surface without
+  upload or submit, then implement exact-ID list/show/create/update/delete with
+  provider-free TDD and one disposable zero-retry live canary.
+- The lane permits no skill invocation, prompt Send, `Answer now`, scheduler,
+  completion, materialization, developer-app, OAuth, API restart, or unrelated
+  browser effect. P16 remains unfinished and is an explicit integration overlap.
+
 ## Turn 543 | 2026-09-02
 
 - Plan 0328 closes `INSTALLED_LIVE_ACCEPTED`. The second canary timed out at 30

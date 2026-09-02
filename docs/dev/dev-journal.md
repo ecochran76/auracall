@@ -1,3 +1,15 @@
+## 2026-09-02 | Plan 0329 ChatGPT Skill CRUD opened
+
+- Plan 0328 is integrated and installed/live accepted, so the handoff's timeout
+  gate is clear. P22 now owns exact-account, exact-ID Skill CRUD.
+- The first gate is one read-only create-surface open/close on `wsl-chrome-3`.
+  Provider-free implementation and validation must precede any upload or
+  submit; live proof is limited to one disposable create/update/delete with
+  zero retries and exact absence proof.
+- P16 remains unfinished and overlaps CLI registration plus generic ChatGPT
+  browser primitives. P22 keeps Skill lifecycle semantics in separate modules
+  and must reconcile that branch before integration.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules
