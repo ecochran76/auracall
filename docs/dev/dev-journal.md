@@ -48447,3 +48447,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   confirmed the exact editor is the durable content-addressed read surface, so
   `show` and optimistic update preflight now read the ID and source there.
   Provider-free gates pass again; the canary remains unchanged at v1.
+- Workspace-runtime proof found a second read-only failure before mutation: the
+  generated editor probe contained a literal newline inside its JavaScript
+  string delimiter. Escaping the delimiter and evaluating the generated probe
+  in a regression restored exact v1 hash readback. The 34-test packet and all
+  static/build gates pass; the final installed mutation sequence is still
+  untouched.

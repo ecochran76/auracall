@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	buildChatgptSkillEditorProbeExpression,
 	deriveChatgptSkillDetail,
 	deriveChatgptSkillState,
 	hashChatgptSkillInstructions,
@@ -99,5 +100,37 @@ describe("ChatGPT Skill provider contracts", () => {
 		expect(readChatgptSkillIdFromUrl("https://chatgpt.com/skills?skill_id=Canary")).toBeNull();
 		expect(readChatgptSkillIdFromUrl("https://chatgpt.com/skills/editor/Canary")).toBeNull();
 		expect(readChatgptSkillIdFromUrl(`https://example.com/skills?skill_id=${"b".repeat(32)}`)).toBeNull();
+	});
+
+	it("builds an executable editor probe that preserves CodeMirror line breaks", () => {
+		const id = "d".repeat(32);
+		const editor = {
+			querySelectorAll: () => [
+				{ textContent: "# Canary" },
+				{ textContent: "" },
+				{ textContent: "Return ready." },
+			],
+		};
+		const document = {
+			querySelector: (selector: string) => {
+				if (selector.includes("-name")) return { value: " Canary " };
+				if (selector.includes("-description")) return { value: " Probe " };
+				if (selector === ".cm-content") return editor;
+				return null;
+			},
+		};
+		const evaluate = new Function(
+			"document",
+			"location",
+			`return ${buildChatgptSkillEditorProbeExpression(id)}`,
+		);
+		expect(evaluate(document, { pathname: `/skills/editor/${id}` })).toEqual({
+			id,
+			name: "Canary",
+			owner: null,
+			description: "Probe",
+			filePaths: ["SKILL.md"],
+			instructions: "# Canary\n\nReturn ready.",
+		});
 	});
 });

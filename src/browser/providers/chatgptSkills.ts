@@ -76,6 +76,21 @@ export function readChatgptSkillIdFromUrl(value: string): string | null {
 	}
 }
 
+export function buildChatgptSkillEditorProbeExpression(id: string): string {
+	return `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const route = location.pathname.match(/^\\/skills\\/editor\\/([a-f0-9]{32})$/i);
+      const routeId = route?.[1]?.toLowerCase() || '';
+      if (routeId !== ${JSON.stringify(id)}) return null;
+      const name = document.querySelector('input[id$="-name"]')?.value || '';
+      const description = document.querySelector('textarea[id$="-description"]')?.value || '';
+      const editor = document.querySelector('.cm-content');
+	  const editorLines = editor ? Array.from(editor.querySelectorAll('.cm-line')).map((line) => line.textContent || '') : [];
+	  const instructions = editor ? editorLines.join('\\n') : null;
+      return { id: routeId, name: normalize(name), owner: null, description: normalize(description) || null, filePaths: ['SKILL.md'], instructions };
+    })()`;
+}
+
 export function deriveChatgptSkillState(input: {
 	identity: SkillIdentity | null;
 	inventory: ChatgptSkillInventoryProbe;
@@ -189,8 +204,21 @@ export class ChatgptSkillBrowserAdapter {
 		await navigateSkills(client, `https://chatgpt.com/skills/editor/${id}`);
 		await assertNoBlockingSurface(client, `read skill ${id}`);
 		await waitForEditor(client, id);
+		const sourceReady = await waitForPredicate(
+			client.Runtime,
+			`(() => {
+      const name = document.querySelector('input[id$="-name"]')?.value || '';
+      const lines = Array.from(document.querySelectorAll('.cm-content .cm-line')).map((line) => line.textContent || '');
+      return name.trim().length > 0 && lines.join('\\n').trim().length > 0;
+    })()`,
+			{ timeoutMs: 12_000, description: `persisted ChatGPT Skill source ${id}` },
+		);
+		if (!sourceReady.ok) {
+			throw new Error(`ChatGPT skill ${id} editor did not expose persisted source.`);
+		}
 		const probe = await readEditorProbe(client, id);
-		return probe ? deriveChatgptSkillDetail(probe) : null;
+		if (!probe) throw new Error(`ChatGPT skill ${id} editor source probe was unavailable.`);
+		return deriveChatgptSkillDetail(probe);
 	}
 
 	async create(source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome> {
@@ -424,18 +452,7 @@ async function readEditorProbe(
 	id: string,
 ): Promise<ChatgptSkillDetailProbe | null> {
 	const result = await client.Runtime.evaluate({
-		expression: `(() => {
-      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const route = location.pathname.match(/^\\/skills\\/editor\\/([a-f0-9]{32})$/i);
-      const routeId = route?.[1]?.toLowerCase() || '';
-      if (routeId !== ${JSON.stringify(id)}) return null;
-      const name = document.querySelector('input[id$="-name"]')?.value || '';
-      const description = document.querySelector('textarea[id$="-description"]')?.value || '';
-      const editor = document.querySelector('.cm-content');
-	  const editorLines = editor ? Array.from(editor.querySelectorAll('.cm-line')).map((line) => line.textContent || '') : [];
-	  const instructions = editor ? editorLines.join('\n') : null;
-      return { id: routeId, name: normalize(name), owner: null, description: normalize(description) || null, filePaths: ['SKILL.md'], instructions };
-    })()`,
+		expression: buildChatgptSkillEditorProbeExpression(id),
 		returnByValue: true,
 	});
 	const value = isRecord(result.result?.value) ? result.result.value : null;

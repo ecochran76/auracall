@@ -6,7 +6,7 @@ Operational state: LIVE_RESUMED_UPDATE_DELETE_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 8 | 2026-09-02
+Revision: 9 | 2026-09-02
 
 ## Stable Objective
 
@@ -96,6 +96,14 @@ and leaving no provider artifact behind.
   typecheck, production build, scoped lint, and diff hygiene. One corrective
   reinstall is required before the canary may proceed; no update or delete has
   been dispatched.
+- Workspace-runtime readback localized the remaining failure to an invalid
+  generated browser expression: the TypeScript template converted the intended
+  CodeMirror `join('\\n')` delimiter into a literal newline inside a JavaScript
+  string. Escaping the generated delimiter restored exact readback of v1 hash
+  `542533651dddbac3a44de8de44b398f498c686212df40b5542f448351823547d`.
+  A new executable-expression regression freezes the boundary; 34 focused and
+  adjacent tests, typecheck, production build, scoped lint, and diff hygiene
+  pass. The canary remains unchanged and no mutation has been dispatched.
 
 ## Execution Graph
 

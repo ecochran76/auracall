@@ -22163,3 +22163,8 @@ browser-stage lifecycle observability, not transcript truncation.
   CodeMirror lines in one surface; normalize and hash those lines directly.
   Keep collection/review ownership sourced from the separate complete
   inventory responses rather than inferring it from the editor.
+- 2026-09-02: Browser expressions generated inside TypeScript template strings
+  need a double-escaped newline delimiter. A source-level `join('\\n')` can
+  become a literal newline inside the emitted JavaScript string and fail at
+  runtime even though TypeScript, build, and lint pass. Export the expression
+  builder and execute it in a regression with representative CodeMirror lines.
