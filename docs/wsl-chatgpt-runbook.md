@@ -224,6 +224,13 @@ effects at zero. The durable receipt is
   - If Chrome owns the directory but no responsive endpoint can be attributed,
     AuraCall fails closed instead of launching a second Chrome on a dynamic
     port. Inspect or close only the exact owned process before retrying.
+- **A long response reports `observation_expired_generation_active`**:
+  - The model run is still active; the observer lease expired. Do not resend
+    the prompt or click `Answer now`.
+  - Run `auracall session <id>` to reattach read-only to the persisted exact
+    browser target and conversation. AuraCall keeps healthy growing output in
+    place and permits a same-conversation refresh only for stale/interrupted
+    observation, at most once per 15 minutes.
 - **Using Windows Chrome from WSL**:
   - Keep `manualLoginProfileDir` as a WSL path if you override it; Aura-Call converts it to the `\\wsl.localhost\...` path for Windows Chrome.
   - If DevTools can’t be reached, open the Windows firewall for the chosen port or pin a port with `AURACALL_BROWSER_PORT`.

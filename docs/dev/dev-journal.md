@@ -1,3 +1,27 @@
+## 2026-09-02 | Plan 0326 long-prompt observation recovery opened
+
+- LitScout Experiment 51 proved AuraCall confused observer expiry with model
+  failure: positive active-generation evidence was persisted as terminal error,
+  while later read-only reattachment recovered the completed same-turn output.
+- Source diagnosis binds the defect to `performSessionRun` timeout persistence
+  and `runBrowserMode` abort cleanup. The existing Session reattachment path is
+  the recovery seam and must remain no-replay.
+- Plan 0326 is provider-free and bounded to nonterminal classification, exact
+  browser/turn evidence preservation, and one progress-aware recovery guard
+  with a 15-minute cooldown. ChatGPT skill CRUD remains separate.
+- The first implementation loop now preserves qualifying expiry as a running
+  Session/model run, retains the exact managed browser for read-only reattach,
+  adds stable assistant message/turn/fingerprint progress evidence, and routes
+  refresh through a same-conversation 15-minute cooldown. It deliberately does
+  not reuse the Cloudflare/manual-clear wrapper.
+- Provider-free verification is green for 66 focused classification/browser
+  tests, 82 adjacent reattachment/display tests, and TypeScript typecheck.
+- Production build, scoped Biome lint, plan audit, and diff hygiene also pass.
+  The full suite passed 3,038 tests in 324 files; its one unrelated failure is
+  the stale raw-DevTools allowlist entry for an existing approval-observation
+  script that no longer contains a direct mutation. Plan 0326 is closed as
+  provider-free accepted, with integration and installed/live proof separate.
+
 ## 2026-09-02 | LitScout Experiment 51 monitoring and skill-lifecycle handoffs
 
 - Added two independent durable handoffs from the corrected LitScout

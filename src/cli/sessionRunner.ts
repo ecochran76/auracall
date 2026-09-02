@@ -17,6 +17,10 @@ import {
   extractTextOutput,
 } from '../oracle.js';
 import { runBrowserSessionExecution, type BrowserSessionRunnerDeps } from '../browser/sessionRunner.js';
+import {
+  isActiveGenerationObservationExpiry,
+  readBrowserResponseProgressEvidence,
+} from '../browser/observationLease.js';
 import { renderMarkdownAnsi } from './markdownRenderer.js';
 import { formatResponseMetadata, formatTransportMetadata } from './sessionDisplay.js';
 import { markErrorLogged } from './errorUtils.js';
@@ -131,6 +135,7 @@ export async function performSessionRun({
     return muteStdout ? true : process.stdout.write(chunk);
   };
   const browserContext = sessionMeta.browser?.context;
+  let latestBrowserRuntime = sessionMeta.browser?.runtime;
   const notificationSettings = notifications ?? deriveNotificationSettingsFromMetadata(sessionMeta, process.env);
   const modelForStatus = runOptions.model ?? sessionMeta.model;
   try {
@@ -156,6 +161,7 @@ export async function performSessionRun({
           if (browserAbortController?.signal.aborted) {
             return;
           }
+          latestBrowserRuntime = runtime;
           await sessionStore.updateSession(sessionMeta.id, {
             status: 'running',
             browser: { config: browserConfig, runtime, context: browserContext },
@@ -466,16 +472,55 @@ export async function performSessionRun({
     log(`ERROR: ${message}`);
     markErrorLogged(error);
     const userError = asOracleUserError(error);
-    const browserResponseProgress =
-      error && typeof error === 'object' && 'browserResponseProgress' in error
-        ? (error as { browserResponseProgress?: Record<string, unknown> }).browserResponseProgress
-        : undefined;
+    const browserResponseProgress = readBrowserResponseProgressEvidence(error);
     const browserRuntime =
       userError?.category === 'browser-automation'
         ? ((userError.details as { runtime?: BrowserRuntimeMetadata } | undefined)?.runtime ?? undefined)
         : undefined;
     const connectionLost =
       userError?.category === 'browser-automation' && (userError.details as { stage?: string } | undefined)?.stage === 'connection-lost';
+    const observationExpiredWhileGenerationActive =
+      isActiveGenerationObservationExpiry(error) &&
+      hasExactBrowserReattachIdentity(latestBrowserRuntime);
+    if (observationExpiredWhileGenerationActive && mode === 'browser') {
+      const incompleteReason = 'observation_expired_generation_active';
+      const recoveryError = {
+        category: 'browser-observation-expired',
+        message,
+        details: {
+          browserResponseProgress,
+          recovery: 'read-only-reattach',
+        },
+      };
+      log(
+        dim(
+          `Observation lease expired while ChatGPT was still generating; keeping the exact turn running for read-only reattach with auracall session ${sessionMeta.id}.`,
+        ),
+      );
+      if (modelForStatus) {
+        await sessionStore.updateModelRun(sessionMeta.id, modelForStatus, {
+          status: 'running',
+          completedAt: undefined,
+          response: { status: 'running', incompleteReason },
+          error: recoveryError,
+        });
+      }
+      await sessionStore.updateSession(sessionMeta.id, {
+        status: 'running',
+        completedAt: undefined,
+        errorMessage: message,
+        mode,
+        browser: {
+          config: browserConfig,
+          runtime: latestBrowserRuntime,
+          context: browserContext,
+        },
+        response: { status: 'running', incompleteReason },
+        transport: undefined,
+        error: recoveryError,
+      });
+      return;
+    }
     if (connectionLost && mode === 'browser') {
       const runtime = (userError.details as { runtime?: BrowserRuntimeMetadata } | undefined)?.runtime;
       log(dim('Chrome disconnected before completion; keeping session running for reattach.'));
@@ -570,6 +615,19 @@ export async function performSessionRun({
       }
     }
   }
+}
+
+function hasExactBrowserReattachIdentity(runtime: BrowserRuntimeMetadata | undefined): runtime is BrowserRuntimeMetadata {
+  return Boolean(
+    runtime &&
+      typeof runtime.chromePort === 'number' &&
+      typeof runtime.chromeTargetId === 'string' &&
+      runtime.chromeTargetId.trim().length > 0 &&
+      typeof runtime.tabUrl === 'string' &&
+      runtime.tabUrl.trim().length > 0 &&
+      typeof runtime.conversationId === 'string' &&
+      runtime.conversationId.trim().length > 0,
+  );
 }
 
 function formatError(error: unknown): string {

@@ -91,6 +91,12 @@ import {
 } from "./domDebug.js";
 import { recordBrowserOperationQueueObservation } from "./operationQueueObservations.js";
 import {
+	BrowserObservationLeaseExpiredError,
+	type BrowserResponseProgressEvidence,
+	decideChatgptObservationRecovery,
+	isActiveGenerationObservationExpiry,
+} from "./observationLease.js";
+import {
 	type AssistantResponseBoundary,
 	captureAssistantMarkdown,
 	clearComposerAttachments,
@@ -863,6 +869,14 @@ function shouldPreserveBrowserOnError(error: unknown, headless: boolean): boolea
 
 export function shouldPreserveBrowserOnErrorForTest(error: unknown, headless: boolean): boolean {
 	return shouldPreserveBrowserOnError(error, headless);
+}
+
+function shouldPreserveBrowserForObservationExpiry(error: unknown): boolean {
+	return isActiveGenerationObservationExpiry(error);
+}
+
+export function shouldPreserveBrowserForObservationExpiryForTest(error: unknown): boolean {
+	return shouldPreserveBrowserForObservationExpiry(error);
 }
 
 function shouldKeepManagedChatgptBrowserOpen(options: {
@@ -2021,6 +2035,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					if (progress && reason && typeof reason === "object") {
 						(reason as { browserResponseProgress?: typeof progress }).browserResponseProgress =
 							progress;
+						if (shouldPreserveBrowserForObservationExpiry(reason)) {
+							preserveBrowserOnError = true;
+						}
 						logger(`[browser] terminal response state: ${JSON.stringify(progress)}`);
 					}
 					reject(reason);
@@ -3024,6 +3041,15 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			throw options.abortSignal.reason;
 		}
 		const normalizedError = error instanceof Error ? error : new Error(String(error));
+		if (shouldPreserveBrowserForObservationExpiry(normalizedError)) {
+			preserveBrowserOnError = true;
+			stopThinkingMonitor?.();
+			await emitRuntimeHint();
+			logger(
+				"ChatGPT is still generating after the observation lease; leaving the exact browser available for read-only reattachment.",
+			);
+			throw normalizedError;
+		}
 		const guardedError = await handleChatgptBrowserRateLimitFailure({
 			config,
 			logger,
@@ -4354,19 +4380,67 @@ async function waitForAssistantResponseWithReload(
 	options: {
 		onResponseIncoming?: () => void | Promise<void>;
 		onPassiveDomProbe?: () => void | Promise<void>;
+		onProgress?: (progress: BrowserResponseProgressEvidence) => void | Promise<void>;
 	} = {},
 ) {
+	const progressTracker: { latest: BrowserResponseProgressEvidence | null } = { latest: null };
+	let latestProgressFingerprint: string | null = null;
+	let lastProgressChangeAtMs: number | null = null;
+	const upstreamOnProgress = options.onProgress;
+	const trackedOptions = {
+		...options,
+		onProgress: async (progress: BrowserResponseProgressEvidence) => {
+			progressTracker.latest = progress;
+			const fingerprint =
+				typeof progress.assistantTextFingerprint === "string"
+					? progress.assistantTextFingerprint
+					: `${String(progress.assistantMessageId ?? "")}:${String(progress.assistantTextChars ?? "")}`;
+			if (fingerprint !== latestProgressFingerprint) {
+				latestProgressFingerprint = fingerprint;
+				lastProgressChangeAtMs = Date.now();
+			}
+			await upstreamOnProgress?.(progress);
+		},
+	};
 	try {
-		return await waitForAssistantResponse(Runtime, timeoutMs, logger, responseBoundary, options);
+		return await waitForAssistantResponse(Runtime, timeoutMs, logger, responseBoundary, trackedOptions);
 	} catch (error) {
 		if (!shouldReloadAfterAssistantError(error)) {
+			throw error;
+		}
+		const observedProgress = await readAssistantResponseProgress(Runtime, responseBoundary).catch(
+			() => null,
+		);
+		if (observedProgress) {
+			await trackedOptions.onProgress(observedProgress);
+		} else if (progressTracker.latest) {
+			progressTracker.latest = { ...progressTracker.latest, connectionInterrupted: true };
+		}
+		const lastRecoveryAtMs = chatgptObservationRecoveryAt.get(Runtime as object) ?? null;
+		const decision = decideChatgptObservationRecovery({
+			progress: progressTracker.latest,
+			nowMs: Date.now(),
+			lastProgressChangeAtMs,
+			lastRecoveryAtMs,
+		});
+		if (decision.action === "heartbeat" || decision.action === "wait") {
+			throw new BrowserObservationLeaseExpiredError(progressTracker.latest ?? {}, error);
+		}
+		if (decision.action !== "refresh") {
 			throw error;
 		}
 		const conversationUrl = await readConversationUrl(Runtime);
 		if (!conversationUrl || !isConversationUrl(conversationUrl)) {
 			throw error;
 		}
-		logger("Assistant response stalled; reloading conversation and retrying once");
+		const conversationId = extractConversationIdFromUrl(conversationUrl);
+		if (!conversationId) {
+			throw error;
+		}
+		chatgptObservationRecoveryAt.set(Runtime as object, Date.now());
+		logger(
+			`Assistant observation ${decision.reason}; refreshing the exact conversation once and reattaching read-only`,
+		);
 		const settled = await navigateAndSettle(
 			{ Page, Runtime },
 			{
@@ -4378,10 +4452,29 @@ async function waitForAssistantResponseWithReload(
 		if (!settled.ok) {
 			throw error;
 		}
+		const settledUrl = await readConversationUrl(Runtime);
+		if (settledUrl === null || extractConversationIdFromUrl(settledUrl) !== conversationId) {
+			throw error;
+		}
 		await delay(1000);
-		return await waitForAssistantResponse(Runtime, timeoutMs, logger, responseBoundary, options);
+		try {
+			return await waitForAssistantResponse(Runtime, timeoutMs, logger, responseBoundary, trackedOptions);
+		} catch (retryError) {
+			const retryProgress = await readAssistantResponseProgress(Runtime, responseBoundary).catch(
+				() => progressTracker.latest,
+			);
+			if (retryProgress) {
+				const activeRetryError = new BrowserObservationLeaseExpiredError(retryProgress, retryError);
+				if (isActiveGenerationObservationExpiry(activeRetryError)) {
+					throw activeRetryError;
+				}
+			}
+			throw retryError;
+		}
 	}
 }
+
+const chatgptObservationRecoveryAt = new WeakMap<object, number>();
 
 function shouldReloadAfterAssistantError(error: unknown): boolean {
 	if (!(error instanceof Error)) return false;

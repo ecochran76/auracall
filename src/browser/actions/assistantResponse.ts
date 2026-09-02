@@ -17,6 +17,7 @@ const PASSIVE_DOM_PROBE_INTERVAL_MS = 5_000;
 export interface WaitForAssistantResponseOptions {
   onResponseIncoming?: () => void | Promise<void>;
   onPassiveDomProbe?: () => void | Promise<void>;
+  onProgress?: (progress: AssistantResponseProgress) => void | Promise<void>;
 }
 
 export interface AssistantResponseBoundary {
@@ -36,6 +37,9 @@ export interface AssistantResponseProgress {
   boundaryState: 'position' | 'stable-identity' | 'stable-text' | 'unresolved' | 'none';
   assistantTurnIndex: number | null;
   assistantTextChars: number;
+  assistantMessageId: string | null;
+  assistantTurnId: string | null;
+  assistantTextFingerprint: string | null;
   stopVisible: boolean;
   completionVisible: boolean;
   toolApprovalCardsVisible: number;
@@ -554,6 +558,10 @@ async function pollAssistantCompletion(
     if (observedAt - lastPassiveProbeAt >= PASSIVE_DOM_PROBE_INTERVAL_MS) {
       lastPassiveProbeAt = observedAt;
       await options.onPassiveDomProbe?.();
+      const progress = await readAssistantResponseProgress(Runtime, responseBoundary).catch(() => null);
+      if (progress) {
+        await options.onProgress?.(progress);
+      }
     }
     const normalized = normalizeAssistantSnapshot(snapshot);
     if (normalized) {
@@ -746,6 +754,8 @@ function buildAssistantResponseProgressExpression(responseBoundary?: AssistantRe
     const turns = Array.from(document.querySelectorAll(CONVERSATION_SELECTOR));
     let assistantTurn = null;
     let assistantTurnIndex = null;
+    let assistantMessageId = null;
+    let assistantTurnId = null;
     let boundaryState = null;
     for (let index = turns.length - 1; index >= 0; index -= 1) {
       const turn = turns[index];
@@ -763,6 +773,8 @@ function buildAssistantResponseProgressExpression(responseBoundary?: AssistantRe
       if (!candidateBoundaryState) continue;
       assistantTurn = turn;
       assistantTurnIndex = index;
+      assistantMessageId = turn.getAttribute('data-message-id') || messageNode?.getAttribute?.('data-message-id') || null;
+      assistantTurnId = turn.getAttribute('data-testid') || null;
       boundaryState = candidateBoundaryState;
       break;
     }
@@ -772,6 +784,7 @@ function buildAssistantResponseProgressExpression(responseBoundary?: AssistantRe
       candidates.push(...Array.from(assistantTurn.querySelectorAll(CONTENT_SELECTOR)));
     }
     let assistantTextChars = 0;
+    let assistantTextFingerprint = null;
     for (let index = candidates.length - 1; index >= 0; index -= 1) {
       const candidate = candidates[index];
       if (!(candidate instanceof HTMLElement)) continue;
@@ -780,6 +793,7 @@ function buildAssistantResponseProgressExpression(responseBoundary?: AssistantRe
       const text = String(candidate.innerText || candidate.textContent || '').trim();
       if (!text) continue;
       assistantTextChars = text.length;
+      assistantTextFingerprint = fingerprintBoundaryText(text);
       break;
     }
     const toolApprovalCardsVisible = assistantTurn
@@ -814,6 +828,9 @@ function buildAssistantResponseProgressExpression(responseBoundary?: AssistantRe
       boundaryState: boundaryState ?? (MIN_TURN_INDEX >= 0 ? 'unresolved' : 'none'),
       assistantTurnIndex,
       assistantTextChars,
+      assistantMessageId,
+      assistantTurnId,
+      assistantTextFingerprint,
       stopVisible,
       completionVisible,
       toolApprovalCardsVisible,

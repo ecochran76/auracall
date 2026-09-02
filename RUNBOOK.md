@@ -1,5 +1,32 @@
 # RUNBOOK
 
+## Turn 539 | 2026-09-02
+
+- Opened [Plan 0326](docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md)
+  on isolated branch `fix/plan0326-long-prompt-observation-recovery` from
+  current `origin/main` after the existing Plan 0315 checkout was found dirty
+  with an unresolved journal conflict.
+- Current source confirms the 3,600-second CLI observer abort already captures
+  `browserResponseProgress`, but the Session runner terminalizes every timeout
+  and browser cleanup normally closes the exact active Chrome. Existing Session
+  display/reattachment can recover the same running turn without replaying the
+  prompt when exact runtime identity survives.
+- P19 will first freeze that terminalization defect, then preserve only
+  positively active generation as resumable and add one provider-local,
+  progress-aware 15-minute recovery guard. This slice is provider-free; no
+  browser, provider, install, restart, scheduler, or live action is authorized.
+- Implemented the provider-free path: qualifying expiry persists running state
+  and exact turn/browser evidence, browser cleanup retains the exact managed
+  browser, and recovery distinguishes healthy progress from stale/interrupted
+  observation before any same-conversation refresh. The combined focused and
+  adjacent packet passed 148 tests; typecheck, production build, scoped Biome
+  lint, plan audit, and diff hygiene also passed.
+- Plan 0326 is provider-free accepted. The full suite passed 3,038 tests across
+  324 files with live tests excluded/skipped; its sole failure is an unrelated
+  stale raw-DevTools allowlist expectation for an existing script that no
+  longer contains direct navigation. Commit, push, and main integration remain;
+  no installed or live claim is made.
+
 ## Turn 538 | 2026-08-29
 
 - Read-only ownership evidence proved the browser blocking P14 cleanup was not

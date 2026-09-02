@@ -1,3 +1,12 @@
+- 2026-09-02: Keep long-prompt browser retention separate from manual-clear
+  preservation. Observation expiry is resumable only with non-empty assistant
+  text, a visible Stop control, no completion/dialog signal, and exact browser
+  plus conversation identity. Persist that Session/model run as running, leave
+  the managed browser open for read-only reattachment, and never pass this
+  condition through the Cloudflare/CAPTCHA error wrapper. Recovery refreshes
+  require stale or interrupted progress, target the same conversation, and use
+  one 15-minute Runtime cooldown.
+
 - 2026-09-02: A browser observer deadline is not a model deadline. LitScout
   Experiment 51 reached AuraCall's 3,600-second wait with 33,688 assistant-text
   characters and active-generation evidence, then completed without another

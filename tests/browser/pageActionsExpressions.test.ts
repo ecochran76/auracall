@@ -232,14 +232,28 @@ describe('browser automation expressions', () => {
       '<p>Session 68 remains at evidence gap review.</p>',
       ['.markdown'],
     );
-    const turn = new FixtureElement({ 'data-turn': 'assistant' }, '', '', '', [], {
+    const turn = new FixtureElement(
+      {
+        'data-turn': 'assistant',
+        'data-message-id': 'message-experiment-51-turn-03',
+        'data-testid': 'conversation-turn-experiment-51-03',
+      },
+      '',
+      '',
+      '',
+      [],
+      {
       '.markdown': [finalProse],
-    });
+      },
+    );
 
     const progress = runAssistantProgressFixture({ turns: [turn] });
     expect(progress).toMatchObject({
       state: 'assistant-text',
       assistantTextChars: 'Session 68 remains at evidence gap review.'.length,
+      assistantMessageId: 'message-experiment-51-turn-03',
+      assistantTurnId: 'conversation-turn-experiment-51-03',
+      assistantTextFingerprint: expect.stringMatching(/^\d+:\d+$/),
       toolApprovalCardsVisible: 0,
       url: 'https://chatgpt.com/c/fixture',
     });
