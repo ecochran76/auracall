@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: LIVE_RESUMED_UPDATE_DELETE_READY
+Operational state: LIVE_ACCEPTED_REPAIR_PENDING_INSTALL
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 9 | 2026-09-02
+Revision: 10 | 2026-09-02
 
 ## Stable Objective
 
@@ -104,6 +104,21 @@ and leaving no provider artifact behind.
   A new executable-expression regression freezes the boundary; 34 focused and
   adjacent tests, typecheck, production build, scoped lint, and diff hygiene
   pass. The canary remains unchanged and no mutation has been dispatched.
+- Installed update completed in place on exact ID
+  `6a984d155ea08191b1577849c0482a3b`; both the command postcondition and an
+  independent `show` matched v2 hash
+  `f23a2dca207aedf8d1d7668520ed35ef1a7856a6aad3491f57859f4cc592d5a7`.
+- The one installed Delete menu selection removed the skill immediately; the
+  provider exposed no second confirmation dialog, so the installed adapter
+  reported a pre-confirmation error. No Delete retry occurred. A subsequent
+  fresh complete authenticated inventory proved the exact ID absent and the
+  canary fully cleaned up.
+- The adapter now models the observed single-step destructive action: it
+  disables restoration to the deleted editor as soon as Delete is dispatched
+  and reports completion only after a new complete inventory omits the exact
+  ID. The provider-free packet passes 35 tests plus typecheck, production
+  build, scoped lint, and diff hygiene. Final install/read-only absence proof
+  and integration remain.
 
 ## Execution Graph
 

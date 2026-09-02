@@ -91,6 +91,13 @@ export function buildChatgptSkillEditorProbeExpression(id: string): string {
     })()`;
 }
 
+export function isChatgptSkillAbsentFromInventory(
+	inventory: ChatgptSkillInventoryProbe,
+	id: string,
+): boolean {
+	return inventory.complete && !inventory.entries.some((entry) => entry.id === id);
+}
+
 export function deriveChatgptSkillState(input: {
 	identity: SkillIdentity | null;
 	inventory: ChatgptSkillInventoryProbe;
@@ -296,33 +303,22 @@ export class ChatgptSkillBrowserAdapter {
 		if (!selected.ok && !selected.matchedLabel) {
 			throw new Error(`ChatGPT skill ${skill.id} did not expose one exact Delete action.`);
 		}
-		const confirmed = await pressButtonWithTrustedPointer(client, {
-			rootSelectors: ['[role="dialog"]'],
-			match: { exact: ["delete"] },
-			requireVisible: true,
-			timeoutMs: 8_000,
-		});
-		if (!confirmed.ok && !confirmed.matchedLabel) {
-			throw new Error(`Unable to confirm exact deletion of ChatGPT skill ${skill.id}.`);
-		}
-		const absent = await waitForPredicate(
-			client.Runtime,
-			`(() => { const url = new URL(location.href); return url.searchParams.get('skill_id') !== ${JSON.stringify(skill.id)} && url.pathname !== ${JSON.stringify(`/skills/editor/${skill.id}`)}; })()`,
-			{ timeoutMs: 15_000, description: `skill ${skill.id} delete navigation` },
-		);
-		const outcome: ChatgptSkillMutationOutcome = absent.ok
-			? { status: "completed", message: `${skill.id} delete submitted.`, skillId: skill.id }
+		this.restoreOriginalUrl = false;
+		const freshInventory = await captureSkillInventory(client);
+		const outcome: ChatgptSkillMutationOutcome = isChatgptSkillAbsentFromInventory(
+			freshInventory,
+			skill.id,
+		)
+			? {
+					status: "completed",
+					message: `${skill.id} delete completed with fresh inventory absence.`,
+					skillId: skill.id,
+			  }
 			: {
 					status: "outcome-unknown",
-					message: `${skill.id} delete was dispatched but the provider postcondition was not observed; do not retry.`,
+					message: `${skill.id} delete was dispatched but fresh complete inventory absence was not observed; do not retry.`,
 					skillId: skill.id,
 			  };
-		if (
-			outcome.status !== "completed" ||
-			(this.originalUrl && readChatgptSkillIdFromUrl(this.originalUrl) === skill.id)
-		) {
-			this.restoreOriginalUrl = false;
-		}
 		return outcome;
 	}
 

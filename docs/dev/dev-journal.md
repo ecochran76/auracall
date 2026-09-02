@@ -48453,3 +48453,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   in a regression restored exact v1 hash readback. The 34-test packet and all
   static/build gates pass; the final installed mutation sequence is still
   untouched.
+- Installed update then completed once on the same exact ID and independently
+  read back the deterministic v2 hash. The one Delete menu action proved
+  immediately destructive: no confirmation dialog existed, the command
+  stopped expecting one, and no Delete retry was attempted. Fresh complete
+  inventory nevertheless proves the target absent.
+- Delete handling now treats that menu selection as the sole destructive
+  dispatch, prevents restoration to the removed editor immediately, and
+  requires fresh exact-ID inventory absence before returning `completed`.
+  Thirty-five focused/adjacent tests and all static/build gates pass.

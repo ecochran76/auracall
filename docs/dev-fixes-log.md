@@ -22168,3 +22168,10 @@ browser-stage lifecycle observability, not transcript truncation.
   become a literal newline inside the emitted JavaScript string and fail at
   runtime even though TypeScript, build, and lint pass. Export the expression
   builder and execute it in a regression with representative CodeMirror lines.
+- 2026-09-02: ChatGPT's current `Created by me` Skill-card `Delete` action is
+  immediately destructive; it does not open a second confirmation dialog.
+  Treat the exact menu item press as the single mutation boundary, disable any
+  attempt to restore the now-deleted editor URL immediately, and determine the
+  outcome from a fresh complete authenticated inventory. If the exact ID is
+  still present or inventory is incomplete, return `outcome-unknown` and never
+  retry the action.

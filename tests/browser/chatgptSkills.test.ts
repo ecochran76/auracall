@@ -5,6 +5,7 @@ import {
 	deriveChatgptSkillDetail,
 	deriveChatgptSkillState,
 	hashChatgptSkillInstructions,
+	isChatgptSkillAbsentFromInventory,
 	joinChatgptCodeMirrorLines,
 	normalizeChatgptSkillInventoryPayloads,
 	readChatgptSkillIdFromUrl,
@@ -132,5 +133,17 @@ describe("ChatGPT Skill provider contracts", () => {
 			filePaths: ["SKILL.md"],
 			instructions: "# Canary\n\nReturn ready.",
 		});
+	});
+
+	it("accepts delete only from fresh complete exact-ID inventory absence", () => {
+		const id = "e".repeat(32);
+		expect(isChatgptSkillAbsentFromInventory({ complete: true, entries: [] }, id)).toBe(true);
+		expect(
+			isChatgptSkillAbsentFromInventory(
+				{ complete: true, entries: [{ id, name: "Canary", collection: "created-by-me" }] },
+				id,
+			),
+		).toBe(false);
+		expect(isChatgptSkillAbsentFromInventory({ complete: false, entries: [] }, id)).toBe(false);
 	});
 });
