@@ -48429,3 +48429,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - P21 now owns one identity smoke, one no-retry long-response timeout canary,
   and one read-only recovery of that same turn. No scheduler or skill effect is
   in scope.
+
+## 2026-09-02 | Plan 0329 recovered Skill canary resumed
+
+- The operator accepted the recovered exact-ID Skill artifact as the one
+  successful Create and authorized one update plus one delete on that same
+  canary; Create will not be retried.
+- Read-only inspection localized update to the saved editor and destructive
+  actions to the `Created by me` card menu. The adapter now requires fresh
+  complete API identity binding before it marks that one exact card and uses
+  trusted pointers for Delete plus confirmation.
+- The false-positive delete route check is repaired across both observed
+  exact-ID URL forms. Provider-free gates pass; the remaining gate is one
+  install followed by exact-hash update readback and fresh-inventory absence.

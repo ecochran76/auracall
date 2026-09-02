@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: LIVE_HARD_STOP_RECOVERABLE_CANARY
+Operational state: LIVE_RESUMED_UPDATE_DELETE_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 6 | 2026-09-02
+Revision: 7 | 2026-09-02
 
 ## Stable Objective
 
@@ -73,6 +73,21 @@ and leaving no provider artifact behind.
   because both insert near the same CLI region, so integration must preserve
   both blocks, with P16 rebased or manually resolved after P22 reaches `main`.
   No P16 code, branch, worktree, or authority was changed by this audit.
+- The operator adjudicated the recovered exact-ID artifact as the successful
+  one authorized Create and authorized resumption on that same canary. No
+  second Create is permitted or needed.
+- Read-only retained-surface inspection observed that the saved editor's
+  `More` menu contains only `Download`, while the exact skill's `Created by
+  me` card menu contains `Chat`, `Edit`, `Download`, `Uninstall`, and `Delete`.
+  The final adapter therefore updates through the exact editor route and
+  deletes only after a fresh complete API inventory binds the requested ID and
+  name to one exact `Created by me` card. Delete menu and confirmation presses
+  use trusted pointers, and both query-detail and editor-route identities must
+  be absent before the navigation postcondition can pass.
+- The resumed provider-free repair passes 12 directly affected tests,
+  typecheck, production build, scoped zero-warning lint, diff hygiene, and the
+  328-candidate zero-error plan audit. Commit/publish, one runtime install, and
+  the one update/read/delete/absence live sequence remain.
 
 ## Execution Graph
 

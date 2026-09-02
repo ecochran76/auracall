@@ -22149,3 +22149,11 @@ browser-stage lifecycle observability, not transcript truncation.
   navigate editor routes to the root before inventory capture. An older client
   that reports unknown after this exact save remains subject to its no-retry
   hard stop even when later read-only evidence recovers the artifact.
+- 2026-09-02: ChatGPT exposes different Skill action menus on the saved editor
+  and root collection cards. Treat the editor route as the exact-ID update
+  surface; before Delete, bind the requested ID and display name through a
+  fresh complete created-inventory response, require exactly one matching card
+  inside the `Created by me` section, then use trusted menu and confirmation
+  presses. A delete postcondition must reject both the query-detail and editor
+  URL forms for the target ID; checking only `skill_id` makes an editor URL a
+  false success.

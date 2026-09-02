@@ -10,7 +10,6 @@ import type {
 import type { ResolvedUserConfig } from "../../config.js";
 import {
 	navigateAndSettle,
-	openAndSelectMenuItem,
 	pressButtonWithTrustedPointer,
 	reloadAndSettle,
 	setInputValue,
@@ -195,6 +194,12 @@ export class ChatgptSkillBrowserAdapter {
 			{ timeoutMs: 8_000, description: `skill detail ${id}` },
 		);
 		if (!exactRoute.ok) return null;
+		const detailReady = await waitForPredicate(
+			client.Runtime,
+			`Array.from(document.querySelectorAll('button,[role="button"]')).some((node) => { const rect = node.getBoundingClientRect(); return rect.width > 0 && rect.height > 0 && String(node.textContent || '').trim().toLowerCase() === 'skill.md'; })`,
+			{ timeoutMs: 12_000, description: `skill detail content ${id}` },
+		);
+		if (!detailReady.ok) return null;
 		await pressButtonWithTrustedPointer(client, {
 			match: { exact: ["skill.md"] },
 			requireVisible: true,
@@ -239,14 +244,8 @@ export class ChatgptSkillBrowserAdapter {
 
 	async update(skill: ChatgptSkill, source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome> {
 		const client = await this.ensureClient();
-		await navigateSkills(client, `https://chatgpt.com/skills?skill_id=${skill.id}`);
+		await navigateSkills(client, `https://chatgpt.com/skills/editor/${skill.id}`);
 		await assertNoBlockingSurface(client, `update skill ${skill.id}`);
-		const selected = await openAndSelectMenuItem(client.Runtime, {
-			trigger: { selector: 'button[aria-label="More"]', requireVisible: true },
-			itemMatch: { exact: ["edit"] },
-			timeoutMs: 8_000,
-		});
-		if (!selected) throw new Error(`ChatGPT skill ${skill.id} did not expose one exact Edit action.`);
 		await waitForEditor(client, skill.id);
 		await setEditorSource(client, source);
 		const outcome = await submitEditor(client, source, "update", skill.id);
@@ -256,14 +255,35 @@ export class ChatgptSkillBrowserAdapter {
 
 	async delete(skill: ChatgptSkill): Promise<ChatgptSkillMutationOutcome> {
 		const client = await this.ensureClient();
-		await navigateSkills(client, `https://chatgpt.com/skills?skill_id=${skill.id}`);
+		const inventory = await captureSkillInventory(client);
+		const createdMatches = inventory.entries.filter(
+			(entry) => entry.collection === "created-by-me" && entry.name === skill.name,
+		);
+		if (!inventory.complete || createdMatches.length !== 1 || createdMatches[0]?.id !== skill.id) {
+			throw new Error(
+				`ChatGPT skill ${skill.id} could not be bound to one exact Created by me card before delete.`,
+			);
+		}
 		await assertNoBlockingSurface(client, `delete skill ${skill.id}`);
-		const selected = await openAndSelectMenuItem(client.Runtime, {
-			trigger: { selector: 'button[aria-label="More"]', requireVisible: true },
-			itemMatch: { exact: ["delete"] },
+		const cardTriggerSelector = await markCreatedSkillCardAction(client, skill.name);
+		const opened = await pressButtonWithTrustedPointer(client, {
+			selector: cardTriggerSelector,
+			requireVisible: true,
+			postSelector: '[role="menu"]',
 			timeoutMs: 8_000,
 		});
-		if (!selected) throw new Error(`ChatGPT skill ${skill.id} did not expose one exact Delete action.`);
+		if (!opened.ok && !opened.matchedLabel) {
+			throw new Error(`ChatGPT skill ${skill.id} did not expose its exact action menu.`);
+		}
+		const selected = await pressButtonWithTrustedPointer(client, {
+			rootSelectors: ['[role="menu"]'],
+			match: { exact: ["delete"] },
+			requireVisible: true,
+			timeoutMs: 8_000,
+		});
+		if (!selected.ok && !selected.matchedLabel) {
+			throw new Error(`ChatGPT skill ${skill.id} did not expose one exact Delete action.`);
+		}
 		const confirmed = await pressButtonWithTrustedPointer(client, {
 			rootSelectors: ['[role="dialog"]'],
 			match: { exact: ["delete"] },
@@ -275,7 +295,7 @@ export class ChatgptSkillBrowserAdapter {
 		}
 		const absent = await waitForPredicate(
 			client.Runtime,
-			`new URL(location.href).searchParams.get('skill_id') !== ${JSON.stringify(skill.id)}`,
+			`(() => { const url = new URL(location.href); return url.searchParams.get('skill_id') !== ${JSON.stringify(skill.id)} && url.pathname !== ${JSON.stringify(`/skills/editor/${skill.id}`)}; })()`,
 			{ timeoutMs: 15_000, description: `skill ${skill.id} delete navigation` },
 		);
 		const outcome: ChatgptSkillMutationOutcome = absent.ok
@@ -285,7 +305,12 @@ export class ChatgptSkillBrowserAdapter {
 					message: `${skill.id} delete was dispatched but the provider postcondition was not observed; do not retry.`,
 					skillId: skill.id,
 			  };
-		if (outcome.status !== "completed") this.restoreOriginalUrl = false;
+		if (
+			outcome.status !== "completed" ||
+			(this.originalUrl && readChatgptSkillIdFromUrl(this.originalUrl) === skill.id)
+		) {
+			this.restoreOriginalUrl = false;
+		}
 		return outcome;
 	}
 
@@ -444,6 +469,33 @@ async function readDetailProbe(
 		filePaths: readStringArray(value.filePaths),
 		instructions: readNonEmptyText(value.instructions),
 	};
+}
+
+async function markCreatedSkillCardAction(client: ChromeClient, name: string): Promise<string> {
+	const marker = `chatgpt-skill-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	const marked = await waitForPredicate(
+		client.Runtime,
+		`(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const sections = Array.from(document.querySelectorAll('section')).filter((section) =>
+        Array.from(section.querySelectorAll('h1,h2,h3,[role="heading"]')).some((heading) => normalize(heading.textContent).toLowerCase() === 'created by me')
+      );
+      if (sections.length !== 1) return false;
+      const cards = Array.from(sections[0].querySelectorAll('article[role="button"]')).filter((card) =>
+        String(card.innerText || '').split('\\n')[0].trim() === ${JSON.stringify(name)}
+      );
+      if (cards.length !== 1) return false;
+      const trigger = cards[0].querySelector('button[aria-label="More actions"]');
+      if (!(trigger instanceof HTMLElement)) return false;
+      trigger.setAttribute('data-auracall-skill-action', ${JSON.stringify(marker)});
+      return true;
+    })()`,
+		{ timeoutMs: 12_000, description: `Created by me card for ${name}` },
+	);
+	if (!marked.ok) {
+		throw new Error(`ChatGPT skill ${name} did not expose one exact Created by me card.`);
+	}
+	return `button[data-auracall-skill-action="${marker}"]`;
 }
 
 async function waitForEditor(client: ChromeClient, id: string | null): Promise<void> {
