@@ -6,7 +6,7 @@ Operational state: PROVIDER_FREE_ACCEPTED
 Branch: fix/plan0326-long-prompt-observation-recovery
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-02
+Revision: 3 | 2026-09-02
 
 ## Stable Objective
 
@@ -142,5 +142,5 @@ installed/live acceptance remains explicitly separate.
 - No browser, provider, install, restart, scheduler, or live action was run.
   Provider-free acceptance is complete; installed/live acceptance is not
   claimed.
-- Implementation checkpoint: `e292dcee`; integration to `main` remains
-  pending.
+- Implementation checkpoint: `e292dcee`; provider-free acceptance receipt:
+  `0e210641`; non-forced merge receipt: `9ced34cc`.

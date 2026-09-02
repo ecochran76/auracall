@@ -26,7 +26,9 @@
   stale raw-DevTools allowlist expectation for an existing script that no
   longer contains direct navigation. Commit, push, and main integration remain;
   no installed or live claim is made.
-- Provider-free implementation checkpoint: `e292dcee`.
+- Provider-free implementation checkpoint: `e292dcee`; acceptance receipt:
+  `0e210641`; non-forced merge receipt: `9ced34cc`. Main integration is
+  complete; installed/live validation remains unclaimed.
 
 ## Turn 538 | 2026-08-29
 

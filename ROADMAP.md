@@ -4,17 +4,17 @@
 
 ### Current Execution Board
 
-Status: Long-prompt observation recovery provider-free accepted; integration, installed materialization canary, and aggregate status latency remain independently open
-Lanes: P01-P07, P09-P15, P17 (integrated); P08, P18 (open); P19 (accepted, integration pending)
+Status: Long-prompt observation recovery integrated; installed materialization canary and aggregate status latency remain independently open
+Lanes: P01-P07, P09-P15, P17, P19 (integrated); P08, P18 (open)
 
-- Provider-free accepted ChatGPT long-prompt observation recovery:
+- Integrated ChatGPT long-prompt observation recovery:
   [docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md](docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md)
   P19 separates observation-lease expiry from provider/model terminal state,
   preserves exact active-turn evidence for read-only reattachment, and adds a
   provider-free 15-minute same-conversation recovery guard. Provider-free
-  verification is accepted on its isolated branch; integration and any
-  installed/live proof remain separate. It does not overlap P08's
-  aggregate-status source surface.
+  verification and non-forced main integration are accepted; installed/live
+  proof remains separate. It does not overlap P08's aggregate-status source
+  surface.
 
 - Integrated Git maintenance closeout:
   [docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
