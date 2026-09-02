@@ -9,9 +9,10 @@ Lanes: P01-P07, P09-P15, P17, P19-P20 (integrated); P08, P18, P21 (open)
 
 - Active installed long-observation recovery canary:
   [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
-  P21 has exact installed parity without API restart and permits one
-  `wsl-chrome-3` identity smoke, one zero-retry long prompt, and one read-only
-  same-turn recovery. Skill CRUD begins only after this gate settles.
+  P21's first zero-retry canary exposed a pre-answer classifier gap while the
+  exact provider turn later completed normally. The provider-free repair is
+  green and permits one distinct second canary after install/parity proof.
+  Skill CRUD begins only after this gate settles.
 
 - Integrated ChatGPT skill lifecycle discovery:
   [docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)

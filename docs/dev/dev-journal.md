@@ -1,3 +1,22 @@
+## 2026-09-02 | Plan 0328 pre-answer timeout repair
+
+- The first installed canary submitted once on the exact expected account and
+  timed out at 45 seconds while ChatGPT showed `Stop answering` but exposed no
+  assistant turn or text. AuraCall recorded terminal error; bounded read-only
+  inspection later recovered all 1,500 lines and the sentinel from that exact
+  completed turn without resend.
+- The live receipt isolates a pre-answer instrumentation gap. One red/green
+  CLI tracer and one observation-recovery tracer now accept only
+  `no-assistant-turn` plus zero text, visible Stop, no completion, and no
+  dialog. Existing approval and terminal fail-closed cases remain green.
+- The focused packet passes 55 tests plus typecheck, production build, scoped
+  zero-warning lint, diff hygiene, and the zero-error plan audit. The full
+  suite passes 3,041 tests in 324 files; its sole failure is the known stale
+  raw-DevTools allowlist expectation for an existing non-mutating approval
+  observation script. Plan 0328 revision 2 permits one distinct second canary
+  only after commit, install, and exact installed byte-parity proof; Skill CRUD
+  remains gated.
+
 ## 2026-09-02 | Plan 0326 long-prompt observation recovery opened
 
 - LitScout Experiment 51 proved AuraCall confused observer expiry with model

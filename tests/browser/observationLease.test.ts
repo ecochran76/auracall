@@ -15,6 +15,23 @@ const activeProgress = {
 };
 
 describe('ChatGPT observation lease recovery', () => {
+  test('treats a visible stop control as active generation before the assistant turn mounts', () => {
+    expect(
+      decideChatgptObservationRecovery({
+        progress: {
+          state: 'no-assistant-turn',
+          assistantTextChars: 0,
+          stopVisible: true,
+          completionVisible: false,
+          dialogVisible: false,
+        },
+        nowMs: 500_000,
+        lastProgressChangeAtMs: 499_000,
+        lastRecoveryAtMs: null,
+      }),
+    ).toEqual({ action: 'heartbeat', reason: 'progress-current' });
+  });
+
   test('records healthy progress without refreshing the active conversation', () => {
     expect(
       decideChatgptObservationRecovery({

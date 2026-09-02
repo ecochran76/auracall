@@ -357,9 +357,9 @@ lanes:
     integration: merge
     dependencies: [P19]
     overlaps: []
-    validation_status: installed-parity-accepted-live-canary-ready
+    validation_status: provider-free-repair-accepted-second-canary-ready
     validation_ref: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
     integration_receipt: null
     blocker: null
-    disposition: One installed-runtime update completed without API restart; one identity smoke, one zero-retry long prompt, and one read-only same-turn recovery remain.
+    disposition: First zero-retry canary exposed a pre-answer active-generation classifier gap and later completed normally without resend; focused repair is green and one distinct second canary remains after install parity.
     updated_at: 2026-09-02

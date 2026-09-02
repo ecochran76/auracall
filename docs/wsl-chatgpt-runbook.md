@@ -227,6 +227,9 @@ effects at zero. The durable receipt is
 - **A long response reports `observation_expired_generation_active`**:
   - The model run is still active; the observer lease expired. Do not resend
     the prompt or click `Answer now`.
+  - A visible Stop control is sufficient positive generation evidence even
+    before ChatGPT mounts the assistant turn; approval cards, dialogs, and
+    completion surfaces do not qualify.
   - Run `auracall session <id>` to reattach read-only to the persisted exact
     browser target and conversation. AuraCall keeps healthy growing output in
     place and permits a same-conversation refresh only for stale/interrupted

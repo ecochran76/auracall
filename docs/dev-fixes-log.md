@@ -1,7 +1,9 @@
 - 2026-09-02: Keep long-prompt browser retention separate from manual-clear
-  preservation. Observation expiry is resumable only with non-empty assistant
-  text, a visible Stop control, no completion/dialog signal, and exact browser
-  plus conversation identity. Persist that Session/model run as running, leave
+  preservation. Observation expiry is resumable with a visible Stop control,
+  no completion/dialog signal, and exact browser plus conversation identity,
+  including before ChatGPT mounts the first assistant node. Once mounted,
+  non-empty assistant text remains positive progress evidence. Persist that
+  Session/model run as running, leave
   the managed browser open for read-only reattachment, and never pass this
   condition through the Cloudflare/CAPTCHA error wrapper. Recovery refreshes
   require stale or interrupted progress, target the same conversation, and use

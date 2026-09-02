@@ -11,8 +11,11 @@
   typecheck. One authorized user-runtime install completed without API restart;
   the three affected installed modules are byte-identical to the current build.
 - Opened [Plan 0328](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
-  as P21 for one exact-account identity smoke, one zero-retry long prompt, and
-  one read-only same-turn recovery before Skill CRUD implementation.
+  as P21. Its first zero-retry canary exposed a pre-answer classifier gap:
+  ChatGPT showed `Stop answering` without an assistant node, then completed all
+  requested output without resend while AuraCall had recorded terminal error.
+  Revision 2 carries the focused provider-free repair and permits one distinct
+  post-install canary before Skill CRUD implementation.
 
 ## Turn 541 | 2026-09-02
 

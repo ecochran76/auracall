@@ -13,7 +13,7 @@ export class BrowserObservationLeaseExpiredError extends Error {
   readonly browserResponseProgress: BrowserResponseProgressEvidence;
 
   constructor(progress: BrowserResponseProgressEvidence, cause?: unknown) {
-    super('ChatGPT observation lease expired while the exact assistant turn was still generating', {
+    super('ChatGPT observation lease expired while the exact generation was still active', {
       cause,
     });
     this.name = 'BrowserObservationLeaseExpiredError';
@@ -29,6 +29,22 @@ export type ChatgptObservationRecoveryDecision =
   | { action: 'wait'; reason: 'recovery-cooldown' }
   | { action: 'none'; reason: 'generation-not-active' };
 
+function hasPositiveActiveGenerationEvidence(
+  progress: BrowserResponseProgressEvidence | null | undefined,
+): progress is BrowserResponseProgressEvidence {
+  const hasGenerationProgress =
+    progress?.state === 'assistant-text'
+      ? typeof progress.assistantTextChars === 'number' && progress.assistantTextChars > 0
+      : progress?.state === 'no-assistant-turn' && progress.assistantTextChars === 0;
+  return Boolean(
+    progress &&
+      hasGenerationProgress &&
+      progress.stopVisible === true &&
+      progress.completionVisible !== true &&
+      progress.dialogVisible !== true,
+  );
+}
+
 export function decideChatgptObservationRecovery(input: {
   progress: BrowserResponseProgressEvidence | null | undefined;
   nowMs: number;
@@ -38,15 +54,7 @@ export function decideChatgptObservationRecovery(input: {
 }): ChatgptObservationRecoveryDecision {
   const recoveryCooldownMs = input.recoveryCooldownMs ?? CHATGPT_OBSERVATION_RECOVERY_COOLDOWN_MS;
   const progress = input.progress;
-  if (
-    !progress ||
-    progress.state !== 'assistant-text' ||
-    typeof progress.assistantTextChars !== 'number' ||
-    progress.assistantTextChars <= 0 ||
-    progress.stopVisible !== true ||
-    progress.completionVisible === true ||
-    progress.dialogVisible === true
-  ) {
+  if (!hasPositiveActiveGenerationEvidence(progress)) {
     return { action: 'none', reason: 'generation-not-active' };
   }
 
@@ -89,13 +97,5 @@ export function isActiveGenerationObservationExpiry(error: unknown): boolean {
     return false;
   }
   const progress = readBrowserResponseProgressEvidence(error);
-  return Boolean(
-    progress &&
-      progress.state === 'assistant-text' &&
-      typeof progress.assistantTextChars === 'number' &&
-      progress.assistantTextChars > 0 &&
-      progress.stopVisible === true &&
-      progress.completionVisible !== true &&
-      progress.dialogVisible !== true,
-  );
+  return hasPositiveActiveGenerationEvidence(progress);
 }
