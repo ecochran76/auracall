@@ -48493,3 +48493,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   stale raw-CDP allowlist expectation from Plan 0326.
 - Merge `1c27bfc3` integrates P23 into `main`; no runtime install,
   service restart, or provider submission accompanied integration.
+
+## 2026-09-02 | Hagenson handoff package reconciliation
+
+- Read-only reconciliation found that the two earlier Hagenson handoff packets
+  selected only the source context JSON and transcript; neither packet contained
+  the requested full CV.
+- Google Drive metadata under `My Drive/ISU/Resume/generated` identifies
+  `2026-08-28-cochran-full-cv.pdf` as the newest full-CV export. Its downloaded
+  407,569-byte copy matches Drive MD5 `19f6a8868c194592f8f6535bcff5c3ba`.
+- Provider-free packet
+  `handoff_1788380829405_c775ebd1-5abb-4c27-ba31-26a340dbc624` now selects the
+  context JSON, transcript, and full CV with no package omissions. Package digest
+  `e035fff5a198ca0eaa7b9ed372c2e3861c92acced3720837c1e89ecb2da1ef7c`
+  remains `preview_ready` with target mutation disabled.
+- Live continuation is withheld because installed PID `44328` is still running
+  an identity smoke against the exact `wsl-chrome-3` ChatGPT browser profile.
+  No install, upload, submit, process termination, or browser retry was attempted.
