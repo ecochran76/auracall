@@ -325,3 +325,22 @@ lanes:
     integration_receipt: 9ced34cce92a92e44a9b32f8aaf46555f5732266
     disposition: Integrated provider-free repair accepted with 148 focused/adjacent and 3038 full-suite tests passing; one unrelated stale raw-DevTools allowlist expectation remains. Installed/live proof is separate.
     updated_at: 2026-09-02
+  - id: P20
+    objective: Establish truthful exact-account ChatGPT skill lifecycle discovery before any CRUD or invocation capability.
+    plan: docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md
+    plan_ref: refs/heads/feat/plan0327-chatgpt-skill-discovery
+    branch: feat/plan0327-chatgpt-skill-discovery
+    target: main
+    plan_state: CLOSED
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 0d9d8026564947cd0e98368dbbf711464b0da922
+    remote_ref: null
+    integration: merge
+    dependencies: [P19]
+    overlaps: []
+    validation_status: provider-free-accepted-live-discovery-ownership-blocked
+    validation_ref: 0d9d8026564947cd0e98368dbbf711464b0da922
+    integration_receipt: null
+    blocker: The wsl-chrome-3 managed Chrome PID 1933 has no AuraCall controller or operation lease; exact-account skill discovery cannot attach until ownership is safely resolved.
+    disposition: Provider-free skill capability truthfulness accepted; exact-account inventory and all lifecycle mutations remain unobserved and gated.
+    updated_at: 2026-09-02

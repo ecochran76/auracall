@@ -33,6 +33,26 @@ describe('workbench capability service', () => {
     ]);
   });
 
+  it('does not claim that the static ChatGPT Skills catalog is invokable', async () => {
+    const service = createWorkbenchCapabilityService();
+
+    const report = await service.listCapabilities({ provider: 'chatgpt', category: 'skill' });
+
+    expect(report.capabilities).toEqual([
+      expect.objectContaining({
+        id: 'chatgpt.skills',
+        availability: 'account_gated',
+        invocationMode: 'unknown',
+        metadata: expect.objectContaining({
+          lifecycleState: 'unknown',
+          stableIdentityObserved: false,
+          installationObserved: false,
+          invocationObserved: false,
+        }),
+      }),
+    ]);
+  });
+
   it('merges discovered capabilities over the static catalog', async () => {
     const service = createWorkbenchCapabilityService({
       now: () => new Date('2026-04-23T12:00:00.000Z'),
@@ -264,6 +284,14 @@ describe('workbench capability service', () => {
         id: 'chatgpt.skills.study_and_learn',
         category: 'skill',
         providerLabels: ['Study And Learn'],
+        availability: 'unknown',
+        invocationMode: 'unknown',
+        metadata: expect.objectContaining({
+          lifecycleState: 'unknown',
+          stableIdentityObserved: false,
+          installationObserved: false,
+          invocationObserved: false,
+        }),
       }),
       expect.objectContaining({
         id: 'chatgpt.model.selector',

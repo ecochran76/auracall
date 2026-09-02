@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 540 | 2026-09-02
+
+- Opened [Plan 0327](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)
+  for the second LitScout handoff on isolated lane P20.
+- Structural inspection found the first truthful-contract defect: a string in
+  feature-signature `skills[]` was reported as available and invokable despite
+  carrying no stable identity, installation, activation, version, or invocation
+  evidence.
+- TDD RED reproduced that overclaim; GREEN now reports lifecycle and invocation
+  unknown with explicit unproven evidence. The focused capability packet passes
+  20 tests across core, CLI, and MCP seams. Read-only browser ownership/account
+  preflight is next; mutations remain prohibited.
+- A second static-catalog RED/Green removed the remaining invocation overclaim;
+  the combined capability packet passes 21 tests, with typecheck, production
+  build, scoped lint, plan audit, and diff hygiene green.
+- Read-only preflight found `wsl-chrome-3` Chrome PID `1933` on port `45015`
+  without an AuraCall controller/operation lease. The browser policy requires a
+  hard stop before attachment, so Plan 0327 closes provider-free accepted with
+  live exact-account discovery ownership-blocked and zero provider mutations.
+
 ## Turn 539 | 2026-09-02
 
 - Opened [Plan 0326](docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md)

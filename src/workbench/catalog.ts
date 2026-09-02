@@ -200,7 +200,7 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
     provider: 'chatgpt',
     providerLabels: ['Skills'],
     category: 'skill',
-    invocationMode: 'tool_drawer_selection',
+    invocationMode: 'unknown',
     surfaces: ['browser_service', 'local_api', 'mcp'],
     availability: 'account_gated',
     stability: 'observed',
@@ -208,9 +208,15 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
     output: { artifactTypes: ['generated'] },
     safety: {
       requiresUserConsent: true,
-      notes: ['Skills can be plan/account dependent and should be reported before invocation.'],
+      notes: ['Static catalog presence does not prove skill installation, activation, identity, version, or invocation.'],
     },
     source: 'static_catalog',
+    metadata: {
+      lifecycleState: 'unknown',
+      stableIdentityObserved: false,
+      installationObserved: false,
+      invocationObserved: false,
+    },
   },
   {
     id: 'grok.media.imagine_image',

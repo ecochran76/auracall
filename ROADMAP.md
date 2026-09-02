@@ -4,8 +4,14 @@
 
 ### Current Execution Board
 
-Status: Long-prompt observation recovery integrated; installed materialization canary and aggregate status latency remain independently open
-Lanes: P01-P07, P09-P15, P17, P19 (integrated); P08, P18 (open)
+Status: ChatGPT skill capability truthfulness accepted with live discovery ownership-blocked; installed materialization canary and aggregate status latency remain independently open
+Lanes: P01-P07, P09-P15, P17, P19 (integrated); P08, P18 (open); P20 (provider-free accepted, live discovery blocked)
+
+- Provider-free accepted ChatGPT skill lifecycle discovery:
+  [docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)
+  P20 corrects label-only capability evidence. Its exact-account read-only
+  discovery attempt stopped before attachment because `wsl-chrome-3` has a
+  foreign/unknown Chrome owner; all skill mutations and invocation remain gated.
 
 - Integrated ChatGPT long-prompt observation recovery:
   [docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md](docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md)

@@ -48249,3 +48249,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   as unrelated foreground work and was neither terminated nor reused.
 - No install, service restart, or canary ran. Gemini remains disabled and
   untouched; both ChatGPT completions remain paused.
+## 2026-09-02 | Plan 0327 ChatGPT skill lifecycle discovery
+
+- LitScout's second handoff is now an isolated discovery-first P20 lane.
+- Corrected the existing workbench capability seam so a visible skill label is
+  not promoted into availability or invocation. Provider-free CLI/API/MCP
+  coverage passes 20 tests.
+- Next gate is read-only ownership and exact-account preflight. No skill or
+  provider mutation is authorized by this plan.
+- Static and discovered projections are now both truthful; 21 capability tests,
+  typecheck, build, lint, plan audit, and diff hygiene pass. The bounded live
+  attempt stopped before attachment because `wsl-chrome-3` PID `1933` has no
+  AuraCall controller/lease. Exact-account inventory remains unobserved.
