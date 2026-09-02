@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 546 | 2026-09-02
+
+- The first installed P22 list stopped before mutation because current Skill
+  cards omit `skill_id` anchors. Bounded read-only inspection identified the
+  separate authenticated installed/created inventory responses and restored
+  all original tabs.
+- A red/green repair now requires both complete response payloads and reconciles
+  overlap by exact ID with created-by-me precedence. The 33-test focused and
+  adjacent packet, typecheck, scoped zero-warning lint, and diff hygiene pass;
+  rebuild/reinstall and the one zero-retry CRUD canary remain.
+
 ## Turn 545 | 2026-09-02
 
 - P22 completed exact-account, no-submit Skill editor discovery and restored

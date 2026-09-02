@@ -22129,3 +22129,8 @@ browser-stage lifecycle observability, not transcript truncation.
   `SKILL.md` hashes, make update optimistic on the prior hash, and prove delete
   by fresh absence. An uncertain dispatched outcome is a terminal manual-review
   state, never retry authority.
+- 2026-09-02: Do not derive ChatGPT Skill inventory completeness from visible
+  root-card anchors: current cards are role buttons and omit stable IDs from the
+  DOM. Capture both authenticated installed and created inventory responses,
+  require both payload arrays, and reconcile overlap by exact ID with
+  created-by-me precedence before authorizing any mutation.

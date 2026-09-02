@@ -25,6 +25,18 @@
   plan audit. One published install and one disposable zero-retry CRUD canary
   remain.
 
+## 2026-09-02 | Plan 0329 live inventory fail-closed repair
+
+- The first installed `skills list` stopped before mutation because current
+  Skill cards carry no `skill_id` links. One bounded read-only inspection found
+  separate authenticated installed and created `hazelnuts` responses; the
+  original three tabs were restored afterward.
+- Inventory capture now accepts only complete successful responses for both
+  scopes, preserves duplicate names and exact IDs, and gives created-by-me
+  precedence when the installed scope overlaps it. The new red/green regression
+  brings the focused/adjacent packet to 33 passing tests; typecheck, scoped
+  zero-warning lint, and diff hygiene also pass. Rebuild/reinstall remains.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules

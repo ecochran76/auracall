@@ -12,6 +12,7 @@ import {
 	navigateAndSettle,
 	openAndSelectMenuItem,
 	pressButtonWithTrustedPointer,
+	reloadAndSettle,
 	setInputValue,
 	waitForPredicate,
 } from "../service/ui.js";
@@ -104,6 +105,40 @@ export function deriveChatgptSkillState(input: {
 	};
 }
 
+export function normalizeChatgptSkillInventoryPayloads(input: {
+	installed: unknown;
+	created: unknown;
+}): ChatgptSkillInventoryProbe {
+	const installed = readHazelnuts(input.installed);
+	const created = readHazelnuts(input.created);
+	if (!installed || !created) return { complete: false, entries: [] };
+	const entries = new Map<string, ChatgptSkillInventoryProbe["entries"][number]>();
+	for (const [collection, values] of [
+		["installed", installed],
+		["created-by-me", created],
+	] as const) {
+		for (const value of values) {
+			if (!isRecord(value)) continue;
+			const id = readString(value.id)?.toLowerCase() ?? "";
+			const name = readString(value.display_name) ?? readString(value.name) ?? "";
+			if (!/^[a-f0-9]{32}$/.test(id) || !name) continue;
+			const safetyStatus = readString(value.safety_check_status)?.toLowerCase();
+			entries.set(id, {
+				id,
+				name,
+				collection,
+				reviewStatus:
+					safetyStatus === "unchecked"
+						? "Needs review"
+						: safetyStatus === "ready"
+							? "Ready"
+							: null,
+			});
+		}
+	}
+	return { complete: true, entries: [...entries.values()] };
+}
+
 export function deriveChatgptSkillDetail(input: ChatgptSkillDetailProbe): ChatgptSkill {
 	const instructions = readString(input.instructions);
 	const contentHash = instructions ? hashChatgptSkillInstructions(instructions) : null;
@@ -137,8 +172,7 @@ export class ChatgptSkillBrowserAdapter {
 		this.throwIfAborted();
 		const identity = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
 		const client = await this.ensureClient();
-		await navigateSkills(client, "https://chatgpt.com/skills");
-		const inventory = await readInventoryProbe(client);
+		const inventory = await captureSkillInventory(client);
 		return deriveChatgptSkillState({ identity, inventory, observedAt: new Date().toISOString() });
 	}
 
@@ -284,47 +318,73 @@ async function navigateSkills(client: ChromeClient, url: string): Promise<void> 
 	if (!settled.ok) throw new Error(`ChatGPT Skill navigation did not settle: ${settled.reason}.`);
 }
 
-async function readInventoryProbe(client: ChromeClient): Promise<ChatgptSkillInventoryProbe> {
-	const result = await client.Runtime.evaluate({
-		expression: `(() => {
-      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const visible = (node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-      const entries = [];
-      for (const anchor of Array.from(document.querySelectorAll('a[href*="skill_id="]')).filter(visible)) {
-        const url = new URL(anchor.href, location.href);
-        const id = String(url.searchParams.get('skill_id') || '').toLowerCase();
-        if (!/^[a-f0-9]{32}$/.test(id)) continue;
-        const card = anchor.closest('article,li,section,[role="listitem"]') || anchor.parentElement || anchor;
-        const name = normalize(anchor.querySelector('h1,h2,h3,h4,[role="heading"]')?.textContent || anchor.getAttribute('aria-label') || anchor.textContent);
-        if (!name) continue;
-        let scope = card;
-        let collection = 'unknown';
-        for (let i = 0; scope && i < 5; i += 1, scope = scope.parentElement) {
-          const heading = normalize(scope.querySelector?.('h1,h2,h3,h4,[role="heading"]')?.textContent).toLowerCase();
-          if (heading.includes('created by me')) { collection = 'created-by-me'; break; }
-          if (heading.includes('installed') || heading.includes('added')) { collection = 'installed'; break; }
-        }
-        const text = normalize(card.textContent);
-        entries.push({ id, name, collection, reviewStatus: /needs review/i.test(text) ? 'Needs review' : null });
-      }
-      const routeReady = location.origin === 'https://chatgpt.com' && location.pathname === '/skills';
-      const skillsTab = Array.from(document.querySelectorAll('a')).some((a) => normalize(a.textContent) === 'Skills' && visible(a));
-      return { complete: routeReady && skillsTab && document.readyState === 'complete', entries };
-    })()`,
-		returnByValue: true,
+async function captureSkillInventory(client: ChromeClient): Promise<ChatgptSkillInventoryProbe> {
+	await client.Network.enable();
+	const payloadPromise = new Promise<{ installed: unknown; created: unknown }>((resolve) => {
+		const requestScopes = new Map<string, "installed" | "created">();
+		const payloads: { installed: unknown; created: unknown } = {
+			installed: null,
+			created: null,
+		};
+		let settled = false;
+		const finish = () => {
+			if (settled || payloads.installed === null || payloads.created === null) return;
+			settled = true;
+			clearTimeout(timer);
+			resolve(payloads);
+		};
+		const timer = setTimeout(() => {
+			if (settled) return;
+			settled = true;
+			resolve(payloads);
+		}, 12_000);
+		client.Network.responseReceived((params) => {
+			if (
+				settled ||
+				params.response.status < 200 ||
+				params.response.status >= 300 ||
+				!params.response.url.includes("/backend-api/hazelnuts")
+			) {
+				return;
+			}
+			const scope = new URL(params.response.url).searchParams.get("scope");
+			if (scope === "installed" || scope === "created") {
+				requestScopes.set(params.requestId, scope);
+			}
+		});
+		client.Network.loadingFinished(async (params) => {
+			if (settled) return;
+			const scope = requestScopes.get(params.requestId);
+			if (!scope) return;
+			const response = await client.Network.getResponseBody({ requestId: params.requestId }).catch(
+				() => null,
+			);
+			if (!response?.body) return;
+			try {
+				const body = response.base64Encoded
+					? Buffer.from(response.body, "base64").toString("utf8")
+					: response.body;
+				payloads[scope] = JSON.parse(body) as unknown;
+				finish();
+			} catch {
+				// Keep waiting for another successful response for this exact scope.
+			}
+		});
 	});
-	const value = isRecord(result.result?.value) ? result.result.value : {};
-	return {
-		complete: value.complete === true,
-		entries: Array.isArray(value.entries)
-			? value.entries.filter(isRecord).map((entry) => ({
-					id: readString(entry.id) ?? "",
-					name: readString(entry.name) ?? "",
-					collection: readString(entry.collection),
-					reviewStatus: readString(entry.reviewStatus),
-			  }))
-			: [],
-	};
+	const currentUrl = await readCurrentUrl(client);
+	if (currentUrl?.startsWith("https://chatgpt.com/skills")) {
+		const reloaded = await reloadAndSettle(client, {
+			ignoreCache: true,
+			timeoutMs: 10_000,
+			mutationSource: "chatgpt-skills:inventory-reload",
+		});
+		if (!reloaded.ok) {
+			throw new Error(`ChatGPT Skill inventory reload did not settle: ${reloaded.reason}.`);
+		}
+	} else {
+		await navigateSkills(client, "https://chatgpt.com/skills");
+	}
+	return normalizeChatgptSkillInventoryPayloads(await payloadPromise);
 }
 
 async function readDetailProbe(
@@ -507,6 +567,10 @@ async function assertNoBlockingSurface(client: ChromeClient, action: string): Pr
 async function readCurrentUrl(client: ChromeClient): Promise<string | null> {
 	const result = await client.Runtime.evaluate({ expression: "location.href", returnByValue: true });
 	return readString(result.result?.value);
+}
+
+function readHazelnuts(value: unknown): unknown[] | null {
+	return isRecord(value) && Array.isArray(value.hazelnuts) ? value.hazelnuts : null;
 }
 
 function normalizeCollection(value: string | null | undefined): ChatgptSkill["collection"] {

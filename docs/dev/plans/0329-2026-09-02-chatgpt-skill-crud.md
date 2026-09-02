@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: PROVIDER_FREE_ACCEPTED_INSTALL_READY
+Operational state: LIVE_INVENTORY_REPAIR_ACCEPTED_REINSTALL_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-02
+Revision: 3 | 2026-09-02
 
 ## Stable Objective
 
@@ -33,10 +33,16 @@ and leaving no provider artifact behind.
   separate Skill adapter and CLI module. Mutations require expected account,
   explicit confirmation, complete inventory, and fresh hash/absence readback;
   update additionally requires the exact prior content hash.
-- The focused and adjacent packet passes 32 tests plus typecheck, production
+- The first installed list stopped before mutation because the current root
+  cards omit `skill_id` anchors. Bounded read-only inspection proved the page
+  loads separate authenticated installed/created `hazelnuts` inventories;
+  capture now binds only complete successful responses and gives created
+  ownership precedence for overlapping IDs.
+- The focused and adjacent packet passes 33 tests plus typecheck, production
   build, scoped zero-warning lint, diff hygiene, and a 328-candidate zero-error
-  plan audit. The next gate is commit/publish, one runtime install, then the
-  single zero-retry disposable CRUD canary.
+  plan audit for the first checkpoint. The inventory repair passes focused
+  tests, typecheck, scoped lint, and diff hygiene; rebuild/reinstall and the
+  single zero-retry disposable CRUD canary remain.
 
 ## Execution Graph
 

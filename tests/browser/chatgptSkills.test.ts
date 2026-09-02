@@ -4,6 +4,7 @@ import {
 	deriveChatgptSkillDetail,
 	deriveChatgptSkillState,
 	hashChatgptSkillInstructions,
+	normalizeChatgptSkillInventoryPayloads,
 	readChatgptSkillIdFromUrl,
 } from "../../src/browser/providers/chatgptSkills.js";
 
@@ -34,6 +35,40 @@ describe("ChatGPT Skill provider contracts", () => {
 				reviewStatus: "needs-review",
 			}),
 		]);
+	});
+
+	it("normalizes complete installed and created payloads with created ownership precedence", () => {
+		const shared = {
+			id: "2".repeat(32),
+			name: "same-name",
+			display_name: "Same",
+			safety_check_status: "unchecked",
+		};
+		expect(
+			normalizeChatgptSkillInventoryPayloads({
+				installed: {
+					hazelnuts: [
+						{ id: "1".repeat(32), name: "same-name", display_name: "Same" },
+						shared,
+					],
+				},
+				created: { hazelnuts: [shared] },
+			}),
+		).toEqual({
+			complete: true,
+			entries: [
+				{ id: "1".repeat(32), name: "Same", collection: "installed", reviewStatus: null },
+				{
+					id: "2".repeat(32),
+					name: "Same",
+					collection: "created-by-me",
+					reviewStatus: "Needs review",
+				},
+			],
+		});
+		expect(
+			normalizeChatgptSkillInventoryPayloads({ installed: { hazelnuts: [] }, created: null }),
+		).toEqual({ complete: false, entries: [] });
 	});
 
 	it("hashes canonical SKILL.md readback and binds it to the exact detail id", () => {
