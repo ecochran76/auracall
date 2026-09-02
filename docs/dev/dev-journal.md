@@ -75,6 +75,18 @@
   awaiting both scopes. The 33-test packet, typecheck, build, scoped lint, and
   diff hygiene pass; this follow-up was not installed or used on the canary.
 
+## 2026-09-02 | Plan 0329 P16 integration reconciliation
+
+- Revalidated the retained canary editor, API PID `98408`/zero restarts,
+  Chrome PID `1933`, and empty operation-lock root without provider mutation.
+- A three-way audit against preserved P16 commit `bd8738da` finds a textual
+  `bin/auracall.ts` conflict but no lifecycle-semantic overlap. P16 adds three
+  guarded response-wait options to `apps test`; P22 owns a separate `skills`
+  command and separate CLI/browser modules.
+- Future integration must retain both command blocks and should rebase or
+  manually resolve P16 after P22 reaches `main`. The unfinished P16 worktree
+  and branch remain untouched.
+
 ## 2026-09-02 | Plan 0328 installed/live accepted
 
 - Checkpoint `ac851379` is published and the three affected installed modules

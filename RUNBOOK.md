@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 550 | 2026-09-02
+
+- The P22 hard stop remains exact and stable: one recoverable canary editor,
+  unchanged API/Chrome PIDs, and no operation lock; no live mutation ran.
+- Three-way P16 reconciliation found only a textual CLI insertion conflict.
+  Preserve P16's three `apps test` response-wait options and P22's separate
+  `skills` command when integrating; do not merge or alter unfinished P16 now.
+
 ## Turn 549 | 2026-09-02
 
 - The single authorized Skill Create saved exactly one v1 canary at a stable

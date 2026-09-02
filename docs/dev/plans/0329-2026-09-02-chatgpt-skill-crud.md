@@ -66,6 +66,13 @@ and leaving no provider artifact behind.
   root before waiting for both scopes. The repair passes 33 tests, typecheck,
   build, scoped lint, and diff hygiene but is not reinstalled or used to mutate
   the preserved canary in this turn.
+- P16 reconciliation is complete at the semantic level. Its only
+  `bin/auracall.ts` delta adds `--wait-for-response`, `--timeout-ms`, and
+  `--tool-approval` to the existing developer-app `apps test` command; P22 adds
+  the separate `skills` command and modules. The branches textually conflict
+  because both insert near the same CLI region, so integration must preserve
+  both blocks, with P16 rebased or manually resolved after P22 reaches `main`.
+  No P16 code, branch, worktree, or authority was changed by this audit.
 
 ## Execution Graph
 
