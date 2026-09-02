@@ -22100,3 +22100,8 @@ browser-stage lifecycle observability, not transcript truncation.
   static false-positive, retrieval-failed, and terminal rows. Full-retrieval
   live follow should consult the recovery planner and queue materialization only
   when retrievable assets or unknown/deferred detail work remain.
+- 2026-09-02: A ChatGPT feature-signature `skills[]` label is discovery
+  evidence, not lifecycle evidence. Report its availability and invocation as
+  unknown until an exact-account readback supplies stable identity and explicit
+  installed/enabled/version/selection state. Never borrow developer-app CRUD
+  semantics merely because the UI labels both surfaces as apps or skills.

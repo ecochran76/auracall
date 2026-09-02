@@ -1247,7 +1247,10 @@ Terminology note:
     merge live browser feature-signature evidence from the matching managed
     browser profile.
     ChatGPT discovery reports visible Web Search, Deep Research, Company
-    Knowledge, apps/connectors, and skills without invoking or enabling them.
+    Knowledge, apps/connectors, and skill labels without invoking or enabling
+    them. A skill label remains `availability = unknown` and
+    `invocationMode = unknown`; it does not prove stable identity,
+    installation, activation, version, or use in a submitted turn.
     App reporting keeps three independent signals separate: installed plugin
     inventory, linked/authentication state, and current composer visibility.
     An installed app is not reported as currently invocable unless it is

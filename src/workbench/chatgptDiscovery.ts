@@ -321,21 +321,25 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
       provider: 'chatgpt',
       providerLabels: [label],
       category: 'skill',
-      invocationMode: 'tool_drawer_selection',
+      invocationMode: 'unknown',
       surfaces: ['browser_service', 'local_api', 'mcp'],
-      availability: 'available',
+      availability: 'unknown',
       stability: 'observed',
       requiredInputs: commonPromptInput,
       output: { artifactTypes: ['generated'] },
       safety: {
         requiresUserConsent: true,
-        notes: ['Skills can be plan/account dependent and should be reported before invocation.'],
+        notes: ['A visible skill label does not prove installation, activation, stable identity, or invocation.'],
       },
       observedAt,
       source: 'browser_discovery',
       metadata: {
         featureSignatureSignal: 'skills',
         skill,
+        lifecycleState: 'unknown',
+        stableIdentityObserved: false,
+        installationObserved: false,
+        invocationObserved: false,
       },
     });
   }
