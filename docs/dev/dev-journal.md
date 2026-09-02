@@ -48265,3 +48265,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   exists, and no other configured AuraCall runtime profile shares the account
   binding. This removes profile-switching as a safe workaround and leaves one
   exact external ownership unblocker.
+- The operator transferred operational control of exact PID `1933`. AuraCall
+  reattached without relaunch or registry-ownership fabrication and completed
+  the single bounded read-only attempt.
+- The authenticated ChatGPT surface separates plugins from skills and exposes
+  a stable 32-hex `skill_id` detail route, installed and created-by-me groups,
+  owner display, file-tree inventory, `Needs review`, and a separate `Try in
+  chat` action. The redacted fixture preserves only contract shape.
+- Cleanup restored the tab to ChatGPT home and preserved PID `1933`/port
+  `45015`; there were no browser-operation locks or skill/provider mutations.

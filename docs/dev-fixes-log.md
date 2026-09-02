@@ -22105,3 +22105,10 @@ browser-stage lifecycle observability, not transcript truncation.
   unknown until an exact-account readback supplies stable identity and explicit
   installed/enabled/version/selection state. Never borrow developer-app CRUD
   semantics merely because the UI labels both surfaces as apps or skills.
+- 2026-09-02: Operator transfer of a pre-existing managed-browser process grants
+  bounded operational authority; it does not justify rewriting durable job
+  owner/lease fields or claiming shutdown ownership. Reattach through the exact
+  AuraCall resolver, preserve the process, and record that distinction. The
+  current ChatGPT skill detail contract supplies a stable 32-hex `skill_id`,
+  owner display, file-tree inventory, and review state, while invocation remains
+  a separate `Try in chat` action and version/enabled state remain unobserved.

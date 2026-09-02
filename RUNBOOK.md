@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 541 | 2026-09-02
+
+- The operator explicitly transferred operational control of exact
+  `wsl-chrome-3` Chrome PID `1933` for Plan 0327's bounded live discovery.
+  AuraCall reattached through its managed-browser resolver without relaunching
+  Chrome, rewriting job ownership, or claiming shutdown rights.
+- One authenticated read-only attempt observed distinct `/plugins` and
+  `/skills` routes, installed and created-by-me inventory groups, a stable
+  32-hex `skill_id` detail route, owner display, file-tree inventory, `Needs
+  review`, and a separate `Try in chat` action. The durable fixture records
+  contract shape only and omits live identity/content payloads.
+- No skill lifecycle action, invocation, prompt Send, runtime install, service
+  restart, scheduler control, or materialization control ran. Cleanup restored
+  the selected tab to ChatGPT home; PID `1933`/port `45015` remained live and
+  the browser-operation directory remained empty.
+- Plan 0327 now closes `LIVE_DISCOVERY_ACCEPTED_MUTATIONS_WITHHELD`. Version,
+  explicit enabled state, and manifest readback remain unobserved and belong to
+  a separately bounded read-only implementation slice before any mutation.
+
 ## Turn 540 | 2026-09-02
 
 - Opened [Plan 0327](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)

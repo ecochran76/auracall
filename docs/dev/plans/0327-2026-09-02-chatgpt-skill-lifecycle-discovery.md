@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P20
-Operational state: PROVIDER_FREE_ACCEPTED_LIVE_DISCOVERY_BLOCKED
+Operational state: LIVE_DISCOVERY_ACCEPTED_MUTATIONS_WITHHELD
 Branch: feat/plan0327-chatgpt-skill-discovery
 Target: main
 Integration: merge
-Revision: 3 | 2026-09-02
+Revision: 4 | 2026-09-02
 
 ## Stable Objective
 
@@ -30,13 +30,19 @@ activation, stable identity, version, invocation, or CRUD readiness.
   report contract.
 - Read-only ownership preflight found the `wsl-chrome-3` managed Chrome at PID
   `1933`, DevTools port `45015`, with no AuraCall controller or operation lease.
-  Per browser policy this is foreign/unknown ownership, so no attach,
-  navigation, identity read, or provider fixture capture was attempted.
-- A second read-only preflight at `2026-09-02T08:44:26-05:00` confirmed PID
-  `1933` remains live with the same managed browser profile and still has no
-  controller, owner, or browser-operation record. Configured-identity
-  comparison found no other AuraCall runtime profile bound to the same ChatGPT
-  account, so switching browser profiles cannot safely bypass the stop.
+  A second preflight at `2026-09-02T08:44:26-05:00` confirmed the same process
+  and no alternate AuraCall runtime profile with the configured ChatGPT account
+  binding.
+- The operator explicitly transferred operational control of PID `1933` for
+  this bounded discovery. AuraCall reattached through its exact managed-browser
+  resolver without relaunching Chrome, rewriting registry ownership, or taking
+  shutdown rights over the pre-existing process.
+- One authenticated read-only attempt observed separate `/plugins` and
+  `/skills` routes. The skills surface exposes installed and created-by-me
+  groupings, a 32-hex `skill_id` detail route, owner display, bounded file-tree
+  inventory, a `Needs review` status, a separate `Try in chat` action, and a
+  create control. The live identifier and account content are redacted from the
+  provider-free receipt.
 
 ## Execution Graph
 
@@ -90,12 +96,18 @@ exact hard stop, and every mutation remains separately gated.
 - Static `wsl-chrome-3` CLI readback reports `chatgpt.skills` as account-gated,
   lifecycle unknown, stable identity unobserved, installation unobserved, and
   invocation unobserved.
-- Live discovery stopped before attachment on foreign/unknown Chrome ownership.
-  Exact account, inventory, and provider contract remain unobserved. No browser
-  or provider mutation occurred.
-- The stop was revalidated against the live PID, browser-state registry,
-  operation-lock directory, and configured identity bindings. The exact
-  unblocker is human-owner closure or explicit ownership transfer of PID
-  `1933`; AuraCall must not infer ownership from the managed directory alone.
+- Live discovery reattached only after explicit operator ownership transfer.
+  The exact managed Chrome, authenticated surface, stable detail-route identity,
+  inventory grouping, owner display, review state, file tree, and distinct
+  invocation action were observed. No create, install, update, enable, disable,
+  uninstall, delete, invocation, prompt Send, runtime install, service restart,
+  or scheduler/materialization action occurred.
+- Cleanup restored the selected tab to `https://chatgpt.com/`. PID `1933` and
+  port `45015` remained live, the registry retained null job owner/operation/
+  lease fields, and the browser-operation directory remained empty. This is
+  intentional: the user transferred operational authority for the attempt, not
+  process-parentage or shutdown ownership.
+- Minimal redacted provider fixture:
+  `docs/dev/notes/2026-09-02-plan0327-chatgpt-skill-discovery.json`.
 - Provider-free checkpoint: `c8097717`; acceptance checkpoint: `687767ab`;
   non-forced merge receipt: `1c126b96`.
