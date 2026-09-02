@@ -48510,3 +48510,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Live continuation is withheld because installed PID `44328` is still running
   an identity smoke against the exact `wsl-chrome-3` ChatGPT browser profile.
   No install, upload, submit, process termination, or browser retry was attempted.
+- Subsequent content verification proved the earlier source conversation was the
+  unrelated RuralSTAMINA/Kevin Moore thread. Packet
+  `handoff_1788380829405_c775ebd1-5abb-4c27-ba31-26a340dbc624` is therefore
+  superseded and was never approved, uploaded, or submitted.
+- The source index and one zero-retry exact context read identify `Hagenson
+  Reports` (`4b5bcba2-5dbd-4753-a387-214bf190c56f`, updated 2025-08-07) as the
+  requested professorship-report conversation. Its five-message context includes
+  the report drafting and patent-significance narrative.
+- Corrected provider-free packet
+  `handoff_1788381411232_0e14a067-f904-449d-915c-f1b52caeda5b` selects only that
+  exact context plus the verified full CV, has zero omissions, and remains
+  `preview_ready` with target mutation disabled. Its package digest is
+  `8f4923f16921e4d15265ea0032ee1b08ff4ceb96fa2c389f124f01bbef7908c0`.
+- The successful context read left CLI wrappers alive after returning; only that
+  exact process group was terminated. Managed Chrome PIDs `79584` and `1933`
+  were preserved, as was the foreign target identity-smoke PID `44328`.
