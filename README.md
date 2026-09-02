@@ -1887,6 +1887,15 @@ npx -y auracall auracall-mcp
 | `--edit-image <file>` | Edit existing image with `--output` (Gemini browser mode). |
 | `--azure-endpoint`, `--azure-deployment`, `--azure-api-version` | Target Azure OpenAI endpoints (picks Azure client automatically). |
 
+For a long ChatGPT browser run, expiration of AuraCall's observation window is
+not treated as model failure when the exact submitted turn still has assistant
+text and a visible Stop control. AuraCall retains the managed browser identity,
+keeps the Session running with
+`observation_expired_generation_active`, and allows `auracall session <id>` to
+reattach read-only without resending the prompt. A physical refresh is reserved
+for positively stale or interrupted observation and is limited to the same
+conversation at most once per 15 minutes.
+
 ## Configuration
 
 ChatGPT tool approval is always an operator preference. Use `allow-once` when

@@ -1182,6 +1182,16 @@
       probe lease evidence when the provider has not surfaced readable
       progress text; missing assistant/status text alone is not evidence that
       the run stopped
+    - if the command observation window expires while the exact assistant turn
+      still has non-empty text and a visible Stop control, Session/model state
+      remains `running` with
+      `response.incompleteReason=observation_expired_generation_active`; exact
+      browser, conversation, assistant identity, and text fingerprint evidence
+      must survive for `auracall session <id>` read-only reattachment
+    - healthy assistant fingerprint/length progress must not refresh the page;
+      only positively stale or interrupted observation may refresh, only the
+      same conversation may be targeted, and one Runtime may refresh at most
+      once in a 15-minute window
     - passive DOM probe evidence must stay bound to the submitted conversation
       target; a target that has moved to ChatGPT Library/root/project or a
       different conversation should fail with `chatgpt-target-mismatch` instead

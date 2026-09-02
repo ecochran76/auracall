@@ -11,6 +11,7 @@ import {
   acquireBrowserExecutionOperationForTest,
   releaseBrowserExecutionOperationAfterPreflightFailureForTest,
   sanitizeThinkingTextForTest,
+  shouldPreserveBrowserForObservationExpiryForTest,
   shouldPreserveBrowserOnErrorForTest,
   shouldKeepManagedChatgptBrowserOpenForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
@@ -92,6 +93,39 @@ describe('browserMode exports', () => {
     expect(shouldPreserveBrowserOnErrorForTest(manualClear, true)).toBe(false);
     expect(shouldPreserveBrowserOnErrorForTest(other, false)).toBe(false);
     expect(shouldPreserveBrowserOnErrorForTest(new Error('nope'), false)).toBe(false);
+  });
+
+  test('preserves the exact browser after an observation lease expires during active generation', () => {
+    const activeGenerationExpiry = Object.assign(
+      new Error('AuraCall session timed out after 3600 seconds.'),
+      {
+        name: 'SessionRunTimeoutError',
+        browserResponseProgress: {
+          state: 'assistant-text',
+          assistantTextChars: 33_688,
+          stopVisible: true,
+          completionVisible: false,
+          dialogVisible: false,
+        },
+      },
+    );
+    const completedAtExpiry = Object.assign(
+      new Error('AuraCall session timed out after 3600 seconds.'),
+      {
+        name: 'SessionRunTimeoutError',
+        browserResponseProgress: {
+          state: 'assistant-text',
+          assistantTextChars: 33_688,
+          stopVisible: false,
+          completionVisible: true,
+          dialogVisible: false,
+        },
+      },
+    );
+
+    expect(shouldPreserveBrowserForObservationExpiryForTest(activeGenerationExpiry)).toBe(true);
+    expect(shouldPreserveBrowserForObservationExpiryForTest(completedAtExpiry)).toBe(false);
+    expect(shouldPreserveBrowserOnErrorForTest(activeGenerationExpiry, false)).toBe(false);
   });
 
   test('does not treat browser-operation lock release as a keep-browser request', () => {

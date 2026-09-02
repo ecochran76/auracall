@@ -307,3 +307,21 @@ lanes:
     integration_receipt: 87fec070638981f87095f1e2830192a0ba3cd9a3
     disposition: Gemini remains disabled and untouched; install/canary allowances remain unused while external BYOP Chrome PID 1933 owns the exact wsl-chrome-3 managed browser profile without an AuraCall or Agent Browser lease.
     updated_at: 2026-09-01
+  - id: P19
+    objective: Preserve long-running ChatGPT turns as resumable when only AuraCall's observation lease expires, with bounded read-only recovery and no resend.
+    plan: docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md
+    plan_ref: refs/heads/fix/plan0326-long-prompt-observation-recovery
+    branch: fix/plan0326-long-prompt-observation-recovery
+    target: main
+    plan_state: CLOSED
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: e292dcee981c886c8abec827d4624dfcb3ed2e2c
+    remote_ref: refs/remotes/origin/fix/plan0326-long-prompt-observation-recovery
+    integration: merge
+    dependencies: [P14]
+    overlaps: []
+    validation_status: provider-free-accepted-integration-pending
+    validation_ref: e292dcee981c886c8abec827d4624dfcb3ed2e2c
+    integration_receipt: null
+    disposition: Provider-free repair accepted with 148 focused/adjacent and 3038 full-suite tests passing; one unrelated stale raw-DevTools allowlist expectation remains. Integration and installed/live proof are separate.
+    updated_at: 2026-09-02
