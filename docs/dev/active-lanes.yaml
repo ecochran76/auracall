@@ -352,14 +352,14 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 191ab43dfb63220f4ba49bfd6f499b852788494b
+    checkpoint: 191ab43d1199d906494a323d6f9a25158976ec3e
     remote_ref: refs/remotes/origin/main
     integration: merge
     dependencies: [P19]
     overlaps: []
     validation_status: installed-live-accepted
     validation_ref: ac85137977902fdece01297dd97f88b22596fcea
-    integration_receipt: 73b982ee5e3839c8ccf57b3a2232d2cf8d844e64
+    integration_receipt: 73b982ee1aa83cdda93ea99e047a883382565736
     blocker: null
     disposition: Installed/live accepted; pre-answer expiry remains running, exact progress identity overrides stale synthetic runtime routing, and read-only reattach recovered the same 1800-line turn with zero resend.
     updated_at: 2026-09-02
