@@ -315,13 +315,13 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 33794405d766cb3c5ab4f3d5858d06c2726120ee
-    remote_ref: null
+    checkpoint: e292dcee981c886c8abec827d4624dfcb3ed2e2c
+    remote_ref: refs/remotes/origin/fix/plan0326-long-prompt-observation-recovery
     integration: merge
     dependencies: [P14]
     overlaps: []
     validation_status: provider-free-accepted-integration-pending
-    validation_ref: 33794405d766cb3c5ab4f3d5858d06c2726120ee
+    validation_ref: e292dcee981c886c8abec827d4624dfcb3ed2e2c
     integration_receipt: null
     disposition: Provider-free repair accepted with 148 focused/adjacent and 3038 full-suite tests passing; one unrelated stale raw-DevTools allowlist expectation remains. Integration and installed/live proof are separate.
     updated_at: 2026-09-02
