@@ -1,3 +1,55 @@
+## 2026-09-02 | Plan 0328 installed/live accepted
+
+- Checkpoint `ac851379` is published and the three affected installed modules
+  are byte-identical. The API remained PID `98408` with zero restarts; exact
+  transferred Chrome PID `1933`/port `45015` remained healthy.
+- The remedial read-only attach used the validated progress conversation,
+  recovered exactly 1,800 numbered lines plus the sentinel from the same
+  existing turn, and marked the Session completed with 18,634 output tokens.
+  No Send, Stop, retry, scheduler, completion, materialization, or skill action
+  occurred, and the operation-lock root is empty.
+- All five Plan 0328 criteria are accepted. The lane can integrate before the
+  separate ChatGPT Skill CRUD plan opens.
+
+## 2026-09-02 | Plan 0328 reattach identity repair
+
+- The installed second canary correctly classified zero-text active generation
+  as running at 30 seconds with the recovery reason and exact target ID. The
+  first read-only attach observed continued generation, then its timeout
+  fallback trusted a stale synthetic `WEB:...` runtime route and navigated away
+  from the real progress `/c/` conversation. The attach process was stopped;
+  no Send, Stop, retry, scheduler, or skill action occurred.
+- Red/green CLI contracts now reconcile a validated ChatGPT progress `/c/<id>`
+  into both future timeout persistence and existing Session reattachment while
+  preserving target ID and port. No provider-specific navigation or mutation
+  is added to the reconciliation module.
+- Both prompt allowances are exhausted. Revision 3 permits one remedial
+  read-only attach to the existing second conversation only after this repair
+  is committed, installed, and byte-identical.
+- The revision 3 affected packet passes 88 tests plus typecheck, production
+  build, scoped zero-warning lint, diff hygiene, and the zero-error plan audit;
+  the earlier full-suite result remains 3,041 passed with its one documented
+  unrelated allowlist mismatch.
+
+## 2026-09-02 | Plan 0328 pre-answer timeout repair
+
+- The first installed canary submitted once on the exact expected account and
+  timed out at 45 seconds while ChatGPT showed `Stop answering` but exposed no
+  assistant turn or text. AuraCall recorded terminal error; bounded read-only
+  inspection later recovered all 1,500 lines and the sentinel from that exact
+  completed turn without resend.
+- The live receipt isolates a pre-answer instrumentation gap. One red/green
+  CLI tracer and one observation-recovery tracer now accept only
+  `no-assistant-turn` plus zero text, visible Stop, no completion, and no
+  dialog. Existing approval and terminal fail-closed cases remain green.
+- The focused packet passes 55 tests plus typecheck, production build, scoped
+  zero-warning lint, diff hygiene, and the zero-error plan audit. The full
+  suite passes 3,041 tests in 324 files; its sole failure is the known stale
+  raw-DevTools allowlist expectation for an existing non-mutating approval
+  observation script. Plan 0328 revision 2 permits one distinct second canary
+  only after commit, install, and exact installed byte-parity proof; Skill CRUD
+  remains gated.
+
 ## 2026-09-02 | Plan 0326 long-prompt observation recovery opened
 
 - LitScout Experiment 51 proved AuraCall confused observer expiry with model
@@ -48274,3 +48326,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   chat` action. The redacted fixture preserves only contract shape.
 - Cleanup restored the tab to ChatGPT home and preserved PID `1933`/port
   `45015`; there were no browser-operation locks or skill/provider mutations.
+
+## 2026-09-02 | Plan 0328 installed long-observation canary
+
+- Git maintenance removed only clean, ancestry-proven integrated P17/P19/P20
+  local custody. P08 and P16 remain preserved because they carry unfinished
+  owner work; local `main` now equals `origin/main`.
+- The Plan 0326 focused packet passes 27 tests plus typecheck. One user-runtime
+  install completed with byte-identical affected modules, API PID `98408`
+  unchanged, and exact managed Chrome PID `1933`/port `45015` preserved.
+- P21 now owns one identity smoke, one no-retry long-response timeout canary,
+  and one read-only recovery of that same turn. No scheduler or skill effect is
+  in scope.

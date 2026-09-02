@@ -1,5 +1,43 @@
 # RUNBOOK
 
+## Turn 543 | 2026-09-02
+
+- Plan 0328 closes `INSTALLED_LIVE_ACCEPTED`. The second canary timed out at 30
+  seconds before an assistant node mounted and correctly persisted the Session
+  as running with `observation_expired_generation_active` and zero resend.
+- Its first read-only attach exposed a stale synthetic runtime route. The
+  provider-free repair now reconciles only URL/conversation identity from the
+  validated progress `/c/<id>` while preserving target ID and port; 88 affected
+  tests, typecheck, build, scoped zero-warning lint, diff hygiene, and plan
+  audit pass.
+- Installed parity is exact. The remedial read-only attach recovered all 1,800
+  numbered lines plus the sentinel from the same existing conversation and
+  marked the Session completed. API PID `98408` retained zero restarts; Chrome
+  PID `1933`/port `45015` and empty operation locks remained stable. ChatGPT
+  Skill CRUD may now proceed in its own lane.
+
+## Turn 542 | 2026-09-02
+
+- Reconciled current Git custody. Clean integrated P17, P19, and P20 worktrees
+  plus local branches were removed; their remote recovery refs remain. The
+  dirty/conflicted P08 lane and clean but unintegrated P16 lane were preserved.
+  The clean local `main` worktree was fast-forwarded to exact `origin/main` at
+  `61ff5ca4`.
+- Plan 0326's focused timeout/instrumentation packet passes 27 tests plus
+  typecheck. One authorized user-runtime install completed without API restart;
+  the three affected installed modules are byte-identical to the current build.
+- Opened [Plan 0328](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
+  as P21. Its first zero-retry canary exposed a pre-answer classifier gap:
+  ChatGPT showed `Stop answering` without an assistant node, then completed all
+  requested output without resend while AuraCall had recorded terminal error.
+  Revision 2 carries the focused provider-free repair and permits one distinct
+  post-install canary before Skill CRUD implementation.
+- The second canary correctly remained running at observer expiry, but its
+  read-only attach later trusted a stale synthetic runtime route instead of the
+  real progress conversation. Revision 3 adds exact progress/runtime identity
+  reconciliation and permits one remedial attach to the existing conversation;
+  no further prompt is allowed.
+
 ## Turn 541 | 2026-09-02
 
 - The operator explicitly transferred operational control of exact

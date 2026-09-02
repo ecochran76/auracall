@@ -333,14 +333,33 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATED
-    checkpoint: 687767abde923e204823e6a7fda810797b8e2d6b
+    checkpoint: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
     remote_ref: refs/remotes/origin/feat/plan0327-chatgpt-skill-discovery
     integration: merge
     dependencies: [P19]
     overlaps: []
-    validation_status: provider-free-accepted-integrated-live-discovery-ownership-blocked
-    validation_ref: c8097717cf224a3729cad7ec5d70311676424177
-    integration_receipt: 1c126b96c0e32afef6490497a69019362ba12e12
-    blocker: The live wsl-chrome-3 managed Chrome PID 1933 on port 45015 has no AuraCall controller, owner, or operation lease, and no alternate runtime profile shares its configured ChatGPT identity; exact-account skill discovery requires human-owner closure or explicit ownership transfer.
-    disposition: Provider-free skill capability truthfulness accepted; exact-account inventory and all lifecycle mutations remain unobserved and gated.
+    validation_status: live-discovery-accepted-mutations-withheld
+    validation_ref: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
+    integration_receipt: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
+    blocker: null
+    disposition: Provider-free truthfulness and exact-account read-only lifecycle discovery accepted after explicit operational ownership transfer; all skill mutations remain separately gated.
+    updated_at: 2026-09-02
+  - id: P21
+    objective: Prove installed long-observation timeout recovery on one exact ChatGPT turn without resend.
+    plan: docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md
+    plan_ref: refs/heads/ops/plan0328-installed-timeout-canary
+    branch: ops/plan0328-installed-timeout-canary
+    target: main
+    plan_state: CLOSED
+    custody_state: READY_FOR_INTEGRATION
+    checkpoint: ac85137977902fdece01297dd97f88b22596fcea
+    remote_ref: refs/remotes/origin/ops/plan0328-installed-timeout-canary
+    integration: merge
+    dependencies: [P19]
+    overlaps: []
+    validation_status: installed-live-accepted
+    validation_ref: ac85137977902fdece01297dd97f88b22596fcea
+    integration_receipt: null
+    blocker: null
+    disposition: Installed/live accepted; pre-answer expiry remains running, exact progress identity overrides stale synthetic runtime routing, and read-only reattach recovered the same 1800-line turn with zero resend.
     updated_at: 2026-09-02

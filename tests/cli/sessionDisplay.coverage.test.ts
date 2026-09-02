@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionMetadata } from '../../src/sessionStore.js';
 
-const mockCollectReattachRegistryDiagnostics = vi.hoisted(() => vi.fn(async () => null));
+const mockCollectReattachRegistryDiagnostics = vi.hoisted(() =>
+  vi.fn(async (): Promise<unknown> => null),
+);
 
 const mockSessionStore = {
   listSessions: vi.fn(),
@@ -26,7 +28,7 @@ vi.mock('../../src/browser/service/registryDiagnostics.js', () => ({
 describe('sessionDisplay helpers', () => {
   beforeEach(() => {
     mockCollectReattachRegistryDiagnostics.mockReset();
-    mockCollectReattachRegistryDiagnostics.mockResolvedValue(null as any);
+    mockCollectReattachRegistryDiagnostics.mockResolvedValue(null);
     Object.values(mockSessionStore).forEach((fn) => {
       if ('mockReset' in fn) {
         (fn as unknown as { mockReset: () => void }).mockReset();
@@ -79,7 +81,7 @@ describe('sessionDisplay helpers', () => {
           reason: 'selected-port-stale',
         },
       ],
-    } as any);
+    });
     mockResumeBrowserSession.mockRejectedValue(
       new ReattachFailure({
         kind: 'wrong-browser-profile',
@@ -113,6 +115,80 @@ describe('sessionDisplay helpers', () => {
           }),
         }),
       }),
+    );
+  }, 15_000);
+
+  it('reattaches an observation-expired session with the exact progress conversation identity', async () => {
+    vi.resetModules();
+    const mockResumeBrowserSession = vi.fn().mockRejectedValue(new Error('stop after runtime capture'));
+    vi.doMock('../../src/browser/reattach.js', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../../src/browser/reattach.js')>();
+      return {
+        ...actual,
+        resumeBrowserSession: mockResumeBrowserSession,
+      };
+    });
+    const observationExpiredSession = {
+      id: 'sess-observation-expired',
+      createdAt: new Date().toISOString(),
+      status: 'running',
+      mode: 'browser',
+      options: {},
+      browser: {
+        config: {},
+        runtime: {
+          chromePort: 45015,
+          chromeHost: '127.0.0.1',
+          chromeTargetId: 'target-experiment-52',
+          tabUrl: 'https://chatgpt.com/c/WEB:stale-runtime-hint',
+          conversationId: 'WEB',
+          controllerPid: 999_999_999,
+        },
+      },
+      response: { status: 'running', incompleteReason: 'observation_expired_generation_active' },
+      error: {
+        category: 'browser-observation-expired',
+        message: 'observer expired',
+        details: {
+          browserResponseProgress: {
+            state: 'no-assistant-turn',
+            url: 'https://chatgpt.com/c/experiment-52',
+            assistantTextChars: 0,
+            stopVisible: true,
+            completionVisible: false,
+            dialogVisible: false,
+          },
+        },
+      },
+    };
+    mockSessionStore.readSession
+      .mockResolvedValueOnce(observationExpiredSession)
+      .mockResolvedValue({
+        ...observationExpiredSession,
+        status: 'error',
+        response: { status: 'error' },
+      });
+    mockSessionStore.readLog.mockResolvedValue('');
+    mockSessionStore.readRequest.mockResolvedValue({ prompt: 'Prompt here' });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const { attachSession } = await import('../../src/cli/sessionDisplay.js');
+    await attachSession('sess-observation-expired', {
+      suppressMetadata: true,
+      renderPrompt: false,
+      renderMarkdown: false,
+    });
+
+    expect(mockResumeBrowserSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chromeTargetId: 'target-experiment-52',
+        tabUrl: 'https://chatgpt.com/c/experiment-52',
+        conversationId: 'experiment-52',
+      }),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
     );
   }, 15_000);
 

@@ -1182,12 +1182,16 @@
       probe lease evidence when the provider has not surfaced readable
       progress text; missing assistant/status text alone is not evidence that
       the run stopped
-    - if the command observation window expires while the exact assistant turn
-      still has non-empty text and a visible Stop control, Session/model state
-      remains `running` with
+    - if the command observation window expires while the exact submitted
+      generation has a visible Stop control, including before ChatGPT mounts
+      an assistant turn, Session/model state remains `running` with
       `response.incompleteReason=observation_expired_generation_active`; exact
-      browser, conversation, assistant identity, and text fingerprint evidence
-      must survive for `auracall session <id>` read-only reattachment
+      browser and conversation evidence must survive for `auracall session
+      <id>` read-only reattachment, with assistant identity and text
+      fingerprint added once that turn mounts
+    - if the last runtime URL is stale or synthetic, the validated final
+      ChatGPT progress `/c/<id>` URL must replace only runtime URL/conversation
+      identity before reattach; target ID and port must remain unchanged
     - healthy assistant fingerprint/length progress must not refresh the page;
       only positively stale or interrupted observation may refresh, only the
       same conversation may be targeted, and one Runtime may refresh at most

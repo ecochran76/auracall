@@ -122,8 +122,22 @@ describe('browserMode exports', () => {
         },
       },
     );
+    const preAnswerGenerationExpiry = Object.assign(
+      new Error('AuraCall session timed out after 45 seconds.'),
+      {
+        name: 'SessionRunTimeoutError',
+        browserResponseProgress: {
+          state: 'no-assistant-turn',
+          assistantTextChars: 0,
+          stopVisible: true,
+          completionVisible: false,
+          dialogVisible: false,
+        },
+      },
+    );
 
     expect(shouldPreserveBrowserForObservationExpiryForTest(activeGenerationExpiry)).toBe(true);
+    expect(shouldPreserveBrowserForObservationExpiryForTest(preAnswerGenerationExpiry)).toBe(true);
     expect(shouldPreserveBrowserForObservationExpiryForTest(completedAtExpiry)).toBe(false);
     expect(shouldPreserveBrowserOnErrorForTest(activeGenerationExpiry, false)).toBe(false);
   });

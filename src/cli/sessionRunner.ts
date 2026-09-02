@@ -20,6 +20,7 @@ import { runBrowserSessionExecution, type BrowserSessionRunnerDeps } from '../br
 import {
   isActiveGenerationObservationExpiry,
   readBrowserResponseProgressEvidence,
+  reconcileBrowserRuntimeWithResponseProgress,
 } from '../browser/observationLease.js';
 import { renderMarkdownAnsi } from './markdownRenderer.js';
 import { formatResponseMetadata, formatTransportMetadata } from './sessionDisplay.js';
@@ -479,9 +480,13 @@ export async function performSessionRun({
         : undefined;
     const connectionLost =
       userError?.category === 'browser-automation' && (userError.details as { stage?: string } | undefined)?.stage === 'connection-lost';
+    const observationRuntime = reconcileBrowserRuntimeWithResponseProgress(
+      latestBrowserRuntime,
+      browserResponseProgress,
+    );
     const observationExpiredWhileGenerationActive =
       isActiveGenerationObservationExpiry(error) &&
-      hasExactBrowserReattachIdentity(latestBrowserRuntime);
+      hasExactBrowserReattachIdentity(observationRuntime);
     if (observationExpiredWhileGenerationActive && mode === 'browser') {
       const incompleteReason = 'observation_expired_generation_active';
       const recoveryError = {
@@ -512,7 +517,7 @@ export async function performSessionRun({
         mode,
         browser: {
           config: browserConfig,
-          runtime: latestBrowserRuntime,
+          runtime: observationRuntime,
           context: browserContext,
         },
         response: { status: 'running', incompleteReason },

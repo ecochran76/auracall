@@ -1891,13 +1891,17 @@ npx -y auracall auracall-mcp
 | `--azure-endpoint`, `--azure-deployment`, `--azure-api-version` | Target Azure OpenAI endpoints (picks Azure client automatically). |
 
 For a long ChatGPT browser run, expiration of AuraCall's observation window is
-not treated as model failure when the exact submitted turn still has assistant
-text and a visible Stop control. AuraCall retains the managed browser identity,
+not treated as model failure when the exact submitted generation has a visible
+Stop control, including the brief interval before ChatGPT mounts the assistant
+turn. Once mounted, non-empty assistant text remains positive progress evidence.
+AuraCall retains the managed browser identity,
 keeps the Session running with
 `observation_expired_generation_active`, and allows `auracall session <id>` to
 reattach read-only without resending the prompt. A physical refresh is reserved
 for positively stale or interrupted observation and is limited to the same
-conversation at most once per 15 minutes.
+conversation at most once per 15 minutes. Before reattachment or fallback
+navigation, a validated final progress `/c/<id>` URL supersedes a stale
+synthetic runtime route while the exact DevTools target and port stay fixed.
 
 ## Configuration
 
