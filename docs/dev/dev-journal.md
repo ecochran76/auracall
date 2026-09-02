@@ -48462,3 +48462,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   dispatch, prevents restoration to the removed editor immediately, and
   requires fresh exact-ID inventory absence before returning `completed`.
   Thirty-five focused/adjacent tests and all static/build gates pass.
+- The final published runtime is byte-identical and its fresh complete
+  inventory proves the canary absent. Cleanup preserved Chrome PID `1933` on
+  port `45015`, API PID `98408`, and the two existing chat tabs; the stale
+  deleted-editor tab was returned to `/skills`, with no operation lock left.
+- The resumed loop used four published installs because installed diagnostics
+  exposed three successive provider/readback mismatches. Each stopped before
+  any new mutation boundary; the one Create was not retried, update ran once,
+  Delete ran once, and all process identities remained stable.
+- Final gates pass 35 tests, typecheck, production build, scoped lint, diff
+  hygiene, and the zero-error plan audit. `pnpm audit --audit-level=high`
+  reports the existing 94-advisory repository baseline; P22 has no dependency
+  manifest or lockfile delta.

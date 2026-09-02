@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P22
-Operational state: LIVE_ACCEPTED_REPAIR_PENDING_INSTALL
+Operational state: INSTALLED_LIVE_ACCEPTED_INTEGRATION_READY
 Branch: feat/plan0329-chatgpt-skill-crud
 Target: main
 Integration: merge
-Revision: 10 | 2026-09-02
+Revision: 11 | 2026-09-02
 
 ## Stable Objective
 
@@ -119,6 +119,23 @@ and leaving no provider artifact behind.
   ID. The provider-free packet passes 35 tests plus typecheck, production
   build, scoped lint, and diff hygiene. Final install/read-only absence proof
   and integration remain.
+- The final published delete repair is installed with byte-identical provider
+  and CLI modules. A fresh installed complete inventory still omits the exact
+  canary ID. Cleanup retained Chrome PID `1933`, DevTools port `45015`, API PID
+  `98408`, and the two pre-existing chat tabs; the former canary editor tab is
+  now the Skills root. No operation-lock file remains.
+- The resumed installed-validation loop required four published installs, not
+  the intended one: the first exposed unreliable query-detail readback, the
+  second exposed the generated newline-expression defect, the third completed
+  update/delete but exposed the provider's immediate-delete semantics, and the
+  fourth installed that final absence-based classification. Every failure was
+  fail-closed before a new mutation boundary, no Create or Delete was retried,
+  and no install restarted the API or replaced the browser process.
+- Final validation passes 35 focused/adjacent tests, typecheck, production
+  build, scoped zero-warning lint, diff hygiene, and a 328-candidate zero-error
+  plan audit. The repository-wide dependency audit separately reports the
+  unchanged pre-existing baseline of 94 advisories; this lane changes neither
+  dependency manifest nor lockfile.
 
 ## Execution Graph
 
@@ -132,8 +149,10 @@ and leaving no provider artifact behind.
    fresh postcondition readback. Never target a mutation by name alone.
 4. Run provider-free TDD, affected suites, typecheck, build, scoped lint, plan
    audit, and diff hygiene; reconcile any `bin/auracall.ts` overlap with P16.
-5. Commit and publish before one runtime install. Prove byte parity without API
-   restart or managed-browser ownership change.
+5. Commit and publish before runtime installation. Prove byte parity without
+   API restart or managed-browser ownership change; if installed diagnostics
+   fail closed, repair and republish before any further provider mutation and
+   record each corrective install explicitly.
 6. Create one uniquely named disposable skill from a deterministic minimal
    bundle, read it back by returned ID, update it once to a second known hash,
    read it back again, then delete that exact ID and prove absence.
