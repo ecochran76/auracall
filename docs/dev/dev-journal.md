@@ -48586,4 +48586,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   (0), Medium (1), High (2), and Extra High (3). A source live canary selected
   Extra High through the generated expression and restored original Pro (4).
 - No prompt, upload, model-family change, `Answer now`, API restart, or retained
-  Chrome shutdown occurred. Installed acceptance remains.
+  Chrome shutdown occurred.
+- Checkpoint `c9f976f1` passed 83 affected tests, typecheck, production build,
+  scoped zero-warning lint, diff hygiene, and a zero-error plan audit. The full
+  suite passed 3,059 tests with only Plan 0326's known stale raw-CDP allowlist
+  expectation failing.
+- Installed runtime hashes match the built selector modules, manifest, and
+  attachment module. The installed model/slider canary passed and restored Pro
+  (4); the installed attachment probe returned `ready` for `#upload-files`
+  without upload. Retained Chrome PID `1933` still listens on port `45015`.

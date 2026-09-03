@@ -11,7 +11,16 @@
   from model-trigger fallbacks and requires a visible active-composer control.
 - Source red/green tests pass. The real source expression selected Extra High
   and the original Pro value was restored; no prompt, upload, model-family
-  change, or `Answer now` action occurred. Build/install acceptance remains.
+  change, or `Answer now` action occurred.
+- Checkpoint `c9f976f1` passes 83 affected tests, typecheck, build, scoped
+  zero-warning lint, diff hygiene, and zero-error plan audit. The comprehensive
+  suite passes 3,059 tests; only the previously documented Plan 0326 stale
+  raw-CDP allowlist expectation fails.
+- One user-runtime install is byte-identical for the changed runtime modules,
+  bundled manifest, and attachment module. Installed no-prompt canaries read
+  GPT-5.6 Sol, selected Extra High (3), restored Pro (4), and returned
+  attachment `ready` on `#upload-files` without upload. Chrome PID `1933` and
+  port `45015` remain healthy; all observed composers are empty.
 
 ## Turn 551 | 2026-09-02
 

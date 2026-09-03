@@ -1,8 +1,8 @@
 # ChatGPT Composer Intelligence Picker | 0331-2026-09-03
 
-State: OPEN
+State: CLOSED
 Lane: P24
-Operational state: SOURCE_IMPLEMENTED_LIVE_CANARY_PASSED_INSTALL_PENDING
+Operational state: INSTALLED_LIVE_ACCEPTED_INTEGRATION_PENDING
 Branch: fix/plan0331-chatgpt-composer-intelligence-picker
 Target: main
 Integration: merge
@@ -31,6 +31,17 @@ preserving safe local-file upload discovery after attachment-row label drift.
 - A source canary read `GPT-5.6 Sol`, selected Extra High through the actual
   AuraCall expression, and restored the original Pro slider state. No prompt,
   file upload, model-family change, or `Answer now` action occurred.
+- The affected cone passes 83 tests, typecheck, production build, scoped
+  zero-warning lint, diff hygiene, and the 330-candidate zero-error plan audit.
+  The comprehensive suite passes 3,059 tests with 65 policy-skipped tests; its
+  sole failure is Plan 0326's documented stale raw-CDP allowlist expectation.
+- The user runtime is installed from checkpoint `c9f976f1`. All three changed
+  runtime modules, the service manifest, and the already-integrated attachment
+  module are byte-identical to the accepted build.
+- Installed no-prompt acceptance read `GPT-5.6 Sol`, selected Extra High (3),
+  and restored Pro (4). The installed attachment probe returned `ready` with
+  `#upload-files` through the composer-local fallback. Chrome PID `1933` still
+  owns port `45015`; composers are empty and no generation is active.
 
 ## Scope
 
@@ -64,10 +75,10 @@ preserving safe local-file upload discovery after attachment-row label drift.
 - [x] `light`, `standard`, `extended`, and `heavy` map to slider values 0, 1,
       2, and 3 with post-click verification.
 - [x] Focused model/thinking-time tests and typecheck pass.
-- [ ] Production build, affected tests, scoped zero-warning lint, diff hygiene,
+- [x] Production build, affected tests, scoped zero-warning lint, diff hygiene,
       and plan audit pass.
-- [ ] User runtime installation is byte-identical to the accepted build.
-- [ ] Installed no-prompt readback passes and restores the original live state.
+- [x] User runtime installation is byte-identical to the accepted build.
+- [x] Installed no-prompt readback passes and restores the original live state.
 
 ## Definition of Done
 
