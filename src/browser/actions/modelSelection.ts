@@ -332,11 +332,32 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
     const targetWords = normalizedTarget.split(' ').filter(Boolean);
 
     let button = null;
+    const visible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const rect = node.getBoundingClientRect();
+      const style = window.getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    const isAssistantTurnControl = (node) => Boolean(
+      node?.closest('[data-testid^="conversation-turn"]') ||
+      node?.closest('[data-message-author-role]') ||
+      node?.closest('[data-turn]')
+    );
+    const findComposerButton = () => {
+      const prompt = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"], .ProseMirror');
+      const composer = prompt?.closest('form, [data-testid*="composer"]') ?? null;
+      for (const selector of BUTTON_SELECTORS) {
+        const candidates = composer
+          ? Array.from(composer.querySelectorAll(selector))
+          : Array.from(document.querySelectorAll(selector));
+        const candidate = candidates.find((node) => visible(node) && !isAssistantTurnControl(node));
+        if (candidate) return candidate;
+      }
+      return null;
+    };
     const buttonWaitStartedAt = performance.now();
     while (!button && performance.now() - buttonWaitStartedAt <= BUTTON_WAIT_MS) {
-      button = BUTTON_SELECTORS
-        .map((selector) => document.querySelector(selector))
-        .find((node) => node) ?? null;
+      button = findComposerButton();
       if (!button) {
         await new Promise((resolve) => setTimeout(resolve, REOPEN_INTERVAL_MS / 2));
       }

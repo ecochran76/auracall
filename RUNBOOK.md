@@ -1,5 +1,27 @@
 # RUNBOOK
 
+## Turn 552 | 2026-09-03
+
+- Opened P24 from clean current `main` in an isolated worktree; the conflicted
+  P08/P17 checkout remains untouched.
+- Retained Chrome PID `1933` / port `45015` showed the same active composer
+  intelligence picker in three chats: checked GPT-5.6 Sol/GPT-5.5 rows and a
+  horizontal Power slider with Instant, Medium, High, Extra High, and Pro.
+- An older assistant turn's `Switch model` opens `Try again`, so P24 removes it
+  from model-trigger fallbacks and requires a visible active-composer control.
+- Source red/green tests pass. The real source expression selected Extra High
+  and the original Pro value was restored; no prompt, upload, model-family
+  change, or `Answer now` action occurred.
+- Checkpoint `c9f976f1` passes 83 affected tests, typecheck, build, scoped
+  zero-warning lint, diff hygiene, and zero-error plan audit. The comprehensive
+  suite passes 3,059 tests; only the previously documented Plan 0326 stale
+  raw-CDP allowlist expectation fails.
+- One user-runtime install is byte-identical for the changed runtime modules,
+  bundled manifest, and attachment module. Installed no-prompt canaries read
+  GPT-5.6 Sol, selected Extra High (3), restored Pro (4), and returned
+  attachment `ready` on `#upload-files` without upload. Chrome PID `1933` and
+  port `45015` remain healthy; all observed composers are empty.
+
 ## Turn 551 | 2026-09-02
 
 - P22 is integrated and installed/live accepted. Exact-account Skill CRUD used

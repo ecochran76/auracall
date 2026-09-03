@@ -22196,3 +22196,11 @@ browser-stage lifecycle observability, not transcript truncation.
   false negative even after ChatGPT creates the project conversation and begins
   its response. Keep the equality contract after presentation-only filtering so
   unrelated retained text cannot satisfy commit verification.
+- 2026-09-03: ChatGPT's assistant-turn `Switch model` action is a retry surface,
+  not the active composer model picker. Bind model-trigger discovery to the
+  visible composer containing `#prompt-textarea` and reject all turn-local
+  controls. The current composer Power control is an aria-hidden five-position
+  slider whose live option order is Instant, Medium, High, Extra High, Pro;
+  dispatch to the corresponding tick and verify `aria-valuenow` before claiming
+  selection. Preserve the unrestricted upload input only when prompt, input,
+  and exact `Add files and more` trigger share the active composer.

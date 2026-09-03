@@ -48570,3 +48570,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   text extraction to exclude `[role="group"][class*="file-tile"]`; the minimal
   repair preserves strict equality after presentation filtering and passed the
   74-test focused browser/handoff cone.
+
+## 2026-09-03 | Plan 0331 ChatGPT composer intelligence picker
+
+- Reconciled Scout's handoff against current `main`: current-model preservation
+  and composer-bound unrestricted upload-input fallback were already present.
+- Surveyed retained Chrome PID `1933` on port `45015`. All three open chats use
+  the active composer intelligence picker with GPT-5.6 Sol/GPT-5.5 model rows
+  and a five-step Power slider. One older assistant turn separately exposes a
+  `Switch model` retry action containing `Try again`.
+- Added a red/green safety fence that finds only a visible model trigger inside
+  the active composer and removes the assistant-turn selector from both bundled
+  registry and provider defaults.
+- Added verified slider selection: light/standard/extended/heavy target Instant
+  (0), Medium (1), High (2), and Extra High (3). A source live canary selected
+  Extra High through the generated expression and restored original Pro (4).
+- No prompt, upload, model-family change, `Answer now`, API restart, or retained
+  Chrome shutdown occurred.
+- Checkpoint `c9f976f1` passed 83 affected tests, typecheck, production build,
+  scoped zero-warning lint, diff hygiene, and a zero-error plan audit. The full
+  suite passed 3,059 tests with only Plan 0326's known stale raw-CDP allowlist
+  expectation failing.
+- Installed runtime hashes match the built selector modules, manifest, and
+  attachment module. The installed model/slider canary passed and restored Pro
+  (4); the installed attachment probe returned `ready` for `#upload-files`
+  without upload. Retained Chrome PID `1933` still listens on port `45015`.

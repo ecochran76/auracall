@@ -165,13 +165,22 @@ oracle --profile wsl-chrome-3 --engine browser \
 If the mode menu or the Work slider's `advanced options -> Model` submenu is
 not present, AuraCall fails closed. It does not reuse Chat picker selectors.
 
+The current Chat composer combines model and effort selection in one
+intelligence picker. AuraCall scopes the trigger to the active composer; an
+older assistant turn's `Switch model` action is a retry menu and is never used
+for composer model selection. The horizontal Power positions are Instant,
+Medium, High, Extra High, and Pro. Existing AuraCall effort levels map to the
+first four positions respectively and verify the selected slider value.
+
 On the current Chat workbench, `Add files and more` opens one searchable
 popover containing both file sources and tools. Use `--browser-composer-tool`
 only for tool/app rows such as `web-search`, `canvas`, or `deep-research`; use
-`--file` for local paths. AuraCall verifies `Add photos & files / Upload from
-computer` and the unrestricted `#upload-files` input without confusing them
-with `Add from library / Browse and search your files`, which is ChatGPT's
-separate provider-library drawer. Missing or ambiguous rows fail closed.
+`--file` for local paths. AuraCall prefers `Add photos & files / Upload from
+computer`; if that text drifts, it accepts the unrestricted `#upload-files`
+input only when the same active composer contains the prompt and the exact
+`Add files and more` trigger. It never substitutes `Add from library / Browse
+and search your files`, which is ChatGPT's provider-library drawer. Missing or
+ambiguous binding still fails closed.
 
 Third-party tools can pause after prompt submission and ask for `Allow once`
 or `Always allow`. AuraCall defaults to `manual`, which detects the pause and
