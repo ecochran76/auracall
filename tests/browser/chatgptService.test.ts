@@ -2,16 +2,16 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { LlmService } from '../../src/browser/llmService/llmService.js';
-import { BrowserService } from '../../src/browser/service/browserService.js';
-import { resolveBrowserLaunchPlan } from '../../src/browser/service/browserLaunchPlan.js';
-import type { ResolvedUserConfig } from '../../src/config.js';
-import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
+import { LlmService } from '../../src/browser/llmService/llmService.js';
 import {
   clearBrowserOperationQueueObservationsForTest,
   summarizeBrowserOperationQueueObservations,
 } from '../../src/browser/operationQueueObservations.js';
+import { resolveBrowserLaunchPlan } from '../../src/browser/service/browserLaunchPlan.js';
+import { BrowserService } from '../../src/browser/service/browserService.js';
+import type { ResolvedUserConfig } from '../../src/config.js';
 
 const providerRunPrompt = vi.hoisted(() =>
   vi.fn(async (input: { conversationId?: string | null; targetUrl?: string | null }) => ({
@@ -170,7 +170,8 @@ describe('ChatGPT llm service', () => {
       sourceRef: 'https://gemini.google.com/app/source',
       targetProvider: 'chatgpt',
       targetRuntimeProfile: 'target-pro',
-      targetRef: null,
+      targetRef: 'https://chatgpt.com/g/g-p-target-pro-soylei',
+      targetProjectRef: 'g-p-target-pro',
       targetModelSelector: null,
       sourceContext: { messages: [{ role: 'user', content: 'handoff adapter' }] },
       sourceManifest: {
@@ -303,7 +304,7 @@ describe('ChatGPT llm service', () => {
           }),
         ],
         conversationId: null,
-        targetUrl: 'https://chatgpt.com/',
+        targetUrl: 'https://chatgpt.com/g/g-p-target-pro-soylei',
         desiredModel: null,
         thinkingTime: null,
         modelStrategy: 'current',

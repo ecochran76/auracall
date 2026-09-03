@@ -226,6 +226,8 @@ auracall run status <id> --json
 auracall handoff prepare \
   --source-provider chatgpt --source-profile default --source-ref "https://chatgpt.com/c/..." \
   --target-provider chatgpt --target-profile auracall-chatgpt-pro \
+  --target-ref "https://chatgpt.com/g/g-p-...-project-slug" \
+  --target-project-ref "g-p-..." \
   --target-model-selector chatgpt:sol-high \
   --source-context-json /path/to/context.json \
   --source-manifest-json /path/to/manifest.json \
@@ -234,14 +236,20 @@ auracall handoff prepare \
   --dry-run --json
 auracall handoff status <handoff_id> --json
 auracall handoff approve-upload <handoff_id> --actor ecochran76 --package-digest <digest>
+# Deterministic packet-adapter execution:
 auracall handoff upload <handoff_id> --json
 auracall handoff approve-submit <handoff_id> --actor ecochran76 --package-digest <digest>
 auracall handoff submit <handoff_id> --json
+# Provider-native ChatGPT execution uses a fresh packet and recover-live for
+# each approved stage; a packet-adapter completion cannot later be promoted live.
+auracall handoff approve-upload <fresh_handoff_id> --actor ecochran76 --package-digest <digest>
+auracall handoff recover-live <fresh_handoff_id> --target-adapter chatgpt-browser --json
+auracall handoff approve-submit <fresh_handoff_id> --actor ecochran76 --package-digest <digest>
+auracall handoff recover-live <fresh_handoff_id> --target-adapter chatgpt-browser --json
 auracall handoff resume <handoff_id> --json
 auracall handoff repair <handoff_id> --json
 auracall handoff export <handoff_id> --json
 auracall handoff recover-live <handoff_id> --json
-auracall handoff recover-live <handoff_id> --target-adapter chatgpt-browser --json
 # The console Handoffs view can run the same status/resume/repair/export/recover actions
 open http://127.0.0.1:<api_port>/console?view=handoffs&handoff=<handoff_id>
 

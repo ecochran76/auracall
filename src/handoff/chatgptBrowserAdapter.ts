@@ -1,15 +1,15 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { getAuracallHomeDir } from "../auracallHome.js";
-import type { ResolvedUserConfig } from "../config.js";
-import { resolveChatgptSemanticModelSelector } from "../config/modelSelector.js";
-import { ChatgptService } from "../browser/llmService/providers/chatgptService.js";
-import { recordBrowserOperationQueueObservation } from "../browser/operationQueueObservations.js";
-import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
 import {
 	createFileBackedBrowserOperationDispatcher,
 	formatBrowserOperationBusyResult,
 } from "../../packages/browser-service/src/service/operationDispatcher.js";
+import { getAuracallHomeDir } from "../auracallHome.js";
+import { ChatgptService } from "../browser/llmService/providers/chatgptService.js";
+import { recordBrowserOperationQueueObservation } from "../browser/operationQueueObservations.js";
+import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
+import { resolveChatgptSemanticModelSelector } from "../config/modelSelector.js";
+import type { ResolvedUserConfig } from "../config.js";
 import {
 	createProviderNativeHandoffTargetAdapter,
 	type HandoffProviderNativePromptInput,
@@ -154,28 +154,36 @@ async function submitChatgptHandoffPrompt(
 	}
 	const prompt = buildChatgptHandoffPrompt(input);
 	const semanticSelection = resolveChatgptSemanticModelSelector(input.modelSelector);
-	const result = await service.runPrompt({
-		prompt,
-		attachments: input.uploadedFiles.map((file) => ({
-			path: file.absolutePath,
-			displayPath: file.filename,
-			sizeBytes: file.sizeBytes,
-		})),
-		completionMode: "prompt_submitted",
-		configuredUrl: input.conversationRef,
-		conversationId: extractChatgptConversationId(input.conversationRef),
-		projectId: input.projectRef,
-		modelSelector: input.modelSelector,
-		desiredModel: semanticSelection?.desiredModel ?? null,
-		thinkingTime: semanticSelection?.thinkingTime ?? null,
-		modelStrategy: input.modelSelector == null ? "current" : semanticSelection ? "select" : undefined,
-	}, {
-		tabLifecycle: input.conversationRef ? "retain" : "retain-new",
-		mutationSourcePrefix: "handoff:chatgpt-target-submit",
-	});
+	const conversationId = extractChatgptConversationId(input.conversationRef);
+	const hasProviderNativeProjectUrl = Boolean(input.conversationRef && !conversationId);
+	const result = await service.runPrompt(
+		{
+			prompt,
+			attachments: input.uploadedFiles.map((file) => ({
+				path: file.absolutePath,
+				displayPath: file.filename,
+				sizeBytes: file.sizeBytes,
+			})),
+			completionMode: "prompt_submitted",
+			configuredUrl: input.conversationRef,
+			conversationId,
+			projectId: hasProviderNativeProjectUrl ? null : input.projectRef,
+			modelSelector: input.modelSelector,
+			desiredModel: semanticSelection?.desiredModel ?? null,
+			thinkingTime: semanticSelection?.thinkingTime ?? null,
+			modelStrategy:
+				input.modelSelector == null ? "current" : semanticSelection ? "select" : undefined,
+		},
+		{
+			tabLifecycle: conversationId ? "retain" : "retain-new",
+			mutationSourcePrefix: "handoff:chatgpt-target-submit",
+		},
+	);
 	const targetConversationRef =
 		normalizeString(result.url) ??
-		(result.conversationId ? `https://chatgpt.com/c/${encodeURIComponent(result.conversationId)}` : null) ??
+		(result.conversationId
+			? `https://chatgpt.com/c/${encodeURIComponent(result.conversationId)}`
+			: null) ??
 		input.conversationRef;
 	return {
 		targetConversationRef,

@@ -48526,3 +48526,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The successful context read left CLI wrappers alive after returning; only that
   exact process group was terminated. Managed Chrome PIDs `79584` and `1933`
   were preserved, as was the foreign target identity-smoke PID `44328`.
+- Live preflight later verified port `45015` as
+  `eric.cochran@soylei.com` with no blocking surface and no active AuraCall
+  owner/operation/lease. The old identity-smoke and doctor wrappers were
+  childless, CPU-idle, and left untouched.
+- A first packet followed the deterministic packet adapter and produced only
+  synthetic `handoff-target-*` evidence; it is not claimed as a live post. A
+  fresh packet, `handoff_hagenson_professorship_20260902`, then completed the
+  correct provider-native upload stage with two `chatgpt-prompt-attachment-*`
+  IDs, zero failures, and zero omissions.
+- The one approved live submit failed commit verification after dispatch. Exact
+  read-only inspection found no handoff ID or primer in the existing visible
+  conversation, an empty composer, no retained submitted conversation, and a
+  ledger still at zero submit attempts. No retry was made.
+- The red regression reproduced the route cause: when a provider-native project
+  URL and bare project ID coexist, prompt planning replaced the exact slugged URL
+  with legacy `/g/{projectId}/project`, while the handoff adapter also treated
+  every non-null target reference as an existing conversation. The repair now
+  preserves provider-native project URLs, clears the redundant project-ID route
+  input, and selects `retain-new` unless the reference contains `/c/<id>`.
+- Provider-free validation passed after the repair: 72 focused browser/handoff
+  tests, typecheck, build, targeted Biome checks, `git diff --check`, and the
+  plan audit with 329 candidates and zero errors. The uploaded live packet remains
+  paused before a second submit attempt; its no-retry boundary is unchanged.

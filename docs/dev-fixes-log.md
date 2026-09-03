@@ -22181,3 +22181,12 @@ browser-stage lifecycle observability, not transcript truncation.
   `runBrowserMode()`. For a handoff with no existing target conversation, use
   the explicit `retain-new` lifecycle so selection cannot borrow an unrelated
   generic root tab and the submitted tab remains available for commit evidence.
+- 2026-09-02: A ChatGPT handoff target can carry a provider-native project URL
+  whose path includes a human-readable slug while also carrying the bare project
+  ID. Do not overwrite that exact URL with the generated legacy
+  `/g/{projectId}/project` route: current ChatGPT can redirect that route to home,
+  leaving a populated composer unable to commit. Treat only references containing
+  `/c/<id>` as existing conversations; project-root references require the fresh
+  retained-tab lifecycle. Provider-native execution must use `recover-live` for
+  each approved stage on a fresh packet, because packet-adapter completion is
+  deliberately terminal and cannot be promoted later.
