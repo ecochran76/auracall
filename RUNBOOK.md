@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 552 | 2026-09-03
+
+- Opened P24 from clean current `main` in an isolated worktree; the conflicted
+  P08/P17 checkout remains untouched.
+- Retained Chrome PID `1933` / port `45015` showed the same active composer
+  intelligence picker in three chats: checked GPT-5.6 Sol/GPT-5.5 rows and a
+  horizontal Power slider with Instant, Medium, High, Extra High, and Pro.
+- An older assistant turn's `Switch model` opens `Try again`, so P24 removes it
+  from model-trigger fallbacks and requires a visible active-composer control.
+- Source red/green tests pass. The real source expression selected Extra High
+  and the original Pro value was restored; no prompt, upload, model-family
+  change, or `Answer now` action occurred. Build/install acceptance remains.
+
 ## Turn 551 | 2026-09-02
 
 - P22 is integrated and installed/live accepted. Exact-account Skill CRUD used

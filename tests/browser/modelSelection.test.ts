@@ -15,7 +15,9 @@ describe('browser model selection matchers', () => {
     const expression = buildModelSelectionExpressionForTest('gpt-5.2-pro');
     expect(expression).toContain('[data-testid=\\"model-switcher-dropdown-button\\"]');
     expect(expression).toContain('button.__composer-pill');
-    expect(expression).toContain('button[aria-label=\\"Switch model\\"]');
+    expect(expression).not.toContain('button[aria-label=\\"Switch model\\"]');
+    expect(expression).toContain(`closest('form, [data-testid*="composer"]')`);
+    expect(expression).toContain(`closest('[data-testid^="conversation-turn"]')`);
     expect(expression).toContain('button[aria-label*=\\"Model\\"]');
   });
 

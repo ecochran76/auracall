@@ -48570,3 +48570,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   text extraction to exclude `[role="group"][class*="file-tile"]`; the minimal
   repair preserves strict equality after presentation filtering and passed the
   74-test focused browser/handoff cone.
+
+## 2026-09-03 | Plan 0331 ChatGPT composer intelligence picker
+
+- Reconciled Scout's handoff against current `main`: current-model preservation
+  and composer-bound unrestricted upload-input fallback were already present.
+- Surveyed retained Chrome PID `1933` on port `45015`. All three open chats use
+  the active composer intelligence picker with GPT-5.6 Sol/GPT-5.5 model rows
+  and a five-step Power slider. One older assistant turn separately exposes a
+  `Switch model` retry action containing `Try again`.
+- Added a red/green safety fence that finds only a visible model trigger inside
+  the active composer and removes the assistant-turn selector from both bundled
+  registry and provider defaults.
+- Added verified slider selection: light/standard/extended/heavy target Instant
+  (0), Medium (1), High (2), and Extra High (3). A source live canary selected
+  Extra High through the generated expression and restored original Pro (4).
+- No prompt, upload, model-family change, `Answer now`, API restart, or retained
+  Chrome shutdown occurred. Installed acceptance remains.

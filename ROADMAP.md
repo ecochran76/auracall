@@ -4,8 +4,15 @@
 
 ### Current Execution Board
 
-Status: ChatGPT Skill CRUD integrated and installed/live accepted
-Lanes: P01-P07, P09-P15, P17, P19-P22 (integrated); P08, P18 (open)
+Status: ChatGPT composer intelligence-picker repair in acceptance
+Lanes: P01-P07, P09-P15, P17, P19-P23 (integrated); P08, P18, P24 (open)
+
+- Active ChatGPT composer intelligence-picker repair:
+  [docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md](docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md)
+  P24 scopes model selection to the active composer, excludes assistant-turn
+  retry controls, and supports the live five-position horizontal Power slider.
+  Source canary passed with original Pro state restored; installed acceptance
+  remains before closure.
 
 - Integrated ChatGPT Skill CRUD:
   [docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)
