@@ -22190,3 +22190,9 @@ browser-stage lifecycle observability, not transcript truncation.
   retained-tab lifecycle. Provider-native execution must use `recover-live` for
   each approved stage on a fresh packet, because packet-adapter completion is
   deliberately terminal and cannot be promoted later.
+- 2026-09-02: ChatGPT renders uploaded-file cards inside the committed user-turn
+  container before the authored prompt. Exclude exact file-tile presentation
+  groups when reading committed text; otherwise strict prompt equality reports a
+  false negative even after ChatGPT creates the project conversation and begins
+  its response. Keep the equality contract after presentation-only filtering so
+  unrelated retained text cannot satisfy commit verification.

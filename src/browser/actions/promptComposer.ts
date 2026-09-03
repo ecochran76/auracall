@@ -93,6 +93,7 @@ function buildReadCommittedTurnTextFunction(): string {
 	  const presentationOnlySelector = [
 	    'button',
 	    '[role="button"]',
+	    '[role="group"][class*="file-tile"]',
 	    '[data-testid="collapsible-user-message-toggle"]',
 	    '[data-testid$="-turn-action-button"]',
 	  ].join(', ');

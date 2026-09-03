@@ -61,6 +61,7 @@ describe("promptComposer", () => {
 		expect(expression).toContain("button");
 		expect(expression).toContain("collapsible-user-message-toggle");
 		expect(expression).toContain("-turn-action-button");
+		expect(expression).toContain('[role="group"][class*="file-tile"]');
 		expect(expression).toContain("window.getComputedStyle(current).display");
 	});
 

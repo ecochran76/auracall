@@ -48549,3 +48549,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   tests, typecheck, build, targeted Biome checks, `git diff --check`, and the
   plan audit with 329 candidates and zero errors. The uploaded live packet remains
   paused before a second submit attempt; its no-retry boundary is unchanged.
+- Fresh operator authorization installed commit `ab2b505d` into the user-scoped
+  runtime. The installed handoff adapter matched the built source byte-for-byte,
+  and a no-launch identity smoke matched all four configured ChatGPT dimensions
+  for `wsl-chrome-3` / `eric.cochran@soylei.com` on retained PID `1933`, port
+  `45015`.
+- The original packet still lacked the provider-native target URL, so it was not
+  retried. Fresh packet `handoff_hagenson_professorship_20260902_routed`
+  preserved the exact slugged SoyLei project URL, the same two source checksums,
+  zero omissions, and two successful upload rows before one approved submit.
+- That submit returned the same commit-verification timeout, but the retained
+  tab proved the provider effect succeeded: ChatGPT created SoyLei project
+  conversation `6a98dc46-0548-83e9-a445-0d4980d1b16d`, rendered the full user
+  primer and compact context, showed both file cards, emptied the composer, and
+  began an assistant response. No retry followed. The packet ledger remains a
+  stale false-negative local projection and is not used to deny the direct
+  provider readback.
+- Live DOM diagnosis showed attachment cards are descendants of the committed
+  user-turn container. A red provider-free regression now requires committed
+  text extraction to exclude `[role="group"][class*="file-tile"]`; the minimal
+  repair preserves strict equality after presentation filtering and passed the
+  74-test focused browser/handoff cone.
