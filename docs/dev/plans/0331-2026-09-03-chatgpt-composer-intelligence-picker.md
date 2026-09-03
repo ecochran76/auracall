@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P24
-Operational state: INSTALLED_LIVE_ACCEPTED_INTEGRATION_PENDING
+Operational state: INTEGRATED_INSTALLED_LIVE_ACCEPTED
 Branch: fix/plan0331-chatgpt-composer-intelligence-picker
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-03
+Revision: 2 | 2026-09-03
 
 ## Stable Objective
 
@@ -42,6 +42,8 @@ preserving safe local-file upload discovery after attachment-row label drift.
   and restored Pro (4). The installed attachment probe returned `ready` with
   `#upload-files` through the composer-local fallback. Chrome PID `1933` still
   owns port `45015`; composers are empty and no generation is active.
+- Non-forced merge `cd3e6b68` integrates the accepted topic branch into
+  current `main` without touching the unfinished P08/P17 checkout.
 
 ## Scope
 

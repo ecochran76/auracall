@@ -21,6 +21,8 @@
   GPT-5.6 Sol, selected Extra High (3), restored Pro (4), and returned
   attachment `ready` on `#upload-files` without upload. Chrome PID `1933` and
   port `45015` remain healthy; all observed composers are empty.
+- Non-forced merge `cd3e6b68` integrates P24 into current `main`; P08/P17
+  conflict custody remains untouched.
 
 ## Turn 551 | 2026-09-02
 
