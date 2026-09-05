@@ -1,0 +1,57 @@
+{
+  "observedAt": "2026-09-05T23:18:23.422059+00:00",
+  "plan": "0334",
+  "checkpoint": "44e42019",
+  "implementationCheckpoint": "af76f2fd",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "authorization": {
+    "iterationsAllowed": 5,
+    "iterationsUsed": 1,
+    "stopReason": "success"
+  },
+  "inventoryComplete": true,
+  "inventoryCount": 11,
+  "expectedAccountAuthorized": true,
+  "selection": {
+    "skillName": "Codebase Investigator",
+    "skillIdSha256": "b5f45eb50af31807cd5ca11b26bca4f9fadc8e784d53fc3efc203d2d0d1e8ab4",
+    "status": "completed",
+    "activations": 1,
+    "exactSkillProofObserved": true,
+    "providerExamplePrefillObserved": true,
+    "promptSubmissions": 0,
+    "skillExecutions": 0,
+    "cleanupVerifiedByCommand": true,
+    "cleanupVerifiedByIndependentReadback": true
+  },
+  "cleanup": {
+    "url": "https://chatgpt.com/",
+    "visibleComposerTextLength": 0,
+    "selectionPills": 0,
+    "userTurns": 0,
+    "assistantTurns": 0,
+    "ownedChromePid": 65022,
+    "ownedChromePidAbsent": true,
+    "port58744Closed": true
+  },
+  "installedSourceParity": true,
+  "skillsModuleSha256": "a4854d471614f55c0d8821bbdc07c8e1d881c69404e98aaa33ca9b48eab94722",
+  "schedulerControlActions": 0,
+  "serviceRestarts": 0,
+  "conclusion": "Exact-account exact-ID non-submitting Skill selection and cleanup are live accepted. Actual Skill execution was not tested.",
+  "validation": {
+    "focusedSkillsAndComposerTestsPassed": 61,
+    "fullSuitePassed": 3087,
+    "fullSuiteSkipped": 65,
+    "fullSuiteInitialFailures": 2,
+    "mutationAuditFocusedTestsPassedAfterRepair": 6,
+    "remainingFailure": "Grok existing-tab readback probe times out in 5000ms",
+    "baselineReproducedAt": "882c9c14",
+    "baselineFilesUnchanged": true,
+    "disposition": "pre-existing nonblocking failure",
+    "typecheckPassed": true,
+    "buildPassed": true,
+    "scopedLintPassed": true
+  }
+}

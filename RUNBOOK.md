@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 567 | 2026-09-05
+
+- The operator authorized up to five corrective iterations. Iteration 1 passed
+  exact-ID Codebase Investigator selection and cleanup on the installed
+  visible-editor repair. All 11 Skills were inventoried; no prompt was sent.
+- Direct cleanup readback confirmed empty root, zero pills, and zero turns.
+  Owned Chrome PID 65022 and port 58744 are gone. Stop early at success, 1/5.
+- Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json`.
+  Final regression gate and main integration follow.
+
+
 ## Turn 566 | 2026-09-05
 
 - Integrated the live-accepted Chat repair into P27 at `ebc792a7`. Fresh Skills
@@ -20967,3 +20978,5 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   commit status. Actions is enabled and active workflow `CI` declares the
   expected `pull_request` trigger, so treat CI as `not_dispatched`; do not infer
   a green gate from the empty checks list.
+
+- Plan 0334 final validation: 3,087 full-suite passes and 65 skips. The mutation-audit expectation is repaired (six focused passes). One Grok readback timeout reproduces on unchanged origin/main 882c9c14 and is nonblocking for Skills. Local focused/typecheck/build/lint/live proof is accepted; GitHub has no CI results and no required branch checks or rulesets.

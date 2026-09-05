@@ -22327,3 +22327,11 @@ A qualified new tab can still be about:blank at CDP attachment. Skills must awai
 ## 2026-09-05 | Skills visible-composer proof
 
 Skills queries must not use the first matching composer: ChatGPT keeps a hidden named fallback textarea before the visible contenteditable editor. Shared pristine, selection, readiness, and cleanup lookup now requires exactly one visible editor. The previous expression returned null on the captured two-editor case. This fixes the probe; prior Skill activation remains unverified.
+
+## 2026-09-05 | Skill selection accepted on visible-editor repair
+
+- The installed unique-visible-composer probes now verify exact Skill selection, exact provider-prefilled example text, and empty-composer cleanup on the real account. One of five authorized iterations was used. This proves selection, not execution.
+
+## 2026-09-05 | Mutation audit recognizes delegated guarded tools
+
+- The explicit raw-CDP allowlist includes a tool whose mutation is delegated to a guarded helper. Direct-navigation detections must be a subset of the allowlist, and every listed script must retain its guard. This replaces the stale equality expectation without allowing unlisted navigation or unguarded listed tools. Both guard suites pass, six tests.

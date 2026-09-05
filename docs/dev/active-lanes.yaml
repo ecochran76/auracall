@@ -445,18 +445,18 @@ lanes:
     plan_ref: refs/heads/fix/plan0334-chatgpt-tool-skill-selection
     branch: fix/plan0334-chatgpt-tool-skill-selection
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: fde8f388
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 44e42019
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
-    validation_status: visible-composer-repair-ready-selection-gated
-    validation_ref: docs/dev/notes/2026-09-05-plan0334-visible-composer-repair.json
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json
     integration_receipt: null
-    blocker: Fresh Skill activation authority is required after one terminal unverified activation; candidate visibility repair is provider-free accepted.
-    disposition: Chat repair integrated; inventory complete; blank-tab fix installed; visible-editor repair tested and read-only verified but not installed. No prompts or activation retries.
+    blocker: null
+    disposition: Iteration 1 of 5 passed exact Skill selection and independent empty-composer cleanup; local validation accepted with unchanged-main Grok timeout documented; main integration pending.
     updated_at: 2026-09-05
   - id: P28
     objective: Require positive Chat mode proof before prompting on new-chat pages.

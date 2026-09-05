@@ -48926,3 +48926,10 @@ Revision 11 integrates Chat mode repair and proves complete 11-Skill inventory. 
 ## 2026-09-05 | Skills visible-composer proof
 
 Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix installed at fde8f388. One Try in chat activation was unverified and not retried. Visibility repair now passes 61 focused tests and read-only live empty-composer proof; it is not installed. Exact owned browser cleanup is verified. Fresh activation authority remains required.
+
+## 2026-09-05 | Plan 0334 Skill selection live accepted
+
+- Iteration 1/5 passed on the installed visible-editor repair. Exact Codebase Investigator selection and cleanup are verified by the command, with independent empty-root/zero-turn readback. No prompt or Skill execution occurred.
+- Owned browser PID 65022 and port 58744 are gone. Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json`. Final regression/integration follows.
+
+- Plan 0334 final validation: 3,087 full-suite passes and 65 skips. The mutation-audit expectation is repaired (six focused passes). One Grok readback timeout reproduces on unchanged origin/main 882c9c14 and is nonblocking for Skills. Local focused/typecheck/build/lint/live proof is accepted; GitHub has no CI results and no required branch checks or rulesets.

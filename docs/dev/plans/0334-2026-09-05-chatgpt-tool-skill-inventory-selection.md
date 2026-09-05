@@ -1,8 +1,8 @@
 # ChatGPT Tool And Skill Inventory Selection | 0334-2026-09-05
 
-State: OPEN
+State: CLOSED
 Lane: P27
-Operational state: FIVE_ITERATION_LIVE_VALIDATION
+Operational state: INSTALLED_LIVE_ACCEPTED_INTEGRATION_PENDING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
@@ -18,6 +18,22 @@ support guarded exact-account/exact-ID Skill selection without submitting a
 prompt.
 
 ## Current State
+
+- Exact-account inventory is complete at 11 Skills. The installed CLI selected
+  Codebase Investigator by exact ID, verified its composer marker and exact
+  provider example prefill, and restored an empty original composer.
+- Iteration 1 of the newly authorized five passed; the other four were unused.
+  No prompt was submitted and actual Skill execution remains untested.
+- Independent readback confirms zero text, pills, user turns, and assistant
+  turns. Owned Chrome PID 65022 is absent and port 58744 is closed.
+- Installed Skills bytes match implementation `af76f2fd`; source tip `44e42019`
+  adds the five-iteration authorization. Receipt:
+  `docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json`.
+- Source, installed, and live acceptance passed. Main integration remains the final Git custody step.
+- Full suite: 3,087 passed, 65 skipped, two failures. The stale mutation-audit expectation is repaired and its six focused tests pass. The remaining Grok readback timeout reproduces on unchanged origin/main `882c9c14`; it is adjudicated pre-existing and nonblocking for this Skills slice. GitHub has supplied no CI runs; no required branch checks or rulesets are configured.
+
+## Implementation History
+
 
 - The original source and installed static capability reports were
   byte-equivalent apart from generation time, but the static ChatGPT catalog
@@ -211,7 +227,7 @@ prompt.
   Stop early on verified success. No prompts, Skill execution, uploads,
   scheduler controls, identity changes, or bypass of human verification.
   Each iteration must record selection proof and cleanup before the next.
-  Iterations used in this authorization: 0/5.
+  Iterations used in this authorization: 1/5; successful selection and cleanup.
 
 ## Scope
 
@@ -311,12 +327,12 @@ prompt.
       conversation is also retained.
 - [x] Existing tool selection accepts a durable Shopping selector and verifies
       the exact provider label.
-- [ ] `skills select` requires exact account and exact stable Skill ID, uses the
+- [x] `skills select` requires exact account and exact stable Skill ID, uses the
       separate `Try in chat` action, submits no prompt, and cleans up composer
       state on success and failure.
-- [ ] Focused, affected, typecheck, build, lint, CodeGraph/readback, planning,
+- [x] Focused, affected, typecheck, build, lint, CodeGraph/readback, planning,
       diff-hygiene, source/install-parity, and bounded live gates pass.
-- [ ] Receipt, journal, fixes log, roadmap, runbook, and lane catalog agree.
+- [x] Receipt, journal, fixes log, roadmap, runbook, and lane catalog agree.
 
 ## Definition Of Done
 

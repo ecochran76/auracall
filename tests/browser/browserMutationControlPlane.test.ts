@@ -68,7 +68,14 @@ describe('browser mutation control plane', () => {
       }
     }
 
-    expect(rawMutatingScripts.sort()).toEqual([...RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST].sort());
+    // The allowlist also includes guarded tools that delegate to mutation helpers.
+    // Every direct navigation must be allowlisted, and every listed tool guarded.
+    for (const script of rawMutatingScripts) {
+      expect(RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST).toContain(script);
+    }
+    for (const script of RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST) {
+      expect(await readFile(path.join(repoRoot, script), 'utf8')).toContain('enforceRawDevToolsEscapeHatchForCli');
+    }
     expect(unguardedScripts).toEqual([]);
   });
 });
