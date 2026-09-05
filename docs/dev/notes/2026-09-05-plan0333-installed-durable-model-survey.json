@@ -1,0 +1,59 @@
+{
+  "plan": "0333",
+  "date": "2026-09-05",
+  "status": "installed_source_accepted_browser_survey_partial",
+  "source_checkpoint": "c6d0681c",
+  "runtime_repair_checkpoint": "24eaab89",
+  "installation": {
+    "installed_at": "2026-09-05T17:14:23.971Z",
+    "source_repo": "/home/ecochran76/workspace.local/auracall-plan0333-installed-model-survey",
+    "package_version": "0.1.1",
+    "matching_sha256": {
+      "dist/bin/auracall.js": "5532e1acd049d5359c80c3b9b6750405dbf897f4e94eba7db7111fd78cd3585c",
+      "dist/src/config/modelSelector.js": "2dcd29547821c7f2e712bef4e2a99198e25bb8ef5a073f76f661e227ea3d15b0",
+      "dist/configs/auracall.services.json": "eb19b4983c3291b66c727314a2791cb2fac3f7a8b9ac6f459659a23eeac31354"
+    },
+    "installed_help_selector_example": "chatgpt:reasoning-high",
+    "canonical_chatgpt_selectors": [
+      "chatgpt:fast",
+      "chatgpt:reasoning",
+      "chatgpt:reasoning-high",
+      "chatgpt:reasoning-max",
+      "chatgpt:premium",
+      "chatgpt:legacy"
+    ],
+    "api_frontier_model": "gpt-6-astra"
+  },
+  "validation": {
+    "focused_tests": "94 passed",
+    "typecheck": "passed",
+    "production_build": "passed",
+    "shell_syntax": "passed",
+    "plan_audit": "332 candidates, 0 errors"
+  },
+  "browser": {
+    "root_pid": 1933,
+    "devtools_port": 45015,
+    "chrome_version": "151.0.7922.108",
+    "managed_browser_profile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "identity": "Eric Cochran Pro",
+    "blocking_state_on_observed_conversations": false,
+    "observed_current_conversations": 2,
+    "observed_model_slug": "gpt-5-6-pro",
+    "checked_model_row": "GPT-5.6 Sol",
+    "model_menu_rows": ["GPT-5.6 Sol", "GPT-5.5"],
+    "power_slider": {"min": 0, "max": 4, "selected": 4},
+    "composer_empty": true,
+    "upload_input": {
+      "id": "upload-files",
+      "accept": null,
+      "multiple": true,
+      "disabled": false,
+      "value": ""
+    },
+    "tool_trigger": "Add files and more",
+    "provider_mutations": 0,
+    "older_model_comparison": "not proven: both open conversations were current-model and bounded route attempts met the automation domain filter",
+    "remaining_view_issue": "the otherwise unused home tab remains at the ChatGPT home URL but displays the automation domain-filter block; the two conversation tabs remain intact"
+  }
+}

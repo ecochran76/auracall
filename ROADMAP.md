@@ -4,15 +4,16 @@
 
 ### Current Execution Board
 
-Status: Durable model schema installed survey in progress
+Status: Durable model schema installed; browser survey partial at domain fence
 Lanes: P01-P07, P09-P15, P17, P19-P25 (integrated); P08, P18, P26 (open)
 
 - Active installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)
-  P26 installs exact integrated P25 once, verifies installed durable-schema
-  bytes, and surveys the existing `wsl-chrome-3` ChatGPT composer and one
-  older-model chat through port `45015` without prompt, upload, model change,
-  navigation, browser launch, or service restart.
+  P26 installed source-identical durable-schema bytes and repaired remaining
+  operational legacy-label defaults. Current tool/upload and horizontal-slider
+  surfaces are directly proven without provider mutation. Both open chats were
+  current-model; older-model comparison stopped at the automation domain fence,
+  which also left the otherwise unused home tab showing its block page.
 
 - Provider-free accepted durable model schema migration:
   [docs/dev/plans/0332-2026-09-05-durable-model-schema.md](docs/dev/plans/0332-2026-09-05-durable-model-schema.md)

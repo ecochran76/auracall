@@ -48658,3 +48658,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   permits a maximum of three read-only existing-conversation navigations in the
   unused home tab, with restoration, solely to observe a genuine older-model
   selector surface.
+- Direct post-survey readback preserved PID `1933`, port `45015`, both current
+  conversation tabs, empty composers, checked GPT-5.6 Sol, slider value 4 of
+  4, and empty enabled `#upload-files`. No provider mutation occurred.
+- Both conversations carry `gpt-5-6-pro`; an older-model comparison is not
+  proven. The bounded home-tab route met the automation domain filter, and the
+  unused home tab now displays that block at the ChatGPT home URL. The fence
+  was not bypassed; manual view restoration is the exact remaining blocker.

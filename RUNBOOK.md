@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 555 | 2026-09-05
+
+- P26 replacement installation is current and byte-identical for the CLI,
+  model resolver, and service manifest. Installed help uses
+  `chatgpt:reasoning-high`; six durable ChatGPT selectors and
+  `openai:frontier -> gpt-6-astra` are present.
+- Retained PID `1933` / port `45015` directly proves `Add files and more`, an
+  enabled empty unrestricted `#upload-files`, checked `GPT-5.6 Sol`, available
+  `GPT-5.5`, and Power slider value 4 of 4. Both composers remained empty.
+- Both open conversations have current DOM slug `gpt-5-6-pro`. Bounded
+  older-chat routing met the automation domain filter; no bypass was attempted.
+  The unused home tab remains on the ChatGPT home URL showing that block while
+  both conversation tabs remain intact. P26 stays open for manual home-tab
+  restoration and one genuine older-model comparison.
+
 ## Turn 554 | 2026-09-05
 
 - Opened P26 from exact current `origin/main` in an isolated worktree; the

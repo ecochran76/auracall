@@ -428,14 +428,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE
-    checkpoint: fedc2d70
-    remote_ref: null
+    checkpoint: c6d0681c
+    remote_ref: refs/remotes/origin/ops/plan0333-installed-model-survey
     integration: merge
     dependencies: [P25]
     overlaps: [P24]
-    validation_status: authorized-install-and-read-only-survey
-    validation_ref: null
+    validation_status: installed-source-accepted-browser-survey-partial
+    validation_ref: docs/dev/notes/2026-09-05-plan0333-installed-durable-model-survey.json
     integration_receipt: null
-    blocker: null
-    disposition: One exact user-runtime install and one bounded retained-port survey are active; prompt, upload, model mutation, navigation, browser lifecycle, and service restart remain forbidden.
+    blocker: Automation domain filter prevents older-chat comparison and leaves the unused home tab showing its block page; manual home-tab restoration is required before one genuine older-model readback.
+    disposition: Durable source and installed runtime are accepted; current composer tool, unrestricted upload input, and horizontal slider are proven without provider mutation. P26 remains open only for the exact browser-view blocker.
     updated_at: 2026-09-05
