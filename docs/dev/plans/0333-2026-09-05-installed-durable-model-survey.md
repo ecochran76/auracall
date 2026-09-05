@@ -6,7 +6,7 @@ Operational state: AUTHORIZED_INSTALL_AND_READ_ONLY_SURVEY
 Branch: ops/plan0333-installed-model-survey
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-05
+Revision: 3 | 2026-09-05
 
 ## Stable Objective
 
@@ -47,8 +47,12 @@ horizontal Power slider, and the distinct older-model conversation surface.
 - At most two `pnpm run install:user-runtime` invocations: the first integrated
   install exposed the post-install help gap; one replacement install is allowed
   only after the corrective source checkpoint is validated and pushed.
+- At most three read-only navigations in the otherwise unused ChatGPT home tab
+  to existing conversations already listed by that attached page, followed by
+  restoration to the home URL. This is permitted only to locate one genuine
+  older-model surface after both pre-opened conversations proved current-model.
 - Zero API-service restarts, prompts, uploads, model selections, conversation
-  mutations, browser launches, navigations, reloads, or closes.
+  mutations, browser launches, reloads, or closes.
 - No `Answer now`, scheduler, completion, materialization, or provider-tool
   action.
 - Transient opening and dismissal of existing composer menus is permitted only

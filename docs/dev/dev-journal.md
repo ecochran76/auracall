@@ -48653,3 +48653,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The six-file selector/CLI cone passes 148 tests; typecheck, production build,
   shell syntax, and both changed smoke-help paths pass. One replacement install
   remains before installed acceptance can close.
+- The replacement install is source-identical and current. Both pre-opened
+  conversations proved to use the current GPT-5.6 Pro DOM slug, so Revision 3
+  permits a maximum of three read-only existing-conversation navigations in the
+  unused home tab, with restoration, solely to observe a genuine older-model
+  selector surface.
