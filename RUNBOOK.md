@@ -20798,3 +20798,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   failed at authorization before mutation; Grok entered and failed its first
   create command. No test-owned process remained and exact generated names
   were absent from local AuraCall state; no further provider command ran.
+
+## Turn 427 | 2026-09-05
+
+- Plan 0334/P27 opens after direct DevTools evidence showed the current
+  ChatGPT drawer includes Shopping while AuraCall's catalog does not, and the
+  installed live capability command selected a retained project chat while
+  requiring the root composer.
+- Exact-account Skill inventory remains complete with stable IDs, but Skill
+  invocation is still reported unknown and no guarded non-submitting selection
+  command exists.
+- The bounded repair will add durable current-drawer identities, deterministic
+  root-composer discovery, and exact-ID Skill `Try in chat` selection with
+  composer cleanup. Provider-free red/green precedes one install and one
+  zero-prompt live canary per selection surface.

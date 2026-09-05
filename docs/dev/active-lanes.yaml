@@ -439,3 +439,22 @@ lanes:
     blocker: null
     disposition: Durable model schema, operational labels, installed bytes, current tool/upload and slider surfaces, older-model High/2 comparison, and exact browser cleanup are accepted with no provider mutation.
     updated_at: 2026-09-05
+  - id: P27
+    objective: Make ChatGPT tool and Skill inventory and non-submitting selection match the current authenticated composer.
+    plan: docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md
+    plan_ref: refs/heads/fix/plan0334-chatgpt-tool-skill-selection
+    branch: fix/plan0334-chatgpt-tool-skill-selection
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 882c9c14d6d1434c5ddce534fee1bf5da093eb56
+    remote_ref: null
+    integration: merge
+    dependencies: [P20, P22, P24, P26]
+    overlaps: []
+    validation_status: implementing
+    validation_ref: null
+    integration_receipt: null
+    blocker: null
+    disposition: Current live gaps are reproduced; provider-free red/green and bounded installed selection canaries remain.
+    updated_at: 2026-09-05

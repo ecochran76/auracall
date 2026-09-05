@@ -48681,3 +48681,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `E5279B87AFE9FA34BF7B147D41F43454` was closed. A fresh census shows the
   healthy empty home and unchanged empty project conversation on the same PID,
   port, and managed browser profile. Plan 0333 is live accepted and closed.
+
+## 2026-09-05 | Plan 0334 ChatGPT tool and Skill inventory selection
+
+- Current focus: make AuraCall inventory and selection truthful against the
+  current authenticated ChatGPT composer without submitting a prompt.
+- Source and installed static catalogs match, but direct DevTools inspection
+  observed a live Shopping row absent from the catalog. The renamed `Add
+  photos & files` and `Add from library` rows remain file actions, not tools.
+- Installed live capability discovery failed before inventory because it bound
+  the retained project conversation while requiring `https://chatgpt.com/`.
+- Exact-account Skill listing returned a complete stable-ID inventory, while
+  the capability schema and CLI still lack a non-submitting selection path.
+- Plan 0334/P27 is bounded to provider-free red/green, one post-checkpoint
+  install, one Shopping selection/cleanup, and one exact-ID Skill `Try in chat`
+  selection/cleanup. No prompt, upload, model change, or Skill execution is
+  authorized.

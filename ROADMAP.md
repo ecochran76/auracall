@@ -4,8 +4,15 @@
 
 ### Current Execution Board
 
-Status: Durable model schema and installed browser survey accepted
-Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18 (open)
+Status: ChatGPT tool and Skill inventory/selection hardening in progress
+Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
+
+- Active ChatGPT tool and Skill inventory/selection hardening:
+  [docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md](docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md)
+  P27 owns current drawer identities including Shopping, deterministic root-tab
+  discovery with retained project chats, and guarded non-submitting exact-ID
+  Skill selection. Provider-free red/green precedes one bounded installed live
+  proof; no prompt, upload, model change, or Skill execution is authorized.
 
 - Integrated installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)
