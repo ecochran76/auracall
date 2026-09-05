@@ -22266,3 +22266,16 @@ browser-stage lifecycle observability, not transcript truncation.
   ChatGPT root for a zero-sized composer, foreground that exact CDP target and
   then measure it. A true greeting-only root still lacks `#prompt-textarea` and
   remains ineligible.
+
+## 2026-09-05 | Distinguish ChatGPT Skill provider prefill from user text
+
+- Failure mode: current `Try in chat` routes the exact Skill into the home
+  composer and seeds a provider-authored example prompt. The empty-text-only
+  proof rejected that safe non-submitting state after the single live click.
+- Durable fix: require the source composer to have zero user text and zero
+  selection pills before any navigation, then accept post-click text only when
+  it exactly equals the decoded current `prompt` parameter and the exact Skill
+  marker or route is present.
+- Guard: arbitrary or mismatched composer text remains untrusted, final route
+  restoration must prove zero text/zero pills, and an unaccepted dispatched
+  click is terminal `outcome-unknown` with no retry.

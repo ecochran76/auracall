@@ -4,7 +4,7 @@
 
 ### Current Execution Board
 
-Status: ChatGPT inventory current; exact-ID Skill selection live acceptance pending
+Status: ChatGPT inventory current; Skill provider-prefill proof repair underway
 Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
 
 - Active ChatGPT tool and Skill inventory/selection hardening:
@@ -14,11 +14,15 @@ Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
   Skill selection. The source-identical installed runtime reports 29 current
   capabilities and the complete 11-item Skill inventory; current Shopping was
   selected and cleaned once. The first exact-ID Skill canary is terminal
-  `outcome-unknown`; the operator's explicit `ok go` now authorizes exactly one
-  fresh, non-submitting exact-ID Skill selection and cleanup canary.
+  `outcome-unknown`; the operator's explicit `ok go` authorized one fresh
+  non-submitting exact-ID canary, which exposed ChatGPT's new provider-authored
+  prompt prefill after the exact Skill-bound route. The source repair now
+  distinguishes that exact decoded provider prompt from user content and adds
+  a pill-free empty-composer pre-navigation gate.
   A final no-click audit confirmed `Try in chat` is a plain button without a
   route-bound selection contract; inventory evidence cannot close that gate.
-  No prompt, upload, model change, Skill execution, or retry is authorized.
+  The terminal attempt restored zero text/zero pills without submission. No
+  install, prompt, upload, model change, Skill execution, or retry is authorized.
 
 - Integrated installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)

@@ -452,9 +452,9 @@ lanes:
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
-    validation_status: installed-live-validating
-    validation_ref: 102e5b30e0797211f75d9136db5b67949980b577
+    validation_status: provider-free-passed-live-gated
+    validation_ref: cb78174ca522c119cb2170e4f20609ea57a9f0b8
     integration_receipt: null
-    blocker: null
-    disposition: Installed inventory and Shopping selection are accepted; Revision 6 authorizes exactly one fresh non-submitting exact-ID Skill-selection and cleanup canary.
+    blocker: Revision 7 is not installed or live accepted, and no qualified empty home composer is currently retained.
+    disposition: The sole Revision 6 Skill click exposed provider-authored prompt prefill and ended outcome-unknown with exact cleanup; Revision 7 repairs proof provider-free, with 246 affected tests passing and no install or retry authorized.
     updated_at: 2026-09-05

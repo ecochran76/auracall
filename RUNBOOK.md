@@ -1,5 +1,31 @@
 # RUNBOOK
 
+## Turn 562 | 2026-09-05
+
+- Revision 7's affected cone passes 246/246 with typecheck, build, touched-file
+  lint, valid JSON, diff hygiene, and the 333-plan audit at zero errors.
+- The comprehensive lane passes 3,081 tests with the known current-main raw-CDP
+  allowlist failure and one 30 ms rate-limit timing failure that passed its
+  single focused rerun. The first failure and flake evidence remain recorded.
+- Browser bracketing preserved Chrome PID `1933` and the exact empty project
+  conversation, but the qualified home target disappeared and a greeting-only
+  home target appeared during the run. Foregrounding it still exposed no prompt
+  editor. Revision 7 remains provider-free; no install or live retry is allowed.
+
+## Turn 561 | 2026-09-05
+
+- The sole Revision 6 installed `skills select` attempt activated `Try in chat`
+  once. Read-only Chrome history proves the exact Skill-bound route, provider
+  example-prompt route, and final home restoration; both composers end at zero
+  text/zero pills, with no conversation, submission, or remaining lease.
+- The installed proof classified the provider-authored prompt as user text, so
+  the filtered CLI result was not accepted and the live outcome remains
+  terminal `outcome-unknown`. No retry ran or is authorized.
+- Revision 7 adds a red/green provider-free contract for exact decoded provider
+  prompt correlation and a separate production gate requiring the original
+  composer to have zero user text and zero pills before navigation. Focused
+  browser/CLI tests pass 22/22 with typecheck; installation remains gated.
+
 ## Turn 560 | 2026-09-05
 
 - The operator's explicit `ok go` reopens P27's exact live gate and authorizes

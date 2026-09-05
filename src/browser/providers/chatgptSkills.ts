@@ -102,6 +102,22 @@ export function buildChatgptSkillEditorProbeExpression(id: string): string {
     })()`;
 }
 
+export function buildChatgptSkillComposerPristineProbeExpression(): string {
+	return `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const editor = document.querySelector('#prompt-textarea');
+      if (!(editor instanceof HTMLElement)) return false;
+      const rect = editor.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const composer = editor.closest('form') || document.querySelector('form[data-type="unified-composer"]');
+      if (!(composer instanceof HTMLElement)) return false;
+      const content = editor.cloneNode(true);
+      content.querySelectorAll('[data-inline-selection-pill-cursor-target]').forEach((node) => node.remove());
+      return normalize(content.textContent || '') === ''
+        && composer.querySelectorAll('[data-inline-selection-pill]').length === 0;
+    })()`;
+}
+
 export function buildChatgptSkillSelectionProbeExpression(skill: {
 	id: string;
 	name: string;
@@ -143,19 +159,19 @@ export function buildChatgptSkillSelectionProbeExpression(skill: {
 	  const content = editor.cloneNode(true);
 	  content.querySelectorAll('[data-inline-selection-pill], [data-inline-selection-pill-cursor-target]')
 	    .forEach((node) => node.remove());
+	  const composerText = normalize(content.textContent || '');
+	  const providerPrompt = normalize(new URL(location.href).searchParams.get('prompt'));
       return {
         selected: Boolean(marker) || routeMatches,
         skillId: marker || routeMatches ? expectedId : null,
         skillName: marker ? expectedName : null,
-		composerEmpty: normalize(content.textContent || '') === '',
+		composerEmpty: composerText === '',
+		providerPrefillOnly: providerPrompt !== '' && composerText === providerPrompt,
       };
     })()`;
 }
 
-export function buildChatgptSkillCleanupExpression(skill: {
-	id: string;
-	name: string;
-}): string {
+export function buildChatgptSkillCleanupExpression(skill: { id: string; name: string }): string {
 	return `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const editor = document.querySelector('#prompt-textarea');
@@ -282,6 +298,7 @@ export function deriveChatgptSkillDetail(input: ChatgptSkillDetailProbe): Chatgp
 export class ChatgptSkillBrowserAdapter {
 	private cdpClient: ChromeClient | null = null;
 	private originalUrl: string | null = null;
+	private originalComposerPristine: boolean | null = null;
 	private restoreOriginalUrl = true;
 
 	constructor(
@@ -328,6 +345,11 @@ export class ChatgptSkillBrowserAdapter {
 
 	async select(skill: ChatgptSkill): Promise<ChatgptSkillMutationOutcome> {
 		const client = await this.ensureClient();
+		if (this.originalComposerPristine !== true) {
+			throw new Error(
+				`ChatGPT skill ${skill.id} selection requires the original prompt workbench to have zero user text and zero selection pills.`,
+			);
+		}
 		const returnUrl = this.originalUrl?.startsWith("https://chatgpt.com/")
 			? this.originalUrl
 			: "https://chatgpt.com/";
@@ -357,14 +379,14 @@ export class ChatgptSkillBrowserAdapter {
 			const proofExpression = buildChatgptSkillSelectionProbeExpression(skill);
 			const proofReady = await waitForPredicate(
 				client.Runtime,
-				`(() => { const proof = ${proofExpression}; return proof?.selected === true && proof?.composerEmpty === true; })()`,
+				`(() => { const proof = ${proofExpression}; return proof?.selected === true && (proof?.composerEmpty === true || proof?.providerPrefillOnly === true); })()`,
 				{
 					timeoutMs: 10_000,
-					description: `empty composer selected with ChatGPT Skill ${skill.id}`,
+					description: `non-submitting composer selected with ChatGPT Skill ${skill.id}`,
 				},
 			);
 			if (!proofReady.ok) {
-				selectionFailure = `ChatGPT skill ${skill.id} Try in chat was dispatched but exact empty-composer selection was not observed; do not retry.`;
+				selectionFailure = `ChatGPT skill ${skill.id} Try in chat was dispatched but exact non-submitting composer selection was not observed; do not retry.`;
 			} else {
 				selectionObserved = true;
 				selectionUrl = await readCurrentUrl(client);
@@ -421,7 +443,7 @@ export class ChatgptSkillBrowserAdapter {
 		}
 		return {
 			status: "completed",
-			message: `${skill.id} selected through Try in chat with an empty composer, then the original ChatGPT route was restored.`,
+			message: `${skill.id} selected through Try in chat without submission, then the original ChatGPT route was restored with an empty composer.`,
 			skillId: skill.id,
 			currentUrl: selectionUrl,
 		};
@@ -547,6 +569,11 @@ export class ChatgptSkillBrowserAdapter {
 		await this.cdpClient.Runtime.enable();
 		await this.cdpClient.Page.enable();
 		this.originalUrl = await readCurrentUrl(this.cdpClient);
+		const pristine = await this.cdpClient.Runtime.evaluate({
+			expression: buildChatgptSkillComposerPristineProbeExpression(),
+			returnByValue: true,
+		});
+		this.originalComposerPristine = pristine.result?.value === true;
 		return this.cdpClient;
 	}
 

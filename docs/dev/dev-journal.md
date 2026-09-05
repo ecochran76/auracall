@@ -48786,3 +48786,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   observed-selection, exact-cleanup, and route-restoration gates. It authorizes
   no prompt, upload, model change, Skill execution, `Answer now`, install, or
   retry; the single attempt's outcome is terminal.
+
+## 2026-09-05 | Plan 0334 Revision 6 canary and provider-prefill drift
+
+- The one installed `skills select` attempt activated the exact `Try in chat`
+  button once. Chrome history proves the exact Skill-bound route, followed by
+  ChatGPT's provider-authored example-prompt route and final home restoration.
+  No conversation was created or prompt submitted; both composers finish at
+  zero text/zero pills and no operation lease remains.
+- The installed selection proof required post-click user text to be empty, so
+  it rejected ChatGPT's current provider-authored prefill. The filtered command
+  emitted no accepted JSON and the live outcome remains terminal
+  `outcome-unknown`; no retry ran or is authorized.
+- Revision 7 adds a failing-then-passing regression that accepts post-click
+  text only when it exactly equals the decoded provider `prompt` parameter and
+  the exact Skill marker/route is present. A separate pre-navigation probe now
+  fails closed unless the original composer has zero user text and zero pills.
+  The affected cone passes 246/246 with typecheck, build, and touched-file lint.
+- The comprehensive lane passes 3,081 tests with two failures: the documented
+  current-main raw-CDP allowlist mismatch and a 30 ms rate-limit timing
+  assertion that passed its one focused rerun. Test bracketing retained Chrome
+  PID `1933` and the exact empty project conversation, but the qualified home
+  target disappeared and a new greeting-only home target appeared. It remained
+  editor-free after foregrounding, so another Skill canary is not currently
+  route-ready even apart from the explicit install/live gate.

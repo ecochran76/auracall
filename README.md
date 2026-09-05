@@ -91,8 +91,11 @@ auracall --profile wsl-chrome-3 skills list \
   --expected-account <chatgpt-email> --json
 auracall --profile wsl-chrome-3 skills show <32-hex-skill-id> \
   --expected-account <chatgpt-email> --json
-# Select the exact Skill for a new empty composer, verify it, and clear it again.
-# This does not submit a prompt or prove Skill invocation.
+# Select the exact Skill only from a pill-free empty composer, verify it, and
+# restore that empty composer. ChatGPT may seed its own example prompt after
+# Try in chat; AuraCall accepts that text only when it exactly matches the
+# provider's decoded prompt parameter. This does not submit a prompt or prove
+# Skill invocation.
 auracall --profile wsl-chrome-3 skills select <32-hex-skill-id> \
   --expected-account <chatgpt-email> --yes --json
 # Mutations additionally require --yes. Create returns the exact stable ID;

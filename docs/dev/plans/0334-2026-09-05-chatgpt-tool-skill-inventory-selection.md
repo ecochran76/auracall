@@ -6,7 +6,7 @@ Operational state: VALIDATING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 6 | 2026-09-05
+Revision: 7 | 2026-09-05
 
 ## Stable Objective
 
@@ -97,6 +97,27 @@ prompt.
   exact-ID Skill-selection and cleanup canary under Revision 6. This supersedes
   only the exhausted Skill-click ceiling; it authorizes no prompt, upload,
   model change, Skill execution, `Answer now`, install, or retry.
+- Revision 6 dispatched exactly one installed `Try in chat` activation. Chrome
+  history proves the exact Skill-bound route, then a provider-authored example
+  prompt route, then restoration of the original home route. Both composers
+  finish at zero user text/zero pills, with no conversation or submission.
+  The CLI result filter emitted no accepted JSON because the installed proof
+  treated provider-prefilled text as user content; the terminal live result is
+  `outcome-unknown`, and no retry is permitted.
+- Revision 7 repairs that observed proof drift provider-free. Selection now
+  distinguishes an exact decoded provider `prompt` parameter from user-authored
+  text while still requiring the exact Skill marker/route, and it independently
+  captures a pill-free empty original composer before any navigation. The new
+  red regression failed on the absent classification. The affected cone passes
+  246/246 with typecheck, build, and touched-file lint. The comprehensive lane
+  passes 3,081 tests with the known raw-CDP allowlist failure plus one 30 ms
+  timing assertion that passed its single focused rerun. No install or live
+  action is admitted.
+- The comprehensive-run browser census kept Chrome PID `1933` and the exact
+  project conversation, but the previously qualified home target disappeared
+  while a new greeting-only home target appeared. Foregrounding that exact new
+  target still exposed no prompt editor. This is test-isolation/browser-state
+  drift and blocks another Skill canary independently of the install gate.
 
 ## Scope
 
@@ -162,6 +183,10 @@ prompt.
   exact cleanup, and route restoration. Its outcome is terminal; no second
   activation, prompt, upload, model change, Skill execution, `Answer now`, or
   install is authorized.
+- Revision 7 admits provider-free source, test, and documentation repair for the
+  exact provider-prefill mismatch exposed by the terminal Revision 6 attempt.
+  It authorizes no install, browser navigation, selection, prompt, upload,
+  model change, Skill execution, `Answer now`, or retry.
 
 ## Acceptance Criteria
 
