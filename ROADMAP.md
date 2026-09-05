@@ -1,6 +1,6 @@
 # Aura-Call Roadmap
 
-- Plan 0334 Skills selection is installed/live accepted: iteration 1/5 verified exact-ID selection and cleanup, no prompt. Main integration is the final custody step.
+- Plan 0334 Skills selection is installed/live accepted: iteration 1/5 verified exact-ID selection and cleanup, no prompt. Merged to main through PR #1 (`697dc668`).
 
 - Installed/live-accepted Plan 0335: [Chat mode preflight](docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md), based on installed P27 source; require mode-control proof before a new prompt.
 
@@ -9,19 +9,17 @@
 
 ### Current Execution Board
 
-Status: ChatGPT inventory source current; installed Skill canary domain-filter blocked
-Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
+Status: ChatGPT inventory and Skill selection installed/live accepted and integrated
+Lanes: P01-P07, P09-P15, P17, P19-P28 (integrated); P08, P18 (open)
 
-- Active ChatGPT tool and Skill inventory/selection hardening:
-  [docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md](docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md)
-  P27 owns current drawer identities including Shopping, deterministic root-tab
-  discovery, and guarded non-submitting exact-ID Skill selection. Revision 10
-  is installed at exact adapter parity and repairs ChatGPT's reduced auth-session
-  response through a token-excluding logged-in bootstrap identity projection.
-  Exact-account authorization passes, but ChatGPT's automation domain filter
-  blocks complete Skill inventory before selection. No fresh `Try in chat`
-  activation, prompt, upload, model change, Skill execution, or `Answer now`
-  occurred; cleanup preserved empty home/project composers and project focus.
+- Integrated ChatGPT tool and Skill inventory/selection:
+  [Plan 0334](docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md)
+  P27 updates current drawer identities, root-tab discovery, and guarded
+  exact-account/exact-ID Skill selection. All 11 Skills were inventoried;
+  iteration 1/5 selected Codebase Investigator and restored an empty composer.
+  No prompt was submitted and actual Skill execution remains untested.
+  The earlier domain-filter attribution to ChatGPT was unsupported and is
+  superseded by successful installed/live evidence. PR #1 merged at `697dc668`.
 
 - Integrated installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)

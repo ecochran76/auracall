@@ -53,5 +53,11 @@
     "typecheckPassed": true,
     "buildPassed": true,
     "scopedLintPassed": true
+  },
+  "integration": {
+    "pullRequest": "https://github.com/ecochran76/auracall/pull/1",
+    "sourceCommit": "f55e398f342c3866666de95ec810d859c00d90eb",
+    "mainMergeCommit": "697dc66847591ac10b87f2e02e1bdf99ac7b4db6",
+    "state": "MERGED"
   }
 }

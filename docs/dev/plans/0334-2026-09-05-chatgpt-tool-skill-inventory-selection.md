@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P27
-Operational state: INSTALLED_LIVE_ACCEPTED_INTEGRATION_PENDING
+Operational state: INSTALLED_LIVE_ACCEPTED_INTEGRATED
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
@@ -29,7 +29,7 @@ prompt.
 - Installed Skills bytes match implementation `af76f2fd`; source tip `44e42019`
   adds the five-iteration authorization. Receipt:
   `docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json`.
-- Source, installed, and live acceptance passed. Main integration remains the final Git custody step.
+- Source, installed, and live acceptance passed. PR #1 merged to main at `697dc66847591ac10b87f2e02e1bdf99ac7b4db6`.
 - Full suite: 3,087 passed, 65 skipped, two failures. The stale mutation-audit expectation is repaired and its six focused tests pass. The remaining Grok readback timeout reproduces on unchanged origin/main `882c9c14`; it is adjudicated pre-existing and nonblocking for this Skills slice. GitHub has supplied no CI runs; no required branch checks or rulesets are configured.
 
 ## Implementation History

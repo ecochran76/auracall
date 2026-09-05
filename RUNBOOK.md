@@ -8,7 +8,7 @@
 - Direct cleanup readback confirmed empty root, zero pills, and zero turns.
   Owned Chrome PID 65022 and port 58744 are gone. Stop early at success, 1/5.
 - Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json`.
-  Final regression gate and main integration follow.
+  Final validation is recorded; PR #1 merged to main at `697dc668`.
 
 
 ## Turn 566 | 2026-09-05

@@ -48933,3 +48933,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Owned browser PID 65022 and port 58744 are gone. Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json`. Final regression/integration follows.
 
 - Plan 0334 final validation: 3,087 full-suite passes and 65 skips. The mutation-audit expectation is repaired (six focused passes). One Grok readback timeout reproduces on unchanged origin/main 882c9c14 and is nonblocking for Skills. Local focused/typecheck/build/lint/live proof is accepted; GitHub has no CI results and no required branch checks or rulesets.
+
+## 2026-09-05 | Plan 0334 integrated
+
+- PR #1 merged source checkpoint `f55e398f` to main at `697dc66847591ac10b87f2e02e1bdf99ac7b4db6`.
+- Installed/live selection passed on iteration 1/5; no Skill execution was submitted.
+- Final full-suite limitation is the unchanged-main Grok timeout; focused mutation-audit repair passes all six tests. No remote CI result is claimed.
+- Plan, current roadmap, and lane custody now agree on closed, installed/live accepted, and integrated.

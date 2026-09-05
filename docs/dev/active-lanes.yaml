@@ -446,17 +446,17 @@ lanes:
     branch: fix/plan0334-chatgpt-tool-skill-selection
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
-    checkpoint: 44e42019
+    custody_state: INTEGRATED
+    checkpoint: f55e398f342c3866666de95ec810d859c00d90eb
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
     validation_status: installed-live-accepted
     validation_ref: docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json
-    integration_receipt: null
+    integration_receipt: 697dc66847591ac10b87f2e02e1bdf99ac7b4db6
     blocker: null
-    disposition: Iteration 1 of 5 passed exact Skill selection and independent empty-composer cleanup; local validation accepted with unchanged-main Grok timeout documented; main integration pending.
+    disposition: Iteration 1 of 5 passed exact Skill selection and independent empty-composer cleanup; local validation accepted with unchanged-main Grok timeout documented; merged to main through PR 1.
     updated_at: 2026-09-05
   - id: P28
     objective: Require positive Chat mode proof before prompting on new-chat pages.
