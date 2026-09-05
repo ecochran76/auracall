@@ -48857,3 +48857,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Draft PR `https://github.com/ecochran76/auracall/pull/1` publishes the review
   surface without merging. Its body preserves the uninstalled/live-gated state
   and the exact gates required before conversion from draft.
+- GitHub Actions is enabled, workflow `CI` is active, and its YAML targets
+  pull requests into `main`. Nevertheless, exact head `9fab266a` had zero check
+  suites and zero statuses across three bounded polls from 15:14:27 through
+  15:14:46 CDT. CI is classified `not_dispatched`, not pending or passed.

@@ -145,6 +145,10 @@ prompt.
   complete topic branch and P27 proposal for review. It is explicitly
   non-mergeable until exact-source installation, one newly authorized
   non-submitting Skill canary, receipt reconciliation, and plan closure pass.
+- GitHub reports the PR mergeable and clean, but CI is not merely pending: the
+  exact head has zero check suites and zero commit statuses after three bounded
+  polls. Repository Actions is enabled and the active CI workflow declares a
+  `pull_request` trigger for `main`, so CI dispatch itself remains unresolved.
 
 ## Scope
 

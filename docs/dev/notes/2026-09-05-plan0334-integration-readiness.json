@@ -28,6 +28,22 @@
     "mergeAllowed": false,
     "mergeGate": "Install Revisions 8-9 from the exact source checkpoint, pass one explicitly authorized fresh non-submitting exact-ID Skill canary, reconcile receipts and docs, and close Plan 0334."
   },
+  "ci": {
+    "workflow": "CI",
+    "workflowState": "active",
+    "pullRequestTrigger": true,
+    "repositoryActionsEnabled": true,
+    "headCommit": "9fab266a2a5c085053c5f45acdfb98fff40e179d",
+    "checkSuiteCount": 0,
+    "commitStatusCount": 0,
+    "boundedPolls": [
+      "2026-09-05T15:14:27-05:00",
+      "2026-09-05T15:14:37-05:00",
+      "2026-09-05T15:14:46-05:00"
+    ],
+    "classification": "not_dispatched",
+    "note": "No check suite exists for the exact PR head; this is not a queued or running CI result."
+  },
   "liveEffects": {
     "install": 0,
     "browserInteraction": 0,
@@ -38,5 +54,5 @@
     "answerNow": 0,
     "retry": 0
   },
-  "conclusion": "The branch is mechanically conflict-free and current with origin/main. Draft PR 1 makes the topic and P27 proposal reviewable, but it is not governance-ready until P27 is published in the canonical main lane catalog. Installation and a fresh non-submitting Skill canary remain separately authorization-gated."
+  "conclusion": "The branch is mechanically conflict-free and current with origin/main. Draft PR 1 makes the topic and P27 proposal reviewable, but it is not governance-ready until P27 is published in the canonical main lane catalog. GitHub CI has not dispatched for the exact PR head despite an active pull-request workflow. Installation and a fresh non-submitting Skill canary remain separately authorization-gated."
 }

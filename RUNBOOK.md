@@ -20926,3 +20926,7 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   `unregistered_active`: its catalog proposal has not landed on canonical
   `main`. Treat the branch as mechanically ready but not governance-ready; see
   `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`.
+- Draft PR 1 is mergeable/clean, but its exact head has no GitHub check suite or
+  commit status. Actions is enabled and active workflow `CI` declares the
+  expected `pull_request` trigger, so treat CI as `not_dispatched`; do not infer
+  a green gate from the empty checks list.
