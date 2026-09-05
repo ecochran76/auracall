@@ -458,3 +458,21 @@ lanes:
     blocker: Revision 10 is installed and exact-account authorization passes, but ChatGPT's automation domain filter blocks complete Skill inventory before selection. P27 is absent from the canonical main lane catalog, and GitHub CI has not dispatched for draft PR 1.
     disposition: Revision 10 repairs reduced auth-session identity with an exact token-excluding bootstrap projection and passes 238 affected tests. Installed adapter parity is exact; the Skill canary remains unspent because inventory failed closed at the domain filter. Cleanup preserved empty home/project composers and restored project focus.
     updated_at: 2026-09-05
+  - id: P28
+    objective: Require positive Chat mode proof before prompting on new-chat pages.
+    plan: docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md
+    plan_ref: refs/heads/fix/chatgpt-chat-mode-preflight
+    branch: fix/chatgpt-chat-mode-preflight
+    target: fix/plan0334-chatgpt-tool-skill-selection
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: ae837e8a
+    remote_ref: refs/remotes/origin/fix/chatgpt-chat-mode-preflight
+    integration: merge
+    dependencies: [P27]
+    overlaps: [P27]
+    validation_status: validating
+    validation_ref: docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md
+    integration_receipt: null
+    disposition: Based on installed P27 source; isolated corrective mode preflight and one post-repair smoke.
+    updated_at: 2026-09-05

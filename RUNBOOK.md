@@ -1,5 +1,10 @@
 # RUNBOOK
 
+## Turn 565 | 2026-09-05
+
+- Plan 0335 repairs the demonstrated root-composer false Chat success. Two RED regressions now pass; installed/live acceptance follows.
+
+
 ## Turn 564 | 2026-09-05
 
 - The operator's `ok go` authorized exact-source installation and one bounded

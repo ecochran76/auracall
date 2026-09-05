@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import {
 	buildChatgptComposerModeExpressionForTest,
 	ensureChatgptComposerMode,
@@ -61,9 +61,52 @@ function installFixtureDocument(query: (selector: string) => FixtureElement[]): 
 	vi.stubGlobal("document", { querySelectorAll: query });
 }
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() =>
+	vi.stubGlobal("location", {
+		pathname: "/c/existing-chat",
+		href: "https://chatgpt.com/c/existing-chat",
+	}),
+);
+afterEach(() => {
+	vi.useRealTimers();
+	vi.unstubAllGlobals();
+});
 
 describe("ChatGPT composer mode", () => {
+	it("waits for root mode controls and switches Work to Chat before accepting the composer", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
+		const editor = new FixtureElement("", { role: "textbox", contenteditable: "true" });
+		const chat = new FixtureElement("Chat", { "aria-checked": "false", "data-state": "off" });
+		const work = new FixtureElement("Work", { "aria-checked": "true", "data-state": "on" });
+		let queries = 0;
+		chat.onClick = () => {
+			chat.setAttribute("aria-checked", "true");
+			work.setAttribute("aria-checked", "false");
+			work.setAttribute("data-state", "off");
+		};
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]') return ++queries >= 2 ? [chat, work] : [];
+			if (selector.includes("#prompt-textarea")) return [editor];
+			return [];
+		});
+		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest("chat")}`)();
+		await vi.advanceTimersByTimeAsync(11000);
+		expect(await pending).toEqual({ status: "switched", mode: "chat" });
+		expect(work.getAttribute("aria-checked")).toBe("false");
+	});
+
+	it("never treats a root composer with absent mode controls as proof of Chat", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
+		installFixtureDocument((selector) =>
+			selector.includes("#prompt-textarea") ? [new FixtureElement("")] : [],
+		);
+		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest("chat")}`)();
+		await vi.advanceTimersByTimeAsync(11000);
+		expect(await pending).toEqual({ status: "mode-not-found", availableModes: [] });
+	});
+
 	it("targets exact Chat and Work radios and verifies Radix selected state", () => {
 		const expression = buildChatgptComposerModeExpressionForTest("chat");
 

@@ -48907,3 +48907,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   preserved the empty healthy home and project composers, and restored project
   focus. Receipt:
   `docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json`.
+
+## 2026-09-05 | Plan 0335 Chat preflight repair
+
+- Explicit Chat was falsely accepted from a root composer before mode controls. Two failing root regressions reproduce the failure; waiting for controls and limiting fallback to established conversations makes both pass.
+- Source scope is isolated from the unfinished P08 merge and based on installed P27. One corrective adoption/smoke follows focused acceptance.
