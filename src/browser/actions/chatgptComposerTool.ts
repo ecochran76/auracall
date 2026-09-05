@@ -79,7 +79,7 @@ const COMPOSER_FILE_REQUEST_LABELS = resolveBundledServiceComposerFileRequestLab
 const COMPOSER_CHIP_IGNORE_TOKENS = resolveBundledServiceComposerChipIgnoreTokens('chatgpt', []);
 const CHATGPT_COMPOSER_POPOVER_SELECTOR = '.popover';
 const CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR =
-  '.__menu-item[tabindex], [data-fill][tabindex]';
+  '.__menu-item, [data-fill][tabindex]';
 const CHATGPT_LOCAL_FILE_ACTION_LABEL = 'add photos files';
 const CHATGPT_LIBRARY_ACTION_LABEL = 'add from library';
 
@@ -187,8 +187,9 @@ function normalizeComposerToolLabel(value: string): string {
 }
 
 function resolveComposerToolCandidates(requestedTool: string): string[] {
+  const durableSelector = requestedTool.trim().toLowerCase();
   const normalized = normalizeComposerToolLabel(requestedTool);
-  const aliases = COMPOSER_TOOL_ALIASES[normalized] ?? [];
+  const aliases = COMPOSER_TOOL_ALIASES[durableSelector] ?? COMPOSER_TOOL_ALIASES[normalized] ?? [];
   return Array.from(
     new Set([normalized, ...aliases.map((entry) => normalizeComposerToolLabel(entry)).filter(Boolean)]),
   ).filter(Boolean);
@@ -407,10 +408,7 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
       document.body;
     if (!root) return null;
     const inlinePills = Array.from(
-      root.querySelectorAll(
-        '#prompt-textarea [data-inline-selection-pill][data-system-hint-type^="plugin:"], ' +
-        '#prompt-textarea [data-inline-selection-pill][data-id^="plugin:"]'
-      ),
+      root.querySelectorAll('[data-inline-selection-pill]'),
     ).filter(isVisible);
     const inlineMatch = inlinePills
       .map((node) => ({
@@ -438,6 +436,8 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
     return match ? { label: match.text || match.label } : null;
   })()`;
 }
+
+export const buildComposerChipVisibleExpressionForTest = buildComposerChipVisibleExpression;
 
 async function readMenuEntry(
   Runtime: ChromeClient['Runtime'],
@@ -607,7 +607,9 @@ export async function prepareChatgptWorkbenchLocalAttachment(
         : [];
       const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => {
         const composer = input.closest('form');
-        const prompt = composer?.querySelector('#prompt-textarea, [contenteditable="true"]');
+        const prompt = composer?.querySelector(
+          '#prompt-textarea, textarea[name="prompt-textarea"], [contenteditable="true"]',
+        );
         const trigger = composer?.querySelector(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)});
         return {
           id: input.id || '',

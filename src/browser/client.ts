@@ -198,6 +198,25 @@ export class BrowserAutomationClient {
     return this.browserService.connectDevTools(options);
   }
 
+  async connectChatgptPromptWorkbench(
+    options: DevToolsConnectionOptions = {},
+  ): Promise<{ client: ChromeClient; port: number }> {
+    if (this.target !== 'chatgpt') {
+      throw new Error('Prompt-workbench DevTools attachment is only available for ChatGPT.');
+    }
+    const providerOptions = await this.llmService.buildListOptions({
+      abortSignal: options.abortSignal,
+      configuredUrl: 'https://chatgpt.com/',
+      preserveActiveTab: true,
+      requirePromptWorkbenchTarget: true,
+      tabLifecycle: 'retain-new',
+    }, { ensurePort: true });
+    const { connectToChatgptPromptWorkbenchForSkills } = await import(
+      './providers/chatgptAdapter.js'
+    );
+    return connectToChatgptPromptWorkbenchForSkills(providerOptions);
+  }
+
   async diagnose(options: { basePath?: string; saveSnapshot?: boolean; quiet?: boolean } = {}): Promise<{
     report: DiagnosisReport;
     port: number;

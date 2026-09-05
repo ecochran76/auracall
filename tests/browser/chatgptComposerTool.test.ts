@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
+  buildComposerChipVisibleExpressionForTest,
   ensureChatgptComposerTool,
   isNonPersistentComposerToolForTest,
   prepareChatgptWorkbenchLocalAttachment,
@@ -10,7 +11,22 @@ import {
 } from '../../src/browser/actions/chatgptComposerTool.js';
 
 describe('chatgpt composer tool selection', () => {
+  test('recognizes durable non-plugin inline tool pills in the current composer', () => {
+    const expression = buildComposerChipVisibleExpressionForTest(['shopping']);
+    expect(expression).toContain("root.querySelectorAll('[data-inline-selection-pill]')");
+    expect(expression).not.toContain('#prompt-textarea [data-inline-selection-pill]');
+    expect(expression).not.toContain('data-system-hint-type^="plugin:"');
+  });
+
   test('normalizes aliases to the current visible tool labels', () => {
+    expect(resolveComposerToolCandidatesForTest('chatgpt.commerce.shopping')).toEqual([
+      'chatgpt commerce shopping',
+      'shopping',
+    ]);
+    expect(resolveComposerToolCandidatesForTest('chatgpt.search.web_search')).toEqual([
+      'chatgpt search web search',
+      'web search',
+    ]);
     expect(resolveComposerToolCandidatesForTest('web-search')).toEqual(['web search']);
     expect(resolveComposerToolCandidatesForTest('search')).toEqual(['search', 'web search']);
     expect(resolveComposerToolCandidatesForTest('research')).toEqual(['research', 'deep research']);
@@ -38,6 +54,13 @@ describe('chatgpt composer tool selection', () => {
   });
 
   test('classifies tools as top-level or More submenu choices', () => {
+    expect(
+      resolveComposerToolLocationForTest('chatgpt.commerce.shopping', [
+        'create image',
+        'shopping',
+        'web search',
+      ]),
+    ).toEqual({ location: 'top', label: 'shopping' });
     expect(
       resolveComposerToolLocationForTest('web-search', ['company knowledge', 'create image', 'deep research', 'web search', 'more']),
     ).toEqual({ location: 'top', label: 'web search' });
@@ -138,6 +161,16 @@ describe('chatgpt composer tool selection', () => {
     });
     expect(surface).toMatchObject({ status: 'ready', inputSelector: '#upload-files' });
     expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({ returnByValue: true }));
+    expect(
+      evaluate.mock.calls.some(([input]) =>
+        String(input.expression ?? '').includes('.__menu-item, [data-fill][tabindex]'),
+      ),
+    ).toBe(true);
+    expect(
+      evaluate.mock.calls.some(([input]) =>
+        String(input.expression ?? '').includes('textarea[name="prompt-textarea"]'),
+      ),
+    ).toBe(true);
   });
 
   test('brings a retained tab forward before measuring the workbench attachment trigger', async () => {

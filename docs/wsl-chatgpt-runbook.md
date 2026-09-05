@@ -174,7 +174,9 @@ first four positions respectively and verify the selected slider value.
 
 On the current Chat workbench, `Add files and more` opens one searchable
 popover containing both file sources and tools. Use `--browser-composer-tool`
-only for tool/app rows such as `web-search`, `canvas`, or `deep-research`; use
+only for tool/app rows through durable IDs such as
+`chatgpt.commerce.shopping`, `chatgpt.search.web_search`, or
+`chatgpt.research.deep_research`; legacy labels remain aliases. Use
 `--file` for local paths. AuraCall prefers `Add photos & files / Upload from
 computer`; if that text drifts, it accepts the unrestricted `#upload-files`
 input only when the same active composer contains the prompt and the exact
@@ -261,3 +263,7 @@ Add to `~/.zshrc`:
 alias oracle-wsl='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle'
 alias oracle-login='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle --target chatgpt login --browser-keep-browser'
 ```
+
+## Chat mode preflight
+
+On new-chat and project landing pages AuraCall waits for explicit Chat/Work controls before accepting the requested mode. A visible composer alone does not prove Chat. Missing controls stop the run before prompting; established conversation routes retain their mode-marker compatibility checks.

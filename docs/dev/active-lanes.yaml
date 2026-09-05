@@ -439,3 +439,40 @@ lanes:
     blocker: null
     disposition: Durable model schema, operational labels, installed bytes, current tool/upload and slider surfaces, older-model High/2 comparison, and exact browser cleanup are accepted with no provider mutation.
     updated_at: 2026-09-05
+  - id: P27
+    objective: Make ChatGPT tool and Skill inventory and non-submitting selection match the current authenticated composer.
+    plan: docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md
+    plan_ref: refs/heads/fix/plan0334-chatgpt-tool-skill-selection
+    branch: fix/plan0334-chatgpt-tool-skill-selection
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 44e42019
+    remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
+    integration: merge
+    dependencies: [P20, P22, P24, P26]
+    overlaps: []
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json
+    integration_receipt: null
+    blocker: null
+    disposition: Iteration 1 of 5 passed exact Skill selection and independent empty-composer cleanup; local validation accepted with unchanged-main Grok timeout documented; main integration pending.
+    updated_at: 2026-09-05
+  - id: P28
+    objective: Require positive Chat mode proof before prompting on new-chat pages.
+    plan: docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md
+    plan_ref: refs/heads/fix/chatgpt-chat-mode-preflight
+    branch: fix/chatgpt-chat-mode-preflight
+    target: fix/plan0334-chatgpt-tool-skill-selection
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: fc640258
+    remote_ref: refs/remotes/origin/fix/chatgpt-chat-mode-preflight
+    integration: merge
+    dependencies: [P27]
+    overlaps: [P27]
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json
+    integration_receipt: ebc792a742b5ec3b814eb4efcccaaa5e9981ab8c
+    disposition: Based on installed P27 source; isolated corrective mode preflight and one post-repair smoke.
+    updated_at: 2026-09-05
