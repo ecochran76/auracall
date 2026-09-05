@@ -48861,3 +48861,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   pull requests into `main`. Nevertheless, exact head `9fab266a` had zero check
   suites and zero statuses across three bounded polls from 15:14:27 through
   15:14:46 CDT. CI is classified `not_dispatched`, not pending or passed.
+
+## 2026-09-05 | Plan 0334 installed-parity and CI dispatch audit
+
+- SHA-256 readback proves that each installed ChatGPT runtime bundle differs
+  from its Revision 9 production build counterpart: composer-tool, provider
+  adapter, and Skills adapter. The current source fixes are therefore not
+  installed; no live-provider action or runtime mutation was performed.
+- GitHub's API confirms repository Actions is enabled with all actions allowed,
+  default workflow write permission, and active workflow `CI`. Public repository
+  events contain both the PR-open delivery and branch pushes, while Actions has
+  still created no run or check suite. The CI gate is a platform dispatch
+  failure, not a pending run and not evidence that the branch passed CI.
+- The plan header now identifies Revision 9, matching the latest source and
+  evidence already recorded in its body. Installation and a newly authorized
+  non-submitting exact-ID canary remain separate unsatisfied acceptance gates.

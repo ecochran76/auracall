@@ -6,7 +6,7 @@ Operational state: VALIDATING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 7 | 2026-09-05
+Revision: 9 | 2026-09-05
 
 ## Stable Objective
 
@@ -19,8 +19,10 @@ prompt.
 
 ## Current State
 
-- Source and installed static capability reports are byte-equivalent apart from
-  generation time, but the static ChatGPT catalog has only eight broad entries.
+- The original source and installed static capability reports were
+  byte-equivalent apart from generation time, but the static ChatGPT catalog
+  had only eight broad entries. That baseline has since been superseded by the
+  Revision 9 source implementation and the still-older installed runtime.
 - Direct DevTools inspection of the retained `wsl-chrome-3` managed browser
   profile observed `Add photos & files`, `Add from library`, `Create image`,
   `Web search`, `Shopping`, `Deep research`, and `Google Drive`.
@@ -149,6 +151,14 @@ prompt.
   exact head has zero check suites and zero commit statuses after three bounded
   polls. Repository Actions is enabled and the active CI workflow declares a
   `pull_request` trigger for `main`, so CI dispatch itself remains unresolved.
+- Read-only SHA-256 parity inspection now proves that the installed
+  `chatgptComposerTool.js`, `chatgptAdapter.js`, and `chatgptSkills.js` bundles
+  each differ from the Revision 9 production build. GitHub's repository API
+  separately confirms Actions is enabled with all actions allowed, default
+  workflow write permission, and active workflow `CI`; repository events show
+  both the PR-open and branch-push deliveries without any resulting run. The
+  remaining installation and live canary gates therefore cannot be represented
+  as already satisfied, and CI remains `not_dispatched` at the platform edge.
 
 ## Scope
 

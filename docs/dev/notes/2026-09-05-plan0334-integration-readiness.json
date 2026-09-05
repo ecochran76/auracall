@@ -4,7 +4,7 @@
   "lane": "P27",
   "branch": "fix/plan0334-chatgpt-tool-skill-selection",
   "target": "main",
-  "observedAt": "2026-09-05T15:11:58-05:00",
+  "observedAt": "2026-09-05T15:19:39-05:00",
   "git": {
     "targetRef": "refs/remotes/origin/main",
     "targetCommit": "882c9c14d6d1434c5ddce534fee1bf5da093eb56",
@@ -33,7 +33,9 @@
     "workflowState": "active",
     "pullRequestTrigger": true,
     "repositoryActionsEnabled": true,
-    "headCommit": "9fab266a2a5c085053c5f45acdfb98fff40e179d",
+    "allowedActions": "all",
+    "defaultWorkflowPermissions": "write",
+    "headCommit": "ca15c1cf4c52914dc291a26403cab97d9ed7fc97",
     "checkSuiteCount": 0,
     "commitStatusCount": 0,
     "boundedPolls": [
@@ -43,6 +45,24 @@
     ],
     "classification": "not_dispatched",
     "note": "No check suite exists for the exact PR head; this is not a queued or running CI result."
+  },
+  "installedParity": {
+    "sourceCheckpoint": "138ec3541c3f1f2b98e12eeb82e1a5e6d33b9e6b",
+    "equal": false,
+    "modules": {
+      "chatgptComposerTool.js": {
+        "sourceSha256": "73b90300d3761fcfef3be442a4906e03eb6a49a0cee4b322401dfe94b4f79419",
+        "installedSha256": "3b6688ed0349a5d0d7012b98a76c1fa2811b174433810b3e73ee023f0e4766e2"
+      },
+      "chatgptAdapter.js": {
+        "sourceSha256": "103aca3a844445252671e4db940802b38a80ad1be535346a830ad3a103496f0d",
+        "installedSha256": "f6ab9818bf6f0505a66e2cf3bf0c6dbc48ad9eb560d64d99c96f3f24a23e134f"
+      },
+      "chatgptSkills.js": {
+        "sourceSha256": "3e13b1543fe3c0544913704201295163551a59227bc36d494f6f0d0ec7378f27",
+        "installedSha256": "efe1035d31a78455ad88c979e1f3ef30192529fa401d8f1123ff2c6f1a09c1bd"
+      }
+    }
   },
   "liveEffects": {
     "install": 0,
