@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 557 | 2026-09-05
+
+- The existing sidebar link reused the non-project target instead of opening a
+  temporary tab. It proved `gpt-5-6-thinking`, composer label `High`, and Power
+  slider value 2 of 4 versus current Pro slug `gpt-5-6-pro` at value 4 of 4.
+  Both menus list GPT-5.6 Sol and GPT-5.5; no selection or prompt occurred.
+- Exact history restoration redirected the reused target to a healthy empty
+  ChatGPT home surface. Revision 5 permits closing only the original blocked
+  home target after healthy-home and intact-project rechecks.
+
 ## Turn 556 | 2026-09-05
 
 - Cached normalized conversation context omits provider model metadata, and

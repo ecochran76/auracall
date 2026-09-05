@@ -6,7 +6,7 @@ Operational state: INSTALLED_SOURCE_ACCEPTED_BROWSER_SURVEY_PARTIAL
 Branch: ops/plan0333-installed-model-survey
 Target: main
 Integration: merge
-Revision: 4 | 2026-09-05
+Revision: 5 | 2026-09-05
 
 ## Stable Objective
 
@@ -44,6 +44,15 @@ horizontal Power slider, and the distinct older-model conversation surface.
   link to an older cached conversation, so Revision 4 permits one exact
   temporary target opened by that existing UI link. Neither intact target may
   navigate or close.
+- Chrome ignored the requested temporary target and reused the non-project
+  target. That existing UI route successfully proved an older conversation
+  with stored slug `gpt-5-6-thinking`, composer label `High`, and Power slider
+  value 2 of 4. The current Pro comparison is `gpt-5-6-pro`, label `Pro`, value
+  4 of 4. Both menus list GPT-5.6 Sol and GPT-5.5; no selection occurred.
+- Exact history restoration of the non-project target redirected it to a
+  healthy ChatGPT home surface. The original home target still contains only
+  the automation block. Revision 5 permits closing that exact blocked target
+  after the healthy replacement and intact project conversation are rechecked.
 - Non-forced merge `960000bb` integrates the durable operational-selector
   repair and partial-survey receipt into `main`; P26 remains open only for the
   exact browser-view blocker.
@@ -73,6 +82,10 @@ horizontal Power slider, and the distinct older-model conversation surface.
   the intact non-project conversation. Record its target ID before inspection;
   close only that exact temporary target afterward, whether it loads the chat
   or the domain-filter page. Do not navigate or close either intact chat tab.
+- Close only blocked target `E5279B87AFE9FA34BF7B147D41F43454`, and only
+  after target `368757448FCB0DEC9440FF27EAE041AE` proves a healthy empty home
+  composer and project target `B00B620EBFA5CDABEC42F3B291334AD3` remains
+  unchanged. Do not close any other target.
 - Zero API-service restarts, prompts, uploads, model selections, conversation
   mutations, browser launches, reloads, or closes.
 - No `Answer now`, scheduler, completion, materialization, or provider-tool
@@ -96,7 +109,7 @@ horizontal Power slider, and the distinct older-model conversation surface.
       upload.
 - [x] The current model-family picker and horizontal Power slider are observed
       without changing their checked values.
-- [ ] One older-model conversation is compared and its different model surface
+- [x] One older-model conversation is compared and its different model surface
       is recorded without selecting a model or retry action.
 - [x] All visible composers remain empty and no prompt/provider action occurs.
 - [x] Receipt, journal, roadmap, runbook, and active-lane state agree.

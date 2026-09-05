@@ -48670,3 +48670,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   retain provider model metadata. Revision 4 therefore permits one temporary
   tab opened by the intact chat's existing sidebar link, with exact-target-only
   cleanup and zero navigation or close on either intact chat.
+- Chrome reused the source target rather than opening a temporary one. The
+  resulting older conversation directly proved `gpt-5-6-thinking`, `High`, and
+  slider 2 of 4 versus the current Pro conversation's `gpt-5-6-pro` and 4 of 4.
+  Both menus retained GPT-5.6 Sol/GPT-5.5 rows; composers stayed empty.
+- Exact history restoration redirected the reused target to a healthy home
+  composer. Revision 5 permits exact cleanup of only the separate blocked home
+  target after rechecking the healthy home and intact project conversation.

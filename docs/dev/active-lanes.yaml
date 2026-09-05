@@ -428,7 +428,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE
-    checkpoint: ad57b939
+    checkpoint: f17675df
     remote_ref: refs/remotes/origin/ops/plan0333-installed-model-survey
     integration: merge
     dependencies: [P25]
@@ -436,6 +436,6 @@ lanes:
     validation_status: installed-source-accepted-browser-survey-partial
     validation_ref: docs/dev/notes/2026-09-05-plan0333-installed-durable-model-survey.json
     integration_receipt: 960000bb8943d016b07bebf0c17f094aa8326e22
-    blocker: Automation domain filter prevents older-chat comparison and leaves the unused home tab showing its block page; manual home-tab restoration is required before one genuine older-model readback.
-    disposition: Durable source is integrated and installed. Revision 4 permits one exact temporary tab through an existing ChatGPT sidebar link to finish older-model evidence without navigating either intact conversation.
+    blocker: The original home target still shows the automation block; Revision 5 permits exact-target-only cleanup after healthy replacement-home and intact-project verification.
+    disposition: Installed schema and older-model comparison are accepted; one exact blocked-tab cleanup and final browser invariant receipt remain.
     updated_at: 2026-09-05
