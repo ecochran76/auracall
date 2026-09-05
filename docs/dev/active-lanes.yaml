@@ -456,5 +456,5 @@ lanes:
     validation_ref: 138ec354
     integration_receipt: null
     blocker: Revision 9 is not installed or live accepted; the one fresh install and non-retry canary require explicit authority. P27 is also absent from the canonical main lane catalog until this branch is integrated.
-    disposition: Read-only CDP proved both retained homes have the current named-textarea composer; Revisions 8-9 align root, drawer-row, composer-pill, Skill, and upload proof provider-free, with 247 affected tests passing. Git is zero behind and conflict-free, but live authority and canonical catalog publication remain open.
+    disposition: Read-only CDP proved both retained homes have the current named-textarea composer; Revisions 8-9 align root, drawer-row, composer-pill, Skill, and upload proof provider-free, with 247 affected tests passing. Git is zero behind and conflict-free; draft PR 1 is open, while live authority and canonical catalog publication remain open.
     updated_at: 2026-09-05

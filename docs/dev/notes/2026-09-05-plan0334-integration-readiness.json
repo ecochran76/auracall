@@ -22,6 +22,12 @@
     "plan0334Reason": "P27 is absent from the canonical default-ref catalog and exists only in the topic-branch proposal.",
     "unrelatedExistingProblemsPresent": true
   },
+  "review": {
+    "state": "draft",
+    "url": "https://github.com/ecochran76/auracall/pull/1",
+    "mergeAllowed": false,
+    "mergeGate": "Install Revisions 8-9 from the exact source checkpoint, pass one explicitly authorized fresh non-submitting exact-ID Skill canary, reconcile receipts and docs, and close Plan 0334."
+  },
   "liveEffects": {
     "install": 0,
     "browserInteraction": 0,
@@ -32,5 +38,5 @@
     "answerNow": 0,
     "retry": 0
   },
-  "conclusion": "The branch is mechanically conflict-free and current with origin/main, but it is not governance-ready until P27 is published in the canonical main lane catalog. Installation and a fresh non-submitting Skill canary remain separately authorization-gated."
+  "conclusion": "The branch is mechanically conflict-free and current with origin/main. Draft PR 1 makes the topic and P27 proposal reviewable, but it is not governance-ready until P27 is published in the canonical main lane catalog. Installation and a fresh non-submitting Skill canary remain separately authorization-gated."
 }

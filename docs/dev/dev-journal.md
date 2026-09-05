@@ -48854,3 +48854,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Durable evidence is recorded in
   `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`. No install,
   browser interaction, or provider mutation occurred.
+- Draft PR `https://github.com/ecochran76/auracall/pull/1` publishes the review
+  surface without merging. Its body preserves the uninstalled/live-gated state
+  and the exact gates required before conversion from draft.

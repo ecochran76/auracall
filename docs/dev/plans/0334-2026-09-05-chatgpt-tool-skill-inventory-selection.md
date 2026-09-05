@@ -141,6 +141,10 @@ prompt.
   exists only on this topic branch and has not reached canonical `main`; other
   reported lane problems predate and are outside Plan 0334. The bounded receipt
   is `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`.
+- Draft PR [#1](https://github.com/ecochran76/auracall/pull/1) now exposes the
+  complete topic branch and P27 proposal for review. It is explicitly
+  non-mergeable until exact-source installation, one newly authorized
+  non-submitting Skill canary, receipt reconciliation, and plan closure pass.
 
 ## Scope
 
