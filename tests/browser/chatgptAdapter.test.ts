@@ -7,6 +7,7 @@ import {
 	beforeChatgptBrowserInteractionForTest,
 	bindChatgptProviderSessionConnectionForTest,
 	buildChatgptAuthSessionIdentityExpression,
+	buildChatgptFeatureProbeExpressionForTest,
 	buildChatgptCreateProjectDialogStateExpressionForTest,
 	buildChatgptPayloadDirectRetryOptionsForTest,
 	buildChatgptPostPayloadReadinessFailureStageForTest,
@@ -246,12 +247,23 @@ describe("ChatGPT provider-session connection provenance", () => {
 });
 
 describe("normalizeChatgptFeatureSignature", () => {
+	test("uses current drawer rows and composer-scoped selection pills", () => {
+		const expression = buildChatgptFeatureProbeExpressionForTest();
+		expect(expression).toContain('.__menu-item, [data-fill][tabindex]');
+		expect(expression).toContain("form[data-type=\"unified-composer\"]");
+		expect(expression).toContain("[data-inline-selection-pill]");
+		expect(expression).not.toContain('.__menu-item[tabindex]');
+		expect(expression).not.toContain('#prompt-textarea [data-inline-selection-pill]');
+	});
+
 	test("normalizes nullable live model selections before schema validation", () => {
 		const signature = normalizeChatgptFeatureSignatureForTest({
 			detector: "chatgpt-feature-probe-v1",
 			web_search: false,
 			deep_research: true,
 			company_knowledge: false,
+			shopping: true,
+			composer_tools: ["Add photos & files", "Shopping"],
 			apps: [],
 			composer_mode: "work",
 			composer_apps: [],
@@ -271,6 +283,8 @@ describe("normalizeChatgptFeatureSignature", () => {
 
 		expect(JSON.parse(signature ?? "null")).toMatchObject({
 			deep_research: true,
+			shopping: true,
+			composer_tools: ["Add photos & files", "Shopping"],
 			composer_mode: "work",
 			model_controls: {
 				visible: true,

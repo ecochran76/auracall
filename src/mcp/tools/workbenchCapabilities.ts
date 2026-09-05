@@ -36,6 +36,8 @@ const workbenchCapabilityShape = z.object({
   invocationMode: z.enum([
     'pre_prompt_toggle',
     'tool_drawer_selection',
+    'skill_detail_selection',
+    'composer_mention',
     'composer_attachment',
     'provider_api',
     'post_prompt_action',

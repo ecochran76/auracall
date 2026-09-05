@@ -17,7 +17,9 @@ import { shouldAttachResolvedServiceTabForTest } from "../../src/browser/llmServ
 import {
 	bindChatgptAbortCleanupForTest,
 	closeChatgptTabConnectionForTest,
+	prepareChatgptPromptWorkbenchTargetForTest,
 	runWithChatgptAbortBoundConnectionForTest,
+	selectChatgptPromptWorkbenchTargetForTest,
 	shouldDisposeChatgptTabConnectionForTest,
 	shouldForceNewChatgptTabConnectionForTest,
 } from "../../src/browser/providers/chatgptAdapter.js";
@@ -43,6 +45,35 @@ function asClosableConnection(connection: ReturnType<typeof createConnection>) {
 }
 
 describe("ChatGPT tab lifecycle", () => {
+	test("foregrounds a retained root before measuring its visible prompt workbench", async () => {
+		const events: string[] = [];
+		let expression = "";
+		const ready = await prepareChatgptPromptWorkbenchTargetForTest({
+			["Page"]: {
+				enable: vi.fn(async () => {
+					events.push("page-enable");
+				}),
+				bringToFront: vi.fn(async () => {
+					events.push("front");
+				}),
+			},
+			["Runtime"]: {
+				enable: vi.fn(async () => {
+					events.push("runtime-enable");
+				}),
+				evaluate: vi.fn(async (input: { expression: string }) => {
+					events.push("evaluate");
+					expression = input.expression;
+					return { result: { value: true } };
+				}),
+			},
+		} as never);
+
+		expect(ready).toBe(true);
+		expect(events).toEqual(["page-enable", "front", "runtime-enable", "evaluate"]);
+		expect(expression).toContain('textarea[name="prompt-textarea"]');
+	});
+
 	beforeEach(() => {
 		chatgptTabLifecycleMocks.cdpClose.mockClear();
 	});
@@ -246,6 +277,22 @@ describe("ChatGPT tab lifecycle", () => {
 				tabLifecycle: "dispose-new",
 			}),
 		).toBe(true);
+	});
+
+	test("skips a service-resolved root without a prompt workbench for a healthy retained root", async () => {
+		const candidates = [{ id: "stale-root" }, { id: "healthy-root" }];
+		const inspected: string[] = [];
+		const selected = await selectChatgptPromptWorkbenchTargetForTest(
+			candidates,
+			"stale-root",
+			async (candidate) => {
+				inspected.push(candidate.id);
+				return candidate.id === "healthy-root";
+			},
+		);
+
+		expect(inspected).toEqual(["stale-root", "healthy-root"]);
+		expect(selected).toEqual({ id: "healthy-root" });
 	});
 
 	test("opens a fresh retained tab for isolated prompt submission", async () => {

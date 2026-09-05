@@ -48681,3 +48681,183 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `E5279B87AFE9FA34BF7B147D41F43454` was closed. A fresh census shows the
   healthy empty home and unchanged empty project conversation on the same PID,
   port, and managed browser profile. Plan 0333 is live accepted and closed.
+
+## 2026-09-05 | Plan 0334 ChatGPT tool and Skill inventory selection
+
+- Current focus: make AuraCall inventory and selection truthful against the
+  current authenticated ChatGPT composer without submitting a prompt.
+- Source and installed static catalogs match, but direct DevTools inspection
+  observed a live Shopping row absent from the catalog. The renamed `Add
+  photos & files` and `Add from library` rows remain file actions, not tools.
+- Installed live capability discovery failed before inventory because it bound
+  the retained project conversation while requiring `https://chatgpt.com/`.
+- Exact-account Skill listing returned a complete stable-ID inventory, while
+  the capability schema and CLI still lack a non-submitting selection path.
+- Plan 0334/P27 is bounded to provider-free red/green, one post-checkpoint
+  install, one Shopping selection/cleanup, and one exact-ID Skill `Try in chat`
+  selection/cleanup. No prompt, upload, model change, or Skill execution is
+  authorized.
+- Provider-free RED reproduced seven missing contracts: root-tab discovery,
+  current static/discovered drawer rows, durable Shopping alias/location, Skill
+  selection proof, and the guarded CLI action. The repaired cone is green at
+  250/250 with typecheck, build, lint, CLI/static readback, JSON/diff hygiene,
+  and zero plan-library validation errors.
+- Skill capability reporting now uses `skill_detail_selection`; this describes
+  exact-ID preparation of an empty composer and deliberately does not claim
+  prompt submission or invocation. Selection restores the original ChatGPT
+  route and requires observed empty-composer cleanup even on failure.
+- The full suite passed 3,073 tests and retained one unrelated current-main
+  failure: the raw-DevTools mutation allowlist still expects
+  `scripts/observe-chatgpt-tool-approval.ts`, whose current source no longer
+  contains a direct navigation mutation. This slice does not alter that debt.
+- The Plan 0334 worktree is not indexed by CodeGraph; exact source readback,
+  typecheck, and tests supplied the documented fallback. Install and the two
+  bounded live canaries remain.
+- The first installed capability read stopped at identity authorization on a
+  second root tab that had no visible composer and only partial auth-session
+  fields; the intact root tab retained the full account shape and empty
+  composer. No drawer or selection action ran.
+- Revision 2 replaces ambiguous root reuse with a fresh disposable root for
+  capability discovery and Skill identity preflight, gated on one visible
+  `#prompt-textarea`. One replacement install and one post-repair discovery are
+  admitted; both original one-shot selection budgets remain untouched.
+- The disposable root reached the authenticated greeting but never rendered a
+  prompt composer, so the readiness gate closed it and discovery stopped.
+  Revision 3 adds explicit retained-candidate composer qualification: inspect
+  the service-preferred root first, skip it when `#prompt-textarea` is absent,
+  and bind the already-observed healthy root. One final replacement install and
+  discovery are admitted; selection counts remain zero.
+- The Revision 3 aggregate discovery acquired the exact managed-profile lease
+  but remained silent for more than five minutes and was stopped. Direct port
+  `45015` inspection then proved the current root drawer (`Add photos & files`,
+  `Add from library`, `Create image`, `Web search`, `Shopping`, `Deep research`,
+  Gmail, Canva, and Google Calendar), current `6 Pro` plus Power 4-of-4, and an
+  older conversation's compatibility `Pro` surface without the `Latest` row.
+- Live Skill listing is complete with 11 `created-by-me` entries. The single
+  exact-ID `Try in chat` canary exposed a cross-tab bug: identity qualification
+  used the healthy ChatGPT root, while the Skills adapter later attached the
+  first generic DevTools page and navigated an unrelated retained tab. The tab
+  was restored exactly; both ChatGPT composers remained empty with no Skill
+  marker. The terminal outcome is unknown and must not be retried.
+- The single Shopping canary reached the correct drawer and live DOM readback
+  proved an exact `data-inline-selection-pill` carrying durable shopping state.
+  The old plugin-only pill proof rejected it, so the composer was explicitly
+  cleared and verified at zero text/zero pills. No second click is permitted.
+- Revision 4 repairs end-to-end prompt-workbench binding, current popover rows
+  without `tabindex`, generic durable inline tool pills, Skill-pill-aware empty
+  user content, and exact single-Skill cleanup. The focused cone passes 224/224
+  with typecheck; one final safety install and read-only route/inventory checks
+  remain, with both selection budgets exhausted.
+- The Revision 4 install is source-identical. Its installed read-only Skill list
+  returned the same complete 11-item inventory and preserved every tab route.
+  The post-install inspection exposed one last qualifier defect: background
+  ChatGPT roots reported zero-sized composer geometry, but the healthy root
+  became visibly prompt-ready when foregrounded; the separate greeting-only root
+  still had no editor. Revision 5 makes foregrounding part of retained-candidate
+  readiness proof and admits one last corrective install, with no selection
+  retry.
+- Revision 5 is committed, pushed, and installed with exact module hash parity.
+  Installed live discovery now completes in under ten seconds with 29 current
+  ChatGPT capabilities, including available durable Shopping and current file
+  source IDs. Installed Skill listing returns the complete 11-item inventory,
+  preserves every tab route, and leaves the qualified root empty with no pills.
+- P27 remains validating because its sole Skill click is terminal
+  `outcome-unknown`. A second exact-ID canary is the only remaining live gate
+  and needs explicit operator authority; no retry is implied by the repair.
+
+## 2026-09-05 | Plan 0334 no-click Skill-control audit
+
+- Exact-target DevTools navigation opened the selected Skill detail route
+  without activating any control. Exactly one visible `Try in chat` control is
+  present; it is a plain button with no link, test ID, or Skill-bearing parent.
+- Route presence and complete inventory therefore cannot establish the
+  composer's post-click state. The repaired `skills select` path still needs one
+  newly authorized exact-ID activation for live acceptance.
+- The audit restored the exact ChatGPT home route at zero user text and zero
+  inline pills, then returned focus to the intact project conversation. No
+  prompt, upload, model change, selection action, or `Answer now` occurred.
+
+## 2026-09-05 | Plan 0334 Revision 6 live-gate authority
+
+- The operator's explicit `ok go` authorizes exactly one fresh installed
+  exact-ID Skill-selection/cleanup canary on the retained `wsl-chrome-3`
+  AuraCall runtime profile.
+- The packet preserves exact-account, complete-inventory, empty-composer,
+  observed-selection, exact-cleanup, and route-restoration gates. It authorizes
+  no prompt, upload, model change, Skill execution, `Answer now`, install, or
+  retry; the single attempt's outcome is terminal.
+
+## 2026-09-05 | Plan 0334 Revision 6 canary and provider-prefill drift
+
+- The one installed `skills select` attempt activated the exact `Try in chat`
+  button once. Chrome history proves the exact Skill-bound route, followed by
+  ChatGPT's provider-authored example-prompt route and final home restoration.
+  No conversation was created or prompt submitted; both composers finish at
+  zero text/zero pills and no operation lease remains.
+- The installed selection proof required post-click user text to be empty, so
+  it rejected ChatGPT's current provider-authored prefill. The filtered command
+  emitted no accepted JSON and the live outcome remains terminal
+  `outcome-unknown`; no retry ran or is authorized.
+- Revision 7 adds a failing-then-passing regression that accepts post-click
+  text only when it exactly equals the decoded provider `prompt` parameter and
+  the exact Skill marker/route is present. A separate pre-navigation probe now
+  fails closed unless the original composer has zero user text and zero pills.
+  The affected cone passes 246/246 with typecheck, build, and touched-file lint.
+- The comprehensive lane passes 3,081 tests with two failures: the documented
+  current-main raw-CDP allowlist mismatch and a 30 ms rate-limit timing
+  assertion that passed its one focused rerun. Test bracketing retained Chrome
+  PID `1933` and the exact empty project conversation, but the qualified home
+  target disappeared and a new greeting-only home target appeared. It remained
+  editor-free after foregrounding, so another Skill canary is not currently
+  route-ready even apart from the explicit install/live gate.
+
+## 2026-09-05 | Plan 0334 Revision 8 current composer qualification
+
+- A read-only direct-CDP DOM and accessibility survey inspected both retained
+  ChatGPT home targets without focus, navigation, clicks, or browser lifecycle
+  changes. Both were complete, empty, pill-free root workbenches with a visible
+  `textarea[name="prompt-textarea"]`; neither exposed the legacy editor ID.
+- Root readiness had therefore misclassified a selector migration as missing
+  browser state. Revision 8 accepts the exact ID or exact name selector in
+  retained-root qualification plus Skill source preflight, selection proof, and
+  cleanup. Regression assertions cover both workbench and Skill expressions.
+- Checkpoint `aa461805` passes the 246-test affected cone, typecheck, production
+  build, touched-file lint with existing computed-key infos only, and diff
+  hygiene. The source-built pristine-composer expression returned true on both
+  retained home targets. It is pushed but not installed, and no live selection
+  was attempted.
+
+## 2026-09-05 | Plan 0334 Revision 9 drawer-proof reconciliation
+
+- A provider-free source audit found capability discovery still required
+  `tabindex` on `.__menu-item` rows even though tool selection already accepted
+  the current no-tabindex drawer. Selected app/tool proof also assumed inline
+  pills were descendants of the prompt editor, which is invalid for the current
+  textarea composer.
+- Capability and direct drawer probes now share the current row selector,
+  selected pills are scoped to the exact composer form, and local-upload
+  qualification accepts the named textarea. Regression assertions cover all
+  three boundaries.
+- Checkpoint `138ec354` passes 247/247 affected tests, typecheck, production
+  build, touched-file lint, and diff hygiene. It is pushed but uninstalled; no
+  browser interaction or selection ran.
+
+## 2026-09-05 | Plan 0334 integration-readiness audit
+
+- Fresh `origin/main` reconciliation reports the topic branch zero behind and
+  18 commits ahead, with the target commit also serving as merge base and no
+  merge conflict markers from `git merge-tree`.
+- The exact-branch active-lane audit is not clean: P27 is
+  `unregistered_active` because the topic-branch catalog proposal is absent from
+  canonical `main`. The audit also reports unrelated pre-existing lane findings;
+  none were silently repaired from this lane.
+- Durable evidence is recorded in
+  `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`. No install,
+  browser interaction, or provider mutation occurred.
+- Draft PR `https://github.com/ecochran76/auracall/pull/1` publishes the review
+  surface without merging. Its body preserves the uninstalled/live-gated state
+  and the exact gates required before conversion from draft.
+- GitHub Actions is enabled, workflow `CI` is active, and its YAML targets
+  pull requests into `main`. Nevertheless, exact head `9fab266a` had zero check
+  suites and zero statuses across three bounded polls from 15:14:27 through
+  15:14:46 CDT. CI is classified `not_dispatched`, not pending or passed.

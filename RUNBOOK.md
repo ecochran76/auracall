@@ -1,5 +1,61 @@
 # RUNBOOK
 
+## Turn 563 | 2026-09-05
+
+- Revision 7 is committed and pushed at
+  `b5ceb8837e40e1866029b8e52eeadd046b2e31ec`; the P27 lane catalog now binds its
+  provider-free validation and published checkpoint to those exact bytes.
+- Installed runtime bytes still predate Revision 7. The next live gate requires
+  separate install authority plus a qualified empty home composer; neither is
+  supplied by the already-spent Revision 6 canary authorization.
+
+## Turn 562 | 2026-09-05
+
+- Revision 7's affected cone passes 246/246 with typecheck, build, touched-file
+  lint, valid JSON, diff hygiene, and the 333-plan audit at zero errors.
+- The comprehensive lane passes 3,081 tests with the known current-main raw-CDP
+  allowlist failure and one 30 ms rate-limit timing failure that passed its
+  single focused rerun. The first failure and flake evidence remain recorded.
+- Browser bracketing preserved Chrome PID `1933` and the exact empty project
+  conversation, but the qualified home target disappeared and a greeting-only
+  home target appeared during the run. Foregrounding it still exposed no prompt
+  editor. Revision 7 remains provider-free; no install or live retry is allowed.
+
+## Turn 561 | 2026-09-05
+
+- The sole Revision 6 installed `skills select` attempt activated `Try in chat`
+  once. Read-only Chrome history proves the exact Skill-bound route, provider
+  example-prompt route, and final home restoration; both composers end at zero
+  text/zero pills, with no conversation, submission, or remaining lease.
+- The installed proof classified the provider-authored prompt as user text, so
+  the filtered CLI result was not accepted and the live outcome remains
+  terminal `outcome-unknown`. No retry ran or is authorized.
+- Revision 7 adds a red/green provider-free contract for exact decoded provider
+  prompt correlation and a separate production gate requiring the original
+  composer to have zero user text and zero pills before navigation. Focused
+  browser/CLI tests pass 22/22 with typecheck; installation remains gated.
+
+## Turn 560 | 2026-09-05
+
+- The operator's explicit `ok go` reopens P27's exact live gate and authorizes
+  exactly one fresh installed exact-ID Skill-selection/cleanup canary on the
+  retained `wsl-chrome-3` AuraCall runtime profile.
+- Revision 6 supersedes only the exhausted Skill-click ceiling. Exact account,
+  complete inventory, empty composer, observed selection, exact cleanup, and
+  route restoration remain mandatory; no prompt, upload, model change, Skill
+  execution, `Answer now`, install, or retry is authorized.
+
+## Turn 559 | 2026-09-05
+
+- P27's final read-only audit opened the exact Skill detail route and observed
+  exactly one visible `Try in chat` control. It is a plain button with no link,
+  test ID, or Skill-bearing parent, so no-click evidence cannot prove selection.
+- Exact cleanup restored the ChatGPT home route with zero user text/zero pills
+  and returned focus to the unchanged project conversation. No prompt, upload,
+  model change, selection action, or `Answer now` occurred.
+- Tool/capability and Skill inventories are current. P27 remains validating
+  until explicit authority permits one fresh exact-ID Skill-selection canary.
+
 ## Turn 558 | 2026-09-05
 
 - Revision 5 cleanup rechecked the healthy empty home target and the unchanged
@@ -20798,3 +20854,79 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   failed at authorization before mutation; Grok entered and failed its first
   create command. No test-owned process remained and exact generated names
   were absent from local AuraCall state; no further provider command ran.
+
+## Turn 427 | 2026-09-05
+
+- Plan 0334/P27 opens after direct DevTools evidence showed the current
+  ChatGPT drawer includes Shopping while AuraCall's catalog does not, and the
+  installed live capability command selected a retained project chat while
+  requiring the root composer.
+- Exact-account Skill inventory remains complete with stable IDs, but Skill
+  invocation is still reported unknown and no guarded non-submitting selection
+  command exists.
+- The bounded repair will add durable current-drawer identities, deterministic
+  root-composer discovery, and exact-ID Skill `Try in chat` selection with
+  composer cleanup. Provider-free red/green precedes one install and one
+  zero-prompt live canary per selection surface.
+- Provider-free implementation is accepted: Shopping and both current file
+  rows have durable capability IDs, live discovery is root-composer-bound, and
+  `skills select` requires exact account, complete inventory, exact stable ID,
+  and `--yes` before one `Try in chat` dispatch. It restores the original route
+  and requires empty-composer cleanup evidence.
+- Evidence: affected 250/250, typecheck, production build, lint (existing
+  warning baseline only), static CLI readback, JSON validation, diff hygiene,
+  and plan-library audit with zero validation errors. The full suite passed
+  3,073 tests and exposed one unrelated stale raw-DevTools allowlist entry.
+- CodeGraph does not index the isolated Plan 0334 worktree; exact source
+  readback plus compilation/tests are the accepted native fallback. The next
+  gate is the single authorized install, then one Shopping and one Skill
+  non-submitting selection/cleanup canary.
+- The first installed discovery stopped before inventory because a second root
+  tab lacked a visible composer and returned partial auth-session identity.
+  Revision 2 uses a fresh disposable root, waits for composer readiness, and
+  permits one replacement install and one post-repair discovery. Neither
+  one-shot selection budget was spent.
+- The disposable root likewise rendered no composer and was closed. Revision 3
+  qualifies retained root candidates by a visible prompt workbench, skips the
+  service-resolved greeting-only root, and admits one final replacement install
+  plus one discovery. Shopping and Skill selection remain unspent.
+- Direct DevTools survey proved the current drawer rows and `6 Pro` Power
+  slider, plus the older-conversation `Pro` compatibility surface. Live Skill
+  inventory is complete at 11 `created-by-me` entries.
+- The single Skill canary exposed cross-tab generic attachment and ended
+  `outcome-unknown`; the unrelated tab was restored and both composers were
+  empty. The single Shopping canary produced the exact current inline pill,
+  whose non-plugin shape exposed a stale proof; it was cleared to zero
+  text/zero pills. Neither click may be retried under the current budget.
+- Revisions 4-5 bind Skills to the qualified workbench, accept current popover
+  rows without `tabindex`, detect durable non-plugin inline pills, and
+  foreground background roots before measuring visibility. Focused tests pass
+  225/225; typecheck/build/lint and plan audit pass. The full suite has 3,077
+  passes, one timing failure that passed focused rerun, and one unrelated
+  pre-existing raw-CDP allowlist failure.
+- Installed Revision 5 matches source hashes. Live capability discovery returns
+  29 entries in under ten seconds; exact-account Skill listing returns all 11,
+  preserves routes, and leaves zero user text/zero pills. A fresh exact-ID Skill
+  canary is the only remaining acceptance gate and requires explicit operator
+  authority because the one-click no-retry budget is exhausted.
+- After Revision 6 exposed provider-prefill proof drift, read-only CDP inspection
+  found that both current home targets retain a visible empty composer as
+  `textarea[name="prompt-textarea"]` without the legacy ID. Revision 8 accepts
+  both exact provider shapes for workbench qualification and Skill
+  preflight/proof/cleanup. Checkpoint `aa461805` is provider-free green and not
+  installed; no additional selection or retry is authorized.
+- The follow-up source audit found two related provider-free assumptions outside
+  the Skill adapter: capability discovery still required `tabindex` on current
+  drawer rows, and selected-pill proof assumed pills were children of the prompt
+  editor. Revision 9 uses current row semantics and composer-form pill scope,
+  and recognizes the named textarea for local-upload qualification. Checkpoint
+  `138ec354` is green and uninstalled; the live effect budget remains closed.
+- Fresh integration reconciliation finds Plan 0334 zero behind and conflict-free
+  against `origin/main`, but the exact-branch lane audit correctly reports P27
+  `unregistered_active`: its catalog proposal has not landed on canonical
+  `main`. Treat the branch as mechanically ready but not governance-ready; see
+  `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`.
+- Draft PR 1 is mergeable/clean, but its exact head has no GitHub check suite or
+  commit status. Actions is enabled and active workflow `CI` declares the
+  expected `pull_request` trigger, so treat CI as `not_dispatched`; do not infer
+  a green gate from the empty checks list.

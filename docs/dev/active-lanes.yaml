@@ -439,3 +439,22 @@ lanes:
     blocker: null
     disposition: Durable model schema, operational labels, installed bytes, current tool/upload and slider surfaces, older-model High/2 comparison, and exact browser cleanup are accepted with no provider mutation.
     updated_at: 2026-09-05
+  - id: P27
+    objective: Make ChatGPT tool and Skill inventory and non-submitting selection match the current authenticated composer.
+    plan: docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md
+    plan_ref: refs/heads/fix/plan0334-chatgpt-tool-skill-selection
+    branch: fix/plan0334-chatgpt-tool-skill-selection
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 138ec354
+    remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
+    integration: merge
+    dependencies: [P20, P22, P24, P26]
+    overlaps: []
+    validation_status: provider-free-passed-live-gated
+    validation_ref: 138ec354
+    integration_receipt: null
+    blocker: Revision 9 is not installed or live accepted; the one fresh install and non-retry canary require explicit authority. P27 is absent from the canonical main lane catalog, and GitHub CI has not dispatched for draft PR 1.
+    disposition: Read-only CDP proved both retained homes have the current named-textarea composer; Revisions 8-9 align root, drawer-row, composer-pill, Skill, and upload proof provider-free, with 247 affected tests passing. Git is zero behind and conflict-free; draft PR 1 is mergeable, while live authority, canonical catalog publication, and CI dispatch remain open.
+    updated_at: 2026-09-05

@@ -915,7 +915,7 @@ program
   .addOption(
     new Option(
       '--browser-composer-tool <tool>',
-      'Select a ChatGPT composer add-on/tool (for example web-search, deep-research, canvas, google-drive, or gmail).',
+      'Select a ChatGPT composer add-on/tool by durable ID (for example chatgpt.commerce.shopping or chatgpt.search.web_search; legacy labels remain aliases).',
     ).hideHelp(),
   )
   .addOption(
@@ -5593,6 +5593,21 @@ skillsCommand
       action: 'show',
       skillId,
       expectedAccount: String(options.expectedAccount ?? ''),
+    }));
+  });
+
+skillsCommand
+  .command('select <skill-id>')
+  .description('Select one exact ChatGPT Skill through Try in chat without submitting a prompt.')
+  .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
+  .option('--yes', 'Confirm the bounded non-submitting selection.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command, skillId: string) {
+    await runChatgptSkillsCliAction(this, (options) => ({
+      action: 'select',
+      skillId,
+      expectedAccount: String(options.expectedAccount ?? ''),
+      confirmed: Boolean(options.yes),
     }));
   });
 

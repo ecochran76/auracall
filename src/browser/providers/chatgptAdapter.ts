@@ -354,7 +354,10 @@ const CHATGPT_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens("chat
 	web_search: ["search the web", "web search"],
 	deep_research: ["deep research"],
 	company_knowledge: ["company knowledge"],
+	shopping: ["shopping"],
 });
+const CHATGPT_COMPOSER_MENU_ITEM_SELECTOR = '.__menu-item, [data-fill][tabindex]';
+const CHATGPT_INLINE_SELECTION_PILL_SELECTOR = '[data-inline-selection-pill]';
 const CHATGPT_ARTIFACT_KIND_EXTENSIONS = resolveBundledServiceArtifactKindExtensions("chatgpt", {
 	spreadsheet: ["csv", "tsv", "xls", "xlsx", "ods"],
 });
@@ -917,6 +920,8 @@ type ChatgptFeatureProbe = {
 	web_search?: boolean | null;
 	deep_research?: boolean | null;
 	company_knowledge?: boolean | null;
+	shopping?: boolean | null;
+	composer_tools?: string[] | null;
 	apps?: string[] | null;
 	composer_mode?: "chat" | "work" | null;
 	composer_apps?: ChatgptComposerAppProbe[] | null;
@@ -4031,6 +4036,23 @@ export function buildChatgptAuthSessionIdentityExpression(): string {
   })()`;
 }
 
+async function waitForChatgptDisposableRootComposer(client: ChromeClient): Promise<void> {
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
+      if (location.origin !== 'https://chatgpt.com' || location.pathname !== '/') return false;
+      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
+      if (!(editor instanceof HTMLElement)) return false;
+      const rect = editor.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    })()`,
+		{ timeoutMs: 12_000, description: "fresh ChatGPT root composer" },
+	);
+	if (!ready.ok) {
+		throw new Error("Fresh ChatGPT root tab did not expose one visible prompt composer.");
+	}
+}
+
 function buildChatgptFallbackIdentityExpression(): string {
 	return `(() => {
     const normalize = (value) => String(value || '').trim();
@@ -4116,6 +4138,65 @@ function bindChatgptProviderSessionConnection<
 }
 
 export const bindChatgptProviderSessionConnectionForTest = bindChatgptProviderSessionConnection;
+
+export async function selectChatgptPromptWorkbenchTargetForTest<
+	T extends { targetId?: string | null; id?: string | null },
+>(
+	candidates: readonly T[],
+	preferredTargetId: string | undefined,
+	readiness: (candidate: T) => Promise<boolean>,
+): Promise<T | undefined> {
+	const ordered = preferredTargetId
+		? [
+				...candidates.filter(
+					(candidate) => resolveChatgptTargetId(candidate) === preferredTargetId,
+				),
+				...candidates.filter(
+					(candidate) => resolveChatgptTargetId(candidate) !== preferredTargetId,
+				),
+			]
+		: [...candidates];
+	for (const candidate of ordered) {
+		if (await readiness(candidate)) return candidate;
+	}
+	return undefined;
+}
+
+async function chatgptTargetHasVisiblePromptWorkbench(
+	host: string,
+	port: number,
+	target: { targetId?: string | null; id?: string | null },
+): Promise<boolean> {
+	const targetId = resolveChatgptTargetId(target);
+	if (!targetId) return false;
+	const client = await connectToChromeTarget({ host, port, target: targetId }).catch(() => null);
+	if (!client) return false;
+	try {
+		return await prepareChatgptPromptWorkbenchTargetForTest(client);
+	} catch {
+		return false;
+	} finally {
+		await client.close().catch(() => undefined);
+	}
+}
+
+export async function prepareChatgptPromptWorkbenchTargetForTest(
+	client: ChromeClient,
+): Promise<boolean> {
+	await client.Page.enable();
+	await client.Page.bringToFront();
+	await client.Runtime.enable();
+	const result = await client.Runtime.evaluate({
+		expression: `(() => {
+		const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
+        if (!(editor instanceof HTMLElement)) return false;
+        const rect = editor.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      })()`,
+		returnByValue: true,
+	});
+	return result.result?.value === true;
+}
 
 async function connectToChatgptTab(
 	options?: BrowserProviderListOptions,
@@ -4260,7 +4341,13 @@ async function connectToChatgptTab(
 		? candidates.find((target) => resolveChatgptTargetId(target) === resolvedTargetIdFromService)
 		: undefined;
 	recordBrowserScrapeCandidateCount(options, "chatgpt.reusableTargets", candidates.length);
-	let targetInfo = serviceResolved ?? candidates[0];
+	let targetInfo = options?.requirePromptWorkbenchTarget
+		? await selectChatgptPromptWorkbenchTargetForTest(
+				candidates,
+				resolvedTargetIdFromService,
+				(candidate) => chatgptTargetHasVisiblePromptWorkbench(host, resolvedPort, candidate),
+			)
+		: (serviceResolved ?? candidates[0]);
 	let shouldClose = false;
 	let usedExisting = Boolean(resolveChatgptTargetId(targetInfo));
 	const tabPolicy = resolveBrowserTabPolicy(options);
@@ -4334,6 +4421,22 @@ async function connectToChatgptTab(
 	recordChatgptTargetSession(options, "retain", connection.targetId);
 	recordBrowserScrapeProviderAction(options, "chatgpt.connectTab.ready");
 	return bindChatgptProviderSessionConnection(options, connection);
+}
+
+export async function connectToChatgptPromptWorkbenchForSkills(
+	options: BrowserProviderListOptions,
+): Promise<{ client: ChromeClient; port: number }> {
+	const connection = await connectToChatgptTab(
+		{
+			...options,
+			configuredUrl: CHATGPT_HOME_URL,
+			preserveActiveTab: true,
+			requirePromptWorkbenchTarget: true,
+			tabLifecycle: "retain-new",
+		},
+		CHATGPT_HOME_URL,
+	);
+	return { client: connection.client, port: connection.port };
 }
 
 type ChatgptTabConnection = Awaited<ReturnType<typeof connectToChatgptTab>>;
@@ -5689,9 +5792,8 @@ function buildChatgptFeatureProbeExpression(): string {
 	          });
 	        }
 	      };
-	      for (const pill of Array.from(document.querySelectorAll(
-	        '#prompt-textarea [data-inline-selection-pill][data-system-hint-type^="plugin:"], #prompt-textarea [data-inline-selection-pill][data-id^="plugin:"]',
-	      )).filter(isVisible)) {
+	      const composer = document.querySelector('form[data-type="unified-composer"]') || document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]')?.closest('form');
+	      for (const pill of Array.from(composer?.querySelectorAll(${JSON.stringify(CHATGPT_INLINE_SELECTION_PILL_SELECTOR)}) || []).filter(isVisible)) {
 	        const dataId = normalize(pill.getAttribute('data-id') || pill.getAttribute('data-system-hint-type') || '');
 	        addApp({
 	          name: pill.getAttribute('data-keyword') || pill.textContent || '',
@@ -5717,7 +5819,7 @@ function buildChatgptFeatureProbeExpression(): string {
 	      )).filter(isVisible).at(-1);
 	      if (menu) {
 	        const items = Array.from(menu.querySelectorAll(
-	          '.__menu-item[tabindex], [data-fill][tabindex]',
+	          ${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)},
 	        )).filter(isVisible);
 	        for (const item of items) {
 	          const primary = item.querySelector('span.max-w-full, span.truncate');
@@ -5815,6 +5917,10 @@ function buildChatgptFeatureProbeExpression(): string {
 	      company_knowledge: composerDetails.composer_menu_observed
 	        ? composerDetails.composer_tools.some((label) => lower(label) === 'company knowledge')
 	        : Boolean(flags.company_knowledge),
+	      shopping: composerDetails.composer_menu_observed
+	        ? composerDetails.composer_tools.some((label) => lower(label) === 'shopping')
+	        : Boolean(flags.shopping),
+	      composer_tools: composerDetails.composer_tools,
 	      apps: composerDetails.composer_apps
 	        .filter((entry) => entry.selection_state === 'selected' || entry.selection_state === 'selectable')
 	        .map((entry) => lower(entry.name).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')),
@@ -5884,7 +5990,7 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 			if (!(node instanceof HTMLElement)) return false;
 			const rect = node.getBoundingClientRect();
 			return rect.width > 0 && rect.height > 0
-				&& Boolean(node.querySelector('.__menu-item[tabindex], [data-fill][tabindex]'));
+				&& Boolean(node.querySelector(${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)}));
 		}))()`,
 		{
 			timeoutMs: 5_000,
@@ -5908,12 +6014,12 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 			const composer_mode = modeText === 'work' ? 'work' : (modeText === 'chat' ? 'chat' : null);
 				const menu = Array.from(document.querySelectorAll('.popover'))
 					.filter((node) => isVisible(node)
-						&& Boolean(node.querySelector('.__menu-item[tabindex], [data-fill][tabindex]')))
+						&& Boolean(node.querySelector(${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)})))
 					.at(-1);
 			const apps = [];
 			const tools = [];
 			for (const item of Array.from(menu?.querySelectorAll(
-				'.__menu-item[tabindex], [data-fill][tabindex]'
+				${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)}
 			) || []).filter(isVisible)) {
 				const primary = item.querySelector('span.max-w-full, span.truncate');
 				const name = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
@@ -5939,10 +6045,10 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 						selection_state: connectRequired ? 'connect_required' : 'selectable',
 				});
 			}
-			for (const pill of Array.from(document.querySelectorAll(
-				'#prompt-textarea [data-inline-selection-pill][data-system-hint-type^="plugin:"], ' +
-				'#prompt-textarea [data-inline-selection-pill][data-id^="plugin:"]'
-			)).filter(isVisible)) {
+			const composer = document.querySelector('form[data-type="unified-composer"]') || document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]')?.closest('form');
+			for (const pill of Array.from(composer?.querySelectorAll(
+				${JSON.stringify(CHATGPT_INLINE_SELECTION_PILL_SELECTOR)}
+			) || []).filter(isVisible)) {
 				const dataId = normalize(
 					pill.getAttribute('data-id') || pill.getAttribute('data-system-hint-type') || ''
 				);
@@ -6002,6 +6108,8 @@ function normalizeChatgptFeatureSignature(
 		deep_research: typeof probe.deep_research === "boolean" ? probe.deep_research : undefined,
 		company_knowledge:
 			typeof probe.company_knowledge === "boolean" ? probe.company_knowledge : undefined,
+		shopping: typeof probe.shopping === "boolean" ? probe.shopping : undefined,
+		composer_tools: normalizeUiTextList(probe.composer_tools),
 		apps,
 		composer_mode:
 			probe.composer_mode === "chat" || probe.composer_mode === "work"
@@ -6016,6 +6124,8 @@ function normalizeChatgptFeatureSignature(
 		normalized.web_search !== undefined ||
 		normalized.deep_research !== undefined ||
 		normalized.company_knowledge !== undefined ||
+		normalized.shopping !== undefined ||
+		normalized.composer_tools.length > 0 ||
 		normalized.apps.length > 0 ||
 		normalized.composer_mode !== undefined ||
 		normalized.composer_apps.length > 0 ||
@@ -6321,6 +6431,8 @@ async function readChatgptFeatureSignature(
 		probe.web_search = composerTools.has("web search");
 		probe.deep_research = composerTools.has("deep research");
 		probe.company_knowledge = composerTools.has("company knowledge");
+		probe.shopping = composerTools.has("shopping");
+		probe.composer_tools = composerSurface.composer_tools;
 	}
 	if (!pluginDiscovery && options?.includeInstalledApps === true && locationHref) {
 		try {
@@ -12689,7 +12801,12 @@ export function createChatgptAdapter(): Pick<
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
-			return runWithChatgptAbortBoundConnection(connection, options, readChatgptUserIdentity);
+			return runWithChatgptAbortBoundConnection(connection, options, async (client) => {
+				if (options?.tabLifecycle === "dispose-new") {
+					await waitForChatgptDisposableRootComposer(client);
+				}
+				return readChatgptUserIdentity(client);
+			});
 		},
 		async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
 			await beforeChatgptBrowserInteraction(options, "page-refresh");
@@ -12706,6 +12823,9 @@ export function createChatgptAdapter(): Pick<
 			try {
 				if (shouldNavigate) {
 					await navigateToChatgptUrl(client, configuredUrl, undefined, options);
+				}
+				if (options?.tabLifecycle === "dispose-new") {
+					await waitForChatgptDisposableRootComposer(client);
 				}
 				await assertChatgptExpectedIdentity(client, options);
 				return await readChatgptFeatureSignature(client, options);

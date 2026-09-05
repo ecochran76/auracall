@@ -127,8 +127,20 @@
 - ChatGPT Skill lifecycle:
   - provider-free contract tests:
     `pnpm vitest run tests/browser/chatgptSkills.test.ts tests/cli/chatgptSkillsCommand.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`
+  - pair with `tests/browser/chatgptComposerTool.test.ts` and
+    `tests/browser/chatgptAdapter.test.ts` when current drawer rows, selected
+    composer pills, or local-upload qualification changes; current rows need
+    not carry `tabindex`, and pill proof stays scoped to the composer form
   - read-only inventory smoke:
     `pnpm tsx bin/auracall.ts --profile <runtime> skills list --expected-account <email> --json`
+  - bounded non-submitting selection smoke:
+    `pnpm tsx bin/auracall.ts --profile <runtime> skills select <32-hex-id> --expected-account <email> --yes --json`
+    requires exact-ID inventory binding plus a pill-free empty source composer,
+    qualifies either the current `textarea[name="prompt-textarea"]` or legacy
+    `#prompt-textarea` provider shape,
+    observes either an empty selected composer or only the provider-authored
+    prompt that exactly matches the decoded current `prompt` parameter, restores
+    the original route, and observes that the selection and prompt are cleared
   - `list` and `show` require the exact expected account; all mutations also
     require `--yes`, a complete inventory, and an exact 32-hex ID after create
   - `update` requires the exact prior `SKILL.md` SHA-256 reported by `show`;
@@ -136,7 +148,7 @@
   - source loading accepts only a regular `SKILL.md` or directory containing
     one, rejects symbolic links, normalizes line endings, and caps content at
     1 MiB
-  - an `outcome-unknown` create, update, or delete is a hard stop and must not
+  - an `outcome-unknown` select, create, update, or delete is a hard stop and must not
     be retried; retain the visible provider surface for operator inspection
   - do not use Skill mutation commands as routine live tests. One authorized
     canary must bind the returned ID and hashes, perform at most one create,

@@ -31,4 +31,21 @@ describe("oracle --version", () => {
 		expect(stdout).toContain("chatgpt:reasoning-high");
 		expect(stdout).not.toContain("chatgpt:pro-extended");
 	}, 30000);
+
+	test("advertises guarded exact-ID ChatGPT Skill selection", async () => {
+		const cliEntrypoint = path.join(process.cwd(), "bin", "auracall.ts");
+		const tsxCli = path.join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
+		const { stdout } = await execFileAsync(
+			process.execPath,
+			[tsxCli, cliEntrypoint, "skills", "select", "--help"],
+			{
+				// biome-ignore lint/style/useNamingConvention: environment variable name
+				env: { ...process.env, FORCE_COLOR: "0", AURACALL_DISABLE_KEYTAR: "1" },
+			},
+		);
+		expect(stdout).toContain("<skill-id>");
+		expect(stdout).toContain("--expected-account <email>");
+		expect(stdout).toContain("--yes");
+		expect(stdout).toContain("without submitting a prompt");
+	}, 30000);
 });

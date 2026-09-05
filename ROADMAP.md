@@ -4,8 +4,30 @@
 
 ### Current Execution Board
 
-Status: Durable model schema and installed browser survey accepted
-Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18 (open)
+Status: ChatGPT inventory current; Skill provider-prefill proof repair underway
+Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
+
+- Active ChatGPT tool and Skill inventory/selection hardening:
+  [docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md](docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md)
+  P27 owns current drawer identities including Shopping, deterministic root-tab
+  discovery with retained project chats, and guarded non-submitting exact-ID
+  Skill selection. The source-identical installed runtime reports 29 current
+  capabilities and the complete 11-item Skill inventory; current Shopping was
+  selected and cleaned once. The first exact-ID Skill canary is terminal
+  `outcome-unknown`; the operator's explicit `ok go` authorized one fresh
+  non-submitting exact-ID canary, which exposed ChatGPT's new provider-authored
+  prompt prefill after the exact Skill-bound route. The source repair now
+  distinguishes that exact decoded provider prompt from user content and adds
+  a pill-free empty-composer pre-navigation gate.
+  A final no-click audit confirmed `Try in chat` is a plain button without a
+  route-bound selection contract; inventory evidence cannot close that gate.
+  The terminal attempt restored zero text/zero pills without submission. No
+  install, prompt, upload, model change, Skill execution, or retry is authorized.
+  Read-only CDP inspection then found both home composers under ChatGPT's current
+  named-textarea shape rather than the legacy editor ID; Revision 8 repairs that
+  qualification provider-free. Revision 9 also removes the remaining stale
+  drawer-row `tabindex` requirement and scopes selected pills to the composer
+  form. Both repairs are pushed but not installed.
 
 - Integrated installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)

@@ -22229,3 +22229,77 @@ browser-stage lifecycle observability, not transcript truncation.
   provider API IDs, and provider DOM matchers.
 - Guard: the CLI subprocess test now requires `chatgpt:reasoning-high` in
   handoff help and rejects `chatgpt:pro-extended`.
+
+## 2026-09-05 | Separate provider labels, capability IDs, and selection semantics
+
+- Failure mode: current ChatGPT drawer labels changed and added Shopping while
+  capability discovery could attach a retained project chat instead of the root
+  composer; Skill inventory had stable IDs but no bounded selection contract.
+- Durable fix: publish semantic capability IDs with provider labels as aliases,
+  force discovery through the configured root URL, and model Skill detail
+  selection separately from prompt invocation.
+- Guard: file-source rows stay `composer_attachment`, tool selection resolves
+  durable IDs, and Skill selection requires exact account, complete inventory,
+  exact 32-hex ID, explicit confirmation, empty-composer proof, and cleanup.
+- Regression rule: a successful `Try in chat` click never proves Skill
+  invocation; failure to observe selection or cleanup is `outcome-unknown` and
+  must not be retried.
+
+## 2026-09-05 | Bind ChatGPT selection and proof to current workbench structure
+
+- Failure mode: an exact-account preflight qualified the healthy ChatGPT root,
+  but the later Skills phase opened generic DevTools and navigated the first
+  retained page. Separately, the current drawer dropped `tabindex` from its
+  `.__menu-item` rows and selected Shopping as a non-plugin inline pill.
+- Durable fix: obtain the Skills CDP client through the same qualified
+  prompt-workbench target used by the provider adapter; recognize current
+  popover rows independent of `tabindex`; detect any exact-scored
+  `data-inline-selection-pill`; and define an empty composer as no user text
+  after selection pills/cursor sentinels are removed from a clone.
+- Cleanup rule: remove composer state only when exactly one expected Skill pill
+  is present and no user-authored text or second pill exists. Otherwise refuse
+  cleanup and return `outcome-unknown`.
+- Regression rule: identity on one tab does not authorize navigation on another,
+  reload does not prove inline-pill cleanup, and a dispatched selection is never
+  retry authority when exact selection or cleanup proof is missing.
+- Background-tab geometry is not workbench absence. Before rejecting a retained
+  ChatGPT root for a zero-sized composer, foreground that exact CDP target and
+  then measure it. A true greeting-only root still lacks `#prompt-textarea` and
+  remains ineligible.
+
+## 2026-09-05 | Distinguish ChatGPT Skill provider prefill from user text
+
+- Failure mode: current `Try in chat` routes the exact Skill into the home
+  composer and seeds a provider-authored example prompt. The empty-text-only
+  proof rejected that safe non-submitting state after the single live click.
+- Durable fix: require the source composer to have zero user text and zero
+  selection pills before any navigation, then accept post-click text only when
+  it exactly equals the decoded current `prompt` parameter and the exact Skill
+  marker or route is present.
+- Guard: arbitrary or mismatched composer text remains untrusted, final route
+  restoration must prove zero text/zero pills, and an unaccepted dispatched
+  click is terminal `outcome-unknown` with no retry.
+
+## 2026-09-05 | Qualify ChatGPT composers by durable provider semantics
+
+- Failure mode: current ChatGPT home pages replaced the prompt editor ID with a
+  named textarea, so an actually visible empty workbench was classified as
+  absent and the Skill lane appeared browser-blocked.
+- Durable fix: exact root qualification and Skill preflight/proof/cleanup accept
+  either `#prompt-textarea` or `textarea[name="prompt-textarea"]`, matching the
+  existing provider input contract without broadening to arbitrary textareas.
+- Regression rule: a missing legacy editor ID does not prove a missing composer;
+  require one of the exact provider selectors plus visible geometry and preserve
+  all empty-composer, identity, cleanup, and no-submit gates.
+
+## 2026-09-05 | Keep ChatGPT drawer inventory and selection proof structurally aligned
+
+- Failure mode: the selection path accepted current no-tabindex drawer rows,
+  while capability discovery still filtered them out; selected-pill proof also
+  assumed pills lived inside the prompt editor instead of the composer form.
+- Durable fix: share the exact current drawer-row shape across discovery paths,
+  scope inline selection pills to the active composer form, and qualify local
+  uploads against either exact ChatGPT prompt-editor shape.
+- Regression rule: inventory and selection must recognize the same current row
+  family, and pill proof must never search the whole page or require an editor
+  containment relationship the provider no longer renders.
