@@ -6,7 +6,7 @@ Operational state: IMPLEMENTING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 4 | 2026-09-05
+Revision: 5 | 2026-09-05
 
 ## Stable Objective
 
@@ -71,6 +71,13 @@ prompt.
   after excluding selection pills. It permits one safety replacement install
   plus read-only inventory/tab-preservation verification, but no further tool
   or Skill selection action.
+- Revision 4 installed with exact source parity, and its read-only Skill list
+  preserved all pre-existing routes while returning the same complete 11-item
+  inventory. Foreground inspection then proved that background layout suppresses
+  the healthy root composer's geometry: the greeting-only root has no editor,
+  while the healthy root exposes it immediately after `Page.bringToFront`.
+  Revision 5 foregrounds each retained candidate before visibility proof and
+  permits one final corrective install plus the same read-only checks only.
 
 ## Scope
 
@@ -108,6 +115,10 @@ prompt.
   is admitted for the concrete cross-tab attachment and current-pill proof
   defects found by the already-spent canaries. No install is authorized after
   that replacement.
+- Revision 5 supersedes that ceiling only for the background-geometry defect
+  discovered by the required post-install read-only verification. One final
+  corrective install is admitted; no later install or selection action is
+  authorized by this plan.
 - Live work is limited to the already-retained `wsl-chrome-3` ChatGPT managed
   browser profile on DevTools port `45015` after exact identity and empty
   composer preflight.

@@ -48748,3 +48748,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   user content, and exact single-Skill cleanup. The focused cone passes 224/224
   with typecheck; one final safety install and read-only route/inventory checks
   remain, with both selection budgets exhausted.
+- The Revision 4 install is source-identical. Its installed read-only Skill list
+  returned the same complete 11-item inventory and preserved every tab route.
+  The post-install inspection exposed one last qualifier defect: background
+  ChatGPT roots reported zero-sized composer geometry, but the healthy root
+  became visibly prompt-ready when foregrounded; the separate greeting-only root
+  still had no editor. Revision 5 makes foregrounding part of retained-candidate
+  readiness proof and admits one last corrective install, with no selection
+  retry.

@@ -22262,3 +22262,7 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regression rule: identity on one tab does not authorize navigation on another,
   reload does not prove inline-pill cleanup, and a dispatched selection is never
   retry authority when exact selection or cleanup proof is missing.
+- Background-tab geometry is not workbench absence. Before rejecting a retained
+  ChatGPT root for a zero-sized composer, foreground that exact CDP target and
+  then measure it. A true greeting-only root still lacks `#prompt-textarea` and
+  remains ineligible.

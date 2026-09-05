@@ -4166,22 +4166,30 @@ async function chatgptTargetHasVisiblePromptWorkbench(
 	const client = await connectToChromeTarget({ host, port, target: targetId }).catch(() => null);
 	if (!client) return false;
 	try {
-		await client.Runtime.enable();
-		const result = await client.Runtime.evaluate({
-			expression: `(() => {
-        const editor = document.querySelector('#prompt-textarea');
-        if (!(editor instanceof HTMLElement)) return false;
-        const rect = editor.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      })()`,
-			returnByValue: true,
-		});
-		return result.result?.value === true;
+		return await prepareChatgptPromptWorkbenchTargetForTest(client);
 	} catch {
 		return false;
 	} finally {
 		await client.close().catch(() => undefined);
 	}
+}
+
+export async function prepareChatgptPromptWorkbenchTargetForTest(
+	client: ChromeClient,
+): Promise<boolean> {
+	await client.Page.enable();
+	await client.Page.bringToFront();
+	await client.Runtime.enable();
+	const result = await client.Runtime.evaluate({
+		expression: `(() => {
+        const editor = document.querySelector('#prompt-textarea');
+        if (!(editor instanceof HTMLElement)) return false;
+        const rect = editor.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      })()`,
+		returnByValue: true,
+	});
+	return result.result?.value === true;
 }
 
 async function connectToChatgptTab(
