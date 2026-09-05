@@ -837,20 +837,15 @@ Current limits:
     pre/post prompt text
   - raw `model` remains the provider-version escape hatch
   - `modelSelector` is the stable semantic intent field, e.g.
-    `chatgpt:auto`, `chatgpt:instant`, `chatgpt:sol`, `chatgpt:terra`,
-    `chatgpt:luna`, `chatgpt:gpt-5.5`, `chatgpt:thinking-standard`,
-    `chatgpt:thinking-extended`, `chatgpt:sol-medium`,
-    `chatgpt:sol-high`, `chatgpt:sol-extra-high`, `chatgpt:sol-pro`,
-    `chatgpt:pro-standard`, `chatgpt:pro-extended`, `grok:auto`,
+    `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`,
+    `chatgpt:reasoning-max`, `chatgpt:premium`, `chatgpt:legacy`, `grok:auto`,
     `grok:thinking`, or `gemini:thinking`
-  - provider adapters should resolve semantic selectors against the current
-    workbench UI; older exact version selectors are non-urgent compatibility
-    pins, not the default config posture
-  - ChatGPT browser-backed execution resolves those selectors through the
-    current nested `Advanced` model picker. `auto` targets GPT-5.6 Terra,
-    `instant` targets GPT-5.6 Luna, and Sol/Thinking/Pro effort aliases target
-    GPT-5.6 Sol plus Light/Medium/High/Extra High; Grok and Gemini semantic
-    execution remain follow-up work
+  - provider adapters resolve semantic selectors against a separately
+    versioned provider schema; older version and codename selectors remain
+    accepted compatibility inputs but are not emitted in discovery
+  - `chatgpt:premium` currently targets ChatGPT's GPT-6 Pro lane, powered by
+    GPT-6 Astra. The fast and reasoning intents currently target the GPT-5.6
+    controls. Grok and Gemini semantic execution remain follow-up work.
 - MCP exposes the same trusted local agent/team config surface through
   `config_entities_list`, `config_agent_upsert`, `config_agent_delete`,
   `config_team_upsert`, and `config_team_delete`; list responses include
@@ -1066,21 +1061,19 @@ Or via `config.json`:
 
 ## Model aliases
 
-Oracle keeps a stable CLI-facing model set, but some names are aliases for the concrete API model ids it sends:
+AuraCall separates durable internal intent from concrete provider model IDs:
 
+- `openai:frontier` → `gpt-6-astra` (API; current default)
 - `gpt-5.1-pro` → `gpt-5.2-pro` (API)
 - `gpt-5.6-sol` is a concrete OpenAI API model and ChatGPT browser selector
   target for Sol reasoning
-- generic `pro` labels/defaults resolve to `gpt-5.1-pro` first, so operator-facing config does not need to pin a dated concrete Pro id
+- generic `pro` labels resolve to `openai:frontier`; exact GPT-5.x inputs remain version pins
 
 Notes:
-- `gpt-5.1-pro` is a **CLI alias** for “the current Pro API model” — OpenAI’s API uses `gpt-5.2-pro`.
-- In ChatGPT, `chatgpt:sol-medium`, `chatgpt:sol-high`, and
-  `chatgpt:sol-extra-high` target the GPT-5.6 Sol effort lane. The current
-  picker no longer exposes separate Thinking or Pro model families, so legacy
-  `chatgpt:thinking-*`, `chatgpt:pro-*`, and `chatgpt:sol-pro` aliases map to
-  Sol at the corresponding effort. `chatgpt:auto` maps to Terra,
-  `chatgpt:instant` maps to Luna, and `chatgpt:gpt-5.5` selects the legacy row.
+- Use `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`,
+  `chatgpt:reasoning-max`, `chatgpt:premium`, and `chatgpt:legacy` in new
+  agent and handoff records. Legacy GPT-5.2, Sol/Terra/Luna, Thinking, and Pro
+  selectors continue to resolve for saved configuration.
 - Browser compatibility labels follow the same current picker: older base GPT
   inputs map to Terra, older Instant inputs map to Luna, and older
   Thinking/Pro inputs map to Sol. These mappings do not change API model ids.

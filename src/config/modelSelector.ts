@@ -1,7 +1,20 @@
 import type { ThinkingTimeLevel } from '../browser/types.js';
 
+export type ChatgptCanonicalModelSelector =
+  | 'chatgpt:fast'
+  | 'chatgpt:reasoning'
+  | 'chatgpt:reasoning-high'
+  | 'chatgpt:reasoning-max'
+  | 'chatgpt:premium'
+  | 'chatgpt:legacy';
+
 export interface ChatgptSemanticModelSelection {
-  desiredModel: 'GPT-5.6 Sol' | 'GPT-5.6 Terra' | 'GPT-5.6 Luna' | 'GPT-5.5';
+  /** Stable AuraCall intent ID. Persist this value instead of a provider model name. */
+  canonicalSelector: ChatgptCanonicalModelSelector;
+  /** Current ChatGPT picker label. This is provider-owned and may change independently. */
+  desiredModel: 'GPT-6 Pro' | 'GPT-5.6 Sol' | 'GPT-5.6 Terra' | 'GPT-5.6 Luna' | 'GPT-5.5';
+  /** Concrete API-compatible bridge used by shared runtime bookkeeping. */
+  apiModel: 'gpt-6-astra' | 'gpt-5.6-sol' | 'gpt-5.2-instant';
   thinkingTime?: ThinkingTimeLevel;
 }
 
@@ -14,66 +27,108 @@ export interface SemanticModelSelectorDescriptor {
 
 const CHATGPT_SELECTOR_PREFIX = 'chatgpt:';
 
+const CHATGPT_CANONICAL_SELECTIONS: Record<
+  ChatgptCanonicalModelSelector,
+  ChatgptSemanticModelSelection
+> = {
+  'chatgpt:fast': {
+    canonicalSelector: 'chatgpt:fast',
+    desiredModel: 'GPT-5.6 Sol',
+    apiModel: 'gpt-5.6-sol',
+    thinkingTime: 'light',
+  },
+  'chatgpt:reasoning': {
+    canonicalSelector: 'chatgpt:reasoning',
+    desiredModel: 'GPT-5.6 Sol',
+    apiModel: 'gpt-5.6-sol',
+    thinkingTime: 'standard',
+  },
+  'chatgpt:reasoning-high': {
+    canonicalSelector: 'chatgpt:reasoning-high',
+    desiredModel: 'GPT-5.6 Sol',
+    apiModel: 'gpt-5.6-sol',
+    thinkingTime: 'extended',
+  },
+  'chatgpt:reasoning-max': {
+    canonicalSelector: 'chatgpt:reasoning-max',
+    desiredModel: 'GPT-5.6 Sol',
+    apiModel: 'gpt-5.6-sol',
+    thinkingTime: 'heavy',
+  },
+  'chatgpt:premium': {
+    canonicalSelector: 'chatgpt:premium',
+    desiredModel: 'GPT-6 Pro',
+    apiModel: 'gpt-6-astra',
+  },
+  'chatgpt:legacy': {
+    canonicalSelector: 'chatgpt:legacy',
+    desiredModel: 'GPT-5.5',
+    apiModel: 'gpt-5.2-instant',
+  },
+};
+
+const CHATGPT_SELECTOR_ALIASES: Readonly<Record<string, ChatgptCanonicalModelSelector>> = {
+  auto: 'chatgpt:fast',
+  instant: 'chatgpt:fast',
+  'gpt-5.2': 'chatgpt:fast',
+  'gpt-5.2-instant': 'chatgpt:fast',
+  thinking: 'chatgpt:reasoning',
+  'thinking-standard': 'chatgpt:reasoning',
+  'gpt-5.2-thinking': 'chatgpt:reasoning',
+  sol: 'chatgpt:reasoning',
+  'sol-medium': 'chatgpt:reasoning',
+  'thinking-extended': 'chatgpt:reasoning-high',
+  'sol-high': 'chatgpt:reasoning-high',
+  'gpt-5.6-sol-high': 'chatgpt:reasoning-high',
+  'pro-standard': 'chatgpt:reasoning',
+  'pro-extended': 'chatgpt:reasoning-high',
+  'sol-extra-high': 'chatgpt:reasoning-max',
+  'gpt-5.6-sol-extra-high': 'chatgpt:reasoning-max',
+  'sol-pro': 'chatgpt:reasoning-max',
+  'gpt-5.6-sol-pro': 'chatgpt:reasoning-max',
+  pro: 'chatgpt:reasoning',
+  premium: 'chatgpt:premium',
+  'gpt-5.2-pro': 'chatgpt:reasoning',
+  'gpt-6': 'chatgpt:premium',
+  'gpt-6-pro': 'chatgpt:premium',
+  'gpt-6-astra': 'chatgpt:premium',
+  astra: 'chatgpt:premium',
+  legacy: 'chatgpt:legacy',
+  'gpt-5.5': 'chatgpt:legacy',
+  '5.5': 'chatgpt:legacy',
+};
+
+const CHATGPT_EXPLICIT_PROVIDER_SELECTIONS: Readonly<Record<string, ChatgptSemanticModelSelection>> = {
+  terra: {
+    canonicalSelector: 'chatgpt:fast',
+    desiredModel: 'GPT-5.6 Terra',
+    apiModel: 'gpt-5.2-instant',
+  },
+  'gpt-5.6-terra': {
+    canonicalSelector: 'chatgpt:fast',
+    desiredModel: 'GPT-5.6 Terra',
+    apiModel: 'gpt-5.2-instant',
+  },
+  luna: {
+    canonicalSelector: 'chatgpt:fast',
+    desiredModel: 'GPT-5.6 Luna',
+    apiModel: 'gpt-5.2-instant',
+  },
+  'gpt-5.6-luna': {
+    canonicalSelector: 'chatgpt:fast',
+    desiredModel: 'GPT-5.6 Luna',
+    apiModel: 'gpt-5.2-instant',
+  },
+  'gpt-5.6-sol': CHATGPT_CANONICAL_SELECTIONS['chatgpt:reasoning'],
+};
+
 export const SEMANTIC_MODEL_SELECTORS: readonly SemanticModelSelectorDescriptor[] = [
-  { id: 'chatgpt:auto', service: 'chatgpt', label: 'ChatGPT Auto (Terra)', executionReady: true },
-  {
-    id: 'chatgpt:instant',
-    service: 'chatgpt',
-    label: 'ChatGPT Instant (Luna)',
-    executionReady: true,
-  },
-  { id: 'chatgpt:sol', service: 'chatgpt', label: 'ChatGPT GPT-5.6 Sol', executionReady: true },
-  { id: 'chatgpt:terra', service: 'chatgpt', label: 'ChatGPT GPT-5.6 Terra', executionReady: true },
-  { id: 'chatgpt:luna', service: 'chatgpt', label: 'ChatGPT GPT-5.6 Luna', executionReady: true },
-  { id: 'chatgpt:gpt-5.5', service: 'chatgpt', label: 'ChatGPT GPT-5.5', executionReady: true },
-  {
-    id: 'chatgpt:thinking-standard',
-    service: 'chatgpt',
-    label: 'ChatGPT Thinking Standard (Sol Medium)',
-    executionReady: true,
-  },
-  {
-    id: 'chatgpt:thinking-extended',
-    service: 'chatgpt',
-    label: 'ChatGPT Thinking Extended (Sol High)',
-    executionReady: true,
-  },
-  {
-    id: 'chatgpt:sol-medium',
-    service: 'chatgpt',
-    label: 'ChatGPT Sol Medium',
-    executionReady: true,
-  },
-  {
-    id: 'chatgpt:sol-high',
-    service: 'chatgpt',
-    label: 'ChatGPT Sol High',
-    executionReady: true,
-  },
-  {
-    id: 'chatgpt:sol-extra-high',
-    service: 'chatgpt',
-    label: 'ChatGPT Sol Extra High',
-    executionReady: true,
-  },
-  {
-    id: 'chatgpt:pro-standard',
-    service: 'chatgpt',
-    label: 'ChatGPT Legacy Pro Standard (Sol Medium)',
-    executionReady: true,
-  },
-  {
-    id: 'chatgpt:pro-extended',
-    service: 'chatgpt',
-    label: 'ChatGPT Legacy Pro Extended (Sol High)',
-    executionReady: true,
-  },
-  {
-    id: 'chatgpt:sol-pro',
-    service: 'chatgpt',
-    label: 'ChatGPT Legacy Sol Pro (Sol Extra High)',
-    executionReady: true,
-  },
+  { id: 'chatgpt:fast', service: 'chatgpt', label: 'ChatGPT Fast', executionReady: true },
+  { id: 'chatgpt:reasoning', service: 'chatgpt', label: 'ChatGPT Reasoning', executionReady: true },
+  { id: 'chatgpt:reasoning-high', service: 'chatgpt', label: 'ChatGPT Reasoning High', executionReady: true },
+  { id: 'chatgpt:reasoning-max', service: 'chatgpt', label: 'ChatGPT Reasoning Max', executionReady: true },
+  { id: 'chatgpt:premium', service: 'chatgpt', label: 'ChatGPT Premium', executionReady: true },
+  { id: 'chatgpt:legacy', service: 'chatgpt', label: 'ChatGPT Legacy', executionReady: true },
   { id: 'gemini:auto', service: 'gemini', label: 'Gemini Auto', executionReady: false },
   { id: 'gemini:instant', service: 'gemini', label: 'Gemini Instant', executionReady: false },
   { id: 'gemini:thinking', service: 'gemini', label: 'Gemini Thinking', executionReady: false },
@@ -86,49 +141,17 @@ export function resolveChatgptSemanticModelSelector(
   value: unknown,
 ): ChatgptSemanticModelSelection | null {
   const selector = normalizeSelector(value);
-  if (!selector) {
-    return null;
-  }
+  if (!selector) return null;
   const token = selector.startsWith(CHATGPT_SELECTOR_PREFIX)
     ? selector.slice(CHATGPT_SELECTOR_PREFIX.length)
     : selector;
-
-  switch (token) {
-    case 'auto':
-    case 'terra':
-    case 'gpt-5.6-terra':
-      return { desiredModel: 'GPT-5.6 Terra' };
-    case 'instant':
-    case 'luna':
-    case 'gpt-5.6-luna':
-      return { desiredModel: 'GPT-5.6 Luna' };
-    case 'thinking':
-    case 'thinking-standard':
-    case 'sol':
-    case 'sol-medium':
-    case 'gpt-5.6-sol':
-      return { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'standard' };
-    case 'thinking-extended':
-    case 'sol-high':
-    case 'gpt-5.6-sol-high':
-      return { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'extended' };
-    case 'sol-extra-high':
-    case 'gpt-5.6-sol-extra-high':
-      return { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'heavy' };
-    case 'pro':
-    case 'pro-standard':
-      return { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'standard' };
-    case 'pro-extended':
-      return { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'extended' };
-    case 'sol-pro':
-    case 'gpt-5.6-sol-pro':
-      return { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'heavy' };
-    case 'gpt-5.5':
-    case '5.5':
-      return { desiredModel: 'GPT-5.5' };
-    default:
-      return null;
-  }
+  const explicitProviderSelection = CHATGPT_EXPLICIT_PROVIDER_SELECTIONS[token];
+  if (explicitProviderSelection) return { ...explicitProviderSelection };
+  const canonicalSelector = selector in CHATGPT_CANONICAL_SELECTIONS
+    ? selector as ChatgptCanonicalModelSelector
+    : CHATGPT_SELECTOR_ALIASES[token];
+  const selection = canonicalSelector ? CHATGPT_CANONICAL_SELECTIONS[canonicalSelector] : null;
+  return selection ? { ...selection } : null;
 }
 
 export function isChatgptSemanticModelSelector(value: unknown): boolean {
@@ -137,9 +160,7 @@ export function isChatgptSemanticModelSelector(value: unknown): boolean {
 }
 
 function normalizeSelector(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
+  if (typeof value !== 'string') return null;
   const normalized = value.trim().toLowerCase();
   return normalized.length > 0 ? normalized : null;
 }

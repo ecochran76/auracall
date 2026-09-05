@@ -48595,3 +48595,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   attachment module. The installed model/slider canary passed and restored Pro
   (4); the installed attachment probe returned `ready` for `#upload-files`
   without upload. Retained Chrome PID `1933` still listens on port `45015`.
+## 2026-09-05 | Plan 0332 durable model schema
+
+- Opened P25 in isolated worktree `auracall-plan0332` from current
+  `origin/main`; preserved the dirty/conflicted P08/P17 root checkout.
+- Verified the current provider contract against official OpenAI documentation:
+  GPT-6 Pro is the ChatGPT product lane powered by GPT-6 Astra, and
+  `gpt-6-astra` supports `max` reasoning with a 1,050,000-token context.
+- Added red/green contracts for six durable ChatGPT selectors and legacy alias
+  compatibility. Discovery now emits capability IDs while resolved selections
+  keep provider label and API bookkeeping fields explicit.
+- Added the `openai:frontier` default alias, GPT-6 Astra model metadata, and
+  OpenAI SDK 7.10.0 so the typed request contract accepts `max`.
+- Provider-free affected and comprehensive validation remain before checkpoint.
+
+## 2026-09-05 | Plan 0332 provider-free acceptance
+
+- Checkpoint `c96a472f` passes 448 affected tests, typecheck, production build,
+  JSON validation, changed-file lint at error level, diff hygiene, and the
+  331-candidate zero-error plan audit.
+- Comprehensive validation passes 3,066 tests with 65 policy skips. Two
+  contention-sensitive timing tests passed together in a 245-test focused
+  rerun; the deterministic residual is Plan 0326's stale raw-CDP allowlist
+  expectation.
+- P25 closes provider-free accepted and published. No user-runtime install,
+  DevTools attach, model change, prompt, or live browser claim occurred.

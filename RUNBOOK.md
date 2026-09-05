@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 553 | 2026-09-05
+
+- Opened P25 from clean current `origin/main` in an isolated worktree; the
+  dirty/conflicted P08/P17 checkout remains untouched.
+- Official OpenAI documentation identifies GPT-6 Astra as the current API
+  model and GPT-6 Pro as its ChatGPT product lane during staged rollout.
+- Red coverage proved the public selector catalog still advertised volatile
+  Auto/Sol/Terra/Luna/Thinking/Pro IDs.
+- The source migration now advertises durable fast/reasoning/premium intents,
+  keeps old selectors as compatibility inputs, and adds `openai:frontier`
+  backed by `gpt-6-astra`.
+- Checkpoint `c96a472f` passes the final 448-test affected packet, typecheck,
+  build, changed-file lint at error level, diff hygiene, and zero-error plan
+  audit. The comprehensive lane passes 3,066 tests; two load-sensitive tests
+  passed on focused rerun and the sole deterministic failure is the documented
+  Plan 0326 stale raw-CDP allowlist expectation.
+- P25 is provider-free accepted and published. Installation and live browser
+  interaction remain separate effects.
+
 ## Turn 552 | 2026-09-03
 
 - Opened P24 from clean current `main` in an isolated worktree; the conflicted

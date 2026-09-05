@@ -17,7 +17,7 @@ describe('Config Resolver', () => {
     expect(result.browser.headless).toBe(undefined);
   });
 
-  it('should default browser runs through the semantic ChatGPT Instant selector when no model is configured', async () => {
+  it('should default browser runs through the durable ChatGPT fast selector when no model is configured', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: { browser: {} } as any,
       path: '/tmp/config.json',
@@ -27,7 +27,7 @@ describe('Config Resolver', () => {
     const result = await resolveConfig({ engine: 'browser' });
 
     expect(result.engine).toBe('browser');
-    expect(result.model).toBe('gpt-5.2-instant');
+    expect(result.model).toBe('gpt-5.6-sol');
   });
 
   it('should resolve legacy ChatGPT Pro Extended intent to the current Sol compatibility model', async () => {

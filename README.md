@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-Aura-Call bundles your prompt and files so another AI can answer with real context. It speaks stable GPT Pro aliases, GPT-5.1 Codex (API-only), GPT-5.1, GPT-5.2 family models, GPT-5.6 Sol, Gemini 3 Pro, Claude Sonnet 4.5, Claude Opus 4.1, Grok 4.20, and more—and it can ask one or multiple models in a single run. Browser automation is available; the current ChatGPT picker exposes GPT-5.6 Sol, Terra, Luna, and legacy GPT-5.5. Use semantic selectors such as `chatgpt:sol-high`, `chatgpt:terra`, and `chatgpt:luna`, or use `--browser-model-strategy current` to keep the active ChatGPT model. API remains the most reliable path, and `--copy` is an easy manual fallback.
+Aura-Call bundles your prompt and files so another AI can answer with real context. Its default API model is the durable `openai:frontier` alias, currently backed by GPT-6 Astra; exact provider model IDs remain available as explicit pins. Browser automation uses capability-oriented selectors such as `chatgpt:fast`, `chatgpt:reasoning-high`, and `chatgpt:premium`, or `--browser-model-strategy current` to preserve the active ChatGPT model. GPT-5.2 and Sol/Terra/Luna spellings remain compatibility inputs but are no longer advertised as durable configuration. API remains the most reliable path, and `--copy` is an easy manual fallback.
 
 ## Quick start
 
@@ -184,7 +184,7 @@ curl -s http://auracall.localhost/v1/response-batches \
 curl -s http://auracall.localhost/v1/tenant-pool-teams/ensure \
   -H "Authorization: Bearer <operator-key>" \
   -H "Content-Type: application/json" \
-  -d '{"teamId":"chatgpt-sol-pool","service":"chatgpt","projectName":"Shared Project","agentModelSelector":"chatgpt:sol-high","members":[{"agentId":"chatgpt-sol-a","runtimeProfile":"wsl-chrome-1"},{"agentId":"chatgpt-sol-b","runtimeProfile":"wsl-chrome-2"}]}'
+  -d '{"teamId":"chatgpt-reasoning-pool","service":"chatgpt","projectName":"Shared Project","agentModelSelector":"chatgpt:reasoning-high","members":[{"agentId":"chatgpt-reasoning-a","runtimeProfile":"wsl-chrome-1"},{"agentId":"chatgpt-reasoning-b","runtimeProfile":"wsl-chrome-2"}]}'
 
 # Dispatch a batch through the tenant-pool team. AuraCall expands each child to
 # the next available member agent and records the selected tenant in batch status.
@@ -228,7 +228,7 @@ auracall handoff prepare \
   --target-provider chatgpt --target-profile auracall-chatgpt-pro \
   --target-ref "https://chatgpt.com/g/g-p-...-project-slug" \
   --target-project-ref "g-p-..." \
-  --target-model-selector chatgpt:sol-high \
+  --target-model-selector chatgpt:reasoning-high \
   --source-context-json /path/to/context.json \
   --source-manifest-json /path/to/manifest.json \
   --source-materialization-job-json /path/to/history-materialization-job.json \
@@ -342,7 +342,7 @@ Current browser-mode default posture:
   `handoff.attachmentPackaging.enabled` and
   `handoff.attachmentPackaging.zipWhenFileCountExceeds` in config. For ChatGPT
   targets, pass
-  `--target-model-selector chatgpt:sol-high` or another semantic selector
+  `--target-model-selector chatgpt:reasoning-high` or another semantic selector
   when the live submit path must select a specific model mode instead of
   inheriting the browser's current model. `auracall handoff status
   <handoff_id>` reads the packet ledger back by id, including event count,
@@ -510,8 +510,8 @@ Terminology note:
   as `agent:<agent_id>` model ids usable with `/v1/responses` and non-streaming
   `/v1/chat/completions`; agent metadata includes source/revision fields when
   available so clients can distinguish config and registry records.
-  semantic provider selectors such as `chatgpt:sol-high` and
-  `chatgpt:terra` include
+  semantic provider selectors such as `chatgpt:reasoning-high` and
+  `chatgpt:premium` include
   `metadata.kind="semantic_model_selector"` and `metadata.executionReady` so
   clients can distinguish execution-ready selectors from planned Gemini/Grok
   selectors.
@@ -1895,16 +1895,16 @@ npx -y auracall auracall-mcp
 | `-p, --prompt <text>` | Required prompt. |
 | `-f, --file <paths...>` | Attach local files/dirs (globs + `!` excludes). On ChatGPT's current workbench, AuraCall prefers the exact `Add photos & files` row and also accepts the unrestricted `#upload-files` input only when it is bound to the active composer and its `Add files and more` trigger; `Add from library` is a separate provider-library drawer. |
 | `-e, --engine <api\|browser>` | Choose API or browser (browser is experimental). |
-| `-m, --model <name>` | Built-ins (`gpt-5.1-pro` default, `gpt-5-pro`, `gpt-5.1`, `gpt-5.1-codex`, `gpt-5.2`, `gpt-5.2-instant`, `gpt-5.2-pro`, `gpt-5.6-sol`, `gemini-3-pro`, `claude-4.5-sonnet`, `claude-4.1-opus`) plus any OpenRouter id (e.g., `minimax/minimax-m2`, `openai/gpt-4o-mini`). Browser ChatGPT also accepts `chatgpt:sol`, `chatgpt:terra`, `chatgpt:luna`, `chatgpt:gpt-5.5`, and effort aliases such as `chatgpt:sol-high`. `chatgpt:auto` maps to Terra and `chatgpt:instant` maps to Luna. Older raw browser base/Instant/Thinking/Pro labels map to Terra/Luna/Sol without changing API model ids. |
+| `-m, --model <name>` | Built-ins (`openai:frontier` default, currently `gpt-6-astra`; exact GPT-5.x, Gemini, Claude, and Grok IDs remain available) plus any OpenRouter id. Browser ChatGPT publishes `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`, `chatgpt:reasoning-max`, `chatgpt:premium`, and `chatgpt:legacy`. Older GPT-5.2 and Sol/Terra/Luna selectors remain accepted aliases or explicit provider-family pins. |
 | `--models <list>` | Comma-separated API models (mix built-ins and OpenRouter ids) for multi-model runs. |
 | `--base-url <url>` | Point API runs at LiteLLM/Azure/OpenRouter/etc. |
 | `--chatgpt-url <url>` | Target a ChatGPT workspace/folder (browser). |
 | `--browser-chatgpt-mode <chat\|work>` | Select the ChatGPT composer mode. AuraCall defaults every ChatGPT browser run to `chat`; `work` must be requested explicitly. |
 | `--browser-chatgpt-tool-approval <manual\|allow-once\|always-allow>` | Handle a post-submit ChatGPT third-party tool approval pause. `manual` is the fail-closed default; the opt-in modes click only the exact corresponding action and verify that the approval surface disappears. |
-| `--browser-work-model <label>` | Select a model through Work's dedicated slider menu (advanced options -> Model). This is used only with `--browser-chatgpt-mode work` and never falls back to the Chat picker. Current labels include `GPT-5.6 Sol`, `GPT-5.6 Terra`, `GPT-5.6 Luna`, and `GPT-5.5`. |
+| `--browser-work-model <label>` | Select a model through Work's dedicated slider menu (advanced options -> Model). This is used only with `--browser-chatgpt-mode work` and never falls back to the Chat picker. This is a raw provider-label escape hatch; prefer semantic selectors for ordinary Chat runs. |
 | `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (current keeps the active model; ignore skips the picker). |
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
-| `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT effort intensity for GPT-5.6 Sol in browser mode. In the current horizontal Power slider, the four AuraCall levels map to Instant, Medium, High, and Extra High; the slider's separate maximum Pro position is not inferred from an effort alias. Prefer `--model chatgpt:sol-high` or `--model chatgpt:sol-extra-high`; legacy Thinking/Pro semantic aliases resolve to the matching Sol lane. |
+| `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT effort intensity in browser mode. In the current horizontal Power slider, the four AuraCall levels map to Instant, Medium, High, and Extra High. Prefer `--model chatgpt:reasoning-high` or `--model chatgpt:reasoning-max`; provider-version spellings remain compatibility aliases. |
 | `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on such as `web-search`, `canvas`, or `deep-research` from the current `Add files and more` workbench selector. File-source rows (`Add photos & files`, `Add from library`) are rejected as tools. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. |
 | `--browser-deep-research-plan-action <start\|edit>` | Control ChatGPT Deep Research after the provider plan appears. `start` accepts the plan; `edit` opens the plan editor before the timed auto-start window, keeps the managed browser open, and stores review evidence including the iframe/DOM edit target and passive screenshot path. |
 | `--browser-port <port>` | Force a fixed Chrome DevTools port (advanced/debugging). Normal WSL -> Windows launches default to auto-discovery instead. |

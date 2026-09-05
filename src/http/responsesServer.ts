@@ -11261,7 +11261,7 @@ function createOperatorBrowserDashboardHtml(
             <button id="duplicateAgentConfig" type="button">Duplicate Agent</button>
             <button id="archiveAgentConfig" type="button">Archive Agent</button>
           </div>
-          <textarea id="agentConfigJson" rows="10" style="width: 100%;" spellcheck="false" placeholder='{"runtimeProfile":"default","service":"chatgpt","modelSelector":"chatgpt:pro-extended"}'></textarea>
+          <textarea id="agentConfigJson" rows="10" style="width: 100%;" spellcheck="false" placeholder='{"runtimeProfile":"default","service":"chatgpt","modelSelector":"chatgpt:reasoning-high"}'></textarea>
           <div id="agentConfigTable" class="muted" style="margin-top: 10px;">No agent configs loaded.</div>
           <pre id="agentConfigResult">No agent config mutation yet.</pre>
         </div>

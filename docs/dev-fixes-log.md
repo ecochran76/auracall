@@ -22204,3 +22204,14 @@ browser-stage lifecycle observability, not transcript truncation.
   dispatch to the corresponding tick and verify `aria-valuenow` before claiming
   selection. Preserve the unrestricted upload input only when prompt, input,
   and exact `Add files and more` trigger share the active composer.
+## 2026-09-05 | Keep internal model intent independent of provider generations
+
+- Failure mode: semantic ChatGPT selectors and defaults encoded GPT-5.2 or
+  GPT-5.6 product names, so every provider rollout leaked into saved agents,
+  discovery catalogs, examples, and branching logic.
+- Durable fix: publish capability-oriented selectors and resolve them through a
+  provider schema carrying a stable canonical ID, current UI label, API bridge,
+  and optional effort. Keep old provider names only as accepted aliases or
+  explicit pins.
+- Regression rule: discovery must not advertise provider versions/codenames as
+  semantic IDs; compatibility inputs must still resolve and validate.

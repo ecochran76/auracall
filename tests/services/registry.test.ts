@@ -149,6 +149,8 @@ describe('service registry manifest helpers', () => {
     expect(resolveBundledServiceModelLabels('chatgpt', 'gpt-5.6-sol')).toEqual(['GPT-5.6 Sol']);
     expect(resolveBundledServiceModelLabels('chatgpt', 'gpt-5.2')).toEqual(['GPT-5.6 Terra']);
     expect(resolveBundledServiceModelLabels('chatgpt', 'gpt-5.2-pro')).toEqual(['GPT-5.6 Sol']);
+    expect(resolveBundledServiceModelLabels('chatgpt', 'premium')).toEqual(['GPT-6 Pro']);
+    expect(resolveBundledServiceModelLabels('chatgpt', 'gpt-6-astra')).toEqual(['GPT-6 Pro']);
     expect(resolveBundledServiceModelLabels('chatgpt', 'sol pro')).toEqual(['GPT-5.6 Sol']);
   });
 
@@ -372,7 +374,14 @@ describe('service registry manifest helpers', () => {
   test('copies the bundled manifest into the writable registry', async () => {
     const registry = await ensureServicesRegistry();
     expect(registry.services.chatgpt?.models?.map((entry) => entry.label)).toEqual(
-      expect.arrayContaining(['GPT-5.6 Sol', 'GPT-5.6 Terra', 'GPT-5.6 Luna', 'GPT-5.5']),
+      expect.arrayContaining(['GPT-6 Pro', 'GPT-5.6 Sol', 'GPT-5.6 Terra', 'GPT-5.6 Luna', 'GPT-5.5']),
     );
+    expect(registry.services.chatgpt?.models?.map((entry) => entry.id)).toEqual([
+      'premium',
+      'reasoning',
+      'balanced',
+      'fast',
+      'legacy',
+    ]);
   });
 });
