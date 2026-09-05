@@ -263,3 +263,7 @@ Add to `~/.zshrc`:
 alias oracle-wsl='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle'
 alias oracle-login='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle --target chatgpt login --browser-keep-browser'
 ```
+
+## Chat mode preflight
+
+On new-chat and project landing pages AuraCall waits for explicit Chat/Work controls before accepting the requested mode. A visible composer alone does not prove Chat. Missing controls stop the run before prompting; established conversation routes retain their mode-marker compatibility checks.

@@ -22315,3 +22315,7 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regression rule: a partial non-null endpoint response must not suppress the
   bootstrap identity fallback; logged-out, missing, or malformed bootstrap data
   remains untrusted.
+
+## 2026-09-05 | Root composer is not Chat-mode evidence
+
+- ChatGPT can expose an editable root composer before Chat/Work controls. The prior fallback inferred Chat and bypassed sticky Work. Wait up to ten seconds for root controls; fail closed if absent. Only established conversation routes retain the control-less compatibility path. Regression tests cover late controls and permanently absent controls.

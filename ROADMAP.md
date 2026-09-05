@@ -1,5 +1,8 @@
 # Aura-Call Roadmap
 
+- Installed/live-accepted Plan 0335: [Chat mode preflight](docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md), based on installed P27 source; require mode-control proof before a new prompt.
+
+
 ## P01 | Active Initiatives
 
 ### Current Execution Board
