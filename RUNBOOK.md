@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 556 | 2026-09-05
+
+- Cached normalized conversation context omits provider model metadata, and
+  read-only DevTools navigation-history inspection found no older conversation
+  behind either intact tab.
+- The intact non-project chat exposes an actual React-managed sidebar link to
+  an older cached conversation. Plan Revision 4 permits one exact temporary
+  target opened through that UI link; neither intact conversation may navigate
+  or close, and only the recorded temporary target may be removed afterward.
+
 ## Turn 555 | 2026-09-05
 
 - P26 replacement installation is current and byte-identical for the CLI,

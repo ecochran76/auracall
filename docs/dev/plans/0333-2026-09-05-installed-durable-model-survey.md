@@ -6,7 +6,7 @@ Operational state: INSTALLED_SOURCE_ACCEPTED_BROWSER_SURVEY_PARTIAL
 Branch: ops/plan0333-installed-model-survey
 Target: main
 Integration: merge
-Revision: 3 | 2026-09-05
+Revision: 4 | 2026-09-05
 
 ## Stable Objective
 
@@ -39,6 +39,11 @@ horizontal Power slider, and the distinct older-model conversation surface.
   the otherwise unused home tab met the automation domain filter. That tab is
   still at `https://chatgpt.com/` but displays the filter block; the two
   conversation tabs remain intact. Do not bypass the fence.
+- Read-only navigation-history inspection found no older conversation behind
+  either intact tab. The non-project chat does expose a React-managed sidebar
+  link to an older cached conversation, so Revision 4 permits one exact
+  temporary target opened by that existing UI link. Neither intact target may
+  navigate or close.
 - Non-forced merge `960000bb` integrates the durable operational-selector
   repair and partial-survey receipt into `main`; P26 remains open only for the
   exact browser-view blocker.
@@ -64,6 +69,10 @@ horizontal Power slider, and the distinct older-model conversation surface.
   to existing conversations already listed by that attached page, followed by
   restoration to the home URL. This is permitted only to locate one genuine
   older-model surface after both pre-opened conversations proved current-model.
+- One temporary tab may be opened only by the existing ChatGPT sidebar link in
+  the intact non-project conversation. Record its target ID before inspection;
+  close only that exact temporary target afterward, whether it loads the chat
+  or the domain-filter page. Do not navigate or close either intact chat tab.
 - Zero API-service restarts, prompts, uploads, model selections, conversation
   mutations, browser launches, reloads, or closes.
 - No `Answer now`, scheduler, completion, materialization, or provider-tool

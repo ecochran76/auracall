@@ -48665,3 +48665,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   proven. The bounded home-tab route met the automation domain filter, and the
   unused home tab now displays that block at the ChatGPT home URL. The fence
   was not bypassed; manual view restoration is the exact remaining blocker.
+- Follow-up read-only inspection found no older conversation in either intact
+  tab's navigation history, and the normalized account-mirror cache does not
+  retain provider model metadata. Revision 4 therefore permits one temporary
+  tab opened by the intact chat's existing sidebar link, with exact-target-only
+  cleanup and zero navigation or close on either intact chat.
