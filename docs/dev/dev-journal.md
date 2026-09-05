@@ -48620,3 +48620,5 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   expectation.
 - P25 closes provider-free accepted and published. No user-runtime install,
   DevTools attach, model change, prompt, or live browser claim occurred.
+- Non-forced merge `a0361f66` integrates the accepted revision into current
+  `main`; the dirty/conflicted P08/P17 checkout remains untouched.

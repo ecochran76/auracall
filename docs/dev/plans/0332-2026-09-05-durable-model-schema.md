@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P25
-Operational state: PROVIDER_FREE_ACCEPTED_NOT_INSTALLED
+Operational state: INTEGRATED_PROVIDER_FREE_ACCEPTED_NOT_INSTALLED
 Branch: fix/plan0332-durable-model-schema
 Target: main
 Integration: merge
@@ -28,6 +28,7 @@ callers.
   allowlist expectation.
 - No installation or live browser interaction occurred. GPT-6 Pro browser
   visibility remains intentionally unclaimed.
+- Non-forced merge `a0361f66` integrates P25 into current `main`.
 
 ## Scope
 

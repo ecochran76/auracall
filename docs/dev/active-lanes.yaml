@@ -408,7 +408,7 @@ lanes:
     branch: fix/plan0332-durable-model-schema
     target: main
     plan_state: CLOSED
-    custody_state: PUBLISHED
+    custody_state: INTEGRATED
     checkpoint: c96a472f
     remote_ref: refs/remotes/origin/fix/plan0332-durable-model-schema
     integration: merge
@@ -416,7 +416,7 @@ lanes:
     overlaps: []
     validation_status: provider-free-accepted-not-installed
     validation_ref: c96a472f
-    integration_receipt: null
+    integration_receipt: a0361f66906987bdc4c20836fdcf3bbc6a83084e
     blocker: null
-    disposition: Durable selector and GPT-6 schema migration is provider-free accepted and published; installation and live browser proof remain separate effects.
+    disposition: Durable selector and GPT-6 schema migration is integrated and provider-free accepted; installation and live browser proof remain separate effects.
     updated_at: 2026-09-05

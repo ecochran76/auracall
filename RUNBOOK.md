@@ -16,8 +16,10 @@
   audit. The comprehensive lane passes 3,066 tests; two load-sensitive tests
   passed on focused rerun and the sole deterministic failure is the documented
   Plan 0326 stale raw-CDP allowlist expectation.
-- P25 is provider-free accepted and published. Installation and live browser
+- P25 is provider-free accepted and integrated. Installation and live browser
   interaction remain separate effects.
+- Non-forced merge `a0361f66` integrates the accepted revision into current
+  `main` without touching the dirty/conflicted P08/P17 checkout.
 
 ## Turn 552 | 2026-09-03
 
