@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 558 | 2026-09-05
+
+- Revision 5 cleanup rechecked the healthy empty home target and the unchanged
+  empty project conversation, then closed only exact blocked target
+  `E5279B87AFE9FA34BF7B147D41F43454`.
+- Final state is Chrome PID `1933`, DevTools port `45015`, the same managed
+  browser profile, one healthy home target, and the intact project conversation.
+  No prompt, upload, model selection, retry action, or provider mutation ran.
+- P26 is integrated, installed, live accepted, and closed. Receipt:
+  `docs/dev/notes/2026-09-05-plan0333-installed-durable-model-survey.json`.
+
 ## Turn 557 | 2026-09-05
 
 - The existing sidebar link reused the non-project target instead of opening a

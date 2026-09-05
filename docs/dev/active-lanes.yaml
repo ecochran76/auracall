@@ -426,16 +426,16 @@ lanes:
     plan_ref: refs/heads/ops/plan0333-installed-model-survey
     branch: ops/plan0333-installed-model-survey
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE
-    checkpoint: f17675df
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: e64af352
     remote_ref: refs/remotes/origin/ops/plan0333-installed-model-survey
     integration: merge
     dependencies: [P25]
     overlaps: [P24]
-    validation_status: installed-source-accepted-browser-survey-partial
+    validation_status: integrated-installed-live-accepted
     validation_ref: docs/dev/notes/2026-09-05-plan0333-installed-durable-model-survey.json
     integration_receipt: 960000bb8943d016b07bebf0c17f094aa8326e22
-    blocker: The original home target still shows the automation block; Revision 5 permits exact-target-only cleanup after healthy replacement-home and intact-project verification.
-    disposition: Installed schema and older-model comparison are accepted; one exact blocked-tab cleanup and final browser invariant receipt remain.
+    blocker: null
+    disposition: Durable model schema, operational labels, installed bytes, current tool/upload and slider surfaces, older-model High/2 comparison, and exact browser cleanup are accepted with no provider mutation.
     updated_at: 2026-09-05

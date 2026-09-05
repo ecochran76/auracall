@@ -1,7 +1,7 @@
 {
   "plan": "0333",
   "date": "2026-09-05",
-  "status": "installed_source_accepted_browser_survey_partial",
+  "status": "integrated_installed_live_accepted",
   "source_checkpoint": "c6d0681c",
   "runtime_repair_checkpoint": "24eaab89",
   "installation": {
@@ -53,7 +53,21 @@
     },
     "tool_trigger": "Add files and more",
     "provider_mutations": 0,
-    "older_model_comparison": "not proven: both open conversations were current-model and bounded route attempts met the automation domain filter",
-    "remaining_view_issue": "the otherwise unused home tab remains at the ChatGPT home URL but displays the automation domain-filter block; the two conversation tabs remain intact"
+    "older_model_comparison": {
+      "stored_slug": "gpt-5-6-thinking",
+      "composer_label": "High",
+      "slider_selected": 2,
+      "slider_max": 4,
+      "current_comparison_slug": "gpt-5-6-pro",
+      "current_composer_label": "Pro",
+      "current_slider_selected": 4,
+      "menu_rows": ["GPT-5.6 Sol", "GPT-5.5"]
+    },
+    "final_targets": {
+      "healthy_home": "368757448FCB0DEC9440FF27EAE041AE",
+      "intact_project_conversation": "B00B620EBFA5CDABEC42F3B291334AD3",
+      "blocked_target_closed": "E5279B87AFE9FA34BF7B147D41F43454"
+    },
+    "remaining_view_issue": null
   }
 }

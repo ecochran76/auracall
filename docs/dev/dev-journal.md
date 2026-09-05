@@ -48677,3 +48677,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Exact history restoration redirected the reused target to a healthy home
   composer. Revision 5 permits exact cleanup of only the separate blocked home
   target after rechecking the healthy home and intact project conversation.
+- The cleanup preconditions passed and only blocked target
+  `E5279B87AFE9FA34BF7B147D41F43454` was closed. A fresh census shows the
+  healthy empty home and unchanged empty project conversation on the same PID,
+  port, and managed browser profile. Plan 0333 is live accepted and closed.

@@ -1,8 +1,8 @@
 # Installed Durable Model Survey | 0333-2026-09-05
 
-State: OPEN
+State: CLOSED
 Lane: P26
-Operational state: INSTALLED_SOURCE_ACCEPTED_BROWSER_SURVEY_PARTIAL
+Operational state: INTEGRATED_INSTALLED_LIVE_ACCEPTED
 Branch: ops/plan0333-installed-model-survey
 Target: main
 Integration: merge
@@ -53,6 +53,10 @@ horizontal Power slider, and the distinct older-model conversation surface.
   healthy ChatGPT home surface. The original home target still contains only
   the automation block. Revision 5 permits closing that exact blocked target
   after the healthy replacement and intact project conversation are rechecked.
+- Final cleanup rechecked the healthy empty home and unchanged empty project
+  conversation, then closed only blocked target `E5279B87AFE9FA34BF7B147D41F43454`.
+  Chrome PID `1933`, port `45015`, and the exact managed browser profile remain
+  stable with two healthy ChatGPT targets and no provider mutation.
 - Non-forced merge `960000bb` integrates the durable operational-selector
   repair and partial-survey receipt into `main`; P26 remains open only for the
   exact browser-view blocker.
