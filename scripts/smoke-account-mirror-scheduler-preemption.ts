@@ -12,7 +12,7 @@ import { readApiStatusForCli } from "../src/cli/apiStatusCommand.js";
 import { createResponsesHttpServer } from "../src/http/responsesServer.js";
 
 const config = {
-	model: "gpt-5.2",
+	model: "chatgpt:fast",
 	browser: {},
 	runtimeProfiles: {
 		default: {

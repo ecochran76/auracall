@@ -420,3 +420,22 @@ lanes:
     blocker: null
     disposition: Durable selector and GPT-6 schema migration is integrated and provider-free accepted; installation and live browser proof remain separate effects.
     updated_at: 2026-09-05
+  - id: P26
+    objective: Install the durable model schema and survey current and older-model ChatGPT composer surfaces without provider mutation.
+    plan: docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md
+    plan_ref: refs/heads/ops/plan0333-installed-model-survey
+    branch: ops/plan0333-installed-model-survey
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE
+    checkpoint: c6d0681c
+    remote_ref: refs/remotes/origin/ops/plan0333-installed-model-survey
+    integration: merge
+    dependencies: [P25]
+    overlaps: [P24]
+    validation_status: installed-source-accepted-browser-survey-partial
+    validation_ref: docs/dev/notes/2026-09-05-plan0333-installed-durable-model-survey.json
+    integration_receipt: null
+    blocker: Automation domain filter prevents older-chat comparison and leaves the unused home tab showing its block page; manual home-tab restoration is required before one genuine older-model readback.
+    disposition: Durable source and installed runtime are accepted; current composer tool, unrestricted upload input, and horizontal slider are proven without provider mutation. P26 remains open only for the exact browser-view blocker.
+    updated_at: 2026-09-05

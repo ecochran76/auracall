@@ -48622,3 +48622,46 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   DevTools attach, model change, prompt, or live browser claim occurred.
 - Non-forced merge `a0361f66` integrates the accepted revision into current
   `main`; the dirty/conflicted P08/P17 checkout remains untouched.
+
+## 2026-09-05 | Plan 0333 installed durable model survey
+
+- Opened P26 from exact current `origin/main` in isolated worktree
+  `auracall-plan0333-installed-model-survey`; preserved the dirty/conflicted
+  root checkout.
+- Installed metadata still names the Plan 0331 checkout, proving P25 is not yet
+  installed. Current process evidence identifies retained `wsl-chrome-3`
+  Chrome PID `1933` on port `45015`, subject to immediate pre-attach recheck.
+- Effect budget is one user-runtime install and one manual retained-port survey
+  with transient menu/drawer opens only. Prompt, upload, model change,
+  navigation, browser lifecycle, API restart, scheduler/control work, and
+  `Answer now` remain forbidden.
+
+## 2026-09-05 | Plan 0333 post-install selector audit repair
+
+- The first authorized install completed and its model-selector module and
+  service manifest matched source byte-for-byte. Direct installed readback
+  proved all six durable selectors plus `openai:frontier -> gpt-6-astra`.
+- Completion auditing found one current CLI help example and several current
+  operational smoke scripts still advertising GPT-5.2/pro-extended inputs.
+  A new CLI-help test failed red on `chatgpt:pro-extended` and passed after the
+  example moved to `chatgpt:reasoning-high`.
+- Current ChatGPT acceptance/browser/account-mirror/handoff smoke defaults now
+  use `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`, or
+  `openai:frontier` as appropriate. Versioned strings remain only where they
+  are explicit compatibility aliases, provider API IDs, or provider DOM
+  matchers.
+- The six-file selector/CLI cone passes 148 tests; typecheck, production build,
+  shell syntax, and both changed smoke-help paths pass. One replacement install
+  remains before installed acceptance can close.
+- The replacement install is source-identical and current. Both pre-opened
+  conversations proved to use the current GPT-5.6 Pro DOM slug, so Revision 3
+  permits a maximum of three read-only existing-conversation navigations in the
+  unused home tab, with restoration, solely to observe a genuine older-model
+  selector surface.
+- Direct post-survey readback preserved PID `1933`, port `45015`, both current
+  conversation tabs, empty composers, checked GPT-5.6 Sol, slider value 4 of
+  4, and empty enabled `#upload-files`. No provider mutation occurred.
+- Both conversations carry `gpt-5-6-pro`; an older-model comparison is not
+  proven. The bounded home-tab route met the automation domain filter, and the
+  unused home tab now displays that block at the ChatGPT home URL. The fence
+  was not bypassed; manual view restoration is the exact remaining blocker.

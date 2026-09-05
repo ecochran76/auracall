@@ -14,7 +14,7 @@ import type { ExecutionRequest } from '../src/runtime/apiTypes.js';
 import { readEnvValues, runScopedClientEnvSmoke } from './smoke-scoped-client-env.js';
 
 const PROJECT_NAME = 'Scoped Client Handoff Smoke';
-const AGENT_ID = 'pro-extended-chatgpt-soylei-client-handoff-smoke';
+const AGENT_ID = 'reasoning-high-chatgpt-soylei-client-handoff-smoke';
 const MODEL = `agent:${AGENT_ID}`;
 type ResponsesHttpServer = Awaited<ReturnType<typeof createResponsesHttpServer>>;
 
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
         projectName: PROJECT_NAME,
         agentId: AGENT_ID,
         keyId: 'client-handoff-smoke',
-        agentModelSelector: 'chatgpt:pro-extended',
+        agentModelSelector: 'chatgpt:reasoning-high',
         agentInstructions: 'Exercise the scoped client handoff smoke.',
         services: ['chatgpt'],
         runtimeProfiles: ['wsl-chrome-3'],

@@ -22215,3 +22215,17 @@ browser-stage lifecycle observability, not transcript truncation.
   explicit pins.
 - Regression rule: discovery must not advertise provider versions/codenames as
   semantic IDs; compatibility inputs must still resolve and validate.
+
+# 2026-09-05 — Durable selectors must cover operational help and smoke defaults
+
+- Symptom: model discovery advertised only durable capability selectors, but
+  `handoff prepare --help` and current operational smoke scripts still taught
+  GPT-5.2/pro-extended inputs.
+- Cause: the first schema migration audited resolver/catalog surfaces but did
+  not include executable help and smoke defaults in its advertised-label cone.
+- Fix: use `chatgpt:fast`, `chatgpt:reasoning`,
+  `chatgpt:reasoning-high`, and `openai:frontier` in current operator-facing
+  and operational code; retain versioned strings only as compatibility inputs,
+  provider API IDs, and provider DOM matchers.
+- Guard: the CLI subprocess test now requires `chatgpt:reasoning-high` in
+  handoff help and rejects `chatgpt:pro-extended`.
