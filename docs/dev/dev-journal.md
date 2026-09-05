@@ -48876,3 +48876,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The plan header now identifies Revision 9, matching the latest source and
   evidence already recorded in its body. Installation and a newly authorized
   non-submitting exact-ID canary remain separate unsatisfied acceptance gates.
+
+## 2026-09-05 | Plan 0334 Revision 10 bootstrap identity repair
+
+- The operator authorized the exact-source install and one bounded Skill
+  canary. Revision 9 installed at exact composer-tool, adapter, and Skills
+  module parity, but the pre-selection read-only inventory failed closed:
+  `/api/auth/session` returned user ID/name without email or account qualifiers.
+- Read-only inspection proved the exact JSON `client-bootstrap` script still
+  carries a complete `authStatus=logged_in` session. Revision 10 projects only
+  user/account identity fields, merges them beneath endpoint evidence, and
+  excludes the bootstrap access token from the returned object.
+- Both regressions failed before implementation and now pass. The affected cone
+  passes 238/238 with typecheck, production build, touched-file lint, and diff
+  hygiene. No Skill-selection activation occurred, so the one-click canary is
+  unspent pending the corrective exact-source install.

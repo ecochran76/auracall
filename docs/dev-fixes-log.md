@@ -22303,3 +22303,15 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regression rule: inventory and selection must recognize the same current row
   family, and pill proof must never search the whole page or require an editor
   containment relationship the provider no longer renders.
+
+## 2026-09-05 | Merge reduced ChatGPT auth responses with exact bootstrap identity
+
+- Failure mode: `/api/auth/session` returned a non-null user ID/name but omitted
+  email and account qualifiers, so identity discovery returned early and exact
+  account authorization failed before Skill inventory.
+- Durable fix: project only user/account fields from the exact logged-in
+  `script#client-bootstrap[type="application/json"]` and use them solely to fill
+  missing endpoint fields. Never return token-bearing bootstrap properties.
+- Regression rule: a partial non-null endpoint response must not suppress the
+  bootstrap identity fallback; logged-out, missing, or malformed bootstrap data
+  remains untrusted.

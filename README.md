@@ -68,6 +68,9 @@ auracall profile identity-smoke --all-bound --include-negative --json
 # ChatGPT identity smoke also reports accountLevel/accountPlanType when the
 # signed-in session exposes them, so Business-vs-Pro profile bindings can fail
 # fast before automation uses the wrong model/tool quota lane.
+# If the auth-session endpoint omits those fields, AuraCall may fill only
+# missing identity fields from ChatGPT's exact logged-in client-bootstrap JSON;
+# token-bearing bootstrap fields are never returned.
 # Qualified ChatGPT plan/structure bindings remain strict when provider-app
 # evidence exposes those values. If the provider app proves the same primary
 # email but omits a qualifier, AuraCall treats that qualifier as unknown rather

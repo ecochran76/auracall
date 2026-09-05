@@ -143,6 +143,10 @@
     the original route, and observes that the selection and prompt are cleared
   - `list` and `show` require the exact expected account; all mutations also
     require `--yes`, a complete inventory, and an exact 32-hex ID after create
+  - identity preflight merges missing fields from the exact logged-in
+    `script#client-bootstrap[type="application/json"]` projection when
+    `/api/auth/session` is reduced; tests must prove token-bearing bootstrap
+    fields never leave that projection
   - `update` requires the exact prior `SKILL.md` SHA-256 reported by `show`;
     stale or unavailable content fails before dispatch
   - source loading accepts only a regular `SKILL.md` or directory containing

@@ -356,8 +356,8 @@ const CHATGPT_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens("chat
 	company_knowledge: ["company knowledge"],
 	shopping: ["shopping"],
 });
-const CHATGPT_COMPOSER_MENU_ITEM_SELECTOR = '.__menu-item, [data-fill][tabindex]';
-const CHATGPT_INLINE_SELECTION_PILL_SELECTOR = '[data-inline-selection-pill]';
+const CHATGPT_COMPOSER_MENU_ITEM_SELECTOR = ".__menu-item, [data-fill][tabindex]";
+const CHATGPT_INLINE_SELECTION_PILL_SELECTOR = "[data-inline-selection-pill]";
 const CHATGPT_ARTIFACT_KIND_EXTENSIONS = resolveBundledServiceArtifactKindExtensions("chatgpt", {
 	spreadsheet: ["csv", "tsv", "xls", "xlsx", "ods"],
 });
@@ -4056,6 +4056,38 @@ async function waitForChatgptDisposableRootComposer(client: ChromeClient): Promi
 function buildChatgptFallbackIdentityExpression(): string {
 	return `(() => {
     const normalize = (value) => String(value || '').trim();
+    const bootstrap = document.querySelector('script#client-bootstrap[type="application/json"]');
+    if (bootstrap) {
+      try {
+        const data = JSON.parse(bootstrap.textContent || 'null');
+        const session = data?.authStatus === 'logged_in' && data?.session && typeof data.session === 'object'
+          ? data.session
+          : null;
+        const user = session?.user && typeof session.user === 'object' ? session.user : null;
+        const account = session?.account && typeof session.account === 'object' ? session.account : null;
+        if (user || account) {
+          return {
+            user: user
+              ? {
+                  id: typeof user.id === 'string' ? user.id : null,
+                  name: typeof user.name === 'string' ? user.name : null,
+                  email: typeof user.email === 'string' ? user.email : null,
+                }
+              : null,
+            account: account
+              ? {
+                  id: typeof account.id === 'string' ? account.id : null,
+                  name: typeof account.name === 'string' ? account.name : null,
+                  email: typeof account.email === 'string' ? account.email : null,
+                  planType: typeof account.planType === 'string' ? account.planType : null,
+                  structure: typeof account.structure === 'string' ? account.structure : null,
+                  organizationId: typeof account.organizationId === 'string' ? account.organizationId : null,
+                }
+              : null,
+          };
+        }
+      } catch {}
+    }
     const storageKeys = Object.keys(window.localStorage || {});
     const userKey = storageKeys.find((key) => /(?:^|\\/)user-[A-Za-z0-9]+/.test(key)) || '';
     const idMatch = userKey.match(/(user-[A-Za-z0-9]+)/);
@@ -4073,6 +4105,8 @@ function buildChatgptFallbackIdentityExpression(): string {
     };
   })()`;
 }
+
+export const buildChatgptFallbackIdentityExpressionForTest = buildChatgptFallbackIdentityExpression;
 
 function buildProjectDeleteConfirmationExpression(): string {
 	return `(() => {
@@ -5568,17 +5602,18 @@ async function waitForCreateProjectDialogReady(
 }
 
 async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
+	let authSessionProbe: ChatgptAuthSessionProbe | null = null;
 	for (let attempt = 0; attempt < 5; attempt += 1) {
 		const authSessionResult = await client.Runtime.evaluate({
 			expression: buildChatgptAuthSessionIdentityExpression(),
 			awaitPromise: true,
 			returnByValue: true,
 		});
-		const authIdentity = normalizeChatgptAuthSessionIdentity(
-			(authSessionResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null,
-		);
-		if (authIdentity) {
-			return authIdentity;
+		const candidate =
+			(authSessionResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null;
+		if (normalizeChatgptAuthSessionIdentity(candidate)) {
+			authSessionProbe = candidate;
+			break;
 		}
 		if (attempt < 4) {
 			await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -5589,10 +5624,25 @@ async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUs
 		expression: buildChatgptFallbackIdentityExpression(),
 		returnByValue: true,
 	});
-	return normalizeChatgptAuthSessionIdentity(
-		(fallbackResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null,
-	);
+	const fallbackProbe =
+		(fallbackResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null;
+	const mergeRecord = <T extends Record<string, unknown>>(
+		primary: T | null | undefined,
+		fallback: T | null | undefined,
+	): T | null => {
+		if (!primary && !fallback) return null;
+		const keys = new Set([...Object.keys(fallback ?? {}), ...Object.keys(primary ?? {})]);
+		return Object.fromEntries(
+			[...keys].map((key) => [key, primary?.[key] ?? fallback?.[key] ?? null]),
+		) as T;
+	};
+	return normalizeChatgptAuthSessionIdentity({
+		user: mergeRecord(authSessionProbe?.user, fallbackProbe?.user),
+		account: mergeRecord(authSessionProbe?.account, fallbackProbe?.account),
+	});
 }
+
+export const readChatgptUserIdentityWithClientForTest = readChatgptUserIdentity;
 
 async function assertChatgptExpectedIdentity(
 	client: ChromeClient,

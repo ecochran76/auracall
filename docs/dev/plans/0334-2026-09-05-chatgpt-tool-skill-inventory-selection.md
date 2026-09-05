@@ -6,7 +6,7 @@ Operational state: VALIDATING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 9 | 2026-09-05
+Revision: 10 | 2026-09-05
 
 ## Stable Objective
 
@@ -159,6 +159,16 @@ prompt.
   both the PR-open and branch-push deliveries without any resulting run. The
   remaining installation and live canary gates therefore cannot be represented
   as already satisfied, and CI remains `not_dispatched` at the platform edge.
+- The newly authorized Revision 9 install reached exact three-module parity,
+  but its pre-selection `skills list` failed closed before inventory because
+  ChatGPT's current `/api/auth/session` response omitted email and account
+  qualifiers. The exact `script#client-bootstrap[type="application/json"]`
+  retained complete `authStatus=logged_in` session identity. Revision 10
+  projects only user/account identity fields from that bootstrap, merges them
+  beneath endpoint fields, and never returns its access token. Red/green
+  coverage plus the affected 238-test cone, typecheck, build, lint, and diff
+  hygiene pass. No Skill selection was dispatched, so the authorized one-click
+  canary remains available after one corrective exact-source install.
 
 ## Scope
 
@@ -236,6 +246,13 @@ prompt.
   drawer-row, composer-scoped pill, and local-upload qualification repair. It
   authorizes no install, browser interaction, selection, prompt, upload, model
   change, Skill execution, `Answer now`, or retry.
+- The operator's fresh `ok go` authorizes exact-source installation and one
+  bounded non-submitting exact-ID Skill canary. Revision 10 uses the ordinary
+  in-envelope repair/retest path after the first installed read-only inventory
+  exposed reduced auth-session evidence: one corrective install is admitted,
+  followed by read-only exact-account inventory and at most one Skill selection
+  activation. Zero prompts, uploads, model changes, `Answer now`, or selection
+  retries remain mandatory.
 
 ## Acceptance Criteria
 
