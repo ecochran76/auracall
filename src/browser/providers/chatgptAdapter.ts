@@ -4034,6 +4034,23 @@ export function buildChatgptAuthSessionIdentityExpression(): string {
   })()`;
 }
 
+async function waitForChatgptDisposableRootComposer(client: ChromeClient): Promise<void> {
+	const ready = await waitForPredicate(
+		client.Runtime,
+		`(() => {
+      if (location.origin !== 'https://chatgpt.com' || location.pathname !== '/') return false;
+      const editor = document.querySelector('#prompt-textarea');
+      if (!(editor instanceof HTMLElement)) return false;
+      const rect = editor.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    })()`,
+		{ timeoutMs: 12_000, description: "fresh ChatGPT root composer" },
+	);
+	if (!ready.ok) {
+		throw new Error("Fresh ChatGPT root tab did not expose one visible prompt composer.");
+	}
+}
+
 function buildChatgptFallbackIdentityExpression(): string {
 	return `(() => {
     const normalize = (value) => String(value || '').trim();
@@ -12702,7 +12719,12 @@ export function createChatgptAdapter(): Pick<
 				options,
 				options?.configuredUrl ?? CHATGPT_HOME_URL,
 			);
-			return runWithChatgptAbortBoundConnection(connection, options, readChatgptUserIdentity);
+			return runWithChatgptAbortBoundConnection(connection, options, async (client) => {
+				if (options?.tabLifecycle === "dispose-new") {
+					await waitForChatgptDisposableRootComposer(client);
+				}
+				return readChatgptUserIdentity(client);
+			});
 		},
 		async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
 			await beforeChatgptBrowserInteraction(options, "page-refresh");
@@ -12719,6 +12741,9 @@ export function createChatgptAdapter(): Pick<
 			try {
 				if (shouldNavigate) {
 					await navigateToChatgptUrl(client, configuredUrl, undefined, options);
+				}
+				if (options?.tabLifecycle === "dispose-new") {
+					await waitForChatgptDisposableRootComposer(client);
 				}
 				await assertChatgptExpectedIdentity(client, options);
 				return await readChatgptFeatureSignature(client, options);

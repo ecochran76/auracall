@@ -45,7 +45,11 @@ export interface ChatgptSkillDetailProbe {
 
 export interface ChatgptSkillBrowserClient {
 	readonly userConfig: ResolvedUserConfig;
-	getUserIdentity(options?: { abortSignal?: AbortSignal }): Promise<SkillIdentity | null>;
+	getUserIdentity(options?: {
+		abortSignal?: AbortSignal;
+		configuredUrl?: string;
+		tabLifecycle?: "dispose-new" | "retain-new";
+	}): Promise<SkillIdentity | null>;
 	connectDevTools(
 		options?: DevToolsConnectionOptions,
 	): Promise<{ client: ChromeClient; port: number }>;
@@ -244,7 +248,11 @@ export class ChatgptSkillBrowserAdapter {
 
 	async readState(): Promise<ChatgptSkillState> {
 		this.throwIfAborted();
-		const identity = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
+		const identity = await this.browser.getUserIdentity({
+			abortSignal: this.abortSignal,
+			configuredUrl: "https://chatgpt.com/",
+			tabLifecycle: "dispose-new",
+		});
 		const client = await this.ensureClient();
 		const inventory = await captureSkillInventory(client);
 		return deriveChatgptSkillState({ identity, inventory, observedAt: new Date().toISOString() });

@@ -6,7 +6,7 @@ Operational state: IMPLEMENTING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-05
+Revision: 2 | 2026-09-05
 
 ## Stable Objective
 
@@ -43,6 +43,11 @@ prompt.
 - The new worktree is not present in the current CodeGraph index, so structural
   readback used the exact changed source plus typecheck/tests as the documented
   native fallback. Live install and bounded canaries remain.
+- The first installed read-only discovery chose a second root tab that had no
+  visible prompt composer and exposed only a partial auth-session identity. It
+  stopped before drawer inspection. Revision 2 moves capability discovery and
+  Skill identity preflight to a fresh disposable root tab, waits for the visible
+  composer, and permits one replacement install plus one post-repair discovery.
 
 ## Scope
 
@@ -71,6 +76,9 @@ prompt.
 - Provider-free tests and local build/lint may run as needed.
 - At most one user-runtime install after the implementation checkpoint is
   committed and pushed.
+- Revision 2 permits one replacement install after the first installed
+  read-only discovery exposed the root-tab readiness defect; no further install
+  is authorized in this plan.
 - Live work is limited to the already-retained `wsl-chrome-3` ChatGPT managed
   browser profile on DevTools port `45015` after exact identity and empty
   composer preflight.
@@ -79,6 +87,9 @@ prompt.
 - Zero prompts, uploads, model changes, `Answer now`, retries, or persistent
   provider mutations. Stop on identity ambiguity, CAPTCHA, ownership mismatch,
   duplicate controls, changed composer state, or unconfirmed cleanup.
+- The failed read-only discovery did not spend either selection canary. One
+  post-repair disposable-root discovery is permitted; selection actions remain
+  exactly one Shopping and one Skill attempt with no retry.
 
 ## Acceptance Criteria
 

@@ -48713,3 +48713,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The Plan 0334 worktree is not indexed by CodeGraph; exact source readback,
   typecheck, and tests supplied the documented fallback. Install and the two
   bounded live canaries remain.
+- The first installed capability read stopped at identity authorization on a
+  second root tab that had no visible composer and only partial auth-session
+  fields; the intact root tab retained the full account shape and empty
+  composer. No drawer or selection action ran.
+- Revision 2 replaces ambiguous root reuse with a fresh disposable root for
+  capability discovery and Skill identity preflight, gated on one visible
+  `#prompt-textarea`. One replacement install and one post-repair discovery are
+  admitted; both original one-shot selection budgets remain untouched.

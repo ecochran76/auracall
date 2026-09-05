@@ -95,8 +95,7 @@ export function createBrowserWorkbenchCapabilityDiscovery(
           ? {
               configuredUrl: 'https://chatgpt.com/',
               includeInstalledApps: true,
-              preserveActiveTab: true,
-              tabLifecycle: 'retain-new',
+              tabLifecycle: 'dispose-new',
               mutationSourcePrefix: 'workbench:chatgpt-app-discovery',
             }
           : undefined,

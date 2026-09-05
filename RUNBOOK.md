@@ -20825,3 +20825,8 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   readback plus compilation/tests are the accepted native fallback. The next
   gate is the single authorized install, then one Shopping and one Skill
   non-submitting selection/cleanup canary.
+- The first installed discovery stopped before inventory because a second root
+  tab lacked a visible composer and returned partial auth-session identity.
+  Revision 2 uses a fresh disposable root, waits for composer readiness, and
+  permits one replacement install and one post-repair discovery. Neither
+  one-shot selection budget was spent.
