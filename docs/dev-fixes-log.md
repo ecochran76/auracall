@@ -22335,3 +22335,13 @@ Skills queries must not use the first matching composer: ChatGPT keeps a hidden 
 ## 2026-09-05 | Mutation audit recognizes delegated guarded tools
 
 - The explicit raw-CDP allowlist includes a tool whose mutation is delegated to a guarded helper. Direct-navigation detections must be a subset of the allowlist, and every listed script must retain its guard. This replaces the stale equality expectation without allowing unlisted navigation or unguarded listed tools. Both guard suites pass, six tests.
+
+## 2026-09-05 | Selection cleanup is not invocation continuity
+
+The installed `skills select` command verifies selection and then clears it.
+A later ordinary prompt naming the Skill does not preserve that selection.
+The one execution smoke returned `Skill status: Not loaded` despite complete
+inventory and working Chat. Keep selection and execution acceptance separate;
+an exact-ID select-and-submit path must prove the Skill in the actual prompt
+composer before sending. A transient activity label was insufficient and the
+final answer contradicted it. Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-execution-smoke.json`.

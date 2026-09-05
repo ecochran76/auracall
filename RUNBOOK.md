@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 568 | 2026-09-05
+
+- One authorized Skill execution smoke on installed `wsl-chrome-3` completed
+  in 77 seconds with zero retries. Account preflight and Chat mode passed;
+  inventory still contained all 11 Skills.
+- The name-based prompt did not attach the previously selected Skill. ChatGPT
+  explicitly answered `Skill status: Not loaded` and solved the synthetic code
+  question normally. Actual Skill execution is not accepted; the earlier
+  non-submitting selection result remains valid. No domain-filter error occurred.
+- Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-execution-smoke.json`.
+  One user turn, one assistant turn, empty composer, and no active generation
+  were independently observed. Pre-existing Chrome PID 93245/port 45015 was
+  preserved. No further prompt, Skill mutation, or scheduler action ran.
+- Next bounded implementation: connect exact-ID Skill selection and prompt
+  submission in the same owned tab; the existing `skills select` command
+  deliberately cleans up its selection before returning.
+
 ## Turn 567 | 2026-09-05
 
 - The operator authorized up to five corrective iterations. Iteration 1 passed
