@@ -48776,3 +48776,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - The audit restored the exact ChatGPT home route at zero user text and zero
   inline pills, then returned focus to the intact project conversation. No
   prompt, upload, model change, selection action, or `Answer now` occurred.
+
+## 2026-09-05 | Plan 0334 Revision 6 live-gate authority
+
+- The operator's explicit `ok go` authorizes exactly one fresh installed
+  exact-ID Skill-selection/cleanup canary on the retained `wsl-chrome-3`
+  AuraCall runtime profile.
+- The packet preserves exact-account, complete-inventory, empty-composer,
+  observed-selection, exact-cleanup, and route-restoration gates. It authorizes
+  no prompt, upload, model change, Skill execution, `Answer now`, install, or
+  retry; the single attempt's outcome is terminal.

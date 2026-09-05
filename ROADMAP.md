@@ -14,10 +14,11 @@ Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
   Skill selection. The source-identical installed runtime reports 29 current
   capabilities and the complete 11-item Skill inventory; current Shopping was
   selected and cleaned once. The first exact-ID Skill canary is terminal
-  `outcome-unknown`, so a fresh canary requires explicit operator authority.
+  `outcome-unknown`; the operator's explicit `ok go` now authorizes exactly one
+  fresh, non-submitting exact-ID Skill selection and cleanup canary.
   A final no-click audit confirmed `Try in chat` is a plain button without a
   route-bound selection contract; inventory evidence cannot close that gate.
-  No prompt, upload, model change, or Skill execution is authorized.
+  No prompt, upload, model change, Skill execution, or retry is authorized.
 
 - Integrated installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)

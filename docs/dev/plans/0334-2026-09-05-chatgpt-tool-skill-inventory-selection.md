@@ -6,7 +6,7 @@ Operational state: VALIDATING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 5 | 2026-09-05
+Revision: 6 | 2026-09-05
 
 ## Stable Objective
 
@@ -93,6 +93,10 @@ prompt.
   test ID, or Skill-bearing parent, so neither route presence nor inventory can
   prove the button's composer-selection effect. The exact home route was
   restored at zero user text/zero pills and project focus was preserved.
+- The operator's explicit `ok go` authorizes exactly one fresh installed
+  exact-ID Skill-selection and cleanup canary under Revision 6. This supersedes
+  only the exhausted Skill-click ceiling; it authorizes no prompt, upload,
+  model change, Skill execution, `Answer now`, install, or retry.
 
 ## Scope
 
@@ -152,6 +156,12 @@ prompt.
   Their uncertain command outcomes are terminal no-retry states. Only read-only
   inventory, tab-route, empty-composer, source/install-parity, and test evidence
   may be collected after the Revision 4 install.
+- Revision 6 supersedes only the exhausted Skill-selection ceiling after fresh
+  explicit operator authority. It admits one installed exact-ID `skills select`
+  attempt with exact-account and empty-composer preflight, observed selection,
+  exact cleanup, and route restoration. Its outcome is terminal; no second
+  activation, prompt, upload, model change, Skill execution, `Answer now`, or
+  install is authorized.
 
 ## Acceptance Criteria
 

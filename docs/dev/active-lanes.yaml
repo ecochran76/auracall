@@ -447,14 +447,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 6cb982a6aa5d0f284f301e77f59462b88971d68b
+    checkpoint: 102e5b30e0797211f75d9136db5b67949980b577
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
-    validation_status: provider-free-passed
-    validation_ref: 6cb982a6aa5d0f284f301e77f59462b88971d68b
+    validation_status: installed-live-validating
+    validation_ref: 102e5b30e0797211f75d9136db5b67949980b577
     integration_receipt: null
     blocker: null
-    disposition: Provider-free composer-ready target qualification is accepted and pushed; final replacement install, discovery, and bounded Shopping and Skill selection cleanup canaries remain.
+    disposition: Installed inventory and Shopping selection are accepted; Revision 6 authorizes exactly one fresh non-submitting exact-ID Skill-selection and cleanup canary.
     updated_at: 2026-09-05

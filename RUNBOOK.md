@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 560 | 2026-09-05
+
+- The operator's explicit `ok go` reopens P27's exact live gate and authorizes
+  exactly one fresh installed exact-ID Skill-selection/cleanup canary on the
+  retained `wsl-chrome-3` AuraCall runtime profile.
+- Revision 6 supersedes only the exhausted Skill-click ceiling. Exact account,
+  complete inventory, empty composer, observed selection, exact cleanup, and
+  route restoration remain mandatory; no prompt, upload, model change, Skill
+  execution, `Answer now`, install, or retry is authorized.
+
 ## Turn 559 | 2026-09-05
 
 - P27's final read-only audit opened the exact Skill detail route and observed
