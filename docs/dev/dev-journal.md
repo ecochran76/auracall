@@ -48635,3 +48635,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   with transient menu/drawer opens only. Prompt, upload, model change,
   navigation, browser lifecycle, API restart, scheduler/control work, and
   `Answer now` remain forbidden.
+
+## 2026-09-05 | Plan 0333 post-install selector audit repair
+
+- The first authorized install completed and its model-selector module and
+  service manifest matched source byte-for-byte. Direct installed readback
+  proved all six durable selectors plus `openai:frontier -> gpt-6-astra`.
+- Completion auditing found one current CLI help example and several current
+  operational smoke scripts still advertising GPT-5.2/pro-extended inputs.
+  A new CLI-help test failed red on `chatgpt:pro-extended` and passed after the
+  example moved to `chatgpt:reasoning-high`.
+- Current ChatGPT acceptance/browser/account-mirror/handoff smoke defaults now
+  use `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`, or
+  `openai:frontier` as appropriate. Versioned strings remain only where they
+  are explicit compatibility aliases, provider API IDs, or provider DOM
+  matchers.
+- The six-file selector/CLI cone passes 148 tests; typecheck, production build,
+  shell syntax, and both changed smoke-help paths pass. One replacement install
+  remains before installed acceptance can close.

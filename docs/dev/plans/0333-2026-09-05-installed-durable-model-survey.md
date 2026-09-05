@@ -6,7 +6,7 @@ Operational state: AUTHORIZED_INSTALL_AND_READ_ONLY_SURVEY
 Branch: ops/plan0333-installed-model-survey
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-05
+Revision: 2 | 2026-09-05
 
 ## Stable Objective
 
@@ -26,6 +26,10 @@ horizontal Power slider, and the distinct older-model conversation surface.
   immediately before attachment.
 - Graphiti was healthy but supplied only stale routing leads; current process,
   runtime metadata, and direct DevTools readback remain authoritative.
+- The first install proved the integrated catalog byte-for-byte, then live
+  closeout auditing found the handoff CLI help and current smoke scripts still
+  advertised legacy selectors. A red CLI-help regression reproduced the gap;
+  the repair now uses durable selectors throughout current operational code.
 
 ## Scope
 
@@ -40,7 +44,9 @@ horizontal Power slider, and the distinct older-model conversation surface.
 
 ## Effect Budget
 
-- One `pnpm run install:user-runtime` invocation.
+- At most two `pnpm run install:user-runtime` invocations: the first integrated
+  install exposed the post-install help gap; one replacement install is allowed
+  only after the corrective source checkpoint is validated and pushed.
 - Zero API-service restarts, prompts, uploads, model selections, conversation
   mutations, browser launches, navigations, reloads, or closes.
 - No `Answer now`, scheduler, completion, materialization, or provider-tool
@@ -56,6 +62,8 @@ horizontal Power slider, and the distinct older-model conversation surface.
 - [ ] Installed metadata names this clean worktree and a fresh install time.
 - [ ] Installed code advertises the six durable ChatGPT selectors and maps
       `openai:frontier` to `gpt-6-astra`.
+- [ ] Handoff help and current operational smoke scripts use durable selectors;
+      versioned provider IDs remain only in compatibility/provider contracts.
 - [ ] Exact retained Chrome PID/port/profile ownership is proven before and
       after the survey.
 - [ ] The active composer tool drawer and upload input are observed without an

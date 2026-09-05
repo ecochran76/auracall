@@ -53,7 +53,7 @@ async function writeFixtureConfig(homeDir: string): Promise<string> {
   const configPath = path.join(homeDir, 'config.json');
   await fs.writeFile(configPath, JSON.stringify({
     version: 2,
-    model: 'gpt-5.2-pro',
+    model: 'openai:frontier',
     engine: 'browser',
     auracallProfile: 'default',
     browser: {
