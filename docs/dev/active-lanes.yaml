@@ -447,13 +447,13 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 102e5b30e0797211f75d9136db5b67949980b577
+    checkpoint: b5ceb8837e40e1866029b8e52eeadd046b2e31ec
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
     validation_status: provider-free-passed-live-gated
-    validation_ref: cb78174ca522c119cb2170e4f20609ea57a9f0b8
+    validation_ref: b5ceb8837e40e1866029b8e52eeadd046b2e31ec
     integration_receipt: null
     blocker: Revision 7 is not installed or live accepted, and no qualified empty home composer is currently retained.
     disposition: The sole Revision 6 Skill click exposed provider-authored prompt prefill and ended outcome-unknown with exact cleanup; Revision 7 repairs proof provider-free, with 246 affected tests passing and no install or retry authorized.

@@ -118,6 +118,8 @@ prompt.
   while a new greeting-only home target appeared. Foregrounding that exact new
   target still exposed no prompt editor. This is test-isolation/browser-state
   drift and blocks another Skill canary independently of the install gate.
+- Revision 7 source, tests, contracts, and the inconclusive live receipt are
+  published at checkpoint `b5ceb8837e40e1866029b8e52eeadd046b2e31ec`.
 
 ## Scope
 

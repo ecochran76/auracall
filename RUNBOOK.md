@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 563 | 2026-09-05
+
+- Revision 7 is committed and pushed at
+  `b5ceb8837e40e1866029b8e52eeadd046b2e31ec`; the P27 lane catalog now binds its
+  provider-free validation and published checkpoint to those exact bytes.
+- Installed runtime bytes still predate Revision 7. The next live gate requires
+  separate install authority plus a qualified empty home composer; neither is
+  supplied by the already-spent Revision 6 canary authorization.
+
 ## Turn 562 | 2026-09-05
 
 - Revision 7's affected cone passes 246/246 with typecheck, build, touched-file

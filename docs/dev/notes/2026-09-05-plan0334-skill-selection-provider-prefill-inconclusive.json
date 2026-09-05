@@ -53,6 +53,7 @@
     "repair": "Require a pristine original composer and distinguish exact decoded provider prompt text from user-authored text while retaining exact Skill identity proof.",
     "repairProviderFreeValidated": true,
     "affectedTestsPassed": 246,
+    "repairCheckpoint": "b5ceb8837e40e1866029b8e52eeadd046b2e31ec",
     "repairInstalled": false,
     "repairLiveAccepted": false
   }
