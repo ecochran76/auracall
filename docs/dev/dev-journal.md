@@ -48764,3 +48764,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - P27 remains validating because its sole Skill click is terminal
   `outcome-unknown`. A second exact-ID canary is the only remaining live gate
   and needs explicit operator authority; no retry is implied by the repair.
+
+## 2026-09-05 | Plan 0334 no-click Skill-control audit
+
+- Exact-target DevTools navigation opened the selected Skill detail route
+  without activating any control. Exactly one visible `Try in chat` control is
+  present; it is a plain button with no link, test ID, or Skill-bearing parent.
+- Route presence and complete inventory therefore cannot establish the
+  composer's post-click state. The repaired `skills select` path still needs one
+  newly authorized exact-ID activation for live acceptance.
+- The audit restored the exact ChatGPT home route at zero user text and zero
+  inline pills, then returned focus to the intact project conversation. No
+  prompt, upload, model change, selection action, or `Answer now` occurred.

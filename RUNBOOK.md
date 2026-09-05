@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 559 | 2026-09-05
+
+- P27's final read-only audit opened the exact Skill detail route and observed
+  exactly one visible `Try in chat` control. It is a plain button with no link,
+  test ID, or Skill-bearing parent, so no-click evidence cannot prove selection.
+- Exact cleanup restored the ChatGPT home route with zero user text/zero pills
+  and returned focus to the unchanged project conversation. No prompt, upload,
+  model change, selection action, or `Answer now` occurred.
+- Tool/capability and Skill inventories are current. P27 remains validating
+  until explicit authority permits one fresh exact-ID Skill-selection canary.
+
 ## Turn 558 | 2026-09-05
 
 - Revision 5 cleanup rechecked the healthy empty home target and the unchanged

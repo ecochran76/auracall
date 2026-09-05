@@ -88,6 +88,11 @@ prompt.
   Because the already-dispatched canary is terminal `outcome-unknown` and the
   plan's one-click budget is exhausted, that requires explicit new operator
   authority; it cannot be inferred from the successful read-only checks.
+- A final no-click DevTools audit opened the exact Skill detail route and found
+  exactly one visible `Try in chat` control. It is a plain button with no link,
+  test ID, or Skill-bearing parent, so neither route presence nor inventory can
+  prove the button's composer-selection effect. The exact home route was
+  restored at zero user text/zero pills and project focus was preserved.
 
 ## Scope
 
