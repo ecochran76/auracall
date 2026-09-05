@@ -22323,3 +22323,7 @@ browser-stage lifecycle observability, not transcript truncation.
 ## 2026-09-05 | Skills blank-tab readiness
 
 A qualified new tab can still be about:blank at CDP attachment. Skills must await the root composer before capturing its original route and pristine state; otherwise both cleanup routing and preflight evidence describe the blank page.
+
+## 2026-09-05 | Skills visible-composer proof
+
+Skills queries must not use the first matching composer: ChatGPT keeps a hidden named fallback textarea before the visible contenteditable editor. Shared pristine, selection, readiness, and cleanup lookup now requires exactly one visible editor. The previous expression returned null on the captured two-editor case. This fixes the probe; prior Skill activation remains unverified.

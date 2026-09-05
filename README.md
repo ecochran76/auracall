@@ -100,7 +100,8 @@ auracall --profile wsl-chrome-3 skills show <32-hex-skill-id> \
 # restore that empty composer. ChatGPT may seed its own example prompt after
 # Try in chat; AuraCall accepts that text only when it exactly matches the
 # provider's decoded prompt parameter. Root qualification accepts ChatGPT's
-# current named textarea as well as its legacy editor ID. This does not submit
+# current named textarea as well as its legacy editor ID, ignoring hidden
+# fallback editors and rejecting multiple visible composers. This does not submit
 # a prompt or prove Skill invocation.
 auracall --profile wsl-chrome-3 skills select <32-hex-skill-id> \
   --expected-account <chatgpt-email> --yes --json

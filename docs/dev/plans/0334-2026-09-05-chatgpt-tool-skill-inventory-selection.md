@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P27
-Operational state: VALIDATING
+Operational state: REPAIR_READY_SELECTION_AUTHORITY_REQUIRED
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 11 | 2026-09-05
+Revision: 12 | 2026-09-05
 
 ## Stable Objective
 
@@ -187,6 +187,23 @@ prompt.
   is still `about:blank` when it freezes `originalComposerPristine=false`.
   One regression reproduces that failure; readiness now precedes route and
   pristine-state capture. The one selection activation remains unspent.
+
+- Revision 11 installed `fde8f388` and reached one `Try in chat` activation.
+  Exact selection was not observed; this is terminal `outcome-unknown` with
+  zero retry after activation. Direct readback proved empty root cleanup and
+  zero conversation turns. The owned Chrome and port were closed.
+- Revision 12 freezes the observed hidden fallback textarea preceding the
+  visible editor. The old selection expression returns null; the new shared
+  lookup selects exactly one visible editor and rejects ambiguity. The revised
+  regression and 61 focused tests pass, together with typecheck/build/lint.
+  Read-only evaluation of candidate expressions on the retained root confirms
+  pristine=true, selected=false, composerEmpty=true. It does not prove that
+  the earlier activation selected the Skill, and the candidate is not installed.
+- Receipt: `docs/dev/notes/2026-09-05-plan0334-visible-composer-repair.json`.
+  Next concrete packet is candidate installation plus one freshly authorized
+  Codebase Investigator selection with cleanup and zero prompt submission.
+  The previous domain-filter message never established which system imposed
+  it; calling it a ChatGPT-side restriction was not supported by that evidence.
 
 ## Scope
 

@@ -48922,3 +48922,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-09-05 | Skills blank-tab readiness
 
 Revision 11 integrates Chat mode repair and proves complete 11-Skill inventory. Selection preflight froze about:blank as non-pristine before loading; the RED regression now passes with bounded root readiness. No Skill activation has occurred.
+
+## 2026-09-05 | Skills visible-composer proof
+
+Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix installed at fde8f388. One Try in chat activation was unverified and not retried. Visibility repair now passes 61 focused tests and read-only live empty-composer proof; it is not installed. Exact owned browser cleanup is verified. Fresh activation authority remains required.

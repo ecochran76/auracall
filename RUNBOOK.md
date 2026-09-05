@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 566 | 2026-09-05
+
+- Integrated the live-accepted Chat repair into P27 at `ebc792a7`. Fresh Skills
+  inventory is complete at 11 entries; no domain filter recurred.
+- Installed `fde8f388` fixes preflight capture while a new tab is about:blank.
+  One selection activation then returned outcome-unknown; no retry followed.
+- The hidden fallback textarea masks the visible editor in the original
+  selection probe. Revision 12's visibility repair passes 61 focused tests,
+  typecheck/build/lint, and read-only live empty-composer proof. It is not
+  installed; fresh activation authority is the remaining live gate.
+- Cleanup verified empty root, zero pills/turns, exact Chrome PID 64663 absent,
+  and port 57852 closed. Receipt:
+  `docs/dev/notes/2026-09-05-plan0334-visible-composer-repair.json`.
+
+
 ## Turn 565 | 2026-09-05
 
 - Plan 0335 repairs the demonstrated root-composer false Chat success. Two RED regressions now pass; all 148 focused tests, typecheck, build, scoped lint, and plan audit pass.

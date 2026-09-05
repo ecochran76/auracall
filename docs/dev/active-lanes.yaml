@@ -447,16 +447,16 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: ba59356a
+    checkpoint: fde8f388
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
-    validation_status: installed-identity-repaired-live-domain-filter-blocked
-    validation_ref: docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json
+    validation_status: visible-composer-repair-ready-selection-gated
+    validation_ref: docs/dev/notes/2026-09-05-plan0334-visible-composer-repair.json
     integration_receipt: null
-    blocker: Revision 10 is installed and exact-account authorization passes, but ChatGPT's automation domain filter blocks complete Skill inventory before selection. P27 is absent from the canonical main lane catalog, and GitHub CI has not dispatched for draft PR 1.
-    disposition: Revision 10 repairs reduced auth-session identity with an exact token-excluding bootstrap projection and passes 238 affected tests. Installed adapter parity is exact; the Skill canary remains unspent because inventory failed closed at the domain filter. Cleanup preserved empty home/project composers and restored project focus.
+    blocker: Fresh Skill activation authority is required after one terminal unverified activation; candidate visibility repair is provider-free accepted.
+    disposition: Chat repair integrated; inventory complete; blank-tab fix installed; visible-editor repair tested and read-only verified but not installed. No prompts or activation retries.
     updated_at: 2026-09-05
   - id: P28
     objective: Require positive Chat mode proof before prompting on new-chat pages.

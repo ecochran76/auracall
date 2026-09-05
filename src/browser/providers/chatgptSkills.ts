@@ -102,10 +102,20 @@ export function buildChatgptSkillEditorProbeExpression(id: string): string {
     })()`;
 }
 
+function buildChatgptSkillComposerLookup(): string {
+	return `const editors = Array.from(document.querySelectorAll('#prompt-textarea, textarea[name="prompt-textarea"]'))
+      .filter((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      const editor = editors.length === 1 ? editors[0] : null;`;
+}
+
 export function buildChatgptSkillComposerPristineProbeExpression(): string {
 	return `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
+      ${buildChatgptSkillComposerLookup()}
       if (!(editor instanceof HTMLElement)) return false;
       const rect = editor.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return false;
@@ -130,7 +140,7 @@ export function buildChatgptSkillSelectionProbeExpression(skill: {
         return rect.width > 0 && rect.height > 0;
       };
       if (location.origin !== 'https://chatgpt.com') return null;
-      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
+      ${buildChatgptSkillComposerLookup()}
       if (!visible(editor)) return null;
       const composer = editor.closest('form') || document.querySelector('form[data-type="unified-composer"]');
       if (!(composer instanceof HTMLElement)) return null;
@@ -174,7 +184,7 @@ export function buildChatgptSkillSelectionProbeExpression(skill: {
 export function buildChatgptSkillCleanupExpression(skill: { id: string; name: string }): string {
 	return `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
+      ${buildChatgptSkillComposerLookup()}
       if (!(editor instanceof HTMLElement)) return { cleared: false, reason: 'composer-missing' };
       const expectedId = ${JSON.stringify(skill.id)};
       const expectedName = ${JSON.stringify(skill.name.trim())};
@@ -574,7 +584,7 @@ export class ChatgptSkillBrowserAdapter {
 				this.cdpClient.Runtime,
 				`(() => {
         if (location.origin !== 'https://chatgpt.com' || location.pathname !== '/') return false;
-        const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
+        ${buildChatgptSkillComposerLookup()}
         if (!(editor instanceof HTMLElement)) return false;
         const rect = editor.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && Boolean(editor.closest('form'));

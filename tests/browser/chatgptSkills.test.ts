@@ -214,6 +214,8 @@ describe("ChatGPT Skill provider contracts", () => {
 			],
 		};
 		const document = {
+			querySelectorAll: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? [editor] : [],
 			querySelector: (selector: string) => {
 				if (selector.includes("-name")) return { value: " Canary " };
 				if (selector.includes("-description")) return { value: " Probe " };
@@ -266,6 +268,8 @@ describe("ChatGPT Skill provider contracts", () => {
 			}),
 		};
 		const document = {
+			querySelectorAll: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? [editor] : [],
 			querySelector: (selector: string) =>
 				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : composer,
 		};
@@ -301,10 +305,13 @@ describe("ChatGPT Skill provider contracts", () => {
 			querySelectorAll: () => [skillMarker],
 			getBoundingClientRect: () => ({ width: 500, height: 120 }),
 		};
+		const hidden = { getBoundingClientRect: () => ({ width: 0, height: 0 }) };
+		const editorCandidates = [hidden, editor];
 		const document = {
+			querySelectorAll: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editorCandidates : [],
 			querySelector: (selector: string) =>
-				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : null,
-			querySelectorAll: () => [skillMarker],
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? hidden : null,
 		};
 		const evaluate = new Function(
 			"document",
@@ -325,6 +332,10 @@ describe("ChatGPT Skill provider contracts", () => {
 			composerEmpty: true,
 			providerPrefillOnly: false,
 		});
+		editorCandidates.push(editor);
+		expect(
+			evaluate(document, { origin: "https://chatgpt.com", href: "https://chatgpt.com/" }, Object),
+		).toBeNull();
 	});
 
 	it("treats an exact inline Skill pill as an empty user composer", () => {
@@ -353,6 +364,8 @@ describe("ChatGPT Skill provider contracts", () => {
 			}),
 		};
 		const document = {
+			querySelectorAll: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? [editor] : [],
 			querySelector: (selector: string) =>
 				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : null,
 		};
@@ -392,6 +405,8 @@ describe("ChatGPT Skill provider contracts", () => {
 		};
 		const composer = { querySelectorAll: () => [skillMarker] };
 		const document = {
+			querySelectorAll: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? [editor] : [],
 			querySelector: (selector: string) =>
 				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : null,
 		};
