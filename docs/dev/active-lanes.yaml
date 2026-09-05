@@ -465,7 +465,7 @@ lanes:
     branch: fix/chatgpt-chat-mode-preflight
     target: fix/plan0334-chatgpt-tool-skill-selection
     plan_state: CLOSED
-    custody_state: ACTIVE_WORKTREE
+    custody_state: INTEGRATED
     checkpoint: fc640258
     remote_ref: refs/remotes/origin/fix/chatgpt-chat-mode-preflight
     integration: merge
@@ -473,6 +473,6 @@ lanes:
     overlaps: [P27]
     validation_status: installed-live-accepted
     validation_ref: docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json
-    integration_receipt: null
+    integration_receipt: ebc792a742b5ec3b814eb4efcccaaa5e9981ab8c
     disposition: Based on installed P27 source; isolated corrective mode preflight and one post-repair smoke.
     updated_at: 2026-09-05

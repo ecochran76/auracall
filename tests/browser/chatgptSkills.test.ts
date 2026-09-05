@@ -16,6 +16,37 @@ import {
 } from "../../src/browser/providers/chatgptSkills.js";
 
 describe("ChatGPT Skill provider contracts", () => {
+	it("waits for a newly opened prompt tab before recording its pristine state", async () => {
+		let ready = false;
+		const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
+			if (expression === "location.href")
+				return { result: { value: ready ? "https://chatgpt.com/" : "about:blank" } };
+			if (expression.includes("location.origin")) {
+				ready = true;
+				return { result: { value: true } };
+			}
+			return { result: { value: ready } };
+		});
+		const adapter = createChatgptSkillBrowserAdapter({
+			connectChatgptPromptWorkbench: vi.fn(async () => ({
+				client: {
+					["Runtime"]: { enable: vi.fn(), evaluate },
+					["Page"]: { enable: vi.fn() },
+					close: vi.fn(),
+				},
+				port: 45015,
+			})),
+		} as never);
+		const state = adapter as unknown as {
+			ensureClient(): Promise<unknown>;
+			originalUrl: string;
+			originalComposerPristine: boolean;
+		};
+		await state.ensureClient();
+		expect(state.originalUrl).toBe("https://chatgpt.com/");
+		expect(state.originalComposerPristine).toBe(true);
+	});
+
 	it("attaches the Skills workflow to the qualified ChatGPT prompt workbench", async () => {
 		const genericConnect = vi.fn();
 		const promptConnect = vi.fn(async () => ({

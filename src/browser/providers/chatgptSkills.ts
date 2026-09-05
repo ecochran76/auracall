@@ -569,6 +569,24 @@ export class ChatgptSkillBrowserAdapter {
 		await this.cdpClient.Runtime.enable();
 		await this.cdpClient.Page.enable();
 		this.originalUrl = await readCurrentUrl(this.cdpClient);
+		if (this.originalUrl === "about:blank") {
+			const ready = await waitForPredicate(
+				this.cdpClient.Runtime,
+				`(() => {
+        if (location.origin !== 'https://chatgpt.com' || location.pathname !== '/') return false;
+        const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
+        if (!(editor instanceof HTMLElement)) return false;
+        const rect = editor.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && Boolean(editor.closest('form'));
+      })()`,
+				{ timeoutMs: 10_000, description: "original Skill prompt workbench" },
+			);
+			if (!ready.ok)
+				throw new Error(
+					"ChatGPT Skill prompt workbench did not finish opening; no selection was attempted.",
+				);
+			this.originalUrl = await readCurrentUrl(this.cdpClient);
+		}
 		const pristine = await this.cdpClient.Runtime.evaluate({
 			expression: buildChatgptSkillComposerPristineProbeExpression(),
 			returnByValue: true,

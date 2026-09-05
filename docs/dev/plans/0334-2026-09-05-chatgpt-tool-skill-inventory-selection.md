@@ -6,7 +6,7 @@ Operational state: VALIDATING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 10 | 2026-09-05
+Revision: 11 | 2026-09-05
 
 ## Stable Objective
 
@@ -180,6 +180,14 @@ prompt.
   occurred, and the live hard-stop receipt is
   `docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json`.
 
+- Revision 11 integrates the installed/live-accepted Chat preflight at `ebc792a7`.
+  A fresh exact-account inventory returns all 11 Skills without the old domain
+  block. Two selection preflights stopped before any activation. A read-only
+  diagnostic through the command's own adapter proves its newly opened client
+  is still `about:blank` when it freezes `originalComposerPristine=false`.
+  One regression reproduces that failure; readiness now precedes route and
+  pristine-state capture. The one selection activation remains unspent.
+
 ## Scope
 
 - Add durable ChatGPT tool capability identities for the currently observed
@@ -263,6 +271,10 @@ prompt.
   followed by read-only exact-account inventory and at most one Skill selection
   activation. Zero prompts, uploads, model changes, `Answer now`, or selection
   retries remain mandatory.
+
+- Revision 11 continues ordinary corrective adoption for the observed blank-tab
+  readiness defect, followed by the still-unspent single selection action.
+  No prompt, execution, scheduler control, or retry after activation is admitted.
 
 ## Acceptance Criteria
 

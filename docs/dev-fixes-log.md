@@ -22319,3 +22319,7 @@ browser-stage lifecycle observability, not transcript truncation.
 ## 2026-09-05 | Root composer is not Chat-mode evidence
 
 - ChatGPT can expose an editable root composer before Chat/Work controls. The prior fallback inferred Chat and bypassed sticky Work. Wait up to ten seconds for root controls; fail closed if absent. Only established conversation routes retain the control-less compatibility path. Regression tests cover late controls and permanently absent controls.
+
+## 2026-09-05 | Skills blank-tab readiness
+
+A qualified new tab can still be about:blank at CDP attachment. Skills must await the root composer before capturing its original route and pristine state; otherwise both cleanup routing and preflight evidence describe the blank page.

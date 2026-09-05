@@ -48918,3 +48918,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - `fc640258` is installed with exact mode-module parity; 148 focused tests, typecheck/build/lint/audit pass.
 - AuraCall switched to Chat and received the exact smoke token in 19.5 seconds, one committed turn, zero retries. Readback confirmed the reply and empty composer. Owned Chrome PID 60573 exited and port 45015 closed.
 - Receipt: `docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json`. P27 integration remains pending; no service restart or scheduler control ran.
+
+## 2026-09-05 | Skills blank-tab readiness
+
+Revision 11 integrates Chat mode repair and proves complete 11-Skill inventory. Selection preflight froze about:blank as non-pristine before loading; the RED regression now passes with bounded root readiness. No Skill activation has occurred.
