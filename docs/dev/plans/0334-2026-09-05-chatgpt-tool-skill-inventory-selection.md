@@ -6,7 +6,7 @@ Operational state: IMPLEMENTING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 3 | 2026-09-05
+Revision: 4 | 2026-09-05
 
 ## Stable Objective
 
@@ -52,6 +52,25 @@ prompt.
   prompt composer and was closed. Revision 3 qualifies retained root candidates
   by a visible composer, skips the service-preferred non-composer root, and
   permits one final replacement install and discovery attempt.
+- The final aggregate discovery acquired its operation lease but did not return
+  within five minutes; it was stopped without any drawer selection. Direct CDP
+  survey of the qualified root then proved the current drawer rows, `6 Pro`,
+  the five-position Power slider, and the older-conversation compatibility form.
+- The exact-account Skill inventory is live complete at 11 `created-by-me`
+  entries. The one authorized `Try in chat` canary returned `outcome-unknown`:
+  its identity preflight qualified the correct root, but its later generic CDP
+  attachment navigated an unrelated retained tab. That tab was restored to its
+  exact original URL and both ChatGPT composers were empty with no Skill marker.
+- The one Shopping canary opened the correct current drawer and produced the
+  exact `Shopping` inline pill. The old proof rejected that non-plugin pill;
+  direct readback recovered the exact outcome and the composer was cleared to
+  zero text/zero pills. No selection click may be retried.
+- Revision 4 binds the entire Skills workflow to the qualified prompt-workbench
+  connection, recognizes current popover rows without a `tabindex`, treats all
+  durable inline selection pills as tool state, and measures empty user content
+  after excluding selection pills. It permits one safety replacement install
+  plus read-only inventory/tab-preservation verification, but no further tool
+  or Skill selection action.
 
 ## Scope
 
@@ -85,6 +104,10 @@ prompt.
   exhausted.
 - Revision 3 permits one final replacement install for retained-root composer
   qualification. No install is authorized after that gate.
+- Revision 4 supersedes only the install ceiling: one final safety replacement
+  is admitted for the concrete cross-tab attachment and current-pill proof
+  defects found by the already-spent canaries. No install is authorized after
+  that replacement.
 - Live work is limited to the already-retained `wsl-chrome-3` ChatGPT managed
   browser profile on DevTools port `45015` after exact identity and empty
   composer preflight.
@@ -99,6 +122,10 @@ prompt.
 - The disposable-root failure also spent no selection action. Revision 3 admits
   one final read-only discovery through an already-observed healthy retained
   root; it does not widen either selection budget.
+- The Skill `Try in chat` and Shopping selection budgets are now each exhausted.
+  Their uncertain command outcomes are terminal no-retry states. Only read-only
+  inventory, tab-route, empty-composer, source/install-parity, and test evidence
+  may be collected after the Revision 4 install.
 
 ## Acceptance Criteria
 

@@ -55,6 +55,9 @@ export interface ChatgptSkillBrowserClient {
 	connectDevTools(
 		options?: DevToolsConnectionOptions,
 	): Promise<{ client: ChromeClient; port: number }>;
+	connectChatgptPromptWorkbench(
+		options?: DevToolsConnectionOptions,
+	): Promise<{ client: ChromeClient; port: number }>;
 }
 
 export function hashChatgptSkillInstructions(value: string): string {
@@ -137,12 +140,50 @@ export function buildChatgptSkillSelectionProbeExpression(skill: {
         return ids.some((value) => value === expectedId || value.endsWith(':' + expectedId))
           || names.some((value) => value === expectedName);
       });
+	  const content = editor.cloneNode(true);
+	  content.querySelectorAll('[data-inline-selection-pill], [data-inline-selection-pill-cursor-target]')
+	    .forEach((node) => node.remove());
       return {
         selected: Boolean(marker) || routeMatches,
         skillId: marker || routeMatches ? expectedId : null,
         skillName: marker ? expectedName : null,
-        composerEmpty: normalize(editor.innerText || editor.textContent || '') === '',
+		composerEmpty: normalize(content.textContent || '') === '',
       };
+    })()`;
+}
+
+export function buildChatgptSkillCleanupExpression(skill: {
+	id: string;
+	name: string;
+}): string {
+	return `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const editor = document.querySelector('#prompt-textarea');
+      if (!(editor instanceof HTMLElement)) return { cleared: false, reason: 'composer-missing' };
+      const expectedId = ${JSON.stringify(skill.id)};
+      const expectedName = ${JSON.stringify(skill.name.trim())};
+      const pills = Array.from(editor.querySelectorAll('[data-inline-selection-pill]'));
+      const matches = pills.filter((node) => {
+        const ids = [
+          node.getAttribute('data-skill-id'),
+          node.getAttribute('data-hazelnut-id'),
+          node.getAttribute('data-id'),
+          node.getAttribute('data-system-hint-type'),
+        ].map(normalize);
+        const names = [node.getAttribute('data-skill-name'), node.getAttribute('data-keyword'), node.textContent]
+          .map(normalize);
+        return ids.some((value) => value === expectedId || value.endsWith(':' + expectedId))
+          || names.some((value) => value === expectedName);
+      });
+      const content = editor.cloneNode(true);
+      content.querySelectorAll('[data-inline-selection-pill], [data-inline-selection-pill-cursor-target]')
+        .forEach((node) => node.remove());
+      if (pills.length !== 1 || matches.length !== 1 || normalize(content.textContent || '') !== '') {
+        return { cleared: false, reason: 'composer-not-exact-single-skill' };
+      }
+      editor.textContent = '';
+      editor.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+      return { cleared: true, reason: null };
     })()`;
 }
 
@@ -334,16 +375,34 @@ export class ChatgptSkillBrowserAdapter {
 			try {
 				await navigateSkills(client, returnUrl);
 				const cleanupProbe = buildChatgptSkillSelectionProbeExpression(skill);
-				const cleanupReady = await waitForPredicate(
-					client.Runtime,
-					`(() => { const proof = ${cleanupProbe}; return proof?.selected === false && proof?.composerEmpty === true; })()`,
-					{
-						timeoutMs: 10_000,
-						description: `empty composer cleared of ChatGPT Skill ${skill.id}`,
-					},
-				);
-				if (!cleanupReady.ok) {
-					cleanupFailure = `Original ChatGPT route was restored but exact Skill ${skill.id} cleanup was not observed.`;
+				const activeSelection = await client.Runtime.evaluate({
+					expression: cleanupProbe,
+					returnByValue: true,
+				});
+				const activeValue = isRecord(activeSelection.result?.value)
+					? activeSelection.result.value
+					: null;
+				if (activeValue?.selected === true && activeValue.composerEmpty === true) {
+					const cleared = await client.Runtime.evaluate({
+						expression: buildChatgptSkillCleanupExpression(skill),
+						returnByValue: true,
+					});
+					if (!isRecord(cleared.result?.value) || cleared.result.value.cleared !== true) {
+						cleanupFailure = `Exact Skill ${skill.id} cleanup was refused.`;
+					}
+				}
+				if (!cleanupFailure) {
+					const cleanupReady = await waitForPredicate(
+						client.Runtime,
+						`(() => { const proof = ${cleanupProbe}; return proof?.selected === false && proof?.composerEmpty === true; })()`,
+						{
+							timeoutMs: 10_000,
+							description: `empty composer cleared of ChatGPT Skill ${skill.id}`,
+						},
+					);
+					if (!cleanupReady.ok) {
+						cleanupFailure = `Original ChatGPT route was restored but exact Skill ${skill.id} cleanup was not observed.`;
+					}
 				}
 			} catch (error) {
 				cleanupFailure = error instanceof Error ? error.message : String(error);
@@ -480,7 +539,7 @@ export class ChatgptSkillBrowserAdapter {
 	private async ensureClient(): Promise<ChromeClient> {
 		this.throwIfAborted();
 		if (this.cdpClient) return this.cdpClient;
-		const connected = await this.browser.connectDevTools({
+		const connected = await this.browser.connectChatgptPromptWorkbench({
 			abortSignal: this.abortSignal,
 			stageTimeoutMs: 10_000,
 		});

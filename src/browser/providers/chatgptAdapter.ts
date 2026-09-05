@@ -4409,6 +4409,22 @@ async function connectToChatgptTab(
 	return bindChatgptProviderSessionConnection(options, connection);
 }
 
+export async function connectToChatgptPromptWorkbenchForSkills(
+	options: BrowserProviderListOptions,
+): Promise<{ client: ChromeClient; port: number }> {
+	const connection = await connectToChatgptTab(
+		{
+			...options,
+			configuredUrl: CHATGPT_HOME_URL,
+			preserveActiveTab: true,
+			requirePromptWorkbenchTarget: true,
+			tabLifecycle: "retain-new",
+		},
+		CHATGPT_HOME_URL,
+	);
+	return { client: connection.client, port: connection.port };
+}
+
 type ChatgptTabConnection = Awaited<ReturnType<typeof connectToChatgptTab>>;
 type ChatgptScopedTabSessionValue = {
 	connection: ChatgptTabConnection;

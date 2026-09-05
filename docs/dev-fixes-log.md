@@ -22244,3 +22244,21 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regression rule: a successful `Try in chat` click never proves Skill
   invocation; failure to observe selection or cleanup is `outcome-unknown` and
   must not be retried.
+
+## 2026-09-05 | Bind ChatGPT selection and proof to current workbench structure
+
+- Failure mode: an exact-account preflight qualified the healthy ChatGPT root,
+  but the later Skills phase opened generic DevTools and navigated the first
+  retained page. Separately, the current drawer dropped `tabindex` from its
+  `.__menu-item` rows and selected Shopping as a non-plugin inline pill.
+- Durable fix: obtain the Skills CDP client through the same qualified
+  prompt-workbench target used by the provider adapter; recognize current
+  popover rows independent of `tabindex`; detect any exact-scored
+  `data-inline-selection-pill`; and define an empty composer as no user text
+  after selection pills/cursor sentinels are removed from a clone.
+- Cleanup rule: remove composer state only when exactly one expected Skill pill
+  is present and no user-authored text or second pill exists. Otherwise refuse
+  cleanup and return `outcome-unknown`.
+- Regression rule: identity on one tab does not authorize navigation on another,
+  reload does not prove inline-pill cleanup, and a dispatched selection is never
+  retry authority when exact selection or cleanup proof is missing.

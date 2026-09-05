@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
+  buildComposerChipVisibleExpressionForTest,
   ensureChatgptComposerTool,
   isNonPersistentComposerToolForTest,
   prepareChatgptWorkbenchLocalAttachment,
@@ -10,6 +11,12 @@ import {
 } from '../../src/browser/actions/chatgptComposerTool.js';
 
 describe('chatgpt composer tool selection', () => {
+  test('recognizes durable non-plugin inline tool pills in the current composer', () => {
+    const expression = buildComposerChipVisibleExpressionForTest(['shopping']);
+    expect(expression).toContain('#prompt-textarea [data-inline-selection-pill]');
+    expect(expression).not.toContain('data-system-hint-type^="plugin:"');
+  });
+
   test('normalizes aliases to the current visible tool labels', () => {
     expect(resolveComposerToolCandidatesForTest('chatgpt.commerce.shopping')).toEqual([
       'chatgpt commerce shopping',
@@ -153,6 +160,11 @@ describe('chatgpt composer tool selection', () => {
     });
     expect(surface).toMatchObject({ status: 'ready', inputSelector: '#upload-files' });
     expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({ returnByValue: true }));
+    expect(
+      evaluate.mock.calls.some(([input]) =>
+        String(input.expression ?? '').includes('.__menu-item, [data-fill][tabindex]'),
+      ),
+    ).toBe(true);
   });
 
   test('brings a retained tab forward before measuring the workbench attachment trigger', async () => {

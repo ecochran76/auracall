@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
 	buildChatgptSkillEditorProbeExpression,
+	buildChatgptSkillCleanupExpression,
 	buildChatgptSkillSelectionProbeExpression,
+	createChatgptSkillBrowserAdapter,
 	deriveChatgptSkillDetail,
 	deriveChatgptSkillState,
 	hashChatgptSkillInstructions,
@@ -13,6 +15,33 @@ import {
 } from "../../src/browser/providers/chatgptSkills.js";
 
 describe("ChatGPT Skill provider contracts", () => {
+	it("attaches the Skills workflow to the qualified ChatGPT prompt workbench", async () => {
+		const genericConnect = vi.fn();
+		const promptConnect = vi.fn(async () => ({
+			client: {
+				["Runtime"]: {
+					enable: vi.fn(async () => undefined),
+					evaluate: vi.fn(async () => ({ result: { value: "https://chatgpt.com/" } })),
+				},
+				["Page"]: { enable: vi.fn(async () => undefined) },
+				close: vi.fn(async () => undefined),
+			},
+			port: 45015,
+		}));
+		const adapter = createChatgptSkillBrowserAdapter({
+			userConfig: {} as never,
+			getUserIdentity: vi.fn(async () => null),
+			connectDevTools: genericConnect,
+			connectChatgptPromptWorkbench: promptConnect,
+		} as never);
+
+		await (adapter as unknown as { ensureClient(): Promise<unknown> }).ensureClient();
+		await adapter.close();
+
+		expect(promptConnect).toHaveBeenCalledOnce();
+		expect(genericConnect).not.toHaveBeenCalled();
+	});
+
 	it("derives stable duplicate-name inventory without inventing unobserved state", () => {
 		const result = deriveChatgptSkillState({
 			identity: { email: "owner@example.com", accountPlanType: "pro" },
@@ -164,6 +193,10 @@ describe("ChatGPT Skill provider contracts", () => {
 			textContent: "",
 			getBoundingClientRect: () => ({ width: 400, height: 80 }),
 			closest: () => composer,
+			cloneNode: () => ({
+				textContent: "",
+				querySelectorAll: () => [],
+			}),
 		};
 		const composer = {
 			querySelectorAll: () => [skillMarker],
@@ -191,5 +224,58 @@ describe("ChatGPT Skill provider contracts", () => {
 			skillName: "Canary",
 			composerEmpty: true,
 		});
+	});
+
+	it("treats an exact inline Skill pill as an empty user composer", () => {
+		const id = "a".repeat(32);
+		const content = { textContent: "Canary " };
+		const removed = {
+			remove: vi.fn(() => {
+				content.textContent = " ";
+			}),
+		};
+		const skillMarker = {
+			getAttribute: (name: string) =>
+				name === "data-id" ? `hazelnut:${id}` : name === "data-keyword" ? "Canary" : null,
+			textContent: "Canary",
+			getBoundingClientRect: () => ({ width: 120, height: 24 }),
+		};
+		const composer = { querySelectorAll: () => [skillMarker] };
+		const editor = {
+			closest: () => composer,
+			getBoundingClientRect: () => ({ width: 400, height: 80 }),
+			cloneNode: () => ({
+				get textContent() {
+					return content.textContent;
+				},
+				querySelectorAll: () => [removed],
+			}),
+		};
+		const document = {
+			querySelector: (selector: string) => (selector === "#prompt-textarea" ? editor : null),
+		};
+		const evaluate = new Function(
+			"document",
+			"location",
+			"HTMLElement",
+			`return ${buildChatgptSkillSelectionProbeExpression({ id, name: "Canary" })}`,
+		);
+
+		expect(
+			evaluate(
+				document,
+				{ origin: "https://chatgpt.com", href: "https://chatgpt.com/" },
+				Object,
+			),
+		).toMatchObject({ selected: true, skillId: id, skillName: "Canary", composerEmpty: true });
+		expect(removed.remove).toHaveBeenCalledOnce();
+	});
+
+	it("clears only one exact Skill pill from an otherwise empty composer", () => {
+		const id = "b".repeat(32);
+		const expression = buildChatgptSkillCleanupExpression({ id, name: "Canary" });
+		expect(expression).toContain("pills.length !== 1 || matches.length !== 1");
+		expect(expression).toContain("composer-not-exact-single-skill");
+		expect(expression).toContain("inputType: 'deleteByCut'");
 	});
 });

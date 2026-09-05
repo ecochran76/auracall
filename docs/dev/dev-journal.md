@@ -48727,3 +48727,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   the service-preferred root first, skip it when `#prompt-textarea` is absent,
   and bind the already-observed healthy root. One final replacement install and
   discovery are admitted; selection counts remain zero.
+- The Revision 3 aggregate discovery acquired the exact managed-profile lease
+  but remained silent for more than five minutes and was stopped. Direct port
+  `45015` inspection then proved the current root drawer (`Add photos & files`,
+  `Add from library`, `Create image`, `Web search`, `Shopping`, `Deep research`,
+  Gmail, Canva, and Google Calendar), current `6 Pro` plus Power 4-of-4, and an
+  older conversation's compatibility `Pro` surface without the `Latest` row.
+- Live Skill listing is complete with 11 `created-by-me` entries. The single
+  exact-ID `Try in chat` canary exposed a cross-tab bug: identity qualification
+  used the healthy ChatGPT root, while the Skills adapter later attached the
+  first generic DevTools page and navigated an unrelated retained tab. The tab
+  was restored exactly; both ChatGPT composers remained empty with no Skill
+  marker. The terminal outcome is unknown and must not be retried.
+- The single Shopping canary reached the correct drawer and live DOM readback
+  proved an exact `data-inline-selection-pill` carrying durable shopping state.
+  The old plugin-only pill proof rejected it, so the composer was explicitly
+  cleared and verified at zero text/zero pills. No second click is permitted.
+- Revision 4 repairs end-to-end prompt-workbench binding, current popover rows
+  without `tabindex`, generic durable inline tool pills, Skill-pill-aware empty
+  user content, and exact single-Skill cleanup. The focused cone passes 224/224
+  with typecheck; one final safety install and read-only route/inventory checks
+  remain, with both selection budgets exhausted.
