@@ -48841,3 +48841,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Checkpoint `138ec354` passes 247/247 affected tests, typecheck, production
   build, touched-file lint, and diff hygiene. It is pushed but uninstalled; no
   browser interaction or selection ran.
+
+## 2026-09-05 | Plan 0334 integration-readiness audit
+
+- Fresh `origin/main` reconciliation reports the topic branch zero behind and
+  18 commits ahead, with the target commit also serving as merge base and no
+  merge conflict markers from `git merge-tree`.
+- The exact-branch active-lane audit is not clean: P27 is
+  `unregistered_active` because the topic-branch catalog proposal is absent from
+  canonical `main`. The audit also reports unrelated pre-existing lane findings;
+  none were silently repaired from this lane.
+- Durable evidence is recorded in
+  `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`. No install,
+  browser interaction, or provider mutation occurred.

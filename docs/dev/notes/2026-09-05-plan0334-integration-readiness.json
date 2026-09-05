@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "plan": "0334",
+  "lane": "P27",
+  "branch": "fix/plan0334-chatgpt-tool-skill-selection",
+  "target": "main",
+  "observedAt": "2026-09-05T15:11:58-05:00",
+  "git": {
+    "targetRef": "refs/remotes/origin/main",
+    "targetCommit": "882c9c14d6d1434c5ddce534fee1bf5da093eb56",
+    "branchCommit": "0a7e098bb865b1810181a81f035dd06550f9e4b6",
+    "mergeBase": "882c9c14d6d1434c5ddce534fee1bf5da093eb56",
+    "behind": 0,
+    "ahead": 18,
+    "mergeConflictMarkers": 0,
+    "localRemoteRelation": "equal"
+  },
+  "laneAudit": {
+    "mode": "exact-branches",
+    "ok": false,
+    "plan0334Finding": "unregistered_active",
+    "plan0334Reason": "P27 is absent from the canonical default-ref catalog and exists only in the topic-branch proposal.",
+    "unrelatedExistingProblemsPresent": true
+  },
+  "liveEffects": {
+    "install": 0,
+    "browserInteraction": 0,
+    "selection": 0,
+    "prompt": 0,
+    "upload": 0,
+    "modelChange": 0,
+    "answerNow": 0,
+    "retry": 0
+  },
+  "conclusion": "The branch is mechanically conflict-free and current with origin/main, but it is not governance-ready until P27 is published in the canonical main lane catalog. Installation and a fresh non-submitting Skill canary remain separately authorization-gated."
+}

@@ -135,6 +135,12 @@ prompt.
   children of the prompt editor; and local-upload qualification recognizes the
   current named textarea. The affected cone passes 247/247 with typecheck,
   build, lint, and diff hygiene; checkpoint `138ec354` remains uninstalled.
+- Integration-readiness reconciliation against freshly fetched `origin/main`
+  reports zero commits behind, 18 ahead, and no merge conflict. The exact-branch
+  lane audit still fails P27 as `unregistered_active` because its catalog entry
+  exists only on this topic branch and has not reached canonical `main`; other
+  reported lane problems predate and are outside Plan 0334. The bounded receipt
+  is `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`.
 
 ## Scope
 

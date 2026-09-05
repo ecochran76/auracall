@@ -20921,3 +20921,8 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   editor. Revision 9 uses current row semantics and composer-form pill scope,
   and recognizes the named textarea for local-upload qualification. Checkpoint
   `138ec354` is green and uninstalled; the live effect budget remains closed.
+- Fresh integration reconciliation finds Plan 0334 zero behind and conflict-free
+  against `origin/main`, but the exact-branch lane audit correctly reports P27
+  `unregistered_active`: its catalog proposal has not landed on canonical
+  `main`. Treat the branch as mechanically ready but not governance-ready; see
+  `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`.
