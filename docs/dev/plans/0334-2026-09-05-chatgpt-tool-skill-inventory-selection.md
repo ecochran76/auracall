@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P27
-Operational state: REPAIR_READY_SELECTION_AUTHORITY_REQUIRED
+Operational state: FIVE_ITERATION_LIVE_VALIDATION
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 12 | 2026-09-05
+Revision: 13 | 2026-09-05
 
 ## Stable Objective
 
@@ -204,6 +204,14 @@ prompt.
   Codebase Investigator selection with cleanup and zero prompt submission.
   The previous domain-filter message never established which system imposed
   it; calling it a ChatGPT-side restriction was not supported by that evidence.
+
+- The operator now authorizes up to five repair/validation iterations. This
+  supersedes the exhausted selection allowance: at most one exact-ID selection
+  per iteration, with corrective source validation and installation as needed.
+  Stop early on verified success. No prompts, Skill execution, uploads,
+  scheduler controls, identity changes, or bypass of human verification.
+  Each iteration must record selection proof and cleanup before the next.
+  Iterations used in this authorization: 0/5.
 
 ## Scope
 
