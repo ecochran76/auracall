@@ -2,7 +2,9 @@
 
 ## Turn 565 | 2026-09-05
 
-- Plan 0335 repairs the demonstrated root-composer false Chat success. Two RED regressions now pass; installed/live acceptance follows.
+- Plan 0335 repairs the demonstrated root-composer false Chat success. Two RED regressions now pass; all 148 focused tests, typecheck, build, scoped lint, and plan audit pass.
+- Installed checkpoint `fc640258` with exact mode-module parity. One smoke switched to Chat, committed one prompt, and returned the exact token in 19.5 seconds with zero retries. Direct readback confirmed the reply; owned Chrome PID 60573 and port 45015 were cleaned up.
+- Receipt: `docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json`. Source integration into P27 remains pending.
 
 
 ## Turn 564 | 2026-09-05

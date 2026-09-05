@@ -1,8 +1,8 @@
 # Chat Mode Preflight | 0335-2026-09-05
 
-State: OPEN
+State: CLOSED
 Lane: P28
-Operational state: VALIDATING
+Operational state: INSTALLED_LIVE_ACCEPTED
 Branch: fix/chatgpt-chat-mode-preflight
 Target: fix/plan0334-chatgpt-tool-skill-selection
 Integration: merge
@@ -21,7 +21,7 @@ provider-free regressions reproduce the false success when a root composer
 mounts before mode controls or controls never appear. Both pass after waiting
 for fresh controls and restricting the fallback to established conversation
 routes. The hydration timing is a reproduced explanation, not a captured live
-timeline. Installed and live validation remain.
+timeline. Installed and live validation passed: one exact response in 19.5 seconds, zero retries, matching installed bytes, and exact owned-browser cleanup. Integration into P27 remains pending.
 
 ## Scope And Bounds
 
@@ -42,3 +42,11 @@ prompt retry. Preserve other worktrees. P27 remains the integration parent.
 
 Record source, installed, and live results separately; publish the validated
 checkpoint and preserve unresolved live gates without claiming cooperation.
+
+## Validation Receipt
+
+- Two root regressions failed before repair; 148 focused tests pass after repair.
+- Typecheck, production build, scoped lint, diff hygiene, and plan audit pass.
+- Source checkpoint `fc640258` is installed with byte parity.
+- Live receipt: `docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json`.
+- Chat switched successfully before the one committed prompt. Direct retained-conversation readback confirms the exact reply and empty composer. No Skill operation, service restart, or scheduler control ran.

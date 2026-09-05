@@ -48912,3 +48912,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Explicit Chat was falsely accepted from a root composer before mode controls. Two failing root regressions reproduce the failure; waiting for controls and limiting fallback to established conversations makes both pass.
 - Source scope is isolated from the unfinished P08 merge and based on installed P27. One corrective adoption/smoke follows focused acceptance.
+
+## 2026-09-05 | Plan 0335 installed and live accepted
+
+- `fc640258` is installed with exact mode-module parity; 148 focused tests, typecheck/build/lint/audit pass.
+- AuraCall switched to Chat and received the exact smoke token in 19.5 seconds, one committed turn, zero retries. Readback confirmed the reply and empty composer. Owned Chrome PID 60573 exited and port 45015 closed.
+- Receipt: `docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json`. P27 integration remains pending; no service restart or scheduler control ran.
