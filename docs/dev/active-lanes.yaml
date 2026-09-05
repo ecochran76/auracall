@@ -447,14 +447,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 138ec354
+    checkpoint: ba59356a
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
-    validation_status: provider-free-passed-live-gated
-    validation_ref: 138ec354
+    validation_status: installed-identity-repaired-live-domain-filter-blocked
+    validation_ref: docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json
     integration_receipt: null
-    blocker: Revision 9 is not installed or live accepted; the one fresh install and non-retry canary require explicit authority. P27 is absent from the canonical main lane catalog, and GitHub CI has not dispatched for draft PR 1.
-    disposition: Read-only CDP proved both retained homes have the current named-textarea composer; Revisions 8-9 align root, drawer-row, composer-pill, Skill, and upload proof provider-free, with 247 affected tests passing. Git is zero behind and conflict-free; draft PR 1 is mergeable, while live authority, canonical catalog publication, and CI dispatch remain open.
+    blocker: Revision 10 is installed and exact-account authorization passes, but ChatGPT's automation domain filter blocks complete Skill inventory before selection. P27 is absent from the canonical main lane catalog, and GitHub CI has not dispatched for draft PR 1.
+    disposition: Revision 10 repairs reduced auth-session identity with an exact token-excluding bootstrap projection and passes 238 affected tests. Installed adapter parity is exact; the Skill canary remains unspent because inventory failed closed at the domain filter. Cleanup preserved empty home/project composers and restored project focus.
     updated_at: 2026-09-05

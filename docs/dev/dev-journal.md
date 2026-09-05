@@ -48891,3 +48891,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   passes 238/238 with typecheck, production build, touched-file lint, and diff
   hygiene. No Skill-selection activation occurred, so the one-click canary is
   unspent pending the corrective exact-source install.
+
+## 2026-09-05 | Plan 0334 Revision 10 installed live hard stop
+
+- Corrective installation matches checkpoint `ba59356a` at exact adapter hash
+  parity. Exact-account authorization now passes, proving the bootstrap identity
+  merge in the installed runtime.
+- Inventory could not become complete because automated navigation reached
+  ChatGPT's domain-filter block page before both hazelnut scopes were captured.
+  The home `Plugins` link is a separate `/plugins` browser; the current public
+  route manifest still declares `skills/editor/:hazelnutId?`, so no route alias
+  was guessed or installed.
+- No `Try in chat`, prompt, upload, model change, or `Answer now` action ran.
+  Exact cleanup closed only block-page target `783F05007C2CAD3D28F1ECA989E1FF8F`,
+  preserved the empty healthy home and project composers, and restored project
+  focus. Receipt:
+  `docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json`.

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "plan": "0334-2026-09-05",
+  "lane": "P27",
+  "checkpoint": "ba59356a",
+  "observedAt": "2026-09-05T15:52:22-05:00",
+  "runtime": {
+    "auracallRuntimeProfile": "wsl-chrome-3",
+    "browserProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "service": "chatgpt",
+    "devtoolsPort": 45015,
+    "chromePid": 1933,
+    "installedAt": "2026-09-05T20:45:07.872Z",
+    "sourceRepo": "/home/ecochran76/workspace.local/auracall-plan0334-chatgpt-tool-skill-selection",
+    "adapterSourceSha256": "6c83dd80a83f140b70ce03c8ede09085ed739f82838dfa4394d8b452260423cd",
+    "adapterInstalledSha256": "6c83dd80a83f140b70ce03c8ede09085ed739f82838dfa4394d8b452260423cd",
+    "installedSourceParity": true
+  },
+  "authorization": {
+    "source": "operator ok go",
+    "exactSourceInstall": true,
+    "permittedSkillSelections": 1,
+    "permittedRetries": 0,
+    "permittedPromptSubmissions": 0,
+    "permittedUploads": 0,
+    "permittedModelChanges": 0
+  },
+  "providerFreeRepair": {
+    "failure": "The current auth-session endpoint returned a partial non-null identity and suppressed fallback evidence.",
+    "repair": "Merge missing identity fields from the exact logged-in client-bootstrap JSON projection without returning token-bearing fields.",
+    "affectedTestsPassed": 238,
+    "typecheckPassed": true,
+    "buildPassed": true,
+    "lintPassed": true,
+    "planValidationErrors": 0
+  },
+  "liveAttempt": {
+    "identityAuthorizationPassedAfterRepair": true,
+    "inventoryComplete": false,
+    "skillSelectionActivations": 0,
+    "selectionRetryAllowed": false,
+    "promptSubmissions": 0,
+    "uploads": 0,
+    "modelChanges": 0,
+    "answerNowActivations": 0,
+    "hardStop": "automation_domain_filter",
+    "blockedText": "Navigation to chatgpt.com is not allowed by domain filter."
+  },
+  "routeEvidence": {
+    "homeProviderLink": "/plugins",
+    "pluginsRoutePurpose": "separate provider Plugins browser",
+    "skillEditorManifestRoute": "skills/editor/:hazelnutId?",
+    "skillInventoryEndpointFamily": "/backend-api/hazelnuts",
+    "directSkillsNavigationAccepted": false,
+    "directPluginsNavigationAccepted": false
+  },
+  "cleanup": {
+    "blockedTargetClosed": "783F05007C2CAD3D28F1ECA989E1FF8F",
+    "healthyHomeTarget": "C12F2E3BFC04725E12663BE9B903F0A0",
+    "healthyHomeUrl": "https://chatgpt.com/",
+    "healthyHomeUserText": "",
+    "healthyHomeInlinePillCount": 0,
+    "projectTarget": "B00B620EBFA5CDABEC42F3B291334AD3",
+    "projectRoutePreserved": true,
+    "projectUserText": "",
+    "projectInlinePillCount": 0,
+    "projectFocusRestored": true
+  },
+  "conclusion": "Revision 10 is installed with exact adapter parity and repairs current identity drift. The provider automation domain filter prevented complete Skill inventory before any Try in chat activation, so the canary was not dispatched and Plan 0334 remains live-blocked."
+}

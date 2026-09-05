@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 564 | 2026-09-05
+
+- The operator's `ok go` authorized exact-source installation and one bounded
+  non-submitting Skill canary. Installed Revision 9 exposed a reduced
+  `/api/auth/session`; Revision 10 now merges missing fields from the exact
+  logged-in client-bootstrap projection without returning token-bearing fields.
+- Checkpoint `ba59356a` passes 238 affected tests, typecheck, build, lint, diff
+  hygiene, and zero plan-validation errors. The corrective installed adapter is
+  byte-identical and exact-account authorization passes.
+- ChatGPT's automation domain filter blocked complete Skill inventory before
+  any `Try in chat` activation. Exact cleanup closed only the block-page target,
+  preserved zero text/zero pills on the healthy home and SoyLei project, and
+  restored project focus. P27 remains open on the domain-filter and CI gates;
+  see `docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json`.
+
 ## Turn 563 | 2026-09-05
 
 - Revision 7 is committed and pushed at

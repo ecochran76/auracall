@@ -169,6 +169,16 @@ prompt.
   coverage plus the affected 238-test cone, typecheck, build, lint, and diff
   hygiene pass. No Skill selection was dispatched, so the authorized one-click
   canary remains available after one corrective exact-source install.
+- Revision 10 is installed with exact adapter parity and its read-only preflight
+  passes exact-account authorization. Skill inventory then failed closed because
+  automated navigation to both the canonical `/skills` editor and the separate
+  `/plugins` browser reached ChatGPT's domain-filter block page. The current
+  public route manifest still declares `skills/editor/:hazelnutId?` and the
+  `/backend-api/hazelnuts` family, so no speculative route migration was made.
+  The block-page target was closed; the healthy home and SoyLei project remain
+  at zero text/zero pills with project focus restored. No `Try in chat` action
+  occurred, and the live hard-stop receipt is
+  `docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json`.
 
 ## Scope
 
