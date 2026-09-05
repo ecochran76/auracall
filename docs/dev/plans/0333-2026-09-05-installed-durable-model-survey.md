@@ -39,6 +39,9 @@ horizontal Power slider, and the distinct older-model conversation surface.
   the otherwise unused home tab met the automation domain filter. That tab is
   still at `https://chatgpt.com/` but displays the filter block; the two
   conversation tabs remain intact. Do not bypass the fence.
+- Non-forced merge `960000bb` integrates the durable operational-selector
+  repair and partial-survey receipt into `main`; P26 remains open only for the
+  exact browser-view blocker.
 
 ## Scope
 

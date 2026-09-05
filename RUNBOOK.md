@@ -14,6 +14,9 @@
   The unused home tab remains on the ChatGPT home URL showing that block while
   both conversation tabs remain intact. P26 stays open for manual home-tab
   restoration and one genuine older-model comparison.
+- Non-forced merge `960000bb` integrates the durable operational-selector
+  repair and partial-survey receipt into current `main` without touching the
+  dirty/conflicted P08/P17 checkout.
 
 ## Turn 554 | 2026-09-05
 
