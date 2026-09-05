@@ -408,7 +408,7 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
       document.body;
     if (!root) return null;
     const inlinePills = Array.from(
-      root.querySelectorAll('#prompt-textarea [data-inline-selection-pill]'),
+      root.querySelectorAll('[data-inline-selection-pill]'),
     ).filter(isVisible);
     const inlineMatch = inlinePills
       .map((node) => ({
@@ -607,7 +607,9 @@ export async function prepareChatgptWorkbenchLocalAttachment(
         : [];
       const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => {
         const composer = input.closest('form');
-        const prompt = composer?.querySelector('#prompt-textarea, [contenteditable="true"]');
+        const prompt = composer?.querySelector(
+          '#prompt-textarea, textarea[name="prompt-textarea"], [contenteditable="true"]',
+        );
         const trigger = composer?.querySelector(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)});
         return {
           id: input.id || '',

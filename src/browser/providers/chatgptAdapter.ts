@@ -356,6 +356,8 @@ const CHATGPT_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens("chat
 	company_knowledge: ["company knowledge"],
 	shopping: ["shopping"],
 });
+const CHATGPT_COMPOSER_MENU_ITEM_SELECTOR = '.__menu-item, [data-fill][tabindex]';
+const CHATGPT_INLINE_SELECTION_PILL_SELECTOR = '[data-inline-selection-pill]';
 const CHATGPT_ARTIFACT_KIND_EXTENSIONS = resolveBundledServiceArtifactKindExtensions("chatgpt", {
 	spreadsheet: ["csv", "tsv", "xls", "xlsx", "ods"],
 });
@@ -5790,9 +5792,8 @@ function buildChatgptFeatureProbeExpression(): string {
 	          });
 	        }
 	      };
-	      for (const pill of Array.from(document.querySelectorAll(
-	        '#prompt-textarea [data-inline-selection-pill][data-system-hint-type^="plugin:"], #prompt-textarea [data-inline-selection-pill][data-id^="plugin:"]',
-	      )).filter(isVisible)) {
+	      const composer = document.querySelector('form[data-type="unified-composer"]') || document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]')?.closest('form');
+	      for (const pill of Array.from(composer?.querySelectorAll(${JSON.stringify(CHATGPT_INLINE_SELECTION_PILL_SELECTOR)}) || []).filter(isVisible)) {
 	        const dataId = normalize(pill.getAttribute('data-id') || pill.getAttribute('data-system-hint-type') || '');
 	        addApp({
 	          name: pill.getAttribute('data-keyword') || pill.textContent || '',
@@ -5818,7 +5819,7 @@ function buildChatgptFeatureProbeExpression(): string {
 	      )).filter(isVisible).at(-1);
 	      if (menu) {
 	        const items = Array.from(menu.querySelectorAll(
-	          '.__menu-item[tabindex], [data-fill][tabindex]',
+	          ${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)},
 	        )).filter(isVisible);
 	        for (const item of items) {
 	          const primary = item.querySelector('span.max-w-full, span.truncate');
@@ -5989,7 +5990,7 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 			if (!(node instanceof HTMLElement)) return false;
 			const rect = node.getBoundingClientRect();
 			return rect.width > 0 && rect.height > 0
-				&& Boolean(node.querySelector('.__menu-item[tabindex], [data-fill][tabindex]'));
+				&& Boolean(node.querySelector(${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)}));
 		}))()`,
 		{
 			timeoutMs: 5_000,
@@ -6013,12 +6014,12 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 			const composer_mode = modeText === 'work' ? 'work' : (modeText === 'chat' ? 'chat' : null);
 				const menu = Array.from(document.querySelectorAll('.popover'))
 					.filter((node) => isVisible(node)
-						&& Boolean(node.querySelector('.__menu-item[tabindex], [data-fill][tabindex]')))
+						&& Boolean(node.querySelector(${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)})))
 					.at(-1);
 			const apps = [];
 			const tools = [];
 			for (const item of Array.from(menu?.querySelectorAll(
-				'.__menu-item[tabindex], [data-fill][tabindex]'
+				${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)}
 			) || []).filter(isVisible)) {
 				const primary = item.querySelector('span.max-w-full, span.truncate');
 				const name = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
@@ -6044,10 +6045,10 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 						selection_state: connectRequired ? 'connect_required' : 'selectable',
 				});
 			}
-			for (const pill of Array.from(document.querySelectorAll(
-				'#prompt-textarea [data-inline-selection-pill][data-system-hint-type^="plugin:"], ' +
-				'#prompt-textarea [data-inline-selection-pill][data-id^="plugin:"]'
-			)).filter(isVisible)) {
+			const composer = document.querySelector('form[data-type="unified-composer"]') || document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]')?.closest('form');
+			for (const pill of Array.from(composer?.querySelectorAll(
+				${JSON.stringify(CHATGPT_INLINE_SELECTION_PILL_SELECTOR)}
+			) || []).filter(isVisible)) {
 				const dataId = normalize(
 					pill.getAttribute('data-id') || pill.getAttribute('data-system-hint-type') || ''
 				);

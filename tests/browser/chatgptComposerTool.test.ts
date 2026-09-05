@@ -13,7 +13,8 @@ import {
 describe('chatgpt composer tool selection', () => {
   test('recognizes durable non-plugin inline tool pills in the current composer', () => {
     const expression = buildComposerChipVisibleExpressionForTest(['shopping']);
-    expect(expression).toContain('#prompt-textarea [data-inline-selection-pill]');
+    expect(expression).toContain("root.querySelectorAll('[data-inline-selection-pill]')");
+    expect(expression).not.toContain('#prompt-textarea [data-inline-selection-pill]');
     expect(expression).not.toContain('data-system-hint-type^="plugin:"');
   });
 
@@ -163,6 +164,11 @@ describe('chatgpt composer tool selection', () => {
     expect(
       evaluate.mock.calls.some(([input]) =>
         String(input.expression ?? '').includes('.__menu-item, [data-fill][tabindex]'),
+      ),
+    ).toBe(true);
+    expect(
+      evaluate.mock.calls.some(([input]) =>
+        String(input.expression ?? '').includes('textarea[name="prompt-textarea"]'),
       ),
     ).toBe(true);
   });
