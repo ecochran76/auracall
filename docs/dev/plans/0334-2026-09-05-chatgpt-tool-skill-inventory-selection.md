@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P27
-Operational state: IMPLEMENTING
+Operational state: VALIDATING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
@@ -78,6 +78,16 @@ prompt.
   while the healthy root exposes it immediately after `Page.bringToFront`.
   Revision 5 foregrounds each retained candidate before visibility proof and
   permits one final corrective install plus the same read-only checks only.
+- Revision 5 is pushed and installed with byte-identical adapter, Skills, and
+  composer-tool modules. Installed live capability discovery now returns in
+  under ten seconds with 29 entries, including available durable Shopping,
+  local-upload, library, web-search, deep-research, and model-selector IDs.
+  Installed exact-account Skill listing again returns all 11 entries, preserves
+  every route, and leaves the qualified root at zero user text/zero pills.
+- The remaining acceptance gate is a fresh exact-ID Skill-selection canary.
+  Because the already-dispatched canary is terminal `outcome-unknown` and the
+  plan's one-click budget is exhausted, that requires explicit new operator
+  authority; it cannot be inferred from the successful read-only checks.
 
 ## Scope
 
@@ -144,9 +154,9 @@ prompt.
       production changes.
 - [x] Static and discovered capability reports expose durable current-drawer
       identities, including Shopping, without treating file rows as tools.
-- [ ] Live discovery chooses the root composer deterministically when a project
+- [x] Live discovery chooses the root composer deterministically when a project
       conversation is also retained.
-- [ ] Existing tool selection accepts a durable Shopping selector and verifies
+- [x] Existing tool selection accepts a durable Shopping selector and verifies
       the exact provider label.
 - [ ] `skills select` requires exact account and exact stable Skill ID, uses the
       separate `Try in chat` action, submits no prompt, and cleans up composer

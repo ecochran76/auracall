@@ -20834,3 +20834,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   qualifies retained root candidates by a visible prompt workbench, skips the
   service-resolved greeting-only root, and admits one final replacement install
   plus one discovery. Shopping and Skill selection remain unspent.
+- Direct DevTools survey proved the current drawer rows and `6 Pro` Power
+  slider, plus the older-conversation `Pro` compatibility surface. Live Skill
+  inventory is complete at 11 `created-by-me` entries.
+- The single Skill canary exposed cross-tab generic attachment and ended
+  `outcome-unknown`; the unrelated tab was restored and both composers were
+  empty. The single Shopping canary produced the exact current inline pill,
+  whose non-plugin shape exposed a stale proof; it was cleared to zero
+  text/zero pills. Neither click may be retried under the current budget.
+- Revisions 4-5 bind Skills to the qualified workbench, accept current popover
+  rows without `tabindex`, detect durable non-plugin inline pills, and
+  foreground background roots before measuring visibility. Focused tests pass
+  225/225; typecheck/build/lint and plan audit pass. The full suite has 3,077
+  passes, one timing failure that passed focused rerun, and one unrelated
+  pre-existing raw-CDP allowlist failure.
+- Installed Revision 5 matches source hashes. Live capability discovery returns
+  29 entries in under ten seconds; exact-account Skill listing returns all 11,
+  preserves routes, and leaves zero user text/zero pills. A fresh exact-ID Skill
+  canary is the only remaining acceptance gate and requires explicit operator
+  authority because the one-click no-retry budget is exhausted.

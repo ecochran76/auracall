@@ -48756,3 +48756,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   still had no editor. Revision 5 makes foregrounding part of retained-candidate
   readiness proof and admits one last corrective install, with no selection
   retry.
+- Revision 5 is committed, pushed, and installed with exact module hash parity.
+  Installed live discovery now completes in under ten seconds with 29 current
+  ChatGPT capabilities, including available durable Shopping and current file
+  source IDs. Installed Skill listing returns the complete 11-item inventory,
+  preserves every tab route, and leaves the qualified root empty with no pills.
+- P27 remains validating because its sole Skill click is terminal
+  `outcome-unknown`. A second exact-ID canary is the only remaining live gate
+  and needs explicit operator authority; no retry is implied by the repair.

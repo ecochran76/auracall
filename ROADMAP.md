@@ -4,16 +4,18 @@
 
 ### Current Execution Board
 
-Status: ChatGPT tool and Skill inventory/selection install and live acceptance pending
+Status: ChatGPT inventory current; exact-ID Skill selection live acceptance pending
 Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
 
 - Active ChatGPT tool and Skill inventory/selection hardening:
   [docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md](docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md)
   P27 owns current drawer identities including Shopping, deterministic root-tab
   discovery with retained project chats, and guarded non-submitting exact-ID
-  Skill selection. Provider-free implementation, affected tests, typecheck,
-  build, lint, and source readback pass; one bounded install and live proof
-  remain. No prompt, upload, model change, or Skill execution is authorized.
+  Skill selection. The source-identical installed runtime reports 29 current
+  capabilities and the complete 11-item Skill inventory; current Shopping was
+  selected and cleaned once. The first exact-ID Skill canary is terminal
+  `outcome-unknown`, so a fresh canary requires explicit operator authority.
+  No prompt, upload, model change, or Skill execution is authorized.
 
 - Integrated installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)
