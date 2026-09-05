@@ -6,7 +6,7 @@ Operational state: IMPLEMENTING
 Branch: fix/plan0334-chatgpt-tool-skill-selection
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-05
+Revision: 3 | 2026-09-05
 
 ## Stable Objective
 
@@ -48,6 +48,10 @@ prompt.
   stopped before drawer inspection. Revision 2 moves capability discovery and
   Skill identity preflight to a fresh disposable root tab, waits for the visible
   composer, and permits one replacement install plus one post-repair discovery.
+- The fresh disposable root also rendered the authenticated greeting without a
+  prompt composer and was closed. Revision 3 qualifies retained root candidates
+  by a visible composer, skips the service-preferred non-composer root, and
+  permits one final replacement install and discovery attempt.
 
 ## Scope
 
@@ -76,9 +80,11 @@ prompt.
 - Provider-free tests and local build/lint may run as needed.
 - At most one user-runtime install after the implementation checkpoint is
   committed and pushed.
-- Revision 2 permits one replacement install after the first installed
-  read-only discovery exposed the root-tab readiness defect; no further install
-  is authorized in this plan.
+- Revision 2 permitted one replacement install after the first installed
+  read-only discovery exposed the root-tab readiness defect; that allowance is
+  exhausted.
+- Revision 3 permits one final replacement install for retained-root composer
+  qualification. No install is authorized after that gate.
 - Live work is limited to the already-retained `wsl-chrome-3` ChatGPT managed
   browser profile on DevTools port `45015` after exact identity and empty
   composer preflight.
@@ -90,6 +96,9 @@ prompt.
 - The failed read-only discovery did not spend either selection canary. One
   post-repair disposable-root discovery is permitted; selection actions remain
   exactly one Shopping and one Skill attempt with no retry.
+- The disposable-root failure also spent no selection action. Revision 3 admits
+  one final read-only discovery through an already-observed healthy retained
+  root; it does not widen either selection budget.
 
 ## Acceptance Criteria
 

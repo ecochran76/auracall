@@ -20830,3 +20830,7 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   Revision 2 uses a fresh disposable root, waits for composer readiness, and
   permits one replacement install and one post-repair discovery. Neither
   one-shot selection budget was spent.
+- The disposable root likewise rendered no composer and was closed. Revision 3
+  qualifies retained root candidates by a visible prompt workbench, skips the
+  service-resolved greeting-only root, and admits one final replacement install
+  plus one discovery. Shopping and Skill selection remain unspent.

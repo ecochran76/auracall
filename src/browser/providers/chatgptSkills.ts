@@ -48,6 +48,8 @@ export interface ChatgptSkillBrowserClient {
 	getUserIdentity(options?: {
 		abortSignal?: AbortSignal;
 		configuredUrl?: string;
+		preserveActiveTab?: boolean;
+		requirePromptWorkbenchTarget?: boolean;
 		tabLifecycle?: "dispose-new" | "retain-new";
 	}): Promise<SkillIdentity | null>;
 	connectDevTools(
@@ -251,7 +253,9 @@ export class ChatgptSkillBrowserAdapter {
 		const identity = await this.browser.getUserIdentity({
 			abortSignal: this.abortSignal,
 			configuredUrl: "https://chatgpt.com/",
-			tabLifecycle: "dispose-new",
+			preserveActiveTab: true,
+			requirePromptWorkbenchTarget: true,
+			tabLifecycle: "retain-new",
 		});
 		const client = await this.ensureClient();
 		const inventory = await captureSkillInventory(client);

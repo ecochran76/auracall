@@ -48721,3 +48721,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   capability discovery and Skill identity preflight, gated on one visible
   `#prompt-textarea`. One replacement install and one post-repair discovery are
   admitted; both original one-shot selection budgets remain untouched.
+- The disposable root reached the authenticated greeting but never rendered a
+  prompt composer, so the readiness gate closed it and discovery stopped.
+  Revision 3 adds explicit retained-candidate composer qualification: inspect
+  the service-preferred root first, skip it when `#prompt-textarea` is absent,
+  and bind the already-observed healthy root. One final replacement install and
+  discovery are admitted; selection counts remain zero.

@@ -18,6 +18,7 @@ import {
 	bindChatgptAbortCleanupForTest,
 	closeChatgptTabConnectionForTest,
 	runWithChatgptAbortBoundConnectionForTest,
+	selectChatgptPromptWorkbenchTargetForTest,
 	shouldDisposeChatgptTabConnectionForTest,
 	shouldForceNewChatgptTabConnectionForTest,
 } from "../../src/browser/providers/chatgptAdapter.js";
@@ -246,6 +247,22 @@ describe("ChatGPT tab lifecycle", () => {
 				tabLifecycle: "dispose-new",
 			}),
 		).toBe(true);
+	});
+
+	test("skips a service-resolved root without a prompt workbench for a healthy retained root", async () => {
+		const candidates = [{ id: "stale-root" }, { id: "healthy-root" }];
+		const inspected: string[] = [];
+		const selected = await selectChatgptPromptWorkbenchTargetForTest(
+			candidates,
+			"stale-root",
+			async (candidate) => {
+				inspected.push(candidate.id);
+				return candidate.id === "healthy-root";
+			},
+		);
+
+		expect(inspected).toEqual(["stale-root", "healthy-root"]);
+		expect(selected).toEqual({ id: "healthy-root" });
 	});
 
 	test("opens a fresh retained tab for isolated prompt submission", async () => {

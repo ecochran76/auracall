@@ -4137,6 +4137,53 @@ function bindChatgptProviderSessionConnection<
 
 export const bindChatgptProviderSessionConnectionForTest = bindChatgptProviderSessionConnection;
 
+export async function selectChatgptPromptWorkbenchTargetForTest<
+	T extends { targetId?: string | null; id?: string | null },
+>(
+	candidates: readonly T[],
+	preferredTargetId: string | undefined,
+	readiness: (candidate: T) => Promise<boolean>,
+): Promise<T | undefined> {
+	const ordered = preferredTargetId
+		? [
+				...candidates.filter((candidate) => resolveChatgptTargetId(candidate) === preferredTargetId),
+				...candidates.filter((candidate) => resolveChatgptTargetId(candidate) !== preferredTargetId),
+			]
+		: [...candidates];
+	for (const candidate of ordered) {
+		if (await readiness(candidate)) return candidate;
+	}
+	return undefined;
+}
+
+async function chatgptTargetHasVisiblePromptWorkbench(
+	host: string,
+	port: number,
+	target: { targetId?: string | null; id?: string | null },
+): Promise<boolean> {
+	const targetId = resolveChatgptTargetId(target);
+	if (!targetId) return false;
+	const client = await connectToChromeTarget({ host, port, target: targetId }).catch(() => null);
+	if (!client) return false;
+	try {
+		await client.Runtime.enable();
+		const result = await client.Runtime.evaluate({
+			expression: `(() => {
+        const editor = document.querySelector('#prompt-textarea');
+        if (!(editor instanceof HTMLElement)) return false;
+        const rect = editor.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      })()`,
+			returnByValue: true,
+		});
+		return result.result?.value === true;
+	} catch {
+		return false;
+	} finally {
+		await client.close().catch(() => undefined);
+	}
+}
+
 async function connectToChatgptTab(
 	options?: BrowserProviderListOptions,
 	urlOverride?: string,
@@ -4280,7 +4327,13 @@ async function connectToChatgptTab(
 		? candidates.find((target) => resolveChatgptTargetId(target) === resolvedTargetIdFromService)
 		: undefined;
 	recordBrowserScrapeCandidateCount(options, "chatgpt.reusableTargets", candidates.length);
-	let targetInfo = serviceResolved ?? candidates[0];
+	let targetInfo = options?.requirePromptWorkbenchTarget
+		? await selectChatgptPromptWorkbenchTargetForTest(
+				candidates,
+				resolvedTargetIdFromService,
+				(candidate) => chatgptTargetHasVisiblePromptWorkbench(host, resolvedPort, candidate),
+			)
+		: serviceResolved ?? candidates[0];
 	let shouldClose = false;
 	let usedExisting = Boolean(resolveChatgptTargetId(targetInfo));
 	const tabPolicy = resolveBrowserTabPolicy(options);
