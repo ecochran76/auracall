@@ -105,7 +105,7 @@ export function buildChatgptSkillEditorProbeExpression(id: string): string {
 export function buildChatgptSkillComposerPristineProbeExpression(): string {
 	return `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const editor = document.querySelector('#prompt-textarea');
+      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
       if (!(editor instanceof HTMLElement)) return false;
       const rect = editor.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return false;
@@ -130,7 +130,7 @@ export function buildChatgptSkillSelectionProbeExpression(skill: {
         return rect.width > 0 && rect.height > 0;
       };
       if (location.origin !== 'https://chatgpt.com') return null;
-      const editor = document.querySelector('#prompt-textarea');
+      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
       if (!visible(editor)) return null;
       const composer = editor.closest('form') || document.querySelector('form[data-type="unified-composer"]');
       if (!(composer instanceof HTMLElement)) return null;
@@ -174,7 +174,7 @@ export function buildChatgptSkillSelectionProbeExpression(skill: {
 export function buildChatgptSkillCleanupExpression(skill: { id: string; name: string }): string {
 	return `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const editor = document.querySelector('#prompt-textarea');
+      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
       if (!(editor instanceof HTMLElement)) return { cleared: false, reason: 'composer-missing' };
       const expectedId = ${JSON.stringify(skill.id)};
       const expectedName = ${JSON.stringify(skill.name.trim())};

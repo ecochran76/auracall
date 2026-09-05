@@ -17,9 +17,9 @@ import { shouldAttachResolvedServiceTabForTest } from "../../src/browser/llmServ
 import {
 	bindChatgptAbortCleanupForTest,
 	closeChatgptTabConnectionForTest,
+	prepareChatgptPromptWorkbenchTargetForTest,
 	runWithChatgptAbortBoundConnectionForTest,
 	selectChatgptPromptWorkbenchTargetForTest,
-	prepareChatgptPromptWorkbenchTargetForTest,
 	shouldDisposeChatgptTabConnectionForTest,
 	shouldForceNewChatgptTabConnectionForTest,
 } from "../../src/browser/providers/chatgptAdapter.js";
@@ -47,15 +47,23 @@ function asClosableConnection(connection: ReturnType<typeof createConnection>) {
 describe("ChatGPT tab lifecycle", () => {
 	test("foregrounds a retained root before measuring its visible prompt workbench", async () => {
 		const events: string[] = [];
+		let expression = "";
 		const ready = await prepareChatgptPromptWorkbenchTargetForTest({
 			["Page"]: {
-				enable: vi.fn(async () => { events.push("page-enable"); }),
-				bringToFront: vi.fn(async () => { events.push("front"); }),
+				enable: vi.fn(async () => {
+					events.push("page-enable");
+				}),
+				bringToFront: vi.fn(async () => {
+					events.push("front");
+				}),
 			},
 			["Runtime"]: {
-				enable: vi.fn(async () => { events.push("runtime-enable"); }),
-				evaluate: vi.fn(async () => {
+				enable: vi.fn(async () => {
+					events.push("runtime-enable");
+				}),
+				evaluate: vi.fn(async (input: { expression: string }) => {
 					events.push("evaluate");
+					expression = input.expression;
 					return { result: { value: true } };
 				}),
 			},
@@ -63,6 +71,7 @@ describe("ChatGPT tab lifecycle", () => {
 
 		expect(ready).toBe(true);
 		expect(events).toEqual(["page-enable", "front", "runtime-enable", "evaluate"]);
+		expect(expression).toContain('textarea[name="prompt-textarea"]');
 	});
 
 	beforeEach(() => {

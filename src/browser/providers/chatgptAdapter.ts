@@ -4039,7 +4039,7 @@ async function waitForChatgptDisposableRootComposer(client: ChromeClient): Promi
 		client.Runtime,
 		`(() => {
       if (location.origin !== 'https://chatgpt.com' || location.pathname !== '/') return false;
-      const editor = document.querySelector('#prompt-textarea');
+      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
       if (!(editor instanceof HTMLElement)) return false;
       const rect = editor.getBoundingClientRect();
       return rect.width > 0 && rect.height > 0;
@@ -4146,8 +4146,12 @@ export async function selectChatgptPromptWorkbenchTargetForTest<
 ): Promise<T | undefined> {
 	const ordered = preferredTargetId
 		? [
-				...candidates.filter((candidate) => resolveChatgptTargetId(candidate) === preferredTargetId),
-				...candidates.filter((candidate) => resolveChatgptTargetId(candidate) !== preferredTargetId),
+				...candidates.filter(
+					(candidate) => resolveChatgptTargetId(candidate) === preferredTargetId,
+				),
+				...candidates.filter(
+					(candidate) => resolveChatgptTargetId(candidate) !== preferredTargetId,
+				),
 			]
 		: [...candidates];
 	for (const candidate of ordered) {
@@ -4182,7 +4186,7 @@ export async function prepareChatgptPromptWorkbenchTargetForTest(
 	await client.Runtime.enable();
 	const result = await client.Runtime.evaluate({
 		expression: `(() => {
-        const editor = document.querySelector('#prompt-textarea');
+		const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
         if (!(editor instanceof HTMLElement)) return false;
         const rect = editor.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
@@ -4341,7 +4345,7 @@ async function connectToChatgptTab(
 				resolvedTargetIdFromService,
 				(candidate) => chatgptTargetHasVisiblePromptWorkbench(host, resolvedPort, candidate),
 			)
-		: serviceResolved ?? candidates[0];
+		: (serviceResolved ?? candidates[0]);
 	let shouldClose = false;
 	let usedExisting = Boolean(resolveChatgptTargetId(targetInfo));
 	const tabPolicy = resolveBrowserTabPolicy(options);

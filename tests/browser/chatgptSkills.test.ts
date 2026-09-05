@@ -218,6 +218,8 @@ describe("ChatGPT Skill provider contracts", () => {
 	});
 
 	it("requires an empty pill-free original composer before Skill selection", () => {
+		const expression = buildChatgptSkillComposerPristineProbeExpression();
+		expect(expression).toContain('textarea[name="prompt-textarea"]');
 		const state = { text: "", pills: 0 };
 		const composer = {
 			querySelectorAll: () => Array.from({ length: state.pills }, () => ({})),
@@ -233,13 +235,10 @@ describe("ChatGPT Skill provider contracts", () => {
 			}),
 		};
 		const document = {
-			querySelector: (selector: string) => (selector === "#prompt-textarea" ? editor : composer),
+			querySelector: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : composer,
 		};
-		const evaluate = new Function(
-			"document",
-			"HTMLElement",
-			`return ${buildChatgptSkillComposerPristineProbeExpression()}`,
-		);
+		const evaluate = new Function("document", "HTMLElement", `return ${expression}`);
 
 		expect(evaluate(document, Object)).toBe(true);
 		state.text = "draft";
@@ -272,7 +271,8 @@ describe("ChatGPT Skill provider contracts", () => {
 			getBoundingClientRect: () => ({ width: 500, height: 120 }),
 		};
 		const document = {
-			querySelector: (selector: string) => (selector === "#prompt-textarea" ? editor : null),
+			querySelector: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : null,
 			querySelectorAll: () => [skillMarker],
 		};
 		const evaluate = new Function(
@@ -322,7 +322,8 @@ describe("ChatGPT Skill provider contracts", () => {
 			}),
 		};
 		const document = {
-			querySelector: (selector: string) => (selector === "#prompt-textarea" ? editor : null),
+			querySelector: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : null,
 		};
 		const evaluate = new Function(
 			"document",
@@ -360,7 +361,8 @@ describe("ChatGPT Skill provider contracts", () => {
 		};
 		const composer = { querySelectorAll: () => [skillMarker] };
 		const document = {
-			querySelector: (selector: string) => (selector === "#prompt-textarea" ? editor : null),
+			querySelector: (selector: string) =>
+				selector === '#prompt-textarea, textarea[name="prompt-textarea"]' ? editor : null,
 		};
 		const href = `https://chatgpt.com/?hazelnuts=${id}&prompt=${encodeURIComponent(providerPrompt)}&surface=tpp`;
 		const evaluate = new Function(
