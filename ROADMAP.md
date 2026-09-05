@@ -23,6 +23,9 @@ Lanes: P01-P07, P09-P15, P17, P19-P26 (integrated); P08, P18, P27 (open)
   route-bound selection contract; inventory evidence cannot close that gate.
   The terminal attempt restored zero text/zero pills without submission. No
   install, prompt, upload, model change, Skill execution, or retry is authorized.
+  Read-only CDP inspection then found both home composers under ChatGPT's current
+  named-textarea shape rather than the legacy editor ID; Revision 8 repairs that
+  qualification provider-free and is pushed but not installed.
 
 - Integrated installed durable-model survey:
   [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)

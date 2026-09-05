@@ -48810,3 +48810,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   target disappeared and a new greeting-only home target appeared. It remained
   editor-free after foregrounding, so another Skill canary is not currently
   route-ready even apart from the explicit install/live gate.
+
+## 2026-09-05 | Plan 0334 Revision 8 current composer qualification
+
+- A read-only direct-CDP DOM and accessibility survey inspected both retained
+  ChatGPT home targets without focus, navigation, clicks, or browser lifecycle
+  changes. Both were complete, empty, pill-free root workbenches with a visible
+  `textarea[name="prompt-textarea"]`; neither exposed the legacy editor ID.
+- Root readiness had therefore misclassified a selector migration as missing
+  browser state. Revision 8 accepts the exact ID or exact name selector in
+  retained-root qualification plus Skill source preflight, selection proof, and
+  cleanup. Regression assertions cover both workbench and Skill expressions.
+- Checkpoint `aa461805` passes the 246-test affected cone, typecheck, production
+  build, touched-file lint with existing computed-key infos only, and diff
+  hygiene. The source-built pristine-composer expression returned true on both
+  retained home targets. It is pushed but not installed, and no live selection
+  was attempted.

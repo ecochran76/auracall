@@ -20909,3 +20909,9 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   preserves routes, and leaves zero user text/zero pills. A fresh exact-ID Skill
   canary is the only remaining acceptance gate and requires explicit operator
   authority because the one-click no-retry budget is exhausted.
+- After Revision 6 exposed provider-prefill proof drift, read-only CDP inspection
+  found that both current home targets retain a visible empty composer as
+  `textarea[name="prompt-textarea"]` without the legacy ID. Revision 8 accepts
+  both exact provider shapes for workbench qualification and Skill
+  preflight/proof/cleanup. Checkpoint `aa461805` is provider-free green and not
+  installed; no additional selection or retry is authorized.

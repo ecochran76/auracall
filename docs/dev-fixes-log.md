@@ -22279,3 +22279,15 @@ browser-stage lifecycle observability, not transcript truncation.
 - Guard: arbitrary or mismatched composer text remains untrusted, final route
   restoration must prove zero text/zero pills, and an unaccepted dispatched
   click is terminal `outcome-unknown` with no retry.
+
+## 2026-09-05 | Qualify ChatGPT composers by durable provider semantics
+
+- Failure mode: current ChatGPT home pages replaced the prompt editor ID with a
+  named textarea, so an actually visible empty workbench was classified as
+  absent and the Skill lane appeared browser-blocked.
+- Durable fix: exact root qualification and Skill preflight/proof/cleanup accept
+  either `#prompt-textarea` or `textarea[name="prompt-textarea"]`, matching the
+  existing provider input contract without broadening to arbitrary textareas.
+- Regression rule: a missing legacy editor ID does not prove a missing composer;
+  require one of the exact provider selectors plus visible geometry and preserve
+  all empty-composer, identity, cleanup, and no-submit gates.

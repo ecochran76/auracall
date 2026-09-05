@@ -120,6 +120,14 @@ prompt.
   drift and blocks another Skill canary independently of the install gate.
 - Revision 7 source, tests, contracts, and the inconclusive live receipt are
   published at checkpoint `b5ceb8837e40e1866029b8e52eeadd046b2e31ec`.
+- A follow-up read-only CDP survey disproved the greeting-only diagnosis for
+  both current home targets: each has one visible, empty
+  `textarea[name="prompt-textarea"]`, but no longer has the legacy
+  `#prompt-textarea` ID. Revision 8 makes prompt-workbench qualification and
+  Skill preflight/proof/cleanup accept both exact provider shapes. The affected
+  cone remains 246/246 with typecheck, build, lint, and diff hygiene passing;
+  the new source pristine-composer probe returns true on both retained home
+  targets. Source is published at checkpoint `aa461805` and remains uninstalled.
 
 ## Scope
 
@@ -189,6 +197,10 @@ prompt.
   exact provider-prefill mismatch exposed by the terminal Revision 6 attempt.
   It authorizes no install, browser navigation, selection, prompt, upload,
   model change, Skill execution, `Answer now`, or retry.
+- Revision 8 admits only provider-free source, tests, documentation, and
+  read-only DOM/accessibility inspection for the current named-textarea
+  composer shape. It authorizes no install, browser navigation, selection,
+  prompt, upload, model change, Skill execution, `Answer now`, or retry.
 
 ## Acceptance Criteria
 

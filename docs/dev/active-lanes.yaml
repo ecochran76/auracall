@@ -447,14 +447,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: b5ceb8837e40e1866029b8e52eeadd046b2e31ec
+    checkpoint: aa461805
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
     validation_status: provider-free-passed-live-gated
-    validation_ref: b5ceb8837e40e1866029b8e52eeadd046b2e31ec
+    validation_ref: aa461805
     integration_receipt: null
-    blocker: Revision 7 is not installed or live accepted, and no qualified empty home composer is currently retained.
-    disposition: The sole Revision 6 Skill click exposed provider-authored prompt prefill and ended outcome-unknown with exact cleanup; Revision 7 repairs proof provider-free, with 246 affected tests passing and no install or retry authorized.
+    blocker: Revision 8 is not installed or live accepted; the one fresh install and non-retry canary require explicit authority.
+    disposition: Read-only CDP proved both retained homes have the current named-textarea composer; Revision 8 repairs root qualification and Skill proof provider-free, with 246 affected tests passing and no install or retry authorized.
     updated_at: 2026-09-05
