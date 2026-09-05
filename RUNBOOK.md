@@ -11,9 +11,13 @@
 - The source migration now advertises durable fast/reasoning/premium intents,
   keeps old selectors as compatibility inputs, and adds `openai:frontier`
   backed by `gpt-6-astra`.
-- Provider-free validation, documentation closeout, commit, and publication
-  remain. Installation and live browser interaction are not authorized by this
-  lane.
+- Checkpoint `c96a472f` passes the final 448-test affected packet, typecheck,
+  build, changed-file lint at error level, diff hygiene, and zero-error plan
+  audit. The comprehensive lane passes 3,066 tests; two load-sensitive tests
+  passed on focused rerun and the sole deterministic failure is the documented
+  Plan 0326 stale raw-CDP allowlist expectation.
+- P25 is provider-free accepted and published. Installation and live browser
+  interaction remain separate effects.
 
 ## Turn 552 | 2026-09-03
 

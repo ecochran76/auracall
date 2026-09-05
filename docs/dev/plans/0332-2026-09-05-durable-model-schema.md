@@ -1,12 +1,12 @@
 # Durable Model Schema | 0332-2026-09-05
 
-State: OPEN
+State: CLOSED
 Lane: P25
-Operational state: IMPLEMENTING_PROVIDER_FREE
+Operational state: PROVIDER_FREE_ACCEPTED_NOT_INSTALLED
 Branch: fix/plan0332-durable-model-schema
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-05
+Revision: 2 | 2026-09-05
 
 ## Stable Objective
 
@@ -17,14 +17,17 @@ callers.
 
 ## Current State
 
-- Implementation and current docs are complete in the isolated topic worktree.
-- Focused and adjacent provider-free tests, typecheck, and production build
-  pass. The first comprehensive run reached 3,062 passing tests; its one
-  remaining code failure was a stale default-selector assertion that now
-  passes focused validation. The separate Plan 0326 raw-CDP allowlist baseline
-  failure remains unchanged.
-- Final lint, plan audit, comprehensive confirmation, checkpoint, and
-  publication remain.
+- Checkpoint `c96a472f` contains the implementation and current docs.
+- The final affected packet passes 448 tests. Typecheck, production build,
+  JSON validation, changed-file lint at error level, diff hygiene, and the
+  331-candidate zero-error plan audit pass.
+- The comprehensive lane passes 3,066 tests with 65 policy-skipped tests. Two
+  contention-sensitive timing tests failed in that run and passed together in
+  a 245-test focused rerun, so they remain recorded as pass-on-retry flakes.
+  The sole deterministic failure is Plan 0326's pre-existing stale raw-CDP
+  allowlist expectation.
+- No installation or live browser interaction occurred. GPT-6 Pro browser
+  visibility remains intentionally unclaimed.
 
 ## Scope
 
@@ -55,10 +58,17 @@ callers.
 - [x] Legacy saved selectors continue to resolve and validate.
 - [x] `chatgpt:premium` resolves to GPT-6 Pro with `gpt-6-astra` bookkeeping.
 - [x] `openai:frontier` resolves to the GPT-6 Astra API contract.
-- [ ] Affected tests, typecheck, build, lint, diff hygiene, and plan audit pass.
-- [ ] Comprehensive provider-free tests pass or any unrelated baseline failure
+- [x] Affected tests, typecheck, build, lint, diff hygiene, and plan audit pass.
+- [x] Comprehensive provider-free tests pass or any unrelated baseline failure
       is recorded precisely.
-- [ ] The implementation and docs are committed and pushed.
+- [x] The implementation and docs are committed and pushed.
+
+## Provider References
+
+- OpenAI API model contract:
+  <https://developers.openai.com/api/docs/models/gpt-6-astra>
+- ChatGPT GPT-6 Pro availability and Astra relationship:
+  <https://help.openai.com/en/articles/20001354>
 
 ## Definition of Done
 

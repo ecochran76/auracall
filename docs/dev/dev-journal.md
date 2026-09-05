@@ -48608,3 +48608,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Added the `openai:frontier` default alias, GPT-6 Astra model metadata, and
   OpenAI SDK 7.10.0 so the typed request contract accepts `max`.
 - Provider-free affected and comprehensive validation remain before checkpoint.
+
+## 2026-09-05 | Plan 0332 provider-free acceptance
+
+- Checkpoint `c96a472f` passes 448 affected tests, typecheck, production build,
+  JSON validation, changed-file lint at error level, diff hygiene, and the
+  331-candidate zero-error plan audit.
+- Comprehensive validation passes 3,066 tests with 65 policy skips. Two
+  contention-sensitive timing tests passed together in a 245-test focused
+  rerun; the deterministic residual is Plan 0326's stale raw-CDP allowlist
+  expectation.
+- P25 closes provider-free accepted and published. No user-runtime install,
+  DevTools attach, model change, prompt, or live browser claim occurred.

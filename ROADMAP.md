@@ -4,15 +4,15 @@
 
 ### Current Execution Board
 
-Status: Durable model schema migration in provider-free validation
-Lanes: P01-P07, P09-P15, P17, P19-P24 (integrated); P08, P18, P25 (open)
+Status: Durable model schema migration provider-free accepted
+Lanes: P01-P07, P09-P15, P17, P19-P24 (integrated); P25 (published); P08, P18 (open)
 
-- Active durable model schema migration:
+- Provider-free accepted durable model schema migration:
   [docs/dev/plans/0332-2026-09-05-durable-model-schema.md](docs/dev/plans/0332-2026-09-05-durable-model-schema.md)
   P25 replaces advertised version/codename ChatGPT selectors with capability
   intents, retains old spellings as aliases, and adds GPT-6 Pro/Astra plus the
-  durable `openai:frontier` API default. This lane is provider-free and does
-  not install or operate the retained browser.
+  durable `openai:frontier` API default. Checkpoint `c96a472f` is published;
+  this lane did not install or operate the retained browser.
 
 - Active ChatGPT composer intelligence-picker repair:
   [docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md](docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md)
