@@ -127,6 +127,10 @@
 - ChatGPT Skill lifecycle:
   - provider-free contract tests:
     `pnpm vitest run tests/browser/chatgptSkills.test.ts tests/cli/chatgptSkillsCommand.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`
+  - pair with `tests/browser/chatgptComposerTool.test.ts` and
+    `tests/browser/chatgptAdapter.test.ts` when current drawer rows, selected
+    composer pills, or local-upload qualification changes; current rows need
+    not carry `tabindex`, and pill proof stays scoped to the composer form
   - read-only inventory smoke:
     `pnpm tsx bin/auracall.ts --profile <runtime> skills list --expected-account <email> --json`
   - bounded non-submitting selection smoke:

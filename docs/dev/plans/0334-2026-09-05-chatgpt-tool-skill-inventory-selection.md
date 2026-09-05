@@ -128,6 +128,13 @@ prompt.
   cone remains 246/246 with typecheck, build, lint, and diff hygiene passing;
   the new source pristine-composer probe returns true on both retained home
   targets. Source is published at checkpoint `aa461805` and remains uninstalled.
+- Revision 9 closes the remaining provider-free drawer-proof drift found in the
+  source audit. Capability discovery and its direct drawer probe now accept
+  current `.__menu-item` rows without requiring `tabindex`; selected tool/app
+  pills are read from the exact composer form instead of assuming they are
+  children of the prompt editor; and local-upload qualification recognizes the
+  current named textarea. The affected cone passes 247/247 with typecheck,
+  build, lint, and diff hygiene; checkpoint `138ec354` remains uninstalled.
 
 ## Scope
 
@@ -201,6 +208,10 @@ prompt.
   read-only DOM/accessibility inspection for the current named-textarea
   composer shape. It authorizes no install, browser navigation, selection,
   prompt, upload, model change, Skill execution, `Answer now`, or retry.
+- Revision 9 admits the same provider-free and read-only envelope for current
+  drawer-row, composer-scoped pill, and local-upload qualification repair. It
+  authorizes no install, browser interaction, selection, prompt, upload, model
+  change, Skill execution, `Answer now`, or retry.
 
 ## Acceptance Criteria
 

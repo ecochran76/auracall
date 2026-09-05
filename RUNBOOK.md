@@ -20915,3 +20915,9 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   both exact provider shapes for workbench qualification and Skill
   preflight/proof/cleanup. Checkpoint `aa461805` is provider-free green and not
   installed; no additional selection or retry is authorized.
+- The follow-up source audit found two related provider-free assumptions outside
+  the Skill adapter: capability discovery still required `tabindex` on current
+  drawer rows, and selected-pill proof assumed pills were children of the prompt
+  editor. Revision 9 uses current row semantics and composer-form pill scope,
+  and recognizes the named textarea for local-upload qualification. Checkpoint
+  `138ec354` is green and uninstalled; the live effect budget remains closed.

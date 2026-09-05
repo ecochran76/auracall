@@ -22291,3 +22291,15 @@ browser-stage lifecycle observability, not transcript truncation.
 - Regression rule: a missing legacy editor ID does not prove a missing composer;
   require one of the exact provider selectors plus visible geometry and preserve
   all empty-composer, identity, cleanup, and no-submit gates.
+
+## 2026-09-05 | Keep ChatGPT drawer inventory and selection proof structurally aligned
+
+- Failure mode: the selection path accepted current no-tabindex drawer rows,
+  while capability discovery still filtered them out; selected-pill proof also
+  assumed pills lived inside the prompt editor instead of the composer form.
+- Durable fix: share the exact current drawer-row shape across discovery paths,
+  scope inline selection pills to the active composer form, and qualify local
+  uploads against either exact ChatGPT prompt-editor shape.
+- Regression rule: inventory and selection must recognize the same current row
+  family, and pill proof must never search the whole page or require an editor
+  containment relationship the provider no longer renders.

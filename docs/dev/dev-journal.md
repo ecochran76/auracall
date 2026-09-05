@@ -48826,3 +48826,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   hygiene. The source-built pristine-composer expression returned true on both
   retained home targets. It is pushed but not installed, and no live selection
   was attempted.
+
+## 2026-09-05 | Plan 0334 Revision 9 drawer-proof reconciliation
+
+- A provider-free source audit found capability discovery still required
+  `tabindex` on `.__menu-item` rows even though tool selection already accepted
+  the current no-tabindex drawer. Selected app/tool proof also assumed inline
+  pills were descendants of the prompt editor, which is invalid for the current
+  textarea composer.
+- Capability and direct drawer probes now share the current row selector,
+  selected pills are scoped to the exact composer form, and local-upload
+  qualification accepts the named textarea. Regression assertions cover all
+  three boundaries.
+- Checkpoint `138ec354` passes 247/247 affected tests, typecheck, production
+  build, touched-file lint, and diff hygiene. It is pushed but uninstalled; no
+  browser interaction or selection ran.

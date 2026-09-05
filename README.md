@@ -85,6 +85,8 @@ auracall capabilities --target grok --static --json
 auracall capabilities --target grok --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json
+# ChatGPT discovery accepts current drawer rows without requiring tabindex and
+# reports selected inline tools only from the active composer form.
 
 # Guarded ChatGPT Skill lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 skills list \

@@ -447,14 +447,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: aa461805
+    checkpoint: 138ec354
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
     validation_status: provider-free-passed-live-gated
-    validation_ref: aa461805
+    validation_ref: 138ec354
     integration_receipt: null
-    blocker: Revision 8 is not installed or live accepted; the one fresh install and non-retry canary require explicit authority.
-    disposition: Read-only CDP proved both retained homes have the current named-textarea composer; Revision 8 repairs root qualification and Skill proof provider-free, with 246 affected tests passing and no install or retry authorized.
+    blocker: Revision 9 is not installed or live accepted; the one fresh install and non-retry canary require explicit authority.
+    disposition: Read-only CDP proved both retained homes have the current named-textarea composer; Revisions 8-9 align root, drawer-row, composer-pill, Skill, and upload proof provider-free, with 247 affected tests passing and no install or retry authorized.
     updated_at: 2026-09-05
