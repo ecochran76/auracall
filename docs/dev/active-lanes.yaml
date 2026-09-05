@@ -447,14 +447,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 46198724ff8b0638cbb0fa65dad2a604f82feb1c
+    checkpoint: 53b96ff4404669f28f9bd7c4ac4894c425682926
     remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
     integration: merge
     dependencies: [P20, P22, P24, P26]
     overlaps: []
     validation_status: provider-free-passed
-    validation_ref: 46198724ff8b0638cbb0fa65dad2a604f82feb1c
+    validation_ref: 53b96ff4404669f28f9bd7c4ac4894c425682926
     integration_receipt: null
     blocker: null
-    disposition: Provider-free implementation is accepted and pushed; one exact install plus bounded Shopping and Skill selection cleanup canaries remain.
+    disposition: Provider-free root-readiness repair is accepted and pushed; one replacement install, one discovery, and bounded Shopping and Skill selection cleanup canaries remain.
     updated_at: 2026-09-05
