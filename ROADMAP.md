@@ -4,8 +4,15 @@
 
 ### Current Execution Board
 
-Status: Durable model schema migration provider-free accepted
-Lanes: P01-P07, P09-P15, P17, P19-P25 (integrated); P08, P18 (open)
+Status: Durable model schema installed survey in progress
+Lanes: P01-P07, P09-P15, P17, P19-P25 (integrated); P08, P18, P26 (open)
+
+- Active installed durable-model survey:
+  [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)
+  P26 installs exact integrated P25 once, verifies installed durable-schema
+  bytes, and surveys the existing `wsl-chrome-3` ChatGPT composer and one
+  older-model chat through port `45015` without prompt, upload, model change,
+  navigation, browser launch, or service restart.
 
 - Provider-free accepted durable model schema migration:
   [docs/dev/plans/0332-2026-09-05-durable-model-schema.md](docs/dev/plans/0332-2026-09-05-durable-model-schema.md)

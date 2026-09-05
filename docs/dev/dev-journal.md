@@ -48622,3 +48622,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   DevTools attach, model change, prompt, or live browser claim occurred.
 - Non-forced merge `a0361f66` integrates the accepted revision into current
   `main`; the dirty/conflicted P08/P17 checkout remains untouched.
+
+## 2026-09-05 | Plan 0333 installed durable model survey
+
+- Opened P26 from exact current `origin/main` in isolated worktree
+  `auracall-plan0333-installed-model-survey`; preserved the dirty/conflicted
+  root checkout.
+- Installed metadata still names the Plan 0331 checkout, proving P25 is not yet
+  installed. Current process evidence identifies retained `wsl-chrome-3`
+  Chrome PID `1933` on port `45015`, subject to immediate pre-attach recheck.
+- Effect budget is one user-runtime install and one manual retained-port survey
+  with transient menu/drawer opens only. Prompt, upload, model change,
+  navigation, browser lifecycle, API restart, scheduler/control work, and
+  `Answer now` remain forbidden.

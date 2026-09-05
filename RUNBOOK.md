@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 554 | 2026-09-05
+
+- Opened P26 from exact current `origin/main` in an isolated worktree; the
+  dirty/conflicted P08/P17 checkout remains untouched.
+- Current installed metadata still identifies Plan 0331, while current process
+  evidence identifies retained `wsl-chrome-3` Chrome PID `1933` on port
+  `45015`; both must be revalidated at their respective effect boundaries.
+- The authorized packet permits one user-runtime install and one bounded
+  retained-browser survey. It permits transient composer menu/drawer opens but
+  zero prompt, upload, model selection, navigation, launch, close, API restart,
+  scheduler, completion, materialization, or `Answer now` effect.
+
 ## Turn 553 | 2026-09-05
 
 - Opened P25 from clean current `origin/main` in an isolated worktree; the
