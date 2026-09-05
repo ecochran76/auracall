@@ -106,7 +106,12 @@ describe('buildBrowserConfig', () => {
   test('uses semantic ChatGPT selector metadata for desired model and thinking time', async () => {
     const config = await buildBrowserConfig({
       model: 'gpt-5.1-pro',
-      chatgptSemanticModelSelection: { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'extended' },
+      chatgptSemanticModelSelection: {
+        canonicalSelector: 'chatgpt:reasoning-high',
+        desiredModel: 'GPT-5.6 Sol',
+        apiModel: 'gpt-5.6-sol',
+        thinkingTime: 'extended',
+      },
     });
     expect(config.desiredModel).toBe('GPT-5.6 Sol');
     expect(config.thinkingTime).toBe('extended');
@@ -116,7 +121,12 @@ describe('buildBrowserConfig', () => {
     const config = await buildBrowserConfig({
       model: 'gpt-5.1-pro',
       browserThinkingTime: 'standard',
-      chatgptSemanticModelSelection: { desiredModel: 'GPT-5.6 Sol', thinkingTime: 'extended' },
+      chatgptSemanticModelSelection: {
+        canonicalSelector: 'chatgpt:reasoning-high',
+        desiredModel: 'GPT-5.6 Sol',
+        apiModel: 'gpt-5.6-sol',
+        thinkingTime: 'extended',
+      },
     });
     expect(config.desiredModel).toBe('GPT-5.6 Sol');
     expect(config.thinkingTime).toBe('standard');

@@ -65,7 +65,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 ### CLI Options
 
 - `--engine browser`: enables browser mode (legacy `--browser` remains as an alias for now). Without `--engine`, Aura-Call chooses API when `OPENAI_API_KEY` exists, otherwise browser.
-- `--chatgpt`: shorthand for `--engine browser --model gpt-5.2` (ChatGPT automation).
+- `--chatgpt`: shorthand for `--engine browser --model chatgpt:fast` (ChatGPT automation).
 - `--gemini`: shorthand for `--engine browser --model gemini-3-pro` (Gemini web mode).
 - `--gemini-url`: override the Gemini web URL (e.g., a specific Gem).
 - `--grok-url`: override the Grok web URL (e.g., a project link like `https://grok.com/project/<id>`).
@@ -128,7 +128,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--browser-bundle-files`: bundle all resolved attachments into a single temp file before uploading (only used when uploads are enabled/selected).
 - `--force`: bypass the duplicate prompt guard if an identical prompt is already running. This does not control conversation reuse (a separate policy will handle reuse vs new conversation).
 - sqlite bindings: automatic rebuilds now require `AURACALL_ALLOW_SQLITE_REBUILD=1`. Without it, the CLI logs instructions instead of running `pnpm rebuild` on your behalf.
-- `--model`: the same flag used for API runs is accepted. ChatGPT automation supports **GPT-5.2** variants (Auto/Thinking/Instant/Pro): use `gpt-5.2`, `gpt-5.2-thinking`, `gpt-5.2-instant`, or `gpt-5.2-pro`. Grok automation defaults to `grok-4.20` / `grok` and still accepts explicit legacy `grok-4.1` values through the Grok model picker. Other GPT families still require API mode.
+- `--model`: the same flag used for API runs is accepted. For ChatGPT browser automation, prefer `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`, `chatgpt:reasoning-max`, `chatgpt:premium`, or `chatgpt:legacy`. GPT-5.2 and Sol/Terra/Luna spellings remain compatibility inputs. Grok automation defaults to `grok-4.20` / `grok` and still accepts explicit legacy `grok-4.1` values through the Grok model picker.
 - Source browser profile cookie copying is opt-in. When enabled with
   `--browser-cookie-sync`, failure to copy still fails closed unless the hidden
   `--browser-allow-cookie-errors` escape hatch is intentionally supplied.

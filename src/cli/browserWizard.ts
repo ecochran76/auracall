@@ -347,7 +347,7 @@ function dedupeBrowserWizardChoices(choices: BrowserWizardChoice[]): BrowserWiza
 
 function defaultWizardModelForTarget(target: BrowserWizardTarget): string {
   const defaultModelByTarget: Record<BrowserWizardTarget, string> = {
-    chatgpt: 'gpt-5.2',
+    chatgpt: 'chatgpt:fast',
     gemini: 'gemini-3-pro',
     grok: 'grok-4.20',
   };

@@ -532,7 +532,7 @@ export const ConfigSchema = z.object({
   runtimeProfiles: RuntimeProfilesConfigSchema.optional(),
   // Core
   engine: z.enum(['api', 'browser']).optional(),
-  model: z.string().default('gpt-5.2-pro'),
+  model: z.string().default('openai:frontier'),
   prompt: z.string().optional(),
   promptSuffix: z.string().optional(),
   

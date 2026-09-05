@@ -676,7 +676,7 @@ program
   .option('-s, --slug <words>', 'Custom session slug (3-5 words).')
   .option(
     '-m, --model <model>',
-    'Model to target (API default: gpt-5.1-pro stable alias). Browser ChatGPT runs also support current semantic selectors like chatgpt:sol-high, chatgpt:terra, and chatgpt:luna.',
+    'Model to target (API default: openai:frontier, currently GPT-6 Astra). Browser ChatGPT runs support durable selectors such as chatgpt:fast, chatgpt:reasoning-high, and chatgpt:premium.',
     normalizeModelOption,
   )
   .addOption(
@@ -690,7 +690,7 @@ program
   .addOption(
     new Option(
       '--chatgpt',
-      'Use ChatGPT browser automation (shorthand for --engine browser --model chatgpt:instant).',
+      'Use ChatGPT browser automation (shorthand for --engine browser --model chatgpt:fast).',
     ),
   )
   .addOption(
