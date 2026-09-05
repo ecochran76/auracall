@@ -91,6 +91,10 @@ auracall --profile wsl-chrome-3 skills list \
   --expected-account <chatgpt-email> --json
 auracall --profile wsl-chrome-3 skills show <32-hex-skill-id> \
   --expected-account <chatgpt-email> --json
+# Select the exact Skill for a new empty composer, verify it, and clear it again.
+# This does not submit a prompt or prove Skill invocation.
+auracall --profile wsl-chrome-3 skills select <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --yes --json
 # Mutations additionally require --yes. Create returns the exact stable ID;
 # update requires that ID plus the exact prior SKILL.md SHA-256 from show.
 auracall --profile wsl-chrome-3 skills create \
@@ -1905,7 +1909,7 @@ npx -y auracall auracall-mcp
 | `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (current keeps the active model; ignore skips the picker). |
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
 | `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT effort intensity in browser mode. In the current horizontal Power slider, the four AuraCall levels map to Instant, Medium, High, and Extra High. Prefer `--model chatgpt:reasoning-high` or `--model chatgpt:reasoning-max`; provider-version spellings remain compatibility aliases. |
-| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on such as `web-search`, `canvas`, or `deep-research` from the current `Add files and more` workbench selector. File-source rows (`Add photos & files`, `Add from library`) are rejected as tools. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. |
+| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on by durable ID, such as `chatgpt.commerce.shopping`, `chatgpt.search.web_search`, or `chatgpt.research.deep_research`; legacy labels remain aliases. File-source rows (`Add photos & files`, `Add from library`) are attachments and are rejected as tools. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. |
 | `--browser-deep-research-plan-action <start\|edit>` | Control ChatGPT Deep Research after the provider plan appears. `start` accepts the plan; `edit` opens the plan editor before the timed auto-start window, keeps the managed browser open, and stores review evidence including the iframe/DOM edit target and passive screenshot path. |
 | `--browser-port <port>` | Force a fixed Chrome DevTools port (advanced/debugging). Normal WSL -> Windows launches default to auto-discovery instead. |
 | `--browser-inline-cookies[(-file)] <payload|path>` | Supply cookies without Chrome/Keychain (browser). |

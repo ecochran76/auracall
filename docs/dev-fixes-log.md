@@ -22229,3 +22229,18 @@ browser-stage lifecycle observability, not transcript truncation.
   provider API IDs, and provider DOM matchers.
 - Guard: the CLI subprocess test now requires `chatgpt:reasoning-high` in
   handoff help and rejects `chatgpt:pro-extended`.
+
+## 2026-09-05 | Separate provider labels, capability IDs, and selection semantics
+
+- Failure mode: current ChatGPT drawer labels changed and added Shopping while
+  capability discovery could attach a retained project chat instead of the root
+  composer; Skill inventory had stable IDs but no bounded selection contract.
+- Durable fix: publish semantic capability IDs with provider labels as aliases,
+  force discovery through the configured root URL, and model Skill detail
+  selection separately from prompt invocation.
+- Guard: file-source rows stay `composer_attachment`, tool selection resolves
+  durable IDs, and Skill selection requires exact account, complete inventory,
+  exact 32-hex ID, explicit confirmation, empty-composer proof, and cleanup.
+- Regression rule: a successful `Try in chat` click never proves Skill
+  invocation; failure to observe selection or cleanup is `outcome-unknown` and
+  must not be retried.

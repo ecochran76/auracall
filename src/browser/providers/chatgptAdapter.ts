@@ -354,6 +354,7 @@ const CHATGPT_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens("chat
 	web_search: ["search the web", "web search"],
 	deep_research: ["deep research"],
 	company_knowledge: ["company knowledge"],
+	shopping: ["shopping"],
 });
 const CHATGPT_ARTIFACT_KIND_EXTENSIONS = resolveBundledServiceArtifactKindExtensions("chatgpt", {
 	spreadsheet: ["csv", "tsv", "xls", "xlsx", "ods"],
@@ -917,6 +918,8 @@ type ChatgptFeatureProbe = {
 	web_search?: boolean | null;
 	deep_research?: boolean | null;
 	company_knowledge?: boolean | null;
+	shopping?: boolean | null;
+	composer_tools?: string[] | null;
 	apps?: string[] | null;
 	composer_mode?: "chat" | "work" | null;
 	composer_apps?: ChatgptComposerAppProbe[] | null;
@@ -5815,6 +5818,10 @@ function buildChatgptFeatureProbeExpression(): string {
 	      company_knowledge: composerDetails.composer_menu_observed
 	        ? composerDetails.composer_tools.some((label) => lower(label) === 'company knowledge')
 	        : Boolean(flags.company_knowledge),
+	      shopping: composerDetails.composer_menu_observed
+	        ? composerDetails.composer_tools.some((label) => lower(label) === 'shopping')
+	        : Boolean(flags.shopping),
+	      composer_tools: composerDetails.composer_tools,
 	      apps: composerDetails.composer_apps
 	        .filter((entry) => entry.selection_state === 'selected' || entry.selection_state === 'selectable')
 	        .map((entry) => lower(entry.name).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')),
@@ -6002,6 +6009,8 @@ function normalizeChatgptFeatureSignature(
 		deep_research: typeof probe.deep_research === "boolean" ? probe.deep_research : undefined,
 		company_knowledge:
 			typeof probe.company_knowledge === "boolean" ? probe.company_knowledge : undefined,
+		shopping: typeof probe.shopping === "boolean" ? probe.shopping : undefined,
+		composer_tools: normalizeUiTextList(probe.composer_tools),
 		apps,
 		composer_mode:
 			probe.composer_mode === "chat" || probe.composer_mode === "work"
@@ -6016,6 +6025,8 @@ function normalizeChatgptFeatureSignature(
 		normalized.web_search !== undefined ||
 		normalized.deep_research !== undefined ||
 		normalized.company_knowledge !== undefined ||
+		normalized.shopping !== undefined ||
+		normalized.composer_tools.length > 0 ||
 		normalized.apps.length > 0 ||
 		normalized.composer_mode !== undefined ||
 		normalized.composer_apps.length > 0 ||
@@ -6321,6 +6332,8 @@ async function readChatgptFeatureSignature(
 		probe.web_search = composerTools.has("web search");
 		probe.deep_research = composerTools.has("deep research");
 		probe.company_knowledge = composerTools.has("company knowledge");
+		probe.shopping = composerTools.has("shopping");
+		probe.composer_tools = composerSurface.composer_tools;
 	}
 	if (!pluginDiscovery && options?.includeInstalledApps === true && locationHref) {
 		try {

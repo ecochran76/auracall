@@ -187,8 +187,9 @@ function normalizeComposerToolLabel(value: string): string {
 }
 
 function resolveComposerToolCandidates(requestedTool: string): string[] {
+  const durableSelector = requestedTool.trim().toLowerCase();
   const normalized = normalizeComposerToolLabel(requestedTool);
-  const aliases = COMPOSER_TOOL_ALIASES[normalized] ?? [];
+  const aliases = COMPOSER_TOOL_ALIASES[durableSelector] ?? COMPOSER_TOOL_ALIASES[normalized] ?? [];
   return Array.from(
     new Set([normalized, ...aliases.map((entry) => normalizeComposerToolLabel(entry)).filter(Boolean)]),
   ).filter(Boolean);

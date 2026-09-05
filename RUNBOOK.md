@@ -20812,3 +20812,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   root-composer discovery, and exact-ID Skill `Try in chat` selection with
   composer cleanup. Provider-free red/green precedes one install and one
   zero-prompt live canary per selection surface.
+- Provider-free implementation is accepted: Shopping and both current file
+  rows have durable capability IDs, live discovery is root-composer-bound, and
+  `skills select` requires exact account, complete inventory, exact stable ID,
+  and `--yes` before one `Try in chat` dispatch. It restores the original route
+  and requires empty-composer cleanup evidence.
+- Evidence: affected 250/250, typecheck, production build, lint (existing
+  warning baseline only), static CLI readback, JSON validation, diff hygiene,
+  and plan-library audit with zero validation errors. The full suite passed
+  3,073 tests and exposed one unrelated stale raw-DevTools allowlist entry.
+- CodeGraph does not index the isolated Plan 0334 worktree; exact source
+  readback plus compilation/tests are the accepted native fallback. The next
+  gate is the single authorized install, then one Shopping and one Skill
+  non-submitting selection/cleanup canary.

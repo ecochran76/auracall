@@ -93,8 +93,10 @@ export function createBrowserWorkbenchCapabilityDiscovery(
           }
         : request.provider === 'chatgpt'
           ? {
+              configuredUrl: 'https://chatgpt.com/',
               includeInstalledApps: true,
               preserveActiveTab: true,
+              tabLifecycle: 'retain-new',
               mutationSourcePrefix: 'workbench:chatgpt-app-discovery',
             }
           : undefined,

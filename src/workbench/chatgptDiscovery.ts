@@ -4,6 +4,8 @@ interface ChatgptFeatureObject {
   web_search?: unknown;
   deep_research?: unknown;
   company_knowledge?: unknown;
+  shopping?: unknown;
+  composer_tools?: unknown;
   create_image?: unknown;
   image_generation?: unknown;
   image?: unknown;
@@ -74,6 +76,9 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
   }
   const signals = collectChatgptSignals(parsed);
   const capabilities: WorkbenchCapability[] = [];
+  const composerToolLabels = new Set(signals.composerTools.map(normalizeToolLabel));
+  const observedToolLabel = (label: string): string | null =>
+    composerToolLabels.has(normalizeToolLabel(label)) ? label : null;
 
   if (signals.webSearch) {
     capabilities.push({
@@ -154,6 +159,66 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
       observedAt,
       source: 'browser_discovery',
       metadata: { featureSignatureSignal: 'create_image' },
+    });
+  }
+
+  const shoppingLabel = observedToolLabel('Shopping');
+  if (signals.shopping || shoppingLabel) {
+    capabilities.push({
+      id: 'chatgpt.commerce.shopping',
+      provider: 'chatgpt',
+      providerLabels: [shoppingLabel ?? 'Shopping'],
+      category: 'other',
+      invocationMode: 'tool_drawer_selection',
+      surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+      availability: 'available',
+      stability: 'observed',
+      requiredInputs: commonPromptInput,
+      output: { artifactTypes: ['generated'] },
+      safety: { mayUseExternalAccount: true },
+      observedAt,
+      source: 'browser_discovery',
+      metadata: { featureSignatureSignal: shoppingLabel ? 'composer_tools' : 'shopping' },
+    });
+  }
+
+  const localUploadLabel = observedToolLabel('Add photos & files');
+  if (localUploadLabel) {
+    capabilities.push({
+      id: 'chatgpt.files.local_upload',
+      provider: 'chatgpt',
+      providerLabels: [localUploadLabel],
+      category: 'file',
+      invocationMode: 'composer_attachment',
+      surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+      availability: 'available',
+      stability: 'observed',
+      requiredInputs: [{ name: 'file', required: true, description: 'Local file attached to the active composer.' }],
+      output: { artifactTypes: ['generated'] },
+      safety: {},
+      observedAt,
+      source: 'browser_discovery',
+      metadata: { featureSignatureSignal: 'composer_tools' },
+    });
+  }
+
+  const libraryLabel = observedToolLabel('Add from library');
+  if (libraryLabel) {
+    capabilities.push({
+      id: 'chatgpt.files.library',
+      provider: 'chatgpt',
+      providerLabels: [libraryLabel],
+      category: 'file',
+      invocationMode: 'composer_attachment',
+      surfaces: ['browser_service', 'local_api', 'mcp'],
+      availability: 'available',
+      stability: 'observed',
+      requiredInputs: [],
+      output: { artifactTypes: ['generated'] },
+      safety: { requiresUserConsent: true },
+      observedAt,
+      source: 'browser_discovery',
+      metadata: { featureSignatureSignal: 'composer_tools' },
     });
   }
 
@@ -433,6 +498,8 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
   deepResearch: boolean;
   companyKnowledge: boolean;
   createImage: boolean;
+  shopping: boolean;
+  composerTools: string[];
   apps: string[];
   composerMode?: 'chat' | 'work';
   composerApps: ChatgptComposerAppSignal[];
@@ -457,6 +524,8 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     deepResearch: false,
     companyKnowledge: false,
     createImage: false,
+    shopping: false,
+    composerTools: new Set<string>(),
     apps: new Set<string>(),
     composerMode: undefined as 'chat' | 'work' | undefined,
     composerApps: new Map<string, ChatgptComposerAppSignal>(),
@@ -482,6 +551,8 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     deepResearch: signals.deepResearch,
     companyKnowledge: signals.companyKnowledge,
     createImage: signals.createImage,
+    shopping: signals.shopping,
+    composerTools: Array.from(signals.composerTools),
     apps: Array.from(signals.apps).sort(),
     composerMode: signals.composerMode,
     composerApps: [...signals.composerApps.values()].sort((left, right) => left.name.localeCompare(right.name)),
@@ -502,6 +573,8 @@ function collectFromObject(
     deepResearch: boolean;
     companyKnowledge: boolean;
     createImage: boolean;
+    shopping: boolean;
+    composerTools: Set<string>;
     apps: Set<string>;
     composerMode?: 'chat' | 'work';
     composerApps: Map<string, ChatgptComposerAppSignal>;
@@ -525,10 +598,12 @@ function collectFromObject(
   if (source.web_search === true) signals.webSearch = true;
   if (source.deep_research === true) signals.deepResearch = true;
   if (source.company_knowledge === true) signals.companyKnowledge = true;
+  if (source.shopping === true) signals.shopping = true;
   if (source.create_image === true || source.image_generation === true || source.image === true) {
     signals.createImage = true;
   }
   collectStringArray(source.apps, signals.apps);
+  collectStringArray(source.composer_tools, signals.composerTools);
   if (source.composer_mode === 'chat' || source.composer_mode === 'work') {
     signals.composerMode = source.composer_mode;
   }
@@ -547,6 +622,10 @@ function normalizeAppId(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
+}
+
+function normalizeToolLabel(value: string): string {
+  return value.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function normalizeConnectorIdentity(value: string): string {

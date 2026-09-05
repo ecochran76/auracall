@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-	executeChatgptSkillOperation,
-	loadChatgptSkillSource,
 	type ChatgptSkillAdapter,
 	type ChatgptSkillState,
+	executeChatgptSkillOperation,
+	loadChatgptSkillSource,
 } from "../../src/cli/chatgptSkillsCommand.js";
 
 function state(overrides: Partial<ChatgptSkillState> = {}): ChatgptSkillState {
@@ -42,6 +42,7 @@ function adapterWith(initial: ChatgptSkillState): ChatgptSkillAdapter {
 	return {
 		readState: vi.fn().mockResolvedValue(initial),
 		readSkill: vi.fn(),
+		select: vi.fn(),
 		create: vi.fn(),
 		update: vi.fn(),
 		delete: vi.fn(),
@@ -65,6 +66,7 @@ describe("executeChatgptSkillOperation", () => {
 		const adapter: ChatgptSkillAdapter = {
 			readState: vi.fn().mockResolvedValue(state()),
 			readSkill: vi.fn(),
+			select: vi.fn(),
 			create: vi.fn(),
 			update: vi.fn(),
 			delete: vi.fn(),
@@ -122,6 +124,42 @@ describe("executeChatgptSkillOperation", () => {
 		).rejects.toThrow("exact 32-hex skill ID");
 	});
 
+	it("selects one exact stable skill id only after explicit confirmation", async () => {
+		const adapter = adapterWith(state());
+		vi.mocked(adapter.select).mockResolvedValue({
+			status: "completed",
+			message: "selected and cleaned",
+			skillId: "1".repeat(32),
+			currentUrl: "https://chatgpt.com/",
+		});
+
+		await expect(
+			executeChatgptSkillOperation(
+				{
+					action: "select",
+					expectedAccount: "owner@example.com",
+					confirmed: false,
+					skillId: "1".repeat(32),
+				},
+				adapter,
+			),
+		).rejects.toThrow("requires --yes");
+		expect(adapter.select).not.toHaveBeenCalled();
+
+		const result = await executeChatgptSkillOperation(
+			{
+				action: "select",
+				expectedAccount: "owner@example.com",
+				confirmed: true,
+				skillId: "1".repeat(32),
+			},
+			adapter,
+		);
+		expect(result).toMatchObject({ action: "select", status: "completed" });
+		expect(adapter.select).toHaveBeenCalledWith(state().skills[0]);
+		expect(adapter.readSkill).not.toHaveBeenCalled();
+	});
+
 	it("proves create by returned fresh id and exact source hash", async () => {
 		const adapter = adapterWith(state({ skills: [] }));
 		const source = {
@@ -135,18 +173,20 @@ describe("executeChatgptSkillOperation", () => {
 			message: "created",
 			skillId: "3".repeat(32),
 		});
-		vi.mocked(adapter.readState).mockResolvedValueOnce(state({ skills: [] })).mockResolvedValueOnce(
-			state({
-				skills: [
-					{
-						...state().skills[0],
-						id: "3".repeat(32),
-						name: "Canary",
-						contentHash: source.contentHash,
-					},
-				],
-			}),
-		);
+		vi.mocked(adapter.readState)
+			.mockResolvedValueOnce(state({ skills: [] }))
+			.mockResolvedValueOnce(
+				state({
+					skills: [
+						{
+							...state().skills[0],
+							id: "3".repeat(32),
+							name: "Canary",
+							contentHash: source.contentHash,
+						},
+					],
+				}),
+			);
 		vi.mocked(adapter.readSkill).mockResolvedValue({
 			...state().skills[0],
 			id: "3".repeat(32),
@@ -196,9 +236,9 @@ describe("executeChatgptSkillOperation", () => {
 		const adapter = adapterWith(state());
 		vi.mocked(adapter.readSkill).mockResolvedValueOnce(state().skills[0]);
 		vi.mocked(adapter.delete).mockResolvedValue({ status: "completed", message: "deleted" });
-		vi.mocked(adapter.readState).mockResolvedValueOnce(state()).mockResolvedValueOnce(
-			state({ skills: state().skills.slice(1) }),
-		);
+		vi.mocked(adapter.readState)
+			.mockResolvedValueOnce(state())
+			.mockResolvedValueOnce(state({ skills: state().skills.slice(1) }));
 		const result = await executeChatgptSkillOperation(
 			{
 				action: "delete",

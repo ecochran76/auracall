@@ -48,6 +48,11 @@ human-submitted existing tab with the diagnostic readback probe.
 
 ### ChatGPT Skill CRUD (explicitly authorized only)
 
+- A separately authorized non-submitting selection smoke may use
+  `skills select <id> --expected-account <email> --yes --json` once. It must
+  return only after proving the exact selected Skill on an empty composer and
+  clearing that transient selection; `outcome-unknown` is a no-retry stop.
+
 - Run `skills list --expected-account <email> --json` first and require
   `inventoryComplete: true` on the exact AuraCall runtime profile.
 - Create one uniquely named disposable fixture with `--yes`, retain the returned
@@ -56,8 +61,8 @@ human-submitted existing tab with the diagnostic readback probe.
   then delete that same ID once with `--yes` and prove it absent from a fresh
   complete list.
 - Stop without retry on CAPTCHA, MFA, identity ambiguity, incomplete inventory,
-  missing exact ID, hash drift, or `outcome-unknown`. Never click `Try in chat`,
-  send a prompt, or click `Answer now` during this test.
+  missing exact ID, hash drift, or `outcome-unknown`. During the CRUD test,
+  never click `Try in chat`; no Skill test sends a prompt or clicks `Answer now`.
 
 ### Gemini browser mode (Gemini web / cookies)
 

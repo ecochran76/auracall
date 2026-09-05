@@ -174,7 +174,9 @@ first four positions respectively and verify the selected slider value.
 
 On the current Chat workbench, `Add files and more` opens one searchable
 popover containing both file sources and tools. Use `--browser-composer-tool`
-only for tool/app rows such as `web-search`, `canvas`, or `deep-research`; use
+only for tool/app rows through durable IDs such as
+`chatgpt.commerce.shopping`, `chatgpt.search.web_search`, or
+`chatgpt.research.deep_research`; legacy labels remain aliases. Use
 `--file` for local paths. AuraCall prefers `Add photos & files / Upload from
 computer`; if that text drifts, it accepts the unrestricted `#upload-files`
 input only when the same active composer contains the prompt and the exact

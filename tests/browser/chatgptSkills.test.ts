@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	buildChatgptSkillEditorProbeExpression,
+	buildChatgptSkillSelectionProbeExpression,
 	deriveChatgptSkillDetail,
 	deriveChatgptSkillState,
 	hashChatgptSkillInstructions,
@@ -31,7 +32,11 @@ describe("ChatGPT Skill provider contracts", () => {
 		});
 		expect(result.inventoryComplete).toBe(true);
 		expect(result.skills).toEqual([
-			expect.objectContaining({ id: "1".repeat(32), collection: "installed", reviewStatus: "unknown" }),
+			expect.objectContaining({
+				id: "1".repeat(32),
+				collection: "installed",
+				reviewStatus: "unknown",
+			}),
 			expect.objectContaining({
 				id: "2".repeat(32),
 				collection: "created-by-me",
@@ -50,10 +55,7 @@ describe("ChatGPT Skill provider contracts", () => {
 		expect(
 			normalizeChatgptSkillInventoryPayloads({
 				installed: {
-					hazelnuts: [
-						{ id: "1".repeat(32), name: "same-name", display_name: "Same" },
-						shared,
-					],
+					hazelnuts: [{ id: "1".repeat(32), name: "same-name", display_name: "Same" }, shared],
 				},
 				created: { hazelnuts: [shared] },
 			}),
@@ -100,7 +102,9 @@ describe("ChatGPT Skill provider contracts", () => {
 		);
 		expect(readChatgptSkillIdFromUrl("https://chatgpt.com/skills?skill_id=Canary")).toBeNull();
 		expect(readChatgptSkillIdFromUrl("https://chatgpt.com/skills/editor/Canary")).toBeNull();
-		expect(readChatgptSkillIdFromUrl(`https://example.com/skills?skill_id=${"b".repeat(32)}`)).toBeNull();
+		expect(
+			readChatgptSkillIdFromUrl(`https://example.com/skills?skill_id=${"b".repeat(32)}`),
+		).toBeNull();
 	});
 
 	it("builds an executable editor probe that preserves CodeMirror line breaks", () => {
@@ -145,5 +149,47 @@ describe("ChatGPT Skill provider contracts", () => {
 			),
 		).toBe(false);
 		expect(isChatgptSkillAbsentFromInventory({ complete: false, entries: [] }, id)).toBe(false);
+	});
+
+	it("binds selection proof to an empty composer and the exact skill identity", () => {
+		const id = "f".repeat(32);
+		const skillMarker = {
+			getAttribute: (name: string) =>
+				name === "data-skill-id" ? id : name === "data-skill-name" ? "Canary" : null,
+			textContent: "Canary",
+			getBoundingClientRect: () => ({ width: 120, height: 24 }),
+		};
+		const editor = {
+			innerText: "",
+			textContent: "",
+			getBoundingClientRect: () => ({ width: 400, height: 80 }),
+			closest: () => composer,
+		};
+		const composer = {
+			querySelectorAll: () => [skillMarker],
+			getBoundingClientRect: () => ({ width: 500, height: 120 }),
+		};
+		const document = {
+			querySelector: (selector: string) => (selector === "#prompt-textarea" ? editor : null),
+			querySelectorAll: () => [skillMarker],
+		};
+		const evaluate = new Function(
+			"document",
+			"location",
+			"HTMLElement",
+			`return ${buildChatgptSkillSelectionProbeExpression({ id, name: "Canary" })}`,
+		);
+		expect(
+			evaluate(
+				document,
+				{ origin: "https://chatgpt.com", pathname: "/", href: "https://chatgpt.com/" },
+				Object,
+			),
+		).toEqual({
+			selected: true,
+			skillId: id,
+			skillName: "Canary",
+			composerEmpty: true,
+		});
 	});
 });

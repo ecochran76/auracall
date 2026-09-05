@@ -55,6 +55,7 @@ export interface ChatgptSkillMutationOutcome {
 export interface ChatgptSkillAdapter {
 	readState(): Promise<ChatgptSkillState>;
 	readSkill(id: string): Promise<ChatgptSkill | null>;
+	select(skill: ChatgptSkill): Promise<ChatgptSkillMutationOutcome>;
 	create(source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome>;
 	update(skill: ChatgptSkill, source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome>;
 	delete(skill: ChatgptSkill): Promise<ChatgptSkillMutationOutcome>;
@@ -76,6 +77,7 @@ export interface ChatgptSkillCliDependencies {
 export type ChatgptSkillOperationInput =
 	| { action: "list"; expectedAccount: string }
 	| { action: "show"; expectedAccount: string; skillId: string }
+	| { action: "select"; expectedAccount: string; confirmed: boolean; skillId: string }
 	| {
 			action: "create";
 			expectedAccount: string;
@@ -101,7 +103,7 @@ export type ChatgptSkillOperationResult =
 	| { action: "list"; status: "observed"; state: ChatgptSkillState }
 	| { action: "show"; status: "observed"; state: ChatgptSkillState; skill: ChatgptSkill }
 	| {
-			action: "create" | "update" | "delete";
+			action: "select" | "create" | "update" | "delete";
 			status: ChatgptSkillMutationOutcome["status"];
 			state: ChatgptSkillState;
 			outcome: ChatgptSkillMutationOutcome;
@@ -126,6 +128,16 @@ export async function executeChatgptSkillOperation(
 	}
 	if (!input.confirmed) {
 		throw new Error(`ChatGPT skill ${input.action} requires --yes.`);
+	}
+	if (input.action === "select") {
+		const skillId = assertExactSkillId(input.skillId);
+		const matches = state.skills.filter((skill) => skill.id === skillId);
+		if (matches.length !== 1) {
+			throw new Error(`ChatGPT skill ${skillId} was not found once in the complete inventory.`);
+		}
+		const skill = matches[0];
+		const outcome = await adapter.select(skill);
+		return { action: "select", status: outcome.status, state, outcome, skill };
 	}
 	if (input.action === "create") {
 		assertSkillSource(input.source);
@@ -185,7 +197,9 @@ export async function loadChatgptSkillSource(input: {
 	const sourceStat = await stat(sourcePath);
 	const skillPath = sourceStat.isDirectory() ? path.join(sourcePath, "SKILL.md") : sourcePath;
 	if (!sourceStat.isDirectory() && path.basename(skillPath).toLowerCase() !== "skill.md") {
-		throw new Error("ChatGPT skill source must be a SKILL.md file or a directory containing SKILL.md.");
+		throw new Error(
+			"ChatGPT skill source must be a SKILL.md file or a directory containing SKILL.md.",
+		);
 	}
 	const skillLinkStat = await lstat(skillPath);
 	const skillStat = await stat(skillPath);
@@ -235,9 +249,13 @@ export function formatChatgptSkillOperationResult(result: ChatgptSkillOperationR
 			...header,
 			`Skills: ${result.state.skills.length}`,
 			...result.state.skills.map((skill) =>
-				[skill.id, skill.name, skill.collection, skill.reviewStatus, skill.contentHash ?? "hash unknown"].join(
-					" | ",
-				),
+				[
+					skill.id,
+					skill.name,
+					skill.collection,
+					skill.reviewStatus,
+					skill.contentHash ?? "hash unknown",
+				].join(" | "),
 			),
 		].join("\n");
 	}
@@ -286,7 +304,9 @@ async function readExactSkill(adapter: ChatgptSkillAdapter, value: string): Prom
 }
 
 function assertExactSkillId(value: string | null | undefined): string {
-	const id = String(value ?? "").trim().toLowerCase();
+	const id = String(value ?? "")
+		.trim()
+		.toLowerCase();
 	if (!/^[a-f0-9]{32}$/.test(id)) {
 		throw new Error("ChatGPT Skill operations require an exact 32-hex skill ID.");
 	}
@@ -295,7 +315,8 @@ function assertExactSkillId(value: string | null | undefined): string {
 
 function assertSkillSource(source: ChatgptSkillSource): void {
 	if (!source.name.trim()) throw new Error("ChatGPT skill source requires a name.");
-	if (!source.instructions.trim()) throw new Error("ChatGPT skill source requires SKILL.md content.");
+	if (!source.instructions.trim())
+		throw new Error("ChatGPT skill source requires SKILL.md content.");
 	assertSha256(source.contentHash, "source content hash");
 }
 

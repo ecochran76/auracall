@@ -11,6 +11,14 @@ import {
 
 describe('chatgpt composer tool selection', () => {
   test('normalizes aliases to the current visible tool labels', () => {
+    expect(resolveComposerToolCandidatesForTest('chatgpt.commerce.shopping')).toEqual([
+      'chatgpt commerce shopping',
+      'shopping',
+    ]);
+    expect(resolveComposerToolCandidatesForTest('chatgpt.search.web_search')).toEqual([
+      'chatgpt search web search',
+      'web search',
+    ]);
     expect(resolveComposerToolCandidatesForTest('web-search')).toEqual(['web search']);
     expect(resolveComposerToolCandidatesForTest('search')).toEqual(['search', 'web search']);
     expect(resolveComposerToolCandidatesForTest('research')).toEqual(['research', 'deep research']);
@@ -38,6 +46,13 @@ describe('chatgpt composer tool selection', () => {
   });
 
   test('classifies tools as top-level or More submenu choices', () => {
+    expect(
+      resolveComposerToolLocationForTest('chatgpt.commerce.shopping', [
+        'create image',
+        'shopping',
+        'web search',
+      ]),
+    ).toEqual({ location: 'top', label: 'shopping' });
     expect(
       resolveComposerToolLocationForTest('web-search', ['company knowledge', 'create image', 'deep research', 'web search', 'more']),
     ).toEqual({ location: 'top', label: 'web search' });

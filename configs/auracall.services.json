@@ -113,6 +113,9 @@
           "deep_research": [
             "deep research"
           ],
+          "shopping": [
+            "shopping"
+          ],
           "company_knowledge": [
             "company knowledge"
           ],
@@ -177,6 +180,18 @@
       },
       "composer": {
         "aliases": {
+          "chatgpt.commerce.shopping": [
+            "shopping"
+          ],
+          "chatgpt.media.create_image": [
+            "create image"
+          ],
+          "chatgpt.research.deep_research": [
+            "deep research"
+          ],
+          "chatgpt.search.web_search": [
+            "web search"
+          ],
           "search": [
             "web search"
           ],
@@ -235,6 +250,7 @@
         "knownLabels": [
           "create image",
           "deep research",
+          "shopping",
           "web search",
           "study and learn",
           "agent mode",
@@ -256,6 +272,7 @@
           "company knowledge",
           "create image",
           "deep research",
+          "shopping",
           "web search"
         ],
         "moreLabels": [

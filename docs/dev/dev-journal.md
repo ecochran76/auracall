@@ -48697,3 +48697,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   install, one Shopping selection/cleanup, and one exact-ID Skill `Try in chat`
   selection/cleanup. No prompt, upload, model change, or Skill execution is
   authorized.
+- Provider-free RED reproduced seven missing contracts: root-tab discovery,
+  current static/discovered drawer rows, durable Shopping alias/location, Skill
+  selection proof, and the guarded CLI action. The repaired cone is green at
+  250/250 with typecheck, build, lint, CLI/static readback, JSON/diff hygiene,
+  and zero plan-library validation errors.
+- Skill capability reporting now uses `skill_detail_selection`; this describes
+  exact-ID preparation of an empty composer and deliberately does not claim
+  prompt submission or invocation. Selection restores the original ChatGPT
+  route and requires observed empty-composer cleanup even on failure.
+- The full suite passed 3,073 tests and retained one unrelated current-main
+  failure: the raw-DevTools mutation allowlist still expects
+  `scripts/observe-chatgpt-tool-approval.ts`, whose current source no longer
+  contains a direct navigation mutation. This slice does not alter that debt.
+- The Plan 0334 worktree is not indexed by CodeGraph; exact source readback,
+  typecheck, and tests supplied the documented fallback. Install and the two
+  bounded live canaries remain.

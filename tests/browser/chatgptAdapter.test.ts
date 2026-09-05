@@ -252,6 +252,8 @@ describe("normalizeChatgptFeatureSignature", () => {
 			web_search: false,
 			deep_research: true,
 			company_knowledge: false,
+			shopping: true,
+			composer_tools: ["Add photos & files", "Shopping"],
 			apps: [],
 			composer_mode: "work",
 			composer_apps: [],
@@ -271,6 +273,8 @@ describe("normalizeChatgptFeatureSignature", () => {
 
 		expect(JSON.parse(signature ?? "null")).toMatchObject({
 			deep_research: true,
+			shopping: true,
+			composer_tools: ["Add photos & files", "Shopping"],
 			composer_mode: "work",
 			model_controls: {
 				visible: true,

@@ -35,6 +35,14 @@ prompt.
   behavior, not the missing current-drawer and Skill-selection contracts.
 - Graphiti is healthy but its atlas returned no relevant AuraCall memory cloud;
   current repository, installed runtime, and DevTools evidence are authoritative.
+- Provider-free implementation is green: durable Shopping and current file-row
+  identities, root-composer discovery, exact-ID Skill selection/cleanup, CLI,
+  feature schemas, and documentation are implemented. The affected cone passes
+  250/250, typecheck/build/lint pass, and the full suite passes 3,073 tests with
+  one unrelated current-main allowlist failure.
+- The new worktree is not present in the current CodeGraph index, so structural
+  readback used the exact changed source plus typecheck/tests as the documented
+  native fallback. Live install and bounded canaries remain.
 
 ## Scope
 
@@ -74,9 +82,9 @@ prompt.
 
 ## Acceptance Criteria
 
-- [ ] A failing provider-free regression reproduces each repaired defect before
+- [x] A failing provider-free regression reproduces each repaired defect before
       production changes.
-- [ ] Static and discovered capability reports expose durable current-drawer
+- [x] Static and discovered capability reports expose durable current-drawer
       identities, including Shopping, without treating file rows as tools.
 - [ ] Live discovery chooses the root composer deterministically when a project
       conversation is also retained.
