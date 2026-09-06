@@ -1,5 +1,7 @@
 # Testing quickstart
 
+- Skill invocation continuity: `pnpm vitest run tests/browser/chatgptSkillRun.test.ts tests/browser/chatgptSkills.test.ts tests/browser/promptComposer.test.ts tests/cli/chatgptSkillsCommand.test.ts`. Proves same-client selection and submission, pre-send account/marker rejection, uncertain-send preservation, and unchanged non-submitting selection. Live acceptance separately requires provider evidence of actual Skill loading.
+
 - Provider-free runtime work must bracket broad `pnpm test` runs with exact
   managed-browser process/port checks or set an isolated AuraCall home. A
   2026-08-09 broad run coincided with an unexpected launch of the configured

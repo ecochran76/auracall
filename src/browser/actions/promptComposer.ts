@@ -247,6 +247,7 @@ export async function submitPrompt(
 		baselineTurns?: number | null;
 		inputTimeoutMs?: number | null;
 		onPromptDispatched?: () => void | Promise<void>;
+		beforeSend?: () => void | Promise<void>;
 	},
 	prompt: string,
 	logger: BrowserLogger,
@@ -413,6 +414,7 @@ export async function submitPrompt(
 	}
 
 	await waitForComposerReadyToSubmit(runtime, Math.max(8_000, deps.inputTimeoutMs ?? 0));
+	await deps.beforeSend?.();
 	const clicked = await attemptSendButton(runtime, logger, deps?.attachmentNames);
 	if (!clicked) {
 		await input.dispatchKeyEvent({

@@ -1,5 +1,9 @@
 # RUNBOOK
 
+## Turn 569 | 2026-09-05
+
+- P29 implements exact-ID `skills run` with same-tab selection and submission. Focused validation passes 376 tests; build/typecheck and planning checks pass. Install and one synthetic live prompt are next under user authority.
+
 ## Turn 568 | 2026-09-05
 
 - One authorized Skill execution smoke on installed `wsl-chrome-3` completed

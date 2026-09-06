@@ -476,3 +476,22 @@ lanes:
     integration_receipt: ebc792a742b5ec3b814eb4efcccaaa5e9981ab8c
     disposition: Based on installed P27 source; isolated corrective mode preflight and one post-repair smoke.
     updated_at: 2026-09-05
+  - id: P29
+    objective: Connect exact-ID Skill selection and prompt submission in one owned tab.
+    plan: docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md
+    plan_ref: refs/heads/fix/plan0336-skill-prompt-invocation
+    branch: fix/plan0336-skill-prompt-invocation
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: b6e1953a
+    remote_ref: refs/remotes/origin/fix/plan0336-skill-prompt-invocation
+    integration: merge
+    dependencies: [P27, P28]
+    overlaps: []
+    validation_status: pending
+    validation_ref: null
+    integration_receipt: null
+    blocker: null
+    disposition: User authorized implementation and one bounded synthetic prompt; no uncertain-send retry.
+    updated_at: 2026-09-05

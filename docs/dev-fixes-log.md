@@ -22345,3 +22345,7 @@ inventory and working Chat. Keep selection and execution acceptance separate;
 an exact-ID select-and-submit path must prove the Skill in the actual prompt
 composer before sending. A transient activity label was insufficient and the
 final answer contradicted it. Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-execution-smoke.json`.
+
+## 2026-09-05 | Skill selection reaches the send boundary
+
+`skills run` holds the existing profile operation lock and one CDP connection through selection, insertion, submission, and response capture. Its pre-send guard rechecks exact account and a visible Skill marker; route parameters alone cannot authorize Send. Uncertain submission preserves the tab without cleanup navigation or retry. `skills select` still restores its original empty composer.

@@ -8,6 +8,9 @@ import type {
 	ChatgptSkillState,
 } from "../../cli/chatgptSkillsCommand.js";
 import type { ResolvedUserConfig } from "../../config.js";
+import { waitForAssistantResponse } from "../actions/assistantResponse.js";
+import { ensureChatgptComposerMode } from "../actions/chatgptComposerMode.js";
+import { submitPrompt } from "../actions/promptComposer.js";
 import {
 	navigateAndSettle,
 	pressButtonWithTrustedPointer,
@@ -15,8 +18,8 @@ import {
 	setInputValue,
 	waitForPredicate,
 } from "../service/ui.js";
-import type { ChromeClient } from "../types.js";
-import { classifyChatgptBlockingSurfaceProbe } from "./chatgptAdapter.js";
+import type { BrowserLogger, ChromeClient } from "../types.js";
+import { classifyChatgptBlockingSurfaceProbe, readChatgptUserIdentity } from "./chatgptAdapter.js";
 
 type SkillIdentity = {
 	email?: string | null;
@@ -173,6 +176,7 @@ export function buildChatgptSkillSelectionProbeExpression(skill: {
 	  const providerPrompt = normalize(new URL(location.href).searchParams.get('prompt'));
       return {
         selected: Boolean(marker) || routeMatches,
+        markerObserved: Boolean(marker),
         skillId: marker || routeMatches ? expectedId : null,
         skillName: marker ? expectedName : null,
 		composerEmpty: composerText === '',
@@ -354,6 +358,73 @@ export class ChatgptSkillBrowserAdapter {
 	}
 
 	async select(skill: ChatgptSkill): Promise<ChatgptSkillMutationOutcome> {
+		return this.withSelectedSkill(skill);
+	}
+
+	async run(
+		skill: ChatgptSkill,
+		input: { prompt: string; expectedAccount: string; timeoutMs: number },
+	): Promise<ChatgptSkillMutationOutcome> {
+		let submissionAttempted = false;
+		const logger: BrowserLogger = () => undefined;
+		const outcome = await this.withSelectedSkill(skill, async (client) => {
+			await ensureChatgptComposerMode(client.Runtime, "chat", logger);
+			const boundary = await submitPrompt(
+				{
+					runtime: client.Runtime,
+					input: client.Input,
+					inputTimeoutMs: 10_000,
+					beforeSend: async () => {
+						this.throwIfAborted();
+						const identity = await readChatgptUserIdentity(client);
+						if (
+							identity?.email?.trim().toLowerCase() !== input.expectedAccount.trim().toLowerCase()
+						) {
+							throw new Error(
+								"ChatGPT Skill run account changed before Send; refusing submission.",
+							);
+						}
+						await assertNoBlockingSurface(client, "run skill before Send");
+						const proof = await client.Runtime.evaluate({
+							expression: buildChatgptSkillSelectionProbeExpression(skill),
+							returnByValue: true,
+						});
+						if (
+							proof.result?.value?.markerObserved !== true ||
+							proof.result?.value?.skillId !== skill.id
+						) {
+							throw new Error("ChatGPT Skill marker was lost before Send; refusing submission.");
+						}
+						// Set before any send attempt, including a lost CDP acknowledgement.
+						submissionAttempted = true;
+						this.restoreOriginalUrl = false;
+					},
+				},
+				input.prompt,
+				logger,
+			);
+			const response = await waitForAssistantResponse(
+				client.Runtime,
+				input.timeoutMs,
+				logger,
+				boundary,
+			);
+			return {
+				status: "completed",
+				skillId: skill.id,
+				currentUrl: await readCurrentUrl(client),
+				responseText: response.text,
+				message:
+					"Submitted once with the selected Skill and captured a response. Skill execution must be assessed from provider evidence.",
+			};
+		});
+		return { ...outcome, submissionAttempted };
+	}
+
+	private async withSelectedSkill(
+		skill: ChatgptSkill,
+		onSelected?: (client: ChromeClient) => Promise<ChatgptSkillMutationOutcome>,
+	): Promise<ChatgptSkillMutationOutcome> {
 		const client = await this.ensureClient();
 		if (this.originalComposerPristine !== true) {
 			throw new Error(
@@ -400,44 +471,47 @@ export class ChatgptSkillBrowserAdapter {
 			} else {
 				selectionObserved = true;
 				selectionUrl = await readCurrentUrl(client);
+				if (onSelected) return await onSelected(client);
 			}
 		} catch (error) {
 			selectionFailure = error instanceof Error ? error.message : String(error);
 		} finally {
-			try {
-				await navigateSkills(client, returnUrl);
-				const cleanupProbe = buildChatgptSkillSelectionProbeExpression(skill);
-				const activeSelection = await client.Runtime.evaluate({
-					expression: cleanupProbe,
-					returnByValue: true,
-				});
-				const activeValue = isRecord(activeSelection.result?.value)
-					? activeSelection.result.value
-					: null;
-				if (activeValue?.selected === true && activeValue.composerEmpty === true) {
-					const cleared = await client.Runtime.evaluate({
-						expression: buildChatgptSkillCleanupExpression(skill),
+			if (this.restoreOriginalUrl) {
+				try {
+					await navigateSkills(client, returnUrl);
+					const cleanupProbe = buildChatgptSkillSelectionProbeExpression(skill);
+					const activeSelection = await client.Runtime.evaluate({
+						expression: cleanupProbe,
 						returnByValue: true,
 					});
-					if (!isRecord(cleared.result?.value) || cleared.result.value.cleared !== true) {
-						cleanupFailure = `Exact Skill ${skill.id} cleanup was refused.`;
+					const activeValue = isRecord(activeSelection.result?.value)
+						? activeSelection.result.value
+						: null;
+					if (activeValue?.selected === true && activeValue.composerEmpty === true) {
+						const cleared = await client.Runtime.evaluate({
+							expression: buildChatgptSkillCleanupExpression(skill),
+							returnByValue: true,
+						});
+						if (!isRecord(cleared.result?.value) || cleared.result.value.cleared !== true) {
+							cleanupFailure = `Exact Skill ${skill.id} cleanup was refused.`;
+						}
 					}
-				}
-				if (!cleanupFailure) {
-					const cleanupReady = await waitForPredicate(
-						client.Runtime,
-						`(() => { const proof = ${cleanupProbe}; return proof?.selected === false && proof?.composerEmpty === true; })()`,
-						{
-							timeoutMs: 10_000,
-							description: `empty composer cleared of ChatGPT Skill ${skill.id}`,
-						},
-					);
-					if (!cleanupReady.ok) {
-						cleanupFailure = `Original ChatGPT route was restored but exact Skill ${skill.id} cleanup was not observed.`;
+					if (!cleanupFailure) {
+						const cleanupReady = await waitForPredicate(
+							client.Runtime,
+							`(() => { const proof = ${cleanupProbe}; return proof?.selected === false && proof?.composerEmpty === true; })()`,
+							{
+								timeoutMs: 10_000,
+								description: `empty composer cleared of ChatGPT Skill ${skill.id}`,
+							},
+						);
+						if (!cleanupReady.ok) {
+							cleanupFailure = `Original ChatGPT route was restored but exact Skill ${skill.id} cleanup was not observed.`;
+						}
 					}
+				} catch (error) {
+					cleanupFailure = error instanceof Error ? error.message : String(error);
 				}
-			} catch (error) {
-				cleanupFailure = error instanceof Error ? error.message : String(error);
 			}
 		}
 		if (!selectionObserved || selectionFailure || cleanupFailure) {

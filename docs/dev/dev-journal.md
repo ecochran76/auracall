@@ -48957,3 +48957,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Next bounded implementation: connect exact-ID Skill selection and prompt
   submission in the same owned tab; the existing `skills select` command
   deliberately cleans up its selection before returning.
+
+## 2026-09-05 | Plan 0336 Skill prompt continuity
+
+- User authorized exact-ID selection and submission in one tab. P29 implements `skills run`, preserving the non-submitting selection contract and prohibiting uncertain-send retries.
