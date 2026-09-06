@@ -48967,3 +48967,5 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The exact native Skill ID is committed in the canary user turn. ChatGPT reported the selected SKILL.md inaccessible, despite installed source and supporting files visible in the detail UI. No domain-filter error or review gate was observed.
 - Repaired prompt-commit normalization for inline Skill labels and response boundary ordering; recovered the existing answer without a new send. Final focused validation passes 377 tests plus typecheck/build.
 - Exact provider example text was cleared; inspection tab closed; pre-existing browser and conversation retained. Source integration and final installed repair follow.
+
+- Final repair `af8a3f10` is installed at matching bytes. Its read-only prompt/response readers recover the same conversation; no additional send. Plan 0336 remains OPEN with an actual Skill execution gate while validated command implementation proceeds to integration.

@@ -1,6 +1,7 @@
 # Skill Prompt Invocation | 0336-2026-09-05
 
 State: OPEN
+Operational state: SKILL_EXECUTION_UNACCEPTED
 Lane: P29
 Branch: fix/plan0336-skill-prompt-invocation
 Target: main
@@ -29,8 +30,9 @@ reports the current conversation URL and prohibits retry.
 Final focused tests pass 377/377; typecheck/build/planning/diff checks pass.
 Scoped lint has no errors and two inherited warnings. Full suite was not rerun.
 Receipt: `docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json`.
-Source integration and repaired installed-byte verification remain. The broader
-Skill-execution objective is still blocked on model access to the Skill resource.
+Repaired installed bytes match `af8a3f10`; installed read-only recovery passes
+on the existing conversation. Source integration remains. Skill execution is
+still unaccepted: the responding model reported no access to its Skill resource.
 
 ## Scope And Bounds
 

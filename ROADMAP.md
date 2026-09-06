@@ -1,6 +1,6 @@
 # Aura-Call Roadmap
 
-- Active P29: [Plan 0336 Skill prompt invocation](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md). Connect exact-ID selection to submission in one tab.
+- P29 implementation installed; actual Skill execution unaccepted: [Plan 0336 Skill prompt invocation](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md). Exact-ID selection and submission are proven in one tab; the responding model reported the selected resource inaccessible.
 
 - Plan 0334 Skills selection is installed/live accepted: iteration 1/5 verified exact-ID selection and cleanup, no prompt. Merged to main through PR #1 (`697dc668`).
 

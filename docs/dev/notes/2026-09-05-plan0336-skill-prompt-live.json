@@ -61,5 +61,8 @@
   "schedulerActions": 0,
   "serviceRestarts": 0,
   "skillCrudActions": 0,
-  "nextGate": "Determine why ChatGPT did not expose the selected installed Skill resource to the responding model; no further prompt was authorized by this one-canary packet."
+  "nextGate": "Determine why the responding model reported the selected installed Skill resource inaccessible; the single canary ended without resend.",
+  "repairedImplementationCheckpoint": "af8a3f105e13879e8a8bd31ce1d5963e79e766c3",
+  "repairedInstalledParity": true,
+  "installedReadOnlyRecoveryPassed": true
 }
