@@ -13,12 +13,24 @@ owned composer, preserving positive selection through the send boundary.
 
 ## Current State
 
-Plan 0334 selection is accepted, but it clears selection before returning.
-The subsequent name-based prompt reported Skill not loaded. Implementation
-adds `skills run` using the existing operation lock and provider actions.
-Focused validation passes 376 tests; build, typecheck, planning and diff checks
-pass. Scoped lint has no errors and two inherited warnings. Installed/live
-acceptance remains.
+`skills run` is implemented and installed. One live canary committed the exact
+Skill ID in its user turn and returned an answer. ChatGPT explicitly reported
+that the selected SKILL.md was inaccessible; actual Skill execution remains
+unaccepted. The detail UI independently shows the Skill installed with source
+and supporting files; no review gate or automation domain block was observed.
+
+The first command timed out on prompt-commit equality because the committed
+Skill label was counted as user text. The repaired readback excludes inline
+pills, preserves ordinary text, and recaptured this exact conversation without
+resubmission. Response boundaries now use the pre-submit empty conversation,
+not a turn count that may already include the answer. An uncertain outcome
+reports the current conversation URL and prohibits retry.
+
+Final focused tests pass 377/377; typecheck/build/planning/diff checks pass.
+Scoped lint has no errors and two inherited warnings. Full suite was not rerun.
+Receipt: `docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json`.
+Source integration and repaired installed-byte verification remain. The broader
+Skill-execution objective is still blocked on model access to the Skill resource.
 
 ## Scope And Bounds
 

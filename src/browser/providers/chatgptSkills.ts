@@ -11,6 +11,7 @@ import type { ResolvedUserConfig } from "../../config.js";
 import { waitForAssistantResponse } from "../actions/assistantResponse.js";
 import { ensureChatgptComposerMode } from "../actions/chatgptComposerMode.js";
 import { submitPrompt } from "../actions/promptComposer.js";
+import { CONVERSATION_TURN_SELECTOR } from "../constants.js";
 import {
 	navigateAndSettle,
 	pressButtonWithTrustedPointer,
@@ -369,11 +370,19 @@ export class ChatgptSkillBrowserAdapter {
 		const logger: BrowserLogger = () => undefined;
 		const outcome = await this.withSelectedSkill(skill, async (client) => {
 			await ensureChatgptComposerMode(client.Runtime, "chat", logger);
-			const boundary = await submitPrompt(
+			const initialTurns = await client.Runtime.evaluate({
+				expression: `document.querySelectorAll(${JSON.stringify(CONVERSATION_TURN_SELECTOR)}).length`,
+				returnByValue: true,
+			});
+			if (initialTurns.result?.value !== 0) {
+				throw new Error("ChatGPT Skill run requires a new conversation before Send.");
+			}
+			await submitPrompt(
 				{
 					runtime: client.Runtime,
 					input: client.Input,
 					inputTimeoutMs: 10_000,
+					baselineTurns: 0,
 					beforeSend: async () => {
 						this.throwIfAborted();
 						const identity = await readChatgptUserIdentity(client);
@@ -403,12 +412,9 @@ export class ChatgptSkillBrowserAdapter {
 				input.prompt,
 				logger,
 			);
-			const response = await waitForAssistantResponse(
-				client.Runtime,
-				input.timeoutMs,
-				logger,
-				boundary,
-			);
+			const response = await waitForAssistantResponse(client.Runtime, input.timeoutMs, logger, {
+				minTurnIndex: 0,
+			});
 			return {
 				status: "completed",
 				skillId: skill.id,
@@ -418,7 +424,21 @@ export class ChatgptSkillBrowserAdapter {
 					"Submitted once with the selected Skill and captured a response. Skill execution must be assessed from provider evidence.",
 			};
 		});
-		return { ...outcome, submissionAttempted };
+		return {
+			...outcome,
+			submissionAttempted,
+			...(submissionAttempted
+				? {
+						currentUrl: this.cdpClient
+							? await readCurrentUrl(this.cdpClient).catch(() => outcome.currentUrl ?? null)
+							: outcome.currentUrl,
+						message:
+							outcome.status === "completed"
+								? outcome.message
+								: `${outcome.message} Submission was attempted; preserve this conversation and do not retry.`,
+					}
+				: {}),
+		};
 	}
 
 	private async withSelectedSkill(

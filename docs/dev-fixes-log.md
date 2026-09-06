@@ -22349,3 +22349,7 @@ final answer contradicted it. Receipt: `docs/dev/notes/2026-09-05-plan0334-skill
 ## 2026-09-05 | Skill selection reaches the send boundary
 
 `skills run` holds the existing profile operation lock and one CDP connection through selection, insertion, submission, and response capture. Its pre-send guard rechecks exact account and a visible Skill marker; route parameters alone cannot authorize Send. Uncertain submission preserves the tab without cleanup navigation or retry. `skills select` still restores its original empty composer.
+
+## 2026-09-05 | Committed Skill mentions are presentation, not user prompt text
+
+ChatGPT commits a native Skill mention before the user text. Prompt equality must exclude `[data-inline-selection-pill]`, as it already excludes attachment/action presentation, without excluding ordinary text. Response capture must use the pre-submit boundary rather than a committed turn count that may include an already-finished answer. The real canary was recovered with the repaired readers and no prompt retry. Selected Skill identity alone still does not prove the provider loaded its instructions.

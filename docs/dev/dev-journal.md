@@ -48961,3 +48961,9 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 ## 2026-09-05 | Plan 0336 Skill prompt continuity
 
 - User authorized exact-ID selection and submission in one tab. P29 implements `skills run`, preserving the non-submitting selection contract and prohibiting uncertain-send retries.
+
+## 2026-09-05 | Plan 0336 native submission proven, execution unaccepted
+
+- The exact native Skill ID is committed in the canary user turn. ChatGPT reported the selected SKILL.md inaccessible, despite installed source and supporting files visible in the detail UI. No domain-filter error or review gate was observed.
+- Repaired prompt-commit normalization for inline Skill labels and response boundary ordering; recovered the existing answer without a new send. Final focused validation passes 377 tests plus typecheck/build.
+- Exact provider example text was cleared; inspection tab closed; pre-existing browser and conversation retained. Source integration and final installed repair follow.

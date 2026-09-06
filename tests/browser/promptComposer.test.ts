@@ -5,6 +5,33 @@ import {
 } from "../../src/browser/actions/promptComposer.js";
 
 describe("promptComposer", () => {
+	test("ignores a committed Skill mention without ignoring ordinary user text", () => {
+		class Element {
+			nodeType = 1;
+			constructor(
+				public childNodes: unknown[],
+				public pill = false,
+			) {}
+			matches(selector: string) {
+				return this.pill && selector.includes("[data-inline-selection-pill]");
+			}
+		}
+		const text = (value: string) => ({ nodeType: 3, textContent: value });
+		const read = new Function(
+			"Element",
+			"Node",
+			"window",
+			`return ${promptComposer.buildReadCommittedTurnTextFunction()};`,
+		)(Element, { ["TEXT_NODE"]: 3 }, { getComputedStyle: () => ({ display: "inline" }) });
+		const prompt = "Investigate this snippet.";
+		expect(
+			read(new Element([new Element([text("Codebase Investigator")], true), text(prompt)])),
+		).toBe(prompt);
+		expect(read(new Element([text("Retained user text. "), text(prompt)]))).toBe(
+			"Retained user text. " + prompt,
+		);
+	});
+
 	test("requires the composer user text to equal the requested prompt", () => {
 		expect(promptComposer.composerContainsPrompt("Corel33t", "Review the existing project")).toBe(
 			false,

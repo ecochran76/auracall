@@ -484,14 +484,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: b6e1953a
+    checkpoint: 7c8a413f
     remote_ref: refs/remotes/origin/fix/plan0336-skill-prompt-invocation
     integration: merge
     dependencies: [P27, P28]
     overlaps: []
-    validation_status: pending
-    validation_ref: null
+    validation_status: native-submission-proven-execution-unaccepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json
     integration_receipt: null
     blocker: null
-    disposition: User authorized implementation and one bounded synthetic prompt; no uncertain-send retry.
+    disposition: One native exact-ID Skill prompt committed; provider reported resource inaccessible. Commit-readback repair recovered existing answer; 377 focused tests pass. No prompt retry.
     updated_at: 2026-09-05

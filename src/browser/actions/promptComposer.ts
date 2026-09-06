@@ -91,6 +91,7 @@ function buildReadCommittedTurnTextFunction(): string {
 	return `(node) => {
 	  if (!node) return '';
 	  const presentationOnlySelector = [
+        '[data-inline-selection-pill]',
 	    'button',
 	    '[role="button"]',
 	    '[role="group"][class*="file-tile"]',

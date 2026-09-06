@@ -61,6 +61,7 @@ function setup(
 		["Runtime"]: {
 			enable: vi.fn(),
 			evaluate: vi.fn(async ({ expression }) => {
+				if (expression.startsWith("document.querySelectorAll(")) return { result: { value: 0 } };
 				if (expression === "location.href")
 					return {
 						result: { value: submitted ? "https://chatgpt.com/c/canary" : "https://chatgpt.com/" },
@@ -102,6 +103,7 @@ describe("Skill selection and prompt continuity", () => {
 		expect(result.submissionAttempted).toBe(true);
 		expect(mocks.submit.mock.calls[0][0].runtime).toBe(client.Runtime);
 		expect(mocks.wait.mock.calls[0][0]).toBe(client.Runtime);
+		expect(mocks.wait.mock.calls[0][3]).toEqual({ minTurnIndex: 0 });
 		expect(mocks.mode).toHaveBeenCalledWith(client.Runtime, "chat", expect.any(Function));
 		await adapter.close();
 		expect(connect).toHaveBeenCalledTimes(1);
@@ -139,6 +141,8 @@ describe("Skill selection and prompt continuity", () => {
 		});
 		expect(result.status).toBe("outcome-unknown");
 		expect(result.submissionAttempted).toBe(true);
+		expect(result.currentUrl).toBe("https://chatgpt.com/c/canary");
+		expect(result.message).toContain("do not retry");
 		await adapter.close();
 		expect(mocks.submit).toHaveBeenCalledTimes(1);
 		expect(mocks.navigate).toHaveBeenCalledTimes(1);
