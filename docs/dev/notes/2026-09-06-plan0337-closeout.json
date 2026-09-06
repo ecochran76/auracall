@@ -1,0 +1,81 @@
+{
+  "plan": "0337",
+  "validated_commit": "fc371067e8ea4fad054de67cf9b0f8940273e684",
+  "initial_worktrees": 15,
+  "removed_worktrees": 11,
+  "retained_worktrees": [
+    {
+      "worktree_name": "auracall",
+      "branch": "refs/heads/fix/plan0315-aggregate-status-latency",
+      "head": "2a1cd3e15bacf1786d9601ca3cc03c529f676714",
+      "clean": true,
+      "in_progress_operations": [],
+      "cwd_owner_count": 14
+    },
+    {
+      "worktree_name": "auracall-plan0323-developer-app-mention",
+      "branch": "refs/heads/fix/plan0323-developer-app-mention",
+      "head": "bd8738da935cdda900c35fe19682f2691cbe1517",
+      "clean": true,
+      "in_progress_operations": [],
+      "cwd_owner_count": 0
+    },
+    {
+      "worktree_name": "auracall-plan0324-integration",
+      "branch": "refs/heads/main",
+      "head": "fc371067e8ea4fad054de67cf9b0f8940273e684",
+      "clean": true,
+      "in_progress_operations": [],
+      "cwd_owner_count": 1
+    },
+    {
+      "worktree_name": "auracall-plan0334-chatgpt-tool-skill-selection",
+      "branch": "refs/heads/fix/plan0334-chatgpt-tool-skill-selection",
+      "head": "f55e398f342c3866666de95ec810d859c00d90eb",
+      "clean": true,
+      "in_progress_operations": [],
+      "cwd_owner_count": 16
+    }
+  ],
+  "remote_custody": {
+    "fix/plan0315-aggregate-status-latency": "2a1cd3e15bacf1786d9601ca3cc03c529f676714",
+    "fix/plan0323-developer-app-mention": "bd8738da935cdda900c35fe19682f2691cbe1517",
+    "wip/plan0337-browser-edits-recovery": "3696f6dd337b703f42997753a576bd8364203102",
+    "ops/plan0325-installed-fairness-canary": "317b6b372da57d295629abb78e2b1daa8ad8bb33"
+  },
+  "original_dirty_files_sha256_verified": 7,
+  "merge_resolution_commit": "18ce58652099873b4c9ea7911a522b0962cc8cbc",
+  "checks": {
+    "catalog-final": {
+      "ok": true,
+      "problems": [],
+      "accepted_baseline_findings": []
+    },
+    "planning-final": {
+      "ok": true,
+      "problems": [],
+      "accepted_baseline_findings": [
+        "plan missing roadmap lane id: 0020-2026-04-21-deterministic-response-shape-contract.md",
+        "plan not wired in ROADMAP.md: 0020-2026-04-21-deterministic-response-shape-contract.md",
+        "plan not wired in RUNBOOK.md: 0020-2026-04-21-deterministic-response-shape-contract.md",
+        "plan missing roadmap lane id: 0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md",
+        "plan missing roadmap lane id: 0065-2026-05-10-db-backed-agent-registry.md",
+        "OPEN plan missing Current State section: 0068-2026-05-18-tenant-pool-response-batches.md",
+        "plan not wired in RUNBOOK.md: 0068-2026-05-18-tenant-pool-response-batches.md"
+      ]
+    },
+    "integrity": {
+      "fsck": {
+        "exit_code": 0,
+        "output": ""
+      },
+      "commit_graph": {
+        "exit_code": 0,
+        "output": ""
+      }
+    }
+  },
+  "publication": "Closeout receipt is committed next; final origin/main parity will be read back after push.",
+  "live_effects": 0,
+  "retention": "P08 and P16 are unfinished; P27 has live process cwd owners; main is the canonical checkout. Completed branch refs are retained for recovery."
+}
