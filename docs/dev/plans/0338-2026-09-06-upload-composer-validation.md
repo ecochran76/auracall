@@ -1,6 +1,6 @@
 # Upload Composer Validation And Handoff Coverage | 0338-2026-09-06
 
-State: OPEN
+State: CLOSED
 Lane: P31
 Branch: fix/plan0338-upload-composer-validation
 Target: main
@@ -26,7 +26,8 @@ retain coverage alongside omitted selectors.
   build, scoped zero-warning lint and diff hygiene pass with frozen dependencies.
 - Initial typecheck/build failed with inherited OpenAI 6.15.0 dependencies;
   isolated frozen-lockfile installation restored required 7.10.0 and both pass.
-- Integration, canonical audit readback, and temporary custody cleanup remain.
+- Source repair is integrated and published at `3cfb1de941a6b9c9a445874c7ec001513b273d65`.
+  The temporary worktree/local branch are removed; the remote source ref remains.
 
 ## Execution Graph
 
@@ -68,3 +69,17 @@ implementation/verification attempts before evidence-driven local replanning.
 
 Both findings are resolved on published main with passing public-seam evidence,
 operator documentation, clean Git custody and the temporary worktree closed.
+
+## Acceptance Evidence
+
+- UC1/UC2: 13 production inventory-expression cases pass, with eight original
+  negative fixtures observed failing before repair. Visible editor ownership
+  accepts a hidden file input and skips an earlier hidden fallback textarea.
+- UC3: the real handoff adapter test retains omitted/current and explicit
+  reasoning-high model/extended-effort/select strategy cases.
+- UC4: 69 focused/adjacent tests, typecheck, production build and zero-warning
+  scoped lint pass. Operator/testing docs describe the final behavior.
+- `docs/dev/notes/2026-09-06-plan0338-validation.json` preserves initial
+  dependency failure and final validation; `docs/dev/notes/2026-09-06-plan0338-custody.json`
+  binds the published source and verified temporary-worktree closure.
+- No runtime install or live upload/prompt proof is claimed by this source slice.

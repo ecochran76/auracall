@@ -1,5 +1,9 @@
 # RUNBOOK
 
+## Turn 574 | 2026-09-06
+
+- Closed [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md). Source `3cfb1de941a6b9c9a445874c7ec001513b273d65` is published on main; 69 targeted/adjacent tests, typecheck, production build and scoped lint pass. Exact clean integrated process-unowned temporary worktree and local branch are removed; remote source custody retained. No browser or installed-runtime action ran.
+
 ## Turn 573 | 2026-09-06
 
 - Opened [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) on fresh main for the two frozen review findings. Provider-free repair, tests and docs only; preserve obsolete WIP custody.

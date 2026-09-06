@@ -1,6 +1,6 @@
 # Aura-Call Roadmap
 
-- Active P31: [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) repairs inactive upload composer detection and explicit-model handoff coverage.
+- Completed P31: [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) rejects inactive upload composers and retains both explicit and omitted handoff-model coverage; published with 69 passing tests.
 
 - Completed Git maintenance: [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md) (P30) preserved unfinished work and removed 11 clean, integrated, process-unowned worktrees; four remain intentionally.
 

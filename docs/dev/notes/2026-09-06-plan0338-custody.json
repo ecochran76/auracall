@@ -1,0 +1,12 @@
+{
+  "source_commit": "3cfb1de941a6b9c9a445874c7ec001513b273d65",
+  "worktree_removed": true,
+  "cwd_owners_at_removal": [],
+  "clean_before_removal": true,
+  "ignored_generated_paths": [
+    "dist/",
+    "node_modules/"
+  ],
+  "remote_branch_retained": "fix/plan0338-upload-composer-validation",
+  "origin_main_ancestry_verified": true
+}

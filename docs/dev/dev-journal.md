@@ -49004,3 +49004,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   plus effort propagation. Final targeted packet passes 69 tests; typecheck,
   build and scoped lint pass after replacing stale shared dependencies with
   the frozen lockfile. Integration and temporary-worktree closeout follow.
+
+## 2026-09-06 | Plan 0338 integrated and closed
+
+- Published visible-composer upload validation and both handoff selector cases at `3cfb1de941a6b9c9a445874c7ec001513b273d65`. All provider-free gates pass; temporary worktree removed after clean/ancestry/process/custody checks. Installed and live state remains unchanged.

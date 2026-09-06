@@ -564,15 +564,18 @@ lanes:
   - id: P31
     objective: Reject inactive upload composers and restore explicit-model handoff coverage.
     plan: docs/dev/plans/0338-2026-09-06-upload-composer-validation.md
-    plan_ref: refs/remotes/origin/fix/plan0338-upload-composer-validation
+    plan_ref: refs/remotes/origin/main
     branch: fix/plan0338-upload-composer-validation
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: null
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 3cfb1de941a6b9c9a445874c7ec001513b273d65
     remote_ref: refs/remotes/origin/fix/plan0338-upload-composer-validation
     integration: merge
     dependencies: [P30]
     overlaps: []
-    disposition: Provider-free remediation of R1 and R2; no installed or live effects.
+    disposition: Both review findings resolved on published main; 69 tests, typecheck, build and scoped lint pass; temporary local custody removed.
     updated_at: 2026-09-06
+    integration_receipt: 3cfb1de941a6b9c9a445874c7ec001513b273d65
+    validation_ref: docs/dev/notes/2026-09-06-plan0338-validation.json
+    validation_status: provider-free-accepted
