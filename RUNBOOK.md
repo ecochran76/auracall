@@ -1,5 +1,9 @@
 # RUNBOOK
 
+## Turn 571 | 2026-09-06
+
+- Opened P30 / Plan 0337 for the authorized Git maintenance goal. Census is 15 worktrees; the earlier interrupted merge is resolved and published. Preserve browser WIP and unpublished P16 before removing integrated stale directories; retain process-owned P27. Graphiti recall returned no relevant custody decisions.
+
 ## Turn 570 | 2026-09-05
 
 - Native unchanged Try-in-chat example also reported the selected Skill unavailable. Exact ID is present in outgoing metadata and the user turn; only four built-in Skills appeared in the model filesystem search. One submission, zero retries, empty composer, browser preserved. Receipt: `docs/dev/notes/2026-09-05-plan0336-native-example-comparison.json`.

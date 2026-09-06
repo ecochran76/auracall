@@ -495,3 +495,18 @@ lanes:
     blocker: Actual Skill execution remains unaccepted; model reported selected resource inaccessible.
     disposition: One native exact-ID Skill prompt committed; provider reported resource inaccessible. Commit-readback repair recovered existing answer; 377 focused tests pass. No prompt retry.
     updated_at: 2026-09-05
+  - id: P30
+    objective: Complete Git maintenance and close stale worktrees while preserving unfinished work.
+    plan: docs/dev/plans/0337-2026-09-06-git-maintenance.md
+    plan_ref: refs/heads/chore/plan0337-git-maintenance
+    branch: chore/plan0337-git-maintenance
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: refs/remotes/origin/chore/plan0337-git-maintenance
+    integration: merge
+    dependencies: []
+    overlaps: [P08, P16, P27]
+    disposition: Maintenance plan registered; custody and cleanup execution pending.
+    updated_at: 2026-09-06

@@ -48982,3 +48982,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Final answer denies Skill loading. Expanded tool output finds only four built-in SKILL.md files under /home/oai, depth six. This supports a model/session resource-availability hypothesis, not exhaustive filesystem absence or a proven provider access denial.
 - No resend. Provider example draft cleared by exact match; conversation and pre-existing browser retained. Shared response waiter returned intermediate text early; direct final DOM readback supplies the outcome.
 - Receipt: `docs/dev/notes/2026-09-05-plan0336-native-example-comparison.json`.
+
+## 2026-09-06 | Plan 0337 Git maintenance opened
+
+- Freeze 15-worktree census; preserve unfinished browser WIP and P16 remote custody, then close eligible stale worktrees. Plan, roadmap, and runbook define verification and explicit retention.
