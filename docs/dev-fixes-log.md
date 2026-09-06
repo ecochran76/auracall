@@ -22066,3 +22066,19 @@ browser-stage lifecycle observability, not transcript truncation.
   gap or suffix rather than accepting a numeric prefix.
 - Keep the production CLI parser under a focused regression for `60m`,
   `1h30m`, numeric seconds, `auto`, and malformed partial tokens.
+## 2026-09-01 | Synthetic skips must not pin bounded materialization
+
+- A stable catalog order plus retryable `no-materializable-*` results can make
+  the same front conversations consume every bounded pass without reaching
+  later rows. Keep those conversations retryable, but order zero-asset retry
+  receipts by never-attempted and then least-recently attempted within the
+  exact provider, AuraCall runtime profile, browser profile, identity, and
+  asset-kind lane.
+- Transfer budget is asset evidence, not result-entry count. Synthetic
+  no-materializable, known-files-excluded, and unsupported placeholders have no
+  concrete provider/local asset identity and must consume zero transfer slots;
+  the separate target budget still bounds provider conversation reads.
+- Raw `remoteKnownMissingLocal` includes duplicate, unsupported metadata-only,
+  static false-positive, retrieval-failed, and terminal rows. Full-retrieval
+  live follow should consult the recovery planner and queue materialization only
+  when retrievable assets or unknown/deferred detail work remain.

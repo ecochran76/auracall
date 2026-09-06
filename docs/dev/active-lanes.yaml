@@ -134,7 +134,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: d461cb56527db9b14e57286622a51582a2b09b41
+    checkpoint: 79b1d2dde3b76fb427d3ac7022a74d8ddd53a28b
     remote_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     integration: merge
     dependencies: [P07]
@@ -142,7 +142,8 @@ lanes:
     validation_status: implementation-accepted-installed-proof-blocked
     validation_ref: 025453473c5957fb72abb7ed787cb6d1266951e6
     integration_receipt: null
-    disposition: Provider-free repair is accepted; installed proof remains blocked by the plan's exact managed-browser and provider-guard hard stop.
+    blocker: The auracall-gemini-pro target retains a manual_clear_required google-sorry guard; human clearance is required before P08 may pause the scheduler or install.
+    disposition: Refreshed provider-free repair passes 91 focused tests, typecheck, build, and changed-source lint; installed proof remains blocked without consuming any effect allowance.
     updated_at: 2026-08-29
   - id: P09
     objective: Restore exact ChatGPT Work-mode proof when a loaded Project conversation route includes its human-readable slug.
@@ -270,3 +271,21 @@ lanes:
     integration_receipt: 168322897e9d7dd0e652e14d44b82482ad83c5ec
     disposition: Integrated exact Git custody cleanup; P08, P14, historical compatibility, divergent, and unknown-custody refs are retained.
     updated_at: 2026-08-29
+  - id: P17
+    objective: Prevent retryable no-asset conversations from stalling history materialization and use actionable backlog for completion.
+    plan: docs/dev/plans/0324-2026-09-01-history-materialization-fairness.md
+    plan_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
+    branch: fix/plan0324-history-materialization-fairness
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: c8cc682eadc2d2b520289c984ed640a6eaafa23c
+    remote_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
+    integration: merge
+    dependencies: []
+    overlaps: [P08]
+    validation_status: provider-free-accepted
+    validation_ref: c8cc682eadc2d2b520289c984ed640a6eaafa23c
+    integration_receipt: null
+    disposition: Provider-free source repair is accepted and ready for integration; installed adoption and live proof remain separately gated while both exact targets stay operator-paused.
+    updated_at: 2026-09-01

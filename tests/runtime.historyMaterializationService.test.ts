@@ -5118,6 +5118,126 @@ describe("history materialization service", () => {
 		});
 	});
 
+	it("does not spend the asset-transfer budget on synthetic no-materializable evidence", async () => {
+		let scheduled: (() => Promise<void>) | undefined;
+		const conversationIds = ["conv_empty_1", "conv_empty_2", "conv_empty_3", "conv_empty_4"];
+		const materializeConversation = vi.fn(
+			async (target: HistoryMaterializationTarget): Promise<HistoryMaterializationResult> =>
+				buildNoMaterializableHistoryResult(target),
+		);
+		const service = createHistoryMaterializationService({
+			config: {},
+			store: createInMemoryHistoryMaterializationJobStore([]),
+			catalogService: {
+				readCatalog: vi.fn(async () => buildReconciliationCatalog(conversationIds)),
+				readItem: vi.fn(),
+			},
+			generateId: () => "hmj_synthetic_budget",
+			now: sequenceNow([
+				"2026-09-01T14:00:00.000Z",
+				"2026-09-01T14:00:01.000Z",
+				"2026-09-01T14:00:02.000Z",
+				"2026-09-01T14:00:03.000Z",
+				"2026-09-01T14:00:04.000Z",
+			]),
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation,
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			runtimeProfile: "default",
+			reconcile: true,
+			assetKinds: ["artifacts", "files"],
+			maxItems: 4,
+			refreshSnapshot: false,
+		});
+		if (!scheduled) throw new Error("Expected synthetic-budget job to be scheduled.");
+		await scheduled();
+
+		expect(materializeConversation.mock.calls.map(([target]) => target.conversationId)).toEqual(
+			conversationIds,
+		);
+		await expect(service.readJob("hmj_synthetic_budget")).resolves.toMatchObject({
+			status: "skipped",
+			result: {
+				attempts: conversationIds.map(() => ({ accounting: { assetsAttempted: 0 } })),
+				metrics: {
+					eligibleCandidates: 4,
+					selectedCandidates: 4,
+					materializedCandidates: 0,
+				},
+			},
+		});
+	});
+
+	it("rotates retryable no-materializable candidates across consecutive reconciliation jobs", async () => {
+		const scheduled: Array<() => Promise<void>> = [];
+		const conversationIds = ["conv_rotate_1", "conv_rotate_2", "conv_rotate_3", "conv_rotate_4"];
+		const materializeConversation = vi.fn(
+			async (target: HistoryMaterializationTarget): Promise<HistoryMaterializationResult> =>
+				buildNoMaterializableHistoryResult(target),
+		);
+		const service = createHistoryMaterializationService({
+			config: {},
+			store: createInMemoryHistoryMaterializationJobStore([]),
+			catalogService: {
+				readCatalog: vi.fn(async () => buildReconciliationCatalog(conversationIds)),
+				readItem: vi.fn(),
+			},
+			generateId: sequenceId(["hmj_rotation_1", "hmj_rotation_2"]),
+			now: sequenceNow([
+				"2026-09-01T15:00:00.000Z",
+				"2026-09-01T15:00:01.000Z",
+				"2026-09-01T15:00:02.000Z",
+				"2026-09-01T15:00:03.000Z",
+				"2026-09-01T15:00:04.000Z",
+				"2026-09-01T15:00:05.000Z",
+				"2026-09-01T15:00:06.000Z",
+				"2026-09-01T15:00:07.000Z",
+			]),
+			schedule: (work) => {
+				scheduled.push(work);
+			},
+			materializeConversation,
+		});
+		const request: HistoryMaterializationCreateRequest = {
+			provider: "chatgpt",
+			runtimeProfile: "default",
+			reconcile: true,
+			assetKinds: ["artifacts", "files"],
+			maxItems: 2,
+			refreshSnapshot: false,
+		};
+
+		await service.createJob(request);
+		const firstScheduled = scheduled.shift();
+		if (!firstScheduled) throw new Error("Expected first rotation job to be scheduled.");
+		await firstScheduled();
+		await service.createJob(request);
+		const secondScheduled = scheduled.shift();
+		if (!secondScheduled) throw new Error("Expected second rotation job to be scheduled.");
+		await secondScheduled();
+
+		expect(materializeConversation.mock.calls.map(([target]) => target.conversationId)).toEqual([
+			"conv_rotate_1",
+			"conv_rotate_2",
+			"conv_rotate_3",
+			"conv_rotate_4",
+		]);
+		await expect(service.readJob("hmj_rotation_2")).resolves.toMatchObject({
+			status: "skipped",
+			result: {
+				attempts: [
+					{ target: { conversationId: "conv_rotate_3" } },
+					{ target: { conversationId: "conv_rotate_4" } },
+				],
+			},
+		});
+	});
+
 	it("fails reconciliation when every attempted asset transfer fails", async () => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-history-materialize-reconcile-failed-"),
@@ -11282,6 +11402,118 @@ function buildArchiveItem(overrides: Partial<RunArchiveItem>): RunArchiveItem {
 		metadata: {},
 		links: {},
 		...overrides,
+	};
+}
+
+function buildReconciliationCatalog(conversationIds: string[]) {
+	return {
+		object: "account_mirror_catalog" as const,
+		generatedAt: "2026-09-01T14:00:00.000Z",
+		kind: "all" as const,
+		limit: 500,
+		entries: [
+			{
+				provider: "chatgpt" as const,
+				runtimeProfileId: "default",
+				browserProfileId: "default",
+				boundIdentityKey: "user@example.com",
+				status: "eligible" as const,
+				reason: "eligible" as const,
+				mirrorCompleteness: {
+					state: "in_progress" as const,
+					summary: "Asset recovery remains open.",
+					remainingDetailSurfaces: {
+						projects: 0,
+						conversations: conversationIds.length,
+						total: conversationIds.length,
+					},
+					signals: {
+						projectsTruncated: false,
+						conversationsTruncated: true,
+						attachmentInventoryTruncated: true,
+						attachmentCursorPresent: true,
+					},
+				},
+				counts: {
+					projects: 0,
+					conversations: conversationIds.length,
+					artifacts: conversationIds.length,
+					files: 0,
+					media: 0,
+				},
+				manifests: {
+					projects: [],
+					conversations: conversationIds.map((id) => ({
+						id,
+						title: id,
+						provider: "chatgpt" as const,
+						cachedArtifactCount: 1,
+						cachedFileCount: 0,
+					})),
+					artifacts: [],
+					files: [],
+					media: [],
+				},
+			},
+		],
+		metrics: {
+			targets: 1,
+			projects: 0,
+			conversations: conversationIds.length,
+			artifacts: conversationIds.length,
+			files: 0,
+			media: 0,
+		},
+	};
+}
+
+function buildNoMaterializableHistoryResult(
+	target: HistoryMaterializationTarget,
+): HistoryMaterializationResult {
+	return {
+		object: "history_materialization_result",
+		generatedAt: "2026-09-01T14:00:02.000Z",
+		status: "skipped",
+		target,
+		source: { type: "reconciliation", provider: "chatgpt" },
+		manifestPaths: [],
+		entries: [
+			{
+				kind: "artifact",
+				providerId: null,
+				title: null,
+				status: "skipped",
+				localPath: null,
+				remoteUrl: null,
+				cacheKey: null,
+				checksumSha256: null,
+				mimeType: null,
+				size: null,
+				materializationMethod: null,
+				reason: `no-materializable-artifact: provider detail exposed no downloadable artifact assets for conversation ${target.conversationId}`,
+				archiveItemId: null,
+				assetRoute: null,
+			},
+			{
+				kind: "file",
+				providerId: null,
+				title: null,
+				status: "skipped",
+				localPath: null,
+				remoteUrl: null,
+				cacheKey: null,
+				checksumSha256: null,
+				mimeType: null,
+				size: null,
+				materializationMethod: null,
+				reason: `no-materializable-file: provider detail exposed no downloadable file assets for conversation ${target.conversationId}`,
+				archiveItemId: null,
+				assetRoute: null,
+			},
+		],
+		archiveItems: [],
+		metrics: { conversations: 1, materialized: 0, skipped: 2, failed: 0 },
+		message: "Provider detail exposed no downloadable assets.",
 	};
 }
 

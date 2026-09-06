@@ -48196,3 +48196,40 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `auracall-gemini-pro` still carries `manual_clear_required` / `google-sorry`.
   Per P08's hard-stop contract, no scheduler pause, install/restart, resume,
   browser, provider, materialization, or guard-clear action ran.
+
+## 2026-09-01 | Plan 0324 history-materialization fairness opened
+
+- Paused exact live-follow targets remain paused while source diagnosis moves
+  into a provider-free repair lane.
+- Durable job receipts show synthetic no-materializable skips consume the
+  transfer budget and repeat the same stable front candidates across jobs;
+  raw missing-local totals also exceed the actionable recovery backlog.
+- Plan 0324 will freeze public-seam regressions, repair fair retry ordering and
+  budget accounting, then align completion with retrievable assets without an
+  install, restart, browser action, scheduler resume, or provider canary.
+
+## 2026-09-01 | Plan 0324 provider-free repair accepted
+
+- Checkpoint `c8cc682e` stops synthetic no-asset evidence from spending the
+  transfer budget, rotates retryable conversations from durable attempts, and
+  gates both live-follow materialization queue paths on the recovery planner's
+  retrievable plus unknown/deferred backlog.
+- Acceptance passes 166 focused/adjacent tests, five HTTP wiring tests,
+  typecheck, production build, scoped zero-warning lint, CodeGraph readback,
+  diff hygiene, and a zero-error plan audit.
+- No installed-runtime mutation, API restart, browser/provider action,
+  scheduler control, or live canary ran. `default` and `wsl-chrome-3` live
+  follow remain operator-paused pending separately authorized adoption.
+- The accepted lane is published at
+  `refs/remotes/origin/fix/plan0324-history-materialization-fairness` for
+  review and integration.
+
+## 2026-09-06 | Git merge journal reconciliation
+
+- Resolved the interrupted Plan 0324 merge into the Plan 0315 branch by
+  preserving both independent journal entries. The later cooperation-smoke
+  note and other unstaged work remain outside the merge checkpoint.
+- The exact staged tree passed 165 targeted materialization, completion,
+  recovery-planner, and HTTP reconciliation tests plus `pnpm run typecheck`.
+  Index validation confirms no unmerged paths and clean staged diff hygiene.
+- No installed runtime, browser, provider, or scheduler action ran.
