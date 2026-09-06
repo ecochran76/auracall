@@ -43,6 +43,7 @@ function adapterWith(initial: ChatgptSkillState): ChatgptSkillAdapter {
 		readState: vi.fn().mockResolvedValue(initial),
 		readSkill: vi.fn(),
 		select: vi.fn(),
+		run: vi.fn(),
 		create: vi.fn(),
 		update: vi.fn(),
 		delete: vi.fn(),
@@ -50,6 +51,43 @@ function adapterWith(initial: ChatgptSkillState): ChatgptSkillAdapter {
 }
 
 describe("executeChatgptSkillOperation", () => {
+	it("routes a confirmed exact-ID run and rejects missing authority, invalid bounds, or duplicate marker names", async () => {
+		const initial = state();
+		initial.skills[0].name = "Unique";
+		const adapter = adapterWith(initial);
+		const input = {
+			action: "run" as const,
+			expectedAccount: "owner@example.com",
+			confirmed: true,
+			skillId: "1".repeat(32),
+			prompt: "Investigate",
+			timeoutMs: 1000,
+		};
+		vi.mocked(adapter.run).mockResolvedValue({ status: "completed", message: "Captured response", responseText: "Result" });
+		for (const override of [
+			{ confirmed: false },
+			{ prompt: " " },
+			{ timeoutMs: NaN },
+			{ timeoutMs: 601000 },
+			{ skillId: "missing" },
+			{ expectedAccount: "wrong@example.com" },
+		]) {
+			await expect(
+				executeChatgptSkillOperation({ ...input, ...override }, adapter),
+			).rejects.toThrow();
+		}
+		expect(adapter.run).not.toHaveBeenCalled();
+		const result = await executeChatgptSkillOperation(input, adapter);
+		expect(result.action).toBe("run");
+		expect(adapter.run).toHaveBeenCalledWith(initial.skills[0], input);
+		expect(adapter.select).not.toHaveBeenCalled();
+		initial.skills[1].name = "Unique";
+		await expect(executeChatgptSkillOperation(input, adapter)).rejects.toThrow(
+			"unambiguous inventory name",
+		);
+		expect(adapter.run).toHaveBeenCalledTimes(1);
+	});
+
 	it("loads one deterministic bounded SKILL.md source", async () => {
 		const source = await loadChatgptSkillSource({
 			sourcePath: new URL("../fixtures/chatgpt-skill", import.meta.url).pathname,
@@ -67,6 +105,7 @@ describe("executeChatgptSkillOperation", () => {
 			readState: vi.fn().mockResolvedValue(state()),
 			readSkill: vi.fn(),
 			select: vi.fn(),
+			run: vi.fn(),
 			create: vi.fn(),
 			update: vi.fn(),
 			delete: vi.fn(),

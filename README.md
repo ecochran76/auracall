@@ -105,6 +105,15 @@ auracall --profile wsl-chrome-3 skills show <32-hex-skill-id> \
 # a prompt or prove Skill invocation.
 auracall --profile wsl-chrome-3 skills select <32-hex-skill-id> \
   --expected-account <chatgpt-email> --yes --json
+# Select and submit once in the SAME Chat composer, then capture the response.
+# Requires an empty original composer and an unambiguous Skill inventory name.
+# The account and visible Skill marker are checked again immediately before Send.
+# Keep the conversation on completion or uncertainty; never retry an uncertain send.
+auracall --profile wsl-chrome-3 skills run <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --yes --prompt "Use this Skill to analyze..." \
+  --response-timeout 300 --json
+# completed means a response was captured; inspect provider evidence to establish
+# actual Skill use. Selecting a Skill separately and later naming it is insufficient.
 # Mutations additionally require --yes. Create returns the exact stable ID;
 # update requires that ID plus the exact prior SKILL.md SHA-256 from show.
 auracall --profile wsl-chrome-3 skills create \

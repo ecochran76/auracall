@@ -5,6 +5,33 @@ import {
 } from "../../src/browser/actions/promptComposer.js";
 
 describe("promptComposer", () => {
+	test("ignores a committed Skill mention without ignoring ordinary user text", () => {
+		class Element {
+			nodeType = 1;
+			constructor(
+				public childNodes: unknown[],
+				public pill = false,
+			) {}
+			matches(selector: string) {
+				return this.pill && selector.includes("[data-inline-selection-pill]");
+			}
+		}
+		const text = (value: string) => ({ nodeType: 3, textContent: value });
+		const read = new Function(
+			"Element",
+			"Node",
+			"window",
+			`return ${promptComposer.buildReadCommittedTurnTextFunction()};`,
+		)(Element, { ["TEXT_NODE"]: 3 }, { getComputedStyle: () => ({ display: "inline" }) });
+		const prompt = "Investigate this snippet.";
+		expect(
+			read(new Element([new Element([text("Codebase Investigator")], true), text(prompt)])),
+		).toBe(prompt);
+		expect(read(new Element([text("Retained user text. "), text(prompt)]))).toBe(
+			"Retained user text. " + prompt,
+		);
+	});
+
 	test("requires the composer user text to equal the requested prompt", () => {
 		expect(promptComposer.composerContainsPrompt("Corel33t", "Review the existing project")).toBe(
 			false,
@@ -228,7 +255,10 @@ describe("promptComposer", () => {
 		expect((runtime.evaluate as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
 	});
 
-	test("accepts prompt text from the exact focused target through submit verification", async () => {
+	test.each([
+		false,
+		true,
+	])("checks the final pre-send guard after insertion (reject=%s)", async (rejectSend) => {
 		const prompt = "Review the bounded Experiment 9 packet.";
 		const runtime = {
 			evaluate: vi
@@ -292,18 +322,30 @@ describe("promptComposer", () => {
 		};
 		const logger = vi.fn<(message: string) => void>();
 
-		await expect(
-			submitPrompt(
-				{
-					runtime: runtime as never,
-					input: input as never,
-					baselineTurns: 0,
-					inputTimeoutMs: 500,
-				},
-				prompt,
-				logger,
-			),
-		).resolves.toBe(1);
+		const beforeSend = vi.fn(async () => {
+			expect(input.insertText).toHaveBeenCalledWith({ text: prompt });
+			expect(runtime.evaluate).toHaveBeenCalledTimes(6);
+			if (rejectSend) throw new Error("selected Skill lost");
+		});
+		const submission = submitPrompt(
+			{
+				runtime: runtime as never,
+				input: input as never,
+				baselineTurns: 0,
+				inputTimeoutMs: 500,
+				beforeSend,
+			},
+			prompt,
+			logger,
+		);
+		if (rejectSend) {
+			await expect(submission).rejects.toThrow("selected Skill lost");
+			expect(runtime.evaluate).toHaveBeenCalledTimes(6);
+			expect(input.dispatchKeyEvent).not.toHaveBeenCalled();
+			return;
+		}
+		await expect(submission).resolves.toBe(1);
+		expect(beforeSend).toHaveBeenCalledOnce();
 
 		expect(input.insertText).toHaveBeenCalledWith({ text: prompt });
 		expect(input.dispatchKeyEvent).not.toHaveBeenCalled();

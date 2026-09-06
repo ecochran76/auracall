@@ -5612,6 +5612,24 @@ skillsCommand
   });
 
 skillsCommand
+  .command('run <skill-id>')
+  .description('Select one exact ChatGPT Skill and submit one prompt in the same Chat composer.')
+  .requiredOption('--expected-account <email>', 'Exact ChatGPT account expected in the managed browser.')
+  .requiredOption('-p, --prompt <text>', 'Prompt to submit once with the selected Skill (maximum 32000 characters).')
+  .option('--response-timeout <seconds>', 'Response capture timeout, 1 to 600 seconds.', '300')
+  .option('--yes', 'Confirm one prompt submission; uncertain sends are never retried.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command, skillId: string) {
+    await runChatgptSkillsCliAction(this, (options) => ({
+      action: 'run', skillId,
+      expectedAccount: String(options.expectedAccount ?? ''),
+      confirmed: Boolean(options.yes),
+      prompt: String(options.prompt ?? ''),
+      timeoutMs: Number(options.responseTimeout) * 1000,
+    }));
+  });
+
+skillsCommand
   .command('create')
   .description('Create one ChatGPT Skill from a deterministic SKILL.md source.')
   .requiredOption('--source <path>', 'SKILL.md file or directory containing SKILL.md.')

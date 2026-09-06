@@ -50,11 +50,17 @@ export interface ChatgptSkillMutationOutcome {
 	message: string;
 	skillId?: string | null;
 	currentUrl?: string | null;
+	responseText?: string;
+	submissionAttempted?: boolean;
 }
 
 export interface ChatgptSkillAdapter {
 	readState(): Promise<ChatgptSkillState>;
 	readSkill(id: string): Promise<ChatgptSkill | null>;
+	run(
+		skill: ChatgptSkill,
+		input: { prompt: string; expectedAccount: string; timeoutMs: number },
+	): Promise<ChatgptSkillMutationOutcome>;
 	select(skill: ChatgptSkill): Promise<ChatgptSkillMutationOutcome>;
 	create(source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome>;
 	update(skill: ChatgptSkill, source: ChatgptSkillSource): Promise<ChatgptSkillMutationOutcome>;
@@ -77,6 +83,14 @@ export interface ChatgptSkillCliDependencies {
 export type ChatgptSkillOperationInput =
 	| { action: "list"; expectedAccount: string }
 	| { action: "show"; expectedAccount: string; skillId: string }
+	| {
+			action: "run";
+			expectedAccount: string;
+			confirmed: boolean;
+			skillId: string;
+			prompt: string;
+			timeoutMs: number;
+	  }
 	| { action: "select"; expectedAccount: string; confirmed: boolean; skillId: string }
 	| {
 			action: "create";
@@ -103,7 +117,7 @@ export type ChatgptSkillOperationResult =
 	| { action: "list"; status: "observed"; state: ChatgptSkillState }
 	| { action: "show"; status: "observed"; state: ChatgptSkillState; skill: ChatgptSkill }
 	| {
-			action: "select" | "create" | "update" | "delete";
+			action: "run" | "select" | "create" | "update" | "delete";
 			status: ChatgptSkillMutationOutcome["status"];
 			state: ChatgptSkillState;
 			outcome: ChatgptSkillMutationOutcome;
@@ -129,15 +143,36 @@ export async function executeChatgptSkillOperation(
 	if (!input.confirmed) {
 		throw new Error(`ChatGPT skill ${input.action} requires --yes.`);
 	}
-	if (input.action === "select") {
+	if (input.action === "select" || input.action === "run") {
+		if (
+			input.action === "run" &&
+			(!input.prompt.trim() ||
+				input.prompt.length > 32_000 ||
+				!Number.isFinite(input.timeoutMs) ||
+				input.timeoutMs < 1000 ||
+				input.timeoutMs > 600_000)
+		) {
+			throw new Error(
+				"ChatGPT Skill run requires a non-empty prompt of at most 32000 characters and a timeout of 1 to 600 seconds.",
+			);
+		}
 		const skillId = assertExactSkillId(input.skillId);
 		const matches = state.skills.filter((skill) => skill.id === skillId);
 		if (matches.length !== 1) {
 			throw new Error(`ChatGPT skill ${skillId} was not found once in the complete inventory.`);
 		}
 		const skill = matches[0];
-		const outcome = await adapter.select(skill);
-		return { action: "select", status: outcome.status, state, outcome, skill };
+		if (
+			input.action === "run" &&
+			state.skills.filter((candidate) => candidate.name.trim() === skill.name.trim()).length !== 1
+		) {
+			throw new Error(
+				"ChatGPT Skill run requires an unambiguous inventory name for composer marker verification.",
+			);
+		}
+		const outcome =
+			input.action === "run" ? await adapter.run(skill, input) : await adapter.select(skill);
+		return { action: input.action, status: outcome.status, state, outcome, skill };
 	}
 	if (input.action === "create") {
 		assertSkillSource(input.source);
@@ -276,6 +311,7 @@ export function formatChatgptSkillOperationResult(result: ChatgptSkillOperationR
 		`Action: ${result.action}`,
 		`Status: ${result.status}`,
 		result.outcome.message,
+		...(result.outcome.responseText ? [result.outcome.responseText] : []),
 		...(result.skill?.id ? [`Skill: ${result.skill.id}`] : []),
 		...(result.skill?.contentHash ? [`Content SHA-256: ${result.skill.contentHash}`] : []),
 	].join("\n");

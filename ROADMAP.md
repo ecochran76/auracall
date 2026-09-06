@@ -1,5 +1,7 @@
 # Aura-Call Roadmap
 
+- P29 implementation installed; actual Skill execution unaccepted: [Plan 0336 Skill prompt invocation](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md). Exact-ID selection and submission are proven in one tab; the responding model reported the selected resource inaccessible.
+
 - Plan 0334 Skills selection is installed/live accepted: iteration 1/5 verified exact-ID selection and cleanup, no prompt. Merged to main through PR #1 (`697dc668`).
 
 - Installed/live-accepted Plan 0335: [Chat mode preflight](docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md), based on installed P27 source; require mode-control proof before a new prompt.

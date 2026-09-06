@@ -1,0 +1,68 @@
+{
+  "observedAt": "2026-09-06T00:15:10.784387+00:00",
+  "implementationCheckpoint": "7c8a413f",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "chatModeVerified": true,
+  "exactAccountVerifiedBeforeSend": true,
+  "inventoryCount": 11,
+  "skillIdSha256": "b5f45eb50af31807cd5ca11b26bca4f9fadc8e784d53fc3efc203d2d0d1e8ab4",
+  "skillName": "Codebase Investigator",
+  "visibleMarkerVerifiedBeforeSend": true,
+  "exactSkillIdCommittedInUserTurn": true,
+  "submissionAttempts": 1,
+  "retries": 0,
+  "initialCommandStatus": "outcome-unknown",
+  "initialCommandError": "Prompt did not appear in conversation before timeout (send may have failed)",
+  "readbackRepair": {
+    "regressionRed": true,
+    "regressionGreen": true,
+    "cause": "Committed Skill mention label was included in prompt text equality. Exclude presentation-only inline pills while retaining ordinary user text.",
+    "existingConversationCommitReverified": true,
+    "existingResponseCaptured": true,
+    "promptResubmitted": false
+  },
+  "conversationUrl": "https://chatgpt.com/c/6a9caed8-9650-83ea-a20f-7ecd07e58202",
+  "responseText": "Actual selected Skill loaded: No. The Codebase Investigator SKILL.md was not exposed as an accessible Skill resource in this session, so I did not claim to use it.\n\nCause: The cache is keyed only by id, but price() depends on both id and discount. After:\n\nprice(\"item\", 0) // caches 100 under \"item\"\n\nthe second call finds \"item\" and returns the stale 100 instead of computing 80.\n\nMinimal fix: Include discount in the cache key:\n\nfunction price(id, discount) {\n  const key = JSON.stringify([id, discount]);\n  if (cache.has(key)) return cache.get(key);\n  const result = 100 * (1 - discount);\n  cache.set(key, result);\n  return result;\n}\n\nRegression test:\n\nexpect(price(\"regression-item\", 0)).toBe(100);\nexpect(price(\"regression-item\", 0.2)).toBe(80);\n\nThis specifically fails with the original implementation because the second result would be 100.\n\nAURACALL_SELECTED_SKILL_SMOKE_20260905",
+  "skillExecutionAccepted": false,
+  "providerReport": "Actual selected Skill loaded: No. The SKILL.md was not exposed as an accessible Skill resource in this session.",
+  "independentDetailPage": {
+    "installedVisible": true,
+    "skillMdVisible": true,
+    "supportingFilesVisible": true,
+    "reviewGateObserved": false
+  },
+  "conclusion": "Same-tab native exact-ID Skill selection and one prompt submission are proven. Provider-native Skill execution remains unaccepted. No domain-filter error was observed.",
+  "cleanup": {
+    "url": "https://chatgpt.com/c/6a9caed8-9650-83ea-a20f-7ecd07e58202",
+    "visibleText": [
+      {
+        "textLength": 0
+      }
+    ],
+    "userTurns": 1,
+    "assistantTurns": 1
+  },
+  "providerReseededExampleClearedByExactText": true,
+  "temporaryInspectionTabClosed": true,
+  "preExistingBrowser": {
+    "pid": 93245,
+    "port": 45015,
+    "preserved": true
+  },
+  "validation": {
+    "focusedPassed": 377,
+    "typecheckPassed": true,
+    "buildPassed": true,
+    "scopedLintErrors": 0,
+    "inheritedScopedLintWarnings": 2,
+    "fullSuiteRun": false
+  },
+  "schedulerActions": 0,
+  "serviceRestarts": 0,
+  "skillCrudActions": 0,
+  "nextGate": "Determine why the responding model reported the selected installed Skill resource inaccessible; the single canary ended without resend.",
+  "repairedImplementationCheckpoint": "af8a3f105e13879e8a8bd31ce1d5963e79e766c3",
+  "repairedInstalledParity": true,
+  "installedReadOnlyRecoveryPassed": true
+}

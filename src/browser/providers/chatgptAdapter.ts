@@ -5601,7 +5601,7 @@ async function waitForCreateProjectDialogReady(
 	return ready.ok;
 }
 
-async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
+export async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
 	let authSessionProbe: ChatgptAuthSessionProbe | null = null;
 	for (let attempt = 0; attempt < 5; attempt += 1) {
 		const authSessionResult = await client.Runtime.evaluate({

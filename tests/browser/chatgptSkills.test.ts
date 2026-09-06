@@ -327,6 +327,7 @@ describe("ChatGPT Skill provider contracts", () => {
 			),
 		).toEqual({
 			selected: true,
+			markerObserved: true,
 			skillId: id,
 			skillName: "Canary",
 			composerEmpty: true,
