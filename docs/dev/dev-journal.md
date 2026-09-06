@@ -48990,3 +48990,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 ## 2026-09-06 | Plan 0337 Git maintenance completed
 
 - Eleven stale worktrees removed; four active/main/process-owned checkouts retained. Original dirty files have verified remote WIP custody; unfinished P16 is published and P18 has a stable paused branch. Merge conflicts are resolved and full Git integrity passes. Canonical census/removal/closeout receipts bind the exact results.
+
+## 2026-09-06 | Plan 0338 browser review remediation
+
+- Implementing visible-composer upload fallback validation and restoring explicit-model handoff coverage from current main. No browser or installed-runtime work is included.

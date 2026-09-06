@@ -1,5 +1,9 @@
 # RUNBOOK
 
+## Turn 573 | 2026-09-06
+
+- Opened [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) on fresh main for the two frozen review findings. Provider-free repair, tests and docs only; preserve obsolete WIP custody.
+
 ## Turn 572 | 2026-09-06
 
 - Closed [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md): eleven stale worktrees removed with fresh custody gates; four retained. Browser WIP preserved at `3696f6dd3`, unfinished P16 published, and P18 isolated as a stable paused plan branch. Full Git integrity checks pass.

@@ -561,3 +561,18 @@ lanes:
     integration_receipt: cd3e6b68
     disposition: Restored missing integrated lane from its closed branch plan and verified main ancestry; eligible for stale worktree closure.
     updated_at: 2026-09-06
+  - id: P31
+    objective: Reject inactive upload composers and restore explicit-model handoff coverage.
+    plan: docs/dev/plans/0338-2026-09-06-upload-composer-validation.md
+    plan_ref: refs/remotes/origin/fix/plan0338-upload-composer-validation
+    branch: fix/plan0338-upload-composer-validation
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: refs/remotes/origin/fix/plan0338-upload-composer-validation
+    integration: merge
+    dependencies: [P30]
+    overlaps: []
+    disposition: Provider-free remediation of R1 and R2; no installed or live effects.
+    updated_at: 2026-09-06

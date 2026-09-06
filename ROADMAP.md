@@ -1,5 +1,7 @@
 # Aura-Call Roadmap
 
+- Active P31: [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) repairs inactive upload composer detection and explicit-model handoff coverage.
+
 - Completed Git maintenance: [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md) (P30) preserved unfinished work and removed 11 clean, integrated, process-unowned worktrees; four remain intentionally.
 
 - P29 implementation installed; actual Skill execution unaccepted: [Plan 0336 Skill prompt invocation](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md). Exact-ID selection and submission are proven in one tab; the responding model reported the selected resource inaccessible.
