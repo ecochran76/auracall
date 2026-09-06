@@ -48971,3 +48971,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Final repair `af8a3f10` is installed at matching bytes. Its read-only prompt/response readers recover the same conversation; no additional send. Plan 0336 remains OPEN with an actual Skill execution gate while validated command implementation proceeds to integration.
 
 - PR #2 merged at `01bb65ad2bed76422b19a1367a275dbed99b5313`. Source/installed/readback evidence is integrated; native Skill execution remains unaccepted, with no additional provider send.
+
+## 2026-09-05 | Plan 0336 visual follow-up
+
+- Visually inspected the live canary and exact Skill detail screenshots. Skill source and supporting files are present. Expanded activity shows a plugin search for `codebase investigator` with limit 10, rather than evidence of Skill-file loading. Wrong lookup routing is now a concrete hypothesis; model self-report alone does not establish provider resource denial. Inspection tab closed, chat focus restored, zero additional prompts.
