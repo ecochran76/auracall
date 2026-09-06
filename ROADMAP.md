@@ -1,6 +1,6 @@
 # Aura-Call Roadmap
 
-- Active Git maintenance: [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md) (P30) preserves unfinished work and closes only clean, integrated, process-unowned worktrees.
+- Completed Git maintenance: [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md) (P30) preserved unfinished work and removed 11 clean, integrated, process-unowned worktrees; four remain intentionally.
 
 - P29 implementation installed; actual Skill execution unaccepted: [Plan 0336 Skill prompt invocation](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md). Exact-ID selection and submission are proven in one tab; the responding model reported the selected resource inaccessible.
 
@@ -4153,3 +4153,5 @@ See [docs/dev/browser-service-upgrade-backlog.md](docs/dev/browser-service-upgra
   successfully. The first pass advanced four detail conversations with no
   provider guard and handed off to one `idle_waiting` completion under normal
   cadence.
+
+- P18 remains paused: [Plan 0325](docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md), now held on a stable published operational branch; no live allowance was used by maintenance.

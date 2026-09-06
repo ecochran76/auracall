@@ -22353,3 +22353,8 @@ final answer contradicted it. Receipt: `docs/dev/notes/2026-09-05-plan0334-skill
 ## 2026-09-05 | Committed Skill mentions are presentation, not user prompt text
 
 ChatGPT commits a native Skill mention before the user text. Prompt equality must exclude `[data-inline-selection-pill]`, as it already excludes attachment/action presentation, without excluding ordinary text. Response capture must use the pre-submit boundary rather than a committed turn count that may include an already-finished answer. The real canary was recovered with the repaired readers and no prompt retry. Selected Skill identity alone still does not prove the provider loaded its instructions.
+
+## 2026-09-06 | Preserve Git custody before closing stale worktrees
+
+- A clean index does not prove a directory is disposable: check ignored files, exact integrated ancestry, remote custody, and current process cwd owners immediately before removal.
+- Preserve reviewed-but-unaccepted edits on a named remote WIP branch and verify file hashes before restoring the original clean branch. Keep paused operational plans on stable branch tips so moving-main checkpoint drift does not recur.

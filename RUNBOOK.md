@@ -1,5 +1,10 @@
 # RUNBOOK
 
+## Turn 572 | 2026-09-06
+
+- Closed [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md): eleven stale worktrees removed with fresh custody gates; four retained. Browser WIP preserved at `3696f6dd3`, unfinished P16 published, and P18 isolated as a stable paused plan branch. Full Git integrity checks pass.
+- Restored explicit links for paused [Plan 0325](docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md) and the previous [Plan 0336](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md) execution record. No runtime effect ran during maintenance.
+
 ## Turn 571 | 2026-09-06
 
 - Opened P30 / Plan 0337 for the authorized Git maintenance goal. Census is 15 worktrees; the earlier interrupted merge is resolved and published. Preserve browser WIP and unpublished P16 before removing integrated stale directories; retain process-owned P27. Graphiti recall returned no relevant custody decisions.

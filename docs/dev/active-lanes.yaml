@@ -297,13 +297,13 @@ lanes:
   - id: P18
     objective: Adopt integrated history-materialization fairness into the installed runtime and prove one bounded wsl-chrome-3 pass without resuming continuous live follow.
     plan: docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md
-    plan_ref: refs/heads/main
-    branch: main
+    plan_ref: refs/remotes/origin/ops/plan0325-installed-fairness-canary
+    branch: ops/plan0325-installed-fairness-canary
     target: main
     plan_state: OPEN
-    custody_state: INTEGRATED
-    checkpoint: cef04418178e5d1a15a4fbd52d8393ce03ea47b3
-    remote_ref: refs/remotes/origin/main
+    custody_state: PAUSED_REF
+    checkpoint: 317b6b372da57d295629abb78e2b1daa8ad8bb33
+    remote_ref: refs/remotes/origin/ops/plan0325-installed-fairness-canary
     integration: direct
     dependencies: [P17]
     overlaps: [P08]
@@ -314,6 +314,7 @@ lanes:
     updated_at: 2026-09-01
     reconciled_overlaps: [P08]
     reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+    custody_note: Exact paused plan branch published by Plan 0337; operational blockers are historical plan evidence and were not re-probed or cleared.
   - id: P19
     objective: Preserve long-running ChatGPT turns as resumable when only AuraCall's observation lease expires, with bounded read-only recovery and no resend.
     plan: docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md
@@ -511,20 +512,23 @@ lanes:
   - id: P30
     objective: Complete Git maintenance and close stale worktrees while preserving unfinished work.
     plan: docs/dev/plans/0337-2026-09-06-git-maintenance.md
-    plan_ref: refs/heads/chore/plan0337-git-maintenance
+    plan_ref: refs/remotes/origin/main
     branch: chore/plan0337-git-maintenance
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: cef04418178e5d1a15a4fbd52d8393ce03ea47b3
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: a2b7dfa3daa373f429bccd4aaaf50bbbcde8189b
     remote_ref: refs/remotes/origin/chore/plan0337-git-maintenance
     integration: merge
     dependencies: []
     overlaps: [P08, P16, P27]
-    disposition: Maintenance plan registered; custody and cleanup execution pending.
+    disposition: Maintenance completed; eleven stale worktrees removed, four deliberately retained, unfinished work published, and original dirty files preserved verbatim.
     updated_at: 2026-09-06
     reconciled_overlaps: [P08, P16, P27]
     reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+    integration_receipt: a2b7dfa3daa373f429bccd4aaaf50bbbcde8189b
+    validation_ref: docs/dev/notes/2026-09-06-plan0337-closeout.json
+    validation_status: git-maintenance-verified
   - id: P16
     objective: Complete exact ChatGPT developer-app submit selection and response capture.
     plan: docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md

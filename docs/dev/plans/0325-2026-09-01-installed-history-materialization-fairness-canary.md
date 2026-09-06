@@ -3,7 +3,7 @@
 State: OPEN
 Lane: P18
 Operational state: BLOCKED_ON_EXTERNAL_FOREGROUND_BROWSER
-Branch: main
+Branch: ops/plan0325-installed-fairness-canary
 Target: main
 Integration: direct
 Revision: 3 | 2026-09-01
@@ -100,3 +100,9 @@ surface after a fresh clean ownership gate.
 External foreground Chrome PID `1933` must exit normally. Do not terminate or
 reuse it for P18. After process absence is proven, repeat the complete
 ChatGPT/Gemini-disabled ownership gate before consuming either effect allowance.
+
+## Git Custody | 2026-09-06
+
+Plan 0337 moved this unfinished operational plan to a published paused branch
+so its checkpoint can remain stable while main advances. The operational
+hard stop and all unused live allowances remain unchanged and unexecuted.

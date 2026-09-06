@@ -1,6 +1,6 @@
 # Git Maintenance And Worktree Closure | 0337-2026-09-06
 
-State: OPEN
+State: CLOSED
 Lane: P30
 Branch: chore/plan0337-git-maintenance
 Target: main
@@ -14,16 +14,15 @@ and close stale worktrees with verified custody and a current lane catalog.
 
 ## Current State
 
-- Initial census: 15 worktrees. P08 has seven dirty entries; P16 is clean but
-  lacks a remote branch. Twelve other worktrees are clean, integrated into
-  origin/main, and have no process cwd owners; one of these is reused for this
-  maintenance lane. P27 is integrated but retains live process cwd owners.
-- Earlier thread work completed the interrupted P17-into-P08 merge at
-  `18ce58652` and published its review follow-up at `2a1cd3e15`.
-- Object maintenance and full fsck passed. Local main was fast-forwarded from
-  `4767e79a` to verified origin/main `d942e80d` before ancestry classification.
-- Browser edits have review findings and must be retained as unaccepted WIP;
-  repairing or deploying that browser behavior is outside Git maintenance.
+- Eleven stale worktrees were removed after fresh gates; four remain: active
+  P08, unfinished P16, process-owned P27, and the existing main checkout.
+- Browser WIP is remotely preserved at `3696f6dd3` with all seven original file
+  SHA-256 values verified; P08 is clean at `2a1cd3e15`. P16 is published at
+  `bd8738da9`. P18 now has stable paused custody at `317b6b37`.
+- Missing P16/P24 catalog entries and checkpoint/overlap metadata are restored.
+  The temporary maintenance local branch is deleted; its remote remains.
+- Full fsck and commit-graph verification pass. Removal receipts record exact
+  SHA, cleanliness, ancestry, generated ignored paths, and no process owners.
 
 ## Execution Graph
 
@@ -72,3 +71,16 @@ custody transition and before destructive directory removal.
 All stale eligible worktrees are removed, retained worktrees have concrete
 active/custody reasons, unfinished files are remotely recoverable, conflicts are
 resolved, and the canonical maintenance receipt proves every criterion.
+
+## Acceptance Evidence
+
+- GM1/GM3: `docs/dev/notes/2026-09-06-plan0337-worktree-census.json` and
+  `docs/dev/notes/2026-09-06-plan0337-worktree-removals.json` account for all
+  15 initial directories: 11 removed, four intentionally retained.
+- GM2: merge `18ce58652` and review `2a1cd3e15` are published on P08; all
+  seven initial dirty files are preserved byte-for-byte at `3696f6dd3`.
+- GM4: P08/P16/WIP/P18 remote tips are read back exactly. The WIP remains
+  unaccepted; Git maintenance did not repair or integrate it. P27 remains
+  process-owned and must not be removed until those owners independently exit.
+- GM5: full fsck and commit-graph verification pass; final custody, conflict,
+  planning/catalog, and parity readbacks are recorded in the closeout receipt.
