@@ -585,7 +585,9 @@ export async function prepareChatgptWorkbenchLocalAttachment(
       const visible = (node) => {
         if (!(node instanceof HTMLElement)) return false;
         const rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
+        const style = getComputedStyle(node);
+        return rect.width > 0 && rect.height > 0
+          && style.visibility !== 'hidden' && style.visibility !== 'collapse';
       };
       const normalizeText = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
@@ -605,17 +607,30 @@ export async function prepareChatgptWorkbenchLocalAttachment(
             })
             .filter((row) => row.label)
         : [];
-      const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => {
-        const composer = input.closest('form');
-        const prompt = composer?.querySelector(
+      // Hidden fallback textareas can precede the visible editor. Select the
+      // unique visible composer before attributing any mounted upload input.
+      const composers = Array.from(document.querySelectorAll('form')).filter((form) =>
+        visible(form)
+        && Array.from(form.querySelectorAll(
           '#prompt-textarea, textarea[name="prompt-textarea"], [contenteditable="true"]',
-        );
-        const trigger = composer?.querySelector(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)});
+        )).some(visible)
+        && Array.from(form.querySelectorAll(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)})).some(visible),
+      );
+      const composer = composers.length === 1 ? composers[0] : null;
+      const triggers = composer
+        ? Array.from(composer.querySelectorAll(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)})).filter(visible)
+        : [];
+      const trigger = triggers.length === 1 ? triggers[0] : null;
+      const controlledIds = (trigger?.getAttribute('aria-controls') || '').trim().split(/\\s+/).filter(Boolean);
+      const ownsPopover = roots.length === 1 && trigger
+        && trigger.getAttribute('aria-expanded') !== 'false'
+        && (controlledIds.length === 0 || controlledIds.includes(root.id));
+      const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => {
         return {
           id: input.id || '',
           accept: input.getAttribute('accept'),
           multiple: input.hasAttribute('multiple'),
-          composerLocal: Boolean(composer && prompt && trigger),
+          composerLocal: Boolean(composer && ownsPopover && input.closest('form') === composer),
           composerTriggerLabel: trigger?.getAttribute('aria-label') || trigger?.textContent || null,
         };
       });

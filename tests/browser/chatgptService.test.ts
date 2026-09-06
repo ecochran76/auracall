@@ -145,7 +145,10 @@ describe('ChatGPT llm service', () => {
     );
   });
 
-  it('submits handoff compact context and selected files through the ChatGPT browser adapter', async () => {
+  it.each([
+    { selector: null, desiredModel: null, thinkingTime: null, modelStrategy: 'current' },
+    { selector: 'chatgpt:reasoning-high', desiredModel: 'GPT-5.6 Sol', thinkingTime: 'extended', modelStrategy: 'select' },
+  ])('submits handoff context and files with model selector $selector', async ({ selector, desiredModel, thinkingTime, modelStrategy }) => {
     stubBrowserServiceTarget();
     const root = await tempRoot('auracall-chatgpt-handoff-adapter-');
     const auracallHome = await tempRoot('auracall-chatgpt-handoff-operation-');
@@ -172,7 +175,7 @@ describe('ChatGPT llm service', () => {
       targetRuntimeProfile: 'target-pro',
       targetRef: 'https://chatgpt.com/g/g-p-target-pro-soylei',
       targetProjectRef: 'g-p-target-pro',
-      targetModelSelector: null,
+      targetModelSelector: selector,
       sourceContext: { messages: [{ role: 'user', content: 'handoff adapter' }] },
       sourceManifest: {
         items: [manifestItemFixture({ id: 'chatgpt_attachment', localPath: selectedPath })],
@@ -305,9 +308,9 @@ describe('ChatGPT llm service', () => {
         ],
         conversationId: null,
         targetUrl: 'https://chatgpt.com/g/g-p-target-pro-soylei',
-        desiredModel: null,
-        thinkingTime: null,
-        modelStrategy: 'current',
+        desiredModel,
+        thinkingTime,
+        modelStrategy,
       }),
       expect.objectContaining({
         tabLifecycle: 'retain-new',

@@ -48994,3 +48994,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 ## 2026-09-06 | Plan 0338 browser review remediation
 
 - Implementing visible-composer upload fallback validation and restoring explicit-model handoff coverage from current main. No browser or installed-runtime work is included.
+
+## 2026-09-06 | Plan 0338 provider-free repair validated
+
+- R1 inventory regressions reproduced eight false-positive upload decisions
+  before repair. Unique visible composer ownership and optional explicit
+  popover binding now reject them while retaining legitimate hidden inputs.
+- R2 handoff coverage keeps current-model behavior and explicit semantic model
+  plus effort propagation. Final targeted packet passes 69 tests; typecheck,
+  build and scoped lint pass after replacing stale shared dependencies with
+  the frozen lockfile. Integration and temporary-worktree closeout follow.

@@ -1,5 +1,14 @@
 # Browser Mode
 
+ChatGPT file uploads require a verified local-file action or one unambiguous
+visible composer with a visible editor and attachment trigger. When menu labels
+change, inactive or ambiguous composers are rejected; a hidden native file input
+is still valid. If the trigger declares which popover it controls, that popover
+must match.
+
+ChatGPT handoffs without a model selector keep the current model. An explicit
+semantic selector selects the requested model and thinking effort.
+
 Aura-Call’s `--engine browser` supports three different execution paths:
 
 - **ChatGPT automation** (GPT-* models): drives the ChatGPT web UI with Chrome automation.

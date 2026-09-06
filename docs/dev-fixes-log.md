@@ -22358,3 +22358,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 
 - A clean index does not prove a directory is disposable: check ignored files, exact integrated ancestry, remote custody, and current process cwd owners immediately before removal.
 - Preserve reviewed-but-unaccepted edits on a named remote WIP branch and verify file hashes before restoring the original clean branch. Keep paused operational plans on stable branch tips so moving-main checkpoint drift does not recur.
+
+## 2026-09-06 | Hidden composer forms are not upload authority
+
+- A mounted file input plus any same-form editor and attachment trigger could
+  authorize local upload despite all controls being hidden. Inventory all
+  candidate forms, require one visible composer and trigger, and require the
+  input to belong to that composer. Respect explicit popover ownership and
+  reject ambiguous popovers; the file input itself may remain hidden.
+- Select a visible editor from all candidates so a hidden fallback textarea
+  cannot mask the usable editor. Test the production inventory expression,
+  not a hand-supplied composerLocal flag.
+- Preserve omitted and explicit-model handoff cases together. Validation must
+  use frozen-lockfile dependencies: stale shared OpenAI 6.15.0 dependencies
+  produced unrelated errors against current source requiring 7.10.0.

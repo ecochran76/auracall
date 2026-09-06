@@ -886,11 +886,16 @@
       `pnpm vitest run tests/browser/chatgptComposerTool.test.ts tests/browser/pageActions.test.ts tests/services/registry.test.ts`
       - the visible `.popover` may mix file-source rows and tool/app rows;
         file-source rows must never satisfy composer-tool selection
-      - local and remote `--file` paths must verify exactly one
-        `Add photos & files / Upload from computer` row, one
-        `Add from library / Browse and search your files` row, and one
-        unrestricted multi-file `#upload-files` input before transfer
-      - drift, ambiguity, or an image-restricted `#upload-files` input must
+      - local and remote `--file` paths require one unrestricted multi-file
+        `#upload-files` input plus the exact local-file row or the validated
+        composer fallback below; the provider-library row is optional
+      - label drift may use one uniquely visible composer/editor/trigger;
+        `tests/browser/chatgptAttachmentComposer.test.ts` executes the real
+        inventory expression for inactive forms, hidden fallback textareas,
+        foreign inputs, ambiguous triggers/popovers, and explicit ownership
+      - handoff coverage in `tests/browser/chatgptService.test.ts` retains both
+        omitted/current and explicit semantic model/effort selection
+      - unresolved drift, ambiguity, or an image-restricted `#upload-files` input must
         fail closed before any file transfer or prompt submission
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`

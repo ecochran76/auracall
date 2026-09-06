@@ -15,10 +15,18 @@ retain coverage alongside omitted selectors.
 
 ## Current State
 
-- Baseline `14e77ae23` already contains current-model preservation and the
-  composer-local upload fallback; do not replay the obsolete recovery branch.
-- Actual DOM inventory accepts hidden forms and the model handoff fixture
-  exercises only an omitted selector. R1 and R2 are the frozen findings.
+- R1 is repaired: fallback requires one visible form/editor/trigger, exact
+  input ownership, one visible popover, and compatible explicit ownership.
+- R2 is repaired by retaining both omitted and explicit semantic selector
+  scenarios through the real handoff adapter and operation dispatcher.
+- Eight original negative inventory fixtures failed before the source repair;
+  all 13 final inventory cases pass, including hidden native file input,
+  hidden textarea before a visible editor, foreign input and duplicate trigger.
+- The seven-file focused/adjacent suite passes 69 tests; typecheck, production
+  build, scoped zero-warning lint and diff hygiene pass with frozen dependencies.
+- Initial typecheck/build failed with inherited OpenAI 6.15.0 dependencies;
+  isolated frozen-lockfile installation restored required 7.10.0 and both pass.
+- Integration, canonical audit readback, and temporary custody cleanup remain.
 
 ## Execution Graph
 
