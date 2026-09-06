@@ -48233,3 +48233,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   recovery-planner, and HTTP reconciliation tests plus `pnpm run typecheck`.
   Index validation confirms no unmerged paths and clean staged diff hygiene.
 - No installed runtime, browser, provider, or scheduler action ran.
+
+## 2026-09-06 | Remaining browser edits reviewed
+
+- Reviewed the browser diff against `18ce58652`: 38 focused tests and typecheck
+  pass, but an actual inventory-expression fixture confirms that a hidden form
+  can authorize upload readiness without a local-file row. Explicit model
+  selection coverage was also replaced instead of retained.
+- Findings and exact acceptance gaps are recorded in
+  `docs/dev/notes/2026-09-06-browser-edits-review.md`. Source changes remain
+  uncommitted pending remediation; no live or installed-runtime action ran.
