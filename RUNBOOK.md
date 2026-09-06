@@ -1,5 +1,9 @@
 # RUNBOOK
 
+## Turn 570 | 2026-09-05
+
+- Native unchanged Try-in-chat example also reported the selected Skill unavailable. Exact ID is present in outgoing metadata and the user turn; only four built-in Skills appeared in the model filesystem search. One submission, zero retries, empty composer, browser preserved. Receipt: `docs/dev/notes/2026-09-05-plan0336-native-example-comparison.json`.
+
 ## Turn 569 | 2026-09-05
 
 - P29 implements exact-ID `skills run` with same-tab selection and submission. Focused validation passes 376 tests; build/typecheck and planning checks pass. The one installed canary committed the exact native Skill ID; ChatGPT reported its resource inaccessible. A Skill-label commit-readback regression was repaired and the existing answer recaptured without resubmission. Final focused checks pass 377 tests; repaired installed readers recovered the existing conversation. PR #2 merged at `01bb65ad`. Actual Skill execution remains unaccepted. Receipt: `docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json`.

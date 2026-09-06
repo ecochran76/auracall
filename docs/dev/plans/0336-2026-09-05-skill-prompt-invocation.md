@@ -34,6 +34,16 @@ Repaired installed bytes match `af8a3f10`; installed read-only recovery passes
 on the existing conversation. PR #2 merged at `01bb65ad`. Skill execution is
 still unaccepted: the responding model reported no access to its Skill resource.
 
+### Native comparison follow-up
+
+The user authorized one unchanged native Try-in-chat example. It also failed
+to load the custom Skill. The outgoing request contains the exact Skill ID in
+serialization metadata and uses `gpt-5-6-thinking`. The model's actual search
+under `/home/oai` returned only docx, pdfs, slides, and spreadsheets Skill files.
+This shifts the next investigation toward custom-Skill availability for the
+model/session; it does not prove exhaustive resource absence or access denial.
+Receipt: `docs/dev/notes/2026-09-05-plan0336-native-example-comparison.json`.
+
 ## Scope And Bounds
 
 One serialized implementation and focused validation slice, installed adoption,

@@ -48975,3 +48975,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 ## 2026-09-05 | Plan 0336 visual follow-up
 
 - Visually inspected the live canary and exact Skill detail screenshots. Skill source and supporting files are present. Expanded activity shows a plugin search for `codebase investigator` with limit 10, rather than evidence of Skill-file loading. Wrong lookup routing is now a concrete hypothesis; model self-report alone does not establish provider resource denial. Inspection tab closed, chat focus restored, zero additional prompts.
+
+## 2026-09-05 | Plan 0336 unchanged native example also fails Skill loading
+
+- One native Try-in-chat example was sent unchanged with trusted pointer input, exact account, Chat mode, and exact Skill ID. Wire metadata carries the ID in custom_symbol_offsets; model is gpt-5-6-thinking.
+- Final answer denies Skill loading. Expanded tool output finds only four built-in SKILL.md files under /home/oai, depth six. This supports a model/session resource-availability hypothesis, not exhaustive filesystem absence or a proven provider access denial.
+- No resend. Provider example draft cleared by exact match; conversation and pre-existing browser retained. Shared response waiter returned intermediate text early; direct final DOM readback supplies the outcome.
+- Receipt: `docs/dev/notes/2026-09-05-plan0336-native-example-comparison.json`.
