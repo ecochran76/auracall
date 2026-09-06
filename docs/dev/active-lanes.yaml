@@ -483,15 +483,15 @@ lanes:
     branch: fix/plan0336-skill-prompt-invocation
     target: main
     plan_state: OPEN
-    custody_state: INTEGRATION_READY
-    checkpoint: af8a3f105e13879e8a8bd31ce1d5963e79e766c3
+    custody_state: INTEGRATED
+    checkpoint: 13a718b6eff79ef51faef8fe63514276ded04367
     remote_ref: refs/remotes/origin/fix/plan0336-skill-prompt-invocation
     integration: merge
     dependencies: [P27, P28]
     overlaps: []
     validation_status: native-submission-proven-execution-unaccepted
     validation_ref: docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json
-    integration_receipt: null
+    integration_receipt: 01bb65ad2bed76422b19a1367a275dbed99b5313
     blocker: Actual Skill execution remains unaccepted; model reported selected resource inaccessible.
     disposition: One native exact-ID Skill prompt committed; provider reported resource inaccessible. Commit-readback repair recovered existing answer; 377 focused tests pass. No prompt retry.
     updated_at: 2026-09-05

@@ -64,5 +64,9 @@
   "nextGate": "Determine why the responding model reported the selected installed Skill resource inaccessible; the single canary ended without resend.",
   "repairedImplementationCheckpoint": "af8a3f105e13879e8a8bd31ce1d5963e79e766c3",
   "repairedInstalledParity": true,
-  "installedReadOnlyRecoveryPassed": true
+  "installedReadOnlyRecoveryPassed": true,
+  "integration": {
+    "pr": "https://github.com/ecochran76/auracall/pull/2",
+    "mergeCommit": "01bb65ad2bed76422b19a1367a275dbed99b5313"
+  }
 }

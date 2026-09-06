@@ -31,7 +31,7 @@ Final focused tests pass 377/377; typecheck/build/planning/diff checks pass.
 Scoped lint has no errors and two inherited warnings. Full suite was not rerun.
 Receipt: `docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json`.
 Repaired installed bytes match `af8a3f10`; installed read-only recovery passes
-on the existing conversation. Source integration remains. Skill execution is
+on the existing conversation. PR #2 merged at `01bb65ad`. Skill execution is
 still unaccepted: the responding model reported no access to its Skill resource.
 
 ## Scope And Bounds

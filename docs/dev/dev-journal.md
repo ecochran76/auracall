@@ -48969,3 +48969,5 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Exact provider example text was cleared; inspection tab closed; pre-existing browser and conversation retained. Source integration and final installed repair follow.
 
 - Final repair `af8a3f10` is installed at matching bytes. Its read-only prompt/response readers recover the same conversation; no additional send. Plan 0336 remains OPEN with an actual Skill execution gate while validated command implementation proceeds to integration.
+
+- PR #2 merged at `01bb65ad2bed76422b19a1367a275dbed99b5313`. Source/installed/readback evidence is integrated; native Skill execution remains unaccepted, with no additional provider send.

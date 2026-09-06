@@ -2,7 +2,7 @@
 
 ## Turn 569 | 2026-09-05
 
-- P29 implements exact-ID `skills run` with same-tab selection and submission. Focused validation passes 376 tests; build/typecheck and planning checks pass. The one installed canary committed the exact native Skill ID; ChatGPT reported its resource inaccessible. A Skill-label commit-readback regression was repaired and the existing answer recaptured without resubmission. Final focused checks pass 377 tests. Receipt: `docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json`.
+- P29 implements exact-ID `skills run` with same-tab selection and submission. Focused validation passes 376 tests; build/typecheck and planning checks pass. The one installed canary committed the exact native Skill ID; ChatGPT reported its resource inaccessible. A Skill-label commit-readback regression was repaired and the existing answer recaptured without resubmission. Final focused checks pass 377 tests; repaired installed readers recovered the existing conversation. PR #2 merged at `01bb65ad`. Actual Skill execution remains unaccepted. Receipt: `docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json`.
 
 ## Turn 568 | 2026-09-05
 
