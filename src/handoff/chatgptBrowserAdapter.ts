@@ -100,7 +100,7 @@ async function submitChatgptHandoffPrompt(
 		modelSelector: input.modelSelector,
 		desiredModel: semanticSelection?.desiredModel ?? null,
 		thinkingTime: semanticSelection?.thinkingTime ?? null,
-		modelStrategy: semanticSelection ? "select" : undefined,
+		modelStrategy: input.modelSelector == null ? "current" : semanticSelection ? "select" : undefined,
 	});
 	const targetConversationRef =
 		normalizeString(result.url) ??

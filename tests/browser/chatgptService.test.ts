@@ -160,7 +160,7 @@ describe('ChatGPT llm service', () => {
       targetProvider: 'chatgpt',
       targetRuntimeProfile: 'target-pro',
       targetRef: 'https://chatgpt.com/c/target-chatgpt-handoff',
-      targetModelSelector: 'chatgpt:pro-extended',
+      targetModelSelector: null,
       sourceContext: { messages: [{ role: 'user', content: 'handoff adapter' }] },
       sourceManifest: {
         items: [manifestItemFixture({ id: 'chatgpt_attachment', localPath: selectedPath })],
@@ -238,9 +238,9 @@ describe('ChatGPT llm service', () => {
         ],
         conversationId: 'target-chatgpt-handoff',
         targetUrl: 'https://chatgpt.com/c/target-chatgpt-handoff',
-        desiredModel: 'GPT-5.6 Sol',
-        thinkingTime: 'extended',
-        modelStrategy: 'select',
+        desiredModel: null,
+        thinkingTime: null,
+        modelStrategy: 'current',
       }),
       expect.any(Object),
     );

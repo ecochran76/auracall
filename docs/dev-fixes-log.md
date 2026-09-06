@@ -22082,3 +22082,8 @@ browser-stage lifecycle observability, not transcript truncation.
   static false-positive, retrieval-failed, and terminal rows. Full-retrieval
   live follow should consult the recovery planner and queue materialization only
   when retrievable assets or unknown/deferred detail work remain.
+
+## 2026-09-05 | Chat mode false-positive exposed by cooperation smoke
+
+- Installed runtime logged Chat already selected while the retained page explicitly reported Work aria-checked=true and Chat=false. Work usage was exhausted; no prompt committed. Treat successful authentication and a mode log as insufficient submission proof.
+- This is an observed unresolved defect, not a provider-domain-filter diagnosis. Receipt: `docs/dev/notes/2026-09-05-wsl-chrome-3-cooperation-smoke.json`.

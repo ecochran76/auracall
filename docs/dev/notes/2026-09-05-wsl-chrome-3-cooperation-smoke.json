@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-09-05T22:15:51.318621+00:00",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "sessionId": "wsl-chatgpt-cooperatio-smoke",
+  "sessionEvidence": "/home/ecochran76/.auracall/sessions/wsl-chatgpt-cooperatio-smoke/output.log",
+  "focusedTestsPassed": 146,
+  "requestedMode": "chat",
+  "runtimeReportedMode": "Chat (already selected)",
+  "liveModeRadios": {
+    "Chat": false,
+    "Work": true
+  },
+  "visibleProviderMessage": "You\u2019re out of Work usage for now",
+  "workCredits": 0,
+  "promptCommitted": false,
+  "userTurns": 0,
+  "assistantTurns": 0,
+  "sendAttempts": 1,
+  "retries": 0,
+  "domainFilterObserved": false,
+  "chromePid": 63540,
+  "chromePort": 9222,
+  "schedulerControlActions": 0,
+  "conclusion": "Smoke failed: live Work selection contradicts AuraCall Chat-mode report; Work quota exhausted. No cooperating Chat response proven.",
+  "cleanup": {
+    "exactOwnedChromePidAbsent": true,
+    "port9222Closed": true
+  }
+}

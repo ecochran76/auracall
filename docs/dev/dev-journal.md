@@ -48234,6 +48234,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   Index validation confirms no unmerged paths and clean staged diff hygiene.
 - No installed runtime, browser, provider, or scheduler action ran.
 
+## 2026-09-05 | wsl-chrome-3 cooperation smoke failed
+
+- Installed AuraCall passed account authorization and navigation, but its Chat-mode report contradicted live radios: Chat=false, Work=true. The page showed exhausted Work usage and zero credits.
+- One Enter send attempt produced zero user/assistant turns; no retry or scheduler control ran. Focused browser contracts passed 146/146 but did not predict this live mismatch.
+- Evidence: `docs/dev/notes/2026-09-05-wsl-chrome-3-cooperation-smoke.json` and retained session `wsl-chatgpt-cooperatio-smoke`. Next: repair current-mode detection before repeating the smoke. Existing merge conflict is preserved.
+
 ## 2026-09-06 | Remaining browser edits reviewed
 
 - Reviewed the browser diff against `18ce58652`: 38 focused tests and typecheck
