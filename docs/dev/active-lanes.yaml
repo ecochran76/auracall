@@ -134,7 +134,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 2a1cd3e15bacf1786d9601ca3cc03c529f676714
+    checkpoint: 9860b9d49be75c7ff3bcdb5ed344ae28bb9f5f2a
     remote_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     integration: merge
     dependencies: [P07]
@@ -143,8 +143,8 @@ lanes:
     validation_ref: 025453473c5957fb72abb7ed787cb6d1266951e6
     integration_receipt: null
     blocker: The auracall-gemini-pro target retains a manual_clear_required google-sorry guard; human clearance is required before P08 may pause the scheduler or install.
-    disposition: Refreshed provider-free repair passes 91 focused tests, typecheck, build, and changed-source lint; installed proof remains blocked without consuming any effect allowance.
-    updated_at: 2026-08-29
+    disposition: Refreshed provider-free repair and later policy-rollout checkpoint are clean and published; 15 current cwd owners retain the active worktree, and installed proof remains blocked without consuming any effect allowance.
+    updated_at: 2026-09-09
     recovery_ref: refs/remotes/origin/wip/plan0337-browser-edits-recovery
     recovery_checkpoint: 3696f6dd337b703f42997753a576bd8364203102
     recovery_disposition: Seven original dirty files preserved byte-for-byte as unaccepted WIP; no browser repair integrated.
@@ -468,8 +468,8 @@ lanes:
     validation_ref: docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json
     integration_receipt: 697dc66847591ac10b87f2e02e1bdf99ac7b4db6
     blocker: null
-    disposition: Integrated and live-accepted history retained; worktree remains because current process cwd owners include retained Chrome. No process termination is authorized by Git maintenance.
-    updated_at: 2026-09-05
+    disposition: Integrated and live-accepted history retained; after the former process cwd owner exited, Plan 0339 removed the clean ancestral worktree while retaining the equal local/remote branch required to verify P28's historical integration target.
+    updated_at: 2026-09-09
   - id: P28
     objective: Require positive Chat mode proof before prompting on new-chat pages.
     plan: docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md
@@ -522,8 +522,8 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: [P08, P16, P27]
-    disposition: Maintenance completed; eleven stale worktrees removed, four deliberately retained, unfinished work published, and original dirty files preserved verbatim.
-    updated_at: 2026-09-06
+    disposition: Initial maintenance removed eleven stale worktrees; Plan 0339 later closed newly unblocked P27, leaving active P08, unfinished P16, and the main checkout deliberately retained while preserving original dirty recovery custody.
+    updated_at: 2026-09-09
     reconciled_overlaps: [P08, P16, P27]
     reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
     integration_receipt: a2b7dfa3daa373f429bccd4aaaf50bbbcde8189b
@@ -543,8 +543,8 @@ lanes:
     dependencies: []
     overlaps: [P22]
     reconciled_overlaps: [P22]
-    disposition: Restored missing catalog lane and published the exact unfinished checkpoint; retain worktree without integration. Future integration must preserve both developer-app and Skill CLI blocks.
-    updated_at: 2026-09-06
+    disposition: Exact unfinished checkpoint remains clean and published with eight commits not on main; a current dry merge reports nine content conflicts. Retain for deliberate reconciliation that preserves both developer-app and Skill CLI blocks.
+    updated_at: 2026-09-09
   - id: P24
     objective: Restore current ChatGPT composer intelligence selection with safe upload discovery.
     plan: docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md
@@ -579,3 +579,23 @@ lanes:
     integration_receipt: 3cfb1de941a6b9c9a445874c7ec001513b273d65
     validation_ref: docs/dev/notes/2026-09-06-plan0338-validation.json
     validation_status: provider-free-accepted
+  - id: P32
+    objective: Confirm current-main installed-runtime parity and reconcile local Git and worktree custody.
+    plan: docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md
+    plan_ref: refs/remotes/origin/chore/plan0339-runtime-git-maintenance
+    branch: chore/plan0339-runtime-git-maintenance
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 0efbcf25a6fea6c2d065935fa044b5984c387b43
+    remote_ref: refs/remotes/origin/chore/plan0339-runtime-git-maintenance
+    integration: merge
+    dependencies: [P31]
+    overlaps: [P08, P16, P18, P27, P29, P30]
+    reconciled_overlaps: [P08, P16, P18, P27, P29, P30]
+    reconciliation_note: Runtime installation changed external installed bytes only; Git maintenance updated custody metadata, retained unfinished P08/P16/P18/P29 unchanged, closed only P27's eligible worktree, and supersedes P30's historical four-worktree count.
+    validation_status: runtime-and-git-maintenance-verified
+    validation_ref: docs/dev/notes/2026-09-09-plan0339-runtime-git-maintenance.json
+    integration_receipt: null
+    disposition: Installed runtime matches current application-bearing main bytes and is healthy; newly unblocked P27 local custody is closed while unfinished and recovery lanes remain intact.
+    updated_at: 2026-09-09

@@ -21022,3 +21022,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   a green gate from the empty checks list.
 
 - Plan 0334 final validation: 3,087 full-suite passes and 65 skips. The mutation-audit expectation is repaired (six focused passes). One Grok readback timeout reproduces on unchanged origin/main 882c9c14 and is nonblocking for Skills. Local focused/typecheck/build/lint/live proof is accepted; GitHub has no CI results and no required branch checks or rulesets.
+## Turn 575 | 2026-09-09
+
+- Plan 0339 opens for the operator-requested installed-runtime and Git custody
+  maintenance. `main == origin/main == a5f777895`; the affected 53 tests and
+  typecheck pass before the supported user-runtime install.
+- Installed metadata now names the current main checkout, API PID `3183` is
+  active with zero restarts on configured port `18095`, and `/status` is
+  healthy with zero queued/running completions and all six active campaigns
+  still paused. All 522 installed/current-build `dist` files share aggregate
+  inventory hash `61ba93ea...`.
+- Worktree review retains active process-owned P08 and divergent unfinished P16.
+  P27 is the sole closure candidate after its historical Chrome cwd owner
+  exited; exact pre-removal gates and final custody verification remain.
+- P27's clean tip `f55e398f3` equaled its remote, was ancestral to main, carried
+  only generated ignored `dist/` and `node_modules/`, and had no `/proc` cwd
+  owner. Its worktree is removed. The local branch was restored at exact remote
+  parity because P28 names it as an integration target and the catalog auditor
+  requires that local pointer for deterministic ancestry verification.
+- P08 is clean/equal-remote at `9860b9d49` and retained with 15 cwd owners. P16
+  is clean/equal-remote at `bd8738da9` and retained because it has eight unique
+  commits plus nine content conflicts against main. P18, P29, and recovery refs
+  remain. Final integrity/catalog/planning and published-main gates close P32.

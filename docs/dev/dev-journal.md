@@ -49054,3 +49054,30 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   document-reference pills before Send.
 - Provider-free focused tests and typecheck pass. No install, browser mutation,
   prompt, service restart, or provider call ran in this repair slice.
+## 2026-09-09 | Plan 0339 installed runtime and Git maintenance opened
+
+- Published `main` is `a5f777895`. The supported installer replaced the stale
+  September 6 user runtime from a deleted worktree with a build from this
+  current checkout; 53 affected tests and typecheck passed first.
+- The replacement service is healthy at PID `3183` with zero restarts. Its
+  configured `127.0.0.1:18095/status` response is healthy, reports zero queued
+  or running completions, and preserves six paused campaigns. Installed and
+  current-build `dist` inventories match across 522 files.
+- Fresh custody review retains P08 for active/process ownership and P16 for its
+  eight unique commits plus current merge conflicts. Integrated P27 is the only
+  worktree eligible for exact closure after its former process owner exited.
+
+## 2026-09-09 | Plan 0339 runtime and Git maintenance accepted
+
+- P27 passed a fresh clean/untracked/ignored, local-remote equality, main
+  ancestry, and `/proc` cwd-owner gate. Ordinary worktree removal and safe
+  worktree removal succeeded. The initially removed local pointer was restored
+  at exact remote parity because P28 still names it as its historical target;
+  no worktree was recreated.
+- Three worktrees remain deliberately: P08 is active, equal-remote, and has 15
+  cwd owners; P16 is unfinished with eight branch-only commits and nine merge
+  conflicts; this maintenance checkout returns to main after integration.
+  P18/P29 and the browser recovery refs remain untouched.
+- Current installed bytes, service health, paused completion posture, object
+  integrity, catalog, planning, and published-main parity are the closeout
+  gates captured in the Plan 0339 receipt.
