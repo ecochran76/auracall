@@ -7,7 +7,7 @@ lanes:
     branch: chore/plan0308-repository-true-up
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATED
+    custody_state: INTEGRATED_NO_WORKTREE
     checkpoint: 47d5e330c2fafc0f1906006fbb5fbba9181e3353
     remote_ref: refs/remotes/origin/chore/plan0308-repository-true-up
     integration: merge
@@ -543,11 +543,12 @@ lanes:
     dependencies: []
     overlaps: [P22]
     reconciled_overlaps: [P22]
-    disposition: Current main is reconciled into P16. The provider-free accepted delta removes inherited generic-tool routing, binds current-model submission, and handles app-pill text unwrapping; the obsolete provider-local response watcher was removed after failing the prompt-lifecycle architecture gate. Response and live acceptance remain open.
+    disposition: Current main is reconciled into P16. Provider-free source and installed-runtime parity are accepted; the obsolete provider-local response watcher was removed after failing the prompt-lifecycle architecture gate. The clean, integrated, process-unowned worktree and local branch are closed, with remote custody retained. Response and live acceptance remain open.
     updated_at: 2026-09-09
     reconciliation_note: Current main owns exact ecosystem-mention, Skill CLI, composer, and prompt-lifecycle behavior; 214 broader tests, build, scoped lint, typecheck, and the plan audit pass before integration.
     integration_receipt: 9cdb92d2058606f3f5c8029843696494f54ca290
-    validation_status: source-integrated-installed-validation-pending
+    validation_ref: docs/dev/notes/2026-09-09-plan0323-reconciliation-runtime-closeout.json
+    validation_status: installed-current-live-acceptance-open
   - id: P24
     objective: Restore current ChatGPT composer intelligence selection with safe upload discovery.
     plan: docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md

@@ -180,8 +180,8 @@
     exact `ecosystemMention` plugin pill. Source `apps test --submit` carries
     the accepted plugin identities into the shared prompt path and refuses a
     non-fresh or nonempty composer, a document-reference pill, or the wrong app identity
-    before Send. Do not claim installed acceptance until the user runtime is
-    refreshed to a build containing that repair
+    before Send. The 2026-09-09 installed runtime has exact build parity for
+    this repair; provider/live behavior remains unaccepted until separately authorized
   - developer-app submit tests preserve the active Chat model. Record the
     visible composer model separately from any configured/resolved `--model`
     value; the latter does not prove a UI selection

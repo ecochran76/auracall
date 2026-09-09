@@ -1,0 +1,59 @@
+{
+  "object": "auracall_plan_reconciliation_receipt",
+  "plan": "0323-2026-08-30-chatgpt-developer-app-submit-selection",
+  "lane": "P16",
+  "generatedAt": "2026-09-09T14:09:42Z",
+  "source": {
+    "reconciliationCheckpoint": "15a58a694d5f189dae2106ac9c931b8487e073ce",
+    "integrationReceipt": "9cdb92d2058606f3f5c8029843696494f54ca290",
+    "publishedMain": "2762fcabddf552407a3738260dbcaf70d36075d4",
+    "testsPassed": 214,
+    "typecheck": "passed",
+    "build": "passed",
+    "scopedLint": "passed-with-2-informational-findings",
+    "planAudit": "passed-zero-validation-errors"
+  },
+  "runtime": {
+    "packageVersion": "0.1.1",
+    "launcher": "/home/ecochran76/.local/bin/auracall",
+    "sourceRepo": "/home/ecochran76/workspace.local/auracall-plan0324-integration",
+    "sourceFileCount": 522,
+    "installedFileCount": 522,
+    "distManifestSha256": "92b117bb7b65ad6b89f5153a10df005e9b79924f4f46062be014c0df1bfd327f",
+    "distParity": true,
+    "service": {
+      "pid": 41886,
+      "activeState": "active",
+      "subState": "running",
+      "restartCount": 0
+    },
+    "status": {
+      "ok": true,
+      "schedulerState": "scheduled",
+      "backgroundDrainState": "idle",
+      "activeCompletions": 6,
+      "queuedCompletions": 0,
+      "runningCompletions": 0,
+      "pausedCompletions": 6
+    }
+  },
+  "git": {
+    "p16WorktreeRemoved": true,
+    "p16LocalBranchRemoved": true,
+    "p16RemoteBranchRetained": true,
+    "p16RemoteContainsCheckpoint": true,
+    "p16CheckpointAncestorOfMain": true,
+    "remainingWorktreeCount": 2,
+    "p08RetainedProcessOwnerCount": 15,
+    "remoteRefsDeleted": false,
+    "forceOperationsUsed": false,
+    "gitFsck": "passed-with-dangling-unreachable-objects-only",
+    "commitGraphVerify": "passed"
+  },
+  "acceptance": {
+    "providerFreeSource": "accepted",
+    "installedRuntimeParity": "accepted",
+    "developerAppLiveSubmit": "not-authorized-not-run",
+    "terminalResponseCapture": "not-accepted-provider-local-design-rejected"
+  }
+}

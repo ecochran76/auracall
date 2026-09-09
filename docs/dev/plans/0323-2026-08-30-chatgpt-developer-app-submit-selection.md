@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P16
-Operational state: SOURCE_INTEGRATED_INSTALLED_VALIDATION_PENDING
+Operational state: INSTALLED_CURRENT_LIVE_ACCEPTANCE_OPEN
 Branch: fix/plan0323-developer-app-mention
 Target: main
 Integration: merge
@@ -63,8 +63,13 @@ Revision: 6 | 2026-09-09
   prompt-structure guard. The broader packet passes 214 tests, production
   build, scoped lint with two informational pre-existing findings, typecheck,
   and the zero-error plan audit. Source integrated non-forced at `9cdb92d205`;
-  installed-runtime refresh and any separately governed live acceptance are
-  recorded during closeout.
+  published main is `2762fcabd`. The supported installer produced exact
+  522-file source/installed `dist` parity, and the restarted API is healthy at
+  PID `41886` with zero restarts, zero queued/running completions, and all six
+  active completions still paused. P16's clean, remote-equal, integrated,
+  process-unowned worktree and local branch were closed; its remote ref remains.
+- No browser or provider action ran. `DAS-R4` and `DAS-R5` remain open under
+  their separate architecture and live-authority gates.
 
 ## Stable Objective
 

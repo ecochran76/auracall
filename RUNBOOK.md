@@ -5,6 +5,9 @@
   two-pass app-composer cleanup, inherited-`composerTool` removal, and current
   Chat-model request. Do not restore its three response-wait CLI options or
   provider-local watcher; the prompt-structure gate rejects that lifecycle.
+  Published main `2762fcabd` and the installed 522-file `dist` inventory now
+  match. The P16 worktree/local branch are closed after fresh custody gates;
+  retain its remote ref and keep response/live acceptance open.
 
 ## Turn 574 | 2026-09-06
 

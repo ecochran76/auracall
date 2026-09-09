@@ -49098,3 +49098,11 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   into main at `9cdb92d205`. The broader packet passes 214 tests, production
   build, scoped lint with two informational findings, and the zero-error plan
   audit. Installed-runtime verification follows from the published main tip.
+- Installed published main `2762fcabd` through the supported user runtime and
+  service path. Source and installed `dist` match across 522 files; API PID
+  `41886` is active with zero restarts, background drain idle, zero queued or
+  running completions, and six preserved paused completions.
+- Fresh closure gates found P16 clean, equal to its remote, ancestral to main,
+  and process-unowned. Removed only its worktree and merged local branch; the
+  remote branch remains. P08 remains protected by 15 cwd owners. No browser,
+  provider, prompt, or live canary ran.

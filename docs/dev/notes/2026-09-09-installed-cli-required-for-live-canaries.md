@@ -85,3 +85,12 @@ changing the private-app submission boundary.
 
 This source repair has provider-free test evidence only. It did not install a
 runtime, change the retained browser, or consume another ChatGPT prompt.
+
+## Superseding runtime readback
+
+Later on 2026-09-09, published main `2762fcabd` was installed through the
+supported user-runtime/service installer. Source and installed `dist`
+inventories match across all 522 files, the API is healthy with zero restarts,
+and the developer-app exact-mention repair is now present in the installed
+runtime. This establishes installed-byte eligibility only; no browser, prompt,
+developer-app invocation, or live acceptance ran.

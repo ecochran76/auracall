@@ -24,7 +24,7 @@
 
 ### Current Execution Board
 
-Status: P16 source reconciled; installed and live acceptance pending
+Status: P16 source and installed runtime reconciled; live acceptance pending
 Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P32 (integrated); P08, P16, P18, P29 (open)
 
 - Completed installed-runtime and Git maintenance:
