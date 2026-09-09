@@ -163,7 +163,7 @@
   - provider-free contract tests:
     `pnpm vitest run tests/browser-service/devToolsConnection.test.ts tests/browser-service/browserServiceCore.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`
   - read-only installed smoke:
-    `pnpm tsx bin/auracall.ts --profile <runtime> apps --target chatgpt list --json`
+    `auracall --profile <runtime> apps --target chatgpt list --json`
   - `apps list` has a 45-second outer deadline plus a bounded browser-client
     close; target resolution, CDP attachment, Runtime enablement, and Page
     enablement each have a 10-second bound and report a named debug stage
@@ -172,7 +172,14 @@
     attachment stage must return control so the CLI can release its file-backed
     browser-operation lease
   - non-submitting app-selection smoke:
-    `pnpm tsx bin/auracall.ts --profile <runtime> apps --target chatgpt test <exact-app> --expected-account <email> --json`
+    `auracall --profile <runtime> apps --target chatgpt test <exact-app> --expected-account <email> --json`
+  - installed/runtime/live acceptance must use the installed `auracall`
+    launcher; repo-local `pnpm tsx bin/auracall.ts` is source-checkout evidence
+    only and must bind an explicitly intended branch and commit
+  - private developer apps use the composer `@mention` ecosystem picker and an
+    exact `ecosystemMention` plugin pill. The current `apps test --submit` path
+    searches the generic top-level tools menu, so it is not an eligible
+    private-app live canary until that routing is repaired
   - do not use `--submit`, `create`, `refresh`, or `uninstall` as routine live
     tests; they require exact authorization and `--yes`
   - an authorized refresh uses replacement semantics and requires a complete

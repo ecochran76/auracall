@@ -46,3 +46,34 @@ receipts, or DOM matchers.
 
 This note records the incident and boundary only. It does not alter AuraCall
 source, configuration, installed runtime, browser state, or model selection.
+
+## Installed-command follow-up
+
+A subsequent single-attempt check used the installed `auracall` launcher with
+the explicit durable selector `chatgpt:reasoning`. The installed resolver
+correctly selected `gpt-5.6-sol`, proving that the earlier model-selection
+failure belonged to the stale source checkout rather than the installed
+runtime.
+
+The installed `apps test --submit` path then stopped before prompt submission
+for a separate reason: it passed the private LitScout developer-app name to
+`ensureChatgptComposerTool`, which searched ChatGPT's generic top-level tools
+menu. That menu exposed ordinary tools such as Web search and Deep research but
+not the private app. Private developer apps are selected through the composer
+ecosystem-mention picker (`@LitScout`), so this command is not currently an
+eligible submitting canary path for them.
+
+The retained ChatGPT tab remained on a blank healthy composer with zero user or
+assistant turns. LitScout's invocation ledger and scoped canonical state were
+unchanged. The zero-retry allowance was consumed by this qualification stop;
+no second prompt was sent.
+
+Until the command implements exact private-app mention selection, use
+`apps list` and non-submitting app checks for inventory only. A live private-app
+canary must use the managed-browser `@mention` path and prove the composer-local
+ecosystem pill and exact plugin ID before Send.
+
+The current operator contract is now reflected in `README.md`,
+`docs/testing.md`, and `.agents/skills/auracall-chatgpt-browser/SKILL.md`. The
+separate versioned-example cleanup identified above remains intentionally
+bounded out of this incident correction.

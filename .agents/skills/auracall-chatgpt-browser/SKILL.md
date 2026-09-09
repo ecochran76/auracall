@@ -118,6 +118,13 @@ readback, diff hygiene, and planning audit required by repo policy.
 - Require explicit authority before launching, attaching to, navigating, or
   mutating a browser, installing the runtime, restarting a service, or sending
   a prompt.
+- Use the installed `auracall` launcher for installed/runtime/live proof and
+  record its version and resolved target. Repo-local `pnpm tsx` proves only the
+  exact source checkout that ran it.
+- For a private ChatGPT developer app, select the exact app through the active
+  composer's `@mention` ecosystem picker and verify its composer-local
+  `ecosystemMention` plugin pill. Do not use the current `apps test --submit`
+  path: it searches the generic top-level tools menu and stops before Send.
 - For a suspicious authorized smoke, add `--browser-keep-browser --verbose` and
   inspect the exact retained browser with the `agent-browser` skill or
   `pnpm tsx scripts/browser-tools.ts ...`.

@@ -49019,3 +49019,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   require installed `auracall` for installed/live proof and to identify the
   remaining operator-facing documentation/skill cleanup. No runtime or browser
   effect occurred in this documentation slice.
+
+## 2026-09-09 | Installed private-app submit path stopped before Send
+
+- A single installed-CLI follow-up with `--model chatgpt:reasoning` correctly
+  resolved `gpt-5.6-sol`, then stopped before submission because
+  `apps test --submit` searched the generic composer tools menu for LitScout.
+  Private developer apps require the composer `@mention` ecosystem picker.
+- The retained tab stayed blank with zero user/assistant turns; LitScout's
+  invocation ledger and scoped canonical state were unchanged. No retry was
+  issued. The durable note, README, testing guide, and ChatGPT browser skill now
+  mark the installed submitting helper ineligible for private apps until it
+  implements exact mention selection.

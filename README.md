@@ -138,6 +138,11 @@ auracall --profile wsl-chrome-3 apps --target chatgpt list --json
 # same-name older connector never supplies auth state to a replacement app.
 auracall --profile wsl-chrome-3 apps --target chatgpt test Corel33t \
   --expected-account eric.cochran@soylei.com --json
+# Private developer apps are selected in Chat through the composer @mention
+# ecosystem picker, not the generic top-level tools menu. The current
+# `apps test --submit` path does not implement that selection and is therefore
+# not an eligible private-app live canary; use the exact managed-browser mention
+# workflow and verify the composer-local plugin pill before Send.
 # Create, refresh, submitted tests, and uninstall require --expected-account
 # plus --yes. OAuth, MFA, consent, CAPTCHA, and verification remain human gates.
 # `awaiting-human` is emitted only after AuraCall observes a fresh OAuth or

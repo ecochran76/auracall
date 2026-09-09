@@ -22385,3 +22385,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   removing compatibility aliases, provider API IDs, historical evidence, or
   DOM matchers. See
   `docs/dev/notes/2026-09-09-installed-cli-required-for-live-canaries.md`.
+
+## 2026-09-09 | Private developer apps require ecosystem-mention selection
+
+- Verification: the installed resolver accepted `chatgpt:reasoning` and chose
+  `gpt-5.6-sol`, clearing the earlier stale-source selector failure.
+- Remaining failure: installed `apps test --submit` routed the private LitScout
+  app name through `ensureChatgptComposerTool`, whose generic top-level menu has
+  no private developer-app row, and stopped before Send.
+- Durable guard: treat that submitting helper as ineligible for private apps
+  until it uses exact composer `@mention` selection and verifies the ecosystem
+  pill/plugin ID. Inventory-only app commands remain valid. README, testing
+  guidance, and the ChatGPT browser skill now carry the same operator rule.
