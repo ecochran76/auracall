@@ -49081,3 +49081,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Current installed bytes, service health, paused completion posture, object
   integrity, catalog, planning, and published-main parity are the closeout
   gates captured in the Plan 0339 receipt.
+
+## 2026-09-09 | P16 reconciled against current main
+
+- Merged current main into the published developer-app lane and treated its
+  shared exact ecosystem-mention, Skill CLI, composer, and prompt-lifecycle
+  code as authoritative. The remaining source delta removes inherited generic
+  `composerTool` routing, explicitly preserves the current Chat model, and
+  retries composer clearing once when deleting an app pill unwraps literal
+  mention text.
+- The broader gate rejected the branch's provider-local terminal response and
+  tool-approval watcher. Removed those CLI flags and implementation; response
+  capture remains open for a shared-lifecycle design. The focused packet passes
+  82 tests plus typecheck. No browser, provider, prompt, or canary ran.

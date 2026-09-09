@@ -131,6 +131,7 @@ export interface ChatgptDeveloperAppBrowserClient {
 		prompt: string;
 		completionMode: "prompt_submitted";
 		timeoutMs?: number | null;
+		modelStrategy?: "current";
 		ecosystemMention?: {
 			label: string;
 			acceptedPluginIds: string[];
@@ -366,10 +367,12 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		app: ChatgptDeveloperAppBrowserTarget,
 		prompt: string,
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
+		const { composerTool: _composerTool, ...browserWithoutComposerTool } =
+			this.browser.userConfig.browser ?? {};
 		const testConfig: ResolvedUserConfig = {
 			...this.browser.userConfig,
 			browser: {
-				...(this.browser.userConfig.browser ?? {}),
+				...browserWithoutComposerTool,
 				modelStrategy: "current",
 			},
 		};
@@ -378,6 +381,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			prompt,
 			completionMode: "prompt_submitted",
 			timeoutMs: 120_000,
+			modelStrategy: "current",
 			ecosystemMention: {
 				label: app.name,
 				acceptedPluginIds: [app.pluginId, ...app.appIds],
@@ -1164,59 +1168,64 @@ async function clearDeveloperAppComposer(client: ChromeClient): Promise<void> {
 	if (focused.result?.value !== true) {
 		throw new Error("Unable to clear the ChatGPT composer because its editor was not found.");
 	}
-	await client.Input.dispatchKeyEvent({
-		type: "keyDown",
-		key: "Control",
-		code: "ControlLeft",
-		windowsVirtualKeyCode: 17,
-		nativeVirtualKeyCode: 17,
-		modifiers: 2,
-	});
-	await client.Input.dispatchKeyEvent({
-		type: "keyDown",
-		key: "a",
-		code: "KeyA",
-		windowsVirtualKeyCode: 65,
-		nativeVirtualKeyCode: 65,
-		modifiers: 2,
-	});
-	await client.Input.dispatchKeyEvent({
-		type: "keyUp",
-		key: "a",
-		code: "KeyA",
-		windowsVirtualKeyCode: 65,
-		nativeVirtualKeyCode: 65,
-		modifiers: 2,
-	});
-	await client.Input.dispatchKeyEvent({
-		type: "keyUp",
-		key: "Control",
-		code: "ControlLeft",
-		windowsVirtualKeyCode: 17,
-		nativeVirtualKeyCode: 17,
-	});
-	await client.Input.dispatchKeyEvent({
-		type: "keyDown",
-		key: "Backspace",
-		code: "Backspace",
-		windowsVirtualKeyCode: 8,
-		nativeVirtualKeyCode: 8,
-	});
-	await client.Input.dispatchKeyEvent({
-		type: "keyUp",
-		key: "Backspace",
-		code: "Backspace",
-		windowsVirtualKeyCode: 8,
-		nativeVirtualKeyCode: 8,
-	});
-	await wait(250);
-	const cleared = await client.Runtime.evaluate({
-		expression: `!String(document.querySelector('#prompt-textarea')?.innerText || '').trim()`,
-		returnByValue: true,
-	});
-	if (cleared.result?.value !== true) {
-		throw new Error("ChatGPT composer text could not be cleared safely.");
+	for (let attempt = 0; attempt < 2; attempt += 1) {
+		await client.Input.dispatchKeyEvent({
+			type: "keyDown",
+			key: "Control",
+			code: "ControlLeft",
+			windowsVirtualKeyCode: 17,
+			nativeVirtualKeyCode: 17,
+			modifiers: 2,
+		});
+		await client.Input.dispatchKeyEvent({
+			type: "keyDown",
+			key: "a",
+			code: "KeyA",
+			windowsVirtualKeyCode: 65,
+			nativeVirtualKeyCode: 65,
+			modifiers: 2,
+		});
+		await client.Input.dispatchKeyEvent({
+			type: "keyUp",
+			key: "a",
+			code: "KeyA",
+			windowsVirtualKeyCode: 65,
+			nativeVirtualKeyCode: 65,
+			modifiers: 2,
+		});
+		await client.Input.dispatchKeyEvent({
+			type: "keyUp",
+			key: "Control",
+			code: "ControlLeft",
+			windowsVirtualKeyCode: 17,
+			nativeVirtualKeyCode: 17,
+		});
+		await client.Input.dispatchKeyEvent({
+			type: "keyDown",
+			key: "Backspace",
+			code: "Backspace",
+			windowsVirtualKeyCode: 8,
+			nativeVirtualKeyCode: 8,
+		});
+		await client.Input.dispatchKeyEvent({
+			type: "keyUp",
+			key: "Backspace",
+			code: "Backspace",
+			windowsVirtualKeyCode: 8,
+			nativeVirtualKeyCode: 8,
+		});
+		await wait(250);
+		const cleared = await client.Runtime.evaluate({
+			expression: `!String(document.querySelector('#prompt-textarea')?.innerText || '').trim()`,
+			returnByValue: true,
+		});
+		if (cleared.result?.value === true) return;
 	}
+	throw new Error("ChatGPT composer text could not be cleared safely.");
+}
+
+export async function clearDeveloperAppComposerForTest(client: ChromeClient): Promise<void> {
+	await clearDeveloperAppComposer(client);
 }
 
 async function assertNoChatgptBlockingSurface(client: ChromeClient, action: string): Promise<void> {

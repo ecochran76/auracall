@@ -22431,3 +22431,9 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   local-remote, lane-state, and process-cwd gates immediately before removal;
   an earlier process interlock may clear, while a clean divergent lane still
   requires reconciliation rather than closure.
+- 2026-09-09: During long-lived branch reconciliation, architecture guards
+  outrank locally green feature tests. P16's provider-local response watcher
+  passed its focused tests but duplicated the shared prompt lifecycle and
+  failed `llmServicePromptStructure.test.ts`; remove the incompatible feature,
+  record its acceptance criterion as open, and retain only independently
+  proven app-selection and cleanup behavior.

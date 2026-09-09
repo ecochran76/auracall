@@ -1,5 +1,11 @@
 # RUNBOOK
 
+- P16 reconciliation supersedes the Turn 550 preservation note: current main's
+  exact ecosystem-mention and Skill CLI paths are authoritative. Retain P16's
+  two-pass app-composer cleanup, inherited-`composerTool` removal, and current
+  Chat-model request. Do not restore its three response-wait CLI options or
+  provider-local watcher; the prompt-structure gate rejects that lifecycle.
+
 ## Turn 574 | 2026-09-06
 
 - Closed [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md). Source `3cfb1de941a6b9c9a445874c7ec001513b273d65` is published on main; 69 targeted/adjacent tests, typecheck, production build and scoped lint pass. Exact clean integrated process-unowned temporary worktree and local branch are removed; remote source custody retained. No browser or installed-runtime action ran.

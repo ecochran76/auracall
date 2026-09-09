@@ -83,11 +83,12 @@ describe("promptComposer", () => {
 		expect(expression).not.toContain("cloneNode");
 	});
 
-	test("excludes ChatGPT presentation controls from committed user-turn text", () => {
+	test("excludes ChatGPT presentation controls and retained app mentions from committed user-turn text", () => {
 		const expression = promptComposer.buildReadCommittedTurnTextFunction();
 		expect(expression).toContain("button");
 		expect(expression).toContain("collapsible-user-message-toggle");
 		expect(expression).toContain("-turn-action-button");
+		expect(expression).toContain("[data-inline-selection-pill]");
 		expect(expression).toContain('[role="group"][class*="file-tile"]');
 		expect(expression).toContain("window.getComputedStyle(current).display");
 	});

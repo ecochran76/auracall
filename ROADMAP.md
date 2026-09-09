@@ -1,5 +1,12 @@
 # Aura-Call Roadmap
 
+- P16 source reconciliation is provider-free green: current main owns exact
+  ecosystem-mention selection; the reconciled delta removes inherited generic
+  tool routing, preserves current-model submission, and safely clears an
+  unwrapped app mention. The obsolete provider-local response watcher was
+  rejected by the prompt-lifecycle architecture gate; response/live acceptance
+  remains open.
+
 - Completed P32: [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md) proves current-main installed-runtime parity and closes the newly eligible P27 worktree while preserving its downstream verification ref and every unfinished lane.
 
 - Completed P31: [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) rejects inactive upload composers and retains both explicit and omitted handoff-model coverage; published with 69 passing tests.
@@ -17,7 +24,7 @@
 
 ### Current Execution Board
 
-Status: Current-main runtime and Git custody maintenance complete
+Status: P16 source reconciled; installed and live acceptance pending
 Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P32 (integrated); P08, P16, P18, P29 (open)
 
 - Completed installed-runtime and Git maintenance:
