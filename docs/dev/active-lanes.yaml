@@ -7,7 +7,7 @@ lanes:
     branch: chore/plan0308-repository-true-up
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATED_NO_WORKTREE
+    custody_state: INTEGRATED
     checkpoint: 47d5e330c2fafc0f1906006fbb5fbba9181e3353
     remote_ref: refs/remotes/origin/chore/plan0308-repository-true-up
     integration: merge
@@ -536,7 +536,7 @@ lanes:
     branch: fix/plan0323-developer-app-mention
     target: main
     plan_state: OPEN
-    custody_state: INTEGRATED
+    custody_state: INTEGRATED_NO_WORKTREE
     checkpoint: 15a58a694d5f189dae2106ac9c931b8487e073ce
     remote_ref: refs/remotes/origin/fix/plan0323-developer-app-mention
     integration: merge
