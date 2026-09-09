@@ -46,6 +46,24 @@ human-submitted existing tab with the diagnostic readback probe.
 
 - `pnpm test:browser` — launches headful Chrome and checks the DevTools endpoint is reachable. Set `AURACALL_BROWSER_PORT` (or `AURACALL_BROWSER_DEBUG_PORT`) to reuse a fixed port when you’ve already opened a firewall rule.
 
+### ChatGPT Skill CRUD (explicitly authorized only)
+
+- A separately authorized non-submitting selection smoke may use
+  `skills select <id> --expected-account <email> --yes --json` once. It must
+  return only after proving the exact selected Skill on an empty composer and
+  clearing that transient selection; `outcome-unknown` is a no-retry stop.
+
+- Run `skills list --expected-account <email> --json` first and require
+  `inventoryComplete: true` on the exact AuraCall runtime profile.
+- Create one uniquely named disposable fixture with `--yes`, retain the returned
+  32-hex ID, and use `skills show <id>` to verify the exact source hash.
+- Update that ID once with `--expected-hash <prior-sha256> --yes`, read it back,
+  then delete that same ID once with `--yes` and prove it absent from a fresh
+  complete list.
+- Stop without retry on CAPTCHA, MFA, identity ambiguity, incomplete inventory,
+  missing exact ID, hash drift, or `outcome-unknown`. During the CRUD test,
+  never click `Try in chat`; no Skill test sends a prompt or clicks `Answer now`.
+
 ### Gemini browser mode (Gemini web / cookies)
 
 Run this whenever you touch the Gemini web client or the legacy

@@ -12,7 +12,7 @@ import {
 import type { ExecutionRequest } from '../src/runtime/apiTypes.js';
 
 const PROJECT_NAME = 'ChE 4470/5470 Seminar Grading';
-const AGENT_ID = 'pro-extended-chatgpt-soylei-che4470-seminar-grading';
+const AGENT_ID = 'reasoning-high-chatgpt-soylei-che4470-seminar-grading';
 const MODEL = `agent:${AGENT_ID}`;
 
 interface ResponseBatchStatusPayload {
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
         runtimeProfile: 'wsl-chrome-3',
         projectName: PROJECT_NAME,
         agentId: AGENT_ID,
-        agentModelSelector: 'chatgpt:pro-extended',
+        agentModelSelector: 'chatgpt:reasoning-high',
         agentInstructions: 'Grade ChE 4470/5470 seminar packets using the course rubric.',
         agentPostPrompt: 'Return concise JSON and Markdown readout sections.',
         agentMetadata: {

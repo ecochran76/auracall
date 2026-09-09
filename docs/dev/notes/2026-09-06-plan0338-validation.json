@@ -1,0 +1,25 @@
+{
+  "plan": "0338",
+  "baseline": "14e77ae23c266afc644ed9494ebf073500e1f154",
+  "red": {
+    "inventory_negative_failures": 8,
+    "reason": "inactive or ambiguous DOM incorrectly returned ready"
+  },
+  "green": {
+    "command": "pnpm vitest run tests/browser/chatgptAttachmentComposer.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptService.test.ts tests/browser/chatgptToolApproval.test.ts tests/browser/attachmentsCompletion.test.ts tests/browser/remoteFileTransfer.test.ts tests/browser/chatgptPromptAdapter.test.ts",
+    "files": 7,
+    "tests": 69,
+    "exit_code": 0,
+    "duration_seconds": 5.59
+  },
+  "typecheck_exit_code": 0,
+  "build_exit_code": 0,
+  "scoped_lint_exit_code": 0,
+  "initial_environment_failure": "Shared node_modules had OpenAI 6.15.0; frozen lockfile requires 7.10.0. Initial typecheck/build errors were retained and resolved by isolated dependency installation.",
+  "live_effects": 0,
+  "review": {
+    "R1": "resolved by production inventory fixtures",
+    "R2": "resolved by parameterized real handoff adapter test"
+  },
+  "codegraph": "Main checkout has no index; exact current files and tests used instead."
+}

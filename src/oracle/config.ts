@@ -6,14 +6,15 @@ import { stringifyTokenizerInput } from './tokenStringifier.js';
 
 export const CURRENT_OPENAI_PRO_ALIAS: Extract<KnownModelName, 'gpt-5.1-pro'> = 'gpt-5.1-pro';
 export const CURRENT_OPENAI_PRO_API_MODEL: Extract<KnownModelName, 'gpt-5.2-pro'> = 'gpt-5.2-pro';
+export const CURRENT_OPENAI_FRONTIER_ALIAS: Extract<KnownModelName, 'openai:frontier'> = 'openai:frontier';
 
-export const DEFAULT_MODEL: ModelName = CURRENT_OPENAI_PRO_ALIAS;
-export const PRO_MODELS = new Set<ProModelName>(['gpt-5.1-pro', 'gpt-5-pro', 'gpt-5.2-pro', 'claude-4.5-sonnet', 'claude-4.1-opus']);
+export const DEFAULT_MODEL: ModelName = CURRENT_OPENAI_FRONTIER_ALIAS;
+export const PRO_MODELS = new Set<ProModelName>(['openai:frontier', 'gpt-5.1-pro', 'gpt-5-pro', 'gpt-5.2-pro', 'gpt-6-astra', 'claude-4.5-sonnet', 'claude-4.1-opus']);
 
 export function resolveCurrentOpenAiProModel(model: string | null | undefined): ModelName {
   const normalized = String(model ?? '').trim().toLowerCase();
   if (!normalized) {
-    return CURRENT_OPENAI_PRO_ALIAS;
+    return CURRENT_OPENAI_FRONTIER_ALIAS;
   }
   if (normalized === 'gpt-5.1-pro' || normalized === 'gpt-5.2-pro') {
     return CURRENT_OPENAI_PRO_ALIAS;
@@ -22,7 +23,7 @@ export function resolveCurrentOpenAiProModel(model: string | null | undefined): 
     return 'gpt-5-pro';
   }
   if (normalized.includes('pro')) {
-    return CURRENT_OPENAI_PRO_ALIAS;
+    return CURRENT_OPENAI_FRONTIER_ALIAS;
   }
   return normalized as ModelName;
 }
@@ -31,6 +32,18 @@ const countTokensAnthropic: TokenizerFn = (input: unknown): number =>
   countTokensAnthropicRaw(stringifyTokenizerInput(input));
 
 export const MODEL_CONFIGS: Record<KnownModelName, ModelConfig> = {
+  'openai:frontier': {
+    model: 'openai:frontier',
+    apiModel: 'gpt-6-astra',
+    provider: 'openai',
+    tokenizer: countTokensGpt5 as TokenizerFn,
+    inputLimit: 1_050_000,
+    pricing: {
+      inputPerToken: 10 / 1_000_000,
+      outputPerToken: 50 / 1_000_000,
+    },
+    reasoning: { effort: 'max' },
+  },
   'gpt-5.1-pro': {
     model: 'gpt-5.1-pro',
     apiModel: CURRENT_OPENAI_PRO_API_MODEL,
@@ -120,6 +133,17 @@ export const MODEL_CONFIGS: Record<KnownModelName, ModelConfig> = {
       outputPerToken: 30 / 1_000_000,
     },
     reasoning: { effort: 'xhigh' },
+  },
+  'gpt-6-astra': {
+    model: 'gpt-6-astra',
+    provider: 'openai',
+    tokenizer: countTokensGpt5 as TokenizerFn,
+    inputLimit: 1_050_000,
+    pricing: {
+      inputPerToken: 10 / 1_000_000,
+      outputPerToken: 50 / 1_000_000,
+    },
+    reasoning: { effort: 'max' },
   },
   'gemini-3-pro': {
     model: 'gemini-3-pro',

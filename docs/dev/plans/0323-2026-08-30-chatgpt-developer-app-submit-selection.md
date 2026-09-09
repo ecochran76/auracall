@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P16
-Operational state: RECONCILING_CURRENT_MAIN
+Operational state: SOURCE_RECONCILED_PROVIDER_FREE
 Branch: fix/plan0323-developer-app-mention
 Target: main
 Integration: merge
-Revision: 5 | 2026-09-09
+Revision: 6 | 2026-09-09
 
 ## Current State
 
@@ -14,11 +14,17 @@ Revision: 5 | 2026-09-09
   Published `main` at `d22c7e46f` already contains a newer shared-helper
   implementation of exact ecosystem-mention selection at `a5f777895`; P16 has
   eight branch-only commits and a dry merge reports nine content conflicts.
-- This revision merges current main into the published P16 branch, treats
-  current main's shared mention/Skill/composer behavior as authoritative, and
-  preserves the remaining response-wait, approval-policy, terminal-response,
-  bounded cleanup, and current-model contracts only when provider-free tests
-  prove their combined behavior.
+- Current main is merged into the P16 branch with current main's shared
+  mention, Skill, composer, and prompt-lifecycle behavior authoritative. The
+  reconciled delta retains the bounded two-pass cleanup needed when deleting an
+  app pill unwraps it into literal text, removes inherited `composerTool`
+  routing, and binds the submitted request to the current Chat model.
+- The broader architecture gate rejected P16's provider-adapter-local
+  response/approval watcher. `llmServicePromptStructure.test.ts` requires the
+  common response lifecycle to remain outside provider `runPrompt`; the
+  response CLI flags, adapter watcher, and associated tests are therefore not
+  part of the reconciled source. This is an explicit disposition, not accepted
+  response-capture evidence.
 - Provider-free RED reproduced the stale `composerTool: "LitScout"` routing.
 - GREEN reuses exact ecosystem-mention selection with retained state and
   removes the inherited built-in composer-tool field before normal dispatch.
@@ -41,27 +47,22 @@ Revision: 5 | 2026-09-09
   The widened six-file packet passes `72/72`, with typecheck, production build,
   scoped Biome, and the plan-library audit also green.
 - A pre-experiment audit found that the submit test's fixed
-  `prompt_submitted` boundary would release AuraCall before its ordinary
-  response watcher could service third-party tool approvals. An explicit
-  `--wait-for-response` mode now retains normal assistant-response completion
-  and tool-approval handling, while submit-only remains the default. Its
-  approval policy is explicit and bounded to `manual` or `allow-once`; the
-  experiment selects `allow-once` and never grants durable approval.
-- The first installed terminal launch then failed before Send at a lower seam:
-  the ChatGPT provider adapter rejected `assistant_response` even though the
-  developer-app caller requested it correctly. Provider-free RED/GREEN now
-  proves that adapter captures a pre-send response boundary, waits for the
-  fresh terminal assistant turn, services the existing approval handler on
-  passive DOM probes, and returns captured Markdown. Focused tests pass
-  `52/52`; typecheck, production build, scoped Biome, and plan audit pass.
+  `prompt_submitted` boundary releases AuraCall before its ordinary response
+  watcher can service third-party tool approvals. P16's attempted inline fix
+  duplicated that lifecycle inside the provider adapter and is incompatible
+  with the current architectural guard. Response capture remains unaccepted
+  until it is routed through the shared high-level lifecycle in a separately
+  reviewed slice.
 - A later zero-turn launch exposed a second propagation gap: the derived test
   browser carried `modelStrategy: current`, but the lower prompt input omitted
   it and therefore retried the stale configured `gpt-5.2-pro` selector.
   Developer-app submissions now bind `modelStrategy: current` on the prompt
   request itself. The same `52/52` focused packet, typecheck, production build,
   and scoped Biome pass.
-- Reinstall/source-runtime parity and one governed terminal-response validation
-  through LitScout Experiment 18 remain pending.
+- The reconciled focused packet passes 82 tests plus typecheck, including the
+  prompt-structure guard. Broader validation, published-main integration, an
+  installed-runtime refresh, and any separately governed live acceptance are
+  recorded during closeout.
 
 ## Stable Objective
 
@@ -92,10 +93,10 @@ ecosystem-mention path as the existing no-submit selection smoke.
 3. Clear an atomic ecosystem mention with at most two verified deletion passes,
    then run focused developer-app, composer-replacement, and ChatGPT prompt tests,
    then typecheck and build.
-4. Add an opt-in terminal-response mode that keeps the ordinary ChatGPT
-   response and tool-approval watcher active; preserve `prompt_submitted` as
-   the default.
-5. Install the exact candidate and use separately governed LitScout Experiment
+4. Keep `prompt_submitted` as the developer-app helper boundary. Any future
+   terminal-response mode must reuse the shared high-level response and
+   approval lifecycle rather than adding it to the provider adapter.
+5. Install the exact candidate. Use separately governed LitScout Experiment
    18 as the one terminal-response live validation. Do not consume an extra
    research Send merely to duplicate the submit proof.
 
@@ -107,10 +108,9 @@ ecosystem-mention path as the existing no-submit selection smoke.
   developer-app/composer/ChatGPT prompt contracts pass, including the atomic
   pill-to-literal cleanup transition.
 - `DAS-R3`: typecheck, build, and source/installed parity pass.
-- `DAS-R4`: provider-free RED/GREEN proves the opt-in terminal mode requests
-  `assistant_response`, forwards its bounded timeout, and returns the captured
-  terminal response while leaving submit-only behavior unchanged; an explicit
-  `allow-once` policy reaches the ordinary response watcher.
+- `DAS-R4`: NOT ACCEPTED. The attempted provider-local terminal mode failed the
+  current prompt-structure gate and was removed during reconciliation. A
+  successor must route through the shared high-level response lifecycle.
 - `DAS-R5`: one authorized live Experiment 18 Send proves exact app selection,
   continued tool approvals, and terminal response capture on the expected
   account; its LitScout effects are governed and audited by Plan 0477.
@@ -127,6 +127,6 @@ ecosystem-mention path as the existing no-submit selection smoke.
 
 ## Definition Of Done
 
-All five criteria have current evidence and the repaired app-submit path has
-completed separately governed LitScout Experiment 18 without an extra canary
-Send.
+`DAS-R1` through `DAS-R3` must have current source and installed evidence.
+`DAS-R4` and `DAS-R5` remain explicit open acceptance work; neither may be
+claimed from this provider-free reconciliation.

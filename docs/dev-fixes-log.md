@@ -1,32 +1,39 @@
-- 2026-08-30: A developer-app submission that promises to preserve the current
-  ChatGPT model must bind `modelStrategy: current` on the lower prompt request,
-  not only on a derived browser configuration. Otherwise service-level stale
-  model names can regain precedence before Send even though caller-level tests
-  appear correct.
+- 2026-09-02: Observation-expired reattachment must reconcile runtime identity
+  from the final positive progress readback before any fallback navigation.
+  ChatGPT can expose the real `/c/<id>` location while the last emitted runtime
+  hint still contains a synthetic `WEB:...` route. Accept only a validated
+  `https://chatgpt.com/.../c/<id>` progress URL, replace only the persisted
+  URL/conversation fields, and preserve the exact DevTools target and port.
+  Apply the same reconciliation when reading an already-stranded Session so
+  recovery never navigates to the stale synthetic route.
 
-- 2026-08-30: Background live follow must never make an explicit foreground
-  request wait for an entire inventory or materialization pass. A same-profile
-  foreground reservation must stop new background admission, cooperatively
-  drain active browser/provider work to a bounded checkpoint, preserve the
-  live-follow cursor, admit foreground work, and resume exactly once after the
-  foreground terminal release. Apply the same ordering during persisted-job
-  recovery after API restart. See
-  `docs/dev/notes/2026-08-30-plan0323-foreground-priority-live-follow.md`.
+- 2026-09-02: Keep long-prompt browser retention separate from manual-clear
+  preservation. Observation expiry is resumable with a visible Stop control,
+  no completion/dialog signal, and exact browser plus conversation identity,
+  including before ChatGPT mounts the first assistant node. Once mounted,
+  non-empty assistant text remains positive progress evidence. Persist that
+  Session/model run as running, leave
+  the managed browser open for read-only reattachment, and never pass this
+  condition through the Cloudflare/CAPTCHA error wrapper. Recovery refreshes
+  require stale or interrupted progress, target the same conversation, and use
+  one 15-minute Runtime cooldown.
 
-- 2026-08-30: A caller-level `assistant_response` regression is insufficient
-  when the lower provider adapter still accepts only `prompt_submitted`.
-  Terminal developer-app execution must be proven through the actual ChatGPT
-  adapter: capture the pre-send response boundary, wait for a fresh assistant
-  turn, run the bounded tool-approval handler on passive probes, and return the
-  captured terminal Markdown. Preserve submit-only as the default.
+- 2026-09-02: A browser observer deadline is not a model deadline. LitScout
+  Experiment 51 reached AuraCall's 3,600-second wait with 33,688 assistant-text
+  characters and active-generation evidence, then completed without another
+  Send and was recovered by read-only reattachment. Preserve active generation
+  as resumable, reuse runtime evidence and response-progress instrumentation,
+  and separate renewable observation from terminal model state. A guarded
+  same-conversation refresh may run no more frequently than every 15 minutes
+  when connection liveness is stale; it must never replay the prompt.
 
-- 2026-08-30: Selecting and committing a ChatGPT developer-app mention is not
-  sufficient for a multi-call research run if the caller requests only
-  `prompt_submitted`. That releases the response loop before third-party tool
-  approvals appear. Keep submit-only as the safe default, but expose an
-  explicit terminal-response mode that reuses the ordinary response watcher,
-  explicit `manual|allow-once` tool-approval policy, bounded timeout, and
-  captured terminal response. Do not silently promote it to durable approval.
+- 2026-09-02: ChatGPT skill visibility is not skill lifecycle proof. Existing
+  workbench discovery can report skill labels and existing attachment ZIPs can
+  support development, but mature managed skills need discovery-first,
+  exact-account identity/version readback and separately guarded
+  install/create, update/replacement, enable/disable, uninstall/delete, and
+  invocation semantics. Keep skill CRUD distinct from developer-app CRUD and
+  never infer installation or use from a visible label alone.
 
 - 2026-08-23: Rebuilding browser list options must preserve provenance from the
   same `LlmService` when the resolved DevTools endpoint is unchanged. The
@@ -22088,20 +22095,345 @@ browser-stage lifecycle observability, not transcript truncation.
   gap or suffix rather than accepting a numeric prefix.
 - Keep the production CLI parser under a focused regression for `60m`,
   `1h30m`, numeric seconds, `auto`, and malformed partial tokens.
-- 2026-08-30: ChatGPT developer apps are ecosystem mentions, not generic
-  built-in composer tools. A no-submit app test already selected and verified
-  the exact app ID, while the submit variant discarded that path and set the
-  app name as `browser.composerTool`, causing a false `did not stay selected`
-  failure before Send. Reuse the exact mention selector with retained
-  selection, remove any inherited composer-tool field, and let exact composer
-  replacement preserve the app pill through prompt submission.
-- 2026-08-30: A retained ecosystem mention is rendered as visible text inside
-  ChatGPT's committed user turn even though it is presentation metadata, not
-  user-authored prompt text. Preserve exact committed-turn equality by omitting
-  only `[data-inline-selection-pill][data-symbol="ecosystemMention"]` from the
-  committed text walker; do not weaken equality for ordinary prefixes, stale
-  drafts, or other controls.
-- 2026-08-30: Clearing a ChatGPT ecosystem mention is a two-stage operation in
-  the current editor: the first select-all/backspace may unwrap the atomic pill
-  into literal mention text. Check the blank postcondition after each pass,
-  allow exactly one second pass, and retain the hard failure if text remains.
+## 2026-09-01 | Synthetic skips must not pin bounded materialization
+
+- A stable catalog order plus retryable `no-materializable-*` results can make
+  the same front conversations consume every bounded pass without reaching
+  later rows. Keep those conversations retryable, but order zero-asset retry
+  receipts by never-attempted and then least-recently attempted within the
+  exact provider, AuraCall runtime profile, browser profile, identity, and
+  asset-kind lane.
+- Transfer budget is asset evidence, not result-entry count. Synthetic
+  no-materializable, known-files-excluded, and unsupported placeholders have no
+  concrete provider/local asset identity and must consume zero transfer slots;
+  the separate target budget still bounds provider conversation reads.
+- Raw `remoteKnownMissingLocal` includes duplicate, unsupported metadata-only,
+  static false-positive, retrieval-failed, and terminal rows. Full-retrieval
+  live follow should consult the recovery planner and queue materialization only
+  when retrievable assets or unknown/deferred detail work remain.
+- 2026-09-02: A ChatGPT feature-signature `skills[]` label is discovery
+  evidence, not lifecycle evidence. Report its availability and invocation as
+  unknown until an exact-account readback supplies stable identity and explicit
+  installed/enabled/version/selection state. Never borrow developer-app CRUD
+  semantics merely because the UI labels both surfaces as apps or skills.
+- 2026-09-02: Operator transfer of a pre-existing managed-browser process grants
+  bounded operational authority; it does not justify rewriting durable job
+  owner/lease fields or claiming shutdown ownership. Reattach through the exact
+  AuraCall resolver, preserve the process, and record that distinction. The
+  current ChatGPT skill detail contract supplies a stable 32-hex `skill_id`,
+  owner display, file-tree inventory, and review state, while invocation remains
+  a separate `Try in chat` action and version/enabled state remain unobserved.
+- 2026-09-02: Treat ChatGPT Skill CRUD as an exact-ID, content-addressed
+  lifecycle rather than a display-name action. Require exact account and
+  complete inventory before every mutation, bind create/update to fresh
+  `SKILL.md` hashes, make update optimistic on the prior hash, and prove delete
+  by fresh absence. An uncertain dispatched outcome is a terminal manual-review
+  state, never retry authority.
+- 2026-09-02: Do not derive ChatGPT Skill inventory completeness from visible
+  root-card anchors: current cards are role buttons and omit stable IDs from the
+  DOM. Capture both authenticated installed and created inventory responses,
+  require both payload arrays, and reconcile overlap by exact ID with
+  created-by-me precedence before authorizing any mutation.
+- 2026-09-02: A trusted pointer can synchronously open a React menu while the
+  rerender discards a window-scoped click-listener receipt. For a provider
+  control whose click dispatch is already trusted, accept the exact visible
+  menu postcondition as activation proof; never proceed from dispatch alone.
+- 2026-09-02: CodeMirror's `.cm-content.textContent` can concatenate visual
+  lines without newline separators. Hash and verify editor content by joining
+  ordered `.cm-line` text, preserving non-empty raw whitespace until canonical
+  hashing. After any prepared mutation pointer dispatch, missing click receipt
+  means postcondition observation or `outcome-unknown`, never a retryable error.
+- 2026-09-02: ChatGPT Skill Create may persist successfully at
+  `/skills/editor/<stable-id>` instead of redirecting to
+  `/skills?skill_id=<stable-id>`. Recognize both only with exact 32-hex identity;
+  navigate editor routes to the root before inventory capture. An older client
+  that reports unknown after this exact save remains subject to its no-retry
+  hard stop even when later read-only evidence recovers the artifact.
+- 2026-09-02: ChatGPT exposes different Skill action menus on the saved editor
+  and root collection cards. Treat the editor route as the exact-ID update
+  surface; before Delete, bind the requested ID and display name through a
+  fresh complete created-inventory response, require exactly one matching card
+  inside the `Created by me` section, then use trusted menu and confirmation
+  presses. A delete postcondition must reject both the query-detail and editor
+  URL forms for the target ID; checking only `skill_id` makes an editor URL a
+  false success.
+- 2026-09-02: For exact ChatGPT Skill source hashing, prefer the persisted
+  `/skills/editor/<stable-id>` surface over query-detail extraction. The editor
+  binds the ID in the route and exposes name, description, and ordered
+  CodeMirror lines in one surface; normalize and hash those lines directly.
+  Keep collection/review ownership sourced from the separate complete
+  inventory responses rather than inferring it from the editor.
+- 2026-09-02: Browser expressions generated inside TypeScript template strings
+  need a double-escaped newline delimiter. A source-level `join('\\n')` can
+  become a literal newline inside the emitted JavaScript string and fail at
+  runtime even though TypeScript, build, and lint pass. Export the expression
+  builder and execute it in a regression with representative CodeMirror lines.
+- 2026-09-02: ChatGPT's current `Created by me` Skill-card `Delete` action is
+  immediately destructive; it does not open a second confirmation dialog.
+  Treat the exact menu item press as the single mutation boundary, disable any
+  attempt to restore the now-deleted editor URL immediately, and determine the
+  outcome from a fresh complete authenticated inventory. If the exact ID is
+  still present or inventory is incomplete, return `outcome-unknown` and never
+  retry the action.
+- 2026-09-02: Provider-native ChatGPT handoff submission must acquire the same
+  managed-browser-profile operation key as ordinary browser execution. Direct
+  `ChatgptService.runPrompt()` use does not inherit the lease from
+  `runBrowserMode()`. For a handoff with no existing target conversation, use
+  the explicit `retain-new` lifecycle so selection cannot borrow an unrelated
+  generic root tab and the submitted tab remains available for commit evidence.
+- 2026-09-02: A ChatGPT handoff target can carry a provider-native project URL
+  whose path includes a human-readable slug while also carrying the bare project
+  ID. Do not overwrite that exact URL with the generated legacy
+  `/g/{projectId}/project` route: current ChatGPT can redirect that route to home,
+  leaving a populated composer unable to commit. Treat only references containing
+  `/c/<id>` as existing conversations; project-root references require the fresh
+  retained-tab lifecycle. Provider-native execution must use `recover-live` for
+  each approved stage on a fresh packet, because packet-adapter completion is
+  deliberately terminal and cannot be promoted later.
+- 2026-09-02: ChatGPT renders uploaded-file cards inside the committed user-turn
+  container before the authored prompt. Exclude exact file-tile presentation
+  groups when reading committed text; otherwise strict prompt equality reports a
+  false negative even after ChatGPT creates the project conversation and begins
+  its response. Keep the equality contract after presentation-only filtering so
+  unrelated retained text cannot satisfy commit verification.
+- 2026-09-03: ChatGPT's assistant-turn `Switch model` action is a retry surface,
+  not the active composer model picker. Bind model-trigger discovery to the
+  visible composer containing `#prompt-textarea` and reject all turn-local
+  controls. The current composer Power control is an aria-hidden five-position
+  slider whose live option order is Instant, Medium, High, Extra High, Pro;
+  dispatch to the corresponding tick and verify `aria-valuenow` before claiming
+  selection. Preserve the unrestricted upload input only when prompt, input,
+  and exact `Add files and more` trigger share the active composer.
+## 2026-09-05 | Keep internal model intent independent of provider generations
+
+- Failure mode: semantic ChatGPT selectors and defaults encoded GPT-5.2 or
+  GPT-5.6 product names, so every provider rollout leaked into saved agents,
+  discovery catalogs, examples, and branching logic.
+- Durable fix: publish capability-oriented selectors and resolve them through a
+  provider schema carrying a stable canonical ID, current UI label, API bridge,
+  and optional effort. Keep old provider names only as accepted aliases or
+  explicit pins.
+- Regression rule: discovery must not advertise provider versions/codenames as
+  semantic IDs; compatibility inputs must still resolve and validate.
+
+# 2026-09-05 — Durable selectors must cover operational help and smoke defaults
+
+- Symptom: model discovery advertised only durable capability selectors, but
+  `handoff prepare --help` and current operational smoke scripts still taught
+  GPT-5.2/pro-extended inputs.
+- Cause: the first schema migration audited resolver/catalog surfaces but did
+  not include executable help and smoke defaults in its advertised-label cone.
+- Fix: use `chatgpt:fast`, `chatgpt:reasoning`,
+  `chatgpt:reasoning-high`, and `openai:frontier` in current operator-facing
+  and operational code; retain versioned strings only as compatibility inputs,
+  provider API IDs, and provider DOM matchers.
+- Guard: the CLI subprocess test now requires `chatgpt:reasoning-high` in
+  handoff help and rejects `chatgpt:pro-extended`.
+
+## 2026-09-05 | Separate provider labels, capability IDs, and selection semantics
+
+- Failure mode: current ChatGPT drawer labels changed and added Shopping while
+  capability discovery could attach a retained project chat instead of the root
+  composer; Skill inventory had stable IDs but no bounded selection contract.
+- Durable fix: publish semantic capability IDs with provider labels as aliases,
+  force discovery through the configured root URL, and model Skill detail
+  selection separately from prompt invocation.
+- Guard: file-source rows stay `composer_attachment`, tool selection resolves
+  durable IDs, and Skill selection requires exact account, complete inventory,
+  exact 32-hex ID, explicit confirmation, empty-composer proof, and cleanup.
+- Regression rule: a successful `Try in chat` click never proves Skill
+  invocation; failure to observe selection or cleanup is `outcome-unknown` and
+  must not be retried.
+
+## 2026-09-05 | Bind ChatGPT selection and proof to current workbench structure
+
+- Failure mode: an exact-account preflight qualified the healthy ChatGPT root,
+  but the later Skills phase opened generic DevTools and navigated the first
+  retained page. Separately, the current drawer dropped `tabindex` from its
+  `.__menu-item` rows and selected Shopping as a non-plugin inline pill.
+- Durable fix: obtain the Skills CDP client through the same qualified
+  prompt-workbench target used by the provider adapter; recognize current
+  popover rows independent of `tabindex`; detect any exact-scored
+  `data-inline-selection-pill`; and define an empty composer as no user text
+  after selection pills/cursor sentinels are removed from a clone.
+- Cleanup rule: remove composer state only when exactly one expected Skill pill
+  is present and no user-authored text or second pill exists. Otherwise refuse
+  cleanup and return `outcome-unknown`.
+- Regression rule: identity on one tab does not authorize navigation on another,
+  reload does not prove inline-pill cleanup, and a dispatched selection is never
+  retry authority when exact selection or cleanup proof is missing.
+- Background-tab geometry is not workbench absence. Before rejecting a retained
+  ChatGPT root for a zero-sized composer, foreground that exact CDP target and
+  then measure it. A true greeting-only root still lacks `#prompt-textarea` and
+  remains ineligible.
+
+## 2026-09-05 | Distinguish ChatGPT Skill provider prefill from user text
+
+- Failure mode: current `Try in chat` routes the exact Skill into the home
+  composer and seeds a provider-authored example prompt. The empty-text-only
+  proof rejected that safe non-submitting state after the single live click.
+- Durable fix: require the source composer to have zero user text and zero
+  selection pills before any navigation, then accept post-click text only when
+  it exactly equals the decoded current `prompt` parameter and the exact Skill
+  marker or route is present.
+- Guard: arbitrary or mismatched composer text remains untrusted, final route
+  restoration must prove zero text/zero pills, and an unaccepted dispatched
+  click is terminal `outcome-unknown` with no retry.
+
+## 2026-09-05 | Qualify ChatGPT composers by durable provider semantics
+
+- Failure mode: current ChatGPT home pages replaced the prompt editor ID with a
+  named textarea, so an actually visible empty workbench was classified as
+  absent and the Skill lane appeared browser-blocked.
+- Durable fix: exact root qualification and Skill preflight/proof/cleanup accept
+  either `#prompt-textarea` or `textarea[name="prompt-textarea"]`, matching the
+  existing provider input contract without broadening to arbitrary textareas.
+- Regression rule: a missing legacy editor ID does not prove a missing composer;
+  require one of the exact provider selectors plus visible geometry and preserve
+  all empty-composer, identity, cleanup, and no-submit gates.
+
+## 2026-09-05 | Keep ChatGPT drawer inventory and selection proof structurally aligned
+
+- Failure mode: the selection path accepted current no-tabindex drawer rows,
+  while capability discovery still filtered them out; selected-pill proof also
+  assumed pills lived inside the prompt editor instead of the composer form.
+- Durable fix: share the exact current drawer-row shape across discovery paths,
+  scope inline selection pills to the active composer form, and qualify local
+  uploads against either exact ChatGPT prompt-editor shape.
+- Regression rule: inventory and selection must recognize the same current row
+  family, and pill proof must never search the whole page or require an editor
+  containment relationship the provider no longer renders.
+
+## 2026-09-05 | Merge reduced ChatGPT auth responses with exact bootstrap identity
+
+- Failure mode: `/api/auth/session` returned a non-null user ID/name but omitted
+  email and account qualifiers, so identity discovery returned early and exact
+  account authorization failed before Skill inventory.
+- Durable fix: project only user/account fields from the exact logged-in
+  `script#client-bootstrap[type="application/json"]` and use them solely to fill
+  missing endpoint fields. Never return token-bearing bootstrap properties.
+- Regression rule: a partial non-null endpoint response must not suppress the
+  bootstrap identity fallback; logged-out, missing, or malformed bootstrap data
+  remains untrusted.
+
+## 2026-09-05 | Root composer is not Chat-mode evidence
+
+- ChatGPT can expose an editable root composer before Chat/Work controls. The prior fallback inferred Chat and bypassed sticky Work. Wait up to ten seconds for root controls; fail closed if absent. Only established conversation routes retain the control-less compatibility path. Regression tests cover late controls and permanently absent controls.
+
+## 2026-09-05 | Skills blank-tab readiness
+
+A qualified new tab can still be about:blank at CDP attachment. Skills must await the root composer before capturing its original route and pristine state; otherwise both cleanup routing and preflight evidence describe the blank page.
+
+## 2026-09-05 | Skills visible-composer proof
+
+Skills queries must not use the first matching composer: ChatGPT keeps a hidden named fallback textarea before the visible contenteditable editor. Shared pristine, selection, readiness, and cleanup lookup now requires exactly one visible editor. The previous expression returned null on the captured two-editor case. This fixes the probe; prior Skill activation remains unverified.
+
+## 2026-09-05 | Skill selection accepted on visible-editor repair
+
+- The installed unique-visible-composer probes now verify exact Skill selection, exact provider-prefilled example text, and empty-composer cleanup on the real account. One of five authorized iterations was used. This proves selection, not execution.
+
+## 2026-09-05 | Mutation audit recognizes delegated guarded tools
+
+- The explicit raw-CDP allowlist includes a tool whose mutation is delegated to a guarded helper. Direct-navigation detections must be a subset of the allowlist, and every listed script must retain its guard. This replaces the stale equality expectation without allowing unlisted navigation or unguarded listed tools. Both guard suites pass, six tests.
+
+## 2026-09-05 | Selection cleanup is not invocation continuity
+
+The installed `skills select` command verifies selection and then clears it.
+A later ordinary prompt naming the Skill does not preserve that selection.
+The one execution smoke returned `Skill status: Not loaded` despite complete
+inventory and working Chat. Keep selection and execution acceptance separate;
+an exact-ID select-and-submit path must prove the Skill in the actual prompt
+composer before sending. A transient activity label was insufficient and the
+final answer contradicted it. Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-execution-smoke.json`.
+
+## 2026-09-05 | Skill selection reaches the send boundary
+
+`skills run` holds the existing profile operation lock and one CDP connection through selection, insertion, submission, and response capture. Its pre-send guard rechecks exact account and a visible Skill marker; route parameters alone cannot authorize Send. Uncertain submission preserves the tab without cleanup navigation or retry. `skills select` still restores its original empty composer.
+
+## 2026-09-05 | Committed Skill mentions are presentation, not user prompt text
+
+ChatGPT commits a native Skill mention before the user text. Prompt equality must exclude `[data-inline-selection-pill]`, as it already excludes attachment/action presentation, without excluding ordinary text. Response capture must use the pre-submit boundary rather than a committed turn count that may include an already-finished answer. The real canary was recovered with the repaired readers and no prompt retry. Selected Skill identity alone still does not prove the provider loaded its instructions.
+
+## 2026-09-06 | Preserve Git custody before closing stale worktrees
+
+- A clean index does not prove a directory is disposable: check ignored files, exact integrated ancestry, remote custody, and current process cwd owners immediately before removal.
+- Preserve reviewed-but-unaccepted edits on a named remote WIP branch and verify file hashes before restoring the original clean branch. Keep paused operational plans on stable branch tips so moving-main checkpoint drift does not recur.
+
+## 2026-09-06 | Hidden composer forms are not upload authority
+
+- A mounted file input plus any same-form editor and attachment trigger could
+  authorize local upload despite all controls being hidden. Inventory all
+  candidate forms, require one visible composer and trigger, and require the
+  input to belong to that composer. Respect explicit popover ownership and
+  reject ambiguous popovers; the file input itself may remain hidden.
+- Select a visible editor from all candidates so a hidden fallback textarea
+  cannot mask the usable editor. Test the production inventory expression,
+  not a hand-supplied composerLocal flag.
+- Preserve omitted and explicit-model handoff cases together. Validation must
+  use frozen-lockfile dependencies: stale shared OpenAI 6.15.0 dependencies
+  produced unrelated errors against current source requiring 7.10.0.
+
+## 2026-09-09 | Installed canaries must not inherit an adjacent stale checkout
+
+- Failure mode: a live connected-app canary used `pnpm tsx bin/auracall.ts`
+  from an unrelated branch that predated the durable model-selector migration,
+  then failed before submission on retired picker label `gpt-5.2-pro`.
+- Durable rule: installed/runtime/live acceptance uses the installed `auracall`
+  launcher and records its resolved model target. Repo-local `pnpm tsx` is only
+  source-development evidence and must bind the intended branch/commit.
+- Remaining cleanup: replace stale operator-facing versioned examples without
+  removing compatibility aliases, provider API IDs, historical evidence, or
+  DOM matchers. See
+  `docs/dev/notes/2026-09-09-installed-cli-required-for-live-canaries.md`.
+
+## 2026-09-09 | Private developer apps require ecosystem-mention selection
+
+- Verification: the installed resolver accepted `chatgpt:reasoning` and chose
+  `gpt-5.6-sol`, clearing the earlier stale-source selector failure.
+- Remaining failure: installed `apps test --submit` routed the private LitScout
+  app name through `ensureChatgptComposerTool`, whose generic top-level menu has
+  no private developer-app row, and stopped before Send.
+- Durable guard: treat that submitting helper as ineligible for private apps
+  until it uses exact composer `@mention` selection and verifies the ecosystem
+  pill/plugin ID. Inventory-only app commands remain valid. README, testing
+  guidance, and the ChatGPT browser skill now carry the same operator rule.
+
+## 2026-09-09 | Operator examples use durable selectors and the installed launcher
+
+- Primary configuration and bundled-skill examples should advertise semantic
+  selectors such as `chatgpt:premium` for the current GPT-6 Pro lane, not
+  retained versioned compatibility inputs.
+- A bundled skill that can launch browser work must use the installed
+  `auracall` command so its live behavior cannot inherit a stale checkout or a
+  separately distributed upstream CLI. Preserve versioned strings where they
+  are API identifiers, compatibility tests, historical receipts, or DOM
+  matchers.
+
+## 2026-09-09 | Developer-app submit must carry identity into the prompt path
+
+- Root cause: `selectForTest` used the ecosystem mention picker, but
+  `submitTest` bypassed it by assigning the private app name to generic
+  `composerTool`; the generic selector stopped on static top-level tools.
+- Fix: carry the app label plus accepted plugin/app IDs in the provider prompt,
+  select through `@mention` on the same fresh prompt connection, and require one
+  matching ecosystem pill with zero document-reference pills before Send.
+- Evidence correction: `chatgpt:reasoning` resolved internally to
+  `gpt-5.6-sol`, but the post-stop composer displayed `5.6 Instant`; do not
+  call the actor model selected without live UI proof. Developer-app tests
+  deliberately preserve the current Chat model.
+- 2026-09-09: Installed-runtime currency needs artifact and service proof, not
+  version equality alone. AuraCall can retain the same package version while
+  source advances, and install metadata records a source path rather than a
+  commit. Bind the supported installer to a clean published source SHA, compare
+  the complete built and installed `dist` inventories, then read back the
+  configured endpoint, service PID/restart count, and scheduler/completion
+  posture. For Git cleanup, re-run clean/untracked/ignored, ancestry,
+  local-remote, lane-state, and process-cwd gates immediately before removal;
+  an earlier process interlock may clear, while a clean divergent lane still
+  requires reconciliation rather than closure.
+- 2026-09-09: During long-lived branch reconciliation, architecture guards
+  outrank locally green feature tests. P16's provider-local response watcher
+  passed its focused tests but duplicated the shared prompt lifecycle and
+  failed `llmServicePromptStructure.test.ts`; remove the incompatible feature,
+  record its acceptance criterion as open, and retain only independently
+  proven app-selection and cleanup behavior.

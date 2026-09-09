@@ -1,0 +1,49 @@
+{
+  "observedAt": "2026-09-06T00:40:34.092908+00:00",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "method": "Native Try in chat followed by trusted pointer Send with provider text unchanged; no AuraCall prompt insertion.",
+  "accountVerified": true,
+  "chatModeVerified": true,
+  "prompt": "I just added the \u201ccodebase-investigator\u201d skill. Let's explore what it does with an example. Make up a realistic user prompt and then use the full Skill end to end.",
+  "providerPrefillExactMatch": true,
+  "exactSkillIdSelectedAndCommitted": true,
+  "nativeWireEvidence": {
+    "endpoint": "/backend-api/f/conversation",
+    "exactSkillIdAt": "messages.0.metadata.serialization_metadata.custom_symbol_offsets.0.id",
+    "model": "gpt-5-6-thinking"
+  },
+  "submissions": 1,
+  "retries": 0,
+  "preSubmitInspectionRepair": "DOM readiness returned an unserializable element; corrected to Boolean and resumed the same selected tab before any Send. Try in chat was not repeated.",
+  "conversationUrl": "https://chatgpt.com/c/6a9cb5ad-94d8-83ea-90f5-129ba114aaa7",
+  "finalResponse": "I tried to use the newly selected Codebase Investigator Skill as requested, but its actual SKILL.md was not exposed to this session. I checked the installed/public plugin surface, locally exposed Skill directories, and your file/library surfaces. So I cannot truthfully say the installed Skill itself was loaded or executed.\n\nRather than stop there, I ran the sort of end-to-end investigation the Skill appears intended for on an isolated synthetic repository. This is a fallback demonstration, not a representation of undocumented Skill instructions.\n\nRealistic example prompt\n\nWe have a multi-tenant SaaS app. A customer reports that after switching from one organization where they are an admin to another where they are only a viewer, they can still export reports. Existing authorization tests pass. Investigate the repository, reproduce the problem, identify the root cause, make the smallest safe fix, add a regression test that would have caught it, and verify the full test suite. Avoid unrelated refactoring.\n\nSynthetic repository\nsrc/\n  auth/\n    store.js\n    permissions.js\n  routes/\n    reports.js\ntest/\n  reports.test.js\n\nThe membership data deliberately contained:\n\nu1 + orgA \u2192 admin\nu1 + orgB \u2192 viewer\n\nThe report route correctly supplied both pieces of context:\n\nJavaScript\npermissionsFor(req.user.id, req.org.id)\nInvestigation\n\nThe original test suite had two tests:\n\norgA admin can export       PASS\norgB viewer cannot export   PASS\n\nAt first glance, everything looked healthy.\n\nTracing the authorization path exposed the suspicious code:\n\nJavaScript\nfunction permissionsFor(userId, orgId) {\n  if (cache.has(userId)) return cache.get(userId);\n\n  const role = roleFor(userId, orgId);\n  ...\n  cache.set(userId, permissions);\n}\n\nThe underlying lookup depends on both userId and orgId, while the cache depends only on userId.\n\nThe existing tests didn't expose it because beforeEach() cleared the cache.\n\nI added the discriminating sequence:\n\nJavaScript\ntest('same user does not inherit export permission across organizations', () => {\n  const user = { id: 'u1' };\n\n  assert.equal(\n    canExportReport({ user, org: { id: 'orgA' } }),\n    true\n  );\n\n  assert.equal(\n    canExportReport({ user, org: { id: 'orgB' } }),\n    false\n  );\n});\n\nThat reproduced the reported defect:\n\nExpected: false\nActual:   true\nRoot cause\n\nThis is a cache-key scope mismatch.\n\npermissionsFor(userId, orgId) computes tenant-specific information, but the cache key represents only the user. Once u1's orgA administrator permissions are cached, the subsequent orgB lookup hits that same entry and never consults the organization-specific membership store.\n\nFor an authorization cache, that is more serious than ordinary stale-data behavior because it can create a cross-tenant privilege leak.\n\nMinimal repair\n\nI changed only the cache identity:\n\nJavaScript\nfunction permissionsFor(userId, orgId) {\n  const cacheKey = JSON.stringify([userId, orgId]);\n\n  if (cache.has(cacheKey)) return cache.get(cacheKey);\n\n  const role = roleFor(userId, orgId);\n  const permissions = role === 'admin'\n    ? ['reports:read', 'reports:export']\n    : role === 'viewer'\n      ? ['reports:read']\n      : [];\n\n  cache.set(cacheKey, permissions);\n  return permissions;\n}\n\nNo route behavior, permission definitions, membership logic, or unrelated code changed.\n\nVerification\n\nAfter the patch:\n\norgA admin can export                                  PASS\norgB viewer cannot export                              PASS\nsame user does not inherit permission across orgs     PASS\n\n3 tests passed\n0 failed\n\nA repository-wide search also showed that permissionsFor() had only this one production call site, so there wasn't another caller relying on the old cache semantics.\n\nWhat this demonstrates\n\nA useful codebase-investigation workflow is not merely \u201cspot the suspicious line.\u201d It should move from symptom \u2192 repository map \u2192 reproduction \u2192 execution/data-flow trace \u2192 falsifiable root-cause hypothesis \u2192 discriminating regression test \u2192 minimal repair \u2192 full verification \u2192 scope/collateral check.\n\nThat is exactly what I exercised here.\n\nThe important qualification is that the actual selected codebase-investigator Skill was not loaded, because its SKILL.md is not presently exposed through the Skill/plugin resources available to me. Therefore I would not use this run to judge whether your newly added Skill's own instructions are working correctly.",
+  "skillLoaded": false,
+  "activityEvidence": {
+    "searchCommand": "bash -lc find /home/oai -maxdepth 6 \\( -iname '*codebase*investigator*' -o -iname 'SKILL.md' \\) 2>/dev/null | head -200",
+    "returnedFiles": [
+      "/home/oai/skills/docx/SKILL.md",
+      "/home/oai/skills/pdfs/SKILL.md",
+      "/home/oai/skills/slides/SKILL.md",
+      "/home/oai/skills/spreadsheets/SKILL.md"
+    ],
+    "scopeLimit": "Search covered /home/oai to depth 6; this is not exhaustive filesystem absence proof."
+  },
+  "comparison": "Native unchanged example and AuraCall custom prompt both commit the exact Skill ID and report no accessible custom Skill. Native wire includes the expected Skill serialization reference. Prior AuraCall wire was not captured; stored-conversation read returned 404, so byte-equivalent request metadata is not claimed.",
+  "inference": "Custom Skill availability in the selected model/session is a stronger hypothesis than prompt replacement or plugin-search wording alone. Exact root cause remains unproven.",
+  "responseCaptureLimitation": "Shared waitForAssistantResponse returned an intermediate statement before tools finished. Final outcome was taken from subsequent direct completed-turn DOM readback.",
+  "cleanup": {
+    "url": "https://chatgpt.com/c/6a9cb5ad-94d8-83ea-90f5-129ba114aaa7",
+    "visibleText": [
+      {
+        "textLength": 0
+      }
+    ],
+    "userTurns": 1,
+    "assistantTurns": 1
+  },
+  "preExistingBrowserPreserved": true,
+  "conversationRetained": true,
+  "additionalSkillMutations": 0,
+  "schedulerActions": 0
+}

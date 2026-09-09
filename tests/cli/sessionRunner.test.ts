@@ -674,6 +674,179 @@ describe('performSessionRun', () => {
 	    );
 	  });
 
+  test('keeps an actively generating ChatGPT turn resumable when only the observation lease expires', async () => {
+    vi.mocked(runBrowserSessionExecution).mockImplementation(async ({ abortSignal }, deps) => {
+      await deps?.persistRuntimeHint?.({
+        chromePid: 4123,
+        chromePort: 45015,
+        chromeHost: '127.0.0.1',
+        chromeTargetId: 'target-experiment-51',
+        tabUrl: 'https://chatgpt.com/c/experiment-51',
+        conversationId: 'experiment-51',
+        userDataDir: '/tmp/auracall/browser-profiles/wsl-chrome-3/chatgpt',
+        controllerPid: process.pid,
+      });
+      return new Promise<never>((_resolve, reject) => {
+        abortSignal?.addEventListener('abort', () => {
+          const reason = abortSignal.reason as SessionRunTimeoutError & {
+            browserResponseProgress?: Record<string, unknown>;
+          };
+          reason.browserResponseProgress = {
+            state: 'assistant-text',
+            url: 'https://chatgpt.com/c/experiment-51',
+            turnCount: 12,
+            minTurnIndex: 11,
+            boundaryState: 'position',
+            assistantTurnIndex: 11,
+            assistantTextChars: 33_688,
+            assistantMessageId: 'message-experiment-51-turn-03',
+            assistantTurnId: 'turn-experiment-51-03',
+            assistantTextFingerprint: '33688:424242',
+            stopVisible: true,
+            completionVisible: false,
+            toolApprovalCardsVisible: 0,
+            dialogVisible: false,
+          };
+          reject(reason);
+        }, { once: true });
+      });
+    });
+
+    await expect(
+      performSessionRun({
+        sessionMeta: baseSessionMeta,
+        runOptions: { ...baseRunOptions, timeoutSeconds: 0.01 },
+        mode: 'browser',
+        browserConfig: { chromePath: null },
+        cwd: '/tmp',
+        log,
+        write,
+        version: cliVersion,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(sessionStoreMock.updateSession.mock.calls.at(-1)?.[1]).toMatchObject({
+      status: 'running',
+      completedAt: undefined,
+      response: {
+        status: 'running',
+        incompleteReason: 'observation_expired_generation_active',
+      },
+      browser: {
+        runtime: expect.objectContaining({
+          chromePid: 4123,
+          chromePort: 45015,
+          chromeTargetId: 'target-experiment-51',
+          conversationId: 'experiment-51',
+        }),
+      },
+      error: {
+        category: 'browser-observation-expired',
+        details: {
+          browserResponseProgress: expect.objectContaining({
+            assistantTextChars: 33_688,
+            assistantMessageId: 'message-experiment-51-turn-03',
+            assistantTurnId: 'turn-experiment-51-03',
+            assistantTextFingerprint: '33688:424242',
+            stopVisible: true,
+          }),
+          recovery: 'read-only-reattach',
+        },
+      },
+    });
+    expect(sessionStoreMock.updateModelRun).toHaveBeenLastCalledWith(
+      baseSessionMeta.id,
+      'gpt-5.2-pro',
+      expect.objectContaining({
+        status: 'running',
+        completedAt: undefined,
+        response: {
+          status: 'running',
+          incompleteReason: 'observation_expired_generation_active',
+        },
+      }),
+    );
+    expect(log.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
+      'read-only reattach',
+    );
+  });
+
+  test('keeps a pre-answer ChatGPT generation resumable when the stop control proves it is active', async () => {
+    vi.mocked(runBrowserSessionExecution).mockImplementation(async ({ abortSignal }, deps) => {
+      await deps?.persistRuntimeHint?.({
+        chromePid: 4123,
+        chromePort: 45015,
+        chromeHost: '127.0.0.1',
+        chromeTargetId: 'target-experiment-52',
+        tabUrl: 'https://chatgpt.com/c/WEB:stale-runtime-hint',
+        conversationId: 'WEB',
+        userDataDir: '/tmp/auracall/browser-profiles/wsl-chrome-3/chatgpt',
+        controllerPid: process.pid,
+      });
+      return new Promise<never>((_resolve, reject) => {
+        abortSignal?.addEventListener('abort', () => {
+          const reason = abortSignal.reason as SessionRunTimeoutError & {
+            browserResponseProgress?: Record<string, unknown>;
+          };
+          reason.browserResponseProgress = {
+            state: 'no-assistant-turn',
+            url: 'https://chatgpt.com/c/experiment-52',
+            turnCount: 3,
+            minTurnIndex: 3,
+            boundaryState: 'unresolved',
+            assistantTurnIndex: null,
+            assistantTextChars: 0,
+            stopVisible: true,
+            completionVisible: false,
+            toolApprovalCardsVisible: 0,
+            dialogVisible: false,
+          };
+          reject(reason);
+        }, { once: true });
+      });
+    });
+
+    await expect(
+      performSessionRun({
+        sessionMeta: baseSessionMeta,
+        runOptions: { ...baseRunOptions, timeoutSeconds: 0.01 },
+        mode: 'browser',
+        browserConfig: { chromePath: null },
+        cwd: '/tmp',
+        log,
+        write,
+        version: cliVersion,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(sessionStoreMock.updateSession.mock.calls.at(-1)?.[1]).toMatchObject({
+      status: 'running',
+      completedAt: undefined,
+      response: {
+        status: 'running',
+        incompleteReason: 'observation_expired_generation_active',
+      },
+      browser: {
+        runtime: expect.objectContaining({
+          chromeTargetId: 'target-experiment-52',
+          tabUrl: 'https://chatgpt.com/c/experiment-52',
+          conversationId: 'experiment-52',
+        }),
+      },
+      error: {
+        category: 'browser-observation-expired',
+        details: {
+          browserResponseProgress: expect.objectContaining({
+            state: 'no-assistant-turn',
+            assistantTextChars: 0,
+            stopVisible: true,
+          }),
+          recovery: 'read-only-reattach',
+        },
+      },
+    });
+  });
+
   test('enforces the explicit overall timeout for browser sessions and persists a terminal error', async () => {
     vi.mocked(runBrowserSessionExecution).mockImplementation(({ abortSignal }) => {
       return new Promise<never>((_resolve, reject) => {

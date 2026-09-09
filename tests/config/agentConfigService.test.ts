@@ -236,7 +236,7 @@ describe('agent and team config service', () => {
     ]));
     expect(choices.modelSelectors).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        id: 'chatgpt:pro-extended',
+        id: 'chatgpt:reasoning-high',
         service: 'chatgpt',
         executionReady: true,
       }),

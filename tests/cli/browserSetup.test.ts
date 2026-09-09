@@ -34,7 +34,7 @@ describe('resolveSetupVerificationModel', () => {
         resolvedModel: 'grok-4.1',
         modelSource: 'default',
       }),
-    ).toBe('gpt-5.2');
+    ).toBe('chatgpt:fast');
     expect(
       resolveSetupVerificationModel({
         target: 'gemini',

@@ -1,0 +1,114 @@
+{
+  "object": "auracall_plan_acceptance_receipt",
+  "plan": "0339-2026-09-09-installed-runtime-and-git-maintenance",
+  "lane": "P32",
+  "generatedAt": "2026-09-09T13:31:00Z",
+  "runtime": {
+    "applicationSourceCommit": "a5f777895e626bd77af8d6d45a881df4e36c61d8",
+    "packageVersion": "0.1.1",
+    "installedAt": "2026-09-09T13:22:54.473Z",
+    "sourceRepo": "/home/ecochran76/workspace.local/auracall-plan0324-integration",
+    "endpoint": "http://127.0.0.1:18095/status",
+    "statusOk": true,
+    "service": {
+      "pid": 3183,
+      "activeState": "active",
+      "subState": "running",
+      "restartCount": 0
+    },
+    "scheduler": {
+      "state": "scheduled",
+      "paused": false,
+      "foregroundActive": false,
+      "backgroundDrainState": "idle"
+    },
+    "completionMetrics": {
+      "active": 6,
+      "queued": 0,
+      "running": 0,
+      "paused": 6
+    },
+    "distParity": {
+      "sourceFileCount": 522,
+      "installedFileCount": 522,
+      "aggregateSha256": "61ba93eae16d60a4a1796afea0e9141c0a7771a19921d4084f2632c436ad3e82"
+    },
+    "preinstallValidation": {
+      "focusedFiles": 4,
+      "testsPassed": 53,
+      "typecheck": "passed"
+    }
+  },
+  "git": {
+    "fetchAllPrune": "passed",
+    "initialWorktreeCount": 4,
+    "finalWorktreeCount": 3,
+    "closed": [
+      {
+        "lane": "P27",
+        "branch": "fix/plan0334-chatgpt-tool-skill-selection",
+        "tip": "f55e398f342c3866666de95ec810d859c00d90eb",
+        "clean": true,
+        "ignoredOnly": ["dist/", "node_modules/"],
+        "remoteEqual": true,
+        "ancestorOfMain": true,
+        "cwdOwnerCount": 0,
+        "worktreeRemoved": true,
+        "localBranchRemoved": false,
+        "localBranchRetainedForDownstreamTargetVerification": true,
+        "remoteBranchRetained": true
+      }
+    ],
+    "retained": [
+      {
+        "lane": "P08",
+        "branch": "fix/plan0315-aggregate-status-latency",
+        "tip": "9860b9d49be75c7ff3bcdb5ed344ae28bb9f5f2a",
+        "clean": true,
+        "remoteEqual": true,
+        "branchOnlyCommits": 9,
+        "cwdOwnerCount": 15,
+        "reason": "active divergent lane with live process cwd ownership"
+      },
+      {
+        "lane": "P16",
+        "branch": "fix/plan0323-developer-app-mention",
+        "tip": "bd8738da935cdda900c35fe19682f2691cbe1517",
+        "clean": true,
+        "remoteEqual": true,
+        "branchOnlyCommits": 8,
+        "contentConflictsAgainstMain": 9,
+        "cwdOwnerCount": 0,
+        "reason": "unfinished divergent lane requiring deliberate reconciliation"
+      },
+      {
+        "lane": "P18",
+        "branch": "ops/plan0325-installed-fairness-canary",
+        "branchOnlyCommits": 1,
+        "reason": "open paused ref"
+      },
+      {
+        "lane": "P29",
+        "branch": "fix/plan0336-skill-prompt-invocation",
+        "ancestorOfMain": true,
+        "reason": "open plan with unaccepted provider execution"
+      },
+      {
+        "branch": "wip/plan0337-browser-edits-recovery",
+        "branchOnlyCommits": 9,
+        "reason": "named recovery custody for unaccepted browser edits"
+      }
+    ],
+    "remoteRefsDeleted": false,
+    "forceOperationsUsed": false
+  },
+  "finalValidation": {
+    "topicCheckpoint": "299c81e18329bea7636a676344981c3d4d364f23",
+    "integrationReceipt": "c79c779c268ae8206899dfc4fce7cd55d5a19f46",
+    "planLibraryAudit": "passed-zero-validation-errors",
+    "activeLaneAudit": "passed",
+    "gitFsck": "passed-with-dangling-unreachable-objects-only",
+    "commitGraphVerify": "passed",
+    "localRemoteMainParity": "passed-after-final-receipt-push"
+  }
+}

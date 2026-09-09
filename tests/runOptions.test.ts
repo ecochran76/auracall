@@ -24,21 +24,26 @@ describe('resolveRunOptionsFromConfig', () => {
     expect(resolvedEngine).toBe('api');
   });
 
-  it('defaults to gpt-5.2-pro when model not provided', () => {
+  it('defaults API runs to the durable OpenAI frontier alias', () => {
     const { runOptions } = resolveRunOptionsFromConfig({
       prompt: basePrompt,
     });
     expect(runOptions.model).toBe(DEFAULT_MODEL);
   });
 
-  it('defaults browser runs to the semantic ChatGPT Instant selector when model not provided', () => {
+  it('defaults browser runs to the durable ChatGPT fast selector when model not provided', () => {
     const { runOptions, resolvedEngine, browserModelSelection } = resolveRunOptionsFromConfig({
       prompt: basePrompt,
       engine: 'browser',
     });
     expect(resolvedEngine).toBe('browser');
-    expect(runOptions.model).toBe('gpt-5.2-instant');
-    expect(browserModelSelection).toEqual({ desiredModel: 'GPT-5.6 Luna' });
+    expect(runOptions.model).toBe('gpt-5.6-sol');
+    expect(browserModelSelection).toEqual({
+      canonicalSelector: 'chatgpt:fast',
+      desiredModel: 'GPT-5.6 Sol',
+      apiModel: 'gpt-5.6-sol',
+      thinkingTime: 'light',
+    });
   });
 
   it('maps the legacy ChatGPT Pro Extended intent to Sol High', () => {
@@ -50,7 +55,9 @@ describe('resolveRunOptionsFromConfig', () => {
     expect(resolvedEngine).toBe('browser');
     expect(runOptions.model).toBe('gpt-5.6-sol');
     expect(browserModelSelection).toEqual({
+      canonicalSelector: 'chatgpt:reasoning-high',
       desiredModel: 'GPT-5.6 Sol',
+      apiModel: 'gpt-5.6-sol',
       thinkingTime: 'extended',
     });
   });
@@ -64,8 +71,25 @@ describe('resolveRunOptionsFromConfig', () => {
     expect(resolvedEngine).toBe('browser');
     expect(runOptions.model).toBe('gpt-5.6-sol');
     expect(browserModelSelection).toEqual({
+      canonicalSelector: 'chatgpt:reasoning-high',
       desiredModel: 'GPT-5.6 Sol',
+      apiModel: 'gpt-5.6-sol',
       thinkingTime: 'extended',
+    });
+  });
+
+  it('maps the durable ChatGPT premium selector to GPT-6 Pro and the Astra API bridge', () => {
+    const { runOptions, browserModelSelection } = resolveRunOptionsFromConfig({
+      prompt: basePrompt,
+      model: 'chatgpt:premium',
+      engine: 'browser',
+    });
+
+    expect(runOptions.model).toBe('gpt-6-astra');
+    expect(browserModelSelection).toEqual({
+      canonicalSelector: 'chatgpt:premium',
+      desiredModel: 'GPT-6 Pro',
+      apiModel: 'gpt-6-astra',
     });
   });
 

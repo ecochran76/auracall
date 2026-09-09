@@ -134,7 +134,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 79b1d2dde3b76fb427d3ac7022a74d8ddd53a28b
+    checkpoint: 9860b9d49be75c7ff3bcdb5ed344ae28bb9f5f2a
     remote_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     integration: merge
     dependencies: [P07]
@@ -143,8 +143,11 @@ lanes:
     validation_ref: 025453473c5957fb72abb7ed787cb6d1266951e6
     integration_receipt: null
     blocker: The auracall-gemini-pro target retains a manual_clear_required google-sorry guard; human clearance is required before P08 may pause the scheduler or install.
-    disposition: Refreshed provider-free repair passes 91 focused tests, typecheck, build, and changed-source lint; installed proof remains blocked without consuming any effect allowance.
-    updated_at: 2026-08-29
+    disposition: Refreshed provider-free repair and later policy-rollout checkpoint are clean and published; 15 current cwd owners retain the active worktree, and installed proof remains blocked without consuming any effect allowance.
+    updated_at: 2026-09-09
+    recovery_ref: refs/remotes/origin/wip/plan0337-browser-edits-recovery
+    recovery_checkpoint: 3696f6dd337b703f42997753a576bd8364203102
+    recovery_disposition: Seven original dirty files preserved byte-for-byte as unaccepted WIP; no browser repair integrated.
   - id: P09
     objective: Restore exact ChatGPT Work-mode proof when a loaded Project conversation route includes its human-readable slug.
     plan: docs/dev/plans/0316-2026-08-25-chatgpt-project-slug-work-marker.md
@@ -271,3 +274,329 @@ lanes:
     integration_receipt: 168322897e9d7dd0e652e14d44b82482ad83c5ec
     disposition: Integrated exact Git custody cleanup; P08, P14, historical compatibility, divergent, and unknown-custody refs are retained.
     updated_at: 2026-08-29
+  - id: P17
+    objective: Prevent retryable no-asset conversations from stalling history materialization and use actionable backlog for completion.
+    plan: docs/dev/plans/0324-2026-09-01-history-materialization-fairness.md
+    plan_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
+    branch: fix/plan0324-history-materialization-fairness
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: c8cc682eadc2d2b520289c984ed640a6eaafa23c
+    remote_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
+    integration: merge
+    dependencies: []
+    overlaps: [P08]
+    validation_status: provider-free-accepted-installed-blocked
+    validation_ref: c8cc682eadc2d2b520289c984ed640a6eaafa23c
+    integration_receipt: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    disposition: Integrated provider-free repair; installed adoption stopped before mutation on the existing auracall-gemini-pro manual-clear google-sorry guard while both exact ChatGPT targets remain operator-paused.
+    updated_at: 2026-09-01
+    reconciled_overlaps: [P08]
+    reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+  - id: P18
+    objective: Adopt integrated history-materialization fairness into the installed runtime and prove one bounded wsl-chrome-3 pass without resuming continuous live follow.
+    plan: docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md
+    plan_ref: refs/remotes/origin/ops/plan0325-installed-fairness-canary
+    branch: ops/plan0325-installed-fairness-canary
+    target: main
+    plan_state: OPEN
+    custody_state: PAUSED_REF
+    checkpoint: 317b6b372da57d295629abb78e2b1daa8ad8bb33
+    remote_ref: refs/remotes/origin/ops/plan0325-installed-fairness-canary
+    integration: direct
+    dependencies: [P17]
+    overlaps: [P08]
+    validation_status: external-foreground-browser-hard-stop
+    validation_ref: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    integration_receipt: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    disposition: Gemini remains disabled and untouched; install/canary allowances remain unused while external BYOP Chrome PID 1933 owns the exact wsl-chrome-3 managed browser profile without an AuraCall or Agent Browser lease.
+    updated_at: 2026-09-01
+    reconciled_overlaps: [P08]
+    reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+    custody_note: Exact paused plan branch published by Plan 0337; operational blockers are historical plan evidence and were not re-probed or cleared.
+  - id: P19
+    objective: Preserve long-running ChatGPT turns as resumable when only AuraCall's observation lease expires, with bounded read-only recovery and no resend.
+    plan: docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md
+    plan_ref: refs/heads/fix/plan0326-long-prompt-observation-recovery
+    branch: fix/plan0326-long-prompt-observation-recovery
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 0e210641dc1762ce0914cc2422e5f717a3f3753b
+    remote_ref: refs/remotes/origin/fix/plan0326-long-prompt-observation-recovery
+    integration: merge
+    dependencies: [P14]
+    overlaps: []
+    validation_status: provider-free-accepted-integrated
+    validation_ref: e292dcee981c886c8abec827d4624dfcb3ed2e2c
+    integration_receipt: 9ced34cce92a92e44a9b32f8aaf46555f5732266
+    disposition: Integrated provider-free repair accepted with 148 focused/adjacent and 3038 full-suite tests passing; one unrelated stale raw-DevTools allowlist expectation remains. Installed/live proof is separate.
+    updated_at: 2026-09-02
+  - id: P20
+    objective: Establish truthful exact-account ChatGPT skill lifecycle discovery before any CRUD or invocation capability.
+    plan: docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md
+    plan_ref: refs/heads/feat/plan0327-chatgpt-skill-discovery
+    branch: feat/plan0327-chatgpt-skill-discovery
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
+    remote_ref: refs/remotes/origin/feat/plan0327-chatgpt-skill-discovery
+    integration: merge
+    dependencies: [P19]
+    overlaps: []
+    validation_status: live-discovery-accepted-mutations-withheld
+    validation_ref: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
+    integration_receipt: 61ff5ca4e072b8c3fd6b06c66afadc66baeb5df6
+    blocker: null
+    disposition: Provider-free truthfulness and exact-account read-only lifecycle discovery accepted after explicit operational ownership transfer; all skill mutations remain separately gated.
+    updated_at: 2026-09-02
+  - id: P21
+    objective: Prove installed long-observation timeout recovery on one exact ChatGPT turn without resend.
+    plan: docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md
+    plan_ref: refs/heads/ops/plan0328-installed-timeout-canary
+    branch: ops/plan0328-installed-timeout-canary
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 191ab43d1199d906494a323d6f9a25158976ec3e
+    remote_ref: refs/remotes/origin/main
+    integration: merge
+    dependencies: [P19]
+    overlaps: []
+    validation_status: installed-live-accepted
+    validation_ref: ac85137977902fdece01297dd97f88b22596fcea
+    integration_receipt: 73b982ee1aa83cdda93ea99e047a883382565736
+    blocker: null
+    disposition: Installed/live accepted; pre-answer expiry remains running, exact progress identity overrides stale synthetic runtime routing, and read-only reattach recovered the same 1800-line turn with zero resend.
+    updated_at: 2026-09-02
+  - id: P22
+    objective: Implement and prove exact-account exact-ID ChatGPT Skill create, read, update, and delete with one disposable canary and exact cleanup.
+    plan: docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md
+    plan_ref: refs/heads/feat/plan0329-chatgpt-skill-crud
+    branch: feat/plan0329-chatgpt-skill-crud
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: ce610227225a78773c60a96af4c62e924ad69626
+    remote_ref: refs/remotes/origin/main
+    integration: merge
+    dependencies: [P20, P21]
+    overlaps: [P16]
+    validation_status: installed-live-accepted
+    validation_ref: d278b01554c1b639f0f50947fd337053d09afbc3
+    integration_receipt: ac1f4aed0206560f00a943f9ad84e95da705e68c
+    blocker: null
+    disposition: Exact-account exact-ID Skill CRUD is integrated and installed/live accepted; one recovered Create, one in-place update, and one immediate Delete completed with exact hash and fresh absence proof, leaving no canary artifact. Previous process interlock cleared at the September 6 census; eligible for integrated worktree closure.
+    updated_at: 2026-09-02
+    reconciled_overlaps: [P16]
+    reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+  - id: P23
+    objective: Serialize provider-native ChatGPT handoff submission and retain one fresh tab for a new target conversation.
+    plan: docs/dev/plans/0330-2026-09-02-chatgpt-handoff-tab-affinity.md
+    plan_ref: refs/heads/fix/plan0330-chatgpt-tab-affinity
+    branch: fix/plan0330-chatgpt-tab-affinity
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 4678e360eefadd7c853415bed530a9730eda2883
+    remote_ref: refs/remotes/origin/fix/plan0330-chatgpt-tab-affinity
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: provider-free-accepted
+    validation_ref: de13541fefeca435012b3b8696d9dff8c73218ad
+    integration_receipt: 1c27bfc3a4d60d5b20e7c04eca4708b88fe416ff
+    blocker: null
+    disposition: Provider-free handoff serialization, fresh retained-tab affinity, current-model preservation, and composer-local upload drift repair are integrated; install and live retry remain separate effects.
+    updated_at: 2026-09-02
+  - id: P25
+    objective: Replace volatile ChatGPT model labels with durable capability selectors and add the current GPT-6 schema.
+    plan: docs/dev/plans/0332-2026-09-05-durable-model-schema.md
+    plan_ref: refs/heads/fix/plan0332-durable-model-schema
+    branch: fix/plan0332-durable-model-schema
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: d83a52c1a875dabb3acd8fd319a59024d2e313e3
+    remote_ref: refs/remotes/origin/fix/plan0332-durable-model-schema
+    integration: merge
+    dependencies: [P24]
+    overlaps: []
+    validation_status: provider-free-accepted-not-installed
+    validation_ref: c96a472f
+    integration_receipt: a0361f66906987bdc4c20836fdcf3bbc6a83084e
+    blocker: null
+    disposition: Durable selector and GPT-6 schema migration is integrated and provider-free accepted; installation and live browser proof remain separate effects.
+    updated_at: 2026-09-05
+  - id: P26
+    objective: Install the durable model schema and survey current and older-model ChatGPT composer surfaces without provider mutation.
+    plan: docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md
+    plan_ref: refs/heads/ops/plan0333-installed-model-survey
+    branch: ops/plan0333-installed-model-survey
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 15535714c71427555aae3b3dccd74fbbc9871def
+    remote_ref: refs/remotes/origin/ops/plan0333-installed-model-survey
+    integration: merge
+    dependencies: [P25]
+    overlaps: [P24]
+    validation_status: integrated-installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0333-installed-durable-model-survey.json
+    integration_receipt: 960000bb8943d016b07bebf0c17f094aa8326e22
+    blocker: null
+    disposition: Durable model schema, operational labels, installed bytes, current tool/upload and slider surfaces, older-model High/2 comparison, and exact browser cleanup are accepted with no provider mutation.
+    updated_at: 2026-09-05
+    reconciled_overlaps: [P24]
+    reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+  - id: P27
+    objective: Make ChatGPT tool and Skill inventory and non-submitting selection match the current authenticated composer.
+    plan: docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md
+    plan_ref: refs/heads/fix/plan0334-chatgpt-tool-skill-selection
+    branch: fix/plan0334-chatgpt-tool-skill-selection
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: f55e398f342c3866666de95ec810d859c00d90eb
+    remote_ref: refs/remotes/origin/fix/plan0334-chatgpt-tool-skill-selection
+    integration: merge
+    dependencies: [P20, P22, P24, P26]
+    overlaps: []
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json
+    integration_receipt: 697dc66847591ac10b87f2e02e1bdf99ac7b4db6
+    blocker: null
+    disposition: Integrated and live-accepted history retained; after the former process cwd owner exited, Plan 0339 removed the clean ancestral worktree while retaining the equal local/remote branch required to verify P28's historical integration target.
+    updated_at: 2026-09-09
+  - id: P28
+    objective: Require positive Chat mode proof before prompting on new-chat pages.
+    plan: docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md
+    plan_ref: refs/heads/fix/chatgpt-chat-mode-preflight
+    branch: fix/chatgpt-chat-mode-preflight
+    target: fix/plan0334-chatgpt-tool-skill-selection
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 2098c3efa1f0bcb96bbe40ce0112b79fec6944f1
+    remote_ref: refs/remotes/origin/fix/chatgpt-chat-mode-preflight
+    integration: merge
+    dependencies: [P27]
+    overlaps: [P27]
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json
+    integration_receipt: ebc792a742b5ec3b814eb4efcccaaa5e9981ab8c
+    disposition: Based on installed P27 source; isolated corrective mode preflight and one post-repair smoke.
+    updated_at: 2026-09-05
+    reconciled_overlaps: [P27]
+    reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+  - id: P29
+    objective: Connect exact-ID Skill selection and prompt submission in one owned tab.
+    plan: docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md
+    plan_ref: refs/heads/fix/plan0336-skill-prompt-invocation
+    branch: fix/plan0336-skill-prompt-invocation
+    target: main
+    plan_state: OPEN
+    custody_state: INTEGRATED
+    checkpoint: d942e80d87b8b76b17d9eecac7b5872ab30cfd67
+    remote_ref: refs/remotes/origin/fix/plan0336-skill-prompt-invocation
+    integration: merge
+    dependencies: [P27, P28]
+    overlaps: []
+    validation_status: native-submission-proven-execution-unaccepted
+    validation_ref: docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json
+    integration_receipt: 01bb65ad2bed76422b19a1367a275dbed99b5313
+    blocker: Actual Skill execution remains unaccepted; model reported selected resource inaccessible.
+    disposition: One native exact-ID Skill prompt committed; provider reported resource inaccessible. Commit-readback repair recovered existing answer; 377 focused tests pass. No prompt retry.
+    updated_at: 2026-09-05
+  - id: P30
+    objective: Complete Git maintenance and close stale worktrees while preserving unfinished work.
+    plan: docs/dev/plans/0337-2026-09-06-git-maintenance.md
+    plan_ref: refs/remotes/origin/main
+    branch: chore/plan0337-git-maintenance
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: a2b7dfa3daa373f429bccd4aaaf50bbbcde8189b
+    remote_ref: refs/remotes/origin/chore/plan0337-git-maintenance
+    integration: merge
+    dependencies: []
+    overlaps: [P08, P16, P27]
+    disposition: Initial maintenance removed eleven stale worktrees; Plan 0339 later closed newly unblocked P27, leaving active P08, unfinished P16, and the main checkout deliberately retained while preserving original dirty recovery custody.
+    updated_at: 2026-09-09
+    reconciled_overlaps: [P08, P16, P27]
+    reconciliation_note: Plan 0337 preserves unfinished P08 and P16 without source integration; existing integrated receipt ancestry resolves completed-lane overlap; P27 runtime custody is retained.
+    integration_receipt: a2b7dfa3daa373f429bccd4aaaf50bbbcde8189b
+    validation_ref: docs/dev/notes/2026-09-06-plan0337-closeout.json
+    validation_status: git-maintenance-verified
+  - id: P16
+    objective: Complete exact ChatGPT developer-app submit selection and response capture.
+    plan: docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md
+    plan_ref: refs/remotes/origin/fix/plan0323-developer-app-mention
+    branch: fix/plan0323-developer-app-mention
+    target: main
+    plan_state: OPEN
+    custody_state: INTEGRATION_READY
+    checkpoint: 9dad7efda
+    remote_ref: refs/remotes/origin/fix/plan0323-developer-app-mention
+    integration: merge
+    dependencies: []
+    overlaps: [P22]
+    reconciled_overlaps: [P22]
+    disposition: Current main is reconciled into P16. The provider-free accepted delta removes inherited generic-tool routing, binds current-model submission, and handles app-pill text unwrapping; the obsolete provider-local response watcher was removed after failing the prompt-lifecycle architecture gate. Response and live acceptance remain open.
+    updated_at: 2026-09-09
+    reconciliation_note: Current main owns exact ecosystem-mention, Skill CLI, composer, and prompt-lifecycle behavior; 214 broader tests, build, scoped lint, typecheck, and the plan audit pass before integration.
+  - id: P24
+    objective: Restore current ChatGPT composer intelligence selection with safe upload discovery.
+    plan: docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md
+    plan_ref: refs/remotes/origin/fix/plan0331-chatgpt-composer-intelligence-picker
+    branch: fix/plan0331-chatgpt-composer-intelligence-picker
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 5f1cedbf2abc07f20ffc077ba304fb1916ebaaa7
+    remote_ref: refs/remotes/origin/fix/plan0331-chatgpt-composer-intelligence-picker
+    integration: merge
+    dependencies: [P23]
+    overlaps: []
+    integration_receipt: cd3e6b68
+    disposition: Restored missing integrated lane from its closed branch plan and verified main ancestry; eligible for stale worktree closure.
+    updated_at: 2026-09-06
+  - id: P31
+    objective: Reject inactive upload composers and restore explicit-model handoff coverage.
+    plan: docs/dev/plans/0338-2026-09-06-upload-composer-validation.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/plan0338-upload-composer-validation
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 3cfb1de941a6b9c9a445874c7ec001513b273d65
+    remote_ref: refs/remotes/origin/fix/plan0338-upload-composer-validation
+    integration: merge
+    dependencies: [P30]
+    overlaps: []
+    disposition: Both review findings resolved on published main; 69 tests, typecheck, build and scoped lint pass; temporary local custody removed.
+    updated_at: 2026-09-06
+    integration_receipt: 3cfb1de941a6b9c9a445874c7ec001513b273d65
+    validation_ref: docs/dev/notes/2026-09-06-plan0338-validation.json
+    validation_status: provider-free-accepted
+  - id: P32
+    objective: Confirm current-main installed-runtime parity and reconcile local Git and worktree custody.
+    plan: docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md
+    plan_ref: refs/remotes/origin/chore/plan0339-runtime-git-maintenance
+    branch: chore/plan0339-runtime-git-maintenance
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 299c81e18329bea7636a676344981c3d4d364f23
+    remote_ref: refs/remotes/origin/chore/plan0339-runtime-git-maintenance
+    integration: merge
+    dependencies: [P31]
+    overlaps: [P08, P16, P18, P27, P29, P30]
+    reconciled_overlaps: [P08, P16, P18, P27, P29, P30]
+    reconciliation_note: Runtime installation changed external installed bytes only; Git maintenance updated custody metadata, retained unfinished P08/P16/P18/P29 unchanged, closed only P27's eligible worktree, and supersedes P30's historical four-worktree count.
+    validation_status: runtime-and-git-maintenance-verified
+    validation_ref: docs/dev/notes/2026-09-09-plan0339-runtime-git-maintenance.json
+    integration_receipt: c79c779c268ae8206899dfc4fce7cd55d5a19f46
+    disposition: Installed runtime matches current application-bearing main bytes and is healthy; newly unblocked P27 local custody is closed while unfinished and recovery lanes remain intact.
+    updated_at: 2026-09-09

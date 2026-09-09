@@ -19,6 +19,7 @@ import { collectReattachRegistryDiagnostics } from '../browser/service/registryD
 import { estimateTokenCount } from '../browser/utils.js';
 import { formatSessionTableHeader, formatSessionTableRow, resolveSessionCost } from './sessionTable.js';
 import { isProcessAlive } from '../browser/processCheck.js';
+import { reconcileBrowserRuntimeWithResponseProgress } from '../browser/observationLease.js';
 
 const isTty = (): boolean => Boolean(process.stdout.isTTY);
 const dim = (text: string): string => (isTty() ? kleur.dim(text) : text);
@@ -135,7 +136,13 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
   const initialStatus = metadata.status;
   const wantsRender = Boolean(options?.renderMarkdown);
   const isVerbose = Boolean(process.env.AURACALL_VERBOSE_RENDER);
-  const runtime = metadata.browser?.runtime;
+  const browserResponseProgress = (
+    metadata.error?.details as { browserResponseProgress?: { url?: unknown } } | undefined
+  )?.browserResponseProgress;
+  const runtime = reconcileBrowserRuntimeWithResponseProgress(
+    metadata.browser?.runtime,
+    browserResponseProgress,
+  );
   const controllerAlive = isProcessAlive(runtime?.controllerPid);
 
   const hasChromeDisconnect = metadata.response?.incompleteReason === 'chrome-disconnected';

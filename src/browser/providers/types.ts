@@ -48,10 +48,11 @@ export interface BrowserProviderListOptions {
 	historySince?: string;
 	allowNavigation?: boolean;
 	preserveActiveTab?: boolean;
-	tabLifecycle?: "retain" | "dispose-new";
+	tabLifecycle?: "retain" | "retain-new" | "dispose-new";
 	downloadVariantLabel?: string | null;
 	discoveryAction?: "grok-imagine-video-mode" | null;
 	includeInstalledApps?: boolean;
+	requirePromptWorkbenchTarget?: boolean;
 	browserService?: import("../service/types.js").BrowserServiceHandle;
 	modelLabel?: string;
 	mutationAudit?: BrowserMutationAuditSink;
@@ -98,6 +99,10 @@ export interface ProviderUserIdentity {
 
 export interface BrowserProviderPromptInput {
 	prompt: string;
+	ecosystemMention?: {
+		label: string;
+		acceptedPluginIds: string[];
+	};
 	attachments?: BrowserAttachment[];
 	capabilityId?: string | null;
 	completionMode?: "assistant_response" | "prompt_submitted";

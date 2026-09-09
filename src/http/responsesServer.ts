@@ -1181,6 +1181,10 @@ export async function createResponsesHttpServer(
 	let historyMaterializationService = deps.historyMaterializationService;
 	let searchProjectionService: SearchProjectionService;
 	let accountMirrorArtifactRecoveryPlanner: AccountMirrorArtifactRecoveryPlanner;
+	let resolveAccountMirrorArtifactRecoveryPlannerReady: () => void = () => {};
+	const accountMirrorArtifactRecoveryPlannerReady = new Promise<void>((resolve) => {
+		resolveAccountMirrorArtifactRecoveryPlannerReady = resolve;
+	});
 	const accountMirrorSchedulerLedger =
 		deps.accountMirrorSchedulerLedger ??
 			createAccountMirrorSchedulerPassLedger({
@@ -1242,6 +1246,20 @@ export async function createResponsesHttpServer(
 				async readJob(id) {
 					return historyMaterializationService ? historyMaterializationService.readJob(id) : null;
 				},
+			},
+			readMaterializationBacklog: async ({ provider, runtimeProfileId }) => {
+				await accountMirrorArtifactRecoveryPlannerReady;
+				const planner = accountMirrorArtifactRecoveryPlanner;
+				const plan = await planner.plan({
+					provider,
+					runtimeProfileId,
+					includeSearchRows: false,
+					limit: 100,
+				});
+				return {
+					retrievableMissing: plan.metrics.retrievableMissingLocal.total,
+					unknownOrDeferred: plan.metrics.unknownOrDeferred.total,
+				};
 			},
 			providerWorkCoordinator: accountMirrorProviderWorkCoordinator,
 			onPersistError: (error, operation) => {
@@ -1518,6 +1536,7 @@ export async function createResponsesHttpServer(
 			historyMaterializationService,
 			now,
 		});
+	resolveAccountMirrorArtifactRecoveryPlannerReady();
 	const reserveForegroundAuraCallDrain = () => {
 		foregroundAuraCallDrainReservations += 1;
 		accountMirrorFollowUpAfterNextDrain = true;
@@ -11242,7 +11261,7 @@ function createOperatorBrowserDashboardHtml(
             <button id="duplicateAgentConfig" type="button">Duplicate Agent</button>
             <button id="archiveAgentConfig" type="button">Archive Agent</button>
           </div>
-          <textarea id="agentConfigJson" rows="10" style="width: 100%;" spellcheck="false" placeholder='{"runtimeProfile":"default","service":"chatgpt","modelSelector":"chatgpt:pro-extended"}'></textarea>
+          <textarea id="agentConfigJson" rows="10" style="width: 100%;" spellcheck="false" placeholder='{"runtimeProfile":"default","service":"chatgpt","modelSelector":"chatgpt:reasoning-high"}'></textarea>
           <div id="agentConfigTable" class="muted" style="margin-top: 10px;">No agent configs loaded.</div>
           <pre id="agentConfigResult">No agent config mutation yet.</pre>
         </div>

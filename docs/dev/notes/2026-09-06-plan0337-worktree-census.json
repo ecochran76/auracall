@@ -1,0 +1,155 @@
+{
+  "worktrees": [
+    {
+      "branch": "fix/plan0315-aggregate-status-latency",
+      "head": "2a1cd3e15bacf1786d9601ca3cc03c529f676714",
+      "remote": "2a1cd3e15bacf1786d9601ca3cc03c529f676714",
+      "origin_main_ancestor": false,
+      "changed_entries": 7,
+      "worktree_name": "auracall",
+      "initial_cwd_owner_count": 16,
+      "disposition": "retain-active"
+    },
+    {
+      "branch": "fix/chatgpt-chat-mode-preflight",
+      "head": "2098c3efa1f0bcb96bbe40ce0112b79fec6944f1",
+      "remote": "2098c3efa1f0bcb96bbe40ce0112b79fec6944f1",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-chat-mode-preflight",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "fix/plan0323-developer-app-mention",
+      "head": "bd8738da935cdda900c35fe19682f2691cbe1517",
+      "remote": null,
+      "origin_main_ancestor": false,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0323-developer-app-mention",
+      "initial_cwd_owner_count": 0,
+      "disposition": "retain-active"
+    },
+    {
+      "branch": "main",
+      "head": "4767e79ae45f4e712eb53ba9369d88945d6a4678",
+      "remote": "d942e80d87b8b76b17d9eecac7b5872ab30cfd67",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0324-integration",
+      "initial_cwd_owner_count": 0,
+      "disposition": "retain-main-checkout"
+    },
+    {
+      "branch": "ops/plan0328-installed-timeout-canary",
+      "head": "191ab43d1199d906494a323d6f9a25158976ec3e",
+      "remote": "191ab43d1199d906494a323d6f9a25158976ec3e",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0328-installed-timeout-canary",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "feat/plan0329-chatgpt-skill-crud",
+      "head": "ce610227225a78773c60a96af4c62e924ad69626",
+      "remote": "ce610227225a78773c60a96af4c62e924ad69626",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0329-chatgpt-skill-crud",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "fix/plan0330-chatgpt-tab-affinity",
+      "head": "4678e360eefadd7c853415bed530a9730eda2883",
+      "remote": "4678e360eefadd7c853415bed530a9730eda2883",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0330-chatgpt-tab-affinity",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "fix/plan0331-chatgpt-composer-intelligence-picker",
+      "head": "5f1cedbf2abc07f20ffc077ba304fb1916ebaaa7",
+      "remote": "5f1cedbf2abc07f20ffc077ba304fb1916ebaaa7",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0331",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "fix/plan0332-durable-model-schema",
+      "head": "d83a52c1a875dabb3acd8fd319a59024d2e313e3",
+      "remote": "d83a52c1a875dabb3acd8fd319a59024d2e313e3",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0332",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "integrate/plan0332-durable-model-schema",
+      "head": "fedc2d70657ed8015d299fb4b96cec8d93fc1e53",
+      "remote": null,
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0332-integration",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "ops/plan0333-installed-model-survey",
+      "head": "15535714c71427555aae3b3dccd74fbbc9871def",
+      "remote": "15535714c71427555aae3b3dccd74fbbc9871def",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0333-installed-model-survey",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "integrate/plan0333-installed-model-survey",
+      "head": "882c9c14d6d1434c5ddce534fee1bf5da093eb56",
+      "remote": null,
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0333-integration",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "fix/plan0334-chatgpt-tool-skill-selection",
+      "head": "f55e398f342c3866666de95ec810d859c00d90eb",
+      "remote": "f55e398f342c3866666de95ec810d859c00d90eb",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0334-chatgpt-tool-skill-selection",
+      "initial_cwd_owner_count": 16,
+      "disposition": "retain-process-owned"
+    },
+    {
+      "branch": "docs/plan0334-integration-receipt",
+      "head": "b6e1953a5562ae8d444503d9d8d4526b0a46e764",
+      "remote": null,
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0334-closeout",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    },
+    {
+      "branch": "fix/plan0336-skill-prompt-invocation",
+      "head": "d942e80d87b8b76b17d9eecac7b5872ab30cfd67",
+      "remote": "d942e80d87b8b76b17d9eecac7b5872ab30cfd67",
+      "origin_main_ancestor": true,
+      "changed_entries": 0,
+      "worktree_name": "auracall-plan0336-skill-prompt",
+      "initial_cwd_owner_count": 0,
+      "disposition": "remove-after-fresh-gates"
+    }
+  ],
+  "browser_recovery_commit": "3696f6dd337b703f42997753a576bd8364203102"
+}

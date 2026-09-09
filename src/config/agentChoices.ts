@@ -1,5 +1,5 @@
 import { MODEL_CONFIGS } from '../oracle/config.js';
-import { SEMANTIC_MODEL_SELECTORS } from './modelSelector.js';
+import { resolveChatgptSemanticModelSelector, SEMANTIC_MODEL_SELECTORS } from './modelSelector.js';
 import {
   getCurrentRuntimeProfiles,
   getRuntimeProfileBrowserProfileId,
@@ -288,7 +288,11 @@ function validateAgentChoice(
     });
   }
   if (agent.modelSelector) {
-    const selector = options.modelSelectors.find((entry) => entry.id === agent.modelSelector);
+    const selector =
+      options.modelSelectors.find((entry) => entry.id === agent.modelSelector) ??
+      (resolveChatgptSemanticModelSelector(agent.modelSelector)
+        ? { service: 'chatgpt' as const }
+        : undefined);
     if (!selector) {
       issues.push({
         severity: 'warning',

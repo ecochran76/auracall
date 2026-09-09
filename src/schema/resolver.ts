@@ -77,7 +77,7 @@ export async function resolveConfig(
   // Handle shorthands
   if (cliOptions.chatgpt) {
     deepSet(cliConfig, 'browser.target', 'chatgpt');
-    if (!cliConfig.model) cliConfig.model = 'chatgpt:instant';
+    if (!cliConfig.model) cliConfig.model = 'chatgpt:fast';
     cliConfig.engine = 'browser';
   }
   if (cliOptions.gemini) {
@@ -112,7 +112,7 @@ export async function resolveConfig(
   const cliModelArg =
     cliConfig.model ||
     effective.model ||
-    (engine === 'browser' ? 'chatgpt:instant' : DEFAULT_MODEL);
+    (engine === 'browser' ? 'chatgpt:fast' : DEFAULT_MODEL);
 
   const semanticChatgptSelection =
     engine === 'browser' ? resolveChatgptSemanticModelSelector(cliModelArg) : null;
@@ -148,13 +148,8 @@ export async function resolveConfig(
   return ComposedConfigSchema.parse(effective);
 }
 
-function resolveModelForChatgptSemanticSelection(selection: { desiredModel: string }): string {
-  switch (selection.desiredModel) {
-    case 'GPT-5.6 Sol':
-      return 'gpt-5.6-sol';
-    default:
-      return 'gpt-5.2-instant';
-  }
+function resolveModelForChatgptSemanticSelection(selection: { apiModel: string }): string {
+  return selection.apiModel;
 }
 
 function mergeRecursively(target: MutableConfig, source: MutableConfig): MutableConfig {

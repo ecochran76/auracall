@@ -1,0 +1,59 @@
+{
+  "observedAt": "2026-09-05T22:54:16.476470+00:00",
+  "plan": "0334",
+  "installedCheckpoint": "fde8f388",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "inventory": {
+    "complete": true,
+    "count": 11,
+    "expectedAccountAuthorized": true,
+    "domainFilterObserved": false
+  },
+  "selection": {
+    "skillName": "Codebase Investigator",
+    "skillIdSha256": "b5f45eb50af31807cd5ca11b26bca4f9fadc8e784d53fc3efc203d2d0d1e8ab4",
+    "activations": 1,
+    "status": "outcome-unknown",
+    "selectionProofObserved": false,
+    "retriesAfterActivation": 0,
+    "promptSubmissions": 0
+  },
+  "diagnosis": {
+    "blankTabBeforeReadinessObserved": true,
+    "blankTabRepairInstalled": true,
+    "hiddenFallbackPrecedesVisibleEditor": true,
+    "hiddenTextareaDimensions": [
+      0,
+      0
+    ],
+    "visibleEditorDimensions": [
+      732,
+      42
+    ],
+    "preRepairRegressionResult": "null instead of selected proof",
+    "candidateReadOnlyLiveProbe": {
+      "pristine": true,
+      "selected": false,
+      "composerEmpty": true
+    },
+    "candidateInstalled": false
+  },
+  "cleanup": {
+    "route": "https://chatgpt.com/",
+    "composerTextLength": 0,
+    "selectionPills": 0,
+    "userTurns": 0,
+    "assistantTurns": 0,
+    "ownedChromePid": 64663,
+    "ownedChromePidAbsent": true,
+    "port57852Closed": true
+  },
+  "validation": {
+    "focusedTestsPassed": 61,
+    "typecheckPassed": true,
+    "buildPassed": true,
+    "scopedLintPassed": true
+  },
+  "remainingGate": "Fresh exact-ID selection authority after candidate installation; actual Skill execution remains outside the existing non-submitting plan."
+}

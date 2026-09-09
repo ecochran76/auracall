@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-Aura-Call bundles your prompt and files so another AI can answer with real context. It speaks stable GPT Pro aliases, GPT-5.1 Codex (API-only), GPT-5.1, GPT-5.2 family models, GPT-5.6 Sol, Gemini 3 Pro, Claude Sonnet 4.5, Claude Opus 4.1, Grok 4.20, and more—and it can ask one or multiple models in a single run. Browser automation is available; the current ChatGPT picker exposes GPT-5.6 Sol, Terra, Luna, and legacy GPT-5.5. Use semantic selectors such as `chatgpt:sol-high`, `chatgpt:terra`, and `chatgpt:luna`, or use `--browser-model-strategy current` to keep the active ChatGPT model. API remains the most reliable path, and `--copy` is an easy manual fallback.
+Aura-Call bundles your prompt and files so another AI can answer with real context. Its default API model is the durable `openai:frontier` alias, currently backed by GPT-6 Astra; exact provider model IDs remain available as explicit pins. Browser automation uses capability-oriented selectors such as `chatgpt:fast`, `chatgpt:reasoning-high`, and `chatgpt:premium`, or `--browser-model-strategy current` to preserve the active ChatGPT model. GPT-5.2 and Sol/Terra/Luna spellings remain compatibility inputs but are no longer advertised as durable configuration. API remains the most reliable path, and `--copy` is an easy manual fallback.
 
 ## Quick start
 
@@ -68,6 +68,9 @@ auracall profile identity-smoke --all-bound --include-negative --json
 # ChatGPT identity smoke also reports accountLevel/accountPlanType when the
 # signed-in session exposes them, so Business-vs-Pro profile bindings can fail
 # fast before automation uses the wrong model/tool quota lane.
+# If the auth-session endpoint omits those fields, AuraCall may fill only
+# missing identity fields from ChatGPT's exact logged-in client-bootstrap JSON;
+# token-bearing bootstrap fields are never returned.
 # Qualified ChatGPT plan/structure bindings remain strict when provider-app
 # evidence exposes those values. If the provider app proves the same primary
 # email but omits a qualifier, AuraCall treats that qualifier as unknown rather
@@ -85,6 +88,45 @@ auracall capabilities --target grok --static --json
 auracall capabilities --target grok --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json
+# ChatGPT discovery accepts current drawer rows without requiring tabindex and
+# reports selected inline tools only from the active composer form.
+
+# Guarded ChatGPT Skill lifecycle on the selected AuraCall runtime profile
+auracall --profile wsl-chrome-3 skills list \
+  --expected-account <chatgpt-email> --json
+auracall --profile wsl-chrome-3 skills show <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --json
+# Select the exact Skill only from a pill-free empty composer, verify it, and
+# restore that empty composer. ChatGPT may seed its own example prompt after
+# Try in chat; AuraCall accepts that text only when it exactly matches the
+# provider's decoded prompt parameter. Root qualification accepts ChatGPT's
+# current named textarea as well as its legacy editor ID, ignoring hidden
+# fallback editors and rejecting multiple visible composers. This does not submit
+# a prompt or prove Skill invocation.
+auracall --profile wsl-chrome-3 skills select <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --yes --json
+# Select and submit once in the SAME Chat composer, then capture the response.
+# Requires an empty original composer and an unambiguous Skill inventory name.
+# The account and visible Skill marker are checked again immediately before Send.
+# Keep the conversation on completion or uncertainty; never retry an uncertain send.
+auracall --profile wsl-chrome-3 skills run <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --yes --prompt "Use this Skill to analyze..." \
+  --response-timeout 300 --json
+# completed means a response was captured; inspect provider evidence to establish
+# actual Skill use. Selecting a Skill separately and later naming it is insufficient.
+# Mutations additionally require --yes. Create returns the exact stable ID;
+# update requires that ID plus the exact prior SKILL.md SHA-256 from show.
+auracall --profile wsl-chrome-3 skills create \
+  --source ./my-skill --name "My skill" \
+  --expected-account <chatgpt-email> --yes --json
+auracall --profile wsl-chrome-3 skills update <32-hex-skill-id> \
+  --source ./my-skill-v2 --name "My skill" \
+  --expected-hash <64-hex-sha256> --expected-account <chatgpt-email> --yes --json
+auracall --profile wsl-chrome-3 skills delete <32-hex-skill-id> \
+  --expected-account <chatgpt-email> --yes --json
+# Sources must be a regular SKILL.md file or a directory containing one.
+# Incomplete inventory, identity drift, stale hashes, CAPTCHA/MFA, and uncertain
+# provider outcomes stop the operation. Never retry an outcome-unknown mutation.
 
 # Guarded ChatGPT developer-app lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 apps --target chatgpt list --json
@@ -96,9 +138,13 @@ auracall --profile wsl-chrome-3 apps --target chatgpt list --json
 # same-name older connector never supplies auth state to a replacement app.
 auracall --profile wsl-chrome-3 apps --target chatgpt test Corel33t \
   --expected-account eric.cochran@soylei.com --json
-# With `--submit --prompt ... --yes`, AuraCall stages the same exact
-# ID-verified ecosystem mention and retains it through prompt replacement. A
-# developer app is not routed through the built-in composer-tool selector.
+# Private developer apps are selected in Chat through the composer @mention
+# ecosystem picker, not the generic top-level tools menu. Source
+# `apps test --submit` uses that path and verifies the exact composer-local
+# plugin identity before Send. Installed acceptance requires a user runtime
+# containing that repair; an older installed 0.1.1 build remains ineligible.
+# Developer-app tests preserve the active Chat model (`modelStrategy=current`);
+# a separately resolved `--model` value is not proof that the UI switched.
 # Create, refresh, submitted tests, and uninstall require --expected-account
 # plus --yes. OAuth, MFA, consent, CAPTCHA, and verification remain human gates.
 # `awaiting-human` is emitted only after AuraCall observes a fresh OAuth or
@@ -168,7 +214,7 @@ curl -s http://auracall.localhost/v1/response-batches \
 curl -s http://auracall.localhost/v1/tenant-pool-teams/ensure \
   -H "Authorization: Bearer <operator-key>" \
   -H "Content-Type: application/json" \
-  -d '{"teamId":"chatgpt-sol-pool","service":"chatgpt","projectName":"Shared Project","agentModelSelector":"chatgpt:sol-high","members":[{"agentId":"chatgpt-sol-a","runtimeProfile":"wsl-chrome-1"},{"agentId":"chatgpt-sol-b","runtimeProfile":"wsl-chrome-2"}]}'
+  -d '{"teamId":"chatgpt-reasoning-pool","service":"chatgpt","projectName":"Shared Project","agentModelSelector":"chatgpt:reasoning-high","members":[{"agentId":"chatgpt-reasoning-a","runtimeProfile":"wsl-chrome-1"},{"agentId":"chatgpt-reasoning-b","runtimeProfile":"wsl-chrome-2"}]}'
 
 # Dispatch a batch through the tenant-pool team. AuraCall expands each child to
 # the next available member agent and records the selected tenant in batch status.
@@ -210,7 +256,9 @@ auracall run status <id> --json
 auracall handoff prepare \
   --source-provider chatgpt --source-profile default --source-ref "https://chatgpt.com/c/..." \
   --target-provider chatgpt --target-profile auracall-chatgpt-pro \
-  --target-model-selector chatgpt:sol-high \
+  --target-ref "https://chatgpt.com/g/g-p-...-project-slug" \
+  --target-project-ref "g-p-..." \
+  --target-model-selector chatgpt:reasoning-high \
   --source-context-json /path/to/context.json \
   --source-manifest-json /path/to/manifest.json \
   --source-materialization-job-json /path/to/history-materialization-job.json \
@@ -218,14 +266,20 @@ auracall handoff prepare \
   --dry-run --json
 auracall handoff status <handoff_id> --json
 auracall handoff approve-upload <handoff_id> --actor ecochran76 --package-digest <digest>
+# Deterministic packet-adapter execution:
 auracall handoff upload <handoff_id> --json
 auracall handoff approve-submit <handoff_id> --actor ecochran76 --package-digest <digest>
 auracall handoff submit <handoff_id> --json
+# Provider-native ChatGPT execution uses a fresh packet and recover-live for
+# each approved stage; a packet-adapter completion cannot later be promoted live.
+auracall handoff approve-upload <fresh_handoff_id> --actor ecochran76 --package-digest <digest>
+auracall handoff recover-live <fresh_handoff_id> --target-adapter chatgpt-browser --json
+auracall handoff approve-submit <fresh_handoff_id> --actor ecochran76 --package-digest <digest>
+auracall handoff recover-live <fresh_handoff_id> --target-adapter chatgpt-browser --json
 auracall handoff resume <handoff_id> --json
 auracall handoff repair <handoff_id> --json
 auracall handoff export <handoff_id> --json
 auracall handoff recover-live <handoff_id> --json
-auracall handoff recover-live <handoff_id> --target-adapter chatgpt-browser --json
 # The console Handoffs view can run the same status/resume/repair/export/recover actions
 open http://127.0.0.1:<api_port>/console?view=handoffs&handoff=<handoff_id>
 
@@ -259,6 +313,11 @@ Current browser-mode default posture:
   prompts support file attachments; Gemini and Grok browser prompt adapters do
   not currently support prompt attachments and fail before connection instead
   of silently dropping them
+- provider-native ChatGPT handoff submission shares the exclusive managed
+  browser profile operation queue with ordinary browser execution. A handoff
+  without an existing target conversation opens one fresh retained tab instead
+  of borrowing another job's generic ChatGPT tab; this is isolation within a
+  serialized profile lane, not concurrent per-tab mutation support
 - stored team/API browser runs are non-interactive: if ChatGPT shows a logged
   out surface, Aura-Call fails fast and prints an auth-mode command such as
   `auracall --profile <name> login --target chatgpt` instead of waiting in the
@@ -313,7 +372,7 @@ Current browser-mode default posture:
   `handoff.attachmentPackaging.enabled` and
   `handoff.attachmentPackaging.zipWhenFileCountExceeds` in config. For ChatGPT
   targets, pass
-  `--target-model-selector chatgpt:sol-high` or another semantic selector
+  `--target-model-selector chatgpt:reasoning-high` or another semantic selector
   when the live submit path must select a specific model mode instead of
   inheriting the browser's current model. `auracall handoff status
   <handoff_id>` reads the packet ledger back by id, including event count,
@@ -481,8 +540,8 @@ Terminology note:
   as `agent:<agent_id>` model ids usable with `/v1/responses` and non-streaming
   `/v1/chat/completions`; agent metadata includes source/revision fields when
   available so clients can distinguish config and registry records.
-  semantic provider selectors such as `chatgpt:sol-high` and
-  `chatgpt:terra` include
+  semantic provider selectors such as `chatgpt:reasoning-high` and
+  `chatgpt:premium` include
   `metadata.kind="semantic_model_selector"` and `metadata.executionReady` so
   clients can distinguish execution-ready selectors from planned Gemini/Grok
   selectors.
@@ -653,6 +712,11 @@ Terminology note:
   bounded target budget: fresh/complete conversation rows are skipped unless
   forced, while stale, partial, or missing-assets rows can still be refreshed
   even when stale cached asset counts are zero.
+  The asset-transfer budget counts only entries bound to a concrete provider or
+  local asset; synthetic `no-materializable-*` and `known-files-excluded`
+  evidence does not spend it. Retryable zero-asset conversations remain
+  eligible, but later jobs order them by least-recent attempt so the same stable
+  front rows cannot monopolize every bounded pass.
   Selected `conversationIds` batches honor the operator-provided order before
   catalog order; terminal Gemini bare-`/app` misses do not consume `maxItems`,
   so the same bounded request can continue to the next routeable selected id.
@@ -837,7 +901,11 @@ Terminology note:
   optional `--materialization-asset-kind`, `--materialization-max-items`,
   `--materialization-refresh-snapshot`, and `--materialization-force`. A
   successful refresh pass queues a history-materialization job through the
-  same provider/politeness path and records the job handoff in the completion
+  same provider/politeness path only when the recovery planner reports
+  retrievable missing assets or unknown/deferred detail work. Raw missing-local
+  rows classified as duplicate, unsupported metadata-only, static false
+  positives, retrieval failures, or terminal failures do not keep reopening
+  materialization. A queued handoff is recorded in the completion
   `materializationCursor`. Per-service `liveFollow` config can set the same
   sweep/materialization fields for startup reconciliation; ordinary
   `liveFollow.enabled: true` remains metadata-only steady follow by default.
@@ -1241,7 +1309,10 @@ Terminology note:
     merge live browser feature-signature evidence from the matching managed
     browser profile.
     ChatGPT discovery reports visible Web Search, Deep Research, Company
-    Knowledge, apps/connectors, and skills without invoking or enabling them.
+    Knowledge, apps/connectors, and skill labels without invoking or enabling
+    them. A skill label remains `availability = unknown` and
+    `invocationMode = unknown`; it does not prove stable identity,
+    installation, activation, version, or use in a submitted turn.
     App reporting keeps three independent signals separate: installed plugin
     inventory, linked/authentication state, and current composer visibility.
     An installed app is not reported as currently invocable unless it is
@@ -1852,19 +1923,19 @@ npx -y auracall auracall-mcp
 | Flag | Purpose |
 | --- | --- |
 | `-p, --prompt <text>` | Required prompt. |
-| `-f, --file <paths...>` | Attach local files/dirs (globs + `!` excludes). On ChatGPT's current workbench, AuraCall verifies the exact `Add photos & files` row and unrestricted `#upload-files` input; `Add from library` is a separate provider-library drawer. |
+| `-f, --file <paths...>` | Attach local files/dirs (globs + `!` excludes). On ChatGPT's current workbench, AuraCall prefers the exact `Add photos & files` row and also accepts the unrestricted `#upload-files` input only when it is bound to the active composer and its `Add files and more` trigger; `Add from library` is a separate provider-library drawer. |
 | `-e, --engine <api\|browser>` | Choose API or browser (browser is experimental). |
-| `-m, --model <name>` | Built-ins (`gpt-5.1-pro` default, `gpt-5-pro`, `gpt-5.1`, `gpt-5.1-codex`, `gpt-5.2`, `gpt-5.2-instant`, `gpt-5.2-pro`, `gpt-5.6-sol`, `gemini-3-pro`, `claude-4.5-sonnet`, `claude-4.1-opus`) plus any OpenRouter id (e.g., `minimax/minimax-m2`, `openai/gpt-4o-mini`). Browser ChatGPT also accepts `chatgpt:sol`, `chatgpt:terra`, `chatgpt:luna`, `chatgpt:gpt-5.5`, and effort aliases such as `chatgpt:sol-high`. `chatgpt:auto` maps to Terra and `chatgpt:instant` maps to Luna. Older raw browser base/Instant/Thinking/Pro labels map to Terra/Luna/Sol without changing API model ids. |
+| `-m, --model <name>` | Built-ins (`openai:frontier` default, currently `gpt-6-astra`; exact GPT-5.x, Gemini, Claude, and Grok IDs remain available) plus any OpenRouter id. Browser ChatGPT publishes `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`, `chatgpt:reasoning-max`, `chatgpt:premium`, and `chatgpt:legacy`. Older GPT-5.2 and Sol/Terra/Luna selectors remain accepted aliases or explicit provider-family pins. |
 | `--models <list>` | Comma-separated API models (mix built-ins and OpenRouter ids) for multi-model runs. |
 | `--base-url <url>` | Point API runs at LiteLLM/Azure/OpenRouter/etc. |
 | `--chatgpt-url <url>` | Target a ChatGPT workspace/folder (browser). |
 | `--browser-chatgpt-mode <chat\|work>` | Select the ChatGPT composer mode. AuraCall defaults every ChatGPT browser run to `chat`; `work` must be requested explicitly. |
 | `--browser-chatgpt-tool-approval <manual\|allow-once\|always-allow>` | Handle a post-submit ChatGPT third-party tool approval pause. `manual` is the fail-closed default; the opt-in modes click only the exact corresponding action and verify that the approval surface disappears. |
-| `--browser-work-model <label>` | Select a model through Work's dedicated slider menu (advanced options -> Model). This is used only with `--browser-chatgpt-mode work` and never falls back to the Chat picker. Current labels include `GPT-5.6 Sol`, `GPT-5.6 Terra`, `GPT-5.6 Luna`, and `GPT-5.5`. |
+| `--browser-work-model <label>` | Select a model through Work's dedicated slider menu (advanced options -> Model). This is used only with `--browser-chatgpt-mode work` and never falls back to the Chat picker. This is a raw provider-label escape hatch; prefer semantic selectors for ordinary Chat runs. |
 | `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (current keeps the active model; ignore skips the picker). |
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
-| `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT effort intensity for GPT-5.6 Sol in browser mode. The four AuraCall levels map to ChatGPT's Light, Medium, High, and Extra High choices. Prefer `--model chatgpt:sol-high` or `--model chatgpt:sol-extra-high`; legacy Thinking/Pro semantic aliases now resolve to the matching Sol effort lane because the current picker no longer exposes separate Thinking or Pro model families. |
-| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on such as `web-search`, `canvas`, or `deep-research` from the current `Add files and more` workbench selector. File-source rows (`Add photos & files`, `Add from library`) are rejected as tools. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. |
+| `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT effort intensity in browser mode. In the current horizontal Power slider, the four AuraCall levels map to Instant, Medium, High, and Extra High. Prefer `--model chatgpt:reasoning-high` or `--model chatgpt:reasoning-max`; provider-version spellings remain compatibility aliases. |
+| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on by durable ID, such as `chatgpt.commerce.shopping`, `chatgpt.search.web_search`, or `chatgpt.research.deep_research`; legacy labels remain aliases. File-source rows (`Add photos & files`, `Add from library`) are attachments and are rejected as tools. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. |
 | `--browser-deep-research-plan-action <start\|edit>` | Control ChatGPT Deep Research after the provider plan appears. `start` accepts the plan; `edit` opens the plan editor before the timed auto-start window, keeps the managed browser open, and stores review evidence including the iframe/DOM edit target and passive screenshot path. |
 | `--browser-port <port>` | Force a fixed Chrome DevTools port (advanced/debugging). Normal WSL -> Windows launches default to auto-discovery instead. |
 | `--browser-inline-cookies[(-file)] <payload|path>` | Supply cookies without Chrome/Keychain (browser). |
@@ -1880,6 +1951,19 @@ npx -y auracall auracall-mcp
 | `--generate-image <file>` | Legacy Gemini browser image shortcut that saves one file directly; prefer `auracall media generate` for durable media runs. |
 | `--edit-image <file>` | Edit existing image with `--output` (Gemini browser mode). |
 | `--azure-endpoint`, `--azure-deployment`, `--azure-api-version` | Target Azure OpenAI endpoints (picks Azure client automatically). |
+
+For a long ChatGPT browser run, expiration of AuraCall's observation window is
+not treated as model failure when the exact submitted generation has a visible
+Stop control, including the brief interval before ChatGPT mounts the assistant
+turn. Once mounted, non-empty assistant text remains positive progress evidence.
+AuraCall retains the managed browser identity,
+keeps the Session running with
+`observation_expired_generation_active`, and allows `auracall session <id>` to
+reattach read-only without resending the prompt. A physical refresh is reserved
+for positively stale or interrupted observation and is limited to the same
+conversation at most once per 15 minutes. Before reattachment or fallback
+navigation, a validated final progress `/c/<id>` URL supersedes a stale
+synthetic runtime route while the exact DevTools target and port stay fixed.
 
 ## Configuration
 

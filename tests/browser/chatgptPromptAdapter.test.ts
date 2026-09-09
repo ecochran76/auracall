@@ -11,6 +11,7 @@ const promptActionMocks = vi.hoisted(() => ({
 	ensureChatgptWorkModelSelection: vi.fn(async () => undefined),
 	ensureThinkingTime: vi.fn(async () => undefined),
 	ensureChatgptComposerTool: vi.fn(async () => undefined),
+	ensureChatgptEcosystemMention: vi.fn(async () => undefined),
 	clearComposerAttachments: vi.fn(async () => undefined),
 	uploadAttachmentFile: vi.fn(async () => true),
 	waitForAttachmentCompletion: vi.fn(async () => undefined),
@@ -18,33 +19,6 @@ const promptActionMocks = vi.hoisted(() => ({
 		await options.onPromptDispatched?.();
 		return 1;
 	}),
-}));
-
-const assistantResponseMocks = vi.hoisted(() => ({
-	readAssistantSnapshot: vi.fn(async () => null),
-	waitForAssistantResponse: vi.fn(
-		async (
-			_runtime: unknown,
-			_timeout: number,
-			_logger: unknown,
-			_boundary: unknown,
-			options: { onPassiveDomProbe?: () => Promise<void> },
-		) => {
-			await options.onPassiveDomProbe?.();
-			return {
-				text: "Terminal assistant response",
-				html: "<p>Terminal assistant response</p>",
-				meta: { messageId: "assistant-18", turnId: "turn-18" },
-			};
-		},
-	),
-	captureAssistantMarkdown: vi.fn(async () => "Terminal assistant response"),
-	fingerprintAssistantResponseText: vi.fn(() => null),
-}));
-
-const toolApprovalMocks = vi.hoisted(() => ({
-	handle: vi.fn(async () => ({ status: "none" as const })),
-	create: vi.fn(),
 }));
 
 const chatgptConnectionMocks = vi.hoisted(() => ({
@@ -90,6 +64,13 @@ vi.mock("../../src/browser/actions/chatgptComposerTool.js", async (importOrigina
 	ensureChatgptComposerTool: promptActionMocks.ensureChatgptComposerTool,
 }));
 
+vi.mock("../../src/browser/actions/chatgptEcosystemMention.js", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("../../src/browser/actions/chatgptEcosystemMention.js")
+	>()),
+	ensureChatgptEcosystemMention: promptActionMocks.ensureChatgptEcosystemMention,
+}));
+
 vi.mock("../../src/browser/actions/attachments.js", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../../src/browser/actions/attachments.js")>()),
 	clearComposerAttachments: promptActionMocks.clearComposerAttachments,
@@ -102,89 +83,23 @@ vi.mock("../../src/browser/actions/promptComposer.js", async (importOriginal) =>
 	submitPrompt: promptActionMocks.submitPrompt,
 }));
 
-vi.mock("../../src/browser/actions/assistantResponse.js", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../../src/browser/actions/assistantResponse.js")>()),
-	readAssistantSnapshot: assistantResponseMocks.readAssistantSnapshot,
-	waitForAssistantResponse: assistantResponseMocks.waitForAssistantResponse,
-	captureAssistantMarkdown: assistantResponseMocks.captureAssistantMarkdown,
-	fingerprintAssistantResponseText: assistantResponseMocks.fingerprintAssistantResponseText,
-}));
-
-vi.mock("../../src/browser/actions/chatgptToolApproval.js", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../../src/browser/actions/chatgptToolApproval.js")>()),
-	createChatgptToolApprovalHandler: toolApprovalMocks.create,
-}));
-
 describe("ChatGPT provider prompt adapter", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		toolApprovalMocks.create.mockReturnValue(toolApprovalMocks.handle);
 	});
 
-	test("waits for a terminal assistant response and services tool approvals", async () => {
-		const targetUrl = "https://chatgpt.com/c/experiment-18";
-		const Runtime = {
-			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
-				if (expression === "location.href") return { result: { value: targetUrl } };
-				if (expression.includes("querySelectorAll")) return { result: { value: 0 } };
-				return { result: { value: { user: { email: "operator@example.com" } } } };
-			}),
-		};
-		const client = { Runtime, Page: {}, Input: {}, DOM: {}, close: vi.fn() };
-		const host = "127.0.0.1";
-		const port = 45015;
-		const authority = createProviderSessionAuthority({
-			services: { chatgpt: { identity: { email: "operator@example.com" } } },
-		});
-		const context = {
-			providerId: "chatgpt" as const,
-			auracallRuntimeProfile: "wsl-chrome-3",
-			browserProfile: "wsl-chrome-3",
-			sourceBrowserProfile: "Default",
-			managedBrowserProfile: "/managed/wsl-chrome-3/chatgpt",
-			browserProcessId: 1234,
-			browserTargetId: "target-18",
-			devtoolsHost: host,
-			devtoolsPort: port,
-		};
-		const result = await createChatgptAdapter().runPrompt?.(
-			{
+	test("rejects unsupported completion before browser interaction", async () => {
+		const adapter = createChatgptAdapter();
+
+		expect(adapter.runPrompt).toBeDefined();
+		await expect(
+			adapter.runPrompt?.({
 				prompt: "Wait for the assistant response",
 				completionMode: "assistant_response",
-				timeoutMs: 7_200_000,
-			},
-			{
-				host,
-				port,
-				configuredUrl: targetUrl,
-				useProviderSession: true,
-				providerSession: {
-					providerId: "chatgpt",
-					key: `chatgpt:${host}:${port}:${targetUrl}`,
-					value: { connection: { client, targetId: "target-18", host, port, usedExisting: true } },
-					close: vi.fn(),
-				},
-				providerSessionAuthorization: {
-					authority,
-					context,
-					expectation: authority.resolveExpectation(context),
-				},
-				browserService: {
-					getConfig: () => ({
-						modelStrategy: "current",
-						inputTimeoutMs: 5_000,
-						chatgptToolApproval: "allow-once",
-					}),
-				} as never,
-			},
+			}),
+		).rejects.toThrow(
+			"ChatGPT llmService prompt execution currently supports completionMode=prompt_submitted only.",
 		);
-
-		expect(toolApprovalMocks.create).toHaveBeenCalledWith(
-			expect.objectContaining({ policy: "allow-once" }),
-		);
-		expect(toolApprovalMocks.handle).toHaveBeenCalled();
-		expect(assistantResponseMocks.waitForAssistantResponse).toHaveBeenCalled();
-		expect(result?.text).toBe("Terminal assistant response");
 	});
 
 	test("prepares Work with the requested model without inserting or sending a prompt", async () => {
@@ -416,6 +331,98 @@ describe("ChatGPT provider prompt adapter", () => {
 			phase: "submit_path_observed",
 			details: expect.objectContaining({ provider: "chatgpt" }),
 		});
+	});
+
+	test("selects an exact ecosystem mention before submitting a developer-app prompt", async () => {
+		const targetUrl = "https://chatgpt.com/";
+		const submittedUrl = "https://chatgpt.com/c/conversation-app";
+		let locationReads = 0;
+		const Runtime = {
+			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+				if (expression === "location.href") {
+					locationReads += 1;
+					return { result: { value: locationReads > 1 ? submittedUrl : targetUrl } };
+				}
+				return {
+					result: { value: { user: { email: "operator@example.com" }, account: null } },
+				};
+			}),
+		};
+		const client = {
+			Runtime,
+			Page: {},
+			Input: {},
+			DOM: {},
+			close: vi.fn(async () => undefined),
+		};
+		const host = "127.0.0.1";
+		const port = 45005;
+		const targetId = "chatgpt-target-app";
+		const connection = {
+			client,
+			targetId,
+			shouldClose: false,
+			host,
+			port,
+			usedExisting: true,
+		};
+		const authority = createProviderSessionAuthority({
+			services: { chatgpt: { identity: { email: "operator@example.com" } } },
+		});
+		const context = {
+			providerId: "chatgpt" as const,
+			auracallRuntimeProfile: "default",
+			browserProfile: "default",
+			sourceBrowserProfile: "Default",
+			managedBrowserProfile: "/managed/default/chatgpt",
+			browserProcessId: 1234,
+			browserTargetId: targetId,
+			devtoolsHost: host,
+			devtoolsPort: port,
+		};
+		const options: BrowserProviderListOptions = {
+			host,
+			port,
+			configuredUrl: targetUrl,
+			useProviderSession: true,
+			providerSession: {
+				providerId: "chatgpt",
+				key: `chatgpt:${host}:${port}:${targetUrl}`,
+				value: { connection },
+				close: vi.fn(async () => undefined),
+			},
+			providerSessionAuthorization: {
+				authority,
+				context,
+				expectation: authority.resolveExpectation(context),
+			},
+			browserService: {
+				getConfig: () => ({ modelStrategy: "current", inputTimeoutMs: 5_000 }),
+			} as never,
+		};
+		const ecosystemMention = {
+			label: "LitScout",
+			acceptedPluginIds: ["plugin_asdk_app_litscout", "asdk_app_litscout"],
+		};
+
+		await createChatgptAdapter().runPrompt?.(
+			{
+				prompt: "Use only LitScout.",
+				completionMode: "prompt_submitted",
+				targetUrl,
+				ecosystemMention,
+			},
+			options,
+		);
+
+		expect(promptActionMocks.ensureChatgptComposerTool).not.toHaveBeenCalled();
+		expect(promptActionMocks.ensureChatgptEcosystemMention).toHaveBeenCalledWith(
+			client,
+			ecosystemMention,
+		);
+		expect(
+			promptActionMocks.ensureChatgptEcosystemMention.mock.invocationCallOrder[0],
+		).toBeLessThan(promptActionMocks.submitPrompt.mock.invocationCallOrder[0]);
 	});
 
 	test("uploads and settles attachments before submitting their names", async () => {

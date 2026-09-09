@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "plan": "0327",
+  "observedAt": "2026-09-02T09:05:26-05:00",
+  "scope": {
+    "auracallRuntimeProfile": "wsl-chrome-3",
+    "browserProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "~/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "provider": "chatgpt",
+    "attempts": 1,
+    "readOnly": true
+  },
+  "ownership": {
+    "operatorTransferObserved": true,
+    "reattachedExistingProcess": true,
+    "processRelaunched": false,
+    "registryOwnershipRewritten": false,
+    "shutdownOwnershipAcquired": false
+  },
+  "surface": {
+    "pluginsRoute": "/plugins",
+    "skillsRoute": "/skills",
+    "detailRouteShape": "/skills?skill_id=<32-hex-id>",
+    "inventoryGroupsObserved": [
+      "installed",
+      "created-by-me"
+    ],
+    "detailFieldsObserved": [
+      "stable-skill-id",
+      "name",
+      "owner-display",
+      "file-tree"
+    ],
+    "statusValuesObserved": [
+      "installed",
+      "needs-review"
+    ],
+    "separateActionsObserved": [
+      "create",
+      "more-actions",
+      "try-in-chat"
+    ],
+    "versionObserved": false,
+    "enabledStateObserved": false,
+    "manifestReadbackObserved": false
+  },
+  "effects": {
+    "skillMutationCount": 0,
+    "skillInvocationCount": 0,
+    "promptSendCount": 0,
+    "runtimeInstallCount": 0,
+    "serviceRestartCount": 0,
+    "schedulerControlCount": 0,
+    "materializationControlCount": 0
+  },
+  "cleanup": {
+    "selectedTabRestoredTo": "https://chatgpt.com/",
+    "existingProcessPreserved": true,
+    "browserOperationLocks": 0
+  },
+  "privacy": {
+    "liveSkillIdRecorded": false,
+    "accountEmailRecorded": false,
+    "skillFileContentsRecorded": false,
+    "rawNetworkPayloadRecorded": false
+  }
+}

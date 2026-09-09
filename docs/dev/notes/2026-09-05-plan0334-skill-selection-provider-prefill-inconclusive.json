@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "plan": "0334-2026-09-05",
+  "lane": "P27",
+  "checkpoint": "cb78174ca522c119cb2170e4f20609ea57a9f0b8",
+  "observedAt": "2026-09-05T14:38:23-05:00",
+  "runtime": {
+    "auracallRuntimeProfile": "wsl-chrome-3",
+    "browserProfile": "wsl-chrome-3",
+    "service": "chatgpt",
+    "devtoolsPort": 45015,
+    "chromePid": 1933,
+    "installedSourceParity": true
+  },
+  "authorization": {
+    "source": "operator ok go",
+    "permittedSkillSelections": 1,
+    "permittedRetries": 0,
+    "permittedPromptSubmissions": 0,
+    "permittedUploads": 0,
+    "permittedModelChanges": 0
+  },
+  "attempt": {
+    "command": "installed skills select with exact account, exact stable ID, --yes, and JSON output",
+    "targetSkillName": "persona-orchestrator",
+    "targetSkillIdSha256": "112eea507136ba4826623fd267b1a4be6b98adaf1132f079587c8c4500beb1df",
+    "targetSkillIdShape": "32 lowercase hex",
+    "inventoryComplete": true,
+    "inventoryCount": 11,
+    "exactInventoryMatches": 1,
+    "selectionActivations": 1,
+    "cliPipelineExitCode": 4,
+    "acceptedJsonEmitted": false,
+    "disposition": "outcome-unknown",
+    "retryAllowed": false
+  },
+  "liveEvidence": {
+    "exactSkillBoundHistoryEntryObserved": true,
+    "providerPromptHistoryEntryObserved": true,
+    "providerPromptWasSubmitted": false,
+    "conversationCreated": false,
+    "originalHomeRouteRestored": true,
+    "homeComposerUserText": "",
+    "homeComposerInlinePillCount": 0,
+    "projectRoutePreserved": true,
+    "projectComposerUserText": "",
+    "projectComposerInlinePillCount": 0,
+    "answerNowActivations": 0,
+    "operationLeaseRemaining": false
+  },
+  "diagnosis": {
+    "failure": "The installed proof required an empty post-click composer and did not classify ChatGPT's exact URL-correlated provider-authored example prompt.",
+    "repair": "Require a pristine original composer and distinguish exact decoded provider prompt text from user-authored text while retaining exact Skill identity proof.",
+    "repairProviderFreeValidated": true,
+    "affectedTestsPassed": 246,
+    "repairCheckpoint": "b5ceb8837e40e1866029b8e52eeadd046b2e31ec",
+    "repairInstalled": false,
+    "repairLiveAccepted": false
+  }
+}

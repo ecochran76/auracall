@@ -2669,6 +2669,7 @@ async function materializeReconciliation(input: {
 		}
 	}
 	const attemptedAssetFamilySignatures = new Set<string>();
+	const priorJobs = input.request.force === true ? [] : await input.jobStore.listJobs();
 	if (input.request.force !== true) {
 		const archiveSignatures = await materializedArchiveAssetFamilySignatures({
 			runArchiveService: input.runArchiveService,
@@ -2679,7 +2680,7 @@ async function materializeReconciliation(input: {
 			attemptedAssetFamilySignatures.add(signature);
 		}
 		const terminalVolatileSignatures = await terminalVolatileAssetFamilySignatures({
-			jobStore: input.jobStore,
+			jobs: priorJobs,
 			request: input.request,
 			selectedKinds,
 		});
@@ -2856,18 +2857,36 @@ async function materializeReconciliation(input: {
 		});
 		eligibleCandidates += selectionCandidates.length;
 		if (candidateFunnel) candidateFunnel.eligible += selectionCandidates.length;
-		for (const [candidateIndex, candidate] of selectionCandidates.entries()) {
+		const retryAttemptedAt =
+			input.request.force === true
+				? new Map<string, string>()
+				: await reconciliationRetryAttemptedAtByConversationId({
+						jobs: priorJobs,
+						request: input.request,
+						selectedKinds,
+					});
+		const orderedSelectionCandidates = [...selectionCandidates].sort((left, right) => {
+			const leftAttemptedAt = retryAttemptedAt.get(left.target.conversationId);
+			const rightAttemptedAt = retryAttemptedAt.get(right.target.conversationId);
+			if (!leftAttemptedAt && rightAttemptedAt) return -1;
+			if (leftAttemptedAt && !rightAttemptedAt) return 1;
+			if (leftAttemptedAt && rightAttemptedAt && leftAttemptedAt !== rightAttemptedAt) {
+				return leftAttemptedAt.localeCompare(rightAttemptedAt);
+			}
+			return left.priority - right.priority || left.sequence - right.sequence;
+		});
+		for (const [candidateIndex, candidate] of orderedSelectionCandidates.entries()) {
 			if (consumedTargetBudget >= maxTargets) {
 				if (candidateFunnel) {
 					candidateFunnel.postEligibilityExclusions.targetBudget +=
-						selectionCandidates.length - candidateIndex;
+						orderedSelectionCandidates.length - candidateIndex;
 				}
 				break;
 			}
 			if (remainingAssetBudget <= 0) {
 				if (candidateFunnel) {
 					candidateFunnel.postEligibilityExclusions.assetBudget +=
-						selectionCandidates.length - candidateIndex;
+						orderedSelectionCandidates.length - candidateIndex;
 				}
 				break;
 			}
@@ -2915,7 +2934,7 @@ async function materializeReconciliation(input: {
 			if (outcome.accounting.providerGuardObserved) {
 				if (candidateFunnel) {
 					candidateFunnel.postEligibilityExclusions.providerGuard +=
-						selectionCandidates.length - candidateIndex - 1;
+						orderedSelectionCandidates.length - candidateIndex - 1;
 				}
 				break;
 			}
@@ -5241,12 +5260,14 @@ async function materializedArchiveAssetFamilySignatures(input: {
 }
 
 async function terminalVolatileAssetFamilySignatures(input: {
-	jobStore: HistoryMaterializationJobStore;
+	jobs?: HistoryMaterializationJob[];
+	jobStore?: HistoryMaterializationJobStore;
 	request: HistoryMaterializationCreateRequest;
 	selectedKinds: HistoryMaterializationAssetKind[];
 }): Promise<string[]> {
 	const signatures = new Set<string>();
-	for (const job of await input.jobStore.listJobs()) {
+	const jobs = input.jobs ?? (await input.jobStore?.listJobs()) ?? [];
+	for (const job of jobs) {
 		if (isActiveStatus(job.status)) continue;
 		if (input.request.provider && job.request.provider !== input.request.provider) continue;
 		if (
@@ -5615,9 +5636,64 @@ function maxKnownCount(values: unknown[]): number {
 
 function countAttemptedReconciliationAssetBudget(result: HistoryMaterializationResult): number {
 	if (isTerminalConversationUnavailableResult(result)) return 0;
-	return result.entries.length > 0
-		? result.entries.length
-		: result.metrics.materialized + result.metrics.failed + result.metrics.skipped;
+	return result.entries.filter((entry) => historyEntryIdentifiesConcreteAsset(entry)).length;
+}
+
+async function reconciliationRetryAttemptedAtByConversationId(input: {
+	jobs: HistoryMaterializationJob[];
+	request: HistoryMaterializationCreateRequest;
+	selectedKinds: HistoryMaterializationAssetKind[];
+}): Promise<Map<string, string>> {
+	const attemptedAt = new Map<string, string>();
+	for (const job of input.jobs) {
+		if (!historyMaterializationJobSharesRetryLane(job, input.request, input.selectedKinds)) {
+			continue;
+		}
+		for (const attempt of job.result?.attempts ?? []) {
+			if (
+				attempt.origin !== "reconciliation_candidate" ||
+				attempt.status !== "skipped" ||
+				attempt.accounting.assetsAttempted !== 0 ||
+				attempt.accounting.candidateMaterialized ||
+				attempt.accounting.providerGuardObserved
+			) {
+				continue;
+			}
+			const previous = attemptedAt.get(attempt.target.conversationId);
+			if (!previous || attempt.generatedAt > previous) {
+				attemptedAt.set(attempt.target.conversationId, attempt.generatedAt);
+			}
+		}
+	}
+	return attemptedAt;
+}
+
+function historyMaterializationJobSharesRetryLane(
+	job: HistoryMaterializationJob,
+	request: HistoryMaterializationCreateRequest,
+	selectedKinds: HistoryMaterializationAssetKind[],
+): boolean {
+	if (job.source.type !== "reconciliation" || isActiveStatus(job.status)) return false;
+	if (job.request.provider !== request.provider) return false;
+	if (job.request.runtimeProfile !== request.runtimeProfile) return false;
+	if (job.request.browserProfile !== request.browserProfile) return false;
+	if (job.request.boundIdentityKey !== request.boundIdentityKey) return false;
+	const jobKinds = normalizeAssetKinds(job.request.assetKinds);
+	return (
+		jobKinds.length === selectedKinds.length &&
+		jobKinds.every((kind) => selectedKinds.includes(kind))
+	);
+}
+
+function historyEntryIdentifiesConcreteAsset(entry: HistoryMaterializationManifestEntry): boolean {
+	return Boolean(
+		entry.providerId ||
+			entry.remoteUrl ||
+			entry.localPath ||
+			entry.materializationMethod ||
+			entry.archiveItemId ||
+			entry.assetRoute,
+	);
 }
 
 function skippedResult(input: {

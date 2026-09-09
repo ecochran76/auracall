@@ -192,7 +192,7 @@ describe("deriveChatgptDeveloperAppState", () => {
 		}
 	});
 
-	it("preserves the active model without routing a developer app through the built-in composer-tool selector", async () => {
+	it("preserves the active model and routes submission through the exact app mention", async () => {
 		const runPrompt = vi.fn(async () => ({
 			conversationId: "conversation-1",
 			url: "https://chatgpt.com/c/conversation-1",
@@ -214,19 +214,13 @@ describe("deriveChatgptDeveloperAppState", () => {
 			appIds: ["asdk_app_litscout"],
 			name: "LitScout",
 		};
-		const selectForTest = vi.spyOn(adapter, "selectForTest").mockResolvedValue({
-			status: "completed",
-			message: "LitScout selected and retained.",
-			app,
-		});
-
 		await adapter.submitTest(app, "Use only LitScout.");
-
-		expect(selectForTest).toHaveBeenCalledWith(app, { preserveSelection: true });
 
 		expect(createBrowser).toHaveBeenCalledWith(
 			expect.objectContaining({
-				browser: expect.objectContaining({ modelStrategy: "current" }),
+				browser: expect.objectContaining({
+					modelStrategy: "current",
+				}),
 			}),
 		);
 		expect(createBrowser).toHaveBeenCalledWith(
@@ -234,58 +228,20 @@ describe("deriveChatgptDeveloperAppState", () => {
 				browser: expect.not.objectContaining({ composerTool: expect.anything() }),
 			}),
 		);
+		expect(createBrowser).not.toHaveBeenCalledWith(
+			expect.objectContaining({
+				browser: expect.objectContaining({ composerTool: "LitScout" }),
+			}),
+		);
 		expect(runPrompt).toHaveBeenCalledWith({
 			prompt: "Use only LitScout.",
 			completionMode: "prompt_submitted",
 			timeoutMs: 120_000,
 			modelStrategy: "current",
-		});
-	});
-
-	it("can retain the tool-approval watcher until a developer-app response is terminal", async () => {
-		const runPrompt = vi.fn(async () => ({
-			text: "Research complete.",
-			conversationId: "conversation-18",
-			url: "https://chatgpt.com/c/conversation-18",
-		}));
-		const createBrowser = vi.fn(async () => ({ runPrompt }));
-		const adapter = createChatgptDeveloperAppBrowserAdapter(
-			{ userConfig: { browser: {} } } as never,
-			createBrowser as never,
-		);
-		const app = {
-			pluginId: "plugin_asdk_app_litscout",
-			appIds: ["asdk_app_litscout"],
-			name: "LitScout",
-		};
-		vi.spyOn(adapter, "selectForTest").mockResolvedValue({
-			status: "completed",
-			message: "LitScout selected and retained.",
-			app,
-		});
-
-		const outcome = await adapter.submitTest(app, "Research deeply.", {
-			waitForResponse: true,
-			timeoutMs: 7_200_000,
-			toolApproval: "allow-once",
-		});
-
-		expect(createBrowser).toHaveBeenCalledWith(
-			expect.objectContaining({
-				browser: expect.objectContaining({ chatgptToolApproval: "allow-once" }),
-			}),
-		);
-
-		expect(runPrompt).toHaveBeenCalledWith({
-			prompt: "Research deeply.",
-			completionMode: "assistant_response",
-			timeoutMs: 7_200_000,
-			modelStrategy: "current",
-		});
-		expect(outcome.response).toEqual({
-			text: "Research complete.",
-			conversationId: "conversation-18",
-			url: "https://chatgpt.com/c/conversation-18",
+			ecosystemMention: {
+				label: "LitScout",
+				acceptedPluginIds: ["plugin_asdk_app_litscout", "asdk_app_litscout"],
+			},
 		});
 	});
 

@@ -120,7 +120,7 @@ export type ChatgptAcceptanceMainAdapter = {
 type AcceptanceState = AcceptanceRunState<AcceptanceSummary>;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_MODEL = 'gpt-5.2-thinking';
+const DEFAULT_MODEL = 'chatgpt:reasoning';
 const DEFAULT_THINKING_TIME = 'standard';
 const DEFAULT_CHATGPT_MUTATION_TIMEOUT_MS = 6 * 60_000;
 const DEFAULT_CHATGPT_COMMAND_TIMEOUT_MS = 180_000;

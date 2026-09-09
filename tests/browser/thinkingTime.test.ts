@@ -7,6 +7,7 @@ import {
   evaluateChatgptProModeGate,
   formatChatgptProModeGateError,
   isChatgptProModelTarget,
+  resolveChatgptPowerSliderTarget,
   resolveChatgptProModeFromThinkingTime,
 } from '../../src/browser/actions/thinkingTime.js';
 
@@ -59,7 +60,10 @@ function installFixtureDocument(query: (selector: string) => FixtureElement[]): 
     ['PointerEvent', FixtureMouseEvent],
     ['getComputedStyle', () => ({ visibility: 'visible', display: 'block' })],
   ]));
-  vi.stubGlobal('document', { querySelectorAll: query });
+  vi.stubGlobal('document', {
+    querySelector: (selector: string) => query(selector)[0] ?? null,
+    querySelectorAll: query,
+  });
 }
 
 afterEach(() => {
@@ -97,6 +101,18 @@ describe('browser thinking-time selection expression', () => {
     expect(expression).toContain("getAttribute('aria-expanded')");
     expect(expression).toContain('clientX');
     expect(expression).toContain('clientY');
+    expect(expression).toContain('composer-model-picker-slider-simple-view');
+    expect(expression).toContain('composer-intelligence-picker-content');
+    expect(expression).toContain('TARGET_SLIDER_VALUE');
+    expect(expression).toContain("endsWith('_Tick')");
+    expect(expression).toContain("getAttribute('aria-valuenow')");
+  });
+
+  it('maps AuraCall effort levels onto the live five-position Power slider', () => {
+    expect(resolveChatgptPowerSliderTarget('light')).toEqual({ value: 0, label: 'Instant' });
+    expect(resolveChatgptPowerSliderTarget('standard')).toEqual({ value: 1, label: 'Medium' });
+    expect(resolveChatgptPowerSliderTarget('extended')).toEqual({ value: 2, label: 'High' });
+    expect(resolveChatgptPowerSliderTarget('heavy')).toEqual({ value: 3, label: 'Extra High' });
   });
 
   it('targets the requested thinking time level', () => {

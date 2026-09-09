@@ -68,8 +68,8 @@ importers:
         specifier: 0.2.0
         version: 0.2.0
       openai:
-        specifier: ^6.15.0
-        version: 6.15.0(ws@8.18.3)(zod@4.3.5)
+        specifier: ^7.10.0
+        version: 7.10.0(zod@4.3.5)
       osc-progress:
         specifier: ^0.2.0
         version: 0.2.0
@@ -2042,13 +2042,25 @@ packages:
   oniguruma-to-es@4.3.4:
     resolution: {integrity: sha512-3VhUGN3w2eYxnTzHn+ikMI+fp/96KoRSVK9/kMTcFqj1NRDh2IhQCKvYxDnWePKRXY/AqH+Fuiyb7VHSzBjHfA==}
 
-  openai@6.15.0:
-    resolution: {integrity: sha512-F1Lvs5BoVvmZtzkUEVyh8mDQPPFolq4F+xdsx/DO8Hee8YF3IGAlZqUIsF+DVGhqf4aU0a3bTghsxB6OIsRy1g==}
-    hasBin: true
+  openai@7.10.0:
+    resolution: {integrity: sha512-sn9t2Kls7O52PwuF9BUTYNu4Gk/r0lXJyrgaNht4TNRlZFb3dJIGO0RciSgjARGCBRtWjySubAQFJttlzUvGQQ==}
+    engines: {node: '>=22.0.0'}
     peerDependencies:
-      ws: ^8.18.0
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      undici: '>=5 <9'
+      ws: ^8.21.0
       zod: ^3.25 || ^4.0
     peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      undici:
+        optional: true
       ws:
         optional: true
       zod:
@@ -4658,9 +4670,8 @@ snapshots:
       regex: 6.1.0
       regex-recursion: 6.0.2
 
-  openai@6.15.0(ws@8.18.3)(zod@4.3.5):
+  openai@7.10.0(zod@4.3.5):
     optionalDependencies:
-      ws: 8.18.3
       zod: 4.3.5
 
   osc-progress@0.2.0: {}

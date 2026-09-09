@@ -12,9 +12,7 @@ import {
   type ChatgptSemanticModelSelection,
 } from '../config/modelSelector.js';
 
-const DEFAULT_BROWSER_MODEL_SELECTOR = 'chatgpt:instant';
-const BROWSER_COMPAT_INSTANT_MODEL: ModelName = 'gpt-5.2-instant';
-const BROWSER_COMPAT_THINKING_MODEL: ModelName = 'gpt-5.6-sol';
+const DEFAULT_BROWSER_MODEL_SELECTOR = 'chatgpt:fast';
 
 export interface ResolveRunOptionsInput {
   prompt: string;
@@ -72,7 +70,8 @@ export function resolveRunOptionsFromConfig({
     normalizedRequestedModels.length > 0
       ? Array.from(new Set(normalizedRequestedModels.map((entry) => resolveApiModel(entry))))
       : [resolvedModel];
-  const isBrowserCompatible = (m: string) => m.startsWith('gpt-') || m.startsWith('gemini') || m.startsWith('grok');
+  const isBrowserCompatible = (m: string) =>
+    m === 'openai:frontier' || m.startsWith('gpt-') || m.startsWith('gemini') || m.startsWith('grok');
   const hasNonBrowserCompatibleTarget = (browserRequested || browserConfigured) && allModels.some((m) => !isBrowserCompatible(m));
   if (hasNonBrowserCompatibleTarget) {
     throw new PromptValidationError(
@@ -133,14 +132,7 @@ export function resolveRunOptionsFromConfig({
 }
 
 function resolveModelForChatgptSemanticSelection(selection: ChatgptSemanticModelSelection): ModelName {
-  switch (selection.desiredModel) {
-    case 'GPT-5.6 Sol':
-      return BROWSER_COMPAT_THINKING_MODEL;
-    case 'GPT-5.6 Terra':
-    case 'GPT-5.6 Luna':
-    case 'GPT-5.5':
-      return BROWSER_COMPAT_INSTANT_MODEL;
-  }
+  return selection.apiModel;
 }
 
 function resolveEngineWithConfig({

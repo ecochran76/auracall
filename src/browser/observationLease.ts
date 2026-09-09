@@ -1,0 +1,131 @@
+import type { BrowserRuntimeMetadata } from './types.js';
+
+export type BrowserResponseProgressEvidence = {
+  state?: unknown;
+  url?: unknown;
+  assistantTextChars?: unknown;
+  stopVisible?: unknown;
+  completionVisible?: unknown;
+  dialogVisible?: unknown;
+  connectionInterrupted?: unknown;
+  assistantMessageId?: unknown;
+  assistantTextFingerprint?: unknown;
+};
+
+export class BrowserObservationLeaseExpiredError extends Error {
+  readonly browserResponseProgress: BrowserResponseProgressEvidence;
+
+  constructor(progress: BrowserResponseProgressEvidence, cause?: unknown) {
+    super('ChatGPT observation lease expired while the exact generation was still active', {
+      cause,
+    });
+    this.name = 'BrowserObservationLeaseExpiredError';
+    this.browserResponseProgress = progress;
+  }
+}
+
+export const CHATGPT_OBSERVATION_RECOVERY_COOLDOWN_MS = 15 * 60_000;
+
+export type ChatgptObservationRecoveryDecision =
+  | { action: 'heartbeat'; reason: 'progress-current' }
+  | { action: 'refresh'; reason: 'connection-interrupted' | 'progress-stale' }
+  | { action: 'wait'; reason: 'recovery-cooldown' }
+  | { action: 'none'; reason: 'generation-not-active' };
+
+function hasPositiveActiveGenerationEvidence(
+  progress: BrowserResponseProgressEvidence | null | undefined,
+): progress is BrowserResponseProgressEvidence {
+  const hasGenerationProgress =
+    progress?.state === 'assistant-text'
+      ? typeof progress.assistantTextChars === 'number' && progress.assistantTextChars > 0
+      : progress?.state === 'no-assistant-turn' && progress.assistantTextChars === 0;
+  return Boolean(
+    progress &&
+      hasGenerationProgress &&
+      progress.stopVisible === true &&
+      progress.completionVisible !== true &&
+      progress.dialogVisible !== true,
+  );
+}
+
+export function decideChatgptObservationRecovery(input: {
+  progress: BrowserResponseProgressEvidence | null | undefined;
+  nowMs: number;
+  lastProgressChangeAtMs: number | null;
+  lastRecoveryAtMs: number | null;
+  recoveryCooldownMs?: number;
+}): ChatgptObservationRecoveryDecision {
+  const recoveryCooldownMs = input.recoveryCooldownMs ?? CHATGPT_OBSERVATION_RECOVERY_COOLDOWN_MS;
+  const progress = input.progress;
+  if (!hasPositiveActiveGenerationEvidence(progress)) {
+    return { action: 'none', reason: 'generation-not-active' };
+  }
+
+  const progressStale =
+    input.lastProgressChangeAtMs !== null &&
+    input.nowMs - input.lastProgressChangeAtMs >= recoveryCooldownMs;
+  const recoveryNeeded = progress.connectionInterrupted === true || progressStale;
+  if (!recoveryNeeded) {
+    return { action: 'heartbeat', reason: 'progress-current' };
+  }
+  if (
+    input.lastRecoveryAtMs !== null &&
+    input.nowMs - input.lastRecoveryAtMs < recoveryCooldownMs
+  ) {
+    return { action: 'wait', reason: 'recovery-cooldown' };
+  }
+  return {
+    action: 'refresh',
+    reason: progress.connectionInterrupted === true ? 'connection-interrupted' : 'progress-stale',
+  };
+}
+
+export function readBrowserResponseProgressEvidence(
+  error: unknown,
+): BrowserResponseProgressEvidence | undefined {
+  if (!error || typeof error !== 'object' || !('browserResponseProgress' in error)) {
+    return undefined;
+  }
+  const progress = (error as { browserResponseProgress?: unknown }).browserResponseProgress;
+  return progress && typeof progress === 'object'
+    ? (progress as BrowserResponseProgressEvidence)
+    : undefined;
+}
+
+export function reconcileBrowserRuntimeWithResponseProgress(
+  runtime: BrowserRuntimeMetadata | undefined,
+  progress: Pick<BrowserResponseProgressEvidence, 'url'> | null | undefined,
+): BrowserRuntimeMetadata | undefined {
+  if (!runtime || typeof progress?.url !== 'string') {
+    return runtime;
+  }
+  try {
+    const url = new URL(progress.url);
+    if (url.protocol !== 'https:' || url.hostname !== 'chatgpt.com') {
+      return runtime;
+    }
+    const match = url.pathname.match(/\/c\/([a-zA-Z0-9-]+)(?:\/|$)/);
+    const conversationId = match?.[1];
+    if (!conversationId) {
+      return runtime;
+    }
+    return {
+      ...runtime,
+      tabUrl: `${url.origin}${url.pathname}`,
+      conversationId,
+    };
+  } catch {
+    return runtime;
+  }
+}
+
+export function isActiveGenerationObservationExpiry(error: unknown): boolean {
+  if (
+    !(error instanceof Error) ||
+    (error.name !== 'SessionRunTimeoutError' && error.name !== 'BrowserObservationLeaseExpiredError')
+  ) {
+    return false;
+  }
+  const progress = readBrowserResponseProgressEvidence(error);
+  return hasPositiveActiveGenerationEvidence(progress);
+}

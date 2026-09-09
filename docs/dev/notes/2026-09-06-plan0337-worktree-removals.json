@@ -1,0 +1,186 @@
+[
+  {
+    "branch": "fix/chatgpt-chat-mode-preflight",
+    "head": "2098c3efa1f0bcb96bbe40ce0112b79fec6944f1",
+    "worktree_name": "auracall-chat-mode-preflight",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "ops/plan0328-installed-timeout-canary",
+    "head": "191ab43d1199d906494a323d6f9a25158976ec3e",
+    "worktree_name": "auracall-plan0328-installed-timeout-canary",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules/"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "feat/plan0329-chatgpt-skill-crud",
+    "head": "ce610227225a78773c60a96af4c62e924ad69626",
+    "worktree_name": "auracall-plan0329-chatgpt-skill-crud",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules/"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "fix/plan0330-chatgpt-tab-affinity",
+    "head": "4678e360eefadd7c853415bed530a9730eda2883",
+    "worktree_name": "auracall-plan0330-chatgpt-tab-affinity",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "fix/plan0331-chatgpt-composer-intelligence-picker",
+    "head": "5f1cedbf2abc07f20ffc077ba304fb1916ebaaa7",
+    "worktree_name": "auracall-plan0331",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules/"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "fix/plan0332-durable-model-schema",
+    "head": "d83a52c1a875dabb3acd8fd319a59024d2e313e3",
+    "worktree_name": "auracall-plan0332",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules/"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "integrate/plan0332-durable-model-schema",
+    "head": "fedc2d70657ed8015d299fb4b96cec8d93fc1e53",
+    "worktree_name": "auracall-plan0332-integration",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "node_modules/"
+    ],
+    "remote_branch_equal": false,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "ops/plan0333-installed-model-survey",
+    "head": "15535714c71427555aae3b3dccd74fbbc9871def",
+    "worktree_name": "auracall-plan0333-installed-model-survey",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules/"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "integrate/plan0333-installed-model-survey",
+    "head": "882c9c14d6d1434c5ddce534fee1bf5da093eb56",
+    "worktree_name": "auracall-plan0333-integration",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "node_modules"
+    ],
+    "remote_branch_equal": false,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "docs/plan0334-integration-receipt",
+    "head": "b6e1953a5562ae8d444503d9d8d4526b0a46e764",
+    "worktree_name": "auracall-plan0334-closeout",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "node_modules"
+    ],
+    "remote_branch_equal": false,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  },
+  {
+    "branch": "fix/plan0336-skill-prompt-invocation",
+    "head": "d942e80d87b8b76b17d9eecac7b5872ab30cfd67",
+    "worktree_name": "auracall-plan0336-skill-prompt",
+    "clean": true,
+    "origin_main_ancestor": true,
+    "cwd_owners": [],
+    "ignored_generated": [
+      "dist/",
+      "node_modules"
+    ],
+    "remote_branch_equal": true,
+    "custody": "branch refs retained; exact commit also reachable from origin/main",
+    "remove_exit_code": 0,
+    "removed": true,
+    "error": ""
+  }
+]

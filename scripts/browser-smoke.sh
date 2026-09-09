@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CMD=(node "$ROOT/dist/bin/auracall.js" --engine browser --wait --heartbeat 0 --timeout 900 --browser-input-timeout 120000)
-FAST_MODEL="gpt-5.2"
-PRO_MODEL="gpt-5.2-pro"
+FAST_MODEL="chatgpt:fast"
+REASONING_MODEL="chatgpt:reasoning"
 
 tmpfile="$(mktemp -t oracle-browser-smoke.XXXXXX)"
 echo "smoke-attachment" >"$tmpfile"
@@ -19,7 +19,7 @@ echo "[browser-smoke] fast with attachment preview (inline)"
 "${CMD[@]}" --model "$FAST_MODEL" --browser-inline-files --prompt "Read the attached file and return exactly one markdown bullet '- file: <content>' where <content> is the file text." --file "$tmpfile" --slug browser-smoke-file --preview --force
 
 echo "[browser-smoke] pro standard markdown check"
-"${CMD[@]}" --model "$PRO_MODEL" --prompt "Return two markdown bullets and a fenced code block labeled js that logs 'thinking-ok'." --slug browser-smoke-thinking --force
+"${CMD[@]}" --model "$REASONING_MODEL" --prompt "Return two markdown bullets and a fenced code block labeled js that logs 'thinking-ok'." --slug browser-smoke-thinking --force
 
 echo "[browser-smoke] reattach flow after controller loss"
 slug="browser-reattach-smoke"
@@ -27,7 +27,7 @@ meta="$HOME/.auracall/sessions/$slug/meta.json"
 logfile="$(mktemp -t oracle-browser-reattach.XXXXXX)"
 
 # Start a browser run in the background and wait for runtime hints to appear.
-"${CMD[@]}" --model "$PRO_MODEL" --prompt "Return exactly 'reattach-ok'." --slug "$slug" --browser-keep-browser --heartbeat 0 --timeout 900 --force >"$logfile" 2>&1 &
+"${CMD[@]}" --model "$REASONING_MODEL" --prompt "Return exactly 'reattach-ok'." --slug "$slug" --browser-keep-browser --heartbeat 0 --timeout 900 --force >"$logfile" 2>&1 &
 runner_pid=$!
 
 runtime_ready=0

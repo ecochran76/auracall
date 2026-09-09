@@ -1,6 +1,10 @@
 import type { DevToolsConnectionOptions } from "../../../packages/browser-service/src/types.js";
 import type { ResolvedUserConfig } from "../../config.js";
 import {
+	ensureChatgptEcosystemMention,
+	readChatgptEcosystemMention,
+} from "../actions/chatgptEcosystemMention.js";
+import {
 	navigateAndSettle,
 	openAndSelectMenuItem,
 	pressButton,
@@ -63,11 +67,6 @@ export interface ChatgptDeveloperAppBrowserMutationOutcome {
 	message: string;
 	currentUrl?: string | null;
 	app?: ChatgptDeveloperAppBrowserTarget | null;
-	response?: {
-		text: string;
-		conversationId?: string | null;
-		url?: string | null;
-	};
 }
 
 export interface ChatgptDeveloperAppBrowserCreateInput {
@@ -130,11 +129,14 @@ export interface ChatgptDeveloperAppBrowserClient {
 	): Promise<{ client: ChromeClient; port: number }>;
 	runPrompt(input: {
 		prompt: string;
-		completionMode: "assistant_response" | "prompt_submitted";
+		completionMode: "prompt_submitted";
 		timeoutMs?: number | null;
 		modelStrategy?: "current";
+		ecosystemMention?: {
+			label: string;
+			acceptedPluginIds: string[];
+		};
 	}): Promise<{
-		text?: string;
 		conversationId?: string | null;
 		url?: string | null;
 	}>;
@@ -336,43 +338,35 @@ export class ChatgptDeveloperAppBrowserAdapter {
 
 	async selectForTest(
 		app: ChatgptDeveloperAppBrowserTarget,
-		options: { preserveSelection?: boolean } = {},
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
 		const client = await this.ensureClient();
 		await navigateChatgpt(client, "https://chatgpt.com/");
 		await assertNoChatgptBlockingSurface(client, `select ${app.name}`);
 		await clearDeveloperAppComposer(client);
 		try {
-			await selectDeveloperAppMention(client, app.name);
-			const selected = await readSelectedEcosystemMention(client);
+			await ensureChatgptEcosystemMention(client, {
+				label: app.name,
+				acceptedPluginIds: [app.pluginId, ...app.appIds],
+			});
+			const selected = await readChatgptEcosystemMention(client);
 			if (!selected || !chatgptDeveloperAppSelectionMatchesForTest(selected.pluginId, app)) {
 				throw new Error(`ChatGPT selected ${selected?.label ?? "no app"} instead of ${app.name}.`);
 			}
 			return {
 				status: "completed",
-				message: options.preserveSelection
-					? `${app.name} selected without prompt submission and retained for the pending prompt.`
-					: `${app.name} selected without prompt submission; the blank composer was cleared afterward.`,
+				message: `${app.name} selected without prompt submission; the blank composer was cleared afterward.`,
 				currentUrl: await readCurrentUrl(client),
 				app,
 			};
 		} finally {
-			if (!options.preserveSelection) {
-				await clearDeveloperAppComposer(client);
-			}
+			await clearDeveloperAppComposer(client);
 		}
 	}
 
 	async submitTest(
 		app: ChatgptDeveloperAppBrowserTarget,
 		prompt: string,
-		options: {
-			waitForResponse?: boolean;
-			timeoutMs?: number;
-			toolApproval?: "manual" | "allow-once";
-		} = {},
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
-		await this.selectForTest(app, { preserveSelection: true });
 		const { composerTool: _composerTool, ...browserWithoutComposerTool } =
 			this.browser.userConfig.browser ?? {};
 		const testConfig: ResolvedUserConfig = {
@@ -380,30 +374,24 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			browser: {
 				...browserWithoutComposerTool,
 				modelStrategy: "current",
-				...(options.toolApproval ? { chatgptToolApproval: options.toolApproval } : {}),
 			},
 		};
 		const testBrowser = await this.createBrowser(testConfig);
 		const result = await testBrowser.runPrompt({
 			prompt,
-			completionMode: options.waitForResponse ? "assistant_response" : "prompt_submitted",
-			timeoutMs: options.timeoutMs ?? 120_000,
+			completionMode: "prompt_submitted",
+			timeoutMs: 120_000,
 			modelStrategy: "current",
+			ecosystemMention: {
+				label: app.name,
+				acceptedPluginIds: [app.pluginId, ...app.appIds],
+			},
 		});
 		return {
 			status: "completed",
-			message: `${app.name} test prompt ${options.waitForResponse ? "completed" : "submitted"}${result.conversationId ? ` in conversation ${result.conversationId}` : ""}.`,
+			message: `${app.name} test prompt submitted${result.conversationId ? ` in conversation ${result.conversationId}` : ""}.`,
 			currentUrl: result.url ?? null,
 			app,
-			...(options.waitForResponse
-				? {
-						response: {
-							text: result.text ?? "",
-							conversationId: result.conversationId ?? null,
-							url: result.url ?? null,
-						},
-					}
-				: {}),
 		};
 	}
 
@@ -1159,71 +1147,6 @@ async function selectNativeOptionByText(
 	}
 }
 
-async function readSelectedEcosystemMention(
-	client: ChromeClient,
-): Promise<{ label: string | null; pluginId: string | null } | null> {
-	const result = await client.Runtime.evaluate({
-		expression: `(() => {
-      const pill = document.querySelector('[data-inline-selection-pill][data-symbol="ecosystemMention"]');
-      if (!pill) return null;
-      return {
-        label: String(pill.textContent || '').replace(/\\s+/g, ' ').trim() || null,
-        pluginId: pill.getAttribute('data-system-hint-type') || pill.getAttribute('data-id') || null,
-      };
-    })()`,
-		returnByValue: true,
-	});
-	return isRecord(result.result?.value)
-		? {
-				label: readString(result.result.value.label),
-				pluginId: readString(result.result.value.pluginId),
-			}
-		: null;
-}
-
-async function selectDeveloperAppMention(client: ChromeClient, appName: string): Promise<void> {
-	const focused = await pressButton(client.Runtime, {
-		selector: '#prompt-textarea[contenteditable="true"]',
-		interactionStrategies: ["pointer"],
-		requireVisible: true,
-		timeoutMs: 5_000,
-	});
-	if (!focused.ok) {
-		throw new Error("Unable to focus the blank ChatGPT composer for app selection.");
-	}
-	await client.Runtime.evaluate({
-		expression: `(() => {
-      const editor = document.querySelector('#prompt-textarea[contenteditable="true"]');
-      if (!editor) return false;
-      editor.focus();
-      const selection = document.getSelection();
-      if (selection) {
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-      return true;
-    })()`,
-		returnByValue: true,
-	});
-	await client.Input.insertText({ text: `@${appName}` });
-	const selected = await pressButton(client.Runtime, {
-		selector: ".popover .__menu-item[tabindex]",
-		interactionStrategies: ["pointer"],
-		requireVisible: true,
-		postSelector: '[data-inline-selection-pill][data-symbol="ecosystemMention"]',
-		timeoutMs: 8_000,
-	});
-	if (!selected.ok || !normalize(selected.matchedLabel).includes(normalize(appName))) {
-		const diagnostic = await readMentionPickerDiagnostic(client);
-		throw new Error(
-			`Unable to select ChatGPT developer app ${appName} from the composer mention picker: ${selected.reason ?? "app option not found"} (${diagnostic}).`,
-		);
-	}
-}
-
 async function clearDeveloperAppComposer(client: ChromeClient): Promise<void> {
 	const ready = await waitForPredicate(
 		client.Runtime,
@@ -1303,24 +1226,6 @@ async function clearDeveloperAppComposer(client: ChromeClient): Promise<void> {
 
 export async function clearDeveloperAppComposerForTest(client: ChromeClient): Promise<void> {
 	await clearDeveloperAppComposer(client);
-}
-
-async function readMentionPickerDiagnostic(client: ChromeClient): Promise<string> {
-	const result = await client.Runtime.evaluate({
-		expression: `JSON.stringify({
-      url: location.href,
-      editorText: document.querySelector('#prompt-textarea')?.innerText || '',
-      activeElement: document.activeElement?.id || document.activeElement?.tagName || null,
-      popovers: Array.from(document.querySelectorAll('.popover,[role="listbox"],[role="menu"]'))
-        .filter((node) => {
-          const rect = node.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        })
-        .map((node) => String(node.textContent || '').trim().slice(0, 240)),
-    })`,
-		returnByValue: true,
-	});
-	return readString(result.result?.value) ?? "no composer diagnostic available";
 }
 
 async function assertNoChatgptBlockingSurface(client: ChromeClient, action: string): Promise<void> {

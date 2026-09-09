@@ -75,6 +75,32 @@ describe('OpenRouter helpers', () => {
     expect(grokId.startsWith('grok-4')).toBe(true);
   });
 
+  it('loads the current GPT-6 Astra API contract from the built-in model schema', async () => {
+    const astra = await resolveModelConfig('gpt-6-astra');
+
+    expect(astra).toMatchObject({
+      model: 'gpt-6-astra',
+      provider: 'openai',
+      inputLimit: 1_050_000,
+      reasoning: { effort: 'max' },
+      pricing: {
+        inputPerToken: 10 / 1_000_000,
+        outputPerToken: 50 / 1_000_000,
+      },
+    });
+  });
+
+  it('resolves the durable OpenAI frontier alias to the current Astra API id', async () => {
+    const frontier = await resolveModelConfig('openai:frontier');
+
+    expect(frontier).toMatchObject({
+      model: 'openai:frontier',
+      apiModel: 'gpt-6-astra',
+      provider: 'openai',
+      reasoning: { effort: 'max' },
+    });
+  });
+
   it('expires stale OpenRouter catalog entries', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));

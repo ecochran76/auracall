@@ -1,68 +1,468 @@
 # RUNBOOK
 
-## Turn 540 | 2026-08-30
+- P16 reconciliation supersedes the Turn 550 preservation note: current main's
+  exact ecosystem-mention and Skill CLI paths are authoritative. Retain P16's
+  two-pass app-composer cleanup, inherited-`composerTool` removal, and current
+  Chat-model request. Do not restore its three response-wait CLI options or
+  provider-local watcher; the prompt-structure gate rejects that lifecycle.
 
-- P16 opens
-  [Plan 0323](docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md)
-  on `fix/plan0323-developer-app-mention`, based on current `origin/main`
-  `3de74115`. It does not overlap P08's aggregate-status source surface.
-- Live evidence from the refreshed private LitScout app proves no-submit exact
-  app selection succeeds, while submit fails before Send because it routes the
-  app name through the built-in composer-tool selector. The existing exact
-  ecosystem-mention path is the bounded repair seam.
-- No prompt was submitted by the failed canaries and no LitScout research,
-  project/session mutation, provider request, or OAuth reconnect ran.
-- Provider-free RED/GREEN now proves exact retained ecosystem-mention staging
-  and removal of the stale composer-tool field. Focused validation passes
-  `63/63`, typecheck, production build, and scoped Biome; install and the single
-  auth-only canary remain.
-- Installed selection advanced to one committed user turn, then ChatGPT
-  returned `plugin_not_found` with zero LitScout calls. Exact Developer-mode
-  inspection proved the replacement app had not yet been connected. The
-  authorized OAuth flow completed, and machine-readable inventory now reports
-  the exact replacement app `ACTIVE`.
-- RED/GREEN also excludes only the retained ecosystem-mention pill from the
-  committed user-turn reader. The widened source packet passes `74/74`,
-  typecheck, build, and scoped Biome with one pre-existing `__test__` warning.
-  One reinstall and final auth-only canary remain.
-- The next no-submit selection did not send a prompt, but its final cleanup
-  failed after ChatGPT converted the deleted ecosystem pill into literal
-  `@LitScout` text. A production-seam RED reproduced that exact two-stage
-  transition; bounded two-pass cleanup is GREEN and the full developer-app
-  browser file passes `24/24`. The widened six-file packet passes `72/72`,
-  followed by typecheck, production build, scoped Biome, and plan audit.
-- Pre-Experiment-18 inspection found the submit helper stopped at
-  `prompt_submitted`, before the normal response watcher could continue
-  approving LitScout actions. A provider-free RED reproduced that lifecycle
-  gap. The bounded opt-in `--wait-for-response` path is GREEN: it uses normal
-  `assistant_response` completion, preserves the submit-only default, forwards
-  an explicit timeout and `manual|allow-once` approval policy, and returns
-  terminal response evidence. Experiment 18 binds `allow-once`; it does not
-  grant durable approval. The two focused
-  files pass `47/47`; typecheck and scoped Biome pass. Install and the single
-  Plan-0477-governed live Send remain.
-- The first terminal launch stopped before Send because the lower ChatGPT
-  provider adapter still rejected `assistant_response`. A production-seam RED
-  reproduced the mismatch. The adapter now captures the pre-send assistant
-  boundary, waits for the fresh response, invokes the existing approval
-  handler during passive probes, and returns captured Markdown. The focused
-  adapter/developer-app/CLI packet passes `52/52`, followed by typecheck,
-  production build, scoped Biome, and the plan audit. Reinstall and the one
-  governed Experiment 18 Send remain.
-- Operator-directed live-follow shutdown paused completion
-  `acctmirror_completion_8cec5bd0-24a7-4bba-bd5f-bc523c028881`, allowed its
-  in-flight provider read to drain, and released the browser/provider-work
-  leases. `wsl-chrome-3` live follow is now disabled in user configuration.
-  Durable requirement note:
-  `docs/dev/notes/2026-08-30-plan0323-foreground-priority-live-follow.md`.
-  Foreground work must preempt background admission, trigger cooperative
-  checkpoint/yield, and allow cursor-preserving resume after foreground
-  terminal release.
-- The next pre-Send launch selected the exact LitScout pill but stopped before
-  dispatch because the lower request omitted `modelStrategy: current` and
-  attempted stale configured option `gpt-5.2-pro`. Zero ChatGPT turns and zero
-  LitScout calls resulted. The prompt request now binds current-model strategy
-  explicitly; the focused `52/52` packet, typecheck, build, and Biome pass.
+## Turn 574 | 2026-09-06
+
+- Closed [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md). Source `3cfb1de941a6b9c9a445874c7ec001513b273d65` is published on main; 69 targeted/adjacent tests, typecheck, production build and scoped lint pass. Exact clean integrated process-unowned temporary worktree and local branch are removed; remote source custody retained. No browser or installed-runtime action ran.
+
+## Turn 573 | 2026-09-06
+
+- Opened [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) on fresh main for the two frozen review findings. Provider-free repair, tests and docs only; preserve obsolete WIP custody.
+
+## Turn 572 | 2026-09-06
+
+- Closed [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md): eleven stale worktrees removed with fresh custody gates; four retained. Browser WIP preserved at `3696f6dd3`, unfinished P16 published, and P18 isolated as a stable paused plan branch. Full Git integrity checks pass.
+- Restored explicit links for paused [Plan 0325](docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md) and the previous [Plan 0336](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md) execution record. No runtime effect ran during maintenance.
+
+## Turn 571 | 2026-09-06
+
+- Opened P30 / Plan 0337 for the authorized Git maintenance goal. Census is 15 worktrees; the earlier interrupted merge is resolved and published. Preserve browser WIP and unpublished P16 before removing integrated stale directories; retain process-owned P27. Graphiti recall returned no relevant custody decisions.
+
+## Turn 570 | 2026-09-05
+
+- Native unchanged Try-in-chat example also reported the selected Skill unavailable. Exact ID is present in outgoing metadata and the user turn; only four built-in Skills appeared in the model filesystem search. One submission, zero retries, empty composer, browser preserved. Receipt: `docs/dev/notes/2026-09-05-plan0336-native-example-comparison.json`.
+
+## Turn 569 | 2026-09-05
+
+- P29 implements exact-ID `skills run` with same-tab selection and submission. Focused validation passes 376 tests; build/typecheck and planning checks pass. The one installed canary committed the exact native Skill ID; ChatGPT reported its resource inaccessible. A Skill-label commit-readback regression was repaired and the existing answer recaptured without resubmission. Final focused checks pass 377 tests; repaired installed readers recovered the existing conversation. PR #2 merged at `01bb65ad`. Actual Skill execution remains unaccepted. Receipt: `docs/dev/notes/2026-09-05-plan0336-skill-prompt-live.json`.
+
+## Turn 568 | 2026-09-05
+
+- One authorized Skill execution smoke on installed `wsl-chrome-3` completed
+  in 77 seconds with zero retries. Account preflight and Chat mode passed;
+  inventory still contained all 11 Skills.
+- The name-based prompt did not attach the previously selected Skill. ChatGPT
+  explicitly answered `Skill status: Not loaded` and solved the synthetic code
+  question normally. Actual Skill execution is not accepted; the earlier
+  non-submitting selection result remains valid. No domain-filter error occurred.
+- Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-execution-smoke.json`.
+  One user turn, one assistant turn, empty composer, and no active generation
+  were independently observed. Pre-existing Chrome PID 93245/port 45015 was
+  preserved. No further prompt, Skill mutation, or scheduler action ran.
+- Next bounded implementation: connect exact-ID Skill selection and prompt
+  submission in the same owned tab; the existing `skills select` command
+  deliberately cleans up its selection before returning.
+
+## Turn 567 | 2026-09-05
+
+- The operator authorized up to five corrective iterations. Iteration 1 passed
+  exact-ID Codebase Investigator selection and cleanup on the installed
+  visible-editor repair. All 11 Skills were inventoried; no prompt was sent.
+- Direct cleanup readback confirmed empty root, zero pills, and zero turns.
+  Owned Chrome PID 65022 and port 58744 are gone. Stop early at success, 1/5.
+- Receipt: `docs/dev/notes/2026-09-05-plan0334-skill-selection-accepted.json`.
+  Final validation is recorded; PR #1 merged to main at `697dc668`.
+
+
+## Turn 566 | 2026-09-05
+
+- Integrated the live-accepted Chat repair into P27 at `ebc792a7`. Fresh Skills
+  inventory is complete at 11 entries; no domain filter recurred.
+- Installed `fde8f388` fixes preflight capture while a new tab is about:blank.
+  One selection activation then returned outcome-unknown; no retry followed.
+- The hidden fallback textarea masks the visible editor in the original
+  selection probe. Revision 12's visibility repair passes 61 focused tests,
+  typecheck/build/lint, and read-only live empty-composer proof. It is not
+  installed; fresh activation authority is the remaining live gate.
+- Cleanup verified empty root, zero pills/turns, exact Chrome PID 64663 absent,
+  and port 57852 closed. Receipt:
+  `docs/dev/notes/2026-09-05-plan0334-visible-composer-repair.json`.
+
+
+## Turn 565 | 2026-09-05
+
+- Plan 0335 repairs the demonstrated root-composer false Chat success. Two RED regressions now pass; all 148 focused tests, typecheck, build, scoped lint, and plan audit pass.
+- Installed checkpoint `fc640258` with exact mode-module parity. One smoke switched to Chat, committed one prompt, and returned the exact token in 19.5 seconds with zero retries. Direct readback confirmed the reply; owned Chrome PID 60573 and port 45015 were cleaned up.
+- Receipt: `docs/dev/notes/2026-09-05-plan0335-chat-mode-live-acceptance.json`. Source integration into P27 remains pending.
+
+
+## Turn 564 | 2026-09-05
+
+- The operator's `ok go` authorized exact-source installation and one bounded
+  non-submitting Skill canary. Installed Revision 9 exposed a reduced
+  `/api/auth/session`; Revision 10 now merges missing fields from the exact
+  logged-in client-bootstrap projection without returning token-bearing fields.
+- Checkpoint `ba59356a` passes 238 affected tests, typecheck, build, lint, diff
+  hygiene, and zero plan-validation errors. The corrective installed adapter is
+  byte-identical and exact-account authorization passes.
+- ChatGPT's automation domain filter blocked complete Skill inventory before
+  any `Try in chat` activation. Exact cleanup closed only the block-page target,
+  preserved zero text/zero pills on the healthy home and SoyLei project, and
+  restored project focus. P27 remains open on the domain-filter and CI gates;
+  see `docs/dev/notes/2026-09-05-plan0334-revision10-live-hard-stop.json`.
+
+## Turn 563 | 2026-09-05
+
+- Revision 7 is committed and pushed at
+  `b5ceb8837e40e1866029b8e52eeadd046b2e31ec`; the P27 lane catalog now binds its
+  provider-free validation and published checkpoint to those exact bytes.
+- Installed runtime bytes still predate Revision 7. The next live gate requires
+  separate install authority plus a qualified empty home composer; neither is
+  supplied by the already-spent Revision 6 canary authorization.
+
+## Turn 562 | 2026-09-05
+
+- Revision 7's affected cone passes 246/246 with typecheck, build, touched-file
+  lint, valid JSON, diff hygiene, and the 333-plan audit at zero errors.
+- The comprehensive lane passes 3,081 tests with the known current-main raw-CDP
+  allowlist failure and one 30 ms rate-limit timing failure that passed its
+  single focused rerun. The first failure and flake evidence remain recorded.
+- Browser bracketing preserved Chrome PID `1933` and the exact empty project
+  conversation, but the qualified home target disappeared and a greeting-only
+  home target appeared during the run. Foregrounding it still exposed no prompt
+  editor. Revision 7 remains provider-free; no install or live retry is allowed.
+
+## Turn 561 | 2026-09-05
+
+- The sole Revision 6 installed `skills select` attempt activated `Try in chat`
+  once. Read-only Chrome history proves the exact Skill-bound route, provider
+  example-prompt route, and final home restoration; both composers end at zero
+  text/zero pills, with no conversation, submission, or remaining lease.
+- The installed proof classified the provider-authored prompt as user text, so
+  the filtered CLI result was not accepted and the live outcome remains
+  terminal `outcome-unknown`. No retry ran or is authorized.
+- Revision 7 adds a red/green provider-free contract for exact decoded provider
+  prompt correlation and a separate production gate requiring the original
+  composer to have zero user text and zero pills before navigation. Focused
+  browser/CLI tests pass 22/22 with typecheck; installation remains gated.
+
+## Turn 560 | 2026-09-05
+
+- The operator's explicit `ok go` reopens P27's exact live gate and authorizes
+  exactly one fresh installed exact-ID Skill-selection/cleanup canary on the
+  retained `wsl-chrome-3` AuraCall runtime profile.
+- Revision 6 supersedes only the exhausted Skill-click ceiling. Exact account,
+  complete inventory, empty composer, observed selection, exact cleanup, and
+  route restoration remain mandatory; no prompt, upload, model change, Skill
+  execution, `Answer now`, install, or retry is authorized.
+
+## Turn 559 | 2026-09-05
+
+- P27's final read-only audit opened the exact Skill detail route and observed
+  exactly one visible `Try in chat` control. It is a plain button with no link,
+  test ID, or Skill-bearing parent, so no-click evidence cannot prove selection.
+- Exact cleanup restored the ChatGPT home route with zero user text/zero pills
+  and returned focus to the unchanged project conversation. No prompt, upload,
+  model change, selection action, or `Answer now` occurred.
+- Tool/capability and Skill inventories are current. P27 remains validating
+  until explicit authority permits one fresh exact-ID Skill-selection canary.
+
+## Turn 558 | 2026-09-05
+
+- Revision 5 cleanup rechecked the healthy empty home target and the unchanged
+  empty project conversation, then closed only exact blocked target
+  `E5279B87AFE9FA34BF7B147D41F43454`.
+- Final state is Chrome PID `1933`, DevTools port `45015`, the same managed
+  browser profile, one healthy home target, and the intact project conversation.
+  No prompt, upload, model selection, retry action, or provider mutation ran.
+- P26 is integrated, installed, live accepted, and closed. Receipt:
+  `docs/dev/notes/2026-09-05-plan0333-installed-durable-model-survey.json`.
+
+## Turn 557 | 2026-09-05
+
+- The existing sidebar link reused the non-project target instead of opening a
+  temporary tab. It proved `gpt-5-6-thinking`, composer label `High`, and Power
+  slider value 2 of 4 versus current Pro slug `gpt-5-6-pro` at value 4 of 4.
+  Both menus list GPT-5.6 Sol and GPT-5.5; no selection or prompt occurred.
+- Exact history restoration redirected the reused target to a healthy empty
+  ChatGPT home surface. Revision 5 permits closing only the original blocked
+  home target after healthy-home and intact-project rechecks.
+
+## Turn 556 | 2026-09-05
+
+- Cached normalized conversation context omits provider model metadata, and
+  read-only DevTools navigation-history inspection found no older conversation
+  behind either intact tab.
+- The intact non-project chat exposes an actual React-managed sidebar link to
+  an older cached conversation. Plan Revision 4 permits one exact temporary
+  target opened through that UI link; neither intact conversation may navigate
+  or close, and only the recorded temporary target may be removed afterward.
+
+## Turn 555 | 2026-09-05
+
+- P26 replacement installation is current and byte-identical for the CLI,
+  model resolver, and service manifest. Installed help uses
+  `chatgpt:reasoning-high`; six durable ChatGPT selectors and
+  `openai:frontier -> gpt-6-astra` are present.
+- Retained PID `1933` / port `45015` directly proves `Add files and more`, an
+  enabled empty unrestricted `#upload-files`, checked `GPT-5.6 Sol`, available
+  `GPT-5.5`, and Power slider value 4 of 4. Both composers remained empty.
+- Both open conversations have current DOM slug `gpt-5-6-pro`. Bounded
+  older-chat routing met the automation domain filter; no bypass was attempted.
+  The unused home tab remains on the ChatGPT home URL showing that block while
+  both conversation tabs remain intact. P26 stays open for manual home-tab
+  restoration and one genuine older-model comparison.
+- Non-forced merge `960000bb` integrates the durable operational-selector
+  repair and partial-survey receipt into current `main` without touching the
+  dirty/conflicted P08/P17 checkout.
+
+## Turn 554 | 2026-09-05
+
+- Opened P26 from exact current `origin/main` in an isolated worktree; the
+  dirty/conflicted P08/P17 checkout remains untouched.
+- Current installed metadata still identifies Plan 0331, while current process
+  evidence identifies retained `wsl-chrome-3` Chrome PID `1933` on port
+  `45015`; both must be revalidated at their respective effect boundaries.
+- The authorized packet permits one user-runtime install and one bounded
+  retained-browser survey. It permits transient composer menu/drawer opens but
+  zero prompt, upload, model selection, navigation, launch, close, API restart,
+  scheduler, completion, materialization, or `Answer now` effect.
+
+## Turn 553 | 2026-09-05
+
+- Opened P25 from clean current `origin/main` in an isolated worktree; the
+  dirty/conflicted P08/P17 checkout remains untouched.
+- Official OpenAI documentation identifies GPT-6 Astra as the current API
+  model and GPT-6 Pro as its ChatGPT product lane during staged rollout.
+- Red coverage proved the public selector catalog still advertised volatile
+  Auto/Sol/Terra/Luna/Thinking/Pro IDs.
+- The source migration now advertises durable fast/reasoning/premium intents,
+  keeps old selectors as compatibility inputs, and adds `openai:frontier`
+  backed by `gpt-6-astra`.
+- Checkpoint `c96a472f` passes the final 448-test affected packet, typecheck,
+  build, changed-file lint at error level, diff hygiene, and zero-error plan
+  audit. The comprehensive lane passes 3,066 tests; two load-sensitive tests
+  passed on focused rerun and the sole deterministic failure is the documented
+  Plan 0326 stale raw-CDP allowlist expectation.
+- P25 is provider-free accepted and integrated. Installation and live browser
+  interaction remain separate effects.
+- Non-forced merge `a0361f66` integrates the accepted revision into current
+  `main` without touching the dirty/conflicted P08/P17 checkout.
+
+## Turn 552 | 2026-09-03
+
+- Opened P24 from clean current `main` in an isolated worktree; the conflicted
+  P08/P17 checkout remains untouched.
+- Retained Chrome PID `1933` / port `45015` showed the same active composer
+  intelligence picker in three chats: checked GPT-5.6 Sol/GPT-5.5 rows and a
+  horizontal Power slider with Instant, Medium, High, Extra High, and Pro.
+- An older assistant turn's `Switch model` opens `Try again`, so P24 removes it
+  from model-trigger fallbacks and requires a visible active-composer control.
+- Source red/green tests pass. The real source expression selected Extra High
+  and the original Pro value was restored; no prompt, upload, model-family
+  change, or `Answer now` action occurred.
+- Checkpoint `c9f976f1` passes 83 affected tests, typecheck, build, scoped
+  zero-warning lint, diff hygiene, and zero-error plan audit. The comprehensive
+  suite passes 3,059 tests; only the previously documented Plan 0326 stale
+  raw-CDP allowlist expectation fails.
+- One user-runtime install is byte-identical for the changed runtime modules,
+  bundled manifest, and attachment module. Installed no-prompt canaries read
+  GPT-5.6 Sol, selected Extra High (3), restored Pro (4), and returned
+  attachment `ready` on `#upload-files` without upload. Chrome PID `1933` and
+  port `45015` remain healthy; all observed composers are empty.
+- Non-forced merge `cd3e6b68` integrates P24 into current `main`; P08/P17
+  conflict custody remains untouched.
+
+## Turn 551 | 2026-09-02
+
+- P22 is integrated and installed/live accepted. Exact-account Skill CRUD used
+  the one recovered Create, one in-place update with independent v2 hash
+  readback, and one immediate Delete with fresh complete-inventory absence.
+- Final runtime bytes match the published implementation. Chrome PID `1933` on
+  port `45015`, API PID `98408`, the two existing chat tabs, and empty operation
+  locks were preserved; the deleted editor tab was cleaned to `/skills`.
+- Feature checkpoint `ce610227` merged non-forced at `ac1f4aed`; post-merge
+  validation passes 35 tests, typecheck, build, scoped lint, diff hygiene, and
+  the zero-error plan audit. P16 remains untouched at `bd8738da`.
+- Git maintenance cannot yet remove the clean integrated P22 worktree/local
+  branch because pre-existing identity-smoke PID `44328` holds its cwd. Leave
+  that process and custody intact; remove them only after a fresh empty cwd
+  census. The dirty/conflicted P08 and clean unfinished P16 remain preserved.
+
+## Turn 550 | 2026-09-02
+
+- The P22 hard stop remains exact and stable: one recoverable canary editor,
+  unchanged API/Chrome PIDs, and no operation lock; no live mutation ran.
+- Three-way P16 reconciliation found only a textual CLI insertion conflict.
+  Preserve P16's three `apps test` response-wait options and P22's separate
+  `skills` command when integrating; do not merge or alter unfinished P16 now.
+
+## Turn 549 | 2026-09-02
+
+- The single authorized Skill Create saved exactly one v1 canary at a stable
+  `/skills/editor/<32-hex-id>` route. The installed client expected only the
+  query-detail route, returned `outcome-unknown`, and retained the exact editor.
+- P22's hard stop is active: no Create retry and no update/delete occurred. API
+  PID `98408`/zero restarts and Chrome PID `1933` are stable, with no operation
+  lock. The preserved editor requires operator adjudication before mutation.
+- Provider-free route and root-inventory handling now cover the observed route;
+  33 tests, typecheck, build, scoped lint, and diff hygiene pass. The repair is
+  published-ready but deliberately not installed or exercised live this turn.
+
+## Turn 548 | 2026-09-02
+
+- The next P22 create reached a fully enabled disposable editor but stopped
+  before submit because parent CodeMirror text concatenated its visual lines.
+  No Skill artifact exists and the original three tabs are restored.
+- Line-aware content readback and post-dispatch outcome fencing are green in the
+  33-test focused packet plus typecheck, scoped lint, and diff hygiene. Rebuild,
+  publish/reinstall, and the still-unused CRUD mutation sequence remain.
+
+## Turn 547 | 2026-09-02
+
+- Reinstalled exact-account inventory passed with 11 existing stable IDs. The
+  first create stopped before submit because menu rendering discarded the
+  trusted-click listener receipt; no Skill mutation occurred.
+- P22 now treats the exact rendered Create menu as the postcondition after the
+  trusted pointer dispatch. The 33-test packet, typecheck, build, scoped lint,
+  and diff hygiene pass; reinstall and the still-unused CRUD canary remain.
+
+## Turn 546 | 2026-09-02
+
+- The first installed P22 list stopped before mutation because current Skill
+  cards omit `skill_id` anchors. Bounded read-only inspection identified the
+  separate authenticated installed/created inventory responses and restored
+  all original tabs.
+- A red/green repair now requires both complete response payloads and reconciles
+  overlap by exact ID with created-by-me precedence. The 33-test focused and
+  adjacent packet, typecheck, scoped zero-warning lint, and diff hygiene pass;
+  rebuild/reinstall and the one zero-retry CRUD canary remain.
+
+## Turn 545 | 2026-09-02
+
+- P22 completed exact-account, no-submit Skill editor discovery and restored
+  the original three-tab state while preserving Chrome PID `1933`/port `45015`.
+- Exact-ID Skill list/show/create/update/delete is provider-free accepted with
+  complete-inventory and account gates, explicit mutation confirmation,
+  deterministic source hashing, optimistic update, fresh postconditions, and
+  terminal no-retry uncertain outcomes.
+- The pre-install packet passes 32 focused/adjacent tests, typecheck, build,
+  scoped zero-warning lint, diff hygiene, and the 328-candidate zero-error plan
+  audit. Commit/publish and one installed disposable CRUD canary remain.
+
+## Turn 544 | 2026-09-02
+
+- Opened [Plan 0329](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)
+  as P22 after Plan 0328 integrated and passed installed/live acceptance.
+- P22 will first open and close the exact-account Skill create surface without
+  upload or submit, then implement exact-ID list/show/create/update/delete with
+  provider-free TDD and one disposable zero-retry live canary.
+- The lane permits no skill invocation, prompt Send, `Answer now`, scheduler,
+  completion, materialization, developer-app, OAuth, API restart, or unrelated
+  browser effect. P16 remains unfinished and is an explicit integration overlap.
+
+## Turn 543 | 2026-09-02
+
+- Plan 0328 closes `INSTALLED_LIVE_ACCEPTED`. The second canary timed out at 30
+  seconds before an assistant node mounted and correctly persisted the Session
+  as running with `observation_expired_generation_active` and zero resend.
+- Its first read-only attach exposed a stale synthetic runtime route. The
+  provider-free repair now reconciles only URL/conversation identity from the
+  validated progress `/c/<id>` while preserving target ID and port; 88 affected
+  tests, typecheck, build, scoped zero-warning lint, diff hygiene, and plan
+  audit pass.
+- Installed parity is exact. The remedial read-only attach recovered all 1,800
+  numbered lines plus the sentinel from the same existing conversation and
+  marked the Session completed. API PID `98408` retained zero restarts; Chrome
+  PID `1933`/port `45015` and empty operation locks remained stable. ChatGPT
+  Skill CRUD may now proceed in its own lane.
+- P21 merged non-forced to `main` at `73b982ee` and is published. Installed
+  source bytes remain those of the accepted implementation checkpoint; the
+  merge adds only the integrated custody receipt beyond that checkpoint.
+
+## Turn 542 | 2026-09-02
+
+- Reconciled current Git custody. Clean integrated P17, P19, and P20 worktrees
+  plus local branches were removed; their remote recovery refs remain. The
+  dirty/conflicted P08 lane and clean but unintegrated P16 lane were preserved.
+  The clean local `main` worktree was fast-forwarded to exact `origin/main` at
+  `61ff5ca4`.
+- Plan 0326's focused timeout/instrumentation packet passes 27 tests plus
+  typecheck. One authorized user-runtime install completed without API restart;
+  the three affected installed modules are byte-identical to the current build.
+- Opened [Plan 0328](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
+  as P21. Its first zero-retry canary exposed a pre-answer classifier gap:
+  ChatGPT showed `Stop answering` without an assistant node, then completed all
+  requested output without resend while AuraCall had recorded terminal error.
+  Revision 2 carries the focused provider-free repair and permits one distinct
+  post-install canary before Skill CRUD implementation.
+- The second canary correctly remained running at observer expiry, but its
+  read-only attach later trusted a stale synthetic runtime route instead of the
+  real progress conversation. Revision 3 adds exact progress/runtime identity
+  reconciliation and permits one remedial attach to the existing conversation;
+  no further prompt is allowed.
+
+## Turn 541 | 2026-09-02
+
+- The operator explicitly transferred operational control of exact
+  `wsl-chrome-3` Chrome PID `1933` for Plan 0327's bounded live discovery.
+  AuraCall reattached through its managed-browser resolver without relaunching
+  Chrome, rewriting job ownership, or claiming shutdown rights.
+- One authenticated read-only attempt observed distinct `/plugins` and
+  `/skills` routes, installed and created-by-me inventory groups, a stable
+  32-hex `skill_id` detail route, owner display, file-tree inventory, `Needs
+  review`, and a separate `Try in chat` action. The durable fixture records
+  contract shape only and omits live identity/content payloads.
+- No skill lifecycle action, invocation, prompt Send, runtime install, service
+  restart, scheduler control, or materialization control ran. Cleanup restored
+  the selected tab to ChatGPT home; PID `1933`/port `45015` remained live and
+  the browser-operation directory remained empty.
+- Plan 0327 now closes `LIVE_DISCOVERY_ACCEPTED_MUTATIONS_WITHHELD`. Version,
+  explicit enabled state, and manifest readback remain unobserved and belong to
+  a separately bounded read-only implementation slice before any mutation.
+
+## Turn 540 | 2026-09-02
+
+- Opened [Plan 0327](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)
+  for the second LitScout handoff on isolated lane P20.
+- Structural inspection found the first truthful-contract defect: a string in
+  feature-signature `skills[]` was reported as available and invokable despite
+  carrying no stable identity, installation, activation, version, or invocation
+  evidence.
+- TDD RED reproduced that overclaim; GREEN now reports lifecycle and invocation
+  unknown with explicit unproven evidence. The focused capability packet passes
+  20 tests across core, CLI, and MCP seams. Read-only browser ownership/account
+  preflight is next; mutations remain prohibited.
+- A second static-catalog RED/Green removed the remaining invocation overclaim;
+  the combined capability packet passes 21 tests, with typecheck, production
+  build, scoped lint, plan audit, and diff hygiene green.
+- Read-only preflight found `wsl-chrome-3` Chrome PID `1933` on port `45015`
+  without an AuraCall controller/operation lease. The browser policy requires a
+  hard stop before attachment, so Plan 0327 closes provider-free accepted with
+  live exact-account discovery ownership-blocked and zero provider mutations.
+- Provider-free checkpoint: `c8097717`; acceptance checkpoint: `687767ab`;
+  non-forced merge receipt: `1c126b96`. Main integration is complete; the
+  exact-account live discovery ownership stop remains.
+- Revalidated the stop at `2026-09-02T08:44:26-05:00`: PID `1933` still owns
+  `wsl-chrome-3` port `45015`, browser state has no controller/owner, the
+  operation-lock directory is empty, and no alternate AuraCall runtime profile
+  shares the configured ChatGPT identity. Do not attach or switch profiles;
+  human-owner closure or explicit ownership transfer is required.
+
+## Turn 539 | 2026-09-02
+
+- Opened [Plan 0326](docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md)
+  on isolated branch `fix/plan0326-long-prompt-observation-recovery` from
+  current `origin/main` after the existing Plan 0315 checkout was found dirty
+  with an unresolved journal conflict.
+- Current source confirms the 3,600-second CLI observer abort already captures
+  `browserResponseProgress`, but the Session runner terminalizes every timeout
+  and browser cleanup normally closes the exact active Chrome. Existing Session
+  display/reattachment can recover the same running turn without replaying the
+  prompt when exact runtime identity survives.
+- P19 will first freeze that terminalization defect, then preserve only
+  positively active generation as resumable and add one provider-local,
+  progress-aware 15-minute recovery guard. This slice is provider-free; no
+  browser, provider, install, restart, scheduler, or live action is authorized.
+- Implemented the provider-free path: qualifying expiry persists running state
+  and exact turn/browser evidence, browser cleanup retains the exact managed
+  browser, and recovery distinguishes healthy progress from stale/interrupted
+  observation before any same-conversation refresh. The combined focused and
+  adjacent packet passed 148 tests; typecheck, production build, scoped Biome
+  lint, plan audit, and diff hygiene also passed.
+- Plan 0326 is provider-free accepted. The full suite passed 3,038 tests across
+  324 files with live tests excluded/skipped; its sole failure is an unrelated
+  stale raw-DevTools allowlist expectation for an existing script that no
+  longer contains direct navigation. Commit, push, and main integration remain;
+  no installed or live claim is made.
+- Provider-free implementation checkpoint: `e292dcee`; acceptance receipt:
+  `0e210641`; non-forced merge receipt: `9ced34cc`. Main integration is
+  complete; installed/live validation remains unclaimed.
 
 ## Turn 538 | 2026-08-29
 
@@ -20550,3 +20950,107 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   failed at authorization before mutation; Grok entered and failed its first
   create command. No test-owned process remained and exact generated names
   were absent from local AuraCall state; no further provider command ran.
+
+## Turn 427 | 2026-09-05
+
+- Plan 0334/P27 opens after direct DevTools evidence showed the current
+  ChatGPT drawer includes Shopping while AuraCall's catalog does not, and the
+  installed live capability command selected a retained project chat while
+  requiring the root composer.
+- Exact-account Skill inventory remains complete with stable IDs, but Skill
+  invocation is still reported unknown and no guarded non-submitting selection
+  command exists.
+- The bounded repair will add durable current-drawer identities, deterministic
+  root-composer discovery, and exact-ID Skill `Try in chat` selection with
+  composer cleanup. Provider-free red/green precedes one install and one
+  zero-prompt live canary per selection surface.
+- Provider-free implementation is accepted: Shopping and both current file
+  rows have durable capability IDs, live discovery is root-composer-bound, and
+  `skills select` requires exact account, complete inventory, exact stable ID,
+  and `--yes` before one `Try in chat` dispatch. It restores the original route
+  and requires empty-composer cleanup evidence.
+- Evidence: affected 250/250, typecheck, production build, lint (existing
+  warning baseline only), static CLI readback, JSON validation, diff hygiene,
+  and plan-library audit with zero validation errors. The full suite passed
+  3,073 tests and exposed one unrelated stale raw-DevTools allowlist entry.
+- CodeGraph does not index the isolated Plan 0334 worktree; exact source
+  readback plus compilation/tests are the accepted native fallback. The next
+  gate is the single authorized install, then one Shopping and one Skill
+  non-submitting selection/cleanup canary.
+- The first installed discovery stopped before inventory because a second root
+  tab lacked a visible composer and returned partial auth-session identity.
+  Revision 2 uses a fresh disposable root, waits for composer readiness, and
+  permits one replacement install and one post-repair discovery. Neither
+  one-shot selection budget was spent.
+- The disposable root likewise rendered no composer and was closed. Revision 3
+  qualifies retained root candidates by a visible prompt workbench, skips the
+  service-resolved greeting-only root, and admits one final replacement install
+  plus one discovery. Shopping and Skill selection remain unspent.
+- Direct DevTools survey proved the current drawer rows and `6 Pro` Power
+  slider, plus the older-conversation `Pro` compatibility surface. Live Skill
+  inventory is complete at 11 `created-by-me` entries.
+- The single Skill canary exposed cross-tab generic attachment and ended
+  `outcome-unknown`; the unrelated tab was restored and both composers were
+  empty. The single Shopping canary produced the exact current inline pill,
+  whose non-plugin shape exposed a stale proof; it was cleared to zero
+  text/zero pills. Neither click may be retried under the current budget.
+- Revisions 4-5 bind Skills to the qualified workbench, accept current popover
+  rows without `tabindex`, detect durable non-plugin inline pills, and
+  foreground background roots before measuring visibility. Focused tests pass
+  225/225; typecheck/build/lint and plan audit pass. The full suite has 3,077
+  passes, one timing failure that passed focused rerun, and one unrelated
+  pre-existing raw-CDP allowlist failure.
+- Installed Revision 5 matches source hashes. Live capability discovery returns
+  29 entries in under ten seconds; exact-account Skill listing returns all 11,
+  preserves routes, and leaves zero user text/zero pills. A fresh exact-ID Skill
+  canary is the only remaining acceptance gate and requires explicit operator
+  authority because the one-click no-retry budget is exhausted.
+- After Revision 6 exposed provider-prefill proof drift, read-only CDP inspection
+  found that both current home targets retain a visible empty composer as
+  `textarea[name="prompt-textarea"]` without the legacy ID. Revision 8 accepts
+  both exact provider shapes for workbench qualification and Skill
+  preflight/proof/cleanup. Checkpoint `aa461805` is provider-free green and not
+  installed; no additional selection or retry is authorized.
+- The follow-up source audit found two related provider-free assumptions outside
+  the Skill adapter: capability discovery still required `tabindex` on current
+  drawer rows, and selected-pill proof assumed pills were children of the prompt
+  editor. Revision 9 uses current row semantics and composer-form pill scope,
+  and recognizes the named textarea for local-upload qualification. Checkpoint
+  `138ec354` is green and uninstalled; the live effect budget remains closed.
+- Fresh integration reconciliation finds Plan 0334 zero behind and conflict-free
+  against `origin/main`, but the exact-branch lane audit correctly reports P27
+  `unregistered_active`: its catalog proposal has not landed on canonical
+  `main`. Treat the branch as mechanically ready but not governance-ready; see
+  `docs/dev/notes/2026-09-05-plan0334-integration-readiness.json`.
+- Draft PR 1 is mergeable/clean, but its exact head has no GitHub check suite or
+  commit status. Actions is enabled and active workflow `CI` declares the
+  expected `pull_request` trigger, so treat CI as `not_dispatched`; do not infer
+  a green gate from the empty checks list.
+
+- Plan 0334 final validation: 3,087 full-suite passes and 65 skips. The mutation-audit expectation is repaired (six focused passes). One Grok readback timeout reproduces on unchanged origin/main 882c9c14 and is nonblocking for Skills. Local focused/typecheck/build/lint/live proof is accepted; GitHub has no CI results and no required branch checks or rulesets.
+## Turn 575 | 2026-09-09
+
+- Plan 0339 opens for the operator-requested installed-runtime and Git custody
+  maintenance. `main == origin/main == a5f777895`; the affected 53 tests and
+  typecheck pass before the supported user-runtime install.
+- Installed metadata now names the current main checkout, API PID `3183` is
+  active with zero restarts on configured port `18095`, and `/status` is
+  healthy with zero queued/running completions and all six active campaigns
+  still paused. All 522 installed/current-build `dist` files share aggregate
+  inventory hash `61ba93ea...`.
+- Worktree review retains active process-owned P08 and divergent unfinished P16.
+  P27 is the sole closure candidate after its historical Chrome cwd owner
+  exited; exact pre-removal gates and final custody verification remain.
+- P27's clean tip `f55e398f3` equaled its remote, was ancestral to main, carried
+  only generated ignored `dist/` and `node_modules/`, and had no `/proc` cwd
+  owner. Its worktree is removed. The local branch was restored at exact remote
+  parity because P28 names it as an integration target and the catalog auditor
+  requires that local pointer for deterministic ancestry verification.
+- P08 is clean/equal-remote at `9860b9d49` and retained with 15 cwd owners. P16
+  is clean/equal-remote at `bd8738da9` and retained because it has eight unique
+  commits plus nine content conflicts against main. P18, P29, and recovery refs
+  remain. Final integrity/catalog/planning and published-main gates close P32.
+- Maintenance topic `299c81e18` merged non-forced through `c79c779c2`.
+  Full fsck and commit-graph verification pass; the plan-library audit has zero
+  validation errors, the reconciled active-lane audit is green, and final local
+  main equals published origin/main.

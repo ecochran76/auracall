@@ -18,6 +18,7 @@ export type WorkbenchCapabilityCategory =
 export type WorkbenchCapabilityInvocationMode =
   | 'pre_prompt_toggle'
   | 'tool_drawer_selection'
+  | 'skill_detail_selection'
   | 'composer_mention'
   | 'composer_attachment'
   | 'provider_api'

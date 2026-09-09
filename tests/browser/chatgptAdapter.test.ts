@@ -8,6 +8,8 @@ import {
 	bindChatgptProviderSessionConnectionForTest,
 	buildChatgptAuthSessionIdentityExpression,
 	buildChatgptCreateProjectDialogStateExpressionForTest,
+	buildChatgptFallbackIdentityExpressionForTest,
+	buildChatgptFeatureProbeExpressionForTest,
 	buildChatgptPayloadDirectRetryOptionsForTest,
 	buildChatgptPostPayloadReadinessFailureStageForTest,
 	buildChatgptUrlRouteExpressionForTest,
@@ -59,6 +61,7 @@ import {
 	normalizeChatgptVisibleImageArtifactProbes,
 	readChatgptConversationContextWithClientForTest,
 	readChatgptConversationPayloadWithClient,
+	readChatgptUserIdentityWithClientForTest,
 	readVisibleChatgptConversationFilesWithClientForTest,
 	readVisibleChatgptConversationMessagesWithClientForTest,
 	readVisibleChatgptDownloadArtifactProbesWithClientForTest,
@@ -246,12 +249,23 @@ describe("ChatGPT provider-session connection provenance", () => {
 });
 
 describe("normalizeChatgptFeatureSignature", () => {
+	test("uses current drawer rows and composer-scoped selection pills", () => {
+		const expression = buildChatgptFeatureProbeExpressionForTest();
+		expect(expression).toContain(".__menu-item, [data-fill][tabindex]");
+		expect(expression).toContain('form[data-type="unified-composer"]');
+		expect(expression).toContain("[data-inline-selection-pill]");
+		expect(expression).not.toContain(".__menu-item[tabindex]");
+		expect(expression).not.toContain("#prompt-textarea [data-inline-selection-pill]");
+	});
+
 	test("normalizes nullable live model selections before schema validation", () => {
 		const signature = normalizeChatgptFeatureSignatureForTest({
 			detector: "chatgpt-feature-probe-v1",
 			web_search: false,
 			deep_research: true,
 			company_knowledge: false,
+			shopping: true,
+			composer_tools: ["Add photos & files", "Shopping"],
 			apps: [],
 			composer_mode: "work",
 			composer_apps: [],
@@ -271,6 +285,8 @@ describe("normalizeChatgptFeatureSignature", () => {
 
 		expect(JSON.parse(signature ?? "null")).toMatchObject({
 			deep_research: true,
+			shopping: true,
+			composer_tools: ["Add photos & files", "Shopping"],
 			composer_mode: "work",
 			model_controls: {
 				visible: true,
@@ -3219,6 +3235,102 @@ describe("normalizeChatgptAuthSessionIdentity", () => {
 		expect(expression).toContain("controller?.abort()");
 		expect(expression).toContain("}, 8000)");
 		expect(expression).toContain("signal: controller?.signal");
+	});
+
+	test("fallback identity reads only logged-in bootstrap identity fields", () => {
+		const expression = buildChatgptFallbackIdentityExpressionForTest();
+		const bootstrap = {
+			textContent: JSON.stringify({
+				authStatus: "logged_in",
+				session: {
+					user: {
+						id: "user-current",
+						name: "Current User",
+						email: "current@example.test",
+					},
+					account: {
+						id: "account-current",
+						name: "Personal",
+						email: null,
+						planType: "pro",
+						structure: "personal",
+						organizationId: null,
+					},
+					accessToken: "must-never-leave-bootstrap",
+				},
+			}),
+		};
+		const document = {
+			querySelector: vi.fn(() => bootstrap),
+			querySelectorAll: vi.fn(() => []),
+		};
+		const window = { localStorage: {} };
+		const evaluate = new Function("document", "window", `return ${expression};`);
+
+		const result = evaluate(document, window);
+
+		expect(document.querySelector).toHaveBeenCalledWith(
+			'script#client-bootstrap[type="application/json"]',
+		);
+		expect(result).toEqual({
+			user: {
+				id: "user-current",
+				name: "Current User",
+				email: "current@example.test",
+			},
+			account: {
+				id: "account-current",
+				name: "Personal",
+				email: null,
+				planType: "pro",
+				structure: "personal",
+				organizationId: null,
+			},
+		});
+		expect(JSON.stringify(result)).not.toContain("must-never-leave-bootstrap");
+	});
+
+	test("merges a partial auth response with bootstrap account evidence", async () => {
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce({
+				result: {
+					value: {
+						user: { id: "user-current", name: "Current User", email: null },
+						account: null,
+					},
+				},
+			})
+			.mockResolvedValueOnce({
+				result: {
+					value: {
+						user: {
+							id: "user-current",
+							name: "Current User",
+							email: "current@example.test",
+						},
+						account: {
+							id: "account-current",
+							planType: "pro",
+							structure: "personal",
+							organizationId: null,
+						},
+					},
+				},
+			});
+
+		await expect(
+			// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
+			readChatgptUserIdentityWithClientForTest({ Runtime: { evaluate } } as never),
+		).resolves.toMatchObject({
+			id: "user-current",
+			email: "current@example.test",
+			accountId: "account-current",
+			accountLevel: "Pro",
+			accountPlanType: "pro",
+			accountStructure: "personal",
+		});
+		expect(evaluate).toHaveBeenCalledTimes(2);
 	});
 
 	test("prefers auth session user email and id", () => {

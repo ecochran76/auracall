@@ -128,10 +128,24 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       node.getAttribute('aria-checked') === 'true' ||
       node.getAttribute('data-state') === 'on';
     ${buildChatgptActiveConversationWorkMarkerHelpers()}
-    const radios = Array.from(document.querySelectorAll('[role="radio"]'))
+    const readModes = (selector) => Array.from(document.querySelectorAll(selector))
       .filter(visible)
       .map((node) => ({ node, label: normalize(node.textContent) }))
       .filter(({ label }) => label === 'chat' || label === 'work');
+    // A root/project landing composer can hydrate before its sticky Work control.
+    // Only an established conversation may use the historical control-less fallback.
+    const establishedConversation = /^\\/c\\/[^/]+\\/?$/.test(location.pathname) ||
+      projectConversationRoute(location.pathname) !== null;
+    let radios = readModes('[role="radio"]');
+    let modeTriggers = readModes('button[aria-haspopup="menu"]');
+    if (!establishedConversation) {
+      const controlsStartedAt = performance.now();
+      while (radios.length === 0 && modeTriggers.length === 0 && performance.now() - controlsStartedAt < 10000) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        radios = readModes('[role="radio"]');
+        modeTriggers = readModes('button[aria-haspopup="menu"]');
+      }
+    }
     const radioTarget = radios.find(({ label }) => label === DESIRED_MODE);
     if (radioTarget) {
       if (isSelected(radioTarget.node)) return { status: 'already-selected', mode: DESIRED_MODE };
@@ -143,10 +157,6 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       }
       return { status: 'selection-not-confirmed', mode: DESIRED_MODE };
     }
-    const modeTriggers = Array.from(document.querySelectorAll('button[aria-haspopup="menu"]'))
-      .filter(visible)
-      .map((node) => ({ node, label: normalize(node.textContent) }))
-      .filter(({ label }) => label === 'chat' || label === 'work');
     const trigger = modeTriggers[0];
     const triggerLabel = trigger?.label;
     if (triggerLabel === DESIRED_MODE) {
@@ -159,7 +169,7 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
           ? { status: 'already-selected', mode: DESIRED_MODE }
           : { status: 'mode-not-found', availableModes: ['Work'] };
       }
-      if (DESIRED_MODE === 'chat' && radios.length === 0) {
+      if (establishedConversation && DESIRED_MODE === 'chat' && radios.length === 0) {
         const composerStartedAt = performance.now();
         while (performance.now() - composerStartedAt < 10000) {
           if (hasActiveConversationWorkMarker()) break;

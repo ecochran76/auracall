@@ -1,19 +1,106 @@
 # Aura-Call Roadmap
 
+- P16 source reconciliation is provider-free green: current main owns exact
+  ecosystem-mention selection; the reconciled delta removes inherited generic
+  tool routing, preserves current-model submission, and safely clears an
+  unwrapped app mention. The obsolete provider-local response watcher was
+  rejected by the prompt-lifecycle architecture gate; response/live acceptance
+  remains open.
+
+- Completed P32: [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md) proves current-main installed-runtime parity and closes the newly eligible P27 worktree while preserving its downstream verification ref and every unfinished lane.
+
+- Completed P31: [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) rejects inactive upload composers and retains both explicit and omitted handoff-model coverage; published with 69 passing tests.
+
+- Completed Git maintenance: [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md) (P30) removed 11 eligible worktrees; Plan 0339's follow-up closed newly unblocked P27, so three linked worktrees now remain intentionally.
+
+- P29 implementation installed; actual Skill execution unaccepted: [Plan 0336 Skill prompt invocation](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md). Exact-ID selection and submission are proven in one tab; the responding model reported the selected resource inaccessible.
+
+- Plan 0334 Skills selection is installed/live accepted: iteration 1/5 verified exact-ID selection and cleanup, no prompt. Merged to main through PR #1 (`697dc668`).
+
+- Installed/live-accepted Plan 0335: [Chat mode preflight](docs/dev/plans/0335-2026-09-05-chat-mode-preflight.md), based on installed P27 source; require mode-control proof before a new prompt.
+
+
 ## P01 | Active Initiatives
 
 ### Current Execution Board
 
-Status: Developer-app submit selection and aggregate status latency open
-Lanes: P01-P07, P09-P15 (integrated); P08, P16 (open)
+Status: P16 source reconciled; installed and live acceptance pending
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P32 (integrated); P08, P16, P18, P29 (open)
 
-- Active ChatGPT developer-app submit selection repair:
-  [docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md](docs/dev/plans/0323-2026-08-30-chatgpt-developer-app-submit-selection.md)
-  P16 corrects the developer-app submit path to use the existing exact
-  ecosystem-mention selection rather than the built-in composer-tool selector.
-  It owns one provider-free repair, one exact install, and one no-research
-  LitScout authentication canary; the research experiment remains separately
-  governed by LitScout Plan 0475.
+- Completed installed-runtime and Git maintenance:
+  [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md)
+  P32 binds the installed service to current published `main`, re-audits local
+  branch/worktree custody, and closes P27 after clean-state, ancestry,
+  remote-custody, and process-owner gates pass. It preserves divergent P08/P16,
+  paused P18, open P29, and recovery custody without provider effects.
+
+- Integrated ChatGPT tool and Skill inventory/selection:
+  [Plan 0334](docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md)
+  P27 updates current drawer identities, root-tab discovery, and guarded
+  exact-account/exact-ID Skill selection. All 11 Skills were inventoried;
+  iteration 1/5 selected Codebase Investigator and restored an empty composer.
+  No prompt was submitted and actual Skill execution remains untested.
+  The earlier domain-filter attribution to ChatGPT was unsupported and is
+  superseded by successful installed/live evidence. PR #1 merged at `697dc668`.
+
+- Integrated installed durable-model survey:
+  [docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md](docs/dev/plans/0333-2026-09-05-installed-durable-model-survey.md)
+  P26 installed source-identical durable-schema bytes and integrated the repair
+  for remaining operational legacy-label defaults. Current tool/upload and
+  horizontal-slider surfaces are directly proven without provider mutation.
+  An older conversation proved the distinct `gpt-5-6-thinking` High/2 surface
+  versus current Pro/4. Exact cleanup left one healthy home and the unchanged
+  project conversation; P26 is closed with no prompt, upload, model selection,
+  retry action, or provider mutation.
+
+- Provider-free accepted durable model schema migration:
+  [docs/dev/plans/0332-2026-09-05-durable-model-schema.md](docs/dev/plans/0332-2026-09-05-durable-model-schema.md)
+  P25 replaces advertised version/codename ChatGPT selectors with capability
+  intents, retains old spellings as aliases, and adds GPT-6 Pro/Astra plus the
+  durable `openai:frontier` API default. Checkpoint `c96a472f` is integrated
+  through `a0361f66`; this lane did not install or operate the retained browser.
+
+- Active ChatGPT composer intelligence-picker repair:
+  [docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md](docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md)
+  P24 scopes model selection to the active composer, excludes assistant-turn
+  retry controls, and supports the live five-position horizontal Power slider.
+  Source and installed canaries passed with original Pro state restored. The
+  installed attachment probe also accepts the composer-local unrestricted
+  input without uploading; P24 is closed and integrated through `cd3e6b68`.
+
+- Integrated ChatGPT Skill CRUD:
+  [docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md](docs/dev/plans/0329-2026-09-02-chatgpt-skill-crud.md)
+  P22 provides guarded exact-account, exact-ID list/show/create/update/delete.
+  Installed/live acceptance recovered the one authorized Create, updated the
+  same stable ID once with exact v2 hash readback, and deleted it once with
+  fresh complete-inventory absence. No skill invocation or prompt occurred;
+  Chrome/API identities remained stable. P16 remains a separate unfinished
+  developer-app lane and must preserve both CLI blocks when later integrated.
+
+- Active installed long-observation recovery canary:
+  [docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md](docs/dev/plans/0328-2026-09-02-installed-long-observation-canary.md)
+  P21 is installed/live accepted. Pre-answer expiry remains resumable, exact
+  progress identity overrides a stale synthetic runtime route, and the
+  remedial read-only attach recovered the same 1,800-line turn with zero
+  resend. PID/port, API restart count, and empty operation-lock state remained
+  stable. Skill CRUD may now open as a separate bounded lane.
+
+- Integrated ChatGPT skill lifecycle discovery:
+  [docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md](docs/dev/plans/0327-2026-09-02-chatgpt-skill-lifecycle-discovery.md)
+  P20 corrects label-only capability evidence. After explicit operator transfer
+  of the exact pre-existing `wsl-chrome-3` Chrome, one read-only attempt proved
+  separate skill/plugin routes, stable detail identity, inventory grouping,
+  owner/file/review surfaces, and separate invocation. All skill mutations and
+  invocation remain gated.
+
+- Integrated ChatGPT long-prompt observation recovery:
+  [docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md](docs/dev/plans/0326-2026-09-02-chatgpt-long-prompt-observation-recovery.md)
+  P19 separates observation-lease expiry from provider/model terminal state,
+  preserves exact active-turn evidence for read-only reattachment, and adds a
+  provider-free 15-minute same-conversation recovery guard. Provider-free
+  verification and non-forced main integration are accepted; installed/live
+  proof remains separate. It does not overlap P08's aggregate-status source
+  surface.
 
 - Integrated Git maintenance closeout:
   [docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md](docs/dev/plans/0322-2026-08-29-git-maintenance-closeout.md)
@@ -4084,3 +4171,5 @@ See [docs/dev/browser-service-upgrade-backlog.md](docs/dev/browser-service-upgra
   successfully. The first pass advanced four detail conversations with no
   provider guard and handed off to one `idle_waiting` completion under normal
   cadence.
+
+- P18 remains paused: [Plan 0325](docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md), now held on a stable published operational branch; no live allowance was used by maintenance.

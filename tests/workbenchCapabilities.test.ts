@@ -33,6 +33,50 @@ describe('workbench capability service', () => {
     ]);
   });
 
+  it('distinguishes exact Skill selection from prompt invocation', async () => {
+    const service = createWorkbenchCapabilityService();
+
+    const report = await service.listCapabilities({ provider: 'chatgpt', category: 'skill' });
+
+    expect(report.capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'chatgpt.skills',
+        availability: 'account_gated',
+        invocationMode: 'skill_detail_selection',
+        metadata: expect.objectContaining({
+          lifecycleState: 'unknown',
+          stableIdentityObserved: false,
+          installationObserved: false,
+          selectionSupported: true,
+          invocationObserved: false,
+        }),
+      }),
+    ]));
+  });
+
+  it('publishes durable current ChatGPT drawer identities without treating file rows as tools', async () => {
+    const service = createWorkbenchCapabilityService();
+    const report = await service.listCapabilities({ provider: 'chatgpt' });
+
+    expect(report.capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'chatgpt.commerce.shopping',
+        providerLabels: ['Shopping'],
+        invocationMode: 'tool_drawer_selection',
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.files.local_upload',
+        providerLabels: ['Add photos & files'],
+        invocationMode: 'composer_attachment',
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.files.library',
+        providerLabels: ['Add from library'],
+        invocationMode: 'composer_attachment',
+      }),
+    ]));
+  });
+
   it('merges discovered capabilities over the static catalog', async () => {
     const service = createWorkbenchCapabilityService({
       now: () => new Date('2026-04-23T12:00:00.000Z'),
@@ -148,6 +192,15 @@ describe('workbench capability service', () => {
         deep_research: true,
         company_knowledge: true,
         create_image: true,
+        composer_tools: [
+          'Add photos & files',
+          'Add from library',
+          'Create image',
+          'Web search',
+          'Shopping',
+          'Deep research',
+          'Google Drive',
+        ],
         apps: ['github', 'google drive'],
         composer_mode: 'work',
         composer_apps: [
@@ -218,6 +271,24 @@ describe('workbench capability service', () => {
 
     expect(capabilities).toEqual(expect.arrayContaining([
       expect.objectContaining({
+        id: 'chatgpt.commerce.shopping',
+        category: 'other',
+        availability: 'available',
+        providerLabels: ['Shopping'],
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.files.local_upload',
+        category: 'file',
+        availability: 'available',
+        providerLabels: ['Add photos & files'],
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.files.library',
+        category: 'file',
+        availability: 'available',
+        providerLabels: ['Add from library'],
+      }),
+      expect.objectContaining({
         id: 'chatgpt.search.web_search',
         provider: 'chatgpt',
         category: 'search',
@@ -264,6 +335,14 @@ describe('workbench capability service', () => {
         id: 'chatgpt.skills.study_and_learn',
         category: 'skill',
         providerLabels: ['Study And Learn'],
+        availability: 'unknown',
+        invocationMode: 'unknown',
+        metadata: expect.objectContaining({
+          lifecycleState: 'unknown',
+          stableIdentityObserved: false,
+          installationObserved: false,
+          invocationObserved: false,
+        }),
       }),
       expect.objectContaining({
         id: 'chatgpt.model.selector',
@@ -320,13 +399,13 @@ describe('workbench capability service', () => {
 
     const report = await service.listCapabilities({ provider: 'chatgpt', category: 'other' });
 
-    expect(report.capabilities).toEqual([
+    expect(report.capabilities).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: 'chatgpt.model.selector',
         availability: 'unknown',
         source: 'static_catalog',
       }),
-    ]);
+    ]));
   });
 
   it('does not treat legacy ChatGPT app-token visibility as proof of installed availability', async () => {

@@ -73,7 +73,7 @@ An agent can carry:
 - `runtimeProfile`: AuraCall runtime profile such as `default` or
   `wsl-chrome-3`
 - `service`: provider family such as `chatgpt`, `gemini`, or `grok`
-- `modelSelector`: semantic intent such as `chatgpt:sol-high`
+- `modelSelector`: durable semantic intent such as `chatgpt:reasoning-high`
 - raw `model`: provider-version escape hatch when semantic selectors are not
   enough
 - `projectId` and `projectName`: provider-side project binding
@@ -211,7 +211,7 @@ the team only when it does not already exist:
   "teamId": "chatgpt-pro-pool",
   "service": "chatgpt",
   "projectName": "Shared Project",
-  "agentModelSelector": "chatgpt:sol-high",
+  "agentModelSelector": "chatgpt:reasoning-high",
   "members": [
     { "agentId": "chatgpt-pro-a", "runtimeProfile": "wsl-chrome-1" },
     { "agentId": "chatgpt-pro-b", "runtimeProfile": "wsl-chrome-2" }
@@ -303,7 +303,7 @@ When a setup agent can create the project-bound agent and key in one call, use
   "runtimeProfile": "wsl-chrome-3",
   "projectName": "ChE 4470/5470 Seminar Grading",
   "agentId": "pro-extended-chatgpt-soylei-che4470-seminar-grading",
-  "agentModelSelector": "chatgpt:sol-high",
+  "agentModelSelector": "chatgpt:reasoning-high",
   "keyId": "che447-grading-client",
   "envPath": "/home/ecochran76/.auracall/api.env",
   "clientEnvPath": "/home/ecochran76/.auracall/clients/che447-grading.env"

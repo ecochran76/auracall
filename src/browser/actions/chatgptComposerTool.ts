@@ -59,7 +59,13 @@ export type ChatgptWorkbenchAttachmentSurface =
 
 type ChatgptWorkbenchAttachmentInventory = {
   rows: Array<{ label: string; description: string }>;
-  inputs: Array<{ id: string; accept: string | null; multiple: boolean }>;
+  inputs: Array<{
+    id: string;
+    accept: string | null;
+    multiple: boolean;
+    composerLocal?: boolean;
+    composerTriggerLabel?: string | null;
+  }>;
 };
 
 const COMPOSER_TOOL_ALIASES = resolveBundledServiceComposerAliases('chatgpt', {});
@@ -73,7 +79,7 @@ const COMPOSER_FILE_REQUEST_LABELS = resolveBundledServiceComposerFileRequestLab
 const COMPOSER_CHIP_IGNORE_TOKENS = resolveBundledServiceComposerChipIgnoreTokens('chatgpt', []);
 const CHATGPT_COMPOSER_POPOVER_SELECTOR = '.popover';
 const CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR =
-  '.__menu-item[tabindex], [data-fill][tabindex]';
+  '.__menu-item, [data-fill][tabindex]';
 const CHATGPT_LOCAL_FILE_ACTION_LABEL = 'add photos files';
 const CHATGPT_LIBRARY_ACTION_LABEL = 'add from library';
 
@@ -181,8 +187,9 @@ function normalizeComposerToolLabel(value: string): string {
 }
 
 function resolveComposerToolCandidates(requestedTool: string): string[] {
+  const durableSelector = requestedTool.trim().toLowerCase();
   const normalized = normalizeComposerToolLabel(requestedTool);
-  const aliases = COMPOSER_TOOL_ALIASES[normalized] ?? [];
+  const aliases = COMPOSER_TOOL_ALIASES[durableSelector] ?? COMPOSER_TOOL_ALIASES[normalized] ?? [];
   return Array.from(
     new Set([normalized, ...aliases.map((entry) => normalizeComposerToolLabel(entry)).filter(Boolean)]),
   ).filter(Boolean);
@@ -253,7 +260,7 @@ function resolveChatgptWorkbenchAttachmentSurface(
       normalizeComposerToolLabel(row.label) === CHATGPT_LOCAL_FILE_ACTION_LABEL &&
       normalizeComposerToolLabel(row.description) === 'upload from computer',
   );
-  if (localRows.length !== 1) {
+  if (localRows.length > 1) {
     return { status: 'local-file-action-not-found' };
   }
   const libraryRows = inventory.rows.filter(
@@ -272,10 +279,17 @@ function resolveChatgptWorkbenchAttachmentSurface(
   if (!input.multiple || (typeof input.accept === 'string' && input.accept.trim().length > 0)) {
     return { status: 'file-input-restricted' };
   }
+  const composerTriggerLabel = normalizeComposerToolLabel(input.composerTriggerLabel ?? '');
+  if (
+    localRows.length === 0 &&
+    !(input.composerLocal === true && composerTriggerLabel === 'add files and more')
+  ) {
+    return { status: 'local-file-action-not-found' };
+  }
   return {
     status: 'ready',
     inputSelector: '#upload-files',
-    localFileLabel: localRows[0].label,
+    localFileLabel: localRows[0]?.label ?? input.composerTriggerLabel ?? 'Add files and more',
     libraryLabel: libraryRows.length === 1 ? libraryRows[0].label : null,
   };
 }
@@ -394,10 +408,7 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
       document.body;
     if (!root) return null;
     const inlinePills = Array.from(
-      root.querySelectorAll(
-        '#prompt-textarea [data-inline-selection-pill][data-system-hint-type^="plugin:"], ' +
-        '#prompt-textarea [data-inline-selection-pill][data-id^="plugin:"]'
-      ),
+      root.querySelectorAll('[data-inline-selection-pill]'),
     ).filter(isVisible);
     const inlineMatch = inlinePills
       .map((node) => ({
@@ -425,6 +436,8 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
     return match ? { label: match.text || match.label } : null;
   })()`;
 }
+
+export const buildComposerChipVisibleExpressionForTest = buildComposerChipVisibleExpression;
 
 async function readMenuEntry(
   Runtime: ChromeClient['Runtime'],
@@ -572,7 +585,9 @@ export async function prepareChatgptWorkbenchLocalAttachment(
       const visible = (node) => {
         if (!(node instanceof HTMLElement)) return false;
         const rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
+        const style = getComputedStyle(node);
+        return rect.width > 0 && rect.height > 0
+          && style.visibility !== 'hidden' && style.visibility !== 'collapse';
       };
       const normalizeText = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
@@ -592,11 +607,33 @@ export async function prepareChatgptWorkbenchLocalAttachment(
             })
             .filter((row) => row.label)
         : [];
-      const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => ({
-        id: input.id || '',
-        accept: input.getAttribute('accept'),
-        multiple: input.hasAttribute('multiple'),
-      }));
+      // Hidden fallback textareas can precede the visible editor. Select the
+      // unique visible composer before attributing any mounted upload input.
+      const composers = Array.from(document.querySelectorAll('form')).filter((form) =>
+        visible(form)
+        && Array.from(form.querySelectorAll(
+          '#prompt-textarea, textarea[name="prompt-textarea"], [contenteditable="true"]',
+        )).some(visible)
+        && Array.from(form.querySelectorAll(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)})).some(visible),
+      );
+      const composer = composers.length === 1 ? composers[0] : null;
+      const triggers = composer
+        ? Array.from(composer.querySelectorAll(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)})).filter(visible)
+        : [];
+      const trigger = triggers.length === 1 ? triggers[0] : null;
+      const controlledIds = (trigger?.getAttribute('aria-controls') || '').trim().split(/\\s+/).filter(Boolean);
+      const ownsPopover = roots.length === 1 && trigger
+        && trigger.getAttribute('aria-expanded') !== 'false'
+        && (controlledIds.length === 0 || controlledIds.includes(root.id));
+      const inputs = Array.from(document.querySelectorAll('input[type="file"]')).map((input) => {
+        return {
+          id: input.id || '',
+          accept: input.getAttribute('accept'),
+          multiple: input.hasAttribute('multiple'),
+          composerLocal: Boolean(composer && ownsPopover && input.closest('form') === composer),
+          composerTriggerLabel: trigger?.getAttribute('aria-label') || trigger?.textContent || null,
+        };
+      });
       return { rows, inputs };
     })()`,
     returnByValue: true,

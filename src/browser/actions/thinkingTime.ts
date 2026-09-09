@@ -27,6 +27,13 @@ type ThinkingTimeOutcome =
 
 const THINKING_TIME_EVALUATE_TIMEOUT_MS = 25_000;
 
+const CHATGPT_POWER_SLIDER_TARGETS = {
+  light: { value: 0, label: 'Instant' },
+  standard: { value: 1, label: 'Medium' },
+  extended: { value: 2, label: 'High' },
+  heavy: { value: 3, label: 'Extra High' },
+} satisfies Record<ThinkingTimeLevel, { value: number; label: string }>;
+
 export class ThinkingTierUnavailableError extends BrowserAutomationError {
   readonly requestedLevel: ThinkingTimeLevel;
   readonly optionLabel: string | null;
@@ -177,6 +184,9 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
   const menuContainerLiteral = JSON.stringify(MENU_CONTAINER_SELECTOR);
   const menuItemLiteral = JSON.stringify(MENU_ITEM_SELECTOR);
   const targetLevelsLiteral = JSON.stringify(resolveThinkingTimeCandidates(level));
+  const sliderTarget = resolveChatgptPowerSliderTarget(level);
+  const sliderTargetValueLiteral = JSON.stringify(sliderTarget.value);
+  const sliderTargetLabelLiteral = JSON.stringify(sliderTarget.label);
 
   return `(async () => {
     ${buildClickDispatcher()}
@@ -194,6 +204,8 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
       '[data-radix-select-item]',
     ].join(', ');
     const TARGET_LEVELS = ${targetLevelsLiteral};
+    const TARGET_SLIDER_VALUE = ${sliderTargetValueLiteral};
+    const TARGET_SLIDER_LABEL = ${sliderTargetLabelLiteral};
 
     const CHIP_SELECTORS = [
       '[data-testid="composer-footer-actions"] button[aria-haspopup="menu"]',
@@ -297,6 +309,10 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
       let effortOpened = false;
 
       const findMenu = () => {
+        const intelligencePicker = document.querySelector('[data-testid="composer-intelligence-picker-content"]');
+        if (visible(intelligencePicker)) {
+          return intelligencePicker;
+        }
         const menus = document.querySelectorAll(THINKING_MENU_CONTAINER_SELECTOR + ', [role="group"]');
         for (const menu of menus) {
           const label = menu.querySelector?.('.__menu-label, [class*="menu-label"]');
@@ -409,6 +425,42 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
 
       let attempt;
 
+      const attemptPowerSlider = () => {
+        const view = document.querySelector('[data-testid="composer-model-picker-slider-simple-view"]');
+        const slider = view?.querySelector?.('[role="slider"]') ?? null;
+        if (!(view instanceof HTMLElement) || !(slider instanceof HTMLElement)) return false;
+        const currentValue = Number(slider.getAttribute('aria-valuenow'));
+        const minimum = Number(slider.getAttribute('aria-valuemin'));
+        const maximum = Number(slider.getAttribute('aria-valuemax'));
+        if (![currentValue, minimum, maximum].every(Number.isFinite)) return false;
+        if (TARGET_SLIDER_VALUE < minimum || TARGET_SLIDER_VALUE > maximum) return false;
+        if (currentValue === TARGET_SLIDER_VALUE) {
+          resolve({ status: 'already-selected', label: TARGET_SLIDER_LABEL });
+          return true;
+        }
+        const ticks = Array.from(view.querySelectorAll('[class*="_Tick"]')).filter((node) =>
+          Array.from(node.classList).some((className) => className.endsWith('_Tick'))
+        );
+        const targetTick = ticks[TARGET_SLIDER_VALUE - minimum] ?? null;
+        if (!(targetTick instanceof HTMLElement)) return false;
+        dispatchClickSequence(targetTick);
+        const verifyStartedAt = performance.now();
+        const verify = () => {
+          const selectedValue = Number(slider.getAttribute('aria-valuenow'));
+          if (selectedValue === TARGET_SLIDER_VALUE) {
+            resolve({ status: 'switched', label: TARGET_SLIDER_LABEL });
+            return;
+          }
+          if (performance.now() - verifyStartedAt > 1200) {
+            resolve({ status: 'option-not-found' });
+            return;
+          }
+          setTimeout(verify, 50);
+        };
+        setTimeout(verify, 50);
+        return true;
+      };
+
       const attemptDirectMenu = () => {
         const menu = findMenu();
         if (!menu) {
@@ -421,6 +473,10 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
             lastOpenAttemptAt = performance.now();
           }
           setTimeout(attempt, 100);
+          return;
+        }
+
+        if (attemptPowerSlider()) {
           return;
         }
 
@@ -535,6 +591,12 @@ export function buildThinkingTimeExpressionForTest(level: ThinkingTimeLevel = 'e
 
 export function resolveChatgptProModeFromThinkingTime(level: ThinkingTimeLevel): ChatgptProMode {
   return level === 'extended' || level === 'heavy' ? 'extended' : 'standard';
+}
+
+export function resolveChatgptPowerSliderTarget(
+  level: ThinkingTimeLevel,
+): { value: number; label: string } {
+  return CHATGPT_POWER_SLIDER_TARGETS[level];
 }
 
 export function isChatgptProModelTarget(desiredModel: string | null | undefined): boolean {

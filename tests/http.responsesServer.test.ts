@@ -21685,8 +21685,8 @@ describe("http responses adapter", () => {
 			expect(payload.data.some((entry) => entry.id === "gpt-5.2")).toBe(true);
 			expect(payload.data.some((entry) => entry.id === "gpt-5.6-sol")).toBe(true);
 			expect(payload.data.some((entry) => entry.id === "gemini-3-pro")).toBe(true);
-			expect(payload.data.some((entry) => entry.id === "chatgpt:pro-extended")).toBe(true);
-			expect(payload.data.some((entry) => entry.id === "chatgpt:sol-high")).toBe(true);
+			expect(payload.data.some((entry) => entry.id === "chatgpt:premium")).toBe(true);
+			expect(payload.data.some((entry) => entry.id === "chatgpt:reasoning-high")).toBe(true);
 		} finally {
 			await server.close();
 		}
@@ -21739,7 +21739,7 @@ describe("http responses adapter", () => {
 					},
 				},
 			});
-			const selectorEntry = payload.data.find((entry) => entry.id === "chatgpt:pro-extended");
+			const selectorEntry = payload.data.find((entry) => entry.id === "chatgpt:reasoning-high");
 			expect(selectorEntry).toMatchObject({
 				metadata: {
 					kind: "semantic_model_selector",

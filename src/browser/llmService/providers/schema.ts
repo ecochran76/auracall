@@ -8,6 +8,8 @@ export const ChatgptFeatureSchema = z.object({
   web_search: FeatureFlagSchema,
   deep_research: FeatureFlagSchema,
   company_knowledge: FeatureFlagSchema,
+  shopping: FeatureFlagSchema,
+  composer_tools: z.array(z.string()).optional(),
   apps: z.array(z.string()).optional(),
   composer_mode: z.enum(['chat', 'work']).optional(),
   composer_apps: z.array(z.object({

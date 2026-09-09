@@ -115,8 +115,11 @@ describe('browser-backed workbench capability discovery', () => {
     expect(browserClientMock.fromConfig).toHaveBeenCalledWith(userConfig, { target: 'chatgpt' });
     expect(browserClientMock.getFeatureSignature).toHaveBeenCalledOnce();
     expect(browserClientMock.getFeatureSignature).toHaveBeenCalledWith({
+      configuredUrl: 'https://chatgpt.com/',
       includeInstalledApps: true,
       preserveActiveTab: true,
+      tabLifecycle: 'retain-new',
+      requirePromptWorkbenchTarget: true,
       mutationSourcePrefix: 'workbench:chatgpt-app-discovery',
     });
     expect(capabilities).toEqual(expect.arrayContaining([

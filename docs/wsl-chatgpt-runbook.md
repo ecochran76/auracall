@@ -165,13 +165,24 @@ oracle --profile wsl-chrome-3 --engine browser \
 If the mode menu or the Work slider's `advanced options -> Model` submenu is
 not present, AuraCall fails closed. It does not reuse Chat picker selectors.
 
+The current Chat composer combines model and effort selection in one
+intelligence picker. AuraCall scopes the trigger to the active composer; an
+older assistant turn's `Switch model` action is a retry menu and is never used
+for composer model selection. The horizontal Power positions are Instant,
+Medium, High, Extra High, and Pro. Existing AuraCall effort levels map to the
+first four positions respectively and verify the selected slider value.
+
 On the current Chat workbench, `Add files and more` opens one searchable
 popover containing both file sources and tools. Use `--browser-composer-tool`
-only for tool/app rows such as `web-search`, `canvas`, or `deep-research`; use
-`--file` for local paths. AuraCall verifies `Add photos & files / Upload from
-computer` and the unrestricted `#upload-files` input without confusing them
-with `Add from library / Browse and search your files`, which is ChatGPT's
-separate provider-library drawer. Missing or ambiguous rows fail closed.
+only for tool/app rows through durable IDs such as
+`chatgpt.commerce.shopping`, `chatgpt.search.web_search`, or
+`chatgpt.research.deep_research`; legacy labels remain aliases. Use
+`--file` for local paths. AuraCall prefers `Add photos & files / Upload from
+computer`; if that text drifts, it accepts the unrestricted `#upload-files`
+input only when the same active composer contains the prompt and the exact
+`Add files and more` trigger. It never substitutes `Add from library / Browse
+and search your files`, which is ChatGPT's provider-library drawer. Missing or
+ambiguous binding still fails closed.
 
 Third-party tools can pause after prompt submission and ask for `Allow once`
 or `Always allow`. AuraCall defaults to `manual`, which detects the pause and
@@ -224,6 +235,19 @@ effects at zero. The durable receipt is
   - If Chrome owns the directory but no responsive endpoint can be attributed,
     AuraCall fails closed instead of launching a second Chrome on a dynamic
     port. Inspect or close only the exact owned process before retrying.
+- **A long response reports `observation_expired_generation_active`**:
+  - The model run is still active; the observer lease expired. Do not resend
+    the prompt or click `Answer now`.
+  - A visible Stop control is sufficient positive generation evidence even
+    before ChatGPT mounts the assistant turn; approval cards, dialogs, and
+    completion surfaces do not qualify.
+  - Run `auracall session <id>` to reattach read-only to the persisted exact
+    browser target and conversation. AuraCall keeps healthy growing output in
+    place and permits a same-conversation refresh only for stale/interrupted
+    observation, at most once per 15 minutes.
+  - Reattachment reconciles a validated final progress `/c/<id>` URL ahead of
+    any stale synthetic runtime route while retaining the exact target and
+    DevTools port.
 - **Using Windows Chrome from WSL**:
   - Keep `manualLoginProfileDir` as a WSL path if you override it; Aura-Call converts it to the `\\wsl.localhost\...` path for Windows Chrome.
   - If DevTools can’t be reached, open the Windows firewall for the chosen port or pin a port with `AURACALL_BROWSER_PORT`.
@@ -239,3 +263,7 @@ Add to `~/.zshrc`:
 alias oracle-wsl='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle'
 alias oracle-login='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle --target chatgpt login --browser-keep-browser'
 ```
+
+## Chat mode preflight
+
+On new-chat and project landing pages AuraCall waits for explicit Chat/Work controls before accepting the requested mode. A visible composer alone does not prove Chat. Missing controls stop the run before prompting; established conversation routes retain their mode-marker compatibility checks.

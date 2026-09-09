@@ -3,6 +3,7 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold, type Tool, type Generate
 import type { ClientLike, ModelName, OracleRequestBody, OracleResponse, ResponseStreamLike, ResponseOutputItem } from './types.js';
 
 const MODEL_ID_MAP: Record<ModelName, string> = {
+  'openai:frontier': 'gpt-6-astra',
   'gemini-3-pro': 'gemini-3-pro-preview',
   'gpt-5.1-pro': 'gpt-5.1-pro',
   'gpt-5-pro': 'gpt-5-pro',
@@ -12,6 +13,7 @@ const MODEL_ID_MAP: Record<ModelName, string> = {
   'gpt-5.2-instant': 'gpt-5.2-instant',
   'gpt-5.2-pro': 'gpt-5.2-pro',
   'gpt-5.6-sol': 'gpt-5.6-sol',
+  'gpt-6-astra': 'gpt-6-astra',
   'claude-4.5-sonnet': 'claude-4.5-sonnet',
   'claude-4.1-opus': 'claude-4.1-opus',
   'grok-4.20': 'grok-4.20',
