@@ -21022,3 +21022,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   a green gate from the empty checks list.
 
 - Plan 0334 final validation: 3,087 full-suite passes and 65 skips. The mutation-audit expectation is repaired (six focused passes). One Grok readback timeout reproduces on unchanged origin/main 882c9c14 and is nonblocking for Skills. Local focused/typecheck/build/lint/live proof is accepted; GitHub has no CI results and no required branch checks or rulesets.
+## Turn 575 | 2026-09-09
+
+- Plan 0339 opens for the operator-requested installed-runtime and Git custody
+  maintenance. `main == origin/main == a5f777895`; the affected 53 tests and
+  typecheck pass before the supported user-runtime install.
+- Installed metadata now names the current main checkout, API PID `3183` is
+  active with zero restarts on configured port `18095`, and `/status` is
+  healthy with zero queued/running completions and all six active campaigns
+  still paused. All 522 installed/current-build `dist` files share aggregate
+  inventory hash `61ba93ea...`.
+- Worktree review retains active process-owned P08 and divergent unfinished P16.
+  P27 is the sole closure candidate after its historical Chrome cwd owner
+  exited; exact pre-removal gates and final custody verification remain.

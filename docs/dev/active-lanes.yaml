@@ -579,3 +579,21 @@ lanes:
     integration_receipt: 3cfb1de941a6b9c9a445874c7ec001513b273d65
     validation_ref: docs/dev/notes/2026-09-06-plan0338-validation.json
     validation_status: provider-free-accepted
+  - id: P32
+    objective: Confirm current-main installed-runtime parity and reconcile local Git and worktree custody.
+    plan: docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md
+    plan_ref: refs/remotes/origin/chore/plan0339-runtime-git-maintenance
+    branch: chore/plan0339-runtime-git-maintenance
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: a5f777895e626bd77af8d6d45a881df4e36c61d8
+    remote_ref: refs/remotes/origin/chore/plan0339-runtime-git-maintenance
+    integration: merge
+    dependencies: [P31]
+    overlaps: [P08, P16, P18, P27, P29, P30]
+    validation_status: runtime-parity-passed-git-maintenance-active
+    validation_ref: null
+    integration_receipt: null
+    disposition: Installed runtime is current and healthy; exact worktree and branch closure gates are in progress.
+    updated_at: 2026-09-09
