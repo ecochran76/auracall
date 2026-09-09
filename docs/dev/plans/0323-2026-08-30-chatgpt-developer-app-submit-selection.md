@@ -2,14 +2,23 @@
 
 State: OPEN
 Lane: P16
-Operational state: IMPLEMENTING
+Operational state: RECONCILING_CURRENT_MAIN
 Branch: fix/plan0323-developer-app-mention
 Target: main
 Integration: merge
-Revision: 4 | 2026-08-30
+Revision: 5 | 2026-09-09
 
 ## Current State
 
+- The operator authorized the recommended P16 reconciliation on 2026-09-09.
+  Published `main` at `d22c7e46f` already contains a newer shared-helper
+  implementation of exact ecosystem-mention selection at `a5f777895`; P16 has
+  eight branch-only commits and a dry merge reports nine content conflicts.
+- This revision merges current main into the published P16 branch, treats
+  current main's shared mention/Skill/composer behavior as authoritative, and
+  preserves the remaining response-wait, approval-policy, terminal-response,
+  bounded cleanup, and current-model contracts only when provider-free tests
+  prove their combined behavior.
 - Provider-free RED reproduced the stale `composerTool: "LitScout"` routing.
 - GREEN reuses exact ecosystem-mention selection with retained state and
   removes the inherited built-in composer-tool field before normal dispatch.
@@ -110,7 +119,9 @@ ecosystem-mention path as the existing no-submit selection smoke.
 
 - One source implementation plus evidence-driven composer and terminal-watcher
   repairs.
-- One install and one Plan-0477-governed experiment Send.
+- This reconciliation slice permits provider-free source integration and one
+  supported installed-runtime refresh after published-main acceptance. It does
+  not authorize the Plan-0477-governed experiment Send or any other prompt.
 - No app recreation, OAuth reconnect, scheduler mutation, unrelated browser
   cleanup, or extra canary Send.
 
