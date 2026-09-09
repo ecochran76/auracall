@@ -586,8 +586,8 @@ lanes:
     branch: chore/plan0339-runtime-git-maintenance
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
-    checkpoint: 0efbcf25a6fea6c2d065935fa044b5984c387b43
+    custody_state: INTEGRATED
+    checkpoint: 299c81e18329bea7636a676344981c3d4d364f23
     remote_ref: refs/remotes/origin/chore/plan0339-runtime-git-maintenance
     integration: merge
     dependencies: [P31]
@@ -596,6 +596,6 @@ lanes:
     reconciliation_note: Runtime installation changed external installed bytes only; Git maintenance updated custody metadata, retained unfinished P08/P16/P18/P29 unchanged, closed only P27's eligible worktree, and supersedes P30's historical four-worktree count.
     validation_status: runtime-and-git-maintenance-verified
     validation_ref: docs/dev/notes/2026-09-09-plan0339-runtime-git-maintenance.json
-    integration_receipt: null
+    integration_receipt: c79c779c268ae8206899dfc4fce7cd55d5a19f46
     disposition: Installed runtime matches current application-bearing main bytes and is healthy; newly unblocked P27 local custody is closed while unfinished and recovery lanes remain intact.
     updated_at: 2026-09-09

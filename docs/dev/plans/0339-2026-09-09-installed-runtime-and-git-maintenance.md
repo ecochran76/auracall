@@ -95,4 +95,5 @@ reason, and local `main` equals `origin/main`.
 - GM3: the durable machine-readable receipt is
   `docs/dev/notes/2026-09-09-plan0339-runtime-git-maintenance.json`. Final Git
   integrity, catalog, plan-library, clean-tree, push, and remote readback gates
-  are recorded there and in Turn 575.
+  pass after topic checkpoint `299c81e18` merged through `c79c779c2`; the
+  results are recorded there and in Turn 575.

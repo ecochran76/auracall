@@ -21044,3 +21044,7 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   is clean/equal-remote at `bd8738da9` and retained because it has eight unique
   commits plus nine content conflicts against main. P18, P29, and recovery refs
   remain. Final integrity/catalog/planning and published-main gates close P32.
+- Maintenance topic `299c81e18` merged non-forced through `c79c779c2`.
+  Full fsck and commit-graph verification pass; the plan-library audit has zero
+  validation errors, the reconciled active-lane audit is green, and final local
+  main equals published origin/main.
