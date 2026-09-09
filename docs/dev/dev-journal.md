@@ -49040,3 +49040,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Updated the bundled compatibility-named `oracle` skill to use the installed
   `auracall` launcher and durable `chatgpt:premium` selector for browser
   work. No install, browser action, service restart, prompt, or canary ran.
+
+## 2026-09-09 | Private developer-app submission routed through exact mention
+
+- CDP inspection corrected the prior model claim: installed AuraCall resolved
+  internal target `gpt-5.6-sol`, while the retained live composer visibly
+  remained `5.6 Instant`. `submitTest` deliberately preserves the current model,
+  so the resolved configuration value did not establish UI selection.
+- `submitTest` no longer maps the private app name onto generic
+  `composerTool`. It passes the app's accepted identities into the shared
+  ChatGPT prompt path, which dismisses stale menus, requires a blank pill-free
+  fresh composer, selects `@<app>`, and verifies one exact ecosystem pill plus zero
+  document-reference pills before Send.
+- Provider-free focused tests and typecheck pass. No install, browser mutation,
+  prompt, service restart, or provider call ran in this repair slice.

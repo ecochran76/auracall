@@ -177,9 +177,14 @@
     launcher; repo-local `pnpm tsx bin/auracall.ts` is source-checkout evidence
     only and must bind an explicitly intended branch and commit
   - private developer apps use the composer `@mention` ecosystem picker and an
-    exact `ecosystemMention` plugin pill. The current `apps test --submit` path
-    searches the generic top-level tools menu, so it is not an eligible
-    private-app live canary until that routing is repaired
+    exact `ecosystemMention` plugin pill. Source `apps test --submit` carries
+    the accepted plugin identities into the shared prompt path and refuses a
+    non-fresh or nonempty composer, a document-reference pill, or the wrong app identity
+    before Send. Do not claim installed acceptance until the user runtime is
+    refreshed to a build containing that repair
+  - developer-app submit tests preserve the active Chat model. Record the
+    visible composer model separately from any configured/resolved `--model`
+    value; the latter does not prove a UI selection
   - do not use `--submit`, `create`, `refresh`, or `uninstall` as routine live
     tests; they require exact authorization and `--yes`
   - an authorized refresh uses replacement semantics and requires a complete

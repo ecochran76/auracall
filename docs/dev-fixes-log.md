@@ -22408,3 +22408,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   separately distributed upstream CLI. Preserve versioned strings where they
   are API identifiers, compatibility tests, historical receipts, or DOM
   matchers.
+
+## 2026-09-09 | Developer-app submit must carry identity into the prompt path
+
+- Root cause: `selectForTest` used the ecosystem mention picker, but
+  `submitTest` bypassed it by assigning the private app name to generic
+  `composerTool`; the generic selector stopped on static top-level tools.
+- Fix: carry the app label plus accepted plugin/app IDs in the provider prompt,
+  select through `@mention` on the same fresh prompt connection, and require one
+  matching ecosystem pill with zero document-reference pills before Send.
+- Evidence correction: `chatgpt:reasoning` resolved internally to
+  `gpt-5.6-sol`, but the post-stop composer displayed `5.6 Instant`; do not
+  call the actor model selected without live UI proof. Developer-app tests
+  deliberately preserve the current Chat model.

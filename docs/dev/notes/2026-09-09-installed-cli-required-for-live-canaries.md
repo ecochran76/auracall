@@ -51,9 +51,13 @@ source, configuration, installed runtime, browser state, or model selection.
 
 A subsequent single-attempt check used the installed `auracall` launcher with
 the explicit durable selector `chatgpt:reasoning`. The installed resolver
-correctly selected `gpt-5.6-sol`, proving that the earlier model-selection
-failure belonged to the stale source checkout rather than the installed
-runtime.
+resolved the internal target `gpt-5.6-sol`, proving that the earlier retired-ID
+failure belonged to the stale source checkout rather than that resolution
+step. Post-stop CDP inspection showed the visible composer control at
+`5.6 Instant`; therefore this attempt did not prove that the resolved target
+was selected in the live UI. Source inspection explains the difference:
+developer-app `submitTest()` deliberately uses `modelStrategy: "current"` and
+therefore preserves the active Chat model.
 
 The installed `apps test --submit` path then stopped before prompt submission
 for a separate reason: it passed the private LitScout developer-app name to
@@ -68,12 +72,16 @@ assistant turns. LitScout's invocation ledger and scoped canonical state were
 unchanged. The zero-retry allowance was consumed by this qualification stop;
 no second prompt was sent.
 
-Until the command implements exact private-app mention selection, use
-`apps list` and non-submitting app checks for inventory only. A live private-app
-canary must use the managed-browser `@mention` path and prove the composer-local
-ecosystem pill and exact plugin ID before Send.
+Source `apps test --submit` now carries the exact app identities into the shared
+prompt path, selects through `@mention`, and verifies one composer-local
+ecosystem pill with no document-reference pills in a fresh conversation before Send. The installed
+`0.1.1` runtime used by this incident does not contain that repair and remains
+ineligible until explicitly refreshed and read back.
 
 The current operator contract is now reflected in `README.md`,
 `docs/testing.md`, and `.agents/skills/auracall-chatgpt-browser/SKILL.md`. The
 separate operator-example cleanup identified above is now complete without
 changing the private-app submission boundary.
+
+This source repair has provider-free test evidence only. It did not install a
+runtime, change the retained browser, or consume another ChatGPT prompt.

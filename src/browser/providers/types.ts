@@ -99,6 +99,10 @@ export interface ProviderUserIdentity {
 
 export interface BrowserProviderPromptInput {
 	prompt: string;
+	ecosystemMention?: {
+		label: string;
+		acceptedPluginIds: string[];
+	};
 	attachments?: BrowserAttachment[];
 	capabilityId?: string | null;
 	completionMode?: "assistant_response" | "prompt_submitted";

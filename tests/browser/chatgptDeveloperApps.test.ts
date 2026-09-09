@@ -191,7 +191,7 @@ describe("deriveChatgptDeveloperAppState", () => {
 		}
 	});
 
-	it("preserves the active model when submitting a developer-app test", async () => {
+	it("preserves the active model and routes submission through the exact app mention", async () => {
 		const runPrompt = vi.fn(async () => ({
 			conversationId: "conversation-1",
 			url: "https://chatgpt.com/c/conversation-1",
@@ -221,15 +221,23 @@ describe("deriveChatgptDeveloperAppState", () => {
 		expect(createBrowser).toHaveBeenCalledWith(
 			expect.objectContaining({
 				browser: expect.objectContaining({
-					composerTool: "LitScout",
 					modelStrategy: "current",
 				}),
+			}),
+		);
+		expect(createBrowser).not.toHaveBeenCalledWith(
+			expect.objectContaining({
+				browser: expect.objectContaining({ composerTool: "LitScout" }),
 			}),
 		);
 		expect(runPrompt).toHaveBeenCalledWith({
 			prompt: "Use only LitScout.",
 			completionMode: "prompt_submitted",
 			timeoutMs: 120_000,
+			ecosystemMention: {
+				label: "LitScout",
+				acceptedPluginIds: ["plugin_asdk_app_litscout", "asdk_app_litscout"],
+			},
 		});
 	});
 

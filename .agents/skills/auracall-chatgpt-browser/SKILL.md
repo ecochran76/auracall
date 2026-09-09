@@ -123,8 +123,12 @@ readback, diff hygiene, and planning audit required by repo policy.
   exact source checkout that ran it.
 - For a private ChatGPT developer app, select the exact app through the active
   composer's `@mention` ecosystem picker and verify its composer-local
-  `ecosystemMention` plugin pill. Do not use the current `apps test --submit`
-  path: it searches the generic top-level tools menu and stops before Send.
+  `ecosystemMention` plugin pill. Source `apps test --submit` now uses that
+  path and rejects a non-fresh or nonempty composer, document-reference pill, or wrong app
+  identity. An installed runtime must contain the repair before it can prove
+  this behavior.
+- Developer-app submit tests preserve the current Chat model. Treat a resolved
+  model target and the visible active composer model as separate evidence.
 - For a suspicious authorized smoke, add `--browser-keep-browser --verbose` and
   inspect the exact retained browser with the `agent-browser` skill or
   `pnpm tsx scripts/browser-tools.ts ...`.

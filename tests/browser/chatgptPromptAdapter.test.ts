@@ -11,6 +11,7 @@ const promptActionMocks = vi.hoisted(() => ({
 	ensureChatgptWorkModelSelection: vi.fn(async () => undefined),
 	ensureThinkingTime: vi.fn(async () => undefined),
 	ensureChatgptComposerTool: vi.fn(async () => undefined),
+	ensureChatgptEcosystemMention: vi.fn(async () => undefined),
 	clearComposerAttachments: vi.fn(async () => undefined),
 	uploadAttachmentFile: vi.fn(async () => true),
 	waitForAttachmentCompletion: vi.fn(async () => undefined),
@@ -61,6 +62,13 @@ vi.mock("../../src/browser/actions/thinkingTime.js", async (importOriginal) => (
 vi.mock("../../src/browser/actions/chatgptComposerTool.js", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../../src/browser/actions/chatgptComposerTool.js")>()),
 	ensureChatgptComposerTool: promptActionMocks.ensureChatgptComposerTool,
+}));
+
+vi.mock("../../src/browser/actions/chatgptEcosystemMention.js", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("../../src/browser/actions/chatgptEcosystemMention.js")
+	>()),
+	ensureChatgptEcosystemMention: promptActionMocks.ensureChatgptEcosystemMention,
 }));
 
 vi.mock("../../src/browser/actions/attachments.js", async (importOriginal) => ({
@@ -323,6 +331,98 @@ describe("ChatGPT provider prompt adapter", () => {
 			phase: "submit_path_observed",
 			details: expect.objectContaining({ provider: "chatgpt" }),
 		});
+	});
+
+	test("selects an exact ecosystem mention before submitting a developer-app prompt", async () => {
+		const targetUrl = "https://chatgpt.com/";
+		const submittedUrl = "https://chatgpt.com/c/conversation-app";
+		let locationReads = 0;
+		const Runtime = {
+			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+				if (expression === "location.href") {
+					locationReads += 1;
+					return { result: { value: locationReads > 1 ? submittedUrl : targetUrl } };
+				}
+				return {
+					result: { value: { user: { email: "operator@example.com" }, account: null } },
+				};
+			}),
+		};
+		const client = {
+			Runtime,
+			Page: {},
+			Input: {},
+			DOM: {},
+			close: vi.fn(async () => undefined),
+		};
+		const host = "127.0.0.1";
+		const port = 45005;
+		const targetId = "chatgpt-target-app";
+		const connection = {
+			client,
+			targetId,
+			shouldClose: false,
+			host,
+			port,
+			usedExisting: true,
+		};
+		const authority = createProviderSessionAuthority({
+			services: { chatgpt: { identity: { email: "operator@example.com" } } },
+		});
+		const context = {
+			providerId: "chatgpt" as const,
+			auracallRuntimeProfile: "default",
+			browserProfile: "default",
+			sourceBrowserProfile: "Default",
+			managedBrowserProfile: "/managed/default/chatgpt",
+			browserProcessId: 1234,
+			browserTargetId: targetId,
+			devtoolsHost: host,
+			devtoolsPort: port,
+		};
+		const options: BrowserProviderListOptions = {
+			host,
+			port,
+			configuredUrl: targetUrl,
+			useProviderSession: true,
+			providerSession: {
+				providerId: "chatgpt",
+				key: `chatgpt:${host}:${port}:${targetUrl}`,
+				value: { connection },
+				close: vi.fn(async () => undefined),
+			},
+			providerSessionAuthorization: {
+				authority,
+				context,
+				expectation: authority.resolveExpectation(context),
+			},
+			browserService: {
+				getConfig: () => ({ modelStrategy: "current", inputTimeoutMs: 5_000 }),
+			} as never,
+		};
+		const ecosystemMention = {
+			label: "LitScout",
+			acceptedPluginIds: ["plugin_asdk_app_litscout", "asdk_app_litscout"],
+		};
+
+		await createChatgptAdapter().runPrompt?.(
+			{
+				prompt: "Use only LitScout.",
+				completionMode: "prompt_submitted",
+				targetUrl,
+				ecosystemMention,
+			},
+			options,
+		);
+
+		expect(promptActionMocks.ensureChatgptComposerTool).not.toHaveBeenCalled();
+		expect(promptActionMocks.ensureChatgptEcosystemMention).toHaveBeenCalledWith(
+			client,
+			ecosystemMention,
+		);
+		expect(
+			promptActionMocks.ensureChatgptEcosystemMention.mock.invocationCallOrder[0],
+		).toBeLessThan(promptActionMocks.submitPrompt.mock.invocationCallOrder[0]);
 	});
 
 	test("uploads and settles attachments before submitting their names", async () => {

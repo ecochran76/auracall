@@ -36,6 +36,7 @@ import {
 	resolveChatgptModelSelectionPlan,
 } from "../actions/chatgptComposerMode.js";
 import { ensureChatgptComposerTool } from "../actions/chatgptComposerTool.js";
+import { ensureChatgptEcosystemMention } from "../actions/chatgptEcosystemMention.js";
 import { ensureChatgptWorkModelSelection } from "../actions/chatgptWorkModelSelection.js";
 import { ensureModelSelection } from "../actions/modelSelection.js";
 import { ensurePromptReady } from "../actions/navigation.js";
@@ -5601,7 +5602,9 @@ async function waitForCreateProjectDialogReady(
 	return ready.ok;
 }
 
-export async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
+export async function readChatgptUserIdentity(
+	client: ChromeClient,
+): Promise<ProviderUserIdentity | null> {
 	let authSessionProbe: ChatgptAuthSessionProbe | null = null;
 	for (let attempt = 0; attempt < 5; attempt += 1) {
 		const authSessionResult = await client.Runtime.evaluate({
@@ -12784,6 +12787,20 @@ export function createChatgptAdapter(): Pick<
 						);
 					}
 					await ensureChatgptComposerTool(client, composerTool, logger);
+					await ensurePromptReady(Runtime, inputTimeoutMs, logger);
+				}
+				if (input.ecosystemMention) {
+					if (chatgptMode === "work") {
+						throw new Error(
+							"ChatGPT developer-app mentions currently belong to Chat mode. Request Chat mode for app submission.",
+						);
+					}
+					if (composerTool) {
+						throw new Error(
+							"ChatGPT developer-app mentions cannot be combined with a generic composer tool.",
+						);
+					}
+					await ensureChatgptEcosystemMention(client, input.ecosystemMention);
 					await ensurePromptReady(Runtime, inputTimeoutMs, logger);
 				}
 				const attachments = input.attachments ?? [];
