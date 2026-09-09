@@ -22372,3 +22372,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Preserve omitted and explicit-model handoff cases together. Validation must
   use frozen-lockfile dependencies: stale shared OpenAI 6.15.0 dependencies
   produced unrelated errors against current source requiring 7.10.0.
+
+## 2026-09-09 | Installed canaries must not inherit an adjacent stale checkout
+
+- Failure mode: a live connected-app canary used `pnpm tsx bin/auracall.ts`
+  from an unrelated branch that predated the durable model-selector migration,
+  then failed before submission on retired picker label `gpt-5.2-pro`.
+- Durable rule: installed/runtime/live acceptance uses the installed `auracall`
+  launcher and records its resolved model target. Repo-local `pnpm tsx` is only
+  source-development evidence and must bind the intended branch/commit.
+- Remaining cleanup: replace stale operator-facing versioned examples without
+  removing compatibility aliases, provider API IDs, historical evidence, or
+  DOM matchers. See
+  `docs/dev/notes/2026-09-09-installed-cli-required-for-live-canaries.md`.

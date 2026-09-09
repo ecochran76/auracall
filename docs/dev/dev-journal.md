@@ -49008,3 +49008,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 ## 2026-09-06 | Plan 0338 integrated and closed
 
 - Published visible-composer upload validation and both handoff selector cases at `3cfb1de941a6b9c9a445874c7ec001513b273d65`. All provider-free gates pass; temporary worktree removed after clean/ancestry/process/custody checks. Installed and live state remains unchanged.
+
+## 2026-09-09 | Installed-cli live-canary boundary recorded
+
+- A LitScout canary stopped pre-submit because its worker ran `pnpm tsx` from
+  stale Plan 0315 source that predates durable selector repair `24eaab891`.
+  The installed `0.1.1` resolver correctly maps the retained compatibility
+  input to `gpt-5.6-sol`. Added
+  `docs/dev/notes/2026-09-09-installed-cli-required-for-live-canaries.md` to
+  require installed `auracall` for installed/live proof and to identify the
+  remaining operator-facing documentation/skill cleanup. No runtime or browser
+  effect occurred in this documentation slice.
