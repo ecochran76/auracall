@@ -7,13 +7,13 @@ description: Use the installed AuraCall CLI to bundle a prompt plus the right fi
 
 AuraCall bundles your prompt + selected files into one “one-shot” request so another model can answer with real repo context (API or browser automation). Treat outputs as advisory: verify against the codebase + tests. The skill keeps its `oracle` name for compatibility with existing installations.
 
-## Main use case (browser, ChatGPT Reasoning)
+## Main use case (browser, GPT-6 Pro)
 
-Default workflow here: the installed `auracall` launcher with `--engine browser` and the durable `chatgpt:reasoning` selector. This is the “human in the loop” path: it can take ~10 minutes to ~1 hour; expect a stored session you can reattach to.
+Default workflow here: the installed `auracall` launcher with `--engine browser` and the durable `chatgpt:premium` selector for the current GPT-6 Pro lane. This is the “human in the loop” path: it can take ~10 minutes to ~1 hour; expect a stored session you can reattach to.
 
 Recommended defaults:
 - Engine: browser (`--engine browser`)
-- Model: ChatGPT Reasoning (`--model chatgpt:reasoning`)
+- Model: GPT-6 Pro (`--model chatgpt:premium`)
 - Attachments: directories/globs + excludes; avoid secrets.
 
 ## Golden path (fast + reliable)
@@ -36,7 +36,7 @@ Recommended defaults:
   - `auracall --dry-run summary --files-report -p "<task>" --file "src/**"`
 
 - Browser run (main path; long-running is normal):
-  - `auracall --engine browser --model chatgpt:reasoning -p "<task>" --file "src/**"`
+  - `auracall --engine browser --model chatgpt:premium -p "<task>" --file "src/**"`
 
 - Manual paste fallback (assemble bundle, copy to clipboard):
   - `auracall --render --copy -p "<task>" --file "src/**"`

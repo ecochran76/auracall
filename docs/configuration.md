@@ -387,7 +387,7 @@ Handoff packaging policy:
   globals: {},
 
   llmDefaults: {
-    model: "chatgpt:reasoning",
+    model: "chatgpt:premium",
   },
 
   // Optional global service URL defaults (override per runtime profile)
@@ -488,7 +488,7 @@ Handoff packaging policy:
           projectName: "Aura-Call",
           chatgptMode: "chat",
           workModel: "Research",
-          model: "chatgpt:reasoning",
+          model: "chatgpt:premium",
           thinkingTime: "extended",
           interactiveLogin: false,
           features: {

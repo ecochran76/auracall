@@ -49035,8 +49035,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 ## 2026-09-09 | Durable-selector operator examples aligned
 
 - Replaced the primary configuration example's retired `gpt-5.2-pro` input
-  with `chatgpt:reasoning`; intentional API IDs and compatibility contracts
-  remain unchanged.
+  with `chatgpt:premium` for the current GPT-6 Pro lane; intentional API IDs
+  and compatibility contracts remain unchanged.
 - Updated the bundled compatibility-named `oracle` skill to use the installed
-  `auracall` launcher and durable `chatgpt:reasoning` selector for browser
+  `auracall` launcher and durable `chatgpt:premium` selector for browser
   work. No install, browser action, service restart, prompt, or canary ran.

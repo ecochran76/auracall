@@ -39,10 +39,10 @@ as `chatgpt:fast`, `chatgpt:reasoning-high`, and `chatgpt:premium`.
 The durable-selector migration repaired current CLI help and operational smoke
 defaults, while retaining versioned strings as compatibility/API/DOM inputs.
 The bounded follow-up converted the primary configuration example and bundled
-compatibility-named `oracle` skill to durable selectors. The skill's live
-browser command now uses the installed `auracall` launcher. Intentional
-compatibility aliases, provider API identifiers, historical receipts, and DOM
-matchers remain unchanged.
+compatibility-named `oracle` skill to the durable `chatgpt:premium` selector
+for the current GPT-6 Pro lane. The skill's live browser command now uses the
+installed `auracall` launcher. Intentional compatibility aliases, provider API
+identifiers, historical receipts, and DOM matchers remain unchanged.
 
 This note records the incident and boundary only. It does not alter AuraCall
 source, configuration, installed runtime, browser state, or model selection.
