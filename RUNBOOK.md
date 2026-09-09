@@ -21035,3 +21035,12 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Worktree review retains active process-owned P08 and divergent unfinished P16.
   P27 is the sole closure candidate after its historical Chrome cwd owner
   exited; exact pre-removal gates and final custody verification remain.
+- P27's clean tip `f55e398f3` equaled its remote, was ancestral to main, carried
+  only generated ignored `dist/` and `node_modules/`, and had no `/proc` cwd
+  owner. Its worktree is removed. The local branch was restored at exact remote
+  parity because P28 names it as an integration target and the catalog auditor
+  requires that local pointer for deterministic ancestry verification.
+- P08 is clean/equal-remote at `9860b9d49` and retained with 15 cwd owners. P16
+  is clean/equal-remote at `bd8738da9` and retained because it has eight unique
+  commits plus nine content conflicts against main. P18, P29, and recovery refs
+  remain. Final integrity/catalog/planning and published-main gates close P32.

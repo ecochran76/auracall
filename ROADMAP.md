@@ -1,10 +1,10 @@
 # Aura-Call Roadmap
 
-- Active P32: [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md) is proving current-main installed-runtime parity and closing only clean, integrated, remotely recoverable, process-unowned Git custody.
+- Completed P32: [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md) proves current-main installed-runtime parity and closes the newly eligible P27 worktree while preserving its downstream verification ref and every unfinished lane.
 
 - Completed P31: [Plan 0338](docs/dev/plans/0338-2026-09-06-upload-composer-validation.md) rejects inactive upload composers and retains both explicit and omitted handoff-model coverage; published with 69 passing tests.
 
-- Completed Git maintenance: [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md) (P30) preserved unfinished work and removed 11 clean, integrated, process-unowned worktrees; four remain intentionally.
+- Completed Git maintenance: [Plan 0337](docs/dev/plans/0337-2026-09-06-git-maintenance.md) (P30) removed 11 eligible worktrees; Plan 0339's follow-up closed newly unblocked P27, so three linked worktrees now remain intentionally.
 
 - P29 implementation installed; actual Skill execution unaccepted: [Plan 0336 Skill prompt invocation](docs/dev/plans/0336-2026-09-05-skill-prompt-invocation.md). Exact-ID selection and submission are proven in one tab; the responding model reported the selected resource inaccessible.
 
@@ -17,15 +17,15 @@
 
 ### Current Execution Board
 
-Status: Current-main runtime and Git custody maintenance active
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P31 (integrated); P08, P16, P18, P29, P32 (open)
+Status: Current-main runtime and Git custody maintenance complete
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P32 (integrated); P08, P16, P18, P29 (open)
 
-- Active installed-runtime and Git maintenance:
+- Completed installed-runtime and Git maintenance:
   [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md)
   P32 binds the installed service to current published `main`, re-audits local
-  branch/worktree custody, and closes only candidates that pass clean-state,
-  ancestry, remote-custody, and process-owner gates. It does not integrate the
-  divergent P08 or P16 lanes or reopen provider effects.
+  branch/worktree custody, and closes P27 after clean-state, ancestry,
+  remote-custody, and process-owner gates pass. It preserves divergent P08/P16,
+  paused P18, open P29, and recovery custody without provider effects.
 
 - Integrated ChatGPT tool and Skill inventory/selection:
   [Plan 0334](docs/dev/plans/0334-2026-09-05-chatgpt-tool-skill-inventory-selection.md)

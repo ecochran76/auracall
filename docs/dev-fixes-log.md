@@ -22421,3 +22421,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   `gpt-5.6-sol`, but the post-stop composer displayed `5.6 Instant`; do not
   call the actor model selected without live UI proof. Developer-app tests
   deliberately preserve the current Chat model.
+- 2026-09-09: Installed-runtime currency needs artifact and service proof, not
+  version equality alone. AuraCall can retain the same package version while
+  source advances, and install metadata records a source path rather than a
+  commit. Bind the supported installer to a clean published source SHA, compare
+  the complete built and installed `dist` inventories, then read back the
+  configured endpoint, service PID/restart count, and scheduler/completion
+  posture. For Git cleanup, re-run clean/untracked/ignored, ancestry,
+  local-remote, lane-state, and process-cwd gates immediately before removal;
+  an earlier process interlock may clear, while a clean divergent lane still
+  requires reconciliation rather than closure.

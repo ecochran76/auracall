@@ -1,11 +1,11 @@
 # Installed Runtime And Git Maintenance | 0339-2026-09-09
 
-State: OPEN
+State: CLOSED
 Lane: P32
 Branch: chore/plan0339-runtime-git-maintenance
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-09
+Revision: 2 | 2026-09-09
 
 ## Stable Objective
 
@@ -21,9 +21,12 @@ unfinished lanes or discarding recoverable work.
   checkout. The managed API is healthy on its configured loopback port with a
   new process and zero restarts; all 522 installed `dist` files match the
   current build's aggregate SHA-256 inventory.
-- Four worktrees entered review: active P08, unfinished P16, integrated P27,
-  and this main checkout. P27's former process interlock is gone. P16 retains
-  eight commits not on main and conflicts on current source and documentation.
+- Four worktrees entered review. Integrated P27 passed every closure gate and
+  its worktree was removed; its equal local/remote branch remains fully
+  ancestral to main because P28 uses that branch as its historical integration
+  target. Three worktrees remain: active/process-owned
+  P08, unfinished/divergent P16, and this checkout. P16 retains eight commits
+  not on main and has nine current content conflicts.
 
 ## Execution Graph
 
@@ -69,3 +72,27 @@ to the supported user-runtime service installer requested by the operator.
 Installed-current proof and a durable Git custody receipt are published on
 `main`; eligible local custody is closed, every retained lane has a concrete
 reason, and local `main` equals `origin/main`.
+
+## Acceptance Evidence
+
+- IR1/IR3: source commit `a5f777895` passed 53 affected tests and typecheck
+  before installation. Metadata records installation at
+  `2026-09-09T13:22:54.473Z` from this checkout; CLI/API report `0.1.1`; the
+  current and installed 522-file `dist` inventories both hash to
+  `61ba93eae16d60a4a1796afea0e9141c0a7771a19921d4084f2632c436ad3e82`.
+- IR2: the configured `127.0.0.1:18095/status` endpoint reports healthy API PID
+  `3183`, scheduled/no-foreground state, idle background drain, six paused
+  completions, and zero queued/running completions. Systemd reports active,
+  running, and zero restarts.
+- GM1/GM2: P27 closure removed only generated ignored `dist/` and
+  `node_modules/`; its clean local/remote tip was `f55e398f3`, it was ancestral
+  to main, and `/proc` found no cwd owner. The local pointer was restored at the
+  exact remote SHA when its removal made P28 integration verification
+  nondeterministic. P08 is retained clean at its equal
+  remote tip `9860b9d49` with 15 cwd owners. P16 is retained clean at its equal
+  remote tip `bd8738da9`, eight branch-only commits, and nine content conflicts.
+  P18/P29 and the named browser recovery ref remain intact.
+- GM3: the durable machine-readable receipt is
+  `docs/dev/notes/2026-09-09-plan0339-runtime-git-maintenance.json`. Final Git
+  integrity, catalog, plan-library, clean-tree, push, and remote readback gates
+  are recorded there and in Turn 575.

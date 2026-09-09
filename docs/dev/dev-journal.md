@@ -49066,3 +49066,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Fresh custody review retains P08 for active/process ownership and P16 for its
   eight unique commits plus current merge conflicts. Integrated P27 is the only
   worktree eligible for exact closure after its former process owner exited.
+
+## 2026-09-09 | Plan 0339 runtime and Git maintenance accepted
+
+- P27 passed a fresh clean/untracked/ignored, local-remote equality, main
+  ancestry, and `/proc` cwd-owner gate. Ordinary worktree removal and safe
+  worktree removal succeeded. The initially removed local pointer was restored
+  at exact remote parity because P28 still names it as its historical target;
+  no worktree was recreated.
+- Three worktrees remain deliberately: P08 is active, equal-remote, and has 15
+  cwd owners; P16 is unfinished with eight branch-only commits and nine merge
+  conflicts; this maintenance checkout returns to main after integration.
+  P18/P29 and the browser recovery refs remain untouched.
+- Current installed bytes, service health, paused completion posture, object
+  integrity, catalog, planning, and published-main parity are the closeout
+  gates captured in the Plan 0339 receipt.
