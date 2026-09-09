@@ -22397,3 +22397,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   until it uses exact composer `@mention` selection and verifies the ecosystem
   pill/plugin ID. Inventory-only app commands remain valid. README, testing
   guidance, and the ChatGPT browser skill now carry the same operator rule.
+
+## 2026-09-09 | Operator examples use durable selectors and the installed launcher
+
+- Primary configuration and bundled-skill examples should advertise semantic
+  selectors such as `chatgpt:reasoning`, not retained versioned compatibility
+  inputs.
+- A bundled skill that can launch browser work must use the installed
+  `auracall` command so its live behavior cannot inherit a stale checkout or a
+  separately distributed upstream CLI. Preserve versioned strings where they
+  are API identifiers, compatibility tests, historical receipts, or DOM
+  matchers.

@@ -34,15 +34,15 @@ as `chatgpt:fast`, `chatgpt:reasoning-high`, and `chatgpt:premium`.
 - Keep supervising-agent selection separate from the ChatGPT actor model. A
   Luna worker does not imply a Luna ChatGPT picker choice.
 
-## Remaining documentation drift
+## Documentation cleanup
 
 The durable-selector migration repaired current CLI help and operational smoke
 defaults, while retaining versioned strings as compatibility/API/DOM inputs.
-Some operator-facing examples remain stale on current `main`, including
-`docs/configuration.md` and `skills/oracle/SKILL.md`. Those examples should be
-converted to durable selectors in a separate bounded cleanup without deleting
-intentional compatibility aliases, provider API identifiers, historical
-receipts, or DOM matchers.
+The bounded follow-up converted the primary configuration example and bundled
+compatibility-named `oracle` skill to durable selectors. The skill's live
+browser command now uses the installed `auracall` launcher. Intentional
+compatibility aliases, provider API identifiers, historical receipts, and DOM
+matchers remain unchanged.
 
 This note records the incident and boundary only. It does not alter AuraCall
 source, configuration, installed runtime, browser state, or model selection.
@@ -75,5 +75,5 @@ ecosystem pill and exact plugin ID before Send.
 
 The current operator contract is now reflected in `README.md`,
 `docs/testing.md`, and `.agents/skills/auracall-chatgpt-browser/SKILL.md`. The
-separate versioned-example cleanup identified above remains intentionally
-bounded out of this incident correction.
+separate operator-example cleanup identified above is now complete without
+changing the private-app submission boundary.
