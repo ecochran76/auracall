@@ -592,6 +592,8 @@ lanes:
     integration: merge
     dependencies: [P31]
     overlaps: [P08, P16, P18, P27, P29, P30]
+    reconciled_overlaps: [P08, P16, P18, P27, P29, P30]
+    reconciliation_note: Runtime installation changed external installed bytes only; Git maintenance updated custody metadata, retained unfinished P08/P16/P18/P29 unchanged, closed only P27's eligible worktree, and supersedes P30's historical four-worktree count.
     validation_status: runtime-and-git-maintenance-verified
     validation_ref: docs/dev/notes/2026-09-09-plan0339-runtime-git-maintenance.json
     integration_receipt: null
