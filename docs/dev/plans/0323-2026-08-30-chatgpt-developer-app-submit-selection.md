@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P16
-Operational state: SOURCE_RECONCILED_PROVIDER_FREE
+Operational state: SOURCE_INTEGRATED_INSTALLED_VALIDATION_PENDING
 Branch: fix/plan0323-developer-app-mention
 Target: main
 Integration: merge
@@ -60,8 +60,10 @@ Revision: 6 | 2026-09-09
   request itself. The same `52/52` focused packet, typecheck, production build,
   and scoped Biome pass.
 - The reconciled focused packet passes 82 tests plus typecheck, including the
-  prompt-structure guard. Broader validation, published-main integration, an
-  installed-runtime refresh, and any separately governed live acceptance are
+  prompt-structure guard. The broader packet passes 214 tests, production
+  build, scoped lint with two informational pre-existing findings, typecheck,
+  and the zero-error plan audit. Source integrated non-forced at `9cdb92d205`;
+  installed-runtime refresh and any separately governed live acceptance are
   recorded during closeout.
 
 ## Stable Objective

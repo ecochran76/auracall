@@ -49094,3 +49094,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   tool-approval watcher. Removed those CLI flags and implementation; response
   capture remains open for a shared-lifecycle design. The focused packet passes
   82 tests plus typecheck. No browser, provider, prompt, or canary ran.
+- Published reconciliation checkpoint `15a58a694` and integrated it non-forced
+  into main at `9cdb92d205`. The broader packet passes 214 tests, production
+  build, scoped lint with two informational findings, and the zero-error plan
+  audit. Installed-runtime verification follows from the published main tip.

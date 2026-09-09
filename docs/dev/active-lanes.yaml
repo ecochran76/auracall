@@ -536,8 +536,8 @@ lanes:
     branch: fix/plan0323-developer-app-mention
     target: main
     plan_state: OPEN
-    custody_state: INTEGRATION_READY
-    checkpoint: 9dad7efda
+    custody_state: INTEGRATED
+    checkpoint: 15a58a694d5f189dae2106ac9c931b8487e073ce
     remote_ref: refs/remotes/origin/fix/plan0323-developer-app-mention
     integration: merge
     dependencies: []
@@ -546,6 +546,8 @@ lanes:
     disposition: Current main is reconciled into P16. The provider-free accepted delta removes inherited generic-tool routing, binds current-model submission, and handles app-pill text unwrapping; the obsolete provider-local response watcher was removed after failing the prompt-lifecycle architecture gate. Response and live acceptance remain open.
     updated_at: 2026-09-09
     reconciliation_note: Current main owns exact ecosystem-mention, Skill CLI, composer, and prompt-lifecycle behavior; 214 broader tests, build, scoped lint, typecheck, and the plan audit pass before integration.
+    integration_receipt: 9cdb92d2058606f3f5c8029843696494f54ca290
+    validation_status: source-integrated-installed-validation-pending
   - id: P24
     objective: Restore current ChatGPT composer intelligence selection with safe upload discovery.
     plan: docs/dev/plans/0331-2026-09-03-chatgpt-composer-intelligence-picker.md
