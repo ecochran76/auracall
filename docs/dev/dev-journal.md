@@ -48256,3 +48256,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Scope is provider-free repair, production build, user-runtime installation,
   and read-only requalification only. It does not authorize another app
   refresh, OAuth action, or ChatGPT prompt.
+- Repair commit `3b59cd2c2` is pushed and the installed compiled module matches
+  the build byte-for-byte. Installed-module positive and fail-closed harnesses
+  pass; fresh read-only live inventory remains complete with Developer Mode on
+  and the unchanged LitScout app OAuth-active. No API service restart or live
+  refresh occurred.
+  [Evidence](notes/2026-09-10-chatgpt-developer-mode-refresh-reread.md).
