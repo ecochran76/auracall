@@ -110,6 +110,9 @@ auracall --profile wsl-chrome-3 apps --target chatgpt refresh Corel33t \
 # Refresh is replacement semantics: validate the full recreation input, delete
 # the exact private development app, prove its old identity/name absent, then
 # recreate it once. ChatGPT Delete may execute without a second confirmation.
+# A transient false Developer mode observation is confirmed by one complete
+# account/inventory re-read before create or refresh rejects. Two false
+# observations still stop before any mutation.
 # Stop at OAuth, MFA, CAPTCHA, verification, or other human gates.
 # If deletion completed but recreation failed, do not rerun refresh: use the
 # guarded `apps create` command with the same frozen inputs after confirming

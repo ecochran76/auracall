@@ -149,10 +149,10 @@ export async function executeChatgptDeveloperAppOperation(
 	if (requiresConfirmation && !input.confirmed) {
 		throw new Error(`ChatGPT developer-app ${input.action} requires --yes.`);
 	}
-	if (input.action === "create" && !state.developerMode) {
+	if ((input.action === "create" || input.action === "refresh") && !state.developerMode) {
 		// Settings navigation can briefly expose a stale switch value. Confirm
 		// once through the same complete account/inventory read before either
-		// rejecting or opening the provider create surface.
+		// rejecting or opening a provider mutation surface.
 		state = await adapter.readState();
 	}
 	const expectedAccount = normalizeAccount(input.expectedAccount);

@@ -144,6 +144,9 @@
     recreation input, including `--server-url`; it resolves the exact private
     development app, selects its Developer mode `Delete` action, proves the old
     identity and normalized name absent in fresh inventory, and recreates once
+  - create and refresh both confirm an initial false Developer Mode observation
+    with one complete account/inventory re-read; two false observations reject
+    before any mutation
   - ChatGPT's developer-app `Delete` action can execute immediately without a
     second confirmation dialog; treat `--yes` as approval for that deletion and
     preserve the exact account/app gates

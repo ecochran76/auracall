@@ -48243,3 +48243,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Findings and exact acceptance gaps are recorded in
   `docs/dev/notes/2026-09-06-browser-edits-review.md`. Source changes remain
   uncommitted pending remediation; no live or installed-runtime action ran.
+
+## 2026-09-10 | Developer-app refresh transient guard repair
+
+- A LitScout metadata refresh on the exact `wsl-chrome-3` ChatGPT account
+  stopped before deletion because the mutation-time Developer Mode observation
+  was false, while complete inventory immediately before and after reported it
+  enabled and proved the same OAuth-active app remained installed.
+- A red-first CLI-operation regression reproduces that alternating observation.
+  Refresh now shares create's single complete re-read before rejecting; two
+  false observations remain a zero-delete fail-closed stop.
+- Scope is provider-free repair, production build, user-runtime installation,
+  and read-only requalification only. It does not authorize another app
+  refresh, OAuth action, or ChatGPT prompt.

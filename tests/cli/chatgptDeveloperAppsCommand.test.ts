@@ -230,6 +230,83 @@ describe("executeChatgptDeveloperAppOperation", () => {
 		expect(createCalled).toBe(false);
 	});
 
+	it("confirms a transient false Developer mode observation before guarded refresh", async () => {
+		const baseAdapter = createAdapter();
+		let reads = 0;
+		let deleteCalled = false;
+		const result = await executeChatgptDeveloperAppOperation(
+			{
+				action: "refresh",
+				app: "Corel33t",
+				serverUrl: "https://litscout.example.test/mcp",
+				auth: "oauth",
+				connection: "server-url",
+				confirmed: true,
+				expectedAccount: "eric.cochran@soylei.com",
+			},
+			createAdapter({
+				readState: async () => {
+					reads += 1;
+					const state = await baseAdapter.readState();
+					if (reads === 1) return { ...state, developerMode: false };
+					if (reads === 3) return { ...state, apps: [] };
+					return state;
+				},
+				delete: async () => {
+					deleteCalled = true;
+					return { status: "completed", message: "deleted" };
+				},
+				create: async () => ({ status: "completed", message: "created" }),
+			}),
+		);
+
+		expect(reads).toBe(4);
+		expect(deleteCalled).toBe(true);
+		expect(result).toMatchObject({
+			action: "refresh",
+			status: "completed",
+			state: {
+				developerMode: true,
+				inventoryComplete: true,
+			},
+		});
+	});
+
+	it("fails closed without deletion when two refresh Developer mode observations remain false", async () => {
+		const baseAdapter = createAdapter();
+		let reads = 0;
+		let deleteCalled = false;
+
+		await expect(
+			executeChatgptDeveloperAppOperation(
+				{
+					action: "refresh",
+					app: "Corel33t",
+					serverUrl: "https://litscout.example.test/mcp",
+					auth: "oauth",
+					connection: "server-url",
+					confirmed: true,
+					expectedAccount: "eric.cochran@soylei.com",
+				},
+				createAdapter({
+					readState: async () => {
+						reads += 1;
+						return {
+							...(await baseAdapter.readState()),
+							developerMode: false,
+						};
+					},
+					delete: async () => {
+						deleteCalled = true;
+						throw new Error("should not delete");
+					},
+				}),
+			),
+		).rejects.toThrow("Developer mode must be enabled");
+		expect(reads).toBe(2);
+		expect(deleteCalled).toBe(false);
+	});
+
 	it("rejects create when the exact normalized app name already exists", async () => {
 		let createCalled = false;
 		await expect(

@@ -1,3 +1,12 @@
+- 2026-09-10: ChatGPT's Developer Mode switch can transiently read false during
+  the initial complete app-inventory pass even when adjacent read-only passes
+  prove it enabled. `create` already confirmed that value with one second full
+  state read, but `refresh` rejected immediately, producing a contradictory
+  pre-effect stop. Apply the same bounded confirmation to both create and
+  refresh: one false observation triggers exactly one complete account,
+  inventory, and Developer Mode re-read; two false observations still fail
+  closed before delete or create.
+
 - 2026-08-23: Rebuilding browser list options must preserve provenance from the
   same `LlmService` when the resolved DevTools endpoint is unchanged. The
   projects CLI intentionally prebuilds options for cache identity, then passes
