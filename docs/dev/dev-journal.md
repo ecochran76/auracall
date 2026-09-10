@@ -48291,3 +48291,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Fresh read-only inventory remained complete on the SoyLei Pro account with
   Developer Mode on and the unchanged enabled LitScout plugin. No new refresh
   or other ChatGPT mutation ran.
+
+## 2026-09-10 | LitScout replacement reconciled after stale pending result
+
+- One newly authorized installed refresh deleted old LitScout app
+  `asdk_app_6aa022ba1b448191b6f48cf050bb4b68`. The command returned
+  `recreate-pending` while the Create dialog remained open at the custom-MCP
+  acknowledgement, but complete post-command inventory proved asynchronous
+  acceptance: exactly one new enabled/private/OAuth-active app exists at
+  `asdk_app_6aa32e43e4a08191b92060904afc706d`.
+- No refresh retry or recovery create ran. Non-submitting exact-app selection
+  passed, and passive CDP captured the new canonical-app record at HTTP 200.
+  Its metadata does not expose raw tool schemas, so consolidated acquisition
+  schema visibility remains unverified without a separately authorized prompt.
+- This retains a narrow lifecycle observability defect: immediate
+  `recreate-pending` can become stale when ChatGPT accepts creation after the
+  dialog observation. Post-command exact inventory remains mandatory before
+  recovery. No prompt, LitScout tool, provider, or research effect ran.

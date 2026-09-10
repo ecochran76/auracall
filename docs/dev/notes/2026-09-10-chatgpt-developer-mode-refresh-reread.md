@@ -89,3 +89,33 @@ does not claim to identify the provider wait that caused the prior timeout.
 
 No new ChatGPT refresh, OAuth action, prompt, connector call, or provider
 request was performed or authorized by this repair and installation slice.
+
+## Live replacement follow-up
+
+With fresh operator authority, one installed `apps refresh` targeted the exact
+old LitScout app and current public MCP endpoint. AuraCall deleted the old app
+but returned `recreate-pending` because ChatGPT's Create dialog remained open at
+the custom-MCP risk acknowledgement. No refresh retry or recovery create ran.
+
+Fresh complete inventory then proved the provider had accepted the creation
+asynchronously: the old ID `asdk_app_6aa022ba1b448191b6f48cf050bb4b68`
+was absent and exactly one new LitScout app existed at
+`asdk_app_6aa32e43e4a08191b92060904afc706d`. It was enabled, private,
+development, and OAuth-active. A non-submitting app test selected the exact new
+ecosystem mention in a blank Chat composer and cleared it afterward.
+
+A passive CDP capture recorded HTTP 200 for the exact new canonical-app record,
+including release `PluginRelease_292aadcaa9388191b3e32bf808077898`, version
+`1.0.0`, the expected display name and description, and the new app ID. That
+canonical metadata response exposed neither tool definitions nor input schemas;
+its `capabilities` and `mcp_servers` arrays were empty. Therefore replacement
+and ChatGPT-side canonical metadata loading are accepted, but exact visibility
+of LitScout's consolidated acquisition request schema remains unverified until
+a separately authorized prompt-driven tool-discovery check.
+
+There was one refresh command, zero refresh retries, zero recovery creates,
+zero prompt submissions, zero LitScout tool invocations, and zero provider or
+canonical research effects. The initially reported `recreate-pending` result is
+a retained AuraCall observability defect: delayed provider acceptance can make
+the command's immediate terminal classification stale even though the required
+post-command inventory reconciliation prevents a duplicate recovery create.
