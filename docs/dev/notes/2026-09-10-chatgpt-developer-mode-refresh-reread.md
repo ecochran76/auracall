@@ -1,7 +1,7 @@
 # ChatGPT developer-app refresh Developer Mode re-read
 
-Status: deadline follow-up source repair validated; installation pending; no
-new live refresh authorized.
+Status: deadline follow-up source and installed-runtime repair accepted; no new
+live refresh authorized.
 
 The LitScout connected-app refresh on 2026-09-10 stopped before deletion when
 the mutation-time state read reported Developer Mode disabled. Complete
@@ -64,6 +64,28 @@ Provider-free red/green evidence:
 - A separate stalled initial inventory returns `pre_effect` and `retrySafe:
   true`.
 
-Installation and installed-module verification remain pending. No new ChatGPT
-refresh, OAuth action, prompt, connector call, or provider request is authorized
-by this source repair.
+Installed-runtime verification:
+
+- Source repair commit: `ecda2cea6`.
+- The user-scoped AuraCall `0.1.1` runtime was installed without restarting the
+  API service. The service remained active with PID `41886` and `NRestarts=0`.
+- The built and installed CLI-operation modules have the same SHA-256:
+  `0c91a712140e16cf520f6fabffe62ca247e62c81662a6e0d07d12abdb70d28e4`.
+- An installed-module delete-stall harness returned `phase: delete`,
+  `effectState: unknown`, `retrySafe: false`, propagated abort, and closed the
+  adapter once.
+- An installed-module initial-inventory-stall harness returned `phase:
+  initial_inventory`, `effectState: pre_effect`, `retrySafe: true`, propagated
+  abort, and closed the adapter once.
+- Read-only live inventory on `wsl-chrome-3` reported the expected
+  `eric.cochran@soylei.com` Pro account, complete inventory, Developer Mode on,
+  and the unchanged enabled LitScout plugin
+  `plugin_asdk_app_6aa022ba1b448191b6f48cf050bb4b68`.
+
+The full developer-app contract passed 59/59 tests; typecheck, production build,
+scoped Biome checks, plan audit, and diff hygiene also passed. This repair gives
+the next live attempt a bounded outcome and exact phase/effect diagnostics; it
+does not claim to identify the provider wait that caused the prior timeout.
+
+No new ChatGPT refresh, OAuth action, prompt, connector call, or provider
+request was performed or authorized by this repair and installation slice.
