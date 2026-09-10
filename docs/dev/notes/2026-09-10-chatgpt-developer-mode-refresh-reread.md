@@ -1,6 +1,7 @@
 # ChatGPT developer-app refresh Developer Mode re-read
 
-Status: source and installed-runtime repair accepted; no live refresh attempted.
+Status: deadline follow-up source repair validated; installation pending; no
+new live refresh authorized.
 
 The LitScout connected-app refresh on 2026-09-10 stopped before deletion when
 the mutation-time state read reported Developer Mode disabled. Complete
@@ -35,3 +36,34 @@ Verification:
 No app refresh, app deletion, app creation, OAuth mutation, ChatGPT prompt,
 LitScout tool call, or provider request was performed during repair
 qualification. Another destructive refresh requires fresh explicit authority.
+
+## Mutation deadline follow-up
+
+The next explicitly authorized LitScout replacement attempt completed both
+inventory/Developer Mode cycles but emitted no result before an external
+120-second timeout. Read-only browser history contained no exact LitScout
+management route, and complete reconciliation preserved the old enabled,
+private, OAuth-active app. This proved a pre-effect outcome for that attempt but
+also exposed a generic lifecycle liveness gap: only `apps list` had an internal
+operation deadline.
+
+The follow-up adds a five-minute internal boundary to create, refresh,
+submitted test, and uninstall. The same abort signal reaches the provider
+adapter, cleanup remains separately bounded, and every operation records its
+active lifecycle phase. A timeout before create/delete/submit/uninstall is
+classified `pre_effect`; a timeout at or after a provider mutation phase is
+`unknown` and explicitly requires exact inventory reconciliation. `--json`
+returns stable `action`, `status`, `code`, `phase`, `timeoutMs`, `effectState`,
+and `retrySafe` fields.
+
+Provider-free red/green evidence:
+
+- RED: a never-settling refresh delete returned `still pending` after 80 ms.
+- GREEN: the same test returns the exact `delete` phase timeout, `unknown`
+  effect state, reconciliation instruction, and bounded adapter close.
+- A separate stalled initial inventory returns `pre_effect` and `retrySafe:
+  true`.
+
+Installation and installed-module verification remain pending. No new ChatGPT
+refresh, OAuth action, prompt, connector call, or provider request is authorized
+by this source repair.

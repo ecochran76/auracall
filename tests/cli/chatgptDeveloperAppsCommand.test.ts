@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	type ChatgptDeveloperAppAdapter,
+	ChatgptDeveloperAppOperationTimeoutError,
 	executeChatgptDeveloperAppOperation,
+	formatChatgptDeveloperAppOperationTimeoutError,
 	runChatgptDeveloperAppOperationForCli,
 } from "../../src/cli/chatgptDeveloperAppsCommand.js";
 
@@ -90,6 +92,98 @@ describe("executeChatgptDeveloperAppOperation", () => {
 				},
 			),
 		).rejects.toThrow("ChatGPT developer-app list timed out after 10ms");
+		expect(close).toHaveBeenCalledOnce();
+	});
+
+	it("bounds a stalled refresh mutation with phase-labelled ambiguous-effect evidence", async () => {
+		const close = vi.fn(async () => undefined);
+		const deleteApp = vi.fn(() => new Promise<never>(() => undefined));
+		const phases: string[] = [];
+		let abortSignal: AbortSignal | undefined;
+		const result = await Promise.race([
+			runChatgptDeveloperAppOperationForCli(
+				{} as never,
+				{
+					action: "refresh",
+					app: "Corel33t",
+					serverUrl: "https://litscout.example.test/mcp",
+					auth: "oauth",
+					connection: "server-url",
+					confirmed: true,
+					expectedAccount: "eric.cochran@soylei.com",
+				},
+				{
+					operationTimeoutMs: 10,
+					closeTimeoutMs: 10,
+					createBrowser: async () => ({}) as never,
+					createAdapter: (_browser, _createBrowser, options) => {
+						abortSignal = options.abortSignal;
+						return {
+							...createAdapter({ delete: deleteApp }),
+							close,
+						};
+					},
+					onPhase: (phase) => phases.push(phase),
+				},
+			).then(
+				() => "unexpected resolution",
+				(error: unknown) => (error instanceof Error ? error.message : String(error)),
+			),
+			new Promise<string>((resolve) => setTimeout(() => resolve("still pending"), 80)),
+		]);
+
+		expect(result).toBe(
+			"ChatGPT developer-app refresh timed out during delete after 10ms; provider effect may be unknown. Reconcile exact app inventory before retrying.",
+		);
+		expect(deleteApp).toHaveBeenCalledOnce();
+		expect(close).toHaveBeenCalledOnce();
+		expect(abortSignal?.aborted).toBe(true);
+		expect(phases).toEqual(["browser_initialization", "initial_inventory", "validation", "delete"]);
+	});
+
+	it("classifies a refresh timeout before mutation as pre-effect", async () => {
+		const close = vi.fn(async () => undefined);
+		let caught: unknown;
+		try {
+			await runChatgptDeveloperAppOperationForCli(
+				{} as never,
+				{
+					action: "refresh",
+					app: "Corel33t",
+					serverUrl: "https://litscout.example.test/mcp",
+					auth: "oauth",
+					connection: "server-url",
+					confirmed: true,
+					expectedAccount: "eric.cochran@soylei.com",
+				},
+				{
+					operationTimeoutMs: 10,
+					closeTimeoutMs: 10,
+					createBrowser: async () => ({}) as never,
+					createAdapter: () => ({
+						...createAdapter({ readState: () => new Promise<never>(() => undefined) }),
+						close,
+					}),
+				},
+			);
+		} catch (error) {
+			caught = error;
+		}
+
+		expect(caught).toBeInstanceOf(ChatgptDeveloperAppOperationTimeoutError);
+		expect(formatChatgptDeveloperAppOperationTimeoutError(caught as never)).toEqual({
+			action: "refresh",
+			status: "timed-out",
+			error: {
+				code: "chatgpt_developer_app_operation_timeout",
+				message:
+					"ChatGPT developer-app refresh timed out during initial inventory after 10ms; no provider mutation phase started.",
+				phase: "initial_inventory",
+				timeoutMs: 10,
+				effectState: "pre_effect",
+				retrySafe: true,
+			},
+		});
 		expect(close).toHaveBeenCalledOnce();
 	});
 

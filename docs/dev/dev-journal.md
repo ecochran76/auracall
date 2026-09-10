@@ -48262,3 +48262,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   and the unchanged LitScout app OAuth-active. No API service restart or live
   refresh occurred.
   [Evidence](notes/2026-09-10-chatgpt-developer-mode-refresh-reread.md).
+
+## 2026-09-10 | Developer-app mutation deadline and phase evidence
+
+- The requalified LitScout refresh exercised the installed transient-state
+  repair but exhausted a 120-second external bound with no result. Browser
+  history proves both inventory/security cycles ran and no exact LitScout
+  management route appeared; the old app remained intact, but the exact
+  internal wait was not observable.
+- A provider-free 88 ms regression reproduced the product defect with a
+  never-settling refresh delete: the operation remained pending instead of
+  returning phase evidence. The CLI wrapper now applies one five-minute
+  internal deadline to every mutating developer-app action, propagates abort,
+  tracks the active phase, and bounds adapter cleanup separately.
+- Timeout errors carry stable action, phase, timeout, and `pre_effect` versus
+  `unknown` effect state. `--json` emits that closed-world structure and marks
+  only pre-effect timeouts retry-safe. The prior reason for excluding mutations
+  from the generic list deadline is preserved: a mutation-phase timeout never
+  claims zero effect and requires exact inventory reconciliation before retry.
+- Scope remains provider-free source repair, validation, user-runtime install,
+  and installed-module harnesses. It does not authorize another ChatGPT app
+  refresh, OAuth action, prompt, or LitScout/provider call.

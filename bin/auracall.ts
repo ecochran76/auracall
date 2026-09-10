@@ -224,7 +224,9 @@ import {
 } from '../src/cli/workbenchCapabilitiesCommand.js';
 import {
   formatChatgptDeveloperAppOperationResult,
+  formatChatgptDeveloperAppOperationTimeoutError,
   runChatgptDeveloperAppOperationForCli,
+  ChatgptDeveloperAppOperationTimeoutError,
   type ChatgptDeveloperAppAuth,
   type ChatgptDeveloperAppOperationInput,
 } from '../src/cli/chatgptDeveloperAppsCommand.js';
@@ -5511,7 +5513,17 @@ async function runChatgptDeveloperAppsCliAction(
     throw new Error(formatBrowserOperationBusyResult(acquired));
   }
   try {
-    const result = await runChatgptDeveloperAppOperationForCli(userConfig, input);
+    let result;
+    try {
+      result = await runChatgptDeveloperAppOperationForCli(userConfig, input);
+    } catch (error) {
+      if (commandOptions.json && error instanceof ChatgptDeveloperAppOperationTimeoutError) {
+        console.log(JSON.stringify(formatChatgptDeveloperAppOperationTimeoutError(error), null, 2));
+        process.exitCode = 1;
+        return;
+      }
+      throw error;
+    }
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
       return;

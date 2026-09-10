@@ -7,7 +7,70 @@ import {
 import type { ResolvedUserConfig } from "../config.js";
 
 const DEFAULT_CHATGPT_DEVELOPER_APP_LIST_TIMEOUT_MS = 45_000;
+const DEFAULT_CHATGPT_DEVELOPER_APP_OPERATION_TIMEOUT_MS = 300_000;
 const DEFAULT_CHATGPT_DEVELOPER_APP_CLOSE_TIMEOUT_MS = 5_000;
+
+export type ChatgptDeveloperAppOperationPhase =
+	| "browser_initialization"
+	| "initial_inventory"
+	| "developer_mode_confirmation"
+	| "validation"
+	| "create"
+	| "delete"
+	| "post_delete_inventory"
+	| "recreate"
+	| "post_create_inventory"
+	| "select_for_test"
+	| "submit_test"
+	| "uninstall";
+
+export class ChatgptDeveloperAppOperationTimeoutError extends Error {
+	readonly code = "chatgpt_developer_app_operation_timeout";
+
+	constructor(
+		readonly action: Exclude<ChatgptDeveloperAppOperationInput["action"], "list">,
+		readonly phase: ChatgptDeveloperAppOperationPhase,
+		readonly timeoutMs: number,
+		readonly effectState: "pre_effect" | "unknown",
+	) {
+		const effectGuidance =
+			effectState === "unknown"
+				? "provider effect may be unknown. Reconcile exact app inventory before retrying."
+				: "no provider mutation phase started.";
+		super(
+			`ChatGPT developer-app ${action} timed out during ${phase.replaceAll("_", " ")} after ${timeoutMs}ms; ${effectGuidance}`,
+		);
+		this.name = "ChatgptDeveloperAppOperationTimeoutError";
+	}
+}
+
+export function formatChatgptDeveloperAppOperationTimeoutError(
+	error: ChatgptDeveloperAppOperationTimeoutError,
+): {
+	action: ChatgptDeveloperAppOperationTimeoutError["action"];
+	status: "timed-out";
+	error: {
+		code: ChatgptDeveloperAppOperationTimeoutError["code"];
+		message: string;
+		phase: ChatgptDeveloperAppOperationPhase;
+		timeoutMs: number;
+		effectState: ChatgptDeveloperAppOperationTimeoutError["effectState"];
+		retrySafe: boolean;
+	};
+} {
+	return {
+		action: error.action,
+		status: "timed-out",
+		error: {
+			code: error.code,
+			message: error.message,
+			phase: error.phase,
+			timeoutMs: error.timeoutMs,
+			effectState: error.effectState,
+			retrySafe: error.effectState === "pre_effect",
+		},
+	};
+}
 
 export interface ChatgptDeveloperAppAccount {
 	email: string | null;
@@ -54,6 +117,7 @@ type ChatgptDeveloperAppCliAdapter = ChatgptDeveloperAppAdapter & {
 
 export interface ChatgptDeveloperAppCliDependencies {
 	listTimeoutMs?: number;
+	operationTimeoutMs?: number;
 	closeTimeoutMs?: number;
 	createBrowser?: (
 		userConfig: ResolvedUserConfig,
@@ -64,6 +128,7 @@ export interface ChatgptDeveloperAppCliDependencies {
 		createBrowser: ChatgptDeveloperAppBrowserClientFactory,
 		options: { abortSignal?: AbortSignal },
 	) => ChatgptDeveloperAppCliAdapter;
+	onPhase?: (phase: ChatgptDeveloperAppOperationPhase) => void;
 }
 
 export type ChatgptDeveloperAppAuth = "oauth" | "none" | "mixed";
@@ -136,7 +201,10 @@ export type ChatgptDeveloperAppOperationResult =
 export async function executeChatgptDeveloperAppOperation(
 	input: ChatgptDeveloperAppOperationInput,
 	adapter: ChatgptDeveloperAppAdapter,
+	options: { onPhase?: (phase: ChatgptDeveloperAppOperationPhase) => void } = {},
 ): Promise<ChatgptDeveloperAppOperationResult> {
+	const enterPhase = (phase: ChatgptDeveloperAppOperationPhase) => options.onPhase?.(phase);
+	enterPhase("initial_inventory");
 	let state = await adapter.readState();
 	if (input.action === "list") {
 		return {
@@ -153,8 +221,10 @@ export async function executeChatgptDeveloperAppOperation(
 		// Settings navigation can briefly expose a stale switch value. Confirm
 		// once through the same complete account/inventory read before either
 		// rejecting or opening a provider mutation surface.
+		enterPhase("developer_mode_confirmation");
 		state = await adapter.readState();
 	}
+	enterPhase("validation");
 	const expectedAccount = normalizeAccount(input.expectedAccount);
 	const actualAccount = normalizeAccount(state.account.email);
 	if (!actualAccount || actualAccount !== expectedAccount) {
@@ -173,6 +243,7 @@ export async function executeChatgptDeveloperAppOperation(
 		}
 		const createInput = normalizeCreateInput(input);
 		assertNoExistingAppName(state.apps, createInput.name);
+		enterPhase("create");
 		const outcome = await adapter.create(createInput);
 		return {
 			action: "create",
@@ -194,6 +265,7 @@ export async function executeChatgptDeveloperAppOperation(
 			auth: input.auth,
 			connection: input.connection,
 		});
+		enterPhase("delete");
 		const deleteOutcome = await adapter.delete(app);
 		if (deleteOutcome.status === "awaiting-human") {
 			return {
@@ -205,6 +277,7 @@ export async function executeChatgptDeveloperAppOperation(
 		}
 		let postDeleteState: ChatgptDeveloperAppState;
 		try {
+			enterPhase("post_delete_inventory");
 			postDeleteState = await adapter.readState();
 		} catch (error) {
 			const outcome = buildRecreatePendingOutcome(
@@ -229,6 +302,7 @@ export async function executeChatgptDeveloperAppOperation(
 		}
 		let createOutcome: ChatgptDeveloperAppMutationOutcome;
 		try {
+			enterPhase("recreate");
 			createOutcome = await adapter.create(replacementInput);
 		} catch (error) {
 			const outcome = buildRecreatePendingOutcome(app, replacementInput, readErrorMessage(error));
@@ -236,6 +310,7 @@ export async function executeChatgptDeveloperAppOperation(
 		}
 		let replacementApp: ChatgptDeveloperApp | null = null;
 		try {
+			enterPhase("post_create_inventory");
 			const postCreateState = await adapter.readState();
 			if (postCreateState.inventoryComplete) {
 				const candidates = postCreateState.apps.filter(
@@ -262,6 +337,7 @@ export async function executeChatgptDeveloperAppOperation(
 	}
 	if (input.action === "uninstall") {
 		const app = resolveExactApp(state.apps, input.app);
+		enterPhase("uninstall");
 		const outcome = await adapter.uninstall(app);
 		return {
 			action: "uninstall",
@@ -272,6 +348,7 @@ export async function executeChatgptDeveloperAppOperation(
 	}
 	if (input.action === "test") {
 		const app = resolveExactApp(state.apps, input.app);
+		enterPhase(input.submit ? "submit_test" : "select_for_test");
 		const outcome = input.submit
 			? await adapter.submitTest(app, normalizeTestPrompt(input.prompt))
 			: await adapter.selectForTest(app);
@@ -292,33 +369,57 @@ export async function runChatgptDeveloperAppOperationForCli(
 ): Promise<ChatgptDeveloperAppOperationResult> {
 	const createBrowser = dependencies.createBrowser ?? BrowserAutomationClient.fromConfig;
 	const createAdapter = dependencies.createAdapter ?? createChatgptDeveloperAppBrowserAdapter;
-	const abortController = input.action === "list" ? new AbortController() : null;
+	const abortController = new AbortController();
 	const active: { adapter: ChatgptDeveloperAppCliAdapter | null } = { adapter: null };
+	let activePhase: ChatgptDeveloperAppOperationPhase = "browser_initialization";
+	const onPhase = (phase: ChatgptDeveloperAppOperationPhase) => {
+		activePhase = phase;
+		dependencies.onPhase?.(phase);
+		if (process.env.AURACALL_DEBUG_DEVELOPER_APPS === "1") {
+			process.stderr.write(`[developer-apps] operation phase: ${phase}\n`);
+		}
+	};
 	const operation = async () => {
+		onPhase("browser_initialization");
 		const browser = await createBrowser(userConfig, { target: "chatgpt" });
-		abortController?.signal.throwIfAborted();
+		abortController.signal.throwIfAborted();
 		active.adapter = createAdapter(
 			browser,
 			(config) => createBrowser(config, { target: "chatgpt" }),
-			{ abortSignal: abortController?.signal },
+			{ abortSignal: abortController.signal },
 		);
-		abortController?.signal.throwIfAborted();
-		return executeChatgptDeveloperAppOperation(input, active.adapter);
+		abortController.signal.throwIfAborted();
+		return executeChatgptDeveloperAppOperation(input, active.adapter, { onPhase });
 	};
 	try {
-		if (input.action !== "list") return await operation();
-		const timeoutMs = normalizePositiveTimeout(
-			dependencies.listTimeoutMs,
-			DEFAULT_CHATGPT_DEVELOPER_APP_LIST_TIMEOUT_MS,
-		);
+		const timeoutMs =
+			input.action === "list"
+				? normalizePositiveTimeout(
+						dependencies.listTimeoutMs,
+						DEFAULT_CHATGPT_DEVELOPER_APP_LIST_TIMEOUT_MS,
+					)
+				: normalizePositiveTimeout(
+						dependencies.operationTimeoutMs,
+						DEFAULT_CHATGPT_DEVELOPER_APP_OPERATION_TIMEOUT_MS,
+					);
 		return await withChatgptDeveloperAppDeadline(
 			operation(),
 			timeoutMs,
-			`ChatGPT developer-app list timed out after ${timeoutMs}ms.`,
-			(error) => abortController?.abort(error),
+			input.action === "list"
+				? `ChatGPT developer-app list timed out after ${timeoutMs}ms.`
+				: () =>
+						new ChatgptDeveloperAppOperationTimeoutError(
+							input.action,
+							activePhase,
+							timeoutMs,
+							chatgptDeveloperAppPhaseMayHaveEffect(input.action, activePhase)
+								? "unknown"
+								: "pre_effect",
+						),
+			(error) => abortController.abort(error),
 		);
 	} finally {
-		abortController?.abort();
+		abortController.abort();
 		if (active.adapter) {
 			const closeTimeoutMs = normalizePositiveTimeout(
 				dependencies.closeTimeoutMs,
@@ -340,7 +441,7 @@ function normalizePositiveTimeout(value: number | undefined, fallback: number): 
 async function withChatgptDeveloperAppDeadline<T>(
 	operation: Promise<T>,
 	timeoutMs: number,
-	message: string,
+	timeoutError: string | (() => Error),
 	onTimeout?: (error: Error) => void,
 ): Promise<T> {
 	let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -349,7 +450,8 @@ async function withChatgptDeveloperAppDeadline<T>(
 			operation,
 			new Promise<never>((_resolve, reject) => {
 				timeout = setTimeout(() => {
-					const error = new Error(message);
+					const error =
+						typeof timeoutError === "function" ? timeoutError() : new Error(timeoutError);
 					try {
 						onTimeout?.(error);
 					} finally {
@@ -361,6 +463,18 @@ async function withChatgptDeveloperAppDeadline<T>(
 	} finally {
 		if (timeout) clearTimeout(timeout);
 	}
+}
+
+function chatgptDeveloperAppPhaseMayHaveEffect(
+	action: Exclude<ChatgptDeveloperAppOperationInput["action"], "list">,
+	phase: ChatgptDeveloperAppOperationPhase,
+): boolean {
+	if (action === "create") return phase === "create";
+	if (action === "refresh") {
+		return ["delete", "post_delete_inventory", "recreate", "post_create_inventory"].includes(phase);
+	}
+	if (action === "uninstall") return phase === "uninstall";
+	return phase === "submit_test";
 }
 
 export function formatChatgptDeveloperAppOperationResult(

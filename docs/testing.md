@@ -132,6 +132,12 @@
   - `apps list` has a 45-second outer deadline plus a bounded browser-client
     close; target resolution, CDP attachment, Runtime enablement, and Page
     enablement each have a 10-second bound and report a named debug stage
+  - mutating lifecycle operations have a five-minute outer deadline, propagate
+    its abort signal into the adapter, and report the active lifecycle phase;
+    JSON timeout output distinguishes `pre_effect` from `unknown`, and only the
+    former is marked `retrySafe`
+  - timeout regression:
+    `pnpm vitest run tests/cli/chatgptDeveloperAppsCommand.test.ts -t "bounds a stalled refresh mutation|classifies a refresh timeout before mutation"`
   - the shared attachment contract carries the caller abort signal and closes
     any CDP client that resolves after timeout/abort; a stalled identity or
     attachment stage must return control so the CLI can release its file-backed

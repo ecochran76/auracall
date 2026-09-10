@@ -1,3 +1,13 @@
+- 2026-09-10: Do not leave mutating ChatGPT developer-app lifecycle operations
+  outside every operation-level deadline. A LitScout refresh completed both
+  Developer Mode inventory cycles but then stayed pending until its external
+  120-second kill, emitting no phase or terminal result. Give create, refresh,
+  submitted test, and uninstall one internal five-minute abort boundary, track
+  their exact lifecycle phase, and classify timeouts before a mutation phase as
+  `pre_effect` while every timeout at or after delete/create/submit/uninstall is
+  `unknown`. JSON callers receive the structured phase/effect result; an unknown
+  effect is never retry-safe until exact inventory reconciliation.
+
 - 2026-09-10: ChatGPT's Developer Mode switch can transiently read false during
   the initial complete app-inventory pass even when adjacent read-only passes
   prove it enabled. `create` already confirmed that value with one second full
