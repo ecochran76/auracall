@@ -49313,3 +49313,6 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   main-ancestral, and process-unowned. Removed its local worktree and branch
   without force, including only ignored generated dependency/build files; the
   remote recovery ref remains.
+- Post-cleanup process census still sees two September 10 identity-smoke
+  processes owned by other working directories. P36's normally exited smoke
+  added none; the inherited processes were not terminated.

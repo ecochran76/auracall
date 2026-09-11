@@ -165,3 +165,6 @@ The redacted receipt is
   `main`, and owned by zero process working directories.
 - Removed the local P36 worktree and local branch without force, including only
   ignored generated build/dependency files. The remote recovery ref remains.
+- A fresh process census attributes two September 10 identity-smoke processes
+  to other working directories. P36's one-second identity smoke left no orphan;
+  the pre-existing processes remain outside this lane's authority.

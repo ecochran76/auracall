@@ -135,7 +135,9 @@
     "idleWaitingCompletions": 0,
     "schedulerPaused": false,
     "schedulerOrCompletionControlEffects": 0,
-    "broadStatusCalls": 0
+    "broadStatusCalls": 0,
+    "preExistingForeignIdentitySmokeOrphans": 2,
+    "p36IdentitySmokeOrphans": 0
   },
   "effectCounters": {
     "supportedInstalls": 1,
