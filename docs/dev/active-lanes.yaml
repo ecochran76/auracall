@@ -133,7 +133,7 @@ lanes:
     branch: fix/plan0315-aggregate-status-latency
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
+    custody_state: INTEGRATION_READY
     checkpoint: 9860b9d49be75c7ff3bcdb5ed344ae28bb9f5f2a
     remote_ref: refs/remotes/origin/fix/plan0315-aggregate-status-latency
     integration: merge
@@ -616,9 +616,11 @@ lanes:
     integration: merge
     dependencies: [P25, P26, P31]
     overlaps: [P16, P18]
-    validation_status: provider-free-accepted-awaiting-integration
+    reconciled_overlaps: [P16, P18]
+    reconciliation_note: P16's shared high-level response lifecycle remains authoritative and its rejected provider-local watcher stays removed; P33 only strengthens shared prompt/effect truth. P18 remains a paused installed/live lane with every install, restart, browser, and canary allowance untouched; it must re-anchor to then-current main before resuming.
+    validation_status: provider-free-accepted-integration-ready
     validation_ref: docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md
     integration_receipt: null
     blocker: null
-    disposition: Provider-free implementation accepted on its isolated branch; recovered provider conversation remains authoritative and must not be retried; integration is pending.
+    disposition: Provider-free implementation accepted and overlap-reconciled for integration; recovered provider conversation remains authoritative and must not be retried.
     updated_at: 2026-09-11

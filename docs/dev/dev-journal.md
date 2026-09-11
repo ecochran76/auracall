@@ -49146,3 +49146,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `origin/fix/plan0340-chatgpt-deep-research-reliability`; local and remote tips
   matched immediately after push. No provider, browser, installed-runtime, or
   service effect ran.
+- Pre-integration reconciliation preserves P16's shared response lifecycle and
+  rejected provider-local-watcher disposition. P18 remains paused with its
+  install, restart, browser, and bounded-canary allowances unused; it must
+  re-anchor to current main if explicitly resumed. P33 is integration-ready.

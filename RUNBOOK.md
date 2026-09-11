@@ -16,9 +16,10 @@
   existing skip, frozen-lockfile typecheck and production build pass, and
   scoped lint has no errors. Requested/observed model provenance, one-run depth
   omission, attachment-aware commitment, post-effect no-retry/cooldown
-  suppression, and artifact-fetch exit are covered. Integration remains
-  pending; no provider, browser, install, service, or recovered-conversation
-  mutation ran.
+  suppression, and artifact-fetch exit are covered. P16/P18 overlap is
+  reconciled: shared response lifecycle authority remains on main, while P18's
+  paused operational allowances remain untouched. Integration is ready; no
+  provider, browser, install, service, or recovered-conversation mutation ran.
 
 - P16 reconciliation supersedes the Turn 550 preservation note: current main's
   exact ecosystem-mention and Skill CLI paths are authoritative. Retain P16's
