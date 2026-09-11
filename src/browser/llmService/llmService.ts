@@ -1982,6 +1982,14 @@ export abstract class LlmService {
 						status: "error",
 						error: normalizeArtifactFetchError(error),
 					});
+				} finally {
+					if (listOptions.useProviderSession === true) {
+						recordBrowserScrapeProviderAction(
+							listOptions,
+							"llmService.materializeConversationArtifacts.settleCandidateSession",
+						);
+						await closeScopedProviderSession(listOptions);
+					}
 				}
 			}
 			if (materialized.length > 0) {

@@ -49213,3 +49213,38 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Fresh custody gates then proved the P34 topic clean, remote-equal, ancestral,
   and owned by zero process working directories. Removed its local worktree and
   local branch while retaining the published remote topic ref.
+
+## 2026-09-11 | Plan 0342 ChatGPT live-findings provider-free repair opened
+
+- Started P35 from exact published main `25c1bf5ac` under the operator's
+  accepted recommendation. The lane converts P34's four foreground findings
+  into provider-free executable contracts: identity-smoke exit, current `6 Pro`
+  selector triggering, ordinary Session observed-model persistence, and
+  independent artifact-export settlement.
+- P08's aggregate `/status` memory issue remains separate. No installed
+  launcher, managed browser, provider conversation, service, scheduler,
+  completion, or artifact-control effect is authorized; the recovered Deep
+  Research conversation remains immutable.
+- Graphiti is healthy but returned no relevant AuraCall memory cloud. The repo
+  is already aligned with the selected policy profile, and CodeGraph remains
+  unavailable in this session, so the plan uses exact native source reads plus
+  executable tests as the documented fallback.
+
+## 2026-09-11 | Plan 0342 implementation reaches provider-free GREEN
+
+- RED reproduced all four P34 findings. The focused implementation suite now
+  passes 127/127, and the affected browser/CLI/architecture suite passes
+  373/373 with one existing skip before the final executable selector-fixture
+  refinement.
+- Completed identity-smoke reports now cross a dedicated one-shot CLI exit
+  boundary after browser-operation settlement. The boundary cannot terminate
+  the separately owned persistent managed Chrome process.
+- Chat `current` now opens the model picker without switching, observes its
+  checked option, and persists the returned label through ordinary Session
+  metadata. The current `6 Pro` animated trigger is admitted only in the
+  composer with an explicit model-family label; Power, High, and generic Pro
+  effort surfaces remain rejected.
+- Conversation artifact materialization now awaits and records each candidate,
+  closes that scoped provider session, and creates a fresh binding for the next
+  distinct Markdown/DOCX/PDF transfer. No live, provider, browser, installed
+  runtime, service, scheduler, completion, or recovered-conversation effect ran.

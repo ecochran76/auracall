@@ -639,7 +639,7 @@ describe('performSessionRun', () => {
     vi.mocked(runBrowserSessionExecution).mockResolvedValue({
       usage: { inputTokens: 100, outputTokens: 50, reasoningTokens: 0, totalTokens: 150 },
       elapsedMs: 2000,
-      runtime: { chromePid: 123, chromePort: 9222, userDataDir: '/tmp/profile' },
+      runtime: { chromePid: 123, chromePort: 9222, userDataDir: '/tmp/profile', observedModel: '6 Pro' },
       answerText: 'Answer',
     });
 
@@ -659,7 +659,7 @@ describe('performSessionRun', () => {
     const finalUpdate = sessionStoreMock.updateSession.mock.calls.at(-1)?.[1];
     expect(finalUpdate).toMatchObject({
       status: 'completed',
-      browser: expect.objectContaining({ runtime: expect.objectContaining({ chromePid: 123 }) }),
+      browser: expect.objectContaining({ runtime: expect.objectContaining({ chromePid: 123, observedModel: '6 Pro' }) }),
     });
     expect(finalUpdate).toHaveProperty('errorMessage', undefined);
 	    expect(sessionStoreMock.updateModelRun).toHaveBeenCalledWith(

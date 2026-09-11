@@ -8,6 +8,33 @@ import { logDomFailure } from '../domDebug.js';
 import { buildClickDispatcher } from './domEvents.js';
 
 const MODEL_SELECTION_EVALUATE_TIMEOUT_MS = 35_000;
+const ANIMATED_SLIDER_TRIGGER_SELECTOR = '[data-animated-slider-trigger="true"]';
+
+type ModelPickerTriggerCandidate = {
+  selector: string;
+  text?: string | null;
+  ariaLabel?: string | null;
+  visible: boolean;
+  inComposer: boolean;
+  inAssistantTurn: boolean;
+};
+
+function hasExplicitModelFamilyLabel(value: string): boolean {
+  const normalized = normalizeModelPickerText(value);
+  return (
+    /(?:^| )6 pro(?: |$)/.test(normalized) ||
+    /(?:^| )gpt 5 6 (?:sol|terra|luna)(?: |$)/.test(normalized) ||
+    /(?:^| )gpt 5 5(?: |$)/.test(normalized)
+  );
+}
+
+export function isModelPickerTriggerCandidateForTest(
+  candidate: ModelPickerTriggerCandidate,
+): boolean {
+  if (!candidate.visible || !candidate.inComposer || candidate.inAssistantTurn) return false;
+  if (candidate.selector !== ANIMATED_SLIDER_TRIGGER_SELECTOR) return true;
+  return hasExplicitModelFamilyLabel(`${candidate.text ?? ''} ${candidate.ariaLabel ?? ''}`);
+}
 
 export async function ensureModelSelection(
   Runtime: ChromeClient['Runtime'],
@@ -343,6 +370,16 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
       node?.closest('[data-message-author-role]') ||
       node?.closest('[data-turn]')
     );
+    const hasExplicitModelFamilyLabel = (node) => {
+      const label = normalizeText(
+        (node?.textContent ?? '') + ' ' + (node?.getAttribute?.('aria-label') ?? '')
+      );
+      return (
+        /(?:^| )6 pro(?: |$)/.test(label) ||
+        /(?:^| )gpt 5 6 (?:sol|terra|luna)(?: |$)/.test(label) ||
+        /(?:^| )gpt 5 5(?: |$)/.test(label)
+      );
+    };
     const findComposerButton = () => {
       const prompt = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"], .ProseMirror');
       const composer = prompt?.closest('form, [data-testid*="composer"]') ?? null;
@@ -350,7 +387,11 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
         const candidates = composer
           ? Array.from(composer.querySelectorAll(selector))
           : Array.from(document.querySelectorAll(selector));
-        const candidate = candidates.find((node) => visible(node) && !isAssistantTurnControl(node));
+        const candidate = candidates.find((node) =>
+          visible(node) &&
+          !isAssistantTurnControl(node) &&
+          (selector !== '[data-animated-slider-trigger="true"]' || hasExplicitModelFamilyLabel(node))
+        );
         if (candidate) return candidate;
       }
       return null;
@@ -917,6 +958,9 @@ function buildModelMatchersLiteral(targetModel: string): {
   };
 }
 
-export function buildModelSelectionExpressionForTest(targetModel: string): string {
-  return buildModelSelectionExpression(targetModel, 'select');
+export function buildModelSelectionExpressionForTest(
+  targetModel: string,
+  strategy: BrowserModelStrategy = 'select',
+): string {
+  return buildModelSelectionExpression(targetModel, strategy);
 }

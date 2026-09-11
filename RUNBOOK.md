@@ -1,5 +1,32 @@
 # RUNBOOK
 
+## Turn 579 | 2026-09-11
+
+- P35 provider-free implementation is published at `f3a0915b8` with exact
+  local/remote parity. Identity-smoke exit, checked-current-model observation,
+  narrow animated `6 Pro` trigger admission, Session provenance persistence,
+  and per-artifact provider-session settlement are executable contracts.
+- Affected validation passes 374 tests with one existing skip. Typecheck,
+  production build, scoped lint, prompt-lifecycle architecture check, diff
+  hygiene, goal-only audit, and plan-library audit pass.
+- Exact-branch lane reconciliation retains inherited P08/P16 catalog findings
+  plus the expected P35 pre-integration absence from `origin/main`. P35 is
+  integration-ready; no installed, browser, provider, service, control, or
+  recovered-conversation effect ran.
+
+## Turn 578 | 2026-09-11
+
+- Opened P35 / [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)
+  from clean local/remote-equal main at `25c1bf5ac` after the operator accepted
+  P34's recommended provider-free successor.
+- Frozen scope: identity-smoke process exit, current `6 Pro` trigger discovery,
+  ordinary Session observed-model persistence, and complete per-artifact async
+  settlement. P08 retains aggregate status; P34's recovered conversation and
+  every provider/browser/install/service/control effect remain untouched.
+- Graphiti runtime is healthy but atlas discovery returned no relevant AuraCall
+  cloud. Repo policy selection remains `already-aligned`; current source,
+  receipt, tests, and Git evidence are authoritative.
+
 ## Turn 577 | 2026-09-11
 
 - Opened P34 / [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)

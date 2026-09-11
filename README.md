@@ -65,6 +65,8 @@ auracall doctor --target grok --json
 # No-prompt account binding smoke for the selected AuraCall runtime profile
 auracall profile identity-smoke --target chatgpt --include-negative --json
 auracall profile identity-smoke --all-bound --include-negative --json
+# Identity smoke is a one-shot probe: after printing the complete report it
+# exits the CLI process while leaving the managed browser profile running.
 # ChatGPT identity smoke also reports accountLevel/accountPlanType when the
 # signed-in session exposes them, so Business-vs-Pro profile bindings can fail
 # fast before automation uses the wrong model/tool quota lane.
@@ -1932,7 +1934,7 @@ npx -y auracall auracall-mcp
 | `--browser-chatgpt-mode <chat\|work>` | Select the ChatGPT composer mode. AuraCall defaults every ChatGPT browser run to `chat`; `work` must be requested explicitly. |
 | `--browser-chatgpt-tool-approval <manual\|allow-once\|always-allow>` | Handle a post-submit ChatGPT third-party tool approval pause. `manual` is the fail-closed default; the opt-in modes click only the exact corresponding action and verify that the approval surface disappears. |
 | `--browser-work-model <label>` | Select a model through Work's dedicated slider menu (advanced options -> Model). This is used only with `--browser-chatgpt-mode work` and never falls back to the Chat picker. This is a raw provider-label escape hatch; prefer semantic selectors for ordinary Chat runs. |
-| `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (current keeps the active model; ignore skips the picker). |
+| `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (`current` keeps the active model and records its observed picker label; `ignore` skips the picker). |
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
 | `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT effort intensity in browser mode. In the current horizontal Power slider, the four AuraCall levels map to Instant, Medium, High, and Extra High. Prefer `--model chatgpt:reasoning-high` or `--model chatgpt:reasoning-max`; provider-version spellings remain compatibility aliases. |
 | `--browser-no-thinking-time` | Omit an inherited semantic-selector thinking depth for this browser run. This leaves the current provider depth untouched and conflicts with `--browser-thinking-time`. |

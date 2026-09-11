@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   buildModelMatchersLiteralForTest,
   buildModelSelectionExpressionForTest,
   chooseModelPickerNavigationActionForTest,
   scoreModelPickerOptionForTest,
+  isModelPickerTriggerCandidateForTest,
 } from '../../src/browser/actions/modelSelection.js';
 
 const expectContains = (arr: string[], value: string) => {
@@ -19,6 +20,101 @@ describe('browser model selection matchers', () => {
     expect(expression).toContain(`closest('form, [data-testid*="composer"]')`);
     expect(expression).toContain(`closest('[data-testid^="conversation-turn"]')`);
     expect(expression).toContain('button[aria-label*=\\"Model\\"]');
+  });
+
+  it('admits the current animated 6 Pro model trigger without admitting Power controls', () => {
+    expect(isModelPickerTriggerCandidateForTest({
+      selector: '[data-animated-slider-trigger="true"]',
+      text: '6 Pro',
+      ariaLabel: '6 Pro, Pro, 5 of 5',
+      visible: true,
+      inComposer: true,
+      inAssistantTurn: false,
+    })).toBe(true);
+    for (const label of ['Power', 'High, 3 of 5', 'Pro, 5 of 5']) {
+      expect(isModelPickerTriggerCandidateForTest({
+        selector: '[data-animated-slider-trigger="true"]',
+        text: label,
+        ariaLabel: label,
+        visible: true,
+        inComposer: true,
+        inAssistantTurn: false,
+      })).toBe(false);
+    }
+    expect(isModelPickerTriggerCandidateForTest({
+      selector: '[data-animated-slider-trigger="true"]',
+      text: '6 Pro',
+      ariaLabel: '6 Pro, Pro, 5 of 5',
+      visible: false,
+      inComposer: true,
+      inAssistantTurn: false,
+    })).toBe(false);
+  });
+
+  it('opens the animated 6 Pro trigger and reads the checked current model', async () => {
+		vi.useFakeTimers();
+    class FixtureElement extends EventTarget {
+      textContent: string;
+      children: FixtureElement[] = [];
+      classList = { contains: () => false };
+      attributes = new Map<string, string>();
+      closestHandler: (selector: string) => FixtureElement | null = () => null;
+      queryAllHandler: (selector: string) => FixtureElement[] = () => [];
+
+      constructor(text = '', attributes: Record<string, string> = {}) {
+        super();
+        this.textContent = text;
+        for (const [name, value] of Object.entries(attributes)) this.attributes.set(name, value);
+      }
+
+      getAttribute(name: string) { return this.attributes.get(name) ?? null; }
+      hasAttribute(name: string) { return this.attributes.has(name); }
+      getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 30 }; }
+      closest(selector: string) { return this.closestHandler(selector); }
+      querySelectorAll(selector: string) { return this.queryAllHandler(selector); }
+      querySelector() { return null; }
+    }
+
+    const prompt = new FixtureElement();
+    const composer = new FixtureElement();
+    const trigger = new FixtureElement('6 Pro', {
+      'aria-label': '6 Pro, Pro, 5 of 5',
+      'data-animated-slider-trigger': 'true',
+    });
+    const selected = new FixtureElement('6 Pro', {
+      'aria-checked': 'true',
+      role: 'menuitemradio',
+    });
+    const menu = new FixtureElement();
+    prompt.closestHandler = () => composer;
+    composer.queryAllHandler = (selector) => selector.includes('data-animated-slider-trigger') ? [trigger] : [];
+    menu.queryAllHandler = () => [selected];
+    let triggerClicks = 0;
+    trigger.addEventListener('click', () => { triggerClicks += 1; });
+
+    vi.stubGlobal('Element', FixtureElement);
+    vi.stubGlobal('HTMLElement', FixtureElement);
+    vi.stubGlobal('MouseEvent', Event);
+    vi.stubGlobal('window', {
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
+    });
+    vi.stubGlobal('document', {
+      querySelector: (selector: string) => selector.includes('#prompt-textarea') ? prompt : menu,
+      querySelectorAll: (selector: string) => selector.includes('[role="menu"]') ? [menu] : [],
+    });
+
+    try {
+			const pending = new Function(
+        `return ${buildModelSelectionExpressionForTest('6 Pro', 'current')}`,
+      )();
+			await vi.advanceTimersByTimeAsync(25_000);
+			const result = await pending;
+      expect(result).toEqual({ status: 'already-selected', label: '6 Pro' });
+      expect(triggerClicks).toBe(1);
+    } finally {
+			vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('waits for the current model picker to mount before failing closed', () => {

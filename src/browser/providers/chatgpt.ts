@@ -28,6 +28,7 @@ const CHATGPT_SELECTORS = resolveBundledServiceSelectors("chatgpt", {
 		"button.__composer-pill",
 		'button[aria-label*="Model"]',
 		'button[aria-haspopup="menu"][aria-label*="Model"]',
+		'[data-animated-slider-trigger="true"]',
 	],
 	menuItem: [
 		"button",
