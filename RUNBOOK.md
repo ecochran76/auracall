@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 582 | 2026-09-11
+
+- Opened P36 / [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
+  from clean published main `ab01c510a` after explicit operator authorization
+  to proceed with installed/live adoption.
+- Pre-effect evidence: installed runtime predates P35 and differs from current
+  source; API PID `47500` is active/running with inherited `NRestarts=1`; six
+  completions are paused and queued/running/idle-waiting are zero; persistent
+  `wsl-chrome-3` Chrome owner PID `71128` remains on DevTools `45015`.
+- Bounds are one install/service refresh, one no-prompt identity smoke, one
+  explicit zero-retry `chatgpt:premium` Send, and one read-only three-artifact
+  fetch. Broad status and all scheduler/completion/materialization controls are
+  excluded. Graphiti is healthy but returned no relevant AuraCall cloud.
+
 ## Turn 581 | 2026-09-11
 
 - Final P35 custody gates proved topic tip `44ea3e793` clean, equal to its
