@@ -22535,3 +22535,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   PDF or ZIP for DOCX) before returning a materialized result.
 - Preserve retained and wrong-variant files. Surface a wrong-variant-only result
   as an explicit artifact error so it cannot increment `materializedCount`.
+
+## 2026-09-11 | Model-family classification outranks submenu-like row attributes
+
+- A current ChatGPT model row may carry `aria-expanded` even when clicking it is
+  the terminal model selection. Do not classify every row with that attribute
+  as navigation; first classify the normalized row as a known model family.
+- Keep explicit `Model ...` rows and unclassified submenu/test-id rows on the
+  recursive navigation path. A live-shaped fixture must include the provider's
+  submenu-like attribute so a simplified row cannot falsely prove acceptance.

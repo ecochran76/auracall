@@ -155,7 +155,10 @@ describe('browser model selection matchers', () => {
       'aria-label': '6Pro, Pro, 5 of 5',
       'data-animated-slider-trigger': 'true',
     });
-    const option = new FixtureElement('6Pro', { role: 'menuitem' });
+    const option = new FixtureElement('6Pro', {
+      role: 'menuitem',
+      'aria-expanded': 'false',
+    });
     const menu = new FixtureElement();
     let menuOpen = false;
     let optionClicks = 0;

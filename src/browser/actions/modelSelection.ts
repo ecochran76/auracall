@@ -740,10 +740,15 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
           dispatchClickSequence(match.node);
           // Submenus (e.g. "Legacy models") need a second pass to pick the actual model option.
           // Keep scanning once the submenu opens instead of treating the submenu click as a final switch.
+          const matchKind = classifyOption(match.normalizedText, match.testid);
+          const isTerminalModelFamily =
+            ['sol', 'terra', 'luna', 'legacy', 'instant', 'thinking', 'pro'].includes(matchKind);
           const isSubmenu =
-            (match.testid ?? '').toLowerCase().includes('submenu') ||
-            match.node.getAttribute?.('aria-expanded') !== null ||
-            match.normalizedText.startsWith('model ');
+            match.normalizedText.startsWith('model ') ||
+            (!isTerminalModelFamily && (
+              (match.testid ?? '').toLowerCase().includes('submenu') ||
+              match.node.getAttribute?.('aria-expanded') !== null
+            ));
           if (isSubmenu) {
             setTimeout(attempt, REOPEN_INTERVAL_MS / 2);
             return;
