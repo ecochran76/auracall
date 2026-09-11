@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 586 | 2026-09-11
+
+- P37 provider-free RED reproduced the exact unmarked `6 Pro` selector loop and
+  the missing synchronous two-context Deep Research export contract.
+- Checkpoint `7dd11b7db` settles explicit selection from exact post-click menu
+  closure plus matching composer-trigger evidence and moves Export/open-option
+  clicks into separate fresh iframe bindings. No `current` fallback or
+  page-owned awaited timer remains in these paths.
+- Focused tests pass 72/72; the affected browser/CLI/architecture suite passes
+  322/322; typecheck, production build, scoped lint, diff hygiene, and the
+  344-plan audit pass. The full suite reached 3,130 passes and 65 skips with one
+  unrelated 29 ms versus 30 ms timing assertion; its immediate focused rerun
+  passed 16/16. P37 is provider-free accepted and integration-ready.
+
 ## Turn 585 | 2026-09-11
 
 - Opened P37 / [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)

@@ -49327,3 +49327,23 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Post-cleanup process census still sees two September 10 identity-smoke
   processes owned by other working directories. P36's normally exited smoke
   added none; the inherited processes were not terminated.
+
+## 2026-09-11 | Plan 0344 implementation reaches provider-free GREEN
+
+- RED exposed an explicit-selection loop: the current unmarked `6 Pro` row
+  stayed matchable after each click, so the match branch bypassed the inner
+  timeout until the outer 35-second guard fired. The repaired expression tracks
+  the exact targeted click and accepts only matching composer-trigger evidence
+  after the menu closes; its timeout now applies even to persistent matches.
+- P36's `Promise was collected` came from awaiting a page-owned timer inside
+  the same frame evaluation that opened Deep Research Export. The new injected
+  step is synchronous; Node closes the frame binding, waits, reacquires the
+  target/context, and then selects exact Word or PDF in a fresh evaluation.
+- Published checkpoint `fe0b7d6b7` passes 72 focused and 322 affected tests,
+  typecheck, production build, scoped lint, diff hygiene, and the 344-plan
+  audit with zero validation errors. The full suite reached 3,130 passes and
+  65 skips; one unrelated 29 ms versus 30 ms rate-limit timing assertion passed
+  16/16 on immediate focused rerun. An earlier profile-store timeout passed its
+  9/9 focused rerun and the final full run.
+- No installation, browser, provider, protected-conversation, service,
+  scheduler, completion, live-follow, or materialization-control effect ran.

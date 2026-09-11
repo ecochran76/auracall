@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P37
-Operational state: PROVIDER_FREE_DIAGNOSIS
+Operational state: INTEGRATION_READY
 Branch: fix/plan0344-chatgpt-selector-artifact-live-findings
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -35,6 +35,28 @@ Markdown/DOCX/PDF artifact transfer failures after the first materialization.
   may not install AuraCall, attach to or launch a browser, inspect live DOM,
   call a provider, send a prompt, fetch the protected conversation, restart a
   service, or alter scheduler/completion/materialization controls.
+- RED proved explicit `select` repeatedly re-clicked the exact unmarked `6 Pro`
+  row until the outer 35-second evaluation timeout, and proved the Deep
+  Research export helper had no synchronous two-context contract.
+- The selector now remembers one exact targeted non-submenu click, verifies
+  the matching composer trigger after menu closure, and applies its inner
+  terminal timeout even while a matching row remains mounted. It does not use
+  `current` fallback or admit generic Power/effort controls.
+- Deep Research Word/PDF export now returns synchronously after either opening
+  Export or clicking the exact option. Node closes the scoped frame binding and
+  reacquires a fresh target/context on the next loop instead of awaiting a
+  page-owned timer across provider DOM transition.
+- Published checkpoint `fe0b7d6b7` is green for 72 focused tests and 322
+  affected browser/CLI/architecture tests, plus typecheck, production build,
+  scoped lint, diff hygiene, and the 344-plan audit with zero validation
+  errors. The full suite reached 3,130 passes and 65 skips; its sole failure was
+  an unrelated 29 ms versus 30 ms rate-limit timing assertion that passed
+  16/16 on immediate focused rerun. An earlier unrelated profile-store timeout
+  likewise passed 9/9 focused and passed in the final full run.
+- CodeGraph reported this isolated worktree as uninitialized, so no impact
+  claim is inferred from it. Exact native source readback, compilation, focused
+  executable tests, affected tests, and full-suite evidence are the documented
+  fallback. Installed/live acceptance remains unproven and unauthorized.
 
 ## Execution Graph
 

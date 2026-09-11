@@ -57,13 +57,14 @@
 
 ### Current Execution Board
 
-Status: P37 provider-free selector and artifact lifecycle repair active
+Status: P37 provider-free selector and artifact lifecycle repair integration-ready
 Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P36 (completed/integrated); P08, P16, P18, P29, P37 (open)
 
-- Active provider-free repair:
+- Integration-ready provider-free repair:
   [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)
-  P37 owns deterministic explicit-selector and independent transfer-lifecycle
-  fixtures and fixes only. No installed/live/provider effect is authorized.
+  P37 has deterministic explicit-selector and independent transfer-lifecycle
+  fixtures and fixes accepted at published checkpoint `fe0b7d6b7`. No
+  installed/live/provider effect is authorized.
 
 - Completed-with-terminal-findings installed/live adoption:
   [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
