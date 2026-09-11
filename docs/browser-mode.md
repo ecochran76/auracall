@@ -120,6 +120,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--browser-work-model <label>`: request a model through Work's dedicated model-selection surface. AuraCall never sends this value to Chat's picker. Without this flag, Work preserves its current model; if a named Work selector cannot be found, the run fails closed.
 - `--browser-model-strategy <select|current|ignore>`: control ChatGPT model selection. `select` (default) switches to the requested model; `current` keeps the active model and logs its label; `ignore` skips the picker entirely. (Ignored for Gemini web runs.)
 - `--browser-thinking-time <light|standard|extended|heavy>`: set Chat mode's thinking-time intensity. It is not applied in Work mode because Work has a separate model system. You can also set a default in `~/.auracall/config.json` via `profiles.<name>.browser.thinkingTime` (legacy `browser.thinkingTime` still works).
+- `--browser-no-thinking-time`: omit any inherited semantic-selector thinking depth for one run, leaving the current provider depth untouched. It cannot be combined with `--browser-thinking-time`.
   - preferred long-term config surface:
     - `runtimeProfiles.<name>.services.<service>.thinkingTime`
   - legacy root `browser.thinkingTime` remains supported as transitional input
@@ -137,7 +138,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--browser-bundle-files`: bundle all resolved attachments into a single temp file before uploading (only used when uploads are enabled/selected).
 - `--force`: bypass the duplicate prompt guard if an identical prompt is already running. This does not control conversation reuse (a separate policy will handle reuse vs new conversation).
 - sqlite bindings: automatic rebuilds now require `AURACALL_ALLOW_SQLITE_REBUILD=1`. Without it, the CLI logs instructions instead of running `pnpm rebuild` on your behalf.
-- `--model`: the same flag used for API runs is accepted. For ChatGPT browser automation, prefer `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`, `chatgpt:reasoning-max`, `chatgpt:premium`, or `chatgpt:legacy`. GPT-5.2 and Sol/Terra/Luna spellings remain compatibility inputs. Grok automation defaults to `grok-4.20` / `grok` and still accepts explicit legacy `grok-4.1` values through the Grok model picker.
+- `--model`: the same flag used for API runs is accepted. For ChatGPT browser automation, prefer `chatgpt:fast`, `chatgpt:reasoning`, `chatgpt:reasoning-high`, `chatgpt:reasoning-max`, `chatgpt:premium`, or `chatgpt:legacy`. `chatgpt:premium` targets the current `6 Pro` UI label while retaining `gpt-6-astra` as its API identity; browser run metadata records the observed picker label separately. GPT-5.2 and Sol/Terra/Luna spellings remain compatibility inputs. Grok automation defaults to `grok-4.20` / `grok` and still accepts explicit legacy `grok-4.1` values through the Grok model picker.
 - Source browser profile cookie copying is opt-in. When enabled with
   `--browser-cookie-sync`, failure to copy still fails closed unless the hidden
   `--browser-allow-cookie-errors` escape hatch is intentionally supplied.

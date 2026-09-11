@@ -3831,6 +3831,9 @@ export abstract class LlmService {
 		if (!settings || !this.isProviderRateLimitedError(error)) {
 			return error;
 		}
+		if (this.providerId === "chatgpt" && this.isProviderEffectObserved(error)) {
+			return error;
+		}
 		const now = Date.now();
 		const current = await this.readProviderGuardState();
 		const cooldownUntil = now + (this.extractProviderRetryAfterMs(error) ?? settings.cooldownMs);
@@ -4054,6 +4057,9 @@ export abstract class LlmService {
 		if (error instanceof ProviderSessionAuthorityError) {
 			return false;
 		}
+		if (this.isProviderEffectObserved(error)) {
+			return false;
+		}
 		const message = error instanceof Error ? error.message : String(error);
 		if (this.providerId === "chatgpt" && isChatgptRateLimitMessage(message)) {
 			return true;
@@ -4070,6 +4076,15 @@ export abstract class LlmService {
 			message.includes("WebSocket connection closed") ||
 			message.includes("WebSocket is not open") ||
 			message.includes("ECONNRESET")
+		);
+	}
+
+	private isProviderEffectObserved(error: unknown): boolean {
+		return Boolean(
+			typeof error === "object" &&
+				error !== null &&
+				"details" in error &&
+				(error as { details?: { effectState?: string } }).details?.effectState === "effect_observed",
 		);
 	}
 

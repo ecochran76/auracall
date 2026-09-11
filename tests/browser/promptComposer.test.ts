@@ -93,7 +93,7 @@ describe("promptComposer", () => {
 		expect(expression).toContain("window.getComputedStyle(current).display");
 	});
 
-	test("rejects a newly committed turn that only contains the requested prompt", async () => {
+	test("accepts an attachment-decorated new turn when prompt and provider effect are intact", async () => {
 		vi.useFakeTimers();
 		try {
 			const runtime = {
@@ -105,6 +105,7 @@ describe("promptComposer", () => {
 							prefixMatched: true,
 							lastMatched: true,
 							lastExactMatched: false,
+							lastExtraTextRecognized: true,
 							hasNewTurn: true,
 							stopVisible: true,
 							assistantVisible: false,
@@ -124,8 +125,49 @@ describe("promptComposer", () => {
 				150,
 				undefined,
 				10,
+				['research-brief.pdf'],
 			);
-			const assertion = expect(promise).rejects.toThrow(/prompt did not appear/i);
+			await expect(promise).resolves.toBe(11);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("rejects an otherwise active new turn with unrecognized extra text", async () => {
+		vi.useFakeTimers();
+		try {
+			const runtime = {
+				evaluate: vi.fn().mockResolvedValue({
+					result: {
+						value: {
+							turnsCount: 11,
+							lastMatched: true,
+							lastExactMatched: false,
+							lastExtraTextRecognized: false,
+							hasNewTurn: true,
+							stopVisible: true,
+							assistantVisible: false,
+							composerCleared: true,
+							inConversation: true,
+							baseline: 10,
+						},
+					},
+				}),
+			} as unknown as {
+				evaluate: (args: { expression: string; returnByValue?: boolean }) => Promise<unknown>;
+			};
+
+			const promise = promptComposer.verifyPromptCommitted(
+				runtime as never,
+				"Review the existing project",
+				150,
+				undefined,
+				10,
+				['research-brief.pdf'],
+			);
+			const assertion = expect(promise).rejects.toMatchObject({
+				details: { effectState: 'unknown' },
+			});
 			await vi.advanceTimersByTimeAsync(250);
 			await assertion;
 		} finally {

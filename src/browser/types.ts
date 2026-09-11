@@ -64,6 +64,7 @@ type LlmBrowserFields = {
 export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   selectedAgentId?: string | null;
   conversationId?: string;
+  observedModel?: string | null;
   composerTool?: string | null;
   thinkingTime?: string;
   chatgptProMode?: string;
@@ -102,6 +103,7 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
 export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   chromeTargetId?: string | null;
   conversationId?: string;
+  observedModel?: string | null;
   composerTool?: string | null;
   thinkingTime?: string;
   chatgptProMode?: string;

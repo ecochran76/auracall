@@ -12,7 +12,7 @@ export interface ChatgptSemanticModelSelection {
   /** Stable AuraCall intent ID. Persist this value instead of a provider model name. */
   canonicalSelector: ChatgptCanonicalModelSelector;
   /** Current ChatGPT picker label. This is provider-owned and may change independently. */
-  desiredModel: 'GPT-6 Pro' | 'GPT-5.6 Sol' | 'GPT-5.6 Terra' | 'GPT-5.6 Luna' | 'GPT-5.5';
+  desiredModel: '6 Pro' | 'GPT-5.6 Sol' | 'GPT-5.6 Terra' | 'GPT-5.6 Luna' | 'GPT-5.5';
   /** Concrete API-compatible bridge used by shared runtime bookkeeping. */
   apiModel: 'gpt-6-astra' | 'gpt-5.6-sol' | 'gpt-5.2-instant';
   thinkingTime?: ThinkingTimeLevel;
@@ -57,7 +57,7 @@ const CHATGPT_CANONICAL_SELECTIONS: Record<
   },
   'chatgpt:premium': {
     canonicalSelector: 'chatgpt:premium',
-    desiredModel: 'GPT-6 Pro',
+    desiredModel: '6 Pro',
     apiModel: 'gpt-6-astra',
   },
   'chatgpt:legacy': {

@@ -49121,3 +49121,24 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - A dedicated worktree and branch now own the slice. The catalog-only audit
   reports inherited P08/P16 custody findings; they remain visible and outside
   this repair.
+- Provider-free implementation now targets the current `6 Pro` picker label,
+  preserves requested and observed model identities separately, and exposes a
+  one-run `--browser-no-thinking-time` omission without changing stored config.
+  Attachment-decorated prompt commitment requires a new latest turn, intact
+  prompt, cleared composer, conversation URL, and assistant/stop evidence.
+  Provider effects now progress through `pre_effect`, `unknown`, and
+  `effect_observed`; the last state disables retry and prevents a later
+  rate-limit surface from replacing the outcome with a cooldown. Completed
+  artifact fetches use the established browser-file CLI force-exit boundary.
+- Focused verification is green across selector, config, prompt, browser-mode,
+  rate-limit, artifact materialization, session, and artifact-fetch lifecycle:
+  245 tests passed with one existing skip. An initial typecheck used a temporary
+  dependency link to OpenAI SDK 6.15.0 and exposed a version mismatch; replacing
+  only that link with a worktree-local offline frozen-lockfile install restored
+  the required 7.10.0 SDK. Fresh typecheck and production build then passed.
+  Scoped lint reports no errors, with one warning and two informational
+  findings already present in the touched prompt/session files.
+- Goal audit passes. Active planning retains P16's two inherited roadmap/runbook
+  findings. Catalog/exact-branch lane audits retain P08/P16 custody findings and
+  the expected P33 pre-integration catalog absence; no unrelated lane was
+  rewritten.

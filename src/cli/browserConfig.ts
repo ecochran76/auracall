@@ -51,6 +51,8 @@ export interface BrowserFlagOptions {
   browserWslChrome?: 'auto' | 'wsl' | 'windows';
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   browserThinkingTime?: ThinkingTimeLevel;
+  /** Omit any inherited thinking-time choice for this browser run. */
+  browserNoThinkingTime?: boolean;
   browserChatgptMode?: 'chat' | 'work';
   browserChatgptToolApproval?: ChatgptToolApprovalPolicy;
   browserWorkModel?: string;
@@ -95,6 +97,9 @@ export function normalizeChatGptModelForBrowser(model: ModelName): ModelName {
 }
 
 export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<BrowserSessionConfig> {
+  if (options.browserNoThinkingTime && options.browserThinkingTime) {
+    throw new Error('Use either --browser-no-thinking-time or --browser-thinking-time, not both.');
+  }
   if (options.browserCookieSync && options.browserNoCookieSync) {
     throw new Error('--browser-cookie-sync cannot be combined with --browser-no-cookie-sync.');
   }
@@ -215,7 +220,9 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     // Allow cookie failures by default so runs can continue without Chrome/Keychain secrets.
     allowCookieErrors: options.browserAllowCookieErrors ?? true,
     remoteChrome,
-    thinkingTime: options.browserThinkingTime ?? chatgptSemanticModelSelection?.thinkingTime,
+    thinkingTime: options.browserNoThinkingTime
+      ? undefined
+      : options.browserThinkingTime ?? chatgptSemanticModelSelection?.thinkingTime,
     composerTool: normalizeComposerTool(options.browserComposerTool),
     deepResearchPlanAction: normalizeDeepResearchPlanAction(options.browserDeepResearchPlanAction),
   };

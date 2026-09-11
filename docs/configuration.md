@@ -317,6 +317,7 @@ Transitional authoring note:
   - `--browser-chatgpt-mode`
   - `--browser-work-model`
   - `--browser-thinking-time`
+  - `--browser-no-thinking-time` (one-run omission only; it is not persisted)
   - `--browser-composer-tool`
   - `--browser-deep-research-plan-action`
 - those CLI flags are still intentionally classified as supported transitional
@@ -336,6 +337,8 @@ Transitional authoring note:
     default service exists
   - when no concrete default service exists, they remain root-browser-only
     inputs
+  - `--browser-no-thinking-time` remains deliberately CLI-only because it
+    suppresses inherited depth for one execution rather than authoring config
 - active service binding now prefers the service-scoped values when both the
   service-scoped and root-browser copies exist
 - keep `manualLogin` / `manualLoginProfileDir` separate from that precedence:

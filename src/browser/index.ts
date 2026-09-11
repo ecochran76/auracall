@@ -1458,6 +1458,7 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 	action: string;
 	Runtime?: ChromeClient["Runtime"] | null;
 	managedProfileDir?: string | null;
+	effectState?: "pre_effect" | "effect_observed" | "unknown";
 }): Promise<Error> {
 	let reason = extractChatgptRateLimitSummary(options.error.message);
 	if (!reason && options.Runtime) {
@@ -1468,6 +1469,19 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 	}
 	if (!reason && !isChatgptRateLimitMessage(options.error.message)) {
 		return options.error;
+	}
+	if (!shouldWriteChatgptRateLimitCooldown(options.effectState)) {
+		return new BrowserAutomationError(
+			`ChatGPT showed a rate-limit surface after the provider effect was observed while ${options.action}; reconcile the existing conversation before any retry.`,
+			{
+				stage: "provider-effect-reconciliation",
+				code: "rate-limit-after-effect",
+				effectState: "effect_observed",
+				retrySafe: false,
+				reason: reason ?? options.error.message,
+			},
+			options.error,
+		);
 	}
 	const now = Date.now();
 	const profile = resolveChatgptBrowserGuardProfileName(options.config, options.managedProfileDir);
@@ -1516,6 +1530,25 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 		).toISOString()}.${detail}`.trim(),
 		{ cause: options.error },
 	);
+}
+
+function shouldWriteChatgptRateLimitCooldown(
+	effectState: "pre_effect" | "effect_observed" | "unknown" | undefined,
+): boolean {
+	return effectState !== "effect_observed";
+}
+
+function readProviderEffectState(
+	error: unknown,
+	fallback: "pre_effect" | "effect_observed" | "unknown",
+): "pre_effect" | "effect_observed" | "unknown" {
+	if (typeof error !== "object" || error === null || !("details" in error)) {
+		return fallback;
+	}
+	const effectState = (error as { details?: { effectState?: unknown } }).details?.effectState;
+	return effectState === "pre_effect" || effectState === "effect_observed" || effectState === "unknown"
+		? effectState
+		: fallback;
 }
 
 function createWindowsManagedProfileRetryReset(options: {
@@ -1642,6 +1675,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	let lastUrl: string | undefined;
 	let submittedConversationId: string | null = null;
 	let promptDispatchedAt: number | null = null;
+	let providerEffectState: "pre_effect" | "effect_observed" | "unknown" = "pre_effect";
+	let observedModel: string | null = null;
 	let selectedThinkingTime: ThinkingTimeLevel | null = null;
 	let selectedChatgptProMode: ChatgptProMode | null = null;
 	let selectedChatgptAccountLevel: string | null = null;
@@ -1745,6 +1780,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			chromeTargetId: lastTargetId,
 			tabUrl: lastUrl,
 			conversationId,
+			observedModel,
 			userDataDir,
 			controllerPid: process.pid,
 			thinkingTime: selectedThinkingTime ?? undefined,
@@ -2304,7 +2340,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		});
 		if (modelSelectionPlan.kind === "chat-model") {
 			await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
-			await raceWithDisconnect(
+			observedModel = await raceWithDisconnect(
 				withRetries(
 					() => ensureModelSelection(Runtime, modelSelectionPlan.model, logger, modelSelectionPlan.strategy),
 					{
@@ -2496,6 +2532,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					inputTimeoutMs: config.inputTimeoutMs ?? undefined,
 					onPromptDispatched: async () => {
 						promptDispatchedAt = Date.now();
+						providerEffectState = "unknown";
 						recordPassiveObservation({
 							state: "response-incoming",
 							source: "browser-service",
@@ -2507,6 +2544,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				prompt,
 				logger,
 			);
+			providerEffectState = "effect_observed";
 			if (typeof committedTurns === "number" && Number.isFinite(committedTurns)) {
 				if (baselineTurns === null || committedTurns > baselineTurns) {
 					baselineTurns = Math.max(0, committedTurns - 1);
@@ -2677,6 +2715,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				chromeTargetId: lastTargetId,
 				tabUrl: lastUrl,
 				conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+				observedModel,
 				composerTool: selectedComposerTool,
 				thinkingTime: selectedThinkingTime ?? undefined,
 				chatgptProMode: selectedChatgptProMode ?? undefined,
@@ -3020,6 +3059,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			chromeTargetId: lastTargetId,
 			tabUrl: lastUrl,
 			conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+			observedModel,
 			composerTool: selectedComposerTool,
 			thinkingTime: selectedThinkingTime ?? undefined,
 			chatgptProMode: selectedChatgptProMode ?? undefined,
@@ -3057,6 +3097,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			action: "browserRun",
 			Runtime: runtimeForGuard,
 			managedProfileDir: userDataDir,
+			effectState: readProviderEffectState(normalizedError, providerEffectState),
 		});
 		stopThinkingMonitor?.();
 		const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(guardedError);
@@ -3303,6 +3344,8 @@ async function runRemoteBrowserMode(
 	let lastUrl: string | undefined;
 	let connectedHost = host;
 	let connectedPort = port;
+	let observedModel: string | null = null;
+	let providerEffectState: "pre_effect" | "effect_observed" | "unknown" = "pre_effect";
 	let disposeRemoteTransport: (() => Promise<void>) | null = null;
 	const runtimeHintCb = options.runtimeHintCb;
 	let selectedThinkingTime: ThinkingTimeLevel | null = null;
@@ -3326,6 +3369,7 @@ async function runRemoteBrowserMode(
 				chromeHost: connectedHost,
 				chromeTargetId: remoteTargetId ?? undefined,
 				tabUrl: lastUrl,
+				observedModel,
 				controllerPid: process.pid,
 				thinkingTime: selectedThinkingTime ?? undefined,
 				chatgptProMode: selectedChatgptProMode ?? undefined,
@@ -3442,7 +3486,7 @@ async function runRemoteBrowserMode(
 		});
 		if (modelSelectionPlan.kind === "chat-model") {
 			await dismissOpenMenus(Runtime).catch(() => false);
-			await withRetries(
+			observedModel = await withRetries(
 				() => ensureModelSelection(Runtime, modelSelectionPlan.model, logger, modelSelectionPlan.strategy),
 				{
 					retries: 2,
@@ -3590,10 +3634,14 @@ async function runRemoteBrowserMode(
 					attachmentNames,
 					baselineTurns: baselineTurns ?? undefined,
 					inputTimeoutMs: config.inputTimeoutMs ?? undefined,
+					onPromptDispatched: async () => {
+						providerEffectState = "unknown";
+					},
 				},
 				prompt,
 				logger,
 			);
+			providerEffectState = "effect_observed";
 			if (typeof committedTurns === "number" && Number.isFinite(committedTurns)) {
 				if (baselineTurns === null || committedTurns > baselineTurns) {
 					baselineTurns = Math.max(0, committedTurns - 1);
@@ -3726,6 +3774,7 @@ async function runRemoteBrowserMode(
 				chromeTargetId: remoteTargetId ?? undefined,
 				tabUrl: lastUrl,
 				conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+				observedModel,
 				composerTool: selectedComposerTool,
 				thinkingTime: selectedThinkingTime ?? undefined,
 				chatgptProMode: selectedChatgptProMode ?? undefined,
@@ -4020,6 +4069,7 @@ async function runRemoteBrowserMode(
 			chromeTargetId: remoteTargetId ?? undefined,
 			tabUrl: lastUrl,
 			conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+			observedModel,
 			composerTool: selectedComposerTool,
 			thinkingTime: selectedThinkingTime ?? undefined,
 			chatgptProMode: selectedChatgptProMode ?? undefined,
@@ -4045,6 +4095,7 @@ async function runRemoteBrowserMode(
 			action: "remoteBrowserRun",
 			Runtime: runtimeForGuard,
 			managedProfileDir: config.manualLoginProfileDir ?? null,
+			effectState: readProviderEffectState(normalizedError, providerEffectState),
 		});
 		stopThinkingMonitor?.();
 		const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(guardedError);
@@ -5285,4 +5336,17 @@ export function buildChatgptProjectDispatchProbeExpressionForTest(
 	requirePromptReady = true,
 ): string {
 	return buildChatgptProjectDispatchProbeExpression(projectId, requirePromptReady);
+}
+
+export function shouldWriteChatgptRateLimitCooldownForTest(
+	effectState: "pre_effect" | "effect_observed" | "unknown" | undefined,
+): boolean {
+	return shouldWriteChatgptRateLimitCooldown(effectState);
+}
+
+export function readProviderEffectStateForTest(
+	error: unknown,
+	fallback: "pre_effect" | "effect_observed" | "unknown",
+): "pre_effect" | "effect_observed" | "unknown" {
+	return readProviderEffectState(error, fallback);
 }

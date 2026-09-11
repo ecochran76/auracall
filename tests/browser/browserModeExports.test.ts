@@ -15,6 +15,8 @@ import {
   shouldPreserveBrowserOnErrorForTest,
   shouldKeepManagedChatgptBrowserOpenForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
+  shouldWriteChatgptRateLimitCooldownForTest,
+  readProviderEffectStateForTest,
   extractParseableJsonObjectTextForTest,
 } from '../../src/browser/index.js';
 import { resolveBrowserLaunchPlan } from '../../src/browser/service/browserLaunchPlan.js';
@@ -53,6 +55,18 @@ describe('browserMode exports', () => {
   test('re-exports runBrowserMode and constants', () => {
     expect(typeof runBrowserMode).toBe('function');
     expect(typeof CHATGPT_URL).toBe('string');
+  });
+
+  test('suppresses a new cooldown write after provider effect was observed', () => {
+    expect(shouldWriteChatgptRateLimitCooldownForTest('effect_observed')).toBe(false);
+    expect(shouldWriteChatgptRateLimitCooldownForTest('pre_effect')).toBe(true);
+    expect(shouldWriteChatgptRateLimitCooldownForTest('unknown')).toBe(true);
+  });
+
+  test('carries structured provider-effect evidence across later browser failures', () => {
+    const error = new BrowserAutomationError('commit uncertain', { effectState: 'effect_observed' });
+    expect(readProviderEffectStateForTest(error, 'unknown')).toBe('effect_observed');
+    expect(readProviderEffectStateForTest(new Error('plain'), 'pre_effect')).toBe('pre_effect');
   });
 
   test('recovers live managed-profile pid for reused-browser provider provenance', async () => {

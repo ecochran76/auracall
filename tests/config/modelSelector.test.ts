@@ -24,7 +24,7 @@ describe('semantic model selectors', () => {
     ['chatgpt:reasoning', { canonicalSelector: 'chatgpt:reasoning', desiredModel: 'GPT-5.6 Sol', thinkingTime: 'standard', apiModel: 'gpt-5.6-sol' }],
     ['chatgpt:reasoning-high', { canonicalSelector: 'chatgpt:reasoning-high', desiredModel: 'GPT-5.6 Sol', thinkingTime: 'extended', apiModel: 'gpt-5.6-sol' }],
     ['chatgpt:reasoning-max', { canonicalSelector: 'chatgpt:reasoning-max', desiredModel: 'GPT-5.6 Sol', thinkingTime: 'heavy', apiModel: 'gpt-5.6-sol' }],
-    ['chatgpt:premium', { canonicalSelector: 'chatgpt:premium', desiredModel: 'GPT-6 Pro', apiModel: 'gpt-6-astra' }],
+    ['chatgpt:premium', { canonicalSelector: 'chatgpt:premium', desiredModel: '6 Pro', apiModel: 'gpt-6-astra' }],
     ['chatgpt:legacy', { canonicalSelector: 'chatgpt:legacy', desiredModel: 'GPT-5.5', apiModel: 'gpt-5.2-instant' }],
   ])('resolves canonical selector %s through the current provider schema', (selector, expected) => {
     expect(resolveChatgptSemanticModelSelector(selector)).toEqual(expected);

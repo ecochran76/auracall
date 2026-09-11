@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P33
-Operational state: PROVIDER_FREE_REPAIR_IN_PROGRESS
+Operational state: PROVIDER_FREE_IMPLEMENTATION_ACCEPTED
 Branch: fix/plan0340-chatgpt-deep-research-reliability
 Target: main
 Integration: merge
@@ -44,6 +44,15 @@ recovered provider job.
   catalog-only audit has inherited findings for P08 missing its claimed
   worktree and P16 using the non-schema `INTEGRATED_NO_WORKTREE` custody value;
   this lane does not rewrite unrelated custody.
+- Planning checkpoint `7bb342219` is published on the exact P33 remote branch.
+- The provider-free implementation satisfies DRR-R1 through DRR-R5. The
+  affected suite passes 245 tests with one existing skip; typecheck and the
+  production build pass against the frozen lockfile dependency graph. Scoped
+  lint reports no errors and only three inherited findings in the pre-existing
+  prompt/session files. Goal governance passes; the active planning audit still
+  reports P16's two inherited missing roadmap/runbook links, while lane audit
+  retains P08/P16 custody findings and the expected pre-integration P33 catalog
+  absence.
 
 ## Execution Graph
 
@@ -117,3 +126,18 @@ All six criteria have current provider-free evidence on this branch; docs and
 lane state match the implemented behavior; the branch is published with a
 recoverable checkpoint; no provider or installed-runtime effect occurred; and
 any install/live canary remains a separately authorized successor.
+
+## Provider-Free Acceptance
+
+- DRR-R1: accepted through selector, picker-return, runtime/session type, and
+  configured-executor metadata coverage.
+- DRR-R2: accepted through inherited-depth omission and conflicting-flag tests
+  plus user/operator documentation.
+- DRR-R3: accepted through attachment-aware commit and unrecognized-extra-text
+  fail-closed regressions.
+- DRR-R4: accepted through effect propagation, cooldown suppression, and
+  no-retry tests.
+- DRR-R5: accepted through the existing scoped-session cleanup plus the CLI
+  post-output force-exit lifecycle regression.
+- DRR-R6: affected tests, frozen-lockfile typecheck, production build, scoped
+  lint, goal audit, diff hygiene, and exact inherited audit findings recorded.

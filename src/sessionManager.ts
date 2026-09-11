@@ -99,6 +99,7 @@ export interface BrowserRuntimeMetadata {
   chromeTargetId?: string;
   tabUrl?: string;
   conversationId?: string;
+  observedModel?: string | null;
   composerTool?: string | null;
   thinkingTime?: string;
   chatgptProMode?: string;

@@ -19,6 +19,7 @@ import type {
 	ProviderUserIdentity,
 } from "../../src/browser/providers/types.js";
 import type { ResolvedUserConfig } from "../../src/config.js";
+import { BrowserAutomationError } from "../../src/oracle/errors.js";
 
 class RateLimitTestLlmService extends LlmService {
 	constructor(
@@ -318,6 +319,40 @@ describe("llmService ChatGPT rate-limit guard", () => {
 			expect(delays[0]).toBeLessThanOrEqual(750);
 		} finally {
 			setTimeoutSpy.mockRestore();
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("does not retry a ChatGPT rate limit after provider effect was observed", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-chatgpt-effect-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+		} satisfies LlmServiceAdapter;
+		const service = new RateLimitTestLlmService(
+			{ browser: { cache: {} } } as ResolvedUserConfig,
+			provider,
+		);
+		let attempts = 0;
+		const error = new BrowserAutomationError(
+			"ChatGPT rate limit detected after provider effect",
+			{ effectState: "effect_observed", retrySafe: false },
+		);
+
+		try {
+			await expect(
+				service.runGuardedWithRetries(
+					"readConversationContext",
+					async () => {
+						attempts += 1;
+						throw error;
+					},
+					2,
+				),
+			).rejects.toBe(error);
+			expect(attempts).toBe(1);
+		} finally {
 			await rm(homeDir, { recursive: true, force: true });
 		}
 	});

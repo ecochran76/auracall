@@ -1422,6 +1422,7 @@ describe('configured stored-step executor', () => {
       answerChars: 28,
       tabUrl: 'https://chatgpt.com/c/mock-chatgpt-selector',
       conversationId: 'mock-chatgpt-selector',
+      observedModel: '5.6 Instant',
     }));
 
     const executeStoredRunStep = createConfiguredStoredStepExecutor(
@@ -1503,6 +1504,7 @@ describe('configured stored-step executor', () => {
       projectId: 'proj_semantic',
       configuredUrl: 'https://chatgpt.com/g/proj_semantic/project',
       desiredModel: 'GPT-5.6 Sol',
+      observedModel: '5.6 Instant',
       modelSelector: 'chatgpt:pro-extended',
       thinkingTime: 'extended',
     });

@@ -12,6 +12,13 @@
   conversation `6aa368bc-43c4-83ea-8d98-964264dd4340`.
 - The pre-plan catalog audit preserves inherited P08/P16 custody findings; P33
   does not silently rewrite unrelated lane state.
+- P33 provider-free acceptance is complete: 245 affected tests pass with one
+  existing skip, frozen-lockfile typecheck and production build pass, and
+  scoped lint has no errors. Requested/observed model provenance, one-run depth
+  omission, attachment-aware commitment, post-effect no-retry/cooldown
+  suppression, and artifact-fetch exit are covered. Integration remains
+  pending; no provider, browser, install, service, or recovered-conversation
+  mutation ran.
 
 - P16 reconciliation supersedes the Turn 550 preservation note: current main's
   exact ecosystem-mention and Skill CLI paths are authoritative. Retain P16's

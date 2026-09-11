@@ -611,14 +611,14 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: null
-    remote_ref: null
+    checkpoint: 7bb342219448d73dc2ca6c929103d81821ec73da
+    remote_ref: refs/remotes/origin/fix/plan0340-chatgpt-deep-research-reliability
     integration: merge
     dependencies: [P25, P26, P31]
     overlaps: [P16, P18]
-    validation_status: planned-provider-free
-    validation_ref: null
+    validation_status: provider-free-accepted-awaiting-integration
+    validation_ref: docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md
     integration_receipt: null
     blocker: null
-    disposition: Provider-free repair opened from current main; recovered provider conversation is authoritative and must not be retried.
+    disposition: Provider-free implementation accepted on its isolated branch; recovered provider conversation remains authoritative and must not be retried; integration is pending.
     updated_at: 2026-09-11

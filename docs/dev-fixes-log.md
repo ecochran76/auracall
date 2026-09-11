@@ -22437,3 +22437,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   failed `llmServicePromptStructure.test.ts`; remove the incompatible feature,
   record its acceptance criterion as open, and retain only independently
   proven app-selection and cleanup behavior.
+
+## 2026-09-11 | Preserve observed browser effects across prompt and rate-limit ambiguity
+
+- A committed ChatGPT user turn may include attachment and tool presentation
+  text even when the authored prompt is intact. Accept that shape only when a
+  new latest turn, prompt containment, cleared composer, conversation URL, and
+  assistant/stop activity all agree; retain exact equality as the simpler path.
+- Track send state as `pre_effect`, `unknown`, or `effect_observed`. Once an
+  effect is observed, a later rate-limit surface is reconciliation-required:
+  do not auto-retry and do not overwrite the outcome with a new cooldown.
+- Keep requested semantic/API model identity separate from the picker label
+  actually observed at runtime. For a CLI command that has completed browser
+  file work and printed its result, use the established force-exit boundary so
+  transient automation handles cannot keep the shell open.

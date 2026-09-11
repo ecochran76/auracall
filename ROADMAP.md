@@ -3,8 +3,10 @@
 - Active P33: [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
   repairs current `6 Pro` provenance, one-run inherited-depth omission,
   attachment-aware prompt commitment, post-effect failure reconciliation, and
-  artifact-fetch cleanup provider-free. The recovered September 10 Deep
-  Research conversation is authoritative and may not be retried.
+  artifact-fetch cleanup provider-free. Implementation and validation are
+  accepted on the isolated branch; integration is pending. The recovered
+  September 10 Deep Research conversation is authoritative and may not be
+  retried.
 
 - P16 source reconciliation is provider-free green: current main owns exact
   ecosystem-mention selection; the reconciled delta removes inherited generic
@@ -30,14 +32,15 @@
 
 ### Current Execution Board
 
-Status: P33 provider-free Deep Research reliability repair in progress
+Status: P33 provider-free Deep Research reliability repair accepted; integration pending
 Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P32 (integrated); P08, P16, P18, P29, P33 (open)
 
 - Active ChatGPT Deep Research reliability repair:
   [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
   P33 starts from current main and treats the completed September 10 provider
-  conversation and recovered artifacts as authoritative. Source work is
-  provider-free and must retain exact new-turn and no-duplicate-submit fences.
+  conversation and recovered artifacts as authoritative. The isolated source
+  packet is accepted provider-free and retains exact new-turn and
+  no-duplicate-submit fences; integration remains pending.
 
 - Completed installed-runtime and Git maintenance:
   [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md)
