@@ -2,7 +2,8 @@
 
 - Completed-with-terminal-evidence-finding P42: [Plan 0349](docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md)
   passed install parity, but piped identity JSON was truncated before parsing;
-  prompt and artifact budgets remained unspent.
+  prompt and artifact budgets remained unspent. Evidence is integrated at
+  `ec538abd5`.
 
 - Integrated P41: [Plan 0348](docs/dev/plans/0348-2026-09-11-chatgpt-compact-option-row-repair.md)
   reproduces the current compact `6Pro` row's submenu-like attribute shape and

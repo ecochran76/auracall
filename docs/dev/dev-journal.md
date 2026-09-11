@@ -49527,3 +49527,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   boundary truncating JSON before flush. The consumer exited 5; the lane failed
   closed without retry. No prompt, Send, artifact fetch, mutation, or runtime
   control ran.
+
+## 2026-09-11 | Plan 0349 integrated
+
+- Merged exact terminal-evidence topic `f46b17122` into `main` at `ec538abd5`
+  without additional runtime/provider effects.

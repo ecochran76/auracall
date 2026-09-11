@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P42
-Operational state: TERMINAL_EVIDENCE_FAILURE
+Operational state: INTEGRATED_TERMINAL_EVIDENCE_FAILURE
 Branch: ops/plan0349-installed-plan0348-live-acceptance
 Target: main
 Integration: merge
@@ -32,6 +32,8 @@ the recovered Deep Research conversation.
 - Prompt and artifact budgets remained unspent: zero prompt attempts, Sends,
   artifact fetches, retries, conversation mutations, or runtime controls.
   Receipt: `docs/dev/notes/2026-09-11-plan0349-installed-live-acceptance.json`.
+- Exact published topic `f46b17122` merged into `main` at `ec538abd5` without
+  additional runtime or provider effects.
 
 ## Execution Graph
 

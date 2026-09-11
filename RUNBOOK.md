@@ -1,5 +1,10 @@
 # RUNBOOK
 
+## Turn 604 | 2026-09-11
+
+- Merged exact P42 terminal-evidence topic `f46b17122` into `main` at
+  `ec538abd5` with no additional runtime/provider effect.
+
 ## Turn 603 | 2026-09-11
 
 - P42's one install passed 523-file source/installed parity at normalized SHA

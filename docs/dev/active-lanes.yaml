@@ -799,7 +799,7 @@ lanes:
     branch: ops/plan0349-installed-plan0348-live-acceptance
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
+    custody_state: INTEGRATED
     checkpoint: f0166599f9657a4fdab569a77909acca737c6af3
     remote_ref: refs/remotes/origin/ops/plan0349-installed-plan0348-live-acceptance
     integration: merge
@@ -809,7 +809,7 @@ lanes:
     reconciliation_note: P42 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, Skill execution, or runtime controls.
     validation_status: terminal-identity-evidence-serialization-failure-not-accepted
     validation_ref: docs/dev/notes/2026-09-11-plan0349-installed-live-acceptance.json
-    integration_receipt: null
+    integration_receipt: ec538abd52e0c18ed987fff9664e37816505d53f
     blocker: null
     disposition: Install parity passed. The single identity operation produced truncated piped JSON, so the lane failed closed without prompt or artifact effects. A successor must capture identity unpiped.
     updated_at: 2026-09-11
