@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Completed-with-terminal-findings P36: [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
+  installed exact published P35 bytes and proved normal identity-smoke exit.
+  Live acceptance was rejected: explicit `6 Pro` selection timed out before
+  Send, and the one artifact fetch again settled Markdown only while DOCX/PDF
+  returned `Promise was collected`. No retries or control effects ran.
+
 - Completed P35: [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)
   repairs four P34-owned failures provider-free: identity-smoke exit, current
   `6 Pro` trigger discovery, ordinary Session observed-model persistence, and
@@ -46,8 +52,15 @@
 
 ### Current Execution Board
 
-Status: P35 ChatGPT live-findings provider-free repair integrated
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P35 (completed/integrated); P08, P16, P18, P29 (open)
+Status: P36 verification completed with terminal findings; integration-ready
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P35 (completed/integrated); P08, P16, P18, P29 (open); P36 (integration-ready)
+
+- Completed-with-terminal-findings installed/live adoption:
+  [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
+  P36 spent one install, one identity probe, one effect-capable explicit
+  `chatgpt:premium` attempt with zero Sends, and one read-only recovered-
+  conversation artifact fetch. Identity passed; selector and complete fresh
+  artifact settlement failed terminally. Unrelated controls stayed preserved.
 
 - Completed provider-free repair:
   [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)

@@ -1,5 +1,33 @@
 # RUNBOOK
 
+## Turn 582 | 2026-09-11
+
+- Opened P36 / [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
+  from clean published main `ab01c510a` after explicit operator authorization
+  to proceed with installed/live adoption.
+- Pre-effect evidence: installed runtime predates P35 and differs from current
+  source; API PID `47500` is active/running with inherited `NRestarts=1`; six
+  completions are paused and queued/running/idle-waiting are zero; persistent
+  `wsl-chrome-3` Chrome owner PID `71128` remains on DevTools `45015`.
+- Bounds are one install/service refresh, one no-prompt identity smoke, one
+  explicit zero-retry `chatgpt:premium` Send, and one read-only three-artifact
+  fetch. Broad status and all scheduler/completion/materialization controls are
+  excluded. Graphiti is healthy but returned no relevant AuraCall cloud.
+- Installed parity passed across 523 source/installed files with normalized
+  SHA-256 `74ea79a3f...`; the refreshed service is PID `37901`, active/running,
+  with zero automatic restarts. Identity matched Pro/personal and exited 0 in
+  one second without launching Chrome.
+- The single effect-capable explicit-selector run timed out before Send. Its
+  persisted Session is `error`, desired model is `6 Pro`, mode is Chat, and
+  conversation/output are null. No fallback or resend ran.
+- The single artifact fetch exited 0 in 24 seconds but freshly materialized
+  only Markdown; DOCX/PDF both recorded `Promise was collected`. Retained
+  authoritative files preserve their prior hashes. Six completions remain
+  paused, controls are untouched, and service/Chrome custody is healthy.
+- P36 completes verification and is integration-ready with terminal findings
+  and no live acceptance. Published evidence checkpoint: `ff4fdd907`.
+  Receipt: `docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.
+
 ## Turn 581 | 2026-09-11
 
 - Final P35 custody gates proved topic tip `44ea3e793` clean, equal to its

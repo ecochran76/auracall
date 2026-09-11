@@ -22491,3 +22491,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   scoped provider session before the next artifact. Reusing a navigated CDP
   execution context can otherwise surface `Promise was collected` on later
   exports even when the first export succeeded.
+
+## 2026-09-11 | Provider-free selector and transfer fixtures are not installed-live acceptance
+
+- A provider-free current-trigger fixture can pass while the installed
+  explicit `select` path still times out before Send. Persist the desired model,
+  mode, error stage, null conversation/output, and zero-Send counter; never
+  substitute `current` after the explicit selector gate fails.
+- Sequential per-artifact session cleanup can pass injected fixtures while a
+  protected live fetch still materializes only its first variant and reports
+  `Promise was collected` for later exports. Treat fresh manifest coverage as
+  the acceptance surface independently of retained historical files and normal
+  command exit, and preserve the one-fetch/no-retry boundary.
