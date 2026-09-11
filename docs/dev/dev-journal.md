@@ -49347,3 +49347,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   9/9 focused rerun and the final full run.
 - No installation, browser, provider, protected-conversation, service,
   scheduler, completion, live-follow, or materialization-control effect ran.
+
+## 2026-09-11 | Plan 0344 integrated
+
+- Merged exact published P37 topic `bea81fe70` non-fast-forward into `main` at
+  `a827fc83a`. The selector and fresh-context export repairs are provider-free
+  accepted and integrated.
+- Fresh merged-result validation passes 351/351 affected tests, typecheck, and
+  production build.
+- Installation, browser/provider proof, prompt/Send, protected-conversation
+  access, service changes, and runtime controls remained unspent. Installed/
+  live adoption is still a separate authorization boundary.

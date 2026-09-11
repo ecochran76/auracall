@@ -1,6 +1,6 @@
 # Aura-Call Roadmap
 
-- Active P37: [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)
+- Integrated P37: [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)
   repairs P36's explicit `6 Pro` selector timeout and later-variant artifact
   transfer failures provider-free. Installation and live adoption remain
   outside the lane.
@@ -57,14 +57,14 @@
 
 ### Current Execution Board
 
-Status: P37 provider-free selector and artifact lifecycle repair integration-ready
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P36 (completed/integrated); P08, P16, P18, P29, P37 (open)
+Status: P37 provider-free selector and artifact lifecycle repair integrated
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P37 (completed/integrated); P08, P16, P18, P29 (open)
 
-- Integration-ready provider-free repair:
+- Integrated provider-free repair:
   [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)
-  P37 has deterministic explicit-selector and independent transfer-lifecycle
-  fixtures and fixes accepted at published checkpoint `fe0b7d6b7`. No
-  installed/live/provider effect is authorized.
+  P37's deterministic explicit-selector and independent transfer-lifecycle
+  fixtures and fixes merged at `a827fc83a`. No installed/live/provider effect
+  was run; adoption remains separately gated.
 
 - Completed-with-terminal-findings installed/live adoption:
   [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)

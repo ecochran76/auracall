@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 587 | 2026-09-11
+
+- Merged exact published P37 topic `bea81fe70` non-fast-forward into `main` at
+  `a827fc83a` after provider-free acceptance.
+- P37 closes as integrated: explicit Chat `6 Pro` selection settles from exact
+  post-click menu closure plus matching composer evidence, and Deep Research
+  Word/PDF export uses fresh synchronous iframe execution contexts.
+- Fresh merged-result validation passes 351/351 affected tests, typecheck, and
+  production build.
+- No installation, browser/provider request, prompt, Send, protected-
+  conversation fetch/mutation, service change, or runtime control ran.
+
 ## Turn 586 | 2026-09-11
 
 - P37 provider-free RED reproduced the exact unmarked `6 Pro` selector loop and

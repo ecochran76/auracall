@@ -1,12 +1,12 @@
 # ChatGPT Selector And Artifact Live-Findings Repair | 0344-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P37
-Operational state: INTEGRATION_READY
+Operational state: INTEGRATED
 Branch: fix/plan0344-chatgpt-selector-artifact-live-findings
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-11
+Revision: 3 | 2026-09-11
 
 ## Stable Objective
 
@@ -57,6 +57,12 @@ Markdown/DOCX/PDF artifact transfer failures after the first materialization.
   claim is inferred from it. Exact native source readback, compilation, focused
   executable tests, affected tests, and full-suite evidence are the documented
   fallback. Installed/live acceptance remains unproven and unauthorized.
+- Exact published topic `bea81fe70` merged non-fast-forward into `main` at
+  `a827fc83a`. P37 is provider-free accepted and integrated; installation,
+  runtime adoption, and any live/provider proof remain a separate authority
+  boundary.
+- Fresh merged-result validation passes 351/351 affected tests, typecheck, and
+  production build.
 
 ## Execution Graph
 
