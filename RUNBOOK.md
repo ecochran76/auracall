@@ -20,6 +20,11 @@
   reconciled: shared response lifecycle authority remains on main, while P18's
   paused operational allowances remain untouched. Integration is ready; no
   provider, browser, install, service, or recovered-conversation mutation ran.
+- The overlap-reconciled branch integrated non-fast-forward into `main` at
+  `30c9d927f`; the merged-result gate passes 342 tests with one existing skip,
+  typecheck, and production build. `origin/main` matched the merge receipt after
+  push. P33 is closed as provider-free accepted/integrated; install and live
+  proof remain outside this plan.
 
 - P16 reconciliation supersedes the Turn 550 preservation note: current main's
   exact ecosystem-mention and Skill CLI paths are authoritative. Retain P16's

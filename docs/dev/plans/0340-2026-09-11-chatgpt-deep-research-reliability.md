@@ -1,8 +1,8 @@
 # ChatGPT Deep Research Reliability | 0340-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P33
-Operational state: INTEGRATION_READY
+Operational state: PROVIDER_FREE_ACCEPTED_INTEGRATED
 Branch: fix/plan0340-chatgpt-deep-research-reliability
 Target: main
 Integration: merge
@@ -54,6 +54,10 @@ recovered provider job.
   and its rejected provider-local watcher stays removed. P18 remains paused;
   P33 performs no install, restart, browser, provider, or canary action, and
   P18 must re-anchor to then-current `main` before any future resumption.
+- The validated branch integrated non-fast-forward into `main` at merge receipt
+  `30c9d927f85aecf5b0be43404c7cb8924e62525d`. The merged result passes 342
+  tests with one existing skip, typecheck, production build, and diff hygiene.
+  Published `origin/main` matched that receipt immediately after push.
 - The provider-free implementation satisfies DRR-R1 through DRR-R5. The
   affected suite passes 245 tests with one existing skip; typecheck and the
   production build pass against the frozen lockfile dependency graph. Scoped

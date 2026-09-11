@@ -49150,3 +49150,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   rejected provider-local-watcher disposition. P18 remains paused with its
   install, restart, browser, and bounded-canary allowances unused; it must
   re-anchor to current main if explicitly resumed. P33 is integration-ready.
+- Integrated P33 non-fast-forward into main at
+  `30c9d927f85aecf5b0be43404c7cb8924e62525d` after the merged result passed 342
+  tests with one existing skip, typecheck, and production build. Pushed the
+  exact receipt to `origin/main`. No provider/browser/install/service effect or
+  recovered-conversation mutation occurred; those remain separate authority.

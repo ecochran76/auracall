@@ -1,10 +1,10 @@
 # Aura-Call Roadmap
 
-- Active P33: [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
+- Completed P33: [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
   repairs current `6 Pro` provenance, one-run inherited-depth omission,
   attachment-aware prompt commitment, post-effect failure reconciliation, and
   artifact-fetch cleanup provider-free. Implementation and validation are
-  accepted and overlap-reconciled on the isolated branch; integration is ready.
+  accepted, overlap-reconciled, and integrated provider-free at `30c9d927f`.
   The recovered
   September 10 Deep Research conversation is authoritative and may not be
   retried.
@@ -33,15 +33,16 @@
 
 ### Current Execution Board
 
-Status: P33 provider-free Deep Research reliability repair integration-ready
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P32 (integrated); P08, P16, P18, P29, P33 (open)
+Status: P33 provider-free Deep Research reliability repair integrated
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P33 (integrated); P08, P16, P18, P29 (open)
 
-- Active ChatGPT Deep Research reliability repair:
+- Completed ChatGPT Deep Research reliability repair:
   [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
   P33 starts from current main and treats the completed September 10 provider
   conversation and recovered artifacts as authoritative. The isolated source
-  packet is accepted provider-free, overlap-reconciled, and retains exact
-  new-turn and no-duplicate-submit fences; integration is ready.
+  packet is accepted and integrated provider-free, retaining exact new-turn
+  and no-duplicate-submit fences. Install and live proof remain separately
+  gated.
 
 - Completed installed-runtime and Git maintenance:
   [Plan 0339](docs/dev/plans/0339-2026-09-09-installed-runtime-and-git-maintenance.md)
