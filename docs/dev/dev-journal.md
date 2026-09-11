@@ -49532,3 +49532,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 
 - Merged exact terminal-evidence topic `f46b17122` into `main` at `ec538abd5`
   without additional runtime/provider effects.
+
+## 2026-09-11 | Plan 0350 final live acceptance opened
+
+- Started P43 from exact main `d9df098fe`. It adopts P42's verified exact
+  install and owns one unpiped identity capture plus the untouched prompt/fetch
+  budgets, with no install, retry, mutation, or runtime control.
+
+## 2026-09-11 | Plan 0350 live accepted
+
+- Exact existing installed parity remains 523/523 files at normalized SHA
+  `569ad132...`; the one unpiped identity smoke matched and exited 0.
+- One explicit premium prompt completed with exact token, desired `6 Pro`, raw
+  observed `6Pro`, one Send, zero retries, and no current fallback.
+- One recovered-conversation fetch materialized Markdown, DOCX, and PDF 3/3.
+  PDF bytes/signature/MIME/hash are genuine and distinct from DOCX; the retained
+  wrong variant remains preserved. Final runtime custody is stable.
