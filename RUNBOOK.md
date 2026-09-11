@@ -23,8 +23,15 @@
   sent Ctrl+A / Backspace after activation returned focus to the composer and
   erased the new mention. A public red recorded the four stray key events; the
   minimal repair removes successful post-activation cleanup while retaining
-  failure cleanup. Provider-free validation is green at `252/252`; final
-  type/build, install parity, and the one still-unspent product submission remain.
+  failure cleanup. Provider-free validation is green at `252/252`; type/build,
+  installed byte parity, and exact-app qualification pass.
+- The one authorized product prompt was committed in fresh conversation
+  `6aa358b7-b140-83ea-8caf-5170d1c9dc02` and completed after 7m40s. AuraCall
+  returned a false-negative prompt-commit timeout because the rendered user turn
+  includes the LitScout mention and collapsed-text affordance around the prompt;
+  CDP plus six canonical LitScout MCP calls prove Send and terminal completion.
+  No retry followed. That residual readback bug is backlog: the product run
+  itself stopped correctly at LitScout's `query_too_long` formation gate.
 
 ## Turn 539 | 2026-08-29
 

@@ -58,3 +58,13 @@ Ctrl+A / Backspace after focus returned to the composer, erasing the app mention
 that verification expected. The public regression reproduces those four stray
 key events; the repair removes successful post-activation cleanup while keeping
 failure cleanup intact.
+
+After installing that repair, the authorized product prompt did commit in fresh
+conversation `6aa358b7-b140-83ea-8caf-5170d1c9dc02` and LitScout received six
+MCP calls. AuraCall nevertheless returned `Prompt did not appear in conversation
+before timeout` because its prompt verifier did not accept the rendered user
+turn with the LitScout mention prefix and collapsed-message affordance. CDP and
+the canonical MCP ledger overrule that false negative; no retry followed. The
+conversation completed after 7m40s at a LitScout `query_too_long` product gate.
+That prompt-commit rendering mismatch is retained as adapter backlog rather than
+widening this product experiment into another harness-repair loop.
