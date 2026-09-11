@@ -78,7 +78,7 @@ describe('resolveRunOptionsFromConfig', () => {
     });
   });
 
-  it('maps the durable ChatGPT premium selector to GPT-6 Pro and the Astra API bridge', () => {
+  it('maps the durable ChatGPT premium selector to 6 Pro and the Astra API bridge', () => {
     const { runOptions, browserModelSelection } = resolveRunOptionsFromConfig({
       prompt: basePrompt,
       model: 'chatgpt:premium',
@@ -88,7 +88,7 @@ describe('resolveRunOptionsFromConfig', () => {
     expect(runOptions.model).toBe('gpt-6-astra');
     expect(browserModelSelection).toEqual({
       canonicalSelector: 'chatgpt:premium',
-      desiredModel: 'GPT-6 Pro',
+      desiredModel: '6 Pro',
       apiModel: 'gpt-6-astra',
     });
   });
