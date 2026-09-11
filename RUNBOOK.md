@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 599 | 2026-09-11
+
+- Opened P41 / Plan 0348 from exact published main `b8ac05622` after P40's
+  terminal selector receipt integrated.
+- P41 owns one provider-free fixture/fix for compact `6Pro` option rows carrying
+  submenu-like attributes. No install, browser, provider, artifact, or runtime-
+  control effect is authorized.
+
 ## Turn 598 | 2026-09-11
 
 - Merged exact published P40 topic `97cbae5a3` non-fast-forward into `main` at

@@ -49484,3 +49484,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `main` at `f30107bad`. The receipt is now canonical and plan audit is green.
 - Integration added no runtime or provider effect. The next provider-free slice
   must reproduce the current compact option row rather than retrying live.
+
+## 2026-09-11 | Plan 0348 compact option-row repair opened
+
+- Started P41 from exact published main `b8ac05622`. P40 proved compact trigger
+  admission but exposed a distinct option-row classification failure before
+  Send.
+- P41 is provider-free and bounded to a fixture with submenu-like attributes
+  plus the smallest terminal-row classification repair. Live retry and artifact
+  fetch remain prohibited.
