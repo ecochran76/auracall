@@ -777,18 +777,18 @@ lanes:
     plan_ref: refs/heads/fix/plan0348-chatgpt-compact-option-row
     branch: fix/plan0348-chatgpt-compact-option-row
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: b8ac05622
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: c6b839c1e
+    remote_ref: refs/remotes/origin/fix/plan0348-chatgpt-compact-option-row
     integration: merge
     dependencies: [P40]
     overlaps: [P08, P16, P18, P29]
     reconciled_overlaps: [P08, P16, P18, P29]
     reconciliation_note: P41 owns one provider-free compact option-row classification repair only. It does not absorb installed/live work, artifact fetch, developer-app response, Skill execution, or runtime controls.
-    validation_status: provider-free-preflight
-    validation_ref: null
+    validation_status: provider-free-accepted
+    validation_ref: c6b839c1e
     integration_receipt: null
     blocker: null
-    disposition: Exact P40 option-row finding opened provider-free; no new live or runtime effect is authorized.
+    disposition: Current compact 6Pro row with submenu-like attributes is provider-free reproduced and repaired. Installed/live successor remains required.
     updated_at: 2026-09-11

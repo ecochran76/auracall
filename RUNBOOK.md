@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 600 | 2026-09-11
+
+- P41 reproduced P40 RED with compact `6Pro` plus `aria-expanded="false"`:
+  one click was misclassified as navigation and ended `option-not-found`.
+- Known model-family classification now outranks submenu-like attributes;
+  explicit/unclassified navigation remains recursive.
+- Published checkpoint `c6b839c1e` passes 21 focused and 353 affected tests,
+  typecheck, build, lint, and diff hygiene with no live/runtime effect.
+
 ## Turn 599 | 2026-09-11
 
 - Opened P41 / Plan 0348 from exact published main `b8ac05622` after P40's

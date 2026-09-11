@@ -1,8 +1,8 @@
 # Aura-Call Roadmap
 
-- Active P41: [Plan 0348](docs/dev/plans/0348-2026-09-11-chatgpt-compact-option-row-repair.md)
+- Integration-ready P41: [Plan 0348](docs/dev/plans/0348-2026-09-11-chatgpt-compact-option-row-repair.md)
   reproduces the current compact `6Pro` row's submenu-like attribute shape and
-  repairs terminal option selection provider-free.
+  repairs terminal option selection provider-free at `c6b839c1e`.
 
 - Completed-with-terminal-finding P40: [Plan 0347](docs/dev/plans/0347-2026-09-11-installed-plan0346-live-acceptance.md)
   passed install parity and identity, but the only compact `6Pro` prompt stopped
@@ -77,12 +77,12 @@
 
 ### Current Execution Board
 
-Status: P41 compact option-row repair active provider-free
+Status: P41 compact option-row repair integration-ready provider-free
 Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P40 (completed/integrated); P08, P16, P18, P29, P41 (open)
 
-- Active provider-free repair:
+- Integration-ready provider-free repair:
   [Plan 0348](docs/dev/plans/0348-2026-09-11-chatgpt-compact-option-row-repair.md)
-  owns only terminal classification of the current compact `6Pro` option row.
+  proves terminal classification of the current compact `6Pro` option row.
 
 - Integrated provider-free repair:
   [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)

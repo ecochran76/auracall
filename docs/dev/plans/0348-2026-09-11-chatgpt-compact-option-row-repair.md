@@ -1,12 +1,12 @@
 # ChatGPT Compact Option Row Repair | 0348-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P41
-Operational state: IMPLEMENTATION_PREFLIGHT
+Operational state: INTEGRATION_READY
 Branch: fix/plan0348-chatgpt-compact-option-row
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -26,6 +26,15 @@ rather than a terminal selectable premium-model row.
   has no such attribute, so it does not exercise the live shape.
 - This lane is provider-free. The installed artifact fetch and any second live
   prompt remain prohibited until a successor lane after integration.
+- Adding `aria-expanded="false"` to the existing compact `6Pro` option fixture
+  reproduced P40 exactly: the selector clicked once, misclassified the row as
+  navigation, then returned `option-not-found`.
+- The repair classifies the matched row first. Known terminal model families
+  settle even with submenu-like attributes, while explicit `Model ...` and
+  unclassified submenu rows retain recursive navigation.
+- Published checkpoint `c6b839c1e` passes 21/21 focused and 353/353 affected
+  tests, typecheck, production build, scoped lint, and diff hygiene. No install,
+  browser, provider, artifact, conversation, or runtime-control effect ran.
 
 ## Execution Graph
 

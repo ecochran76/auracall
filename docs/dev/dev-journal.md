@@ -49493,3 +49493,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - P41 is provider-free and bounded to a fixture with submenu-like attributes
   plus the smallest terminal-row classification repair. Live retry and artifact
   fetch remain prohibited.
+
+## 2026-09-11 | Plan 0348 provider-free accepted
+
+- The live-shaped `6Pro` fixture with `aria-expanded="false"` failed before the
+  fix and passes after terminal family classification is evaluated ahead of
+  generic submenu attributes.
+- Checkpoint `c6b839c1e` passes 21 focused and 353 affected tests, typecheck,
+  production build, scoped lint, and diff hygiene. No install/browser/provider
+  effect ran; P41 is integration-ready.
