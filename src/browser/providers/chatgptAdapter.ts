@@ -12165,51 +12165,11 @@ async function materializeChatgptDeepResearchExportWithClient(
 			try {
 				await frameClient.Runtime.enable();
 				const clicked = await frameClient.Runtime.evaluate({
-					expression: `(async () => {
-          const exportLabel = ${JSON.stringify(exportLabel)};
-          const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-          const isVisible = (node) => {
-            if (!(node instanceof Element)) return false;
-            const rect = node.getBoundingClientRect();
-            if (rect.width <= 0 || rect.height <= 0) return false;
-            const style = node.ownerDocument.defaultView.getComputedStyle(node);
-            return style.display !== 'none' && style.visibility !== 'hidden';
-          };
-          const readableDocuments = () => {
-            const docs = [document];
-            for (const frame of Array.from(document.querySelectorAll('iframe'))) {
-              try {
-                const child = frame.contentDocument || frame.contentWindow?.document || null;
-                if (child) docs.push(child);
-              } catch {
-                // Cross-origin child frames stay opaque here.
-              }
-            }
-            return docs;
-          };
-          const controls = () => readableDocuments()
-            .flatMap((doc) => Array.from(doc.querySelectorAll('button, [role="button"], [role="menuitem"], a')))
-            .filter((node) => readableDocuments().length > 1 || isVisible(node));
-          const labels = () => controls().map((node) => normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || ''));
-          if (!labels().some((label) => label.toLowerCase() === exportLabel.toLowerCase())) {
-            const exportButton = controls().find((node) => /^export$/i.test(normalize(node.textContent || node.getAttribute('aria-label') || '')));
-            if (exportButton && typeof exportButton.click === 'function') {
-              exportButton.click();
-              await new Promise((resolve) => setTimeout(resolve, 500));
-            }
-          }
-          const option = controls().find((node) => normalize(node.textContent || node.getAttribute('aria-label') || '').toLowerCase() === exportLabel.toLowerCase());
-          if (!option || typeof option.click !== 'function') {
-            return { ok: false, labels: labels().slice(0, 20) };
-          }
-          option.click();
-          return { ok: true };
-        })()`,
-					awaitPromise: true,
+					expression: buildChatgptDeepResearchExportControlExpression(exportLabel),
 					returnByValue: true,
 				});
 				const value = clicked.result?.value;
-				if (isRecord(value) && value.ok === true) {
+				if (isRecord(value) && value.action === "export-option-clicked") {
 					const downloadedPath = await waitForChatgptDownloadedFile(destDir, 30_000);
 					if (!downloadedPath) {
 						throw new Error(
@@ -12235,6 +12195,10 @@ async function materializeChatgptDeepResearchExportWithClient(
 						},
 					};
 				}
+				if (isRecord(value) && value.action === "export-menu-opened") {
+					lastClickFailureLabels = "";
+					break;
+				}
 				lastClickFailureLabels =
 					isRecord(value) && Array.isArray(value.labels)
 						? value.labels.slice(0, 10).join(", ")
@@ -12252,6 +12216,54 @@ async function materializeChatgptDeepResearchExportWithClient(
 	}
 	throw new Error(`ChatGPT Deep Research ${exportVariant} export iframe target was not found.`);
 }
+
+function buildChatgptDeepResearchExportControlExpression(exportLabel: string): string {
+	return `(() => {
+    const exportLabel = ${JSON.stringify(exportLabel)};
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const style = node.ownerDocument.defaultView?.getComputedStyle(node);
+      return !style || (style.display !== 'none' && style.visibility !== 'hidden');
+    };
+    const documents = [document];
+    for (const frame of Array.from(document.querySelectorAll('iframe'))) {
+      try {
+        const child = frame.contentDocument || frame.contentWindow?.document || null;
+        if (child) documents.push(child);
+      } catch {
+        // Cross-origin child frames stay opaque here.
+      }
+    }
+    const controls = documents
+      .flatMap((doc) => Array.from(doc.querySelectorAll('button, [role="button"], [role="menuitem"], a')))
+      .filter((node) => documents.length > 1 || isVisible(node));
+    const labelFor = (node) => normalize(
+      node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || ''
+    );
+    const option = controls.find(
+      (node) => labelFor(node).toLowerCase() === exportLabel.toLowerCase()
+    );
+    if (option && typeof option.click === 'function') {
+      option.click();
+      return { action: 'export-option-clicked' };
+    }
+    const exportButton = controls.find((node) => /^export$/i.test(labelFor(node)));
+    if (exportButton && typeof exportButton.click === 'function') {
+      exportButton.click();
+      return { action: 'export-menu-opened' };
+    }
+    return {
+      action: 'unavailable',
+      labels: controls.map((node) => labelFor(node)).filter(Boolean).slice(0, 20),
+    };
+  })()`;
+}
+
+export const buildChatgptDeepResearchExportControlExpressionForTest =
+	buildChatgptDeepResearchExportControlExpression;
 
 async function materializeChatgptConversationArtifactWithClient(
 	client: ChromeClient,

@@ -2053,6 +2053,11 @@
   The workbook case matters because ChatGPT exposes it through the embedded spreadsheet card's unlabeled header button rather than a filename-matching behavior button; Aura-Call now uses that fallback for `sandbox:/...xlsx` spreadsheet artifacts. The earlier canvas sample `69c8a0fc-c960-8333-8006-c4d6e6704e6e` no longer reproduces a live canvas artifact on this account, so do not use it as a current smoke. Also, do not run multiple live ChatGPT artifact fetches in parallel against the same managed browser; they share one active signed-in tab and can interfere with each other's navigation/state.
   Sequential artifacts within one fetch are different: Aura-Call awaits each
   transfer and closes its scoped provider session before binding the next one.
+  Deep Research Word/PDF export also separates the synchronous `Export` click
+  from exact option selection: Node closes that iframe binding, waits, and
+  reacquires a fresh target/context before the next synchronous click. Never
+  await a page-owned timer across the export-menu DOM transition; Chromium can
+  collect that execution-context Promise even though the menu opened.
   Provider-free coverage must include at least three distinct artifact paths so
   title/URI reconciliation cannot collapse the settlement fixture.
   One current side finding from the fresh generated-image proof: the direct browser-mode wrapper appeared to linger after the image artifact was already visible and materializable via `conversations context get` / `conversations artifacts fetch`. Record that as a later follow-up, not a current blocker.

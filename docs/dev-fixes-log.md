@@ -1,3 +1,14 @@
+- 2026-09-11: ChatGPT's current animated `6 Pro` option can close the model
+  menu without mounting a checked marker. Explicit selection must remember the
+  exact targeted non-submenu click and may settle only when the menu closes and
+  the composer-scoped trigger independently scores as the requested model. Put
+  the terminal timeout before match/navigation branches so a persistently
+  mounted matching row cannot bypass it. For Deep Research Word/PDF exports,
+  never await a page-owned timer in the same CDP evaluation that opens Export:
+  the iframe transition can collect that Promise. Return synchronously after
+  opening the menu, close the scoped binding, and reacquire a fresh target and
+  execution context before synchronously clicking the exact export option.
+
 - 2026-09-02: Observation-expired reattachment must reconcile runtime identity
   from the final positive progress readback before any fallback navigation.
   ChatGPT can expose the real `/c/<id>` location while the last emitted runtime
