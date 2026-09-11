@@ -154,11 +154,13 @@
     "ILA-R3": "fail_terminal_selector_timeout_before_send",
     "ILA-R4": "fail_terminal_partial_materialization",
     "ILA-R5": "pass",
-    "ILA-R6": "pass_preintegration_integration_pending"
+    "ILA-R6": "pass_integrated"
   },
   "integration": {
-    "topicCommit": "ff4fdd9072a2c939827d8c5f482213a231c92dc6",
-    "mergeCommit": null,
-    "publishedMain": null
+    "evidenceCommit": "ff4fdd9072a2c939827d8c5f482213a231c92dc6",
+    "topicCommit": "14d2f6ab26f38d6bdb4439cdd4bd43ecbb25fed7",
+    "mergeCommit": "1ec768b4620ca931d905d39d334ad249086e556e",
+    "target": "main",
+    "method": "non_fast_forward_merge"
   }
 }

@@ -1,12 +1,12 @@
 # Installed Plan 0342 Live Acceptance | 0343-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P36
-Operational state: INTEGRATION_READY_WITH_TERMINAL_FINDINGS
+Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS_INTEGRATED
 Branch: ops/plan0343-installed-plan0342-live-acceptance
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-11
+Revision: 3 | 2026-09-11
 
 ## Stable Objective
 
@@ -144,10 +144,17 @@ unmodified, and the bounded receipt is integrated and published.
   and PDF returned `Promise was collected` and were not retried.
 - `ILA-R5`: PASS — runtime/browser/completion custody and excluded controls are
   preserved.
-- `ILA-R6`: PASS PRE-INTEGRATION — receipt/docs, provider-free gates, planning
-  audit, topic publication, and Git parity pass; canonical integration remains.
+- `ILA-R6`: PASS — receipt/docs, provider-free gates, planning audit, topic
+  publication, non-fast-forward integration, and merged-result checks pass.
 
-P36 is verification-complete, integration-ready with terminal findings, and is
-not live accepted.
+P36 is verification-complete and integrated with terminal findings; it is not
+live accepted.
 The redacted receipt is
 `docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.
+
+## Integration Receipt
+
+- Published topic tip: `14d2f6ab26f38d6bdb4439cdd4bd43ecbb25fed7`.
+- Non-fast-forward merge: `1ec768b4620ca931d905d39d334ad249086e556e`.
+- Integration changes documentation and evidence only; no additional runtime,
+  browser, provider, artifact, or control effect ran.

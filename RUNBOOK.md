@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 583 | 2026-09-11
+
+- Integrated exact published P36 topic `14d2f6ab2` non-fast-forward into
+  `main` at `1ec768b46`.
+- P36 closes with terminal findings and no live acceptance: installed parity
+  and identity lifecycle passed, explicit `6 Pro` selection stopped before
+  Send, and the one artifact fetch was Markdown-only with DOCX/PDF errors.
+- Integration introduced no additional runtime, browser, provider, artifact,
+  recovered-conversation, or scheduler/completion/materialization effect.
+
 ## Turn 582 | 2026-09-11
 
 - Opened P36 / [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)

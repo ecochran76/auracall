@@ -49301,3 +49301,11 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Six completions remain paused, scheduler control is unchanged, and Chrome
   and the service remain responsive. P36 is not live accepted. Receipt:
   `docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.
+
+## 2026-09-11 | Plan 0343 integrated
+
+- Merged exact published P36 topic `14d2f6ab2` non-fast-forward into `main` at
+  `1ec768b46` and closed the lane as integrated with terminal findings.
+- Live acceptance remains rejected. The merge and documentation closeout ran
+  no additional runtime, browser, provider, artifact, protected-conversation,
+  scheduler, completion, live-follow, or materialization effect.
