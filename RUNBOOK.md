@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 598 | 2026-09-11
+
+- Merged exact published P40 topic `97cbae5a3` non-fast-forward into `main` at
+  `f30107bad`; the plan audit remains at zero errors.
+- Integration ran no additional install, browser, provider, artifact,
+  recovered-conversation, or runtime-control effect. The option-row finding is
+  now the exact provider-free repair target.
+
 ## Turn 597 | 2026-09-11
 
 - P40 installed exact source bytes once: source and installed `dist` each have

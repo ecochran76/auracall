@@ -2,7 +2,8 @@
 
 - Completed-with-terminal-finding P40: [Plan 0347](docs/dev/plans/0347-2026-09-11-installed-plan0346-live-acceptance.md)
   passed install parity and identity, but the only compact `6Pro` prompt stopped
-  before Send in option selection. The artifact fetch remained unspent.
+  before Send in option selection. The artifact fetch remained unspent, and the
+  terminal receipt is integrated at `f30107bad`.
 
 - Integrated P39: [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)
   accepts compact `6Pro` semantically while preserving the raw label and

@@ -757,7 +757,7 @@ lanes:
     branch: ops/plan0347-installed-plan0346-live-acceptance
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
+    custody_state: INTEGRATED
     checkpoint: 5958deb9717a3c85bef27485021fd0bd11aa17d2
     remote_ref: refs/remotes/origin/ops/plan0347-installed-plan0346-live-acceptance
     integration: merge
@@ -767,7 +767,7 @@ lanes:
     reconciliation_note: P40 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, paused installed-live work, Skill execution, scheduler, completion, live-follow, background-drain, or materialization controls.
     validation_status: installed-live-completed-with-terminal-finding-not-accepted
     validation_ref: docs/dev/notes/2026-09-11-plan0347-installed-live-acceptance.json
-    integration_receipt: null
+    integration_receipt: f30107bad6c91f2858bddd2f4582afc3d28abf9c
     blocker: null
-    disposition: Install and identity passed. The only compact 6Pro prompt stopped before Send because option selection still rejected the listed compact row; artifact fetch remained unspent. No retry, fallback, mutation, or runtime control ran.
+    disposition: Install and identity passed. The only compact 6Pro prompt stopped before Send because option selection still rejected the listed compact row; artifact fetch remained unspent. Terminal evidence is integrated. No retry, fallback, mutation, or runtime control ran.
     updated_at: 2026-09-11

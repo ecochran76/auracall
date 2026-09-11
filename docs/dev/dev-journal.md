@@ -49477,3 +49477,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The serialized artifact fetch was withheld. Final custody remains six paused
   completions, none queued/running/idle-waiting, responsive Chrome PID `71128`,
   and stable service PID `96978`. P40 is not live accepted.
+
+## 2026-09-11 | Plan 0347 integrated
+
+- Merged exact published P40 terminal topic `97cbae5a3` non-fast-forward into
+  `main` at `f30107bad`. The receipt is now canonical and plan audit is green.
+- Integration added no runtime or provider effect. The next provider-free slice
+  must reproduce the current compact option row rather than retrying live.

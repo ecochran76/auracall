@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P40
-Operational state: TERMINAL_FINDING
+Operational state: INTEGRATED_TERMINAL_FINDING
 Branch: ops/plan0347-installed-plan0346-live-acceptance
 Target: main
 Integration: merge
@@ -41,6 +41,9 @@ admitting retained or DOCX bytes.
   `96978` remain responsive/stable.
 - Terminal receipt:
   `docs/dev/notes/2026-09-11-plan0347-installed-live-acceptance.json`.
+- Exact published topic `97cbae5a3` merged non-fast-forward into `main` at
+  `f30107bad`. The terminal evidence is canonical; no additional install,
+  browser, provider, artifact, conversation, or runtime-control effect ran.
 
 ## Execution Graph
 
