@@ -1,5 +1,12 @@
 # RUNBOOK
 
+## Turn 607 | 2026-09-11
+
+- Merged exact live-accepted P43 topic `c78405d9d` non-fast-forward into `main`
+  at `a8739e127`; the plan audit remains at zero errors.
+- Integration ran no additional runtime/provider effect. The compact `6Pro`
+  selection and genuine-PDF recovery are accepted end to end.
+
 ## Turn 606 | 2026-09-11
 
 - P43 live acceptance passes. Existing source/installed runtime parity is

@@ -49548,3 +49548,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - One recovered-conversation fetch materialized Markdown, DOCX, and PDF 3/3.
   PDF bytes/signature/MIME/hash are genuine and distinct from DOCX; the retained
   wrong variant remains preserved. Final runtime custody is stable.
+
+## 2026-09-11 | Plan 0350 integrated and end-to-end recovery accepted
+
+- Merged exact published P43 topic `c78405d9d` into `main` at `a8739e127` with
+  zero additional runtime/provider effects. Plan audit remains green.
+- Canonical evidence now proves compact `6Pro` one-Send success and genuine
+  distinct PDF materialization end to end.

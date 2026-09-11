@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P43
-Operational state: LIVE_ACCEPTED_INTEGRATION_READY
+Operational state: LIVE_ACCEPTED_INTEGRATED
 Branch: ops/plan0350-final-live-acceptance
 Target: main
 Integration: merge
@@ -36,6 +36,9 @@ fetch budgets to close compact `6Pro` and genuine-PDF live acceptance.
 - Final custody is six paused and zero queued/running/idle-waiting completions,
   responsive Chrome PID `71128`, and stable service PID `51128`. Receipt:
   `docs/dev/notes/2026-09-11-plan0350-final-live-acceptance.json`.
+- Exact published P43 topic `c78405d9d` merged non-fast-forward into `main` at
+  `a8739e127`; the plan audit remains at zero errors. Integration introduced no
+  additional runtime or provider effects.
 
 ## Acceptance Criteria
 
