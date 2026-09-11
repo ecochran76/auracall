@@ -1,12 +1,12 @@
 # Installed Plan 0346 Live Acceptance | 0347-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P40
-Operational state: PREFLIGHT
+Operational state: TERMINAL_FINDING
 Branch: ops/plan0347-installed-plan0346-live-acceptance
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -28,6 +28,19 @@ admitting retained or DOCX bytes.
   running, or idle-waiting completions, active/running service PID `89826` with
   zero restarts, and persistent managed Chrome PID `71128` on port `45015`.
   These are prior receipts and must be refreshed before effects.
+- P40's one install produced 523-file source/installed parity at normalized
+  SHA-256 `97fb0011...`; service PID `96978` is active/running with zero
+  restarts. The one identity smoke matched, exited 0, and launched no browser.
+- The only prompt attempt again stopped before Send. Compact `6Pro` now passes
+  trigger admission, but the option-selection path still reported no matching
+  `6 Pro` option even while listing `6Pro`. Session `plan-p40-six-pro` has null
+  conversation/output, zero Sends, zero retries, and no fallback.
+- The serialized artifact fetch was withheld after the prompt gate failed, so
+  PDF acceptance remains unspent. Final custody is six paused and zero queued,
+  running, or idle-waiting completions; Chrome PID `71128` and service PID
+  `96978` remain responsive/stable.
+- Terminal receipt:
+  `docs/dev/notes/2026-09-11-plan0347-installed-live-acceptance.json`.
 
 ## Execution Graph
 

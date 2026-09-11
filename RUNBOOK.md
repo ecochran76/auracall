@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 597 | 2026-09-11
+
+- P40 installed exact source bytes once: source and installed `dist` each have
+  523 files and normalized SHA-256 `97fb0011...`; service PID `96978` is
+  active/running with zero restarts.
+- The one identity smoke matched, exited 0, launched no browser, and retained
+  managed Chrome PID `71128` on `45015`.
+- The only premium prompt stopped before Send: trigger admission found compact
+  `6Pro`, but option selection still rejected it. Session conversation/output
+  are null; Sends/retries/fallbacks are zero.
+- The artifact fetch remained unspent after the prompt gate failed. Six
+  completions remain paused and queued/running/idle-waiting remain zero.
+
 ## Turn 596 | 2026-09-11
 
 - Opened P40 / Plan 0347 from exact published main `36914e877` after P39
