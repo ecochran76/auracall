@@ -1,5 +1,12 @@
 # RUNBOOK
 
+## Turn 605 | 2026-09-11
+
+- Opened P43 / Plan 0350 from exact main `d9df098fe`. It reuses P42's verified
+  source-identical install and performs no new installation.
+- One unpiped identity read, one compact premium prompt, and one conditional
+  read-only artifact fetch remain. No retry or runtime control is authorized.
+
 ## Turn 604 | 2026-09-11
 
 - Merged exact P42 terminal-evidence topic `f46b17122` into `main` at

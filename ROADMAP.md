@@ -1,5 +1,9 @@
 # Aura-Call Roadmap
 
+- Active P43: [Plan 0350](docs/dev/plans/0350-2026-09-11-final-live-acceptance.md)
+  adopts the exact existing install, captures identity unpiped, and owns the
+  untouched one-prompt/one-fetch acceptance budget.
+
 - Completed-with-terminal-evidence-finding P42: [Plan 0349](docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md)
   passed install parity, but piped identity JSON was truncated before parsing;
   prompt and artifact budgets remained unspent. Evidence is integrated at
@@ -83,8 +87,8 @@
 
 ### Current Execution Board
 
-Status: P42 installed Plan 0348 acceptance terminal before prompt
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P42 (completed/integration-ready); P08, P16, P18, P29 (open)
+Status: P43 final live acceptance active
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P42 (completed/integrated); P08, P16, P18, P29, P43 (open)
 
 - Completed-with-terminal-evidence installed/live successor:
   [Plan 0349](docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md)

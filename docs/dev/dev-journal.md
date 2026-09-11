@@ -49532,3 +49532,9 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 
 - Merged exact terminal-evidence topic `f46b17122` into `main` at `ec538abd5`
   without additional runtime/provider effects.
+
+## 2026-09-11 | Plan 0350 final live acceptance opened
+
+- Started P43 from exact main `d9df098fe`. It adopts P42's verified exact
+  install and owns one unpiped identity capture plus the untouched prompt/fetch
+  budgets, with no install, retry, mutation, or runtime control.

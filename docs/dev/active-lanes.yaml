@@ -813,3 +813,24 @@ lanes:
     blocker: null
     disposition: Install parity passed. The single identity operation produced truncated piped JSON, so the lane failed closed without prompt or artifact effects. A successor must capture identity unpiped.
     updated_at: 2026-09-11
+  - id: P43
+    objective: Capture unpiped identity and spend the untouched compact 6Pro prompt plus genuine-PDF fetch budgets.
+    plan: docs/dev/plans/0350-2026-09-11-final-live-acceptance.md
+    plan_ref: refs/heads/ops/plan0350-final-live-acceptance
+    branch: ops/plan0350-final-live-acceptance
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: d9df098fe
+    remote_ref: null
+    integration: merge
+    dependencies: [P42]
+    overlaps: [P08, P16, P18, P29]
+    reconciled_overlaps: [P08, P16, P18, P29]
+    reconciliation_note: P43 owns one unpiped identity read and the untouched serialized prompt/fetch budget only; no install or runtime controls.
+    validation_status: live-preflight
+    validation_ref: null
+    integration_receipt: null
+    blocker: null
+    disposition: Final live successor opened; no P43 effect has run.
+    updated_at: 2026-09-11
