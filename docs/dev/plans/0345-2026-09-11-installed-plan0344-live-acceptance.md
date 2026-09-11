@@ -1,12 +1,12 @@
 # Installed Plan 0344 Live Acceptance | 0345-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P38
-Operational state: PREFLIGHT
+Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS
 Branch: ops/plan0345-installed-plan0344-live-acceptance
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -37,6 +37,21 @@ recovered Deep Research conversation or unrelated runtime controls.
   readbacks are authoritative.
 - The provider-free full-suite browser-launch leak is excluded from this lane.
   Only focused and affected tests may run before the live packet.
+- The single supported install produced source/installed parity across 523
+  files at normalized SHA-256 `af32d079b...`; service PID `89826` is
+  active/running with `NRestarts=0`.
+- The installed identity smoke matched the configured Pro/personal identity,
+  exited normally in five seconds, launched no browser, and retained Chrome
+  PID `71128` on DevTools `45015`.
+- The single prompt attempt failed before Send because the current menu exposed
+  `6Pro` while exact matching required `6 Pro`. Its Session is `error` with no
+  conversation or output; no retry or `current` fallback ran.
+- The single artifact fetch removed the old Promise-lifecycle failures, but its
+  claimed PDF is a duplicate DOCX with the same filename extension, MIME type,
+  size, and hash. The prior authoritative PDF remains intact; no retry ran.
+- Six completions remain paused; queued/running/idle-waiting and active history
+  materialization jobs remain zero. No broad status, recovered-conversation
+  mutation, or scheduler/completion/materialization control ran.
 
 ## Execution Graph
 
@@ -111,3 +126,19 @@ Owner: primary agent. Every runtime/browser/provider operation is serialized.
 ILA2-R1 through ILA2-R6 have current durable evidence or an explicit terminal
 finding, effect counters are exact, the recovered conversation remains
 unmodified, and the bounded receipt is integrated and published.
+
+## Final Disposition
+
+- `ILA2-R1`: PASS — exact installed-source parity and stable service refresh.
+- `ILA2-R2`: PASS — exact no-prompt identity and normal five-second CLI exit.
+- `ILA2-R3`: FAIL, TERMINAL — live `6Pro` label drift rejected exact `6 Pro`
+  matching before Send; no observed-model or response acceptance exists.
+- `ILA2-R4`: FAIL, TERMINAL — all three entries reported materialized, but the
+  PDF entry is byte-identical DOCX content with DOCX name and MIME type.
+- `ILA2-R5`: PASS — runtime/browser/completion custody and excluded controls
+  are preserved.
+- `ILA2-R6`: PENDING — receipt publication and integration remain.
+
+P38 is verification-complete with terminal findings; it is not live accepted.
+The redacted receipt is
+`docs/dev/notes/2026-09-11-plan0345-installed-live-acceptance.json`.

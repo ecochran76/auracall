@@ -1,9 +1,9 @@
 # Aura-Call Roadmap
 
-- Active P38: [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)
-  installs exact published Plan 0344 and runs one bounded live adoption packet
-  for identity, explicit `6 Pro`, observed-model persistence, and independent
-  Markdown/DOCX/PDF settlement.
+- Completed-with-terminal-findings P38: [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)
+  installed exact Plan 0344 bytes and passed identity. Live acceptance failed:
+  the current `6Pro` label did not match exact `6 Pro` before Send, and the
+  claimed PDF was byte-identical DOCX content. Neither finding was retried.
 
 - Integrated P37: [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)
   repairs P36's explicit `6 Pro` selector timeout and later-variant artifact
@@ -62,15 +62,15 @@
 
 ### Current Execution Board
 
-Status: P38 installed Plan 0344 live adoption active
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P37 (completed/integrated); P08, P16, P18, P29, P38 (open)
+Status: P38 installed Plan 0344 verification completed with terminal findings
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P37 (completed/integrated); P38 (closed, integration pending); P08, P16, P18, P29 (open)
 
-- Active installed/live adoption:
+- Completed-with-terminal-findings installed/live adoption:
   [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)
-  P38 owns one supported install, one no-prompt identity smoke, one explicit
-  `chatgpt:premium` prompt with at most one Send, and one read-only recovered-
-  conversation artifact fetch. Retries and unrelated runtime controls are out
-  of scope.
+  P38 spent one install, one identity smoke, one prompt attempt with zero Sends,
+  and one artifact fetch. Identity and installation passed; current label drift
+  and false PDF materialization are terminal. No retry or unrelated runtime
+  control ran.
 
 - Integrated provider-free repair:
   [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)

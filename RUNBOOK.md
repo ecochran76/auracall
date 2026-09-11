@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 590 | 2026-09-11
+
+- P38 completed its bounded live packet with terminal findings and no live
+  acceptance. Exact source/installed parity and the no-prompt identity smoke
+  passed; service PID `89826` has `NRestarts=0`.
+- The only prompt attempt stopped before Send because ChatGPT exposed `6Pro`
+  while exact matching required `6 Pro`. The Session has no conversation or
+  output, and no retry or fallback ran.
+- The only artifact fetch reported three materializations without Promise
+  lifecycle errors, but the PDF entry is the DOCX again: same `.docx` name,
+  MIME, size, and hash. The retained authoritative PDF is intact; no retry ran.
+- Six completions remain paused, active work is zero, Chrome PID `71128` is
+  responsive on `45015`, and excluded controls remain untouched. Receipt:
+  `docs/dev/notes/2026-09-11-plan0345-installed-live-acceptance.json`.
+
 ## Turn 589 | 2026-09-11
 
 - Opened P38 / [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)

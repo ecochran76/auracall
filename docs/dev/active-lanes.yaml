@@ -714,7 +714,7 @@ lanes:
     plan_ref: refs/heads/ops/plan0345-installed-plan0344-live-acceptance
     branch: ops/plan0345-installed-plan0344-live-acceptance
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
     checkpoint: 51801cc4ec28620ea4b9f7cf67bbe26c41374d55
     remote_ref: null
@@ -723,9 +723,9 @@ lanes:
     overlaps: [P08, P16, P18, P29]
     reconciled_overlaps: [P08, P16, P18, P29]
     reconciliation_note: P38 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, paused installed-live work, Skill execution, scheduler, completion, live-follow, background-drain, or materialization controls.
-    validation_status: live-preflight
-    validation_ref: null
+    validation_status: installed-live-verification-completed-with-terminal-findings
+    validation_ref: docs/dev/notes/2026-09-11-plan0345-installed-live-acceptance.json
     integration_receipt: null
     blocker: null
-    disposition: Operator authorized the separately gated installed/live adoption. Exact effect bounds are one install, one identity smoke, one prompt and at most one Send, zero retries, and one read-only recovered-conversation artifact fetch.
+    disposition: Verification completed without live acceptance. Install parity and identity passed; the live menu exposed 6Pro instead of exact 6 Pro before Send, and the claimed PDF materialization duplicated DOCX bytes and metadata. No retry, fallback, resend, recovered-conversation mutation, or runtime control effect ran.
     updated_at: 2026-09-11
