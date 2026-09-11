@@ -38,9 +38,11 @@ auracall --dry-run summary -p "Check release notes" --file docs/release-notes.md
 # Browser run (no API key, opens ChatGPT in the default Chat mode)
 auracall --engine browser -p "Walk through the UI smoke test" --file "src/**/*.ts"
 # Explicit Chat model selection accepts the current composer-scoped animated
-# model trigger. After AuraCall clicks an exact requested row such as `6 Pro`,
-# it may verify the switch from the matching trigger once the menu closes; it
-# does not fall back to preserving the current model.
+# model trigger. Provider-equivalent compact spelling such as `6Pro` is matched
+# as `6 Pro`, while the exact observed provider label remains in run metadata.
+# After AuraCall clicks the requested row, it may verify the switch from the
+# matching trigger once the menu closes; it does not fall back to preserving
+# the current model.
 
 # Work is opt-in and uses its own model selector
 auracall --profile wsl-chrome-3 --engine browser \
@@ -1942,7 +1944,7 @@ npx -y auracall auracall-mcp
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
 | `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT effort intensity in browser mode. In the current horizontal Power slider, the four AuraCall levels map to Instant, Medium, High, and Extra High. Prefer `--model chatgpt:reasoning-high` or `--model chatgpt:reasoning-max`; provider-version spellings remain compatibility aliases. |
 | `--browser-no-thinking-time` | Omit an inherited semantic-selector thinking depth for this browser run. This leaves the current provider depth untouched and conflicts with `--browser-thinking-time`. |
-| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on by durable ID, such as `chatgpt.commerce.shopping`, `chatgpt.search.web_search`, or `chatgpt.research.deep_research`; legacy labels remain aliases. File-source rows (`Add photos & files`, `Add from library`) are attachments and are rejected as tools. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. Export-menu opening and exact Word/PDF selection run in separate short-lived iframe execution contexts so provider navigation cannot collect an awaited page-side Promise. |
+| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on by durable ID, such as `chatgpt.commerce.shopping`, `chatgpt.search.web_search`, or `chatgpt.research.deep_research`; legacy labels remain aliases. File-source rows (`Add photos & files`, `Add from library`) are attachments and are rejected as tools. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, preserves review evidence in run metadata, and reads completed reports from the Deep Research iframe as Markdown, Word, and PDF conversation artifacts. Export-menu opening and exact Word/PDF selection run in separate short-lived iframe execution contexts so provider navigation cannot collect an awaited page-side Promise. A Word/PDF export counts as materialized only when a fresh file has the requested extension and matching DOCX/PDF binary signature; retained or wrong-variant files are preserved but reported as errors. |
 | `--browser-deep-research-plan-action <start\|edit>` | Control ChatGPT Deep Research after the provider plan appears. `start` accepts the plan; `edit` opens the plan editor before the timed auto-start window, keeps the managed browser open, and stores review evidence including the iframe/DOM edit target and passive screenshot path. |
 | `--browser-port <port>` | Force a fixed Chrome DevTools port (advanced/debugging). Normal WSL -> Windows launches default to auto-discovery instead. |
 | `--browser-inline-cookies[(-file)] <payload|path>` | Supply cookies without Chrome/Keychain (browser). |
