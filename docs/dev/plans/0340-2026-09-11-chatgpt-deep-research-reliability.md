@@ -47,6 +47,8 @@ recovered provider job.
 - Planning checkpoint `7bb342219` is published on the exact P33 remote branch.
 - Provider-free implementation checkpoint `5f8ed9ffd` is published on that
   branch with local/remote parity.
+- Integration-readiness and overlap-reconciliation checkpoint `dd00e77c5` is
+  published on the same branch.
 - P16/P18 overlap is reconciled without consuming either lane's remaining
   authority. P16's shared high-level response lifecycle remains authoritative
   and its rejected provider-local watcher stays removed. P18 remains paused;
