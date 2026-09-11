@@ -25,6 +25,9 @@
   typecheck, and production build. `origin/main` matched the merge receipt after
   push. P33 is closed as provider-free accepted/integrated; install and live
   proof remain outside this plan.
+- Final custody gates found the P33 feature tip remote-equal, ancestral to main,
+  tracked/untracked clean, and process-unowned. Removed its local worktree and
+  local branch; retained remote branch `55c57ca5c` for recovery.
 
 - P16 reconciliation supersedes the Turn 550 preservation note: current main's
   exact ecosystem-mention and Skill CLI paths are authoritative. Retain P16's

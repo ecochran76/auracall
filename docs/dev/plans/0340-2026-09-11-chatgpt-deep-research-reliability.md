@@ -58,6 +58,11 @@ recovered provider job.
   `30c9d927f85aecf5b0be43404c7cb8924e62525d`. The merged result passes 342
   tests with one existing skip, typecheck, production build, and diff hygiene.
   Published `origin/main` matched that receipt immediately after push.
+- After closeout publication, the P33 worktree was clean except for generated
+  `dist/` and `node_modules/`, exact feature tips matched the retained remote,
+  the feature tip was ancestral to `main`, and no process owned the worktree as
+  cwd. The local worktree and branch were removed; remote source custody remains
+  at `55c57ca5c`.
 - The provider-free implementation satisfies DRR-R1 through DRR-R5. The
   affected suite passes 245 tests with one existing skip; typecheck and the
   production build pass against the frozen lockfile dependency graph. Scoped

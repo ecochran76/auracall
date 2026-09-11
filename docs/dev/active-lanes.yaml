@@ -622,5 +622,5 @@ lanes:
     validation_ref: 30c9d927f85aecf5b0be43404c7cb8924e62525d
     integration_receipt: 30c9d927f85aecf5b0be43404c7cb8924e62525d
     blocker: null
-    disposition: Provider-free implementation accepted and integrated into main; recovered provider conversation remains authoritative and must not be retried; install and live proof remain separately gated.
+    disposition: Provider-free implementation accepted and integrated into main; clean, ancestral, process-unowned local worktree and branch removed with remote source custody retained; recovered provider conversation remains authoritative and must not be retried; install and live proof remain separately gated.
     updated_at: 2026-09-11
