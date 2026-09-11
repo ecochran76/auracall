@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P34
-Operational state: LIVE_VERIFICATION_COMPLETED_WITH_FINDINGS
+Operational state: LIVE_VERIFICATION_COMPLETED_WITH_FINDINGS_INTEGRATED
 Branch: ops/plan0341-installed-plan0340-live-acceptance
 Target: main
 Integration: merge
@@ -159,7 +159,8 @@ published on `main`.
   and exited normally in 24 seconds without a prompt or mutation. It freshly
   materialized Markdown; the DOCX/PDF entries reported `Promise was collected`.
   The previously recovered Markdown, DOCX, and PDF remain present and hashed.
-- `LVA-R6` is pending integration of the redacted receipt at
+- `LVA-R6` passed through non-fast-forward main integration
+  `52b0604d159af176c74ca117e30f46887670bfd3` of the redacted receipt at
   `docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json`, the
   synchronized closeout documents, audits, and published integration receipt.
 

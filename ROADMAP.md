@@ -41,7 +41,7 @@
 ### Current Execution Board
 
 Status: P34 installed Plan 0340 live verification completed with findings
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P34 (completed/integrated or integration-ready); P08, P16, P18, P29 (open)
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P34 (completed/integrated); P08, P16, P18, P29 (open)
 
 - Completed-with-findings installed/live verification:
   [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)

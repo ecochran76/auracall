@@ -49206,3 +49206,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   were one install, one prompt/upload/Send, zero retries, one artifact fetch,
   zero recovered-conversation mutations, and zero scheduler/completion controls.
   Receipt: `docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json`.
+- Published topic closeout `d9c5be33b` and integrated it non-fast-forward into
+  main at `52b0604d1`. The partial-acceptance receipt is now canonical; no
+  additional runtime, browser, provider, or recovered-conversation effect ran
+  during integration.

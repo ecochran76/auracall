@@ -631,17 +631,17 @@ lanes:
     branch: ops/plan0341-installed-plan0340-live-acceptance
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
-    checkpoint: da1871eb85b899629baba915f66fabbbb3c2bfc59
+    custody_state: INTEGRATED
+    checkpoint: d9c5be33bc08617a2e09a89be6fa29b7ae048971
     remote_ref: refs/remotes/origin/ops/plan0341-installed-plan0340-live-acceptance
     integration: merge
     dependencies: [P33]
     overlaps: [P08, P18]
     reconciled_overlaps: [P08, P18]
     reconciliation_note: P34 may install and run only its bounded foreground ChatGPT proof; it does not resume P18 or alter P08 and preserves all scheduler/completion state.
-    validation_status: installed-live-verification-completed-with-findings
+    validation_status: installed-live-verification-completed-with-findings-integrated
     validation_ref: docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json
-    integration_receipt: null
+    integration_receipt: 52b0604d159af176c74ca117e30f46887670bfd3
     blocker: null
     disposition: Verification completed with partial acceptance. Source/install parity and one current-model attachment turn passed; API restart churn, identity-smoke exit, explicit selector triggering, persisted observed-model provenance, and fresh DOCX/PDF materialization failed or remained partial. No retry is authorized.
     updated_at: 2026-09-11

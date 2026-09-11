@@ -26,6 +26,9 @@
   successful session metadata omitted observed-model provenance; and the fresh
   fetch rematerialized only Markdown while DOCX/PDF entries errored. Continue
   only through a new provider-free repair plan, never a P34 live retry.
+- Integrated the exact P34 topic tip `d9c5be33b` into main through non-fast-
+  forward merge `52b0604d1`; the receipt and synchronized closeout documents are
+  now canonical.
 - Installed source/byte parity passes at 522 files and aggregate SHA-256
   `6615333e…`. A broad post-install `/status` read exhausted the API heap and
   caused one automatic systemd restart; narrow authenticated reads remain

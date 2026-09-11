@@ -3,7 +3,13 @@
   "plan": "0341",
   "lane": "P34",
   "generatedAt": "2026-09-11T06:30:59-05:00",
-  "outcome": "verification_completed_partial_acceptance",
+  "outcome": "verification_completed_partial_acceptance_integrated",
+  "integration": {
+    "topicCommit": "d9c5be33bc08617a2e09a89be6fa29b7ae048971",
+    "mergeCommit": "52b0604d159af176c74ca117e30f46887670bfd3",
+    "target": "main",
+    "method": "non_fast_forward_merge"
+  },
   "source": {
     "branch": "main",
     "commit": "da1871eb85b899629baba915f66fabbbb3c2bfc59",
@@ -108,7 +114,7 @@
     "LVA-R3": "partial_identity_match_passed_cli_exit_failed",
     "LVA-R4": "partial_turn_passed_explicit_selection_and_observed_model_provenance_failed",
     "LVA-R5": "partial_process_exit_passed_fresh_docx_pdf_materialization_failed",
-    "LVA-R6": "pending_integration"
+    "LVA-R6": "passed"
   },
   "effectCounters": {
     "installations": 1,
