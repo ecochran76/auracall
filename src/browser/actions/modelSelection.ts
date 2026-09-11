@@ -515,6 +515,9 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
       }
       return Array.from(document.querySelectorAll(${menuItemLiteral}));
     };
+    const hasVisibleMenu = () => Array.from(
+      document.querySelectorAll(${menuContainerLiteral})
+    ).some((menu) => visible(menu));
     const findNavigationAction = () => {
       const nodes = collectOptionNodes();
       const labelsForNode = (node) => [
@@ -661,6 +664,7 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
 
     return new Promise((resolve) => {
       const start = performance.now();
+      let selectionAttempt = null;
       const detectTemporaryChat = () => {
         try {
           const url = new URL(window.location.href);
@@ -695,6 +699,27 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
           initialized = true;
           await openDelay();
         }
+        if (performance.now() - start > MAX_WAIT_MS) {
+          resolve({
+            status: 'option-not-found',
+            hint: { temporaryChat: detectTemporaryChat(), availableOptions: collectAvailableOptions() },
+          });
+          return;
+        }
+        if (selectionAttempt && !hasVisibleMenu()) {
+          const buttonLabel = getButtonLabel();
+          const buttonScore = scoreOption(
+            normalizeText(buttonLabel + ' ' + (button.getAttribute?.('aria-label') ?? '')),
+            button.getAttribute?.('data-testid') ?? ''
+          );
+          if (buttonScore > 0) {
+            resolve({
+              status: 'switched-best-effort',
+              label: buttonLabel || selectionAttempt.label || PRIMARY_LABEL,
+            });
+            return;
+          }
+        }
         ensureMenuOpen();
         const selected = findSelectedOption();
         const match = findBestOption();
@@ -719,6 +744,7 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
             setTimeout(attempt, REOPEN_INTERVAL_MS / 2);
             return;
           }
+          selectionAttempt = { label: match.label || PRIMARY_LABEL };
           // Verify via the checked menu item instead of the top button label, which is often generic.
           setTimeout(attempt, Math.max(160, INITIAL_WAIT_MS));
           return;
@@ -727,13 +753,6 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
         if (navigation) {
           dispatchClickSequence(navigation.node);
           setTimeout(attempt, REOPEN_INTERVAL_MS / 2);
-          return;
-        }
-        if (performance.now() - start > MAX_WAIT_MS) {
-          resolve({
-            status: 'option-not-found',
-            hint: { temporaryChat: detectTemporaryChat(), availableOptions: collectAvailableOptions() },
-          });
           return;
         }
         setTimeout(attempt, REOPEN_INTERVAL_MS / 2);

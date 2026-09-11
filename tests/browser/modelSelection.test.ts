@@ -117,6 +117,78 @@ describe('browser model selection matchers', () => {
     }
   });
 
+  it('settles explicit select after clicking the current unmarked 6 Pro row', async () => {
+    vi.useFakeTimers();
+    class FixtureElement extends EventTarget {
+      textContent: string;
+      children: FixtureElement[] = [];
+      classList = { contains: () => false };
+      attributes = new Map<string, string>();
+      closestHandler: (selector: string) => FixtureElement | null = () => null;
+      queryAllHandler: (selector: string) => FixtureElement[] = () => [];
+
+      constructor(text = '', attributes: Record<string, string> = {}) {
+        super();
+        this.textContent = text;
+        for (const [name, value] of Object.entries(attributes)) this.attributes.set(name, value);
+      }
+
+      getAttribute(name: string) { return this.attributes.get(name) ?? null; }
+      hasAttribute(name: string) { return this.attributes.has(name); }
+      getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 30 }; }
+      closest(selector: string) { return this.closestHandler(selector); }
+      querySelectorAll(selector: string) { return this.queryAllHandler(selector); }
+      querySelector() { return null; }
+    }
+
+    const prompt = new FixtureElement();
+    const composer = new FixtureElement();
+    const trigger = new FixtureElement('6 Pro', {
+      'aria-label': '6 Pro, Pro, 5 of 5',
+      'data-animated-slider-trigger': 'true',
+    });
+    const option = new FixtureElement('6 Pro', { role: 'menuitem' });
+    const menu = new FixtureElement();
+    let menuOpen = false;
+    let optionClicks = 0;
+    prompt.closestHandler = () => composer;
+    composer.queryAllHandler = (selector) => selector.includes('data-animated-slider-trigger') ? [trigger] : [];
+    menu.queryAllHandler = () => [option];
+    trigger.addEventListener('click', () => { menuOpen = true; });
+    option.addEventListener('click', () => {
+      optionClicks += 1;
+      menuOpen = false;
+    });
+
+    vi.stubGlobal('Element', FixtureElement);
+    vi.stubGlobal('HTMLElement', FixtureElement);
+    vi.stubGlobal('MouseEvent', Event);
+    vi.stubGlobal('window', {
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
+    });
+    vi.stubGlobal('document', {
+      querySelector: (selector: string) => {
+        if (selector.includes('#prompt-textarea')) return prompt;
+        if (selector.includes('[role="menu"]')) return menuOpen ? menu : null;
+        return null;
+      },
+      querySelectorAll: (selector: string) =>
+        selector.includes('[role="menu"]') && menuOpen ? [menu] : [],
+    });
+
+    try {
+      const pending = new Function(
+        `return ${buildModelSelectionExpressionForTest('6 Pro', 'select')}`,
+      )();
+      await vi.advanceTimersByTimeAsync(25_000);
+      await expect(pending).resolves.toEqual({ status: 'switched-best-effort', label: '6 Pro' });
+      expect(optionClicks).toBe(1);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('waits for the current model picker to mount before failing closed', () => {
     const expression = buildModelSelectionExpressionForTest('Pro');
     expect(expression).toContain('const BUTTON_WAIT_MS = 12000');
