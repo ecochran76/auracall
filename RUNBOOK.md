@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 594 | 2026-09-11
+
+- P39 / Plan 0346 is provider-free accepted and integration-ready at published
+  checkpoint `40f2cecf9`.
+- Compact `6Pro` is admitted only through alpha/numeric boundary normalization;
+  raw observed identity remains intact and `6Power`/generic controls stay out.
+- Deep Research export admission now requires a fresh expected extension and
+  matching binary signature while preserving retained/wrong-variant files.
+- Validation passes 25/25 focused and 353/353 affected tests, typecheck,
+  production build, scoped lint, diff hygiene, and the plan audit with zero
+  errors. No installed/runtime/provider effect ran.
+
 ## Turn 593 | 2026-09-11
 
 - Opened P39 / [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)

@@ -49434,3 +49434,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - P39 is provider-free only. Installation, browser/provider effects, artifact
   fetches, recovered-conversation mutation, and runtime controls remain
   reserved for a successor acceptance lane.
+
+## 2026-09-11 | Plan 0346 provider-free accepted
+
+- Compact alpha/numeric normalization admits current `6Pro` as semantic
+  `6 Pro`, preserves the provider's raw observed label, and retains negatives
+  for `6Power`, generic `Pro`, Power, and effort controls.
+- Deep Research Word/PDF transfer now snapshots retained files and admits only
+  a fresh requested extension with matching ZIP/PDF bytes. Wrong variants are
+  preserved and become explicit errors rather than materialized successes.
+- Published checkpoint `40f2cecf9` passes 25 focused and 353 affected tests,
+  typecheck, production build, scoped lint, diff hygiene, and the plan audit.
+  P39 is integration-ready; installed/live proof remains unspent.

@@ -1,12 +1,12 @@
 # ChatGPT Current Live Findings Repair | 0346-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P39
-Operational state: IMPLEMENTATION_PREFLIGHT
+Operational state: INTEGRATION_READY
 Branch: fix/plan0346-chatgpt-live-findings
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -29,6 +29,20 @@ request from admitting an old or DOCX download as a fresh PDF result.
 - CodeGraph is not initialized in this worktree. Current source, executable
   tests, Plan 0345, and its receipt are the authoritative fallback. Graphiti is
   healthy but has no reviewed AuraCall memory cloud.
+- Compact alpha/numeric boundaries now normalize for semantic comparison in
+  both host and injected picker logic. Provider-free fixtures admit `6Pro` as
+  desired `6 Pro`, preserve the raw `6Pro` observation, and reject `6Power`,
+  `Power`, generic `Pro`, and effort controls.
+- Deep Research export now snapshots the destination before the provider click,
+  ignores unchanged and wrong-extension files, requires one fresh stable file
+  of the requested variant, and validates `%PDF-` or ZIP bytes before returning
+  a materialized result. Existing files are never deleted.
+- Published checkpoint `40f2cecf9` passes 25/25 focused tests, 353/353 affected
+  browser/CLI/architecture tests, typecheck, production build, scoped lint,
+  diff hygiene, and the 346-plan audit with zero validation errors.
+- No installation, service, browser, provider, recovered-conversation, or
+  runtime-control effect ran in P39. Installed/live proof remains the successor
+  gate required to close the end-to-end goal.
 
 ## Execution Graph
 
