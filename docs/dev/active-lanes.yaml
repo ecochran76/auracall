@@ -643,5 +643,5 @@ lanes:
     validation_ref: docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json
     integration_receipt: 52b0604d159af176c74ca117e30f46887670bfd3
     blocker: null
-    disposition: Verification completed with partial acceptance. Source/install parity and one current-model attachment turn passed; API restart churn, identity-smoke exit, explicit selector triggering, persisted observed-model provenance, and fresh DOCX/PDF materialization failed or remained partial. No retry is authorized.
+    disposition: Verification completed with partial acceptance. Source/install parity and one current-model attachment turn passed; API restart churn, identity-smoke exit, explicit selector triggering, persisted observed-model provenance, and fresh DOCX/PDF materialization failed or remained partial. Clean, equal, ancestral, process-unowned local topic custody was removed after integration; the remote ref remains and no retry is authorized.
     updated_at: 2026-09-11

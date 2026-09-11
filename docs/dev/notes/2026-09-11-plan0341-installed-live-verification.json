@@ -10,6 +10,15 @@
     "target": "main",
     "method": "non_fast_forward_merge"
   },
+  "localCustodyCloseout": {
+    "topicWorktreeRemoved": true,
+    "localTopicBranchRemoved": true,
+    "remoteTopicRefRetained": true,
+    "preRemovalClean": true,
+    "preRemovalRemoteEqual": true,
+    "preRemovalAncestralToMain": true,
+    "preRemovalProcessCwdOwners": 0
+  },
   "source": {
     "branch": "main",
     "commit": "da1871eb85b899629baba915f66fabbbb3c2bfc59",

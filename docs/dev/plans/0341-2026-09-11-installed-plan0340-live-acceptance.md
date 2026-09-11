@@ -172,3 +172,7 @@ authoritative and unmodified. Any repair for aggregate status memory use,
 identity-smoke lifecycle, live selector triggering, observed-model persistence,
 or DOCX/PDF fetch materialization requires a new provider-free plan; no P34
 provider retry is authorized.
+
+After published integration, the exact topic tip was clean, remote-equal,
+ancestral to main, and had zero process cwd owners. Its local worktree and local
+branch were removed; the remote topic ref remains as recovery custody.

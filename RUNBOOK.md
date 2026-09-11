@@ -29,6 +29,9 @@
 - Integrated the exact P34 topic tip `d9c5be33b` into main through non-fast-
   forward merge `52b0604d1`; the receipt and synchronized closeout documents are
   now canonical.
+- Final custody gates found the P34 topic clean, remote-equal, ancestral to main,
+  and process-unowned. Removed only its local worktree and local branch; retained
+  `origin/ops/plan0341-installed-plan0340-live-acceptance` for recovery.
 - Installed source/byte parity passes at 522 files and aggregate SHA-256
   `6615333e…`. A broad post-install `/status` read exhausted the API heap and
   caused one automatic systemd restart; narrow authenticated reads remain
