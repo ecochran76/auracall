@@ -442,6 +442,7 @@ export async function submitPrompt(
 		commitTimeoutMs,
 		logger,
 		deps.baselineTurns ?? undefined,
+		deps.attachmentNames,
 	);
 }
 
@@ -636,6 +637,7 @@ async function verifyPromptCommitted(
 	timeoutMs: number,
 	logger?: BrowserLogger,
 	baselineTurns?: number,
+	attachmentNames: readonly string[] = [],
 ): Promise<number | null> {
 	const deadline = Date.now() + timeoutMs;
 	const encodedPrompt = JSON.stringify(prompt.trim());
@@ -645,6 +647,7 @@ async function verifyPromptCommitted(
 	const stopSelectorLiteral = JSON.stringify(STOP_BUTTON_SELECTOR);
 	const assistantSelectorLiteral = JSON.stringify(ASSISTANT_ROLE_SELECTOR);
 	const turnSelectorLiteral = JSON.stringify(CONVERSATION_TURN_SELECTOR);
+	const attachmentNamesLiteral = JSON.stringify(attachmentNames);
 	let baseline: number | null =
 		typeof baselineTurns === "number" && Number.isFinite(baselineTurns) && baselineTurns >= 0
 			? Math.floor(baselineTurns)
@@ -664,6 +667,20 @@ async function verifyPromptCommitted(
 		}
 	}
 	const baselineLiteral = baseline ?? -1;
+	let latestInfo: {
+		userMatched?: boolean;
+		prefixMatched?: boolean;
+		lastMatched?: boolean;
+		lastExactMatched?: boolean;
+		hasNewTurn?: boolean;
+		stopVisible?: boolean;
+		assistantVisible?: boolean;
+		composerCleared?: boolean;
+		inConversation?: boolean;
+		lastExtraTextRecognized?: boolean;
+		turnsCount?: number;
+		baseline?: number;
+	} | null = null;
 	// Require the newly committed user turn to equal the requested prompt after
 	// presentation-only markdown and whitespace normalization.
 	const script = `(() => {
@@ -719,6 +736,23 @@ async function verifyPromptCommitted(
 	      (lastTurn.includes(normalizedPrompt) ||
 	        (normalizedPromptPrefix.length > 30 && lastTurn.includes(normalizedPromptPrefix)));
 	    const lastExactMatched = normalizedPrompt.length > 0 && lastTurn === normalizedPrompt;
+	    const attachmentNames = ${attachmentNamesLiteral}.map((name) => normalize(name)).filter(Boolean);
+	    const lastExtraText = lastMatched ? lastTurn.replace(normalizedPrompt, ' ').trim() : '';
+	    const recognizedChromeLabels = [
+	      ...attachmentNames,
+	      ...attachmentNames.map((name) => {
+	        const extensionIndex = name.lastIndexOf('.');
+	        return extensionIndex > 0 ? name.slice(0, extensionIndex).trim() : name;
+	      }),
+	      'attachment', 'attached file', 'file', 'pdf', 'document', 'spreadsheet',
+	      'presentation', 'image', 'deep research', 'collapsed', 'expand',
+	    ].filter(Boolean).sort((a, b) => b.length - a.length);
+	    let unrecognizedExtraText = lastExtraText;
+	    for (const label of recognizedChromeLabels) {
+	      unrecognizedExtraText = unrecognizedExtraText.split(label).join(' ');
+	    }
+	    const lastExtraTextRecognized =
+	      lastExtraText.length > 0 && normalize(unrecognizedExtraText).length === 0;
 	    const baseline = ${baselineLiteral};
 	    const hasNewTurn = baseline < 0 ? false : articles.length > baseline;
       const stopVisible = Boolean(document.querySelector(${stopSelectorLiteral}));
@@ -740,6 +774,7 @@ async function verifyPromptCommitted(
       prefixMatched,
       lastMatched,
 	  lastExactMatched,
+	  lastExtraTextRecognized,
       hasNewTurn,
       stopVisible,
       assistantVisible,
@@ -760,6 +795,7 @@ async function verifyPromptCommitted(
 			prefixMatched?: boolean;
 			lastMatched?: boolean;
 			lastExactMatched?: boolean;
+			lastExtraTextRecognized?: boolean;
 			hasNewTurn?: boolean;
 			stopVisible?: boolean;
 			assistantVisible?: boolean;
@@ -768,8 +804,17 @@ async function verifyPromptCommitted(
 			turnsCount?: number;
 			baseline?: number;
 		};
+		latestInfo = info;
 		const turnsCount = (result.value as { turnsCount?: number } | undefined)?.turnsCount;
-		const matchesPrompt = Boolean(info?.lastExactMatched);
+		const attachmentAwareMatch = Boolean(
+			info?.lastMatched &&
+				info?.lastExtraTextRecognized &&
+				info?.hasNewTurn &&
+				info?.composerCleared &&
+				info?.inConversation &&
+				(info?.assistantVisible || info?.stopVisible),
+		);
+		const matchesPrompt = Boolean(info?.lastExactMatched || attachmentAwareMatch);
 		const baselineUnknown =
 			typeof info?.baseline === "number" ? info.baseline < 0 : baselineLiteral < 0;
 		if (matchesPrompt && (baselineUnknown || info?.hasNewTurn)) {
@@ -799,7 +844,29 @@ async function verifyPromptCommitted(
 			},
 		);
 	}
-	throw new Error("Prompt did not appear in conversation before timeout (send may have failed)");
+	const effectState =
+		latestInfo?.hasNewTurn &&
+		latestInfo.lastMatched &&
+		latestInfo.lastExtraTextRecognized &&
+		latestInfo.composerCleared &&
+		latestInfo.inConversation &&
+		(latestInfo.assistantVisible || latestInfo.stopVisible)
+			? "effect_observed"
+			: latestInfo?.baseline !== undefined &&
+					latestInfo.baseline >= 0 &&
+					!latestInfo.hasNewTurn &&
+					latestInfo.composerCleared === false
+				? "pre_effect"
+				: "unknown";
+	throw new BrowserAutomationError(
+		"Prompt did not appear in conversation before timeout (send may have failed)",
+		{
+			stage: "submit-prompt",
+			code: "prompt-commit-unconfirmed",
+			effectState,
+			commitEvidence: latestInfo,
+		},
+	);
 }
 
 export const __test__ = {

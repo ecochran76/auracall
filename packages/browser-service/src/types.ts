@@ -41,6 +41,7 @@ export interface BrowserRuntimeMetadata {
   userDataDir?: string;
   chromeTargetId?: string;
   tabUrl?: string;
+  observedModel?: string | null;
   composerTool?: string | null;
   thinkingTime?: string;
   chatgptProMode?: string;
@@ -168,6 +169,7 @@ export interface BrowserRunResult {
   userDataDir?: string;
   chromeTargetId?: string;
   tabUrl?: string;
+  observedModel?: string | null;
   composerTool?: string | null;
   thinkingTime?: string;
   chatgptProMode?: string;

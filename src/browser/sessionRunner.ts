@@ -82,6 +82,7 @@ export async function runBrowserSessionExecution(
       formatFinishLine: (options) => formatFinishLine({ ...options, model: options.label }),
       runtimeExtras: (result) => ({
         conversationId: (result as { conversationId?: string }).conversationId,
+        observedModel: (result as { observedModel?: string | null }).observedModel ?? undefined,
         composerTool: (result as { composerTool?: string | null }).composerTool ?? undefined,
         thinkingTime: (result as { thinkingTime?: string }).thinkingTime,
         chatgptProMode: (result as { chatgptProMode?: string }).chatgptProMode,

@@ -26,7 +26,7 @@ describe('ensureModelSelection', () => {
     const runtime = {
       evaluate: vi.fn().mockResolvedValue({ result: { value: { status: 'already-selected', label: 'GPT-5.2 Pro' } } }),
     } as unknown as ChromeClient['Runtime'];
-    await expect(ensureModelSelection(runtime, 'GPT-5.2 Pro', logger)).resolves.toBeUndefined();
+    await expect(ensureModelSelection(runtime, 'GPT-5.2 Pro', logger)).resolves.toBe('GPT-5.2 Pro');
     expect(logger).toHaveBeenCalledWith('Model picker: GPT-5.2 Pro');
   });
 

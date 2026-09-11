@@ -132,6 +132,30 @@ describe('buildBrowserConfig', () => {
     expect(config.thinkingTime).toBe('standard');
   });
 
+  test('can omit inherited semantic selector depth for one browser run', async () => {
+    const config = await buildBrowserConfig({
+      model: 'gpt-5.6-sol',
+      browserNoThinkingTime: true,
+      chatgptSemanticModelSelection: {
+        canonicalSelector: 'chatgpt:reasoning-high',
+        desiredModel: 'GPT-5.6 Sol',
+        apiModel: 'gpt-5.6-sol',
+        thinkingTime: 'extended',
+      },
+    });
+    expect(config.thinkingTime).toBeUndefined();
+  });
+
+  test('rejects conflicting one-run thinking-time controls', async () => {
+    await expect(
+      buildBrowserConfig({
+        model: 'gpt-5.6-sol',
+        browserThinkingTime: 'standard',
+        browserNoThinkingTime: true,
+      }),
+    ).rejects.toThrow(/either --browser-no-thinking-time or --browser-thinking-time/i);
+  });
+
   test('honors overrides and converts durations + booleans', async () => {
     const config = await buildBrowserConfig({
       model: 'gpt-5.1',

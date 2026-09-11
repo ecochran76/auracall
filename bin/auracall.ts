@@ -423,6 +423,7 @@ interface CliOptions extends OptionValues {
   forceReseedManagedProfile?: boolean;
   browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   browserThinkingTime?: 'light' | 'standard' | 'extended' | 'heavy';
+  browserNoThinkingTime?: boolean;
   browserChatgptMode?: 'chat' | 'work';
   browserChatgptToolApproval?: 'manual' | 'allow-once' | 'always-allow';
   browserWorkModel?: string;
@@ -911,6 +912,10 @@ program
       '--browser-thinking-time <level>',
       "ChatGPT 'thinking' time level (standard | extended; light/heavy kept as legacy aliases).",
     ).hideHelp(),
+  )
+  .option(
+    '--browser-no-thinking-time',
+    'Omit inherited ChatGPT thinking-time selection for this browser run.',
   )
   .addOption(
     new Option(
@@ -3950,28 +3955,25 @@ conversationArtifactsCommand
           2,
         ),
       );
-      return;
-    }
-    if (result.artifacts.length === 0) {
+    } else if (result.artifacts.length === 0) {
       console.log(`No artifacts found for conversation ${conversationId}.`);
-      return;
-    }
-    if (result.files.length === 0) {
+    } else if (result.files.length === 0) {
       console.log(`No supported artifacts were materialized for conversation ${conversationId}.`);
       if (result.manifestPath) {
         console.log(chalk.dim(`Artifact fetch manifest: ${result.manifestPath}`));
       }
-      return;
+    } else {
+      for (const file of result.files) {
+        console.log(`${file.name}\t${file.localPath ?? ''}`);
+      }
+      const skipped = result.artifacts.length - result.files.length;
+      const suffix = skipped > 0 ? ` (${skipped} unsupported or unavailable)` : '';
+      console.log(chalk.dim(`Materialized ${result.files.length} artifact(s)${suffix}.`));
+      if (result.manifestPath) {
+        console.log(chalk.dim(`Artifact fetch manifest: ${result.manifestPath}`));
+      }
     }
-    for (const file of result.files) {
-      console.log(`${file.name}\t${file.localPath ?? ''}`);
-    }
-    const skipped = result.artifacts.length - result.files.length;
-    const suffix = skipped > 0 ? ` (${skipped} unsupported or unavailable)` : '';
-    console.log(chalk.dim(`Materialized ${result.files.length} artifact(s)${suffix}.`));
-    if (result.manifestPath) {
-      console.log(chalk.dim(`Artifact fetch manifest: ${result.manifestPath}`));
-    }
+    exitAfterCompletedBrowserFileCommand();
   });
 
 conversationContextCommand
@@ -11590,7 +11592,8 @@ function exitAfterCompletedBrowserFileCommand(): void {
 	if (process.env.AURACALL_DISABLE_BROWSER_FILE_FORCE_EXIT === '1') {
 		return;
 	}
-	// Account-file list/download commands are one-shot browser utility commands.
+	// Account-file list/download and conversation-artifact fetch commands are
+	// one-shot browser utility commands.
 	// CDP handles may remain open after the operation has completed and stdout
 	// has been flushed, so exit explicitly to preserve CLI completion semantics.
 	process.exit(process.exitCode ?? 0);
