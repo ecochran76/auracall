@@ -624,3 +624,24 @@ lanes:
     blocker: null
     disposition: Provider-free implementation accepted and integrated into main; clean, ancestral, process-unowned local worktree and branch removed with remote source custody retained; recovered provider conversation remains authoritative and must not be retried; install and live proof remain separately gated.
     updated_at: 2026-09-11
+  - id: P34
+    objective: Install exact published Plan 0340 bytes and run one identity-qualified attached-file ChatGPT canary plus one read-only artifact-fetch exit proof.
+    plan: docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md
+    plan_ref: refs/heads/ops/plan0341-installed-plan0340-live-acceptance
+    branch: ops/plan0341-installed-plan0340-live-acceptance
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: da1871eb85b899629baba915f66fabbbb3c2bfc59
+    remote_ref: refs/remotes/origin/ops/plan0341-installed-plan0340-live-acceptance
+    integration: merge
+    dependencies: [P33]
+    overlaps: [P08, P18]
+    reconciled_overlaps: [P08, P18]
+    reconciliation_note: P34 may install and run only its bounded foreground ChatGPT proof; it does not resume P18 or alter P08 and preserves all scheduler/completion state.
+    validation_status: preinstall-baseline-accepted
+    validation_ref: da1871eb85b899629baba915f66fabbbb3c2bfc59
+    integration_receipt: null
+    blocker: null
+    disposition: One install, one identity smoke, one new attached-file prompt with zero retries, and one read-only recovered-conversation artifact fetch are authorized; all other live effects remain out of scope.
+    updated_at: 2026-09-11

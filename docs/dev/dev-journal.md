@@ -49168,3 +49168,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Post-integration hardening passes 343 tests with one existing skip, typecheck,
   production build, and scoped lint with no errors. The retained one warning
   and two informational findings predate this classifier extraction.
+
+## 2026-09-11 | Plan 0341 installed/live acceptance opened
+
+- Started P34 from clean published Plan 0340 main at `da1871eb8`. The plan
+  allows one supported installed-runtime/service refresh, one no-prompt
+  identity smoke, one new attached-file ChatGPT prompt with zero retries, and
+  one read-only artifact-fetch lifecycle proof.
+- The pre-effect API is healthy at PID `41886` with zero restarts, background
+  drain idle, six paused completions, and zero queued/running. The exact
+  `wsl-chrome-3` managed browser is already owned by Chrome PID `71128` on
+  DevTools `45015`, pending responsive ownership and identity preflight.
+- Recovered conversation `6aa368bc-43c4-83ea-8d98-964264dd4340` remains
+  authoritative. It may be read once for artifact-fetch exit evidence but may
+  not receive a prompt, retry, recreation, or mutation. No scheduler,
+  completion, live-follow, or materialization control is authorized.

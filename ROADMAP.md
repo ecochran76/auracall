@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Open P34: [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)
+  installs exact current Plan 0340 bytes and permits one identity-qualified
+  ChatGPT attachment canary plus one read-only artifact-fetch lifecycle proof.
+  It allows no retry, scheduler/completion control, or mutation of the recovered
+  Deep Research conversation.
+
 - Completed P33: [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
   repairs current `6 Pro` provenance, one-run inherited-depth omission,
   attachment-aware prompt commitment, post-effect failure reconciliation, and
@@ -33,8 +39,15 @@
 
 ### Current Execution Board
 
-Status: P33 provider-free Deep Research reliability repair integrated
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P33 (integrated); P08, P16, P18, P29 (open)
+Status: P34 installed Plan 0340 live acceptance open
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P33 (integrated); P08, P16, P18, P29, P34 (open)
+
+- Active installed/live acceptance:
+  [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)
+  P34 starts from exact published Plan 0340 main and bounds effects to one
+  supported install/restart, one no-prompt identity smoke, one new attached-file
+  prompt, and one read-only artifact fetch. The recovered September 10
+  conversation remains authoritative and cannot be retried or mutated.
 
 - Completed ChatGPT Deep Research reliability repair:
   [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)

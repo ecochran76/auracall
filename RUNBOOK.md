@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 577 | 2026-09-11
+
+- Opened P34 / [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)
+  from clean local/remote-equal `main` at `da1871eb8`. User authority covers one
+  supported installed-runtime/service refresh and the smallest bounded live
+  ChatGPT verification of integrated Plan 0340.
+- Pre-effect runtime evidence: installed launcher `0.1.1`; API PID `41886`,
+  active/running with zero restarts; background drain idle; six completions all
+  paused and zero queued/running. AuraCall runtime profile `wsl-chrome-3`
+  resolves WSL Chrome and managed browser profile
+  `~/.auracall/browser-profiles/wsl-chrome-3/chatgpt`, currently owned by one
+  persistent Chrome root at PID `71128` / DevTools `45015` pending immediate
+  responsive-owner and identity qualification.
+- Bounds: one install, one no-prompt identity smoke, one new attachment prompt,
+  one Send, zero retries, and one read-only artifact fetch. Never click `Answer
+  now`; never control scheduler/completion/materialization work; never prompt or
+  mutate recovered conversation `6aa368bc-43c4-83ea-8d98-964264dd4340`.
+
 ## Turn 576 | 2026-09-11
 
 - Opened P33 / [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
