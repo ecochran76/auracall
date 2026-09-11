@@ -648,7 +648,7 @@ lanes:
   - id: P35
     objective: Repair P34 foreground ChatGPT lifecycle, selector, observed-model persistence, and artifact-settlement findings provider-free.
     plan: docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md
-    plan_ref: refs/heads/fix/plan0342-chatgpt-live-findings
+    plan_ref: refs/remotes/origin/fix/plan0342-chatgpt-live-findings
     branch: fix/plan0342-chatgpt-live-findings
     target: main
     plan_state: CLOSED
@@ -664,5 +664,5 @@ lanes:
     validation_ref: f3a0915b8bf1b6cfe9ec5e1de9119abc514a038a
     integration_receipt: d80613c4fb40d33a6126baa41a504d3e6700c61a
     blocker: null
-    disposition: Four P34 findings repaired, provider-free accepted, and integrated into main. Installed/live adoption remains separate and unauthorized.
+    disposition: Four P34 findings repaired, provider-free accepted, and integrated into main. Clean ancestral local worktree and branch removed without force; remote recovery ref retained. Installed/live adoption remains separate and unauthorized.
     updated_at: 2026-09-11

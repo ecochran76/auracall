@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 581 | 2026-09-11
+
+- Final P35 custody gates proved topic tip `44ea3e793` clean, equal to its
+  remote, ancestral to published main, and owned by zero process working
+  directories.
+- Removed the local worktree and local branch without force. Generated ignored
+  `dist/` and `node_modules/` copies were deleted with the worktree; remote
+  recovery ref `origin/fix/plan0342-chatgpt-live-findings` remains.
+
 ## Turn 580 | 2026-09-11
 
 - Integrated exact published P35 non-fast-forward into `main` at

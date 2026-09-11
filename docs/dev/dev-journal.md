@@ -49259,3 +49259,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - P35 is closed as provider-free accepted and integrated. No installed-runtime,
   browser, provider, service, scheduler, completion, artifact-fetch, or
   recovered-conversation effect ran; live adoption remains separately gated.
+- Final custody readback proved the topic clean, remote-equal, main-ancestral,
+  and process-unowned. Removed the local P35 worktree and branch without force,
+  including only its generated ignored build/dependency copies; retained the
+  published remote recovery ref.

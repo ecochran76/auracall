@@ -6,7 +6,7 @@ Operational state: PROVIDER_FREE_ACCEPTED_INTEGRATED
 Branch: fix/plan0342-chatgpt-live-findings
 Target: main
 Integration: merge
-Revision: 3 | 2026-09-11
+Revision: 4 | 2026-09-11
 
 ## Stable Objective
 
@@ -129,3 +129,12 @@ documented merge path, and installed/live adoption remains explicitly separate.
   architecture guard.
 - All provider-free criteria are accepted and P35 is closed. Installed-runtime
   refresh and live adoption remain separate work requiring separate authority.
+
+## Revision 4 Custody Closeout
+
+- The published topic tip `44ea3e793882dbe4aba07f554ae53c68ee9ef1c1`
+  is ancestral to published `main`, clean, equal to its remote, and owned by no
+  process working directory.
+- Removed the local P35 worktree and local branch without force. Generated
+  ignored `dist/` and `node_modules/` copies were removed with the worktree;
+  remote recovery ref `origin/fix/plan0342-chatgpt-live-findings` remains.
