@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 578 | 2026-09-11
+
+- Opened P35 / [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)
+  from clean local/remote-equal main at `25c1bf5ac` after the operator accepted
+  P34's recommended provider-free successor.
+- Frozen scope: identity-smoke process exit, current `6 Pro` trigger discovery,
+  ordinary Session observed-model persistence, and complete per-artifact async
+  settlement. P08 retains aggregate status; P34's recovered conversation and
+  every provider/browser/install/service/control effect remain untouched.
+- Graphiti runtime is healthy but atlas discovery returned no relevant AuraCall
+  cloud. Repo policy selection remains `already-aligned`; current source,
+  receipt, tests, and Git evidence are authoritative.
+
 ## Turn 577 | 2026-09-11
 
 - Opened P34 / [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)

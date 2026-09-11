@@ -49213,3 +49213,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Fresh custody gates then proved the P34 topic clean, remote-equal, ancestral,
   and owned by zero process working directories. Removed its local worktree and
   local branch while retaining the published remote topic ref.
+
+## 2026-09-11 | Plan 0342 ChatGPT live-findings provider-free repair opened
+
+- Started P35 from exact published main `25c1bf5ac` under the operator's
+  accepted recommendation. The lane converts P34's four foreground findings
+  into provider-free executable contracts: identity-smoke exit, current `6 Pro`
+  selector triggering, ordinary Session observed-model persistence, and
+  independent artifact-export settlement.
+- P08's aggregate `/status` memory issue remains separate. No installed
+  launcher, managed browser, provider conversation, service, scheduler,
+  completion, or artifact-control effect is authorized; the recovered Deep
+  Research conversation remains immutable.
+- Graphiti is healthy but returned no relevant AuraCall memory cloud. The repo
+  is already aligned with the selected policy profile, and CodeGraph remains
+  unavailable in this session, so the plan uses exact native source reads plus
+  executable tests as the documented fallback.

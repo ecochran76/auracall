@@ -645,3 +645,24 @@ lanes:
     blocker: null
     disposition: Verification completed with partial acceptance. Source/install parity and one current-model attachment turn passed; API restart churn, identity-smoke exit, explicit selector triggering, persisted observed-model provenance, and fresh DOCX/PDF materialization failed or remained partial. Clean, equal, ancestral, process-unowned local topic custody was removed after integration; the remote ref remains and no retry is authorized.
     updated_at: 2026-09-11
+  - id: P35
+    objective: Repair P34 foreground ChatGPT lifecycle, selector, observed-model persistence, and artifact-settlement findings provider-free.
+    plan: docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md
+    plan_ref: refs/heads/fix/plan0342-chatgpt-live-findings
+    branch: fix/plan0342-chatgpt-live-findings
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 25c1bf5ac8882a3126eda88437ba85c1598d237c
+    remote_ref: refs/remotes/origin/fix/plan0342-chatgpt-live-findings
+    integration: merge
+    dependencies: [P34]
+    overlaps: [P08, P16, P18]
+    reconciled_overlaps: [P08, P16, P18]
+    reconciliation_note: P35 owns only provider-free foreground CLI/browser repairs. P08 retains aggregate status, P16 retains developer-app response acceptance, and paused P18 retains every installed/live allowance.
+    validation_status: provider-free-red-green-pending
+    validation_ref: null
+    integration_receipt: null
+    blocker: null
+    disposition: Four exact P34 findings frozen; no provider/browser/install/service/control effect is authorized.
+    updated_at: 2026-09-11
