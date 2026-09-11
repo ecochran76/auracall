@@ -48308,3 +48308,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `recreate-pending` can become stale when ChatGPT accepts creation after the
   dialog observation. Post-command exact inventory remains mandatory before
   recovery. No prompt, LitScout tool, provider, or research effect ran.
+
+## 2026-09-10 | ChatGPT 6 Pro developer-app submit stopped pre-send
+
+- The current blank Chat composer now displayed `6 Pro`, Chat on and Work off.
+  One authorized installed `apps test --submit` attempt stopped before Send
+  after waiting 35 seconds for AuraCall's older model-selector contract.
+- Passive browser plus LitScout-ledger reconciliation proved no new conversation,
+  user turn or tool call. A direct-CDP exact-mention qualification also stopped
+  before Send when its short observation saw no unique picker row; the composer
+  was cleared. Because the supported eight-second non-submitting picker had
+  already passed, that short fallback is not accepted as a mention-selector
+  defect.
+- The demonstrated defect is current-model preservation against the new `6 Pro`
+  control. Prompt allowance remains unconsumed. No app/OAuth, prompt, tool,
+  provider or research effect ran.
+  [Evidence](notes/2026-09-10-chatgpt-6-pro-developer-app-pre-send-stop.md).
