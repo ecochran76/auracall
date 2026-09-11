@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 596 | 2026-09-11
+
+- Opened P40 / Plan 0347 from exact published main `36914e877` after P39
+  integrated provider-free.
+- P40 owns one supported install, one no-prompt identity smoke, one explicit
+  compact-`6Pro` premium prompt with at most one Send, and one read-only genuine-
+  PDF artifact fetch. Retries and runtime controls remain forbidden.
+- Prior runtime evidence is only a locator; current service, browser, completion,
+  source, installed, and identity state must be refreshed before effects.
+
 ## Turn 595 | 2026-09-11
 
 - Merged exact published P39 topic `4fd2d1a99` non-fast-forward into `main` at

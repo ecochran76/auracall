@@ -750,3 +750,24 @@ lanes:
     blocker: null
     disposition: Compact 6Pro semantic admission and fresh expected-variant binary export validation are provider-free accepted and integrated. Installed/live adoption remains the successor gate.
     updated_at: 2026-09-11
+  - id: P40
+    objective: Install published Plan 0346 and run one bounded compact 6Pro prompt plus genuine-PDF artifact adoption pass.
+    plan: docs/dev/plans/0347-2026-09-11-installed-plan0346-live-acceptance.md
+    plan_ref: refs/heads/ops/plan0347-installed-plan0346-live-acceptance
+    branch: ops/plan0347-installed-plan0346-live-acceptance
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 36914e8771761a7cf4d65cba0fae31327af600ba
+    remote_ref: null
+    integration: merge
+    dependencies: [P39]
+    overlaps: [P08, P16, P18, P29]
+    reconciled_overlaps: [P08, P16, P18, P29]
+    reconciliation_note: P40 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, paused installed-live work, Skill execution, scheduler, completion, live-follow, background-drain, or materialization controls.
+    validation_status: installed-live-preflight
+    validation_ref: null
+    integration_receipt: null
+    blocker: null
+    disposition: End-to-end successor opened after exact P39 integration. No P40 install or provider effect has run.
+    updated_at: 2026-09-11

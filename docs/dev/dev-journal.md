@@ -49455,3 +49455,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Integration introduced no installation, browser, provider, recovered-
   conversation, or runtime-control effect. The end-to-end goal remains open for
   one bounded installed/live successor.
+
+## 2026-09-11 | Plan 0347 installed/live acceptance opened
+
+- Started P40 from exact published main `36914e877` after P39 provider-free
+  integration. The packet owns one install, identity smoke, explicit premium
+  prompt with at most one Send, and read-only recovered-conversation fetch.
+- Acceptance requires raw observed compact `6Pro`, the exact response token,
+  and a fresh `.pdf` with PDF MIME, `%PDF-` bytes, and a hash distinct from
+  DOCX. No retry, mutation, broad status, or runtime control is in scope.
