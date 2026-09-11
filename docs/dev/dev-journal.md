@@ -49502,3 +49502,9 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Checkpoint `c6b839c1e` passes 21 focused and 353 affected tests, typecheck,
   production build, scoped lint, and diff hygiene. No install/browser/provider
   effect ran; P41 is integration-ready.
+
+## 2026-09-11 | Plan 0348 integrated
+
+- Merged exact published P41 topic `992955adc` non-fast-forward into `main` at
+  `96ed036b3`. Fresh merged-result validation passes 353 affected tests,
+  typecheck, and production build with no live/runtime effect.

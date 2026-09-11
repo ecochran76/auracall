@@ -1,5 +1,12 @@
 # RUNBOOK
 
+## Turn 601 | 2026-09-11
+
+- Merged exact published P41 topic `992955adc` non-fast-forward into `main` at
+  `96ed036b3` with no live/runtime effect.
+- Fresh merged-result validation passes 353/353 affected tests, typecheck, and
+  production build. P41 closes integrated provider-free.
+
 ## Turn 600 | 2026-09-11
 
 - P41 reproduced P40 RED with compact `6Pro` plus `aria-expanded="false"`:

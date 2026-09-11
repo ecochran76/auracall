@@ -778,7 +778,7 @@ lanes:
     branch: fix/plan0348-chatgpt-compact-option-row
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
+    custody_state: INTEGRATED
     checkpoint: c6b839c1e
     remote_ref: refs/remotes/origin/fix/plan0348-chatgpt-compact-option-row
     integration: merge
@@ -788,7 +788,7 @@ lanes:
     reconciliation_note: P41 owns one provider-free compact option-row classification repair only. It does not absorb installed/live work, artifact fetch, developer-app response, Skill execution, or runtime controls.
     validation_status: provider-free-accepted
     validation_ref: c6b839c1e
-    integration_receipt: null
+    integration_receipt: 96ed036b303f8c4a073bb8ba494b369db875b5c9
     blocker: null
-    disposition: Current compact 6Pro row with submenu-like attributes is provider-free reproduced and repaired. Installed/live successor remains required.
+    disposition: Current compact 6Pro row with submenu-like attributes is provider-free reproduced, repaired, and integrated. Installed/live successor remains required.
     updated_at: 2026-09-11

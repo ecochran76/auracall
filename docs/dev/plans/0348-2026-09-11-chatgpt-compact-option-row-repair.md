@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P41
-Operational state: INTEGRATION_READY
+Operational state: INTEGRATED
 Branch: fix/plan0348-chatgpt-compact-option-row
 Target: main
 Integration: merge
@@ -35,6 +35,9 @@ rather than a terminal selectable premium-model row.
 - Published checkpoint `c6b839c1e` passes 21/21 focused and 353/353 affected
   tests, typecheck, production build, scoped lint, and diff hygiene. No install,
   browser, provider, artifact, conversation, or runtime-control effect ran.
+- Exact published topic `992955adc` merged non-fast-forward into `main` at
+  `96ed036b3`. Fresh merged-result validation passes 353/353 affected tests,
+  typecheck, and production build.
 
 ## Execution Graph
 
