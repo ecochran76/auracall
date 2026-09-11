@@ -705,6 +705,6 @@ lanes:
     validation_status: provider-free-accepted-integrated
     validation_ref: fe0b7d6b7
     integration_receipt: a827fc83af162be0ca4ce287a3fed40984fecb4a
-    blocker: Local worktree cleanup is blocked by managed Chrome PID 49777, unexpectedly launched by the full suite from this worktree on port 45013 at about:blank; termination requires separate runtime-control authority.
-    disposition: Explicit 6 Pro selection and fresh-context Deep Research export are provider-free accepted and integrated. No provider or installed-live acceptance ran. Retain the process-owned local worktree; installed/live adoption and Chrome termination remain separate.
+    blocker: null
+    disposition: Explicit 6 Pro selection and fresh-context Deep Research export are provider-free accepted and integrated. Authorized exact Chrome cleanup completed; clean, equal, ancestral, process-unowned local topic custody was removed without force and the remote recovery ref remains. Installed/live adoption remains separate.
     updated_at: 2026-09-11

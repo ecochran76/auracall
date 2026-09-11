@@ -64,9 +64,9 @@ Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P37 (completed/integrated); P08, P16,
   [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)
   P37's deterministic explicit-selector and independent transfer-lifecycle
   fixtures and fixes merged at `a827fc83a`. No installed/live/provider effect
-  was accepted; adoption remains separately gated. Its local worktree remains
-  in custody because the full suite unexpectedly launched a managed
-  `about:blank` Chrome process there; termination is not authorized.
+  was accepted; adoption remains separately gated. The unexpectedly launched
+  blank managed Chrome tree was terminated under later exact authority, and
+  clean local P37 topic custody is closed with its remote recovery ref retained.
 
 - Completed-with-terminal-findings installed/live adoption:
   [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)

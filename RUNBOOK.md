@@ -1,5 +1,15 @@
 # RUNBOOK
 
+## Turn 588 | 2026-09-11
+
+- Operator authorized termination of the exact P37-owned managed Chrome tree.
+  `SIGTERM` to process group `49777` completed normally; PID `49777` and port
+  `45013` are absent on fresh readback.
+- Revalidated the topic as clean, equal to its published remote, ancestral to
+  `main`, and process-unowned. Removed the local P37 worktree and branch without
+  force; only ignored generated dependency/build copies disappeared, and the
+  remote recovery ref remains.
+
 ## Turn 587 | 2026-09-11
 
 - Merged exact published P37 topic `bea81fe70` non-fast-forward into `main` at

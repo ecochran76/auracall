@@ -49363,3 +49363,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   managed Chrome launch is not live acceptance and retains exact worktree
   custody until separately authorized termination. Installed/live adoption is
   still a separate authorization boundary.
+
+## 2026-09-11 | Plan 0344 process and Git custody closed
+
+- Operator authorized exact cleanup of the managed Chrome tree launched by the
+  full suite. `SIGTERM` to process group `49777` completed normally; fresh
+  readback shows no PID `49777` and no listener on port `45013`.
+- P37 remained clean, equal to its published remote, ancestral to `main`, and
+  owned by zero process working directories. Removed the local worktree and
+  branch without force; the remote recovery ref remains.

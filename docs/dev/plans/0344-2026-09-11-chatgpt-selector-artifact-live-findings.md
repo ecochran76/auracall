@@ -69,6 +69,11 @@ Markdown/DOCX/PDF artifact transfer failures after the first materialization.
   DOM inspection, navigation, provider request, or termination followed. This
   is not live acceptance; exact process ownership blocks local P37 worktree
   cleanup until runtime-control authority is granted.
+- The operator subsequently authorized exact cleanup. `SIGTERM` to process
+  group `49777` removed the complete owned Chrome tree and listener on port
+  `45013`. Fresh process/cwd checks were empty; the clean, remote-equal,
+  main-ancestral P37 worktree and local branch were then removed without force.
+  The published remote recovery ref remains.
 
 ## Execution Graph
 
