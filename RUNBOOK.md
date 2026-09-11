@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 593 | 2026-09-11
+
+- Opened P39 / [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)
+  from exact published main `4a57abc2d` to continue the end-to-end goal.
+- P39 owns provider-free repair of compact `6Pro` trigger admission and false
+  PDF materialization caused by accepting an old or wrong-extension download.
+- CodeGraph is uninitialized and Graphiti has no relevant reviewed AuraCall
+  cloud; current source, tests, Plan 0345, and its receipt are authoritative.
+- No installed runtime, service, browser, provider, recovered conversation, or
+  runtime-control effect has run in P39.
+
 ## Turn 592 | 2026-09-11
 
 - Proved P38 topic `ce5ee0ced` clean, remote-equal, ancestral to published
