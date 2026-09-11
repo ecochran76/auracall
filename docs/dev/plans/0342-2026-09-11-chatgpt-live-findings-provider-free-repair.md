@@ -1,12 +1,12 @@
 # ChatGPT Live Findings Provider-Free Repair | 0342-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P35
-Operational state: INTEGRATION_READY
+Operational state: PROVIDER_FREE_ACCEPTED_INTEGRATED
 Branch: fix/plan0342-chatgpt-live-findings
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-11
+Revision: 3 | 2026-09-11
 
 ## Stable Objective
 
@@ -119,3 +119,13 @@ documented merge path, and installed/live adoption remains explicitly separate.
   goal-only audit, and plan-library audit pass.
 - The exact-branch lane audit retains only inherited P08/P16 findings and the
   expected P35 pre-integration catalog absence. No provider/runtime effect ran.
+
+## Revision 3 Integration Receipt
+
+- Merged the exact published topic non-fast-forward into `main` at
+  `d80613c4fb40d33a6126baa41a504d3e6700c61a`.
+- The merged result again passes 374 affected tests with one existing skip,
+  typecheck, production build, scoped lint, and the prompt-lifecycle
+  architecture guard.
+- All provider-free criteria are accepted and P35 is closed. Installed-runtime
+  refresh and live adoption remain separate work requiring separate authority.

@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 580 | 2026-09-11
+
+- Integrated exact published P35 non-fast-forward into `main` at
+  `d80613c4fb40d33a6126baa41a504d3e6700c61a`.
+- The merged result passes the 374-test affected suite with one existing skip,
+  typecheck, production build, scoped lint, and prompt-lifecycle architecture
+  guard. P35 provider-free acceptance is complete.
+- No install, browser attach/navigation, provider prompt, artifact fetch,
+  service, scheduler, completion, or recovered-conversation effect ran.
+  Installed/live adoption remains a separate authority boundary.
+
 ## Turn 579 | 2026-09-11
 
 - P35 provider-free implementation is published at `f3a0915b8` with exact
