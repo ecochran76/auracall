@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 592 | 2026-09-11
+
+- Proved P38 topic `ce5ee0ced` clean, remote-equal, ancestral to published
+  `main`, and owned by zero process working directories.
+- Removed the local P38 worktree and branch without force. The remote recovery
+  ref remains; installed service PID `89826` and Chrome PID `71128` were not
+  part of local Git custody cleanup.
+
 ## Turn 591 | 2026-09-11
 
 - Merged exact published P38 topic `ce5ee0ced` non-fast-forward into `main` at

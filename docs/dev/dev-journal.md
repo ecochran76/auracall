@@ -49415,3 +49415,11 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Integration introduced no additional install, service, browser, provider,
   prompt, Send, artifact-fetch, recovered-conversation, or runtime-control
   effect. The `6Pro` and false-PDF findings remain unaccepted follow-up.
+
+## 2026-09-11 | Plan 0345 Git custody closed
+
+- Fresh gates proved the published P38 topic clean, remote-equal, ancestral to
+  `main`, and owned by zero process working directories.
+- Removed the local worktree and branch without force, retaining remote
+  recovery ref `ce5ee0ced`. Installed runtime/service/browser state was not
+  part of the local Git cleanup.

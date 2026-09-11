@@ -70,7 +70,8 @@ Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P38 (completed/integrated); P08, P16,
   P38 spent one install, one identity smoke, one prompt attempt with zero Sends,
   and one artifact fetch. Identity and installation passed; current label drift
   and false PDF materialization are terminal. No retry or unrelated runtime
-  control ran. The evidence is integrated at `62b056005`.
+  control ran. The evidence is integrated at `62b056005`; clean local topic
+  custody is closed with its remote recovery ref retained.
 
 - Integrated provider-free repair:
   [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)

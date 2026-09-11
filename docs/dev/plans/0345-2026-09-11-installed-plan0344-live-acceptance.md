@@ -151,3 +151,10 @@ The redacted receipt is
 - Non-fast-forward merge: `62b05600574c05282aa881d7f258ef24136485ed`.
 - Integration changed documentation and evidence only; no additional runtime,
   browser, provider, artifact, recovered-conversation, or control effect ran.
+
+## Custody Closeout
+
+- The topic tip was clean, remote-equal, ancestral to published `main`, and
+  owned by zero process working directories.
+- Removed the local P38 worktree and branch without force. The remote recovery
+  ref remains at `ce5ee0cedab1b2c0e8b6dd9a31b2a9651ececff0`.

@@ -727,5 +727,5 @@ lanes:
     validation_ref: docs/dev/notes/2026-09-11-plan0345-installed-live-acceptance.json
     integration_receipt: 62b05600574c05282aa881d7f258ef24136485ed
     blocker: null
-    disposition: Verification completed without live acceptance. Install parity and identity passed; the live menu exposed 6Pro instead of exact 6 Pro before Send, and the claimed PDF materialization duplicated DOCX bytes and metadata. No retry, fallback, resend, recovered-conversation mutation, or runtime control effect ran.
+    disposition: Verification completed and integrated without live acceptance. Install parity and identity passed; the live menu exposed 6Pro instead of exact 6 Pro before Send, and the claimed PDF materialization duplicated DOCX bytes and metadata. No retry, fallback, resend, recovered-conversation mutation, or runtime control effect ran. Clean, equal, ancestral, process-unowned local topic custody was removed without force; the remote recovery ref remains.
     updated_at: 2026-09-11
