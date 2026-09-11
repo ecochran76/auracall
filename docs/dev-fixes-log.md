@@ -1,3 +1,11 @@
+- 2026-09-11: A test suite labeled provider-free is not proof of zero browser
+  effects. After broad or full validation, run a fresh OS process/cwd census.
+  P37's first full suite unexpectedly left managed Chrome at `about:blank` with
+  its cwd in the topic worktree even though focused and affected tests were
+  provider-free. Do not attach, terminate, or remove the owned worktree without
+  separate authority; record the PID, port, browser profile, start time, and
+  exact cleanup gate.
+
 - 2026-09-11: ChatGPT's current animated `6 Pro` option can close the model
   menu without mounting a checked marker. Explicit selection must remember the
   exact targeted non-submenu click and may settle only when the menu closes and

@@ -59,10 +59,16 @@ Markdown/DOCX/PDF artifact transfer failures after the first materialization.
   fallback. Installed/live acceptance remains unproven and unauthorized.
 - Exact published topic `bea81fe70` merged non-fast-forward into `main` at
   `a827fc83a`. P37 is provider-free accepted and integrated; installation,
-  runtime adoption, and any live/provider proof remain a separate authority
-  boundary.
+  runtime adoption, and any live/provider acceptance remain a separate
+  authority boundary.
 - Fresh merged-result validation passes 351/351 affected tests, typecheck, and
   production build.
+- The first full-suite command unexpectedly launched managed Chrome PID
+  `49777` from the P37 worktree at `2026-09-11 09:10:12` on port `45013` with
+  browser profile `wsl-chrome-2` and initial URL `about:blank`. No attachment,
+  DOM inspection, navigation, provider request, or termination followed. This
+  is not live acceptance; exact process ownership blocks local P37 worktree
+  cleanup until runtime-control authority is granted.
 
 ## Execution Graph
 

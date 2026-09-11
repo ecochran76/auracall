@@ -9,8 +9,12 @@
   Word/PDF export uses fresh synchronous iframe execution contexts.
 - Fresh merged-result validation passes 351/351 affected tests, typecheck, and
   production build.
-- No installation, browser/provider request, prompt, Send, protected-
-  conversation fetch/mutation, service change, or runtime control ran.
+- No installation, provider request, prompt, Send, protected-conversation
+  fetch/mutation, service change, or runtime control ran. The nominally
+  provider-free full suite unexpectedly launched managed Chrome PID `49777`
+  from the P37 worktree on port `45013` at `about:blank`; it was neither
+  attached nor terminated. Retain the worktree pending separate cleanup
+  authority.
 
 ## Turn 586 | 2026-09-11
 

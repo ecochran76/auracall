@@ -49345,8 +49345,11 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   65 skips; one unrelated 29 ms versus 30 ms rate-limit timing assertion passed
   16/16 on immediate focused rerun. An earlier profile-store timeout passed its
   9/9 focused rerun and the final full run.
-- No installation, browser, provider, protected-conversation, service,
-  scheduler, completion, live-follow, or materialization-control effect ran.
+- No installation, provider, protected-conversation, service, scheduler,
+  completion, live-follow, or materialization-control effect ran. The first
+  full-suite command unexpectedly launched managed Chrome PID `49777` from this
+  worktree on port `45013` with `wsl-chrome-2` at `about:blank`. It was not
+  attached, navigated, inspected, or terminated under P37's hard stop.
 
 ## 2026-09-11 | Plan 0344 integrated
 
@@ -49355,6 +49358,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   accepted and integrated.
 - Fresh merged-result validation passes 351/351 affected tests, typecheck, and
   production build.
-- Installation, browser/provider proof, prompt/Send, protected-conversation
-  access, service changes, and runtime controls remained unspent. Installed/
-  live adoption is still a separate authorization boundary.
+- Installation, provider proof, prompt/Send, protected-conversation access,
+  service changes, and runtime controls remained unspent. The unexpected blank
+  managed Chrome launch is not live acceptance and retains exact worktree
+  custody until separately authorized termination. Installed/live adoption is
+  still a separate authorization boundary.
