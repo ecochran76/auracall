@@ -1,12 +1,12 @@
 # Installed Plan 0348 Live Acceptance | 0349-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P42
-Operational state: PREFLIGHT
+Operational state: TERMINAL_EVIDENCE_FAILURE
 Branch: ops/plan0349-installed-plan0348-live-acceptance
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -24,6 +24,14 @@ the recovered Deep Research conversation.
 - Last fresh runtime custody recorded six paused and zero queued/running/idle-
   waiting completions, service PID `96978`, and managed Chrome PID `71128` on
   `45015`. Refresh all of these before effects.
+- One install passed 523-file source/installed parity at normalized SHA-256
+  `569ad132...`; service PID `51128` is active/running with zero restarts.
+- The only identity operation was piped into `jq`. AuraCall's force-exit boundary
+  truncated the piped JSON, leaving the identity evidence unparseable and the
+  consumer at exit 5. The lane fails closed without a retry.
+- Prompt and artifact budgets remained unspent: zero prompt attempts, Sends,
+  artifact fetches, retries, conversation mutations, or runtime controls.
+  Receipt: `docs/dev/notes/2026-09-11-plan0349-installed-live-acceptance.json`.
 
 ## Execution Graph
 

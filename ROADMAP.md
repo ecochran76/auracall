@@ -1,8 +1,8 @@
 # Aura-Call Roadmap
 
-- Active P42: [Plan 0349](docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md)
-  owns the final bounded install, compact `6Pro` prompt, and genuine-PDF
-  artifact acceptance pass.
+- Completed-with-terminal-evidence-finding P42: [Plan 0349](docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md)
+  passed install parity, but piped identity JSON was truncated before parsing;
+  prompt and artifact budgets remained unspent.
 
 - Integrated P41: [Plan 0348](docs/dev/plans/0348-2026-09-11-chatgpt-compact-option-row-repair.md)
   reproduces the current compact `6Pro` row's submenu-like attribute shape and
@@ -82,12 +82,13 @@
 
 ### Current Execution Board
 
-Status: P42 installed Plan 0348 live acceptance active
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P41 (completed/integrated); P08, P16, P18, P29, P42 (open)
+Status: P42 installed Plan 0348 acceptance terminal before prompt
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P42 (completed/integration-ready); P08, P16, P18, P29 (open)
 
-- Active installed/live successor:
+- Completed-with-terminal-evidence installed/live successor:
   [Plan 0349](docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md)
-  owns one no-retry prompt and one conditional read-only artifact fetch.
+  failed closed on truncated piped identity JSON. Prompt and artifact fetch were
+  not attempted.
 
 - Integrated provider-free repair:
   [Plan 0348](docs/dev/plans/0348-2026-09-11-chatgpt-compact-option-row-repair.md)

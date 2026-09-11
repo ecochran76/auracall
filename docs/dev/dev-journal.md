@@ -49517,3 +49517,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Acceptance requires raw observed `6Pro`, exact response token, and a genuine
   fresh PDF distinct from DOCX. Retries, mutation, and runtime controls remain
   forbidden.
+
+## 2026-09-11 | Plan 0349 terminal identity-evidence finding
+
+- One supported install passed exact 523-file source/installed parity at
+  normalized SHA `569ad132...`; service PID `51128` is active/running with zero
+  restarts.
+- Piping the single identity operation to `jq` exposed the CLI force-exit
+  boundary truncating JSON before flush. The consumer exited 5; the lane failed
+  closed without retry. No prompt, Send, artifact fetch, mutation, or runtime
+  control ran.
