@@ -1,0 +1,87 @@
+{
+  "object": "auracall.installed-live-acceptance-receipt",
+  "version": 1,
+  "generatedAt": "2026-09-11T19:40:34.000Z",
+  "plan": "docs/dev/plans/0350-2026-09-11-final-live-acceptance.md",
+  "lane": "P43",
+  "outcome": "live_accepted",
+  "source": {
+    "baseMain": "d9df098fe",
+    "planOpeningCommit": "decf12865",
+    "publishedBeforeEffects": true
+  },
+  "installedRuntime": {
+    "adoptedFromPlan": "docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md",
+    "installCountThisLane": 0,
+    "sourceDistFiles": 523,
+    "installedDistFiles": 523,
+    "sourceNormalizedSha256": "569ad132a341f3e68f9a7751b33ac701ec9d45a6ef2d73deb83801107411fcef",
+    "installedNormalizedSha256": "569ad132a341f3e68f9a7751b33ac701ec9d45a6ef2d73deb83801107411fcef",
+    "servicePid": 51128,
+    "serviceRestarts": 0
+  },
+  "identity": {
+    "attempts": 1,
+    "exitCode": 0,
+    "durationSeconds": 2,
+    "runtimeProfile": "wsl-chrome-3",
+    "providerSessionVerdict": "match",
+    "accountPlanType": "pro",
+    "accountStructure": "personal",
+    "accountLevel": "Pro",
+    "launchedBrowser": false,
+    "chromePid": 71128,
+    "devtoolsPort": 45015,
+    "privateIdentityFieldsRetained": false
+  },
+  "prompt": {
+    "attempts": 1,
+    "requestedSemanticModel": "chatgpt:premium",
+    "desiredProviderModel": "6 Pro",
+    "observedProviderModel": "6Pro",
+    "modelStrategy": "select",
+    "chatgptMode": "chat",
+    "thinkingTimeSelectionRequested": false,
+    "expectedToken": "AURACALL_P43_6PRO_OK_20260911",
+    "actualOutput": "AURACALL_P43_6PRO_OK_20260911",
+    "outputSha256": "cc1f223047c45744ac220cca4f1ef18d258274691901258ddba886f8a95ac18d",
+    "durationSeconds": 44.2,
+    "sessionSlug": "plan-p43-six-pro",
+    "sessionStatus": "completed",
+    "conversationId": "6aa458cd-5108-83ea-8cf9-f8515921d770",
+    "sendCount": 1,
+    "retryCount": 0,
+    "fallbackToCurrentCount": 0
+  },
+  "artifactFetch": {
+    "attempts": 1,
+    "provider": "chatgpt",
+    "conversationId": "6aa368bc-43c4-83ea-8d98-964264dd4340",
+    "artifactCount": 3,
+    "materializedCount": 3,
+    "retryCount": 0,
+    "conversationMutations": 0,
+    "artifacts": [
+      {"variant": "markdown", "size": 32310, "mimeType": "text/markdown", "sha256": "f62a7cd3888da5ad30c029d2042aa7e96ee0296aa476561c93949c3c522786c9"},
+      {"variant": "docx", "size": 28662, "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "signatureHex": "504b030414000208", "sha256": "7f46ef5242057923d5e2a54ac2fb61efa4bc223396d493b2e560295056b32bff"},
+      {"variant": "pdf", "size": 259263, "mimeType": "application/pdf", "signatureHex": "255044462d312e37", "sha256": "21e3ba66c0dda8069b81a202b2b98117f8ae6e864d2d79de6168a257869fbd9b"}
+    ],
+    "retainedWrongVariantPreserved": true,
+    "pdfDistinctFromDocx": true
+  },
+  "effects": {
+    "installCount": 0,
+    "identitySmokeCount": 1,
+    "promptAttemptCount": 1,
+    "sendCount": 1,
+    "artifactFetchCount": 1,
+    "retryCount": 0,
+    "recoveredConversationMutationCount": 0,
+    "runtimeControlCount": 0
+  },
+  "finalCustody": {
+    "completionCounts": {"paused": 6, "queued": 0, "running": 0, "idleWaiting": 0},
+    "service": {"mainPid": 51128, "restartCount": 0, "activeState": "active", "subState": "running"},
+    "browser": {"pid": 71128, "devtoolsPort": 45015, "responsive": true}
+  }
+}

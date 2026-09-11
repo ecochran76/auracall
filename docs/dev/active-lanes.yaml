@@ -819,18 +819,18 @@ lanes:
     plan_ref: refs/heads/ops/plan0350-final-live-acceptance
     branch: ops/plan0350-final-live-acceptance
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: d9df098fe
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: decf12865
+    remote_ref: refs/remotes/origin/ops/plan0350-final-live-acceptance
     integration: merge
     dependencies: [P42]
     overlaps: [P08, P16, P18, P29]
     reconciled_overlaps: [P08, P16, P18, P29]
     reconciliation_note: P43 owns one unpiped identity read and the untouched serialized prompt/fetch budget only; no install or runtime controls.
-    validation_status: live-preflight
-    validation_ref: null
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-11-plan0350-final-live-acceptance.json
     integration_receipt: null
     blocker: null
-    disposition: Final live successor opened; no P43 effect has run.
+    disposition: Existing exact install, unpiped identity, compact 6Pro one-Send prompt, and genuine distinct PDF artifact fetch are live accepted with zero retries or runtime controls.
     updated_at: 2026-09-11

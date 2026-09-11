@@ -1,12 +1,12 @@
 # Final Live Acceptance | 0350-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P43
-Operational state: PREFLIGHT
+Operational state: LIVE_ACCEPTED_INTEGRATION_READY
 Branch: ops/plan0350-final-live-acceptance
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -23,6 +23,19 @@ fetch budgets to close compact `6Pro` and genuine-PDF live acceptance.
   service PID `51128` with zero restarts, and Chrome PID `71128` on `45015`.
 - This lane performs no install. It must re-prove current installed parity and
   runtime custody, then capture identity output directly without a pipe.
+- Current main build and installed runtime each contain 523 files at normalized
+  SHA-256 `569ad132...`; service PID `51128` remains active/running with zero
+  restarts. The one unpiped identity smoke matched and exited 0.
+- The one premium prompt completed in 44.2 seconds with exact token
+  `AURACALL_P43_6PRO_OK_20260911`, desired `6 Pro`, raw observed `6Pro`, one
+  Send, zero retries, and zero fallback.
+- The one recovered-conversation fetch exited 0 with 3/3 materialized. PDF is
+  259263 bytes, MIME `application/pdf`, starts `%PDF-1.7`, and has SHA-256
+  `21e3ba66...`, distinct from the ZIP/DOCX SHA `7f46ef52...`. The retained
+  wrong-variant DOCX remains preserved and did not count.
+- Final custody is six paused and zero queued/running/idle-waiting completions,
+  responsive Chrome PID `71128`, and stable service PID `51128`. Receipt:
+  `docs/dev/notes/2026-09-11-plan0350-final-live-acceptance.json`.
 
 ## Acceptance Criteria
 

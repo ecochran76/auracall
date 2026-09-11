@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 606 | 2026-09-11
+
+- P43 live acceptance passes. Existing source/installed runtime parity is
+  523/523 files at `569ad132...`; identity matched unpiped and exited 0.
+- One premium prompt returned exact token `AURACALL_P43_6PRO_OK_20260911` with
+  desired `6 Pro`, raw observed `6Pro`, one Send, and zero retries/fallbacks.
+- One recovered-conversation fetch materialized 3/3. PDF begins `%PDF-1.7`, has
+  PDF MIME and SHA `21e3ba66...`, distinct from ZIP/DOCX `7f46ef52...`.
+- Final custody is six paused completions, zero active completions, stable
+  service PID `51128`, and responsive Chrome PID `71128`.
+
 ## Turn 605 | 2026-09-11
 
 - Opened P43 / Plan 0350 from exact main `d9df098fe`. It reuses P42's verified
