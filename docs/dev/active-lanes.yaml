@@ -736,7 +736,7 @@ lanes:
     branch: fix/plan0346-chatgpt-live-findings
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
+    custody_state: INTEGRATED
     checkpoint: 40f2cecf9
     remote_ref: refs/remotes/origin/fix/plan0346-chatgpt-live-findings
     integration: merge
@@ -746,7 +746,7 @@ lanes:
     reconciliation_note: P39 owns only provider-free compact model-label and fresh expected-variant artifact admission repairs. It does not absorb aggregate status, developer-app response, installed/live work, Skill execution, or scheduler/completion/materialization controls.
     validation_status: provider-free-accepted
     validation_ref: 40f2cecf9
-    integration_receipt: null
+    integration_receipt: db527e0c99cda34da240584ee99cf0a9560605f1
     blocker: null
-    disposition: Compact 6Pro semantic admission and fresh expected-variant binary export validation are provider-free accepted and published. Installed/live adoption remains a successor gate after integration.
+    disposition: Compact 6Pro semantic admission and fresh expected-variant binary export validation are provider-free accepted and integrated. Installed/live adoption remains the successor gate.
     updated_at: 2026-09-11

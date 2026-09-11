@@ -49446,3 +49446,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Published checkpoint `40f2cecf9` passes 25 focused and 353 affected tests,
   typecheck, production build, scoped lint, diff hygiene, and the plan audit.
   P39 is integration-ready; installed/live proof remains unspent.
+
+## 2026-09-11 | Plan 0346 integrated
+
+- Merged exact published P39 topic `4fd2d1a99` non-fast-forward into `main` at
+  `db527e0c9`. Fresh merged-result validation passes 353 affected tests,
+  typecheck, production build, and the plan audit with zero errors.
+- Integration introduced no installation, browser, provider, recovered-
+  conversation, or runtime-control effect. The end-to-end goal remains open for
+  one bounded installed/live successor.

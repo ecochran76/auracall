@@ -1,10 +1,10 @@
 # Aura-Call Roadmap
 
-- Integration-ready P39: [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)
+- Integrated P39: [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)
   accepts compact `6Pro` semantically while preserving the raw label and
   requires fresh expected-variant binary proof for Deep Research exports.
-  Published checkpoint `40f2cecf9` awaits integration before one successor
-  installed/live recheck.
+  Published topic `4fd2d1a99` is integrated at `db527e0c9`; one successor
+  installed/live recheck remains.
 
 - Completed-with-terminal-findings P38: [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)
   installed exact Plan 0344 bytes and passed identity. Live acceptance failed:
@@ -68,14 +68,15 @@
 
 ### Current Execution Board
 
-Status: P39 current live findings repair integration-ready provider-free
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P38 (completed/integrated); P08, P16, P18, P29, P39 (open)
+Status: P39 current live findings repair integrated provider-free
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P39 (completed/integrated); P08, P16, P18, P29 (open)
 
-- Integration-ready provider-free repair:
+- Integrated provider-free repair:
   [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)
   proves compact premium-label matching and fresh expected-extension plus
-  binary-signature download admission at published checkpoint `40f2cecf9`.
-  Installation and live proof remain a successor gate.
+  binary-signature download admission at published checkpoint `40f2cecf9`,
+  integrated at `db527e0c9`. Installation and live proof remain a successor
+  gate.
 
 - Completed-with-terminal-findings installed/live adoption:
   [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)

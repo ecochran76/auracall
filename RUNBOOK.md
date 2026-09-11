@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 595 | 2026-09-11
+
+- Merged exact published P39 topic `4fd2d1a99` non-fast-forward into `main` at
+  `db527e0c9` with no installation, browser, provider, or runtime-control effect.
+- Fresh merged-result validation passes 353/353 affected tests, typecheck,
+  production build, and the Plan 0346 audit with zero errors.
+- P39 closes integrated provider-free. One separately bounded installed/live
+  successor must prove compact `6Pro` selection and genuine PDF export bytes.
+
 ## Turn 594 | 2026-09-11
 
 - P39 / Plan 0346 is provider-free accepted and integration-ready at published

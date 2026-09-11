@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P39
-Operational state: INTEGRATION_READY
+Operational state: INTEGRATED
 Branch: fix/plan0346-chatgpt-live-findings
 Target: main
 Integration: merge
@@ -43,6 +43,9 @@ request from admitting an old or DOCX download as a fresh PDF result.
 - No installation, service, browser, provider, recovered-conversation, or
   runtime-control effect ran in P39. Installed/live proof remains the successor
   gate required to close the end-to-end goal.
+- Exact published topic `4fd2d1a99` merged non-fast-forward into `main` at
+  `db527e0c9`. Fresh merged-result validation passes 353/353 affected tests,
+  typecheck, production build, and the plan audit with zero validation errors.
 
 ## Execution Graph
 
