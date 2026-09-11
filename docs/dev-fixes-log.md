@@ -22127,3 +22127,19 @@ browser-stage lifecycle observability, not transcript truncation.
   static false-positive, retrieval-failed, and terminal rows. Full-retrieval
   live follow should consult the recovery planner and queue materialization only
   when retrievable assets or unknown/deferred detail work remain.
+
+## 2026-09-10 | Reconcile provider effect before retrying attachment prompts
+
+- A ChatGPT user turn containing uploaded-file labels and Deep Research chrome
+  can preserve the full prompt without being exact-text-equal to the staged
+  composer value. Accept only a uniquely matched post-baseline turn with the
+  intact normalized prompt body; keep duplicate-submit boundaries strict.
+- `hasNewTurn`, a conversation ID, an assistant turn, or an observed tool call
+  is provider-effect evidence. Reconcile that effect before a later rate-limit
+  dialog classifies the run or permits retry.
+- Requested-model metadata is not observed-model proof. The current composer
+  showed `6 Pro` while the older semantic registry recorded `GPT-5.6 Sol`;
+  persist both requested and observed labels when they differ.
+- A successful artifact materialization result must release transient command
+  resources and exit independently of whether the owned managed browser is
+  intentionally retained.

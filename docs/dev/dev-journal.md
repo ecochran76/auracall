@@ -48324,3 +48324,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   control. Prompt allowance remains unconsumed. No app/OAuth, prompt, tool,
   provider or research effect ran.
   [Evidence](notes/2026-09-10-chatgpt-6-pro-developer-app-pre-send-stop.md).
+
+## 2026-09-10 | ChatGPT 6 Pro Deep Research recovered after stale local error
+
+- One authorized installed AuraCall Deep Research run used Chat mode, the
+  persistent `wsl-chrome-3` runtime/browser profile, five attachments, and the
+  live `6 Pro` model. ChatGPT created conversation
+  `6aa368bc-43c4-83ea-8d98-964264dd4340`, invoked the research tool, and
+  completed a 32,081-character report in ten minutes.
+- AuraCall nevertheless terminalized the local session as an error. Its prompt
+  verifier saw the new user turn, matched the prompt, saw an assistant turn,
+  and saw the cleared composer, but rejected exact equality because the
+  provider-rendered turn included attachment/tool chrome. A later rate-limit
+  dialog then obscured the already observed provider effect.
+- Read-only `conversations context get` reconciliation prevented a duplicate
+  retry and proved completion. `conversations artifacts fetch` materialized
+  Markdown, DOCX, and PDF, but its completed CLI process did not exit until
+  interrupted. The persistent managed browser remained alive and separate.
+- Current model provenance also drifts: the live composer showed `6 Pro` while
+  AuraCall metadata retained `GPT-5.6 Sol`; explicit Sol depth selection still
+  targets a missing Thinking-time dropdown.
+- No source repair or additional provider prompt was performed. The bounded
+  provider-free follow-up is recorded in
+  [the recovery handoff](notes/0002-2026-09-10-chatgpt-6pro-deep-research-recovery-handoff.md).
