@@ -1,12 +1,12 @@
 # Installed Plan 0340 Live Acceptance | 0341-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P34
-Operational state: PREINSTALL_BASELINE_ACCEPTED
+Operational state: LIVE_VERIFICATION_COMPLETED_WITH_FINDINGS
 Branch: ops/plan0341-installed-plan0340-live-acceptance
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-11
+Revision: 3 | 2026-09-11
 
 ## Stable Objective
 
@@ -136,3 +136,38 @@ identity-qualified attached-file canary and one read-only artifact-fetch exit
 proof satisfy LVA-R1 through LVA-R6; unrelated paused controls and the recovered
 conversation are unchanged; and the durable receipt is integrated and
 published on `main`.
+
+## Acceptance Evidence
+
+- `LVA-R1` passed. The one supported install used clean, published main at
+  `da1871eb85`; source and installed `dist` each contain 522 files and share
+  aggregate SHA-256 `6615333ea65e35903f817264b41eac6135fc33d3c0857b2845bf0ddd9860af64`.
+- `LVA-R2` was rejected. A broad `/status` projection exhausted the API's
+  1536 MiB Node heap and caused one automatic systemd restart. The replacement
+  service is healthy at PID `47500`; narrow authenticated reads show 78 models,
+  six paused completions, and zero queued/running completions. No control ran.
+- `LVA-R3` is partial. Exact Pro/personal identity, runtime/browser profile,
+  Chrome PID `71128`, and DevTools port `45015` matched, but the identity-smoke
+  CLI printed complete JSON and did not exit. Only that invocation was stopped;
+  two September 10 foreign orphans remain untouched.
+- `LVA-R4` is partial. Explicit `6 Pro` selection failed before upload/Send
+  despite the open live menu containing that label. The final current-model
+  canary uploaded one attachment, sent once, retried zero times, and returned
+  the exact token in 22.245 seconds, but persisted session metadata omitted the
+  provider-observed model field.
+- `LVA-R5` is partial. The one recovered-conversation fetch printed completion
+  and exited normally in 24 seconds without a prompt or mutation. It freshly
+  materialized Markdown; the DOCX/PDF entries reported `Promise was collected`.
+  The previously recovered Markdown, DOCX, and PDF remain present and hashed.
+- `LVA-R6` is pending integration of the redacted receipt at
+  `docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json`, the
+  synchronized closeout documents, audits, and published integration receipt.
+
+## Disposition
+
+P34 is closed as verification completed with partial acceptance, not as a
+fully accepted Plan 0340 live surface. The recovered conversation remains
+authoritative and unmodified. Any repair for aggregate status memory use,
+identity-smoke lifecycle, live selector triggering, observed-model persistence,
+or DOCX/PDF fetch materialization requires a new provider-free plan; no P34
+provider retry is authorized.

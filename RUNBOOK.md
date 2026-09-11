@@ -17,6 +17,15 @@
   one Send, zero retries, and one read-only artifact fetch. Never click `Answer
   now`; never control scheduler/completion/materialization work; never prompt or
   mutate recovered conversation `6aa368bc-43c4-83ea-8d98-964264dd4340`.
+- Completed the packet within bounds: one install, one prompt, one upload, one
+  Send, zero retries, and one recovered-conversation fetch. The current-model
+  canary returned the exact token; the recovered Markdown/DOCX/PDF remain
+  intact and the recovered conversation received no mutation.
+- Closed with partial acceptance. Broad status caused one automatic API restart;
+  identity smoke did not exit; explicit `6 Pro` selection failed pre-effect;
+  successful session metadata omitted observed-model provenance; and the fresh
+  fetch rematerialized only Markdown while DOCX/PDF entries errored. Continue
+  only through a new provider-free repair plan, never a P34 live retry.
 - Installed source/byte parity passes at 522 files and aggregate SHA-256
   `6615333e…`. A broad post-install `/status` read exhausted the API heap and
   caused one automatic systemd restart; narrow authenticated reads remain

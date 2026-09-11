@@ -630,8 +630,8 @@ lanes:
     plan_ref: refs/heads/ops/plan0341-installed-plan0340-live-acceptance
     branch: ops/plan0341-installed-plan0340-live-acceptance
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
     checkpoint: da1871eb85b899629baba915f66fabbbb3c2bfc59
     remote_ref: refs/remotes/origin/ops/plan0341-installed-plan0340-live-acceptance
     integration: merge
@@ -639,9 +639,9 @@ lanes:
     overlaps: [P08, P18]
     reconciled_overlaps: [P08, P18]
     reconciliation_note: P34 may install and run only its bounded foreground ChatGPT proof; it does not resume P18 or alter P08 and preserves all scheduler/completion state.
-    validation_status: installed-pre-effect-gates-accepted-live-send-pending
-    validation_ref: 9b3e88e91fc2dbaf08bc0a52b0ec01c30a1f58fe
+    validation_status: installed-live-verification-completed-with-findings
+    validation_ref: docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json
     integration_receipt: null
     blocker: null
-    disposition: Install and identity gates completed with one API OOM restart and one identity CLI exit defect recorded; explicit model selection stopped pre-Send, so the final attempt preserves the already active model. One Send and one read-only artifact fetch remain; all other live effects stay out of scope.
+    disposition: Verification completed with partial acceptance. Source/install parity and one current-model attachment turn passed; API restart churn, identity-smoke exit, explicit selector triggering, persisted observed-model provenance, and fresh DOCX/PDF materialization failed or remained partial. No retry is authorized.
     updated_at: 2026-09-11

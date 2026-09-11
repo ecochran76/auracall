@@ -1,10 +1,11 @@
 # Aura-Call Roadmap
 
-- Open P34: [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)
-  installs exact current Plan 0340 bytes and permits one identity-qualified
-  ChatGPT attachment canary plus one read-only artifact-fetch lifecycle proof.
-  It allows no retry, scheduler/completion control, or mutation of the recovered
-  Deep Research conversation.
+- Completed-with-findings P34: [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)
+  installed source-identical Plan 0340 bytes and completed the bounded live
+  packet. One current-model attachment turn passed with one Send and zero
+  retries; the recovered conversation was not mutated and its artifacts remain
+  intact. Full acceptance was rejected by API restart churn, CLI exit failure,
+  selector/provenance gaps, and partial fresh artifact materialization.
 
 - Completed P33: [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
   repairs current `6 Pro` provenance, one-run inherited-depth omission,
@@ -39,15 +40,15 @@
 
 ### Current Execution Board
 
-Status: P34 installed Plan 0340 live acceptance open
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P33 (integrated); P08, P16, P18, P29, P34 (open)
+Status: P34 installed Plan 0340 live verification completed with findings
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P34 (completed/integrated or integration-ready); P08, P16, P18, P29 (open)
 
-- Active installed/live acceptance:
+- Completed-with-findings installed/live verification:
   [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)
-  P34 starts from exact published Plan 0340 main and bounds effects to one
-  supported install/restart, one no-prompt identity smoke, one new attached-file
-  prompt, and one read-only artifact fetch. The recovered September 10
-  conversation remains authoritative and cannot be retried or mutated.
+  P34 installed exact published Plan 0340 main and spent exactly one prompt,
+  one attachment upload, one Send, zero retries, and one read-only artifact
+  fetch. The successful current-model turn does not override the rejected
+  restart, exit, explicit-selector, observed-model, and fresh export findings.
 
 - Completed ChatGPT Deep Research reliability repair:
   [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)

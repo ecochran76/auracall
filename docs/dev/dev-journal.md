@@ -49192,3 +49192,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   on explicit model-selector drift. A read-only census proves the live menu
   contains `6 Pro`; Revision 2 takes the original handoff's current-model path
   for the second/final work-unit attempt, with at most one Send overall.
+- Final current-model canary completed in 22.245 seconds with the exact expected
+  token, one attachment upload, one Send, zero retry, no thinking-depth action,
+  and no cooldown rewrite. Its persisted session retained desired `6 Pro` but
+  omitted provider-observed model provenance, so Plan 0340 live provenance is
+  not accepted.
+- The single recovered-conversation artifact fetch printed completion and
+  exited in 24 seconds without prompt or mutation. It freshly materialized the
+  32,310-byte Markdown while DOCX/PDF entries failed with `Promise was
+  collected`; previously recovered Markdown, DOCX, and PDF files remain intact
+  with recorded hashes.
+- P34 closes as verification completed with partial acceptance. Exact effects
+  were one install, one prompt/upload/Send, zero retries, one artifact fetch,
+  zero recovered-conversation mutations, and zero scheduler/completion controls.
+  Receipt: `docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json`.
