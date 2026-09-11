@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P38
-Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS
+Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS_INTEGRATION_READY
 Branch: ops/plan0345-installed-plan0344-live-acceptance
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-11
+Revision: 3 | 2026-09-11
 
 ## Stable Objective
 
@@ -137,7 +137,8 @@ unmodified, and the bounded receipt is integrated and published.
   PDF entry is byte-identical DOCX content with DOCX name and MIME type.
 - `ILA2-R5`: PASS — runtime/browser/completion custody and excluded controls
   are preserved.
-- `ILA2-R6`: PENDING — receipt publication and integration remain.
+- `ILA2-R6`: PENDING — evidence commit `89e40da9c` is durable; topic
+  publication and integration remain.
 
 P38 is verification-complete with terminal findings; it is not live accepted.
 The redacted receipt is

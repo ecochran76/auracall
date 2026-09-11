@@ -715,8 +715,8 @@ lanes:
     branch: ops/plan0345-installed-plan0344-live-acceptance
     target: main
     plan_state: CLOSED
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 51801cc4ec28620ea4b9f7cf67bbe26c41374d55
+    custody_state: EVIDENCE_COMMITTED
+    checkpoint: 89e40da9cc292e27640da6adbf48fa38004d4e77
     remote_ref: null
     integration: merge
     dependencies: [P37]
