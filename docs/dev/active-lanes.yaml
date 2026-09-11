@@ -652,17 +652,17 @@ lanes:
     branch: fix/plan0342-chatgpt-live-findings
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 25c1bf5ac8882a3126eda88437ba85c1598d237c
+    custody_state: INTEGRATION_READY
+    checkpoint: f3a0915b8bf1b6cfe9ec5e1de9119abc514a038a
     remote_ref: refs/remotes/origin/fix/plan0342-chatgpt-live-findings
     integration: merge
     dependencies: [P34]
     overlaps: [P08, P16, P18]
     reconciled_overlaps: [P08, P16, P18]
     reconciliation_note: P35 owns only provider-free foreground CLI/browser repairs. P08 retains aggregate status, P16 retains developer-app response acceptance, and paused P18 retains every installed/live allowance.
-    validation_status: provider-free-red-green-pending
-    validation_ref: null
+    validation_status: provider-free-accepted-integration-ready
+    validation_ref: f3a0915b8bf1b6cfe9ec5e1de9119abc514a038a
     integration_receipt: null
     blocker: null
-    disposition: Four exact P34 findings frozen; no provider/browser/install/service/control effect is authorized.
+    disposition: Four P34 findings repaired and provider-free accepted; exact topic is published and integration-ready. Installed/live adoption remains separate and unauthorized.
     updated_at: 2026-09-11

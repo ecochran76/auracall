@@ -46,13 +46,14 @@
 
 ### Current Execution Board
 
-Status: P35 ChatGPT live-findings provider-free repair active
+Status: P35 ChatGPT live-findings provider-free repair integration-ready
 Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P34 (completed/integrated); P08, P16, P18, P29, P35 (open)
 
 - Active provider-free repair:
   [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)
-  P35 converts the four P34 foreground findings into executable fixtures and
-  source repairs. It does not reopen P34's live effect budget or absorb P08.
+  P35 has provider-free acceptance for all four P34 foreground findings at
+  `f3a0915b8`; integration is the remaining gate. It does not reopen P34's live
+  effect budget or absorb P08.
 
 - Completed-with-findings installed/live verification:
   [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)

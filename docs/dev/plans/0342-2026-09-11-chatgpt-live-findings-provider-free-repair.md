@@ -2,11 +2,11 @@
 
 State: OPEN
 Lane: P35
-Operational state: PROVIDER_FREE_REPAIR_ACTIVE
+Operational state: INTEGRATION_READY
 Branch: fix/plan0342-chatgpt-live-findings
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -99,3 +99,23 @@ independently testable but converge through the shared CLI/browser gate.
 All four P34-owned failures have provider-free RED/GREEN execution evidence,
 the affected broader suite and static gates pass, P35 is integrated through the
 documented merge path, and installed/live adoption remains explicitly separate.
+
+## Revision 2 Validation Checkpoint
+
+- Provider-free implementation checkpoint:
+  `f3a0915b8bf1b6cfe9ec5e1de9119abc514a038a`, published with exact
+  local/remote topic parity.
+- `PFR-R1` passes through a real child-process fixture that retains an interval,
+  prints completion, and exits normally within two seconds.
+- `PFR-R2` passes through the exact injected browser expression: it discovers
+  the bundled animated trigger, clicks visible composer-scoped `6 Pro`, reads
+  the checked `6 Pro` menu row, and retains Power/High/generic-Pro negatives.
+- `PFR-R3` passes at both browser-session return and ordinary CLI Session-store
+  boundaries. Existing null behavior remains unchanged.
+- `PFR-R4` passes with three distinct Markdown, DOCX, and PDF candidates whose
+  scoped sessions are absent before each transfer and closed in transfer order.
+- Affected validation passes 374 tests with one existing skip; typecheck,
+  production build, scoped Biome lint, architecture structure test, diff check,
+  goal-only audit, and plan-library audit pass.
+- The exact-branch lane audit retains only inherited P08/P16 findings and the
+  expected P35 pre-integration catalog absence. No provider/runtime effect ran.

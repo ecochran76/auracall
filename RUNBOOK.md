@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 579 | 2026-09-11
+
+- P35 provider-free implementation is published at `f3a0915b8` with exact
+  local/remote parity. Identity-smoke exit, checked-current-model observation,
+  narrow animated `6 Pro` trigger admission, Session provenance persistence,
+  and per-artifact provider-session settlement are executable contracts.
+- Affected validation passes 374 tests with one existing skip. Typecheck,
+  production build, scoped lint, prompt-lifecycle architecture check, diff
+  hygiene, goal-only audit, and plan-library audit pass.
+- Exact-branch lane reconciliation retains inherited P08/P16 catalog findings
+  plus the expected P35 pre-integration absence from `origin/main`. P35 is
+  integration-ready; no installed, browser, provider, service, control, or
+  recovered-conversation effect ran.
+
 ## Turn 578 | 2026-09-11
 
 - Opened P35 / [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)
