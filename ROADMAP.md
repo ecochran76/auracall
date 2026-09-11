@@ -52,8 +52,8 @@
 
 ### Current Execution Board
 
-Status: P36 verification completed with terminal findings; integration pending
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P36 (completed or integration-pending); P08, P16, P18, P29 (open)
+Status: P36 verification completed with terminal findings; integration-ready
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P35 (completed/integrated); P08, P16, P18, P29 (open); P36 (integration-ready)
 
 - Completed-with-terminal-findings installed/live adoption:
   [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)

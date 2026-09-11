@@ -24,7 +24,8 @@
   only Markdown; DOCX/PDF both recorded `Promise was collected`. Retained
   authoritative files preserve their prior hashes. Six completions remain
   paused, controls are untouched, and service/Chrome custody is healthy.
-- P36 closes verification with terminal findings and no live acceptance.
+- P36 completes verification and is integration-ready with terminal findings
+  and no live acceptance. Published evidence checkpoint: `ff4fdd907`.
   Receipt: `docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.
 
 ## Turn 581 | 2026-09-11

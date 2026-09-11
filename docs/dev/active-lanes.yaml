@@ -672,16 +672,16 @@ lanes:
     plan_ref: refs/heads/ops/plan0343-installed-plan0342-live-acceptance
     branch: ops/plan0343-installed-plan0342-live-acceptance
     target: main
-    plan_state: CLOSED
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: ab01c510a5dca6ad26b66f376861661541fb588a
+    plan_state: OPEN
+    custody_state: INTEGRATION_READY
+    checkpoint: ff4fdd9072a2c939827d8c5f482213a231c92dc6
     remote_ref: refs/remotes/origin/ops/plan0343-installed-plan0342-live-acceptance
     integration: merge
     dependencies: [P35]
     overlaps: [P08, P16, P18, P29]
     reconciled_overlaps: [P08, P16, P18, P29]
     reconciliation_note: P36 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, paused installed-live, Skill execution, scheduler, completion, or materialization-control work.
-    validation_status: installed-live-verification-completed-with-terminal-findings
+    validation_status: installed-live-verification-completed-with-terminal-findings-integration-ready
     validation_ref: docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json
     integration_receipt: null
     blocker: null

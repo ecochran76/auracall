@@ -154,10 +154,10 @@
     "ILA-R3": "fail_terminal_selector_timeout_before_send",
     "ILA-R4": "fail_terminal_partial_materialization",
     "ILA-R5": "pass",
-    "ILA-R6": "pending_validation_and_integration"
+    "ILA-R6": "pass_preintegration_integration_pending"
   },
   "integration": {
-    "topicCommit": null,
+    "topicCommit": "ff4fdd9072a2c939827d8c5f482213a231c92dc6",
     "mergeCommit": null,
     "publishedMain": null
   }

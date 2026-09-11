@@ -1,8 +1,8 @@
 # Installed Plan 0342 Live Acceptance | 0343-2026-09-11
 
-State: CLOSED
+State: OPEN
 Lane: P36
-Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS
+Operational state: INTEGRATION_READY_WITH_TERMINAL_FINDINGS
 Branch: ops/plan0343-installed-plan0342-live-acceptance
 Target: main
 Integration: merge
@@ -144,9 +144,10 @@ unmodified, and the bounded receipt is integrated and published.
   and PDF returned `Promise was collected` and were not retried.
 - `ILA-R5`: PASS — runtime/browser/completion custody and excluded controls are
   preserved.
-- `ILA-R6`: PENDING — receipt and docs are written; final validation,
-  publication, and integration evidence remain before canonical closeout.
+- `ILA-R6`: PASS PRE-INTEGRATION — receipt/docs, provider-free gates, planning
+  audit, topic publication, and Git parity pass; canonical integration remains.
 
-P36 is verification-complete with terminal findings and is not live accepted.
+P36 is verification-complete, integration-ready with terminal findings, and is
+not live accepted.
 The redacted receipt is
 `docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.
