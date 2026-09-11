@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 585 | 2026-09-11
+
+- Opened P37 / [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)
+  from clean published main `067ee2a43` after operator acceptance of the P36
+  recommendation.
+- P37 owns provider-free repair of the explicit Chat `6 Pro` selector timeout
+  and the later-variant `Promise was collected` artifact-transfer failures.
+- Installation, browser attachment/launch/navigation, live DOM inspection,
+  provider requests, prompts, Sends, protected-conversation fetch/mutation,
+  service changes, and runtime controls remain prohibited.
+- Graphiti is healthy but returned no relevant AuraCall cloud; current P36
+  evidence and current repository artifacts are authoritative.
+
 ## Turn 584 | 2026-09-11
 
 - Final P36 cleanup gates proved topic tip `14d2f6ab2` clean, remote-equal,

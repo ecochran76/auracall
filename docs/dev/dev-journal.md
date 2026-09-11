@@ -49313,6 +49313,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   main-ancestral, and process-unowned. Removed its local worktree and branch
   without force, including only ignored generated dependency/build files; the
   remote recovery ref remains.
+
+## 2026-09-11 | Plan 0344 provider-free repair opened
+
+- Started P37 from exact published main `067ee2a43` after the operator accepted
+  the P36 recommendation.
+- The bounded scope is deterministic repair of explicit Chat `6 Pro` selection
+  and independent Markdown/DOCX/PDF transfer lifecycle. P36's terminal receipt
+  is the live evidence boundary.
+- No installation, browser, provider, protected-conversation, service, or
+  scheduler/completion/materialization-control effect is authorized. Graphiti
+  is healthy but returned no relevant AuraCall cloud.
 - Post-cleanup process census still sees two September 10 identity-smoke
   processes owned by other working directories. P36's normally exited smoke
   added none; the inherited processes were not terminated.
