@@ -144,6 +144,10 @@
     browser-operation lease
   - non-submitting app-selection smoke:
     `pnpm tsx bin/auracall.ts --profile <runtime> apps --target chatgpt test <exact-app> --expected-account <email> --json`
+  - a submitted developer-app test pins `modelStrategy=current` on the prompt
+    request itself, not only on its replacement browser configuration; this
+    prevents a profile-level service binding from reasserting `select` and
+    makes a newly labelled active model irrelevant to the one-submit path
   - do not use `--submit`, `create`, `refresh`, or `uninstall` as routine live
     tests; they require exact authorization and `--yes`
   - an authorized refresh uses replacement semantics and requires a complete

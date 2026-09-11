@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-Aura-Call bundles your prompt and files so another AI can answer with real context. It speaks stable GPT Pro aliases, GPT-5.1 Codex (API-only), GPT-5.1, GPT-5.2 family models, GPT-5.6 Sol, Gemini 3 Pro, Claude Sonnet 4.5, Claude Opus 4.1, Grok 4.20, and more—and it can ask one or multiple models in a single run. Browser automation is available; the current ChatGPT picker exposes GPT-5.6 Sol, Terra, Luna, and legacy GPT-5.5. Use semantic selectors such as `chatgpt:sol-high`, `chatgpt:terra`, and `chatgpt:luna`, or use `--browser-model-strategy current` to keep the active ChatGPT model. API remains the most reliable path, and `--copy` is an easy manual fallback.
+Aura-Call bundles your prompt and files so another AI can answer with real context. It speaks stable GPT Pro aliases, GPT-5.1 Codex (API-only), GPT-5.1, GPT-5.6 Sol, Gemini 3 Pro, Claude Sonnet 4.5, Claude Opus 4.1, Grok 4.20, and more—and it can ask one or multiple models in a single run. Browser automation follows ChatGPT's current picker. Use semantic selectors such as `chatgpt:sol-high`, `chatgpt:terra`, and `chatgpt:luna` when those lanes are available, or use `--browser-model-strategy current` to preserve the active ChatGPT model without interpreting or selecting its label. API remains the most reliable path, and `--copy` is an easy manual fallback.
 
 ## Quick start
 

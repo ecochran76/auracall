@@ -126,6 +126,7 @@ export interface ChatgptDeveloperAppBrowserClient {
 	runPrompt(input: {
 		prompt: string;
 		completionMode: "prompt_submitted";
+		modelStrategy: "current";
 		timeoutMs?: number | null;
 	}): Promise<{
 		conversationId?: string | null;
@@ -367,6 +368,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		const result = await testBrowser.runPrompt({
 			prompt,
 			completionMode: "prompt_submitted",
+			modelStrategy: "current",
 			timeoutMs: 120_000,
 		});
 		return {

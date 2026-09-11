@@ -229,6 +229,7 @@ describe("deriveChatgptDeveloperAppState", () => {
 		expect(runPrompt).toHaveBeenCalledWith({
 			prompt: "Use only LitScout.",
 			completionMode: "prompt_submitted",
+			modelStrategy: "current",
 			timeoutMs: 120_000,
 		});
 	});

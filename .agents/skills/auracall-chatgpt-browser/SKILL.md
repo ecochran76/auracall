@@ -123,6 +123,10 @@ readback, diff hygiene, and planning audit required by repo policy.
   `pnpm tsx scripts/browser-tools.ts ...`.
 - Use the smallest live proof: one exact AuraCall runtime profile, one short
   prompt, one expected token, and no retry unless the governing plan allows it.
+- For `apps test --submit`, preserve the current model at the prompt-request
+  boundary. Do not depend only on a replacement browser config, because an
+  existing profile-level service binding can otherwise restore model
+  selection. A newly labelled active model must not be opened or interpreted.
 - Never click ChatGPT's **Answer now** button.
 - Treat CAPTCHA, human verification, identity mismatch, unknown browser
   ownership, or missing selector separation as a hard stop.

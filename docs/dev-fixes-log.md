@@ -1,3 +1,12 @@
+- 2026-09-10: A submitted ChatGPT developer-app test set
+  `browser.modelStrategy=current` only on a replacement user config, but did
+  not carry the same invariant on the prompt request. A profile-level ChatGPT
+  service binding could therefore reassert `select`, causing the supported
+  LitScout path to wait 35 seconds for the model selector after the provider
+  relabelled the active control to `6 Pro`. Pin `modelStrategy=current` at the
+  `submitTest -> runPrompt` boundary. The path now preserves any active model
+  without opening, interpreting, or selecting the picker.
+
 - 2026-09-10: Do not leave mutating ChatGPT developer-app lifecycle operations
   outside every operation-level deadline. A LitScout refresh completed both
   Developer Mode inventory cycles but then stayed pending until its external

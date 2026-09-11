@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 540 | 2026-09-10
+
+- The authorized LitScout continuation remained unsubmitted after installed
+  AuraCall timed out for 35 seconds waiting on the ChatGPT model selector while
+  the retained Chat surface displayed `6 Pro`.
+- A deterministic adapter tracer proved the cause: developer-app `submitTest`
+  put `modelStrategy=current` only in replacement browser config and omitted it
+  from the prompt request, allowing profile-level service configuration to
+  restore `select`. The minimal repair pins `current` at the prompt boundary;
+  it neither recognizes nor selects the new label.
+- The exact red failed on the missing prompt field. Focused green passes the
+  adapter, prompt, composer-mode, and immutable-launch suites at `59/59`.
+  Broader provider-free validation, install parity, exact-app qualification,
+  and the single authorized product prompt remain in this turn's critical path.
+
 ## Turn 539 | 2026-08-29
 
 - Refreshed P08 by merging current `origin/main`; only two append-only history

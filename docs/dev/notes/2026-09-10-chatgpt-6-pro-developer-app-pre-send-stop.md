@@ -32,3 +32,13 @@ using the generic composer-tools menu. A bounded AuraCall source repair should
 make `modelStrategy=current` accept and record the current model control without
 selecting it, retain exact private-app identity checks, and pass provider-free
 coverage before another live Send.
+
+## Provider-free repair
+
+The causal defect was narrower than the visible label. `submitTest()` created
+a replacement browser config with `modelStrategy=current`, but its prompt
+request omitted the strategy. A profile-level service binding could therefore
+restore `select` inside the prompt workbench. The regression failed red at that
+exact adapter boundary, and the minimal repair now passes `modelStrategy=current`
+directly to `runPrompt()`. This does not recognize `6 Pro`, open the model
+picker, or select a different model; it makes the active label irrelevant.
