@@ -708,3 +708,24 @@ lanes:
     blocker: null
     disposition: Explicit 6 Pro selection and fresh-context Deep Research export are provider-free accepted and integrated. Authorized exact Chrome cleanup completed; clean, equal, ancestral, process-unowned local topic custody was removed without force and the remote recovery ref remains. Installed/live adoption remains separate.
     updated_at: 2026-09-11
+  - id: P38
+    objective: Install published Plan 0344 and run one bounded identity, explicit 6 Pro prompt, observed-model, and three-artifact live adoption pass.
+    plan: docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md
+    plan_ref: refs/heads/ops/plan0345-installed-plan0344-live-acceptance
+    branch: ops/plan0345-installed-plan0344-live-acceptance
+    target: main
+    plan_state: CLOSED
+    custody_state: EVIDENCE_COMMITTED
+    checkpoint: 89e40da9cc292e27640da6adbf48fa38004d4e77
+    remote_ref: null
+    integration: merge
+    dependencies: [P37]
+    overlaps: [P08, P16, P18, P29]
+    reconciled_overlaps: [P08, P16, P18, P29]
+    reconciliation_note: P38 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, paused installed-live work, Skill execution, scheduler, completion, live-follow, background-drain, or materialization controls.
+    validation_status: installed-live-verification-completed-with-terminal-findings
+    validation_ref: docs/dev/notes/2026-09-11-plan0345-installed-live-acceptance.json
+    integration_receipt: null
+    blocker: null
+    disposition: Verification completed without live acceptance. Install parity and identity passed; the live menu exposed 6Pro instead of exact 6 Pro before Send, and the claimed PDF materialization duplicated DOCX bytes and metadata. No retry, fallback, resend, recovered-conversation mutation, or runtime control effect ran.
+    updated_at: 2026-09-11

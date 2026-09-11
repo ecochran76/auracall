@@ -49372,3 +49372,36 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - P37 remained clean, equal to its published remote, ancestral to `main`, and
   owned by zero process working directories. Removed the local worktree and
   branch without force; the remote recovery ref remains.
+
+## 2026-09-11 | Plan 0345 installed/live adoption opened
+
+- Started P38 from exact published main `51801cc4e` after the operator
+  explicitly authorized the separately gated installed/live adoption.
+- The bounded packet owns one supported install, one no-prompt identity smoke,
+  one explicit semantic `chatgpt:premium` prompt with at most one Send and zero
+  retries, and one read-only three-artifact fetch from the recovered
+  conversation.
+- Existing API PID `37901` is active/running with `NRestarts=0`; persistent
+  managed Chrome PID `71128` remains on DevTools `45015`. No new effect has run.
+- Broad status and all scheduler, completion, live-follow, background-drain,
+  materialization, developer-app, Skill, and recovered-conversation mutation
+  controls remain outside P38.
+
+## 2026-09-11 | Plan 0345 completed with terminal findings
+
+- One supported installation produced exact 523-file source/installed parity
+  at normalized SHA-256 `af32d079b...`; API PID `89826` is active/running with
+  zero restarts. The installed identity smoke matched and exited normally in
+  five seconds without launching a browser.
+- The only effect-capable prompt stopped before Send: ChatGPT's current model
+  menu exposed `6Pro`, which exact `6 Pro` matching rejected. Its Session has
+  no conversation or output. No retry or `current` fallback ran.
+- The one recovered-conversation fetch no longer raised `Promise was
+  collected`, but the purported PDF is byte-identical to the DOCX and carries
+  its `.docx` name and MIME type. The prior authoritative PDF remains intact.
+- Exact effects are one install, one identity smoke, one supplied prompt, zero
+  Sends, zero retries, one artifact fetch, zero recovered-conversation
+  mutations, and zero scheduler/completion/materialization controls.
+- Final custody is six paused completions, zero queued/running/idle-waiting,
+  zero active history-materialization jobs, responsive Chrome PID `71128` on
+  `45015`, and stable service PID `89826`. P38 is not live accepted.

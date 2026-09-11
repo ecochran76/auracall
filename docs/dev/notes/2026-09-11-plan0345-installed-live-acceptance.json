@@ -1,0 +1,160 @@
+{
+  "object": "auracall.installed-live-acceptance-receipt",
+  "version": 1,
+  "generatedAt": "2026-09-11T16:31:00.000Z",
+  "plan": "docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md",
+  "lane": "P38",
+  "outcome": "completed_with_terminal_findings_not_accepted",
+  "source": {
+    "baseMain": "51801cc4ec28620ea4b9f7cf67bbe26c41374d55",
+    "planOpeningCommit": "e5ff6435df2f463c365df1e85b00112ad2c9a066",
+    "branch": "ops/plan0345-installed-plan0344-live-acceptance",
+    "publishedBeforeEffects": true
+  },
+  "providerFreeValidation": {
+    "affectedTestsPassed": 351,
+    "typecheck": "pass",
+    "productionBuild": "pass",
+    "planLibraryValidationErrors": 0,
+    "timing": "completed before installation and provider effects",
+    "fullSuiteExcluded": "known provider-free suite path can launch managed Chrome"
+  },
+  "install": {
+    "count": 1,
+    "installedAt": "2026-09-11T16:26:12.659Z",
+    "sourceRepo": "/home/ecochran76/workspace.local/auracall-plan0345",
+    "packageName": "auracall",
+    "packageVersion": "0.1.1",
+    "launcherVersion": "0.1.1",
+    "sourceDistFiles": 523,
+    "installedDistFiles": 523,
+    "sourceNormalizedSha256": "af32d079b4b1435ed97a81dd9ebf26a5e88cdee1fddff239730bc3e0baf1a1ae",
+    "installedNormalizedSha256": "af32d079b4b1435ed97a81dd9ebf26a5e88cdee1fddff239730bc3e0baf1a1ae",
+    "serviceAfterInstall": {
+      "mainPid": 89826,
+      "restartCount": 0,
+      "activeState": "active",
+      "subState": "running"
+    }
+  },
+  "identity": {
+    "attempts": 1,
+    "exitCode": 0,
+    "durationSeconds": 5,
+    "runtimeProfile": "wsl-chrome-3",
+    "browserProfile": "wsl-chrome-3",
+    "sourceBrowserProfile": "Default",
+    "managedBrowserProfile": "~/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "providerSessionVerdict": "match",
+    "accountPlanType": "pro",
+    "accountStructure": "personal",
+    "accountLevel": "Pro",
+    "launchedBrowser": false,
+    "chromePid": 71128,
+    "devtoolsPort": 45015,
+    "privateIdentityFieldsRetained": false
+  },
+  "prompt": {
+    "effectCapableAttempts": 1,
+    "requestedSemanticModel": "chatgpt:premium",
+    "desiredProviderModel": "6 Pro",
+    "modelStrategy": "select",
+    "chatgptMode": "chat",
+    "thinkingTimeSelectionRequested": false,
+    "expectedToken": "AURACALL_P38_6PRO_OK_20260911",
+    "exitCode": 1,
+    "durationSeconds": 62,
+    "terminalFinding": "Current model menu exposed 6Pro without a space; exact 6 Pro matching rejected it before Send.",
+    "availableModelLabels": ["6Pro", "Latest", "GPT-5.6 Sol", "GPT-5.5"],
+    "sessionSlug": "plan-p38-six-pro",
+    "sessionStatus": "error",
+    "sessionConversationId": null,
+    "sessionOutput": null,
+    "sendCount": 0,
+    "retryCount": 0,
+    "fallbackToCurrentCount": 0,
+    "observedProviderModel": null
+  },
+  "artifactFetch": {
+    "attempts": 1,
+    "provider": "chatgpt",
+    "conversationId": "6aa368bc-43c4-83ea-8d98-964264dd4340",
+    "exitCode": 0,
+    "durationSeconds": 23,
+    "artifactCount": 3,
+    "reportedMaterializedCount": 3,
+    "semanticallyValidMaterializedCount": 2,
+    "promiseWasCollectedCount": 0,
+    "outcomes": [
+      {
+        "variant": "markdown",
+        "status": "materialized",
+        "size": 32310,
+        "sha256": "f62a7cd3888da5ad30c029d2042aa7e96ee0296aa476561c93949c3c522786c9"
+      },
+      {
+        "variant": "docx",
+        "status": "materialized",
+        "size": 28662,
+        "sha256": "7f46ef5242057923d5e2a54ac2fb61efa4bc223396d493b2e560295056b32bff"
+      },
+      {
+        "variant": "pdf",
+        "status": "invalid_duplicate_docx",
+        "reportedMimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "reportedFileExtension": ".docx",
+        "size": 28662,
+        "sha256": "7f46ef5242057923d5e2a54ac2fb61efa4bc223396d493b2e560295056b32bff"
+      }
+    ],
+    "retainedAuthoritativePdf": {
+      "size": 259251,
+      "sha256": "b9fc6faeea2898835b0d4d6e14a72538793d406854913d9c7f42a28cb2f0782e"
+    },
+    "providerConversationMutations": 0,
+    "retries": 0
+  },
+  "custody": {
+    "serviceMainPid": 89826,
+    "serviceRestartCount": 0,
+    "serviceActiveState": "active",
+    "chromePid": 71128,
+    "chromeResponsive": true,
+    "activeCompletions": 6,
+    "pausedCompletions": 6,
+    "queuedCompletions": 0,
+    "runningCompletions": 0,
+    "idleWaitingCompletions": 0,
+    "schedulerPosture": "scheduled",
+    "activeHistoryMaterializationJobs": 0,
+    "schedulerOrCompletionControlEffects": 0,
+    "broadStatusCalls": 0,
+    "p38IdentitySmokeOrphans": 0
+  },
+  "effectCounters": {
+    "supportedInstalls": 1,
+    "identitySmokes": 1,
+    "providerPromptsSupplied": 1,
+    "providerSends": 0,
+    "promptRetriesOrResends": 0,
+    "artifactFetches": 1,
+    "artifactFetchRetries": 0,
+    "recoveredConversationMutations": 0,
+    "schedulerCompletionOrMaterializationControls": 0
+  },
+  "acceptance": {
+    "ILA2-R1": "pass",
+    "ILA2-R2": "pass",
+    "ILA2-R3": "fail_terminal_current_label_drift_before_send",
+    "ILA2-R4": "fail_terminal_pdf_is_duplicate_docx",
+    "ILA2-R5": "pass",
+    "ILA2-R6": "pending_integration"
+  },
+  "integration": {
+    "evidenceCommit": "89e40da9cc292e27640da6adbf48fa38004d4e77",
+    "topicCommit": null,
+    "mergeCommit": null,
+    "target": "main",
+    "method": "non_fast_forward_merge"
+  }
+}
