@@ -1,5 +1,9 @@
 # Aura-Call Roadmap
 
+- Completed-with-terminal-finding P40: [Plan 0347](docs/dev/plans/0347-2026-09-11-installed-plan0346-live-acceptance.md)
+  passed install parity and identity, but the only compact `6Pro` prompt stopped
+  before Send in option selection. The artifact fetch remained unspent.
+
 - Integrated P39: [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)
   accepts compact `6Pro` semantically while preserving the raw label and
   requires fresh expected-variant binary proof for Deep Research exports.
@@ -68,8 +72,8 @@
 
 ### Current Execution Board
 
-Status: P39 current live findings repair integrated provider-free
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P39 (completed/integrated); P08, P16, P18, P29 (open)
+Status: P40 installed Plan 0346 live acceptance completed with terminal finding
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P40 (completed/integration-ready); P08, P16, P18, P29 (open)
 
 - Integrated provider-free repair:
   [Plan 0346](docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md)
@@ -77,6 +81,11 @@ Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P39 (completed/integrated); P08, P16,
   binary-signature download admission at published checkpoint `40f2cecf9`,
   integrated at `db527e0c9`. Installation and live proof remain a successor
   gate.
+
+- Completed-with-terminal-finding installed/live successor:
+  [Plan 0347](docs/dev/plans/0347-2026-09-11-installed-plan0346-live-acceptance.md)
+  passed install and identity. Its only prompt stopped before Send because the
+  live option path still rejected listed `6Pro`; artifact fetch was withheld.
 
 - Completed-with-terminal-findings installed/live adoption:
   [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)

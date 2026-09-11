@@ -49455,3 +49455,25 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Integration introduced no installation, browser, provider, recovered-
   conversation, or runtime-control effect. The end-to-end goal remains open for
   one bounded installed/live successor.
+
+## 2026-09-11 | Plan 0347 installed/live acceptance opened
+
+- Started P40 from exact published main `36914e877` after P39 provider-free
+  integration. The packet owns one install, identity smoke, explicit premium
+  prompt with at most one Send, and read-only recovered-conversation fetch.
+- Acceptance requires raw observed compact `6Pro`, the exact response token,
+  and a fresh `.pdf` with PDF MIME, `%PDF-` bytes, and a hash distinct from
+  DOCX. No retry, mutation, broad status, or runtime control is in scope.
+
+## 2026-09-11 | Plan 0347 completed with terminal selector finding
+
+- One supported install produced exact 523-file source/installed parity at
+  normalized SHA-256 `97fb0011...`; service PID `96978` is active/running with
+  zero restarts. The one identity smoke matched and launched no browser.
+- The only effect-capable prompt stopped before Send. The compact trigger is now
+  admitted, but current option-row handling still rejected listed `6Pro` as a
+  match for desired `6 Pro`. Session conversation and output are null; no retry
+  or `current` fallback ran.
+- The serialized artifact fetch was withheld. Final custody remains six paused
+  completions, none queued/running/idle-waiting, responsive Chrome PID `71128`,
+  and stable service PID `96978`. P40 is not live accepted.
