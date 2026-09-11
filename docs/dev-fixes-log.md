@@ -22475,3 +22475,19 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   command exited normally while two export entries failed with `Promise was
   collected`; preserve already recovered files and never retry a protected
   provider conversation merely to improve a fresh materialization count.
+
+## 2026-09-11 | One-shot probes and sequential CDP transfers need explicit lifecycle boundaries
+
+- A complete identity report does not prove command completion. After the
+  browser-operation lock has released and the final report is printed, end the
+  one-shot CLI process explicitly; the managed Chrome process is external and
+  remains persistent.
+- `--browser-model-strategy current` is read-only observation, not picker
+  omission. Open the picker, preserve the checked option, and persist its label
+  separately from the requested model. Admit ChatGPT's animated trigger only
+  when its visible composer-scoped label names an explicit model family such as
+  `6 Pro`; reject Power/effort labels.
+- Await each artifact transfer through success/error recording, then close its
+  scoped provider session before the next artifact. Reusing a navigated CDP
+  execution context can otherwise surface `Promise was collected` on later
+  exports even when the first export succeeded.

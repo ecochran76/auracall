@@ -33,6 +33,11 @@ pnpm tsx bin/auracall.ts --profile "${auracall_runtime_profile}" --engine browse
   -p "Reply exactly with: AURACALL_CHAT_MODE_OK"
 ```
 
+`--browser-model-strategy current` opens the Chat model picker read-only,
+preserves its checked model, and records the observed picker label separately
+from the requested model. It does not mean “skip model observation”; use
+`ignore` for that behavior.
+
 Use both Work flags when Work and a named Work model are required:
 
 ```bash

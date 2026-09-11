@@ -923,6 +923,67 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
+	test("settles and closes each scoped provider session before transferring the next artifact", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-artifact-settlement-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const artifacts: ConversationArtifact[] = ["markdown", "docx", "pdf"].map((kind) => ({
+			id: `artifact-${kind}`,
+			title: `${kind.toUpperCase()} report`,
+			kind: "download",
+			uri: `sandbox:/mnt/data/${kind}-report.${kind === "markdown" ? "md" : kind}`,
+			metadata: { liveControlState: "available" },
+		}));
+		const closed: string[] = [];
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(async () => ({
+				provider: "chatgpt",
+				conversationId: "conversation-settlement",
+				messages: [],
+				artifacts,
+			})),
+			materializeConversationArtifact: vi.fn(async (
+				_conversationId: string,
+				artifact: ConversationArtifact,
+				_destDir: string,
+				_projectId: string | undefined,
+				listOptions: BrowserProviderListOptions,
+			) => {
+				expect(listOptions.providerSession).toBeUndefined();
+				listOptions.providerSession = {
+					providerId: "chatgpt",
+					key: artifact.id,
+					value: {},
+					close: async () => { closed.push(artifact.id); },
+				};
+				return {
+					id: `file-${artifact.id}`,
+					name: `${artifact.id}.bin`,
+					provider: "chatgpt",
+					source: "conversation",
+					size: 1,
+					localPath: `/tmp/${artifact.id}.bin`,
+				} satisfies FileRef;
+			}),
+		};
+		const service = new TestLlmService(provider as never, new JsonCacheStore(), cacheContext);
+
+		try {
+			const result = await service.materializeConversationArtifacts("conversation-settlement");
+			expect(result.files).toHaveLength(3);
+			expect(closed).toEqual(artifacts.map((artifact) => artifact.id));
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("materializeConversationArtifacts skips ChatGPT static image false positives before fetching", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-static-skip-"));
 		setAuracallHomeDirOverrideForTest(homeDir);

@@ -243,6 +243,7 @@ import {
   resolveProfileIdentitySmokeExitCode,
   resolveProfileIdentitySmokeTargets,
 } from '../src/cli/profileIdentitySmokeCommand.js';
+import { exitAfterCompletedBrowserProbeCommand } from '../src/cli/completedBrowserCommandExit.js';
 import {
   registerMediaGenerationCliCommand,
 } from '../src/cli/mediaGenerationCommand.js';
@@ -10274,10 +10275,10 @@ profileCommand
       process.exitCode = resolveProfileIdentitySmokeBatchExitCode(batchReport);
       if (commandOptions.json) {
         console.log(JSON.stringify(batchReport, null, 2));
-        return;
+      } else {
+        console.log(formatProfileIdentitySmokeBatchReport(batchReport));
       }
-      console.log(formatProfileIdentitySmokeBatchReport(batchReport));
-      return;
+      exitAfterCompletedBrowserProbeCommand();
     }
     const report = reports[0];
     if (!report) {
@@ -10286,9 +10287,10 @@ profileCommand
     process.exitCode = resolveProfileIdentitySmokeExitCode(report);
     if (commandOptions.json) {
       console.log(JSON.stringify(report, null, 2));
-      return;
+    } else {
+      console.log(formatProfileIdentitySmokeReport(report));
     }
-    console.log(formatProfileIdentitySmokeReport(report));
+    exitAfterCompletedBrowserProbeCommand();
   });
 
 const configCommand = program

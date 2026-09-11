@@ -49229,3 +49229,22 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   is already aligned with the selected policy profile, and CodeGraph remains
   unavailable in this session, so the plan uses exact native source reads plus
   executable tests as the documented fallback.
+
+## 2026-09-11 | Plan 0342 implementation reaches provider-free GREEN
+
+- RED reproduced all four P34 findings. The focused implementation suite now
+  passes 127/127, and the affected browser/CLI/architecture suite passes
+  373/373 with one existing skip before the final executable selector-fixture
+  refinement.
+- Completed identity-smoke reports now cross a dedicated one-shot CLI exit
+  boundary after browser-operation settlement. The boundary cannot terminate
+  the separately owned persistent managed Chrome process.
+- Chat `current` now opens the model picker without switching, observes its
+  checked option, and persists the returned label through ordinary Session
+  metadata. The current `6 Pro` animated trigger is admitted only in the
+  composer with an explicit model-family label; Power, High, and generic Pro
+  effort surfaces remain rejected.
+- Conversation artifact materialization now awaits and records each candidate,
+  closes that scoped provider session, and creates a fresh binding for the next
+  distinct Markdown/DOCX/PDF transfer. No live, provider, browser, installed
+  runtime, service, scheduler, completion, or recovered-conversation effect ran.

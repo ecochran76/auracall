@@ -130,6 +130,7 @@ describe('runBrowserSessionExecution', () => {
         tookMs: 1000,
         answerTokens: 12,
         answerChars: 20,
+		observedModel: '6 Pro',
       };
     });
     const result = await runBrowserSessionExecution(
@@ -156,7 +157,7 @@ describe('runBrowserSessionExecution', () => {
       },
     );
     expect(result.usage).toEqual({ inputTokens: 42, outputTokens: 12, reasoningTokens: 0, totalTokens: 54 });
-    expect(result.runtime).toMatchObject({ chromePid: undefined });
+    expect(result.runtime).toMatchObject({ chromePid: undefined, observedModel: '6 Pro' });
     expect(persistRuntimeHint).toHaveBeenCalledWith(
       expect.objectContaining({
         selectedAgentId: 'analyst',
