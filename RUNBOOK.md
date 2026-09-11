@@ -17,6 +17,19 @@
   one Send, zero retries, and one read-only artifact fetch. Never click `Answer
   now`; never control scheduler/completion/materialization work; never prompt or
   mutate recovered conversation `6aa368bc-43c4-83ea-8d98-964264dd4340`.
+- Installed source/byte parity passes at 522 files and aggregate SHA-256
+  `6615333e…`. A broad post-install `/status` read exhausted the API heap and
+  caused one automatic systemd restart; narrow authenticated reads remain
+  healthy and all six completions remain paused with zero queued/running.
+- The no-prompt identity dimensions and exact PID/target/port provenance all
+  matched, but the CLI printed complete JSON and did not exit. Stopped only that
+  exact process; two September 10 orphaned identity-smoke processes in other
+  workdirs remain out of scope.
+- The first canary work-unit attempt reached account, Chat-mode, and composer
+  readiness, then stopped before upload/Send when explicit premium-model
+  selection timed out. Read-only DOM census shows the changed live `6 Pro`
+  slider/menu. Revision 2 permits the handoff-prescribed current-model path as
+  the second/final attempt; only one Send remains possible.
 
 ## Turn 576 | 2026-09-11
 

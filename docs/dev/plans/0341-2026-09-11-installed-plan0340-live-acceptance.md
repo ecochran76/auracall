@@ -6,7 +6,7 @@ Operational state: PREINSTALL_BASELINE_ACCEPTED
 Branch: ops/plan0341-installed-plan0340-live-acceptance
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -40,6 +40,22 @@ Deep Research conversation and every unrelated scheduler/completion control.
   cloud for this work. Current repo, Git, installed service, and browser
   readbacks are authoritative. CodeGraph is not initialized in this worktree,
   so source lookup uses the documented native fallback.
+- The one supported install completed from published `main`; source and
+  installed `dist` each contain 522 files with equal aggregate SHA-256
+  `6615333ea65e35903f817264b41eac6135fc33d3c0857b2845bf0ddd9860af64`.
+  The API automatically restarted once after a broad `/status` read exhausted
+  the Node heap; narrow authenticated endpoints remain healthy and prove the
+  six completions are still paused with zero queued/running.
+- The no-prompt identity smoke proved an exact Pro/personal match and exact
+  browser ownership, but printed complete JSON without exiting and was stopped
+  at the exact CLI process. Two September 10 identity-smoke orphans in other
+  working directories remain outside this plan's process ownership.
+- The first effect-capable canary attempt passed account, ownership, Chat-mode,
+  and composer readiness but stopped before upload or Send because explicit
+  model selection could not find its selector. A bounded read-only DOM census
+  proved a visible open menu containing `6 Pro` in a changed slider/menu shape.
+  The second and final work-unit attempt uses the handoff-prescribed
+  `modelStrategy=current`; only one provider Send remains permitted.
 
 ## Execution Graph
 
@@ -55,10 +71,12 @@ Owner: primary agent. All runtime/browser/provider operations are serialized.
 4. Run one read-only identity smoke for AuraCall runtime profile
    `wsl-chrome-3`; stop on identity, ownership, mode, or human-verification
    ambiguity.
-5. Run one installed Chat-mode canary with semantic `chatgpt:premium`, public
-   `--browser-no-thinking-time`, one small attachment, one unique expected
-   token, `--browser-keep-browser`, and no retry. Reattach read-only if the
-   provider effect is uncertain; never resend.
+5. Request semantic `chatgpt:premium` but preserve the already active `6 Pro`
+   model with `modelStrategy=current`, as prescribed by the incident handoff.
+   Run one installed Chat-mode Send with public `--browser-no-thinking-time`,
+   one small attachment, one unique expected token, `--browser-keep-browser`,
+   and no retry. Reattach read-only if the provider effect is uncertain; never
+   resend.
 6. Run `conversations artifacts fetch` exactly once, read-only, against the
    recovered conversation under a bounded caller timeout. Require completed
    output plus normal process exit while the exact owned persistent Chrome
@@ -93,8 +111,10 @@ Owner: primary agent. All runtime/browser/provider operations are serialized.
 ## Bounds
 
 - At most one supported runtime/service installation, one no-prompt identity
-  smoke, one new provider prompt, one attachment upload, one Send, and one
-  recovered-conversation artifact fetch.
+  smoke, two effect-capable work-unit attempts, one new provider prompt, one
+  attachment upload, one Send, and one recovered-conversation artifact fetch.
+  The first work-unit attempt is accepted only as a proven pre-upload/pre-Send
+  selector failure; the second uses `modelStrategy=current` and is final.
 - Zero automatic or manual prompt retries. If submission is uncertain or
   `effect_observed`, inspect/reattach read-only and stop rather than resend.
 - Never click ChatGPT's `Answer now` button. CAPTCHA, human verification,
@@ -105,9 +125,9 @@ Owner: primary agent. All runtime/browser/provider operations are serialized.
   rate limiting or intentionally exercise a failure.
 - Do not prompt, retry, recreate, rename, delete, or otherwise mutate recovered
   conversation `6aa368bc-43c4-83ea-8d98-964264dd4340`.
-- Do not absorb P08, P16, P18, or P29. One evidence-driven correction pass is
-  allowed only for a confirmed pre-effect local/configuration defect; no second
-  provider Send or artifact-fetch attempt is allowed.
+- Do not absorb P08, P16, P18, or P29. One evidence-driven tactic change is
+  allowed after a proven pre-effect selector failure; no second provider Send
+  or artifact-fetch attempt is allowed.
 
 ## Definition Of Done
 

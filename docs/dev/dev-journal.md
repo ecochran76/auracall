@@ -49183,3 +49183,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   authoritative. It may be read once for artifact-fetch exit evidence but may
   not receive a prompt, retry, recreation, or mutation. No scheduler,
   completion, live-follow, or materialization control is authorized.
+- Current published-main installation is source-identical across 522 `dist`
+  files. One broad `/status` read triggered a Node heap OOM and one automatic
+  API restart; narrow authenticated health/completion reads pass and preserve
+  six paused, zero queued/running completions.
+- Exact no-prompt identity proof passed but its CLI did not exit after complete
+  JSON. The first effect-capable canary attempt then stopped before upload/Send
+  on explicit model-selector drift. A read-only census proves the live menu
+  contains `6 Pro`; Revision 2 takes the original handoff's current-model path
+  for the second/final work-unit attempt, with at most one Send overall.
