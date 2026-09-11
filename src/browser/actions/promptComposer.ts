@@ -119,6 +119,33 @@ function buildReadCommittedTurnTextFunction(): string {
 	}`;
 }
 
+function buildRecognizeCommittedTurnExtraTextFunction(): string {
+	return `(lastTurn, normalizedPrompt, attachmentNames, normalize) => {
+	  const normalizedTurn = normalize(lastTurn).toLowerCase();
+	  const prompt = normalize(normalizedPrompt).toLowerCase();
+	  if (!prompt || !normalizedTurn.includes(prompt)) return false;
+	  const lastExtraText = normalizedTurn.replace(prompt, ' ').trim();
+	  if (!lastExtraText) return false;
+	  const normalizedAttachmentNames = attachmentNames
+	    .map((name) => normalize(name).toLowerCase())
+	    .filter(Boolean);
+	  const recognizedChromeLabels = [
+	    ...normalizedAttachmentNames,
+	    ...normalizedAttachmentNames.map((name) => {
+	      const extensionIndex = name.lastIndexOf('.');
+	      return extensionIndex > 0 ? name.slice(0, extensionIndex).trim() : name;
+	    }),
+	    'attachment', 'attached file', 'file', 'pdf', 'document', 'spreadsheet',
+	    'presentation', 'image', 'deep research', 'collapsed', 'expand',
+	  ].filter(Boolean).sort((a, b) => b.length - a.length);
+	  let unrecognizedExtraText = lastExtraText;
+	  for (const label of recognizedChromeLabels) {
+	    unrecognizedExtraText = unrecognizedExtraText.split(label).join(' ');
+	  }
+	  return !Array.from(unrecognizedExtraText).some((character) => /[a-z0-9]/i.test(character));
+	}`;
+}
+
 async function preparePromptComposer(
 	Runtime: ChromeClient["Runtime"],
 	logger: BrowserLogger,
@@ -736,23 +763,13 @@ async function verifyPromptCommitted(
 	      (lastTurn.includes(normalizedPrompt) ||
 	        (normalizedPromptPrefix.length > 30 && lastTurn.includes(normalizedPromptPrefix)));
 	    const lastExactMatched = normalizedPrompt.length > 0 && lastTurn === normalizedPrompt;
-	    const attachmentNames = ${attachmentNamesLiteral}.map((name) => normalize(name)).filter(Boolean);
-	    const lastExtraText = lastMatched ? lastTurn.replace(normalizedPrompt, ' ').trim() : '';
-	    const recognizedChromeLabels = [
-	      ...attachmentNames,
-	      ...attachmentNames.map((name) => {
-	        const extensionIndex = name.lastIndexOf('.');
-	        return extensionIndex > 0 ? name.slice(0, extensionIndex).trim() : name;
-	      }),
-	      'attachment', 'attached file', 'file', 'pdf', 'document', 'spreadsheet',
-	      'presentation', 'image', 'deep research', 'collapsed', 'expand',
-	    ].filter(Boolean).sort((a, b) => b.length - a.length);
-	    let unrecognizedExtraText = lastExtraText;
-	    for (const label of recognizedChromeLabels) {
-	      unrecognizedExtraText = unrecognizedExtraText.split(label).join(' ');
-	    }
-	    const lastExtraTextRecognized =
-	      lastExtraText.length > 0 && normalize(unrecognizedExtraText).length === 0;
+	    const recognizeCommittedTurnExtraText = ${buildRecognizeCommittedTurnExtraTextFunction()};
+	    const lastExtraTextRecognized = lastMatched && recognizeCommittedTurnExtraText(
+	      lastTurn,
+	      normalizedPrompt,
+	      ${attachmentNamesLiteral},
+	      normalize,
+	    );
 	    const baseline = ${baselineLiteral};
 	    const hasNewTurn = baseline < 0 ? false : articles.length > baseline;
       const stopVisible = Boolean(document.querySelector(${stopSelectorLiteral}));
@@ -875,6 +892,7 @@ export const __test__ = {
 	promptMismatchDiagnostics,
 	buildReadComposerUserTextFunction,
 	buildReadCommittedTurnTextFunction,
+	buildRecognizeCommittedTurnExtraTextFunction,
 	preparePromptComposer,
 	verifyPromptCommitted,
 	waitForComposerReadyToSubmit,

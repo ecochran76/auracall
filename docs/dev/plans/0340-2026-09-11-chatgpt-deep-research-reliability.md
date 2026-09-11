@@ -63,6 +63,11 @@ recovered provider job.
   the feature tip was ancestral to `main`, and no process owned the worktree as
   cwd. The local worktree and branch were removed; remote source custody remains
   at `55c57ca5c`.
+- Final completion audit rejected the original attachment regression as too
+  indirect because it mocked the page-side chrome-classification boolean. The
+  exact injected classifier is now independently executable in tests, matches
+  attachment/provider labels case-insensitively, and rejects arbitrary extra
+  text, altered prompt bodies, and duplicated prompts.
 - The provider-free implementation satisfies DRR-R1 through DRR-R5. The
   affected suite passes 245 tests with one existing skip; typecheck and the
   production build pass against the frozen lockfile dependency graph. Scoped
@@ -159,3 +164,6 @@ any install/live canary remains a separately authorized successor.
   post-output force-exit lifecycle regression.
 - DRR-R6: affected tests, frozen-lockfile typecheck, production build, scoped
   lint, goal audit, diff hygiene, and exact inherited audit findings recorded.
+- Post-integration classifier hardening passes 343 tests with one existing
+  skip, typecheck, production build, and scoped lint with only the same one
+  warning and two informational findings in pre-existing test/export syntax.

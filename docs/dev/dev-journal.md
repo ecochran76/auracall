@@ -49159,3 +49159,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   ignored `dist/` and `node_modules/`, exact local/remote feature-tip equality,
   main ancestry, and zero process cwd owners. Removed the local worktree and
   local branch while retaining remote recovery ref `55c57ca5c`.
+- Completion audit found the attachment fixture trusted a mocked
+  `lastExtraTextRecognized` value and therefore did not execute the production
+  page classifier. Extracted that exact injected function for provider-free
+  execution and corrected case sensitivity for current `PDF` / `Deep Research`
+  chrome; new negatives preserve arbitrary-extra, altered-body, and duplicate
+  prompt fences.
+- Post-integration hardening passes 343 tests with one existing skip, typecheck,
+  production build, and scoped lint with no errors. The retained one warning
+  and two informational findings predate this classifier extraction.

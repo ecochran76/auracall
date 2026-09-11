@@ -22451,3 +22451,7 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   actually observed at runtime. For a CLI command that has completed browser
   file work and printed its result, use the established force-exit boundary so
   transient automation handles cannot keep the shell open.
+- Do not prove page-side attachment-chrome classification with a hand-supplied
+  boolean alone. Execute the exact injected classifier in provider-free tests,
+  normalize provider labels case-insensitively, and retain arbitrary-extra,
+  altered-body, and duplicate-prompt negatives.
