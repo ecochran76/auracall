@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 608 | 2026-09-11
+
+- Fresh gates proved P39-P43 local topics clean, remote-equal, ancestral to
+  published `main`, and owned by zero process working directories.
+- Removed all five local worktrees and branches without force. Their published
+  remote recovery refs remain; canonical integration and live receipts remain
+  on `main`.
+
 ## Turn 607 | 2026-09-11
 
 - Merged exact live-accepted P43 topic `c78405d9d` non-fast-forward into `main`
