@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 591 | 2026-09-11
+
+- Merged exact published P38 topic `ce5ee0ced` non-fast-forward into `main` at
+  `62b056005` with no additional live or runtime effect.
+- Fresh merged-result validation passes 351/351 affected tests, typecheck,
+  production build, and the Plan 0345 audit with zero validation errors.
+- P38 closes integrated with terminal findings and without live acceptance:
+  `6Pro` label drift stopped before Send, and the claimed PDF duplicated DOCX.
+
 ## Turn 590 | 2026-09-11
 
 - P38 completed its bounded live packet with terminal findings and no live

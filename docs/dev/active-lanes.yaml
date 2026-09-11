@@ -715,17 +715,17 @@ lanes:
     branch: ops/plan0345-installed-plan0344-live-acceptance
     target: main
     plan_state: CLOSED
-    custody_state: EVIDENCE_COMMITTED
-    checkpoint: 89e40da9cc292e27640da6adbf48fa38004d4e77
-    remote_ref: null
+    custody_state: INTEGRATED
+    checkpoint: ce5ee0cedab1b2c0e8b6dd9a31b2a9651ececff0
+    remote_ref: refs/remotes/origin/ops/plan0345-installed-plan0344-live-acceptance
     integration: merge
     dependencies: [P37]
     overlaps: [P08, P16, P18, P29]
     reconciled_overlaps: [P08, P16, P18, P29]
     reconciliation_note: P38 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, paused installed-live work, Skill execution, scheduler, completion, live-follow, background-drain, or materialization controls.
-    validation_status: installed-live-verification-completed-with-terminal-findings
+    validation_status: installed-live-verification-completed-with-terminal-findings-integrated
     validation_ref: docs/dev/notes/2026-09-11-plan0345-installed-live-acceptance.json
-    integration_receipt: null
+    integration_receipt: 62b05600574c05282aa881d7f258ef24136485ed
     blocker: null
     disposition: Verification completed without live acceptance. Install parity and identity passed; the live menu exposed 6Pro instead of exact 6 Pro before Send, and the claimed PDF materialization duplicated DOCX bytes and metadata. No retry, fallback, resend, recovered-conversation mutation, or runtime control effect ran.
     updated_at: 2026-09-11

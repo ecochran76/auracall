@@ -148,12 +148,12 @@
     "ILA2-R3": "fail_terminal_current_label_drift_before_send",
     "ILA2-R4": "fail_terminal_pdf_is_duplicate_docx",
     "ILA2-R5": "pass",
-    "ILA2-R6": "pending_integration"
+    "ILA2-R6": "pass_integrated"
   },
   "integration": {
     "evidenceCommit": "89e40da9cc292e27640da6adbf48fa38004d4e77",
-    "topicCommit": null,
-    "mergeCommit": null,
+    "topicCommit": "ce5ee0cedab1b2c0e8b6dd9a31b2a9651ececff0",
+    "mergeCommit": "62b05600574c05282aa881d7f258ef24136485ed",
     "target": "main",
     "method": "non_fast_forward_merge"
   }

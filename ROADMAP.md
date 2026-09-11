@@ -62,15 +62,15 @@
 
 ### Current Execution Board
 
-Status: P38 installed Plan 0344 verification completed with terminal findings
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P37 (completed/integrated); P38 (closed, integration pending); P08, P16, P18, P29 (open)
+Status: P38 installed Plan 0344 verification integrated with terminal findings
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P38 (completed/integrated); P08, P16, P18, P29 (open)
 
 - Completed-with-terminal-findings installed/live adoption:
   [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)
   P38 spent one install, one identity smoke, one prompt attempt with zero Sends,
   and one artifact fetch. Identity and installation passed; current label drift
   and false PDF materialization are terminal. No retry or unrelated runtime
-  control ran.
+  control ran. The evidence is integrated at `62b056005`.
 
 - Integrated provider-free repair:
   [Plan 0344](docs/dev/plans/0344-2026-09-11-chatgpt-selector-artifact-live-findings.md)

@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P38
-Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS_INTEGRATION_READY
+Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS_INTEGRATED
 Branch: ops/plan0345-installed-plan0344-live-acceptance
 Target: main
 Integration: merge
-Revision: 3 | 2026-09-11
+Revision: 4 | 2026-09-11
 
 ## Stable Objective
 
@@ -137,9 +137,17 @@ unmodified, and the bounded receipt is integrated and published.
   PDF entry is byte-identical DOCX content with DOCX name and MIME type.
 - `ILA2-R5`: PASS — runtime/browser/completion custody and excluded controls
   are preserved.
-- `ILA2-R6`: PENDING — evidence commit `89e40da9c` is durable; topic
-  publication and integration remain.
+- `ILA2-R6`: PASS — receipt/docs, planning audit, topic publication,
+  non-fast-forward integration, and merged-result checks pass.
 
 P38 is verification-complete with terminal findings; it is not live accepted.
 The redacted receipt is
 `docs/dev/notes/2026-09-11-plan0345-installed-live-acceptance.json`.
+
+## Integration Receipt
+
+- Evidence commit: `89e40da9cc292e27640da6adbf48fa38004d4e77`.
+- Published topic tip: `ce5ee0cedab1b2c0e8b6dd9a31b2a9651ececff0`.
+- Non-fast-forward merge: `62b05600574c05282aa881d7f258ef24136485ed`.
+- Integration changed documentation and evidence only; no additional runtime,
+  browser, provider, artifact, recovered-conversation, or control effect ran.
