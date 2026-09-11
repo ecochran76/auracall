@@ -611,7 +611,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 7bb342219448d73dc2ca6c929103d81821ec73da
+    checkpoint: 5f8ed9ffd46df045c4048be868e8d10492b8c9e7
     remote_ref: refs/remotes/origin/fix/plan0340-chatgpt-deep-research-reliability
     integration: merge
     dependencies: [P25, P26, P31]

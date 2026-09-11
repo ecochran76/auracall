@@ -45,6 +45,8 @@ recovered provider job.
   worktree and P16 using the non-schema `INTEGRATED_NO_WORKTREE` custody value;
   this lane does not rewrite unrelated custody.
 - Planning checkpoint `7bb342219` is published on the exact P33 remote branch.
+- Provider-free implementation checkpoint `5f8ed9ffd` is published on that
+  branch with local/remote parity.
 - The provider-free implementation satisfies DRR-R1 through DRR-R5. The
   affected suite passes 245 tests with one existing skip; typecheck and the
   production build pass against the frozen lockfile dependency graph. Scoped
