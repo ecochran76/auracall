@@ -685,5 +685,5 @@ lanes:
     validation_ref: docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json
     integration_receipt: 1ec768b4620ca931d905d39d334ad249086e556e
     blocker: null
-    disposition: Verification completed without live acceptance. Install parity and identity exit passed; explicit 6 Pro selection timed out before Send, and the one artifact fetch reproduced partial Markdown-only settlement with Promise was collected for DOCX/PDF. No retry, fallback, resend, protected-conversation mutation, or runtime control effect ran.
+    disposition: Verification completed and integrated without live acceptance. Install parity and identity exit passed; explicit 6 Pro selection timed out before Send, and the one artifact fetch reproduced partial Markdown-only settlement with Promise was collected for DOCX/PDF. No retry, fallback, resend, protected-conversation mutation, or runtime control effect ran. Clean, equal, ancestral, process-unowned local topic custody was removed without force; the remote recovery ref remains.
     updated_at: 2026-09-11

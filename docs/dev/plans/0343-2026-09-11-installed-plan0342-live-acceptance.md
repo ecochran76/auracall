@@ -6,7 +6,7 @@ Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS_INTEGRATED
 Branch: ops/plan0343-installed-plan0342-live-acceptance
 Target: main
 Integration: merge
-Revision: 3 | 2026-09-11
+Revision: 4 | 2026-09-11
 
 ## Stable Objective
 
@@ -158,3 +158,10 @@ The redacted receipt is
 - Non-fast-forward merge: `1ec768b4620ca931d905d39d334ad249086e556e`.
 - Integration changes documentation and evidence only; no additional runtime,
   browser, provider, artifact, or control effect ran.
+
+## Custody Closeout
+
+- The published topic tip is clean, remote-equal, ancestral to published
+  `main`, and owned by zero process working directories.
+- Removed the local P36 worktree and local branch without force, including only
+  ignored generated build/dependency files. The remote recovery ref remains.

@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 584 | 2026-09-11
+
+- Final P36 cleanup gates proved topic tip `14d2f6ab2` clean, remote-equal,
+  ancestral to published `main`, and owned by zero process working directories.
+- Removed the local worktree and local branch without force. Only ignored
+  generated dependency/build entries were removed; remote recovery custody is
+  retained.
+
 ## Turn 583 | 2026-09-11
 
 - Integrated exact published P36 topic `14d2f6ab2` non-fast-forward into
