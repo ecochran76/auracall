@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 589 | 2026-09-11
+
+- Opened P38 / [Plan 0345](docs/dev/plans/0345-2026-09-11-installed-plan0344-live-acceptance.md)
+  from exact published main `51801cc4e` after explicit operator authorization
+  to proceed with separately gated installed/live adoption.
+- Bounds are one supported install/service refresh, one no-prompt identity
+  smoke, one explicit `chatgpt:premium` prompt with at most one Send and zero
+  retries, and one read-only recovered-conversation three-artifact fetch.
+- API PID `37901` is active/running with `NRestarts=0`; persistent
+  `wsl-chrome-3` Chrome PID `71128` remains on DevTools `45015`. No new runtime,
+  browser, provider, artifact, conversation, or control effect has run.
+
 ## Turn 588 | 2026-09-11
 
 - Operator authorized termination of the exact P37-owned managed Chrome tree.

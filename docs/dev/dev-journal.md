@@ -49372,3 +49372,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - P37 remained clean, equal to its published remote, ancestral to `main`, and
   owned by zero process working directories. Removed the local worktree and
   branch without force; the remote recovery ref remains.
+
+## 2026-09-11 | Plan 0345 installed/live adoption opened
+
+- Started P38 from exact published main `51801cc4e` after the operator
+  explicitly authorized the separately gated installed/live adoption.
+- The bounded packet owns one supported install, one no-prompt identity smoke,
+  one explicit semantic `chatgpt:premium` prompt with at most one Send and zero
+  retries, and one read-only three-artifact fetch from the recovered
+  conversation.
+- Existing API PID `37901` is active/running with `NRestarts=0`; persistent
+  managed Chrome PID `71128` remains on DevTools `45015`. No new effect has run.
+- Broad status and all scheduler, completion, live-follow, background-drain,
+  materialization, developer-app, Skill, and recovered-conversation mutation
+  controls remain outside P38.
