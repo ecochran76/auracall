@@ -603,3 +603,22 @@ lanes:
     integration_receipt: c79c779c268ae8206899dfc4fce7cd55d5a19f46
     disposition: Installed runtime matches current application-bearing main bytes and is healthy; newly unblocked P27 local custody is closed while unfinished and recovery lanes remain intact.
     updated_at: 2026-09-09
+  - id: P33
+    objective: Make ChatGPT Deep Research submissions truthful and retry-safe across current model/depth resolution, attachment prompt commitment, post-effect failures, and artifact-fetch cleanup.
+    plan: docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md
+    plan_ref: refs/heads/fix/plan0340-chatgpt-deep-research-reliability
+    branch: fix/plan0340-chatgpt-deep-research-reliability
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: null
+    integration: merge
+    dependencies: [P25, P26, P31]
+    overlaps: [P16, P18]
+    validation_status: planned-provider-free
+    validation_ref: null
+    integration_receipt: null
+    blocker: null
+    disposition: Provider-free repair opened from current main; recovered provider conversation is authoritative and must not be retried.
+    updated_at: 2026-09-11

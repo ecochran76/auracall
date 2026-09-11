@@ -49106,3 +49106,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   and process-unowned. Removed only its worktree and merged local branch; the
   remote branch remains. P08 remains protected by 15 cwd owners. No browser,
   provider, prompt, or live canary ran.
+
+## 2026-09-11 | Plan 0340 Deep Research reliability repair opened
+
+- Re-anchored against current published `main` at `96d29b01c` rather than the
+  clean but 134-commit-stale September 10 handoff branch. Plan 0332/0333 already
+  supply the durable GPT-6 selector foundation; the later `6 Pro` label and
+  observed/requested provenance split remain unimplemented.
+- P33 freezes five provider-free repairs: explicit one-run omission of inherited
+  thinking depth, attachment-aware exact prompt commitment, three-state effect
+  reconciliation before rate-limit retry guidance, transient artifact-fetch
+  cleanup, and current-model provenance. No live/provider/install effect is in
+  scope and the recovered conversation must not be replayed.
+- A dedicated worktree and branch now own the slice. The catalog-only audit
+  reports inherited P08/P16 custody findings; they remain visible and outside
+  this repair.

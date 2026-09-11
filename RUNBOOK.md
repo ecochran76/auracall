@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 576 | 2026-09-11
+
+- Opened P33 / [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
+  from exact current `origin/main` at `96d29b01c`. The stale September 10
+  handoff branch is 134 commits behind main and is not the implementation base.
+- Current main already owns the durable GPT-6 selector foundation, but the
+  later `6 Pro` label/provenance drift, inherited-depth omission, attachment
+  prompt commitment, post-effect reconciliation, and artifact-fetch exit
+  remain open. Provider-free source/tests/docs only; never replay recovered
+  conversation `6aa368bc-43c4-83ea-8d98-964264dd4340`.
+- The pre-plan catalog audit preserves inherited P08/P16 custody findings; P33
+  does not silently rewrite unrelated lane state.
+
 - P16 reconciliation supersedes the Turn 550 preservation note: current main's
   exact ecosystem-mention and Skill CLI paths are authoritative. Retain P16's
   two-pass app-composer cleanup, inherited-`composerTool` removal, and current
