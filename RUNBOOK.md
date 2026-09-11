@@ -17,9 +17,14 @@
   URL, blank composer, 2,912 ledger lines, and unchanged Project 68 / Session
   129 row counts; the prompt allowance remains unconsumed.
 - A second exact red reproduced the missing ecosystem-mention recognition. The
-  minimal shared-selector repair keeps visibility and label matching intact;
-  focused green passes `73/73`. Broader provider-free validation, second install
-  parity, and the single authorized product prompt remain on the critical path.
+  minimal shared-selector repair kept visibility and label matching intact, but
+  its first installed run exposed a deeper ordering defect and again stopped
+  before Send with the same zero-effect reconciliation. Searched-popover cleanup
+  sent Ctrl+A / Backspace after activation returned focus to the composer and
+  erased the new mention. A public red recorded the four stray key events; the
+  minimal repair removes successful post-activation cleanup while retaining
+  failure cleanup. Provider-free validation is green at `252/252`; final
+  type/build, install parity, and the one still-unspent product submission remain.
 
 ## Turn 539 | 2026-08-29
 

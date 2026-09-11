@@ -955,9 +955,6 @@ async function selectComposerTool(
   if (directMenu.ok && directMenu.topMatch) {
     const activatedLabel = await activateComposerPopoverItem(client, toolCandidates);
     if (activatedLabel) {
-      if (searchedComposerPopover) {
-        await clearComposerPopoverSearch(client);
-      }
       for (let attempt = 0; attempt < 10; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, 120));
         const chipLabel = await readComposerToolChip(Runtime, toolCandidates);

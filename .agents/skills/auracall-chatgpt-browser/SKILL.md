@@ -130,6 +130,9 @@ readback, diff hygiene, and planning audit required by repo policy.
 - Confirm dynamically installed app selection through one visible inline pill
   with exact `data-symbol="ecosystemMention"` and a matching label. A visible
   app row or successful activation without that postcondition is insufficient.
+- Treat successful app activation as the close boundary for a searched composer
+  popover. Do not send Ctrl+A / Backspace afterward; those keys can land in the
+  composer and erase the selected ecosystem mention.
 - Never click ChatGPT's **Answer now** button.
 - Treat CAPTCHA, human verification, identity mismatch, unknown browser
   ownership, or missing selector separation as a hard stop.

@@ -1,3 +1,11 @@
+- 2026-09-10: The generic ChatGPT app-selection path searched the composer
+  popover, activated the matching app, and then issued Ctrl+A / Backspace to
+  clear the now-closed popover search. Focus had already returned to the
+  composer, so that cleanup could erase the newly inserted app mention before
+  verification. Clear searched text only on failure while the popover remains
+  open; successful activation owns the close transition and must not receive
+  post-click keyboard cleanup.
+
 - 2026-09-10: After the current-model repair reached ChatGPT app selection, the
   exact visible `litscout` row activated but generic composer verification
   rejected it. ChatGPT's current app selection is an inline pill identified by

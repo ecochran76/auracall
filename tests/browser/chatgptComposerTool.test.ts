@@ -270,6 +270,57 @@ describe('chatgpt composer tool selection', () => {
     expect(logger).toHaveBeenCalledWith('Composer tool: LitScout (already selected)');
   });
 
+  test('does not clear composer focus after activating an app from searched popover results', async () => {
+    let popoverReads = 0;
+    let chipReads = 0;
+    const evaluate = vi.fn(async ({ expression }: { expression?: string }) => {
+      const source = String(expression ?? '');
+      if (source.includes('const inlinePills')) {
+        chipReads += 1;
+        return { result: { value: chipReads > 1 ? { label: 'LitScout' } : null } };
+      }
+      if (source.includes('data-auracall-chatgpt-composer-menu')) {
+        popoverReads += 1;
+        const items = popoverReads > 1 ? [{ label: 'litscout', role: null, selected: false }] : [];
+        return {
+          result: {
+            value: {
+              selector: '[data-auracall-chatgpt-composer-menu="true"]',
+              sourceSelector: '.popover',
+              signature: 'searched-apps',
+              rect: { x: 0, y: 0, width: 400, height: 600 },
+              distanceToAnchor: null,
+              items,
+              itemLabels: items.map((item) => item.label),
+            },
+          },
+        };
+      }
+      if (source.includes('const ranked = Array.from')) {
+        return { result: { value: { blocked: false, label: 'litscout', x: 120, y: 240 } } };
+      }
+      return { result: { value: null } };
+    });
+    const input = {
+      insertText: vi.fn().mockResolvedValue(undefined),
+      dispatchKeyEvent: vi.fn().mockResolvedValue(undefined),
+      dispatchMouseEvent: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await expect(
+      ensureChatgptComposerTool(
+        // biome-ignore lint/style/useNamingConvention: CDP protocol domains use upstream names.
+        { Runtime: { evaluate }, Input: input, Page: {} } as unknown as Parameters<
+          typeof ensureChatgptComposerTool
+        >[0],
+        'LitScout',
+        vi.fn((_message: string) => undefined),
+      ),
+    ).resolves.toBeUndefined();
+    expect(input.insertText).toHaveBeenCalledWith({ text: 'LitScout' });
+    expect(input.dispatchKeyEvent).not.toHaveBeenCalled();
+  });
+
   test('reads current tool state from selected top-level or More menu rows when chip is absent', () => {
     expect(
       resolveCurrentComposerToolSelectionForTest(null, [

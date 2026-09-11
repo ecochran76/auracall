@@ -152,6 +152,10 @@
     `[data-inline-selection-pill][data-symbol="ecosystemMention"]` contract as
     developer-app mention qualification; older `plugin:` pill attributes remain
     supported, but a visible app row alone is not selection proof
+  - after activating an app from searched popover results, do not issue search
+    cleanup keystrokes: focus has returned to the composer and Ctrl+A /
+    Backspace can remove the app mention; cleanup is reserved for failed search
+    paths that leave the popover open
   - do not use `--submit`, `create`, `refresh`, or `uninstall` as routine live
     tests; they require exact authorization and `--yes`
   - an authorized refresh uses replacement semantics and requires a complete

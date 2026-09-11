@@ -50,3 +50,11 @@ row, while generic composer verification did not recognize the resulting
 the root URL, and the blank composer reconciled unchanged. A second red tracer
 now protects that exact current pill family, and the shared verifier recognizes
 it without relaxing label or visibility matching.
+
+The second installed attempt also stopped before Send and reconciled to the
+same zero-effect baseline. CDP and the generic selection trace then isolated an
+ordering defect: after selecting a searched app result, popover cleanup sent
+Ctrl+A / Backspace after focus returned to the composer, erasing the app mention
+that verification expected. The public regression reproduces those four stray
+key events; the repair removes successful post-activation cleanup while keeping
+failure cleanup intact.
