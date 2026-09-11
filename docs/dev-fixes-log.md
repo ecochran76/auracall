@@ -22455,3 +22455,23 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   boolean alone. Execute the exact injected classifier in provider-free tests,
   normalize provider labels case-insensitively, and retain arbitrary-extra,
   altered-body, and duplicate-prompt negatives.
+
+## 2026-09-11 | Installed live acceptance must separate effect success from lifecycle and provenance
+
+- A correct picker label is not sufficient when the live trigger surface has
+  changed. Explicit `6 Pro` selection stopped pre-effect even though the open
+  menu contained `6 Pro`; current-model preservation can prove the prompt path
+  but cannot substitute for explicit-selection acceptance.
+- Verify provider-observed model provenance in the actual persisted installed
+  session, not only in provider-free propagation tests. A successful turn may
+  retain requested/desired identity while silently omitting `observedModel`.
+- Treat complete JSON output and process exit as separate acceptance facts.
+  Identity smoke proved exact account and browser ownership but retained a
+  process until the bounded caller interrupted only that invocation.
+- Avoid broad aggregate status as a routine health probe while its projection
+  can exceed the API heap. Use narrow authenticated model/completion endpoints
+  for current-state proof; the aggregate-memory repair remains P08-owned.
+- Artifact-fetch process cleanup and artifact coverage are independent. The
+  command exited normally while two export entries failed with `Promise was
+  collected`; preserve already recovered files and never retry a protected
+  provider conversation merely to improve a fresh materialization count.

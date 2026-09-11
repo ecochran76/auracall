@@ -1,0 +1,125 @@
+{
+  "object": "auracall-installed-live-verification-receipt",
+  "plan": "0341",
+  "lane": "P34",
+  "generatedAt": "2026-09-11T06:30:59-05:00",
+  "outcome": "verification_completed_partial_acceptance",
+  "source": {
+    "branch": "main",
+    "commit": "da1871eb85b899629baba915f66fabbbb3c2bfc59",
+    "publishedRefEqual": true,
+    "packageVersion": "0.1.1"
+  },
+  "install": {
+    "count": 1,
+    "installedAt": "2026-09-11T11:16:56.288Z",
+    "sourceDistFiles": 522,
+    "installedDistFiles": 522,
+    "aggregateSha256": "6615333ea65e35903f817264b41eac6135fc33d3c0857b2845bf0ddd9860af64",
+    "launcher": "~/.local/bin/auracall",
+    "sourceInstalledParity": true
+  },
+  "providerFreeValidation": {
+    "testFilesPassed": 17,
+    "testsPassed": 343,
+    "testsSkipped": 1,
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  "service": {
+    "preInstall": {"mainPid": 41886, "restartCount": 0},
+    "current": {
+      "mainPid": 47500,
+      "restartCount": 1,
+      "activeState": "active",
+      "subState": "running",
+      "modelCount": 78,
+      "activeCompletions": 6,
+      "pausedCompletions": 6,
+      "queuedOrRunningCompletions": 0
+    },
+    "finding": "A broad status projection exhausted the 1536 MiB Node heap and systemd restarted the service once; narrow authenticated endpoints are healthy.",
+    "schedulerOrCompletionControlEffects": 0
+  },
+  "identity": {
+    "runtimeProfile": "wsl-chrome-3",
+    "browserProfile": "wsl-chrome-3",
+    "sourceBrowserProfile": "Default",
+    "managedBrowserProfile": "~/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+    "configuredAndObservedMatch": true,
+    "plan": "Pro",
+    "workspace": "personal",
+    "chromePid": 71128,
+    "devtoolsPort": 45015,
+    "cliExitedNormally": false,
+    "termination": "The complete JSON result was followed by a bounded wait, then only the exact invocation process was interrupted.",
+    "preExistingForeignIdentitySmokeOrphans": 2
+  },
+  "liveCanary": {
+    "explicitSelectAttempt": {
+      "session": "plan0341-attachment-live-proof",
+      "outcome": "pre_effect_selector_failure",
+      "attachmentUploads": 0,
+      "sends": 0,
+      "liveMenuContained": "6 Pro"
+    },
+    "currentModelAttempt": {
+      "session": "plan0341-attachment-current-proof",
+      "conversationId": "6aa3e567-8800-83e9-a431-073111dfed2e",
+      "outcome": "completed",
+      "expectedResponseMatched": true,
+      "elapsedSeconds": 22.245,
+      "resolvedModel": "gpt-6-astra",
+      "desiredModel": "6 Pro",
+      "modelStrategy": "current",
+      "thinkingDepthSelected": false,
+      "attachmentUploads": 1,
+      "sends": 1,
+      "retries": 0,
+      "usage": {"inputTokens": 86, "outputTokens": 10, "reasoningTokens": 0, "totalTokens": 96},
+      "observedModelPersisted": false,
+      "cooldownWritten": false
+    },
+    "totalProviderPrompts": 1,
+    "totalAttachmentUploads": 1,
+    "totalSends": 1,
+    "totalRetries": 0
+  },
+  "recoveredConversation": {
+    "conversationId": "6aa368bc-43c4-83ea-8d98-964264dd4340",
+    "promptOrMutationEffects": 0,
+    "artifactFetchAttempts": 1,
+    "artifactFetchExitCode": 0,
+    "artifactFetchElapsedSeconds": 24,
+    "artifactCount": 3,
+    "freshMaterializedCount": 1,
+    "freshEntryStatuses": {"materialized": 1, "error": 2},
+    "freshEntryError": "Promise was collected",
+    "retainedFiles": {
+      "markdown": {"size": 32310, "sha256": "f62a7cd3888da5ad30c029d2042aa7e96ee0296aa476561c93949c3c522786c9"},
+      "docx": {"size": 28662, "sha256": "7f46ef5242057923d5e2a54ac2fb61efa4bc223396d493b2e560295056b32bff"},
+      "pdf": {"size": 259251, "sha256": "b9fc6faeea2898835b0d4d6e14a72538793d406854913d9c7f42a28cb2f0782e"}
+    },
+    "browserRetained": true
+  },
+  "acceptance": {
+    "LVA-R1": "passed",
+    "LVA-R2": "rejected_service_restart_churn",
+    "LVA-R3": "partial_identity_match_passed_cli_exit_failed",
+    "LVA-R4": "partial_turn_passed_explicit_selection_and_observed_model_provenance_failed",
+    "LVA-R5": "partial_process_exit_passed_fresh_docx_pdf_materialization_failed",
+    "LVA-R6": "pending_integration"
+  },
+  "effectCounters": {
+    "installations": 1,
+    "providerPrompts": 1,
+    "attachmentUploads": 1,
+    "sends": 1,
+    "promptRetries": 0,
+    "artifactFetches": 1,
+    "recoveredConversationMutations": 0,
+    "schedulerCompletionOrMaterializationControls": 0,
+    "manualServiceRestarts": 0,
+    "foreignProcessesTerminated": 0
+  }
+}

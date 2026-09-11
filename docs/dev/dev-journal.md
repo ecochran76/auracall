@@ -49168,3 +49168,41 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Post-integration hardening passes 343 tests with one existing skip, typecheck,
   production build, and scoped lint with no errors. The retained one warning
   and two informational findings predate this classifier extraction.
+
+## 2026-09-11 | Plan 0341 installed/live acceptance opened
+
+- Started P34 from clean published Plan 0340 main at `da1871eb8`. The plan
+  allows one supported installed-runtime/service refresh, one no-prompt
+  identity smoke, one new attached-file ChatGPT prompt with zero retries, and
+  one read-only artifact-fetch lifecycle proof.
+- The pre-effect API is healthy at PID `41886` with zero restarts, background
+  drain idle, six paused completions, and zero queued/running. The exact
+  `wsl-chrome-3` managed browser is already owned by Chrome PID `71128` on
+  DevTools `45015`, pending responsive ownership and identity preflight.
+- Recovered conversation `6aa368bc-43c4-83ea-8d98-964264dd4340` remains
+  authoritative. It may be read once for artifact-fetch exit evidence but may
+  not receive a prompt, retry, recreation, or mutation. No scheduler,
+  completion, live-follow, or materialization control is authorized.
+- Current published-main installation is source-identical across 522 `dist`
+  files. One broad `/status` read triggered a Node heap OOM and one automatic
+  API restart; narrow authenticated health/completion reads pass and preserve
+  six paused, zero queued/running completions.
+- Exact no-prompt identity proof passed but its CLI did not exit after complete
+  JSON. The first effect-capable canary attempt then stopped before upload/Send
+  on explicit model-selector drift. A read-only census proves the live menu
+  contains `6 Pro`; Revision 2 takes the original handoff's current-model path
+  for the second/final work-unit attempt, with at most one Send overall.
+- Final current-model canary completed in 22.245 seconds with the exact expected
+  token, one attachment upload, one Send, zero retry, no thinking-depth action,
+  and no cooldown rewrite. Its persisted session retained desired `6 Pro` but
+  omitted provider-observed model provenance, so Plan 0340 live provenance is
+  not accepted.
+- The single recovered-conversation artifact fetch printed completion and
+  exited in 24 seconds without prompt or mutation. It freshly materialized the
+  32,310-byte Markdown while DOCX/PDF entries failed with `Promise was
+  collected`; previously recovered Markdown, DOCX, and PDF files remain intact
+  with recorded hashes.
+- P34 closes as verification completed with partial acceptance. Exact effects
+  were one install, one prompt/upload/Send, zero retries, one artifact fetch,
+  zero recovered-conversation mutations, and zero scheduler/completion controls.
+  Receipt: `docs/dev/notes/2026-09-11-plan0341-installed-live-verification.json`.

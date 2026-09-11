@@ -1,5 +1,45 @@
 # RUNBOOK
 
+## Turn 577 | 2026-09-11
+
+- Opened P34 / [Plan 0341](docs/dev/plans/0341-2026-09-11-installed-plan0340-live-acceptance.md)
+  from clean local/remote-equal `main` at `da1871eb8`. User authority covers one
+  supported installed-runtime/service refresh and the smallest bounded live
+  ChatGPT verification of integrated Plan 0340.
+- Pre-effect runtime evidence: installed launcher `0.1.1`; API PID `41886`,
+  active/running with zero restarts; background drain idle; six completions all
+  paused and zero queued/running. AuraCall runtime profile `wsl-chrome-3`
+  resolves WSL Chrome and managed browser profile
+  `~/.auracall/browser-profiles/wsl-chrome-3/chatgpt`, currently owned by one
+  persistent Chrome root at PID `71128` / DevTools `45015` pending immediate
+  responsive-owner and identity qualification.
+- Bounds: one install, one no-prompt identity smoke, one new attachment prompt,
+  one Send, zero retries, and one read-only artifact fetch. Never click `Answer
+  now`; never control scheduler/completion/materialization work; never prompt or
+  mutate recovered conversation `6aa368bc-43c4-83ea-8d98-964264dd4340`.
+- Completed the packet within bounds: one install, one prompt, one upload, one
+  Send, zero retries, and one recovered-conversation fetch. The current-model
+  canary returned the exact token; the recovered Markdown/DOCX/PDF remain
+  intact and the recovered conversation received no mutation.
+- Closed with partial acceptance. Broad status caused one automatic API restart;
+  identity smoke did not exit; explicit `6 Pro` selection failed pre-effect;
+  successful session metadata omitted observed-model provenance; and the fresh
+  fetch rematerialized only Markdown while DOCX/PDF entries errored. Continue
+  only through a new provider-free repair plan, never a P34 live retry.
+- Installed source/byte parity passes at 522 files and aggregate SHA-256
+  `6615333e…`. A broad post-install `/status` read exhausted the API heap and
+  caused one automatic systemd restart; narrow authenticated reads remain
+  healthy and all six completions remain paused with zero queued/running.
+- The no-prompt identity dimensions and exact PID/target/port provenance all
+  matched, but the CLI printed complete JSON and did not exit. Stopped only that
+  exact process; two September 10 orphaned identity-smoke processes in other
+  workdirs remain out of scope.
+- The first canary work-unit attempt reached account, Chat-mode, and composer
+  readiness, then stopped before upload/Send when explicit premium-model
+  selection timed out. Read-only DOM census shows the changed live `6 Pro`
+  slider/menu. Revision 2 permits the handoff-prescribed current-model path as
+  the second/final attempt; only one Send remains possible.
+
 ## Turn 576 | 2026-09-11
 
 - Opened P33 / [Plan 0340](docs/dev/plans/0340-2026-09-11-chatgpt-deep-research-reliability.md)
