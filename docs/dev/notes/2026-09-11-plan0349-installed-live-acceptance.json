@@ -1,0 +1,60 @@
+{
+  "object": "auracall.installed-live-acceptance-receipt",
+  "version": 1,
+  "generatedAt": "2026-09-11T19:35:44.000Z",
+  "plan": "docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md",
+  "lane": "P42",
+  "outcome": "terminal_evidence_serialization_failure_not_accepted",
+  "source": {
+    "baseMain": "f1d24156a",
+    "planOpeningCommit": "f0166599f9657a4fdab569a77909acca737c6af3",
+    "publishedBeforeEffects": true
+  },
+  "validation": {
+    "affectedTestsPassed": 353,
+    "typecheck": "pass",
+    "productionBuild": "pass",
+    "planLibraryValidationErrors": 0
+  },
+  "install": {
+    "count": 1,
+    "installedAt": "2026-09-11T19:34:51.182Z",
+    "sourceDistFiles": 523,
+    "installedDistFiles": 523,
+    "sourceNormalizedSha256": "569ad132a341f3e68f9a7751b33ac701ec9d45a6ef2d73deb83801107411fcef",
+    "installedNormalizedSha256": "569ad132a341f3e68f9a7751b33ac701ec9d45a6ef2d73deb83801107411fcef",
+    "servicePid": 51128,
+    "serviceRestarts": 0
+  },
+  "identity": {
+    "attempts": 1,
+    "evidenceStatus": "unproven",
+    "consumerExitCode": 5,
+    "terminalFinding": "The unbuffered CLI force-exit boundary truncated piped JSON before jq could parse it; no complete identity receipt was retained.",
+    "launchedBrowser": false
+  },
+  "prompt": {
+    "attempts": 0,
+    "sendCount": 0,
+    "withheldReason": "Identity evidence gate was unproven."
+  },
+  "artifactFetch": {
+    "attempts": 0,
+    "conversationMutations": 0,
+    "withheldReason": "Prompt gate was not reached."
+  },
+  "effects": {
+    "installCount": 1,
+    "identitySmokeCount": 1,
+    "promptAttemptCount": 0,
+    "sendCount": 0,
+    "artifactFetchCount": 0,
+    "retryCount": 0,
+    "runtimeControlCount": 0
+  },
+  "finalCustody": {
+    "completionCounts": {"paused": 6, "queued": 0, "running": 0, "idleWaiting": 0},
+    "service": {"mainPid": 51128, "restartCount": 0, "activeState": "active", "subState": "running"},
+    "browser": {"pid": 71128, "devtoolsPort": 45015, "responsive": true}
+  }
+}

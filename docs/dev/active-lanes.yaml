@@ -792,3 +792,24 @@ lanes:
     blocker: null
     disposition: Current compact 6Pro row with submenu-like attributes is provider-free reproduced, repaired, and integrated. Installed/live successor remains required.
     updated_at: 2026-09-11
+  - id: P42
+    objective: Install published Plan 0348 and complete one compact 6Pro prompt plus genuine-PDF artifact acceptance pass.
+    plan: docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md
+    plan_ref: refs/heads/ops/plan0349-installed-plan0348-live-acceptance
+    branch: ops/plan0349-installed-plan0348-live-acceptance
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: f0166599f9657a4fdab569a77909acca737c6af3
+    remote_ref: refs/remotes/origin/ops/plan0349-installed-plan0348-live-acceptance
+    integration: merge
+    dependencies: [P41]
+    overlaps: [P08, P16, P18, P29]
+    reconciled_overlaps: [P08, P16, P18, P29]
+    reconciliation_note: P42 owns one serialized foreground installed/live adoption packet only. It does not absorb aggregate status, developer-app response, Skill execution, or runtime controls.
+    validation_status: terminal-identity-evidence-serialization-failure-not-accepted
+    validation_ref: docs/dev/notes/2026-09-11-plan0349-installed-live-acceptance.json
+    integration_receipt: null
+    blocker: null
+    disposition: Install parity passed. The single identity operation produced truncated piped JSON, so the lane failed closed without prompt or artifact effects. A successor must capture identity unpiped.
+    updated_at: 2026-09-11

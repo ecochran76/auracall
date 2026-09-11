@@ -49508,3 +49508,22 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Merged exact published P41 topic `992955adc` non-fast-forward into `main` at
   `96ed036b3`. Fresh merged-result validation passes 353 affected tests,
   typecheck, and production build with no live/runtime effect.
+
+## 2026-09-11 | Plan 0349 final installed/live successor opened
+
+- Started P42 from exact published main `f1d24156a`. It owns one supported
+  install, identity smoke, compact premium prompt with at most one Send, and one
+  artifact fetch only after prompt success.
+- Acceptance requires raw observed `6Pro`, exact response token, and a genuine
+  fresh PDF distinct from DOCX. Retries, mutation, and runtime controls remain
+  forbidden.
+
+## 2026-09-11 | Plan 0349 terminal identity-evidence finding
+
+- One supported install passed exact 523-file source/installed parity at
+  normalized SHA `569ad132...`; service PID `51128` is active/running with zero
+  restarts.
+- Piping the single identity operation to `jq` exposed the CLI force-exit
+  boundary truncating JSON before flush. The consumer exited 5; the lane failed
+  closed without retry. No prompt, Send, artifact fetch, mutation, or runtime
+  control ran.

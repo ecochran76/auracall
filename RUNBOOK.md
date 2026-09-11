@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 603 | 2026-09-11
+
+- P42's one install passed 523-file source/installed parity at normalized SHA
+  `569ad132...`; service PID `51128` is active/running with zero restarts.
+- The only identity operation was piped to `jq`; the CLI force-exit boundary
+  truncated JSON before parsing, so identity evidence is unproven and no retry
+  ran. Prompt and artifact budgets remained entirely unspent.
+- Final custody remains six paused completions, zero active completions,
+  responsive Chrome PID `71128`, and stable service PID `51128`.
+
+## Turn 602 | 2026-09-11
+
+- Opened P42 / Plan 0349 from exact published main `f1d24156a` after P41
+  integrated the live-shaped option-row repair.
+- P42 owns one install, identity smoke, compact-`6Pro` prompt with one-Send
+  maximum, and one conditional read-only genuine-PDF artifact fetch. No retry
+  or runtime control is authorized.
+
 ## Turn 601 | 2026-09-11
 
 - Merged exact published P41 topic `992955adc` non-fast-forward into `main` at
