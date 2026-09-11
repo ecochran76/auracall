@@ -13,6 +13,19 @@
   explicit zero-retry `chatgpt:premium` Send, and one read-only three-artifact
   fetch. Broad status and all scheduler/completion/materialization controls are
   excluded. Graphiti is healthy but returned no relevant AuraCall cloud.
+- Installed parity passed across 523 source/installed files with normalized
+  SHA-256 `74ea79a3f...`; the refreshed service is PID `37901`, active/running,
+  with zero automatic restarts. Identity matched Pro/personal and exited 0 in
+  one second without launching Chrome.
+- The single effect-capable explicit-selector run timed out before Send. Its
+  persisted Session is `error`, desired model is `6 Pro`, mode is Chat, and
+  conversation/output are null. No fallback or resend ran.
+- The single artifact fetch exited 0 in 24 seconds but freshly materialized
+  only Markdown; DOCX/PDF both recorded `Promise was collected`. Retained
+  authoritative files preserve their prior hashes. Six completions remain
+  paused, controls are untouched, and service/Chrome custody is healthy.
+- P36 closes verification with terminal findings and no live acceptance.
+  Receipt: `docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.
 
 ## Turn 581 | 2026-09-11
 

@@ -1,12 +1,12 @@
 # Installed Plan 0342 Live Acceptance | 0343-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P36
-Operational state: PRE_EFFECT_VALIDATION
+Operational state: LIVE_VERIFICATION_COMPLETED_WITH_TERMINAL_FINDINGS
 Branch: ops/plan0343-installed-plan0342-live-acceptance
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -41,6 +41,26 @@ mutating the recovered Deep Research conversation or unrelated runtime controls.
 - Graphiti is healthy but its reviewed atlas returned no relevant AuraCall
   cloud. Current repository, P34 receipt, installed metadata, runtime files,
   and direct readbacks are authoritative.
+- The single supported install completed from the published P36 topic. Source
+  and installed `dist` each contain 523 files with equal normalized SHA-256
+  `74ea79a3f4486eaedb90d585b2fa763ce3941581a915dfed38003ab633446143`;
+  service PID `37901` is active/running with `NRestarts=0`.
+- The installed identity smoke exited normally in one second, proved the exact
+  configured Pro/personal identity, launched no browser, and retained Chrome
+  PID `71128` on DevTools `45015`.
+- The single effect-capable prompt attempt persisted desired `6 Pro`, explicit
+  `select`, and Chat mode, then timed out waiting 35 seconds for the model
+  selector. Its Session is `error` with no conversation or output, so no Send
+  completed. The terminal selector finding was not retried or replaced with
+  `current`.
+- The single recovered-conversation artifact fetch exited normally in 24
+  seconds but materialized only Markdown; DOCX and PDF each failed with
+  `Promise was collected`. Previously recovered Markdown, DOCX, and PDF bytes
+  remain intact at their recorded hashes, but the fresh fetch is terminally
+  partial and not accepted.
+- Six completions remain paused, scheduler control is unchanged, Chrome and the
+  service remain responsive, and no broad status, retry, resend, recovered
+  conversation mutation, or scheduler/completion/materialization control ran.
 
 ## Execution Graph
 
@@ -113,3 +133,20 @@ Owner: primary agent. Every runtime/browser/provider operation is serialized.
 ILA-R1 through ILA-R6 have current durable evidence or an explicit terminal
 finding, effect counters are exact, the recovered conversation remains
 unmodified, and the bounded receipt is integrated and published.
+
+## Final Disposition
+
+- `ILA-R1`: PASS — exact installed-source parity and stable service refresh.
+- `ILA-R2`: PASS — exact no-prompt identity and normal one-second CLI exit.
+- `ILA-R3`: FAIL, TERMINAL — explicit `6 Pro` selector timeout before Send; no
+  observed-model or response acceptance exists.
+- `ILA-R4`: FAIL, TERMINAL — one of three fresh artifacts materialized; DOCX
+  and PDF returned `Promise was collected` and were not retried.
+- `ILA-R5`: PASS — runtime/browser/completion custody and excluded controls are
+  preserved.
+- `ILA-R6`: PENDING — receipt and docs are written; final validation,
+  publication, and integration evidence remain before canonical closeout.
+
+P36 is verification-complete with terminal findings and is not live accepted.
+The redacted receipt is
+`docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.

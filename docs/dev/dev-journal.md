@@ -49280,3 +49280,24 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   read-only recovered-conversation artifact fetch are authorized with no
   retries. Broad status, scheduler/completion/materialization controls, and any
   recovered-conversation prompt or mutation are excluded.
+
+## 2026-09-11 | Plan 0343 completed with terminal findings
+
+- Built and installed the exact published P36 topic once. Source and installed
+  `dist` each contain 523 files with normalized SHA-256 `74ea79a3f...`.
+  Service PID `37901` is active/running with `NRestarts=0`.
+- The installed identity smoke matched the configured Pro/personal ChatGPT
+  account, used the existing managed Chrome PID `71128`, launched no browser,
+  and exited 0 in one second.
+- One local parse-only command rejected `--no-notify` before browser contact.
+  The corrected and only effect-capable prompt attempt retained desired
+  `6 Pro`, explicit `select`, and Chat mode, but timed out waiting for the
+  selector. Its Session has no conversation or output, proving no completed
+  Send; no retry or `current` fallback ran.
+- The one protected-conversation artifact fetch exited 0 in 24 seconds and
+  found three variants, but materialized Markdown only. DOCX and PDF each
+  recorded `Promise was collected`; the existing authoritative three-file set
+  remains intact at its prior hashes. No retry or provider mutation ran.
+- Six completions remain paused, scheduler control is unchanged, and Chrome
+  and the service remain responsive. P36 is not live accepted. Receipt:
+  `docs/dev/notes/2026-09-11-plan0343-installed-live-acceptance.json`.

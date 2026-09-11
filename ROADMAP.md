@@ -1,9 +1,10 @@
 # Aura-Call Roadmap
 
-- Active P36: [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
-  installs exact published P35 bytes and runs one serialized identity-smoke,
-  explicit `6 Pro`, observed-model provenance, and three-artifact adoption pass.
-  It does not reopen aggregate status or scheduler/completion controls.
+- Completed-with-terminal-findings P36: [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
+  installed exact published P35 bytes and proved normal identity-smoke exit.
+  Live acceptance was rejected: explicit `6 Pro` selection timed out before
+  Send, and the one artifact fetch again settled Markdown only while DOCX/PDF
+  returned `Promise was collected`. No retries or control effects ran.
 
 - Completed P35: [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)
   repairs four P34-owned failures provider-free: identity-smoke exit, current
@@ -51,14 +52,15 @@
 
 ### Current Execution Board
 
-Status: P36 installed Plan 0342 live acceptance active
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P35 (completed/integrated); P08, P16, P18, P29, P36 (open)
+Status: P36 verification completed with terminal findings; integration pending
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P36 (completed or integration-pending); P08, P16, P18, P29 (open)
 
-- Active installed/live adoption:
+- Completed-with-terminal-findings installed/live adoption:
   [Plan 0343](docs/dev/plans/0343-2026-09-11-installed-plan0342-live-acceptance.md)
-  P36 has one install, one identity probe, one explicit `chatgpt:premium` Send,
-  and one read-only recovered-conversation artifact fetch. All are serialized,
-  zero-retry, and preserve unrelated controls.
+  P36 spent one install, one identity probe, one effect-capable explicit
+  `chatgpt:premium` attempt with zero Sends, and one read-only recovered-
+  conversation artifact fetch. Identity passed; selector and complete fresh
+  artifact settlement failed terminally. Unrelated controls stayed preserved.
 
 - Completed provider-free repair:
   [Plan 0342](docs/dev/plans/0342-2026-09-11-chatgpt-live-findings-provider-free-repair.md)
