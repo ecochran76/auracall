@@ -1,3 +1,12 @@
+- 2026-09-10: After the current-model repair reached ChatGPT app selection, the
+  exact visible `litscout` row activated but generic composer verification
+  rejected it. ChatGPT's current app selection is an inline pill identified by
+  `data-symbol="ecosystemMention"`; the generic verifier only recognized older
+  `data-system-hint-type` / `data-id` values beginning with `plugin:`. Reuse the
+  already-proven exact ecosystem-mention pill family when confirming a dynamic
+  app. Keep the label match, visibility requirement, and pre-Send fail-closed
+  behavior intact.
+
 - 2026-09-10: A submitted ChatGPT developer-app test set
   `browser.modelStrategy=current` only on a replacement user config, but did
   not carry the same invariant on the prompt request. A profile-level ChatGPT

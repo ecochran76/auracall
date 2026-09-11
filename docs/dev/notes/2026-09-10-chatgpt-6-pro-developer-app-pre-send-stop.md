@@ -42,3 +42,11 @@ restore `select` inside the prompt workbench. The regression failed red at that
 exact adapter boundary, and the minimal repair now passes `modelStrategy=current`
 directly to `runPrompt()`. This does not recognize `6 Pro`, open the model
 picker, or select a different model; it makes the active label irrelevant.
+
+The first installed attempt after that repair crossed the model boundary but
+still stopped before Send: ChatGPT exposed and activated one exact `litscout`
+row, while generic composer verification did not recognize the resulting
+`data-symbol="ecosystemMention"` inline pill. Ledger, Project 68, Session 129,
+the root URL, and the blank composer reconciled unchanged. A second red tracer
+now protects that exact current pill family, and the shared verifier recognizes
+it without relaxing label or visibility matching.

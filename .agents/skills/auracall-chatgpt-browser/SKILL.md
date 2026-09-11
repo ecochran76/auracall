@@ -127,6 +127,9 @@ readback, diff hygiene, and planning audit required by repo policy.
   boundary. Do not depend only on a replacement browser config, because an
   existing profile-level service binding can otherwise restore model
   selection. A newly labelled active model must not be opened or interpreted.
+- Confirm dynamically installed app selection through one visible inline pill
+  with exact `data-symbol="ecosystemMention"` and a matching label. A visible
+  app row or successful activation without that postcondition is insufficient.
 - Never click ChatGPT's **Answer now** button.
 - Treat CAPTCHA, human verification, identity mismatch, unknown browser
   ownership, or missing selector separation as a hard stop.

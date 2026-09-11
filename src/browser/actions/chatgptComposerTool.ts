@@ -396,7 +396,8 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
     const inlinePills = Array.from(
       root.querySelectorAll(
         '#prompt-textarea [data-inline-selection-pill][data-system-hint-type^="plugin:"], ' +
-        '#prompt-textarea [data-inline-selection-pill][data-id^="plugin:"]'
+        '#prompt-textarea [data-inline-selection-pill][data-id^="plugin:"], ' +
+        '#prompt-textarea [data-inline-selection-pill][data-symbol="ecosystemMention"]'
       ),
     ).filter(isVisible);
     const inlineMatch = inlinePills

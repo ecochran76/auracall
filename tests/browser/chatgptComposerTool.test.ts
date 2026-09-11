@@ -247,6 +247,29 @@ describe('chatgpt composer tool selection', () => {
     ).toEqual({ label: 'Custom CRM', source: 'chip' });
   });
 
+  test('recognizes a selected ecosystem mention as the current composer app', async () => {
+    const evaluate = vi.fn(async ({ expression }: { expression?: string }) => ({
+      result: {
+        value: String(expression ?? '').includes(
+          '[data-inline-selection-pill][data-symbol="ecosystemMention"]',
+        )
+          ? { label: 'LitScout' }
+          : null,
+      },
+    }));
+    const logger = vi.fn();
+
+    await expect(
+      ensureChatgptComposerTool(
+        // biome-ignore lint/style/useNamingConvention: CDP protocol domains use upstream names.
+        { Runtime: { evaluate } } as unknown as Parameters<typeof ensureChatgptComposerTool>[0],
+        'LitScout',
+        logger,
+      ),
+    ).resolves.toBeUndefined();
+    expect(logger).toHaveBeenCalledWith('Composer tool: LitScout (already selected)');
+  });
+
   test('reads current tool state from selected top-level or More menu rows when chip is absent', () => {
     expect(
       resolveCurrentComposerToolSelectionForTest(null, [

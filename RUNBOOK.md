@@ -10,10 +10,16 @@
   from the prompt request, allowing profile-level service configuration to
   restore `select`. The minimal repair pins `current` at the prompt boundary;
   it neither recognizes nor selects the new label.
-- The exact red failed on the missing prompt field. Focused green passes the
-  adapter, prompt, composer-mode, and immutable-launch suites at `59/59`.
-  Broader provider-free validation, install parity, exact-app qualification,
-  and the single authorized product prompt remain in this turn's critical path.
+- The exact red failed on the missing prompt field. The first installed attempt
+  then crossed the model boundary and failed closed before Send because generic
+  composer verification omitted ChatGPT's current exact
+  `data-symbol="ecosystemMention"` pill family. Reconciliation retained the root
+  URL, blank composer, 2,912 ledger lines, and unchanged Project 68 / Session
+  129 row counts; the prompt allowance remains unconsumed.
+- A second exact red reproduced the missing ecosystem-mention recognition. The
+  minimal shared-selector repair keeps visibility and label matching intact;
+  focused green passes `73/73`. Broader provider-free validation, second install
+  parity, and the single authorized product prompt remain on the critical path.
 
 ## Turn 539 | 2026-08-29
 

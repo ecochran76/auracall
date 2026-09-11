@@ -148,6 +148,10 @@
     request itself, not only on its replacement browser configuration; this
     prevents a profile-level service binding from reasserting `select` and
     makes a newly labelled active model irrelevant to the one-submit path
+  - dynamically installed apps confirm selection through the same exact
+    `[data-inline-selection-pill][data-symbol="ecosystemMention"]` contract as
+    developer-app mention qualification; older `plugin:` pill attributes remain
+    supported, but a visible app row alone is not selection proof
   - do not use `--submit`, `create`, `refresh`, or `uninstall` as routine live
     tests; they require exact authorization and `--yes`
   - an authorized refresh uses replacement semantics and requires a complete
