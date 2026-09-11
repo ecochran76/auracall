@@ -49423,3 +49423,26 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Removed the local worktree and branch without force, retaining remote
   recovery ref `ce5ee0ced`. Installed runtime/service/browser state was not
   part of the local Git cleanup.
+
+## 2026-09-11 | Plan 0346 provider-free repair opened
+
+- Started P39 from exact published main `4a57abc2d` to continue the end-to-end
+  goal after P38's two terminal live findings.
+- Source localization identifies two concrete gaps: compact `6Pro` is rejected
+  by animated-trigger family admission, and Deep Research export accepts the
+  first stable file without freshness or requested-extension proof.
+- P39 is provider-free only. Installation, browser/provider effects, artifact
+  fetches, recovered-conversation mutation, and runtime controls remain
+  reserved for a successor acceptance lane.
+
+## 2026-09-11 | Plan 0346 provider-free accepted
+
+- Compact alpha/numeric normalization admits current `6Pro` as semantic
+  `6 Pro`, preserves the provider's raw observed label, and retains negatives
+  for `6Power`, generic `Pro`, Power, and effort controls.
+- Deep Research Word/PDF transfer now snapshots retained files and admits only
+  a fresh requested extension with matching ZIP/PDF bytes. Wrong variants are
+  preserved and become explicit errors rather than materialized successes.
+- Published checkpoint `40f2cecf9` passes 25 focused and 353 affected tests,
+  typecheck, production build, scoped lint, diff hygiene, and the plan audit.
+  P39 is integration-ready; installed/live proof remains unspent.

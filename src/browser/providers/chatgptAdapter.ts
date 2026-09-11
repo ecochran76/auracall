@@ -11982,6 +11982,154 @@ async function clickChatgptViewerDownloadButtonWithClient(
 	return false;
 }
 
+type ChatgptDownloadDirectorySnapshot = ReadonlyMap<string, string>;
+
+function chatgptDownloadStatFingerprint(stat: {
+	size: number;
+	mtimeMs: number;
+	ctimeMs?: number;
+	ino?: number;
+}): string {
+	return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs ?? ""}:${stat.ino ?? ""}`;
+}
+
+async function snapshotChatgptDownloadDirectory(
+	destDir: string,
+): Promise<Map<string, string>> {
+	const snapshot = new Map<string, string>();
+	const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
+	for (const entry of entries) {
+		if (!entry.isFile() || entry.name.endsWith(".crdownload") || entry.name.endsWith(".tmp")) {
+			continue;
+		}
+		const stat = await fs.stat(path.join(destDir, entry.name)).catch(() => null);
+		if (stat) snapshot.set(entry.name, chatgptDownloadStatFingerprint(stat));
+	}
+	return snapshot;
+}
+
+async function waitForFreshChatgptDownloadedFile(
+	destDir: string,
+	expectedExtension: ".docx" | ".pdf",
+	baseline: ChatgptDownloadDirectorySnapshot,
+	timeoutMs = 20_000,
+	pollIntervalMs = 250,
+): Promise<string | null> {
+	const deadline = Date.now() + timeoutMs;
+	let lastPath: string | null = null;
+	let lastSize = -1;
+	let stableCount = 0;
+	const wrongVariantNames = new Set<string>();
+	while (Date.now() < deadline) {
+		const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
+		const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+		const completed = fileNames.filter(
+			(name) => !name.endsWith(".crdownload") && !name.endsWith(".tmp"),
+		);
+		const fresh: Array<{ name: string; size: number }> = [];
+		for (const name of completed) {
+			const stat = await fs.stat(path.join(destDir, name)).catch(() => null);
+			if (!stat || baseline.get(name) === chatgptDownloadStatFingerprint(stat)) continue;
+			if (path.extname(name).toLowerCase() !== expectedExtension) {
+				wrongVariantNames.add(name);
+				continue;
+			}
+			fresh.push({ name, size: stat.size });
+		}
+		if (fresh.length > 1) {
+			throw new Error(
+				`ChatGPT Deep Research export produced multiple fresh ${expectedExtension} downloads: ${fresh.map((entry) => entry.name).sort().join(", ")}.`,
+			);
+		}
+		if (fresh.length === 1) {
+			const candidateName = fresh[0]?.name;
+			if (!candidateName) continue;
+			const candidatePath = path.join(destDir, candidateName);
+			const candidateSize = fresh[0]?.size ?? -1;
+			if (candidateSize >= 0) {
+				if (candidatePath === lastPath && candidateSize === lastSize) {
+					stableCount += 1;
+				} else {
+					lastPath = candidatePath;
+					lastSize = candidateSize;
+					stableCount = 0;
+				}
+				if (stableCount >= 1) {
+					return candidatePath;
+				}
+			}
+		}
+		await sleep(pollIntervalMs);
+	}
+	if (wrongVariantNames.size > 0) {
+		throw new Error(
+			`ChatGPT Deep Research export expected fresh ${expectedExtension} but produced only unexpected download variants: ${Array.from(wrongVariantNames).sort().join(", ")}.`,
+		);
+	}
+	return null;
+}
+
+async function validateChatgptDeepResearchExportFile(
+	downloadedPath: string,
+	exportVariant: "docx" | "pdf",
+): Promise<{ extension: ".docx" | ".pdf"; mimeType: string }> {
+	const expectedExtension = exportVariant === "docx" ? ".docx" : ".pdf";
+	const actualExtension = path.extname(downloadedPath).toLowerCase();
+	if (actualExtension !== expectedExtension) {
+		throw new Error(
+			`ChatGPT Deep Research ${exportVariant} export returned ${actualExtension || "no extension"}; expected ${expectedExtension}.`,
+		);
+	}
+	const handle = await fs.open(downloadedPath, "r");
+	const header = Buffer.alloc(8);
+	let bytesRead = 0;
+	try {
+		({ bytesRead } = await handle.read(header, 0, header.length, 0));
+	} finally {
+		await handle.close();
+	}
+	const bytes = header.subarray(0, bytesRead);
+	if (exportVariant === "pdf") {
+		if (!bytes.toString("ascii").startsWith("%PDF-")) {
+			throw new Error("ChatGPT Deep Research PDF export does not contain PDF bytes.");
+		}
+		return { extension: ".pdf", mimeType: "application/pdf" };
+	}
+	const hasZipSignature =
+		bytes.length >= 4 &&
+		bytes[0] === 0x50 &&
+		bytes[1] === 0x4b &&
+		((bytes[2] === 0x03 && bytes[3] === 0x04) ||
+			(bytes[2] === 0x05 && bytes[3] === 0x06) ||
+			(bytes[2] === 0x07 && bytes[3] === 0x08));
+	if (!hasZipSignature) {
+		throw new Error("ChatGPT Deep Research DOCX export does not contain ZIP/DOCX bytes.");
+	}
+	return {
+		extension: ".docx",
+		mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	};
+}
+
+export const snapshotChatgptDownloadDirectoryForTest = snapshotChatgptDownloadDirectory;
+export async function waitForChatgptExportDownloadForTest(
+	destDir: string,
+	exportVariant: "docx" | "pdf",
+	baseline: ChatgptDownloadDirectorySnapshot,
+	timeoutMs: number,
+	pollIntervalMs: number,
+): Promise<string | null> {
+	return await waitForFreshChatgptDownloadedFile(
+		destDir,
+		exportVariant === "docx" ? ".docx" : ".pdf",
+		baseline,
+		timeoutMs,
+		pollIntervalMs,
+	);
+}
+export const validateChatgptDeepResearchExportFileForTest =
+	validateChatgptDeepResearchExportFile;
+
 async function waitForChatgptDownloadedFile(
 	destDir: string,
 	timeoutMs = 20_000,
@@ -11992,10 +12140,12 @@ async function waitForChatgptDownloadedFile(
 	let stableCount = 0;
 	while (Date.now() < deadline) {
 		const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
-		const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
-		const completed = fileNames.filter(
-			(name) => !name.endsWith(".crdownload") && !name.endsWith(".tmp"),
-		);
+		const completed = entries
+			.filter(
+				(entry) =>
+					entry.isFile() && !entry.name.endsWith(".crdownload") && !entry.name.endsWith(".tmp"),
+			)
+			.map((entry) => entry.name);
 		if (completed.length > 0) {
 			const candidateName = completed.sort()[0];
 			if (!candidateName) continue;
@@ -12009,9 +12159,7 @@ async function waitForChatgptDownloadedFile(
 					lastSize = stat.size;
 					stableCount = 0;
 				}
-				if (stableCount >= 1) {
-					return candidatePath;
-				}
+				if (stableCount >= 1) return candidatePath;
 			}
 		}
 		await sleep(250);
@@ -12136,6 +12284,8 @@ async function materializeChatgptDeepResearchExportWithClient(
 			`ChatGPT Deep Research ${exportVariant} export missing iframe identity; refresh the conversation context before exporting.`,
 		);
 	}
+	const expectedExtension = exportVariant === "docx" ? ".docx" : ".pdf";
+	const downloadBaseline = await snapshotChatgptDownloadDirectory(destDir);
 	const deadline = Date.now() + 15_000;
 	let lastClickFailureLabels = "";
 	while (Date.now() < deadline) {
@@ -12170,12 +12320,21 @@ async function materializeChatgptDeepResearchExportWithClient(
 				});
 				const value = clicked.result?.value;
 				if (isRecord(value) && value.action === "export-option-clicked") {
-					const downloadedPath = await waitForChatgptDownloadedFile(destDir, 30_000);
+					const downloadedPath = await waitForFreshChatgptDownloadedFile(
+						destDir,
+						expectedExtension,
+						downloadBaseline,
+						30_000,
+					);
 					if (!downloadedPath) {
 						throw new Error(
-							`ChatGPT Deep Research ${exportVariant} export did not produce a downloaded file.`,
+							`ChatGPT Deep Research ${exportVariant} export did not produce a fresh ${expectedExtension} download.`,
 						);
 					}
+					const validated = await validateChatgptDeepResearchExportFile(
+						downloadedPath,
+						exportVariant,
+					);
 					const stat = await fs.stat(downloadedPath);
 					const name = path.basename(downloadedPath);
 					return {
@@ -12184,7 +12343,7 @@ async function materializeChatgptDeepResearchExportWithClient(
 						provider: "chatgpt",
 						source: "conversation",
 						size: stat.size,
-						mimeType: inferMimeTypeFromArtifactName(name),
+						mimeType: validated.mimeType,
 						remoteUrl: artifact.uri,
 						localPath: downloadedPath,
 						metadata: {

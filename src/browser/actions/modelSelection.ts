@@ -159,6 +159,8 @@ function normalizeModelPickerText(value: string | null | undefined): string {
   }
   return value
     .toLowerCase()
+    .replace(/([a-z])([0-9])/g, '$1 $2')
+    .replace(/([0-9])([a-z])/g, '$1 $2')
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -347,6 +349,8 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
       }
       return value
         .toLowerCase()
+        .replace(/([a-z])([0-9])/g, '$1 $2')
+        .replace(/([0-9])([a-z])/g, '$1 $2')
         .replace(/[^a-z0-9]+/g, ' ')
         .replace(/\\s+/g, ' ')
         .trim();

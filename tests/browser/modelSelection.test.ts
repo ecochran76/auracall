@@ -31,7 +31,15 @@ describe('browser model selection matchers', () => {
       inComposer: true,
       inAssistantTurn: false,
     })).toBe(true);
-    for (const label of ['Power', 'High, 3 of 5', 'Pro, 5 of 5']) {
+    expect(isModelPickerTriggerCandidateForTest({
+      selector: '[data-animated-slider-trigger="true"]',
+      text: '6Pro',
+      ariaLabel: '6Pro, Pro, 5 of 5',
+      visible: true,
+      inComposer: true,
+      inAssistantTurn: false,
+    })).toBe(true);
+    for (const label of ['Power', '6Power', 'High, 3 of 5', 'Pro, 5 of 5']) {
       expect(isModelPickerTriggerCandidateForTest({
         selector: '[data-animated-slider-trigger="true"]',
         text: label,
@@ -77,8 +85,8 @@ describe('browser model selection matchers', () => {
 
     const prompt = new FixtureElement();
     const composer = new FixtureElement();
-    const trigger = new FixtureElement('6 Pro', {
-      'aria-label': '6 Pro, Pro, 5 of 5',
+    const trigger = new FixtureElement('6Pro', {
+      'aria-label': '6Pro, Pro, 5 of 5',
       'data-animated-slider-trigger': 'true',
     });
     const selected = new FixtureElement('6 Pro', {
@@ -143,11 +151,11 @@ describe('browser model selection matchers', () => {
 
     const prompt = new FixtureElement();
     const composer = new FixtureElement();
-    const trigger = new FixtureElement('6 Pro', {
-      'aria-label': '6 Pro, Pro, 5 of 5',
+    const trigger = new FixtureElement('6Pro', {
+      'aria-label': '6Pro, Pro, 5 of 5',
       'data-animated-slider-trigger': 'true',
     });
-    const option = new FixtureElement('6 Pro', { role: 'menuitem' });
+    const option = new FixtureElement('6Pro', { role: 'menuitem' });
     const menu = new FixtureElement();
     let menuOpen = false;
     let optionClicks = 0;
@@ -181,7 +189,7 @@ describe('browser model selection matchers', () => {
         `return ${buildModelSelectionExpressionForTest('6 Pro', 'select')}`,
       )();
       await vi.advanceTimersByTimeAsync(25_000);
-      await expect(pending).resolves.toEqual({ status: 'switched-best-effort', label: '6 Pro' });
+      await expect(pending).resolves.toEqual({ status: 'switched-best-effort', label: '6Pro' });
       expect(optionClicks).toBe(1);
     } finally {
       vi.useRealTimers();

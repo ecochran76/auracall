@@ -22522,3 +22522,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   `Promise was collected` for later exports. Treat fresh manifest coverage as
   the acceptance surface independently of retained historical files and normal
   command exit, and preserve the one-fetch/no-retry boundary.
+
+## 2026-09-11 | Normalize compact model labels and prove export bytes before admission
+
+- Provider model labels can remove whitespace at alpha/numeric boundaries.
+  Normalize only those boundaries for semantic matching, keep the raw observed
+  label in run evidence, and retain negative coverage for lookalikes such as
+  `6Power`, generic `Pro`, and effort controls.
+- A stable file in a shared artifact directory is not proof of the export just
+  requested. Snapshot the directory before the click, admit only a fresh file
+  with the requested extension, and validate the binary signature (`%PDF-` for
+  PDF or ZIP for DOCX) before returning a materialized result.
+- Preserve retained and wrong-variant files. Surface a wrong-variant-only result
+  as an explicit artifact error so it cannot increment `materializedCount`.

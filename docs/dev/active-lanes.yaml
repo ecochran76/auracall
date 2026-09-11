@@ -729,3 +729,24 @@ lanes:
     blocker: null
     disposition: Verification completed and integrated without live acceptance. Install parity and identity passed; the live menu exposed 6Pro instead of exact 6 Pro before Send, and the claimed PDF materialization duplicated DOCX bytes and metadata. No retry, fallback, resend, recovered-conversation mutation, or runtime control effect ran. Clean, equal, ancestral, process-unowned local topic custody was removed without force; the remote recovery ref remains.
     updated_at: 2026-09-11
+  - id: P39
+    objective: Repair Plan 0345 compact 6Pro selector drift and false PDF materialization provider-free.
+    plan: docs/dev/plans/0346-2026-09-11-chatgpt-current-live-findings-repair.md
+    plan_ref: refs/heads/fix/plan0346-chatgpt-live-findings
+    branch: fix/plan0346-chatgpt-live-findings
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 40f2cecf9
+    remote_ref: refs/remotes/origin/fix/plan0346-chatgpt-live-findings
+    integration: merge
+    dependencies: [P38]
+    overlaps: [P08, P16, P18, P29]
+    reconciled_overlaps: [P08, P16, P18, P29]
+    reconciliation_note: P39 owns only provider-free compact model-label and fresh expected-variant artifact admission repairs. It does not absorb aggregate status, developer-app response, installed/live work, Skill execution, or scheduler/completion/materialization controls.
+    validation_status: provider-free-accepted
+    validation_ref: 40f2cecf9
+    integration_receipt: null
+    blocker: null
+    disposition: Compact 6Pro semantic admission and fresh expected-variant binary export validation are provider-free accepted and published. Installed/live adoption remains a successor gate after integration.
+    updated_at: 2026-09-11
