@@ -22553,3 +22553,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Classify only the exact alias (visible label or test id), preserve its raw
   observed label, and prove that the checked row settles without an option-row
   click. Keep lookalikes and unknown submenu rows on existing guarded paths.
+
+## 2026-09-12 | Expose single-action ChatGPT app-security consent
+
+- The approval probe previously required paired `Allow once` and `Always
+  allow`, so it missed ChatGPT's `Allow ChatGPT to use <app>?` security dialog.
+- Require the exact heading, `Suspicious Instruction` warning, and one `Allow`
+  control; expose surface kind/action in manual mode, permit explicit
+  allow-once, and reject persistent-policy downgrade.
+- Route `apps test --submit` through shared assistant-response handling so the
+  existing approval watcher remains the single lifecycle owner.

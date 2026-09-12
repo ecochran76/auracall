@@ -861,18 +861,18 @@ lanes:
     plan_ref: refs/heads/fix/plan0352-chatgpt-security-approval
     branch: fix/plan0352-chatgpt-security-approval
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE
-    checkpoint: null
+    plan_state: CLOSED
+    custody_state: CHECKPOINTED
+    checkpoint: 61c62c6d61892a8e570a12097f6e199ac11513de
     remote_ref: null
     integration: merge
     dependencies: [P16, P44]
     overlaps: [P08, P16, P18, P29]
     reconciled_overlaps: [P08, P16, P18, P29]
     reconciliation_note: P45 owns provider-free security-dialog detection and shared response-lifecycle selection only; no installed, live, provider, LitScout retry, scheduler, completion, or unrelated browser control effect.
-    validation_status: provider-free-active
-    validation_ref: null
+    validation_status: provider-free-accepted-integration-ready
+    validation_ref: docs/dev/notes/2026-09-12-plan0352-provider-free-acceptance.json
     blocker: null
     integration_receipt: null
-    disposition: Exact live failure is reconciled; provider-free RED and repair are active.
+    disposition: Exact security-dialog detection and shared lifecycle routing are provider-free accepted. Installation and live acceptance remain separate.
     updated_at: 2026-09-12

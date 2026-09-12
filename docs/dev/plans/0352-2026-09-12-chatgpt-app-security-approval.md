@@ -1,12 +1,12 @@
 # ChatGPT App Security Approval Exposure | 0352-2026-09-12
 
-State: OPEN
+State: CLOSED
 Lane: P45
-Operational state: PROVIDER_FREE_REPAIR_ACTIVE
+Operational state: PROVIDER_FREE_ACCEPTED_INTEGRATION_READY
 Branch: fix/plan0352-chatgpt-security-approval
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-12
+Revision: 2 | 2026-09-12
 
 ## Stable Objective
 
@@ -30,6 +30,17 @@ persistent approval.
   one `research_action_execute` invocation and rejected it during pre-effect
   validation. The canonical exact-action execution/attempt/receipt counts and
   Session 129 membership count did not increase; no automatic retry is allowed.
+- Provider-free RED was `2 failed / 43 passed`. The repair recognizes only the
+  exact heading+warning+single-Allow shape, exposes its surface kind/action in
+  manual mode, permits explicit allow-once, and rejects an always-allow
+  downgrade.
+- Developer-app submission now selects `assistant_response` on the existing
+  shared high-level lifecycle. The prompt-structure guard passes; no provider-
+  adapter-local watcher was added.
+- Acceptance passes 69 focused tests, 352 widened tests, typecheck, production
+  build, zero-finding scoped lint, diff hygiene, and the 352-candidate plan audit
+  with zero errors. Implementation checkpoint: `61c62c6d6`. Receipt:
+  `docs/dev/notes/2026-09-12-plan0352-provider-free-acceptance.json`.
 
 ## Execution Graph
 
@@ -69,5 +80,6 @@ persistent approval.
 
 ## Definition Of Done
 
-ASA-R1 through ASA-R5 are provider-free accepted and the exact bounded repair
-is ready for integration. Installed/live acceptance remains explicitly open.
+ASA-R1 through ASA-R5 are provider-free accepted at `61c62c6d6` and the exact
+bounded repair is ready for integration. Installed/live acceptance remains
+explicitly open.

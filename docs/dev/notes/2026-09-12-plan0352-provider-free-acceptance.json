@@ -1,0 +1,53 @@
+{
+  "schema": "auracall.plan0352.provider-free-acceptance.v1",
+  "recordedAt": "2026-09-12T15:30:00Z",
+  "source": {
+    "branch": "fix/plan0352-chatgpt-security-approval",
+    "baseCommit": "da5acac0a2",
+    "implementationCommit": "61c62c6d61892a8e570a12097f6e199ac11513de"
+  },
+  "observedFailure": {
+    "chatgptSurface": "Allow ChatGPT to use LitScout? / Suspicious Instruction / Allow",
+    "existingProbe": "paired Allow once and Always allow only",
+    "existingDeveloperAppBoundary": "prompt_submitted",
+    "red": "2 failed, 43 passed"
+  },
+  "acceptedBehavior": {
+    "surfaceKind": "app-security",
+    "manual": "approval-required with exact action metadata and zero click",
+    "allowOnce": "exact one-time Allow may be activated",
+    "alwaysAllow": "fails closed because persistent consent is unavailable",
+    "developerAppCompletionMode": "assistant_response",
+    "lifecycleOwner": "shared high-level browser response and approval lifecycle"
+  },
+  "validation": {
+    "focused": "69 passed",
+    "widened": "352 passed",
+    "promptStructureGuard": "passed",
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "scopedLint": "passed with zero findings",
+    "planAudit": "352 candidates, 0 validation errors",
+    "diffCheck": "passed"
+  },
+  "litscoutReconciliation": {
+    "invocationLedgerBefore": 2928,
+    "invocationLedgerAfter": 2930,
+    "newInvocations": ["research_continue", "research_action_execute"],
+    "ledgerSha256": "ea66e0d71536e0824bb28717887fb8f3a36eca87b7777cb845c217517fed2923",
+    "exactActionExecutions": 226,
+    "exactActionAttempts": 227,
+    "actionReceipts": 744,
+    "session129Memberships": 0,
+    "externalRequestEvents": 5900,
+    "externalRequestEventsAfterAttempt": 0,
+    "productOutcome": "operator-reported invalid_request rejection at pre_effect_validation",
+    "automaticRetryAllowed": false
+  },
+  "runtimeCustody": {
+    "installed": false,
+    "liveRetest": false,
+    "existingCliPid": 62171,
+    "existingCliPidDisposition": "preserved untouched"
+  }
+}

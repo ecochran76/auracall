@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 613 | 2026-09-12
+
+- P45 provider-free acceptance passes at implementation checkpoint
+  `61c62c6d6`: 69 focused and 352 widened tests, including the shared prompt-
+  structure guard, plus typecheck, production build, zero-finding scoped lint,
+  diff hygiene, and the 352-candidate zero-error plan audit.
+- Exact heading+warning+single-Allow recognition now exposes app-security
+  consent in manual mode, supports explicit allow-once, and refuses an
+  always-allow downgrade. Developer-app submission reuses the shared assistant-
+  response/approval lifecycle rather than adding a provider-local watcher.
+- LitScout reconciliation is frozen at ledger 2,930 lines (two new transport-
+  successful invocations), exact-action execution/attempt/receipt counts
+  226/227/744, zero Session 129 memberships, and 5,900 external events with
+  zero after the attempt. The rejected token remains terminal and unretired.
+- No install or live retest ran. Existing installed CLI PID `62171`, API PID
+  `51128`, and Chrome PID `71128` were preserved untouched. P45 is integration-
+  ready; installed/live proof is a separate gate.
+
 ## Turn 612 | 2026-09-12
 
 - Opened P45 / [Plan 0352](docs/dev/plans/0352-2026-09-12-chatgpt-app-security-approval.md)
