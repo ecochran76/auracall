@@ -1,0 +1,50 @@
+{
+  "schema": "auracall.plan0351.current-latest-live-acceptance.v1",
+  "generatedAt": "2026-09-11T20:30:28-05:00",
+  "status": "LIVE_ACCEPTED_PRODUCT_GATE",
+  "source": {
+    "branch": "fix/plan0351-chatgpt-current-latest",
+    "implementationCommit": "9327635d3",
+    "version": "0.1.1",
+    "modelSelectionSha256": "ee78078940126e8c9e8099b934572c58501bdb775b5debecc18192276c7bfd90",
+    "installedParity": true
+  },
+  "qualification": {
+    "profile": "wsl-chrome-3",
+    "account": "eric.cochran@soylei.com",
+    "accountMatched": true,
+    "appId": "asdk_app_6aa32e43e4a08191b92060904afc706d",
+    "appName": "LitScout",
+    "appEnabled": true,
+    "appAuthStatus": "ACTIVE",
+    "appScope": "USER",
+    "appDiscoverability": "PRIVATE",
+    "nonSubmittingSelection": "completed"
+  },
+  "attempt": {
+    "conversationId": "6aa4aa87-e89c-83e9-84dc-c684ef39765e",
+    "conversationTitle": "Continue LitScout Research",
+    "promptSubmitted": true,
+    "sendCountMax": 1,
+    "automaticRetries": 0,
+    "approvalActivations": 0,
+    "answerNowActivations": 0,
+    "terminalOutcome": "ChatGPT completed after six read-only LitScout calls and stopped before approve_search_plan",
+    "retainedWorkCount": 0,
+    "providerRequestsAdded": 0,
+    "canonicalDbCountersChanged": false
+  },
+  "supervision": {
+    "worker": "Luna low passive watcher",
+    "workerEffects": "none",
+    "primaryReconciliation": "CDP conversation, LitScout MCP ledger, and canonical SQLite DB"
+  },
+  "acceptance": {
+    "latestAliasRepair": true,
+    "exactInstalledRuntime": true,
+    "oneSendBoundary": true,
+    "manualApprovalBoundary": true,
+    "connectedProductReached": true,
+    "researchCompleted": false
+  }
+}

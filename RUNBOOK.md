@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 610 | 2026-09-11
+
+- P44 installed exact source/runtime model-selection bytes at SHA-256
+  `ee780789...`; exact account and private OAuth-active LitScout qualification
+  passed without submission.
+- One Send created conversation `6aa4aa87-e89c-83e9-84dc-c684ef39765e`.
+  ChatGPT completed after six read-only LitScout calls and stopped before the
+  product's `approve_search_plan` gate. No approval, search, provider request,
+  retry, `Answer now`, or canonical DB mutation occurred.
+- Primary CDP/ledger/SQLite evidence and Luna/low passive observation agree.
+  P44 is live accepted at the product gate and awaits source integration.
+
+## Turn 609 | 2026-09-11
+
+- Opened P44 / [Plan 0351](docs/dev/plans/0351-2026-09-11-chatgpt-current-latest-selection.md)
+  from exact integrated main `50939e52b` after a
+  LitScout attempt stopped before Send on checked ChatGPT label `Latest`.
+- Provider-free RED proved `Latest` classified as null. Exact-family handling
+  now maps it to `instant` in both classifier copies; 136 focused tests, lint,
+  typecheck, build, and diff hygiene pass.
+- P44 owns one install and one frozen LitScout prompt with at most one Send,
+  zero retries, manual approval, and independent ledger/DB reconciliation.
+
 ## Turn 608 | 2026-09-11
 
 - Fresh gates proved P39-P43 local topics clean, remote-equal, ancestral to
