@@ -1,12 +1,12 @@
 # ChatGPT Current Latest Selection | 0351-2026-09-11
 
-State: OPEN
+State: CLOSED
 Lane: P44
-Operational state: PROVIDER_FREE_ACCEPTED_AWAITING_INSTALLED_LIVE
+Operational state: LIVE_ACCEPTED_PRODUCT_GATE_AWAITING_INTEGRATION
 Branch: fix/plan0351-chatgpt-current-latest
 Target: main
 Integration: merge
-Revision: 1 | 2026-09-11
+Revision: 2 | 2026-09-11
 
 ## Stable Objective
 
@@ -27,7 +27,16 @@ app attempt without switching models or bypassing any product approval gate.
 - Focused validation passes 136/136 tests across model selection, composer,
   developer-app, ecosystem-mention, label, and configuration coverage; scoped
   lint, typecheck, production build, and diff hygiene pass.
-- Installation and the one live LitScout attempt remain unspent.
+- The exact user runtime was installed at model-selection SHA-256
+  `ee780789...`, byte-identical to the source build. Expected-account and exact
+  private OAuth-active LitScout qualification passed without submission.
+- The one prompt was committed in conversation
+  `6aa4aa87-e89c-83e9-84dc-c684ef39765e`. ChatGPT completed after six read-only
+  LitScout invocations and stopped before `approve_search_plan`; there were no
+  approval, search, provider, retry, `Answer now`, or canonical DB effects.
+- Primary CDP/ledger/SQLite reconciliation and Luna/low passive observation
+  agree. Receipt:
+  `docs/dev/notes/2026-09-11-plan0351-current-latest-live-acceptance.json`.
 
 ## Execution Graph
 
@@ -67,5 +76,5 @@ app attempt without switching models or bypassing any product approval gate.
 
 ## Definition Of Done
 
-CLS-R1 through CLS-R5 are recorded with exact terminal evidence and integrated,
-whether the one live attempt completes or stops truthfully at a product gate.
+CLS-R1 through CLS-R5 are recorded with exact terminal evidence. Source repair,
+install, and connected product-gate behavior are accepted; integration remains.

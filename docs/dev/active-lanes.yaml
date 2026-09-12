@@ -840,17 +840,17 @@ lanes:
     plan_ref: refs/heads/fix/plan0351-chatgpt-current-latest
     branch: fix/plan0351-chatgpt-current-latest
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: WORKTREE
-    checkpoint: null
+    checkpoint: 9327635d3
     remote_ref: refs/remotes/origin/fix/plan0351-chatgpt-current-latest
     integration: merge
     dependencies: [P43]
     overlaps: [P08, P16, P18, P29]
     reconciled_overlaps: [P08, P16, P18, P29]
     reconciliation_note: P44 owns exact Latest classification, one install, and one foreground LitScout attempt only; it does not absorb aggregate status, Skill execution, scheduler, completion, recovered-conversation, or unrelated browser controls.
-    validation_status: provider-free-accepted-awaiting-installed-live
-    validation_ref: null
+    validation_status: installed-live-accepted-product-gate-awaiting-integration
+    validation_ref: docs/dev/notes/2026-09-11-plan0351-current-latest-live-acceptance.json
     blocker: null
-    disposition: Provider-free repair passes; installed/live attempt remains unspent.
+    disposition: Exact install and one zero-retry LitScout attempt passed; ChatGPT reached and stopped before approve_search_plan with no approval, provider, retry, or canonical DB effect. Integration remains.
     updated_at: 2026-09-11

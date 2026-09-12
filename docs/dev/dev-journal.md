@@ -49569,3 +49569,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - P44 maps exact `Latest` to the instant family without switching models.
   Provider-free validation passes 136 focused tests, lint, typecheck, build,
   and diff hygiene; one exact install and one zero-retry prompt remain.
+## 2026-09-11 | Plan 0351 live accepted at the product gate
+
+- Exact installed/source parity and exact-account LitScout qualification passed.
+  One Send created conversation `6aa4aa87-e89c-83e9-84dc-c684ef39765e`.
+- ChatGPT completed after six read-only LitScout calls and stopped before
+  `approve_search_plan`. Independent reconciliation found zero approval, search,
+  provider, retry, `Answer now`, or canonical DB effects.
