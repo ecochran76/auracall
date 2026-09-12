@@ -862,9 +862,9 @@ lanes:
     branch: fix/plan0352-chatgpt-security-approval
     target: main
     plan_state: CLOSED
-    custody_state: CHECKPOINTED
+    custody_state: PUBLISHED
     checkpoint: 61c62c6d61892a8e570a12097f6e199ac11513de
-    remote_ref: null
+    remote_ref: refs/remotes/origin/fix/plan0352-chatgpt-security-approval
     integration: merge
     dependencies: [P16, P44]
     overlaps: [P08, P16, P18, P29]

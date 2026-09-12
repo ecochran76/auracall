@@ -2,7 +2,7 @@
 
 State: CLOSED
 Lane: P45
-Operational state: PROVIDER_FREE_ACCEPTED_INTEGRATION_READY
+Operational state: PROVIDER_FREE_ACCEPTED_PUBLISHED
 Branch: fix/plan0352-chatgpt-security-approval
 Target: main
 Integration: merge
@@ -41,6 +41,8 @@ persistent approval.
   build, zero-finding scoped lint, diff hygiene, and the 352-candidate plan audit
   with zero errors. Implementation checkpoint: `61c62c6d6`. Receipt:
   `docs/dev/notes/2026-09-12-plan0352-provider-free-acceptance.json`.
+- The two-commit branch is published through closeout `8e4e13b05`; local HEAD
+  equals `origin/fix/plan0352-chatgpt-security-approval`.
 
 ## Execution Graph
 

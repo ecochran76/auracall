@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 614 | 2026-09-12
+
+- Published P45's two-commit stack through closeout `8e4e13b05`; local HEAD and
+  `origin/fix/plan0352-chatgpt-security-approval` are equal.
+- Source remains provider-free accepted. The next gate is non-fast-forward
+  integration into current main, followed by a separately governed exact
+  install and manual-approval live acceptance; neither ran this turn.
+
 ## Turn 613 | 2026-09-12
 
 - P45 provider-free acceptance passes at implementation checkpoint
