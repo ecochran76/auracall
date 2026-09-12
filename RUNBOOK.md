@@ -1,5 +1,16 @@
 # RUNBOOK
 
+## Turn 609 | 2026-09-11
+
+- Opened P44 / [Plan 0351](docs/dev/plans/0351-2026-09-11-chatgpt-current-latest-selection.md)
+  from exact integrated main `50939e52b` after a
+  LitScout attempt stopped before Send on checked ChatGPT label `Latest`.
+- Provider-free RED proved `Latest` classified as null. Exact-family handling
+  now maps it to `instant` in both classifier copies; 136 focused tests, lint,
+  typecheck, build, and diff hygiene pass.
+- P44 owns one install and one frozen LitScout prompt with at most one Send,
+  zero retries, manual approval, and independent ledger/DB reconciliation.
+
 ## Turn 608 | 2026-09-11
 
 - Fresh gates proved P39-P43 local topics clean, remote-equal, ancestral to

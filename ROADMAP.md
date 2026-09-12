@@ -1,5 +1,10 @@
 # Aura-Call Roadmap
 
+- Active P44: [Plan 0351](docs/dev/plans/0351-2026-09-11-chatgpt-current-latest-selection.md)
+  recognizes ChatGPT's checked `Latest` row during read-only current-model
+  observation, then owns one exact install and one zero-retry LitScout app
+  attempt with independent product-state reconciliation.
+
 - Live-accepted integrated P43: [Plan 0350](docs/dev/plans/0350-2026-09-11-final-live-acceptance.md)
   proves exact installed parity, unpiped identity, compact `6Pro` one-Send
   success, and a genuine distinct PDF with zero retries; canonical integration

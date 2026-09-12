@@ -22544,3 +22544,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Keep explicit `Model ...` rows and unclassified submenu/test-id rows on the
   recursive navigation path. A live-shaped fixture must include the provider's
   submenu-like attribute so a simplified row cannot falsely prove acceptance.
+## 2026-09-11 | Current-model observation must classify provider aliases
+
+- A checked provider alias such as `Latest` is still a current-model identity,
+  even when it does not expose a numbered model label. Dropping it from the
+  observed inventory can misreport a read-only `current` strategy as a failed
+  explicit model request.
+- Classify only the exact alias (visible label or test id), preserve its raw
+  observed label, and prove that the checked row settles without an option-row
+  click. Keep lookalikes and unknown submenu rows on existing guarded paths.

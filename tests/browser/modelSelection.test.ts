@@ -59,7 +59,13 @@ describe('browser model selection matchers', () => {
     })).toBe(false);
   });
 
-  it('opens the animated 6 Pro trigger and reads the checked current model', async () => {
+  it.each([
+    { desiredModel: '6 Pro', selectedLabel: '6 Pro' },
+    { desiredModel: 'gpt-5.6-sol', selectedLabel: 'Latest' },
+  ])('opens the model trigger and reads the checked $selectedLabel current model', async ({
+    desiredModel,
+    selectedLabel,
+  }) => {
 		vi.useFakeTimers();
     class FixtureElement extends EventTarget {
       textContent: string;
@@ -89,7 +95,7 @@ describe('browser model selection matchers', () => {
       'aria-label': '6Pro, Pro, 5 of 5',
       'data-animated-slider-trigger': 'true',
     });
-    const selected = new FixtureElement('6 Pro', {
+    const selected = new FixtureElement(selectedLabel, {
       'aria-checked': 'true',
       role: 'menuitemradio',
     });
@@ -113,11 +119,11 @@ describe('browser model selection matchers', () => {
 
     try {
 			const pending = new Function(
-        `return ${buildModelSelectionExpressionForTest('6 Pro', 'current')}`,
+        `return ${buildModelSelectionExpressionForTest(desiredModel, 'current')}`,
       )();
 			await vi.advanceTimersByTimeAsync(25_000);
 			const result = await pending;
-      expect(result).toEqual({ status: 'already-selected', label: '6 Pro' });
+      expect(result).toEqual({ status: 'already-selected', label: selectedLabel });
       expect(triggerClicks).toBe(1);
     } finally {
 			vi.useRealTimers();
@@ -269,6 +275,7 @@ describe('browser model selection matchers', () => {
   });
 
   it.each([
+    ['Latest', 'instant'],
     ['GPT-5.6 Sol', 'sol'],
     ['GPT-5.6 Terra', 'terra'],
     ['GPT-5.6 Luna', 'luna'],

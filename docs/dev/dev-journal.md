@@ -49562,3 +49562,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   owned by zero process working directories. Removed the five local worktrees
   and branches without force; remote recovery refs and canonical receipts
   remain.
+## 2026-09-11 | Plan 0351 current Latest repair opened
+
+- The LitScout attempt stopped before Send because read-only current-model
+  observation discarded ChatGPT's checked `Latest` row as unclassified.
+- P44 maps exact `Latest` to the instant family without switching models.
+  Provider-free validation passes 136 focused tests, lint, typecheck, build,
+  and diff hygiene; one exact install and one zero-retry prompt remain.

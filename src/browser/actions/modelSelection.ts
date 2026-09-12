@@ -169,6 +169,9 @@ function normalizeModelPickerText(value: string | null | undefined): string {
 function classifyModelPickerOption(normalizedText: string, normalizedTestId = ''): ModelOptionKind {
   const text = normalizedText.trim();
   const testId = normalizedTestId.toLowerCase();
+  if (text === 'latest' || testId.includes('latest')) {
+    return 'instant';
+  }
   const startsWith = (pattern: RegExp) => pattern.test(text);
   if (text.includes('gpt 5 6 terra') || testId.includes('terra')) {
     return 'terra';
@@ -428,6 +431,9 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
     const classifyOption = (normalizedText, normalizedTestId) => {
       const text = normalizedText.trim();
       const testId = (normalizedTestId ?? '').toLowerCase();
+      if (text === 'latest' || testId.includes('latest')) {
+        return 'instant';
+      }
       if (text.includes('gpt 5 6 terra') || testId.includes('terra')) {
         return 'terra';
       }
