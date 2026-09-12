@@ -389,6 +389,151 @@ describe("ChatGPT tool approval handling", () => {
 		expect(result.fingerprint).toContain("litscout wants to use a tool");
 	});
 
+	it("detects the exact single-Allow suspicious-instruction app security dialog", () => {
+		const allow = new FixtureElement(
+			"Allow",
+			{ role: "button" },
+			{ left: 220, top: 320, width: 80, height: 40 },
+		);
+		const cancel = new FixtureElement("Cancel", { role: "button" });
+		const securityDialog = new FixtureElement(
+			"Allow ChatGPT to use LitScout? Executes a research action in a project session with zero external calls and zero spending. Suspicious Instruction Tool documentation prescribes classifier treatment and outcome handling. Cancel Allow",
+			{ role: "dialog" },
+		);
+		securityDialog.append(cancel, allow);
+		vi.stubGlobal("Element", FixtureElement);
+		vi.stubGlobal("HTMLElement", FixtureElement);
+		vi.stubGlobal("document", {
+			querySelectorAll: (selector: string) => {
+				if (selector === 'button,[role="button"]') return [cancel, allow];
+				return [];
+			},
+		});
+
+		const expression = buildChatgptToolApprovalProbeExpressionForTest("manual");
+		const result = new Function(`return ${expression}`)();
+
+		expect(result).toMatchObject({
+			status: "approval-required",
+			surfaceKind: "app-security",
+			actionLabel: "Allow",
+			x: 260,
+			y: 340,
+		});
+		expect(result.fingerprint).toContain("allow chatgpt to use litscout?");
+	});
+
+	it("does not classify a generic single-Allow dialog as app security approval", () => {
+		const allow = new FixtureElement("Allow", { role: "button" });
+		const genericDialog = new FixtureElement("Allow notifications? Cancel Allow", {
+			role: "dialog",
+		});
+		genericDialog.append(allow);
+		vi.stubGlobal("Element", FixtureElement);
+		vi.stubGlobal("HTMLElement", FixtureElement);
+		vi.stubGlobal("document", {
+			querySelectorAll: (selector: string) => {
+				if (selector === 'button,[role="button"]') return [allow];
+				return [];
+			},
+		});
+
+		const expression = buildChatgptToolApprovalProbeExpressionForTest("manual");
+		expect(new Function(`return ${expression}`)()).toEqual({ status: "none" });
+	});
+
+	it("exposes app-security approval details in manual mode without clicking", async () => {
+		const evaluate = vi.fn().mockResolvedValue({
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "allow chatgpt to use litscout? suspicious instruction",
+					surfaceKind: "app-security",
+					actionLabel: "Allow",
+					x: 260,
+					y: 340,
+				},
+			},
+		});
+		const dispatchMouseEvent = vi.fn();
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "manual",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).rejects.toMatchObject({
+			message: expect.stringMatching(/app security approval.*suspicious instruction.*allow/i),
+			details: {
+				code: "chatgpt-tool-approval-required",
+				surfaceKind: "app-security",
+				actionLabel: "Allow",
+			},
+		});
+		expect(dispatchMouseEvent).not.toHaveBeenCalled();
+	});
+
+	it("refuses to downgrade always-allow to the one-time app-security Allow action", async () => {
+		const evaluate = vi.fn().mockResolvedValue({
+			result: {
+				value: {
+					status: "approval-required",
+					fingerprint: "allow chatgpt to use litscout? suspicious instruction",
+					surfaceKind: "app-security",
+					actionLabel: "Allow",
+					x: 260,
+					y: 340,
+				},
+			},
+		});
+		const dispatchMouseEvent = vi.fn();
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "always-allow",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).rejects.toMatchObject({
+			message: expect.stringMatching(/one-time allow.*persistent always allow/i),
+			details: {
+				code: "chatgpt-app-security-approval-policy-mismatch",
+				surfaceKind: "app-security",
+				actionLabel: "Allow",
+			},
+		});
+		expect(dispatchMouseEvent).not.toHaveBeenCalled();
+	});
+
+	it("activates the exact app-security Allow action under allow-once", async () => {
+		const approval = {
+			status: "approval-required",
+			fingerprint: "allow chatgpt to use litscout? suspicious instruction",
+			surfaceKind: "app-security",
+			actionLabel: "Allow",
+			activated: true,
+			x: 260,
+			y: 340,
+		};
+		const evaluate = vi
+			.fn()
+			.mockResolvedValueOnce({ result: { value: { ...approval, activated: false } } })
+			.mockResolvedValueOnce({ result: { value: approval } })
+			.mockResolvedValueOnce({ result: { value: { status: "none" } } });
+		const dispatchMouseEvent = vi.fn().mockResolvedValue(undefined);
+		const handle = createChatgptToolApprovalHandler({
+			client: createClient(evaluate, dispatchMouseEvent),
+			policy: "allow-once",
+			logger: vi.fn<(message: string) => void>(),
+		});
+
+		await expect(handle()).resolves.toMatchObject({
+			status: "approved",
+			action: "allow-once",
+			label: "Allow",
+		});
+		expect(dispatchMouseEvent).toHaveBeenCalledTimes(3);
+	});
+
 	it("fingerprints the exact approval card instead of the shared assistant turn prefix", () => {
 		const allowOnce = new FixtureElement("Allow once", { role: "button" });
 		const alwaysAllow = new FixtureElement("Always allow", { role: "button" });

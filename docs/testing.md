@@ -108,6 +108,12 @@
     replacement has identical visible text, two sequential cards in one
     assistant turn, one-attempt fencing for an unchanged DOM card, and `Answer
     now` exclusion
+  - ChatGPT app-security consent is a separate exact surface: require the
+    `Allow ChatGPT to use <app>?` heading, visible `Suspicious Instruction`
+    warning, and exactly one `Allow` action in the same dialog. Generic
+    single-Allow dialogs remain unmatched; manual mode exposes the surface,
+    allow-once may activate it, and always-allow fails closed rather than
+    downgrading persistent consent
   - foreground ChatGPT lock lifetime must cover response wait, tool approval,
     and final answer extraction, not only prompt dispatch. Run
     `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser-service/operationDispatcher.test.ts tests/accountMirror/refreshService.test.ts tests/browser/chatgptToolApproval.test.ts`;
@@ -180,8 +186,9 @@
     exact `ecosystemMention` plugin pill. Source `apps test --submit` carries
     the accepted plugin identities into the shared prompt path and refuses a
     non-fresh or nonempty composer, a document-reference pill, or the wrong app identity
-    before Send. The 2026-09-09 installed runtime has exact build parity for
-    this repair; provider/live behavior remains unaccepted until separately authorized
+    before Send. It then uses the shared assistant-response lifecycle so tool
+    and app-security approval gates are detected and exposed. Provider/live
+    behavior remains unaccepted until separately authorized
   - developer-app submit tests preserve the active Chat model. Record the
     visible composer model separately from any configured/resolved `--model`
     value; the latter does not prove a UI selection

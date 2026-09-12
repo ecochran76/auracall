@@ -235,7 +235,7 @@ describe("deriveChatgptDeveloperAppState", () => {
 		);
 		expect(runPrompt).toHaveBeenCalledWith({
 			prompt: "Use only LitScout.",
-			completionMode: "prompt_submitted",
+			completionMode: "assistant_response",
 			timeoutMs: 120_000,
 			modelStrategy: "current",
 			ecosystemMention: {

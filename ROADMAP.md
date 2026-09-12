@@ -1,5 +1,10 @@
 # Aura-Call Roadmap
 
+- Active P45: [Plan 0352](docs/dev/plans/0352-2026-09-12-chatgpt-app-security-approval.md)
+  detects ChatGPT's single-`Allow` suspicious-instruction app-security dialog
+  and routes developer-app test submissions through the shared response and
+  approval lifecycle. The current slice is provider-free only.
+
 - Live-accepted integrated P44: [Plan 0351](docs/dev/plans/0351-2026-09-11-chatgpt-current-latest-selection.md)
   recognizes ChatGPT's checked `Latest` row during read-only current-model
   observation. Exact install and one zero-retry LitScout app attempt reached and
@@ -95,8 +100,8 @@
 
 ### Current Execution Board
 
-Status: P43 final live acceptance integrated; end-to-end recovery accepted
-Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P43 (completed/integrated); P08, P16, P18, P29 (open)
+Status: P45 provider-free ChatGPT app-security approval repair active
+Lanes: P01-P07, P09-P15, P17, P19-P28, P30-P44 (completed/integrated); P08, P16, P18, P29, P45 (open)
 
 - Completed-with-terminal-evidence installed/live successor:
   [Plan 0349](docs/dev/plans/0349-2026-09-11-installed-plan0348-live-acceptance.md)

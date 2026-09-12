@@ -149,8 +149,11 @@ auracall --profile wsl-chrome-3 apps --target chatgpt test Corel33t \
 # Private developer apps are selected in Chat through the composer @mention
 # ecosystem picker, not the generic top-level tools menu. Source
 # `apps test --submit` uses that path and verifies the exact composer-local
-# plugin identity before Send. Installed acceptance requires a user runtime
-# containing that repair; an older installed 0.1.1 build remains ineligible.
+# plugin identity before Send, then remains in the shared response lifecycle so
+# tool and app-security approvals are detected. Manual mode exposes the exact
+# approval for browser review; allow-once may select a one-time `Allow`, while
+# always-allow refuses to downgrade persistent consent. Installed acceptance
+# requires a user runtime containing that repair.
 # Developer-app tests preserve the active Chat model (`modelStrategy=current`);
 # a separately resolved `--model` value is not proof that the UI switched.
 # Create, refresh, submitted tests, and uninstall require --expected-account

@@ -25,6 +25,9 @@ type ToolApprovalControlObservation = {
 	};
 };
 
+type ToolApprovalActionLabel = "Allow" | "Allow once" | "Always allow";
+type ToolApprovalSurfaceKind = "app-security" | "tool";
+
 type ToolApprovalProbe =
 	| { status: "none" }
 	| { status: "ambiguous"; count: number }
@@ -33,7 +36,8 @@ type ToolApprovalProbe =
 			fingerprint: string;
 			surfaceId?: string;
 			controlId?: string;
-			actionLabel: "Allow once" | "Always allow";
+			surfaceKind: ToolApprovalSurfaceKind;
+			actionLabel: ToolApprovalActionLabel;
 			activated?: boolean;
 			x: number;
 			y: number;
@@ -45,7 +49,8 @@ export type ChatgptToolApprovalObservation = {
 	observedAt: string;
 	confirmationAttempt?: number;
 	status: ToolApprovalProbe["status"];
-	actionLabel?: "Allow once" | "Always allow";
+	surfaceKind?: ToolApprovalSurfaceKind;
+	actionLabel?: ToolApprovalActionLabel;
 	surfaceId?: string;
 	controlId?: string;
 	x?: number;
@@ -58,7 +63,7 @@ export type ChatgptToolApprovalOutcome =
 	| {
 			status: "approved";
 			action: Exclude<ChatgptToolApprovalPolicy, "manual">;
-			label: "Allow once" | "Always allow";
+			label: ToolApprovalActionLabel;
 			fingerprint: string;
 			surfaceId?: string;
 			controlId?: string;
@@ -97,6 +102,7 @@ export function createChatgptToolApprovalHandler(options: {
 			status: probe.status,
 			...(probe.status === "approval-required"
 				? {
+						surfaceKind: probe.surfaceKind,
 						actionLabel: probe.actionLabel,
 						surfaceId: probe.surfaceId,
 						controlId: probe.controlId,
@@ -113,7 +119,7 @@ export function createChatgptToolApprovalHandler(options: {
 		fingerprint: string;
 		surfaceId?: string;
 		controlId?: string;
-		actionLabel: "Allow once" | "Always allow";
+		actionLabel: ToolApprovalActionLabel;
 	}): Promise<ToolApprovalProbe> => {
 		const { result } = await options.client.Runtime.evaluate({
 			expression: buildChatgptToolApprovalProbeExpression(options.policy, activation),
@@ -139,12 +145,28 @@ export function createChatgptToolApprovalHandler(options: {
 
 		if (options.policy === "manual") {
 			throw new BrowserAutomationError(
-				"ChatGPT is waiting for third-party tool approval, but the approval policy is manual. " +
-					"Set ChatGPT tool approval to allow-once or always-allow for unattended runs.",
+				probe.surfaceKind === "app-security"
+					? "ChatGPT is waiting for app security approval. Review the Suspicious Instruction warning and select Allow in the browser, or use allow-once for an explicitly authorized unattended run."
+					: "ChatGPT is waiting for third-party tool approval, but the approval policy is manual. " +
+						"Set ChatGPT tool approval to allow-once or always-allow for unattended runs.",
 				{
 					stage: "chatgpt-tool-approval",
 					code: "chatgpt-tool-approval-required",
 					fingerprint: probe.fingerprint,
+					surfaceKind: probe.surfaceKind,
+					actionLabel: probe.actionLabel,
+				},
+			);
+		}
+		if (probe.surfaceKind === "app-security" && options.policy === "always-allow") {
+			throw new BrowserAutomationError(
+				"ChatGPT's app security dialog offers only one-time Allow; refusing to treat it as persistent Always allow consent.",
+				{
+					stage: "chatgpt-tool-approval",
+					code: "chatgpt-app-security-approval-policy-mismatch",
+					fingerprint: probe.fingerprint,
+					surfaceKind: probe.surfaceKind,
+					actionLabel: probe.actionLabel,
 				},
 			);
 		}
@@ -370,7 +392,7 @@ function buildChatgptToolApprovalProbeExpression(
 		fingerprint: string;
 		surfaceId?: string;
 		controlId?: string;
-		actionLabel: "Allow once" | "Always allow";
+		actionLabel: ToolApprovalActionLabel;
 	},
 ): string {
 	const desiredLabel = policy === "always-allow" ? "always allow" : "allow once";
@@ -404,7 +426,7 @@ function buildChatgptToolApprovalProbeExpression(
     const controls = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible);
     const approvalControls = controls.filter((node) => {
       const label = labelOf(node);
-      return label === 'allow once' || label === 'always allow';
+      return label === 'allow' || label === 'allow once' || label === 'always allow';
     });
     const roots = [];
     for (const control of approvalControls) {
@@ -418,15 +440,27 @@ function buildChatgptToolApprovalProbeExpression(
       const rootControls = Array.from(root.querySelectorAll('button,[role="button"]')).filter(visible);
       const once = rootControls.filter((node) => labelOf(node) === 'allow once');
       const always = rootControls.filter((node) => labelOf(node) === 'always allow');
-      if (once.length !== 1 || always.length !== 1) continue;
-      const target = ${JSON.stringify(desiredLabel)} === 'always allow' ? always[0] : once[0];
+      const allow = rootControls.filter((node) => labelOf(node) === 'allow');
+      const rootText = normalize(root.textContent || '');
+      const pairedToolApproval = once.length === 1 && always.length === 1 && allow.length === 0;
+      const appSecurityApproval =
+        allow.length === 1 && once.length === 0 && always.length === 0 &&
+        /allow chatgpt to use [^?]+\\?/.test(rootText) &&
+        rootText.includes('suspicious instruction');
+      if (!pairedToolApproval && !appSecurityApproval) continue;
+      const target = appSecurityApproval
+        ? allow[0]
+        : ${JSON.stringify(desiredLabel)} === 'always allow' ? always[0] : once[0];
       const rect = target.getBoundingClientRect();
       matches.push({
         status: 'approval-required',
-        fingerprint: normalize(root.textContent || '').slice(0, 500),
+        fingerprint: rootText.slice(0, 500),
         surfaceId: identityFor(root, 'approval-surface'),
         controlId: identityFor(target, 'approval-control'),
-        actionLabel: labelOf(target) === 'always allow' ? 'Always allow' : 'Allow once',
+        surfaceKind: appSecurityApproval ? 'app-security' : 'tool',
+        actionLabel: appSecurityApproval
+          ? 'Allow'
+          : labelOf(target) === 'always allow' ? 'Always allow' : 'Allow once',
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
         target,
@@ -474,6 +508,7 @@ function buildChatgptToolApprovalProbeExpression(
       fingerprint: match.fingerprint,
       surfaceId: match.surfaceId,
       controlId: match.controlId,
+      surfaceKind: match.surfaceKind,
       actionLabel: match.actionLabel,
       activated,
       x: match.x,
@@ -505,7 +540,7 @@ export function buildChatgptToolApprovalProbeExpressionForTest(
 		fingerprint: string;
 		surfaceId?: string;
 		controlId?: string;
-		actionLabel: "Allow once" | "Always allow";
+		actionLabel: ToolApprovalActionLabel;
 	},
 ): string {
 	return buildChatgptToolApprovalProbeExpression(policy, activation);

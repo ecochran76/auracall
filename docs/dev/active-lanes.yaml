@@ -855,3 +855,24 @@ lanes:
     integration_receipt: a47801d6a440685c0822e843421b184fa89961a5
     disposition: Exact install and one zero-retry LitScout attempt passed; ChatGPT reached and stopped before approve_search_plan with no approval, provider, retry, or canonical DB effect. The repair and receipt are integrated into main.
     updated_at: 2026-09-11
+  - id: P45
+    objective: Detect and expose ChatGPT's single-action app-security approval through the shared developer-app response lifecycle.
+    plan: docs/dev/plans/0352-2026-09-12-chatgpt-app-security-approval.md
+    plan_ref: refs/heads/fix/plan0352-chatgpt-security-approval
+    branch: fix/plan0352-chatgpt-security-approval
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE
+    checkpoint: null
+    remote_ref: null
+    integration: merge
+    dependencies: [P16, P44]
+    overlaps: [P08, P16, P18, P29]
+    reconciled_overlaps: [P08, P16, P18, P29]
+    reconciliation_note: P45 owns provider-free security-dialog detection and shared response-lifecycle selection only; no installed, live, provider, LitScout retry, scheduler, completion, or unrelated browser control effect.
+    validation_status: provider-free-active
+    validation_ref: null
+    blocker: null
+    integration_receipt: null
+    disposition: Exact live failure is reconciled; provider-free RED and repair are active.
+    updated_at: 2026-09-12

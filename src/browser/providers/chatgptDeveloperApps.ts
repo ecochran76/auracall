@@ -129,7 +129,7 @@ export interface ChatgptDeveloperAppBrowserClient {
 	): Promise<{ client: ChromeClient; port: number }>;
 	runPrompt(input: {
 		prompt: string;
-		completionMode: "prompt_submitted";
+		completionMode: "assistant_response" | "prompt_submitted";
 		timeoutMs?: number | null;
 		modelStrategy?: "current";
 		ecosystemMention?: {
@@ -379,7 +379,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		const testBrowser = await this.createBrowser(testConfig);
 		const result = await testBrowser.runPrompt({
 			prompt,
-			completionMode: "prompt_submitted",
+			completionMode: "assistant_response",
 			timeoutMs: 120_000,
 			modelStrategy: "current",
 			ecosystemMention: {
@@ -389,7 +389,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		});
 		return {
 			status: "completed",
-			message: `${app.name} test prompt submitted${result.conversationId ? ` in conversation ${result.conversationId}` : ""}.`,
+			message: `${app.name} test prompt completed${result.conversationId ? ` in conversation ${result.conversationId}` : ""}.`,
 			currentUrl: result.url ?? null,
 			app,
 		};

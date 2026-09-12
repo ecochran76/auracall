@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 612 | 2026-09-12
+
+- Opened P45 / [Plan 0352](docs/dev/plans/0352-2026-09-12-chatgpt-app-security-approval.md)
+  from exact integrated main `da5acac0a2` after the operator manually continued
+  the retained LitScout conversation.
+- ChatGPT exposed a single-action `Allow ChatGPT to use LitScout?` security
+  dialog with `Suspicious Instruction`; AuraCall currently detects only paired
+  `Allow once` / `Always allow` tool cards and its developer-app submit helper
+  exits before the shared response/approval watcher.
+- The operator's one manual approval reached LitScout once. LitScout rejected
+  the exact action during pre-effect validation; exact-action execution,
+  attempt, receipt, external-effect, and Session 129 membership state did not
+  advance. No retry is allowed or planned.
+- P45 owns a provider-free exact-dialog fixture and shared-lifecycle repair.
+  It authorizes no install, browser/provider action, approval click, or LitScout
+  retry.
+
 ## Turn 611 | 2026-09-11
 
 - Merged exact published P44 topic `e551504d4` non-fast-forward into `main` at
