@@ -1,5 +1,13 @@
 # RUNBOOK
 
+## Turn 611 | 2026-09-11
+
+- Merged exact published P44 topic `e551504d4` non-fast-forward into `main` at
+  `a47801d6a`. Integration performed no additional browser/provider action.
+- The checked-`Latest` repair, exact install, one-Send LitScout run, correct
+  `approve_search_plan` stop, and independent zero-mutation reconciliation are
+  now canonical.
+
 ## Turn 610 | 2026-09-11
 
 - P44 installed exact source/runtime model-selection bytes at SHA-256

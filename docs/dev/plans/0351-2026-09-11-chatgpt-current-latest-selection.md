@@ -2,11 +2,11 @@
 
 State: CLOSED
 Lane: P44
-Operational state: LIVE_ACCEPTED_PRODUCT_GATE_AWAITING_INTEGRATION
+Operational state: LIVE_ACCEPTED_PRODUCT_GATE_INTEGRATED
 Branch: fix/plan0351-chatgpt-current-latest
 Target: main
 Integration: merge
-Revision: 2 | 2026-09-11
+Revision: 3 | 2026-09-11
 
 ## Stable Objective
 
@@ -37,6 +37,8 @@ app attempt without switching models or bypassing any product approval gate.
 - Primary CDP/ledger/SQLite reconciliation and Luna/low passive observation
   agree. Receipt:
   `docs/dev/notes/2026-09-11-plan0351-current-latest-live-acceptance.json`.
+- Exact published topic `e551504d4` merged non-fast-forward into `main` at
+  `a47801d6a`; integration ran no additional browser or provider effect.
 
 ## Execution Graph
 
@@ -77,4 +79,4 @@ app attempt without switching models or bypassing any product approval gate.
 ## Definition Of Done
 
 CLS-R1 through CLS-R5 are recorded with exact terminal evidence. Source repair,
-install, and connected product-gate behavior are accepted; integration remains.
+install, connected product-gate behavior, and integration are accepted.

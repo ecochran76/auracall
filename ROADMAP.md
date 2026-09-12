@@ -1,10 +1,11 @@
 # Aura-Call Roadmap
 
-- Completed P44 awaiting integration: [Plan 0351](docs/dev/plans/0351-2026-09-11-chatgpt-current-latest-selection.md)
+- Live-accepted integrated P44: [Plan 0351](docs/dev/plans/0351-2026-09-11-chatgpt-current-latest-selection.md)
   recognizes ChatGPT's checked `Latest` row during read-only current-model
   observation. Exact install and one zero-retry LitScout app attempt reached and
   stopped at the real `approve_search_plan` product gate with no approval,
   provider, retry, or canonical DB effect.
+  Canonical integration is `a47801d6a`.
 
 - Live-accepted integrated P43: [Plan 0350](docs/dev/plans/0350-2026-09-11-final-live-acceptance.md)
   proves exact installed parity, unpiped identity, compact `6Pro` one-Send
