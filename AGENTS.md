@@ -175,6 +175,8 @@ Read and follow:
 - `docs/dev/policies/0028-active-lane-coordination.md`
 - `docs/dev/policies/0029-code-testing-discipline.md`
 - `docs/dev/policies/0030-model-selection-and-calibration.md`
+- `docs/dev/policies/0031-work-item-traceability.md`
+- `docs/dev/policies/0032-collaborative-development-workflow.md`
 
 ## Scope
 
