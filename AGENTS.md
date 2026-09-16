@@ -177,6 +177,8 @@ Read and follow:
 - `docs/dev/policies/0030-model-selection-and-calibration.md`
 - `docs/dev/policies/0031-work-item-traceability.md`
 - `docs/dev/policies/0032-collaborative-development-workflow.md`
+- `docs/dev/policies/0033-forge-issue-reporting.md`
+- `docs/dev/policies/0034-github-issue-operations.md`
 
 ## Scope
 

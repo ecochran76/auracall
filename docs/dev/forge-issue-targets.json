@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "id": "github-ecochran76-auracall",
+      "forge": "github",
+      "host": "github.com",
+      "repository": "ecochran76/auracall",
+      "relationship": "owned",
+      "allowed_actions": [
+        "read"
+      ],
+      "security_route": "none",
+      "label_map": {}
+    }
+  ]
+}
+
