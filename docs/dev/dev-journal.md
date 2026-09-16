@@ -48362,3 +48362,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - No GitHub issue, label, assignment, milestone, Project, PR, repository
   setting, branch, or worktree mutation was performed as part of provider
   validation.
+
+## 2026-09-16 | GitHub issue operations configured
+
+- Under explicit operator direction, enabled GitHub Issues and private
+  vulnerability reporting on owned fork `ecochran76/auracall`; fresh provider
+  readback confirms both features are enabled.
+- Expanded the repo-local target registry to allow read, create, comment, edit,
+  existing-label application, close, and reopen. Assignment, milestones,
+  Projects/planning, label creation, transfer, and repository-setting changes
+  remain excluded.
+- Mapped the existing GitHub labels without creating or changing provider
+  labels. No issue, comment, label application, assignment, milestone, Project,
+  PR, branch, or worktree was created or changed.

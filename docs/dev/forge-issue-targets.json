@@ -8,10 +8,44 @@
       "repository": "ecochran76/auracall",
       "relationship": "owned",
       "allowed_actions": [
-        "read"
+        "read",
+        "create",
+        "comment",
+        "edit",
+        "apply_labels",
+        "close",
+        "reopen"
       ],
-      "security_route": "none",
-      "label_map": {}
+      "security_route": "private_vulnerability_reporting",
+      "label_map": {
+        "intent/defect": {
+          "provider_label": "bug"
+        },
+        "intent/documentation": {
+          "provider_label": "documentation"
+        },
+        "intent/feature": {
+          "provider_label": "enhancement"
+        },
+        "intent/question": {
+          "provider_label": "question"
+        },
+        "disposition/duplicate": {
+          "provider_label": "duplicate"
+        },
+        "disposition/invalid": {
+          "provider_label": "invalid"
+        },
+        "disposition/wontfix": {
+          "provider_label": "wontfix"
+        },
+        "contribution/good-first-issue": {
+          "provider_label": "good first issue"
+        },
+        "attention/help-wanted": {
+          "provider_label": "help wanted"
+        }
+      }
     }
   ]
 }

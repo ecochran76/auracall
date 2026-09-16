@@ -21,16 +21,20 @@
   explicitly adopts Graphiti discovery; this slice queried the available
   `openclaw_ec_main` group, found no AuraCall-relevant recall, and used current
   repo/provider evidence instead.
-- Current provider readback: authenticated actor `ecochran76` has `ADMIN` on
-  owned fork `ecochran76/auracall`, but GitHub Issues and private vulnerability
-  reporting are disabled.
-- Registry decision: allowlist read-only inspection, no issue mutation, no
-  label mappings, and no security-report route. Enabling GitHub features or
-  granting mutation actions requires a separate explicit decision and fresh
-  provider preflight.
-- Behavioral evidence: policy wiring and fail-closed preflight are validated;
-  issue creation, comments, labels, assignments, milestones, Projects, closure,
-  and repository-setting changes are not authorized and were not exercised.
+- Initial provider readback: authenticated actor `ecochran76` had `ADMIN` on
+  owned fork `ecochran76/auracall`, while GitHub Issues and private
+  vulnerability reporting were disabled.
+- Follow-up configuration: explicit operator direction enabled GitHub Issues
+  and private vulnerability reporting. Fresh readback reports both enabled.
+- Registry decision: allowlist read, create, comment, edit, existing-label
+  application, close, and reopen. Assignment, milestones, Projects/planning,
+  label creation, transfer, and repository-setting changes remain outside the
+  allowlist.
+- Label mappings use only the nine exact existing GitHub labels. No label was
+  created, renamed, recolored, or deleted.
+- Behavioral evidence: repository feature configuration and read-only
+  preflight are validated. No issue, comment, label application, assignment,
+  milestone, Project, PR, branch, or worktree was created or changed.
 - Fit assessment: the installed selector cleanly identified only the two
   missing issue modules. The existing pull-request and worktree policies remain
   the authoritative local contracts.
@@ -49,7 +53,12 @@
 - Goal policy audit: zero problems.
 - Active planning audit: four pre-existing Plan 0017/0018 metadata findings;
   this adoption adds no plan or planning-contract change.
-- Live read-only forge preflight: resolved actor `ecochran76`, role `ADMIN`, and
-  repository `ecochran76/auracall`, then failed closed because the issue surface
-  is disabled. It reported `operator_authority_verified: false` and
-  `mutation_authorized: false`.
+- Initial live read-only forge preflight resolved actor `ecochran76`, role
+  `ADMIN`, and repository `ecochran76/auracall`, then failed closed because the
+  issue surface was disabled. Post-configuration preflights validate the
+  enabled surface and exact label mappings while continuing to report
+  `operator_authority_verified: false` and `mutation_authorized: false`.
+- Post-configuration read-only preflights passed for read, comment, edit, close,
+  reopen, and create plus application of all nine mapped labels. The create
+  preflight found no duplicate for its non-secret validation marker and did not
+  perform a write.
