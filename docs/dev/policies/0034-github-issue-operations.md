@@ -36,4 +36,3 @@
 Prefer explicit `--hostname` or host-qualified targeting for GitHub Enterprise.
 Keep fine-grained token scopes least-privilege and do not print tokens in
 diagnostic output.
-

@@ -58,4 +58,3 @@ Adopt this provider-neutral module with `work-item-traceability`, then add the
 provider adapter for each forge in use. Keep the registry at
 `docs/dev/forge-issue-targets.json` and run the installed selector's read-only
 `preflight_forge_issue.py` before proposing a provider mutation.
-
