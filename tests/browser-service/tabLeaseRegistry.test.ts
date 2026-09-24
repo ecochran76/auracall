@@ -1,6 +1,10 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { createBrowserOperationDispatcher } from "../../packages/browser-service/src/service/operationDispatcher.js";
 import {
+	createFileBackedBrowserTabLeaseRegistry,
 	createInMemoryBrowserTabLeaseRegistry,
 	type TabLeaseScope,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
@@ -178,10 +182,12 @@ describe("tabLeaseRegistry (package)", () => {
 		});
 		expect(collision.ok).toBe(false);
 		if (!collision.ok) expect(collision.conflict.kind).toBe("workload-owned");
-		expect(await registry.findByWorkload(scope, {
-			kind: "new-conversation",
-			reservationId: "reservation-b",
-		})).toMatchObject({ targetId: "target-b", revision: 1 });
+		expect(
+			await registry.findByWorkload(scope, {
+				kind: "new-conversation",
+				reservationId: "reservation-b",
+			}),
+		).toMatchObject({ targetId: "target-b", revision: 1 });
 	});
 
 	test("extends idle lifetime only for meaningful use and never past absolute expiry", async () => {
@@ -324,10 +330,12 @@ describe("tabLeaseRegistry (package)", () => {
 				finalDisposition: "closed",
 			},
 		});
-		expect(await registry.findByWorkload(scope, {
-			kind: "conversation",
-			conversationId: "conversation-a",
-		})).toBeNull();
+		expect(
+			await registry.findByWorkload(scope, {
+				kind: "conversation",
+				conversationId: "conversation-a",
+			}),
+		).toBeNull();
 	});
 
 	test("keeps missing or restart-unverified targets fenced as lost evidence", async () => {
@@ -378,5 +386,82 @@ describe("tabLeaseRegistry (package)", () => {
 		});
 		expect(duplicateTarget).toMatchObject({ ok: false, conflict: { kind: "target-owned" } });
 		expect(await registry.listFencedTargetIds(scope)).toEqual(["target-a"]);
+	});
+
+	test("persists uniqueness atomically across file-backed registry instances", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-tab-leases-"));
+		try {
+			let sequence = 0;
+			const options = {
+				registryRoot: directory,
+				createLeaseId: () => `lease-${++sequence}`,
+			};
+			const firstRegistry = createFileBackedBrowserTabLeaseRegistry(options);
+			const secondRegistry = createFileBackedBrowserTabLeaseRegistry(options);
+			const first = await firstRegistry.reserve({
+				scope,
+				targetId: "target-a",
+				workload: { kind: "conversation", conversationId: "conversation-a" },
+				operationId: "operation-a",
+				now: "2026-09-24T12:00:00.000Z",
+				idleTtlMs: 60_000,
+				absoluteTtlMs: 3_600_000,
+			});
+			expect(first.ok).toBe(true);
+
+			const duplicate = await secondRegistry.reserve({
+				scope,
+				targetId: "target-a",
+				workload: { kind: "conversation", conversationId: "conversation-b" },
+				operationId: "operation-b",
+				now: "2026-09-24T12:00:01.000Z",
+				idleTtlMs: 60_000,
+				absoluteTtlMs: 3_600_000,
+			});
+			expect(duplicate).toMatchObject({ ok: false, conflict: { kind: "target-owned" } });
+
+			const second = await secondRegistry.reserve({
+				scope,
+				targetId: "target-b",
+				workload: { kind: "conversation", conversationId: "conversation-b" },
+				operationId: "operation-b",
+				now: "2026-09-24T12:00:01.000Z",
+				idleTtlMs: 60_000,
+				absoluteTtlMs: 3_600_000,
+			});
+			expect(second.ok).toBe(true);
+
+			const concurrent = await Promise.all([
+				firstRegistry.reserve({
+					scope,
+					targetId: "target-c",
+					workload: { kind: "conversation", conversationId: "conversation-c" },
+					operationId: "operation-c",
+					now: "2026-09-24T12:00:02.000Z",
+					idleTtlMs: 60_000,
+					absoluteTtlMs: 3_600_000,
+				}),
+				secondRegistry.reserve({
+					scope,
+					targetId: "target-c",
+					workload: { kind: "conversation", conversationId: "conversation-d" },
+					operationId: "operation-d",
+					now: "2026-09-24T12:00:02.000Z",
+					idleTtlMs: 60_000,
+					absoluteTtlMs: 3_600_000,
+				}),
+			]);
+			expect(concurrent.filter((result) => result.ok)).toHaveLength(1);
+			expect(concurrent.filter((result) => !result.ok)).toHaveLength(1);
+
+			const restartedRegistry = createFileBackedBrowserTabLeaseRegistry(options);
+			expect((await restartedRegistry.list()).map((lease) => lease.targetId)).toEqual([
+				"target-a",
+				"target-b",
+				"target-c",
+			]);
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
 	});
 });

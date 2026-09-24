@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 3
+Plan version: 4
 
 ## Stable Objective
 
@@ -28,10 +28,11 @@ provider-neutral.
 - The operator authorized implementation with parallel subagents and calibrated
   model choice. P52 is owned by issue 46 and branch
   `feat/issue-46-browser-tab-affinity`.
-- The current implementation authority is Packet 1 provider-free plus ordinary
-  in-envelope validation, repair, documentation, commit, push, and pull-request
-  workflow. Installation, browser launch, provider interaction, scheduler
-  control, and live acceptance remain outside this packet.
+- The current implementation authority is provider-free Packet 1 contract work
+  plus the bounded Packet 2 registry adapter, ordinary in-envelope validation,
+  repair, documentation, commit, push, and pull-request workflow. Installation,
+  browser launch, provider interaction, scheduler control, and live acceptance
+  remain outside this authority.
 - Packet 1's first vertical tracer is GREEN: a separate provider-neutral
   in-memory tab-lease registry allows two conversation reservations and one
   live-follow crawler on distinct exact targets while rejecting duplicate
@@ -44,6 +45,11 @@ provider-neutral.
   fail-closed lost/restart-unverified target evidence. Generic discovery can
   consume the registry's exact fenced-target list without learning lifecycle
   internals.
+- The file-backed adapter stores the entire versioned registry snapshot behind
+  one cross-process lock and temp-file fsync/rename transition. Concurrent
+  instances enforce the same target/workload uniqueness, and a restarted
+  instance reconstructs the durable lease evidence without treating it as
+  independently verified target liveness.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -528,3 +534,20 @@ Checkpoint 2026-09-24, lifecycle continuation:
   after the prior three reviews converged on the registry seam
 - `review_status`: focused self-review retained profile-control serialization,
   exact-workload-only acquisition, revision fencing, and fail-closed lost state
+
+Checkpoint 2026-09-24, file-backed adapter:
+
+- `plan_version`: 4
+- `state_transition`: OPEN -> OPEN; bounded Packet 2 persistence tracer GREEN
+- `acceptance_state`: partial provider-free acceptance; 9 lease-registry tests
+  and 11 compatibility-dispatcher tests pass with typecheck
+- `progress_classification`: forward progress
+- `evidence`: two file-backed instances race for one exact target, exactly one
+  succeeds, and a restarted instance reads the complete versioned snapshot
+- `material_blockers`: none for provider-free conflict and cancellation work
+- `next_action_or_stop_reason`: freeze target-action counters and provider
+  warning admission, then complete profile-control conflict and cancellation
+  fixtures before production integration
+- `delegation_status`: no new workers
+- `review_status`: persistence remains one atomic registry transition rather
+  than independent per-target files, preserving workload-rebind uniqueness

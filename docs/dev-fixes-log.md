@@ -22741,3 +22741,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Do not wire the registry into production until rebinding, lifetime,
   reconciliation, aggregate interaction admission, and provider hard stops are
   covered by provider-free fixtures.
+
+## 2026-09-24 | Persist tab leases as one atomic registry transition
+
+- Per-target lock files cannot atomically preserve both exact-target uniqueness
+  and workload uniqueness when a new-conversation reservation is rebound to a
+  provider conversation ID.
+- Persist the complete versioned lease registry behind one cross-process lock,
+  using a synced temporary file and atomic rename. A restart reconstructs
+  evidence, not live-target authority; reconciliation must still verify the
+  target before use.

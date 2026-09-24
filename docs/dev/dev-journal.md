@@ -50024,3 +50024,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Eight lease tests, eleven compatibility-dispatcher regressions, typecheck,
   and production build pass. No production caller, browser, provider,
   scheduler, installed runtime, or live surface was changed or exercised.
+
+## 2026-09-24 | Plan 0359 file-backed lease registry tracer
+
+- Added a file-backed adapter that performs every registry mutation under one
+  cross-process lock and replaces one versioned snapshot through temp-file
+  fsync/rename. This keeps target and workload indexes atomic during
+  reservation-to-conversation rebinding.
+- Two registry instances racing for the same exact target produce one winner
+  and one conflict; a fresh instance reconstructs all committed leases.
+- Nine lease-registry tests, eleven compatibility-dispatcher tests, and
+  typecheck pass. Production dispatch remains serialized and no browser or
+  provider effect ran.
