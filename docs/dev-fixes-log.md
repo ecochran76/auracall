@@ -22904,3 +22904,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   reacquired tab still has an earlier operation attached.
 - Treat unleased live provider tabs as census evidence only. Report aggregate
   attention without adoption, navigation, focus, refresh, or close authority.
+
+## 2026-09-24 | Settle durable interaction evidence before idling an effectful tab
+
+- A successful provider response proves an effect even if the aggregate ledger
+  cannot subsequently settle. Do not mark the exact tab idle and reusable until
+  that durable settlement succeeds.
+- If settlement fails after the effect is observed, heartbeat the lease as
+  `outcome-unknown`, idle it only in that fenced state, and reject later
+  reacquisition until exact reconciliation proves retry safety.
+- Keep this ordering distinct from pre-effect provisioning failures, where an
+  idle `none` lease remains safe because no prompt was submitted.

@@ -50328,3 +50328,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free work is accepted. Packet 7 remains unrun because installation,
   browser/provider interaction, exact account/profile selection, and live
   acceptance were not authorized; serialized compatibility remains default.
+
+## 2026-09-24 | Post-effect ledger settlement fence
+
+- Read-only branch review found that foreground prompt success idled a settled
+  tab before durable interaction-ledger settlement. A ledger failure could
+  therefore surface as a caller error while leaving an observed provider effect
+  on a reusable tab.
+- Successful ledger settlement now precedes the idle transition. A failed
+  settlement marks the exact lease outcome-unknown and reacquisition fails
+  closed.
+- Four focused suites pass with 14 tests; typecheck, build, scoped Biome, lint,
+  and diff hygiene pass. Two broad reruns encountered unrelated timing flakes
+  in rate-limit spacing and HTTP background drain; each exact failure passed in
+  isolation. No browser or provider effect ran.

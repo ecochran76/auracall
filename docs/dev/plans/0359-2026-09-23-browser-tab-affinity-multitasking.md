@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 25
+Plan version: 26
 
 ## Stable Objective
 
@@ -1178,3 +1178,30 @@ Checkpoint 2026-09-24, provider-free completion audit:
   and deterministic-suite evidence; installed/live coexistence, runtime byte
   parity, real provider warning absence, and attributable final browser state
   remain deliberately unclaimed
+
+Checkpoint 2026-09-24, post-effect settlement fencing:
+
+- `plan_version`: 26
+- `state_transition`: OPEN -> OPEN; provider-free acceptance retained with a
+  newly repaired post-effect ledger-failure interlock
+- `acceptance_state`: provider-free accepted; a successful provider result can
+  no longer leave its exact tab reusable when durable interaction settlement
+  fails
+- `progress_classification`: forward progress
+- `evidence`: commit `45df398acf25ac0f8ede745f0c47c9d8427123e0`
+  moves successful ledger settlement before the lease becomes idle and adds a
+  regression proving settlement failure marks the exact lease outcome-unknown
+  and prevents reacquisition
+- `material_blockers`: Packet 7 remains outside the issue's explicit
+  provider-free authority
+- `validation_notes`: 14 focused executor/runtime/handoff tests, typecheck,
+  production build, scoped Biome, lint, and diff hygiene pass. Two broad runs
+  reached 3,268/3,269 passing tests but encountered unrelated wall-clock and
+  background-drain flakes; all three failing cases passed immediately in exact
+  isolation, while the parent checkpoint retains a clean 3,269-test run
+- `next_action_or_stop_reason`: continue read-only pre-live review and
+  provider-free repair; do not begin Packet 7 without separate authority
+- `delegation_status`: no new workers
+- `review_status`: utility and live-follow paths already settle their
+  ledger-backed governor before idling; only the foreground prompt executor had
+  the unsafe ordering

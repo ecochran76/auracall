@@ -1018,7 +1018,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 9b9f6f05c20a412f14808e9e42c375096432eebd
+    checkpoint: 45df398acf25ac0f8ede745f0c47c9d8427123e0
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1028,6 +1028,6 @@ lanes:
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
     validation_status: packets-1-through-6-provider-free-accepted
-    validation_ref: 9b9f6f05c20a412f14808e9e42c375096432eebd
-    disposition: Packets 1 through 6 are provider-free accepted after the complete 354-file, 3269-test non-live suite, production build, lint, and requirement audit passed; Packet 7 installed/live acceptance and canonical-main integration remain open, serialized compatibility remains default, and no installed, browser, provider, scheduler, or live effect is authorized.
+    validation_ref: 45df398acf25ac0f8ede745f0c47c9d8427123e0
+    disposition: Packets 1 through 6 are provider-free accepted; post-effect ledger settlement failure now fences the exact tab outcome-unknown before any idle reuse. Focused regression, typecheck, build, lint, and diff hygiene pass; Packet 7 installed/live acceptance and canonical-main integration remain open, serialized compatibility remains default, and no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24
