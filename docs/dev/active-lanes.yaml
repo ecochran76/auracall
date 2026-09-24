@@ -1018,7 +1018,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 3eb0f2b1e39593c186df614df7702c67c0479d1d
+    checkpoint: a33a3def950fc9cf98098c831b97f6aabbee3532
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1027,7 +1027,7 @@ lanes:
     reconciled_overlaps: []
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
-    validation_status: packets-1-through-6-plus-chatgpt-utility-read-materialization-affinity-passed
-    validation_ref: 3eb0f2b1e39593c186df614df7702c67c0479d1d
-    disposition: Provider-free exact-target lifecycle, warning-first admission, modern and legacy ChatGPT prompt/session affinity, Account Mirror crawler ownership, attributable retirement, aggregate status, API maintenance, and ChatGPT utility CRUD/read/materialization affinity pass; remaining project/file mutations, per-binding lifetime, and broader restart/orphan status are incomplete, and no installed, browser, provider, scheduler, or live effect is authorized.
+    validation_status: packets-1-through-6-plus-chatgpt-utility-file-mutation-affinity-passed
+    validation_ref: a33a3def950fc9cf98098c831b97f6aabbee3532
+    disposition: Provider-free exact-target lifecycle, warning-first admission, modern and legacy ChatGPT prompt/session affinity, Account Mirror crawler ownership, attributable retirement, aggregate status, API maintenance, and ChatGPT utility read/materialization/file-mutation affinity pass; remaining project mutations, per-binding lifetime, and broader restart/orphan status are incomplete, and no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24

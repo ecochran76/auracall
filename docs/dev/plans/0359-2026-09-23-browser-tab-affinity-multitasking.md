@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 21
+Plan version: 22
 
 ## Stable Objective
 
@@ -150,8 +150,10 @@ provider-neutral.
   materialization, account/project downloads, and active-media materialization
   now reuse that same exact utility tab without nested lease acquisition.
   Affinity-owned scoped provider sessions retain the aggregate interaction
-  governor across transfers. Remaining project/file mutations and specialized
-  management adapters still require integration.
+  governor across transfers. Project/account file upload and delete now also
+  execute once on that exact tab and refresh their cache without reacquiring
+  the lease. Remaining project mutations and specialized management adapters
+  still require integration.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -1064,3 +1066,27 @@ Checkpoint 2026-09-24, inherited ChatGPT read and materialization affinity:
 - `review_status`: all covered read/materialization operations retain one exact
   target and one aggregate governor across nested and scoped-session calls;
   legacy scoped-session callers retain their prior governor-bypass behavior
+
+Checkpoint 2026-09-24, ChatGPT file-mutation affinity:
+
+- `plan_version`: 22
+- `state_transition`: OPEN -> OPEN; project/account file upload and delete now
+  enter exact utility ownership with one-attempt mutation semantics
+- `acceptance_state`: partial provider-free acceptance; 13 focused service and
+  utility-coordinator tests pass with typecheck, scoped formatting, and diff
+  hygiene; no live effect ran
+- `progress_classification`: forward progress
+- `evidence`: commit `a33a3def950fc9cf98098c831b97f6aabbee3532`
+  coordinates project/account upload and deletion on the reusable utility tab,
+  performs the provider mutation once, and performs post-mutation cache refresh
+  through an already exact nested read on the same target
+- `material_blockers`: project create/rename/clone/instruction mutations and
+  specialized ChatGPT management adapters remain outside utility affinity;
+  restart/orphan reconciliation and per-binding lifetime status remain open
+- `next_action_or_stop_reason`: integrate remaining project mutations with
+  explicit no-retry semantics, then finish restart/orphan reconciliation and
+  the provider-free completion audit
+- `delegation_status`: no new workers
+- `review_status`: a provider failure is not retried and prevents cache refresh;
+  an outer coordinator records the uncertain mutation outcome and makes its
+  idle lease ineligible for reacquisition

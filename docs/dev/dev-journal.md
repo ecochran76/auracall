@@ -50262,6 +50262,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - One hundred three focused tests, typecheck, scoped Biome checks, diff hygiene,
   and production build pass. Account Mirror and legacy `runBrowserMode()` are
   not migrated; no installed, browser, provider, scheduler, or live effect ran.
+## 2026-09-24 | Plan 0359 ChatGPT file-mutation affinity
+
+- Project/account file upload and delete now execute once on the reusable exact
+  utility tab in explicit affinity mode. Their post-mutation cache refreshes
+  reuse the same exact target without nested lease acquisition.
+- A failed mutation does not invoke the legacy retry path and does not begin a
+  cache refresh; the production utility coordinator classifies that failure as
+  outcome unknown.
+- Thirteen focused service/coordinator tests, typecheck, scoped formatting, and
+  diff hygiene pass. No live browser/provider effect ran.
+
 ## 2026-09-24 | Plan 0359 inherited ChatGPT materialization affinity
 
 - Extended the reusable ChatGPT utility lease across inherited project,
