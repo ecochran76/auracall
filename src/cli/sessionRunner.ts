@@ -42,6 +42,7 @@ import { formatFinishLine } from '../oracle/finishLine.js';
 import { sanitizeOscProgress } from './oscUtils.js';
 import { readFiles } from '../oracle/files.js';
 import { cwd as getCwd } from 'node:process';
+import type { ResolvedUserConfig } from '../config.js';
 
 const isTty = process.stdout.isTTY;
 const dim = (text: string): string => (isTty ? kleur.dim(text) : text);
@@ -60,6 +61,7 @@ export interface SessionRunParams {
   browserDeps?: BrowserSessionRunnerDeps;
   muteStdout?: boolean;
   abortSignal?: AbortSignal;
+  userConfig?: ResolvedUserConfig;
 }
 export class SessionRunTimeoutError extends Error {
   readonly timeoutSeconds: number;
@@ -94,6 +96,7 @@ export async function performSessionRun({
   browserDeps,
   muteStdout = false,
   abortSignal,
+  userConfig,
 }: SessionRunParams): Promise<void> {
   const browserAbortController = mode === 'browser' ? new AbortController() : null;
   const forwardAbort = (): void => {
@@ -170,7 +173,14 @@ export async function performSessionRun({
         },
       };
       const result = await runBrowserSessionExecution(
-        { runOptions, browserConfig, cwd, log, abortSignal: browserAbortController?.signal },
+        {
+          runOptions,
+          browserConfig,
+          cwd,
+          log,
+          abortSignal: browserAbortController?.signal,
+          userConfig,
+        },
         runnerDeps,
       );
       browserAbortController?.signal.throwIfAborted();

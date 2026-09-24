@@ -13,6 +13,8 @@ import {
 } from '../../packages/browser-service/src/sessionRunner.js';
 import type { BrowserRunResult } from './types.js';
 import type { ProviderSessionAuthorization } from './providers/providerSessionAuthority.js';
+import type { ResolvedUserConfig } from '../config.js';
+import { resolveRuntimeProfileUserConfig } from './service/profileConfig.js';
 
 interface RunBrowserSessionArgs {
   runOptions: RunOracleOptions;
@@ -20,6 +22,7 @@ interface RunBrowserSessionArgs {
   cwd: string;
   log: (message?: string) => void;
   abortSignal?: AbortSignal;
+  userConfig?: ResolvedUserConfig;
 }
 type ExecuteBrowserInput = Parameters<typeof runBrowserMode>[0] | Parameters<CoreBrowserSessionRunnerDeps['executeBrowser']>[0];
 
@@ -31,7 +34,7 @@ export type BrowserSessionRunnerDeps = {
 };
 
 export async function runBrowserSessionExecution(
-  { runOptions, browserConfig, cwd, log, abortSignal }: RunBrowserSessionArgs,
+  { runOptions, browserConfig, cwd, log, abortSignal, userConfig }: RunBrowserSessionArgs,
   deps: BrowserSessionRunnerDeps = {},
 ): Promise<BrowserExecutionResult> {
   const assemblePrompt = async (
@@ -59,6 +62,12 @@ export async function runBrowserSessionExecution(
     runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
     abortSignal?: AbortSignal;
   }) => {
+    const affinityUserConfig = userConfig
+      ? resolveRuntimeProfileUserConfig(userConfig, {
+          runtimeProfileId: browserConfig.auracallProfileName,
+          provider: browserConfig.target ?? 'chatgpt',
+        }) as ResolvedUserConfig
+      : undefined;
     const baseConfig = options.config && options.config.timeoutMs == null
       ? { ...options.config, timeoutMs: undefined }
       : options.config;
@@ -68,6 +77,8 @@ export async function runBrowserSessionExecution(
     return (deps.executeBrowser ?? runBrowserMode)({
       ...options,
       config,
+      tabAffinityUserConfig:
+        browserConfig.tabConcurrencyMode === 'tab-affinity' ? affinityUserConfig : undefined,
     } as Parameters<typeof runBrowserMode>[0]);
   };
   const persistRuntimeHint = deps.persistRuntimeHint;

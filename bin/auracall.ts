@@ -11343,6 +11343,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
           auracallProfileName: userConfig.auracallProfile ?? 'default',
           selectedAgentId: typeof options.agent === 'string' ? options.agent.trim() || null : null,
           managedProfileRoot: config.browser.managedProfileRoot ?? null,
+          browserTabConcurrencyMode: config.browser.tabConcurrencyMode,
           model: resolvedModel,
           browserModelLabel: browserModelLabelOverride,
           chatgptSemanticModelSelection,
@@ -11555,6 +11556,7 @@ async function runInteractiveSession(
       notifications:
         notifications ?? deriveNotificationSettingsFromMetadata(sessionMeta, process.env, userConfig?.notify),
       browserDeps,
+      userConfig,
     });
     const latest = await sessionStore.readSession(sessionMeta.id);
     if (!suppressSummary) {
@@ -11654,6 +11656,7 @@ async function executeSession(sessionId: string) {
       version: VERSION,
       notifications,
       browserDeps,
+      userConfig,
     });
   } catch {
     // Errors are already logged to the session log; keep quiet to mirror stored-session behavior.
