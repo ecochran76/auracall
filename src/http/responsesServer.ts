@@ -91,7 +91,7 @@ import {
 } from "../accountMirror/statusRegistry.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import { readChatgptRateLimitGuardState } from "../browser/chatgptRateLimitGuard.js";
-import { clearPersistedBrowserProviderGuard } from "../browser/providerGuardControl.js";
+import { runConfiguredChatgptTabMaintenance } from "../browser/configuredChatgptTabMaintenance.js";
 import {
 	acceptDomDriftObservation,
 	type DomDriftObservationStatus,
@@ -106,6 +106,7 @@ import {
 	probeGeminiBrowserServiceState,
 	probeGrokBrowserServiceState,
 } from "../browser/liveServiceState.js";
+import { clearPersistedBrowserProviderGuard } from "../browser/providerGuardControl.js";
 import { BrowserService } from "../browser/service/browserService.js";
 import {
 	type BrowserInstanceLease,
@@ -113,6 +114,7 @@ import {
 	type BrowserInstanceOwner,
 	getInstance as getBrowserRegistryInstance,
 } from "../browser/service/stateRegistry.js";
+import { createTabAffinityMaintenanceLoop } from "../browser/tabAffinityMaintenanceLoop.js";
 import {
 	agentConfigUpsertInputSchema,
 	agentRegistrySnapshotSchema,
@@ -341,6 +343,7 @@ export interface ResponsesHttpServerOptions {
 	backgroundDrainIntervalMs?: number;
 	accountMirrorSchedulerIntervalMs?: number;
 	accountMirrorSchedulerDryRun?: boolean;
+	tabAffinityMaintenanceIntervalMs?: number;
 	resumeAccountMirrorCompletionsOnStart?: boolean;
 	reconcileAccountMirrorLiveFollowOnStart?: boolean;
 	accountMirrorProofScope?: {
@@ -394,6 +397,7 @@ export interface ResponsesHttpServerDeps {
 	preflightRunner?: LazyLiveFollowPreflightRunner;
 	terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
 	scheduleApiServiceRestart?: (input: ApiServiceRestartRequest) => void;
+	runTabAffinityMaintenance?: () => Promise<void>;
 	env?: Record<string, string | undefined>;
 }
 
@@ -1120,6 +1124,31 @@ export async function createResponsesHttpServer(
 			agentTeamConfigService,
 		});
 	const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
+	const tabAffinityMaintenanceIntervalMs = accountMirrorProofScope
+		? 0
+		: Math.max(
+				0,
+				options.tabAffinityMaintenanceIntervalMs ??
+					(resolvedUserConfig?.browser?.tabConcurrencyMode === "tab-affinity" ? 60_000 : 0),
+			);
+	const tabAffinityMaintenanceLoop = createTabAffinityMaintenanceLoop({
+		intervalMs: tabAffinityMaintenanceIntervalMs,
+		logger,
+		run:
+			deps.runTabAffinityMaintenance ??
+			(async () => {
+				if (!resolvedUserConfig) return;
+				const summary = await runConfiguredChatgptTabMaintenance({
+					userConfig: resolvedUserConfig,
+					now,
+				});
+				for (const error of summary.errors) {
+					logger(
+						`Tab-affinity maintenance deferred for ${error.runtimeProfileId}: ${error.message}`,
+					);
+				}
+			}),
+	});
 	const accountMirrorPersistence = createAccountMirrorPersistence({
 		config: configuredRuntimeConfig,
 	});
@@ -1187,9 +1216,9 @@ export async function createResponsesHttpServer(
 	});
 	const accountMirrorSchedulerLedger =
 		deps.accountMirrorSchedulerLedger ??
-			createAccountMirrorSchedulerPassLedger({
-				config: configuredRuntimeConfig,
-			});
+		createAccountMirrorSchedulerPassLedger({
+			config: configuredRuntimeConfig,
+		});
 	const persistedAccountMirrorSchedulerControl =
 		accountMirrorSchedulerIntervalMs > 0
 			? await readAccountMirrorSchedulerControlState().catch((error) => {
@@ -2724,15 +2753,15 @@ export async function createResponsesHttpServer(
 				return;
 			}
 
-				if (req.method === "GET" && url.pathname === "/v1/account-mirrors/completions") {
-					const query = parseAccountMirrorCompletionListQuery(url.searchParams);
-					const listed = accountMirrorCompletionService.list(query);
-					const fullDetail = url.searchParams.get("detail") === "full";
-					const data = fullDetail
-						? accountMirrorCompletionService.refreshMaterializationStatuses
-							? await accountMirrorCompletionService.refreshMaterializationStatuses(listed)
-							: listed
-						: listed.map(projectAccountMirrorCompletionForMonitoring);
+			if (req.method === "GET" && url.pathname === "/v1/account-mirrors/completions") {
+				const query = parseAccountMirrorCompletionListQuery(url.searchParams);
+				const listed = accountMirrorCompletionService.list(query);
+				const fullDetail = url.searchParams.get("detail") === "full";
+				const data = fullDetail
+					? accountMirrorCompletionService.refreshMaterializationStatuses
+						? await accountMirrorCompletionService.refreshMaterializationStatuses(listed)
+						: listed
+					: listed.map(projectAccountMirrorCompletionForMonitoring);
 				sendJson(res, 200, {
 					object: "list",
 					data,
@@ -2741,16 +2770,19 @@ export async function createResponsesHttpServer(
 				return;
 			}
 
-				const accountMirrorCompletionId = matchAccountMirrorCompletionRoute(url.pathname);
-				if (req.method === "GET" && accountMirrorCompletionId) {
-					const fullDetail = url.searchParams.get("detail") === "full";
-					const fullResult = fullDetail && accountMirrorCompletionService.refreshMaterializationStatus
-						? await accountMirrorCompletionService.refreshMaterializationStatus(accountMirrorCompletionId)
+			const accountMirrorCompletionId = matchAccountMirrorCompletionRoute(url.pathname);
+			if (req.method === "GET" && accountMirrorCompletionId) {
+				const fullDetail = url.searchParams.get("detail") === "full";
+				const fullResult =
+					fullDetail && accountMirrorCompletionService.refreshMaterializationStatus
+						? await accountMirrorCompletionService.refreshMaterializationStatus(
+								accountMirrorCompletionId,
+							)
 						: accountMirrorCompletionService.read(accountMirrorCompletionId);
-					const result =
-						fullDetail || !fullResult
-							? fullResult
-							: projectAccountMirrorCompletionForMonitoring(fullResult);
+				const result =
+					fullDetail || !fullResult
+						? fullResult
+						: projectAccountMirrorCompletionForMonitoring(fullResult);
 				if (!result) {
 					sendJson(res, 404, {
 						error: {
@@ -4355,11 +4387,13 @@ export async function createResponsesHttpServer(
 	}
 	scheduleBackgroundDrain();
 	scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs, "startup-cadence");
+	tabAffinityMaintenanceLoop.start();
 
 	return {
 		port: address.port,
 		async close() {
 			closed = true;
+			await tabAffinityMaintenanceLoop.close();
 			if (runnerHeartbeatTimer) {
 				clearTimeout(runnerHeartbeatTimer);
 				runnerHeartbeatTimer = null;
@@ -6225,14 +6259,14 @@ async function hydrateAccountMirrorStatusMaterializationEvidence(
 		(async () => {
 			if (!runArchiveService) return archiveRequests.map(() => null);
 			if (runArchiveService.listItemsBatchAvailability) {
-				return runArchiveService.listItemsBatchAvailability(archiveRequests).catch(() =>
-					archiveRequests.map(() => null),
-				);
+				return runArchiveService
+					.listItemsBatchAvailability(archiveRequests)
+					.catch(() => archiveRequests.map(() => null));
 			}
 			if (runArchiveService.listItemsBatch) {
-				return runArchiveService.listItemsBatch(archiveRequests).catch(() =>
-					archiveRequests.map(() => null),
-				);
+				return runArchiveService
+					.listItemsBatch(archiveRequests)
+					.catch(() => archiveRequests.map(() => null));
 			}
 			const results = [];
 			for (const request of archiveRequests) {
@@ -6827,11 +6861,11 @@ function summarizeLiveFollowRoutineDecision(input: {
 	const preemption = summarizeLiveFollowPreemption(entry, scheduler);
 	const accountObservedAt = latestAccountStatusObservedAt(entry);
 	const operationObservedAt =
-			cycle?.updatedAt ??
-			operation?.lastRefresh?.completedAt ??
-			operation?.lifecycleEvents?.at(-1)?.at ??
-			operation?.completedAt ??
-			null;
+		cycle?.updatedAt ??
+		operation?.lastRefresh?.completedAt ??
+		operation?.lifecycleEvents?.at(-1)?.at ??
+		operation?.completedAt ??
+		null;
 	const remainingDetailSurfaces = entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? null;
 	const materializationAssets =
 		materializationBacklog?.remoteKnownMissingLocal.total ??

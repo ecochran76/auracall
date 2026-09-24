@@ -1,0 +1,121 @@
+import { describe, expect, test, vi } from "vitest";
+
+import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import { runConfiguredChatgptTabMaintenance } from "../../src/browser/configuredChatgptTabMaintenance.js";
+
+describe("configured ChatGPT tab maintenance", () => {
+	test("visits only explicit affinity profiles without launching a browser", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+		const reserved = await registry.reserve({
+			scope: {
+				runtimeProfileId: "affinity",
+				managedBrowserProfile: "/managed/affinity/chatgpt",
+				service: "chatgpt",
+				tenantKey: "service-account:chatgpt:account-id=account-1",
+			},
+			targetId: "target-1",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "operation-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			targetFingerprint: "https://chatgpt.com/c/conversation-1",
+		});
+		if (!reserved.ok) throw new Error("expected lease reservation");
+		await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-09-24T12:00:01.000Z",
+			effectState: "settled",
+		});
+		const resolveServiceTarget = vi.fn().mockResolvedValue({
+			host: "127.0.0.1",
+			port: 9222,
+			managedBrowserProfile: "/managed/affinity/chatgpt",
+		});
+		const closeTarget = vi.fn().mockResolvedValue(undefined);
+		let censusCount = 0;
+		const summary = await runConfiguredChatgptTabMaintenance({
+			userConfig: {
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				profiles: {
+					affinity: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+				},
+			} as never,
+			now: () => new Date("2026-09-24T12:02:00.000Z"),
+			deps: {
+				createRuntime: () => ({ registry }),
+				createBrowserService: () => ({ resolveServiceTarget }),
+				listTargets: vi.fn(async () => {
+					censusCount += 1;
+					return censusCount === 1
+						? [{ id: "target-1", url: "https://chatgpt.com/c/conversation-1" }]
+						: [];
+				}) as never,
+				closeTarget,
+			},
+		});
+
+		expect(resolveServiceTarget).toHaveBeenCalledWith(
+			expect.objectContaining({ serviceId: "chatgpt", ensurePort: false }),
+		);
+		expect(closeTarget).toHaveBeenCalledWith("127.0.0.1", 9222, "target-1", expect.any(Function));
+		expect(summary).toMatchObject({
+			configuredScopeCount: 1,
+			visitedScopeCount: 1,
+			closedCount: 1,
+			errors: [],
+		});
+	});
+
+	test("defers expired leases when the configured browser endpoint is absent", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+		const reserved = await registry.reserve({
+			scope: {
+				runtimeProfileId: "affinity",
+				managedBrowserProfile: "/managed/affinity/chatgpt",
+				service: "chatgpt",
+				tenantKey: "service-account:chatgpt:account-id=account-1",
+			},
+			targetId: "target-1",
+			workload: { kind: "live-follow", operationId: "completion-1" },
+			operationId: "operation-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			targetFingerprint: "https://chatgpt.com/",
+		});
+		if (!reserved.ok) throw new Error("expected lease reservation");
+		await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-09-24T12:00:01.000Z",
+			effectState: "settled",
+		});
+
+		const summary = await runConfiguredChatgptTabMaintenance({
+			userConfig: {
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				profiles: {
+					affinity: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+				},
+			} as never,
+			now: () => new Date("2026-09-24T12:02:00.000Z"),
+			deps: {
+				createRuntime: () => ({ registry }),
+				createBrowserService: () => ({
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						managedBrowserProfile: "/managed/affinity/chatgpt",
+					}),
+				}),
+			},
+		});
+
+		expect(summary).toMatchObject({ deferredScopeCount: 1, closedCount: 0, errors: [] });
+		expect((await registry.list())[0]?.state).toBe("idle");
+	});
+});
