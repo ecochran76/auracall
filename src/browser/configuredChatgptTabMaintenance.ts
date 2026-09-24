@@ -99,6 +99,7 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 			? configuredRuntimeProfileIds
 			: [fallbackRuntimeProfileId];
 	const seenScopes = new Set<string>();
+	const seenTargetCensuses = new Set<string>();
 
 	for (const runtimeProfileId of runtimeProfileIds) {
 		if (input.abortSignal?.aborted) break;
@@ -207,6 +208,10 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 				if (outcome.disposition === "preserved") summary.preservedCount += 1;
 			}
 			if (endpoint) {
+				const censusKey = [managedBrowserProfile, endpoint.host, String(endpoint.port)].join(
+					"\u0000",
+				);
+				if (seenTargetCensuses.has(censusKey)) continue;
 				try {
 					const [targets, fencedTargetIds] = await Promise.all([
 						listTargets(endpoint.port, endpoint.host),
@@ -230,6 +235,7 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 					summary.liveChatgptTargetCount += chatgptTargets.length;
 					summary.fencedLiveTargetCount += fencedLiveCount;
 					summary.unleasedLiveTargetCount += chatgptTargets.length - fencedLiveCount;
+					seenTargetCensuses.add(censusKey);
 				} catch {
 					summary.targetCensusErrorCount += 1;
 				}

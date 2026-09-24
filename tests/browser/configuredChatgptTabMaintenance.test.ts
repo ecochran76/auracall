@@ -4,6 +4,48 @@ import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-se
 import { runConfiguredChatgptTabMaintenance } from "../../src/browser/configuredChatgptTabMaintenance.js";
 
 describe("configured ChatGPT tab maintenance", () => {
+	test("counts one physical browser census across runtime profiles", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const listTargets = vi.fn(async () => [
+			{ id: "unleased-target", type: "page", url: "https://chatgpt.com/" },
+		]) as never;
+		const summary = await runConfiguredChatgptTabMaintenance({
+			userConfig: {
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				profiles: {
+					first: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+					second: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+				},
+			} as never,
+			deps: {
+				createRuntime: () => ({ registry }),
+				createBrowserService: () => ({
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 9222,
+						managedBrowserProfile: "/managed/shared/chatgpt",
+					}),
+				}),
+				listTargets,
+			},
+		});
+
+		expect(summary).toMatchObject({
+			configuredScopeCount: 2,
+			visitedScopeCount: 2,
+			liveChatgptTargetCount: 1,
+			fencedLiveTargetCount: 0,
+			unleasedLiveTargetCount: 1,
+		});
+		expect(listTargets).toHaveBeenCalledOnce();
+	});
+
 	test("classifies live fenced and unleased ChatGPT targets without mutating them", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const reserved = await registry.reserve({
