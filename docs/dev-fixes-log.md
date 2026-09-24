@@ -1,3 +1,11 @@
+- 2026-09-24: A live-follow crawler cannot share a profile-wide browser lock
+  with conversation tabs if tab-affinity is meant to permit safe coexistence.
+  Bind each active completion to an exact verified crawler target, retain that
+  target only through a revision-fenced lease, and put every paced read through
+  the same tenant/provider warning and rolling-interaction ledger as foreground
+  prompts. Missing targets may be replaced; live route mismatches fail closed,
+  and affinity cleanup must never terminate the whole managed browser.
+
 - 2026-09-23: Name archival Git remotes for their actual role. The former
   `upstream` remote now uses `oracle-archive`; Oracle is historical
   research/provenance, not an AuraCall synchronization authority. Preserve old

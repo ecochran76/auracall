@@ -1,3 +1,17 @@
+## 2026-09-24 | Plan 0359 Account Mirror crawler activation
+
+- ChatGPT live-follow completions in explicit `tab-affinity` mode now own one
+  exact crawler tab, retain it across sequential Account Mirror reads, and
+  settle those interactions into the same tenant/provider ledger used by
+  foreground affinity prompts.
+- The crawler path verifies an existing target before reacquisition, replaces
+  only a proven-missing target, fails closed on a mismatched provider route,
+  and disables whole-browser cleanup while the bounded lease remains valid.
+- Provider-free validation passed 177 focused tests, typecheck, scoped Biome
+  checks, diff hygiene, and the production build. No installation, browser,
+  provider, scheduler, or live effect was performed. The next boundary is the
+  legacy direct `runBrowserMode()` path and production expiry retirement.
+
 ## 2026-09-23 | Oracle remote reclassified as historical provenance
 
 - Renamed the local Git remote `upstream` to `oracle-archive` without changing

@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 14
+Plan version: 15
 
 ## Stable Objective
 
@@ -112,10 +112,17 @@ provider-neutral.
   proven-missing target is recorded lost and released before one replacement
   target is created; a live mismatched route is retained as a lost conflict and
   fails closed. Serialized mode retains the existing profile dispatcher.
-- The legacy direct `runBrowserMode()` entry point and Account Mirror live
-  follow still use their current profile-wide execution paths. They remain the
-  next production migration boundaries; configured affinity must not be
-  described as universal until both are coordinated.
+- ChatGPT Account Mirror live-follow completions now acquire one exact crawler
+  lease, retain that target across their sequential traversal, and use a
+  ledger-backed interaction governor. Foreground affinity prompts and
+  live-follow reads consult the same tenant/provider warning state and rolling
+  per-minute counter; direct/manual Account Mirror refreshes and other
+  providers retain serialized compatibility behavior.
+- The legacy direct `runBrowserMode()` entry point still uses its current
+  profile-wide execution path. It is the next production migration boundary;
+  configured affinity must not be described as universal until every direct,
+  stored-response, batch, materialization, media, and CRUD caller either uses
+  the shared coordinator or is explicitly classified as profile control.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -845,3 +852,30 @@ Checkpoint 2026-09-24, guarded prompt activation and binding reuse:
 - `review_status`: completion audit caught and repaired a create-on-every-call
   defect before checkpoint; persisted target IDs are reused only after live
   exact-route verification
+
+Checkpoint 2026-09-24, Account Mirror crawler activation:
+
+- `plan_version`: 15
+- `state_transition`: OPEN -> OPEN; explicit ChatGPT live-follow completions
+  now use Packet 5 crawler ownership and aggregate per-minute admission
+- `acceptance_state`: partial provider-free acceptance; 177 focused tests,
+  typecheck, scoped Biome checks, diff hygiene, and production build pass
+- `progress_classification`: forward progress
+- `evidence`: commit `b29351b0e764378f38a81fc4568abf61ef61e3d4`
+  gives each active ChatGPT live-follow completion an exact crawler lease,
+  verifies an idle crawler before reuse, replaces a proven-missing target,
+  fails closed on route mismatch, retains the exact target through sequential
+  collection, and settles every governed read into the shared ledger
+- `material_blockers`: the legacy direct `runBrowserMode()` path and several
+  non-prompt provider surfaces can still bypass lease ownership and aggregate
+  accounting; lifetime retirement is modeled but no production sweeper yet
+  closes attributable expired targets
+- `next_action_or_stop_reason`: reconcile `runBrowserMode()` and its direct,
+  stored-response, and batch callers with the affinity coordinator without
+  weakening serialized rollback, then add target-specific retirement and
+  restart reconciliation before any installed/live acceptance
+- `delegation_status`: no new workers
+- `review_status`: ordinary direct refresh and Gemini/Grok stay serialized;
+  the affinity collector uses `retain`, preserves the active tab, disables
+  whole-browser cleanup, and projects structured provider guards before new
+  permits
