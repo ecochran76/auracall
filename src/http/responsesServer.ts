@@ -92,6 +92,7 @@ import {
 import { getAuracallHomeDir } from "../auracallHome.js";
 import { readChatgptRateLimitGuardState } from "../browser/chatgptRateLimitGuard.js";
 import { runConfiguredChatgptTabMaintenance } from "../browser/configuredChatgptTabMaintenance.js";
+import { clearConfiguredAggregateProviderWarning } from "../browser/configuredProviderWarningClear.js";
 import {
 	acceptDomDriftObservation,
 	type DomDriftObservationStatus,
@@ -3249,6 +3250,16 @@ export async function createResponsesHttpServer(
 						cooldownMs,
 						now,
 					});
+					if (resolvedUserConfig) {
+						await clearConfiguredAggregateProviderWarning({
+							userConfig: resolvedUserConfig,
+							provider: payload.accountMirrorProviderGuard.provider,
+							runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
+							clearedAt: now().toISOString(),
+							cooldownUntil: guardClear.cooldownUntil,
+							reason: "Operator cleared provider guard; quiet cooldown before automation resumes.",
+						});
+					}
 					controlResult = {
 						kind: guardClear.kind,
 						action: guardClear.action,

@@ -139,6 +139,57 @@ describe("interactionLedger (package)", () => {
 		).toEqual(["frozen", "frozen"]);
 	});
 
+	test("operator clearance replaces an indefinite warning with a bounded quiet cooldown", async () => {
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => "reservation-after-clear",
+		});
+		await ledger.recordProviderWarning({
+			scope: foregroundScope,
+			classification: "human-verification",
+			reason: "human verification required",
+			observedAt: "2026-09-24T12:00:00.000Z",
+		});
+
+		const cleared = await ledger.clearProviderWarning({
+			scope: foregroundScope,
+			clearedAt: "2026-09-24T12:05:00.000Z",
+			cooldownUntil: "2026-09-24T12:35:00.000Z",
+			reason: "operator cleared provider guard; quiet cooldown",
+		});
+		expect(cleared).toMatchObject({
+			previous: { classification: "human-verification", cooldownUntil: null },
+			warning: {
+				classification: "human-verification",
+				cooldownUntil: "2026-09-24T12:35:00.000Z",
+			},
+		});
+
+		const request = (now: string) =>
+			ledger.reserve({
+				scope: foregroundScope,
+				workloadId: "conversation:after-clear",
+				operationId: "operation-after-clear",
+				interactionClass: "prompt-continuation",
+				mutability: "provider-mutating",
+				startsNewConversation: false,
+				now,
+				reservationTtlMs: 30_000,
+				policy: {
+					maxConcurrentChats: 4,
+					maxConversationStartsPerHour: 120,
+					maxConversationStartsPerDay: 240,
+				},
+			});
+		expect(await request("2026-09-24T12:34:59.999Z")).toMatchObject({
+			allowed: false,
+			reason: "provider-warning",
+		});
+		expect(await request("2026-09-24T12:35:00.000Z")).toMatchObject({ allowed: true });
+		expect((await ledger.listEvents()).map((event) => event.type)).toContain(
+			"provider-warning-cleared",
+		);
+	});
+
 	test("atomic short reservations close concurrency races and expire without erasing history", async () => {
 		let sequence = 0;
 		const ledger = createInMemoryProviderInteractionLedger({

@@ -87,6 +87,7 @@ export type ProviderInteractionEventType =
   | 'reservation-abandoned'
   | 'interaction-frozen'
   | 'provider-warning-observed'
+  | 'provider-warning-cleared'
   | 'passive-observed';
 
 export interface ProviderInteractionEvent {
@@ -169,6 +170,12 @@ export interface ProviderInteractionLedger {
     observedAt: string;
     cooldownUntil?: string | null;
   }): Promise<{ warning: ProviderWarningRecord; frozenReservationIds: string[] }>;
+  clearProviderWarning(input: {
+    scope: ProviderInteractionScope;
+    clearedAt: string;
+    cooldownUntil?: string | null;
+    reason: string;
+  }): Promise<{ previous: ProviderWarningRecord | null; warning: ProviderWarningRecord | null }>;
   list(scope?: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>>): Promise<ProviderInteractionRecord[]>;
   listEvents(scope?: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>>): Promise<ProviderInteractionEvent[]>;
   summarizeUsage(input: {
@@ -577,6 +584,54 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     return { warning: cloneWarning(warning), frozenReservationIds };
   }
 
+  async clearProviderWarning(input: {
+    scope: ProviderInteractionScope;
+    clearedAt: string;
+    cooldownUntil?: string | null;
+    reason: string;
+  }): Promise<{ previous: ProviderWarningRecord | null; warning: ProviderWarningRecord | null }> {
+    const scope = normalizeScope(input.scope);
+    const key = aggregateScopeKey(scope);
+    const previous = this.warnings.get(key) ?? null;
+    const clearedAtMs = parseTimestamp(input.clearedAt, 'clearedAt');
+    const cooldownUntil = input.cooldownUntil == null
+      ? null
+      : new Date(parseTimestamp(input.cooldownUntil, 'cooldownUntil')).toISOString();
+    if (cooldownUntil !== null && Date.parse(cooldownUntil) <= clearedAtMs) {
+      throw new Error('cooldownUntil must be later than clearedAt');
+    }
+    const warning = cooldownUntil && previous
+      ? {
+          ...previous,
+          reason: requireNonEmpty(input.reason, 'reason'),
+          observedAt: new Date(clearedAtMs).toISOString(),
+          cooldownUntil,
+        }
+      : null;
+    if (warning) this.warnings.set(key, warning);
+    else this.warnings.delete(key);
+    this.appendEvent({
+      reservationId: null,
+      scope,
+      workloadId: null,
+      operationId: null,
+      tabLeaseId: null,
+      interactionClass: null,
+      mutability: null,
+      startsNewConversation: false,
+      type: 'provider-warning-cleared',
+      occurredAt: new Date(clearedAtMs).toISOString(),
+      effectState: 'none',
+      outcome: null,
+      providerWarning: previous?.classification ?? null,
+      reason: requireNonEmpty(input.reason, 'reason'),
+    });
+    return {
+      previous: previous ? cloneWarning(previous) : null,
+      warning: warning ? cloneWarning(warning) : null,
+    };
+  }
+
   async list(
     scope: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>> = {},
   ): Promise<ProviderInteractionRecord[]> {
@@ -756,6 +811,10 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
 
   recordProviderWarning(input: Parameters<ProviderInteractionLedger['recordProviderWarning']>[0]) {
     return this.write((ledger) => ledger.recordProviderWarning(input));
+  }
+
+  clearProviderWarning(input: Parameters<ProviderInteractionLedger['clearProviderWarning']>[0]) {
+    return this.write((ledger) => ledger.clearProviderWarning(input));
   }
 
   list(scope?: Parameters<ProviderInteractionLedger['list']>[0]) {

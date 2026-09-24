@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createAccountMirrorStatusRegistry } from '../src/accountMirror/statusRegistry.js';
 import { createAccountMirrorProviderGuardClearToolHandler } from '../src/mcp/tools/accountMirrorProviderGuard.js';
 
@@ -36,9 +36,11 @@ describe('mcp account_mirror_provider_guard_clear tool', () => {
         },
       },
     });
+    const clearAggregateWarning = vi.fn(async () => undefined);
     const handler = createAccountMirrorProviderGuardClearToolHandler({
       registry,
       now: () => new Date('2026-05-10T12:05:00.000Z'),
+      clearAggregateWarning,
     });
 
     const result = await handler({
@@ -75,6 +77,12 @@ describe('mcp account_mirror_provider_guard_clear tool', () => {
           },
         },
       },
+    });
+    expect(clearAggregateWarning).toHaveBeenCalledWith({
+      provider: 'gemini',
+      runtimeProfileId: 'default',
+      clearedAt: '2026-05-10T12:05:00.000Z',
+      cooldownUntil: '2026-05-10T12:15:00.000Z',
     });
   });
 });

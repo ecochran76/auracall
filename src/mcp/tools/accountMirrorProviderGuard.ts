@@ -1,8 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
-  clearAccountMirrorProviderGuard,
-  type ClearAccountMirrorProviderGuardResult,
+	type ClearAccountMirrorProviderGuardResult,
+	clearAccountMirrorProviderGuard,
 } from '../../accountMirror/providerGuardControl.js';
 import type { AccountMirrorStatusRegistry } from '../../accountMirror/statusRegistry.js';
 
@@ -23,8 +23,14 @@ const accountMirrorProviderGuardClearOutputShape = {
 } satisfies z.ZodRawShape;
 
 export interface RegisterAccountMirrorProviderGuardToolsDeps {
-  registry: AccountMirrorStatusRegistry;
-  now?: () => Date;
+	registry: AccountMirrorStatusRegistry;
+	now?: () => Date;
+	clearAggregateWarning?: (input: {
+		provider: "chatgpt" | "gemini" | "grok";
+		runtimeProfileId: string;
+		clearedAt: string;
+		cooldownUntil: string | null;
+	}) => Promise<void>;
 }
 
 export function registerAccountMirrorProviderGuardTools(
@@ -49,13 +55,19 @@ export function createAccountMirrorProviderGuardClearToolHandler(
 ) {
   return async (rawInput: unknown) => {
     const payload = z.object(accountMirrorProviderGuardClearInputShape).parse(rawInput);
-    const clearResult = clearAccountMirrorProviderGuard({
+		const clearResult = clearAccountMirrorProviderGuard({
       registry: deps.registry,
       provider: payload.provider,
       runtimeProfileId: payload.runtimeProfile,
       cooldownMs: payload.cooldownMs,
-      now: deps.now,
-    });
+			now: deps.now,
+		});
+		await deps.clearAggregateWarning?.({
+			provider: payload.provider,
+			runtimeProfileId: payload.runtimeProfile,
+			clearedAt: (deps.now?.() ?? new Date()).toISOString(),
+			cooldownUntil: clearResult.cooldownUntil,
+		});
     const structuredContent = formatProviderGuardClearResult(clearResult);
     return {
       isError: false,
