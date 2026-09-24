@@ -50011,3 +50011,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   reconciliation, warning freeze, and action counts.
 - Pushed the checkpoint and opened PR 47 against `main`; issue 46 remains open
   because this is the first implementation slice, not Plan 0359 completion.
+
+## 2026-09-24 | Plan 0359 provider-free lease lifecycle
+
+- Extended the separate tab-lease registry with atomic conversation rebinding,
+  revision-fenced meaningful-use heartbeat, exact-workload idle/reacquire, and
+  two-phase target retirement. Passive reads do not extend lifetime and idle
+  expiry never exceeds absolute expiry.
+- Target-missing and restart-unverified records become terminal lost evidence
+  that remains fenced from generic reuse. Callers can obtain the exact fenced
+  target IDs without interpreting registry lifecycle internals.
+- Eight lease tests, eleven compatibility-dispatcher regressions, typecheck,
+  and production build pass. No production caller, browser, provider,
+  scheduler, installed runtime, or live surface was changed or exercised.

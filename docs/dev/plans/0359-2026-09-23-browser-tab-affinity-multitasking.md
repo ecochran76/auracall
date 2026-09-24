@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 2
+Plan version: 3
 
 ## Stable Objective
 
@@ -38,6 +38,12 @@ provider-neutral.
   target and workload ownership. A paired fixture preserves evidence that the
   compatibility dispatcher still serializes those targets by managed browser
   profile plus service. No production caller uses the registry.
+- The provider-neutral lifecycle tracer now also covers atomic
+  reservation-to-conversation rebinding, revision-fenced meaningful-use
+  heartbeat, exact-workload idle/reacquire, two-phase target retirement, and
+  fail-closed lost/restart-unverified target evidence. Generic discovery can
+  consume the registry's exact fenced-target list without learning lifecycle
+  internals.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -114,8 +120,9 @@ Introduce a provider-neutral tab lease record with at least:
   - `new-conversation` plus reservation ID
   - `live-follow` plus completion/operation ID
   - bounded `ephemeral` operation ID where no durable affinity is needed
-- lifecycle state: `reserved`, `active`, `idle`, `retiring`, `released`, or
-  `lost`
+- lifecycle state: `active`, `idle`, `retiring`, `released`, or `lost`; target
+  reservation and the initial active claim are one atomic transition, so no
+  unowned persisted `reserved` state is exposed
 - `acquiredAt`, `heartbeatAt`, `lastMeaningfulUseAt`, `idleExpiresAt`, and
   `absoluteExpiresAt`
 - current sanitized route/target fingerprint
@@ -503,3 +510,21 @@ Checkpoint 2026-09-24:
 The next action remains Packet 1 provider-free on issue 46 and branch
 `feat/issue-46-browser-tab-affinity`. This implementation authority does not
 include installed, browser, provider, scheduler, or live effects.
+
+Checkpoint 2026-09-24, lifecycle continuation:
+
+- `plan_version`: 3
+- `state_transition`: OPEN -> OPEN; Packet 1 lifecycle contract advanced
+- `acceptance_state`: partial provider-free acceptance; 8 tab-lease tests and
+  11 compatibility-dispatcher tests pass, with typecheck and production build
+- `progress_classification`: forward progress
+- `evidence`: public `BrowserTabLeaseRegistry` lifecycle methods and
+  `tests/browser-service/tabLeaseRegistry.test.ts`
+- `material_blockers`: none for remaining Packet 1 fixtures
+- `next_action_or_stop_reason`: add fake target-action counters and the
+  provider-warning freeze/admission contract, then review Packet 1 terminal
+  evidence before any file-backed registry or production caller integration
+- `delegation_status`: no new workers; this continuation avoided context forks
+  after the prior three reviews converged on the registry seam
+- `review_status`: focused self-review retained profile-control serialization,
+  exact-workload-only acquisition, revision fencing, and fail-closed lost state

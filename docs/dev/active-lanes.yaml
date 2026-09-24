@@ -1027,7 +1027,7 @@ lanes:
     reconciled_overlaps: []
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
-    validation_status: packet-1-first-tracer-passed
+    validation_status: packet-1-lifecycle-tracers-passed
     validation_ref: 09b01ebbbd3640cb0159a7095aa78ca2d13ae75d
-    disposition: Packet 1 first exact-target ownership tracer passes while every production caller remains on serialized compatibility behavior; no installed, browser, provider, scheduler, or live effect is authorized.
+    disposition: Packet 1 exact-target ownership, rebinding, heartbeat, idle/reacquire, retirement, and lost-target tracers pass while every production caller remains serialized; no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24
