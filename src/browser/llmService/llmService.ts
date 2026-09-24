@@ -654,6 +654,15 @@ export abstract class LlmService {
 			options?.cacheStore ?? createCacheStore(resolveCacheStoreKind(configuredStore));
 	}
 
+	async runUtilityBrowserOperation<TResult>(input: {
+		options?: BrowserProviderListOptions;
+		mutability: "read-only" | "provider-mutating";
+		run: (options: BrowserProviderListOptions) => Promise<TResult>;
+	}): Promise<TResult> {
+		const options = await this.buildListOptions(input.options, { ensurePort: true });
+		return input.run(options);
+	}
+
 	getCapabilities(): LlmCapabilities {
 		return {
 			projects: this.provider.capabilities?.projects ?? false,

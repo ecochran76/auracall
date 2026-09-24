@@ -8,6 +8,7 @@ import {
 	hashChatgptSkillInstructions,
 	normalizeInstructions,
 } from "../browser/providers/chatgptSkills.js";
+import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { ResolvedUserConfig } from "../config.js";
 
 const MAX_CHATGPT_SKILL_SOURCE_BYTES = 1_048_576;
@@ -250,15 +251,55 @@ export async function runChatgptSkillOperationForCli(
 	const createBrowser = dependencies.createBrowser ?? BrowserAutomationClient.fromConfig;
 	const createAdapter = dependencies.createAdapter ?? createChatgptSkillBrowserAdapter;
 	const controller = new AbortController();
-	let adapter: ChatgptSkillCliAdapter | null = null;
+	const active: { adapter: ChatgptSkillCliAdapter | null } = { adapter: null };
 	try {
 		const browser = await createBrowser(userConfig, { target: "chatgpt" });
-		adapter = createAdapter(browser, { abortSignal: controller.signal });
-		return await executeChatgptSkillOperation(input, adapter);
+		const run = async (listOptions: BrowserProviderListOptions) => {
+			await listOptions.interactionGovernor?.beforeInteraction("generic", controller.signal);
+			const exactBrowser = scopeChatgptSkillBrowser(browser, listOptions);
+			active.adapter = createAdapter(exactBrowser, { abortSignal: controller.signal });
+			try {
+				return await executeChatgptSkillOperation(input, active.adapter);
+			} finally {
+				await active.adapter.close().catch(() => undefined);
+				active.adapter = null;
+			}
+		};
+		if (!browser.runUtilityBrowserOperation) {
+			if (userConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+				throw new Error("ChatGPT Skill affinity requires utility-operation support.");
+			}
+			return await run({});
+		}
+		return await browser.runUtilityBrowserOperation({
+			options: { abortSignal: controller.signal },
+			mutability:
+				input.action === "list" || input.action === "show" ? "read-only" : "provider-mutating",
+			run,
+		});
 	} finally {
 		controller.abort();
-		await adapter?.close().catch(() => undefined);
+		await active.adapter?.close().catch(() => undefined);
 	}
+}
+
+function scopeChatgptSkillBrowser(
+	browser: ChatgptSkillBrowserClient,
+	listOptions: BrowserProviderListOptions,
+): ChatgptSkillBrowserClient {
+	const exactConnection = {
+		host: listOptions.host,
+		port: listOptions.port,
+		tabTargetId: listOptions.tabTargetId,
+	};
+	return {
+		userConfig: browser.userConfig,
+		getUserIdentity: (options) =>
+			browser.getUserIdentity({ ...listOptions, ...options, ...exactConnection }),
+		connectDevTools: (options) => browser.connectDevTools({ ...options, ...exactConnection }),
+		connectChatgptPromptWorkbench: (options) =>
+			browser.connectChatgptPromptWorkbench({ ...options, ...exactConnection }),
+	};
 }
 
 export function formatChatgptSkillOperationResult(result: ChatgptSkillOperationResult): string {

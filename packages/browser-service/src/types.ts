@@ -10,6 +10,9 @@ export interface DevToolsConnectionOptions {
   abortSignal?: AbortSignal;
   stageTimeoutMs?: number;
   onStage?: (stage: DevToolsAttachmentStage) => void;
+  host?: string;
+  port?: number;
+  tabTargetId?: string;
 }
 export type CookieParam = Protocol.Network.CookieParam;
 export type DebugPortStrategy = 'fixed' | 'auto';

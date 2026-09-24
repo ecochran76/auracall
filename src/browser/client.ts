@@ -89,6 +89,14 @@ export class BrowserAutomationClient {
     return this.tabConcurrencyRuntime.readStatus();
   }
 
+  async runUtilityBrowserOperation<TResult>(input: {
+    options?: BrowserProviderListOptions;
+    mutability: 'read-only' | 'provider-mutating';
+    run: (options: BrowserProviderListOptions) => Promise<TResult>;
+  }): Promise<TResult> {
+    return this.llmService.runUtilityBrowserOperation(input);
+  }
+
   async listProjects(
     options?: BrowserProviderListOptions,
   ): Promise<unknown> {
@@ -259,12 +267,21 @@ export class BrowserAutomationClient {
     if (this.target !== 'chatgpt') {
       throw new Error('Prompt-workbench DevTools attachment is only available for ChatGPT.');
     }
+    const exactOptions =
+      options.host && options.port && options.tabTargetId
+        ? {
+            host: options.host,
+            port: options.port,
+            tabTargetId: options.tabTargetId,
+          }
+        : {};
     const providerOptions = await this.llmService.buildListOptions({
       abortSignal: options.abortSignal,
       configuredUrl: 'https://chatgpt.com/',
       preserveActiveTab: true,
       requirePromptWorkbenchTarget: true,
       tabLifecycle: 'retain-new',
+      ...exactOptions,
     }, { ensurePort: true });
     const { connectToChatgptPromptWorkbenchForSkills } = await import(
       './providers/chatgptAdapter.js'

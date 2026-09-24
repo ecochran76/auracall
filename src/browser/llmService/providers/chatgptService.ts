@@ -86,6 +86,17 @@ export class ChatgptService extends LlmService {
 		return this.getResolvedUserConfig().browser?.tabConcurrencyMode === "tab-affinity";
 	}
 
+	override runUtilityBrowserOperation<TResult>(input: {
+		options?: BrowserProviderListOptions;
+		mutability: "read-only" | "provider-mutating";
+		run: (options: BrowserProviderListOptions) => Promise<TResult>;
+	}): Promise<TResult> {
+		if (!this.usesUtilityAffinity()) return super.runUtilityBrowserOperation(input);
+		return input.mutability === "provider-mutating"
+			? this.runWithUtilityMutationAffinity(input.options, input.run)
+			: this.runWithUtilityAffinity(input.options, input.run);
+	}
+
 	async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
 		if (!this.provider.listProjects) {
 			return [];

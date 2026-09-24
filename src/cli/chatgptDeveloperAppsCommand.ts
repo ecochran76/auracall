@@ -1,10 +1,11 @@
-import { BrowserAutomationClient } from "../browser/client.js";
 import type { DeveloperAppSubmissionEvidence } from "../browser/chatgptDeveloperAppSubmission.js";
+import { BrowserAutomationClient } from "../browser/client.js";
 import {
 	type ChatgptDeveloperAppBrowserClient,
 	type ChatgptDeveloperAppBrowserClientFactory,
 	createChatgptDeveloperAppBrowserAdapter,
 } from "../browser/providers/chatgptDeveloperApps.js";
+import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { ResolvedUserConfig } from "../config.js";
 
 const DEFAULT_CHATGPT_DEVELOPER_APP_LIST_TIMEOUT_MS = 45_000;
@@ -299,16 +300,40 @@ export async function runChatgptDeveloperAppOperationForCli(
 	const operation = async () => {
 		const browser = await createBrowser(userConfig, { target: "chatgpt" });
 		abortController?.signal.throwIfAborted();
-		active.adapter = createAdapter(
-			browser,
-			(config) => createBrowser(config, { target: "chatgpt" }),
-			{
-				abortSignal: abortController?.signal,
-				browserOperationOwned: dependencies.browserOperationOwned,
-			},
-		);
-		abortController?.signal.throwIfAborted();
-		return executeChatgptDeveloperAppOperation(input, active.adapter);
+		const run = async (listOptions: BrowserProviderListOptions) => {
+			await listOptions.interactionGovernor?.beforeInteraction("generic", abortController?.signal);
+			const exactBrowser = scopeChatgptDeveloperAppBrowser(browser, listOptions);
+			active.adapter = createAdapter(
+				exactBrowser,
+				async (config) =>
+					scopeChatgptDeveloperAppBrowser(
+						await createBrowser(config, { target: "chatgpt" }),
+						listOptions,
+					),
+				{
+					abortSignal: abortController?.signal,
+					browserOperationOwned: dependencies.browserOperationOwned,
+				},
+			);
+			abortController?.signal.throwIfAborted();
+			try {
+				return await executeChatgptDeveloperAppOperation(input, active.adapter);
+			} finally {
+				await active.adapter.close().catch(() => undefined);
+				active.adapter = null;
+			}
+		};
+		if (!browser.runUtilityBrowserOperation) {
+			if (userConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+				throw new Error("ChatGPT developer-app affinity requires utility-operation support.");
+			}
+			return run({});
+		}
+		return browser.runUtilityBrowserOperation({
+			options: { abortSignal: abortController?.signal },
+			mutability: input.action === "list" ? "read-only" : "provider-mutating",
+			run,
+		});
 	};
 	try {
 		if (input.action !== "list") return await operation();
@@ -336,6 +361,23 @@ export async function runChatgptDeveloperAppOperationForCli(
 			).catch(() => undefined);
 		}
 	}
+}
+
+function scopeChatgptDeveloperAppBrowser(
+	browser: ChatgptDeveloperAppBrowserClient,
+	listOptions: BrowserProviderListOptions,
+): ChatgptDeveloperAppBrowserClient {
+	const exactConnection = {
+		host: listOptions.host,
+		port: listOptions.port,
+		tabTargetId: listOptions.tabTargetId,
+	};
+	return {
+		userConfig: browser.userConfig,
+		getUserIdentity: (options) =>
+			browser.getUserIdentity({ ...listOptions, ...options, ...exactConnection }),
+		connectDevTools: (options) => browser.connectDevTools({ ...options, ...exactConnection }),
+	};
 }
 
 function normalizePositiveTimeout(value: number | undefined, fallback: number): number {

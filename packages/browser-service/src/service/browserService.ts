@@ -9,7 +9,7 @@ import type {
 } from '../types.js';
 import { isDevToolsResponsive } from '../processCheck.js';
 import type { CredentialHint } from './types.js';
-import { connectToChrome } from '../chromeLifecycle.js';
+import { connectToChrome, connectToChromeTarget } from '../chromeLifecycle.js';
 
 const DEFAULT_DEVTOOLS_ATTACHMENT_STAGE_TIMEOUT_MS = 10_000;
 const MANAGED_PROFILE_OWNER_READINESS_ATTEMPTS = 10;
@@ -188,6 +188,32 @@ export class BrowserService {
       DEFAULT_DEVTOOLS_ATTACHMENT_STAGE_TIMEOUT_MS,
     );
     options.onStage?.('browserDevToolsTargetResolution');
+    const exactTargetFields = [options.host, options.port, options.tabTargetId].filter(
+      (value) => value !== undefined,
+    ).length;
+    if (exactTargetFields > 0 && exactTargetFields < 3) {
+      throw new Error('Exact DevTools attachment requires host, port, and tabTargetId together.');
+    }
+    if (options.host && options.port && options.tabTargetId) {
+      options.onStage?.('browserDevToolsCdpConnection');
+      const client = await runDevToolsAttachmentStage(
+        connectToChromeTarget({
+          host: options.host,
+          port: options.port,
+          target: options.tabTargetId,
+          abortSignal: options.abortSignal,
+          timeoutMs: stageTimeoutMs,
+        }),
+        {
+          stage: 'browserDevToolsCdpConnection',
+          timeoutMs: stageTimeoutMs,
+          abortSignal: options.abortSignal,
+          onLateResolve: (lateClient) => lateClient.close().catch(() => undefined),
+        },
+      );
+      options.onStage?.('browserDevToolsConnected');
+      return { client, port: options.port };
+    }
     const target = await runDevToolsAttachmentStage(
       this.deps.resolveBrowserListTarget(),
       {
