@@ -22,7 +22,17 @@ export interface RunChatgptPromptOnLeasedTabInput {
 export async function runChatgptPromptOnLeasedTab(
 	request: RunChatgptPromptOnLeasedTabInput,
 ): Promise<PromptResult> {
-	const { lease, operationId, endpoint, input, runPrompt } = request;
+	const { lease, input, runPrompt } = request;
+	const options = buildChatgptLeasedPromptOptions(request);
+	const result = await runPrompt(input, options);
+	assertChatgptLeasedPromptResult(lease, result);
+	return result;
+}
+
+export function buildChatgptLeasedPromptOptions(
+	request: Omit<RunChatgptPromptOnLeasedTabInput, "runPrompt">,
+): BrowserProviderListOptions {
+	const { lease, operationId, endpoint, input } = request;
 	assertChatgptConversationLease(lease, operationId, input);
 	if (!endpoint.host.trim() || !Number.isInteger(endpoint.port) || endpoint.port <= 0) {
 		throw new Error(
@@ -30,7 +40,7 @@ export async function runChatgptPromptOnLeasedTab(
 		);
 	}
 
-	const result = await runPrompt(input, {
+	return {
 		...(request.options ?? {}),
 		allowNavigation: false,
 		host: endpoint.host,
@@ -38,8 +48,13 @@ export async function runChatgptPromptOnLeasedTab(
 		preserveActiveTab: true,
 		tabLifecycle: "retain",
 		tabTargetId: lease.targetId,
-	});
+	};
+}
 
+export function assertChatgptLeasedPromptResult(
+	lease: BrowserTabLease,
+	result: PromptResult,
+): void {
 	if (result.tabTargetId !== lease.targetId) {
 		throw new Error(
 			`ChatGPT leased prompt returned target ${result.tabTargetId ?? "(missing)"} instead of leased target ${lease.targetId}.`,
@@ -56,8 +71,6 @@ export async function runChatgptPromptOnLeasedTab(
 	if (lease.workload.kind === "new-conversation" && !result.conversationId) {
 		throw new Error("ChatGPT new-conversation leased prompt did not return a conversation ID.");
 	}
-
-	return result;
 }
 
 function assertChatgptConversationLease(
