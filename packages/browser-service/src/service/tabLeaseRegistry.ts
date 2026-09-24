@@ -81,7 +81,19 @@ export interface BrowserTabLease {
   retirementReason: TabLeaseRetirementReason | null;
   finalDisposition: TabLeaseFinalDisposition | null;
   lossReason: TabLeaseLossReason | null;
+  actionCounts: BrowserTabActionCounts;
 }
+
+export interface BrowserTabActionCounts {
+  targetCreations: number;
+  adoptions: number;
+  navigations: number;
+  reloads: number;
+  focuses: number;
+  closes: number;
+}
+
+export type BrowserTabTargetAction = 'target-created' | 'adopted' | 'navigation' | 'reload' | 'focus';
 
 export type TabLeaseRetirementReason = 'idle-expired' | 'absolute-expired' | 'cancelled' | 'operator';
 export type TabLeaseFinalDisposition = 'closed' | 'already-missing' | 'preserved';
@@ -147,6 +159,15 @@ export interface BrowserTabLeaseRegistry {
     idleTtlMs: number;
     targetFingerprint?: string | null;
     effectState?: TabLeaseEffectState;
+  }): Promise<TabLeaseResult<{
+    lease: BrowserTabLease;
+    claim: TabLeaseClaim;
+  }>>;
+  recordTargetAction(input: {
+    claim: TabLeaseClaim;
+    action: BrowserTabTargetAction;
+    occurredAt: string;
+    idleTtlMs: number;
   }): Promise<TabLeaseResult<{
     lease: BrowserTabLease;
     claim: TabLeaseClaim;
@@ -365,6 +386,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       retirementReason: null,
       finalDisposition: null,
       lossReason: null,
+      actionCounts: emptyActionCounts(),
     };
     this.leases.set(leaseId, lease);
     return {
@@ -475,6 +497,61 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
         ? existing.targetFingerprint
         : normalizeOptional(input.targetFingerprint) ?? null,
       effectState: input.effectState ?? existing.effectState,
+    };
+    this.leases.set(updated.leaseId, updated);
+    return {
+      ok: true,
+      value: {
+        lease: cloneLease(updated),
+        claim: {
+          leaseId: updated.leaseId,
+          revision: updated.revision,
+          operationId: input.claim.operationId,
+        },
+      },
+    };
+  }
+
+  async recordTargetAction(input: {
+    claim: TabLeaseClaim;
+    action: BrowserTabTargetAction;
+    occurredAt: string;
+    idleTtlMs: number;
+  }): Promise<TabLeaseResult<{
+    lease: BrowserTabLease;
+    claim: TabLeaseClaim;
+  }>> {
+    const existing = this.leases.get(input.claim.leaseId);
+    if (!existing) return { ok: false, conflict: { kind: 'not-found' } };
+    if (
+      existing.revision !== input.claim.revision ||
+      existing.ownerOperationId !== input.claim.operationId
+    ) {
+      return { ok: false, conflict: { kind: 'stale-claim', lease: cloneLease(existing) } };
+    }
+    if (existing.state !== 'active') {
+      return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    }
+    const occurredAtMs = parseTimestamp(input.occurredAt, 'occurredAt');
+    const absoluteExpiresAtMs = parseTimestamp(existing.absoluteExpiresAt, 'absoluteExpiresAt');
+    if (occurredAtMs > absoluteExpiresAtMs) {
+      return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    }
+    const actionCounts = cloneActionCounts(existing.actionCounts);
+    actionCounts[actionCountKey(input.action)] += 1;
+    const occurredAt = new Date(occurredAtMs).toISOString();
+    const updated: BrowserTabLease = {
+      ...existing,
+      revision: existing.revision + 1,
+      heartbeatAt: occurredAt,
+      lastMeaningfulUseAt: occurredAt,
+      idleExpiresAt: new Date(
+        Math.min(
+          occurredAtMs + normalizeTtl(input.idleTtlMs, 'idleTtlMs'),
+          absoluteExpiresAtMs,
+        ),
+      ).toISOString(),
+      actionCounts,
     };
     this.leases.set(updated.leaseId, updated);
     return {
@@ -631,6 +708,10 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       state: input.disposition === 'preserved' ? 'lost' : 'released',
       heartbeatAt: new Date(parseTimestamp(input.now, 'now')).toISOString(),
       finalDisposition: input.disposition,
+      actionCounts: {
+        ...existing.actionCounts,
+        closes: existing.actionCounts.closes + (input.disposition === 'closed' ? 1 : 0),
+      },
     };
     this.leases.set(finished.leaseId, finished);
     return { ok: true, value: cloneLease(finished) };
@@ -749,6 +830,10 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
 
   recordMeaningfulUse(input: Parameters<BrowserTabLeaseRegistry['recordMeaningfulUse']>[0]) {
     return this.write((registry) => registry.recordMeaningfulUse(input));
+  }
+
+  recordTargetAction(input: Parameters<BrowserTabLeaseRegistry['recordTargetAction']>[0]) {
+    return this.write((registry) => registry.recordTargetAction(input));
   }
 
   idle(input: Parameters<BrowserTabLeaseRegistry['idle']>[0]) {
@@ -967,7 +1052,33 @@ function cloneLease(lease: BrowserTabLease): BrowserTabLease {
     ...lease,
     scope: { ...lease.scope },
     workload: { ...lease.workload } as TabLeaseWorkload,
+    actionCounts: cloneActionCounts(lease.actionCounts),
   };
+}
+
+function emptyActionCounts(): BrowserTabActionCounts {
+  return {
+    targetCreations: 0,
+    adoptions: 0,
+    navigations: 0,
+    reloads: 0,
+    focuses: 0,
+    closes: 0,
+  };
+}
+
+function cloneActionCounts(counts: BrowserTabActionCounts | null | undefined): BrowserTabActionCounts {
+  return { ...emptyActionCounts(), ...(counts ?? {}) };
+}
+
+function actionCountKey(action: BrowserTabTargetAction): keyof BrowserTabActionCounts {
+  switch (action) {
+    case 'target-created': return 'targetCreations';
+    case 'adopted': return 'adoptions';
+    case 'navigation': return 'navigations';
+    case 'reload': return 'reloads';
+    case 'focus': return 'focuses';
+  }
 }
 
 function cloneControl(control: BrowserProfileControlRecord): BrowserProfileControlRecord {

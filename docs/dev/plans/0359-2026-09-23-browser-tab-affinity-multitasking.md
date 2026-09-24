@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 7
+Plan version: 8
 
 ## Stable Objective
 
@@ -66,6 +66,11 @@ provider-neutral.
   active, including across file-backed instances. Confirmed pre-effect
   interaction cancellation remains durable evidence without consuming a
   conversation-start quota slot.
+- Exact target-action counters now live on each lease and update only through
+  its revision-fenced claim. Target creation, adoption, navigation, reload,
+  focus, and attributable retirement close remain target-specific; action use
+  extends idle lifetime without extending absolute lifetime. Rolling daily
+  admission has explicit inclusive-boundary coverage.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -627,3 +632,23 @@ Checkpoint 2026-09-24, conflict hierarchy and cancellation:
 - `delegation_status`: no new workers
 - `review_status`: profile and tab exclusion share one registry transaction;
   cancellation accounting follows effect evidence rather than terminal label
+
+Checkpoint 2026-09-24, action accounting and daily boundary:
+
+- `plan_version`: 8
+- `state_transition`: OPEN -> OPEN; Packet 1 action counters and Packet 3 daily
+  boundary tracer GREEN
+- `acceptance_state`: partial provider-free acceptance; 7 interaction-ledger,
+  11 tab-lease, and 11 compatibility-dispatcher tests pass with typecheck
+- `progress_classification`: forward progress
+- `evidence`: exact claim-fenced target creation/adoption/navigation/reload/focus
+  counters, close settlement count, bounded lifetime extension, and inclusive
+  24-hour rolling-limit boundary
+- `material_blockers`: none for status projection or provider integration work
+- `next_action_or_stop_reason`: project the new durable ledger evidence through
+  existing tenant-limit status, add provider-free ChatGPT exact-target fixtures,
+  and keep production execution serialized until the integration seam is fully
+  guarded
+- `delegation_status`: no new workers
+- `review_status`: action evidence is attributable to one target lease and
+  quota release follows exact timestamp/effect evidence

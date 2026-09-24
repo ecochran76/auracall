@@ -389,4 +389,47 @@ describe("interactionLedger (package)", () => {
 			}),
 		);
 	});
+
+	test("enforces the inclusive rolling daily boundary", async () => {
+		let sequence = 0;
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => `reservation-${++sequence}`,
+		});
+		const policy = {
+			maxConcurrentChats: 4,
+			maxConversationStartsPerHour: null,
+			maxConversationStartsPerDay: 1,
+		};
+		const reserve = (operationId: string, now: string) =>
+			ledger.reserve({
+				scope: foregroundScope,
+				workloadId: operationId,
+				operationId,
+				tabLeaseId: `lease-${operationId}`,
+				interactionClass: "conversation-start",
+				mutability: "provider-mutating",
+				startsNewConversation: true,
+				now,
+				reservationTtlMs: 30_000,
+				policy,
+			});
+		const first = await reserve("operation-a", "2026-09-24T12:00:00.000Z");
+		if (!first.allowed) throw new Error("expected first start");
+		await ledger.start({
+			reservationId: first.reservation.reservationId,
+			startedAt: "2026-09-24T12:00:00.000Z",
+		});
+		await ledger.settle({
+			reservationId: first.reservation.reservationId,
+			settledAt: "2026-09-24T12:00:00.000Z",
+			effectState: "settled",
+			outcome: "succeeded",
+		});
+
+		expect(await reserve("operation-b", "2026-09-25T12:00:00.000Z")).toEqual({
+			allowed: false,
+			reason: "daily-limit",
+		});
+		expect((await reserve("operation-c", "2026-09-25T12:00:00.001Z")).allowed).toBe(true);
+	});
 });

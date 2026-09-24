@@ -582,4 +582,66 @@ describe("tabLeaseRegistry (package)", () => {
 			).ok,
 		).toBe(true);
 	});
+
+	test("attributes target actions and retirement close counts to the exact fenced lease", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-a" });
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "target-a",
+			workload: { kind: "conversation", conversationId: "conversation-a" },
+			operationId: "operation-a",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!reserved.ok) throw new Error("expected lease");
+		let claim = reserved.value.claim;
+		for (const [action, occurredAt] of [
+			["target-created", "2026-09-24T12:00:01.000Z"],
+			["navigation", "2026-09-24T12:00:02.000Z"],
+			["reload", "2026-09-24T12:00:03.000Z"],
+			["focus", "2026-09-24T12:00:04.000Z"],
+		] as const) {
+			const recorded = await registry.recordTargetAction({
+				claim,
+				action,
+				occurredAt,
+				idleTtlMs: 60_000,
+			});
+			if (!recorded.ok) throw new Error(`expected ${action} record`);
+			claim = recorded.value.claim;
+		}
+		const idled = await registry.idle({
+			claim,
+			now: "2026-09-24T12:00:05.000Z",
+			effectState: "settled",
+		});
+		if (!idled.ok) throw new Error("expected idle lease");
+		const retiring = await registry.beginRetirement({
+			leaseId: idled.value.leaseId,
+			expectedRevision: idled.value.revision,
+			now: "2026-09-24T12:00:06.000Z",
+			reason: "cancelled",
+		});
+		if (!retiring.ok) throw new Error("expected retiring lease");
+		const released = await registry.finishRetirement({
+			leaseId: idled.value.leaseId,
+			retirementRevision: retiring.value.retirementRevision,
+			now: "2026-09-24T12:00:07.000Z",
+			disposition: "closed",
+		});
+		expect(released).toMatchObject({
+			ok: true,
+			value: {
+				actionCounts: {
+					targetCreations: 1,
+					adoptions: 0,
+					navigations: 1,
+					reloads: 1,
+					focuses: 1,
+					closes: 1,
+				},
+			},
+		});
+	});
 });

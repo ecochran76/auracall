@@ -50076,3 +50076,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Six interaction-ledger, ten tab-lease, and eleven compatibility-dispatcher
   tests plus typecheck pass. Existing production dispatcher behavior remains
   unchanged and serialized.
+
+## 2026-09-24 | Plan 0359 exact action counters and daily admission
+
+- Added per-lease counters for target creation, adoption, navigation, reload,
+  focus, and attributable close. Every active action requires the current
+  revision claim, updates only that lease, and extends idle but never absolute
+  lifetime.
+- Added exact rolling-day coverage: a settled start at the inclusive 24-hour
+  cutoff remains counted, then becomes available one millisecond later.
+- Seven ledger, eleven tab-lease, and eleven compatibility-dispatcher tests plus
+  typecheck pass. Production browser execution remains serialized.
