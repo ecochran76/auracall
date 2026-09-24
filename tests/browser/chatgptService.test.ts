@@ -24,6 +24,7 @@ const providerRunPrompt = vi.hoisted(() =>
 	})),
 );
 const providerListProjectFiles = vi.hoisted(() => vi.fn(async () => []));
+const providerUploadProjectFiles = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("../../src/browser/providers/index.js", async (importOriginal) => {
 	const original = await importOriginal<typeof import("../../src/browser/providers/index.js")>();
@@ -32,7 +33,12 @@ vi.mock("../../src/browser/providers/index.js", async (importOriginal) => {
 		getProvider: (id: "chatgpt" | "gemini" | "grok") => {
 			const provider = original.getProvider(id);
 			return id === "chatgpt"
-				? { ...provider, runPrompt: providerRunPrompt, listProjectFiles: providerListProjectFiles }
+				? {
+						...provider,
+						runPrompt: providerRunPrompt,
+						listProjectFiles: providerListProjectFiles,
+						uploadProjectFiles: providerUploadProjectFiles,
+					}
 				: provider;
 		},
 	};
@@ -46,6 +52,8 @@ afterEach(async () => {
 	}
 	providerRunPrompt.mockClear();
 	providerListProjectFiles.mockClear();
+	providerUploadProjectFiles.mockReset();
+	providerUploadProjectFiles.mockResolvedValue(undefined);
 	clearBrowserOperationQueueObservationsForTest();
 	vi.restoreAllMocks();
 	setAuracallHomeDirOverrideForTest(null);
@@ -167,6 +175,87 @@ describe("ChatGPT llm service", () => {
 			"project-1",
 			expect.objectContaining({ tabTargetId: "utility-tab-1" }),
 		);
+	});
+
+	it("runs a ChatGPT project upload and cache refresh once on the same utility tab", async () => {
+		const cacheRoot = await tempRoot("auracall-chatgpt-utility-upload-");
+		const runUtilityOperation = vi.fn(
+			async (input: {
+				mutability: string;
+				run: (options: {
+					host: string;
+					port: number;
+					tabTargetId: string;
+					skipFeatureSignature: boolean;
+				}) => Promise<unknown>;
+			}) =>
+				input.run({
+					host: "127.0.0.1",
+					port: 45011,
+					tabTargetId: "utility-tab-1",
+					skipFeatureSignature: true,
+				}),
+		);
+		const { ChatgptService } = await import(
+			"../../src/browser/llmService/providers/chatgptService.js"
+		);
+		const service = ChatgptService.create(
+			{
+				browser: {
+					target: "chatgpt",
+					tabConcurrencyMode: "tab-affinity",
+					cache: { rootDir: cacheRoot, identityKey: "test", useDetectedIdentity: false },
+				},
+			} as ResolvedUserConfig,
+			{ runUtilityOperation: runUtilityOperation as never },
+		);
+
+		await service.uploadProjectFiles("project-1", ["/tmp/source.txt"]);
+
+		expect(runUtilityOperation).toHaveBeenCalledOnce();
+		expect(runUtilityOperation).toHaveBeenCalledWith(
+			expect.objectContaining({ mutability: "provider-mutating" }),
+		);
+		expect(providerUploadProjectFiles).toHaveBeenCalledOnce();
+		expect(providerUploadProjectFiles).toHaveBeenCalledWith(
+			"project-1",
+			["/tmp/source.txt"],
+			expect.objectContaining({ tabTargetId: "utility-tab-1" }),
+		);
+		expect(providerListProjectFiles).toHaveBeenCalledOnce();
+		expect(providerListProjectFiles).toHaveBeenCalledWith(
+			"project-1",
+			expect.objectContaining({ tabTargetId: "utility-tab-1" }),
+		);
+	});
+
+	it("does not retry a failed ChatGPT project upload inside utility affinity", async () => {
+		providerUploadProjectFiles.mockRejectedValueOnce(new Error("connection lost after upload"));
+		const runUtilityOperation = vi.fn(
+			async (input: {
+				run: (options: { host: string; port: number; tabTargetId: string }) => Promise<unknown>;
+			}) =>
+				input.run({
+					host: "127.0.0.1",
+					port: 45011,
+					tabTargetId: "utility-tab-1",
+				}),
+		);
+		const { ChatgptService } = await import(
+			"../../src/browser/llmService/providers/chatgptService.js"
+		);
+		const service = ChatgptService.create(
+			{
+				browser: { target: "chatgpt", tabConcurrencyMode: "tab-affinity" },
+			} as ResolvedUserConfig,
+			{ runUtilityOperation: runUtilityOperation as never },
+		);
+
+		await expect(service.uploadProjectFiles("project-1", ["/tmp/source.txt"])).rejects.toThrow(
+			"connection lost after upload",
+		);
+		expect(providerUploadProjectFiles).toHaveBeenCalledOnce();
+		expect(providerListProjectFiles).not.toHaveBeenCalled();
 	});
 
 	it("passes ChatGPT image capability intent to the provider adapter", async () => {

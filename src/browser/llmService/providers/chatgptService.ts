@@ -64,6 +64,24 @@ export class ChatgptService extends LlmService {
 		})) as TResult;
 	}
 
+	private async runWithUtilityMutationAffinity<TResult>(
+		options: BrowserProviderListOptions | undefined,
+		run: (exactOptions: BrowserProviderListOptions) => Promise<TResult>,
+	): Promise<TResult> {
+		if (options?.tabTargetId) {
+			return run(options);
+		}
+		return (await this.runUtilityOperation({
+			userConfig: this.getResolvedUserConfig(),
+			browserService: this.getBrowserService(),
+			utilityId: this.utilityAffinityId,
+			options,
+			mutability: "provider-mutating",
+			buildListOptions: (overrides) => this.buildListOptions(overrides, { ensurePort: true }),
+			run,
+		})) as TResult;
+	}
+
 	private usesUtilityAffinity(): boolean {
 		return this.getResolvedUserConfig().browser?.tabConcurrencyMode === "tab-affinity";
 	}
@@ -207,6 +225,36 @@ export class ChatgptService extends LlmService {
 		);
 	}
 
+	override uploadProjectFiles(
+		projectId: string,
+		paths: string[],
+		options?: Parameters<LlmService["uploadProjectFiles"]>[2],
+	): ReturnType<LlmService["uploadProjectFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.uploadProjectFiles(projectId, paths, options);
+		if (!this.provider.uploadProjectFiles) {
+			throw new Error(`Project file upload is not supported for ${this.providerId}.`);
+		}
+		return this.runWithUtilityMutationAffinity(options?.listOptions, async (listOptions) => {
+			await this.provider.uploadProjectFiles?.(projectId, paths, listOptions);
+			await this.listProjectFiles(projectId, { listOptions });
+		});
+	}
+
+	override deleteProjectFile(
+		projectId: string,
+		fileName: string,
+		options?: Parameters<LlmService["deleteProjectFile"]>[2],
+	): ReturnType<LlmService["deleteProjectFile"]> {
+		if (!this.usesUtilityAffinity()) return super.deleteProjectFile(projectId, fileName, options);
+		if (!this.provider.deleteProjectFile) {
+			throw new Error(`Project file deletion is not supported for ${this.providerId}.`);
+		}
+		return this.runWithUtilityMutationAffinity(options?.listOptions, async (listOptions) => {
+			await this.provider.deleteProjectFile?.(projectId, fileName, listOptions);
+			await this.listProjectFiles(projectId, { listOptions });
+		});
+	}
+
 	override materializeProjectFiles(
 		projectId: string,
 		options?: Parameters<LlmService["materializeProjectFiles"]>[1],
@@ -224,6 +272,34 @@ export class ChatgptService extends LlmService {
 		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
 			super.listAccountFiles({ ...options, listOptions }),
 		);
+	}
+
+	override uploadAccountFiles(
+		paths: string[],
+		options?: Parameters<LlmService["uploadAccountFiles"]>[1],
+	): ReturnType<LlmService["uploadAccountFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.uploadAccountFiles(paths, options);
+		if (!this.provider.uploadAccountFiles) {
+			throw new Error(`Account file upload is not supported for ${this.providerId}.`);
+		}
+		return this.runWithUtilityMutationAffinity(options?.listOptions, async (listOptions) => {
+			await this.provider.uploadAccountFiles?.(paths, listOptions);
+			await this.listAccountFiles({ listOptions });
+		});
+	}
+
+	override deleteAccountFile(
+		fileId: string,
+		options?: Parameters<LlmService["deleteAccountFile"]>[1],
+	): ReturnType<LlmService["deleteAccountFile"]> {
+		if (!this.usesUtilityAffinity()) return super.deleteAccountFile(fileId, options);
+		if (!this.provider.deleteAccountFile) {
+			throw new Error(`Account file deletion is not supported for ${this.providerId}.`);
+		}
+		return this.runWithUtilityMutationAffinity(options?.listOptions, async (listOptions) => {
+			await this.provider.deleteAccountFile?.(fileId, listOptions);
+			await this.listAccountFiles({ listOptions });
+		});
 	}
 
 	override downloadAccountFile(
