@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 27
+Plan version: 28
 
 ## Stable Objective
 
@@ -1230,3 +1230,25 @@ Checkpoint 2026-09-24, cross-runtime ownership domain:
 - `review_status`: runtime profile is attribution and configuration context,
   not a namespace that may duplicate physical target or provider-conversation
   ownership inside one managed browser/account
+
+Checkpoint 2026-09-24, provisioning-accounting rollback:
+
+- `plan_version`: 28
+- `state_transition`: OPEN -> OPEN; provider-free acceptance retained with
+  bounded cleanup for post-reservation accounting failure
+- `acceptance_state`: provider-free accepted; a newly created prompt, crawler,
+  or utility target cannot remain indefinitely active when target-action
+  accounting fails immediately after lease reservation
+- `progress_classification`: forward progress
+- `evidence`: commit `791fc9c3c01b5377634be60b92b3e8cd4283c240`
+  marks the exact created lease lost before closing its target and releases the
+  lease only after close succeeds; uncertain close retains the lost fence
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: 14 focused provisioner, crawler, runtime, and configured
+  live-follow tests pass with typecheck, scoped Biome, and diff hygiene
+- `next_action_or_stop_reason`: continue the bounded provider-free failure-path
+  audit without starting a browser or provider interaction
+- `delegation_status`: no new workers
+- `review_status`: reservation failure already closed the unleased newly
+  created target; this repair covers the later state where reservation succeeded
+  but action accounting did not

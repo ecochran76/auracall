@@ -50358,3 +50358,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   pass. The reduced-concurrency full suite passes 354 files and 3,271 tests,
   with 65 opt-in/live tests skipped; build and lint pass. No browser/provider
   effect ran.
+
+## 2026-09-24 | Provisioning accounting rollback
+
+- Prompt and crawler provisioners reserved a newly created exact target before
+  recording its target-created action. If that accounting transition failed,
+  the target stayed safely fenced but active under a live process indefinitely.
+- Both provisioners now mark that exact lease lost before closing the exact
+  newly created target, then release it only after close succeeds. A close
+  failure preserves the lost fence for reconciliation.
+- Four focused suites pass with 14 tests; typecheck, scoped Biome, and diff
+  hygiene pass. No browser/provider effect ran.

@@ -1018,7 +1018,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 2e656c722d475c67e12fe2987f18e5da1c35389e
+    checkpoint: 791fc9c3c01b5377634be60b92b3e8cd4283c240
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1028,6 +1028,6 @@ lanes:
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
     validation_status: packets-1-through-6-provider-free-accepted
-    validation_ref: 2e656c722d475c67e12fe2987f18e5da1c35389e
-    disposition: Packets 1 through 6 are provider-free accepted; post-effect settlement failure is fenced and physical target, conversation, generic-selection, and profile-control ownership now span AuraCall runtime profiles sharing one managed browser/account. The 354-file, 3271-test non-live suite, typecheck, build, and lint pass; Packet 7 installed/live acceptance and canonical-main integration remain open, serialized compatibility remains default, and no installed, browser, provider, scheduler, or live effect is authorized.
+    validation_ref: 791fc9c3c01b5377634be60b92b3e8cd4283c240
+    disposition: Packets 1 through 6 are provider-free accepted; post-effect settlement is fenced, ownership spans runtime profiles sharing a browser/account, and newly created targets are lost-fenced then closed when post-reservation action accounting fails. Focused regressions and typecheck pass; Packet 7 installed/live acceptance and canonical-main integration remain open, serialized compatibility remains default, and no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24

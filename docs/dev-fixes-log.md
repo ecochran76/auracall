@@ -22927,3 +22927,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - When a different runtime profile safely reacquires an idle settled binding,
   transfer current runtime attribution on the lease instead of provisioning a
   competing tab.
+
+## 2026-09-24 | Roll back newly created targets after lease-action accounting failure
+
+- Reserving a newly created target prevents cross-workload use, but a later
+  target-created/navigation accounting failure can strand an active lease whose
+  owner process is still alive.
+- Fence the exact lease as lost before attempting close. Release it only after
+  the exact newly created target closes successfully; preserve the lost fence
+  when close or release is uncertain.
+- This rollback authority applies only to the target created by the failing
+  provisioning operation, never to a reused or human-owned tab.
