@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 19
+Plan version: 20
 
 ## Stable Objective
 
@@ -140,6 +140,13 @@ provider-neutral.
   target-action totals, and retirement dispositions. It does not expose target,
   operation, tenant, or conversation identifiers. Per-binding age and remaining
   lifetime and broader orphan reconciliation remain incomplete Packet 6 work.
+- Generic ChatGPT service project/conversation listing, provider identity
+  reads, and conversation rename/delete now use one reusable exact utility tab
+  per service instance in explicit affinity mode. Every adapter interaction is
+  admitted and settled through the shared ledger. Mutations execute once; an
+  uncertain mutation leaves both ledger and tab evidence outcome-unknown, and
+  the registry now forbids reacquiring any outcome-unknown idle lease. Other
+  project/file CRUD and materialization read surfaces remain to be integrated.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -998,3 +1005,31 @@ Checkpoint 2026-09-24, persistent API maintenance owner:
 - `review_status`: proof-scoped server runs suppress the cadence; serialized
   mode schedules nothing; an absent endpoint defers leases without launching a
   browser or transitioning ownership
+
+Checkpoint 2026-09-24, ChatGPT utility-tab coordination:
+
+- `plan_version`: 20
+- `state_transition`: OPEN -> OPEN; first non-prompt ChatGPT CRUD/read bypasses
+  now enter exact-tab ownership and aggregate admission
+- `acceptance_state`: partial provider-free acceptance; 100 focused service,
+  context, file, prompt, utility, registry, and dedicated-tab tests pass with
+  typecheck, production build, diff hygiene, and repository lint; lint retains
+  the existing 207-warning baseline
+- `progress_classification`: forward progress
+- `evidence`: commit `22ed9d8751cd7e25114c28e52b8d7b214d9e358e`
+  gives each ChatGPT service instance one reusable five-minute-idle utility tab
+  for project/conversation listing, identity reads, rename, and delete; exact
+  target options prevent generic-tab selection, adapter interaction governors
+  reserve the shared ledger, and provider mutations are not retried in the
+  affinity branch
+- `material_blockers`: project/file CRUD inherited from the wider LLM service,
+  history/artifact materialization, and some specialized ChatGPT management
+  adapters still bypass utility affinity; restart/orphan reconciliation and
+  per-binding lifetime status remain open
+- `next_action_or_stop_reason`: extend the utility-operation wrapper across
+  remaining ChatGPT project/file and materialization reads, then finish
+  restart/orphan reconciliation and provider-free completion audit
+- `delegation_status`: no new workers
+- `review_status`: successful utility work idles and reuses the exact target;
+  failed reads settle without mutation evidence, failed mutations become
+  outcome-unknown, and outcome-unknown idle leases cannot be reacquired

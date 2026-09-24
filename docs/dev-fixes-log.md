@@ -1,3 +1,10 @@
+- 2026-09-24: Non-prompt provider CRUD cannot safely inherit generic compatible
+  tab selection when conversation tabs and a crawler coexist. Give a service
+  instance one exact leased utility tab, route every adapter interaction through
+  the aggregate ledger, and execute provider mutations once. If the mutation
+  outcome is uncertain, idle it only as fenced evidence and prohibit later
+  reacquisition rather than treating the tab as reusable.
+
 - 2026-09-24: Acquisition-driven expiry cleanup cannot enforce tab lifetime
   while a workload is quiet. Give explicit tab-affinity a long-running,
   non-overlapping maintenance owner that resolves configured scopes without

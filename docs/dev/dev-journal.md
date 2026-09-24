@@ -1,3 +1,15 @@
+## 2026-09-24 | Plan 0359 ChatGPT utility-tab coordination
+
+- ChatGPT project/conversation listing, identity reads, rename, and delete now
+  use one retained exact utility tab per service instance when explicit affinity
+  is enabled. Serialized mode retains the existing service behavior.
+- Each adapter interaction reserves and settles against the shared
+  tenant/provider ledger. Affinity mutations execute once without the legacy
+  retry wrapper; uncertain failures mark both tab and ledger outcome unknown.
+- The lease registry now refuses to reacquire any outcome-unknown idle lease.
+  One hundred focused browser-service and LLM-service tests, typecheck,
+  production build, diff hygiene, and repository lint pass. No live effect ran.
+
 ## 2026-09-24 | Plan 0359 persistent API tab maintenance
 
 - Added a non-overlapping tab-affinity maintenance loop owned by the
