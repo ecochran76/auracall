@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 15
+Plan version: 16
 
 ## Stable Objective
 
@@ -118,11 +118,17 @@ provider-neutral.
   live-follow reads consult the same tenant/provider warning state and rolling
   per-minute counter; direct/manual Account Mirror refreshes and other
   providers retain serialized compatibility behavior.
-- The legacy direct `runBrowserMode()` entry point still uses its current
-  profile-wide execution path. It is the next production migration boundary;
-  configured affinity must not be described as universal until every direct,
-  stored-response, batch, materialization, media, and CRUD caller either uses
-  the shared coordinator or is explicitly classified as profile control.
+- The legacy `runBrowserMode()` ChatGPT path now enters the same admission and
+  provisioning coordinator when explicit affinity includes full
+  profile-resolved configuration. Its established response waiting, runtime
+  heartbeats, tool/deep-research behavior, and recovery remain intact, but the
+  engine attaches only to the exact leased target, skips a redundant exact-route
+  navigation, and does not close the retained target. Stored responses,
+  interactive/detached sessions, TUI, and MCP consultation carry that authority.
+- Materialization, media, provider CRUD, and specialized non-prompt surfaces
+  still require classification and ledger integration. Production expiry
+  retirement and restart reconciliation also remain incomplete, so configured
+  affinity is not yet universal.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -879,3 +885,30 @@ Checkpoint 2026-09-24, Account Mirror crawler activation:
   the affinity collector uses `retain`, preserves the active tab, disables
   whole-browser cleanup, and projects structured provider guards before new
   permits
+
+Checkpoint 2026-09-24, legacy response and session coordination:
+
+- `plan_version`: 16
+- `state_transition`: OPEN -> OPEN; ChatGPT legacy response execution and its
+  stored/interactive session callers now enter Packet 4 affinity coordination
+- `acceptance_state`: partial provider-free acceptance; 102 focused legacy and
+  coordinator tests plus 125 focused session tests pass with typecheck, scoped
+  lint/diff hygiene, and production builds
+- `progress_classification`: forward progress
+- `evidence`: commits `51b52ff16` and
+  `74468d13435cf93aab6454183020bbb4ea167375` preserve the full legacy response
+  lifecycle while admitting before provisioning, selecting one exact leased
+  target without generic fallback, retaining it after execution, and carrying
+  profile-resolved affinity through stored responses, interactive and detached
+  sessions, TUI, and MCP consultation
+- `material_blockers`: production lifetime sweeping/reconciliation and
+  non-prompt materialization, media, and provider CRUD accounting remain; live
+  acceptance is separately gated
+- `next_action_or_stop_reason`: implement target-specific expired-lease
+  retirement with exact live-target verification and unresolved-effect stops,
+  then audit remaining non-prompt provider interactions against the aggregate
+  ledger
+- `delegation_status`: no new workers
+- `review_status`: direct ChatGPT browser execution cannot silently select a
+  generic tab in affinity mode; absent full resolved authority fails closed,
+  and Gemini/Grok remain serialized

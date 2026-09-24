@@ -1,3 +1,11 @@
+- 2026-09-24: Do not replace a mature browser response engine with a narrower
+  prompt-submitted adapter merely to gain tab affinity. Put admission and exact
+  target provisioning around the existing engine, require the full
+  profile-resolved tenant authority, attach without generic fallback, skip an
+  already-exact route, and retain the leased target for lifecycle settlement.
+  Carry that authority through stored, interactive, detached, TUI, and MCP
+  session entry points; an affinity request without it must fail closed.
+
 - 2026-09-24: A live-follow crawler cannot share a profile-wide browser lock
   with conversation tabs if tab-affinity is meant to permit safe coexistence.
   Bind each active completion to an exact verified crawler target, retain that

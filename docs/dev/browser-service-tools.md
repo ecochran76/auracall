@@ -150,11 +150,15 @@ ChatGPT handoff submission uses the same coordinated browser client in explicit
 affinity mode. Existing conversation bindings are reused only after a live
 target census confirms the exact conversation route; a missing target may be
 replaced, while a live route mismatch fails closed. The legacy direct
-`runBrowserMode()` path remains serialized and is not yet covered by this
-setting. ChatGPT Account Mirror live-follow completions use one dedicated
-crawler lease and the same tenant/provider interaction ledger in affinity
-mode; direct/manual refreshes and Gemini/Grok remain serialized. Do not treat
-configured mode or registry files as installed/live acceptance evidence.
+`runBrowserMode()` now uses the same admission/provisioning coordinator for
+ChatGPT when the caller supplies full profile-resolved affinity authority.
+Stored responses and interactive/detached, TUI, and MCP browser sessions carry
+that authority; the legacy response lifecycle attaches only to the leased
+target and retains it. ChatGPT Account Mirror live-follow completions use one
+dedicated crawler lease and the same tenant/provider interaction ledger.
+Direct/manual refreshes, non-prompt surfaces, and Gemini/Grok remain serialized
+or otherwise outside affinity. Do not treat configured mode or registry files
+as installed/live acceptance evidence.
 
 ## ChatGPT composer-mode boundary
 

@@ -1,3 +1,18 @@
+## 2026-09-24 | Plan 0359 legacy response affinity activation
+
+- Explicit ChatGPT affinity now wraps the full legacy `runBrowserMode()`
+  response lifecycle with aggregate admission and exact-tab provisioning. The
+  legacy engine connects only to the leased target, skips navigation when that
+  target is already on the exact route, and leaves affinity-owned cleanup to
+  the lease lifecycle.
+- Stored responses, interactive and detached sessions, TUI, and MCP
+  consultation now carry profile-resolved affinity configuration. Missing full
+  authority fails closed; Gemini and Grok remain serialized.
+- Provider-free validation passed 102 focused coordinator/legacy tests and 125
+  focused session tests, typecheck, scoped lint/diff hygiene, and production
+  builds. No browser or provider effect occurred. Expiry retirement and
+  remaining non-prompt surfaces are next.
+
 ## 2026-09-24 | Plan 0359 Account Mirror crawler activation
 
 - ChatGPT live-follow completions in explicit `tab-affinity` mode now own one
