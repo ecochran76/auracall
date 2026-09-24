@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 8
+Plan version: 9
 
 ## Stable Objective
 
@@ -71,6 +71,11 @@ provider-neutral.
   focus, and attributable retirement close remain target-specific; action use
   extends idle lifetime without extending absolute lifetime. Rolling daily
   admission has explicit inclusive-boundary coverage.
+- Existing tenant-limit status now accepts the provider-neutral ledger as an
+  optional evidence source and labels that projection
+  `aggregate-interaction-ledger`. Legacy runtime-evidence projection remains
+  unchanged when no ledger is supplied, so this checkpoint adds status
+  compatibility without changing production admission or tab concurrency.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -652,3 +657,22 @@ Checkpoint 2026-09-24, action accounting and daily boundary:
 - `delegation_status`: no new workers
 - `review_status`: action evidence is attributable to one target lease and
   quota release follows exact timestamp/effect evidence
+
+Checkpoint 2026-09-24, tenant status projection:
+
+- `plan_version`: 9
+- `state_transition`: OPEN -> OPEN; Packet 3 compatibility projection GREEN
+- `acceptance_state`: partial provider-free acceptance; 34 focused tests,
+  typecheck, and production build pass
+- `progress_classification`: forward progress
+- `evidence`: tenant status reports ledger-derived active/hour/day counts and
+  explicit `aggregate-interaction-ledger` basis when injected; existing status
+  tests remain green on `runtime-evidence`
+- `material_blockers`: production construction does not yet supply the ledger,
+  intentionally preserving the compatibility path
+- `next_action_or_stop_reason`: add provider-free ChatGPT exact-target fixture
+  and dedicated live-follow crawler fixture, then introduce guarded production
+  construction behind serialized rollback rather than switching behavior
+- `delegation_status`: no new workers
+- `review_status`: the projection seam is optional and backward-compatible;
+  status evidence is not treated as execution authority

@@ -50087,3 +50087,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   cutoff remains counted, then becomes available one millisecond later.
 - Seven ledger, eleven tab-lease, and eleven compatibility-dispatcher tests plus
   typecheck pass. Production browser execution remains serialized.
+
+## 2026-09-24 | Plan 0359 tenant-limit status projection
+
+- Added an optional provider-neutral interaction-ledger input to tenant-limit
+  status. When supplied, status reads exact durable active/hour/day usage and
+  labels its basis `aggregate-interaction-ledger`; without it, established
+  runtime-evidence behavior is unchanged.
+- This is a read-only compatibility projection. Production construction does
+  not yet inject the ledger, and no admission or browser concurrency behavior
+  changed.
+- Thirty-four focused tests, typecheck, and production build pass.

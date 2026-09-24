@@ -39,6 +39,12 @@ export interface ProviderInteractionPolicy {
   maxConversationStartsPerDay: number | null;
 }
 
+export interface ProviderInteractionUsageSummary {
+  activeChats: number;
+  chatsLastHour: number;
+  chatsLastDay: number;
+}
+
 export interface ProviderWarningRecord {
   provider: string;
   tenantKey: string;
@@ -152,6 +158,11 @@ export interface ProviderInteractionLedger {
   }): Promise<{ warning: ProviderWarningRecord; frozenReservationIds: string[] }>;
   list(scope?: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>>): Promise<ProviderInteractionRecord[]>;
   listEvents(scope?: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>>): Promise<ProviderInteractionEvent[]>;
+  summarizeUsage(input: {
+    provider: string;
+    tenantKey: string;
+    now: string;
+  }): Promise<ProviderInteractionUsageSummary>;
 }
 
 export interface InMemoryProviderInteractionLedgerOptions {
@@ -504,6 +515,31 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       .map(cloneEvent);
   }
 
+  async summarizeUsage(input: {
+    provider: string;
+    tenantKey: string;
+    now: string;
+  }): Promise<ProviderInteractionUsageSummary> {
+    const scope = {
+      provider: normalizeKey(input.provider, 'provider'),
+      tenantKey: normalizeKey(input.tenantKey, 'tenantKey'),
+    };
+    const nowMs = parseTimestamp(input.now, 'now');
+    this.expireReservations(nowMs);
+    const activeWorkloads = new Set<string>();
+    for (const record of this.records.values()) {
+      if (aggregateScopeKey(record.scope) !== aggregateScopeKey(scope)) continue;
+      if (record.state === 'reserved' || record.state === 'started') {
+        activeWorkloads.add(record.workloadId);
+      }
+    }
+    return {
+      activeChats: activeWorkloads.size,
+      chatsLastHour: this.countConversationStarts(scope, nowMs - 60 * 60_000),
+      chatsLastDay: this.countConversationStarts(scope, nowMs - 24 * 60 * 60_000),
+    };
+  }
+
   private expireReservations(nowMs: number): void {
     for (const [reservationId, record] of this.records) {
       if (record.state !== 'reserved' || Date.parse(record.reservationExpiresAt) > nowMs) continue;
@@ -533,7 +569,10 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     }
   }
 
-  private countConversationStarts(scope: ProviderInteractionScope, cutoffMs: number): number {
+  private countConversationStarts(
+    scope: Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>,
+    cutoffMs: number,
+  ): number {
     let count = 0;
     for (const record of this.records.values()) {
       if (!record.startsNewConversation || aggregateScopeKey(record.scope) !== aggregateScopeKey(scope)) continue;
@@ -609,6 +648,10 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
 
   listEvents(scope?: Parameters<ProviderInteractionLedger['listEvents']>[0]) {
     return this.read((ledger) => ledger.listEvents(scope));
+  }
+
+  summarizeUsage(input: Parameters<ProviderInteractionLedger['summarizeUsage']>[0]) {
+    return this.write((ledger) => ledger.summarizeUsage(input));
   }
 
   private async read<T>(operation: (ledger: InMemoryProviderInteractionLedger) => Promise<T>): Promise<T> {

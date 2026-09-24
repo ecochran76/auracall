@@ -2,23 +2,26 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { createInMemoryProviderInteractionLedger } from '../packages/browser-service/src/service/interactionLedger.js';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { createExecutionRunEvent } from '../src/runtime/model.js';
 import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
+import type { ExecutionRunStoredRecord } from '../src/runtime/store.js';
 import {
   createTenantExecutionLimitGate,
   resolveChatgptTenantLimits,
   summarizeTenantExecutionLimits,
 } from '../src/runtime/tenantExecutionLimits.js';
-import type { ExecutionRunStoredRecord } from '../src/runtime/store.js';
 
 describe('tenant execution limits', () => {
   const cleanup: string[] = [];
 
   afterEach(async () => {
     setAuracallHomeDirOverrideForTest(null);
-    await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
+    await Promise.all(
+      cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })),
+    );
   });
 
   it('applies default ChatGPT tenant-wide concurrent chat limits by service account', async () => {
@@ -55,7 +58,13 @@ describe('tenant execution limits', () => {
       control,
       drainAfterCreate: false,
       generateResponseId: (() => {
-        const ids = ['resp_tenant_1', 'resp_tenant_2', 'resp_tenant_3', 'resp_tenant_4', 'resp_tenant_5'];
+        const ids = [
+          'resp_tenant_1',
+          'resp_tenant_2',
+          'resp_tenant_3',
+          'resp_tenant_4',
+          'resp_tenant_5',
+        ];
         return () => ids.shift() ?? 'resp_tenant_extra';
       })(),
       now: () => new Date('2026-05-17T19:00:00.000Z'),
@@ -235,7 +244,9 @@ describe('tenant execution limits', () => {
   });
 
   it('summarizes ChatGPT tenant limits and runtime usage for status readback', async () => {
-    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-tenant-limits-status-'));
+    const homeDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'auracall-runtime-tenant-limits-status-'),
+    );
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
 
@@ -319,6 +330,73 @@ describe('tenant execution limits', () => {
           ],
         },
       },
+    });
+  });
+
+  it('projects durable aggregate interaction-ledger evidence when supplied', async () => {
+    const config = {
+      profiles: {
+        default: {
+          browserProfile: 'default',
+          services: {
+            chatgpt: { identity: { email: 'operator@example.com' } },
+          },
+        },
+      },
+    };
+    const tenantKey = 'service-account:chatgpt:operator@example.com';
+    let sequence = 0;
+    const interactionLedger = createInMemoryProviderInteractionLedger({
+      createReservationId: () => `reservation-${++sequence}`,
+    });
+    const policy = {
+      maxConcurrentChats: 4,
+      maxConversationStartsPerHour: 120,
+      maxConversationStartsPerDay: 240,
+    };
+    const reserve = (operationId: string, now: string) =>
+      interactionLedger.reserve({
+        scope: {
+          provider: 'chatgpt',
+          tenantKey,
+          runtimeProfileId: 'default',
+          managedBrowserProfile: 'default',
+        },
+        workloadId: operationId,
+        operationId,
+        tabLeaseId: `lease-${operationId}`,
+        interactionClass: 'conversation-start',
+        mutability: 'provider-mutating',
+        startsNewConversation: true,
+        now,
+        reservationTtlMs: 60_000,
+        policy,
+      });
+    const settled = await reserve('operation-a', '2026-05-17T20:30:00.000Z');
+    if (!settled.allowed) throw new Error('expected settled admission');
+    await interactionLedger.start({
+      reservationId: settled.reservation.reservationId,
+      startedAt: '2026-05-17T20:30:01.000Z',
+    });
+    await interactionLedger.settle({
+      reservationId: settled.reservation.reservationId,
+      settledAt: '2026-05-17T20:30:02.000Z',
+      effectState: 'settled',
+      outcome: 'succeeded',
+    });
+    expect((await reserve('operation-b', '2026-05-17T20:59:30.000Z')).allowed).toBe(true);
+
+    const summary = await summarizeTenantExecutionLimits({
+      control: createExecutionRuntimeControl(),
+      config,
+      interactionLedger,
+      now: () => new Date('2026-05-17T21:00:00.000Z'),
+    });
+    expect(summary.providers.chatgpt.entries[0]?.usage).toEqual({
+      basis: 'aggregate-interaction-ledger',
+      activeChats: 1,
+      chatsLastHour: 2,
+      chatsLastDay: 2,
     });
   });
 });
