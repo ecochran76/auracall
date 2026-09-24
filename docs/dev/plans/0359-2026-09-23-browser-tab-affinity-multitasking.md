@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 32
+Plan version: 33
 
 ## Stable Objective
 
@@ -1342,3 +1342,24 @@ Checkpoint 2026-09-24, active provider-guard status:
 - `delegation_status`: no new workers
 - `review_status`: expired cooldowns are absent from active counts while
   historical warning-event counts remain unchanged and attributable
+
+Checkpoint 2026-09-24, admission-rejection status:
+
+- `plan_version`: 33
+- `state_transition`: OPEN -> OPEN; failed admission decisions are now durable
+  and explainable through sanitized read-only status
+- `acceptance_state`: provider-free accepted; provider-warning, concurrency,
+  per-minute, hourly, and daily rejections are append-only evidence with total,
+  latest-reason, and reason-count projections
+- `progress_classification`: forward progress
+- `evidence`: commit `87b57958bd04259e8d1eaec2ef77e602ad18c260`
+  records denial events without allocating reservations or changing the
+  admission decision
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: 29 focused affinity/ledger/status tests, typecheck,
+  production build, lint, scoped Biome, and diff hygiene pass
+- `next_action_or_stop_reason`: continue bounded provider-free acceptance
+  audit; preserve the live gate
+- `delegation_status`: no new workers
+- `review_status`: status omits rejected workload, operation, tab, tenant, and
+  warning-reason values while the internal audit event remains attributable

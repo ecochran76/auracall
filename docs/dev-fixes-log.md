@@ -22976,3 +22976,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Read active warnings at one captured status timestamp and publish only
   aggregate classifications and cooldown posture. Exclude expired cooldowns,
   preserve historical events, and never expose tenant keys or warning reasons.
+
+## 2026-09-24 | Persist admission denials without reserving work
+
+- A returned rejection reason is transient caller feedback, not durable
+  operator evidence. Append a denial event under the same ledger lock used for
+  admission so concurrent, minute, hourly, daily, and provider-warning refusals
+  remain explainable.
+- A denial event must not allocate a reservation or consume quota. Aggregate
+  status may expose reason counts, but not workload, operation, target, tenant,
+  or provider-warning detail.

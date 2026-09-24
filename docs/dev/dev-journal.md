@@ -50418,3 +50418,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   and diff hygiene pass. The immediately preceding full non-live suite passed
   355 files and 3,276 tests with 65 opt-in/live tests skipped. No browser or
   provider effect ran.
+
+## 2026-09-24 | Admission-rejection status
+
+- Aggregate admission returned precise rejection reasons but persisted no
+  denial evidence, leaving operator status unable to explain why otherwise
+  valid concurrent work was refused.
+- Denials now append an `admission-rejected` event without creating a
+  reservation. Status exposes only total, latest reason, and counts for
+  provider-warning, concurrency, per-minute, hourly, and daily guards.
+- Twenty-nine focused affinity/ledger/status tests, typecheck, build, lint,
+  scoped Biome, and diff hygiene pass. No browser or provider effect ran.

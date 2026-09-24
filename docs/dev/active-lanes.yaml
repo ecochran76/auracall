@@ -1018,7 +1018,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: c9449ea48155249b00c86be3dbb7fa07d11f06b0
+    checkpoint: 87b57958bd04259e8d1eaec2ef77e602ad18c260
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1028,6 +1028,6 @@ lanes:
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
     validation_status: packets-1-through-6-provider-free-accepted
-    validation_ref: c9449ea48155249b00c86be3dbb7fa07d11f06b0
-    disposition: Packets 1 through 6 are provider-free accepted; ownership, rollback, and census semantics are browser/account-correct, HTTP/MCP operator guard clear applies bounded quiet cooldown to the aggregate affinity ledger, and read-only status distinguishes active guards from warning history without tenant leakage. Focused regressions, typecheck, build, lint, and the preceding 355-file non-live suite pass; Packet 7 installed/live acceptance and canonical-main integration remain open, serialized compatibility remains default, and no installed, browser, provider, scheduler, or live effect is authorized.
+    validation_ref: 87b57958bd04259e8d1eaec2ef77e602ad18c260
+    disposition: Packets 1 through 6 are provider-free accepted; ownership, rollback, and census semantics are browser/account-correct, operator guard clear applies bounded quiet cooldown, and read-only status distinguishes active guards plus admission-rejection reasons from append-only history without tenant leakage. Focused regressions, typecheck, build, lint, and the preceding 355-file non-live suite pass; Packet 7 installed/live acceptance and canonical-main integration remain open, serialized compatibility remains default, and no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24
