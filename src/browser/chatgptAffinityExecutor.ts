@@ -219,7 +219,6 @@ async function executeAdmittedChatgptConversation(
 		result = await request.runPrompt(request.input, providerOptions);
 		assertChatgptLeasedPromptResult(request.lease, result);
 		activeClaim = await settleSuccessfulLease(request, result, now().toISOString());
-		await idleLease(request.registry, activeClaim, now().toISOString(), "settled");
 	} catch (error) {
 		await settleFailedExecution(request, activeClaim, reservationId, now, error);
 		throw error;
@@ -230,8 +229,37 @@ async function executeAdmittedChatgptConversation(
 		effectState: "settled",
 		outcome: "succeeded",
 	});
-	if (!settled.ok) throw new Error(`Interaction settlement failed: ${settled.reason}.`);
+	if (!settled.ok) {
+		const settlementError = new Error(`Interaction settlement failed: ${settled.reason}.`);
+		try {
+			await fenceLeaseAfterSettlementFailure(request, activeClaim, now().toISOString());
+		} catch (fenceError) {
+			throw new AggregateError(
+				[settlementError, fenceError],
+				"Interaction settlement failed and the exact tab lease could not be fenced.",
+			);
+		}
+		throw settlementError;
+	}
+	await idleLease(request.registry, activeClaim, now().toISOString(), "settled");
 	return { status: "completed", result };
+}
+
+async function fenceLeaseAfterSettlementFailure(
+	request: ChatgptTabAffinityExecutionInput,
+	claim: TabLeaseClaim,
+	now: string,
+): Promise<void> {
+	const used = await request.registry.recordMeaningfulUse({
+		claim,
+		now,
+		idleTtlMs: request.idleTtlMs,
+		effectState: "outcome-unknown",
+	});
+	if (!used.ok) {
+		throw new Error(`ChatGPT settlement-failure fence failed: ${used.conflict.kind}.`);
+	}
+	await idleLease(request.registry, used.value.claim, now, "outcome-unknown");
 }
 
 async function settleSuccessfulLease(

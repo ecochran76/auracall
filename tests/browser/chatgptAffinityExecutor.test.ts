@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import {
 	createInMemoryProviderInteractionLedger,
+	type ProviderInteractionLedger,
 	type ProviderInteractionPolicy,
 } from "../../packages/browser-service/src/service/interactionLedger.js";
 import {
@@ -362,5 +363,77 @@ describe("ChatGPT affinity executor", () => {
 			conversationId: "conversation-1",
 		});
 		expect(binding).toMatchObject({ state: "idle", effectState: "outcome-unknown" });
+	});
+
+	test("fences the exact lease when ledger settlement fails after provider success", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-1",
+		});
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => "interaction-1",
+		});
+		const failingLedger = new Proxy(ledger, {
+			get(target, property, receiver) {
+				if (property === "settle") {
+					return async () => ({ ok: false as const, reason: "invalid-state" as const });
+				}
+				const value = Reflect.get(target, property, receiver) as unknown;
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		}) as ProviderInteractionLedger;
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "target-1",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "operation-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!reserved.ok) throw new Error("fixture lease conflict");
+		const runPrompt = vi.fn(async (_input, options) => ({
+			text: "observed provider response",
+			conversationId: "conversation-1",
+			url: "https://chatgpt.com/c/conversation-1",
+			tabTargetId: options.tabTargetId,
+		}));
+
+		await expect(
+			executeChatgptConversation({
+				mode: "tab-affinity",
+				registry,
+				ledger: failingLedger,
+				lease: reserved.value.lease,
+				claim: reserved.value.claim,
+				operationId: "operation-1",
+				endpoint: { host: "127.0.0.1", port: 45011 },
+				input: { prompt: "continue", conversationId: "conversation-1" },
+				runPrompt,
+				policy,
+				reservationTtlMs: 30_000,
+				idleTtlMs: 60_000,
+				now: () => new Date("2026-09-24T12:00:01.000Z"),
+			}),
+		).rejects.toThrow("Interaction settlement failed: invalid-state.");
+
+		expect(runPrompt).toHaveBeenCalledOnce();
+		const binding = await registry.findByWorkload(scope, {
+			kind: "conversation",
+			conversationId: "conversation-1",
+		});
+		expect(binding).toMatchObject({ state: "idle", effectState: "outcome-unknown" });
+		const reacquired = await registry.acquire({
+			scope,
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "operation-2",
+			now: "2026-09-24T12:00:02.000Z",
+		});
+		expect(reacquired).toMatchObject({
+			ok: false,
+			conflict: {
+				kind: "invalid-transition",
+				lease: { effectState: "outcome-unknown" },
+			},
+		});
 	});
 });
