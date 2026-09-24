@@ -50429,3 +50429,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   provider-warning, concurrency, per-minute, hourly, and daily guards.
 - Twenty-nine focused affinity/ledger/status tests, typecheck, build, lint,
   scoped Biome, and diff hygiene pass. No browser or provider effect ran.
+
+## 2026-09-24 | Aggregate rolling-usage status
+
+- Status exposed record totals but not the current quota windows that decide
+  admission, leaving operators unable to compare a rejection with durable
+  minute/hour/day usage.
+- The ledger now summarizes all tenant scopes without publishing their keys.
+  Equal workload IDs in different tenant scopes remain distinct, and status
+  uses one captured timestamp for active, minute, hourly, and daily values.
+- Thirty focused affinity/ledger/status tests, typecheck, build, lint, scoped
+  Biome, and diff hygiene pass. No browser or provider effect ran.

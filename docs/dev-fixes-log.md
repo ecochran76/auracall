@@ -22986,3 +22986,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - A denial event must not allocate a reservation or consume quota. Aggregate
   status may expose reason counts, but not workload, operation, target, tenant,
   or provider-warning detail.
+
+## 2026-09-24 | Project the quota windows used by admission
+
+- Raw record totals do not explain rolling-limit posture. Operator status
+  should expose active workloads, last-minute interactions, and last-hour/day
+  conversation starts from the same durable ledger semantics as admission.
+- Aggregate across tenant scopes without publishing their identifiers. Include
+  the scope in internal workload uniqueness so equal provider IDs from distinct
+  tenants do not collapse into one active workload.

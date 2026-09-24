@@ -150,7 +150,7 @@ The status projection is intentionally aggregate and content-free. In addition
 to total/fenced leases and interaction/warning counts, it reports active
 provider-guard totals split into indefinite and bounded cooldowns, warning
 classification counts, maximum remaining cooldown, admission-rejection totals
-and reason counts, lease states,
+and reason counts, aggregate active/minute/hour/day usage windows, lease states,
 workload classes, expired-idle and outcome-unknown attention counts, cumulative
 target creation/adoption/navigation/reload/focus/close counts, and retirement
 dispositions. It does not publish target IDs, conversation IDs, operation IDs,

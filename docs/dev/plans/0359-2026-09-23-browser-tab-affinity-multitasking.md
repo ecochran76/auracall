@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 33
+Plan version: 34
 
 ## Stable Objective
 
@@ -1363,3 +1363,24 @@ Checkpoint 2026-09-24, admission-rejection status:
 - `delegation_status`: no new workers
 - `review_status`: status omits rejected workload, operation, tab, tenant, and
   warning-reason values while the internal audit event remains attributable
+
+Checkpoint 2026-09-24, aggregate rolling-usage status:
+
+- `plan_version`: 34
+- `state_transition`: OPEN -> OPEN; operator status now projects the same
+  active/minute/hour/day accounting windows used for admission
+- `acceptance_state`: provider-free accepted; aggregate active workloads,
+  interactions in the last minute, and conversation starts in the last hour
+  and day are visible without tenant identifiers
+- `progress_classification`: forward progress
+- `evidence`: commit `c10ac52a4994f53600c820e13088929f8651ac9c`
+  adds cross-tenant usage summarization while keeping equal workload IDs in
+  distinct tenant scopes separate
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: 30 focused affinity/ledger/status tests, typecheck,
+  production build, lint, scoped Biome, and diff hygiene pass
+- `next_action_or_stop_reason`: perform the final provider-free requirement
+  audit and preserve the live gate
+- `delegation_status`: no new workers
+- `review_status`: rolling usage is derived from durable ledger records at one
+  captured status timestamp; status contains no tenant or workload identity
