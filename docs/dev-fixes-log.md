@@ -22798,3 +22798,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   endpoint readiness, release it, then create the target. Existing endpoints
   should not acquire profile control because that would unnecessarily exclude
   already leased conversation tabs.
+
+## 2026-09-24 | Keep tab concurrency default-off at configuration resolution
+
+- Resolve one provider-neutral `serialized` or `tab-affinity` mode in browser
+  configuration instead of inferring activation from the presence of registry
+  files or retained tabs.
+- Serialized construction must not instantiate or touch durable coordination
+  storage. Explicit affinity may construct shared file-backed adapters, but
+  construction and status alone do not authorize caller migration.
+- Place the interaction ledger above AuraCall runtime profiles so hourly,
+  daily, concurrency, and warning evidence cannot fragment by profile.

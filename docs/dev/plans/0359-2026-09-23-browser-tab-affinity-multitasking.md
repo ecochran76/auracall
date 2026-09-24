@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 12
+Plan version: 13
 
 ## Stable Objective
 
@@ -102,6 +102,12 @@ provider-neutral.
   reserves the matching workload lease, records target creation and the one
   existing-conversation navigation, and closes only that just-created target
   if reservation conflicts. BrowserService construction does not use it yet.
+- Browser configuration now resolves provider-neutral
+  `browser.tabConcurrencyMode` to `serialized` by default. Explicit
+  `tab-affinity` constructs one shared file-backed registry and interaction
+  ledger under the AuraCall home and exposes read-only mode/count status from
+  `BrowserAutomationClient`; it still does not switch `runPrompt` or Account
+  Mirror execution.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -784,3 +790,28 @@ Checkpoint 2026-09-24, admission-before-provisioning construction:
 - `review_status`: provider warning classification is required by the outer
   coordinator and freezes the aggregate ledger before another workload can be
   admitted; no live/provider authority was exercised
+
+Checkpoint 2026-09-24, runtime construction and serialized default:
+
+- `plan_version`: 13
+- `state_transition`: OPEN -> OPEN; runtime factory and read-only status GREEN,
+  prompt and crawler callers remain serialized
+- `acceptance_state`: partial provider-free acceptance; 89 focused tests,
+  typecheck, scoped Biome checks, diff hygiene, and production build pass
+- `progress_classification`: forward progress
+- `evidence`: absent configuration resolves to `serialized` and creates no
+  coordination storage; explicit `tab-affinity` constructs shared durable
+  stores, survives real file-backed writes, and publishes exact lease,
+  interaction, active, fenced, and warning-event counts through the production
+  browser client factory
+- `material_blockers`: `BrowserAutomationClient.runPrompt` and Account Mirror
+  do not yet invoke the affinity coordinators; configured service-account
+  identity and exact managed browser profile must be resolved before activation
+- `next_action_or_stop_reason`: wire explicit ChatGPT `tab-affinity` prompt
+  execution through the outer coordinator using configured tenant identity,
+  resolved tenant limits, exact managed browser profile, BrowserService
+  endpoint resolution, and exact target create/close; preserve the current
+  `serialized` branch byte-for-byte
+- `delegation_status`: no new workers
+- `review_status`: configuration is provider-neutral and default-off; status
+  construction is not represented as active concurrent execution

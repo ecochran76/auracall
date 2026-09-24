@@ -50148,3 +50148,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   tenant/provider ledger before another permit can issue. Seventy-six focused
   tests, typecheck, scoped Biome checks, diff hygiene, and production build
   pass; production factories and callers remain on serialized compatibility.
+
+## 2026-09-24 | Plan 0359 runtime factory and mode status
+
+- Added provider-neutral `browser.tabConcurrencyMode` configuration with an
+  explicit `serialized` default. Default construction returns no registry or
+  ledger and does not create coordination storage.
+- Explicit `tab-affinity` constructs one shared file-backed tab registry and
+  cross-runtime interaction ledger under the AuraCall home. The production
+  browser client now exposes read-only resolved mode and aggregate count status.
+- Eight focused files passed 89 tests, typecheck, scoped Biome checks, diff
+  hygiene, and production build. Prompt and Account Mirror callers remain on
+  serialized compatibility; no browser, provider, scheduler, installation, or
+  live effect ran.

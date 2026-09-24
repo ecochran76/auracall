@@ -136,6 +136,21 @@ Current active extraction plan:
   menu markup, prefer the package-owned select-and-reopen helpers before adding
   provider-local reopen logic
 
+## Experimental tab-concurrency construction
+
+`browser.tabConcurrencyMode` resolves to `serialized` unless an operator or
+test explicitly selects `tab-affinity`. The serialized default constructs no
+tab registry or aggregate interaction ledger. Explicit affinity currently
+constructs shared file-backed coordination state under
+`~/.auracall/browser-coordination` and exposes read-only status through
+`BrowserAutomationClient.getTabConcurrencyStatus()`.
+
+This setting does not yet migrate prompt or Account Mirror callers; their
+existing serialized behavior remains the operational path until Plan 0359's
+provider-free wiring and separately gated installed/live acceptance complete.
+Do not treat configured mode or created registry files as proof that concurrent
+provider execution is active.
+
 ## ChatGPT composer-mode boundary
 
 Choose the ChatGPT composer mode before any model action. Chat is AuraCall's
