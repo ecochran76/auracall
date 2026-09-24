@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 16
+Plan version: 17
 
 ## Stable Objective
 
@@ -127,8 +127,11 @@ provider-neutral.
   interactive/detached sessions, TUI, and MCP consultation carry that authority.
 - Materialization, media, provider CRUD, and specialized non-prompt surfaces
   still require classification and ledger integration. Production expiry
-  retirement and restart reconciliation also remain incomplete, so configured
-  affinity is not yet universal.
+  retirement now runs opportunistically before ChatGPT foreground and
+  live-follow affinity acquisition: only expired idle settled leases advance,
+  and the exact target must match and disappear after close. A periodic
+  maintenance trigger and remaining restart/orphan reconciliation are still
+  incomplete, so configured affinity is not yet universal.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -912,3 +915,28 @@ Checkpoint 2026-09-24, legacy response and session coordination:
 - `review_status`: direct ChatGPT browser execution cannot silently select a
   generic tab in affinity mode; absent full resolved authority fails closed,
   and Gemini/Grok remain serialized
+
+Checkpoint 2026-09-24, attributable expiry retirement:
+
+- `plan_version`: 17
+- `state_transition`: OPEN -> OPEN; Packet 6 target-specific retirement is
+  active at foreground and live-follow acquisition boundaries
+- `acceptance_state`: partial provider-free acceptance; 53 focused retirement,
+  registry, prompt, live-follow, legacy, session, and configured-executor tests
+  pass with typecheck, scoped Biome checks, diff hygiene, and production build
+- `progress_classification`: forward progress
+- `evidence`: `9f9135fdbcc8acb29f000d1f641956d332d60944`
+  begins retirement only for expired idle settled leases, verifies the exact
+  target against provider/workload identity, closes that target only, confirms
+  disappearance, and records `closed`; missing targets are released as
+  already missing, mismatches are preserved/lost, unavailable endpoints are
+  deferred, and outcome-unknown leases are untouched
+- `material_blockers`: expiry sweeping is acquisition-driven rather than a
+  persistent periodic maintenance loop; remaining orphan/restart status and
+  non-prompt materialization, media, and CRUD accounting are incomplete
+- `next_action_or_stop_reason`: add a bounded periodic maintenance owner for
+  configured affinity scopes, expose retirement/lost attention in operator
+  status, then classify and integrate remaining non-prompt interactions
+- `delegation_status`: no new workers
+- `review_status`: retirement never closes a browser or a generic/provider-only
+  match; close success requires an exact post-close absence observation

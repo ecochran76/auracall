@@ -1,3 +1,17 @@
+## 2026-09-24 | Plan 0359 attributable tab retirement
+
+- Added a provider-neutral two-phase expired-lease sweeper and ChatGPT workload
+  identity policy. Only idle settled leases past idle or absolute expiry are
+  eligible; outcome-unknown leases remain untouched.
+- Foreground and live-follow affinity acquisition now sweep their exact scope.
+  Live matching targets are closed individually and must be absent on a second
+  census before `closed` is recorded. Missing targets become already-missing,
+  mismatches become preserved/lost, and unavailable endpoints defer without a
+  lease transition.
+- Fifty-three focused tests, typecheck, scoped Biome checks, diff hygiene, and
+  production build pass. This is acquisition-driven cleanup; a persistent
+  periodic maintenance owner and broader orphan status remain open.
+
 ## 2026-09-24 | Plan 0359 legacy response affinity activation
 
 - Explicit ChatGPT affinity now wraps the full legacy `runBrowserMode()`

@@ -160,6 +160,13 @@ Direct/manual refreshes, non-prompt surfaces, and Gemini/Grok remain serialized
 or otherwise outside affinity. Do not treat configured mode or registry files
 as installed/live acceptance evidence.
 
+Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
+reconciles expired idle leases for that exact runtime/account/managed browser
+scope. A target is closed only after exact workload identity verification, and
+`closed` is recorded only after a second census proves the target disappeared.
+Outcome-unknown leases are not retired. This sweep is currently
+acquisition-driven; periodic maintenance remains a separate incomplete gate.
+
 ## ChatGPT composer-mode boundary
 
 Choose the ChatGPT composer mode before any model action. Chat is AuraCall's

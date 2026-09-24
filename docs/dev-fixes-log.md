@@ -1,3 +1,9 @@
+- 2026-09-24: Lease expiry alone is not authority to close a browser target.
+  Begin retirement only from idle settled state, verify the exact target and
+  workload identity, close that target alone, and require a post-close absence
+  observation before recording `closed`. Defer when the endpoint is unavailable,
+  preserve mismatches for attention, and never retire outcome-unknown work.
+
 - 2026-09-24: Do not replace a mature browser response engine with a narrower
   prompt-submitted adapter merely to gain tab affinity. Put admission and exact
   target provisioning around the existing engine, require the full
