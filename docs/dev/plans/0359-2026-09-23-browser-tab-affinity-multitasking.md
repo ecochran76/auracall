@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 13
+Plan version: 14
 
 ## Stable Objective
 
@@ -102,16 +102,20 @@ provider-neutral.
   reserves the matching workload lease, records target creation and the one
   existing-conversation navigation, and closes only that just-created target
   if reservation conflicts. BrowserService construction does not use it yet.
-- Browser configuration now resolves provider-neutral
-  `browser.tabConcurrencyMode` to `serialized` by default. Explicit
-  `tab-affinity` constructs one shared file-backed registry and interaction
-  ledger under the AuraCall home and exposes read-only mode/count status from
-  `BrowserAutomationClient`; it still does not switch `runPrompt` or Account
-  Mirror execution.
-- Browser prompt execution currently acquires an `exclusive-mutating`
-  operation keyed by managed browser profile plus service. Independent ChatGPT
-  tab work therefore queues behind the current profile owner and may terminate
-  as busy even when a separate tab could safely perform the request.
+- Browser configuration resolves provider-neutral `browser.tabConcurrencyMode`
+  to `serialized` by default. Explicit `tab-affinity` constructs one shared
+  file-backed registry and interaction ledger under the AuraCall home and now
+  routes `BrowserAutomationClient.runPrompt()` plus ChatGPT handoff submission
+  through admission-before-provisioning exact-tab coordination.
+- Existing-conversation affinity now reacquires its idle binding only after a
+  successful live target census confirms the exact conversation route. A
+  proven-missing target is recorded lost and released before one replacement
+  target is created; a live mismatched route is retained as a lost conflict and
+  fails closed. Serialized mode retains the existing profile dispatcher.
+- The legacy direct `runBrowserMode()` entry point and Account Mirror live
+  follow still use their current profile-wide execution paths. They remain the
+  next production migration boundaries; configured affinity must not be
+  described as universal until both are coordinated.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -815,3 +819,29 @@ Checkpoint 2026-09-24, runtime construction and serialized default:
 - `delegation_status`: no new workers
 - `review_status`: configuration is provider-neutral and default-off; status
   construction is not represented as active concurrent execution
+
+Checkpoint 2026-09-24, guarded prompt activation and binding reuse:
+
+- `plan_version`: 14
+- `state_transition`: OPEN -> OPEN; explicit ChatGPT prompt affinity is now
+  constructed by the browser client and handoff adapter
+- `acceptance_state`: partial provider-free acceptance; 103 focused tests,
+  typecheck, scoped Biome checks, diff hygiene, and production build pass
+- `progress_classification`: forward progress
+- `evidence`: explicit affinity resolves configured tenant identity and exact
+  managed browser profile, reserves aggregate capacity before target creation,
+  executes only on its leased target, reuses a verified idle conversation
+  binding without navigation, and replaces only a census-proven missing target;
+  the handoff adapter no longer enters the compatibility profile queue in
+  affinity mode
+- `material_blockers`: legacy direct `runBrowserMode()` and Account Mirror live
+  follow do not yet use the coordinator; installed/live acceptance remains
+  separately gated
+- `next_action_or_stop_reason`: migrate Account Mirror's active completion to
+  one dedicated crawler lease and the shared interaction ledger, then reconcile
+  the legacy direct browser entry point so explicit affinity cannot silently
+  bypass ownership or accounting
+- `delegation_status`: no new workers
+- `review_status`: completion audit caught and repaired a create-on-every-call
+  defect before checkpoint; persisted target IDs are reused only after live
+  exact-route verification

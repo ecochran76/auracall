@@ -22809,3 +22809,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   construction and status alone do not authorize caller migration.
 - Place the interaction ledger above AuraCall runtime profiles so hourly,
   daily, concurrency, and warning evidence cannot fragment by profile.
+
+## 2026-09-24 | Verify a persisted conversation target before affinity reuse
+
+- Creating a new target for every continuation defeats conversation affinity:
+  the new target collides with the already-bound workload and adds exactly the
+  tab churn the design is meant to remove.
+- Reacquire the idle workload lease only after a live target census on the
+  exact DevTools endpoint confirms both target ID and conversation route. Do
+  not treat a persisted target ID as current ownership evidence.
+- When a successful census proves the target absent, record the lost state and
+  release that obsolete binding before creating one replacement. If the target
+  is live on a different route, preserve the conflict as lost and stop rather
+  than navigating, adopting, or closing it.

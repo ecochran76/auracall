@@ -1018,7 +1018,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 8a09afc89f3297b1421f434ab2fcb2be76dc3f6b
+    checkpoint: 0bc127cc70a41d20953b73c3b5ae0c830857d06e
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1027,7 +1027,7 @@ lanes:
     reconciled_overlaps: []
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
-    validation_status: packet-1-lifecycle-packet-2-control-packet-3-admission-packet-4-runtime-construction-and-packet-5-crawler-fixtures-passed
-    validation_ref: 8a09afc89f3297b1421f434ab2fcb2be76dc3f6b
-    disposition: Provider-free exact-target lifecycle, warning-first admission-before-provisioning, guarded ChatGPT coordination, default-off runtime construction, and dedicated crawler fixtures pass while prompt and Account Mirror callers remain serialized; no installed, browser, provider, scheduler, or live effect is authorized.
+    validation_status: packet-1-lifecycle-packet-2-control-packet-3-admission-packet-4-chatgpt-prompt-activation-and-packet-5-crawler-fixtures-passed
+    validation_ref: 0bc127cc70a41d20953b73c3b5ae0c830857d06e
+    disposition: Provider-free exact-target lifecycle, warning-first admission-before-provisioning, explicit ChatGPT browser-client and handoff affinity, verified conversation-binding reuse, and dedicated crawler fixtures pass; Account Mirror and the legacy direct browser entry remain serialized, and no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24

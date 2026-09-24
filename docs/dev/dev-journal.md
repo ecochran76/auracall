@@ -50161,3 +50161,22 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   hygiene, and production build. Prompt and Account Mirror callers remain on
   serialized compatibility; no browser, provider, scheduler, installation, or
   live effect ran.
+
+## 2026-09-24 | Plan 0359 guarded ChatGPT prompt activation
+
+- Explicit `tab-affinity` now routes `BrowserAutomationClient.runPrompt()`
+  through tenant-wide admission, exact managed-browser-profile resolution,
+  target provisioning, lease binding, effect settlement, and warning
+  projection. Default `serialized` execution still calls the established
+  service path without constructing coordination stores.
+- ChatGPT handoff submission selects the coordinated browser client only in
+  explicit affinity mode; serialized handoffs retain the existing profile-wide
+  queue and owner attribution.
+- Completion review found that initial wiring created a fresh target for every
+  continuation. The provisioner now reacquires an idle conversation binding
+  only after live target census confirms the exact route. A census-proven
+  missing target is released and replaced once; a live route mismatch is
+  marked lost and fails closed.
+- One hundred three focused tests, typecheck, scoped Biome checks, diff hygiene,
+  and production build pass. Account Mirror and legacy `runBrowserMode()` are
+  not migrated; no installed, browser, provider, scheduler, or live effect ran.
