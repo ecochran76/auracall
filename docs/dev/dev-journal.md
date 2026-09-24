@@ -50284,3 +50284,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Sixty focused tests and typecheck pass. Scoped source formatting and diff
   hygiene pass; the broader legacy file test retains a pre-existing formatter
   finding outside this change. No live browser/provider effect ran.
+## 2026-09-24 | Plan 0359 project mutation and restart ownership
+
+- Routed project create/rename/clone/instruction operations and public project
+  UI substeps through the reusable exact ChatGPT utility tab. Affinity-owned
+  provider mutations explicitly disable retry while serialized callers retain
+  prior behavior.
+- Added sanitized per-binding age and idle/absolute lifetime status with no
+  target, tenant, operation, or conversation identifiers.
+- Active leases now carry process-generation ownership. Periodic maintenance
+  marks dead or legacy owners restart-unverified, releases only proven-missing
+  targets, and keeps live or mismatched targets fenced.
+- Seventy-eight focused LLM tests and 21 lifecycle/status tests pass with
+  typecheck, production build, scoped formatting, and diff hygiene. No live
+  browser/provider effect ran.

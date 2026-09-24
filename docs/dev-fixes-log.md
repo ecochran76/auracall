@@ -22883,3 +22883,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   multiple provider interactions.
 - Keep the preservation flag explicit so legacy scoped-session callers retain
   their established behavior until separately migrated.
+## 2026-09-24 | Persist process-generation ownership for active tab leases
+
+- An active persisted lease cannot be assumed live after service restart. Store
+  both the owning PID and a process-generation UUID when reserving or acquiring
+  it, and clear both when the lease idles or becomes lost.
+- Reconcile only owners that are provably dead, replaced in the current PID, or
+  from a legacy record with no ownership proof. Mark them restart-unverified.
+- Release the fence only when the exact target is proven absent. A live target,
+  route mismatch, or unavailable endpoint remains fenced because provider
+  effect settlement cannot be reconstructed safely.

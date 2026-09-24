@@ -168,12 +168,14 @@ Direct/manual refreshes and Gemini/Grok remain serialized or otherwise outside
 affinity. ChatGPT project/conversation listing, provider identity reads,
 conversation rename/delete, project/account file upload and delete, inherited
 file/context reads, downloads, materialization, and active-media materialization
-use one reusable exact utility tab per service instance. Nested operations reuse an already exact
-target, and affinity-owned scoped sessions keep the aggregate ledger governor
+use one reusable exact utility tab per service instance. Project create, rename,
+clone, instruction updates, and public project-UI substeps use the same target.
+Nested operations reuse an already exact target, and affinity-owned scoped sessions keep the aggregate ledger governor
 through transfers. A failed provider mutation is outcome-unknown and that idle
-lease cannot be reacquired. Other project mutations and specialized
-management paths remain incomplete. Do not treat configured mode or registry
-files as installed/live acceptance evidence.
+lease cannot be reacquired. Affinity-owned provider mutations explicitly disable
+retry; serialized callers retain their established behavior. Specialized
+management paths outside the LLM service remain under audit. Do not treat
+configured mode or registry files as installed/live acceptance evidence.
 
 Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
 reconciles expired idle leases for that exact runtime/account/managed browser
@@ -186,6 +188,12 @@ uses `ensurePort: false`, so an absent browser is never launched merely for
 cleanup; the affected leases remain idle and are reconsidered later. The loop
 is suppressed for proof-scoped server runs and is cleared and awaited during
 API shutdown.
+
+Active leases persist owner PID plus process-generation identity. Maintenance
+marks dead, replaced, or legacy active owners `restart-unverified`; it releases
+that fence only after proving the exact target absent. Live or mismatched
+targets remain fenced. Status exposes content-free per-binding age and
+idle/absolute time remaining, plus a restart-unverified attention count.
 
 ## ChatGPT composer-mode boundary
 

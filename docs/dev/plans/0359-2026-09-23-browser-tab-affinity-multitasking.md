@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 22
+Plan version: 23
 
 ## Stable Objective
 
@@ -125,21 +125,20 @@ provider-neutral.
   engine attaches only to the exact leased target, skips a redundant exact-route
   navigation, and does not close the retained target. Stored responses,
   interactive/detached sessions, TUI, and MCP consultation carry that authority.
-- Materialization, media, provider CRUD, and specialized non-prompt surfaces
-  still require classification and ledger integration. Production expiry
-  retirement now runs opportunistically before ChatGPT foreground and
+- Production expiry retirement runs opportunistically before ChatGPT foreground and
   live-follow affinity acquisition: only expired idle settled leases advance,
   and the exact target must match and disappear after close. The long-running
   API now also owns a non-overlapping 60-second maintenance cadence for explicit
   affinity configurations. It never launches an absent browser, isolates
-  failures per AuraCall runtime profile, and stops with the API. Remaining
-  restart/orphan reconciliation is incomplete, so configured affinity is not
-  yet universal.
+  failures per AuraCall runtime profile, and stops with the API. Active leases
+  now persist process-generation ownership; maintenance marks dead or legacy
+  owners restart-unverified and releases only those whose exact target is
+  proven absent. Live or identity-mismatched targets remain fenced.
 - Read-only runtime status now reports sanitized aggregate lease-state and
   workload counts, expired-idle and outcome-unknown attention counts, exact
   target-action totals, and retirement dispositions. It does not expose target,
-  operation, tenant, or conversation identifiers. Per-binding age and remaining
-  lifetime and broader orphan reconciliation remain incomplete Packet 6 work.
+  operation, tenant, or conversation identifiers. It also reports sanitized
+  per-binding age and idle/absolute lifetime remaining without binding IDs.
 - Generic ChatGPT service project/conversation listing, provider identity
   reads, and conversation rename/delete now use one reusable exact utility tab
   per service instance in explicit affinity mode. Every adapter interaction is
@@ -152,16 +151,10 @@ provider-neutral.
   Affinity-owned scoped provider sessions retain the aggregate interaction
   governor across transfers. Project/account file upload and delete now also
   execute once on that exact tab and refresh their cache without reacquiring
-  the lease. Remaining project mutations and specialized management adapters
-  still require integration.
-- `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
-  selection evidence, but there is no durable workload-to-tab lease registry.
-- ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
-  and `retain`, `retain-new`, and `dispose-new` tab lifecycles. Its retained
-  session affinity is not a durable conversation-to-target binding.
-- Prompt execution records target URL, target ID, and a discovered conversation
-  ID during one run, but that association is not an independently managed lease
-  reusable by later runs.
+  the lease. Project create/rename/clone/instruction operations and their public
+  project-UI substeps now use the same exact utility ownership and zero-retry
+  provider-mutation marker. Remaining specialized adapters outside the LLM
+  service require a caller audit.
 - Account Mirror live follow already has one active-operation contract,
   provider-work serialization, cadence controls, abortable pause, interaction
   governors, rate-limit warning detection, persistent cooldown, and hard-stop
@@ -1090,3 +1083,35 @@ Checkpoint 2026-09-24, ChatGPT file-mutation affinity:
 - `review_status`: a provider failure is not retried and prevents cache refresh;
   an outer coordinator records the uncertain mutation outcome and makes its
   idle lease ineligible for reacquisition
+
+Checkpoint 2026-09-24, project mutation and restart ownership:
+
+- `plan_version`: 23
+- `state_transition`: OPEN -> OPEN; remaining LLM-service project mutations are
+  affinity-owned, sanitized lifetime readback is present, and stale active
+  ownership is reconciled after process restart
+- `acceptance_state`: partial provider-free acceptance; 78 focused project,
+  utility, file, and context tests plus 21 registry, restart-maintenance, and
+  status tests pass with typecheck, production build, scoped formatting, and
+  diff hygiene; no live effect ran
+- `progress_classification`: forward progress
+- `evidence`: commits `bf86ba12ce5831334d4187028f8590f801da849c`
+  and `c341b3c1809bb3a70c5d8f0ef9ec037a60e6a5ab` route project create,
+  rename, clone, instructions, validation, creation substeps, project menus,
+  sidebar/history controls, and chat-area selection through the reusable exact
+  utility tab with explicit zero-retry mutation options; commit
+  `100d7cbff9a80d0402b14396f7fe5252cef48f25` adds sanitized per-binding
+  age and remaining idle/absolute lifetime; commit
+  `e65bb5d152c68cdeaadeca5c2ace8d36d4a50fd8` records process-generation
+  ownership and reconciles dead or legacy active owners as restart-unverified
+- `material_blockers`: live matching restart-unverified targets intentionally
+  remain fenced because their provider effect cannot be proven settled;
+  unleased live-target classification and specialized ChatGPT callers outside
+  the LLM service still require audit; installed/live acceptance remains gated
+- `next_action_or_stop_reason`: audit direct ChatGPT adapter callers for any
+  remaining generic-tab bypass, add safe unleased-target classification without
+  adopting or closing it, then run the provider-free completion audit
+- `delegation_status`: no new workers
+- `review_status`: maintenance never launches an absent browser; a stale active
+  lease is released only after exact target absence proof, while a live or
+  mismatched target remains fenced for operator-visible reconciliation
