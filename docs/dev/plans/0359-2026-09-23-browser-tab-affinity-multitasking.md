@@ -676,3 +676,8 @@ Checkpoint 2026-09-24, tenant status projection:
 - `delegation_status`: no new workers
 - `review_status`: the projection seam is optional and backward-compatible;
   status evidence is not treated as execution authority
+- `validation_notes`: the full provider-free suite reached 3,200 passing tests
+  with one background-drain timing failure in
+  `tests/http.responsesServer.test.ts`; the exact failed test passed on its
+  immediate isolated rerun. This is retained as flaky-suite evidence rather
+  than reported as a clean full-suite pass.

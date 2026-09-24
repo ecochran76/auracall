@@ -50098,3 +50098,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   not yet inject the ledger, and no admission or browser concurrency behavior
   changed.
 - Thirty-four focused tests, typecheck, and production build pass.
+- A full provider-free run produced 3,200 passes and one unrelated
+  background-drain timing failure (`in_progress` instead of `completed`); the
+  exact failed test passed immediately in isolation. The broad run is recorded
+  as flaky evidence, not a clean pass.
