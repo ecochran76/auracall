@@ -16,6 +16,59 @@ const foregroundScope: ProviderInteractionScope = {
 };
 
 describe("interactionLedger (package)", () => {
+	test("binds a post-admission tab lease once and persists the association", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-interaction-binding-"));
+		try {
+			const ledger = createFileBackedProviderInteractionLedger({
+				ledgerRoot: directory,
+				createReservationId: () => "reservation-1",
+			});
+			const admission = await ledger.reserve({
+				scope: foregroundScope,
+				workloadId: "new-conversation-1",
+				operationId: "operation-1",
+				tabLeaseId: null,
+				interactionClass: "conversation-start",
+				mutability: "provider-mutating",
+				startsNewConversation: true,
+				now: "2026-09-24T13:00:00.000Z",
+				reservationTtlMs: 30_000,
+				policy: {
+					maxConcurrentChats: 4,
+					maxConversationStartsPerHour: 120,
+					maxConversationStartsPerDay: 240,
+				},
+			});
+			if (!admission.allowed) throw new Error("expected admission");
+
+			expect(
+				await ledger.bindTabLease({
+					reservationId: "reservation-1",
+					tabLeaseId: "lease-1",
+					boundAt: "2026-09-24T13:00:01.000Z",
+				}),
+			).toMatchObject({ ok: true, record: { tabLeaseId: "lease-1" } });
+			expect(
+				await ledger.bindTabLease({
+					reservationId: "reservation-1",
+					tabLeaseId: "lease-other",
+					boundAt: "2026-09-24T13:00:02.000Z",
+				}),
+			).toEqual({ ok: false, reason: "invalid-state" });
+
+			const restarted = createFileBackedProviderInteractionLedger({ ledgerRoot: directory });
+			expect(await restarted.list()).toEqual([
+				expect.objectContaining({ reservationId: "reservation-1", tabLeaseId: "lease-1" }),
+			]);
+			expect((await restarted.listEvents()).map((event) => event.type)).toEqual([
+				"reservation-created",
+				"tab-lease-bound",
+			]);
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
+
 	test("a warning on one tab freezes existing work and denies every later tenant-provider permit", async () => {
 		let sequence = 0;
 		const ledger = createInMemoryProviderInteractionLedger({

@@ -79,6 +79,7 @@ export type ProviderInteractionOutcome = 'succeeded' | 'failed' | 'cancelled';
 
 export type ProviderInteractionEventType =
   | 'reservation-created'
+  | 'tab-lease-bound'
   | 'interaction-started'
   | 'interaction-settled'
   | 'reservation-abandoned'
@@ -131,6 +132,11 @@ export type ProviderInteractionAdmission =
 
 export interface ProviderInteractionLedger {
   reserve(input: ReserveProviderInteractionInput): Promise<ProviderInteractionAdmission>;
+  bindTabLease(input: {
+    reservationId: string;
+    tabLeaseId: string;
+    boundAt: string;
+  }): Promise<ProviderInteractionTransitionResult>;
   start(input: {
     reservationId: string;
     startedAt: string;
@@ -345,6 +351,51 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       reason: null,
     });
     return { ok: true, record: cloneRecord(started) };
+  }
+
+  async bindTabLease(input: {
+    reservationId: string;
+    tabLeaseId: string;
+    boundAt: string;
+  }): Promise<ProviderInteractionTransitionResult> {
+    const record = this.records.get(input.reservationId);
+    if (!record) return { ok: false, reason: 'not-found' };
+    if (record.state !== 'reserved' && record.state !== 'started') {
+      return { ok: false, reason: 'invalid-state' };
+    }
+    const tabLeaseId = requireNonEmpty(input.tabLeaseId, 'tabLeaseId');
+    if (record.tabLeaseId !== null) {
+      return record.tabLeaseId === tabLeaseId
+        ? { ok: true, record: cloneRecord(record) }
+        : { ok: false, reason: 'invalid-state' };
+    }
+    const boundAtMs = parseTimestamp(input.boundAt, 'boundAt');
+    if (boundAtMs < Date.parse(record.reservedAt)) {
+      throw new Error('boundAt cannot be earlier than reservedAt');
+    }
+    if (record.state === 'reserved' && boundAtMs > Date.parse(record.reservationExpiresAt)) {
+      this.expireReservations(boundAtMs);
+      return { ok: false, reason: 'reservation-expired' };
+    }
+    const bound: ProviderInteractionRecord = { ...record, tabLeaseId };
+    this.records.set(bound.reservationId, bound);
+    this.appendEvent({
+      reservationId: bound.reservationId,
+      scope: bound.scope,
+      workloadId: bound.workloadId,
+      operationId: bound.operationId,
+      tabLeaseId,
+      interactionClass: bound.interactionClass,
+      mutability: bound.mutability,
+      startsNewConversation: bound.startsNewConversation,
+      type: 'tab-lease-bound',
+      occurredAt: new Date(boundAtMs).toISOString(),
+      effectState: bound.effectState,
+      outcome: null,
+      providerWarning: null,
+      reason: null,
+    });
+    return { ok: true, record: cloneRecord(bound) };
   }
 
   async settle(input: {
@@ -624,6 +675,10 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
 
   reserve(input: ReserveProviderInteractionInput) {
     return this.write((ledger) => ledger.reserve(input));
+  }
+
+  bindTabLease(input: Parameters<ProviderInteractionLedger['bindTabLease']>[0]) {
+    return this.write((ledger) => ledger.bindTabLease(input));
   }
 
   start(input: Parameters<ProviderInteractionLedger['start']>[0]) {
