@@ -127,6 +127,18 @@ describe("browser tab concurrency runtime", () => {
 					ephemeral: 0,
 				},
 				attention: { expiredIdle: 1, outcomeUnknown: 1 },
+				bindingLifetimes: [
+					{
+						workloadKind: "conversation",
+						state: "idle",
+						effectState: "outcome-unknown",
+						ageMs: 120_000,
+						idleRemainingMs: 0,
+						absoluteRemainingMs: 3_480_000,
+						idleExpired: true,
+						absoluteExpired: false,
+					},
+				],
 				targetActions: {
 					targetCreations: 0,
 					adoptions: 0,

@@ -6,6 +6,7 @@ import {
 } from "../../packages/browser-service/src/service/interactionLedger.js";
 import {
 	type BrowserTabActionCounts,
+	type BrowserTabLease,
 	type BrowserTabLeaseRegistry,
 	createFileBackedBrowserTabLeaseRegistry,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
@@ -40,6 +41,16 @@ export interface BrowserTabConcurrencyStatus {
 		expiredIdle: number;
 		outcomeUnknown: number;
 	};
+	bindingLifetimes: Array<{
+		workloadKind: BrowserTabLease["workload"]["kind"];
+		state: BrowserTabLease["state"];
+		effectState: BrowserTabLease["effectState"];
+		ageMs: number;
+		idleRemainingMs: number;
+		absoluteRemainingMs: number;
+		idleExpired: boolean;
+		absoluteExpired: boolean;
+	}>;
 	targetActions: BrowserTabActionCounts;
 	retirements: {
 		closed: number;
@@ -94,14 +105,15 @@ export function createBrowserTabConcurrencyRuntime(
 				ledger.listEvents(),
 			]);
 			const nowMs = (options.now ?? (() => new Date()))().getTime();
+			const fencedLeases = leases.filter((lease) =>
+				["active", "idle", "retiring", "lost"].includes(lease.state),
+			);
 			return {
 				mode,
 				enabled: true,
 				storageRoot,
 				leaseCount: leases.length,
-				fencedLeaseCount: leases.filter((lease) =>
-					["active", "idle", "retiring", "lost"].includes(lease.state),
-				).length,
+				fencedLeaseCount: fencedLeases.length,
 				interactionCount: interactions.length,
 				activeInteractionCount: interactions.filter(
 					(interaction) => interaction.state === "reserved" || interaction.state === "started",
@@ -132,6 +144,27 @@ export function createBrowserTabConcurrencyRuntime(
 					).length,
 					outcomeUnknown: leases.filter((lease) => lease.effectState === "outcome-unknown").length,
 				},
+				bindingLifetimes: fencedLeases
+					.map((lease) => ({
+						workloadKind: lease.workload.kind,
+						state: lease.state,
+						effectState: lease.effectState,
+						ageMs: Math.max(0, nowMs - Date.parse(lease.acquiredAt)),
+						idleRemainingMs: Math.max(0, Date.parse(lease.idleExpiresAt) - nowMs),
+						absoluteRemainingMs: Math.max(0, Date.parse(lease.absoluteExpiresAt) - nowMs),
+						idleExpired: nowMs >= Date.parse(lease.idleExpiresAt),
+						absoluteExpired: nowMs >= Date.parse(lease.absoluteExpiresAt),
+					}))
+					.sort(
+						(left, right) =>
+							[
+								left.workloadKind.localeCompare(right.workloadKind),
+								left.state.localeCompare(right.state),
+								left.effectState.localeCompare(right.effectState),
+								left.ageMs - right.ageMs,
+								left.absoluteRemainingMs - right.absoluteRemainingMs,
+							].find((value) => value !== 0) ?? 0,
+					),
 				targetActions: leases.reduce<BrowserTabActionCounts>(
 					(totals, lease) => ({
 						targetCreations: totals.targetCreations + lease.actionCounts.targetCreations,
@@ -167,6 +200,7 @@ function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStat
 		leaseStates: { active: 0, idle: 0, retiring: 0, released: 0, lost: 0 },
 		workloads: { conversations: 0, newConversations: 0, liveFollow: 0, ephemeral: 0 },
 		attention: { expiredIdle: 0, outcomeUnknown: 0 },
+		bindingLifetimes: [],
 		targetActions: emptyActionCounts(),
 		retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
 	};
