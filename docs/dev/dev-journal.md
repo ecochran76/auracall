@@ -50391,3 +50391,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   and a failed census remains retryable through another mapped profile.
 - Nine selected maintenance/API tests and typecheck pass. No browser/provider
   effect ran.
+
+## 2026-09-24 | Aggregate provider-warning operator recovery
+
+- The affinity interaction ledger persisted provider warnings independently of
+  existing browser and Account Mirror guards. Operator clear did not reach that
+  ledger, so a no-expiry human-verification warning blocked affinity forever.
+- The ledger now records an append-only `provider-warning-cleared` event. The
+  existing HTTP and MCP operator-clear surfaces replace an indefinite ChatGPT
+  affinity warning with the same bounded quiet cooldown, after which admission
+  may resume.
+- Historical frozen interactions remain unchanged. Twelve focused tests, the
+  selected HTTP regression, typecheck, build, and lint pass. No provider effect
+  ran.

@@ -22957,3 +22957,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   endpoint before aggregating live, fenced, and unleased counts.
 - Do not memoize a failed census; allow another mapped runtime profile to retry
   the read-only observation.
+
+## 2026-09-24 | Clear every guard surface through one operator action
+
+- Aggregate affinity warnings are independent persisted admission evidence.
+  Clearing only legacy browser or Account Mirror guard state leaves affinity
+  blocked, especially for no-expiry human-verification warnings.
+- Route HTTP and MCP operator-clear actions through the aggregate ledger too.
+  Preserve an append-only clear event and replace the warning with the existing
+  quiet cooldown rather than immediately reopening interaction permits.
+- Do not rewrite historical frozen interactions; they remain evidence of the
+  warning and any outcome-unknown in-flight work.

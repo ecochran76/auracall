@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 30
+Plan version: 31
 
 ## Stable Objective
 
@@ -1295,3 +1295,27 @@ Checkpoint 2026-09-24, shared-browser census deduplication:
 - `delegation_status`: no new workers
 - `review_status`: a failed census is not memoized, allowing another mapped
   runtime profile to retry observation without granting mutation authority
+
+Checkpoint 2026-09-24, aggregate warning operator recovery:
+
+- `plan_version`: 31
+- `state_transition`: OPEN -> OPEN; operator guard clearance now reaches the
+  aggregate affinity ledger as well as legacy/browser and Account Mirror state
+- `acceptance_state`: provider-free accepted; an indefinite human-verification
+  warning remains fail-closed until explicit operator clear, then becomes the
+  existing bounded quiet cooldown instead of blocking forever or resuming
+  immediately
+- `progress_classification`: forward progress
+- `evidence`: commit `53989df41befb6c19e7ba04757457ec8ecd1ffec`
+  adds an append-only provider-warning-clear event and routes HTTP plus MCP
+  operator-clear surfaces through one configured aggregate-ledger helper
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: 12 full focused ledger/configured-clear/MCP tests plus the
+  selected HTTP clear regression pass with typecheck, production build, scoped
+  Biome, lint, and diff hygiene
+- `next_action_or_stop_reason`: continue bounded provider-free recovery and
+  status audit; preserve the live gate
+- `delegation_status`: no new workers
+- `review_status`: clearance is provider/account aggregate even when initiated
+  through one runtime profile; historical frozen interactions remain immutable
+  evidence while future permits stay denied through the cooldown boundary
