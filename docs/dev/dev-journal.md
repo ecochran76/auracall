@@ -50262,3 +50262,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - One hundred three focused tests, typecheck, scoped Biome checks, diff hygiene,
   and production build pass. Account Mirror and legacy `runBrowserMode()` are
   not migrated; no installed, browser, provider, scheduler, or live effect ran.
+## 2026-09-24 | Plan 0359 inherited ChatGPT materialization affinity
+
+- Extended the reusable ChatGPT utility lease across inherited project,
+  account, and conversation file reads; conversation context; artifact/file
+  materialization; downloads; and active-media materialization.
+- Exact nested calls now bypass lease acquisition, preventing an outer
+  materialization routine from reacquiring its own tab. Affinity-owned scoped
+  provider sessions preserve the shared ledger governor across transfers.
+- Sixty focused tests and typecheck pass. Scoped source formatting and diff
+  hygiene pass; the broader legacy file test retains a pre-existing formatter
+  finding outside this change. No live browser/provider effect ran.

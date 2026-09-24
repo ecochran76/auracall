@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 20
+Plan version: 21
 
 ## Stable Objective
 
@@ -145,8 +145,13 @@ provider-neutral.
   per service instance in explicit affinity mode. Every adapter interaction is
   admitted and settled through the shared ledger. Mutations execute once; an
   uncertain mutation leaves both ledger and tab evidence outcome-unknown, and
-  the registry now forbids reacquiring any outcome-unknown idle lease. Other
-  project/file CRUD and materialization read surfaces remain to be integrated.
+  the registry now forbids reacquiring any outcome-unknown idle lease. Inherited
+  project/account/conversation file reads, conversation context, artifact/file
+  materialization, account/project downloads, and active-media materialization
+  now reuse that same exact utility tab without nested lease acquisition.
+  Affinity-owned scoped provider sessions retain the aggregate interaction
+  governor across transfers. Remaining project/file mutations and specialized
+  management adapters still require integration.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -1033,3 +1038,29 @@ Checkpoint 2026-09-24, ChatGPT utility-tab coordination:
 - `review_status`: successful utility work idles and reuses the exact target;
   failed reads settle without mutation evidence, failed mutations become
   outcome-unknown, and outcome-unknown idle leases cannot be reacquired
+
+Checkpoint 2026-09-24, inherited ChatGPT read and materialization affinity:
+
+- `plan_version`: 21
+- `state_transition`: OPEN -> OPEN; inherited read and materialization surfaces
+  now remain on the service-owned exact utility target
+- `acceptance_state`: partial provider-free acceptance; 60 focused ChatGPT
+  service, utility coordinator, and LLM file/materialization tests pass with
+  typecheck and scoped source formatting; no live effect ran
+- `progress_classification`: forward progress
+- `evidence`: commit `3eb0f2b1e39593c186df614df7702c67c0479d1d`
+  adds a re-entrant exact-target wrapper to inherited project/account/
+  conversation file reads, conversation context, artifact and file
+  materialization, downloads, and active-media materialization; an already
+  exact nested call bypasses acquisition, while scoped transfers preserve the
+  affinity ledger governor instead of removing it
+- `material_blockers`: inherited project/file mutations and specialized
+  ChatGPT management adapters remain outside utility affinity; restart/orphan
+  reconciliation and sanitized per-binding lifetime status remain open
+- `next_action_or_stop_reason`: integrate provider-mutating project/file
+  methods with one-attempt outcome-unknown semantics, then finish restart/orphan
+  reconciliation and the provider-free completion audit
+- `delegation_status`: no new workers
+- `review_status`: all covered read/materialization operations retain one exact
+  target and one aggregate governor across nested and scoped-session calls;
+  legacy scoped-session callers retain their prior governor-bypass behavior

@@ -22863,3 +22863,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   release that obsolete binding before creating one replacement. If the target
   is live on a different route, preserve the conflict as lost and stop rather
   than navigating, adopting, or closing it.
+## 2026-09-24 | Keep nested materialization on its owning utility lease
+
+- Treat an exact `tabTargetId` as re-entry into an already acquired utility
+  lease. Run the inherited operation directly with that exact locator instead
+  of attempting another workload acquisition.
+- When a scoped provider session belongs to aggregate tab-affinity execution,
+  preserve its interaction governor through artifact and file transfers.
+  Removing it fragments accounting precisely where one operation performs
+  multiple provider interactions.
+- Keep the preservation flag explicit so legacy scoped-session callers retain
+  their established behavior until separately migrated.

@@ -164,14 +164,16 @@ Stored responses and interactive/detached, TUI, and MCP browser sessions carry
 that authority; the legacy response lifecycle attaches only to the leased
 target and retains it. ChatGPT Account Mirror live-follow completions use one
 dedicated crawler lease and the same tenant/provider interaction ledger.
-Direct/manual refreshes, non-prompt surfaces, and Gemini/Grok remain serialized
-or otherwise outside affinity. ChatGPT project/conversation listing, provider
-identity reads, and conversation rename/delete are the first non-prompt
-exceptions: one service instance owns one reusable exact utility tab, and each
-adapter interaction uses the aggregate ledger. A failed provider mutation is
-outcome-unknown and that idle lease cannot be reacquired. Other project/file
-CRUD and materialization paths remain incomplete. Do not treat configured mode
-or registry files as installed/live acceptance evidence.
+Direct/manual refreshes and Gemini/Grok remain serialized or otherwise outside
+affinity. ChatGPT project/conversation listing, provider identity reads,
+conversation rename/delete, inherited file/context reads, downloads,
+materialization, and active-media materialization use one reusable exact
+utility tab per service instance. Nested operations reuse an already exact
+target, and affinity-owned scoped sessions keep the aggregate ledger governor
+through transfers. A failed provider mutation is outcome-unknown and that idle
+lease cannot be reacquired. Other project/file mutations and specialized
+management paths remain incomplete. Do not treat configured mode or registry
+files as installed/live acceptance evidence.
 
 Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
 reconciles expired idle leases for that exact runtime/account/managed browser
