@@ -19,6 +19,11 @@ import type { DevToolsConnectionOptions } from '../../packages/browser-service/s
 import type { PromptInput, PromptResult } from './llmService/types.js';
 import type { ProviderSessionProof } from './providers/providerSessionAuthority.js';
 import type { ConversationArtifact, ConversationContext, FileRef } from './providers/domain.js';
+import {
+  createBrowserTabConcurrencyRuntime,
+  type BrowserTabConcurrencyRuntime,
+  type BrowserTabConcurrencyStatus,
+} from './tabConcurrencyRuntime.js';
 
 export class BrowserAutomationClient {
   readonly target: 'chatgpt' | 'gemini' | 'grok';
@@ -26,6 +31,7 @@ export class BrowserAutomationClient {
   private readonly browserService: BrowserService;
   private readonly llmService: LlmService;
   private readonly core: BrowserAutomationClientCore;
+  private readonly tabConcurrencyRuntime: BrowserTabConcurrencyRuntime;
 
   private constructor(
     readonly userConfig: ResolvedUserConfig,
@@ -42,6 +48,7 @@ export class BrowserAutomationClient {
         diagnoseProvider(client, config as typeof this.provider.config, basePath, options),
       crawlerScript: CRAWLER_SCRIPT,
     });
+    this.tabConcurrencyRuntime = createBrowserTabConcurrencyRuntime(userConfig);
   }
 
   static async fromConfig(
@@ -62,6 +69,10 @@ export class BrowserAutomationClient {
     options: { ensurePort?: boolean } = {},
   ): Promise<BrowserProviderListOptions> {
     return this.llmService.buildListOptions(overrides, options);
+  }
+
+  async getTabConcurrencyStatus(): Promise<BrowserTabConcurrencyStatus> {
+    return this.tabConcurrencyRuntime.readStatus();
   }
 
   async listProjects(

@@ -237,6 +237,7 @@ const AGENT_BROWSER_RDP_CONFIG_SCHEMA = z.object({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserConfigSchema = z.object({
+  tabConcurrencyMode: z.enum(['serialized', 'tab-affinity']).optional(),
   // Targeting
   target: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   
@@ -314,6 +315,7 @@ export const BrowserConfigSchema = z.object({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileBrowserSchema = z.object({
+  tabConcurrencyMode: z.enum(['serialized', 'tab-affinity']).optional(),
   browserFamily: z.enum(['chrome', 'chromium']).optional(),
   browserBuild: z.enum(['stock_chrome', 'stealthcdp_chromium']).optional(),
   agentBrowserRdp: AGENT_BROWSER_RDP_CONFIG_SCHEMA.optional(),

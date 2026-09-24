@@ -95,6 +95,7 @@ export interface BrowserSessionConfig {
 }
 
 export interface BrowserAutomationConfig {
+  tabConcurrencyMode?: 'serialized' | 'tab-affinity';
   browserFamily?: BrowserProfileFamily | null;
   browserBuild?: AgentBrowserBuild | null;
   agentBrowserRdp?: AgentBrowserRdpConfig | null;
