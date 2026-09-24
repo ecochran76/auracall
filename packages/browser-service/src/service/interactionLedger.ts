@@ -176,6 +176,7 @@ export interface ProviderInteractionLedger {
     cooldownUntil?: string | null;
     reason: string;
   }): Promise<{ previous: ProviderWarningRecord | null; warning: ProviderWarningRecord | null }>;
+  listActiveProviderWarnings(input: { now: string }): Promise<ProviderWarningRecord[]>;
   list(scope?: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>>): Promise<ProviderInteractionRecord[]>;
   listEvents(scope?: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>>): Promise<ProviderInteractionEvent[]>;
   summarizeUsage(input: {
@@ -632,6 +633,15 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     };
   }
 
+  async listActiveProviderWarnings(input: { now: string }): Promise<ProviderWarningRecord[]> {
+    const nowMs = parseTimestamp(input.now, 'now');
+    return [...this.warnings.values()]
+      .filter((warning) => isWarningActive(warning, nowMs))
+      .map(cloneWarning)
+      .sort((left, right) =>
+        left.provider.localeCompare(right.provider) || left.observedAt.localeCompare(right.observedAt));
+  }
+
   async list(
     scope: Partial<Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>> = {},
   ): Promise<ProviderInteractionRecord[]> {
@@ -815,6 +825,10 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
 
   clearProviderWarning(input: Parameters<ProviderInteractionLedger['clearProviderWarning']>[0]) {
     return this.write((ledger) => ledger.clearProviderWarning(input));
+  }
+
+  listActiveProviderWarnings(input: Parameters<ProviderInteractionLedger['listActiveProviderWarnings']>[0]) {
+    return this.read((ledger) => ledger.listActiveProviderWarnings(input));
   }
 
   list(scope?: Parameters<ProviderInteractionLedger['list']>[0]) {

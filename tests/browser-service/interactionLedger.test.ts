@@ -188,6 +188,12 @@ describe("interactionLedger (package)", () => {
 		expect((await ledger.listEvents()).map((event) => event.type)).toContain(
 			"provider-warning-cleared",
 		);
+		expect(await ledger.listActiveProviderWarnings({ now: "2026-09-24T12:34:59.999Z" })).toEqual([
+			cleared.warning,
+		]);
+		expect(await ledger.listActiveProviderWarnings({ now: "2026-09-24T12:35:00.000Z" })).toEqual(
+			[],
+		);
 	});
 
 	test("atomic short reservations close concurrency races and expire without erasing history", async () => {

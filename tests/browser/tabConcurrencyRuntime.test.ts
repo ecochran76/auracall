@@ -83,8 +83,22 @@ describe("browser tab concurrency runtime", () => {
 				},
 			);
 			const registry = runtime.registry;
+			const ledger = runtime.ledger;
 			expect(registry).not.toBeNull();
-			if (!registry) throw new Error("expected tab lease registry");
+			expect(ledger).not.toBeNull();
+			if (!registry || !ledger) throw new Error("expected coordination stores");
+			await ledger.recordProviderWarning({
+				scope: {
+					provider: "chatgpt",
+					tenantKey: "tenant-secret",
+					runtimeProfileId: "runtime-1",
+					managedBrowserProfile: "managed-1",
+				},
+				classification: "rate-limit",
+				reason: "provider warning secret",
+				observedAt: "2026-09-24T12:01:00.000Z",
+				cooldownUntil: "2026-09-24T12:12:00.000Z",
+			});
 
 			const reserved = await registry.reserve({
 				scope: {
@@ -127,6 +141,14 @@ describe("browser tab concurrency runtime", () => {
 					ephemeral: 0,
 				},
 				attention: { expiredIdle: 1, outcomeUnknown: 1, restartUnverified: 0 },
+				providerWarningEventCount: 1,
+				providerWarnings: {
+					active: 1,
+					indefinite: 0,
+					cooldown: 1,
+					classifications: { "rate-limit": 1 },
+					maximumCooldownRemainingMs: 600_000,
+				},
 				bindingLifetimes: [
 					{
 						workloadKind: "conversation",
@@ -150,6 +172,8 @@ describe("browser tab concurrency runtime", () => {
 				retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
 			});
 			expect(JSON.stringify(status)).not.toContain("conversation-secret");
+			expect(JSON.stringify(status)).not.toContain("tenant-secret");
+			expect(JSON.stringify(status)).not.toContain("provider warning secret");
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}

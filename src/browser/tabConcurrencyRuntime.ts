@@ -24,6 +24,13 @@ export interface BrowserTabConcurrencyStatus {
 	interactionCount: number;
 	activeInteractionCount: number;
 	providerWarningEventCount: number;
+	providerWarnings: {
+		active: number;
+		indefinite: number;
+		cooldown: number;
+		classifications: Record<string, number>;
+		maximumCooldownRemainingMs: number;
+	};
 	leaseStates: {
 		active: number;
 		idle: number;
@@ -100,12 +107,14 @@ export function createBrowserTabConcurrencyRuntime(
 		registry,
 		ledger,
 		readStatus: async () => {
-			const [leases, interactions, events] = await Promise.all([
+			const now = (options.now ?? (() => new Date()))();
+			const [leases, interactions, events, activeWarnings] = await Promise.all([
 				registry.list(),
 				ledger.list(),
 				ledger.listEvents(),
+				ledger.listActiveProviderWarnings({ now: now.toISOString() }),
 			]);
-			const nowMs = (options.now ?? (() => new Date()))().getTime();
+			const nowMs = now.getTime();
 			const fencedLeases = leases.filter((lease) =>
 				["active", "idle", "retiring", "lost"].includes(lease.state),
 			);
@@ -122,6 +131,22 @@ export function createBrowserTabConcurrencyRuntime(
 				providerWarningEventCount: events.filter(
 					(event) => event.type === "provider-warning-observed",
 				).length,
+				providerWarnings: {
+					active: activeWarnings.length,
+					indefinite: activeWarnings.filter((warning) => warning.cooldownUntil === null).length,
+					cooldown: activeWarnings.filter((warning) => warning.cooldownUntil !== null).length,
+					classifications: activeWarnings.reduce<Record<string, number>>((counts, warning) => {
+						counts[warning.classification] = (counts[warning.classification] ?? 0) + 1;
+						return counts;
+					}, {}),
+					maximumCooldownRemainingMs: activeWarnings.reduce(
+						(maximum, warning) =>
+							warning.cooldownUntil === null
+								? maximum
+								: Math.max(maximum, Date.parse(warning.cooldownUntil) - nowMs),
+						0,
+					),
+				},
 				leaseStates: {
 					active: leases.filter((lease) => lease.state === "active").length,
 					idle: leases.filter((lease) => lease.state === "idle").length,
@@ -201,6 +226,13 @@ function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStat
 		interactionCount: 0,
 		activeInteractionCount: 0,
 		providerWarningEventCount: 0,
+		providerWarnings: {
+			active: 0,
+			indefinite: 0,
+			cooldown: 0,
+			classifications: {},
+			maximumCooldownRemainingMs: 0,
+		},
 		leaseStates: { active: 0, idle: 0, retiring: 0, released: 0, lost: 0 },
 		workloads: { conversations: 0, newConversations: 0, liveFollow: 0, ephemeral: 0 },
 		attention: { expiredIdle: 0, outcomeUnknown: 0, restartUnverified: 0 },
