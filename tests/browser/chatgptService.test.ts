@@ -23,6 +23,7 @@ const providerRunPrompt = vi.hoisted(() =>
 		devtoolsPort: 45011,
 	})),
 );
+const providerListProjectFiles = vi.hoisted(() => vi.fn(async () => []));
 
 vi.mock("../../src/browser/providers/index.js", async (importOriginal) => {
 	const original = await importOriginal<typeof import("../../src/browser/providers/index.js")>();
@@ -30,7 +31,9 @@ vi.mock("../../src/browser/providers/index.js", async (importOriginal) => {
 		...original,
 		getProvider: (id: "chatgpt" | "gemini" | "grok") => {
 			const provider = original.getProvider(id);
-			return id === "chatgpt" ? { ...provider, runPrompt: providerRunPrompt } : provider;
+			return id === "chatgpt"
+				? { ...provider, runPrompt: providerRunPrompt, listProjectFiles: providerListProjectFiles }
+				: provider;
 		},
 	};
 });
@@ -42,6 +45,7 @@ afterEach(async () => {
 		await rm(root, { recursive: true, force: true, maxRetries: 2 });
 	}
 	providerRunPrompt.mockClear();
+	providerListProjectFiles.mockClear();
 	clearBrowserOperationQueueObservationsForTest();
 	vi.restoreAllMocks();
 	setAuracallHomeDirOverrideForTest(null);
@@ -86,6 +90,82 @@ describe("ChatGPT llm service", () => {
 		expect(runUtilityOperation).toHaveBeenCalledOnce();
 		expect(runUtilityOperation).toHaveBeenCalledWith(
 			expect.objectContaining({ mutability: "provider-mutating" }),
+		);
+	});
+
+	it("keeps inherited ChatGPT reads on one exact utility tab without nested acquisition", async () => {
+		const cacheRoot = await tempRoot("auracall-chatgpt-utility-read-");
+		const runUtilityOperation = vi.fn(
+			async (input: {
+				run: (options: {
+					host: string;
+					port: number;
+					tabTargetId: string;
+					skipFeatureSignature: boolean;
+				}) => Promise<unknown>;
+			}) =>
+				input.run({
+					host: "127.0.0.1",
+					port: 45011,
+					tabTargetId: "utility-tab-1",
+					skipFeatureSignature: true,
+				}),
+		);
+		const { ChatgptService } = await import(
+			"../../src/browser/llmService/providers/chatgptService.js"
+		);
+		const service = ChatgptService.create(
+			{
+				browser: {
+					target: "chatgpt",
+					tabConcurrencyMode: "tab-affinity",
+					cache: { rootDir: cacheRoot, identityKey: "test", useDetectedIdentity: false },
+				},
+			} as ResolvedUserConfig,
+			{ runUtilityOperation: runUtilityOperation as never },
+		);
+
+		await expect(service.listProjectFiles("project-1")).resolves.toEqual([]);
+
+		expect(runUtilityOperation).toHaveBeenCalledOnce();
+		expect(providerListProjectFiles).toHaveBeenCalledWith(
+			"project-1",
+			expect.objectContaining({ tabTargetId: "utility-tab-1" }),
+		);
+	});
+
+	it("does not reacquire utility affinity for an already exact inherited read", async () => {
+		const cacheRoot = await tempRoot("auracall-chatgpt-exact-read-");
+		const runUtilityOperation = vi.fn();
+		const { ChatgptService } = await import(
+			"../../src/browser/llmService/providers/chatgptService.js"
+		);
+		const service = ChatgptService.create(
+			{
+				browser: {
+					target: "chatgpt",
+					tabConcurrencyMode: "tab-affinity",
+					cache: { rootDir: cacheRoot, identityKey: "test", useDetectedIdentity: false },
+				},
+			} as ResolvedUserConfig,
+			{ runUtilityOperation: runUtilityOperation as never },
+		);
+
+		await expect(
+			service.listProjectFiles("project-1", {
+				listOptions: {
+					host: "127.0.0.1",
+					port: 45011,
+					tabTargetId: "utility-tab-1",
+					skipFeatureSignature: true,
+				},
+			}),
+		).resolves.toEqual([]);
+
+		expect(runUtilityOperation).not.toHaveBeenCalled();
+		expect(providerListProjectFiles).toHaveBeenCalledWith(
+			"project-1",
+			expect.objectContaining({ tabTargetId: "utility-tab-1" }),
 		);
 	});
 

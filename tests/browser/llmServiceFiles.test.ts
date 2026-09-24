@@ -1034,10 +1034,14 @@ describe("llmService project file cache writes", () => {
 			),
 		};
 		const service = new TestLlmService(provider as never, store, cacheContext);
+		const interactionGovernor = { beforeInteraction: vi.fn(async () => undefined) };
 
 		try {
 			const result = await service.materializeConversationArtifacts("conversation-123", {
-				listOptions: {},
+				listOptions: {
+					interactionGovernor,
+					preserveInteractionGovernorForProviderSession: true,
+				},
 				refresh: true,
 			});
 			expect(result.files).toHaveLength(1);
@@ -1047,7 +1051,11 @@ describe("llmService project file cache writes", () => {
 				expect.objectContaining({ id: "image-dom:turn-real:0" }),
 				expect.any(String),
 				undefined,
-				expect.objectContaining({ useProviderSession: true }),
+				expect.objectContaining({
+					interactionGovernor,
+					preserveInteractionGovernorForProviderSession: true,
+					useProviderSession: true,
+				}),
 			);
 			const manifest = JSON.parse(await readFile(result.manifestPath as string, "utf8")) as {
 				artifactCount: number;

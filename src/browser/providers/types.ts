@@ -58,6 +58,7 @@ export interface BrowserProviderListOptions {
 	mutationAudit?: BrowserMutationAuditSink;
 	mutationSourcePrefix?: string;
 	interactionGovernor?: BrowserInteractionGovernor;
+	preserveInteractionGovernorForProviderSession?: boolean;
 	providerSessionAuthorization?: ProviderSessionAuthorization;
 	onProviderSessionProof?: (proof: ProviderSessionProof) => void;
 	skipFeatureSignature?: boolean;

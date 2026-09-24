@@ -46,21 +46,36 @@ export class ChatgptService extends LlmService {
 		return new ChatgptService(userConfig, provider, browserService, options);
 	}
 
+	private async runWithUtilityAffinity<TResult>(
+		options: BrowserProviderListOptions | undefined,
+		run: (exactOptions: BrowserProviderListOptions) => Promise<TResult>,
+	): Promise<TResult> {
+		if (options?.tabTargetId) {
+			return run(options);
+		}
+		return (await this.runUtilityOperation({
+			userConfig: this.getResolvedUserConfig(),
+			browserService: this.getBrowserService(),
+			utilityId: this.utilityAffinityId,
+			options,
+			mutability: "read-only",
+			buildListOptions: (overrides) => this.buildListOptions(overrides, { ensurePort: true }),
+			run,
+		})) as TResult;
+	}
+
+	private usesUtilityAffinity(): boolean {
+		return this.getResolvedUserConfig().browser?.tabConcurrencyMode === "tab-affinity";
+	}
+
 	async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
 		if (!this.provider.listProjects) {
 			return [];
 		}
-		if (this.getResolvedUserConfig().browser?.tabConcurrencyMode === "tab-affinity") {
-			return (
-				(await this.runUtilityOperation({
-					userConfig: this.getResolvedUserConfig(),
-					browserService: this.getBrowserService(),
-					utilityId: this.utilityAffinityId,
-					options,
-					mutability: "read-only",
-					buildListOptions: (overrides) => this.buildListOptions(overrides, { ensurePort: true }),
-					run: (exactOptions) => this.provider.listProjects?.(exactOptions) as Promise<Project[]>,
-				})) ?? []
+		if (this.usesUtilityAffinity()) {
+			return this.runWithUtilityAffinity(
+				options,
+				(exactOptions) => this.provider.listProjects?.(exactOptions) as Promise<Project[]>,
 			);
 		}
 		const listOptions = await this.buildListOptions(options, { ensurePort: true });
@@ -77,22 +92,14 @@ export class ChatgptService extends LlmService {
 		if (!this.provider.listConversations) {
 			return [];
 		}
-		if (this.getResolvedUserConfig().browser?.tabConcurrencyMode === "tab-affinity") {
-			return (
-				(await this.runUtilityOperation({
-					userConfig: this.getResolvedUserConfig(),
-					browserService: this.getBrowserService(),
-					utilityId: this.utilityAffinityId,
-					options,
-					mutability: "read-only",
-					buildListOptions: async (overrides) =>
-						this.scopeConversationListOptions(
-							await this.buildListOptions(overrides, { ensurePort: true }),
-							projectId,
-						),
-					run: (exactOptions) =>
-						this.provider.listConversations?.(projectId, exactOptions) as Promise<Conversation[]>,
-				})) ?? []
+		if (this.usesUtilityAffinity()) {
+			return this.runWithUtilityAffinity(
+				options,
+				(exactOptions) =>
+					this.provider.listConversations?.(
+						projectId,
+						this.scopeConversationListOptions(exactOptions, projectId),
+					) as Promise<Conversation[]>,
 			);
 		}
 		const listOptions = this.scopeConversationListOptions(
@@ -181,20 +188,137 @@ export class ChatgptService extends LlmService {
 	async getUserIdentity(
 		options?: BrowserProviderListOptions,
 	): Promise<ProviderUserIdentity | null> {
-		if (
-			this.getResolvedUserConfig().browser?.tabConcurrencyMode === "tab-affinity" &&
-			this.provider.getUserIdentity
-		) {
-			return await this.runUtilityOperation({
-				userConfig: this.getResolvedUserConfig(),
-				browserService: this.getBrowserService(),
-				utilityId: this.utilityAffinityId,
+		if (this.usesUtilityAffinity() && this.provider.getUserIdentity) {
+			return this.runWithUtilityAffinity(
 				options,
-				mutability: "read-only",
-				buildListOptions: (overrides) => this.buildListOptions(overrides, { ensurePort: true }),
-				run: async (exactOptions) => (await this.getProviderSessionProof(exactOptions)).observation,
-			});
+				async (exactOptions) => (await this.getProviderSessionProof(exactOptions)).observation,
+			);
 		}
 		return (await this.getProviderSessionProof(options)).observation;
+	}
+
+	override listProjectFiles(
+		projectId: string,
+		options?: Parameters<LlmService["listProjectFiles"]>[1],
+	): ReturnType<LlmService["listProjectFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.listProjectFiles(projectId, options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.listProjectFiles(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override materializeProjectFiles(
+		projectId: string,
+		options?: Parameters<LlmService["materializeProjectFiles"]>[1],
+	): ReturnType<LlmService["materializeProjectFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.materializeProjectFiles(projectId, options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.materializeProjectFiles(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override listAccountFiles(
+		options?: Parameters<LlmService["listAccountFiles"]>[0],
+	): ReturnType<LlmService["listAccountFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.listAccountFiles(options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.listAccountFiles({ ...options, listOptions }),
+		);
+	}
+
+	override downloadAccountFile(
+		fileId: string,
+		destPath: string,
+		options?: Parameters<LlmService["downloadAccountFile"]>[2],
+	): ReturnType<LlmService["downloadAccountFile"]> {
+		if (!this.usesUtilityAffinity()) return super.downloadAccountFile(fileId, destPath, options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.downloadAccountFile(fileId, destPath, { ...options, listOptions }),
+		);
+	}
+
+	override materializeAccountFiles(
+		options?: Parameters<LlmService["materializeAccountFiles"]>[0],
+	): ReturnType<LlmService["materializeAccountFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.materializeAccountFiles(options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.materializeAccountFiles({ ...options, listOptions }),
+		);
+	}
+
+	override listConversationFiles(
+		conversationId: string,
+		options?: Parameters<LlmService["listConversationFiles"]>[1],
+	): ReturnType<LlmService["listConversationFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.listConversationFiles(conversationId, options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.listConversationFiles(conversationId, { ...options, listOptions }),
+		);
+	}
+
+	override materializeConversationArtifacts(
+		conversationId: string,
+		options?: Parameters<LlmService["materializeConversationArtifacts"]>[1],
+	): ReturnType<LlmService["materializeConversationArtifacts"]> {
+		if (!this.usesUtilityAffinity()) {
+			return super.materializeConversationArtifacts(conversationId, options);
+		}
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.materializeConversationArtifacts(conversationId, { ...options, listOptions }),
+		);
+	}
+
+	override materializeConversationArtifact(
+		conversationId: string,
+		artifact: Parameters<LlmService["materializeConversationArtifact"]>[1],
+		destDir: string,
+		options?: Parameters<LlmService["materializeConversationArtifact"]>[3],
+	): ReturnType<LlmService["materializeConversationArtifact"]> {
+		if (!this.usesUtilityAffinity()) {
+			return super.materializeConversationArtifact(conversationId, artifact, destDir, options);
+		}
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.materializeConversationArtifact(conversationId, artifact, destDir, {
+				...options,
+				listOptions,
+			}),
+		);
+	}
+
+	override materializeActiveMediaArtifacts(
+		input: Parameters<LlmService["materializeActiveMediaArtifacts"]>[0],
+		destDir: string,
+		options?: Parameters<LlmService["materializeActiveMediaArtifacts"]>[2],
+	): ReturnType<LlmService["materializeActiveMediaArtifacts"]> {
+		if (!this.usesUtilityAffinity()) {
+			return super.materializeActiveMediaArtifacts(input, destDir, options);
+		}
+		return this.runWithUtilityAffinity(options, (listOptions) =>
+			super.materializeActiveMediaArtifacts(input, destDir, listOptions),
+		);
+	}
+
+	override materializeConversationFiles(
+		conversationId: string,
+		options?: Parameters<LlmService["materializeConversationFiles"]>[1],
+	): ReturnType<LlmService["materializeConversationFiles"]> {
+		if (!this.usesUtilityAffinity()) {
+			return super.materializeConversationFiles(conversationId, options);
+		}
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.materializeConversationFiles(conversationId, { ...options, listOptions }),
+		);
+	}
+
+	override getConversationContext(
+		conversationId: string,
+		options?: Parameters<LlmService["getConversationContext"]>[1],
+	): ReturnType<LlmService["getConversationContext"]> {
+		if (!this.usesUtilityAffinity() || options?.cacheOnly) {
+			return super.getConversationContext(conversationId, options);
+		}
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.getConversationContext(conversationId, { ...options, listOptions }),
+		);
 	}
 }

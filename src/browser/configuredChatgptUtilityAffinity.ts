@@ -171,7 +171,11 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	try {
 		execution = {
 			ok: true,
-			value: await input.run({ ...options, interactionGovernor: governor }),
+			value: await input.run({
+				...options,
+				interactionGovernor: governor,
+				preserveInteractionGovernorForProviderSession: true,
+			}),
 		};
 	} catch (error) {
 		outcome = "failed";

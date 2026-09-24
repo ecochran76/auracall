@@ -59,6 +59,9 @@ describe("configured ChatGPT utility affinity", () => {
 
 		expect(openTarget).toHaveBeenCalledOnce();
 		expect(run).toHaveBeenCalledTimes(2);
+		expect(run).toHaveBeenCalledWith(
+			expect.objectContaining({ preserveInteractionGovernorForProviderSession: true }),
+		);
 		expect(await registry.list()).toEqual([
 			expect.objectContaining({
 				state: "idle",

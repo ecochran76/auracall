@@ -1846,12 +1846,14 @@ export abstract class LlmService {
 			);
 			const artifacts = limitItems(artifactCandidates, options?.maxItems);
 			if (listOptions.useProviderSession === true) {
-				listOptions.interactionGovernor = undefined;
 				listOptions.skipFeatureSignature = true;
-				recordBrowserScrapeProviderAction(
-					listOptions,
-					"llmService.scopedArtifactTransfersBypassInteractionGovernor",
-				);
+				if (listOptions.preserveInteractionGovernorForProviderSession !== true) {
+					listOptions.interactionGovernor = undefined;
+					recordBrowserScrapeProviderAction(
+						listOptions,
+						"llmService.scopedArtifactTransfersBypassInteractionGovernor",
+					);
+				}
 			}
 			recordBrowserScrapeCandidateCount(
 				listOptions,
@@ -2171,12 +2173,14 @@ export abstract class LlmService {
 			);
 			const knownConversationFileCount = listedConversationFiles.length;
 			if (listOptions.useProviderSession === true) {
-				listOptions.interactionGovernor = undefined;
 				listOptions.skipFeatureSignature = true;
-				recordBrowserScrapeProviderAction(
-					listOptions,
-					"llmService.scopedFileTransfersBypassInteractionGovernor",
-				);
+				if (listOptions.preserveInteractionGovernorForProviderSession !== true) {
+					listOptions.interactionGovernor = undefined;
+					recordBrowserScrapeProviderAction(
+						listOptions,
+						"llmService.scopedFileTransfersBypassInteractionGovernor",
+					);
+				}
 			}
 			recordBrowserScrapeCandidateCount(
 				listOptions,
