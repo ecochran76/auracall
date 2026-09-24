@@ -10,6 +10,7 @@ import { createExecutionResponsesService } from '../src/runtime/responsesService
 import type { ExecutionRunStoredRecord } from '../src/runtime/store.js';
 import {
   createTenantExecutionLimitGate,
+  resolveChatgptInteractionsPerMinute,
   resolveChatgptTenantLimits,
   summarizeTenantExecutionLimits,
 } from '../src/runtime/tenantExecutionLimits.js';
@@ -52,6 +53,20 @@ describe('tenant execution limits', () => {
       maxChatsPerHour: 120,
       maxChatsPerDay: 240,
     });
+    expect(resolveChatgptInteractionsPerMinute(config, 'wsl-chrome-3')).toBe(30);
+    expect(
+      resolveChatgptInteractionsPerMinute(
+        {
+          services: { chatgpt: { liveFollow: { maxBrowserInteractionsPerMinute: 21 } } },
+          profiles: {
+            'wsl-chrome-3': {
+              services: { chatgpt: { liveFollow: { maxBrowserInteractionsPerMinute: 7 } } },
+            },
+          },
+        },
+        'wsl-chrome-3',
+      ),
+    ).toBe(7);
 
     const control = createExecutionRuntimeControl();
     const responsesService = createExecutionResponsesService({
@@ -397,6 +412,7 @@ describe('tenant execution limits', () => {
       activeChats: 1,
       chatsLastHour: 2,
       chatsLastDay: 2,
+      interactionsLastMinute: 1,
     });
   });
 });

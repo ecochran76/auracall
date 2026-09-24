@@ -1,0 +1,112 @@
+import type {
+	ProviderInteractionClass,
+	ProviderInteractionLedger,
+	ProviderInteractionPolicy,
+	ProviderInteractionScope,
+	ProviderInteractionOutcome,
+} from "./interactionLedger.js";
+import type {
+	BrowserInteractionClass,
+	BrowserInteractionGovernor,
+} from "./interactionGovernor.js";
+
+export interface LedgerBackedBrowserInteractionGovernor extends BrowserInteractionGovernor {
+	finish(input?: {
+		outcome?: ProviderInteractionOutcome;
+		effectState?: "none" | "settled" | "outcome-unknown";
+		reason?: string | null;
+	}): Promise<void>;
+}
+
+export class ProviderInteractionAdmissionError extends Error {
+	constructor(readonly reason: string) {
+		super(`Provider interaction admission denied: ${reason}.`);
+		this.name = "ProviderInteractionAdmissionError";
+	}
+}
+
+export function createLedgerBackedBrowserInteractionGovernor(input: {
+	ledger: ProviderInteractionLedger;
+	scope: ProviderInteractionScope;
+	workloadId: string;
+	operationId: string;
+	tabLeaseId: string;
+	policy: ProviderInteractionPolicy;
+	baseGovernor: BrowserInteractionGovernor;
+	reservationTtlMs?: number;
+	now?: () => Date;
+}): LedgerBackedBrowserInteractionGovernor {
+	const now = input.now ?? (() => new Date());
+	let activeReservationId: string | null = null;
+
+	const finish = async (
+		settlement: {
+			outcome?: ProviderInteractionOutcome;
+			effectState?: "none" | "settled" | "outcome-unknown";
+			reason?: string | null;
+		} = {},
+	) => {
+		if (!activeReservationId) return;
+		const reservationId = activeReservationId;
+		activeReservationId = null;
+		const settled = await input.ledger.settle({
+			reservationId,
+			settledAt: now().toISOString(),
+			effectState: settlement.effectState ?? "settled",
+			outcome: settlement.outcome ?? "succeeded",
+			stopReason: settlement.reason,
+		});
+		if (!settled.ok) {
+			throw new Error(`Provider interaction settlement failed: ${settled.reason}.`);
+		}
+	};
+
+	return {
+		async beforeInteraction(kind = "generic", abortSignal) {
+			await finish();
+			await input.baseGovernor.beforeInteraction(kind, abortSignal);
+			const admission = await input.ledger.reserve({
+				scope: input.scope,
+				workloadId: input.workloadId,
+				operationId: input.operationId,
+				tabLeaseId: input.tabLeaseId,
+				interactionClass: toLedgerInteractionClass(kind),
+				mutability: isMutating(kind) ? "provider-mutating" : "read-only",
+				startsNewConversation: false,
+				now: now().toISOString(),
+				reservationTtlMs: input.reservationTtlMs ?? 30_000,
+				policy: input.policy,
+			});
+			if (!admission.allowed) throw new ProviderInteractionAdmissionError(admission.reason);
+			const started = await input.ledger.start({
+				reservationId: admission.reservation.reservationId,
+				startedAt: now().toISOString(),
+			});
+			if (!started.ok) {
+				throw new Error(`Provider interaction start failed: ${started.reason}.`);
+			}
+			activeReservationId = admission.reservation.reservationId;
+		},
+		finish,
+	};
+}
+
+function toLedgerInteractionClass(kind: BrowserInteractionClass): ProviderInteractionClass {
+	switch (kind) {
+		case "conversation-read":
+			return "conversation-read";
+		case "page-refresh":
+			return "reload";
+		case "renavigation":
+			return "navigation";
+		case "upload-submit":
+		case "provider-recovery":
+			return "provider-mutation";
+		case "generic":
+			return "list-read";
+	}
+}
+
+function isMutating(kind: BrowserInteractionClass): boolean {
+	return kind === "upload-submit" || kind === "provider-recovery";
+}

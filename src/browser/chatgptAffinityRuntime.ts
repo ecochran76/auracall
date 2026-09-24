@@ -3,7 +3,10 @@ import crypto from "node:crypto";
 import type { ProviderWarningClassification } from "../../packages/browser-service/src/service/interactionLedger.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
-import { resolveChatgptTenantLimits } from "../runtime/tenantExecutionLimits.js";
+import {
+	resolveChatgptInteractionsPerMinute,
+	resolveChatgptTenantLimits,
+} from "../runtime/tenantExecutionLimits.js";
 import {
 	executeProvisionedChatgptConversation,
 	type ProviderWarningClassifier,
@@ -151,6 +154,10 @@ export async function runChatgptPromptWithConfiguredAffinity(input: {
 			maxConcurrentChats: limits.maxConcurrentChats,
 			maxConversationStartsPerHour: limits.maxChatsPerHour,
 			maxConversationStartsPerDay: limits.maxChatsPerDay,
+			maxInteractionsPerMinute: resolveChatgptInteractionsPerMinute(
+				input.userConfig as Record<string, unknown>,
+				runtimeProfileId,
+			),
 		},
 		reservationTtlMs: 30_000,
 		idleTtlMs: 15 * 60_000,

@@ -19,6 +19,10 @@ import type {
 	Project,
 } from "../browser/providers/domain.js";
 import {
+	type ProviderSessionProof,
+	summarizeProviderSessionProof,
+} from "../browser/providers/providerSessionAuthority.js";
+import {
 	type BrowserScrapeTelemetrySnapshot,
 	createBrowserScrapeTelemetryRecorder,
 	snapshotBrowserScrapeTelemetry,
@@ -27,10 +31,6 @@ import type {
 	BrowserProviderListOptions,
 	ProviderUserIdentity,
 } from "../browser/providers/types.js";
-import {
-	summarizeProviderSessionProof,
-	type ProviderSessionProof,
-} from "../browser/providers/providerSessionAuthority.js";
 import { resolveRuntimeProfileUserConfig as resolveBrowserRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
 import type { ResolvedUserConfig } from "../config.js";
 import type { AccountMirrorConversationMaterializationPolicy } from "./conversationFreshness.js";
@@ -120,6 +120,12 @@ export interface AccountMirrorMetadataCollectorInput {
 	abortSignal?: AbortSignal;
 	providerCallTimeoutMs?: number | null;
 	detailReadCap?: number | null;
+	interactionGovernor?: BrowserInteractionGovernor;
+	tabAffinity?: {
+		host: string;
+		port: number;
+		targetId: string;
+	};
 	limits: {
 		maxPageReadsPerCycle: number;
 		maxConversationRowsPerCycle: number;
@@ -273,6 +279,7 @@ function createAccountMirrorListOptions(
 	abortSignal?: AbortSignal,
 	interactionGovernor?: BrowserInteractionGovernor,
 	scrapeTelemetry = createBrowserScrapeTelemetryRecorder(),
+	tabAffinity?: AccountMirrorMetadataCollectorInput["tabAffinity"],
 ): BrowserProviderListOptions {
 	return {
 		...(abortSignal ? { abortSignal } : {}),
@@ -280,10 +287,21 @@ function createAccountMirrorListOptions(
 		scrapeTelemetry,
 		accountMirrorInventory: true,
 		skipFeatureSignature: true,
-		tabLifecycle: "dispose-new",
+		...(tabAffinity
+			? {
+					allowNavigation: true,
+					host: tabAffinity.host,
+					port: tabAffinity.port,
+					preserveActiveTab: true,
+					tabLifecycle: "retain" as const,
+					tabTargetId: tabAffinity.targetId,
+				}
+			: { tabLifecycle: "dispose-new" as const }),
 		disableProjectClickFallback: true,
 	};
 }
+
+export const createAccountMirrorListOptionsForTest = createAccountMirrorListOptions;
 
 function withAccountMirrorTabLifecycle(
 	listOptions?: BrowserProviderListOptions,
@@ -372,44 +390,51 @@ export function createChatgptAccountMirrorMetadataCollector(
 				(await BrowserAutomationClient.fromConfig(clientConfig, {
 					target: input.provider,
 				}));
-			const pacer = createAccountMirrorBrowserInteractionGovernor(
-				input.limits.maxBrowserInteractionsPerMinute,
-				{
-					conversationReadCooldownMs: input.limits.conversationReadCooldownMs,
-					pageRefreshCooldownMs: input.limits.pageRefreshCooldownMs,
-					renavigationCooldownMs: input.limits.renavigationCooldownMs,
-				},
-				input.abortSignal,
-			);
+			const pacer =
+				input.interactionGovernor ??
+				createAccountMirrorBrowserInteractionGovernor(
+					input.limits.maxBrowserInteractionsPerMinute,
+					{
+						conversationReadCooldownMs: input.limits.conversationReadCooldownMs,
+						pageRefreshCooldownMs: input.limits.pageRefreshCooldownMs,
+						renavigationCooldownMs: input.limits.renavigationCooldownMs,
+					},
+					input.abortSignal,
+				);
 			throwIfCollectionAborted(input.abortSignal);
 			const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
-			const listOptions = createAccountMirrorListOptions(input.abortSignal, pacer, scrapeTelemetry);
+			const listOptions = createAccountMirrorListOptions(
+				input.abortSignal,
+				pacer,
+				scrapeTelemetry,
+				input.tabAffinity,
+			);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
 			await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "page-refresh");
 			const identityProviderCallTimeoutMs = resolveCollectorDiscoveryCallTimeoutMs(
 				input,
 				"page-refresh",
 			);
-				const providerSessionProof = await runCollectorDiagnosticStage(
-					input,
-					"identity",
-					() =>
-						withProviderCallTimeout(
-							(abortSignal) => client.getProviderSessionProof({ ...listOptions, abortSignal }),
+			const providerSessionProof = await runCollectorDiagnosticStage(
+				input,
+				"identity",
+				() =>
+					withProviderCallTimeout(
+						(abortSignal) => client.getProviderSessionProof({ ...listOptions, abortSignal }),
 						identityProviderCallTimeoutMs,
 						`Identity discovery timed out for ${input.provider}/${input.runtimeProfileId}.`,
 						input.abortSignal,
 					),
 				{ providerCallTimeoutMs: identityProviderCallTimeoutMs },
-				);
-				throwIfCollectionAborted(input.abortSignal);
-				const identity = providerSessionProof.observation;
-				const detectedIdentityKey = readProviderIdentityKey(input.provider, identity);
-				if (!detectedIdentityKey) {
-					throw new AccountMirrorIdentityMismatchError(
-						input.provider,
-						providerSessionProof.expectation.configuredServiceAccountId ?? input.expectedIdentityKey,
-						detectedIdentityKey,
+			);
+			throwIfCollectionAborted(input.abortSignal);
+			const identity = providerSessionProof.observation;
+			const detectedIdentityKey = readProviderIdentityKey(input.provider, identity);
+			if (!detectedIdentityKey) {
+				throw new AccountMirrorIdentityMismatchError(
+					input.provider,
+					providerSessionProof.expectation.configuredServiceAccountId ?? input.expectedIdentityKey,
+					detectedIdentityKey,
 				);
 			}
 			const verifiedIdentity: AccountMirrorVerifiedIdentityEvidence = {
@@ -417,8 +442,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 				detectedIdentitySource: "provider-app",
 				detectedIdentityObservedAtMs: Date.now(),
 				detectedIdentityConfidence: "authoritative",
-					detectedAccountLevel: readAccountLevel(identity),
-					providerSessionProof,
+				detectedAccountLevel: readAccountLevel(identity),
+				providerSessionProof,
 			};
 			await input.onIdentityVerified?.(verifiedIdentity);
 			await reportCollectorProgress(input, { phase: "identity", event: "completed" });
@@ -694,8 +719,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 				detectedIdentitySource: verifiedIdentity.detectedIdentitySource,
 				detectedIdentityObservedAtMs: verifiedIdentity.detectedIdentityObservedAtMs,
 				detectedIdentityConfidence: verifiedIdentity.detectedIdentityConfidence,
-					detectedAccountLevel: verifiedIdentity.detectedAccountLevel,
-					providerSessionProof,
+				detectedAccountLevel: verifiedIdentity.detectedAccountLevel,
+				providerSessionProof,
 				metadataCounts: {
 					projects: projects.items.length,
 					conversations: conversations.length,

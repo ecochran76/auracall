@@ -37,12 +37,14 @@ export interface ProviderInteractionPolicy {
   maxConcurrentChats: number | null;
   maxConversationStartsPerHour: number | null;
   maxConversationStartsPerDay: number | null;
+  maxInteractionsPerMinute?: number | null;
 }
 
 export interface ProviderInteractionUsageSummary {
   activeChats: number;
   chatsLastHour: number;
   chatsLastDay: number;
+  interactionsLastMinute: number;
 }
 
 export interface ProviderWarningRecord {
@@ -126,7 +128,12 @@ export type ProviderInteractionAdmission =
   | { allowed: true; reservation: ProviderInteractionRecord }
   | {
       allowed: false;
-      reason: 'provider-warning' | 'concurrent-limit' | 'hourly-limit' | 'daily-limit';
+      reason:
+        | 'provider-warning'
+        | 'concurrent-limit'
+        | 'minute-interaction-limit'
+        | 'hourly-limit'
+        | 'daily-limit';
       warning?: ProviderWarningRecord;
     };
 
@@ -235,12 +242,38 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       return { allowed: false, reason: 'provider-warning', warning: cloneWarning(warning) };
     }
 
-    const activeCount = [...this.records.values()].filter((record) =>
-      aggregateScopeKey(record.scope) === aggregateScopeKey(scope) &&
-      (record.state === 'reserved' || record.state === 'started')).length;
+    const activeConversationWorkloads = new Set(
+      [...this.records.values()]
+        .filter(
+          (record) =>
+            aggregateScopeKey(record.scope) === aggregateScopeKey(scope) &&
+            (record.state === 'reserved' || record.state === 'started') &&
+            (record.interactionClass === 'conversation-start' ||
+              record.interactionClass === 'prompt-continuation'),
+        )
+        .map((record) => record.workloadId),
+    );
     const maxConcurrent = normalizeLimit(input.policy.maxConcurrentChats, 'maxConcurrentChats');
-    if (maxConcurrent !== null && activeCount >= maxConcurrent) {
+    const reservesConversationSlot =
+      input.interactionClass === 'conversation-start' ||
+      input.interactionClass === 'prompt-continuation';
+    if (
+      reservesConversationSlot &&
+      maxConcurrent !== null &&
+      activeConversationWorkloads.size >= maxConcurrent
+    ) {
       return { allowed: false, reason: 'concurrent-limit' };
+    }
+
+    const minuteInteractionLimit = normalizeLimit(
+      input.policy.maxInteractionsPerMinute ?? null,
+      'maxInteractionsPerMinute',
+    );
+    if (
+      minuteInteractionLimit !== null &&
+      this.countInteractions(scope, nowMs - 60_000) >= minuteInteractionLimit
+    ) {
+      return { allowed: false, reason: 'minute-interaction-limit' };
     }
 
     if (input.startsNewConversation) {
@@ -588,6 +621,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       activeChats: activeWorkloads.size,
       chatsLastHour: this.countConversationStarts(scope, nowMs - 60 * 60_000),
       chatsLastDay: this.countConversationStarts(scope, nowMs - 24 * 60 * 60_000),
+      interactionsLastMinute: this.countInteractions(scope, nowMs - 60_000),
     };
   }
 
@@ -640,6 +674,33 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
         continue;
       }
       if (record.state === 'frozen' && record.effectState === 'outcome-unknown') {
+        const evidenceAt = record.startedAt ?? record.reservedAt;
+        if (Date.parse(evidenceAt) >= cutoffMs) count += 1;
+      }
+    }
+    return count;
+  }
+
+  private countInteractions(
+    scope: Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>,
+    cutoffMs: number,
+  ): number {
+    let count = 0;
+    for (const record of this.records.values()) {
+      if (aggregateScopeKey(record.scope) !== aggregateScopeKey(scope)) continue;
+      if (record.state === 'reserved') {
+        if (Date.parse(record.reservedAt) >= cutoffMs) count += 1;
+        continue;
+      }
+      if (record.state === 'started') {
+        const evidenceAt = record.startedAt ?? record.reservedAt;
+        if (Date.parse(evidenceAt) >= cutoffMs) count += 1;
+        continue;
+      }
+      if (
+        (record.state === 'settled' || record.state === 'frozen') &&
+        record.effectState !== 'none'
+      ) {
         const evidenceAt = record.startedAt ?? record.reservedAt;
         if (Date.parse(evidenceAt) >= cutoffMs) count += 1;
       }

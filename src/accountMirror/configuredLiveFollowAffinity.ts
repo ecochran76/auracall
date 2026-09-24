@@ -1,0 +1,285 @@
+import {
+	closeRemoteChromeTarget,
+	listChromeTargets,
+	openChromeTarget,
+} from "../../packages/browser-service/src/chromeLifecycle.js";
+import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
+import {
+	createLedgerBackedBrowserInteractionGovernor,
+	type LedgerBackedBrowserInteractionGovernor,
+} from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
+import type { BrowserOperationAcquiredResult } from "../../packages/browser-service/src/service/operationDispatcher.js";
+import { classifyStructuredProviderWarning } from "../browser/chatgptAffinityRuntime.js";
+import { BrowserService } from "../browser/service/browserService.js";
+import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
+import { createBrowserTabConcurrencyRuntime } from "../browser/tabConcurrencyRuntime.js";
+import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
+import type { ResolvedUserConfig } from "../config.js";
+import { resolveChatgptTenantLimits } from "../runtime/tenantExecutionLimits.js";
+import type { AccountMirrorMetadataCollectorInput } from "./chatgptMetadataCollector.js";
+import { acquireLiveFollowCrawlerTab } from "./liveFollowTabCoordinator.js";
+
+export interface ConfiguredLiveFollowAffinityContext {
+	tabAffinity: NonNullable<AccountMirrorMetadataCollectorInput["tabAffinity"]>;
+	interactionGovernor: LedgerBackedBrowserInteractionGovernor;
+	operation: BrowserOperationAcquiredResult;
+	completeSuccess(): Promise<void>;
+	completeFailure(error: unknown): Promise<void>;
+}
+
+export async function createConfiguredLiveFollowAffinity(input: {
+	userConfig: ResolvedUserConfig;
+	provider: "chatgpt" | "gemini" | "grok";
+	runtimeProfileId: string;
+	operationId: string;
+	maxBrowserInteractionsPerMinute: number;
+	conversationReadCooldownMs?: number;
+	pageRefreshCooldownMs?: number;
+	renavigationCooldownMs?: number;
+	abortSignal?: AbortSignal;
+	now?: () => Date;
+}): Promise<ConfiguredLiveFollowAffinityContext | null> {
+	const clientConfig = resolveRuntimeProfileUserConfig(input.userConfig, {
+		runtimeProfileId: input.runtimeProfileId,
+		provider: input.provider,
+	}) as ResolvedUserConfig;
+	if (input.provider !== "chatgpt" || clientConfig.browser?.tabConcurrencyMode !== "tab-affinity") {
+		return null;
+	}
+	const runtime = createBrowserTabConcurrencyRuntime(clientConfig);
+	if (!runtime.registry || !runtime.ledger) {
+		throw new Error("Live-follow tab affinity is missing its registry or interaction ledger.");
+	}
+	const tenantKey = resolveConfiguredServiceAccountId(clientConfig as Record<string, unknown>, {
+		serviceId: "chatgpt",
+		runtimeProfileId: input.runtimeProfileId,
+	});
+	if (!tenantKey) {
+		throw new Error("Live-follow tab affinity requires a configured ChatGPT tenant identity.");
+	}
+	const browserService = BrowserService.fromConfig(clientConfig, "chatgpt");
+	const configuredUrl =
+		clientConfig.browser?.chatgptUrl ?? clientConfig.browser?.url ?? "https://chatgpt.com/";
+	const initialTarget = await browserService.resolveServiceTarget({
+		serviceId: "chatgpt",
+		configuredUrl,
+		ensurePort: false,
+		abortSignal: input.abortSignal,
+	});
+	const managedBrowserProfile = initialTarget.managedBrowserProfile?.trim();
+	if (!managedBrowserProfile) {
+		throw new Error("Live-follow tab affinity could not resolve the managed browser profile.");
+	}
+	const toEndpoint = (target: typeof initialTarget) => {
+		if (!target.host || !target.port || target.managedBrowserProfile !== managedBrowserProfile) {
+			return null;
+		}
+		return { host: target.host, port: target.port, managedBrowserProfile };
+	};
+	const scope = {
+		runtimeProfileId: input.runtimeProfileId,
+		managedBrowserProfile,
+		service: "chatgpt",
+		tenantKey,
+	};
+	const crawler = await acquireLiveFollowCrawlerTab({
+		registry: runtime.registry,
+		scope,
+		operationId: input.operationId,
+		targetUrl: configuredUrl,
+		idleTtlMs: 15 * 60_000,
+		absoluteTtlMs: 8 * 60 * 60_000,
+		now: input.now,
+		resolveExistingEndpoint: async () => toEndpoint(initialTarget),
+		startBrowser: async () => {
+			const started = await browserService.resolveServiceTarget({
+				serviceId: "chatgpt",
+				configuredUrl,
+				ensurePort: true,
+				abortSignal: input.abortSignal,
+			});
+			const endpoint = toEndpoint(started);
+			if (!endpoint) throw new Error("Live-follow browser startup returned no exact endpoint.");
+			return endpoint;
+		},
+		inspectTarget: async (endpoint, targetId) => {
+			const targets = await listChromeTargets(endpoint.port, endpoint.host);
+			const target = targets.find((candidate) => {
+				const record = candidate as { id?: string; targetId?: string };
+				return (record.targetId ?? record.id) === targetId;
+			}) as { url?: string } | undefined;
+			return typeof target?.url === "string" ? { url: target.url } : null;
+		},
+		openTarget: async ({ host, port, url }) => {
+			const target = await openChromeTarget(port, url, host);
+			const targetId = typeof target === "string" ? target : target.id;
+			if (!targetId) throw new Error("Live-follow target creation returned no target ID.");
+			return { targetId, url };
+		},
+		closeTarget: ({ host, port, targetId }) =>
+			closeRemoteChromeTarget(host, port, targetId, () => undefined),
+	});
+	const limits = resolveChatgptTenantLimits(
+		clientConfig as Record<string, unknown>,
+		input.runtimeProfileId,
+	);
+	const baseGovernor = createBrowserInteractionGovernor({
+		maxInteractionsPerMinute: input.maxBrowserInteractionsPerMinute,
+		cooldownsByClass: {
+			"conversation-read": input.conversationReadCooldownMs,
+			"page-refresh": input.pageRefreshCooldownMs,
+			renavigation: input.renavigationCooldownMs,
+		},
+		abortSignal: input.abortSignal,
+	});
+	const interactionGovernor = createLedgerBackedBrowserInteractionGovernor({
+		ledger: runtime.ledger,
+		scope: {
+			provider: "chatgpt",
+			tenantKey,
+			runtimeProfileId: input.runtimeProfileId,
+			managedBrowserProfile,
+		},
+		workloadId: `live-follow:${input.operationId}`,
+		operationId: input.operationId,
+		tabLeaseId: crawler.lease.leaseId,
+		policy: {
+			maxConcurrentChats: limits.maxConcurrentChats,
+			maxConversationStartsPerHour: limits.maxChatsPerHour,
+			maxConversationStartsPerDay: limits.maxChatsPerDay,
+			maxInteractionsPerMinute: input.maxBrowserInteractionsPerMinute,
+		},
+		baseGovernor,
+		now: input.now,
+	});
+	let finished = false;
+	let warningRecorded = false;
+	const finish = async (
+		outcome: "succeeded" | "failed",
+		effectState: "settled" | "outcome-unknown",
+		reason?: string,
+	) => {
+		if (finished) return;
+		await interactionGovernor.finish({ outcome, effectState, reason });
+		const used = await runtime.registry?.recordMeaningfulUse({
+			claim: crawler.claim,
+			now: (input.now ?? (() => new Date()))().toISOString(),
+			idleTtlMs: 15 * 60_000,
+			effectState,
+		});
+		if (!used?.ok) {
+			throw new Error(`Live-follow crawler heartbeat failed: ${used?.conflict.kind ?? "missing"}.`);
+		}
+		const idled = await runtime.registry?.idle({
+			claim: used.value.claim,
+			now: (input.now ?? (() => new Date()))().toISOString(),
+			effectState,
+		});
+		if (!idled?.ok) {
+			throw new Error(
+				`Live-follow crawler idle transition failed: ${idled?.conflict.kind ?? "missing"}.`,
+			);
+		}
+		finished = true;
+	};
+	const operationRecord = {
+		id: input.operationId,
+		key: `tab-lease:${crawler.lease.leaseId}`,
+		managedProfileDir: managedBrowserProfile,
+		serviceTarget: "chatgpt",
+		kind: "browser-execution" as const,
+		operationClass: "shared-read" as const,
+		ownerPid: process.pid,
+		ownerCommand: `account-mirror-live-follow:${input.operationId}`,
+		startedAt: (input.now ?? (() => new Date()))().toISOString(),
+		updatedAt: (input.now ?? (() => new Date()))().toISOString(),
+	};
+	return {
+		tabAffinity: {
+			host: crawler.endpoint.host,
+			port: crawler.endpoint.port,
+			targetId: crawler.lease.targetId,
+		},
+		interactionGovernor,
+		operation: {
+			acquired: true,
+			operation: operationRecord,
+			release: () => finish("failed", "outcome-unknown", "affinity-context-released"),
+		},
+		completeSuccess: () => finish("succeeded", "settled"),
+		completeFailure: async (error) => {
+			const warning = classifyLiveFollowWarning(error);
+			let finishError: unknown = null;
+			try {
+				await finish(
+					"failed",
+					"outcome-unknown",
+					error instanceof Error ? error.message : String(error),
+				);
+			} catch (settlementError) {
+				finishError = settlementError;
+			}
+			let warningError: unknown = null;
+			if (warning && !warningRecorded) {
+				try {
+					await runtime.ledger?.recordProviderWarning({
+						scope: {
+							provider: "chatgpt",
+							tenantKey,
+							runtimeProfileId: input.runtimeProfileId,
+							managedBrowserProfile,
+						},
+						...warning,
+						observedAt: (input.now ?? (() => new Date()))().toISOString(),
+					});
+					warningRecorded = true;
+				} catch (recordError) {
+					warningError = recordError;
+				}
+			}
+			if (finishError && warningError) {
+				throw new AggregateError(
+					[finishError, warningError],
+					"Live-follow settlement and provider-warning projection both failed.",
+				);
+			}
+			if (finishError) throw finishError;
+			if (warningError) throw warningError;
+		},
+	};
+}
+
+export function classifyLiveFollowWarning(error: unknown) {
+	const structured = classifyStructuredProviderWarning(error);
+	if (structured) return structured;
+	if (!error || typeof error !== "object") return null;
+	const record = error as Record<string, unknown>;
+	const details =
+		record.details && typeof record.details === "object"
+			? (record.details as Record<string, unknown>)
+			: null;
+	const guardCandidate = record.providerGuard ?? details?.providerGuard ?? details?.blockingState;
+	const guard =
+		guardCandidate && typeof guardCandidate === "object"
+			? (guardCandidate as Record<string, unknown>)
+			: null;
+	const kind = typeof guard?.kind === "string" ? guard.kind.toLowerCase() : "";
+	const classification =
+		kind.includes("rate") || kind.includes("quick")
+			? ("rate-limit" as const)
+			: kind.includes("captcha") || kind.includes("human") || kind.includes("verification")
+				? ("human-verification" as const)
+				: kind.includes("account") || kind.includes("identity")
+					? ("identity-conflict" as const)
+					: null;
+	if (!classification) return null;
+	return {
+		classification,
+		reason:
+			typeof guard?.summary === "string" && guard.summary.trim()
+				? guard.summary.trim()
+				: error instanceof Error
+					? error.message
+					: "Account Mirror provider warning observed.",
+	};
+}

@@ -371,6 +371,89 @@ describe("account mirror refresh service", () => {
 		});
 	});
 
+	test("routes a live-follow pass through its exact affinity tab without taking the profile dispatcher", async () => {
+		const metadataCollector = {
+			collect: vi.fn(async () => ({
+				detectedIdentityKey: "ecochran76@gmail.com",
+				detectedAccountLevel: "Business",
+				metadataCounts: { projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
+				manifests: { projects: [], conversations: [], artifacts: [], files: [], media: [] },
+				evidence: {
+					identitySource: "profile-menu",
+					projectSampleIds: [],
+					conversationSampleIds: [],
+					truncated: { projects: false, conversations: false, artifacts: false },
+				},
+			})),
+		};
+		const dispatcher = createBrowserOperationDispatcher();
+		const acquireQueued = vi.spyOn(dispatcher, "acquireQueued");
+		const completeSuccess = vi.fn(async () => undefined);
+		const completeFailure = vi.fn(async () => undefined);
+		const interactionGovernor = {
+			beforeInteraction: vi.fn(async () => undefined),
+			finish: vi.fn(),
+		};
+		const affinityFactory = vi.fn(async () => ({
+			tabAffinity: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+			interactionGovernor,
+			operation: {
+				acquired: true as const,
+				operation: {
+					id: "completion-1",
+					key: "tab-lease:lease-crawler",
+					managedProfileDir: "/managed/chatgpt",
+					serviceTarget: "chatgpt",
+					kind: "browser-execution" as const,
+					operationClass: "shared-read" as const,
+					ownerPid: process.pid,
+					ownerCommand: "account-mirror-live-follow:completion-1",
+					startedAt: "2026-04-29T12:00:00.000Z",
+					updatedAt: "2026-04-29T12:00:00.000Z",
+				},
+				release: vi.fn(async () => undefined),
+			},
+			completeSuccess,
+			completeFailure,
+		}));
+		const affinityConfig = {
+			...config,
+			auracallProfile: "default",
+			browser: { tabConcurrencyMode: "tab-affinity" },
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config: affinityConfig,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+		const service = createAccountMirrorRefreshService({
+			config: affinityConfig,
+			registry,
+			dispatcher,
+			metadataCollector,
+			persistence: createNoopPersistence(),
+			liveFollowAffinityFactory: affinityFactory as never,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+
+		const result = await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+			liveFollowOperationId: "completion-1",
+		});
+
+		expect(result.status).toBe("completed");
+		expect(acquireQueued).not.toHaveBeenCalled();
+		expect(metadataCollector.collect).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tabAffinity: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+				interactionGovernor,
+			}),
+		);
+		expect(completeSuccess).toHaveBeenCalledOnce();
+		expect(completeFailure).not.toHaveBeenCalled();
+	});
+
 	test("threads requested collector phase into metadata collection", async () => {
 		const metadataCollector = {
 			collect: vi.fn(async (input: AccountMirrorMetadataCollectorInput) => ({

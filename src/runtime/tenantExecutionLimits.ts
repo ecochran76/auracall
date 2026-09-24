@@ -67,6 +67,7 @@ export const DEFAULT_CHATGPT_TENANT_LIMITS: TenantChatExecutionLimits = {
   maxChatsPerHour: 120,
   maxChatsPerDay: 240,
 };
+export const DEFAULT_CHATGPT_INTERACTIONS_PER_MINUTE = 30;
 
 const TENANT_RESERVATION_TTL_MS = 60_000;
 const HOUR_MS = 60 * 60_000;
@@ -174,6 +175,23 @@ export function resolveChatgptTenantLimits(
     DEFAULT_CHATGPT_TENANT_LIMITS,
     readTenantLimits(globalChatgpt?.tenantLimits),
     readTenantLimits(runtimeChatgpt?.tenantLimits),
+  );
+}
+
+export function resolveChatgptInteractionsPerMinute(
+  config: Record<string, unknown>,
+  runtimeProfileId: string | null,
+): number {
+  const globalChatgpt = readRecord(readRecord(config.services)?.chatgpt);
+  const globalLiveFollow = readRecord(globalChatgpt?.liveFollow);
+  const runtimeProfiles = getCurrentRuntimeProfiles(config);
+  const runtimeProfile = runtimeProfileId ? readRecord(runtimeProfiles[runtimeProfileId]) : null;
+  const runtimeChatgpt = readRecord(readRecord(runtimeProfile?.services)?.chatgpt);
+  const runtimeLiveFollow = readRecord(runtimeChatgpt?.liveFollow);
+  return (
+    readNullablePositiveInteger(runtimeLiveFollow?.maxBrowserInteractionsPerMinute) ??
+    readNullablePositiveInteger(globalLiveFollow?.maxBrowserInteractionsPerMinute) ??
+    DEFAULT_CHATGPT_INTERACTIONS_PER_MINUTE
   );
 }
 

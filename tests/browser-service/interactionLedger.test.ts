@@ -485,4 +485,64 @@ describe("interactionLedger (package)", () => {
 		});
 		expect((await reserve("operation-c", "2026-09-25T12:00:00.001Z")).allowed).toBe(true);
 	});
+
+	test("enforces one aggregate rolling-minute interaction limit across runtime profiles", async () => {
+		let sequence = 0;
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => `reservation-${++sequence}`,
+		});
+		const policy = {
+			maxConcurrentChats: 4,
+			maxConversationStartsPerHour: null,
+			maxConversationStartsPerDay: null,
+			maxInteractionsPerMinute: 1,
+		};
+		const first = await ledger.reserve({
+			scope: foregroundScope,
+			workloadId: "conversation:one",
+			operationId: "operation-a",
+			interactionClass: "conversation-read",
+			mutability: "read-only",
+			startsNewConversation: false,
+			now: "2026-09-24T12:00:00.000Z",
+			reservationTtlMs: 30_000,
+			policy,
+		});
+		if (!first.allowed) throw new Error("expected first interaction");
+		await ledger.start({
+			reservationId: first.reservation.reservationId,
+			startedAt: "2026-09-24T12:00:00.000Z",
+		});
+		await ledger.settle({
+			reservationId: first.reservation.reservationId,
+			settledAt: "2026-09-24T12:00:01.000Z",
+			effectState: "settled",
+			outcome: "succeeded",
+		});
+
+		const reserveBackground = (now: string) =>
+			ledger.reserve({
+				scope: { ...foregroundScope, runtimeProfileId: "runtime-background" },
+				workloadId: "live-follow:one",
+				operationId: "operation-b",
+				interactionClass: "list-read",
+				mutability: "read-only",
+				startsNewConversation: false,
+				now,
+				reservationTtlMs: 30_000,
+				policy,
+			});
+		expect(await reserveBackground("2026-09-24T12:01:00.000Z")).toEqual({
+			allowed: false,
+			reason: "minute-interaction-limit",
+		});
+		expect((await reserveBackground("2026-09-24T12:01:00.001Z")).allowed).toBe(true);
+		expect(
+			await ledger.summarizeUsage({
+				provider: foregroundScope.provider,
+				tenantKey: foregroundScope.tenantKey,
+				now: "2026-09-24T12:01:00.001Z",
+			}),
+		).toMatchObject({ interactionsLastMinute: 1 });
+	});
 });
