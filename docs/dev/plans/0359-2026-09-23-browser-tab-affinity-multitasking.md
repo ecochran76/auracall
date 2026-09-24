@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 5
+Plan version: 6
 
 ## Stable Objective
 
@@ -56,6 +56,10 @@ provider-neutral.
   reservations close concurrency races; settled plus in-flight conversation
   starts drive rolling hourly admission without double-counting; passive
   observations are audited without consuming a permit.
+- The file-backed interaction-ledger adapter now places quota evaluation,
+  warning evaluation, and reservation creation in one cross-process atomic
+  transition. Settled usage, append-only events, and provider warnings survive
+  restart; concurrent instances cannot both consume the final permit.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -578,3 +582,22 @@ Checkpoint 2026-09-24, aggregate admission tracer:
 - `delegation_status`: no new workers
 - `review_status`: admission is one tenant/provider seam across runtime/browser
   profiles; warning evidence dominates numeric limits
+
+Checkpoint 2026-09-24, durable aggregate admission:
+
+- `plan_version`: 6
+- `state_transition`: OPEN -> OPEN; Packet 3 durable admission tracer GREEN
+- `acceptance_state`: partial provider-free acceptance; 5 interaction-ledger,
+  9 tab-lease, and 11 compatibility-dispatcher tests pass with typecheck
+- `progress_classification`: forward progress
+- `evidence`: a restarted ledger preserves settled rolling usage, event history,
+  and indefinite verification warning; two instances racing for one remaining
+  permit yield one admission and one concurrency denial
+- `material_blockers`: none for remaining provider-free fixtures
+- `next_action_or_stop_reason`: add exact daily-boundary, cancellation, and
+  target-action counter fixtures; then project ledger evidence through tenant
+  status and implement profile-control-versus-tab conflict hierarchy without
+  enabling production concurrent mutation
+- `delegation_status`: no new workers
+- `review_status`: quota check and reservation write share one locked snapshot;
+  warning precedence remains tenant/provider-wide across profiles

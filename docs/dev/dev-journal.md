@@ -50051,3 +50051,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   mutability, effect state, outcome, and warning classification. Four ledger,
   nine lease, and eleven dispatcher tests, typecheck, and build pass. No
   production caller or live/provider surface uses the ledger yet.
+
+## 2026-09-24 | Plan 0359 durable aggregate admission
+
+- Added a file-backed interaction-ledger adapter that evaluates warnings and
+  rolling limits and commits the reservation under one cross-process lock.
+  Synced snapshot replacement preserves projections plus append-only event
+  history across restart.
+- Restart tests preserve settled hourly usage and an indefinite
+  human-verification warning. A concurrent two-instance race under a one-chat
+  limit returns exactly one permit and one denial.
+- Five ledger, nine lease, and eleven compatibility-dispatcher tests plus
+  typecheck pass. No production caller is wired to the new admission seam.

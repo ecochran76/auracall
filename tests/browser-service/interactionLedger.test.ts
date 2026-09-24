@@ -1,5 +1,9 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, test } from "vitest";
 import {
+	createFileBackedProviderInteractionLedger,
 	createInMemoryProviderInteractionLedger,
 	type ProviderInteractionScope,
 } from "../../packages/browser-service/src/service/interactionLedger.js";
@@ -224,5 +228,117 @@ describe("interactionLedger (package)", () => {
 			"reservation-created",
 			"passive-observed",
 		]);
+	});
+
+	test("persists usage and provider warnings atomically across ledger instances and restart", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-interactions-"));
+		try {
+			let sequence = 0;
+			const options = {
+				ledgerRoot: directory,
+				createReservationId: () => `reservation-${++sequence}`,
+			};
+			const policy = {
+				maxConcurrentChats: 4,
+				maxConversationStartsPerHour: 1,
+				maxConversationStartsPerDay: 2,
+			};
+			const firstLedger = createFileBackedProviderInteractionLedger(options);
+			const first = await firstLedger.reserve({
+				scope: foregroundScope,
+				workloadId: "conversation-a",
+				operationId: "operation-a",
+				tabLeaseId: "lease-a",
+				interactionClass: "conversation-start",
+				mutability: "provider-mutating",
+				startsNewConversation: true,
+				now: "2026-09-24T12:00:00.000Z",
+				reservationTtlMs: 30_000,
+				policy,
+			});
+			if (!first.allowed) throw new Error("expected first admission");
+			await firstLedger.start({
+				reservationId: first.reservation.reservationId,
+				startedAt: "2026-09-24T12:00:00.000Z",
+			});
+			await firstLedger.settle({
+				reservationId: first.reservation.reservationId,
+				settledAt: "2026-09-24T12:00:01.000Z",
+				effectState: "settled",
+				outcome: "succeeded",
+			});
+
+			const restarted = createFileBackedProviderInteractionLedger(options);
+			const hourlyDenied = await restarted.reserve({
+				scope: foregroundScope,
+				workloadId: "conversation-b",
+				operationId: "operation-b",
+				tabLeaseId: "lease-b",
+				interactionClass: "conversation-start",
+				mutability: "provider-mutating",
+				startsNewConversation: true,
+				now: "2026-09-24T12:30:00.000Z",
+				reservationTtlMs: 30_000,
+				policy,
+			});
+			expect(hourlyDenied).toEqual({ allowed: false, reason: "hourly-limit" });
+
+			await restarted.recordProviderWarning({
+				scope: foregroundScope,
+				classification: "human-verification",
+				reason: "provider verification required",
+				observedAt: "2026-09-24T12:30:01.000Z",
+			});
+			const afterWarningRestart = createFileBackedProviderInteractionLedger(options);
+			const warningDenied = await afterWarningRestart.reserve({
+				scope: foregroundScope,
+				workloadId: "conversation-a",
+				operationId: "operation-c",
+				tabLeaseId: "lease-a",
+				interactionClass: "prompt-continuation",
+				mutability: "provider-mutating",
+				startsNewConversation: false,
+				now: "2026-09-24T12:30:02.000Z",
+				reservationTtlMs: 30_000,
+				policy,
+			});
+			expect(warningDenied).toMatchObject({
+				allowed: false,
+				reason: "provider-warning",
+				warning: { classification: "human-verification" },
+			});
+			expect((await afterWarningRestart.listEvents()).map((event) => event.type)).toEqual([
+				"reservation-created",
+				"interaction-started",
+				"interaction-settled",
+				"provider-warning-observed",
+			]);
+
+			const raceScope = { ...foregroundScope, tenantKey: "account-b" };
+			const racePolicy = { ...policy, maxConcurrentChats: 1 };
+			const reserveRacer = (ledger: typeof firstLedger, operationId: string) =>
+				ledger.reserve({
+					scope: raceScope,
+					workloadId: operationId,
+					operationId,
+					tabLeaseId: `lease-${operationId}`,
+					interactionClass: "prompt-continuation",
+					mutability: "provider-mutating",
+					startsNewConversation: false,
+					now: "2026-09-24T12:31:00.000Z",
+					reservationTtlMs: 30_000,
+					policy: racePolicy,
+				});
+			const raced = await Promise.all([
+				reserveRacer(restarted, "race-a"),
+				reserveRacer(afterWarningRestart, "race-b"),
+			]);
+			expect(raced.filter((result) => result.allowed)).toHaveLength(1);
+			expect(raced.filter((result) => !result.allowed)).toEqual([
+				{ allowed: false, reason: "concurrent-limit" },
+			]);
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
 	});
 });

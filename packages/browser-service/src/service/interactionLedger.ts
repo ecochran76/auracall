@@ -1,4 +1,7 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { isProcessAlive } from '../processCheck.js';
 
 export type ProviderInteractionClass =
   | 'conversation-start'
@@ -155,10 +158,29 @@ export interface InMemoryProviderInteractionLedgerOptions {
   createReservationId?: () => string;
 }
 
+export interface FileBackedProviderInteractionLedgerOptions extends InMemoryProviderInteractionLedgerOptions {
+  ledgerRoot: string;
+  isOwnerAlive?: (pid: number) => boolean;
+  lockTimeoutMs?: number;
+  lockPollMs?: number;
+}
+
 export function createInMemoryProviderInteractionLedger(
   options: InMemoryProviderInteractionLedgerOptions = {},
 ): ProviderInteractionLedger {
   return new InMemoryProviderInteractionLedger(options);
+}
+
+export function createFileBackedProviderInteractionLedger(
+  options: FileBackedProviderInteractionLedgerOptions,
+): ProviderInteractionLedger {
+  return new FileBackedProviderInteractionLedger(options);
+}
+
+interface ProviderInteractionLedgerSnapshot {
+  records: ProviderInteractionRecord[];
+  warnings: ProviderWarningRecord[];
+  events: ProviderInteractionEvent[];
 }
 
 class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
@@ -167,8 +189,24 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
   private readonly events: ProviderInteractionEvent[] = [];
   private readonly createReservationId: () => string;
 
-  constructor(options: InMemoryProviderInteractionLedgerOptions) {
+  constructor(
+    options: InMemoryProviderInteractionLedgerOptions,
+    snapshot: ProviderInteractionLedgerSnapshot = { records: [], warnings: [], events: [] },
+  ) {
     this.createReservationId = options.createReservationId ?? (() => crypto.randomUUID());
+    for (const record of snapshot.records) this.records.set(record.reservationId, cloneRecord(record));
+    for (const warning of snapshot.warnings) {
+      this.warnings.set(aggregateScopeKey(warning), cloneWarning(warning));
+    }
+    this.events.push(...snapshot.events.map(cloneEvent));
+  }
+
+  snapshot(): ProviderInteractionLedgerSnapshot {
+    return {
+      records: [...this.records.values()].map(cloneRecord),
+      warnings: [...this.warnings.values()].map(cloneWarning),
+      events: this.events.map(cloneEvent),
+    };
   }
 
   async reserve(input: ReserveProviderInteractionInput): Promise<ProviderInteractionAdmission> {
@@ -522,6 +560,152 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
   }
 }
 
+class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
+  private readonly ledgerRoot: string;
+  private readonly statePath: string;
+  private readonly lockPath: string;
+  private readonly createReservationId?: () => string;
+  private readonly isOwnerAlive: (pid: number) => boolean;
+  private readonly lockTimeoutMs: number;
+  private readonly lockPollMs: number;
+
+  constructor(options: FileBackedProviderInteractionLedgerOptions) {
+    this.ledgerRoot = path.resolve(options.ledgerRoot);
+    this.statePath = path.join(this.ledgerRoot, 'provider-interactions.v1.json');
+    this.lockPath = path.join(this.ledgerRoot, 'provider-interactions.lock');
+    this.createReservationId = options.createReservationId;
+    this.isOwnerAlive = options.isOwnerAlive ?? isProcessAlive;
+    this.lockTimeoutMs = normalizePositiveInteger(options.lockTimeoutMs ?? 5_000, 'lockTimeoutMs');
+    this.lockPollMs = normalizePositiveInteger(options.lockPollMs ?? 25, 'lockPollMs');
+  }
+
+  reserve(input: ReserveProviderInteractionInput) {
+    return this.write((ledger) => ledger.reserve(input));
+  }
+
+  start(input: Parameters<ProviderInteractionLedger['start']>[0]) {
+    return this.write((ledger) => ledger.start(input));
+  }
+
+  settle(input: Parameters<ProviderInteractionLedger['settle']>[0]) {
+    return this.write((ledger) => ledger.settle(input));
+  }
+
+  observePassive(input: Parameters<ProviderInteractionLedger['observePassive']>[0]) {
+    return this.write((ledger) => ledger.observePassive(input));
+  }
+
+  recordProviderWarning(input: Parameters<ProviderInteractionLedger['recordProviderWarning']>[0]) {
+    return this.write((ledger) => ledger.recordProviderWarning(input));
+  }
+
+  list(scope?: Parameters<ProviderInteractionLedger['list']>[0]) {
+    return this.read((ledger) => ledger.list(scope));
+  }
+
+  listEvents(scope?: Parameters<ProviderInteractionLedger['listEvents']>[0]) {
+    return this.read((ledger) => ledger.listEvents(scope));
+  }
+
+  private async read<T>(operation: (ledger: InMemoryProviderInteractionLedger) => Promise<T>): Promise<T> {
+    return this.withLock(async () => operation(await this.loadLedger()));
+  }
+
+  private async write<T>(operation: (ledger: InMemoryProviderInteractionLedger) => Promise<T>): Promise<T> {
+    return this.withLock(async () => {
+      const ledger = await this.loadLedger();
+      const result = await operation(ledger);
+      await this.persist(ledger.snapshot());
+      return result;
+    });
+  }
+
+  private async loadLedger(): Promise<InMemoryProviderInteractionLedger> {
+    let snapshot: ProviderInteractionLedgerSnapshot = { records: [], warnings: [], events: [] };
+    try {
+      const parsed = JSON.parse(await fs.readFile(this.statePath, 'utf8')) as {
+        schemaVersion?: unknown;
+        records?: unknown;
+        warnings?: unknown;
+        events?: unknown;
+      };
+      if (
+        parsed.schemaVersion !== 1 ||
+        !Array.isArray(parsed.records) ||
+        !Array.isArray(parsed.warnings) ||
+        !Array.isArray(parsed.events)
+      ) {
+        throw new Error(`Unsupported provider interaction ledger snapshot: ${this.statePath}`);
+      }
+      snapshot = {
+        records: parsed.records as ProviderInteractionRecord[],
+        warnings: parsed.warnings as ProviderWarningRecord[],
+        events: parsed.events as ProviderInteractionEvent[],
+      };
+    } catch (error) {
+      if (!isNodeError(error, 'ENOENT')) throw error;
+    }
+    return new InMemoryProviderInteractionLedger(
+      { createReservationId: this.createReservationId },
+      snapshot,
+    );
+  }
+
+  private async persist(snapshot: ProviderInteractionLedgerSnapshot): Promise<void> {
+    const tempPath = `${this.statePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    const handle = await fs.open(tempPath, 'wx', 0o600);
+    try {
+      await handle.writeFile(`${JSON.stringify({ schemaVersion: 1, ...snapshot }, null, 2)}\n`, 'utf8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    try {
+      await fs.rename(tempPath, this.statePath);
+    } catch (error) {
+      await fs.rm(tempPath, { force: true });
+      throw error;
+    }
+  }
+
+  private async withLock<T>(operation: () => Promise<T>): Promise<T> {
+    await fs.mkdir(this.ledgerRoot, { recursive: true });
+    const startedAt = Date.now();
+    let handle: Awaited<ReturnType<typeof fs.open>> | null = null;
+    while (!handle) {
+      try {
+        handle = await fs.open(this.lockPath, 'wx', 0o600);
+        await handle.writeFile(JSON.stringify({ ownerPid: process.pid, acquiredAt: new Date().toISOString() }));
+      } catch (error) {
+        if (!isNodeError(error, 'EEXIST')) throw error;
+        if (await this.removeStaleLock()) continue;
+        if (Date.now() - startedAt >= this.lockTimeoutMs) {
+          throw new Error(`Timed out waiting for provider interaction ledger lock: ${this.lockPath}`);
+        }
+        await delay(this.lockPollMs);
+      }
+    }
+    try {
+      return await operation();
+    } finally {
+      await handle.close();
+      await fs.rm(this.lockPath, { force: true });
+    }
+  }
+
+  private async removeStaleLock(): Promise<boolean> {
+    try {
+      const parsed = JSON.parse(await fs.readFile(this.lockPath, 'utf8')) as { ownerPid?: unknown };
+      if (typeof parsed.ownerPid === 'number' && this.isOwnerAlive(parsed.ownerPid)) return false;
+      await fs.rm(this.lockPath, { force: true });
+      return true;
+    } catch (error) {
+      if (isNodeError(error, 'ENOENT')) return true;
+      return false;
+    }
+  }
+}
+
 function aggregateScopeKey(scope: Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>): string {
   return `${scope.provider}\0${scope.tenantKey}`;
 }
@@ -585,4 +769,12 @@ function cloneRecord(record: ProviderInteractionRecord): ProviderInteractionReco
 
 function cloneEvent(event: ProviderInteractionEvent): ProviderInteractionEvent {
   return { ...event, scope: { ...event.scope } };
+}
+
+function isNodeError(error: unknown, code: string): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error && error.code === code;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
