@@ -981,6 +981,10 @@ export abstract class LlmService {
 		return this.userConfig;
 	}
 
+	protected getBrowserService(): BrowserService {
+		return this.browserService;
+	}
+
 	protected async overlayConversationListFromCache(
 		items: Conversation[],
 		listOptions: BrowserProviderListOptions,
@@ -4092,7 +4096,8 @@ export abstract class LlmService {
 			typeof error === "object" &&
 				error !== null &&
 				"details" in error &&
-				(error as { details?: { effectState?: string } }).details?.effectState === "effect_observed",
+				(error as { details?: { effectState?: string } }).details?.effectState ===
+					"effect_observed",
 		);
 	}
 

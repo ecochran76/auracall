@@ -1,7 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
 
 import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
-import { acquireLiveFollowCrawlerTab } from "../../src/accountMirror/liveFollowTabCoordinator.js";
+import {
+	acquireEphemeralBrowserTab,
+	acquireLiveFollowCrawlerTab,
+} from "../../src/accountMirror/liveFollowTabCoordinator.js";
 
 const scope = {
 	runtimeProfileId: "runtime-1",
@@ -55,5 +58,33 @@ describe("live-follow crawler tab coordinator", () => {
 			actionCounts: { targetCreations: 1, adoptions: 1 },
 		});
 		expect(openTarget).toHaveBeenCalledOnce();
+	});
+
+	test("uses the same exact-target lifecycle for bounded ephemeral work", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-utility",
+		});
+		const tab = await acquireEphemeralBrowserTab({
+			registry,
+			scope,
+			operationId: "utility-1",
+			targetUrl: "https://chatgpt.com/",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			resolveExistingEndpoint: async () => ({
+				host: "127.0.0.1",
+				port: 45011,
+				managedBrowserProfile: scope.managedBrowserProfile,
+			}),
+			startBrowser: vi.fn(),
+			inspectTarget: vi.fn(),
+			openTarget: vi.fn(async () => ({ targetId: "utility-tab", url: "https://chatgpt.com/" })),
+			closeTarget: vi.fn(),
+		});
+
+		expect(tab.lease).toMatchObject({
+			targetId: "utility-tab",
+			workload: { kind: "ephemeral", operationId: "utility-1" },
+		});
 	});
 });

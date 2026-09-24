@@ -338,6 +338,37 @@ describe("tabLeaseRegistry (package)", () => {
 		).toBeNull();
 	});
 
+	test("never reacquires an outcome-unknown idle lease", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-a" });
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "target-a",
+			workload: { kind: "ephemeral", operationId: "utility-a" },
+			operationId: "operation-a",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!reserved.ok) throw new Error("expected reservation");
+		await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-09-24T12:00:01.000Z",
+			effectState: "outcome-unknown",
+		});
+
+		const reacquired = await registry.acquire({
+			scope,
+			workload: { kind: "ephemeral", operationId: "utility-a" },
+			operationId: "operation-b",
+			now: "2026-09-24T12:00:02.000Z",
+		});
+
+		expect(reacquired).toMatchObject({
+			ok: false,
+			conflict: { kind: "invalid-transition", lease: { effectState: "outcome-unknown" } },
+		});
+	});
+
 	test("keeps missing or restart-unverified targets fenced as lost evidence", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-a" });
 		const reserved = await registry.reserve({

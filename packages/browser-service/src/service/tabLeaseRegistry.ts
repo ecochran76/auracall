@@ -625,6 +625,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     if (
       existing.state !== 'idle' ||
+      existing.effectState === 'outcome-unknown' ||
       nowMs > parseTimestamp(existing.idleExpiresAt, 'idleExpiresAt') ||
       nowMs > parseTimestamp(existing.absoluteExpiresAt, 'absoluteExpiresAt')
     ) {

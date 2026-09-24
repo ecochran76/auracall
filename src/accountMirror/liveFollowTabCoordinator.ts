@@ -4,6 +4,7 @@ import type {
 	BrowserTabLeaseRegistry,
 	TabLeaseClaim,
 	TabLeaseScope,
+	TabLeaseWorkload,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 
 export interface LiveFollowBrowserEndpoint {
@@ -18,7 +19,7 @@ export interface LiveFollowCrawlerTab {
 	endpoint: LiveFollowBrowserEndpoint;
 }
 
-export async function acquireLiveFollowCrawlerTab(input: {
+export interface DedicatedBrowserTabInput {
 	registry: BrowserTabLeaseRegistry;
 	scope: TabLeaseScope;
 	operationId: string;
@@ -39,9 +40,31 @@ export async function acquireLiveFollowCrawlerTab(input: {
 		url: string;
 	}) => Promise<{ targetId: string; url: string }>;
 	closeTarget: (input: { host: string; port: number; targetId: string }) => Promise<void>;
-}): Promise<LiveFollowCrawlerTab> {
+}
+
+export function acquireLiveFollowCrawlerTab(
+	input: DedicatedBrowserTabInput,
+): Promise<LiveFollowCrawlerTab> {
+	return acquireDedicatedBrowserTab(input, {
+		kind: "live-follow",
+		operationId: input.operationId,
+	});
+}
+
+export function acquireEphemeralBrowserTab(
+	input: DedicatedBrowserTabInput,
+): Promise<LiveFollowCrawlerTab> {
+	return acquireDedicatedBrowserTab(input, {
+		kind: "ephemeral",
+		operationId: input.operationId,
+	});
+}
+
+async function acquireDedicatedBrowserTab(
+	input: DedicatedBrowserTabInput,
+	workload: TabLeaseWorkload,
+): Promise<LiveFollowCrawlerTab> {
 	const now = input.now ?? (() => new Date());
-	const workload = { kind: "live-follow", operationId: input.operationId } as const;
 	let endpoint = await input.resolveExistingEndpoint();
 	const existing = await input.registry.findByWorkload(input.scope, workload);
 	if (existing) {
