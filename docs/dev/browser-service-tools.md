@@ -147,7 +147,9 @@ constructs shared file-backed coordination state under
 execution through exact-tab admission and ownership.
 
 The status projection is intentionally aggregate and content-free. In addition
-to total/fenced leases and interaction/warning counts, it reports lease states,
+to total/fenced leases and interaction/warning counts, it reports active
+provider-guard totals split into indefinite and bounded cooldowns, warning
+classification counts, maximum remaining cooldown, lease states,
 workload classes, expired-idle and outcome-unknown attention counts, cumulative
 target creation/adoption/navigation/reload/focus/close counts, and retirement
 dispositions. It does not publish target IDs, conversation IDs, operation IDs,

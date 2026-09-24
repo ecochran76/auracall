@@ -50404,3 +50404,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Historical frozen interactions remain unchanged. Twelve focused tests, the
   selected HTTP regression, typecheck, build, and lint pass. No provider effect
   ran.
+
+## 2026-09-24 | Active provider-guard status
+
+- Tab-concurrency status previously exposed only historical warning-event
+  count, so a cleared or expired warning was indistinguishable from a current
+  fail-closed guard.
+- The shared interaction ledger now provides a time-bounded active-warning read.
+  Status publishes only aggregate active, indefinite, cooldown, classification,
+  and maximum remaining-cooldown values; tenant keys and warning reasons remain
+  private.
+- Fourteen focused ledger/status tests, typecheck, build, lint, scoped Biome,
+  and diff hygiene pass. The immediately preceding full non-live suite passed
+  355 files and 3,276 tests with 65 opt-in/live tests skipped. No browser or
+  provider effect ran.

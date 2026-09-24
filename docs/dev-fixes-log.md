@@ -22968,3 +22968,11 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   quiet cooldown rather than immediately reopening interaction permits.
 - Do not rewrite historical frozen interactions; they remain evidence of the
   warning and any outcome-unknown in-flight work.
+
+## 2026-09-24 | Separate active provider guards from warning history
+
+- A warning-event total is append-only audit evidence, not current admission
+  state. Do not use it to infer whether provider work is presently blocked.
+- Read active warnings at one captured status timestamp and publish only
+  aggregate classifications and cooldown posture. Exclude expired cooldowns,
+  preserve historical events, and never expose tenant keys or warning reasons.

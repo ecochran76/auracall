@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 31
+Plan version: 32
 
 ## Stable Objective
 
@@ -1319,3 +1319,26 @@ Checkpoint 2026-09-24, aggregate warning operator recovery:
 - `review_status`: clearance is provider/account aggregate even when initiated
   through one runtime profile; historical frozen interactions remain immutable
   evidence while future permits stay denied through the cooldown boundary
+
+Checkpoint 2026-09-24, active provider-guard status:
+
+- `plan_version`: 32
+- `state_transition`: OPEN -> OPEN; read-only status now distinguishes active
+  provider guards from append-only warning history
+- `acceptance_state`: provider-free accepted; operators can see active,
+  indefinite, and bounded-cooldown guard counts, classifications, and maximum
+  remaining cooldown without receiving tenant keys, reasons, or provider content
+- `progress_classification`: forward progress
+- `evidence`: commit `c9449ea48155249b00c86be3dbb7fa07d11f06b0`
+  adds active-warning reads to the shared ledger and a sanitized aggregate
+  projection to tab-concurrency status
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: 14 focused ledger/status tests, typecheck, production
+  build, lint, scoped Biome, and diff hygiene pass. The immediately preceding
+  complete reduced-concurrency non-live suite passed 355 files and 3,276 tests,
+  with 65 opt-in/live tests skipped
+- `next_action_or_stop_reason`: continue bounded provider-free acceptance
+  audit; preserve the live gate
+- `delegation_status`: no new workers
+- `review_status`: expired cooldowns are absent from active counts while
+  historical warning-event counts remain unchanged and attributable
