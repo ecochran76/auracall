@@ -99,7 +99,11 @@ export type BrowserTabTargetAction = 'target-created' | 'adopted' | 'navigation'
 
 export type TabLeaseRetirementReason = 'idle-expired' | 'absolute-expired' | 'cancelled' | 'operator';
 export type TabLeaseFinalDisposition = 'closed' | 'already-missing' | 'preserved';
-export type TabLeaseLossReason = 'target-missing' | 'restart-unverified' | 'identity-conflict';
+export type TabLeaseLossReason =
+  | 'target-missing'
+  | 'restart-unverified'
+  | 'identity-conflict'
+  | 'provisioning-failed';
 
 export interface TabLeaseClaim {
   leaseId: string;
@@ -213,7 +217,7 @@ export interface BrowserTabLeaseRegistry {
     leaseId: string;
     expectedRevision: number;
     now: string;
-    disposition: Extract<TabLeaseFinalDisposition, 'already-missing' | 'preserved'>;
+    disposition: Extract<TabLeaseFinalDisposition, 'closed' | 'already-missing'>;
   }): Promise<TabLeaseResult<BrowserTabLease>>;
   listFencedTargetIds(scope: TabLeaseScope): Promise<string[]>;
   findByWorkload(scope: TabLeaseScope, workload: TabLeaseWorkload): Promise<BrowserTabLease | null>;
@@ -783,14 +787,14 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     leaseId: string;
     expectedRevision: number;
     now: string;
-    disposition: Extract<TabLeaseFinalDisposition, 'already-missing' | 'preserved'>;
+    disposition: Extract<TabLeaseFinalDisposition, 'closed' | 'already-missing'>;
   }): Promise<TabLeaseResult<BrowserTabLease>> {
     const existing = this.leases.get(input.leaseId);
     if (!existing) return { ok: false, conflict: { kind: 'not-found' } };
     if (existing.revision !== input.expectedRevision) {
       return { ok: false, conflict: { kind: 'stale-claim', lease: cloneLease(existing) } };
     }
-    if (existing.state !== 'lost' || input.disposition !== 'already-missing') {
+    if (existing.state !== 'lost') {
       return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
     }
     const now = new Date(parseTimestamp(input.now, 'now')).toISOString();
@@ -800,6 +804,10 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       state: 'released',
       heartbeatAt: now,
       finalDisposition: input.disposition,
+      actionCounts: {
+        ...existing.actionCounts,
+        closes: existing.actionCounts.closes + (input.disposition === 'closed' ? 1 : 0),
+      },
     };
     this.leases.set(released.leaseId, released);
     return { ok: true, value: cloneLease(released) };

@@ -176,7 +176,7 @@ async function acquireDedicatedBrowserTab(
 			leaseId: reserved.value.lease.leaseId,
 			expectedRevision: reserved.value.lease.revision,
 			now: now().toISOString(),
-			reason: "identity-conflict",
+			reason: "provisioning-failed",
 		});
 		if (!lost.ok) {
 			throw new AggregateError(
@@ -200,7 +200,7 @@ async function acquireDedicatedBrowserTab(
 			leaseId: lost.value.leaseId,
 			expectedRevision: lost.value.revision,
 			now: now().toISOString(),
-			disposition: "already-missing",
+			disposition: "closed",
 		});
 		if (!released.ok) {
 			throw new AggregateError(

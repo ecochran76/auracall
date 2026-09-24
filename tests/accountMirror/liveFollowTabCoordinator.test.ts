@@ -135,7 +135,12 @@ describe("live-follow crawler tab coordinator", () => {
 
 		expect(closeTarget).toHaveBeenCalledOnce();
 		expect(await baseRegistry.list()).toEqual([
-			expect.objectContaining({ state: "released", finalDisposition: "already-missing" }),
+			expect.objectContaining({
+				state: "released",
+				lossReason: "provisioning-failed",
+				finalDisposition: "closed",
+				actionCounts: expect.objectContaining({ closes: 1 }),
+			}),
 		]);
 	});
 });

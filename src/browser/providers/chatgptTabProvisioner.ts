@@ -164,7 +164,7 @@ async function rollbackCreatedTarget(
 		leaseId: lease.leaseId,
 		expectedRevision: lease.revision,
 		now: now().toISOString(),
-		reason: "identity-conflict",
+		reason: "provisioning-failed",
 	});
 	if (!lost.ok) {
 		throw new AggregateError(
@@ -184,7 +184,7 @@ async function rollbackCreatedTarget(
 		leaseId: lost.value.leaseId,
 		expectedRevision: lost.value.revision,
 		now: now().toISOString(),
-		disposition: "already-missing",
+		disposition: "closed",
 	});
 	if (!released.ok) {
 		throw new AggregateError(
