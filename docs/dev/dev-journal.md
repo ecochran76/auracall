@@ -50063,3 +50063,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   limit returns exactly one permit and one denial.
 - Five ledger, nine lease, and eleven compatibility-dispatcher tests plus
   typecheck pass. No production caller is wired to the new admission seam.
+
+## 2026-09-24 | Plan 0359 profile-control hierarchy and cancellation
+
+- Added profile-control claims to the same atomic registry that owns exact tab
+  leases. Fenced tab targets deny browser startup/control, while an active
+  control claim denies tab reservation; file-backed instances observe the same
+  exclusion and revision-fenced release.
+- Interaction settlement now distinguishes confirmed pre-effect cancellation
+  from provider-observed or outcome-unknown conversation starts. The cancelled
+  record and event remain durable, but numeric start usage is not charged.
+- Six interaction-ledger, ten tab-lease, and eleven compatibility-dispatcher
+  tests plus typecheck pass. Existing production dispatcher behavior remains
+  unchanged and serialized.

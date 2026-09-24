@@ -19,6 +19,50 @@ export interface TabLeaseScope {
   tenantKey: string;
 }
 
+export type BrowserProfileControlScope = Pick<
+  TabLeaseScope,
+  'runtimeProfileId' | 'managedBrowserProfile' | 'service'
+>;
+export type BrowserProfileControlKind =
+  | 'browser-startup'
+  | 'browser-shutdown'
+  | 'login'
+  | 'setup'
+  | 'cookie-bootstrap'
+  | 'profile-replacement';
+
+export interface BrowserProfileControlRecord {
+  controlId: string;
+  revision: number;
+  scope: BrowserProfileControlScope;
+  kind: BrowserProfileControlKind;
+  ownerOperationId: string;
+  state: 'active' | 'released';
+  acquiredAt: string;
+  heartbeatAt: string;
+  expiresAt: string;
+  releasedAt: string | null;
+}
+
+export interface BrowserProfileControlClaim {
+  controlId: string;
+  revision: number;
+  operationId: string;
+}
+
+export type BrowserProfileControlAcquireResult =
+  | {
+      acquired: true;
+      control: BrowserProfileControlRecord;
+      claim: BrowserProfileControlClaim;
+    }
+  | {
+      acquired: false;
+      reason: 'profile-control-active' | 'tab-leases-active';
+      blockingControl?: BrowserProfileControlRecord;
+      blockingTargetIds?: string[];
+    };
+
 export interface BrowserTabLease {
   leaseId: string;
   revision: number;
@@ -54,7 +98,8 @@ export type TabLeaseConflict =
   | { kind: 'workload-owned'; lease: BrowserTabLease }
   | { kind: 'not-found' }
   | { kind: 'stale-claim'; lease: BrowserTabLease }
-  | { kind: 'invalid-transition'; lease: BrowserTabLease };
+  | { kind: 'invalid-transition'; lease: BrowserTabLease }
+  | { kind: 'profile-controlled'; control: BrowserProfileControlRecord };
 
 export type TabLeaseResult<T> =
   | { ok: true; value: T }
@@ -72,6 +117,17 @@ export interface ReserveTabLeaseInput {
 }
 
 export interface BrowserTabLeaseRegistry {
+  acquireProfileControl(input: {
+    scope: BrowserProfileControlScope;
+    kind: BrowserProfileControlKind;
+    operationId: string;
+    now: string;
+    ttlMs: number;
+  }): Promise<BrowserProfileControlAcquireResult>;
+  releaseProfileControl(input: {
+    claim: BrowserProfileControlClaim;
+    releasedAt: string;
+  }): Promise<boolean>;
   reserve(input: ReserveTabLeaseInput): Promise<TabLeaseResult<{
     lease: BrowserTabLease;
     claim: TabLeaseClaim;
@@ -140,6 +196,7 @@ export interface BrowserTabLeaseRegistry {
 
 export interface InMemoryBrowserTabLeaseRegistryOptions {
   createLeaseId?: () => string;
+  createControlId?: () => string;
 }
 
 export interface FileBackedBrowserTabLeaseRegistryOptions extends InMemoryBrowserTabLeaseRegistryOptions {
@@ -150,6 +207,11 @@ export interface FileBackedBrowserTabLeaseRegistryOptions extends InMemoryBrowse
 }
 
 const FENCED_STATES = new Set<TabLeaseState>(['active', 'idle', 'retiring', 'lost']);
+
+interface TabLeaseRegistrySnapshot {
+  leases: BrowserTabLease[];
+  controls: BrowserProfileControlRecord[];
+}
 
 export function createInMemoryBrowserTabLeaseRegistry(
   options: InMemoryBrowserTabLeaseRegistryOptions = {},
@@ -165,18 +227,98 @@ export function createFileBackedBrowserTabLeaseRegistry(
 
 class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   private readonly leases = new Map<string, BrowserTabLease>();
+  private readonly controls = new Map<string, BrowserProfileControlRecord>();
   private readonly createLeaseId: () => string;
+  private readonly createControlId: () => string;
 
   constructor(
     options: InMemoryBrowserTabLeaseRegistryOptions,
-    initialLeases: readonly BrowserTabLease[] = [],
+    snapshot: TabLeaseRegistrySnapshot = { leases: [], controls: [] },
   ) {
     this.createLeaseId = options.createLeaseId ?? (() => crypto.randomUUID());
-    for (const lease of initialLeases) this.leases.set(lease.leaseId, cloneLease(lease));
+    this.createControlId = options.createControlId ?? (() => crypto.randomUUID());
+    for (const lease of snapshot.leases) this.leases.set(lease.leaseId, cloneLease(lease));
+    for (const control of snapshot.controls) {
+      this.controls.set(control.controlId, cloneControl(control));
+    }
   }
 
-  snapshot(): BrowserTabLease[] {
-    return [...this.leases.values()].map(cloneLease);
+  snapshot(): TabLeaseRegistrySnapshot {
+    return {
+      leases: [...this.leases.values()].map(cloneLease),
+      controls: [...this.controls.values()].map(cloneControl),
+    };
+  }
+
+  async acquireProfileControl(input: {
+    scope: BrowserProfileControlScope;
+    kind: BrowserProfileControlKind;
+    operationId: string;
+    now: string;
+    ttlMs: number;
+  }): Promise<BrowserProfileControlAcquireResult> {
+    const scope = normalizeControlScope(input.scope);
+    const nowMs = parseTimestamp(input.now, 'now');
+    this.pruneExpiredControls(nowMs);
+    const blockingControl = [...this.controls.values()].find((control) =>
+      control.state === 'active' && sameControlScope(control.scope, scope));
+    if (blockingControl) {
+      return {
+        acquired: false,
+        reason: 'profile-control-active',
+        blockingControl: cloneControl(blockingControl),
+      };
+    }
+    const blockingTargetIds = [...this.leases.values()]
+      .filter((lease) => FENCED_STATES.has(lease.state) && sameControlScope(lease.scope, scope))
+      .map((lease) => lease.targetId)
+      .sort();
+    if (blockingTargetIds.length > 0) {
+      return { acquired: false, reason: 'tab-leases-active', blockingTargetIds };
+    }
+    const controlId = requireNonEmpty(this.createControlId(), 'controlId');
+    if (this.controls.has(controlId)) throw new Error(`Profile control ID already exists: ${controlId}`);
+    const now = new Date(nowMs).toISOString();
+    const control: BrowserProfileControlRecord = {
+      controlId,
+      revision: 1,
+      scope,
+      kind: input.kind,
+      ownerOperationId: requireNonEmpty(input.operationId, 'operationId'),
+      state: 'active',
+      acquiredAt: now,
+      heartbeatAt: now,
+      expiresAt: new Date(nowMs + normalizeTtl(input.ttlMs, 'ttlMs')).toISOString(),
+      releasedAt: null,
+    };
+    this.controls.set(controlId, control);
+    return {
+      acquired: true,
+      control: cloneControl(control),
+      claim: { controlId, revision: control.revision, operationId: control.ownerOperationId },
+    };
+  }
+
+  async releaseProfileControl(input: {
+    claim: BrowserProfileControlClaim;
+    releasedAt: string;
+  }): Promise<boolean> {
+    const existing = this.controls.get(input.claim.controlId);
+    if (
+      !existing ||
+      existing.state !== 'active' ||
+      existing.revision !== input.claim.revision ||
+      existing.ownerOperationId !== input.claim.operationId
+    ) return false;
+    const releasedAt = new Date(parseTimestamp(input.releasedAt, 'releasedAt')).toISOString();
+    this.controls.set(existing.controlId, {
+      ...existing,
+      revision: existing.revision + 1,
+      state: 'released',
+      heartbeatAt: releasedAt,
+      releasedAt,
+    });
+    return true;
   }
 
   async reserve(input: ReserveTabLeaseInput): Promise<TabLeaseResult<{
@@ -184,6 +326,13 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     claim: TabLeaseClaim;
   }>> {
     const normalized = normalizeReserveInput(input);
+    const nowMs = parseTimestamp(normalized.now, 'now');
+    this.pruneExpiredControls(nowMs);
+    const blockingControl = [...this.controls.values()].find((control) =>
+      control.state === 'active' && sameControlScope(control.scope, normalized.scope));
+    if (blockingControl) {
+      return { ok: false, conflict: { kind: 'profile-controlled', control: cloneControl(blockingControl) } };
+    }
     for (const existing of this.leases.values()) {
       if (!FENCED_STATES.has(existing.state) || !sameScope(existing.scope, normalized.scope)) continue;
       if (existing.targetId === normalized.targetId) {
@@ -198,7 +347,6 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     if (this.leases.has(leaseId)) {
       throw new Error(`Tab lease ID already exists: ${leaseId}`);
     }
-    const nowMs = parseTimestamp(normalized.now, 'now');
     const lease: BrowserTabLease = {
       leaseId,
       revision: 1,
@@ -537,6 +685,20 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return null;
   }
 
+  private pruneExpiredControls(nowMs: number): void {
+    for (const [controlId, control] of this.controls) {
+      if (control.state !== 'active' || Date.parse(control.expiresAt) > nowMs) continue;
+      const releasedAt = new Date(nowMs).toISOString();
+      this.controls.set(controlId, {
+        ...control,
+        revision: control.revision + 1,
+        state: 'released',
+        heartbeatAt: releasedAt,
+        releasedAt,
+      });
+    }
+  }
+
   async list(input: {
     scope?: Partial<TabLeaseScope>;
     states?: readonly TabLeaseState[];
@@ -553,6 +715,7 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   private readonly statePath: string;
   private readonly lockPath: string;
   private readonly createLeaseId?: () => string;
+  private readonly createControlId?: () => string;
   private readonly isOwnerAlive: (pid: number) => boolean;
   private readonly lockTimeoutMs: number;
   private readonly lockPollMs: number;
@@ -562,9 +725,18 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     this.statePath = path.join(this.registryRoot, 'tab-leases.v1.json');
     this.lockPath = path.join(this.registryRoot, 'tab-leases.lock');
     this.createLeaseId = options.createLeaseId;
+    this.createControlId = options.createControlId;
     this.isOwnerAlive = options.isOwnerAlive ?? isProcessAlive;
     this.lockTimeoutMs = normalizePositiveInteger(options.lockTimeoutMs ?? 5_000, 'lockTimeoutMs');
     this.lockPollMs = normalizePositiveInteger(options.lockPollMs ?? 25, 'lockPollMs');
+  }
+
+  acquireProfileControl(input: Parameters<BrowserTabLeaseRegistry['acquireProfileControl']>[0]) {
+    return this.write((registry) => registry.acquireProfileControl(input));
+  }
+
+  releaseProfileControl(input: Parameters<BrowserTabLeaseRegistry['releaseProfileControl']>[0]) {
+    return this.write((registry) => registry.releaseProfileControl(input));
   }
 
   reserve(input: ReserveTabLeaseInput) {
@@ -625,27 +797,38 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   }
 
   private async loadRegistry(): Promise<InMemoryBrowserTabLeaseRegistry> {
-    let leases: BrowserTabLease[] = [];
+    let snapshot: TabLeaseRegistrySnapshot = { leases: [], controls: [] };
     try {
       const parsed = JSON.parse(await fs.readFile(this.statePath, 'utf8')) as {
         schemaVersion?: unknown;
         leases?: unknown;
+        controls?: unknown;
       };
-      if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.leases)) {
+      if (
+        parsed.schemaVersion !== 1 ||
+        !Array.isArray(parsed.leases) ||
+        (parsed.controls !== undefined && !Array.isArray(parsed.controls))
+      ) {
         throw new Error(`Unsupported tab lease registry snapshot: ${this.statePath}`);
       }
-      leases = parsed.leases as BrowserTabLease[];
+      snapshot = {
+        leases: parsed.leases as BrowserTabLease[],
+        controls: (parsed.controls ?? []) as BrowserProfileControlRecord[],
+      };
     } catch (error) {
       if (!isNodeError(error, 'ENOENT')) throw error;
     }
-    return new InMemoryBrowserTabLeaseRegistry({ createLeaseId: this.createLeaseId }, leases);
+    return new InMemoryBrowserTabLeaseRegistry(
+      { createLeaseId: this.createLeaseId, createControlId: this.createControlId },
+      snapshot,
+    );
   }
 
-  private async persist(leases: readonly BrowserTabLease[]): Promise<void> {
+  private async persist(snapshot: TabLeaseRegistrySnapshot): Promise<void> {
     const tempPath = `${this.statePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
     const handle = await fs.open(tempPath, 'wx', 0o600);
     try {
-      await handle.writeFile(`${JSON.stringify({ schemaVersion: 1, leases }, null, 2)}\n`, 'utf8');
+      await handle.writeFile(`${JSON.stringify({ schemaVersion: 1, ...snapshot }, null, 2)}\n`, 'utf8');
       await handle.sync();
     } finally {
       await handle.close();
@@ -694,6 +877,7 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       return false;
     }
   }
+
 }
 
 function normalizeReserveInput(input: ReserveTabLeaseInput): ReserveTabLeaseInput {
@@ -724,6 +908,14 @@ function normalizeScope(scope: TabLeaseScope): TabLeaseScope {
   };
 }
 
+function normalizeControlScope(scope: BrowserProfileControlScope): BrowserProfileControlScope {
+  return {
+    runtimeProfileId: requireNonEmpty(scope.runtimeProfileId, 'scope.runtimeProfileId'),
+    managedBrowserProfile: requireNonEmpty(scope.managedBrowserProfile, 'scope.managedBrowserProfile'),
+    service: requireNonEmpty(scope.service, 'scope.service').toLowerCase(),
+  };
+}
+
 function normalizeWorkload(workload: TabLeaseWorkload): TabLeaseWorkload {
   switch (workload.kind) {
     case 'new-conversation':
@@ -741,6 +933,15 @@ function sameScope(left: TabLeaseScope, right: TabLeaseScope): boolean {
     left.managedBrowserProfile === right.managedBrowserProfile &&
     left.service === right.service &&
     left.tenantKey === right.tenantKey;
+}
+
+function sameControlScope(
+  left: BrowserProfileControlScope,
+  right: BrowserProfileControlScope,
+): boolean {
+  return left.runtimeProfileId === right.runtimeProfileId &&
+    left.managedBrowserProfile === right.managedBrowserProfile &&
+    left.service === right.service;
 }
 
 function sameWorkload(left: TabLeaseWorkload, right: TabLeaseWorkload): boolean {
@@ -767,6 +968,10 @@ function cloneLease(lease: BrowserTabLease): BrowserTabLease {
     scope: { ...lease.scope },
     workload: { ...lease.workload } as TabLeaseWorkload,
   };
+}
+
+function cloneControl(control: BrowserProfileControlRecord): BrowserProfileControlRecord {
+  return { ...control, scope: { ...control.scope } };
 }
 
 function normalizeTtl(value: number, name: string): number {

@@ -132,7 +132,7 @@ export interface ProviderInteractionLedger {
   settle(input: {
     reservationId: string;
     settledAt: string;
-    effectState: 'settled' | 'outcome-unknown';
+    effectState: 'none' | 'settled' | 'outcome-unknown';
     outcome: ProviderInteractionOutcome;
     stopReason?: string | null;
   }): Promise<ProviderInteractionTransitionResult>;
@@ -339,7 +339,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
   async settle(input: {
     reservationId: string;
     settledAt: string;
-    effectState: 'settled' | 'outcome-unknown';
+    effectState: 'none' | 'settled' | 'outcome-unknown';
     outcome: ProviderInteractionOutcome;
     stopReason?: string | null;
   }): Promise<ProviderInteractionTransitionResult> {
@@ -542,7 +542,11 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
         continue;
       }
       if (record.state === 'settled') {
-        if (record.settledAt !== null && Date.parse(record.settledAt) >= cutoffMs) count += 1;
+        if (
+          record.effectState !== 'none' &&
+          record.settledAt !== null &&
+          Date.parse(record.settledAt) >= cutoffMs
+        ) count += 1;
         continue;
       }
       if (record.state === 'frozen' && record.effectState === 'outcome-unknown') {

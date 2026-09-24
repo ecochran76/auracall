@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 6
+Plan version: 7
 
 ## Stable Objective
 
@@ -60,6 +60,12 @@ provider-neutral.
   warning evaluation, and reservation creation in one cross-process atomic
   transition. Settled usage, append-only events, and provider warnings survive
   restart; concurrent instances cannot both consume the final permit.
+- Profile-control claims now share the tab-registry transaction. Browser
+  startup and other profile-wide control cannot begin while any fenced tab
+  lease exists, and tab reservation cannot begin while profile control is
+  active, including across file-backed instances. Confirmed pre-effect
+  interaction cancellation remains durable evidence without consuming a
+  conversation-start quota slot.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -601,3 +607,23 @@ Checkpoint 2026-09-24, durable aggregate admission:
 - `delegation_status`: no new workers
 - `review_status`: quota check and reservation write share one locked snapshot;
   warning precedence remains tenant/provider-wide across profiles
+
+Checkpoint 2026-09-24, conflict hierarchy and cancellation:
+
+- `plan_version`: 7
+- `state_transition`: OPEN -> OPEN; Packet 2 control-plane hierarchy and Packet
+  3 cancellation tracer GREEN
+- `acceptance_state`: partial provider-free acceptance; 6 interaction-ledger,
+  10 tab-lease, and 11 compatibility-dispatcher tests pass with typecheck
+- `progress_classification`: forward progress
+- `evidence`: profile control is denied by fenced target IDs; active profile
+  control denies new tab reservation across registry instances; revision-fenced
+  release restores eligibility; pre-effect cancellation is retained but not
+  charged as a conversation start
+- `material_blockers`: none for remaining provider-free fixtures
+- `next_action_or_stop_reason`: add exact daily-boundary and target-action
+  counter fixtures, then project ledger evidence through existing tenant-limit
+  status without enabling production tab concurrency
+- `delegation_status`: no new workers
+- `review_status`: profile and tab exclusion share one registry transaction;
+  cancellation accounting follows effect evidence rather than terminal label

@@ -341,4 +341,52 @@ describe("interactionLedger (package)", () => {
 			await rm(directory, { recursive: true, force: true });
 		}
 	});
+
+	test("retains pre-effect cancellation evidence without charging a conversation start", async () => {
+		let sequence = 0;
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => `reservation-${++sequence}`,
+		});
+		const policy = {
+			maxConcurrentChats: 1,
+			maxConversationStartsPerHour: 1,
+			maxConversationStartsPerDay: 1,
+		};
+		const reserve = (operationId: string, now: string) =>
+			ledger.reserve({
+				scope: foregroundScope,
+				workloadId: operationId,
+				operationId,
+				tabLeaseId: `lease-${operationId}`,
+				interactionClass: "conversation-start",
+				mutability: "provider-mutating",
+				startsNewConversation: true,
+				now,
+				reservationTtlMs: 30_000,
+				policy,
+			});
+		const cancelled = await reserve("operation-a", "2026-09-24T12:00:00.000Z");
+		if (!cancelled.allowed) throw new Error("expected reservation");
+		await ledger.start({
+			reservationId: cancelled.reservation.reservationId,
+			startedAt: "2026-09-24T12:00:01.000Z",
+		});
+		await ledger.settle({
+			reservationId: cancelled.reservation.reservationId,
+			settledAt: "2026-09-24T12:00:02.000Z",
+			effectState: "none",
+			outcome: "cancelled",
+			stopReason: "caller-aborted-before-provider-effect",
+		});
+
+		expect((await reserve("operation-b", "2026-09-24T12:00:03.000Z")).allowed).toBe(true);
+		expect(await ledger.list()).toContainEqual(
+			expect.objectContaining({
+				operationId: "operation-a",
+				state: "settled",
+				effectState: "none",
+				outcome: "cancelled",
+			}),
+		);
+	});
 });

@@ -454,6 +454,34 @@ describe("tabLeaseRegistry (package)", () => {
 			expect(concurrent.filter((result) => result.ok)).toHaveLength(1);
 			expect(concurrent.filter((result) => !result.ok)).toHaveLength(1);
 
+			const controlScope = { ...scope, service: "grok" };
+			const profileControl = await firstRegistry.acquireProfileControl({
+				scope: controlScope,
+				kind: "browser-startup",
+				operationId: "control-operation",
+				now: "2026-09-24T12:00:03.000Z",
+				ttlMs: 30_000,
+			});
+			expect(profileControl.acquired).toBe(true);
+			if (!profileControl.acquired) throw new Error("expected profile control");
+			expect(
+				await secondRegistry.reserve({
+					scope: controlScope,
+					targetId: "target-grok",
+					workload: { kind: "conversation", conversationId: "conversation-grok" },
+					operationId: "operation-grok",
+					now: "2026-09-24T12:00:04.000Z",
+					idleTtlMs: 60_000,
+					absoluteTtlMs: 3_600_000,
+				}),
+			).toMatchObject({ ok: false, conflict: { kind: "profile-controlled" } });
+			expect(
+				await secondRegistry.releaseProfileControl({
+					claim: profileControl.claim,
+					releasedAt: "2026-09-24T12:00:05.000Z",
+				}),
+			).toBe(true);
+
 			const restartedRegistry = createFileBackedBrowserTabLeaseRegistry(options);
 			expect((await restartedRegistry.list()).map((lease) => lease.targetId)).toEqual([
 				"target-a",
@@ -463,5 +491,95 @@ describe("tabLeaseRegistry (package)", () => {
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}
+	});
+
+	test("atomically excludes profile control and exact-tab ownership in both directions", async () => {
+		let sequence = 0;
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => `lease-${++sequence}`,
+			createControlId: () => `control-${sequence}`,
+		});
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "target-a",
+			workload: { kind: "conversation", conversationId: "conversation-a" },
+			operationId: "operation-a",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!reserved.ok) throw new Error("expected tab lease");
+
+		const blockedControl = await registry.acquireProfileControl({
+			scope,
+			kind: "browser-startup",
+			operationId: "control-operation",
+			now: "2026-09-24T12:00:01.000Z",
+			ttlMs: 30_000,
+		});
+		expect(blockedControl).toMatchObject({
+			acquired: false,
+			reason: "tab-leases-active",
+			blockingTargetIds: ["target-a"],
+		});
+
+		const idled = await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-09-24T12:00:02.000Z",
+			effectState: "settled",
+		});
+		if (!idled.ok) throw new Error("expected idle lease");
+		const retiring = await registry.beginRetirement({
+			leaseId: idled.value.leaseId,
+			expectedRevision: idled.value.revision,
+			now: "2026-09-24T12:00:03.000Z",
+			reason: "cancelled",
+		});
+		if (!retiring.ok) throw new Error("expected retiring lease");
+		await registry.finishRetirement({
+			leaseId: idled.value.leaseId,
+			retirementRevision: retiring.value.retirementRevision,
+			now: "2026-09-24T12:00:04.000Z",
+			disposition: "closed",
+		});
+
+		const control = await registry.acquireProfileControl({
+			scope,
+			kind: "browser-startup",
+			operationId: "control-operation",
+			now: "2026-09-24T12:00:05.000Z",
+			ttlMs: 30_000,
+		});
+		expect(control.acquired).toBe(true);
+		if (!control.acquired) return;
+
+		const blockedTab = await registry.reserve({
+			scope,
+			targetId: "target-b",
+			workload: { kind: "conversation", conversationId: "conversation-b" },
+			operationId: "operation-b",
+			now: "2026-09-24T12:00:06.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		expect(blockedTab).toMatchObject({ ok: false, conflict: { kind: "profile-controlled" } });
+
+		await registry.releaseProfileControl({
+			claim: control.claim,
+			releasedAt: "2026-09-24T12:00:06.500Z",
+		});
+		expect(
+			(
+				await registry.reserve({
+					scope,
+					targetId: "target-b",
+					workload: { kind: "conversation", conversationId: "conversation-b" },
+					operationId: "operation-b",
+					now: "2026-09-24T12:00:07.000Z",
+					idleTtlMs: 60_000,
+					absoluteTtlMs: 3_600_000,
+				})
+			).ok,
+		).toBe(true);
 	});
 });
