@@ -14,6 +14,7 @@ export * from './service/operationDispatcher.js';
 export * from './service/tabLeaseRegistry.js';
 export * from './service/mutationDispatcher.js';
 export * from './service/interactionGovernor.js';
+export * from './service/interactionLedger.js';
 export * from './service/instanceScanner.js';
 export * from './service/types.js';
 export * from './service/selectors.js';

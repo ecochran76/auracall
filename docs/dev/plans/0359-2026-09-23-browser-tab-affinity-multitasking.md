@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 4
+Plan version: 5
 
 ## Stable Objective
 
@@ -50,6 +50,12 @@ provider-neutral.
   instances enforce the same target/workload uniqueness, and a restarted
   instance reconstructs the durable lease evidence without treating it as
   independently verified target liveness.
+- The first provider-neutral interaction-admission tracer is GREEN. A warning
+  observed by any runtime profile freezes every reserved or started workload
+  for the same tenant/provider and precedes numeric availability. Short-lived
+  reservations close concurrency races; settled plus in-flight conversation
+  starts drive rolling hourly admission without double-counting; passive
+  observations are audited without consuming a permit.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -551,3 +557,24 @@ Checkpoint 2026-09-24, file-backed adapter:
 - `delegation_status`: no new workers
 - `review_status`: persistence remains one atomic registry transition rather
   than independent per-target files, preserving workload-rebind uniqueness
+
+Checkpoint 2026-09-24, aggregate admission tracer:
+
+- `plan_version`: 5
+- `state_transition`: OPEN -> OPEN; bounded Packet 3 in-memory admission tracer
+  GREEN
+- `acceptance_state`: partial provider-free acceptance; 4 interaction-ledger,
+  9 tab-lease, and 11 compatibility-dispatcher tests pass with typecheck and
+  production build
+- `progress_classification`: forward progress
+- `evidence`: provider-warning precedence/freeze, atomic concurrency race,
+  reservation expiry, rolling hourly boundary, no double-counting, append-only
+  transition events, and permit-free passive observation
+- `material_blockers`: none for ledger persistence or remaining conflict work
+- `next_action_or_stop_reason`: persist the interaction ledger and warning
+  projection atomically across restart, add exact daily-boundary and
+  cancellation fixtures, then project the evidence through existing tenant
+  limit status without enabling production concurrency
+- `delegation_status`: no new workers
+- `review_status`: admission is one tenant/provider seam across runtime/browser
+  profiles; warning evidence dominates numeric limits

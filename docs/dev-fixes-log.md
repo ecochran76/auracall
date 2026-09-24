@@ -22751,3 +22751,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   using a synced temporary file and atomic rename. A restart reconstructs
   evidence, not live-target authority; reconciliation must still verify the
   target before use.
+
+## 2026-09-24 | Make provider warnings dominate aggregate admission
+
+- Numeric quota availability is never authority to continue after any tab
+  observes a provider warning, CAPTCHA, verification gate, identity conflict,
+  or account mismatch. Project the warning at tenant/provider scope before
+  issuing another permit, regardless of AuraCall runtime or managed browser
+  profile.
+- Use short-lived reservations to close quota races, retain expired
+  reservations as abandoned evidence, and derive rolling usage from one
+  append-only event history. Passive observations remain auditable without
+  consuming an interaction permit.

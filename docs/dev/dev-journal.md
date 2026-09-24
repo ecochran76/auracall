@@ -50036,3 +50036,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Nine lease-registry tests, eleven compatibility-dispatcher tests, and
   typecheck pass. Production dispatch remains serialized and no browser or
   provider effect ran.
+
+## 2026-09-24 | Plan 0359 aggregate interaction admission tracer
+
+- Added a provider-neutral in-memory interaction ledger keyed by tenant and
+  provider across AuraCall runtime profiles and managed browser profiles.
+  Provider warnings freeze existing reserved/started work and deny later work
+  before numeric availability is considered.
+- Short reservations close concurrent admission races and expire as retained
+  abandoned evidence. Settled and active conversation starts drive rolling
+  hourly limits exactly once. Passive observation is append-only audit evidence
+  but consumes no interaction permit.
+- Append-only events retain sanitized operational locators, interaction class,
+  mutability, effect state, outcome, and warning classification. Four ledger,
+  nine lease, and eleven dispatcher tests, typecheck, and build pass. No
+  production caller or live/provider surface uses the ledger yet.
