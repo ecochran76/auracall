@@ -1,3 +1,17 @@
+## 2026-09-24 | Plan 0359 sanitized affinity observability
+
+- Expanded read-only tab-concurrency status with aggregate lease lifecycle,
+  workload class, expiry/uncertainty attention, exact target-action, and
+  retirement-disposition counts. The projection contains no conversation IDs,
+  target IDs, operation IDs, tenant keys, or provider content.
+- A deterministic injected clock makes expiry status testable without changing
+  production time behavior. Four focused tests, typecheck, production build,
+  scoped formatting, diff hygiene, and repository lint pass; lint retains its
+  existing 207-warning baseline.
+- Periodic maintenance ownership, sanitized per-binding lifetime status,
+  restart/orphan reconciliation, and remaining non-prompt interaction surfaces
+  stay open. No browser, provider, scheduler, installation, or live effect ran.
+
 ## 2026-09-24 | Plan 0359 attributable tab retirement
 
 - Added a provider-neutral two-phase expired-lease sweeper and ChatGPT workload

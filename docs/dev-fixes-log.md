@@ -1,3 +1,9 @@
+- 2026-09-24: Multitab status should expose operational pressure without
+  leaking provider identities or content. Derive aggregate lease-state,
+  workload-class, expiry/uncertainty, target-action, and retirement counts from
+  the durable registry using one clock instant. Keep exact target, operation,
+  tenant, and conversation locators out of this general status projection.
+
 - 2026-09-24: Lease expiry alone is not authority to close a browser target.
   Begin retirement only from idle settled state, verify the exact target and
   workload identity, close that target alone, and require a post-close absence

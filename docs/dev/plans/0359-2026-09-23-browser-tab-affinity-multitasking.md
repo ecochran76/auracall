@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 17
+Plan version: 18
 
 ## Stable Objective
 
@@ -132,6 +132,12 @@ provider-neutral.
   and the exact target must match and disappear after close. A periodic
   maintenance trigger and remaining restart/orphan reconciliation are still
   incomplete, so configured affinity is not yet universal.
+- Read-only runtime status now reports sanitized aggregate lease-state and
+  workload counts, expired-idle and outcome-unknown attention counts, exact
+  target-action totals, and retirement dispositions. It does not expose target,
+  operation, tenant, or conversation identifiers. Per-binding age and remaining
+  lifetime, periodic maintenance ownership, and broader orphan reconciliation
+  remain incomplete Packet 6 work.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -940,3 +946,27 @@ Checkpoint 2026-09-24, attributable expiry retirement:
 - `delegation_status`: no new workers
 - `review_status`: retirement never closes a browser or a generic/provider-only
   match; close success requires an exact post-close absence observation
+
+Checkpoint 2026-09-24, sanitized affinity observability:
+
+- `plan_version`: 18
+- `state_transition`: OPEN -> OPEN; Packet 6 aggregate operator status advanced
+- `acceptance_state`: partial provider-free acceptance; 4 focused runtime-status
+  tests, typecheck, production build, scoped formatting, diff hygiene, and
+  repository lint pass; lint retains the existing 207-warning baseline
+- `progress_classification`: forward progress
+- `evidence`: commit `28f8b6cae7cd9fc62e662f1fc4d631b575b58c09`
+  exposes aggregate active, idle, retiring, released, and lost lease states;
+  conversation, new-conversation, live-follow, and ephemeral workloads;
+  expired-idle and outcome-unknown attention; target actions; and retirement
+  dispositions without publishing conversation IDs or other lease locators
+- `material_blockers`: status does not yet expose sanitized per-binding age or
+  remaining lifetime; sweeping remains acquisition-driven; broader orphan and
+  restart reconciliation plus non-prompt interaction integration remain open
+- `next_action_or_stop_reason`: add a bounded persistent maintenance owner and
+  restart/orphan reconciliation, then classify and integrate materialization,
+  media, and provider CRUD interactions without widening live authority
+- `delegation_status`: no new workers
+- `review_status`: status reads a single injected clock instant and derives only
+  counts from durable registry evidence; serialized mode still creates no
+  coordination storage
