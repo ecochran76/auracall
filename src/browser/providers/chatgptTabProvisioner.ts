@@ -165,7 +165,7 @@ async function acquireVerifiedExistingLease(
 		await releaseMissingLease(input.registry, existing, now().toISOString());
 		return null;
 	}
-	if (!isExactConversationRoute(inspected.url, input.workload.conversationId)) {
+	if (!isExactConversationRoute(inspected.url, input.targetUrl, input.workload.conversationId)) {
 		const lost = await input.registry.markLost({
 			leaseId: existing.leaseId,
 			expectedRevision: existing.revision,
@@ -226,9 +226,15 @@ async function releaseMissingLease(
 	}
 }
 
-function isExactConversationRoute(url: string, conversationId: string): boolean {
+function isExactConversationRoute(
+	url: string,
+	expectedUrl: string,
+	conversationId: string,
+): boolean {
 	try {
 		const parsed = new URL(url);
+		const expected = new URL(expectedUrl);
+		if (parsed.hostname !== expected.hostname) return false;
 		const match = parsed.pathname.match(/\/c\/([^/?#]+)/);
 		return match?.[1] ? decodeURIComponent(match[1]) === conversationId : false;
 	} catch {

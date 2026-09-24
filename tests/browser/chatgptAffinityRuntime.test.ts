@@ -3,10 +3,25 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 
-import { runChatgptPromptWithConfiguredAffinity } from "../../src/browser/chatgptAffinityRuntime.js";
+import {
+	classifyStructuredProviderWarning,
+	runChatgptPromptWithConfiguredAffinity,
+} from "../../src/browser/chatgptAffinityRuntime.js";
 import { createBrowserTabConcurrencyRuntime } from "../../src/browser/tabConcurrencyRuntime.js";
 
 describe("configured ChatGPT affinity runtime", () => {
+	test("classifies structured legacy browser warning details", () => {
+		expect(
+			classifyStructuredProviderWarning({
+				message: "Manual verification required",
+				details: { providerState: "human_verification" },
+			}),
+		).toEqual({
+			classification: "human-verification",
+			reason: "Manual verification required",
+		});
+	});
+
 	test("preserves serialized execution without resolving or creating a browser target", async () => {
 		const runSerialized = vi.fn(async () => ({ text: "serialized" }));
 		const resolveServiceTarget = vi.fn();

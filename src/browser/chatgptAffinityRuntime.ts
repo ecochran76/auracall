@@ -175,9 +175,14 @@ export function classifyStructuredProviderWarning(
 ): ReturnType<ProviderWarningClassifier> {
 	if (!error || typeof error !== "object") return null;
 	const record = error as Record<string, unknown>;
+	const details =
+		record.details && typeof record.details === "object"
+			? (record.details as Record<string, unknown>)
+			: null;
 	const blockingSurface =
-		record.blockingSurface && typeof record.blockingSurface === "object"
-			? (record.blockingSurface as Record<string, unknown>)
+		(record.blockingSurface ?? details?.blockingSurface) &&
+		typeof (record.blockingSurface ?? details?.blockingSurface) === "object"
+			? ((record.blockingSurface ?? details?.blockingSurface) as Record<string, unknown>)
 			: null;
 	if (blockingSurface?.kind === "rate-limit") {
 		return {
@@ -185,7 +190,9 @@ export function classifyStructuredProviderWarning(
 			reason: readReason(record, blockingSurface, "ChatGPT rate-limit warning observed."),
 		};
 	}
-	const classification = structuredClassification(record.code ?? record.type);
+	const classification = structuredClassification(
+		record.code ?? record.type ?? details?.code ?? details?.providerState ?? details?.stage,
+	);
 	return classification
 		? { classification, reason: readReason(record, null, `ChatGPT ${classification} observed.`) }
 		: null;

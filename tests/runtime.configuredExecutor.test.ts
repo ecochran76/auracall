@@ -168,6 +168,10 @@ describe('configured stored-step executor', () => {
       {
         browser: {
           managedProfileRoot: path.join(homeDir, 'profiles'),
+          tabConcurrencyMode: 'tab-affinity',
+        },
+        services: {
+          chatgpt: { identity: { email: 'operator@example.com' } },
         },
         runtimeProfiles: {
           default: {
@@ -222,6 +226,11 @@ describe('configured stored-step executor', () => {
     expect(options?.prompt).toContain('Return exactly one valid JSON object');
     expect(options?.prompt.length).toBeLessThan(1000);
     expect(options?.attachments).toHaveLength(1);
+    expect(options?.config?.tabConcurrencyMode).toBe('tab-affinity');
+    expect(options?.tabAffinityUserConfig).toMatchObject({
+      auracallProfile: 'default',
+      browser: { tabConcurrencyMode: 'tab-affinity', target: 'chatgpt' },
+    });
     expect(options?.attachments?.[0]?.displayPath).toBe('auracall-request.txt');
     const attachmentPath = options?.attachments?.[0]?.path;
     expect(attachmentPath).toBeTruthy();

@@ -1,4 +1,5 @@
 import type * as BaseTypes from '../../packages/browser-service/src/types.js';
+import type { ResolvedUserConfig } from '../config.js';
 import type { ProviderSessionAuthorization } from './providers/providerSessionAuthority.js';
 
 export type {
@@ -98,6 +99,8 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
   config?: BrowserAutomationConfig;
   /** Internally provisioned exact target. Never falls back to generic tab selection. */
   tabAffinity?: { host: string; port: number; targetId: string };
+  /** Full profile-resolved configuration required to construct durable affinity state. */
+  tabAffinityUserConfig?: ResolvedUserConfig;
   ecosystemMention?: import('./actions/chatgptEcosystemMention.js').ChatgptEcosystemMentionRequest;
   onProviderEffectState?: (state: 'pre_effect' | 'unknown' | 'effect_observed') => void;
   runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
