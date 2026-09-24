@@ -1,3 +1,16 @@
+## 2026-09-24 | Plan 0359 persistent API tab maintenance
+
+- Added a non-overlapping tab-affinity maintenance loop owned by the
+  long-running API. Explicit affinity defaults to a 60-second cadence;
+  serialized and proof-scoped runs schedule nothing, and shutdown clears the
+  timer and awaits an active pass.
+- Each pass resolves configured ChatGPT AuraCall runtime profiles independently,
+  uses `ensurePort: false`, never starts an absent browser, and applies the same
+  exact identity and post-close retirement contract as acquisition-time cleanup.
+- Eleven focused maintenance/retirement/status tests and the API lifecycle test
+  pass with typecheck, production build, diff hygiene, and repository lint.
+  Lint retains 207 pre-existing warnings. No live browser/provider effect ran.
+
 ## 2026-09-24 | Plan 0359 sanitized affinity observability
 
 - Expanded read-only tab-concurrency status with aggregate lease lifecycle,

@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 18
+Plan version: 19
 
 ## Stable Objective
 
@@ -129,15 +129,17 @@ provider-neutral.
   still require classification and ledger integration. Production expiry
   retirement now runs opportunistically before ChatGPT foreground and
   live-follow affinity acquisition: only expired idle settled leases advance,
-  and the exact target must match and disappear after close. A periodic
-  maintenance trigger and remaining restart/orphan reconciliation are still
-  incomplete, so configured affinity is not yet universal.
+  and the exact target must match and disappear after close. The long-running
+  API now also owns a non-overlapping 60-second maintenance cadence for explicit
+  affinity configurations. It never launches an absent browser, isolates
+  failures per AuraCall runtime profile, and stops with the API. Remaining
+  restart/orphan reconciliation is incomplete, so configured affinity is not
+  yet universal.
 - Read-only runtime status now reports sanitized aggregate lease-state and
   workload counts, expired-idle and outcome-unknown attention counts, exact
   target-action totals, and retirement dispositions. It does not expose target,
   operation, tenant, or conversation identifiers. Per-binding age and remaining
-  lifetime, periodic maintenance ownership, and broader orphan reconciliation
-  remain incomplete Packet 6 work.
+  lifetime and broader orphan reconciliation remain incomplete Packet 6 work.
 - `BrowserService.resolveServiceTarget()` returns a service-compatible tab and
   selection evidence, but there is no durable workload-to-tab lease registry.
 - ChatGPT already supports explicit `tabTargetId`, retained scoped sessions,
@@ -970,3 +972,29 @@ Checkpoint 2026-09-24, sanitized affinity observability:
 - `review_status`: status reads a single injected clock instant and derives only
   counts from durable registry evidence; serialized mode still creates no
   coordination storage
+
+Checkpoint 2026-09-24, persistent API maintenance owner:
+
+- `plan_version`: 19
+- `state_transition`: OPEN -> OPEN; Packet 6 periodic expiry ownership active
+  in the long-running API
+- `acceptance_state`: partial provider-free acceptance; 11 focused maintenance,
+  retirement, and status tests plus the API ownership test pass with typecheck,
+  production build, diff hygiene, and repository lint; lint retains the
+  existing 207-warning baseline
+- `progress_classification`: forward progress
+- `evidence`: commit `2eb79d430ae90da0b05376972211d3d07bc8a206`
+  schedules one non-overlapping pass every 60 seconds only when explicit
+  affinity is configured, resolves each configured ChatGPT scope without
+  browser launch, reuses exact retirement verification, isolates scope errors,
+  and clears/awaits maintenance during API shutdown
+- `material_blockers`: restart reconciliation does not yet classify live
+  unleased/orphan targets or verify persisted leases before general status;
+  per-binding lifetime status and non-prompt interaction integration remain open
+- `next_action_or_stop_reason`: implement read-only restart/orphan
+  reconciliation and status projection, then classify and integrate
+  materialization, media, and provider CRUD interactions
+- `delegation_status`: no new workers
+- `review_status`: proof-scoped server runs suppress the cadence; serialized
+  mode schedules nothing; an absent endpoint defers leases without launching a
+  browser or transitioning ownership

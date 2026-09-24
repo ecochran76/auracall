@@ -1,3 +1,9 @@
+- 2026-09-24: Acquisition-driven expiry cleanup cannot enforce tab lifetime
+  while a workload is quiet. Give explicit tab-affinity a long-running,
+  non-overlapping maintenance owner that resolves configured scopes without
+  launching browsers, reuses exact target identity verification, isolates
+  profile failures, and is cleared and awaited during API shutdown.
+
 - 2026-09-24: Multitab status should expose operational pressure without
   leaking provider identities or content. Derive aggregate lease-state,
   workload-class, expiry/uncertainty, target-action, and retirement counts from

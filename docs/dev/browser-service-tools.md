@@ -172,8 +172,13 @@ Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
 reconciles expired idle leases for that exact runtime/account/managed browser
 scope. A target is closed only after exact workload identity verification, and
 `closed` is recorded only after a second census proves the target disappeared.
-Outcome-unknown leases are not retired. This sweep is currently
-acquisition-driven; periodic maintenance remains a separate incomplete gate.
+Outcome-unknown leases are not retired. Retirement runs at acquisition
+boundaries, and the long-running API also owns a non-overlapping
+60-second maintenance cadence when explicit affinity is configured. Maintenance
+uses `ensurePort: false`, so an absent browser is never launched merely for
+cleanup; the affected leases remain idle and are reconsidered later. The loop
+is suppressed for proof-scoped server runs and is cleared and awaited during
+API shutdown.
 
 ## ChatGPT composer-mode boundary
 
