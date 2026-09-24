@@ -35,6 +35,7 @@ export interface BrowserTabConcurrencyRuntime {
 
 export function createBrowserTabConcurrencyRuntime(
 	userConfig: ResolvedUserConfig,
+	options: { storageRoot?: string } = {},
 ): BrowserTabConcurrencyRuntime {
 	const mode = userConfig.browser?.tabConcurrencyMode ?? "serialized";
 	if (mode === "serialized") {
@@ -48,7 +49,8 @@ export function createBrowserTabConcurrencyRuntime(
 		};
 	}
 
-	const storageRoot = path.join(getAuracallHomeDir(), "browser-coordination");
+	const storageRoot =
+		options.storageRoot ?? path.join(getAuracallHomeDir(), "browser-coordination");
 	const registry = createFileBackedBrowserTabLeaseRegistry({
 		registryRoot: path.join(storageRoot, "tab-leases"),
 	});

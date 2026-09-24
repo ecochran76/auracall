@@ -207,6 +207,12 @@ export interface BrowserTabLeaseRegistry {
     now: string;
     reason: TabLeaseLossReason;
   }): Promise<TabLeaseResult<BrowserTabLease>>;
+  releaseLost(input: {
+    leaseId: string;
+    expectedRevision: number;
+    now: string;
+    disposition: Extract<TabLeaseFinalDisposition, 'already-missing' | 'preserved'>;
+  }): Promise<TabLeaseResult<BrowserTabLease>>;
   listFencedTargetIds(scope: TabLeaseScope): Promise<string[]>;
   findByWorkload(scope: TabLeaseScope, workload: TabLeaseWorkload): Promise<BrowserTabLease | null>;
   list(input?: {
@@ -743,6 +749,32 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return { ok: true, value: cloneLease(lost) };
   }
 
+  async releaseLost(input: {
+    leaseId: string;
+    expectedRevision: number;
+    now: string;
+    disposition: Extract<TabLeaseFinalDisposition, 'already-missing' | 'preserved'>;
+  }): Promise<TabLeaseResult<BrowserTabLease>> {
+    const existing = this.leases.get(input.leaseId);
+    if (!existing) return { ok: false, conflict: { kind: 'not-found' } };
+    if (existing.revision !== input.expectedRevision) {
+      return { ok: false, conflict: { kind: 'stale-claim', lease: cloneLease(existing) } };
+    }
+    if (existing.state !== 'lost' || input.disposition !== 'already-missing') {
+      return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    }
+    const now = new Date(parseTimestamp(input.now, 'now')).toISOString();
+    const released: BrowserTabLease = {
+      ...existing,
+      revision: existing.revision + 1,
+      state: 'released',
+      heartbeatAt: now,
+      finalDisposition: input.disposition,
+    };
+    this.leases.set(released.leaseId, released);
+    return { ok: true, value: cloneLease(released) };
+  }
+
   async listFencedTargetIds(scope: TabLeaseScope): Promise<string[]> {
     const normalizedScope = normalizeScope(scope);
     return [...this.leases.values()]
@@ -854,6 +886,10 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
 
   markLost(input: Parameters<BrowserTabLeaseRegistry['markLost']>[0]) {
     return this.write((registry) => registry.markLost(input));
+  }
+
+  releaseLost(input: Parameters<BrowserTabLeaseRegistry['releaseLost']>[0]) {
+    return this.write((registry) => registry.releaseLost(input));
   }
 
   listFencedTargetIds(scope: TabLeaseScope) {

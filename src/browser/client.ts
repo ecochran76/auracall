@@ -1,5 +1,21 @@
+import {
+  closeRemoteChromeTarget,
+  listChromeTargets,
+  openChromeTarget,
+} from '../../packages/browser-service/src/chromeLifecycle.js';
+import { BrowserAutomationClientCore } from '../../packages/browser-service/src/client.js';
+import type { DevToolsConnectionOptions } from '../../packages/browser-service/src/types.js';
 import type { ResolvedUserConfig } from '../config.js';
-import type { ChromeClient } from './types.js';
+import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
+import { type DiagnosisReport, diagnoseProvider } from '../inspector/doctor.js';
+import { runChatgptPromptWithConfiguredAffinity } from './chatgptAffinityRuntime.js';
+import { createLlmService } from './llmService/index.js';
+import type { LlmService } from './llmService/llmService.js';
+import type { PromptInput, PromptResult } from './llmService/types.js';
+import type { BrowserLoginOptions } from './login.js';
+import { runBrowserLogin } from './login.js';
+import type { ConversationArtifact, ConversationContext, FileRef } from './providers/domain.js';
+import type { ProviderSessionProof } from './providers/providerSessionAuthority.js';
 import type {
   BrowserProvider,
   BrowserProviderActiveMediaMaterializationInput,
@@ -7,23 +23,16 @@ import type {
   BrowserProviderPromptWorkbenchInput,
   BrowserProviderPromptWorkbenchResult,
 } from './providers/types.js';
-import { diagnoseProvider, type DiagnosisReport } from '../inspector/doctor.js';
-import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
-import type { BrowserLoginOptions } from './login.js';
-import { runBrowserLogin } from './login.js';
-import { BrowserService } from './service/browserService.js';
-import { createLlmService } from './llmService/index.js';
-import type { LlmService } from './llmService/llmService.js';
-import { BrowserAutomationClientCore } from '../../packages/browser-service/src/client.js';
-import type { DevToolsConnectionOptions } from '../../packages/browser-service/src/types.js';
-import type { PromptInput, PromptResult } from './llmService/types.js';
-import type { ProviderSessionProof } from './providers/providerSessionAuthority.js';
-import type { ConversationArtifact, ConversationContext, FileRef } from './providers/domain.js';
 import {
-  createBrowserTabConcurrencyRuntime,
+  type BrowserProcessOwnerAttribution,
+  BrowserService,
+} from './service/browserService.js';
+import {
   type BrowserTabConcurrencyRuntime,
   type BrowserTabConcurrencyStatus,
+  createBrowserTabConcurrencyRuntime,
 } from './tabConcurrencyRuntime.js';
+import type { ChromeClient } from './types.js';
 
 export class BrowserAutomationClient {
   readonly target: 'chatgpt' | 'gemini' | 'grok';
@@ -53,13 +62,18 @@ export class BrowserAutomationClient {
 
   static async fromConfig(
     userConfig: ResolvedUserConfig,
-    options?: { target?: 'chatgpt' | 'gemini' | 'grok' },
+    options?: {
+      target?: 'chatgpt' | 'gemini' | 'grok';
+      browserProcessOwner?: BrowserProcessOwnerAttribution;
+    },
   ): Promise<BrowserAutomationClient> {
     const target = options?.target ?? userConfig.browser?.target ?? 'chatgpt';
     if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
-    const browserService = BrowserService.fromConfig(userConfig, target);
+    const browserService = BrowserService.fromConfig(userConfig, target, {
+      browserProcessOwner: options?.browserProcessOwner,
+    });
     await browserService.pruneRegistry().catch(() => undefined);
     return new BrowserAutomationClient(userConfig, target, browserService);
   }
@@ -123,7 +137,37 @@ export class BrowserAutomationClient {
     input: PromptInput,
     options?: BrowserProviderListOptions,
   ): Promise<PromptResult> {
-    return this.llmService.runPrompt(input, options);
+    if (this.target !== 'chatgpt') {
+      return this.llmService.runPrompt(input, options);
+    }
+    return runChatgptPromptWithConfiguredAffinity({
+      userConfig: this.userConfig,
+      runtime: this.tabConcurrencyRuntime,
+      input,
+      options,
+      runSerialized: (promptInput, promptOptions) =>
+        this.llmService.runPrompt(promptInput, promptOptions),
+      runExact: (promptInput, promptOptions) =>
+        this.llmService.runPrompt(promptInput, promptOptions),
+      resolveServiceTarget: (targetOptions) =>
+        this.browserService.resolveServiceTarget(targetOptions),
+      openTarget: async ({ host, port, url }) => {
+        const target = await openChromeTarget(port, url, host);
+        const targetId = typeof target === 'string' ? target : target.id;
+        if (!targetId) throw new Error('ChatGPT target creation returned no target ID.');
+        return { targetId, url };
+      },
+      inspectTarget: async (endpoint, targetId) => {
+        const targets = await listChromeTargets(endpoint.port, endpoint.host);
+        const target = targets.find((candidate) => {
+          const record = candidate as { id?: string; targetId?: string };
+          return (record.targetId ?? record.id) === targetId;
+        }) as { url?: string } | undefined;
+        return typeof target?.url === 'string' ? { url: target.url } : null;
+      },
+      closeTarget: ({ host, port, targetId }) =>
+        closeRemoteChromeTarget(host, port, targetId, () => undefined),
+    });
   }
 
   async preparePromptWorkbench(
