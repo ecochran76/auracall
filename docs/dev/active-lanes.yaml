@@ -1010,3 +1010,24 @@ lanes:
     integration_receipt: e497767e4967a713410b83469a4c02bcd1278d9e
     disposition: The exact zero-retry pass advanced once and its sole child succeeded with one materialized asset and zero failures; final active jobs and managed browser owners are zero, API is healthy, and scheduler remains paused.
     updated_at: 2026-09-23
+  - id: P52
+    objective: Implement provider-neutral exact tab leases, conversation affinity, dedicated live-follow crawler ownership, and aggregate interaction accounting, beginning provider-free.
+    plan: docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md
+    plan_ref: refs/heads/feat/issue-46-browser-tab-affinity
+    branch: feat/issue-46-browser-tab-affinity
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 7f6692db70c9168e2c7cbb6c556a91317e7fcb13
+    remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
+    integration: merge
+    work_items: [ecochran76/auracall#46]
+    dependencies: []
+    overlaps: []
+    reconciled_overlaps: []
+    reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
+    blocker: null
+    validation_status: packet-1-started
+    validation_ref: docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md
+    disposition: Packet 1 provider-free is active; no installed, browser, provider, scheduler, or live effect is authorized.
+    updated_at: 2026-09-24

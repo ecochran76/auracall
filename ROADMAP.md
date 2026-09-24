@@ -1,5 +1,15 @@
 # Aura-Call Roadmap
 
+- Active P52 / issue 46: [Plan 0359](docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md)
+  replaces managed-browser-profile-wide serialization of ordinary provider
+  work with exact tab leases: one tab per conversation and one dedicated
+  crawler tab per live-follow operation. It also unifies aggregate
+  tenant/provider interaction accounting while preserving provider-warning,
+  identity, CAPTCHA, uncertain-effect, and browser-profile control-plane hard
+  stops. Packet 1 provider-free is owned on
+  `feat/issue-46-browser-tab-affinity`; provider-free contracts precede ChatGPT
+  integration and any installed/live acceptance.
+
 - P16 / issue 6 revision-8 recovery implements developer-app terminal response
   through the real shared local/remote lifecycle, with exact app selection,
   one Send and honest answer/identity/effect evidence. Provider-free validation

@@ -49969,3 +49969,27 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   limitation after integration. The plan audit retains 32 pre-existing missing
   policy-target findings from main commit `2b08d5f2e`; this slice does not
   expand into that policy repair.
+
+## 2026-09-23 | Plan 0359 browser tab affinity and multitasking
+
+- Reviewed the current browser-operation dispatcher, ChatGPT retained-session
+  mechanics, live-follow ownership, tenant execution limits, and provider
+  warning guards against the requested one-workload-per-tab design.
+- Added Plan 0359 as `PLANNED` with implementation custody unassigned. It
+  specifies exact conversation-to-tab leases, one dedicated live-follow crawler
+  tab, bounded heartbeat/expiry/retirement, and one aggregate provider
+  interaction ledger while preserving current warning, identity, CAPTCHA,
+  uncertain-effect, and second-Chrome hard stops.
+- The plan sequences provider-free contracts before ChatGPT integration and
+  keeps Gemini/Grok plus installed/live work behind separate acceptance gates.
+  No source, runtime, browser, provider, issue, branch, or active-lane state was
+  changed in this planning slice.
+
+## 2026-09-24 | Plan 0359 Packet 1 started
+
+- Opened issue 46 and branch `feat/issue-46-browser-tab-affinity` for P52.
+- Packet 1 is provider-free and keeps the existing serialized production path.
+  The primary owns architecture/integration; parallel workers receive isolated,
+  non-overlapping discovery and test-design scopes.
+- Installation, managed-browser launch, provider interaction, scheduler
+  control, and live acceptance remain out of scope.
