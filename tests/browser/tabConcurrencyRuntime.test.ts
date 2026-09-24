@@ -72,6 +72,77 @@ describe("browser tab concurrency runtime", () => {
 		}
 	});
 
+	test("reports sanitized lease lifecycle and target action aggregates", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-tab-runtime-"));
+		try {
+			const runtime = createBrowserTabConcurrencyRuntime(
+				{ browser: { tabConcurrencyMode: "tab-affinity" } } as never,
+				{
+					storageRoot: path.join(directory, "coordination"),
+					now: () => new Date("2026-09-24T12:02:00.000Z"),
+				},
+			);
+			const registry = runtime.registry;
+			expect(registry).not.toBeNull();
+			if (!registry) throw new Error("expected tab lease registry");
+
+			const reserved = await registry.reserve({
+				scope: {
+					runtimeProfileId: "runtime-1",
+					managedBrowserProfile: "managed-1",
+					service: "chatgpt",
+					tenantKey: "tenant-1",
+				},
+				targetId: "target-1",
+				workload: { kind: "conversation", conversationId: "conversation-secret" },
+				operationId: "operation-1",
+				now: "2026-09-24T12:00:00.000Z",
+				idleTtlMs: 60_000,
+				absoluteTtlMs: 3_600_000,
+			});
+			expect(reserved.ok).toBe(true);
+			if (!reserved.ok) throw new Error("expected tab lease reservation");
+
+			const action = await registry.recordTargetAction({
+				claim: reserved.value.claim,
+				action: "navigation",
+				occurredAt: "2026-09-24T12:00:01.000Z",
+				idleTtlMs: 60_000,
+			});
+			expect(action.ok).toBe(true);
+			if (!action.ok) throw new Error("expected target action");
+			await registry.idle({
+				claim: action.value.claim,
+				now: "2026-09-24T12:00:02.000Z",
+				effectState: "outcome-unknown",
+			});
+
+			const status = await runtime.readStatus();
+			expect(status).toMatchObject({
+				leaseStates: { active: 0, idle: 1, retiring: 0, released: 0, lost: 0 },
+				workloads: {
+					conversations: 1,
+					newConversations: 0,
+					liveFollow: 0,
+					ephemeral: 0,
+				},
+				attention: { expiredIdle: 1, outcomeUnknown: 1 },
+				targetActions: {
+					targetCreations: 0,
+					adoptions: 0,
+					navigations: 1,
+					reloads: 0,
+					focuses: 0,
+					closes: 0,
+				},
+				retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
+			});
+			expect(JSON.stringify(status)).not.toContain("conversation-secret");
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
+
 	test("publishes resolved mode status from the production browser client factory", async () => {
 		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-tab-client-"));
 		try {

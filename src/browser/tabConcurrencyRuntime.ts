@@ -5,6 +5,7 @@ import {
 	type ProviderInteractionLedger,
 } from "../../packages/browser-service/src/service/interactionLedger.js";
 import {
+	type BrowserTabActionCounts,
 	type BrowserTabLeaseRegistry,
 	createFileBackedBrowserTabLeaseRegistry,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
@@ -22,6 +23,29 @@ export interface BrowserTabConcurrencyStatus {
 	interactionCount: number;
 	activeInteractionCount: number;
 	providerWarningEventCount: number;
+	leaseStates: {
+		active: number;
+		idle: number;
+		retiring: number;
+		released: number;
+		lost: number;
+	};
+	workloads: {
+		conversations: number;
+		newConversations: number;
+		liveFollow: number;
+		ephemeral: number;
+	};
+	attention: {
+		expiredIdle: number;
+		outcomeUnknown: number;
+	};
+	targetActions: BrowserTabActionCounts;
+	retirements: {
+		closed: number;
+		alreadyMissing: number;
+		preserved: number;
+	};
 }
 
 export interface BrowserTabConcurrencyRuntime {
@@ -35,7 +59,7 @@ export interface BrowserTabConcurrencyRuntime {
 
 export function createBrowserTabConcurrencyRuntime(
 	userConfig: ResolvedUserConfig,
-	options: { storageRoot?: string } = {},
+	options: { storageRoot?: string; now?: () => Date } = {},
 ): BrowserTabConcurrencyRuntime {
 	const mode = userConfig.browser?.tabConcurrencyMode ?? "serialized";
 	if (mode === "serialized") {
@@ -69,6 +93,7 @@ export function createBrowserTabConcurrencyRuntime(
 				ledger.list(),
 				ledger.listEvents(),
 			]);
+			const nowMs = (options.now ?? (() => new Date()))().getTime();
 			return {
 				mode,
 				enabled: true,
@@ -84,6 +109,46 @@ export function createBrowserTabConcurrencyRuntime(
 				providerWarningEventCount: events.filter(
 					(event) => event.type === "provider-warning-observed",
 				).length,
+				leaseStates: {
+					active: leases.filter((lease) => lease.state === "active").length,
+					idle: leases.filter((lease) => lease.state === "idle").length,
+					retiring: leases.filter((lease) => lease.state === "retiring").length,
+					released: leases.filter((lease) => lease.state === "released").length,
+					lost: leases.filter((lease) => lease.state === "lost").length,
+				},
+				workloads: {
+					conversations: leases.filter((lease) => lease.workload.kind === "conversation").length,
+					newConversations: leases.filter((lease) => lease.workload.kind === "new-conversation")
+						.length,
+					liveFollow: leases.filter((lease) => lease.workload.kind === "live-follow").length,
+					ephemeral: leases.filter((lease) => lease.workload.kind === "ephemeral").length,
+				},
+				attention: {
+					expiredIdle: leases.filter(
+						(lease) =>
+							lease.state === "idle" &&
+							(nowMs >= Date.parse(lease.idleExpiresAt) ||
+								nowMs >= Date.parse(lease.absoluteExpiresAt)),
+					).length,
+					outcomeUnknown: leases.filter((lease) => lease.effectState === "outcome-unknown").length,
+				},
+				targetActions: leases.reduce<BrowserTabActionCounts>(
+					(totals, lease) => ({
+						targetCreations: totals.targetCreations + lease.actionCounts.targetCreations,
+						adoptions: totals.adoptions + lease.actionCounts.adoptions,
+						navigations: totals.navigations + lease.actionCounts.navigations,
+						reloads: totals.reloads + lease.actionCounts.reloads,
+						focuses: totals.focuses + lease.actionCounts.focuses,
+						closes: totals.closes + lease.actionCounts.closes,
+					}),
+					emptyActionCounts(),
+				),
+				retirements: {
+					closed: leases.filter((lease) => lease.finalDisposition === "closed").length,
+					alreadyMissing: leases.filter((lease) => lease.finalDisposition === "already-missing")
+						.length,
+					preserved: leases.filter((lease) => lease.finalDisposition === "preserved").length,
+				},
 			};
 		},
 	};
@@ -99,5 +164,21 @@ function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStat
 		interactionCount: 0,
 		activeInteractionCount: 0,
 		providerWarningEventCount: 0,
+		leaseStates: { active: 0, idle: 0, retiring: 0, released: 0, lost: 0 },
+		workloads: { conversations: 0, newConversations: 0, liveFollow: 0, ephemeral: 0 },
+		attention: { expiredIdle: 0, outcomeUnknown: 0 },
+		targetActions: emptyActionCounts(),
+		retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
+	};
+}
+
+function emptyActionCounts(): BrowserTabActionCounts {
+	return {
+		targetCreations: 0,
+		adoptions: 0,
+		navigations: 0,
+		reloads: 0,
+		focuses: 0,
+		closes: 0,
 	};
 }
