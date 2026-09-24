@@ -22763,3 +22763,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   reservations as abandoned evidence, and derive rolling usage from one
   append-only event history. Passive observations remain auditable without
   consuming an interaction permit.
+
+## 2026-09-24 | Treat target ID and DevTools endpoint as one affinity locator
+
+- A target ID alone is insufficient execution authority because it is scoped
+  to one browser endpoint. Require the exact host/port together with the active
+  lease before attaching to a conversation or crawler target.
+- Apply caller options before the fixed affinity fields so cancellation,
+  warning, and session-authority evidence survives while target, lifecycle,
+  and navigation policy cannot be overridden.
+- Require provider result readback to name the leased target and bound
+  conversation. A successful-looking response on another target is an affinity
+  failure, not a result to accept or silently reconcile.

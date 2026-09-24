@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 9
+Plan version: 10
 
 ## Stable Objective
 
@@ -76,6 +76,16 @@ provider-neutral.
   `aggregate-interaction-ledger`. Legacy runtime-evidence projection remains
   unchanged when no ledger is supplied, so this checkpoint adds status
   compatibility without changing production admission or tab concurrency.
+- Provider-free ChatGPT prompt affinity now validates one active conversation
+  or new-conversation lease, requires its exact DevTools endpoint, fixes the
+  provider call to the leased target with retained/no-navigation semantics,
+  and rejects crawler leases, operation-owner drift, and mismatched provider
+  target or conversation readback. The seam is not yet constructed by a
+  production caller.
+- A provider-neutral live-follow traversal seam now accepts only the active
+  crawler lease for the exact completion operation, walks conversation IDs
+  sequentially on that one target, and checks cancellation before every next
+  visit. Conversation-owned tabs are rejected before collector work begins.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -681,3 +691,29 @@ Checkpoint 2026-09-24, tenant status projection:
   `tests/http.responsesServer.test.ts`; the exact failed test passed on its
   immediate isolated rerun. This is retained as flaky-suite evidence rather
   than reported as a clean full-suite pass.
+
+Checkpoint 2026-09-24, exact-target provider fixtures:
+
+- `plan_version`: 10
+- `state_transition`: OPEN -> OPEN; Packet 4 and Packet 5 exact-target fixture
+  seams GREEN, production compatibility path unchanged
+- `acceptance_state`: partial provider-free acceptance; 65 focused tests,
+  typecheck, scoped formatting/lint, diff hygiene, and production build pass
+- `progress_classification`: forward progress
+- `evidence`: two independent ChatGPT conversation calls retain distinct exact
+  target IDs and endpoints; untrusted caller tab overrides cannot escape the
+  lease; a new-conversation reservation returns binding evidence; a crawler
+  lease cannot submit a prompt; live follow walks one crawler target
+  sequentially and aborts before the next interaction
+- `material_blockers`: neither seam is constructed by the production executor
+  or Account Mirror refresh path yet, and lease/ledger lifecycle settlement
+  still has to surround provider effects
+- `next_action_or_stop_reason`: add one guarded production construction layer
+  that owns lease acquisition, aggregate admission, ChatGPT execution,
+  reservation rebinding, effect-aware settlement, and serialized rollback;
+  keep it disabled by default until its provider-free state-machine fixtures
+  pass
+- `delegation_status`: no new workers
+- `review_status`: exact endpoint plus target ownership is explicit and
+  provider readback fails closed; fixtures do not imply installed or live
+  acceptance

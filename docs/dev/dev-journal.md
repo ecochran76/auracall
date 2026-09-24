@@ -50102,3 +50102,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   background-drain timing failure (`in_progress` instead of `completed`); the
   exact failed test passed immediately in isolation. The broad run is recorded
   as flaky evidence, not a clean pass.
+
+## 2026-09-24 | Plan 0359 exact-target provider fixtures
+
+- Added a provider-specific ChatGPT leased-prompt seam that requires one active
+  conversation/new-conversation lease plus the exact DevTools endpoint. It
+  fixes execution to the leased target, retains the tab, prohibits navigation
+  fallback, preserves caller cancellation/authority options, and rejects
+  ownership or provider readback drift.
+- Added a provider-neutral live-follow traversal seam that accepts only its
+  dedicated crawler lease, visits conversations sequentially on that target,
+  and observes abort before every follow-on visit. A conversation lease cannot
+  enter the crawler path.
+- Sixty-five focused tests, typecheck, scoped Biome checks, diff hygiene, and
+  production build pass. Production construction still uses serialized
+  compatibility behavior; no browser, provider, scheduler, installation, or
+  live effect ran.
