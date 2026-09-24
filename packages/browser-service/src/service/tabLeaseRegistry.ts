@@ -375,11 +375,17 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       return { ok: false, conflict: { kind: 'profile-controlled', control: cloneControl(blockingControl) } };
     }
     for (const existing of this.leases.values()) {
-      if (!FENCED_STATES.has(existing.state) || !sameScope(existing.scope, normalized.scope)) continue;
-      if (existing.targetId === normalized.targetId) {
+      if (!FENCED_STATES.has(existing.state)) continue;
+      if (
+        sameTargetDomain(existing.scope, normalized.scope) &&
+        existing.targetId === normalized.targetId
+      ) {
         return { ok: false, conflict: { kind: 'target-owned', lease: cloneLease(existing) } };
       }
-      if (sameWorkload(existing.workload, normalized.workload)) {
+      if (
+        sameOwnershipScope(existing.scope, normalized.scope) &&
+        sameWorkload(existing.workload, normalized.workload)
+      ) {
         return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(existing) } };
       }
     }
@@ -450,7 +456,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       if (
         other.leaseId !== existing.leaseId &&
         FENCED_STATES.has(other.state) &&
-        sameScope(other.scope, existing.scope) &&
+        sameOwnershipScope(other.scope, existing.scope) &&
         sameWorkload(other.workload, workload)
       ) {
         return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(other) } };
@@ -635,7 +641,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     const nowMs = parseTimestamp(input.now, 'now');
     const existing = [...this.leases.values()].find((lease) =>
       FENCED_STATES.has(lease.state) &&
-      sameScope(lease.scope, scope) &&
+      sameOwnershipScope(lease.scope, scope) &&
       sameWorkload(lease.workload, workload));
     if (!existing) return { ok: false, conflict: { kind: 'not-found' } };
     if (existing.state === 'active') {
@@ -651,6 +657,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     const acquired: BrowserTabLease = {
       ...existing,
+      scope,
       revision: existing.revision + 1,
       state: 'active',
       ownerOperationId: operationId,
@@ -801,7 +808,8 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   async listFencedTargetIds(scope: TabLeaseScope): Promise<string[]> {
     const normalizedScope = normalizeScope(scope);
     return [...this.leases.values()]
-      .filter((lease) => FENCED_STATES.has(lease.state) && sameScope(lease.scope, normalizedScope))
+      .filter((lease) =>
+        FENCED_STATES.has(lease.state) && sameTargetDomain(lease.scope, normalizedScope))
       .map((lease) => lease.targetId)
       .sort();
   }
@@ -812,7 +820,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     for (const lease of this.leases.values()) {
       if (
         FENCED_STATES.has(lease.state) &&
-        sameScope(lease.scope, normalizedScope) &&
+        sameOwnershipScope(lease.scope, normalizedScope) &&
         sameWorkload(lease.workload, normalizedWorkload)
       ) {
         return cloneLease(lease);
@@ -1078,19 +1086,22 @@ function normalizeWorkload(workload: TabLeaseWorkload): TabLeaseWorkload {
   }
 }
 
-function sameScope(left: TabLeaseScope, right: TabLeaseScope): boolean {
-  return left.runtimeProfileId === right.runtimeProfileId &&
-    left.managedBrowserProfile === right.managedBrowserProfile &&
+function sameOwnershipScope(left: TabLeaseScope, right: TabLeaseScope): boolean {
+  return left.managedBrowserProfile === right.managedBrowserProfile &&
     left.service === right.service &&
     left.tenantKey === right.tenantKey;
+}
+
+function sameTargetDomain(left: TabLeaseScope, right: TabLeaseScope): boolean {
+  return left.managedBrowserProfile === right.managedBrowserProfile &&
+    left.service === right.service;
 }
 
 function sameControlScope(
   left: BrowserProfileControlScope,
   right: BrowserProfileControlScope,
 ): boolean {
-  return left.runtimeProfileId === right.runtimeProfileId &&
-    left.managedBrowserProfile === right.managedBrowserProfile &&
+  return left.managedBrowserProfile === right.managedBrowserProfile &&
     left.service === right.service;
 }
 

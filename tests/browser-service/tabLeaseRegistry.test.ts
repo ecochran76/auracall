@@ -132,6 +132,70 @@ describe("tabLeaseRegistry (package)", () => {
 		}
 	});
 
+	test("enforces browser and account ownership across AuraCall runtime profiles", async () => {
+		let sequence = 0;
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => `lease-${++sequence}`,
+		});
+		const otherRuntime = { ...scope, runtimeProfileId: "alternate" };
+		const first = await registry.reserve({
+			scope,
+			targetId: "target-a",
+			workload: { kind: "conversation", conversationId: "conversation-a" },
+			operationId: "operation-a",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!first.ok) throw new Error("expected first reservation");
+
+		const duplicateTarget = await registry.reserve({
+			scope: { ...otherRuntime, tenantKey: "tenant-b" },
+			targetId: "target-a",
+			workload: { kind: "conversation", conversationId: "conversation-b" },
+			operationId: "operation-b",
+			now: "2026-09-24T12:00:01.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		expect(duplicateTarget).toMatchObject({
+			ok: false,
+			conflict: { kind: "target-owned" },
+		});
+
+		const duplicateConversation = await registry.reserve({
+			scope: otherRuntime,
+			targetId: "target-b",
+			workload: { kind: "conversation", conversationId: "conversation-a" },
+			operationId: "operation-b",
+			now: "2026-09-24T12:00:01.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		expect(duplicateConversation).toMatchObject({
+			ok: false,
+			conflict: { kind: "workload-owned" },
+		});
+		expect(await registry.listFencedTargetIds(otherRuntime)).toEqual(["target-a"]);
+
+		const idled = await registry.idle({
+			claim: first.value.claim,
+			now: "2026-09-24T12:00:02.000Z",
+			effectState: "settled",
+		});
+		if (!idled.ok) throw new Error("expected idle lease");
+		const reacquired = await registry.acquire({
+			scope: otherRuntime,
+			workload: { kind: "conversation", conversationId: "conversation-a" },
+			operationId: "operation-c",
+			now: "2026-09-24T12:00:03.000Z",
+		});
+		expect(reacquired).toMatchObject({
+			ok: true,
+			value: { lease: { scope: { runtimeProfileId: "alternate" } } },
+		});
+	});
+
 	test("atomically rebinds a reservation to its provider conversation", async () => {
 		let sequence = 0;
 		const registry = createInMemoryBrowserTabLeaseRegistry({
@@ -542,7 +606,7 @@ describe("tabLeaseRegistry (package)", () => {
 		if (!reserved.ok) throw new Error("expected tab lease");
 
 		const blockedControl = await registry.acquireProfileControl({
-			scope,
+			scope: { ...scope, runtimeProfileId: "alternate" },
 			kind: "browser-startup",
 			operationId: "control-operation",
 			now: "2026-09-24T12:00:01.000Z",
@@ -585,7 +649,7 @@ describe("tabLeaseRegistry (package)", () => {
 		if (!control.acquired) return;
 
 		const blockedTab = await registry.reserve({
-			scope,
+			scope: { ...scope, runtimeProfileId: "alternate" },
 			targetId: "target-b",
 			workload: { kind: "conversation", conversationId: "conversation-b" },
 			operationId: "operation-b",
