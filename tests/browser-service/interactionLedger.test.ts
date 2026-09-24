@@ -293,6 +293,8 @@ describe("interactionLedger (package)", () => {
 			"reservation-created",
 			"interaction-started",
 			"interaction-settled",
+			"admission-rejected",
+			"admission-rejected",
 			"reservation-created",
 		]);
 	});
@@ -421,7 +423,9 @@ describe("interactionLedger (package)", () => {
 				"reservation-created",
 				"interaction-started",
 				"interaction-settled",
+				"admission-rejected",
 				"provider-warning-observed",
+				"admission-rejected",
 			]);
 
 			const raceScope = { ...foregroundScope, tenantKey: "account-b" };

@@ -99,6 +99,26 @@ describe("browser tab concurrency runtime", () => {
 				observedAt: "2026-09-24T12:01:00.000Z",
 				cooldownUntil: "2026-09-24T12:12:00.000Z",
 			});
+			await ledger.reserve({
+				scope: {
+					provider: "chatgpt",
+					tenantKey: "tenant-secret",
+					runtimeProfileId: "runtime-1",
+					managedBrowserProfile: "managed-1",
+				},
+				workloadId: "conversation-rejected-secret",
+				operationId: "operation-rejected-secret",
+				interactionClass: "prompt-continuation",
+				mutability: "provider-mutating",
+				startsNewConversation: false,
+				now: "2026-09-24T12:01:30.000Z",
+				reservationTtlMs: 30_000,
+				policy: {
+					maxConcurrentChats: 4,
+					maxConversationStartsPerHour: 120,
+					maxConversationStartsPerDay: 240,
+				},
+			});
 
 			const reserved = await registry.reserve({
 				scope: {
@@ -149,6 +169,11 @@ describe("browser tab concurrency runtime", () => {
 					classifications: { "rate-limit": 1 },
 					maximumCooldownRemainingMs: 600_000,
 				},
+				admissionRejections: {
+					total: 1,
+					latestReason: "provider-warning",
+					reasons: { "provider-warning": 1 },
+				},
 				bindingLifetimes: [
 					{
 						workloadKind: "conversation",
@@ -174,6 +199,8 @@ describe("browser tab concurrency runtime", () => {
 			expect(JSON.stringify(status)).not.toContain("conversation-secret");
 			expect(JSON.stringify(status)).not.toContain("tenant-secret");
 			expect(JSON.stringify(status)).not.toContain("provider warning secret");
+			expect(JSON.stringify(status)).not.toContain("conversation-rejected-secret");
+			expect(JSON.stringify(status)).not.toContain("operation-rejected-secret");
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}

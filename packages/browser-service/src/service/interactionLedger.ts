@@ -78,6 +78,12 @@ export interface ProviderInteractionRecord {
 }
 
 export type ProviderInteractionOutcome = 'succeeded' | 'failed' | 'cancelled';
+export type ProviderInteractionAdmissionRejectionReason =
+  | 'provider-warning'
+  | 'concurrent-limit'
+  | 'minute-interaction-limit'
+  | 'hourly-limit'
+  | 'daily-limit';
 
 export type ProviderInteractionEventType =
   | 'reservation-created'
@@ -88,6 +94,7 @@ export type ProviderInteractionEventType =
   | 'interaction-frozen'
   | 'provider-warning-observed'
   | 'provider-warning-cleared'
+  | 'admission-rejected'
   | 'passive-observed';
 
 export interface ProviderInteractionEvent {
@@ -129,12 +136,7 @@ export type ProviderInteractionAdmission =
   | { allowed: true; reservation: ProviderInteractionRecord }
   | {
       allowed: false;
-      reason:
-        | 'provider-warning'
-        | 'concurrent-limit'
-        | 'minute-interaction-limit'
-        | 'hourly-limit'
-        | 'daily-limit';
+      reason: ProviderInteractionAdmissionRejectionReason;
       warning?: ProviderWarningRecord;
     };
 
@@ -247,7 +249,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     this.expireReservations(nowMs);
     const warning = this.warnings.get(aggregateScopeKey(scope));
     if (warning && isWarningActive(warning, nowMs)) {
-      return { allowed: false, reason: 'provider-warning', warning: cloneWarning(warning) };
+      return this.rejectAdmission(scope, input, 'provider-warning', warning);
     }
 
     const activeConversationWorkloads = new Set(
@@ -270,7 +272,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       maxConcurrent !== null &&
       activeConversationWorkloads.size >= maxConcurrent
     ) {
-      return { allowed: false, reason: 'concurrent-limit' };
+      return this.rejectAdmission(scope, input, 'concurrent-limit');
     }
 
     const minuteInteractionLimit = normalizeLimit(
@@ -281,7 +283,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       minuteInteractionLimit !== null &&
       this.countInteractions(scope, nowMs - 60_000) >= minuteInteractionLimit
     ) {
-      return { allowed: false, reason: 'minute-interaction-limit' };
+      return this.rejectAdmission(scope, input, 'minute-interaction-limit');
     }
 
     if (input.startsNewConversation) {
@@ -293,7 +295,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
         hourlyLimit !== null &&
         this.countConversationStarts(scope, nowMs - 60 * 60_000) >= hourlyLimit
       ) {
-        return { allowed: false, reason: 'hourly-limit' };
+        return this.rejectAdmission(scope, input, 'hourly-limit');
       }
       const dailyLimit = normalizeLimit(
         input.policy.maxConversationStartsPerDay,
@@ -303,7 +305,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
         dailyLimit !== null &&
         this.countConversationStarts(scope, nowMs - 24 * 60 * 60_000) >= dailyLimit
       ) {
-        return { allowed: false, reason: 'daily-limit' };
+        return this.rejectAdmission(scope, input, 'daily-limit');
       }
     }
 
@@ -771,6 +773,33 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       }
     }
     return count;
+  }
+
+  private rejectAdmission(
+    scope: ProviderInteractionScope,
+    input: ReserveProviderInteractionInput,
+    reason: ProviderInteractionAdmissionRejectionReason,
+    warning?: ProviderWarningRecord,
+  ): ProviderInteractionAdmission {
+    this.appendEvent({
+      reservationId: null,
+      scope,
+      workloadId: input.workloadId || null,
+      operationId: input.operationId || null,
+      tabLeaseId: input.tabLeaseId?.trim() || null,
+      interactionClass: input.interactionClass,
+      mutability: input.mutability,
+      startsNewConversation: input.startsNewConversation,
+      type: 'admission-rejected',
+      occurredAt: new Date(parseTimestamp(input.now, 'now')).toISOString(),
+      effectState: 'none',
+      outcome: null,
+      providerWarning: warning?.classification ?? null,
+      reason,
+    });
+    return warning
+      ? { allowed: false, reason, warning: cloneWarning(warning) }
+      : { allowed: false, reason };
   }
 
   private appendEvent(event: Omit<ProviderInteractionEvent, 'eventId'>): ProviderInteractionEvent {

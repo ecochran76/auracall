@@ -2,6 +2,7 @@ import path from "node:path";
 
 import {
 	createFileBackedProviderInteractionLedger,
+	type ProviderInteractionAdmissionRejectionReason,
 	type ProviderInteractionLedger,
 } from "../../packages/browser-service/src/service/interactionLedger.js";
 import {
@@ -30,6 +31,11 @@ export interface BrowserTabConcurrencyStatus {
 		cooldown: number;
 		classifications: Record<string, number>;
 		maximumCooldownRemainingMs: number;
+	};
+	admissionRejections: {
+		total: number;
+		latestReason: ProviderInteractionAdmissionRejectionReason | null;
+		reasons: Partial<Record<ProviderInteractionAdmissionRejectionReason, number>>;
 	};
 	leaseStates: {
 		active: number;
@@ -118,6 +124,7 @@ export function createBrowserTabConcurrencyRuntime(
 			const fencedLeases = leases.filter((lease) =>
 				["active", "idle", "retiring", "lost"].includes(lease.state),
 			);
+			const rejectionEvents = events.filter((event) => event.type === "admission-rejected");
 			return {
 				mode,
 				enabled: true,
@@ -146,6 +153,19 @@ export function createBrowserTabConcurrencyRuntime(
 								: Math.max(maximum, Date.parse(warning.cooldownUntil) - nowMs),
 						0,
 					),
+				},
+				admissionRejections: {
+					total: rejectionEvents.length,
+					latestReason:
+						(rejectionEvents.at(-1)
+							?.reason as ProviderInteractionAdmissionRejectionReason | null) ?? null,
+					reasons: rejectionEvents.reduce<
+						Partial<Record<ProviderInteractionAdmissionRejectionReason, number>>
+					>((counts, event) => {
+						const reason = event.reason as ProviderInteractionAdmissionRejectionReason;
+						counts[reason] = (counts[reason] ?? 0) + 1;
+						return counts;
+					}, {}),
 				},
 				leaseStates: {
 					active: leases.filter((lease) => lease.state === "active").length,
@@ -233,6 +253,7 @@ function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStat
 			classifications: {},
 			maximumCooldownRemainingMs: 0,
 		},
+		admissionRejections: { total: 0, latestReason: null, reasons: {} },
 		leaseStates: { active: 0, idle: 0, retiring: 0, released: 0, lost: 0 },
 		workloads: { conversations: 0, newConversations: 0, liveFollow: 0, ephemeral: 0 },
 		attention: { expiredIdle: 0, outcomeUnknown: 0, restartUnverified: 0 },
