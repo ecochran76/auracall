@@ -22893,3 +22893,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Release the fence only when the exact target is proven absent. A live target,
   route mismatch, or unavailable endpoint remains fenced because provider
   effect settlement cannot be reconstructed safely.
+## 2026-09-24 | Bind specialized DevTools clients before adapter construction
+
+- Wrapping a CLI operation in a lease is insufficient if its adapter later
+  calls generic `connectDevTools()`. Create a scoped browser facade whose
+  identity reads and DevTools connections carry the immutable leased host,
+  port, and target ID.
+- Close the adapter and CDP client inside the utility callback, before the
+  coordinator idles the lease. Closing afterward leaves a window in which a
+  reacquired tab still has an earlier operation attached.
+- Treat unleased live provider tabs as census evidence only. Report aggregate
+  attention without adoption, navigation, focus, refresh, or close authority.

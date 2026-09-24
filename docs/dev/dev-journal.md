@@ -50298,3 +50298,33 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Seventy-eight focused LLM tests and 21 lifecycle/status tests pass with
   typecheck, production build, scoped formatting, and diff hygiene. No live
   browser/provider effect ran.
+## 2026-09-24 | Plan 0359 specialized adapters and target census
+
+- ChatGPT Skill and Developer App CLI operations now acquire the service-owned
+  utility lease, consume its aggregate governor, and pass fixed host, port, and
+  target ID into every DevTools attachment. Their CDP clients close before the
+  lease becomes idle.
+- Exact DevTools attachment bypasses generic target resolution and rejects
+  partial exact-target authority. Developer App prompt submission remains on
+  the separate conversation-affinity execution path.
+- Periodic maintenance now counts live, fenced, and unleased ChatGPT page
+  targets and logs only aggregates. Unleased targets are never adopted or
+  mutated.
+- One hundred twenty-three focused adapter/service tests and four maintenance
+  tests pass with typecheck and scoped formatting. No live effect ran.
+
+## 2026-09-24 | Plan 0359 provider-free completion audit
+
+- The full non-live suite passes: 354 test files and 3,269 tests; 65 opt-in/live
+  tests remain skipped. Production build and lint pass, with the existing 207
+  warnings and 13 infos unchanged.
+- The Packet 1-6 audit found direct deterministic coverage for exact lease
+  uniqueness, conversation rebinding/reuse, crawler isolation, generic-target
+  exclusion, lifecycle extension/retirement, aggregate limits, warning
+  precedence, restart fencing, exact management adapters, and observation-only
+  unleased-target census.
+- The plan-library audit keeps Plan 0359 and reports only the 32 pre-existing
+  missing duplicate policy targets referenced by `AGENTS.md`.
+- Provider-free work is accepted. Packet 7 remains unrun because installation,
+  browser/provider interaction, exact account/profile selection, and live
+  acceptance were not authorized; serialized compatibility remains default.

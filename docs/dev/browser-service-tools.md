@@ -173,9 +173,14 @@ clone, instruction updates, and public project-UI substeps use the same target.
 Nested operations reuse an already exact target, and affinity-owned scoped sessions keep the aggregate ledger governor
 through transfers. A failed provider mutation is outcome-unknown and that idle
 lease cannot be reacquired. Affinity-owned provider mutations explicitly disable
-retry; serialized callers retain their established behavior. Specialized
-management paths outside the LLM service remain under audit. Do not treat
+retry; serialized callers retain their established behavior. Do not treat
 configured mode or registry files as installed/live acceptance evidence.
+
+ChatGPT Skill and Developer App operations also use the utility coordinator.
+Their scoped browser clients attach only with the leased host, port, and target
+ID, consume the aggregate interaction governor, and close before the lease is
+idled. Developer App prompt submission continues through the separate
+conversation-affinity executor rather than turning the utility tab into a chat.
 
 Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
 reconciles expired idle leases for that exact runtime/account/managed browser
@@ -194,6 +199,9 @@ marks dead, replaced, or legacy active owners `restart-unverified`; it releases
 that fence only after proving the exact target absent. Live or mismatched
 targets remain fenced. Status exposes content-free per-binding age and
 idle/absolute time remaining, plus a restart-unverified attention count.
+The same maintenance pass reports aggregate live, fenced, and unleased ChatGPT
+page-target counts. Unleased targets are preserved as observation-only evidence;
+the census grants no authority to adopt, navigate, focus, refresh, or close them.
 
 ## ChatGPT composer-mode boundary
 

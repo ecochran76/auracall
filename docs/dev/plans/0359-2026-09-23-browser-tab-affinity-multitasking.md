@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 23
+Plan version: 25
 
 ## Stable Objective
 
@@ -80,8 +80,8 @@ provider-neutral.
   or new-conversation lease, requires its exact DevTools endpoint, fixes the
   provider call to the leased target with retained/no-navigation semantics,
   and rejects crawler leases, operation-owner drift, and mismatched provider
-  target or conversation readback. The seam is not yet constructed by a
-  production caller.
+  target or conversation readback. Explicit `tab-affinity` production callers
+  now construct this seam; serialized mode remains the default rollback path.
 - A provider-neutral live-follow traversal seam now accepts only the active
   crawler lease for the exact completion operation, walks conversation IDs
   sequentially on that one target, and checks cancellation before every next
@@ -153,18 +153,21 @@ provider-neutral.
   execute once on that exact tab and refresh their cache without reacquiring
   the lease. Project create/rename/clone/instruction operations and their public
   project-UI substeps now use the same exact utility ownership and zero-retry
-  provider-mutation marker. Remaining specialized adapters outside the LLM
-  service require a caller audit.
-- Account Mirror live follow already has one active-operation contract,
-  provider-work serialization, cadence controls, abortable pause, interaction
-  governors, rate-limit warning detection, persistent cooldown, and hard-stop
-  behavior. Its provider-wide lease currently prevents safe per-tab
-  coexistence and its crawler does not own a durable dedicated tab.
-- ChatGPT tenant defaults already limit execution to four concurrent chats,
-  120 chat starts per hour, and 240 chat starts per day. The current gate derives
-  usage from stored execution leases and `step-started` events; batch limits,
-  live-follow pacing, materialization, direct CLI work, media work, and
-  provider-warning guards remain separate evidence/control surfaces.
+  provider-mutation marker. ChatGPT Skill and Developer App adapters now enter
+  the utility coordinator, attach DevTools only by the exact leased endpoint and
+  target, consume the aggregate governor, and close before the lease idles.
+  Developer App prompt submission retains the separate conversation-affinity
+  execution path.
+- Account Mirror live follow retains its one-active-operation, cadence,
+  cancellation, warning, cooldown, and hard-stop contracts while explicit
+  ChatGPT affinity gives each completion operation one exact durable crawler
+  lease. Foreground and crawler work share the aggregate ledger and per-minute
+  governor; serialized mode remains unchanged.
+- ChatGPT tenant defaults remain four concurrent chats, 120 chat starts per
+  hour, and 240 chat starts per day. Explicit affinity admits foreground,
+  crawler, materialization, direct management, and provider CRUD interactions
+  through the shared ledger/governor surfaces without weakening narrower batch
+  or legacy guards.
 - Earlier isolated-tab and retained-session work proves the lower-level CDP
   primitives exist. This plan changes their ownership model rather than
   replacing those primitives.
@@ -1115,3 +1118,63 @@ Checkpoint 2026-09-24, project mutation and restart ownership:
 - `review_status`: maintenance never launches an absent browser; a stale active
   lease is released only after exact target absence proof, while a live or
   mismatched target remains fenced for operator-visible reconciliation
+
+Checkpoint 2026-09-24, specialized adapters and unleased-target census:
+
+- `plan_version`: 24
+- `state_transition`: OPEN -> OPEN; the remaining known direct ChatGPT
+  management adapters now use exact utility ownership, and maintenance reports
+  unleased live ChatGPT targets without touching them
+- `acceptance_state`: partial provider-free acceptance; 123 focused Skill,
+  Developer App, exact DevTools, utility, and ChatGPT service tests plus four
+  maintenance tests pass with typecheck, scoped formatting, and diff hygiene;
+  no live effect ran
+- `progress_classification`: forward progress
+- `evidence`: commit `ffccd431575394e3380639fa93081cc462d8ec32`
+  adds a provider-neutral utility-operation seam, exact-target DevTools
+  attachment, and Skill/Developer App wrappers that consume the shared governor
+  and close before lease settlement; commit
+  `9b9f6f05c20a412f14808e9e42c375096432eebd` classifies aggregate live,
+  fenced, and unleased ChatGPT targets and emits content-free operator attention
+  without adopting, navigating, focusing, refreshing, or closing them
+- `material_blockers`: installed/live acceptance and merge to canonical `main`
+  remain separately gated; the provider-free completion audit and broad
+  regression suite remain to be completed
+- `next_action_or_stop_reason`: execute the plan-wide provider-free regression
+  matrix and requirement-by-requirement audit, repair any failures, then stop at
+  the installed/live authority boundary
+- `delegation_status`: no new workers
+- `review_status`: direct ChatGPT adapter search found and migrated Skills and
+  Developer Apps; exact DevTools attachment rejects partial endpoint authority,
+  and unleased targets remain observation-only
+
+Checkpoint 2026-09-24, provider-free completion audit:
+
+- `plan_version`: 25
+- `state_transition`: OPEN -> OPEN; Packets 1 through 6 are provider-free
+  complete, while Packet 7 and canonical-main integration remain open
+- `acceptance_state`: provider-free accepted; the complete non-live suite passes
+  with 354 files and 3,269 tests, 65 explicitly opt-in/live tests are skipped,
+  production build and lint pass, and diff hygiene is clean
+- `progress_classification`: forward progress
+- `evidence`: lease-registry, conflict, ledger, ChatGPT executor/runtime,
+  configured live-follow, retirement/restart, maintenance, status, LLM-service,
+  Skill, and Developer App suites cover the Packet 1-6 terminal conditions;
+  commits `ffccd431575394e3380639fa93081cc462d8ec32` and
+  `9b9f6f05c20a412f14808e9e42c375096432eebd` close the last identified direct
+  adapter and unleased-target gaps
+- `material_blockers`: Packet 7 requires separately authorized installation,
+  exact account/profile selection, browser/provider interaction, and live
+  acceptance; compatibility serialization therefore remains the default
+- `validation_notes`: repository lint exits zero with the existing 207 warnings
+  and 13 infos; the plan-library audit retains Plan 0359 as KEEP but exits one
+  solely for 32 pre-existing nonexistent duplicate policy references in
+  `AGENTS.md` (`0035` through `0066`)
+- `next_action_or_stop_reason`: stop at the live-authority boundary; after exact
+  authority is granted, execute Packet 7 in its stated bounded order, integrate
+  the receipt, then merge to canonical `main`
+- `delegation_status`: no new workers
+- `review_status`: every provider-free acceptance criterion has direct source
+  and deterministic-suite evidence; installed/live coexistence, runtime byte
+  parity, real provider warning absence, and attributable final browser state
+  remain deliberately unclaimed
