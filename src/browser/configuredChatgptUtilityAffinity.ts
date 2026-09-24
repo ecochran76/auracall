@@ -175,6 +175,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 				...options,
 				interactionGovernor: governor,
 				preserveInteractionGovernorForProviderSession: true,
+				disableProviderMutationRetry: input.mutability === "provider-mutating",
 			}),
 		};
 	} catch (error) {

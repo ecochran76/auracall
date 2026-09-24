@@ -60,7 +60,10 @@ describe("configured ChatGPT utility affinity", () => {
 		expect(openTarget).toHaveBeenCalledOnce();
 		expect(run).toHaveBeenCalledTimes(2);
 		expect(run).toHaveBeenCalledWith(
-			expect.objectContaining({ preserveInteractionGovernorForProviderSession: true }),
+			expect.objectContaining({
+				disableProviderMutationRetry: false,
+				preserveInteractionGovernorForProviderSession: true,
+			}),
 		);
 		expect(await registry.list()).toEqual([
 			expect.objectContaining({
@@ -109,6 +112,9 @@ describe("configured ChatGPT utility affinity", () => {
 		).rejects.toThrow("connection lost after click");
 
 		expect(run).toHaveBeenCalledOnce();
+		expect(run).toHaveBeenCalledWith(
+			expect.objectContaining({ disableProviderMutationRetry: true }),
+		);
 		expect((await registry.list())[0]).toMatchObject({
 			state: "idle",
 			effectState: "outcome-unknown",

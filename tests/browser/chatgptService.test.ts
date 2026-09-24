@@ -25,6 +25,8 @@ const providerRunPrompt = vi.hoisted(() =>
 );
 const providerListProjectFiles = vi.hoisted(() => vi.fn(async () => []));
 const providerUploadProjectFiles = vi.hoisted(() => vi.fn(async () => undefined));
+const providerRenameProject = vi.hoisted(() => vi.fn(async () => undefined));
+const providerValidateProjectUrl = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("../../src/browser/providers/index.js", async (importOriginal) => {
 	const original = await importOriginal<typeof import("../../src/browser/providers/index.js")>();
@@ -38,6 +40,8 @@ vi.mock("../../src/browser/providers/index.js", async (importOriginal) => {
 						runPrompt: providerRunPrompt,
 						listProjectFiles: providerListProjectFiles,
 						uploadProjectFiles: providerUploadProjectFiles,
+						renameProject: providerRenameProject,
+						validateProjectUrl: providerValidateProjectUrl,
 					}
 				: provider;
 		},
@@ -54,6 +58,10 @@ afterEach(async () => {
 	providerListProjectFiles.mockClear();
 	providerUploadProjectFiles.mockReset();
 	providerUploadProjectFiles.mockResolvedValue(undefined);
+	providerRenameProject.mockReset();
+	providerRenameProject.mockResolvedValue(undefined);
+	providerValidateProjectUrl.mockReset();
+	providerValidateProjectUrl.mockResolvedValue(undefined);
 	clearBrowserOperationQueueObservationsForTest();
 	vi.restoreAllMocks();
 	setAuracallHomeDirOverrideForTest(null);
@@ -256,6 +264,43 @@ describe("ChatGPT llm service", () => {
 		);
 		expect(providerUploadProjectFiles).toHaveBeenCalledOnce();
 		expect(providerListProjectFiles).not.toHaveBeenCalled();
+	});
+
+	it("does not retry an uncertain ChatGPT project rename inside utility affinity", async () => {
+		stubBrowserServiceTarget();
+		providerRenameProject.mockRejectedValue(new Error("connection lost after rename"));
+		const runUtilityOperation = vi.fn(
+			async (input: {
+				run: (options: {
+					host: string;
+					port: number;
+					tabTargetId: string;
+					disableProviderMutationRetry: boolean;
+				}) => Promise<unknown>;
+			}) =>
+				input.run({
+					host: "127.0.0.1",
+					port: 45011,
+					tabTargetId: "utility-tab-1",
+					disableProviderMutationRetry: true,
+				}),
+		);
+		const { ChatgptService } = await import(
+			"../../src/browser/llmService/providers/chatgptService.js"
+		);
+		const service = ChatgptService.create(
+			{
+				browser: { target: "chatgpt", tabConcurrencyMode: "tab-affinity" },
+			} as ResolvedUserConfig,
+			{ runUtilityOperation: runUtilityOperation as never },
+		);
+
+		await expect(service.renameProject("project-1", "Renamed")).rejects.toThrow(
+			"connection lost after rename",
+		);
+		expect(runUtilityOperation).toHaveBeenCalledOnce();
+		expect(providerValidateProjectUrl).toHaveBeenCalledOnce();
+		expect(providerRenameProject).toHaveBeenCalledOnce();
 	});
 
 	it("passes ChatGPT image capability intent to the provider adapter", async () => {

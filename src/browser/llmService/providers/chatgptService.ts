@@ -215,6 +215,199 @@ export class ChatgptService extends LlmService {
 		return (await this.getProviderSessionProof(options)).observation;
 	}
 
+	override renameProject(
+		projectId: string,
+		newTitle: string,
+		options?: Parameters<LlmService["renameProject"]>[2],
+	): ReturnType<LlmService["renameProject"]> {
+		if (!this.usesUtilityAffinity()) return super.renameProject(projectId, newTitle, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.renameProject(projectId, newTitle, { ...options, listOptions }),
+		);
+	}
+
+	override cloneProject(
+		projectId: string,
+		options?: Parameters<LlmService["cloneProject"]>[1],
+	): ReturnType<LlmService["cloneProject"]> {
+		if (!this.usesUtilityAffinity()) return super.cloneProject(projectId, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.cloneProject(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override createProject(
+		input: Parameters<LlmService["createProject"]>[0],
+		options?: Parameters<LlmService["createProject"]>[1],
+	): ReturnType<LlmService["createProject"]> {
+		if (!this.usesUtilityAffinity()) return super.createProject(input, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.createProject(input, { ...options, listOptions }),
+		);
+	}
+
+	override updateProjectInstructions(
+		projectId: string,
+		instructions: string,
+		options?: Parameters<LlmService["updateProjectInstructions"]>[2],
+	): ReturnType<LlmService["updateProjectInstructions"]> {
+		if (!this.usesUtilityAffinity()) {
+			return super.updateProjectInstructions(projectId, instructions, options);
+		}
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.updateProjectInstructions(projectId, instructions, { ...options, listOptions }),
+		);
+	}
+
+	override getProjectInstructions(
+		projectId: string,
+		options?: Parameters<LlmService["getProjectInstructions"]>[1],
+	): ReturnType<LlmService["getProjectInstructions"]> {
+		if (!this.usesUtilityAffinity()) return super.getProjectInstructions(projectId, options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.getProjectInstructions(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override ensureValidProjectUrl(
+		projectId: string,
+		options?: Parameters<LlmService["ensureValidProjectUrl"]>[1],
+	): ReturnType<LlmService["ensureValidProjectUrl"]> {
+		if (!this.usesUtilityAffinity()) return super.ensureValidProjectUrl(projectId, options);
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.ensureValidProjectUrl(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override ensureValidConversationUrl(
+		conversationId: string,
+		options?: Parameters<LlmService["ensureValidConversationUrl"]>[1],
+	): ReturnType<LlmService["ensureValidConversationUrl"]> {
+		if (!this.usesUtilityAffinity()) {
+			return super.ensureValidConversationUrl(conversationId, options);
+		}
+		return this.runWithUtilityAffinity(options?.listOptions, (listOptions) =>
+			super.ensureValidConversationUrl(conversationId, { ...options, listOptions }),
+		);
+	}
+
+	override openProjectMenu(
+		projectId: string,
+		options?: Parameters<LlmService["openProjectMenu"]>[1],
+	): ReturnType<LlmService["openProjectMenu"]> {
+		if (!this.usesUtilityAffinity()) return super.openProjectMenu(projectId, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.openProjectMenu(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override selectRenameProjectItem(
+		projectId: string,
+		options?: Parameters<LlmService["selectRenameProjectItem"]>[1],
+	): ReturnType<LlmService["selectRenameProjectItem"]> {
+		if (!this.usesUtilityAffinity()) return super.selectRenameProjectItem(projectId, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.selectRenameProjectItem(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override selectCloneProjectItem(
+		projectId: string,
+		options?: Parameters<LlmService["selectCloneProjectItem"]>[1],
+	): ReturnType<LlmService["selectCloneProjectItem"]> {
+		if (!this.usesUtilityAffinity()) return super.selectCloneProjectItem(projectId, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.selectCloneProjectItem(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override selectRemoveProjectItem(
+		projectId: string,
+		options?: Parameters<LlmService["selectRemoveProjectItem"]>[1],
+	): ReturnType<LlmService["selectRemoveProjectItem"]> {
+		if (!this.usesUtilityAffinity()) return super.selectRemoveProjectItem(projectId, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.selectRemoveProjectItem(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override pushProjectRemoveConfirmation(
+		projectId: string,
+		options?: Parameters<LlmService["pushProjectRemoveConfirmation"]>[1],
+	): ReturnType<LlmService["pushProjectRemoveConfirmation"]> {
+		if (!this.usesUtilityAffinity()) {
+			return super.pushProjectRemoveConfirmation(projectId, options);
+		}
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.pushProjectRemoveConfirmation(projectId, { ...options, listOptions }),
+		);
+	}
+
+	override openCreateProjectModal(
+		options?: Parameters<LlmService["openCreateProjectModal"]>[0],
+	): ReturnType<LlmService["openCreateProjectModal"]> {
+		if (!this.usesUtilityAffinity()) return super.openCreateProjectModal(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.openCreateProjectModal({ ...options, listOptions }),
+		);
+	}
+
+	override setCreateProjectFields(
+		fields: Parameters<LlmService["setCreateProjectFields"]>[0],
+		options?: Parameters<LlmService["setCreateProjectFields"]>[1],
+	): ReturnType<LlmService["setCreateProjectFields"]> {
+		if (!this.usesUtilityAffinity()) return super.setCreateProjectFields(fields, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.setCreateProjectFields(fields, { ...options, listOptions }),
+		);
+	}
+
+	override clickCreateProjectNext(
+		options?: Parameters<LlmService["clickCreateProjectNext"]>[0],
+	): ReturnType<LlmService["clickCreateProjectNext"]> {
+		if (!this.usesUtilityAffinity()) return super.clickCreateProjectNext(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.clickCreateProjectNext({ ...options, listOptions }),
+		);
+	}
+
+	override clickCreateProjectAttach(
+		options?: Parameters<LlmService["clickCreateProjectAttach"]>[0],
+	): ReturnType<LlmService["clickCreateProjectAttach"]> {
+		if (!this.usesUtilityAffinity()) return super.clickCreateProjectAttach(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.clickCreateProjectAttach({ ...options, listOptions }),
+		);
+	}
+
+	override clickCreateProjectUploadFile(
+		options?: Parameters<LlmService["clickCreateProjectUploadFile"]>[0],
+	): ReturnType<LlmService["clickCreateProjectUploadFile"]> {
+		if (!this.usesUtilityAffinity()) return super.clickCreateProjectUploadFile(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.clickCreateProjectUploadFile({ ...options, listOptions }),
+		);
+	}
+
+	override uploadCreateProjectFiles(
+		paths: string[],
+		options?: Parameters<LlmService["uploadCreateProjectFiles"]>[1],
+	): ReturnType<LlmService["uploadCreateProjectFiles"]> {
+		if (!this.usesUtilityAffinity()) return super.uploadCreateProjectFiles(paths, options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.uploadCreateProjectFiles(paths, { ...options, listOptions }),
+		);
+	}
+
+	override clickCreateProjectConfirm(
+		options?: Parameters<LlmService["clickCreateProjectConfirm"]>[0],
+	): ReturnType<LlmService["clickCreateProjectConfirm"]> {
+		if (!this.usesUtilityAffinity()) return super.clickCreateProjectConfirm(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.clickCreateProjectConfirm({ ...options, listOptions }),
+		);
+	}
+
 	override listProjectFiles(
 		projectId: string,
 		options?: Parameters<LlmService["listProjectFiles"]>[1],
