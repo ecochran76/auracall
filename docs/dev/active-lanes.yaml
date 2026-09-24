@@ -1018,7 +1018,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 68bdc87400c2d0484b5006c1e6deff34603c6e48
+    checkpoint: c93ac5eb8c40bd7bcd4c2179cf4f29ec58ab66b7
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1028,6 +1028,6 @@ lanes:
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
     validation_status: packet-1-action-lifecycle-packet-2-control-persistence-and-packet-3-durable-admission-tracers-passed
-    validation_ref: 68bdc87400c2d0484b5006c1e6deff34603c6e48
+    validation_ref: c93ac5eb8c40bd7bcd4c2179cf4f29ec58ab66b7
     disposition: Provider-free exact-target lifecycle and action accounting, atomic profile-control hierarchy, lease persistence, and durable warning-first admission tracers pass while every production caller remains serialized; no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24
