@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 29
+Plan version: 30
 
 ## Stable Objective
 
@@ -1274,3 +1274,24 @@ Checkpoint 2026-09-24, rollback attribution:
 - `review_status`: target-missing remains `already-missing`, route mismatch
   remains `identity-conflict`, and post-reservation rollback now has distinct
   attributable evidence
+
+Checkpoint 2026-09-24, shared-browser census deduplication:
+
+- `plan_version`: 30
+- `state_transition`: OPEN -> OPEN; maintenance observability now follows the
+  physical browser ownership domain across runtime profiles
+- `acceptance_state`: provider-free accepted; multiple AuraCall runtime
+  profiles mapped to one DevTools endpoint no longer multiply live, fenced, or
+  unleased ChatGPT target counts
+- `progress_classification`: forward progress
+- `evidence`: commit `f7c98d2f4872cbd38466575e868406880d8fe546`
+  deduplicates each successful target census by managed browser and exact
+  endpoint while retaining per-runtime lease retirement/restart reconciliation
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: nine selected maintenance/API tests pass (218 unrelated
+  cases excluded by test name), with typecheck, scoped Biome, and diff hygiene
+- `next_action_or_stop_reason`: continue bounded provider-free observability
+  and failure-path audit; preserve the live gate
+- `delegation_status`: no new workers
+- `review_status`: a failed census is not memoized, allowing another mapped
+  runtime profile to retry observation without granting mutation authority

@@ -50380,3 +50380,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   close counter. Proven-absent targets retain `already-missing` semantics.
 - Twenty-eight focused lifecycle/status tests and typecheck pass. No live effect
   ran.
+
+## 2026-09-24 | Shared-browser census deduplication
+
+- Periodic maintenance correctly reconciled leases per attributed runtime, but
+  also counted the same physical ChatGPT endpoint once per runtime profile.
+  Aggregate live/fenced/unleased target status could therefore be inflated.
+- Successful target census is now deduplicated by managed browser plus exact
+  DevTools host/port. Retirement and restart reconciliation remain per-runtime,
+  and a failed census remains retryable through another mapped profile.
+- Nine selected maintenance/API tests and typecheck pass. No browser/provider
+  effect ran.

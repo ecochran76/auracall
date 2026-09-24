@@ -22947,3 +22947,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   Release the lost lease as `closed` and increment only its exact close count.
 - Keep `already-missing` for independently proven absence so operator status
   can distinguish cleanup effects from observations.
+
+## 2026-09-24 | Count a shared physical browser endpoint once
+
+- AuraCall runtime profiles may share one managed browser and DevTools
+  endpoint. Runtime profiles remain useful lease-attribution contexts, but they
+  are not separate physical target censuses.
+- Deduplicate successful census observations by managed browser and exact
+  endpoint before aggregating live, fenced, and unleased counts.
+- Do not memoize a failed census; allow another mapped runtime profile to retry
+  the read-only observation.
