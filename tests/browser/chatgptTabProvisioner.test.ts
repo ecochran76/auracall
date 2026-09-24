@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 import {
+	type BrowserTabLeaseRegistry,
 	createInMemoryBrowserTabLeaseRegistry,
 	type TabLeaseScope,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
@@ -262,5 +263,50 @@ describe("ChatGPT tab provisioner", () => {
 			port: 45011,
 			targetId: "target-1",
 		});
+	});
+
+	test("closes and releases its created target when creation accounting fails", async () => {
+		const baseRegistry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-1",
+		});
+		const registry = new Proxy(baseRegistry, {
+			get(target, property, receiver) {
+				if (property === "recordTargetAction") {
+					return async () => ({
+						ok: false as const,
+						conflict: { kind: "invalid-transition" as const, lease: (await target.list())[0] },
+					});
+				}
+				const value = Reflect.get(target, property, receiver) as unknown;
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		}) as BrowserTabLeaseRegistry;
+		const closeTarget = vi.fn(async () => undefined);
+		const provision = createChatgptTabProvisioner({
+			registry,
+			scope,
+			workload: { kind: "new-conversation", reservationId: "reservation-new" },
+			operationId: "operation-new",
+			targetUrl: "https://chatgpt.com/",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			now: () => new Date("2026-09-24T12:00:01.000Z"),
+			resolveExistingEndpoint: async () => ({
+				host: "127.0.0.1",
+				port: 45011,
+				managedBrowserProfile: scope.managedBrowserProfile,
+			}),
+			startBrowser: vi.fn(),
+			openTarget: async () => ({ targetId: "target-new", url: "https://chatgpt.com/" }),
+			closeTarget,
+		});
+
+		await expect(provision({ interactionReservationId: "interaction-1" })).rejects.toThrow(
+			"target creation accounting failed",
+		);
+		expect(closeTarget).toHaveBeenCalledOnce();
+		expect(await baseRegistry.list()).toEqual([
+			expect.objectContaining({ state: "released", finalDisposition: "already-missing" }),
+		]);
 	});
 });

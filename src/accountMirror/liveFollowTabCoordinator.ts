@@ -169,7 +169,46 @@ async function acquireDedicatedBrowserTab(
 		idleTtlMs: input.idleTtlMs,
 	});
 	if (!created.ok) {
-		throw new Error(`Live-follow crawler creation accounting failed: ${created.conflict.kind}.`);
+		const accountingError = new Error(
+			`Live-follow crawler creation accounting failed: ${created.conflict.kind}.`,
+		);
+		const lost = await input.registry.markLost({
+			leaseId: reserved.value.lease.leaseId,
+			expectedRevision: reserved.value.lease.revision,
+			now: now().toISOString(),
+			reason: "identity-conflict",
+		});
+		if (!lost.ok) {
+			throw new AggregateError(
+				[accountingError, new Error(`Crawler rollback fence failed: ${lost.conflict.kind}.`)],
+				"Live-follow crawler accounting and rollback fencing both failed.",
+			);
+		}
+		try {
+			await input.closeTarget({
+				host: endpoint.host,
+				port: endpoint.port,
+				targetId: target.targetId,
+			});
+		} catch (closeError) {
+			throw new AggregateError(
+				[accountingError, closeError],
+				"Live-follow crawler accounting failed and its lost target could not be closed.",
+			);
+		}
+		const released = await input.registry.releaseLost({
+			leaseId: lost.value.leaseId,
+			expectedRevision: lost.value.revision,
+			now: now().toISOString(),
+			disposition: "already-missing",
+		});
+		if (!released.ok) {
+			throw new AggregateError(
+				[accountingError, new Error(`Crawler rollback release failed: ${released.conflict.kind}.`)],
+				"Live-follow crawler accounting failed and its closed lease could not be released.",
+			);
+		}
+		throw accountingError;
 	}
 	return { ...created.value, endpoint };
 }

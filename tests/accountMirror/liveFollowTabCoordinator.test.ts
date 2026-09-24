@@ -1,6 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import {
+	type BrowserTabLeaseRegistry,
+	createInMemoryBrowserTabLeaseRegistry,
+} from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import {
 	acquireEphemeralBrowserTab,
 	acquireLiveFollowCrawlerTab,
@@ -86,5 +89,53 @@ describe("live-follow crawler tab coordinator", () => {
 			targetId: "utility-tab",
 			workload: { kind: "ephemeral", operationId: "utility-1" },
 		});
+	});
+
+	test("closes and releases a new crawler when creation accounting fails", async () => {
+		const baseRegistry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-crawler",
+		});
+		const registry = new Proxy(baseRegistry, {
+			get(target, property, receiver) {
+				if (property === "recordTargetAction") {
+					return async () => ({
+						ok: false as const,
+						conflict: { kind: "invalid-transition" as const, lease: (await target.list())[0] },
+					});
+				}
+				const value = Reflect.get(target, property, receiver) as unknown;
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		}) as BrowserTabLeaseRegistry;
+		const closeTarget = vi.fn(async () => undefined);
+
+		await expect(
+			acquireLiveFollowCrawlerTab({
+				registry,
+				scope,
+				operationId: "completion-1",
+				targetUrl: "https://chatgpt.com/",
+				idleTtlMs: 60_000,
+				absoluteTtlMs: 3_600_000,
+				now: () => new Date("2026-09-24T12:00:00.000Z"),
+				resolveExistingEndpoint: async () => ({
+					host: "127.0.0.1",
+					port: 45011,
+					managedBrowserProfile: scope.managedBrowserProfile,
+				}),
+				startBrowser: vi.fn(),
+				inspectTarget: vi.fn(),
+				openTarget: vi.fn(async () => ({
+					targetId: "crawler-1",
+					url: "https://chatgpt.com/",
+				})),
+				closeTarget,
+			}),
+		).rejects.toThrow("crawler creation accounting failed");
+
+		expect(closeTarget).toHaveBeenCalledOnce();
+		expect(await baseRegistry.list()).toEqual([
+			expect.objectContaining({ state: "released", finalDisposition: "already-missing" }),
+		]);
 	});
 });

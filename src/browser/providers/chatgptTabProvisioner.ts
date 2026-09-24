@@ -119,8 +119,12 @@ export function createChatgptTabProvisioner(input: {
 			occurredAt: now().toISOString(),
 			idleTtlMs: input.idleTtlMs,
 		});
-		if (!created.ok)
-			throw new Error(`ChatGPT target creation accounting failed: ${created.conflict.kind}.`);
+		if (!created.ok) {
+			const accountingError = new Error(
+				`ChatGPT target creation accounting failed: ${created.conflict.kind}.`,
+			);
+			return rollbackCreatedTarget(input, endpoint, reserved.value.lease, accountingError, now);
+		}
 		lease = created.value.lease;
 		claim = created.value.claim;
 
@@ -132,7 +136,10 @@ export function createChatgptTabProvisioner(input: {
 				idleTtlMs: input.idleTtlMs,
 			});
 			if (!navigated.ok) {
-				throw new Error(`ChatGPT target navigation accounting failed: ${navigated.conflict.kind}.`);
+				const accountingError = new Error(
+					`ChatGPT target navigation accounting failed: ${navigated.conflict.kind}.`,
+				);
+				return rollbackCreatedTarget(input, endpoint, lease, accountingError, now);
 			}
 			lease = navigated.value.lease;
 			claim = navigated.value.claim;
@@ -144,6 +151,48 @@ export function createChatgptTabProvisioner(input: {
 			endpoint: { host: endpoint.host, port: endpoint.port },
 		};
 	};
+}
+
+async function rollbackCreatedTarget(
+	input: Parameters<typeof createChatgptTabProvisioner>[0],
+	endpoint: ChatgptManagedBrowserEndpoint,
+	lease: BrowserTabLease,
+	accountingError: Error,
+	now: () => Date,
+): Promise<never> {
+	const lost = await input.registry.markLost({
+		leaseId: lease.leaseId,
+		expectedRevision: lease.revision,
+		now: now().toISOString(),
+		reason: "identity-conflict",
+	});
+	if (!lost.ok) {
+		throw new AggregateError(
+			[accountingError, new Error(`Created-target fence failed: ${lost.conflict.kind}.`)],
+			"ChatGPT target accounting and rollback fencing both failed.",
+		);
+	}
+	try {
+		await input.closeTarget({ host: endpoint.host, port: endpoint.port, targetId: lease.targetId });
+	} catch (closeError) {
+		throw new AggregateError(
+			[accountingError, closeError],
+			"ChatGPT target accounting failed and its lost target could not be closed.",
+		);
+	}
+	const released = await input.registry.releaseLost({
+		leaseId: lost.value.leaseId,
+		expectedRevision: lost.value.revision,
+		now: now().toISOString(),
+		disposition: "already-missing",
+	});
+	if (!released.ok) {
+		throw new AggregateError(
+			[accountingError, new Error(`Created-target release failed: ${released.conflict.kind}.`)],
+			"ChatGPT target accounting failed and its closed lease could not be released.",
+		);
+	}
+	throw accountingError;
 }
 
 async function acquireVerifiedExistingLease(
