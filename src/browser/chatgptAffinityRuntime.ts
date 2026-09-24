@@ -11,6 +11,7 @@ import {
 	executeProvisionedChatgptConversation,
 	type ProviderWarningClassifier,
 } from "./chatgptAffinityExecutor.js";
+import { retireExpiredChatgptTabLeases } from "./chatgptTabRetirement.js";
 import type { PromptInput, PromptResult } from "./llmService/types.js";
 import { resolveChatgptConversationUrl } from "./providers/chatgptAdapter.js";
 import type { ChatgptLeasedPromptRunner } from "./providers/chatgptTabAffinity.js";
@@ -110,6 +111,19 @@ export async function runChatgptPromptWithConfiguredAffinity(input: {
 			managedBrowserProfile,
 		};
 	};
+	if (input.inspectTarget) {
+		await retireExpiredChatgptTabLeases({
+			registry: input.runtime.registry,
+			scope,
+			endpoint: toEndpoint(initialTarget),
+			now: input.now,
+			inspectTarget: (endpoint, targetId) =>
+				input.inspectTarget?.({ ...endpoint, managedBrowserProfile }, targetId) ??
+				Promise.resolve(null),
+			closeTarget: (endpoint, targetId) =>
+				input.closeTarget({ host: endpoint.host, port: endpoint.port, targetId }),
+		});
+	}
 	const provision = createChatgptTabProvisioner({
 		registry: input.runtime.registry,
 		scope,

@@ -10,6 +10,7 @@ import {
 } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 import type { BrowserOperationAcquiredResult } from "../../packages/browser-service/src/service/operationDispatcher.js";
 import { classifyStructuredProviderWarning } from "../browser/chatgptAffinityRuntime.js";
+import { retireExpiredChatgptTabLeases } from "../browser/chatgptTabRetirement.js";
 import { BrowserService } from "../browser/service/browserService.js";
 import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
 import { createBrowserTabConcurrencyRuntime } from "../browser/tabConcurrencyRuntime.js";
@@ -82,6 +83,24 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		service: "chatgpt",
 		tenantKey,
 	};
+	const inspectTarget = async (endpoint: { host: string; port: number }, targetId: string) => {
+		const targets = await listChromeTargets(endpoint.port, endpoint.host);
+		const target = targets.find((candidate) => {
+			const record = candidate as { id?: string; targetId?: string };
+			return (record.targetId ?? record.id) === targetId;
+		}) as { url?: string } | undefined;
+		return typeof target?.url === "string" ? { url: target.url } : null;
+	};
+	const closeTarget = (endpoint: { host: string; port: number }, targetId: string) =>
+		closeRemoteChromeTarget(endpoint.host, endpoint.port, targetId, () => undefined);
+	await retireExpiredChatgptTabLeases({
+		registry: runtime.registry,
+		scope,
+		endpoint: toEndpoint(initialTarget),
+		now: input.now,
+		inspectTarget,
+		closeTarget,
+	});
 	const crawler = await acquireLiveFollowCrawlerTab({
 		registry: runtime.registry,
 		scope,
@@ -102,22 +121,14 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			if (!endpoint) throw new Error("Live-follow browser startup returned no exact endpoint.");
 			return endpoint;
 		},
-		inspectTarget: async (endpoint, targetId) => {
-			const targets = await listChromeTargets(endpoint.port, endpoint.host);
-			const target = targets.find((candidate) => {
-				const record = candidate as { id?: string; targetId?: string };
-				return (record.targetId ?? record.id) === targetId;
-			}) as { url?: string } | undefined;
-			return typeof target?.url === "string" ? { url: target.url } : null;
-		},
+		inspectTarget,
 		openTarget: async ({ host, port, url }) => {
 			const target = await openChromeTarget(port, url, host);
 			const targetId = typeof target === "string" ? target : target.id;
 			if (!targetId) throw new Error("Live-follow target creation returned no target ID.");
 			return { targetId, url };
 		},
-		closeTarget: ({ host, port, targetId }) =>
-			closeRemoteChromeTarget(host, port, targetId, () => undefined),
+		closeTarget: ({ host, port, targetId }) => closeTarget({ host, port }, targetId),
 	});
 	const limits = resolveChatgptTenantLimits(
 		clientConfig as Record<string, unknown>,
