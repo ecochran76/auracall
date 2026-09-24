@@ -87,6 +87,38 @@ describe("browser tab concurrency runtime", () => {
 			expect(registry).not.toBeNull();
 			expect(ledger).not.toBeNull();
 			if (!registry || !ledger) throw new Error("expected coordination stores");
+			const usageReservation = await ledger.reserve({
+				scope: {
+					provider: "chatgpt",
+					tenantKey: "tenant-usage-secret",
+					runtimeProfileId: "runtime-1",
+					managedBrowserProfile: "managed-1",
+				},
+				workloadId: "conversation-usage-secret",
+				operationId: "operation-usage-secret",
+				interactionClass: "conversation-start",
+				mutability: "provider-mutating",
+				startsNewConversation: true,
+				now: "2026-09-24T12:00:30.000Z",
+				reservationTtlMs: 30_000,
+				policy: {
+					maxConcurrentChats: 4,
+					maxConversationStartsPerHour: 120,
+					maxConversationStartsPerDay: 240,
+				},
+			});
+			expect(usageReservation.allowed).toBe(true);
+			if (!usageReservation.allowed) throw new Error("expected usage reservation");
+			await ledger.start({
+				reservationId: usageReservation.reservation.reservationId,
+				startedAt: "2026-09-24T12:00:31.000Z",
+			});
+			await ledger.settle({
+				reservationId: usageReservation.reservation.reservationId,
+				settledAt: "2026-09-24T12:00:32.000Z",
+				effectState: "settled",
+				outcome: "succeeded",
+			});
 			await ledger.recordProviderWarning({
 				scope: {
 					provider: "chatgpt",
@@ -174,6 +206,12 @@ describe("browser tab concurrency runtime", () => {
 					latestReason: "provider-warning",
 					reasons: { "provider-warning": 1 },
 				},
+				aggregateUsage: {
+					activeChats: 0,
+					chatsLastHour: 1,
+					chatsLastDay: 1,
+					interactionsLastMinute: 0,
+				},
 				bindingLifetimes: [
 					{
 						workloadKind: "conversation",
@@ -201,6 +239,8 @@ describe("browser tab concurrency runtime", () => {
 			expect(JSON.stringify(status)).not.toContain("provider warning secret");
 			expect(JSON.stringify(status)).not.toContain("conversation-rejected-secret");
 			expect(JSON.stringify(status)).not.toContain("operation-rejected-secret");
+			expect(JSON.stringify(status)).not.toContain("tenant-usage-secret");
+			expect(JSON.stringify(status)).not.toContain("conversation-usage-secret");
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}

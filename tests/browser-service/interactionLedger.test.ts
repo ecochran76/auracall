@@ -299,6 +299,37 @@ describe("interactionLedger (package)", () => {
 		]);
 	});
 
+	test("summarizes rolling usage across tenant scopes without merging equal workload ids", async () => {
+		let sequence = 0;
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => `aggregate-${++sequence}`,
+		});
+		for (const tenantKey of ["account-a", "account-b"]) {
+			const admission = await ledger.reserve({
+				scope: { ...foregroundScope, tenantKey },
+				workloadId: "same-conversation-id",
+				operationId: `operation-${tenantKey}`,
+				interactionClass: "conversation-start",
+				mutability: "provider-mutating",
+				startsNewConversation: true,
+				now: "2026-09-24T12:00:00.000Z",
+				reservationTtlMs: 300_000,
+				policy: {
+					maxConcurrentChats: 4,
+					maxConversationStartsPerHour: 120,
+					maxConversationStartsPerDay: 240,
+				},
+			});
+			expect(admission.allowed).toBe(true);
+		}
+		expect(await ledger.summarizeAggregateUsage({ now: "2026-09-24T12:00:01.000Z" })).toEqual({
+			activeChats: 2,
+			chatsLastHour: 2,
+			chatsLastDay: 2,
+			interactionsLastMinute: 2,
+		});
+	});
+
 	test("passive observation is audited without consuming an interaction permit", async () => {
 		let sequence = 0;
 		const ledger = createInMemoryProviderInteractionLedger({

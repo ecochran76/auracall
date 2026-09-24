@@ -186,6 +186,7 @@ export interface ProviderInteractionLedger {
     tenantKey: string;
     now: string;
   }): Promise<ProviderInteractionUsageSummary>;
+  summarizeAggregateUsage(input: { now: string }): Promise<ProviderInteractionUsageSummary>;
 }
 
 export interface InMemoryProviderInteractionLedgerOptions {
@@ -692,6 +693,37 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     };
   }
 
+  async summarizeAggregateUsage(input: { now: string }): Promise<ProviderInteractionUsageSummary> {
+    const nowMs = parseTimestamp(input.now, 'now');
+    this.expireReservations(nowMs);
+    const scopes = new Map<string, Pick<ProviderInteractionScope, 'provider' | 'tenantKey'>>();
+    const activeWorkloads = new Set<string>();
+    for (const record of this.records.values()) {
+      const scopeKey = aggregateScopeKey(record.scope);
+      scopes.set(scopeKey, {
+        provider: record.scope.provider,
+        tenantKey: record.scope.tenantKey,
+      });
+      if (record.state === 'reserved' || record.state === 'started') {
+        activeWorkloads.add(`${scopeKey}\0${record.workloadId}`);
+      }
+    }
+    let chatsLastHour = 0;
+    let chatsLastDay = 0;
+    let interactionsLastMinute = 0;
+    for (const scope of scopes.values()) {
+      chatsLastHour += this.countConversationStarts(scope, nowMs - 60 * 60_000);
+      chatsLastDay += this.countConversationStarts(scope, nowMs - 24 * 60 * 60_000);
+      interactionsLastMinute += this.countInteractions(scope, nowMs - 60_000);
+    }
+    return {
+      activeChats: activeWorkloads.size,
+      chatsLastHour,
+      chatsLastDay,
+      interactionsLastMinute,
+    };
+  }
+
   private expireReservations(nowMs: number): void {
     for (const [reservationId, record] of this.records) {
       if (record.state !== 'reserved' || Date.parse(record.reservationExpiresAt) > nowMs) continue;
@@ -870,6 +902,10 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
 
   summarizeUsage(input: Parameters<ProviderInteractionLedger['summarizeUsage']>[0]) {
     return this.write((ledger) => ledger.summarizeUsage(input));
+  }
+
+  summarizeAggregateUsage(input: Parameters<ProviderInteractionLedger['summarizeAggregateUsage']>[0]) {
+    return this.write((ledger) => ledger.summarizeAggregateUsage(input));
   }
 
   private async read<T>(operation: (ledger: InMemoryProviderInteractionLedger) => Promise<T>): Promise<T> {

@@ -37,6 +37,12 @@ export interface BrowserTabConcurrencyStatus {
 		latestReason: ProviderInteractionAdmissionRejectionReason | null;
 		reasons: Partial<Record<ProviderInteractionAdmissionRejectionReason, number>>;
 	};
+	aggregateUsage: {
+		activeChats: number;
+		chatsLastHour: number;
+		chatsLastDay: number;
+		interactionsLastMinute: number;
+	};
 	leaseStates: {
 		active: number;
 		idle: number;
@@ -114,11 +120,12 @@ export function createBrowserTabConcurrencyRuntime(
 		ledger,
 		readStatus: async () => {
 			const now = (options.now ?? (() => new Date()))();
-			const [leases, interactions, events, activeWarnings] = await Promise.all([
+			const [leases, interactions, events, activeWarnings, aggregateUsage] = await Promise.all([
 				registry.list(),
 				ledger.list(),
 				ledger.listEvents(),
 				ledger.listActiveProviderWarnings({ now: now.toISOString() }),
+				ledger.summarizeAggregateUsage({ now: now.toISOString() }),
 			]);
 			const nowMs = now.getTime();
 			const fencedLeases = leases.filter((lease) =>
@@ -167,6 +174,7 @@ export function createBrowserTabConcurrencyRuntime(
 						return counts;
 					}, {}),
 				},
+				aggregateUsage,
 				leaseStates: {
 					active: leases.filter((lease) => lease.state === "active").length,
 					idle: leases.filter((lease) => lease.state === "idle").length,
@@ -254,6 +262,12 @@ function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStat
 			maximumCooldownRemainingMs: 0,
 		},
 		admissionRejections: { total: 0, latestReason: null, reasons: {} },
+		aggregateUsage: {
+			activeChats: 0,
+			chatsLastHour: 0,
+			chatsLastDay: 0,
+			interactionsLastMinute: 0,
+		},
 		leaseStates: { active: 0, idle: 0, retiring: 0, released: 0, lost: 0 },
 		workloads: { conversations: 0, newConversations: 0, liveFollow: 0, ephemeral: 0 },
 		attention: { expiredIdle: 0, outcomeUnknown: 0, restartUnverified: 0 },
