@@ -2567,6 +2567,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.toggleProjectSidebar?.(listOptions) as Promise<void>, {
 			action: "toggleProjectSidebar",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2577,6 +2578,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.toggleMainSidebar?.(listOptions) as Promise<void>, {
 			action: "toggleMainSidebar",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2587,6 +2589,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.clickHistoryItem?.(listOptions) as Promise<void>, {
 			action: "clickHistoryItem",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2597,6 +2600,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.clickHistorySeeAll?.(listOptions) as Promise<void>, {
 			action: "clickHistorySeeAll",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2607,6 +2611,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.clickChatArea?.(listOptions) as Promise<void>, {
 			action: "clickChatArea",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 

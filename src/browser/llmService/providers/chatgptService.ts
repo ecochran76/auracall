@@ -408,6 +408,51 @@ export class ChatgptService extends LlmService {
 		);
 	}
 
+	override toggleProjectSidebar(
+		options?: Parameters<LlmService["toggleProjectSidebar"]>[0],
+	): ReturnType<LlmService["toggleProjectSidebar"]> {
+		if (!this.usesUtilityAffinity()) return super.toggleProjectSidebar(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.toggleProjectSidebar({ ...options, listOptions }),
+		);
+	}
+
+	override toggleMainSidebar(
+		options?: Parameters<LlmService["toggleMainSidebar"]>[0],
+	): ReturnType<LlmService["toggleMainSidebar"]> {
+		if (!this.usesUtilityAffinity()) return super.toggleMainSidebar(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.toggleMainSidebar({ ...options, listOptions }),
+		);
+	}
+
+	override clickHistoryItem(
+		options?: Parameters<LlmService["clickHistoryItem"]>[0],
+	): ReturnType<LlmService["clickHistoryItem"]> {
+		if (!this.usesUtilityAffinity()) return super.clickHistoryItem(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.clickHistoryItem({ ...options, listOptions }),
+		);
+	}
+
+	override clickHistorySeeAll(
+		options?: Parameters<LlmService["clickHistorySeeAll"]>[0],
+	): ReturnType<LlmService["clickHistorySeeAll"]> {
+		if (!this.usesUtilityAffinity()) return super.clickHistorySeeAll(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.clickHistorySeeAll({ ...options, listOptions }),
+		);
+	}
+
+	override clickChatArea(
+		options?: Parameters<LlmService["clickChatArea"]>[0],
+	): ReturnType<LlmService["clickChatArea"]> {
+		if (!this.usesUtilityAffinity()) return super.clickChatArea(options);
+		return this.runWithUtilityMutationAffinity(options?.listOptions, (listOptions) =>
+			super.clickChatArea({ ...options, listOptions }),
+		);
+	}
+
 	override listProjectFiles(
 		projectId: string,
 		options?: Parameters<LlmService["listProjectFiles"]>[1],
