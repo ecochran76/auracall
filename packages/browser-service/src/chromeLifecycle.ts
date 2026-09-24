@@ -1292,6 +1292,7 @@ export async function connectToRemoteChrome(
   logger: BrowserLogger,
   targetUrl?: string,
   options: {
+    exactTargetId?: string;
     compatibleHosts?: string[];
     reusePolicy?: ChromeTabReusePolicy;
     serviceTabLimit?: number;
@@ -1309,6 +1310,24 @@ export async function connectToRemoteChrome(
   const disposeRelay = endpoint.dispose;
   if (isWindowsLoopbackRemoteHost(host)) {
     logger(`Routing Windows Chrome loopback ${port} through local relay ${connectHost}:${connectPort}`);
+  }
+
+  const exactTargetId = options.exactTargetId?.trim();
+  if (exactTargetId) {
+    try {
+      const client = await CDP({ host: connectHost, port: connectPort, target: exactTargetId });
+      logger(`Connected to exact remote Chrome target ${exactTargetId}`);
+      return {
+        client,
+        targetId: exactTargetId,
+        host: connectHost,
+        port: connectPort,
+        dispose: disposeRelay,
+      };
+    } catch (error) {
+      await disposeRelay?.().catch(() => undefined);
+      throw error;
+    }
   }
 
   if (targetUrl) {

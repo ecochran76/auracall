@@ -3391,6 +3391,14 @@ async function runRemoteBrowserMode(
 		);
 	}
 	const { host, port } = remoteChromeConfig;
+	if (
+		options.tabAffinity &&
+		(options.tabAffinity.host !== host || options.tabAffinity.port !== port)
+	) {
+		throw new Error(
+			"Exact tab affinity endpoint does not match the configured remote Chrome endpoint.",
+		);
+	}
 	await enforceChatgptBrowserRateLimitGuard(config, logger, config.manualLoginProfileDir ?? null);
 	logger(`Connecting to remote Chrome at ${host}:${port}`);
 
@@ -3471,6 +3479,7 @@ async function runRemoteBrowserMode(
 
 	try {
 		const connection = await connectToRemoteChrome(host, port, logger, config.url, {
+			exactTargetId: options.tabAffinity?.targetId,
 			compatibleHosts: resolveCompatibleHostsForUrl(config.url),
 			serviceTabLimit: config.serviceTabLimit ?? undefined,
 			blankTabLimit: config.blankTabLimit ?? undefined,
