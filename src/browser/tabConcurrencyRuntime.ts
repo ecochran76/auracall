@@ -40,6 +40,7 @@ export interface BrowserTabConcurrencyStatus {
 	attention: {
 		expiredIdle: number;
 		outcomeUnknown: number;
+		restartUnverified: number;
 	};
 	bindingLifetimes: Array<{
 		workloadKind: BrowserTabLease["workload"]["kind"];
@@ -143,6 +144,9 @@ export function createBrowserTabConcurrencyRuntime(
 								nowMs >= Date.parse(lease.absoluteExpiresAt)),
 					).length,
 					outcomeUnknown: leases.filter((lease) => lease.effectState === "outcome-unknown").length,
+					restartUnverified: leases.filter(
+						(lease) => lease.state === "lost" && lease.lossReason === "restart-unverified",
+					).length,
 				},
 				bindingLifetimes: fencedLeases
 					.map((lease) => ({
@@ -199,7 +203,7 @@ function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStat
 		providerWarningEventCount: 0,
 		leaseStates: { active: 0, idle: 0, retiring: 0, released: 0, lost: 0 },
 		workloads: { conversations: 0, newConversations: 0, liveFollow: 0, ephemeral: 0 },
-		attention: { expiredIdle: 0, outcomeUnknown: 0 },
+		attention: { expiredIdle: 0, outcomeUnknown: 0, restartUnverified: 0 },
 		bindingLifetimes: [],
 		targetActions: emptyActionCounts(),
 		retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },

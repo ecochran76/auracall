@@ -2,11 +2,18 @@ import {
 	closeRemoteChromeTarget,
 	listChromeTargets,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
-import type { BrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import {
+	type BrowserTabLeaseRegistry,
+	getCurrentTabLeaseOwnerIdentity,
+} from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import { reconcileStaleActiveTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
 import { getCurrentRuntimeProfiles } from "../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
-import { retireExpiredChatgptTabLeases } from "./chatgptTabRetirement.js";
+import {
+	chatgptTargetMatchesLease,
+	retireExpiredChatgptTabLeases,
+} from "./chatgptTabRetirement.js";
 import { BrowserService } from "./service/browserService.js";
 import { resolveRuntimeProfileUserConfig } from "./service/profileConfig.js";
 import { createBrowserTabConcurrencyRuntime } from "./tabConcurrencyRuntime.js";
@@ -18,6 +25,10 @@ export interface ConfiguredChatgptTabMaintenanceSummary {
 	closedCount: number;
 	alreadyMissingCount: number;
 	preservedCount: number;
+	restartLostCount: number;
+	restartMissingReleasedCount: number;
+	restartPreservedCount: number;
+	restartIdentityMismatchCount: number;
 	errors: Array<{ runtimeProfileId: string; message: string }>;
 }
 
@@ -41,6 +52,8 @@ export interface ConfiguredChatgptTabMaintenanceDeps {
 	createBrowserService?: (config: ResolvedUserConfig) => MaintenanceBrowserService;
 	listTargets?: typeof listChromeTargets;
 	closeTarget?: typeof closeRemoteChromeTarget;
+	currentOwner?: { processId: number; instanceId: string };
+	isOwnerAlive?: (processId: number) => boolean;
 }
 
 export async function runConfiguredChatgptTabMaintenance(input: {
@@ -56,6 +69,10 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 		closedCount: 0,
 		alreadyMissingCount: 0,
 		preservedCount: 0,
+		restartLostCount: 0,
+		restartMissingReleasedCount: 0,
+		restartPreservedCount: 0,
+		restartIdentityMismatchCount: 0,
 		errors: [],
 	};
 	const deps = input.deps ?? {};
@@ -114,14 +131,54 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 					: null;
 			const listTargets = deps.listTargets ?? listChromeTargets;
 			const closeTarget = deps.closeTarget ?? closeRemoteChromeTarget;
+			const scope = {
+				runtimeProfileId,
+				managedBrowserProfile,
+				service: "chatgpt",
+				tenantKey,
+			};
+			const staleActive = await reconcileStaleActiveTabLeases({
+				registry: runtime.registry,
+				scope,
+				now: input.now,
+				currentOwner: deps.currentOwner ?? getCurrentTabLeaseOwnerIdentity(),
+				isOwnerAlive: deps.isOwnerAlive,
+			});
+			for (const stale of staleActive) {
+				if (stale.disposition !== "lost" || stale.lostRevision === undefined) continue;
+				summary.restartLostCount += 1;
+				if (!endpoint) {
+					summary.deferredScopeCount += 1;
+					continue;
+				}
+				const targetMatch = await listTargets(endpoint.port, endpoint.host);
+				const target = targetMatch.find((candidate) => {
+					const record = candidate as { id?: string; targetId?: string };
+					return (record.targetId ?? record.id) === stale.targetId;
+				}) as { url?: string } | undefined;
+				if (!target) {
+					const released = await runtime.registry.releaseLost({
+						leaseId: stale.leaseId,
+						expectedRevision: stale.lostRevision,
+						now: (input.now ?? (() => new Date()))().toISOString(),
+						disposition: "already-missing",
+					});
+					if (released.ok) summary.restartMissingReleasedCount += 1;
+					else summary.deferredScopeCount += 1;
+					continue;
+				}
+				const lostLease = (await runtime.registry.list({ states: ["lost"] })).find(
+					(lease) => lease.leaseId === stale.leaseId,
+				);
+				if (!lostLease || !chatgptTargetMatchesLease(lostLease, { url: target.url ?? "" })) {
+					summary.restartIdentityMismatchCount += 1;
+					continue;
+				}
+				summary.restartPreservedCount += 1;
+			}
 			const outcomes = await retireExpiredChatgptTabLeases({
 				registry: runtime.registry,
-				scope: {
-					runtimeProfileId,
-					managedBrowserProfile,
-					service: "chatgpt",
-					tenantKey,
-				},
+				scope,
 				endpoint,
 				now: input.now,
 				inspectTarget: async (resolvedEndpoint, targetId) => {

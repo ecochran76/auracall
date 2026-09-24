@@ -71,6 +71,8 @@ export interface BrowserTabLease {
   workload: TabLeaseWorkload;
   state: TabLeaseState;
   ownerOperationId: string | null;
+  ownerProcessId?: number | null;
+  ownerInstanceId?: string | null;
   effectState: TabLeaseEffectState;
   acquiredAt: string;
   heartbeatAt: string;
@@ -224,6 +226,7 @@ export interface BrowserTabLeaseRegistry {
 export interface InMemoryBrowserTabLeaseRegistryOptions {
   createLeaseId?: () => string;
   createControlId?: () => string;
+  ownerIdentity?: { processId: number; instanceId: string };
 }
 
 export interface FileBackedBrowserTabLeaseRegistryOptions extends InMemoryBrowserTabLeaseRegistryOptions {
@@ -234,6 +237,15 @@ export interface FileBackedBrowserTabLeaseRegistryOptions extends InMemoryBrowse
 }
 
 const FENCED_STATES = new Set<TabLeaseState>(['active', 'idle', 'retiring', 'lost']);
+
+const CURRENT_TAB_LEASE_OWNER_INSTANCE_ID = crypto.randomUUID();
+
+export function getCurrentTabLeaseOwnerIdentity(): {
+  processId: number;
+  instanceId: string;
+} {
+  return { processId: process.pid, instanceId: CURRENT_TAB_LEASE_OWNER_INSTANCE_ID };
+}
 
 interface TabLeaseRegistrySnapshot {
   leases: BrowserTabLease[];
@@ -257,6 +269,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   private readonly controls = new Map<string, BrowserProfileControlRecord>();
   private readonly createLeaseId: () => string;
   private readonly createControlId: () => string;
+  private readonly ownerIdentity: { processId: number; instanceId: string };
 
   constructor(
     options: InMemoryBrowserTabLeaseRegistryOptions,
@@ -264,6 +277,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   ) {
     this.createLeaseId = options.createLeaseId ?? (() => crypto.randomUUID());
     this.createControlId = options.createControlId ?? (() => crypto.randomUUID());
+    this.ownerIdentity = options.ownerIdentity ?? getCurrentTabLeaseOwnerIdentity();
     for (const lease of snapshot.leases) this.leases.set(lease.leaseId, cloneLease(lease));
     for (const control of snapshot.controls) {
       this.controls.set(control.controlId, cloneControl(control));
@@ -382,6 +396,8 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       workload: normalized.workload,
       state: 'active',
       ownerOperationId: normalized.operationId,
+      ownerProcessId: this.ownerIdentity.processId,
+      ownerInstanceId: this.ownerIdentity.instanceId,
       effectState: 'none',
       acquiredAt: normalized.now,
       heartbeatAt: normalized.now,
@@ -595,6 +611,8 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       revision: existing.revision + 1,
       state: 'idle',
       ownerOperationId: null,
+      ownerProcessId: null,
+      ownerInstanceId: null,
       heartbeatAt: now,
       effectState: input.effectState,
     };
@@ -636,6 +654,8 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       revision: existing.revision + 1,
       state: 'active',
       ownerOperationId: operationId,
+      ownerProcessId: this.ownerIdentity.processId,
+      ownerInstanceId: this.ownerIdentity.instanceId,
       heartbeatAt: new Date(nowMs).toISOString(),
     };
     this.leases.set(acquired.leaseId, acquired);
@@ -743,6 +763,8 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       revision: existing.revision + 1,
       state: 'lost',
       ownerOperationId: null,
+      ownerProcessId: null,
+      ownerInstanceId: null,
       heartbeatAt: new Date(parseTimestamp(input.now, 'now')).toISOString(),
       lossReason: input.reason,
     };
@@ -830,6 +852,7 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   private readonly lockPath: string;
   private readonly createLeaseId?: () => string;
   private readonly createControlId?: () => string;
+  private readonly ownerIdentity?: { processId: number; instanceId: string };
   private readonly isOwnerAlive: (pid: number) => boolean;
   private readonly lockTimeoutMs: number;
   private readonly lockPollMs: number;
@@ -840,6 +863,7 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     this.lockPath = path.join(this.registryRoot, 'tab-leases.lock');
     this.createLeaseId = options.createLeaseId;
     this.createControlId = options.createControlId;
+    this.ownerIdentity = options.ownerIdentity;
     this.isOwnerAlive = options.isOwnerAlive ?? isProcessAlive;
     this.lockTimeoutMs = normalizePositiveInteger(options.lockTimeoutMs ?? 5_000, 'lockTimeoutMs');
     this.lockPollMs = normalizePositiveInteger(options.lockPollMs ?? 25, 'lockPollMs');
@@ -941,7 +965,11 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       if (!isNodeError(error, 'ENOENT')) throw error;
     }
     return new InMemoryBrowserTabLeaseRegistry(
-      { createLeaseId: this.createLeaseId, createControlId: this.createControlId },
+      {
+        createLeaseId: this.createLeaseId,
+        createControlId: this.createControlId,
+        ownerIdentity: this.ownerIdentity,
+      },
       snapshot,
     );
   }

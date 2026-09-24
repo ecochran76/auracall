@@ -4,6 +4,67 @@ import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-se
 import { runConfiguredChatgptTabMaintenance } from "../../src/browser/configuredChatgptTabMaintenance.js";
 
 describe("configured ChatGPT tab maintenance", () => {
+	test("marks a dead-owner active lease lost and releases it only after target absence proof", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-1",
+			ownerIdentity: { processId: 41, instanceId: "previous-process" },
+		});
+		const reserved = await registry.reserve({
+			scope: {
+				runtimeProfileId: "affinity",
+				managedBrowserProfile: "/managed/affinity/chatgpt",
+				service: "chatgpt",
+				tenantKey: "service-account:chatgpt:account-id=account-1",
+			},
+			targetId: "target-1",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "operation-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			targetFingerprint: "https://chatgpt.com/c/conversation-1",
+		});
+		expect(reserved.ok).toBe(true);
+
+		const summary = await runConfiguredChatgptTabMaintenance({
+			userConfig: {
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				profiles: {
+					affinity: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+				},
+			} as never,
+			now: () => new Date("2026-09-24T12:01:00.000Z"),
+			deps: {
+				createRuntime: () => ({ registry }),
+				createBrowserService: () => ({
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 9222,
+						managedBrowserProfile: "/managed/affinity/chatgpt",
+					}),
+				}),
+				listTargets: vi.fn(async () => []) as never,
+				currentOwner: { processId: 99, instanceId: "current-process" },
+				isOwnerAlive: () => false,
+			},
+		});
+
+		expect(summary).toMatchObject({
+			restartLostCount: 1,
+			restartMissingReleasedCount: 1,
+			restartPreservedCount: 0,
+			errors: [],
+		});
+		expect((await registry.list())[0]).toMatchObject({
+			state: "released",
+			lossReason: "restart-unverified",
+			finalDisposition: "already-missing",
+		});
+	});
+
 	test("visits only explicit affinity profiles without launching a browser", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const reserved = await registry.reserve({

@@ -126,7 +126,7 @@ describe("browser tab concurrency runtime", () => {
 					liveFollow: 0,
 					ephemeral: 0,
 				},
-				attention: { expiredIdle: 1, outcomeUnknown: 1 },
+				attention: { expiredIdle: 1, outcomeUnknown: 1, restartUnverified: 0 },
 				bindingLifetimes: [
 					{
 						workloadKind: "conversation",
