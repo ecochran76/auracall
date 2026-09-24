@@ -22775,3 +22775,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Require provider result readback to name the leased target and bound
   conversation. A successful-looking response on another target is an affinity
   failure, not a result to accept or silently reconcile.
+
+## 2026-09-24 | Make rollback a separate execution branch
+
+- Do not make tab affinity an optional collection of arguments on the existing
+  serialized call. Use a discriminated execution mode so compatibility cannot
+  accidentally consume a partial registry or ledger configuration.
+- Require the affinity branch to receive its exact lease claim, aggregate
+  ledger, policy, endpoint, and registry together. Missing construction data is
+  a type/contract failure, not permission to fall back to generic tab discovery.
+- Record an uncertain provider exception as outcome-unknown on both the tab
+  lease and interaction ledger, and never retry it inside the coordinator.

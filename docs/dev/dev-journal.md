@@ -50118,3 +50118,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   production build pass. Production construction still uses serialized
   compatibility behavior; no browser, provider, scheduler, installation, or
   live effect ran.
+
+## 2026-09-24 | Plan 0359 guarded ChatGPT affinity coordinator
+
+- Added an explicit serialized-versus-tab-affinity execution coordinator. The
+  serialized branch preserves the current runner without registry or aggregate
+  ledger dependencies; the affinity branch requires all new ownership and
+  admission inputs rather than resolving generic browser state.
+- The affinity branch admits and starts exactly once, runs the exact leased
+  target, validates provider target/conversation readback, atomically rebinds a
+  new conversation, idles the lease, and settles aggregate usage. Provider
+  failure is retained as outcome-unknown and is not retried.
+- Sixty-nine focused tests, typecheck, scoped Biome checks, diff hygiene,
+  production build, and an up-to-date CodeGraph census pass. The remaining
+  outer layer must reserve before target creation and attach the eventual lease
+  to that reservation; production callers remain serialized.

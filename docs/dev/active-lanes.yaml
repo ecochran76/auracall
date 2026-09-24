@@ -1018,7 +1018,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: c877d3e24688af0dc7e36f35f952f61a8537b142
+    checkpoint: 1ea3593bef5ba176549f39930ba4620fef155681
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1027,7 +1027,7 @@ lanes:
     reconciled_overlaps: []
     reconciliation_note: P52 begins with provider-free ownership contracts and retains the serialized production path; installed/live/provider work remains separately gated.
     blocker: null
-    validation_status: packet-1-lifecycle-packet-2-control-packet-3-admission-and-packet-4-5-exact-target-fixtures-passed
-    validation_ref: c877d3e24688af0dc7e36f35f952f61a8537b142
-    disposition: Provider-free exact-target lifecycle, durable warning-first admission, ChatGPT conversation affinity, and dedicated sequential crawler fixtures pass while every production caller remains serialized; no installed, browser, provider, scheduler, or live effect is authorized.
+    validation_status: packet-1-lifecycle-packet-2-control-packet-3-admission-packet-4-coordinator-and-packet-5-crawler-fixtures-passed
+    validation_ref: 1ea3593bef5ba176549f39930ba4620fef155681
+    disposition: Provider-free exact-target lifecycle, durable warning-first admission, guarded ChatGPT affinity coordination, and dedicated sequential crawler fixtures pass while every production caller remains serialized; no installed, browser, provider, scheduler, or live effect is authorized.
     updated_at: 2026-09-24

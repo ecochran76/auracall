@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 10
+Plan version: 11
 
 ## Stable Objective
 
@@ -86,6 +86,12 @@ provider-neutral.
   crawler lease for the exact completion operation, walks conversation IDs
   sequentially on that one target, and checks cancellation before every next
   visit. Conversation-owned tabs are rejected before collector work begins.
+- A guarded ChatGPT execution coordinator now makes serialized compatibility
+  and tab-affinity explicit modes. The affinity branch requires the aggregate
+  ledger, exact lease claim, registry, endpoint, policy, and provider runner;
+  it admits and starts once, executes once, validates provider readback,
+  rebinds new conversations, idles the exact lease, and settles success or
+  outcome-unknown failure. No current production caller selects this branch.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -717,3 +723,28 @@ Checkpoint 2026-09-24, exact-target provider fixtures:
 - `review_status`: exact endpoint plus target ownership is explicit and
   provider readback fails closed; fixtures do not imply installed or live
   acceptance
+
+Checkpoint 2026-09-24, guarded ChatGPT affinity coordinator:
+
+- `plan_version`: 11
+- `state_transition`: OPEN -> OPEN; Packet 4 inner execution coordinator GREEN,
+  serialized production behavior unchanged
+- `acceptance_state`: partial provider-free acceptance; 69 focused tests,
+  typecheck, scoped Biome checks, diff hygiene, production build, and fresh
+  CodeGraph status pass
+- `progress_classification`: forward progress
+- `evidence`: explicit serialized rollback has no registry/ledger dependency;
+  affinity mode denies on aggregate warning before provider execution, executes
+  one admitted prompt, rebinds and idles a new conversation, settles exact
+  usage, and preserves provider failure as outcome-unknown without retry
+- `material_blockers`: this inner coordinator receives an already-created
+  target lease, so the outer admission-before-target-creation transaction,
+  reservation-to-lease association, warning classification during execution,
+  and production factory wiring remain incomplete
+- `next_action_or_stop_reason`: add a reservation-to-lease association
+  transition to the durable ledger and an outer coordinator that reserves
+  aggregate capacity before target creation; then connect warning
+  classification before any production caller can enable tab affinity
+- `delegation_status`: no new workers
+- `review_status`: compatibility remains the only constructed production path;
+  provider-free coordinator success is not activation authority
