@@ -50133,3 +50133,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   production build, and an up-to-date CodeGraph census pass. The remaining
   outer layer must reserve before target creation and attach the eventual lease
   to that reservation; production callers remain serialized.
+
+## 2026-09-24 | Plan 0359 admission-before-provisioning transaction
+
+- Added a durable one-time interaction-reservation-to-tab-lease binding and
+  append-only event. The outer ChatGPT coordinator now reserves aggregate
+  capacity before it invokes target provisioning and denies warning-blocked
+  work without creating a tab or calling the provider.
+- Added a ChatGPT provisioner with injected provider-free browser effects. It
+  reuses a verified endpoint, or holds profile-control ownership only around
+  absent-browser startup, then creates and immediately leases one exact target.
+  A lease conflict closes only that newly created target.
+- Provider warning classification during execution now freezes the shared
+  tenant/provider ledger before another permit can issue. Seventy-six focused
+  tests, typecheck, scoped Biome checks, diff hygiene, and production build
+  pass; production factories and callers remain on serialized compatibility.

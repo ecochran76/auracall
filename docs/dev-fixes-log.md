@@ -22786,3 +22786,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   a type/contract failure, not permission to fall back to generic tab discovery.
 - Record an uncertain provider exception as outcome-unknown on both the tab
   lease and interaction ledger, and never retry it inside the coordinator.
+
+## 2026-09-24 | Reserve quota before creating a browser target
+
+- Aggregate admission must precede target creation; otherwise denied work can
+  leak unnecessary tabs and create browser effects that were never eligible.
+- Allow a reserved or started ledger record to bind exactly one later-created
+  lease ID. Persist that association as its own event and reject any different
+  second binding.
+- When the browser is absent, hold profile-wide startup control only through
+  endpoint readiness, release it, then create the target. Existing endpoints
+  should not acquire profile control because that would unnecessarily exclude
+  already leased conversation tabs.

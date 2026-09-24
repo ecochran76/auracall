@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 11
+Plan version: 12
 
 ## Stable Objective
 
@@ -92,6 +92,16 @@ provider-neutral.
   it admits and starts once, executes once, validates provider readback,
   rebinds new conversations, idles the exact lease, and settles success or
   outcome-unknown failure. No current production caller selects this branch.
+- The aggregate ledger can now bind one tab lease to a reservation after
+  admission, with a durable `tab-lease-bound` event and fail-closed rejection
+  of a different second binding. The outer ChatGPT coordinator uses that
+  transition to reserve aggregate capacity before target provisioning.
+- A provider-free ChatGPT provisioner now reuses an already verified managed
+  browser endpoint or obtains registry-owned profile startup control only while
+  starting an absent browser. It then creates one exact target, immediately
+  reserves the matching workload lease, records target creation and the one
+  existing-conversation navigation, and closes only that just-created target
+  if reservation conflicts. BrowserService construction does not use it yet.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -748,3 +758,29 @@ Checkpoint 2026-09-24, guarded ChatGPT affinity coordinator:
 - `delegation_status`: no new workers
 - `review_status`: compatibility remains the only constructed production path;
   provider-free coordinator success is not activation authority
+
+Checkpoint 2026-09-24, admission-before-provisioning construction:
+
+- `plan_version`: 12
+- `state_transition`: OPEN -> OPEN; Packet 3 reservation association and
+  Packet 4 outer provisioning transaction GREEN
+- `acceptance_state`: partial provider-free acceptance; 76 focused tests,
+  typecheck, scoped Biome checks, diff hygiene, and production build pass
+- `progress_classification`: forward progress
+- `evidence`: aggregate warning denial invokes neither target provisioning nor
+  provider execution; an allowed reservation is started before target creation,
+  then durably bound to the exact lease; live endpoint reuse avoids profile
+  control, absent-browser startup holds profile control until ready, and a
+  reservation conflict closes only the newly created target
+- `material_blockers`: BrowserAutomationClient/BrowserService factory wiring,
+  runtime configuration and rollback status, exact current-route verification,
+  and Account Mirror adoption remain incomplete
+- `next_action_or_stop_reason`: add a disabled-by-default runtime construction
+  factory using file-backed registry/ledger paths, verified BrowserService
+  endpoint resolution, exact ChatGPT target creation/close, and read-only mode
+  status; do not switch prompt callers until provider-free construction tests
+  prove serialized default and explicit affinity opt-in
+- `delegation_status`: no new workers
+- `review_status`: provider warning classification is required by the outer
+  coordinator and freezes the aggregate ledger before another workload can be
+  admitted; no live/provider authority was exercised
