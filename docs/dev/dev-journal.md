@@ -50342,3 +50342,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   and diff hygiene pass. Two broad reruns encountered unrelated timing flakes
   in rate-limit spacing and HTTP background drain; each exact failure passed in
   isolation. No browser or provider effect ran.
+
+## 2026-09-24 | Cross-runtime tab ownership repair
+
+- Read-only review found that registry conflict checks included AuraCall runtime
+  profile identity. Distinct runtime profiles targeting the same managed browser
+  and account could therefore duplicate a target or conversation lease and
+  generic target exclusion could miss the other runtime's tab.
+- Target uniqueness and generic exclusion now span the managed browser and
+  service. Conversation/workload uniqueness spans managed browser, service, and
+  tenant/account. Profile-wide control likewise spans runtime profiles.
+- A settled idle conversation may be reacquired through another runtime profile
+  for the same browser/account, transferring current runtime attribution rather
+  than creating a competing binding. Twenty-six focused tests and typecheck
+  pass. The reduced-concurrency full suite passes 354 files and 3,271 tests,
+  with 65 opt-in/live tests skipped; build and lint pass. No browser/provider
+  effect ran.

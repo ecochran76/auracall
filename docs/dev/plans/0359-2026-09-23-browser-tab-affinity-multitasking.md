@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 26
+Plan version: 27
 
 ## Stable Objective
 
@@ -1205,3 +1205,28 @@ Checkpoint 2026-09-24, post-effect settlement fencing:
 - `review_status`: utility and live-follow paths already settle their
   ledger-backed governor before idling; only the foreground prompt executor had
   the unsafe ordering
+
+Checkpoint 2026-09-24, cross-runtime ownership domain:
+
+- `plan_version`: 27
+- `state_transition`: OPEN -> OPEN; provider-free acceptance retained with
+  browser/account ownership enforced across AuraCall runtime profiles
+- `acceptance_state`: provider-free accepted; two runtime profiles mapped to
+  one managed browser can no longer lease the same target or independently bind
+  the same account conversation
+- `progress_classification`: forward progress
+- `evidence`: commit `2e656c722d475c67e12fe2987f18e5da1c35389e`
+  makes target exclusion browser/service-wide, conversation uniqueness
+  browser/service/account-wide, and profile control browser/service-wide;
+  safe idle reacquisition transfers runtime attribution to the new owner
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: 26 focused registry, provisioner, runtime, and maintenance
+  tests pass; the reduced-concurrency complete suite passes 354 files and 3,271
+  tests with 65 opt-in/live tests skipped; typecheck, production build, scoped
+  Biome, lint, and diff hygiene pass
+- `next_action_or_stop_reason`: continue provider-free/read-only review, while
+  leaving installation and live acceptance untouched
+- `delegation_status`: no new workers
+- `review_status`: runtime profile is attribution and configuration context,
+  not a namespace that may duplicate physical target or provider-conversation
+  ownership inside one managed browser/account

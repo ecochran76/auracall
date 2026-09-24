@@ -22915,3 +22915,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   reacquisition until exact reconciliation proves retry safety.
 - Keep this ordering distinct from pre-effect provisioning failures, where an
   idle `none` lease remains safe because no prompt was submitted.
+
+## 2026-09-24 | Runtime profiles do not namespace physical tab ownership
+
+- AuraCall runtime profile identity is configuration and attribution context;
+  it must not allow two claims on one physical target in the same managed
+  browser/service.
+- Enforce target ownership and generic-selection fences across runtime profiles.
+  Enforce conversation ownership across runtime profiles for the same managed
+  browser, service, and verified tenant/account.
+- When a different runtime profile safely reacquires an idle settled binding,
+  transfer current runtime attribution on the lease instead of provisioning a
+  competing tab.
