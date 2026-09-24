@@ -6,7 +6,7 @@ Branch: feat/issue-46-browser-tab-affinity
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
-Plan version: 1
+Plan version: 2
 
 ## Stable Objective
 
@@ -31,6 +31,12 @@ provider-neutral.
   in-envelope validation, repair, documentation, commit, push, and pull-request
   workflow. Installation, browser launch, provider interaction, scheduler
   control, and live acceptance remain outside this packet.
+- Packet 1's first vertical tracer is GREEN: a separate provider-neutral
+  in-memory tab-lease registry allows two conversation reservations and one
+  live-follow crawler on distinct exact targets while rejecting duplicate
+  target and workload ownership. A paired fixture preserves evidence that the
+  compatibility dispatcher still serializes those targets by managed browser
+  profile plus service. No production caller uses the registry.
 - Browser prompt execution currently acquires an `exclusive-mutating`
   operation keyed by managed browser profile plus service. Independent ChatGPT
   tab work therefore queues behind the current profile owner and may terminate
@@ -470,6 +476,28 @@ At every material transition record:
 - `delegation_status` only when delegation occurs
 - `review_status` only when review occurs
 
-The next action is to execute Packet 1 provider-free on issue 46 and branch
-`feat/issue-46-browser-tab-affinity`, preserving the serialized production path.
-This implementation authority does not include installed/live/provider effects.
+Checkpoint 2026-09-24:
+
+- `plan_version`: 2
+- `state_transition`: OPEN -> OPEN; Packet 1 first tracer implemented
+- `acceptance_state`: partial provider-free acceptance; 3 focused lease tests,
+  11 compatibility-dispatcher tests, typecheck, and the full 3,185-test
+  provider-free suite pass
+- `progress_classification`: forward progress
+- `evidence`: `tests/browser-service/tabLeaseRegistry.test.ts`,
+  `packages/browser-service/src/service/tabLeaseRegistry.ts`, and the unchanged
+  production dispatcher behavior
+- `material_blockers`: none for the remaining provider-free fixtures
+- `validation_notes`: the plan-library audit retains 32 pre-existing missing
+  policy-target findings outside P52; Plan 0359 itself remains a KEEP candidate
+- `next_action_or_stop_reason`: extend the contract with reservation rebinding,
+  meaningful-use heartbeat, idle/retirement, census exclusion, and restart
+  reconciliation before any production integration
+- `delegation_status`: three read-only workers completed test inventory,
+  contract design, and dispatcher-impact review; no worker changed files
+- `review_status`: primary reconciled all three reviews into a separate registry
+  seam and retained serialized compatibility behavior
+
+The next action remains Packet 1 provider-free on issue 46 and branch
+`feat/issue-46-browser-tab-affinity`. This implementation authority does not
+include installed, browser, provider, scheduler, or live effects.

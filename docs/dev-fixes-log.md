@@ -22728,3 +22728,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Keep read/selection/CRUD support, but reject `skills run` at every exported
   execution boundary before inventory, browser launch, or Send. The rejection
   must say that Work-mode testing is deferred rather than implying Work support.
+
+## 2026-09-24 | Separate profile control locks from exact-tab data leases
+
+- Keep the browser-operation dispatcher as the exclusive managed-browser-profile
+  control plane. Changing its key to include a target would let existing generic
+  selection and cleanup paths bypass profile-wide safety before they understand
+  lease ownership.
+- Model exact-target ownership in a provider-neutral registry with independent
+  uniqueness for target identity and workload identity. This permits distinct
+  tabs to coexist without weakening duplicate-target exclusion.
+- Do not wire the registry into production until rebinding, lifetime,
+  reconciliation, aggregate interaction admission, and provider hard stops are
+  covered by provider-free fixtures.

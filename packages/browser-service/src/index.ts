@@ -11,6 +11,7 @@ export * from './service/portResolution.js';
 export * from './service/browserService.js';
 export * from './service/stateRegistry.js';
 export * from './service/operationDispatcher.js';
+export * from './service/tabLeaseRegistry.js';
 export * from './service/mutationDispatcher.js';
 export * from './service/interactionGovernor.js';
 export * from './service/instanceScanner.js';

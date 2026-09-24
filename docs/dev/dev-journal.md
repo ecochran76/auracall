@@ -49993,3 +49993,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   non-overlapping discovery and test-design scopes.
 - Installation, managed-browser launch, provider interaction, scheduler
   control, and live acceptance remain out of scope.
+
+## 2026-09-24 | Plan 0359 first tab-lease tracer
+
+- Added a provider-neutral in-memory tab-lease registry as a separate data-plane
+  seam; the existing browser-operation dispatcher and every production caller
+  remain unchanged and serialized.
+- The first deterministic tracer proves two conversation reservations and one
+  live-follow crawler can own distinct exact targets concurrently, while
+  duplicate target and workload ownership fail atomically. A paired fixture
+  records that the compatibility dispatcher still blocks distinct targets in
+  the same managed browser profile.
+- Three focused lease tests, eleven dispatcher regressions, repository
+  typecheck, and the full 3,185-test provider-free suite pass. The plan audit
+  retains 32 pre-existing missing-policy findings unrelated to P52. Remaining
+  Packet 1 work covers rebinding, heartbeat/lifetime, census exclusion, restart
+  reconciliation, warning freeze, and action counts.
