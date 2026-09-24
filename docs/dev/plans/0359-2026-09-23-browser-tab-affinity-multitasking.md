@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 28
+Plan version: 29
 
 ## Stable Objective
 
@@ -1252,3 +1252,25 @@ Checkpoint 2026-09-24, provisioning-accounting rollback:
 - `review_status`: reservation failure already closed the unleased newly
   created target; this repair covers the later state where reservation succeeded
   but action accounting did not
+
+Checkpoint 2026-09-24, rollback attribution:
+
+- `plan_version`: 29
+- `state_transition`: OPEN -> OPEN; provisioning rollback evidence now states
+  the actual cause and disposition
+- `acceptance_state`: provider-free accepted; successful rollback closes are
+  included in exact target-action and retirement totals rather than appearing
+  as already-missing identity conflicts
+- `progress_classification`: forward progress
+- `evidence`: commit `52b9198604b2ac1d6dade8a58d9560b3fa5c28b6`
+  adds `provisioning-failed` loss evidence and permits a lost exact target to be
+  released with `closed`, incrementing only that lease's close count
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: 28 focused registry, retirement, provisioner, crawler,
+  and status tests pass with typecheck, scoped Biome, and diff hygiene
+- `next_action_or_stop_reason`: continue bounded provider-free failure-path
+  audit; preserve the live gate
+- `delegation_status`: no new workers
+- `review_status`: target-missing remains `already-missing`, route mismatch
+  remains `identity-conflict`, and post-reservation rollback now has distinct
+  attributable evidence

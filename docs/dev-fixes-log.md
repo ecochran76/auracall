@@ -22938,3 +22938,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   when close or release is uncertain.
 - This rollback authority applies only to the target created by the failing
   provisioning operation, never to a reused or human-owned tab.
+
+## 2026-09-24 | Preserve exact rollback cause and close attribution
+
+- Do not encode action-accounting rollback as an identity conflict: identity
+  was not disproven. Persist a distinct `provisioning-failed` loss reason.
+- Do not encode a target AuraCall successfully closed as `already-missing`.
+  Release the lost lease as `closed` and increment only its exact close count.
+- Keep `already-missing` for independently proven absence so operator status
+  can distinguish cleanup effects from observations.

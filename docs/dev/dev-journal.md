@@ -50369,3 +50369,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   failure preserves the lost fence for reconciliation.
 - Four focused suites pass with 14 tests; typecheck, scoped Biome, and diff
   hygiene pass. No browser/provider effect ran.
+
+## 2026-09-24 | Provisioning rollback attribution
+
+- The first rollback repair reused `identity-conflict` and
+  `already-missing`, obscuring both why the lease was lost and that AuraCall had
+  actually closed the target.
+- Rollback now persists `provisioning-failed`, releases a successfully closed
+  lost target with disposition `closed`, and increments that exact lease's
+  close counter. Proven-absent targets retain `already-missing` semantics.
+- Twenty-eight focused lifecycle/status tests and typecheck pass. No live effect
+  ran.
