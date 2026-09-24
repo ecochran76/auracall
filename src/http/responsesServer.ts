@@ -1147,6 +1147,16 @@ export async function createResponsesHttpServer(
 						`Tab-affinity maintenance deferred for ${error.runtimeProfileId}: ${error.message}`,
 					);
 				}
+				if (summary.unleasedLiveTargetCount > 0) {
+					logger(
+						`Tab-affinity maintenance observed ${summary.unleasedLiveTargetCount} unleased live ChatGPT target(s); they were preserved without adoption or mutation.`,
+					);
+				}
+				if (summary.restartLostCount > 0) {
+					logger(
+						`Tab-affinity maintenance reconciled ${summary.restartLostCount} stale active lease(s): ${summary.restartMissingReleasedCount} target(s) proven missing, ${summary.restartPreservedCount} live target(s) preserved, ${summary.restartIdentityMismatchCount} identity mismatch(es).`,
+					);
+				}
 			}),
 	});
 	const accountMirrorPersistence = createAccountMirrorPersistence({

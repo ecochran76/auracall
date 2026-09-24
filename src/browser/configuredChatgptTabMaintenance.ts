@@ -29,6 +29,10 @@ export interface ConfiguredChatgptTabMaintenanceSummary {
 	restartMissingReleasedCount: number;
 	restartPreservedCount: number;
 	restartIdentityMismatchCount: number;
+	liveChatgptTargetCount: number;
+	fencedLiveTargetCount: number;
+	unleasedLiveTargetCount: number;
+	targetCensusErrorCount: number;
 	errors: Array<{ runtimeProfileId: string; message: string }>;
 }
 
@@ -73,6 +77,10 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 		restartMissingReleasedCount: 0,
 		restartPreservedCount: 0,
 		restartIdentityMismatchCount: 0,
+		liveChatgptTargetCount: 0,
+		fencedLiveTargetCount: 0,
+		unleasedLiveTargetCount: 0,
+		targetCensusErrorCount: 0,
 		errors: [],
 	};
 	const deps = input.deps ?? {};
@@ -197,6 +205,34 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 				if (outcome.disposition === "closed") summary.closedCount += 1;
 				if (outcome.disposition === "already-missing") summary.alreadyMissingCount += 1;
 				if (outcome.disposition === "preserved") summary.preservedCount += 1;
+			}
+			if (endpoint) {
+				try {
+					const [targets, fencedTargetIds] = await Promise.all([
+						listTargets(endpoint.port, endpoint.host),
+						runtime.registry.listFencedTargetIds(scope),
+					]);
+					const fenced = new Set(fencedTargetIds);
+					const chatgptTargets = targets.filter((candidate) => {
+						const record = candidate as { type?: string; url?: string };
+						if (record.type && record.type !== "page") return false;
+						try {
+							return new URL(record.url ?? "").hostname === "chatgpt.com";
+						} catch {
+							return false;
+						}
+					});
+					const fencedLiveCount = chatgptTargets.filter((candidate) => {
+						const record = candidate as { id?: string; targetId?: string };
+						const targetId = record.targetId ?? record.id;
+						return Boolean(targetId && fenced.has(targetId));
+					}).length;
+					summary.liveChatgptTargetCount += chatgptTargets.length;
+					summary.fencedLiveTargetCount += fencedLiveCount;
+					summary.unleasedLiveTargetCount += chatgptTargets.length - fencedLiveCount;
+				} catch {
+					summary.targetCensusErrorCount += 1;
+				}
 			}
 		} catch (error) {
 			summary.errors.push({
