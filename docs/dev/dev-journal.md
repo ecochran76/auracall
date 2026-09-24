@@ -50009,3 +50009,5 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   retains 32 pre-existing missing-policy findings unrelated to P52. Remaining
   Packet 1 work covers rebinding, heartbeat/lifetime, census exclusion, restart
   reconciliation, warning freeze, and action counts.
+- Pushed the checkpoint and opened PR 47 against `main`; issue 46 remains open
+  because this is the first implementation slice, not Plan 0359 completion.

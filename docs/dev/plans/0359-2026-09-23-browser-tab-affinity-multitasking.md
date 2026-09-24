@@ -6,6 +6,7 @@ Branch: feat/issue-46-browser-tab-affinity
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
+Pull request: ecochran76/auracall#47
 Plan version: 2
 
 ## Stable Objective
@@ -496,7 +497,8 @@ Checkpoint 2026-09-24:
 - `delegation_status`: three read-only workers completed test inventory,
   contract design, and dispatcher-impact review; no worker changed files
 - `review_status`: primary reconciled all three reviews into a separate registry
-  seam and retained serialized compatibility behavior
+  seam and retained serialized compatibility behavior; PR 47 is open for
+  review
 
 The next action remains Packet 1 provider-free on issue 46 and branch
 `feat/issue-46-browser-tab-affinity`. This implementation authority does not
