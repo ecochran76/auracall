@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 40
+Plan version: 41
 
 ## Stable Objective
 
@@ -1546,3 +1546,33 @@ Checkpoint 2026-09-24, pre-effect aggregate-accounting repair:
 - `delegation_status`: no new workers
 - `review_status`: only explicit error effect evidence may cancel usage;
   unknown failures remain fenced and settled outcome-unknown
+
+Checkpoint 2026-09-24, current-model picker dismissal repair:
+
+- `plan_version`: 41
+- `state_transition`: OPEN -> OPEN; live concurrency and zero-effect settlement
+  are proven, while completed prompt and live-follow acceptance remain open
+- `acceptance_state`: partial installed/live acceptance plus provider-free repair
+- `progress_classification`: forward progress with a new provider-surface blocker
+- `evidence`: installed source at `7971f177e` passed exact artifact parity and
+  exact `wsl-chrome-3` Pro/personal identity. Two simultaneous operations used
+  distinct exact targets `819AB655BA5824DC1FA7325F7E8AF86B` and
+  `EFDC40B5E356482A693B589DAE36C274`, independently observed `Latest`, and
+  stopped before Send when the read-only picker remained open and blocked
+  composer focus.
+- `material_blockers`: the picker-dismissal repair is provider-free validated
+  but not installed or live-retested. No prompt response, conversation-route
+  binding, or live-follow pass exists.
+- `validation_notes`: both failed interactions settled append-only as
+  `effectState=none`, `outcome=cancelled`; both exact leases are idle with only
+  one target creation and zero navigation, reload, focus, or close actions.
+  The regression requires current-model observation to dismiss the open menu
+  before returning. Its 23 focused tests, typecheck, and production build pass.
+  No warning, CAPTCHA, identity drift, marker submission, or live-follow effect
+  occurred. GitHub Actions remains skipped by operator direction.
+- `next_action_or_stop_reason`: push the provider-free dismissal repair and
+  require fresh bounded live authority before another Send attempt; live follow
+  remains conditional on two completed exact-tab conversations
+- `delegation_status`: no new workers
+- `review_status`: read-only observation may open provider UI, but it must
+  restore a prompt-ready state before the adapter proceeds

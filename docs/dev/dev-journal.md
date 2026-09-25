@@ -50524,3 +50524,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   existing conservative fence.
 - Forty-seven focused tests, typecheck, production build, and diff hygiene pass.
   The repair was not installed and no further provider or live-follow effect ran.
+
+## 2026-09-24 | Plan 0359 current-model picker dismissal
+
+- Exact installed parity and `wsl-chrome-3` identity passed before the bounded
+  two-conversation retry. Both operations ran concurrently on distinct exact
+  targets, observed `Latest`, and stopped before Send because the read-only
+  model picker remained open and blocked composer focus.
+- The live accounting repair behaved as designed: both records settled
+  `effectState=none`, `outcome=cancelled`; both leases are idle and record only
+  target creation, with zero navigation, reload, focus, close, prompt, warning,
+  CAPTCHA, or live-follow effects.
+- Current-model observation now dismisses its provider menu and confirms it is
+  closed before returning to prompt composition. The focused suite passes 23
+  tests with typecheck and production build. The repair is not installed or
+  live-retested; Packet 7 and canonical integration remain open.

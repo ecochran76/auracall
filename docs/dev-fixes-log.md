@@ -23062,3 +23062,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   outcome-unknown fencing whenever effect evidence is absent or ambiguous.
 - Never rewrite historical outcome-unknown records merely because later DOM
   inspection suggests a likely pre-effect failure; append-only evidence wins.
+
+## 2026-09-24 | Read-only model observation must restore composer readiness
+
+- A `current` model strategy may open ChatGPT's picker to read the checked
+  option, but observation is incomplete until that overlay is dismissed.
+- Dismiss the picker and confirm no visible model menu remains before returning
+  to prompt composition. Otherwise the provider menu retains focus and a valid
+  pre-Send request fails even though the model observation itself succeeded.
+- Preserve the failure as confirmed pre-effect evidence; do not submit or run
+  live follow after a prompt-readiness failure.

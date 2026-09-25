@@ -528,6 +528,25 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
     const hasVisibleMenu = () => Array.from(
       document.querySelectorAll(${menuContainerLiteral})
     ).some((menu) => visible(menu));
+    const dismissObservedMenu = async () => {
+      if (!hasVisibleMenu()) return true;
+      const active = document.activeElement;
+      const keyboardTarget = active instanceof HTMLElement ? active : document.body;
+      for (const type of ['keydown', 'keyup']) {
+        keyboardTarget?.dispatchEvent(new KeyboardEvent(type, {
+          key: 'Escape',
+          code: 'Escape',
+          bubbles: true,
+          cancelable: true,
+        }));
+      }
+      await new Promise((resolve) => setTimeout(resolve, INITIAL_WAIT_MS));
+      if (hasVisibleMenu()) {
+        dispatchClickSequence(button);
+        await new Promise((resolve) => setTimeout(resolve, INITIAL_WAIT_MS));
+      }
+      return !hasVisibleMenu();
+    };
     const findNavigationAction = () => {
       const nodes = collectOptionNodes();
       const labelsForNode = (node) => [
@@ -735,6 +754,10 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
         const match = findBestOption();
         if (MODEL_STRATEGY === 'current') {
           if (selected) {
+            if (!(await dismissObservedMenu())) {
+              setTimeout(attempt, REOPEN_INTERVAL_MS / 2);
+              return;
+            }
             resolve({ status: 'already-selected', label: selected.label || getButtonLabel() });
             return;
           }
