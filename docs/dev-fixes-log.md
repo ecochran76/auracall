@@ -1,3 +1,10 @@
+- 2026-09-25: An isolated lifecycle API must set every effectful cadence to an
+  explicit zero even when the CLI help says the cadence defaults disabled;
+  resolved configuration may still supply an interval. For tab-maintenance
+  proof use `--account-mirror-scheduler-interval-ms 0`, background drain zero,
+  startup recovery disabled, and completion reconciliation disabled, then
+  verify the status projection before waiting on TTL.
+
 - 2026-09-25: A routine being selected by a live-follow scheduler does not
   automatically make its refresh a live-follow-affinity operation. Carry a
   stable, content-free operation ID across the scheduler-to-refresh boundary;
