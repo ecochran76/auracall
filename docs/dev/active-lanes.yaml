@@ -1016,18 +1016,18 @@ lanes:
     plan_ref: refs/heads/feat/issue-46-browser-tab-affinity
     branch: feat/issue-46-browser-tab-affinity
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 0f6e98c69
+    plan_state: CLOSED
+    custody_state: READY_TO_INTEGRATE
+    checkpoint: 7e610e84e
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
     dependencies: []
     overlaps: []
     reconciled_overlaps: []
-    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Live attempt 2/10 completed two concurrent exact-tab commands with exact R6 markers, durable route bindings, settled leases, and succeeded aggregate records. The first bounded metadata-only live-follow probe exposed legacy stockpile cleanup closing both newest retained conversation targets; a provider-free dedicated-tab cleanup suppression is validated locally.
-    blocker: The dedicated-tab stockpile-cleanup repair is not installed or live-retested; successful live-follow coexistence and canonical-main acceptance remain open.
-    validation_status: packet-7-conversations-live-accepted-dedicated-tab-cleanup-repaired
-    validation_ref: 0f6e98c69
-    disposition: Exact wsl-chrome-3 identity and installed/source parity passed. Two simultaneous commands returned exact markers on distinct retained route-bound tabs and settled succeeded. An isolated proof server then ran one bounded metadata-only completion; legacy same-origin stockpile cleanup closed the two newest retained tabs before the collector failed its fresh-root composer gate. Forced dedicated ChatGPT tabs now preserve pre-existing targets, with 205 focused tests and typecheck passing. No provider warning or CAPTCHA appeared. GitHub Actions remains skipped by operator direction.
+    reconciliation_note: Packets 1 through 6 are provider-free accepted. Packet 7 proved two simultaneous exact-tab conversations plus one dedicated metadata-only live-follow pass under the shared ledger on exact wsl-chrome-3 Pro/personal identity. Expired exact leases were released after fresh absence and zero-process proof.
+    blocker: Canonical merge of pull request 47 remains.
+    validation_status: installed-live-accepted-ready-to-integrate
+    validation_ref: docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md
+    disposition: Exact installed/source parity passed. Two simultaneous commands returned exact markers on distinct route-bound tabs and settled succeeded. A bounded metadata-only completion then completed one pass on a dedicated crawler target while both conversation targets remained unchanged, using two of six provider-read permits with no warning. All accepted leases recorded one target creation and zero navigation, reload, or focus. At expiry the browser endpoint exited; fresh CDP and OS censuses proved zero remaining exact targets or managed-browser processes, and the three fences were released already-missing. GitHub Actions was skipped by operator direction.
     updated_at: 2026-09-24

@@ -1,13 +1,13 @@
 # Browser tab affinity and provider-safe multitasking | 0359-2026-09-23
 
-State: OPEN
+State: CLOSED
 Lane: P52
 Branch: feat/issue-46-browser-tab-affinity
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 45
+Plan version: 47
 
 ## Stable Objective
 
@@ -32,11 +32,12 @@ provider-neutral.
   and canonical integration on 2026-09-24, while explicitly waiving GitHub
   Actions because the service was unavailable. Local and installed/live gates
   remain mandatory.
-- The current implementation authority is provider-free Packet 1 contract work
-  plus the bounded Packet 2 registry adapter, ordinary in-envelope validation,
-  repair, documentation, commit, push, and pull-request workflow. Installation,
-  browser launch, provider interaction, scheduler control, and live acceptance
-  remain outside this authority.
+- Packets 1 through 6 are provider-free accepted. Packet 7 is installed/live
+  accepted on exact `wsl-chrome-3` Pro/personal identity: two simultaneous
+  route-bound conversations coexisted with one dedicated metadata-only crawler
+  pass under the shared ledger, with no cross-tab navigation, reload, focus,
+  warning, quota drift, or surviving browser ownership. Gemini and Grok remain
+  serialized pending their own acceptance.
 - Packet 1's first vertical tracer is GREEN: a separate provider-neutral
   in-memory tab-lease registry allows two conversation reservations and one
   live-follow crawler on distinct exact targets while rejecting duplicate
@@ -1728,3 +1729,40 @@ Checkpoint 2026-09-24, exact-endpoint provider-session provenance repair:
 - `delegation_status`: no new workers
 - `review_status`: explicit execution coordinates must not discard matching
   read-only browser authority provenance, and mismatches must remain fail-closed
+
+Checkpoint 2026-09-24, Packet 7 terminal installed/live acceptance:
+
+- `plan_version`: 47
+- `state_transition`: OPEN -> CLOSED; the bounded ChatGPT sequence and final
+  ownership reconciliation pass
+- `acceptance_state`: installed/live accepted; ready for canonical integration
+- `progress_classification`: terminal forward progress
+- `evidence`: installed/source SHA-256 parity passed at `7e610e84e`.
+  Completion `acctmirror_completion_71ebcf0e-d56f-45ad-9c66-9018891ba95d`
+  completed one `steady_follow` metadata-only pass with `passCount=1`, exact
+  Pro/personal identity, a clear provider guard, and two active provider reads
+  from a budget of six. Crawler target `B532B653524D70308A6B396CDAA98D17`
+  coexisted with conversation targets `698D59A1D1CA1C1DDD685921B0B1CF7C`
+  and `443F1786E17EBD7CCAE4368EDA7C9664`; their exact routes remained unchanged.
+- `material_blockers`: none
+- `validation_notes`: both R10 conversation ledger records and the crawler-read
+  record are settled/succeeded with no provider warnings. Each accepted lease
+  records one target creation and zero navigation, reload, or focus actions.
+  An expiry-time operator invocation passed the installed close helper in the
+  wrong argument order; it closed nothing and the registry correctly fenced all
+  three expired leases `lost/preserved`. The managed browser endpoint exited
+  before reconciliation. Fresh CDP and OS censuses proved the three targets and
+  managed-browser process absent, after which the exact fences were released
+  `already-missing`; this proves zero orphan ownership but is not claimed as an
+  attributed close. The full local suite reached 3,281 passing tests before
+  three directly affected stale assertions and one timing-sensitive background
+  drain assertion failed. Corrected affected assertions plus the timing test
+  pass 268/268; the focused acceptance packet passes 251 tests, typecheck,
+  production build, scoped Biome, and diff hygiene. GitHub Actions remains
+  skipped by operator direction.
+- `next_action_or_stop_reason`: integrate pull request 47 into canonical `main`,
+  close issue 46, and retain serialized rollback plus provider-specific rollout
+  gates for Gemini and Grok
+- `delegation_status`: no new workers
+- `review_status`: the provider-neutral design is accepted on ChatGPT; this does
+  not authorize affinity rollout to any other provider

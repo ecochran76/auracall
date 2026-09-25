@@ -1,3 +1,25 @@
+## 2026-09-24 | Plan 0359 installed ChatGPT acceptance complete
+
+- Exact source/runtime parity at `7e610e84e` preceded one isolated
+  metadata-only `wsl-chrome-3` completion. It completed one steady-follow pass
+  with two active provider interactions out of six, zero prompt or asset
+  materialization, a clear provider guard, and exact Pro/personal identity.
+- The dedicated crawler target coexisted with both retained R10 conversation
+  targets. All three leases recorded one target creation and zero navigation,
+  reload, or focus actions; both conversation routes remained byte-identical
+  through the completed pass.
+- At expiry, an operator-side maintenance call used the close helper's arguments
+  in the wrong order. It closed nothing and correctly fenced the three leases
+  `lost/preserved`. The managed browser endpoint then exited before
+  reconciliation; a fresh CDP and OS census proved all exact targets and the
+  managed-browser process absent, so the fences were released
+  `already-missing`. This is zero-orphan proof, not an attributed close.
+- The complete local suite reached 3,281 passing tests before three directly
+  affected stale assertions and one background-drain timing test failed. The
+  assertions were corrected; the affected file plus the timing test then pass
+  268/268. Typecheck, production build, scoped formatting, and diff hygiene
+  pass. GitHub Actions was skipped by operator direction.
+
 ## 2026-09-24 | Plan 0359 exact-endpoint provenance retention
 
 - An explicit DevTools host, port, or target remains an execution override, but

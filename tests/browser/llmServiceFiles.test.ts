@@ -2167,7 +2167,7 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
-	test("buildListOptions honors explicit host/port without rediscovering the browser target", async () => {
+	test("buildListOptions honors explicit host/port while resolving provenance read-only", async () => {
 		const browserService = {
 			resolveServiceTarget: vi.fn(async () => ({
 				host: "127.0.0.1",
@@ -2191,7 +2191,9 @@ describe("llmService project file cache writes", () => {
 			configuredUrl: "https://grok.com/c/conversation-123",
 		});
 
-		expect(browserService.resolveServiceTarget).not.toHaveBeenCalled();
+		expect(browserService.resolveServiceTarget).toHaveBeenCalledWith(
+			expect.objectContaining({ serviceId: "grok", ensurePort: false }),
+		);
 		expect(result.host).toBe("127.0.0.1");
 		expect(result.port).toBe(9222);
 		expect(result.configuredUrl).toBe("https://grok.com/c/conversation-123");
@@ -2222,7 +2224,7 @@ describe("llmService project file cache writes", () => {
 		const first = await service.buildListOptions();
 		const second = await service.buildListOptions(first);
 
-		expect(browserService.resolveServiceTarget).toHaveBeenCalledTimes(1);
+		expect(browserService.resolveServiceTarget).toHaveBeenCalledTimes(2);
 		expect(second.providerSessionAuthorization?.context).toMatchObject({
 			providerId: "chatgpt",
 			browserProfile: "wsl-chrome-3",
@@ -2329,7 +2331,7 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
-	test("getConversationContext does not trust provider-session authorization from another service", async () => {
+	test("getConversationContext replaces another service authorization with freshly resolved provenance", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-foreign-provenance-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
 		const browserService = {
@@ -2364,9 +2366,9 @@ describe("llmService project file cache writes", () => {
 					options: BrowserProviderListOptions,
 				) => {
 					expect(options.providerSessionAuthorization?.context).toMatchObject({
-						browserProfile: null,
-						managedBrowserProfile: null,
-						browserProcessId: null,
+						browserProfile: "default",
+						managedBrowserProfile: "/tmp/managed/chatgpt",
+						browserProcessId: 1234,
 						browserTargetId: "foreign-chatgpt-target",
 					});
 					return { provider: "chatgpt", conversationId, messages: [] };
@@ -2386,7 +2388,7 @@ describe("llmService project file cache writes", () => {
 				allowCacheFallback: false,
 			});
 
-			expect(browserService.resolveServiceTarget).toHaveBeenCalledTimes(1);
+			expect(browserService.resolveServiceTarget).toHaveBeenCalledTimes(2);
 			expect(provider.readConversationContext).toHaveBeenCalledTimes(1);
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
