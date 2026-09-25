@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 16
+Plan version: 17
 
 ## Stable Objective
 
@@ -381,6 +381,29 @@ separately authorized live proof.
 Terminal condition: a fixture scheduled pass uses only its crawler lease and
 target, all aggregate interaction records name that routine, and no live proof
 runs until this packet is canonical and installed.
+
+Installed evidence: canonical `02f7a3613` completed scheduler refresh
+`acctmirror_2018493f-c299-4c10-8ac2-b5ed3c4bce00` on `wsl-chrome-3` with exact
+identity match, five settled interactions, one live-follow lease, zero generic
+utility leases, and zero warnings. The lease retired released/settled after
+TTL. A maintenance-only server started without an explicit scheduler interval
+inherited configured cadence and began one unintended second pass before being
+stopped; this added one adoption and two settled reads, but no new target or
+warning. Cleanup also found one proof-launched unleased ChatGPT startup page
+after the leased crawler target disappeared. Packet 5H's binding is accepted,
+but perfect one-tab lifecycle acceptance remains open.
+
+### Packet 5I: Remove the unleased browser-startup page
+
+- Trace the `ensurePort=true` browser startup path that leaves one ChatGPT page
+  outside the crawler lease before `openTarget` creates the leased crawler.
+- Adopt the attributable compatible startup page when safe, or close it with
+  post-close absence proof before reserving a distinct crawler target.
+- Add provider-free coverage proving cold-start live follow yields exactly one
+  ChatGPT page and one crawler lease, with no unleased compatible target.
+
+Terminal condition: cold-start acceptance has one created-or-adopted page,
+one crawler lease, zero unleased ChatGPT pages, and normal TTL retirement.
 
 ### Packet 6: Default enablement or retained rollback
 

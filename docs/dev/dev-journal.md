@@ -1,5 +1,22 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- Installed Packet 5H acceptance completed refresh
+  `acctmirror_2018493f-c299-4c10-8ac2-b5ed3c4bce00` on exact
+  `wsl-chrome-3`/Pro-personal identity. Five interactions all used
+  `account-mirror-scheduler:chatgpt:wsl-chrome-3`; the pass created one
+  live-follow lease, no generic utility lease, and no warning. Four detail
+  conversations completed and remaining surfaces fell from 18 to 14.
+- A lifecycle-only API was mistakenly started without explicitly overriding
+  the configured scheduler interval to zero. It adopted the same crawler and
+  completed two additional settled reads before hard-stop shutdown; it made no
+  new target or warning. The corrected lifecycle server had scheduler, drain,
+  recovery, and completion reconciliation disabled. It fenced the dead owner,
+  then released the settled lease after TTL with `already-missing` proof.
+- Final census exposed one different unleased ChatGPT startup page in the
+  proof-launched browser after the leased crawler target was gone. The exact
+  proof-owned Chrome PID was terminated and ports 45015/18096 were cleared.
+  Packet 5I now owns cold-start page adoption/cleanup; Packet 5H's scheduled
+  crawler binding itself is accepted.
 - Packet 5H traced the extra random utility tab to the scheduler-to-refresh
   request, not to a nested collector call. Periodic scheduler passes omitted
   `liveFollowOperationId`; refresh consequently built no crawler affinity and
