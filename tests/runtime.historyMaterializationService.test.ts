@@ -25,6 +25,7 @@ import {
 	type HistoryMaterializationTarget,
 	type HistoryMediaGenerationMaterializeInput,
 	type HistoryProjectSourcesMaterializeInput,
+	historyMaterializationUtilityAffinityId,
 	matchesHistoryMaterializationSelectedCatalogArtifact,
 	matchesHistoryMaterializationSelectedCatalogFile,
 	resolveHistoryMaterializationProviderListOptions,
@@ -34,6 +35,13 @@ import {
 describe("history materialization service", () => {
 	afterEach(() => {
 		setAuracallHomeDirOverrideForTest(null);
+	});
+
+	it("derives one utility affinity identity for a durable job", () => {
+		expect(historyMaterializationUtilityAffinityId(" hmj_123 ")).toBe(
+			"history-materialization:hmj_123",
+		);
+		expect(historyMaterializationUtilityAffinityId(null)).toBeUndefined();
 	});
 
 	it("classifies an all-failed transfer result as failed rather than skipped", () => {
@@ -2683,9 +2691,9 @@ describe("history materialization service", () => {
 		expect(Object.isFrozen(snapshotRefresh)).toBe(false);
 		expect(Object.isFrozen(completed?.result?.phases)).toBe(false);
 		expect(Object.isFrozen(completed?.result?.attempts?.[0]?.phases)).toBe(true);
-		expect(
-			Object.isFrozen(completed?.result?.attempts?.[0]?.phases.snapshotRefresh?.target),
-		).toBe(true);
+		expect(Object.isFrozen(completed?.result?.attempts?.[0]?.phases.snapshotRefresh?.target)).toBe(
+			true,
+		);
 		expect(completed).toMatchObject({
 			status: "succeeded",
 			result: {
@@ -3487,27 +3495,25 @@ describe("history materialization service", () => {
 			cleanupManagedBrowser: async () => {
 				events.push("cleanup");
 			},
-			materializeConversation: vi.fn(
-				async (target): Promise<HistoryMaterializationResult> => {
-					events.push("provider-work");
-					return {
-						object: "history_materialization_result",
-						generatedAt: "2026-08-22T02:30:01.000Z",
-						status: "materialized",
-						target,
-						source: {
-							type: "conversation",
-							provider: "chatgpt",
-							conversationId: "conv_browser_ownership",
-						},
-						manifestPaths: [],
-						entries: [],
-						archiveItems: [],
-						metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 0 },
-						message: "Provider work completed.",
-					};
-				},
-			),
+			materializeConversation: vi.fn(async (target): Promise<HistoryMaterializationResult> => {
+				events.push("provider-work");
+				return {
+					object: "history_materialization_result",
+					generatedAt: "2026-08-22T02:30:01.000Z",
+					status: "materialized",
+					target,
+					source: {
+						type: "conversation",
+						provider: "chatgpt",
+						conversationId: "conv_browser_ownership",
+					},
+					manifestPaths: [],
+					entries: [],
+					archiveItems: [],
+					metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 0 },
+					message: "Provider work completed.",
+				};
+			}),
 		});
 
 		await expect(service.runJob("hmj_browser_ownership")).resolves.toMatchObject({
@@ -3576,28 +3582,26 @@ describe("history materialization service", () => {
 				cleanupStartedResolve?.();
 				await cleanupFinished;
 			},
-			materializeConversation: vi.fn(
-				async (target): Promise<HistoryMaterializationResult> => {
-					providerStartedResolve?.();
-					await providerFinished;
-					return {
-						object: "history_materialization_result",
-						generatedAt: "2026-08-22T02:31:00.000Z",
-						status: "materialized",
-						target,
-						source: {
-							type: "conversation",
-							provider: "chatgpt",
-							conversationId: "conv_file_fence",
-						},
-						manifestPaths: [],
-						entries: [],
-						archiveItems: [],
-						metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 0 },
-						message: "Provider work completed.",
-					};
-				},
-			),
+			materializeConversation: vi.fn(async (target): Promise<HistoryMaterializationResult> => {
+				providerStartedResolve?.();
+				await providerFinished;
+				return {
+					object: "history_materialization_result",
+					generatedAt: "2026-08-22T02:31:00.000Z",
+					status: "materialized",
+					target,
+					source: {
+						type: "conversation",
+						provider: "chatgpt",
+						conversationId: "conv_file_fence",
+					},
+					manifestPaths: [],
+					entries: [],
+					archiveItems: [],
+					metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 0 },
+					message: "Provider work completed.",
+				};
+			}),
 		});
 		const run = service.runJob("hmj_file_fence");
 		await providerStarted;
@@ -7756,7 +7760,9 @@ describe("history materialization service", () => {
 			},
 		);
 		const refreshConversationSnapshot = vi.fn(
-			async (target: HistoryMaterializationTarget): Promise<HistoryMaterializationSnapshotRefresh> => {
+			async (
+				target: HistoryMaterializationTarget,
+			): Promise<HistoryMaterializationSnapshotRefresh> => {
 				operations.push("refresh");
 				return {
 					object: "history_materialization_snapshot_refresh",
@@ -7875,9 +7881,7 @@ describe("history materialization service", () => {
 			await scheduled();
 			return service.readJob(input.jobId);
 		};
-		const resultFor = (
-			target: HistoryMaterializationTarget,
-		): HistoryMaterializationResult => ({
+		const resultFor = (target: HistoryMaterializationTarget): HistoryMaterializationResult => ({
 			object: "history_materialization_result",
 			generatedAt: "2026-08-15T22:00:01.000Z",
 			status: "skipped",

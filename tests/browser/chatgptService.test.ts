@@ -71,6 +71,33 @@ afterEach(async () => {
 });
 
 describe("ChatGPT llm service", () => {
+	it("reuses an explicit utility affinity identity across service instances", async () => {
+		const runUtilityOperation = vi.fn(async () => []);
+		const { ChatgptService } = await import(
+			"../../src/browser/llmService/providers/chatgptService.js"
+		);
+		const config = {
+			browser: { target: "chatgpt", tabConcurrencyMode: "tab-affinity" },
+		} as ResolvedUserConfig;
+		const options = {
+			runUtilityOperation: runUtilityOperation as never,
+			utilityAffinityId: "history-materialization:hmj-1",
+		};
+
+		await ChatgptService.create(config, options).listProjects();
+		await ChatgptService.create(config, options).listProjects();
+
+		expect(runUtilityOperation).toHaveBeenCalledTimes(2);
+		expect(runUtilityOperation).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({ utilityId: "history-materialization:hmj-1" }),
+		);
+		expect(runUtilityOperation).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({ utilityId: "history-materialization:hmj-1" }),
+		);
+	});
+
 	it("routes ChatGPT CRUD reads through utility affinity when explicitly enabled", async () => {
 		const runUtilityOperation = vi.fn(async () => [
 			{ id: "project-1", name: "Project 1", provider: "chatgpt" as const },

@@ -115,6 +115,13 @@ export interface HistoryMaterializationProviderWorkContext {
 	onProviderSessionProof?: (proof: ProviderSessionProof) => void;
 }
 
+export function historyMaterializationUtilityAffinityId(
+	jobId: string | null | undefined,
+): string | undefined {
+	const normalized = jobId?.trim();
+	return normalized ? `history-materialization:${normalized}` : undefined;
+}
+
 export type HistoryMaterializationSelectedCatalogAsset =
 	| {
 			kind: "file";
@@ -2229,6 +2236,7 @@ async function materializeAccountLibraryFilesTarget(input: {
 			input.request.runtimeProfile,
 		) as ResolvedUserConfig,
 		{
+			utilityAffinityId: historyMaterializationUtilityAffinityId(input.request.jobId),
 			browserProcessOwner: createHistoryMaterializationBrowserProcessOwner({
 				request: {
 					provider: input.request.provider,
@@ -2279,6 +2287,7 @@ async function materializeProjectSourcesTarget(input: {
 			input.request.runtimeProfile,
 		) as ResolvedUserConfig,
 		{
+			utilityAffinityId: historyMaterializationUtilityAffinityId(input.request.jobId),
 			browserProcessOwner: createHistoryMaterializationBrowserProcessOwner({
 				request: {
 					provider: input.request.provider,
@@ -2323,6 +2332,7 @@ async function listAccountLibraryFilesTarget(input: {
 			input.request.runtimeProfile,
 		) as ResolvedUserConfig,
 		{
+			utilityAffinityId: historyMaterializationUtilityAffinityId(input.request.jobId),
 			browserProcessOwner: createHistoryMaterializationBrowserProcessOwner({
 				request: {
 					provider: input.request.provider,
@@ -3810,6 +3820,7 @@ async function refreshConversationSnapshotTarget(input: {
 			input.target.runtimeProfile,
 		) as ResolvedUserConfig,
 		{
+			utilityAffinityId: historyMaterializationUtilityAffinityId(input.jobId),
 			browserProcessOwner: input.request
 				? createHistoryMaterializationBrowserProcessOwner({
 						request: input.request,
@@ -4135,6 +4146,7 @@ async function materializeConversationTarget(input: {
 			input.target.runtimeProfile,
 		) as ResolvedUserConfig,
 		{
+			utilityAffinityId: historyMaterializationUtilityAffinityId(input.jobId),
 			browserProcessOwner: createHistoryMaterializationBrowserProcessOwner({
 				request: input.request,
 				jobId: input.jobId,

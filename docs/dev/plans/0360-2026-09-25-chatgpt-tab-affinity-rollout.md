@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 10
+Plan version: 11
 
 ## Stable Objective
 
@@ -174,6 +174,15 @@ the source packet is safe to integrate.
   remaining. Materialization correctly did not start before detail inventory.
   The completion was paused between passes and explicitly resumed to continue
   gradual catch-up under existing cooldowns.
+- The first materialization job then exposed a separate tab-identity defect:
+  each per-candidate `createLlmService` call generated a new random utility ID,
+  producing successive `chatgpt-service-*` tabs even though all calls belonged
+  to one durable history-materialization job. The managed API was stopped
+  gracefully after the job reached terminal failed; the live-follow completion
+  remains operator-paused. Packet 5D derives one stable utility affinity ID
+  from the durable job ID and passes it through every history-materialization
+  service construction, allowing the existing lease registry to reacquire the
+  same exact tab.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -264,6 +273,20 @@ without target proliferation or retrying the failed uncertain operation.
 Terminal condition: regression coverage proves a failed affinity acquisition
 cannot strand queued state, then the canonical installed runtime permits one
 fresh bounded catch-up without manual cache edits.
+
+### Packet 5D: Durable materialization utility-tab identity
+
+- Permit a caller to supply the ChatGPT utility affinity identity instead of
+  generating one per `ChatgptService` instance.
+- Derive that identity from the durable history-materialization job ID and use
+  it for conversation refresh, materialization, account-library, media, and
+  project-source service construction.
+- Preserve random per-instance identities for unrelated callers that do not
+  supply a durable routine identity.
+
+Terminal condition: provider-free coverage proves repeated service instances
+for one job present one utility identity and the registry reuses one exact tab;
+installed validation shows no additional utility target during a bounded job.
 
 ### Packet 6: Default enablement or retained rollback
 

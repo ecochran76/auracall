@@ -1,29 +1,30 @@
-import type { ResolvedUserConfig } from '../../../config.js';
-import type { IdentityPrompt } from '../types.js';
+import type { ResolvedUserConfig } from "../../../config.js";
+import type { ProviderId } from "../../providers/domain.js";
 import type {
-  BrowserProcessOwnerAttribution,
-  BrowserService,
-} from '../../service/browserService.js';
-import { ChatgptService } from './chatgptService.js';
-import { GeminiService } from './geminiService.js';
-import { GrokService } from './grokService.js';
-import type { ProviderId } from '../../providers/domain.js';
-import type { LlmService } from '../llmService.js';
+	BrowserProcessOwnerAttribution,
+	BrowserService,
+} from "../../service/browserService.js";
+import type { LlmService } from "../llmService.js";
+import type { IdentityPrompt } from "../types.js";
+import { ChatgptService } from "./chatgptService.js";
+import { GeminiService } from "./geminiService.js";
+import { GrokService } from "./grokService.js";
 
 export function createLlmService(
-  providerId: ProviderId,
-  userConfig: ResolvedUserConfig,
-  options?: {
-    identityPrompt?: IdentityPrompt;
-    browserProcessOwner?: BrowserProcessOwnerAttribution;
-    browserService?: BrowserService;
-  },
+	providerId: ProviderId,
+	userConfig: ResolvedUserConfig,
+	options?: {
+		identityPrompt?: IdentityPrompt;
+		browserProcessOwner?: BrowserProcessOwnerAttribution;
+		browserService?: BrowserService;
+		utilityAffinityId?: string;
+	},
 ): LlmService {
-  if (providerId === 'gemini') {
-    return GeminiService.create(userConfig, options);
-  }
-  if (providerId === 'grok') {
-    return GrokService.create(userConfig, options);
-  }
-  return ChatgptService.create(userConfig, options);
+	if (providerId === "gemini") {
+		return GeminiService.create(userConfig, options);
+	}
+	if (providerId === "grok") {
+		return GrokService.create(userConfig, options);
+	}
+	return ChatgptService.create(userConfig, options);
 }
