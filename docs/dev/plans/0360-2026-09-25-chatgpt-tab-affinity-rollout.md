@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 15
+Plan version: 16
 
 ## Stable Objective
 
@@ -212,6 +212,12 @@ the source packet is safe to integrate.
   both tabs were left for TTL retirement.
   Packet 5G terminally closes ledger governors so late continuations fail
   before reserving or performing another provider interaction.
+- Packet 5H merged through PR 66 at canonical `5c06cfd91`. The defect was the
+  scheduler request omitting `liveFollowOperationId`, not a collector helper
+  dropping an exact target. Scheduled targets now use one stable crawler
+  identity across passes. The widened provider-free set passes 292 tests with
+  typecheck/build, and the installed scheduler bytes match source. The API
+  remains stopped; installed live proof is still a separate gate.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
