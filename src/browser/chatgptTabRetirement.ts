@@ -19,6 +19,7 @@ export function retireExpiredChatgptTabLeases(input: {
 		targetId: string,
 	) => Promise<{ url: string } | null>;
 	closeTarget: (endpoint: TabLeaseRetirementEndpoint, targetId: string) => Promise<void>;
+	endpointAbsenceProvesTargetsMissing?: boolean;
 }): Promise<TabLeaseRetirementOutcome[]> {
 	return retireExpiredTabLeases({
 		registry: input.registry,
@@ -27,6 +28,7 @@ export function retireExpiredChatgptTabLeases(input: {
 		resolveEndpoint: async () => input.endpoint,
 		inspectTarget: input.inspectTarget,
 		closeTarget: input.closeTarget,
+		endpointAbsenceProvesTargetsMissing: input.endpointAbsenceProvesTargetsMissing,
 		targetMatchesLease: chatgptTargetMatchesLease,
 	});
 }

@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 3
+Plan version: 4
 
 ## Stable Objective
 
@@ -21,7 +21,7 @@ This lane does not redesign tab ownership. It operationalizes the accepted
 provider-neutral contracts. Gemini and Grok remain serialized until separate
 provider-specific acceptance exists.
 
-## Authority and Current State
+## Current State
 
 - Issue 49 owns the work and the branch starts from canonical `main` at
   `17001ba1a5305f3641d4f6737e0db17b028e5923`.
@@ -47,6 +47,13 @@ provider-specific acceptance exists.
   leases, and four outcome-unknown fences. No receipt, prompt, live-follow
   pass, or provider interaction was created. Explicit reconciliation of those
   fences is the next gate; the rollout must not baseline them away.
+- The blocked preflight exposed a lifecycle defect rather than an operator
+  cleanup duty: uncertain idle leases were excluded from TTL retirement,
+  active leases ignored heartbeat expiry while their long-lived process stayed
+  alive, old lost leases were not revisited, and an absent managed browser
+  deferred cleanup forever. Plan v4 adds a provider-neutral repair packet that
+  preserves uncertainty history while making those operational fences
+  self-retiring under revision-fenced target-absence or exact-target proof.
 
 ## Acceptance Gates
 
@@ -131,6 +138,21 @@ the source packet is safe to integrate.
 
 Terminal condition: the elapsed window and final zero-orphan census are
 durably evidenced. Merely starting the soak is not completion.
+
+### Packet 4A: Lease lifecycle repair
+
+- Treat heartbeat/idle and absolute TTL as operational ownership deadlines,
+  including when the owner is a still-live long-running API process.
+- Permit expired idle `outcome-unknown` leases to retire without clearing or
+  retrying the uncertain provider effect.
+- Revisit pre-existing lost leases on every maintenance pass. Release missing
+  targets, close only exact attributable expired targets with post-close
+  absence proof, and preserve identity mismatches.
+- Treat an absent endpoint from read-only managed-browser resolution as target
+  absence proof in the maintenance path; never launch a browser for cleanup.
+
+Terminal condition: provider-free regression tests prove stale fences converge
+without manual registry edits and without weakening no-retry uncertainty.
 
 ### Packet 6: Default enablement or retained rollback
 

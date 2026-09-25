@@ -1,5 +1,14 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- The blocked soak preflight exposed a lifecycle bug, not an operator repair
+  obligation. `outcome-unknown` idle leases bypassed TTL forever, active leases
+  trusted process liveness after heartbeat expiry, previous lost leases were
+  never revisited, and an absent managed browser deferred cleanup indefinitely.
+- Plan v4 now separates provider-effect uncertainty from operational tab
+  ownership. Expired uncertain leases retire without becoming retryable;
+  heartbeat-expired active leases become lost; maintenance revisits every lost
+  lease and releases absent targets or closes only exact expired targets with a
+  post-close absence census. Thirteen focused provider-free tests pass.
 - Opened issue 49 after a clean owned-repository, permission, duplicate,
   security-route, and label preflight; assigned it to the authenticated owner.
 - Created `feat/issue-49-chatgpt-affinity-rollout` from canonical main
@@ -30,8 +39,9 @@
   did not start because the affinity registry retains one lost lease, four
   expired idle leases, and four outcome-unknown fences from prior acceptance.
   Provider warnings and admission rejections are clear; target navigation,
-  reload, focus, and close totals remain zero. These fences require explicit
-  reconciliation rather than being ignored or automatically retired.
+  reload, focus, and close totals remain zero. The initial manual-reconciliation
+  conclusion was rejected after lifecycle review; the source repair must be
+  integrated and installed before those fences are reconsidered automatically.
 - The first attempted soak command failed before reading status because the
   documented `pnpm run` separator was wrong. The documentation is corrected;
   no receipt was created and no provider interaction occurred.

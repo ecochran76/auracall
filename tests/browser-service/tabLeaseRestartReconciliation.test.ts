@@ -46,7 +46,10 @@ describe("tab lease restart reconciliation", () => {
 	});
 
 	test("preserves an active lease whose owner process is still live", async () => {
-		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-1",
+			ownerIdentity: { processId: 99, instanceId: "current" },
+		});
 		await registry.reserve({
 			scope,
 			targetId: "target-1",
@@ -63,8 +66,39 @@ describe("tab lease restart reconciliation", () => {
 				scope,
 				currentOwner: { processId: 99, instanceId: "current" },
 				isOwnerAlive: () => true,
+				now: () => new Date("2026-09-24T12:00:30.000Z"),
 			}),
 		).resolves.toEqual([]);
 		expect((await registry.list())[0]?.state).toBe("active");
+	});
+
+	test("marks an active lease lost when its heartbeat TTL expires even if the owner process is live", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-1",
+			ownerIdentity: { processId: 99, instanceId: "current" },
+		});
+		await registry.reserve({
+			scope,
+			targetId: "target-1",
+			workload: { kind: "live-follow", operationId: "follow-1" },
+			operationId: "follow-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+
+		await expect(
+			reconcileStaleActiveTabLeases({
+				registry,
+				scope,
+				currentOwner: { processId: 99, instanceId: "current" },
+				isOwnerAlive: () => true,
+				now: () => new Date("2026-09-24T12:01:00.000Z"),
+			}),
+		).resolves.toEqual([expect.objectContaining({ leaseId: "lease-1", disposition: "lost" })]);
+		expect((await registry.list())[0]).toMatchObject({
+			state: "lost",
+			lossReason: "heartbeat-expired",
+		});
 	});
 });

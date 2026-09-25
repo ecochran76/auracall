@@ -1,3 +1,11 @@
+- 2026-09-25: Provider-effect uncertainty and operational tab ownership must
+  have separate lifecycles. `outcome-unknown` forbids provider retry; it must
+  not disable heartbeat/TTL retirement forever. Reclaim expired active leases
+  even when a long-lived API PID survives, revisit all lost leases on every
+  maintenance pass, use absent managed-browser resolution as missing-target
+  proof, and close only exact attributable expired targets with post-close
+  absence verification. Preserve the uncertainty field on released records.
+
 - 2026-09-25: A multitab rollout needs one durable, content-free acceptance
   surface rather than separate ad hoc browser observations. Project the exact
   lease/ledger status through HTTP, Browser Ops, CLI, and MCP; record soak

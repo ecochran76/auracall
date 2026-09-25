@@ -102,6 +102,7 @@ export type TabLeaseFinalDisposition = 'closed' | 'already-missing' | 'preserved
 export type TabLeaseLossReason =
   | 'target-missing'
   | 'restart-unverified'
+  | 'heartbeat-expired'
   | 'identity-conflict'
   | 'provisioning-failed';
 
@@ -707,7 +708,6 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       existing.state !== 'idle' ||
       existing.ownerOperationId !== null ||
       existing.effectState === 'in-flight' ||
-      existing.effectState === 'outcome-unknown' ||
       !reasonIsEligible
     ) {
       return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };

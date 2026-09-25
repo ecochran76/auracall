@@ -2026,6 +2026,10 @@ work receive exact tabs while sharing aggregate interaction and provider-warning
 guards. Inspect the sanitized posture in Browser Ops or with
 `auracall api ops-browser-status --port <port>`. Roll back by restoring
 `serialized` and restarting AuraCall; Gemini and Grok remain serialized.
+Tab leases are heartbeat- and TTL-governed: maintenance reclaims expired active
+ownership, retires expired idle tabs, and revisits lost leases until target
+absence or an exact post-close census releases them. An uncertain provider
+outcome remains durable no-retry evidence even after its tab lease retires.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
 For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:

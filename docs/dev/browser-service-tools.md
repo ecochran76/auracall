@@ -225,18 +225,22 @@ Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
 reconciles expired idle leases for that exact runtime/account/managed browser
 scope. A target is closed only after exact workload identity verification, and
 `closed` is recorded only after a second census proves the target disappeared.
-Outcome-unknown leases are not retired. Retirement runs at acquisition
+An expired `outcome-unknown` lease may retire, but its uncertainty remains in
+the released record and never authorizes prompt retry. Retirement runs at acquisition
 boundaries, and the long-running API also owns a non-overlapping
 60-second maintenance cadence when explicit affinity is configured. Maintenance
 uses `ensurePort: false`, so an absent browser is never launched merely for
-cleanup; the affected leases remain idle and are reconsidered later. The loop
+cleanup; endpoint absence from that managed-browser resolution proves its old
+targets are already missing, so expired idle and lost fences are released. The loop
 is suppressed for proof-scoped server runs and is cleared and awaited during
 API shutdown.
 
 Active leases persist owner PID plus process-generation identity. Maintenance
-marks dead, replaced, or legacy active owners `restart-unverified`; it releases
-that fence only after proving the exact target absent. Live or mismatched
-targets remain fenced. Status exposes content-free per-binding age and
+marks dead, replaced, or legacy active owners `restart-unverified`, and marks a
+lease whose heartbeat/idle or absolute deadline elapsed `heartbeat-expired`
+even when its API process remains alive. Every pass revisits all lost leases:
+missing targets are released, exact expired targets are closed only with a
+post-close absence census, and identity mismatches remain fenced. Status exposes content-free per-binding age and
 elapsed time since last meaningful use, idle/absolute time remaining, plus a
 restart-unverified attention count.
 The same maintenance pass reports aggregate live, fenced, and unleased ChatGPT

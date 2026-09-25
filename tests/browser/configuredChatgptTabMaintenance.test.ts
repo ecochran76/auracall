@@ -236,7 +236,132 @@ describe("configured ChatGPT tab maintenance", () => {
 		});
 	});
 
-	test("defers expired leases when the configured browser endpoint is absent", async () => {
+	test("revisits and releases a previously lost lease when the managed browser is absent", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-lost" });
+		const reserved = await registry.reserve({
+			scope: {
+				runtimeProfileId: "affinity",
+				managedBrowserProfile: "/managed/affinity/chatgpt",
+				service: "chatgpt",
+				tenantKey: "service-account:chatgpt:account-id=account-1",
+			},
+			targetId: "target-lost",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "operation-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!reserved.ok) throw new Error("expected lease reservation");
+		const lost = await registry.markLost({
+			leaseId: reserved.value.lease.leaseId,
+			expectedRevision: reserved.value.lease.revision,
+			now: "2026-09-24T12:01:00.000Z",
+			reason: "target-missing",
+		});
+		if (!lost.ok) throw new Error("expected lost lease");
+
+		const summary = await runConfiguredChatgptTabMaintenance({
+			userConfig: {
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				profiles: {
+					affinity: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+				},
+			} as never,
+			now: () => new Date("2026-09-24T12:02:00.000Z"),
+			deps: {
+				createRuntime: () => ({ registry }),
+				createBrowserService: () => ({
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						managedBrowserProfile: "/managed/affinity/chatgpt",
+					}),
+				}),
+			},
+		});
+
+		expect(summary).toMatchObject({ restartMissingReleasedCount: 1, errors: [] });
+		expect((await registry.list())[0]).toMatchObject({
+			state: "released",
+			finalDisposition: "already-missing",
+		});
+	});
+
+	test("closes and releases an expired lost lease when its attributable target is still live", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-lost" });
+		const reserved = await registry.reserve({
+			scope: {
+				runtimeProfileId: "affinity",
+				managedBrowserProfile: "/managed/affinity/chatgpt",
+				service: "chatgpt",
+				tenantKey: "service-account:chatgpt:account-id=account-1",
+			},
+			targetId: "target-lost",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "operation-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			targetFingerprint: "https://chatgpt.com/c/conversation-1",
+		});
+		if (!reserved.ok) throw new Error("expected lease reservation");
+		const lost = await registry.markLost({
+			leaseId: reserved.value.lease.leaseId,
+			expectedRevision: reserved.value.lease.revision,
+			now: "2026-09-24T12:01:00.000Z",
+			reason: "heartbeat-expired",
+		});
+		if (!lost.ok) throw new Error("expected lost lease");
+		let targetLive = true;
+		const closeTarget = vi.fn(async () => {
+			targetLive = false;
+		});
+
+		const summary = await runConfiguredChatgptTabMaintenance({
+			userConfig: {
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				profiles: {
+					affinity: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+				},
+			} as never,
+			now: () => new Date("2026-09-24T12:02:00.000Z"),
+			deps: {
+				createRuntime: () => ({ registry }),
+				createBrowserService: () => ({
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 9222,
+						managedBrowserProfile: "/managed/affinity/chatgpt",
+					}),
+				}),
+				listTargets: vi.fn(async () =>
+					targetLive
+						? [{ id: "target-lost", type: "page", url: "https://chatgpt.com/c/conversation-1" }]
+						: [],
+				) as never,
+				closeTarget,
+			},
+		});
+
+		expect(closeTarget).toHaveBeenCalledWith(
+			"127.0.0.1",
+			9222,
+			"target-lost",
+			expect.any(Function),
+		);
+		expect(summary).toMatchObject({ closedCount: 1, restartPreservedCount: 0, errors: [] });
+		expect((await registry.list())[0]).toMatchObject({
+			state: "released",
+			finalDisposition: "closed",
+		});
+	});
+
+	test("retires expired uncertain leases when the managed browser endpoint is absent", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const reserved = await registry.reserve({
 			scope: {
@@ -257,7 +382,7 @@ describe("configured ChatGPT tab maintenance", () => {
 		await registry.idle({
 			claim: reserved.value.claim,
 			now: "2026-09-24T12:00:01.000Z",
-			effectState: "settled",
+			effectState: "outcome-unknown",
 		});
 
 		const summary = await runConfiguredChatgptTabMaintenance({
@@ -281,7 +406,16 @@ describe("configured ChatGPT tab maintenance", () => {
 			},
 		});
 
-		expect(summary).toMatchObject({ deferredScopeCount: 1, closedCount: 0, errors: [] });
-		expect((await registry.list())[0]?.state).toBe("idle");
+		expect(summary).toMatchObject({
+			deferredScopeCount: 0,
+			closedCount: 0,
+			alreadyMissingCount: 1,
+			errors: [],
+		});
+		expect((await registry.list())[0]).toMatchObject({
+			state: "released",
+			effectState: "outcome-unknown",
+			finalDisposition: "already-missing",
+		});
 	});
 });
