@@ -4284,9 +4284,12 @@ async function connectToChatgptTab(
 			await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
 			const currentUrl = await readChatgptLocationHref(client.Runtime).catch(() => null);
 			if (!isChatgptTargetReusableForPreferredUrl(currentUrl, preferredUrl)) {
-				throw new Error(
-					`ChatGPT target ${options.tabTargetId} is on ${currentUrl ?? "(unknown URL)"}, not the expected ${preferredUrl}.`,
-				);
+				if (!shouldNavigateExactChatgptTargetForTest(currentUrl, preferredUrl, options)) {
+					throw new Error(
+						`ChatGPT target ${options.tabTargetId} is on ${currentUrl ?? "(unknown URL)"}, not the expected ${preferredUrl}.`,
+					);
+				}
+				await navigateToChatgptUrl(client, preferredUrl, undefined, options);
 			}
 			const connection = {
 				client,
@@ -4305,7 +4308,7 @@ async function connectToChatgptTab(
 			recordChatgptTargetSession(options, "retain", connection.targetId);
 			return bindChatgptProviderSessionConnection(options, connection);
 		} catch (error) {
-			if (!providerNavigationAllowed(options)) {
+			if (!providerNavigationAllowed(options) || options.tabTargetId) {
 				throw error;
 			}
 			failedTargetId = options.tabTargetId;
@@ -4464,6 +4467,18 @@ async function connectToChatgptTab(
 	recordChatgptTargetSession(options, "retain", connection.targetId);
 	recordBrowserScrapeProviderAction(options, "chatgpt.connectTab.ready");
 	return bindChatgptProviderSessionConnection(options, connection);
+}
+
+export function shouldNavigateExactChatgptTargetForTest(
+	currentUrl: string | null,
+	preferredUrl: string,
+	options?: BrowserProviderListOptions,
+): boolean {
+	return (
+		Boolean(options?.tabTargetId) &&
+		providerNavigationAllowed(options) &&
+		!isChatgptTargetReusableForPreferredUrl(currentUrl, preferredUrl)
+	);
 }
 
 export async function connectToChatgptPromptWorkbenchForSkills(
@@ -12014,9 +12029,7 @@ function chatgptDownloadStatFingerprint(stat: {
 	return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs ?? ""}:${stat.ino ?? ""}`;
 }
 
-async function snapshotChatgptDownloadDirectory(
-	destDir: string,
-): Promise<Map<string, string>> {
+async function snapshotChatgptDownloadDirectory(destDir: string): Promise<Map<string, string>> {
 	const snapshot = new Map<string, string>();
 	const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
 	for (const entry of entries) {
@@ -12059,7 +12072,10 @@ async function waitForFreshChatgptDownloadedFile(
 		}
 		if (fresh.length > 1) {
 			throw new Error(
-				`ChatGPT Deep Research export produced multiple fresh ${expectedExtension} downloads: ${fresh.map((entry) => entry.name).sort().join(", ")}.`,
+				`ChatGPT Deep Research export produced multiple fresh ${expectedExtension} downloads: ${fresh
+					.map((entry) => entry.name)
+					.sort()
+					.join(", ")}.`,
 			);
 		}
 		if (fresh.length === 1) {
@@ -12148,8 +12164,7 @@ export async function waitForChatgptExportDownloadForTest(
 		pollIntervalMs,
 	);
 }
-export const validateChatgptDeepResearchExportFileForTest =
-	validateChatgptDeepResearchExportFile;
+export const validateChatgptDeepResearchExportFileForTest = validateChatgptDeepResearchExportFile;
 
 async function waitForChatgptDownloadedFile(
 	destDir: string,
@@ -12827,7 +12842,9 @@ async function prepareChatgptPromptWorkbenchInClient(
 		chatgptMode === "chat" &&
 		thinkingTime &&
 		(modelStrategy === "current" ? selectedModel : desiredModel) &&
-		/\b(sol|thinking|pro)\b/i.test((modelStrategy === "current" ? selectedModel : desiredModel) ?? "")
+		/\b(sol|thinking|pro)\b/i.test(
+			(modelStrategy === "current" ? selectedModel : desiredModel) ?? "",
+		)
 	) {
 		await ensureThinkingTime(Runtime, thinkingTime, logger);
 	}

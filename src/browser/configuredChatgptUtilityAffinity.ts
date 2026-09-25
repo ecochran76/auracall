@@ -137,7 +137,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		tabTargetId: tab.lease.targetId,
 		tabUrl: tab.lease.targetFingerprint ?? configuredUrl,
 		tabLifecycle: "retain",
-		preserveActiveTab: true,
+		preserveActiveTab: input.options?.preserveActiveTab ?? input.options?.allowNavigation !== true,
 	});
 	const baseGovernor =
 		options.interactionGovernor ??

@@ -50776,3 +50776,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `history-materialization:<job-id>` to every ChatGPT service instance. The
   existing lease registry can therefore reacquire one exact utility tab across
   candidate reads while unrelated utility callers retain random isolation.
+## 2026-09-25 | Plan 0360 exact utility-tab navigation
+
+- Installed Packet 5D proved two materialization candidates reused one exact
+  utility lease: one target creation and five adoptions, with no extra target.
+- Both candidates failed before content extraction because utility affinity
+  forced `preserveActiveTab=true`; the exact leased root tab was therefore not
+  allowed to navigate to either conversation route.
+- Packet 5E retains preservation as the default, honors explicit job-owned
+  navigation, navigates the exact leased target in place, and forbids fallback
+  target creation after an exact-target attachment/navigation failure.

@@ -22,6 +22,7 @@ import {
 	selectChatgptPromptWorkbenchTargetForTest,
 	shouldDisposeChatgptTabConnectionForTest,
 	shouldForceNewChatgptTabConnectionForTest,
+	shouldNavigateExactChatgptTargetForTest,
 } from "../../src/browser/providers/chatgptAdapter.js";
 
 function createConnection(input: {
@@ -327,6 +328,28 @@ describe("ChatGPT tab lifecycle", () => {
 				tabLifecycle: "dispose-new",
 				preserveActiveTab: true,
 			}),
+		).toBe(false);
+	});
+
+	test("navigates a mismatched exact target only when its caller allows navigation", () => {
+		const input = {
+			tabTargetId: "job-tab",
+			allowNavigation: true,
+			preserveActiveTab: false,
+		};
+		expect(
+			shouldNavigateExactChatgptTargetForTest(
+				"https://chatgpt.com/",
+				"https://chatgpt.com/c/conversation-1",
+				input,
+			),
+		).toBe(true);
+		expect(
+			shouldNavigateExactChatgptTargetForTest(
+				"https://chatgpt.com/",
+				"https://chatgpt.com/c/conversation-1",
+				{ ...input, preserveActiveTab: true },
+			),
 		).toBe(false);
 	});
 });
