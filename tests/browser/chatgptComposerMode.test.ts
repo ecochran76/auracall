@@ -1,4 +1,4 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	buildChatgptComposerModeExpressionForTest,
 	ensureChatgptComposerMode,
@@ -8,6 +8,7 @@ import { buildChatgptWorkModelSelectionExpressionForTest } from "../../src/brows
 
 class FixtureElement extends EventTarget {
 	textContent: string;
+	disabled = false;
 	private readonly attributes = new Map<string, string>();
 	onClick?: () => void;
 	closestResult: FixtureElement | null = null;
@@ -96,6 +97,36 @@ describe("ChatGPT composer mode", () => {
 		expect(work.getAttribute("aria-checked")).toBe("false");
 	});
 
+	it("waits for the current root Chat and Work buttons to enable before accepting Chat", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
+		const chat = new FixtureElement("Chat", {
+			class: "text-mode-toggle-primary",
+		});
+		const work = new FixtureElement("Work", {
+			class: "text-mode-toggle-inactive",
+		});
+		chat.disabled = true;
+		work.disabled = true;
+		let toggleQueries = 0;
+		installFixtureDocument((selector) => {
+			if (selector === '[role="radio"]' || selector === 'button[aria-haspopup="menu"]') return [];
+			if (selector === '[class*="home-mode-toggle"] button') {
+				toggleQueries += 1;
+				if (toggleQueries >= 2) {
+					chat.disabled = false;
+					work.disabled = false;
+				}
+				return [chat, work];
+			}
+			return [];
+		});
+		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest("chat")}`)();
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(await pending).toEqual({ status: "already-selected", mode: "chat" });
+		expect(toggleQueries).toBeGreaterThanOrEqual(2);
+	});
+
 	it("never treats a root composer with absent mode controls as proof of Chat", async () => {
 		vi.useFakeTimers();
 		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
@@ -115,6 +146,8 @@ describe("ChatGPT composer mode", () => {
 		expect(expression).toContain("label === 'chat' || label === 'work'");
 		expect(expression).toContain("getAttribute('aria-checked') === 'true'");
 		expect(expression).toContain("getAttribute('data-state') === 'on'");
+		expect(expression).toContain('[class*="home-mode-toggle"] button');
+		expect(expression).toContain("text-mode-toggle-primary");
 	});
 
 	it("supports the current mode trigger plus menuitemradio surface", () => {

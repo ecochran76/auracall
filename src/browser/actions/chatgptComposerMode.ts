@@ -125,9 +125,14 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       const style = getComputedStyle(node);
       return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
     };
-    const isSelected = (node) =>
-      node.getAttribute('aria-checked') === 'true' ||
-      node.getAttribute('data-state') === 'on';
+	    const isSelected = (node) =>
+	      node.getAttribute('aria-checked') === 'true' ||
+	      node.getAttribute('data-state') === 'on' ||
+	      (String(node.getAttribute('class') ?? '').includes('text-mode-toggle-primary') &&
+	        !String(node.getAttribute('class') ?? '').includes('text-mode-toggle-inactive'));
+	    const isEnabled = (node) =>
+	      node.getAttribute('aria-disabled') !== 'true' &&
+	      !('disabled' in node && node.disabled === true);
     ${buildChatgptActiveConversationWorkMarkerHelpers()}
     const readModes = (selector) => Array.from(document.querySelectorAll(selector))
       .filter(visible)
@@ -137,24 +142,26 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
     // Only an established conversation may use the historical control-less fallback.
     const establishedConversation = /^\\/c\\/[^/]+\\/?$/.test(location.pathname) ||
       projectConversationRoute(location.pathname) !== null;
-    let radios = readModes('[role="radio"]');
-    let modeTriggers = readModes('button[aria-haspopup="menu"]');
-    if (!establishedConversation) {
-      const controlsStartedAt = performance.now();
-      while (radios.length === 0 && modeTriggers.length === 0 && performance.now() - controlsStartedAt < 10000) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        radios = readModes('[role="radio"]');
-        modeTriggers = readModes('button[aria-haspopup="menu"]');
-      }
-    }
-    const radioTarget = radios.find(({ label }) => label === DESIRED_MODE);
-    if (radioTarget) {
-      if (isSelected(radioTarget.node)) return { status: 'already-selected', mode: DESIRED_MODE };
-      if (!dispatchClickSequence(radioTarget.node)) return { status: 'selection-not-confirmed', mode: DESIRED_MODE };
-      const startedAt = performance.now();
-      while (performance.now() - startedAt < 5000) {
-        if (isSelected(radioTarget.node)) return { status: 'switched', mode: DESIRED_MODE };
-        await new Promise((resolve) => setTimeout(resolve, 100));
+	    let radios = readModes('[role="radio"]');
+	    let modeTriggers = readModes('button[aria-haspopup="menu"]');
+	    let rootToggles = readModes('[class*="home-mode-toggle"] button').filter(({ node }) => isEnabled(node));
+	    if (!establishedConversation) {
+	      const controlsStartedAt = performance.now();
+	      while (radios.length === 0 && modeTriggers.length === 0 && rootToggles.length === 0 && performance.now() - controlsStartedAt < 10000) {
+	        await new Promise((resolve) => setTimeout(resolve, 100));
+	        radios = readModes('[role="radio"]');
+	        modeTriggers = readModes('button[aria-haspopup="menu"]');
+	        rootToggles = readModes('[class*="home-mode-toggle"] button').filter(({ node }) => isEnabled(node));
+	      }
+	    }
+	    const directTarget = [...radios, ...rootToggles].find(({ label }) => label === DESIRED_MODE);
+	    if (directTarget) {
+	      if (isSelected(directTarget.node)) return { status: 'already-selected', mode: DESIRED_MODE };
+	      if (!dispatchClickSequence(directTarget.node)) return { status: 'selection-not-confirmed', mode: DESIRED_MODE };
+	      const startedAt = performance.now();
+	      while (performance.now() - startedAt < 5000) {
+	        if (isSelected(directTarget.node)) return { status: 'switched', mode: DESIRED_MODE };
+	        await new Promise((resolve) => setTimeout(resolve, 100));
       }
       return { status: 'selection-not-confirmed', mode: DESIRED_MODE };
     }
@@ -189,14 +196,14 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       }
       return {
         status: 'mode-not-found',
-        availableModes: [...radios, ...modeTriggers]
+	          availableModes: [...radios, ...rootToggles, ...modeTriggers]
           .map(({ node }) => String(node.textContent ?? '').trim()).filter(Boolean),
       };
     }
     if (!dispatchClickSequence(trigger.node)) {
       return {
         status: 'mode-not-found',
-        availableModes: [...radios, ...modeTriggers]
+	        availableModes: [...radios, ...rootToggles, ...modeTriggers]
           .map(({ node }) => String(node.textContent ?? '').trim()).filter(Boolean),
       };
     }
