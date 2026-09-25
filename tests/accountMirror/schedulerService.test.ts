@@ -1,10 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
 import type { AccountMirrorBackfillLedger } from "../../src/accountMirror/backfillLedger.js";
+import { createAccountMirrorProviderWorkCoordinator } from "../../src/accountMirror/providerWorkCoordinator.js";
 import {
 	AccountMirrorRefreshError,
 	type AccountMirrorRefreshResult,
 } from "../../src/accountMirror/refreshService.js";
-import { createAccountMirrorProviderWorkCoordinator } from "../../src/accountMirror/providerWorkCoordinator.js";
 import { createAccountMirrorSchedulerPassService } from "../../src/accountMirror/schedulerService.js";
 import { createAccountMirrorStatusRegistry } from "../../src/accountMirror/statusRegistry.js";
 
@@ -344,6 +344,7 @@ describe("account mirror scheduler pass service", () => {
 		expect(requestRefresh).toHaveBeenCalledWith({
 			provider: "gemini",
 			runtimeProfileId: "geminiDefault",
+			liveFollowOperationId: "account-mirror-scheduler:gemini:geminiDefault",
 			sweepMode: "steady_follow",
 			materializationPolicy: null,
 			requestedPhase: "identity",
@@ -387,6 +388,7 @@ describe("account mirror scheduler pass service", () => {
 		expect(requestRefresh).toHaveBeenCalledWith({
 			provider: "chatgpt",
 			runtimeProfileId: "default",
+			liveFollowOperationId: "account-mirror-scheduler:chatgpt:default",
 			sweepMode: "steady_follow",
 			materializationPolicy: null,
 			requestedPhase: "identity",
@@ -697,6 +699,7 @@ describe("account mirror scheduler pass service", () => {
 		expect(requestRefresh).toHaveBeenCalledWith({
 			provider: "chatgpt",
 			runtimeProfileId: "default",
+			liveFollowOperationId: "account-mirror-scheduler:chatgpt:default",
 			sweepMode: "steady_follow",
 			materializationPolicy: null,
 			requestedPhase: "detail-inventory",
@@ -784,6 +787,7 @@ describe("account mirror scheduler pass service", () => {
 		expect(requestRefresh).toHaveBeenCalledWith({
 			provider: "chatgpt",
 			runtimeProfileId: "default",
+			liveFollowOperationId: "account-mirror-scheduler:chatgpt:default",
 			sweepMode: "steady_follow",
 			materializationPolicy: null,
 			requestedPhase: "detail-inventory",
@@ -837,6 +841,7 @@ describe("account mirror scheduler pass service", () => {
 		expect(requestRefresh).toHaveBeenCalledWith({
 			provider: "chatgpt",
 			runtimeProfileId: "default",
+			liveFollowOperationId: "account-mirror-scheduler:chatgpt:default",
 			sweepMode: "steady_follow",
 			materializationPolicy: null,
 			requestedPhase: "project-conversations",

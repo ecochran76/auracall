@@ -1,3 +1,11 @@
+- 2026-09-25: A routine being selected by a live-follow scheduler does not
+  automatically make its refresh a live-follow-affinity operation. Carry a
+  stable, content-free operation ID across the scheduler-to-refresh boundary;
+  otherwise refresh cannot acquire the crawler lease, exact tab options never
+  reach the collector, and provider reads legitimately fall back to a random
+  utility tab. Keep the ID stable across passes so lease heartbeat and TTL
+  extend one crawler rather than creating a workload per timer tick.
+
 - 2026-09-25: Skipping nested utility-tab acquisition for an already exact
   ChatGPT target must not skip list-option authorization. Rebuild options with
   `ensurePort=false` so the exact host, port, and target remain pinned while the

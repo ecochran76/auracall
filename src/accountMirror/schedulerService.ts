@@ -212,6 +212,7 @@ export function createAccountMirrorSchedulerPassService(input: {
 					refresh = await input.refreshService.requestRefresh({
 						provider: selected.provider,
 						runtimeProfileId: selected.runtimeProfileId,
+						liveFollowOperationId: createSchedulerLiveFollowOperationId(selected),
 						sweepMode,
 						materializationPolicy: selected.liveFollow.materializationPolicy ?? null,
 						requestedPhase: phaseDecision.requestedPhase,
@@ -259,6 +260,12 @@ export function createAccountMirrorSchedulerPassService(input: {
 			}
 		},
 	};
+}
+
+function createSchedulerLiveFollowOperationId(
+	entry: Pick<AccountMirrorStatusEntry, "provider" | "runtimeProfileId">,
+): string {
+	return `account-mirror-scheduler:${entry.provider}:${entry.runtimeProfileId}`;
 }
 
 function deriveSkippedBackpressure(

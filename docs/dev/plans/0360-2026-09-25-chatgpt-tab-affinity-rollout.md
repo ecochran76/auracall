@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 14
+Plan version: 15
 
 ## Stable Objective
 
@@ -359,13 +359,18 @@ separately authorized live proof.
 
 ### Packet 5H: Bind scheduled live follow to its crawler tab
 
-- Trace the scheduled Account Mirror collector call that omitted or replaced
-  its supplied exact crawler-tab options and therefore entered generic utility
-  affinity with a random `chatgpt-service-*` identity.
-- Make the scheduler's durable refresh/completion identity and exact crawler
-  target survive every identity, index, and detail-inventory call.
+- The traced defect is the scheduler-to-refresh boundary: periodic scheduled
+  passes omitted `liveFollowOperationId`, so refresh never created a crawler
+  affinity context and the collector was never supplied exact crawler options.
+  ChatGPT reads then correctly fell through to random `chatgpt-service-*`
+  utility affinity under the incomplete request.
+- Give every scheduled target a stable, content-free live-follow operation ID
+  derived from provider and AuraCall runtime profile. Reuse that identity on
+  every pass so refresh reacquires and heartbeats the target's crawler lease
+  and carries its exact target through identity, index, and detail inventory.
 - Prove provider-free that one scheduled pass cannot create a generic utility
-  lease while a crawler affinity context is present.
+  lease: the scheduler request must carry the stable identity, and refresh
+  coverage must continue to pass the resulting exact affinity into collection.
 
 Terminal condition: a fixture scheduled pass uses only its crawler lease and
 target, all aggregate interaction records name that routine, and no live proof

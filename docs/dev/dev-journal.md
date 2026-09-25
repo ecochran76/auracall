@@ -1,5 +1,15 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- Packet 5H traced the extra random utility tab to the scheduler-to-refresh
+  request, not to a nested collector call. Periodic scheduler passes omitted
+  `liveFollowOperationId`; refresh consequently built no crawler affinity and
+  supplied no exact target to the collector. The scheduler now supplies the
+  stable identity `account-mirror-scheduler:<provider>:<runtimeProfileId>`, so
+  later passes reacquire and heartbeat the same crawler workload. The focused
+  three-file regression passes 102 tests; the widened Account Mirror and
+  ChatGPT utility-affinity set passes 292 tests, with typecheck, production
+  build, scoped Biome, and diff checks also passing. The managed API remains
+  stopped and no provider proof was run.
 - The operator authorized bounded materialization catch-up before the soak.
   The parked completion resumed once, made one startup reload, and failed at
   pass zero before materialization with `ChatGPT provider-session authorization
