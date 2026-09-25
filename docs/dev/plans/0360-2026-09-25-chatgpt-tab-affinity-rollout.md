@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 9
+Plan version: 10
 
 ## Stable Objective
 
@@ -165,6 +165,15 @@ the source packet is safe to integrate.
   mirror's in-memory queued flag but before entering the collector cleanup
   block. Packet 5C clears and persists terminal status on that pre-collector
   failure path before any further catch-up attempt.
+- Packet 5C merged through PR 59 at canonical `053a239f7` and was installed.
+  Startup created one live-follow completion using the configured six-item cap.
+  Its first pass completed successfully with exact Pro/personal session proof,
+  one retained crawler lease, six aggregate active interactions, no warning,
+  and no duplicate target. It indexed 30 conversations, inspected two detail
+  surfaces, and yielded at the six-interaction budget with 22 detail surfaces
+  remaining. Materialization correctly did not start before detail inventory.
+  The completion was paused between passes and explicitly resumed to continue
+  gradual catch-up under existing cooldowns.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census

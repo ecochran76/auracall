@@ -50751,3 +50751,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Packet 5C clears and persists terminal mirror state when affinity acquisition
   throws. Focused refresh-service coverage and typecheck pass; installed
   catch-up validation remains open.
+## 2026-09-25 | Plan 0360 installed Packet 5C catch-up
+
+- Packet 5C merged through PR 59 at canonical `053a239f7` and that exact source
+  is installed in the user runtime.
+- The startup live-follow completion passed exact ChatGPT Pro/personal session
+  proof and completed one pass on one retained crawler tab. It observed 30
+  conversations, inspected two detail surfaces, and yielded at the configured
+  six-interaction budget without a provider warning.
+- The pass left 22 detail surfaces. No materialization ran yet because detail
+  inventory remains incomplete. The completion was paused between passes,
+  proving terminal queue cleanup, then explicitly resumed to continue bounded
+  catch-up under the configured cooldowns.
