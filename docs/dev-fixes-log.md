@@ -23012,3 +23012,19 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - The fixture should assert both positive ownership and negative cross-tab
   behavior: each prompt stays on its exact retained target with navigation
   disabled, the crawler uses only its own target, and settled usage is exact.
+
+## 2026-09-24 | Live affinity must bypass the outer exclusive dispatcher
+
+- A tab-affinity coordinator inside provider execution does not create live
+  concurrency when the ordinary CLI acquires a managed-profile/service
+  exclusive dispatcher first. Acceptance must prove the second conversation
+  acquires its own exact tab while the first is active, not merely that leases
+  can coexist in provider-free fixtures.
+- `--browser-model-strategy current` must not require a model-selector control.
+  On ChatGPT's current root Chat surface the composer and Chat/Work toggle can
+  be ready while no model-selector button exists. Fail before Send if current
+  model provenance cannot be established, but do not silently fall back to a
+  selector path the operator explicitly disabled.
+- Treat both failures as pre-effect evidence: preserve zero interaction counts,
+  inspect retained DOM read-only, and require a provider-free successor repair
+  before spending another live retry.

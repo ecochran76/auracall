@@ -50463,3 +50463,23 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Thirty-six focused registry/ledger/status/affinity/coexistence tests,
   typecheck, scoped Biome, and diff hygiene pass. No browser or provider effect
   ran; installed/live Packet 7 remains separately gated.
+
+## 2026-09-24 | Plan 0359 Packet 7 installed/live hard stop
+
+- The operator authorized installation, bounded ChatGPT acceptance, and
+  canonical integration while directing us to skip unavailable GitHub Actions.
+  Installed/source parity passed for the repaired composer-mode artifact, and
+  exact `wsl-chrome-3` identity matched the configured Pro personal account.
+- The first smoke stopped before Send on current root Chat/Work hydration. A
+  provider-specific repair now waits for enabled root toggles and recognizes
+  Chat's selected class; 70 focused tests, 156 broader browser/config tests,
+  typecheck, build, and lint pass.
+- The one bounded retry reached Chat mode for both distinct marker commands,
+  but the second queued behind the first at the managed-profile/service
+  exclusive dispatcher. Both then stopped before Send because current-model
+  execution still demanded a model-selector button absent from the root UI.
+- Retained read-only census showed three root ChatGPT tabs, an enabled composer,
+  the exact Chat/Work controls, and no dialog, provider warning, CAPTCHA, or
+  submitted marker. Live follow did not run. Packet 7 and canonical-main
+  integration remain unaccepted; the next slice is provider-free dispatcher
+  routing plus a selector-free current-model path, not another live retry.

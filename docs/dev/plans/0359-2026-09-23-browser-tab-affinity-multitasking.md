@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 36
+Plan version: 37
 
 ## Stable Objective
 
@@ -28,6 +28,10 @@ provider-neutral.
 - The operator authorized implementation with parallel subagents and calibrated
   model choice. P52 is owned by issue 46 and branch
   `feat/issue-46-browser-tab-affinity`.
+- The operator authorized Packet 7 installation, bounded ChatGPT interaction,
+  and canonical integration on 2026-09-24, while explicitly waiving GitHub
+  Actions because the service was unavailable. Local and installed/live gates
+  remain mandatory.
 - The current implementation authority is provider-free Packet 1 contract work
   plus the bounded Packet 2 registry adapter, ordinary in-envelope validation,
   repair, documentation, commit, push, and pull-request workflow. Installation,
@@ -1426,3 +1430,40 @@ Checkpoint 2026-09-24, provider-free coexistence terminal fixture:
 - `delegation_status`: no new workers
 - `review_status`: the fixture uses one real registry and ledger with concurrent
   fake-target execution, then proves exact routes and rolling usage after settlement
+
+Checkpoint 2026-09-24, Packet 7 installed/live hard stop:
+
+- `plan_version`: 37
+- `state_transition`: OPEN -> OPEN; Packet 7 was authorized and started but is
+  not accepted
+- `acceptance_state`: installed parity and identity preflight accepted; live
+  multitasking rejected before prompt submission
+- `progress_classification`: terminal live finding requiring a provider-free
+  successor repair before any further ChatGPT prompt retry
+- `evidence`: commit `80d154394bb5505aaa796bbe2ceb7cb61fa6d1d4`
+  repairs the current hydrated root Chat/Work toggle. The installed artifact
+  matched source at SHA-256
+  `11e1d5bcc3c98a65cfae37be271d4c983a0736ac6087fe7400d84920803df125`.
+  Exact identity preflight matched `eric.cochran@soylei.com`, Pro, personal, on
+  AuraCall runtime profile and browser profile `wsl-chrome-3`.
+- `material_blockers`: the ordinary installed CLI still takes the
+  managed-profile/service exclusive dispatcher before it reaches affinity
+  execution, so the second conversation queued behind the first instead of
+  acquiring a distinct tab concurrently. Both commands then stopped before
+  Send because current ChatGPT root Chat mode has no detectable model-selector
+  button even with `--browser-model-strategy current`.
+- `validation_notes`: 70 focused adapter tests, 156 broader browser/config
+  tests, typecheck, build, and lint pass; lint retains the repository baseline
+  of 207 warnings and 13 infos. The retained read-only census showed three
+  root ChatGPT tabs, no dialogs, an enabled `Ask ChatGPT` composer, and the
+  exact Chat/Work root controls. No marker prompt was submitted, no provider
+  warning or CAPTCHA appeared, and no live-follow pass ran. GitHub Actions was
+  intentionally skipped by operator direction.
+- `next_action_or_stop_reason`: provider-free repair must route tab-affinity
+  conversation work around the profile-wide exclusive dispatcher and make
+  current-model mode a true selector-free path on the current root surface;
+  then repeat Packet 7 from identity preflight under fresh live authority
+- `delegation_status`: no new workers
+- `review_status`: canonical-main integration is withheld because the bounded
+  live terminal condition did not pass; serialized compatibility remains the
+  observed installed behavior
