@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 12
+Plan version: 13
 
 ## Stable Objective
 
@@ -190,6 +190,15 @@ the source packet is safe to integrate.
   root target to the candidate conversation. Packet 5E permits navigation only
   when the owning caller explicitly requests it and navigates the exact leased
   target in place rather than falling back to an unleased replacement tab.
+- Packet 5E merged through PR 62 at canonical `764c8af66` and was installed.
+  Its bounded two-item proof retained one lease and one leased target across
+  three observed adoptions, with no provider warning. The requested
+  conversation route did not settle and remained on the ChatGPT root, but the
+  ChatGPT navigation wrapper discarded the failed settle result for non-project
+  URLs. The job therefore continued a long read against the wrong route instead
+  of failing closed. Packet 5F makes every ChatGPT route-settle failure fatal;
+  no further live retry is permitted until that repair is canonical and
+  installed.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -307,6 +316,18 @@ installed validation shows no additional utility target during a bounded job.
 Terminal condition: provider-free navigation tests pass and a bounded installed
 job visits multiple candidate conversations with one target creation, no
 replacement target, and no provider warning.
+
+### Packet 5F: Fail closed when an exact route does not settle
+
+- Apply the navigation result uniformly to conversation, root, library, and
+  project routes instead of checking failure only when a project ID is present.
+- Preserve the route-specific diagnostic and stop the materialization attempt
+  before any extraction can run against the wrong page.
+- Keep the existing exact lease and do not create or select a replacement tab.
+
+Terminal condition: provider-free coverage proves an unsettled ordinary
+conversation route throws, focused tests plus typecheck/build pass, and the
+canonical installed runtime is ready for a separately authorized bounded proof.
 
 ### Packet 6: Default enablement or retained rollback
 
