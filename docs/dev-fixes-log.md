@@ -23097,3 +23097,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - When Send produced an exact route and response but legacy observation timed
   out, reconcile read-only and preserve the original outcome-unknown ledger;
   never blind-retry the same prompt.
+
+## 2026-09-24 | Dedicated tabs must not prune retained service tabs
+
+- A forced `dispose-new` or `retain-new` tab is a new ownership boundary, not a
+  request to enforce the legacy same-origin stockpile cap against existing
+  tabs. Cleanup during creation can close valid conversation leases before the
+  dedicated routine starts.
+- Preserve ordinary reuse cleanup, but disable cleanup of pre-existing targets
+  when ChatGPT explicitly forces a new dedicated target. The dedicated target
+  may still be disposed through its own lifecycle after use.
+- Regression coverage must seed more same-provider conversations than the
+  legacy cap, open one forced dedicated root, and assert no existing target is
+  closed.

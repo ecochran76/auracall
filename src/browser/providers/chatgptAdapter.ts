@@ -4402,6 +4402,7 @@ async function connectToChatgptTab(
 					matchingTabLimit: tabPolicy.serviceTabLimit,
 					blankTabLimit: tabPolicy.blankTabLimit,
 					collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
+					cleanupExistingTargets: !forceNewDisposableTab,
 					suppressFocus: tabPolicy.suppressFocus,
 					mutationAudit: resolveMutationAudit(options),
 					mutationSource: resolveMutationSource(options, "provider:chatgpt", "connect-tab"),

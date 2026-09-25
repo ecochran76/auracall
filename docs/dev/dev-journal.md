@@ -50567,3 +50567,20 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   adapter message-role inference now recognize the current exact attributes.
   Six focused suites pass 242 tests; typecheck and production build pass.
   Live follow remains gated on an installed successful prompt pair.
+
+## 2026-09-24 | Plan 0359 dedicated-tab stockpile cleanup
+
+- Installed live attempt 2/10 completed two concurrent ChatGPT commands on
+  distinct exact targets and returned both exact R6 markers. Their leases are
+  idle, retained, route-bound, and settled; both aggregate interaction records
+  succeeded with no provider warning, navigation, or reload.
+- The first isolated, metadata-only, one-pass live-follow probe opened a fresh
+  root tab but the legacy target-stockpile cleanup closed both newest retained
+  conversation tabs despite their unexpired leases. The collector then failed
+  its fresh-root composer gate, without submitting a prompt or materializing
+  account data.
+- Forced dedicated ChatGPT tabs now suppress cleanup of pre-existing targets.
+  Ordinary reuse cleanup remains unchanged. A new regression preserves three
+  retained same-provider conversations while opening the dedicated root; four
+  focused suites pass 205 tests and typecheck passes. Installed retest remains
+  open.

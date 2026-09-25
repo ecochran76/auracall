@@ -1067,6 +1067,7 @@ export async function openOrReuseChromeTarget(
     matchingTabLimit?: number;
     blankTabLimit?: number;
     collapseDisposableWindows?: boolean;
+	    cleanupExistingTargets?: boolean;
 	    suppressFocus?: boolean;
 	    navigateReusedTargets?: boolean;
 	    mutationAudit?: BrowserMutationAuditSink;
@@ -1080,6 +1081,7 @@ export async function openOrReuseChromeTarget(
   const matchingTabLimit = Math.max(1, options.matchingTabLimit ?? 3);
 	  const blankTabLimit = Math.max(0, options.blankTabLimit ?? 1);
 	  const collapseDisposableWindows = options.collapseDisposableWindows ?? true;
+	  const cleanupExistingTargets = options.cleanupExistingTargets !== false;
 	  const navigateReusedTargets = options.navigateReusedTargets !== false;
 	  const endpoint = await resolveChromeEndpoint(options.host, port, logger);
   try {
@@ -1269,15 +1271,17 @@ export async function openOrReuseChromeTarget(
       reason: 'new',
     });
     const result = { target: created, reused: false, reason: 'new' as const };
-    await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
-      selectedTargetId: resolveTargetId(created),
-      requestedUrl: url,
-      compatibleHosts,
-      matchingTabLimit,
-      blankTabLimit,
-      collapseDisposableWindows,
-      logger,
-    });
+    if (cleanupExistingTargets) {
+      await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
+        selectedTargetId: resolveTargetId(created),
+        requestedUrl: url,
+        compatibleHosts,
+        matchingTabLimit,
+        blankTabLimit,
+        collapseDisposableWindows,
+        logger,
+      });
+    }
     return result;
   } finally {
     await endpoint.dispose?.().catch(() => undefined);

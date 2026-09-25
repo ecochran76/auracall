@@ -1018,16 +1018,16 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: c49c31e23f9af73f7dc53c75e74ffc520096bcee
+    checkpoint: 0f6e98c69
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
     dependencies: []
     overlaps: []
     reconciled_overlaps: []
-    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Live attempt 1/10 sent two concurrent prompts on distinct exact targets and both provider conversations completed with exact markers. Installed automation failed to observe current role-bearing search-unit DOM, so receipts remain outcome unknown; a provider-free shared selector and observer repair is validated locally.
-    blocker: The current turn-observation repair is not installed or live-retested; durable successful bindings, live-follow coexistence, and canonical-main acceptance remain open.
-    validation_status: packet-7-two-provider-effects-reconciled-current-turn-observer-repaired
-    validation_ref: c49c31e23f9af73f7dc53c75e74ffc520096bcee
-    disposition: Installed parity and exact wsl-chrome-3 identity passed. Two simultaneous commands sent from distinct exact tabs and created two exact conversation routes. Read-only route inspection proves both user prompts, exact assistant markers, and Response complete. The installed legacy turn reader did not observe those effects, so both append-only records remain outcome unknown and are not retried. Shared ChatGPT selectors and readers now recognize current data-content-search-unit-key role suffixes. No provider warning or CAPTCHA appeared; live follow has not run. GitHub Actions remains skipped by operator direction.
+    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Live attempt 2/10 completed two concurrent exact-tab commands with exact R6 markers, durable route bindings, settled leases, and succeeded aggregate records. The first bounded metadata-only live-follow probe exposed legacy stockpile cleanup closing both newest retained conversation targets; a provider-free dedicated-tab cleanup suppression is validated locally.
+    blocker: The dedicated-tab stockpile-cleanup repair is not installed or live-retested; successful live-follow coexistence and canonical-main acceptance remain open.
+    validation_status: packet-7-conversations-live-accepted-dedicated-tab-cleanup-repaired
+    validation_ref: 0f6e98c69
+    disposition: Exact wsl-chrome-3 identity and installed/source parity passed. Two simultaneous commands returned exact markers on distinct retained route-bound tabs and settled succeeded. An isolated proof server then ran one bounded metadata-only completion; legacy same-origin stockpile cleanup closed the two newest retained tabs before the collector failed its fresh-root composer gate. Forced dedicated ChatGPT tabs now preserve pre-existing targets, with 205 focused tests and typecheck passing. No provider warning or CAPTCHA appeared. GitHub Actions remains skipped by operator direction.
     updated_at: 2026-09-24

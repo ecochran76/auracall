@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 43
+Plan version: 44
 
 ## Stable Objective
 
@@ -1639,3 +1639,36 @@ Checkpoint 2026-09-24, current turn observation repair:
 - `delegation_status`: no new workers
 - `review_status`: reconciliation proves the provider effects but does not
   rewrite their outcome-unknown ledgers or substitute for installed acceptance
+
+Checkpoint 2026-09-24, dedicated-tab stockpile cleanup repair:
+
+- `plan_version`: 44
+- `state_transition`: OPEN -> OPEN; installed concurrent conversation
+  acceptance passed, while the first bounded live-follow coexistence probe
+  exposed destructive legacy tab cleanup
+- `acceptance_state`: two-conversation installed/live accepted; live-follow
+  coexistence remains open behind a provider-free repair
+- `progress_classification`: forward progress with one exact lifecycle defect
+- `evidence`: live attempt 2/10 returned exact markers from distinct targets
+  `368BEEBA627973A2016B71A2EBE25491` and
+  `42475E4931043E64BC560766DEC5B36D`, bound routes
+  `6ab5e64e-9ae4-83ea-b019-0d6a05625c0f` and
+  `6ab5e648-eebc-83ea-ae57-e05032858c41`, and settled both durable interaction
+  records succeeded with zero navigation or reload actions
+- `material_blockers`: the isolated one-pass live-follow probe opened a fresh
+  root tab through the legacy stockpile-cleanup path. Its default three-tab cap
+  closed the two newest retained conversation targets even though their leases
+  were idle, unexpired, and settled. The collector then failed because the
+  fresh root did not expose a visible composer.
+- `validation_notes`: forced dedicated ChatGPT tabs now disable cleanup of
+  pre-existing targets while retaining cleanup for ordinary reuse paths. A new
+  browser-service regression proves a dedicated root opens without closing
+  three retained same-provider conversations. Four focused suites pass 205
+  tests, plus typecheck and diff hygiene. No provider warning, CAPTCHA, prompt,
+  or materialization occurred during the failed metadata-only pass.
+- `next_action_or_stop_reason`: build, install, and commit this provider-free
+  repair; then use fresh conversation markers for attempt 3/10 and repeat one
+  bounded metadata-only live-follow pass only after both commands succeed
+- `delegation_status`: no new workers
+- `review_status`: a dedicated crawler tab may be disposable itself, but its
+  creation must never classify unrelated retained conversation tabs as stale
