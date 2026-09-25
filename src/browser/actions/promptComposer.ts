@@ -228,9 +228,9 @@ function buildPromptFocusExpression(): string {
       node.getAttribute('contenteditable') !== 'false';
     const isComposerOwned = (node) => {
       if (node.matches('#prompt-textarea, textarea[name="prompt-textarea"]')) return true;
-      const composer = node.closest('[data-testid*="composer"], form');
-      if (!composer) return false;
-      if (composer.matches('[data-testid*="composer"]')) return true;
+	      const composer = node.closest('[data-testid*="composer"], [data-chatgpt-composer], form');
+	      if (!composer) return false;
+	      if (composer.matches('[data-testid*="composer"], [data-chatgpt-composer]')) return true;
       return Boolean(
         composer.querySelector(
           '#composer-plus-btn, button[data-testid="send-button"], button[data-testid*="composer-send"], input#upload-files',
@@ -728,12 +728,16 @@ async function verifyPromptCommitted(
 	    const normalizedPromptPrefix = normalizedPrompt.slice(0, 120);
 	    const CONVERSATION_SELECTOR = ${JSON.stringify(CONVERSATION_TURN_SELECTOR)};
 	    const articles = Array.from(document.querySelectorAll(CONVERSATION_SELECTOR));
-	    const userArticles = articles.filter((node) => {
+	    const roleUserArticles = articles.filter((node) => {
 	      const role = String(
 	        node.getAttribute?.('data-message-author-role') || node.getAttribute?.('data-turn') || '',
 	      ).toLowerCase();
 	      return role === 'user' || Boolean(node.querySelector?.('[data-message-author-role="user"], [data-turn="user"]'));
 	    });
+	    const currentUserUnits = Array.from(document.querySelectorAll(
+	      '[data-content-search-unit-key$=":user"], [data-chatgpt-search-unit-key$=":user"], [data-user-message-bubble="true"]'
+	    ));
+	    const userArticles = Array.from(new Set([...roleUserArticles, ...currentUserUnits]));
 	    const candidateArticles = userArticles.length > 0 ? userArticles : articles;
 	    const readCommittedTurnText = ${buildReadCommittedTurnTextFunction()};
 	    const normalizedTurns = candidateArticles.map((node) => normalize(readCommittedTurnText(node)));

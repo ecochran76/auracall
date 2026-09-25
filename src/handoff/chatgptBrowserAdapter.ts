@@ -5,8 +5,11 @@ import {
 	formatBrowserOperationBusyResult,
 } from "../../packages/browser-service/src/service/operationDispatcher.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import { BrowserAutomationClient } from "../browser/client.js";
 import { ChatgptService } from "../browser/llmService/providers/chatgptService.js";
+import type { PromptInput, PromptResult } from "../browser/llmService/types.js";
 import { recordBrowserOperationQueueObservation } from "../browser/operationQueueObservations.js";
+import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import { resolveBrowserLaunchPlan } from "../browser/service/browserLaunchPlan.js";
 import { resolveChatgptSemanticModelSelector } from "../config/modelSelector.js";
 import type { ResolvedUserConfig } from "../config.js";
@@ -21,6 +24,9 @@ import {
 
 export function createChatgptBrowserHandoffTargetAdapter(
 	userConfig: ResolvedUserConfig,
+	dependencies: {
+		createAffinityClient?: () => Promise<ChatgptHandoffPromptRunner>;
+	} = {},
 ): HandoffTargetAdapter {
 	const runtimeProfileId =
 		typeof userConfig.auracallProfile === "string" ? userConfig.auracallProfile : null;
@@ -35,7 +41,7 @@ export function createChatgptBrowserHandoffTargetAdapter(
 		sourceKey: null,
 		reason: "chatgpt-browser-handoff-prompt-attachment",
 	};
-	const service = ChatgptService.create(userConfig, {
+	const browserProcessOwner = {
 		browserProcessOwner: {
 			owner: {
 				...operation,
@@ -52,17 +58,49 @@ export function createChatgptBrowserHandoffTargetAdapter(
 				cleanupPolicy: "handoff-target-submit-provider-work",
 			},
 		},
-	});
+	};
+	const service = ChatgptService.create(userConfig, browserProcessOwner);
+	let affinityClient: Promise<ChatgptHandoffPromptRunner> | null = null;
+	const getAffinityClient = () => {
+		affinityClient ??=
+			dependencies.createAffinityClient?.() ??
+			BrowserAutomationClient.fromConfig(userConfig, {
+				target: "chatgpt",
+				...browserProcessOwner,
+			});
+		return affinityClient;
+	};
 	return createProviderNativeHandoffTargetAdapter(
 		{
 			submit: (input) =>
-				withChatgptHandoffBrowserOperation(userConfig, () =>
-					submitChatgptHandoffPrompt(service, input),
-				),
+				submitChatgptHandoffWithConfiguredConcurrency({
+					userConfig,
+					input,
+					serializedRunner: service,
+					getAffinityRunner: getAffinityClient,
+				}),
 		},
 		{
 			upload: stageChatgptPromptAttachments,
 		},
+	);
+}
+
+export interface ChatgptHandoffPromptRunner {
+	runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult>;
+}
+
+export async function submitChatgptHandoffWithConfiguredConcurrency(input: {
+	userConfig: ResolvedUserConfig;
+	input: HandoffProviderNativePromptInput;
+	serializedRunner: ChatgptHandoffPromptRunner;
+	getAffinityRunner: () => Promise<ChatgptHandoffPromptRunner>;
+}): Promise<HandoffProviderNativePromptResult> {
+	if (input.userConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+		return submitChatgptHandoffPrompt(await input.getAffinityRunner(), input.input);
+	}
+	return withChatgptHandoffBrowserOperation(input.userConfig, () =>
+		submitChatgptHandoffPrompt(input.serializedRunner, input.input),
 	);
 }
 
@@ -146,7 +184,7 @@ async function stageChatgptPromptAttachments(
 }
 
 async function submitChatgptHandoffPrompt(
-	service: ChatgptService,
+	service: ChatgptHandoffPromptRunner,
 	input: HandoffProviderNativePromptInput,
 ): Promise<HandoffProviderNativePromptResult> {
 	if (input.provider !== "chatgpt") {

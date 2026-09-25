@@ -4,6 +4,7 @@ import process from 'node:process';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { getCliVersion } from '../version.js';
+import { clearConfiguredAggregateProviderWarning } from '../browser/configuredProviderWarningClear.js';
 import { registerConsultTool } from './tools/consult.js';
 import { registerSessionsTool } from './tools/sessions.js';
 import { registerSessionResources } from './tools/sessionResources.js';
@@ -220,6 +221,13 @@ export async function startMcpServer(): Promise<void> {
   });
   registerAccountMirrorProviderGuardTools(server, {
     registry: services.accountMirrorStatusRegistry,
+    clearAggregateWarning: async (input) => {
+      await clearConfiguredAggregateProviderWarning({
+        userConfig: services.resolvedUserConfig,
+        ...input,
+        reason: 'Operator cleared provider guard; quiet cooldown before automation resumes.',
+      });
+    },
   });
   registerSessionsTool(server);
   registerSessionResources(server);

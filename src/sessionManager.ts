@@ -18,6 +18,7 @@ import { getAuracallHomeDir } from './auracallHome.js';
 export type SessionMode = 'api' | 'browser';
 
 export interface BrowserSessionConfig {
+  tabConcurrencyMode?: 'serialized' | 'tab-affinity';
   auracallProfileName?: string | null;
   selectedAgentId?: string | null;
   chromeProfile?: string | null;

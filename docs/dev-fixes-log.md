@@ -1,3 +1,51 @@
+- 2026-09-24: An exact crawler tab endpoint and browser-service provenance are
+  complementary, not mutually exclusive. When a caller supplies host, port, or
+  target ID, resolve the service target read-only with `ensurePort: false` and
+  inherit provenance only when the endpoint matches. Keep the caller's exact
+  target ID authoritative; changed or unavailable endpoints remain
+  provenance-free so provider-session authorization fails closed.
+
+- 2026-09-24: Non-prompt provider CRUD cannot safely inherit generic compatible
+  tab selection when conversation tabs and a crawler coexist. Give a service
+  instance one exact leased utility tab, route every adapter interaction through
+  the aggregate ledger, and execute provider mutations once. If the mutation
+  outcome is uncertain, idle it only as fenced evidence and prohibit later
+  reacquisition rather than treating the tab as reusable.
+
+- 2026-09-24: Acquisition-driven expiry cleanup cannot enforce tab lifetime
+  while a workload is quiet. Give explicit tab-affinity a long-running,
+  non-overlapping maintenance owner that resolves configured scopes without
+  launching browsers, reuses exact target identity verification, isolates
+  profile failures, and is cleared and awaited during API shutdown.
+
+- 2026-09-24: Multitab status should expose operational pressure without
+  leaking provider identities or content. Derive aggregate lease-state,
+  workload-class, expiry/uncertainty, target-action, and retirement counts from
+  the durable registry using one clock instant. Keep exact target, operation,
+  tenant, and conversation locators out of this general status projection.
+
+- 2026-09-24: Lease expiry alone is not authority to close a browser target.
+  Begin retirement only from idle settled state, verify the exact target and
+  workload identity, close that target alone, and require a post-close absence
+  observation before recording `closed`. Defer when the endpoint is unavailable,
+  preserve mismatches for attention, and never retire outcome-unknown work.
+
+- 2026-09-24: Do not replace a mature browser response engine with a narrower
+  prompt-submitted adapter merely to gain tab affinity. Put admission and exact
+  target provisioning around the existing engine, require the full
+  profile-resolved tenant authority, attach without generic fallback, skip an
+  already-exact route, and retain the leased target for lifecycle settlement.
+  Carry that authority through stored, interactive, detached, TUI, and MCP
+  session entry points; an affinity request without it must fail closed.
+
+- 2026-09-24: A live-follow crawler cannot share a profile-wide browser lock
+  with conversation tabs if tab-affinity is meant to permit safe coexistence.
+  Bind each active completion to an exact verified crawler target, retain that
+  target only through a revision-fenced lease, and put every paced read through
+  the same tenant/provider warning and rolling-interaction ledger as foreground
+  prompts. Missing targets may be replaced; live route mismatches fail closed,
+  and affinity cleanup must never terminate the whole managed browser.
+
 - 2026-09-23: Name archival Git remotes for their actual role. The former
   `upstream` remote now uses `oracle-archive`; Oracle is historical
   research/provenance, not an AuraCall synchronization authority. Preserve old
@@ -22728,3 +22776,354 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Keep read/selection/CRUD support, but reject `skills run` at every exported
   execution boundary before inventory, browser launch, or Send. The rejection
   must say that Work-mode testing is deferred rather than implying Work support.
+
+## 2026-09-24 | Separate profile control locks from exact-tab data leases
+
+- Keep the browser-operation dispatcher as the exclusive managed-browser-profile
+  control plane. Changing its key to include a target would let existing generic
+  selection and cleanup paths bypass profile-wide safety before they understand
+  lease ownership.
+- Model exact-target ownership in a provider-neutral registry with independent
+  uniqueness for target identity and workload identity. This permits distinct
+  tabs to coexist without weakening duplicate-target exclusion.
+- Do not wire the registry into production until rebinding, lifetime,
+  reconciliation, aggregate interaction admission, and provider hard stops are
+  covered by provider-free fixtures.
+
+## 2026-09-24 | Persist tab leases as one atomic registry transition
+
+- Per-target lock files cannot atomically preserve both exact-target uniqueness
+  and workload uniqueness when a new-conversation reservation is rebound to a
+  provider conversation ID.
+- Persist the complete versioned lease registry behind one cross-process lock,
+  using a synced temporary file and atomic rename. A restart reconstructs
+  evidence, not live-target authority; reconciliation must still verify the
+  target before use.
+
+## 2026-09-24 | Make provider warnings dominate aggregate admission
+
+- Numeric quota availability is never authority to continue after any tab
+  observes a provider warning, CAPTCHA, verification gate, identity conflict,
+  or account mismatch. Project the warning at tenant/provider scope before
+  issuing another permit, regardless of AuraCall runtime or managed browser
+  profile.
+- Use short-lived reservations to close quota races, retain expired
+  reservations as abandoned evidence, and derive rolling usage from one
+  append-only event history. Passive observations remain auditable without
+  consuming an interaction permit.
+
+## 2026-09-24 | Treat target ID and DevTools endpoint as one affinity locator
+
+- A target ID alone is insufficient execution authority because it is scoped
+  to one browser endpoint. Require the exact host/port together with the active
+  lease before attaching to a conversation or crawler target.
+- Apply caller options before the fixed affinity fields so cancellation,
+  warning, and session-authority evidence survives while target, lifecycle,
+  and navigation policy cannot be overridden.
+- Require provider result readback to name the leased target and bound
+  conversation. A successful-looking response on another target is an affinity
+  failure, not a result to accept or silently reconcile.
+
+## 2026-09-24 | Make rollback a separate execution branch
+
+- Do not make tab affinity an optional collection of arguments on the existing
+  serialized call. Use a discriminated execution mode so compatibility cannot
+  accidentally consume a partial registry or ledger configuration.
+- Require the affinity branch to receive its exact lease claim, aggregate
+  ledger, policy, endpoint, and registry together. Missing construction data is
+  a type/contract failure, not permission to fall back to generic tab discovery.
+- Record an uncertain provider exception as outcome-unknown on both the tab
+  lease and interaction ledger, and never retry it inside the coordinator.
+
+## 2026-09-24 | Reserve quota before creating a browser target
+
+- Aggregate admission must precede target creation; otherwise denied work can
+  leak unnecessary tabs and create browser effects that were never eligible.
+- Allow a reserved or started ledger record to bind exactly one later-created
+  lease ID. Persist that association as its own event and reject any different
+  second binding.
+- When the browser is absent, hold profile-wide startup control only through
+  endpoint readiness, release it, then create the target. Existing endpoints
+  should not acquire profile control because that would unnecessarily exclude
+  already leased conversation tabs.
+
+## 2026-09-24 | Keep tab concurrency default-off at configuration resolution
+
+- Resolve one provider-neutral `serialized` or `tab-affinity` mode in browser
+  configuration instead of inferring activation from the presence of registry
+  files or retained tabs.
+- Serialized construction must not instantiate or touch durable coordination
+  storage. Explicit affinity may construct shared file-backed adapters, but
+  construction and status alone do not authorize caller migration.
+- Place the interaction ledger above AuraCall runtime profiles so hourly,
+  daily, concurrency, and warning evidence cannot fragment by profile.
+
+## 2026-09-24 | Verify a persisted conversation target before affinity reuse
+
+- Creating a new target for every continuation defeats conversation affinity:
+  the new target collides with the already-bound workload and adds exactly the
+  tab churn the design is meant to remove.
+- Reacquire the idle workload lease only after a live target census on the
+  exact DevTools endpoint confirms both target ID and conversation route. Do
+  not treat a persisted target ID as current ownership evidence.
+- When a successful census proves the target absent, record the lost state and
+  release that obsolete binding before creating one replacement. If the target
+  is live on a different route, preserve the conflict as lost and stop rather
+  than navigating, adopting, or closing it.
+## 2026-09-24 | Do not retry affinity-owned provider mutations
+
+- Provider-mutating utility operations must invoke the adapter exactly once.
+  Retrying after a transport failure can duplicate an upload or deletion when
+  the provider effect committed before the failure became observable.
+- Perform cache refresh only after the mutation returns successfully, and pass
+  the existing exact target options into that nested read so refresh does not
+  acquire another lease or select a generic tab.
+
+## 2026-09-24 | Keep nested materialization on its owning utility lease
+
+- Treat an exact `tabTargetId` as re-entry into an already acquired utility
+  lease. Run the inherited operation directly with that exact locator instead
+  of attempting another workload acquisition.
+- When a scoped provider session belongs to aggregate tab-affinity execution,
+  preserve its interaction governor through artifact and file transfers.
+  Removing it fragments accounting precisely where one operation performs
+  multiple provider interactions.
+- Keep the preservation flag explicit so legacy scoped-session callers retain
+  their established behavior until separately migrated.
+## 2026-09-24 | Persist process-generation ownership for active tab leases
+
+- An active persisted lease cannot be assumed live after service restart. Store
+  both the owning PID and a process-generation UUID when reserving or acquiring
+  it, and clear both when the lease idles or becomes lost.
+- Reconcile only owners that are provably dead, replaced in the current PID, or
+  from a legacy record with no ownership proof. Mark them restart-unverified.
+- Release the fence only when the exact target is proven absent. A live target,
+  route mismatch, or unavailable endpoint remains fenced because provider
+  effect settlement cannot be reconstructed safely.
+## 2026-09-24 | Bind specialized DevTools clients before adapter construction
+
+- Wrapping a CLI operation in a lease is insufficient if its adapter later
+  calls generic `connectDevTools()`. Create a scoped browser facade whose
+  identity reads and DevTools connections carry the immutable leased host,
+  port, and target ID.
+- Close the adapter and CDP client inside the utility callback, before the
+  coordinator idles the lease. Closing afterward leaves a window in which a
+  reacquired tab still has an earlier operation attached.
+- Treat unleased live provider tabs as census evidence only. Report aggregate
+  attention without adoption, navigation, focus, refresh, or close authority.
+
+## 2026-09-24 | Settle durable interaction evidence before idling an effectful tab
+
+- A successful provider response proves an effect even if the aggregate ledger
+  cannot subsequently settle. Do not mark the exact tab idle and reusable until
+  that durable settlement succeeds.
+- If settlement fails after the effect is observed, heartbeat the lease as
+  `outcome-unknown`, idle it only in that fenced state, and reject later
+  reacquisition until exact reconciliation proves retry safety.
+- Keep this ordering distinct from pre-effect provisioning failures, where an
+  idle `none` lease remains safe because no prompt was submitted.
+
+## 2026-09-24 | Runtime profiles do not namespace physical tab ownership
+
+- AuraCall runtime profile identity is configuration and attribution context;
+  it must not allow two claims on one physical target in the same managed
+  browser/service.
+- Enforce target ownership and generic-selection fences across runtime profiles.
+  Enforce conversation ownership across runtime profiles for the same managed
+  browser, service, and verified tenant/account.
+- When a different runtime profile safely reacquires an idle settled binding,
+  transfer current runtime attribution on the lease instead of provisioning a
+  competing tab.
+
+## 2026-09-24 | Roll back newly created targets after lease-action accounting failure
+
+- Reserving a newly created target prevents cross-workload use, but a later
+  target-created/navigation accounting failure can strand an active lease whose
+  owner process is still alive.
+- Fence the exact lease as lost before attempting close. Release it only after
+  the exact newly created target closes successfully; preserve the lost fence
+  when close or release is uncertain.
+- This rollback authority applies only to the target created by the failing
+  provisioning operation, never to a reused or human-owned tab.
+
+## 2026-09-24 | Preserve exact rollback cause and close attribution
+
+- Do not encode action-accounting rollback as an identity conflict: identity
+  was not disproven. Persist a distinct `provisioning-failed` loss reason.
+- Do not encode a target AuraCall successfully closed as `already-missing`.
+  Release the lost lease as `closed` and increment only its exact close count.
+- Keep `already-missing` for independently proven absence so operator status
+  can distinguish cleanup effects from observations.
+
+## 2026-09-24 | Count a shared physical browser endpoint once
+
+- AuraCall runtime profiles may share one managed browser and DevTools
+  endpoint. Runtime profiles remain useful lease-attribution contexts, but they
+  are not separate physical target censuses.
+- Deduplicate successful census observations by managed browser and exact
+  endpoint before aggregating live, fenced, and unleased counts.
+- Do not memoize a failed census; allow another mapped runtime profile to retry
+  the read-only observation.
+
+## 2026-09-24 | Clear every guard surface through one operator action
+
+- Aggregate affinity warnings are independent persisted admission evidence.
+  Clearing only legacy browser or Account Mirror guard state leaves affinity
+  blocked, especially for no-expiry human-verification warnings.
+- Route HTTP and MCP operator-clear actions through the aggregate ledger too.
+  Preserve an append-only clear event and replace the warning with the existing
+  quiet cooldown rather than immediately reopening interaction permits.
+- Do not rewrite historical frozen interactions; they remain evidence of the
+  warning and any outcome-unknown in-flight work.
+
+## 2026-09-24 | Separate active provider guards from warning history
+
+- A warning-event total is append-only audit evidence, not current admission
+  state. Do not use it to infer whether provider work is presently blocked.
+- Read active warnings at one captured status timestamp and publish only
+  aggregate classifications and cooldown posture. Exclude expired cooldowns,
+  preserve historical events, and never expose tenant keys or warning reasons.
+
+## 2026-09-24 | Persist admission denials without reserving work
+
+- A returned rejection reason is transient caller feedback, not durable
+  operator evidence. Append a denial event under the same ledger lock used for
+  admission so concurrent, minute, hourly, daily, and provider-warning refusals
+  remain explainable.
+- A denial event must not allocate a reservation or consume quota. Aggregate
+  status may expose reason counts, but not workload, operation, target, tenant,
+  or provider-warning detail.
+
+## 2026-09-24 | Project the quota windows used by admission
+
+- Raw record totals do not explain rolling-limit posture. Operator status
+  should expose active workloads, last-minute interactions, and last-hour/day
+  conversation starts from the same durable ledger semantics as admission.
+- Aggregate across tenant scopes without publishing their identifiers. Include
+  the scope in internal workload uniqueness so equal provider IDs from distinct
+  tenants do not collapse into one active workload.
+
+## 2026-09-24 | Distinguish total lease age from meaningful-use age
+
+- Remaining idle lifetime alone does not explain whether retained tabs are
+  being extended by substantive work. Expose elapsed time since the persisted
+  `lastMeaningfulUseAt` alongside total binding age.
+- Keep this projection identity-free; operators need lifecycle posture, not
+  conversation or target contents.
+
+## 2026-09-24 | Prove coexistence in one provider-free fixture
+
+- Separate green tests for leases, exact-target execution, crawler traversal,
+  and accounting do not prove their combined concurrency contract. Retain one
+  integrated fixture with a shared registry and ledger.
+- The fixture should assert both positive ownership and negative cross-tab
+  behavior: each prompt stays on its exact retained target with navigation
+  disabled, the crawler uses only its own target, and settled usage is exact.
+
+## 2026-09-24 | Live affinity must bypass the outer exclusive dispatcher
+
+- A tab-affinity coordinator inside provider execution does not create live
+  concurrency when the ordinary CLI acquires a managed-profile/service
+  exclusive dispatcher first. Acceptance must prove the second conversation
+  acquires its own exact tab while the first is active, not merely that leases
+  can coexist in provider-free fixtures.
+- `--browser-model-strategy current` must not require a model-selector control.
+  On ChatGPT's current root Chat surface the composer and Chat/Work toggle can
+  be ready while no model-selector button exists. Fail before Send if current
+  model provenance cannot be established, but do not silently fall back to a
+  selector path the operator explicitly disabled.
+- Treat both failures as pre-effect evidence: preserve zero interaction counts,
+  inspect retained DOM read-only, and require a provider-free successor repair
+  before spending another live retry.
+
+## 2026-09-24 | Preserve concurrency mode through runtime-profile materialization
+
+- A nested runtime-profile `browser.tabConcurrencyMode` is operational config,
+  not merely status metadata. Copy it through the same selected-profile browser
+  override seam as `keepBrowser`, model strategy, and other browser behavior.
+- Diagnose a serialized live run from the resolved browser config printed by
+  the installed command. A correctly placed source branch is irrelevant when
+  profile materialization never selects it.
+- Preserve Chat/current as a read-only picker observation. Add exact provider
+  selectors when the control drifts; do not redefine `current` to skip model
+  evidence. Use `ignore` when observation is intentionally disabled.
+
+## 2026-09-24 | Gate thinking controls from observed current-model evidence
+
+- Under model strategy `current`, the requested compatibility label is not the
+  active provider model. Use the picker-observed label to decide whether Chat
+  thinking controls exist and are eligible.
+- A current `Latest` observation must not inherit Sol/Thinking controls merely
+  because schema resolution supplied a Sol target. Preserve the requested and
+  observed model as separate evidence.
+- Keep failures before Send as zero-effect evidence and do not continue to live
+  follow until both exact conversation operations complete and bind routes.
+
+## 2026-09-24 | Do not charge confirmed pre-effect affinity failures
+
+- Propagate remote browser effect state through the thrown error boundary so
+  the affinity executor can distinguish a selector failure before Send from an
+  uncertain post-dispatch outcome.
+- Settle explicitly proven pre-effect failures as `none` plus `cancelled`, and
+  idle the exact lease without extending meaningful-use time. Preserve
+  outcome-unknown fencing whenever effect evidence is absent or ambiguous.
+- Never rewrite historical outcome-unknown records merely because later DOM
+  inspection suggests a likely pre-effect failure; append-only evidence wins.
+
+## 2026-09-24 | Read-only model observation must restore composer readiness
+
+- A `current` model strategy may open ChatGPT's picker to read the checked
+  option, but observation is incomplete until that overlay is dismissed.
+- Dismiss the picker and confirm no visible model menu remains before returning
+  to prompt composition. Otherwise the provider menu retains focus and a valid
+  pre-Send request fails even though the model observation itself succeeded.
+- Preserve the failure as confirmed pre-effect evidence; do not submit or run
+  live follow after a prompt-readiness failure.
+
+## 2026-09-24 | Recognize ChatGPT's exact current composer boundary
+
+- Prompt presence does not prove prompt ownership. ChatGPT's current root
+  editor can be a visible `.ProseMirror` inside
+  `form[data-chatgpt-composer]` without the older composer `data-testid` or
+  legacy send/upload controls.
+- Admit that exact provider-owned form in the prompt-focus ownership check.
+  Do not weaken the guard to accept arbitrary forms or arbitrary editable
+  nodes, because focus is the first step toward a provider mutation.
+- Keep a failure at this gate pre-effect and verify the append-only interaction
+  settles cancelled before considering another live attempt.
+
+## 2026-09-24 | Treat ChatGPT search-unit keys as current turn authority
+
+- Current ChatGPT can omit legacy `conversation-turn`,
+  `data-message-author-role`, and `data-turn` attributes while exposing exact
+  `data-content-search-unit-key` and `data-chatgpt-search-unit-key` values whose
+  final segment is `user` or `assistant`.
+- Use the content search unit as the message boundary and infer its role from
+  the exact key suffix. Ensure assistant extractors accept a role-bearing node
+  itself, not only a matching descendant.
+- When Send produced an exact route and response but legacy observation timed
+  out, reconcile read-only and preserve the original outcome-unknown ledger;
+  never blind-retry the same prompt.
+
+## 2026-09-24 | Dedicated tabs must not prune retained service tabs
+
+- A forced `dispose-new` or `retain-new` tab is a new ownership boundary, not a
+  request to enforce the legacy same-origin stockpile cap against existing
+  tabs. Cleanup during creation can close valid conversation leases before the
+  dedicated routine starts.
+- Preserve ordinary reuse cleanup, but disable cleanup of pre-existing targets
+  when ChatGPT explicitly forces a new dedicated target. The dedicated target
+  may still be disposed through its own lifecycle after use.
+- Regression coverage must seed more same-provider conversations than the
+  legacy cap, open one forced dedicated root, and assert no existing target is
+  closed.
+
+## 2026-09-24 | Share current composer authority with disposable-root checks
+
+- A fresh-root identity/readiness gate must recognize the same exact current
+  provider-owned composer boundary as prompt execution. Keeping a legacy-only
+  textarea selector causes read-only live follow to fail even when the root is
+  healthy.
+- Accept `.ProseMirror` only beneath exact `form[data-chatgpt-composer]`, and
+  retain the root-route and visible-rectangle checks. Do not broaden readiness
+  to arbitrary editable content.

@@ -1010,3 +1010,24 @@ lanes:
     integration_receipt: e497767e4967a713410b83469a4c02bcd1278d9e
     disposition: The exact zero-retry pass advanced once and its sole child succeeded with one materialized asset and zero failures; final active jobs and managed browser owners are zero, API is healthy, and scheduler remains paused.
     updated_at: 2026-09-23
+  - id: P52
+    objective: Implement provider-neutral exact tab leases, conversation affinity, dedicated live-follow crawler ownership, and aggregate interaction accounting, beginning provider-free.
+    plan: docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md
+    plan_ref: refs/heads/feat/issue-46-browser-tab-affinity
+    branch: feat/issue-46-browser-tab-affinity
+    target: main
+    plan_state: CLOSED
+    custody_state: READY_TO_INTEGRATE
+    checkpoint: 7e610e84e
+    remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
+    integration: merge
+    work_items: [ecochran76/auracall#46]
+    dependencies: []
+    overlaps: []
+    reconciled_overlaps: []
+    reconciliation_note: Packets 1 through 6 are provider-free accepted. Packet 7 proved two simultaneous exact-tab conversations plus one dedicated metadata-only live-follow pass under the shared ledger on exact wsl-chrome-3 Pro/personal identity. Expired exact leases were released after fresh absence and zero-process proof.
+    blocker: Canonical merge of pull request 47 remains.
+    validation_status: installed-live-accepted-ready-to-integrate
+    validation_ref: docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md
+    disposition: Exact installed/source parity passed. Two simultaneous commands returned exact markers on distinct route-bound tabs and settled succeeded. A bounded metadata-only completion then completed one pass on a dedicated crawler target while both conversation targets remained unchanged, using two of six provider-read permits with no warning. All accepted leases recorded one target creation and zero navigation, reload, or focus. At expiry the browser endpoint exited; fresh CDP and OS censuses proved zero remaining exact targets or managed-browser processes, and the three fences were released already-missing. GitHub Actions was skipped by operator direction.
+    updated_at: 2026-09-24

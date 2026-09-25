@@ -44,6 +44,7 @@ import {
 	type AccountMirrorVerifiedIdentityEvidence,
 	createChatgptAccountMirrorMetadataCollector,
 } from "./chatgptMetadataCollector.js";
+import { createConfiguredLiveFollowAffinity } from "./configuredLiveFollowAffinity.js";
 import {
 	type AccountMirrorConversationMaterializationPolicy,
 	deriveAccountMirrorConversationFreshness,
@@ -89,6 +90,7 @@ export interface AccountMirrorRefreshRequest {
 	) => Promise<void> | void;
 	development?: AccountMirrorDevelopmentPolicy | null;
 	abortSignal?: AbortSignal;
+	liveFollowOperationId?: string | null;
 }
 
 export interface AccountMirrorDevelopmentPolicy {
@@ -211,6 +213,7 @@ export function createAccountMirrorRefreshService(input: {
 	now?: () => Date;
 	generateRequestId?: () => string;
 	developmentControlsEnabled?: boolean;
+	liveFollowAffinityFactory?: typeof createConfiguredLiveFollowAffinity;
 }): AccountMirrorRefreshService {
 	const now = input.now ?? (() => new Date());
 	const registry =
@@ -239,6 +242,8 @@ export function createAccountMirrorRefreshService(input: {
 	const terminateManagedBrowserProcess =
 		input.terminateManagedBrowserProcess ?? terminateManagedBrowserProcessByPid;
 	const generateRequestId = input.generateRequestId ?? (() => `acctmirror_${randomUUID()}`);
+	const liveFollowAffinityFactory =
+		input.liveFollowAffinityFactory ?? createConfiguredLiveFollowAffinity;
 
 	return {
 		async requestRefresh(request = {}) {
@@ -312,27 +317,49 @@ export function createAccountMirrorRefreshService(input: {
 				operationClass: "exclusive-probe",
 				ownerCommand: `account-mirror-refresh:${provider}:${runtimeProfileId}`,
 			} as const;
-			const acquired = await dispatcher.acquireQueued(operationInput, {
-				timeoutMs: normalizeNonNegativeInteger(request.queueTimeoutMs, 30_000),
-				pollMs: normalizePositiveInteger(request.queuePollMs, 1_000),
-				onBlocked: (result) => {
-					recordBrowserOperationQueueObservation({
-						event: "queued",
-						key: result.key,
-						requested: operationInput,
-						blockedBy: result.blockedBy,
-					});
-					registry.mergeState(
-						{ provider, runtimeProfileId },
-						{
-							queued: true,
-							running: false,
-							lastDispatcherKey: result.key,
-							lastDispatcherBlockedBy: summarizeBrowserOperation(result.blockedBy),
-						},
-					);
-				},
-			});
+			const affinity =
+				request.liveFollowOperationId && isResolvedUserConfig(input.config)
+					? await liveFollowAffinityFactory({
+							userConfig: input.config,
+							provider,
+							runtimeProfileId,
+							operationId: request.liveFollowOperationId,
+							maxBrowserInteractionsPerMinute:
+								development?.maxBrowserInteractionsPerMinute ??
+								target.limits.maxBrowserInteractionsPerMinute,
+							conversationReadCooldownMs:
+								development?.conversationReadCooldownMs ?? target.limits.conversationReadCooldownMs,
+							pageRefreshCooldownMs:
+								development?.pageRefreshCooldownMs ?? target.limits.pageRefreshCooldownMs,
+							renavigationCooldownMs:
+								development?.renavigationCooldownMs ?? target.limits.renavigationCooldownMs,
+							abortSignal: request.abortSignal,
+							now,
+						})
+					: null;
+			const acquired =
+				affinity?.operation ??
+				(await dispatcher.acquireQueued(operationInput, {
+					timeoutMs: normalizeNonNegativeInteger(request.queueTimeoutMs, 30_000),
+					pollMs: normalizePositiveInteger(request.queuePollMs, 1_000),
+					onBlocked: (result) => {
+						recordBrowserOperationQueueObservation({
+							event: "queued",
+							key: result.key,
+							requested: operationInput,
+							blockedBy: result.blockedBy,
+						});
+						registry.mergeState(
+							{ provider, runtimeProfileId },
+							{
+								queued: true,
+								running: false,
+								lastDispatcherKey: result.key,
+								lastDispatcherBlockedBy: summarizeBrowserOperation(result.blockedBy),
+							},
+						);
+					},
+				}));
 
 			if (!acquired.acquired) {
 				const completedAt = now();
@@ -495,6 +522,8 @@ export function createAccountMirrorRefreshService(input: {
 							}
 							return false;
 						},
+						interactionGovernor: affinity?.interactionGovernor,
+						tabAffinity: affinity?.tabAffinity,
 					}),
 					development?.maxWallTimeMs ??
 						normalizePositiveInteger(request.collectorTimeoutMs, 120_000),
@@ -647,8 +676,9 @@ export function createAccountMirrorRefreshService(input: {
 					runtimeProfileId,
 					explicitRefresh: true,
 				});
+				await affinity?.completeSuccess();
 				const browserLifecycle = await cleanupManagedBrowserAfterRefresh({
-					request,
+					request: affinity ? { ...request, cleanupManagedBrowserAfterRefresh: false } : request,
 					config: input.config,
 					provider,
 					runtimeProfileId,
@@ -691,6 +721,7 @@ export function createAccountMirrorRefreshService(input: {
 					development,
 				};
 			} catch (error) {
+				await affinity?.completeFailure(error);
 				const completedAt = now();
 				const isIdentityMismatch = error instanceof AccountMirrorIdentityMismatchError;
 				const verifiedIdentity = verifiedIdentityRef.current;
@@ -841,7 +872,7 @@ export function createAccountMirrorRefreshService(input: {
 					},
 				});
 				await cleanupManagedBrowserAfterRefresh({
-					request,
+					request: affinity ? { ...request, cleanupManagedBrowserAfterRefresh: false } : request,
 					config: input.config,
 					provider,
 					runtimeProfileId,

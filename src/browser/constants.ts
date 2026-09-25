@@ -1,10 +1,10 @@
-import type { BrowserModelStrategy } from './types.js';
-import { CHATGPT_PROVIDER } from './providers/chatgpt.js';
 import {
   requireBundledServiceBaseUrl,
   requireBundledServiceCookieOrigins,
   requireBundledServiceRouteTemplate,
 } from '../services/registry.js';
+import { CHATGPT_PROVIDER } from './providers/chatgpt.js';
+import type { BrowserModelStrategy } from './types.js';
 
 export const CHATGPT_URL = requireBundledServiceBaseUrl('chatgpt');
 export const GEMINI_URL = requireBundledServiceRouteTemplate('gemini', 'app');
@@ -18,7 +18,12 @@ export const INPUT_SELECTORS = CHATGPT_PROVIDER.selectors.input;
 export const ANSWER_SELECTORS = CHATGPT_PROVIDER.selectors.assistantRole;
 
 export const CONVERSATION_TURN_SELECTOR = CHATGPT_PROVIDER.selectors.assistantBubble.join(', ');
-export const ASSISTANT_ROLE_SELECTOR = '[data-message-author-role="assistant"], [data-turn="assistant"]';
+export const ASSISTANT_ROLE_SELECTOR = [
+  '[data-content-search-unit-key$=":assistant"]',
+  '[data-chatgpt-search-unit-key$=":assistant"]',
+  '[data-message-author-role="assistant"]',
+  '[data-turn="assistant"]',
+].join(', ');
 export const CLOUDFLARE_CHALLENGE_SELECTOR = [
   '#challenge-running',
   '#challenge-stage',

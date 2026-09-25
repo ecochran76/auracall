@@ -4,6 +4,7 @@ import type { ExecutionRuntimeControlContract } from './contract.js';
 import type { ExecutionServiceHostExecutionGate } from './serviceHost.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 import type { ExecutionRunStep } from './types.js';
+import type { ProviderInteractionLedger } from '../../packages/browser-service/src/service/interactionLedger.js';
 
 type MutableRecord = Record<string, unknown>;
 
@@ -14,7 +15,7 @@ export interface TenantChatExecutionLimits {
 }
 
 export interface TenantExecutionLimitUsageSummary {
-  basis: 'runtime-evidence' | 'not-requested';
+  basis: 'runtime-evidence' | 'aggregate-interaction-ledger' | 'not-requested';
   activeChats: number | null;
   chatsLastHour: number | null;
   chatsLastDay: number | null;
@@ -66,6 +67,7 @@ export const DEFAULT_CHATGPT_TENANT_LIMITS: TenantChatExecutionLimits = {
   maxChatsPerHour: 120,
   maxChatsPerDay: 240,
 };
+export const DEFAULT_CHATGPT_INTERACTIONS_PER_MINUTE = 30;
 
 const TENANT_RESERVATION_TTL_MS = 60_000;
 const HOUR_MS = 60 * 60_000;
@@ -176,11 +178,29 @@ export function resolveChatgptTenantLimits(
   );
 }
 
+export function resolveChatgptInteractionsPerMinute(
+  config: Record<string, unknown>,
+  runtimeProfileId: string | null,
+): number {
+  const globalChatgpt = readRecord(readRecord(config.services)?.chatgpt);
+  const globalLiveFollow = readRecord(globalChatgpt?.liveFollow);
+  const runtimeProfiles = getCurrentRuntimeProfiles(config);
+  const runtimeProfile = runtimeProfileId ? readRecord(runtimeProfiles[runtimeProfileId]) : null;
+  const runtimeChatgpt = readRecord(readRecord(runtimeProfile?.services)?.chatgpt);
+  const runtimeLiveFollow = readRecord(runtimeChatgpt?.liveFollow);
+  return (
+    readNullablePositiveInteger(runtimeLiveFollow?.maxBrowserInteractionsPerMinute) ??
+    readNullablePositiveInteger(globalLiveFollow?.maxBrowserInteractionsPerMinute) ??
+    DEFAULT_CHATGPT_INTERACTIONS_PER_MINUTE
+  );
+}
+
 export async function summarizeTenantExecutionLimits(deps: {
   control: ExecutionRuntimeControlContract;
   config?: Record<string, unknown> | null;
   now?: () => Date;
   includeUsage?: boolean;
+  interactionLedger?: ProviderInteractionLedger;
 }): Promise<TenantExecutionLimitStatusSummary> {
   const config = deps.config ?? {};
   const now = deps.now ?? (() => new Date());
@@ -228,21 +248,30 @@ export async function summarizeTenantExecutionLimits(deps: {
   }
 
   const emptyReservations = new Map<string, TenantExecutionReservation>();
-  const entries = [...scopesByKey.values()]
+  const entries = await Promise.all([...scopesByKey.values()]
     .sort((left, right) => {
       const tenantCompare = left.scope.tenantKey.localeCompare(right.scope.tenantKey);
       if (tenantCompare !== 0) return tenantCompare;
       return formatTenantLimitsKey(left.scope.limits).localeCompare(formatTenantLimitsKey(right.scope.limits));
     })
-    .map((entry): TenantExecutionLimitStatusEntry => {
+    .map(async (entry): Promise<TenantExecutionLimitStatusEntry> => {
       const usage = includeUsage
-        ? summarizeTenantUsage({
-            records: allRecords,
-            reservations: emptyReservations,
-            config,
-            scope: entry.scope,
-            nowMs,
-          })
+        ? deps.interactionLedger
+          ? {
+              basis: 'aggregate-interaction-ledger' as const,
+              ...await deps.interactionLedger.summarizeUsage({
+                provider: entry.scope.service,
+                tenantKey: entry.scope.tenantKey,
+                now: nowDate.toISOString(),
+              }),
+            }
+          : summarizeTenantUsage({
+              records: allRecords,
+              reservations: emptyReservations,
+              config,
+              scope: entry.scope,
+              nowMs,
+            })
         : createNotRequestedTenantUsage();
       return {
         service: 'chatgpt',
@@ -253,7 +282,7 @@ export async function summarizeTenantExecutionLimits(deps: {
         limits: entry.scope.limits,
         usage,
       };
-    });
+    }));
 
   const tenantUsage = new Map<string, TenantExecutionLimitUsageSummary>();
   for (const entry of entries) {

@@ -1,3 +1,122 @@
+## 2026-09-24 | Plan 0359 installed ChatGPT acceptance complete
+
+- Exact source/runtime parity at `7e610e84e` preceded one isolated
+  metadata-only `wsl-chrome-3` completion. It completed one steady-follow pass
+  with two active provider interactions out of six, zero prompt or asset
+  materialization, a clear provider guard, and exact Pro/personal identity.
+- The dedicated crawler target coexisted with both retained R10 conversation
+  targets. All three leases recorded one target creation and zero navigation,
+  reload, or focus actions; both conversation routes remained byte-identical
+  through the completed pass.
+- At expiry, an operator-side maintenance call used the close helper's arguments
+  in the wrong order. It closed nothing and correctly fenced the three leases
+  `lost/preserved`. The managed browser endpoint then exited before
+  reconciliation; a fresh CDP and OS census proved all exact targets and the
+  managed-browser process absent, so the fences were released
+  `already-missing`. This is zero-orphan proof, not an attributed close.
+- The complete local suite reached 3,281 passing tests before three directly
+  affected stale assertions and one background-drain timing test failed. The
+  assertions were corrected; the affected file plus the timing test then pass
+  268/268. Typecheck, production build, scoped formatting, and diff hygiene
+  pass. GitHub Actions was skipped by operator direction.
+
+## 2026-09-24 | Plan 0359 exact-endpoint provenance retention
+
+- An explicit DevTools host, port, or target remains an execution override, but
+  it no longer suppresses read-only resolution of the matching browser-service
+  target. Matching endpoint provenance now supplies the browser profile,
+  managed browser profile, source profile, and process identity while the
+  caller's exact target ID remains authoritative.
+- Explicit endpoints resolve with `ensurePort: false`, so provenance recovery
+  cannot launch or renavigate a browser. A mismatched or unavailable resolved
+  endpoint remains provenance-free and therefore fails closed at the existing
+  provider-session authorization gate.
+- Three focused suites pass 251 tests, with typecheck and production build.
+  Installed metadata-only acceptance remains open; no additional provider
+  prompt was sent.
+
+## 2026-09-24 | Plan 0359 ChatGPT utility-tab coordination
+
+- ChatGPT project/conversation listing, identity reads, rename, and delete now
+  use one retained exact utility tab per service instance when explicit affinity
+  is enabled. Serialized mode retains the existing service behavior.
+- Each adapter interaction reserves and settles against the shared
+  tenant/provider ledger. Affinity mutations execute once without the legacy
+  retry wrapper; uncertain failures mark both tab and ledger outcome unknown.
+- The lease registry now refuses to reacquire any outcome-unknown idle lease.
+  One hundred focused browser-service and LLM-service tests, typecheck,
+  production build, diff hygiene, and repository lint pass. No live effect ran.
+
+## 2026-09-24 | Plan 0359 persistent API tab maintenance
+
+- Added a non-overlapping tab-affinity maintenance loop owned by the
+  long-running API. Explicit affinity defaults to a 60-second cadence;
+  serialized and proof-scoped runs schedule nothing, and shutdown clears the
+  timer and awaits an active pass.
+- Each pass resolves configured ChatGPT AuraCall runtime profiles independently,
+  uses `ensurePort: false`, never starts an absent browser, and applies the same
+  exact identity and post-close retirement contract as acquisition-time cleanup.
+- Eleven focused maintenance/retirement/status tests and the API lifecycle test
+  pass with typecheck, production build, diff hygiene, and repository lint.
+  Lint retains 207 pre-existing warnings. No live browser/provider effect ran.
+
+## 2026-09-24 | Plan 0359 sanitized affinity observability
+
+- Expanded read-only tab-concurrency status with aggregate lease lifecycle,
+  workload class, expiry/uncertainty attention, exact target-action, and
+  retirement-disposition counts. The projection contains no conversation IDs,
+  target IDs, operation IDs, tenant keys, or provider content.
+- A deterministic injected clock makes expiry status testable without changing
+  production time behavior. Four focused tests, typecheck, production build,
+  scoped formatting, diff hygiene, and repository lint pass; lint retains its
+  existing 207-warning baseline.
+- Periodic maintenance ownership, sanitized per-binding lifetime status,
+  restart/orphan reconciliation, and remaining non-prompt interaction surfaces
+  stay open. No browser, provider, scheduler, installation, or live effect ran.
+
+## 2026-09-24 | Plan 0359 attributable tab retirement
+
+- Added a provider-neutral two-phase expired-lease sweeper and ChatGPT workload
+  identity policy. Only idle settled leases past idle or absolute expiry are
+  eligible; outcome-unknown leases remain untouched.
+- Foreground and live-follow affinity acquisition now sweep their exact scope.
+  Live matching targets are closed individually and must be absent on a second
+  census before `closed` is recorded. Missing targets become already-missing,
+  mismatches become preserved/lost, and unavailable endpoints defer without a
+  lease transition.
+- Fifty-three focused tests, typecheck, scoped Biome checks, diff hygiene, and
+  production build pass. This is acquisition-driven cleanup; a persistent
+  periodic maintenance owner and broader orphan status remain open.
+
+## 2026-09-24 | Plan 0359 legacy response affinity activation
+
+- Explicit ChatGPT affinity now wraps the full legacy `runBrowserMode()`
+  response lifecycle with aggregate admission and exact-tab provisioning. The
+  legacy engine connects only to the leased target, skips navigation when that
+  target is already on the exact route, and leaves affinity-owned cleanup to
+  the lease lifecycle.
+- Stored responses, interactive and detached sessions, TUI, and MCP
+  consultation now carry profile-resolved affinity configuration. Missing full
+  authority fails closed; Gemini and Grok remain serialized.
+- Provider-free validation passed 102 focused coordinator/legacy tests and 125
+  focused session tests, typecheck, scoped lint/diff hygiene, and production
+  builds. No browser or provider effect occurred. Expiry retirement and
+  remaining non-prompt surfaces are next.
+
+## 2026-09-24 | Plan 0359 Account Mirror crawler activation
+
+- ChatGPT live-follow completions in explicit `tab-affinity` mode now own one
+  exact crawler tab, retain it across sequential Account Mirror reads, and
+  settle those interactions into the same tenant/provider ledger used by
+  foreground affinity prompts.
+- The crawler path verifies an existing target before reacquisition, replaces
+  only a proven-missing target, fails closed on a mismatched provider route,
+  and disables whole-browser cleanup while the bounded lease remains valid.
+- Provider-free validation passed 177 focused tests, typecheck, scoped Biome
+  checks, diff hygiene, and the production build. No installation, browser,
+  provider, scheduler, or live effect was performed. The next boundary is the
+  legacy direct `runBrowserMode()` path and production expiry retirement.
+
 ## 2026-09-23 | Oracle remote reclassified as historical provenance
 
 - Renamed the local Git remote `upstream` to `oracle-archive` without changing
@@ -49969,3 +50088,551 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   limitation after integration. The plan audit retains 32 pre-existing missing
   policy-target findings from main commit `2b08d5f2e`; this slice does not
   expand into that policy repair.
+
+## 2026-09-23 | Plan 0359 browser tab affinity and multitasking
+
+- Reviewed the current browser-operation dispatcher, ChatGPT retained-session
+  mechanics, live-follow ownership, tenant execution limits, and provider
+  warning guards against the requested one-workload-per-tab design.
+- Added Plan 0359 as `PLANNED` with implementation custody unassigned. It
+  specifies exact conversation-to-tab leases, one dedicated live-follow crawler
+  tab, bounded heartbeat/expiry/retirement, and one aggregate provider
+  interaction ledger while preserving current warning, identity, CAPTCHA,
+  uncertain-effect, and second-Chrome hard stops.
+- The plan sequences provider-free contracts before ChatGPT integration and
+  keeps Gemini/Grok plus installed/live work behind separate acceptance gates.
+  No source, runtime, browser, provider, issue, branch, or active-lane state was
+  changed in this planning slice.
+
+## 2026-09-24 | Plan 0359 Packet 1 started
+
+- Opened issue 46 and branch `feat/issue-46-browser-tab-affinity` for P52.
+- Packet 1 is provider-free and keeps the existing serialized production path.
+  The primary owns architecture/integration; parallel workers receive isolated,
+  non-overlapping discovery and test-design scopes.
+- Installation, managed-browser launch, provider interaction, scheduler
+  control, and live acceptance remain out of scope.
+
+## 2026-09-24 | Plan 0359 first tab-lease tracer
+
+- Added a provider-neutral in-memory tab-lease registry as a separate data-plane
+  seam; the existing browser-operation dispatcher and every production caller
+  remain unchanged and serialized.
+- The first deterministic tracer proves two conversation reservations and one
+  live-follow crawler can own distinct exact targets concurrently, while
+  duplicate target and workload ownership fail atomically. A paired fixture
+  records that the compatibility dispatcher still blocks distinct targets in
+  the same managed browser profile.
+- Three focused lease tests, eleven dispatcher regressions, repository
+  typecheck, and the full 3,185-test provider-free suite pass. The plan audit
+  retains 32 pre-existing missing-policy findings unrelated to P52. Remaining
+  Packet 1 work covers rebinding, heartbeat/lifetime, census exclusion, restart
+  reconciliation, warning freeze, and action counts.
+- Pushed the checkpoint and opened PR 47 against `main`; issue 46 remains open
+  because this is the first implementation slice, not Plan 0359 completion.
+
+## 2026-09-24 | Plan 0359 provider-free lease lifecycle
+
+- Extended the separate tab-lease registry with atomic conversation rebinding,
+  revision-fenced meaningful-use heartbeat, exact-workload idle/reacquire, and
+  two-phase target retirement. Passive reads do not extend lifetime and idle
+  expiry never exceeds absolute expiry.
+- Target-missing and restart-unverified records become terminal lost evidence
+  that remains fenced from generic reuse. Callers can obtain the exact fenced
+  target IDs without interpreting registry lifecycle internals.
+- Eight lease tests, eleven compatibility-dispatcher regressions, typecheck,
+  and production build pass. No production caller, browser, provider,
+  scheduler, installed runtime, or live surface was changed or exercised.
+
+## 2026-09-24 | Plan 0359 file-backed lease registry tracer
+
+- Added a file-backed adapter that performs every registry mutation under one
+  cross-process lock and replaces one versioned snapshot through temp-file
+  fsync/rename. This keeps target and workload indexes atomic during
+  reservation-to-conversation rebinding.
+- Two registry instances racing for the same exact target produce one winner
+  and one conflict; a fresh instance reconstructs all committed leases.
+- Nine lease-registry tests, eleven compatibility-dispatcher tests, and
+  typecheck pass. Production dispatch remains serialized and no browser or
+  provider effect ran.
+
+## 2026-09-24 | Plan 0359 aggregate interaction admission tracer
+
+- Added a provider-neutral in-memory interaction ledger keyed by tenant and
+  provider across AuraCall runtime profiles and managed browser profiles.
+  Provider warnings freeze existing reserved/started work and deny later work
+  before numeric availability is considered.
+- Short reservations close concurrent admission races and expire as retained
+  abandoned evidence. Settled and active conversation starts drive rolling
+  hourly limits exactly once. Passive observation is append-only audit evidence
+  but consumes no interaction permit.
+- Append-only events retain sanitized operational locators, interaction class,
+  mutability, effect state, outcome, and warning classification. Four ledger,
+  nine lease, and eleven dispatcher tests, typecheck, and build pass. No
+  production caller or live/provider surface uses the ledger yet.
+
+## 2026-09-24 | Plan 0359 durable aggregate admission
+
+- Added a file-backed interaction-ledger adapter that evaluates warnings and
+  rolling limits and commits the reservation under one cross-process lock.
+  Synced snapshot replacement preserves projections plus append-only event
+  history across restart.
+- Restart tests preserve settled hourly usage and an indefinite
+  human-verification warning. A concurrent two-instance race under a one-chat
+  limit returns exactly one permit and one denial.
+- Five ledger, nine lease, and eleven compatibility-dispatcher tests plus
+  typecheck pass. No production caller is wired to the new admission seam.
+
+## 2026-09-24 | Plan 0359 profile-control hierarchy and cancellation
+
+- Added profile-control claims to the same atomic registry that owns exact tab
+  leases. Fenced tab targets deny browser startup/control, while an active
+  control claim denies tab reservation; file-backed instances observe the same
+  exclusion and revision-fenced release.
+- Interaction settlement now distinguishes confirmed pre-effect cancellation
+  from provider-observed or outcome-unknown conversation starts. The cancelled
+  record and event remain durable, but numeric start usage is not charged.
+- Six interaction-ledger, ten tab-lease, and eleven compatibility-dispatcher
+  tests plus typecheck pass. Existing production dispatcher behavior remains
+  unchanged and serialized.
+
+## 2026-09-24 | Plan 0359 exact action counters and daily admission
+
+- Added per-lease counters for target creation, adoption, navigation, reload,
+  focus, and attributable close. Every active action requires the current
+  revision claim, updates only that lease, and extends idle but never absolute
+  lifetime.
+- Added exact rolling-day coverage: a settled start at the inclusive 24-hour
+  cutoff remains counted, then becomes available one millisecond later.
+- Seven ledger, eleven tab-lease, and eleven compatibility-dispatcher tests plus
+  typecheck pass. Production browser execution remains serialized.
+
+## 2026-09-24 | Plan 0359 tenant-limit status projection
+
+- Added an optional provider-neutral interaction-ledger input to tenant-limit
+  status. When supplied, status reads exact durable active/hour/day usage and
+  labels its basis `aggregate-interaction-ledger`; without it, established
+  runtime-evidence behavior is unchanged.
+- This is a read-only compatibility projection. Production construction does
+  not yet inject the ledger, and no admission or browser concurrency behavior
+  changed.
+- Thirty-four focused tests, typecheck, and production build pass.
+- A full provider-free run produced 3,200 passes and one unrelated
+  background-drain timing failure (`in_progress` instead of `completed`); the
+  exact failed test passed immediately in isolation. The broad run is recorded
+  as flaky evidence, not a clean pass.
+
+## 2026-09-24 | Plan 0359 exact-target provider fixtures
+
+- Added a provider-specific ChatGPT leased-prompt seam that requires one active
+  conversation/new-conversation lease plus the exact DevTools endpoint. It
+  fixes execution to the leased target, retains the tab, prohibits navigation
+  fallback, preserves caller cancellation/authority options, and rejects
+  ownership or provider readback drift.
+- Added a provider-neutral live-follow traversal seam that accepts only its
+  dedicated crawler lease, visits conversations sequentially on that target,
+  and observes abort before every follow-on visit. A conversation lease cannot
+  enter the crawler path.
+- Sixty-five focused tests, typecheck, scoped Biome checks, diff hygiene, and
+  production build pass. Production construction still uses serialized
+  compatibility behavior; no browser, provider, scheduler, installation, or
+  live effect ran.
+
+## 2026-09-24 | Plan 0359 guarded ChatGPT affinity coordinator
+
+- Added an explicit serialized-versus-tab-affinity execution coordinator. The
+  serialized branch preserves the current runner without registry or aggregate
+  ledger dependencies; the affinity branch requires all new ownership and
+  admission inputs rather than resolving generic browser state.
+- The affinity branch admits and starts exactly once, runs the exact leased
+  target, validates provider target/conversation readback, atomically rebinds a
+  new conversation, idles the lease, and settles aggregate usage. Provider
+  failure is retained as outcome-unknown and is not retried.
+- Sixty-nine focused tests, typecheck, scoped Biome checks, diff hygiene,
+  production build, and an up-to-date CodeGraph census pass. The remaining
+  outer layer must reserve before target creation and attach the eventual lease
+  to that reservation; production callers remain serialized.
+
+## 2026-09-24 | Plan 0359 admission-before-provisioning transaction
+
+- Added a durable one-time interaction-reservation-to-tab-lease binding and
+  append-only event. The outer ChatGPT coordinator now reserves aggregate
+  capacity before it invokes target provisioning and denies warning-blocked
+  work without creating a tab or calling the provider.
+- Added a ChatGPT provisioner with injected provider-free browser effects. It
+  reuses a verified endpoint, or holds profile-control ownership only around
+  absent-browser startup, then creates and immediately leases one exact target.
+  A lease conflict closes only that newly created target.
+- Provider warning classification during execution now freezes the shared
+  tenant/provider ledger before another permit can issue. Seventy-six focused
+  tests, typecheck, scoped Biome checks, diff hygiene, and production build
+  pass; production factories and callers remain on serialized compatibility.
+
+## 2026-09-24 | Plan 0359 runtime factory and mode status
+
+- Added provider-neutral `browser.tabConcurrencyMode` configuration with an
+  explicit `serialized` default. Default construction returns no registry or
+  ledger and does not create coordination storage.
+- Explicit `tab-affinity` constructs one shared file-backed tab registry and
+  cross-runtime interaction ledger under the AuraCall home. The production
+  browser client now exposes read-only resolved mode and aggregate count status.
+- Eight focused files passed 89 tests, typecheck, scoped Biome checks, diff
+  hygiene, and production build. Prompt and Account Mirror callers remain on
+  serialized compatibility; no browser, provider, scheduler, installation, or
+  live effect ran.
+
+## 2026-09-24 | Plan 0359 guarded ChatGPT prompt activation
+
+- Explicit `tab-affinity` now routes `BrowserAutomationClient.runPrompt()`
+  through tenant-wide admission, exact managed-browser-profile resolution,
+  target provisioning, lease binding, effect settlement, and warning
+  projection. Default `serialized` execution still calls the established
+  service path without constructing coordination stores.
+- ChatGPT handoff submission selects the coordinated browser client only in
+  explicit affinity mode; serialized handoffs retain the existing profile-wide
+  queue and owner attribution.
+- Completion review found that initial wiring created a fresh target for every
+  continuation. The provisioner now reacquires an idle conversation binding
+  only after live target census confirms the exact route. A census-proven
+  missing target is released and replaced once; a live route mismatch is
+  marked lost and fails closed.
+- One hundred three focused tests, typecheck, scoped Biome checks, diff hygiene,
+  and production build pass. Account Mirror and legacy `runBrowserMode()` are
+  not migrated; no installed, browser, provider, scheduler, or live effect ran.
+## 2026-09-24 | Plan 0359 ChatGPT file-mutation affinity
+
+- Project/account file upload and delete now execute once on the reusable exact
+  utility tab in explicit affinity mode. Their post-mutation cache refreshes
+  reuse the same exact target without nested lease acquisition.
+- A failed mutation does not invoke the legacy retry path and does not begin a
+  cache refresh; the production utility coordinator classifies that failure as
+  outcome unknown.
+- Thirteen focused service/coordinator tests, typecheck, scoped formatting, and
+  diff hygiene pass. No live browser/provider effect ran.
+
+## 2026-09-24 | Plan 0359 inherited ChatGPT materialization affinity
+
+- Extended the reusable ChatGPT utility lease across inherited project,
+  account, and conversation file reads; conversation context; artifact/file
+  materialization; downloads; and active-media materialization.
+- Exact nested calls now bypass lease acquisition, preventing an outer
+  materialization routine from reacquiring its own tab. Affinity-owned scoped
+  provider sessions preserve the shared ledger governor across transfers.
+- Sixty focused tests and typecheck pass. Scoped source formatting and diff
+  hygiene pass; the broader legacy file test retains a pre-existing formatter
+  finding outside this change. No live browser/provider effect ran.
+## 2026-09-24 | Plan 0359 project mutation and restart ownership
+
+- Routed project create/rename/clone/instruction operations and public project
+  UI substeps through the reusable exact ChatGPT utility tab. Affinity-owned
+  provider mutations explicitly disable retry while serialized callers retain
+  prior behavior.
+- Added sanitized per-binding age and idle/absolute lifetime status with no
+  target, tenant, operation, or conversation identifiers.
+- Active leases now carry process-generation ownership. Periodic maintenance
+  marks dead or legacy owners restart-unverified, releases only proven-missing
+  targets, and keeps live or mismatched targets fenced.
+- Seventy-eight focused LLM tests and 21 lifecycle/status tests pass with
+  typecheck, production build, scoped formatting, and diff hygiene. No live
+  browser/provider effect ran.
+## 2026-09-24 | Plan 0359 specialized adapters and target census
+
+- ChatGPT Skill and Developer App CLI operations now acquire the service-owned
+  utility lease, consume its aggregate governor, and pass fixed host, port, and
+  target ID into every DevTools attachment. Their CDP clients close before the
+  lease becomes idle.
+- Exact DevTools attachment bypasses generic target resolution and rejects
+  partial exact-target authority. Developer App prompt submission remains on
+  the separate conversation-affinity execution path.
+- Periodic maintenance now counts live, fenced, and unleased ChatGPT page
+  targets and logs only aggregates. Unleased targets are never adopted or
+  mutated.
+- One hundred twenty-three focused adapter/service tests and four maintenance
+  tests pass with typecheck and scoped formatting. No live effect ran.
+
+## 2026-09-24 | Plan 0359 provider-free completion audit
+
+- The full non-live suite passes: 354 test files and 3,269 tests; 65 opt-in/live
+  tests remain skipped. Production build and lint pass, with the existing 207
+  warnings and 13 infos unchanged.
+- The Packet 1-6 audit found direct deterministic coverage for exact lease
+  uniqueness, conversation rebinding/reuse, crawler isolation, generic-target
+  exclusion, lifecycle extension/retirement, aggregate limits, warning
+  precedence, restart fencing, exact management adapters, and observation-only
+  unleased-target census.
+- The plan-library audit keeps Plan 0359 and reports only the 32 pre-existing
+  missing duplicate policy targets referenced by `AGENTS.md`.
+- Provider-free work is accepted. Packet 7 remains unrun because installation,
+  browser/provider interaction, exact account/profile selection, and live
+  acceptance were not authorized; serialized compatibility remains default.
+
+## 2026-09-24 | Post-effect ledger settlement fence
+
+- Read-only branch review found that foreground prompt success idled a settled
+  tab before durable interaction-ledger settlement. A ledger failure could
+  therefore surface as a caller error while leaving an observed provider effect
+  on a reusable tab.
+- Successful ledger settlement now precedes the idle transition. A failed
+  settlement marks the exact lease outcome-unknown and reacquisition fails
+  closed.
+- Four focused suites pass with 14 tests; typecheck, build, scoped Biome, lint,
+  and diff hygiene pass. Two broad reruns encountered unrelated timing flakes
+  in rate-limit spacing and HTTP background drain; each exact failure passed in
+  isolation. No browser or provider effect ran.
+
+## 2026-09-24 | Cross-runtime tab ownership repair
+
+- Read-only review found that registry conflict checks included AuraCall runtime
+  profile identity. Distinct runtime profiles targeting the same managed browser
+  and account could therefore duplicate a target or conversation lease and
+  generic target exclusion could miss the other runtime's tab.
+- Target uniqueness and generic exclusion now span the managed browser and
+  service. Conversation/workload uniqueness spans managed browser, service, and
+  tenant/account. Profile-wide control likewise spans runtime profiles.
+- A settled idle conversation may be reacquired through another runtime profile
+  for the same browser/account, transferring current runtime attribution rather
+  than creating a competing binding. Twenty-six focused tests and typecheck
+  pass. The reduced-concurrency full suite passes 354 files and 3,271 tests,
+  with 65 opt-in/live tests skipped; build and lint pass. No browser/provider
+  effect ran.
+
+## 2026-09-24 | Provisioning accounting rollback
+
+- Prompt and crawler provisioners reserved a newly created exact target before
+  recording its target-created action. If that accounting transition failed,
+  the target stayed safely fenced but active under a live process indefinitely.
+- Both provisioners now mark that exact lease lost before closing the exact
+  newly created target, then release it only after close succeeds. A close
+  failure preserves the lost fence for reconciliation.
+- Four focused suites pass with 14 tests; typecheck, scoped Biome, and diff
+  hygiene pass. No browser/provider effect ran.
+
+## 2026-09-24 | Provisioning rollback attribution
+
+- The first rollback repair reused `identity-conflict` and
+  `already-missing`, obscuring both why the lease was lost and that AuraCall had
+  actually closed the target.
+- Rollback now persists `provisioning-failed`, releases a successfully closed
+  lost target with disposition `closed`, and increments that exact lease's
+  close counter. Proven-absent targets retain `already-missing` semantics.
+- Twenty-eight focused lifecycle/status tests and typecheck pass. No live effect
+  ran.
+
+## 2026-09-24 | Shared-browser census deduplication
+
+- Periodic maintenance correctly reconciled leases per attributed runtime, but
+  also counted the same physical ChatGPT endpoint once per runtime profile.
+  Aggregate live/fenced/unleased target status could therefore be inflated.
+- Successful target census is now deduplicated by managed browser plus exact
+  DevTools host/port. Retirement and restart reconciliation remain per-runtime,
+  and a failed census remains retryable through another mapped profile.
+- Nine selected maintenance/API tests and typecheck pass. No browser/provider
+  effect ran.
+
+## 2026-09-24 | Aggregate provider-warning operator recovery
+
+- The affinity interaction ledger persisted provider warnings independently of
+  existing browser and Account Mirror guards. Operator clear did not reach that
+  ledger, so a no-expiry human-verification warning blocked affinity forever.
+- The ledger now records an append-only `provider-warning-cleared` event. The
+  existing HTTP and MCP operator-clear surfaces replace an indefinite ChatGPT
+  affinity warning with the same bounded quiet cooldown, after which admission
+  may resume.
+- Historical frozen interactions remain unchanged. Twelve focused tests, the
+  selected HTTP regression, typecheck, build, and lint pass. No provider effect
+  ran.
+
+## 2026-09-24 | Active provider-guard status
+
+- Tab-concurrency status previously exposed only historical warning-event
+  count, so a cleared or expired warning was indistinguishable from a current
+  fail-closed guard.
+- The shared interaction ledger now provides a time-bounded active-warning read.
+  Status publishes only aggregate active, indefinite, cooldown, classification,
+  and maximum remaining-cooldown values; tenant keys and warning reasons remain
+  private.
+- Fourteen focused ledger/status tests, typecheck, build, lint, scoped Biome,
+  and diff hygiene pass. The immediately preceding full non-live suite passed
+  355 files and 3,276 tests with 65 opt-in/live tests skipped. No browser or
+  provider effect ran.
+
+## 2026-09-24 | Admission-rejection status
+
+- Aggregate admission returned precise rejection reasons but persisted no
+  denial evidence, leaving operator status unable to explain why otherwise
+  valid concurrent work was refused.
+- Denials now append an `admission-rejected` event without creating a
+  reservation. Status exposes only total, latest reason, and counts for
+  provider-warning, concurrency, per-minute, hourly, and daily guards.
+- Twenty-nine focused affinity/ledger/status tests, typecheck, build, lint,
+  scoped Biome, and diff hygiene pass. No browser or provider effect ran.
+
+## 2026-09-24 | Aggregate rolling-usage status
+
+- Status exposed record totals but not the current quota windows that decide
+  admission, leaving operators unable to compare a rejection with durable
+  minute/hour/day usage.
+- The ledger now summarizes all tenant scopes without publishing their keys.
+  Equal workload IDs in different tenant scopes remain distinct, and status
+  uses one captured timestamp for active, minute, hourly, and daily values.
+- Thirty focused affinity/ledger/status tests, typecheck, build, lint, scoped
+  Biome, and diff hygiene pass. No browser or provider effect ran.
+
+## 2026-09-24 | Meaningful-use status
+
+- Per-binding status exposed total age and remaining lifetime but omitted the
+  last-meaningful-use posture explicitly required by Packet 6.
+- Status now reports elapsed time since `lastMeaningfulUseAt` without exposing
+  target or conversation identity. The fixture proves target-action accounting
+  produces a value distinct from total lease age.
+- Focused status tests, typecheck, scoped Biome, and diff hygiene pass. No
+  browser or provider effect ran.
+
+## 2026-09-24 | Provider-free coexistence terminal fixture
+
+- The constituent contracts had separate coverage for two conversation tabs,
+  crawler isolation, and aggregate accounting, but no single fixture proved the
+  Plan 0359 terminal condition end to end.
+- The combined fixture reserves two exact conversation leases and one crawler
+  lease in one registry, admits all three through one ledger, runs concurrent
+  fake-target prompt/crawler work, and proves exact routes plus three settled
+  rolling interactions.
+- Thirty-six focused registry/ledger/status/affinity/coexistence tests,
+  typecheck, scoped Biome, and diff hygiene pass. No browser or provider effect
+  ran; installed/live Packet 7 remains separately gated.
+
+## 2026-09-24 | Plan 0359 Packet 7 installed/live hard stop
+
+- The operator authorized installation, bounded ChatGPT acceptance, and
+  canonical integration while directing us to skip unavailable GitHub Actions.
+  Installed/source parity passed for the repaired composer-mode artifact, and
+  exact `wsl-chrome-3` identity matched the configured Pro personal account.
+- The first smoke stopped before Send on current root Chat/Work hydration. A
+  provider-specific repair now waits for enabled root toggles and recognizes
+  Chat's selected class; 70 focused tests, 156 broader browser/config tests,
+  typecheck, build, and lint pass.
+- The one bounded retry reached Chat mode for both distinct marker commands,
+  but the second queued behind the first at the managed-profile/service
+  exclusive dispatcher. Both then stopped before Send because current-model
+  execution still demanded a model-selector button absent from the root UI.
+- Retained read-only census showed three root ChatGPT tabs, an enabled composer,
+  the exact Chat/Work controls, and no dialog, provider warning, CAPTCHA, or
+  submitted marker. Live follow did not run. Packet 7 and canonical-main
+  integration remain unaccepted; the next slice is provider-free dispatcher
+  routing plus a selector-free current-model path, not another live retry.
+
+## 2026-09-24 | Plan 0359 Packet 7 provider-free successor repair
+
+- Structural tracing showed the affinity branch already precedes the ordinary
+  outer dispatcher. The selected AuraCall runtime profile instead dropped its
+  nested `browser.tabConcurrencyMode`, causing the installed CLI to remain in
+  serialized compatibility mode despite the configured profile value.
+- Profile materialization now preserves that field. Chat/current model strategy
+  now produces an explicit selector-free plan across local, remote, and adapter
+  workbench paths rather than invoking the root model picker.
+- Eight focused suites pass with 133 tests, plus typecheck, production build,
+  and diff hygiene. This slice is provider-free: repaired source was not
+  installed, no additional prompt ran, and Packet 7 remains open.
+
+## 2026-09-24 | Plan 0359 exact-tab live concurrency proven pre-Send
+
+- The corrected installed runtime resolved `tabConcurrencyMode=tab-affinity`.
+  Two simultaneous conversation operations connected to distinct exact targets
+  without an operation-dispatcher queue, and both independently observed the
+  current root model as `Latest` through the exact `Select ChatGPT model`
+  control.
+- Both stopped before Send because inherited `thinkingTime=light` was evaluated
+  against the requested Sol compatibility label rather than observed `Latest`,
+  which exposes no Thinking chip. No prompt, warning, CAPTCHA, identity drift,
+  or live-follow effect occurred.
+- Current-model thinking eligibility now uses the observed model in local,
+  remote, and adapter paths. Eighty-eight focused tests, typecheck, production
+  build, and diff hygiene pass. The repair is not installed; Packet 7 remains
+  open and integration is withheld.
+
+## 2026-09-24 | Plan 0359 pre-effect aggregate-accounting repair
+
+- Read-only ledger inspection showed both thinking-control failures persisted
+  as settled/outcome-unknown despite zero Send and exact action counts limited
+  to target creation. Those historical records remain immutable evidence.
+- Remote browser failures now carry explicit pre-effect state into affinity
+  settlement. Confirmed pre-effect failures idle the exact lease with `none`
+  and settle the aggregate record as cancelled; unknown failures retain the
+  existing conservative fence.
+- Forty-seven focused tests, typecheck, production build, and diff hygiene pass.
+  The repair was not installed and no further provider or live-follow effect ran.
+
+## 2026-09-24 | Plan 0359 current-model picker dismissal
+
+- Exact installed parity and `wsl-chrome-3` identity passed before the bounded
+  two-conversation retry. Both operations ran concurrently on distinct exact
+  targets, observed `Latest`, and stopped before Send because the read-only
+  model picker remained open and blocked composer focus.
+- The live accounting repair behaved as designed: both records settled
+  `effectState=none`, `outcome=cancelled`; both leases are idle and record only
+  target creation, with zero navigation, reload, focus, close, prompt, warning,
+  CAPTCHA, or live-follow effects.
+- Current-model observation now dismisses its provider menu and confirms it is
+  closed before returning to prompt composition. The focused suite passes 23
+  tests with typecheck and production build. The repair is not installed or
+  live-retested; Packet 7 and canonical integration remain open.
+
+## 2026-09-24 | Plan 0359 current root composer ownership
+
+- Installed parity and exact `wsl-chrome-3` identity passed before the bounded
+  concurrent retry. Both exact tabs observed `Latest` and dismissed the picker,
+  proving the prior repair, but stopped before Send because prompt focus did
+  not recognize the current root composer boundary.
+- Read-only retained-DOM inspection identified a visible editable `.ProseMirror`
+  inside exact `form[data-chatgpt-composer]`; the older ownership check accepted
+  only `data-testid` composer containers or forms containing legacy controls.
+- Prompt focus now accepts the exact provider-owned `data-chatgpt-composer`
+  boundary without broadening to arbitrary forms. Forty focused tests,
+  typecheck, and production build pass. Both live records settled cancelled
+  with no effect, no prompt or live-follow ran, and integration remains open.
+
+## 2026-09-24 | Plan 0359 current turn observation
+
+- Live attempt 1/10 passed exact concurrent tab ownership through Send. Both
+  ChatGPT conversations completed on distinct routes with the exact requested
+  response markers, as proven by read-only retained-route inspection.
+- Installed automation timed out because the provider replaced legacy turn and
+  author attributes with role-bearing search-unit keys. Both append-only
+  interactions therefore remain outcome unknown despite successful external
+  reconciliation; they were not retried.
+- Shared ChatGPT turn selectors, commit verification, assistant extraction, and
+  adapter message-role inference now recognize the current exact attributes.
+  Six focused suites pass 242 tests; typecheck and production build pass.
+  Live follow remains gated on an installed successful prompt pair.
+
+## 2026-09-24 | Plan 0359 dedicated-tab stockpile cleanup
+
+- Installed live attempt 2/10 completed two concurrent ChatGPT commands on
+  distinct exact targets and returned both exact R6 markers. Their leases are
+  idle, retained, route-bound, and settled; both aggregate interaction records
+  succeeded with no provider warning, navigation, or reload.
+- The first isolated, metadata-only, one-pass live-follow probe opened a fresh
+  root tab but the legacy target-stockpile cleanup closed both newest retained
+  conversation tabs despite their unexpired leases. The collector then failed
+  its fresh-root composer gate, without submitting a prompt or materializing
+  account data.
+- Forced dedicated ChatGPT tabs now suppress cleanup of pre-existing targets.
+  Ordinary reuse cleanup remains unchanged. A new regression preserves three
+  retained same-provider conversations while opening the dedicated root; four
+  focused suites pass 205 tests and typecheck passes. Installed retest remains
+  open.
+
+## 2026-09-24 | Plan 0359 disposable-root composer readiness
+
+- Attempt 6/10 completed two fresh concurrent R10 conversations after the
+  supported login launcher restored the exact managed browser profile. A
+  repaired live-follow probe then opened its own crawler tab without closing
+  either retained conversation tab, proving the stockpile-cleanup fix live.
+- The bounded collector stopped read-only at identity because its fresh-root
+  gate still accepted only legacy textarea selectors. Current ChatGPT instead
+  exposes the already-known `.ProseMirror` within exact
+  `form[data-chatgpt-composer]`.
+- The root-readiness expression now accepts that provider-owned boundary while
+  preserving root-route and visibility checks. Four focused suites pass 206
+  tests, plus typecheck and production build. No provider warning, CAPTCHA,
+  prompt, or materialization occurred during the failed collector pass.

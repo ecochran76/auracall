@@ -10,6 +10,7 @@ const processCheckMocks = vi.hoisted(() => ({
 
 const chromeLifecycleMocks = vi.hoisted(() => ({
   connectToChrome: vi.fn(),
+  connectToChromeTarget: vi.fn(),
 }));
 
 vi.mock('../../packages/browser-service/src/processCheck.js', async (importOriginal) => {
@@ -27,12 +28,14 @@ vi.mock('../../packages/browser-service/src/chromeLifecycle.js', async (importOr
   return {
     ...actual,
     connectToChrome: chromeLifecycleMocks.connectToChrome,
+    connectToChromeTarget: chromeLifecycleMocks.connectToChromeTarget,
   };
 });
 
 describe('BrowserService DevTools attachment liveness', () => {
   beforeEach(() => {
     chromeLifecycleMocks.connectToChrome.mockReset();
+    chromeLifecycleMocks.connectToChromeTarget.mockReset();
   });
 
   test('bounds stalled browser target resolution and reports the active stage', async () => {
@@ -94,6 +97,48 @@ describe('BrowserService DevTools attachment liveness', () => {
         timeoutMs: 25,
       }),
     );
+  });
+
+  test('attaches directly to an exact target without generic target resolution', async () => {
+    const exactClient = { close: vi.fn(async () => undefined) };
+    chromeLifecycleMocks.connectToChromeTarget.mockResolvedValueOnce(exactClient);
+    const resolveBrowserListTarget = vi.fn();
+    const service = new BrowserService(DEFAULT_BROWSER_CONFIG as ResolvedBrowserConfig, {
+      resolveBrowserListTarget,
+      pruneRegistry: vi.fn(async () => {}),
+      launchManualLoginSession: vi.fn(),
+    });
+
+    await expect(
+      service.connectDevTools({
+        host: '127.0.0.1',
+        port: 45015,
+        tabTargetId: 'utility-tab-1',
+      }),
+    ).resolves.toEqual({ client: exactClient, port: 45015 });
+    expect(resolveBrowserListTarget).not.toHaveBeenCalled();
+    expect(chromeLifecycleMocks.connectToChromeTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        host: '127.0.0.1',
+        port: 45015,
+        target: 'utility-tab-1',
+      }),
+    );
+    expect(chromeLifecycleMocks.connectToChrome).not.toHaveBeenCalled();
+  });
+
+  test('rejects partial exact-target attachment authority', async () => {
+    const resolveBrowserListTarget = vi.fn();
+    const service = new BrowserService(DEFAULT_BROWSER_CONFIG as ResolvedBrowserConfig, {
+      resolveBrowserListTarget,
+      pruneRegistry: vi.fn(async () => {}),
+      launchManualLoginSession: vi.fn(),
+    });
+
+    await expect(
+      service.connectDevTools({ host: '127.0.0.1', tabTargetId: 'utility-tab-1' }),
+    ).rejects.toThrow('requires host, port, and tabTargetId together');
+    expect(resolveBrowserListTarget).not.toHaveBeenCalled();
   });
 });
 

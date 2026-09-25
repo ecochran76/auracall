@@ -26,6 +26,7 @@ const CHATGPT_SELECTORS = resolveBundledServiceSelectors("chatgpt", {
 	modelButton: [
 		'[data-testid="model-switcher-dropdown-button"]',
 		"button.__composer-pill",
+		'button[aria-label="Select ChatGPT model"]',
 		'button[aria-label*="Model"]',
 		'button[aria-haspopup="menu"][aria-label*="Model"]',
 		'[data-animated-slider-trigger="true"]',
@@ -37,6 +38,7 @@ const CHATGPT_SELECTORS = resolveBundledServiceSelectors("chatgpt", {
 		'[data-testid*="model-switcher-"]',
 	],
 	assistantBubble: [
+		"[data-content-search-unit-key]",
 		'article[data-testid^="conversation-turn"]',
 		'div[data-testid^="conversation-turn"]',
 		'section[data-testid^="conversation-turn"]',
@@ -48,6 +50,8 @@ const CHATGPT_SELECTORS = resolveBundledServiceSelectors("chatgpt", {
 		"section[data-turn]",
 	],
 	assistantRole: [
+		'[data-content-search-unit-key$=":assistant"]',
+		'[data-chatgpt-search-unit-key$=":assistant"]',
 		'article[data-testid^="conversation-turn"][data-message-author-role="assistant"]',
 		'article[data-testid^="conversation-turn"][data-turn="assistant"]',
 		'article[data-testid^="conversation-turn"] [data-message-author-role="assistant"]',

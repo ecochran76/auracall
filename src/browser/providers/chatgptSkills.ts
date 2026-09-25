@@ -21,6 +21,7 @@ import {
 } from "../service/ui.js";
 import type { BrowserLogger, ChromeClient } from "../types.js";
 import { classifyChatgptBlockingSurfaceProbe, readChatgptUserIdentity } from "./chatgptAdapter.js";
+import type { BrowserProviderListOptions } from "./types.js";
 
 type SkillIdentity = {
 	email?: string | null;
@@ -49,19 +50,18 @@ export interface ChatgptSkillDetailProbe {
 
 export interface ChatgptSkillBrowserClient {
 	readonly userConfig: ResolvedUserConfig;
-	getUserIdentity(options?: {
-		abortSignal?: AbortSignal;
-		configuredUrl?: string;
-		preserveActiveTab?: boolean;
-		requirePromptWorkbenchTarget?: boolean;
-		tabLifecycle?: "dispose-new" | "retain-new";
-	}): Promise<SkillIdentity | null>;
+	getUserIdentity(options?: BrowserProviderListOptions): Promise<SkillIdentity | null>;
 	connectDevTools(
 		options?: DevToolsConnectionOptions,
 	): Promise<{ client: ChromeClient; port: number }>;
 	connectChatgptPromptWorkbench(
 		options?: DevToolsConnectionOptions,
 	): Promise<{ client: ChromeClient; port: number }>;
+	runUtilityBrowserOperation?<TResult>(input: {
+		options?: BrowserProviderListOptions;
+		mutability: "read-only" | "provider-mutating";
+		run: (options: BrowserProviderListOptions) => Promise<TResult>;
+	}): Promise<TResult>;
 }
 
 export function hashChatgptSkillInstructions(value: string): string {

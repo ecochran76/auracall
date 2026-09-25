@@ -158,6 +158,7 @@ export function registerConsultTool(server: McpServer): void {
           hideWindow: false,
           keepBrowser: false,
           desiredModel: desiredModelLabel || mapModelToBrowserLabel(runOptions.model),
+          tabConcurrencyMode: userConfig.browser?.tabConcurrencyMode,
         };
       }
 
@@ -216,6 +217,7 @@ export function registerConsultTool(server: McpServer): void {
           version: getCliVersion(),
           notifications,
           muteStdout: true,
+          userConfig,
         });
       } catch (error) {
         log(`Run failed: ${error instanceof Error ? error.message : String(error)}`);

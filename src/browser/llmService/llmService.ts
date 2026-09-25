@@ -654,6 +654,15 @@ export abstract class LlmService {
 			options?.cacheStore ?? createCacheStore(resolveCacheStoreKind(configuredStore));
 	}
 
+	async runUtilityBrowserOperation<TResult>(input: {
+		options?: BrowserProviderListOptions;
+		mutability: "read-only" | "provider-mutating";
+		run: (options: BrowserProviderListOptions) => Promise<TResult>;
+	}): Promise<TResult> {
+		const options = await this.buildListOptions(input.options, { ensurePort: true });
+		return input.run(options);
+	}
+
 	getCapabilities(): LlmCapabilities {
 		return {
 			projects: this.provider.capabilities?.projects ?? false,
@@ -822,16 +831,23 @@ export abstract class LlmService {
 			? (overrides.configuredUrl ?? null)
 			: this.getConfiguredUrl();
 		const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
+		const resolvedTarget = await this.browserService.resolveServiceTarget({
+			serviceId: this.providerId,
+			configuredUrl,
+			ensurePort: overrides.tabTargetId || hasExplicitEndpoint ? false : options.ensurePort,
+			abortSignal: overrides.abortSignal,
+			onStage: options.onPreflightStage,
+		});
+		const explicitEndpointMatches =
+			Boolean(resolvedTarget) &&
+			(!overrides.host || !resolvedTarget?.host || overrides.host === resolvedTarget.host) &&
+			(!overrides.port || !resolvedTarget?.port || overrides.port === resolvedTarget.port);
 		const target =
 			overrides.tabTargetId || hasExplicitEndpoint
-				? null
-				: await this.browserService.resolveServiceTarget({
-						serviceId: this.providerId,
-						configuredUrl,
-						ensurePort: options.ensurePort,
-						abortSignal: overrides.abortSignal,
-						onStage: options.onPreflightStage,
-					});
+				? explicitEndpointMatches
+					? resolvedTarget
+					: null
+				: resolvedTarget;
 		const host = target?.host ?? overrides.host;
 		const port = target?.port ?? overrides.port;
 		const attachResolvedServiceTab = shouldAttachResolvedServiceTab(overrides);
@@ -979,6 +995,10 @@ export abstract class LlmService {
 
 	protected getResolvedUserConfig(): ResolvedUserConfig {
 		return this.userConfig;
+	}
+
+	protected getBrowserService(): BrowserService {
+		return this.browserService;
 	}
 
 	protected async overlayConversationListFromCache(
@@ -1183,7 +1203,10 @@ export abstract class LlmService {
 		await this.ensureValidProjectUrl(projectId, { listOptions });
 		await this.withRetry(
 			() => this.provider.renameProject?.(projectId, newTitle, listOptions) as Promise<void>,
-			{ action: "renameProject" },
+			{
+				action: "renameProject",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 		await this.renameProjectCacheEntry(listOptions, projectId, newTitle);
 	}
@@ -1199,7 +1222,10 @@ export abstract class LlmService {
 		await this.ensureValidProjectUrl(projectId, { listOptions });
 		const created = await this.withRetry(
 			() => this.provider.cloneProject?.(projectId, listOptions) as Promise<Project | null>,
-			{ action: "cloneProject" },
+			{
+				action: "cloneProject",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 		if (created?.id) {
 			await this.upsertProjectCacheEntry(listOptions, created);
@@ -1217,7 +1243,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.openProjectMenu?.(projectId, listOptions) as Promise<void>,
-			{ action: "openProjectMenu" },
+			{
+				action: "openProjectMenu",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1231,7 +1260,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.selectRenameProjectItem?.(projectId, listOptions) as Promise<void>,
-			{ action: "selectRenameProjectItem" },
+			{
+				action: "selectRenameProjectItem",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1245,7 +1277,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.selectCloneProjectItem?.(projectId, listOptions) as Promise<void>,
-			{ action: "selectCloneProjectItem" },
+			{
+				action: "selectCloneProjectItem",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1260,7 +1295,10 @@ export abstract class LlmService {
 		await this.ensureValidProjectUrl(projectId, { listOptions });
 		await this.withRetry(
 			() => this.provider.selectRemoveProjectItem?.(projectId, listOptions) as Promise<void>,
-			{ action: "selectRemoveProjectItem" },
+			{
+				action: "selectRemoveProjectItem",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1274,7 +1312,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.pushProjectRemoveConfirmation?.(projectId, listOptions) as Promise<void>,
-			{ action: "pushProjectRemoveConfirmation" },
+			{
+				action: "pushProjectRemoveConfirmation",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 		await this.removeProjectCacheEntry(listOptions, projectId);
 	}
@@ -1317,7 +1358,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.openCreateProjectModal?.(listOptions) as Promise<void>,
-			{ action: "openCreateProjectModal" },
+			{
+				action: "openCreateProjectModal",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1336,7 +1380,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.setCreateProjectFields?.(fields, listOptions) as Promise<void>,
-			{ action: "setCreateProjectFields" },
+			{
+				action: "setCreateProjectFields",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1349,7 +1396,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.clickCreateProjectNext?.(listOptions) as Promise<void>,
-			{ action: "clickCreateProjectNext" },
+			{
+				action: "clickCreateProjectNext",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1362,7 +1412,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.clickCreateProjectAttach?.(listOptions) as Promise<void>,
-			{ action: "clickCreateProjectAttach" },
+			{
+				action: "clickCreateProjectAttach",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1375,7 +1428,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.clickCreateProjectUploadFile?.(listOptions) as Promise<void>,
-			{ action: "clickCreateProjectUploadFile" },
+			{
+				action: "clickCreateProjectUploadFile",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1389,7 +1445,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.uploadCreateProjectFiles?.(paths, listOptions) as Promise<void>,
-			{ action: "uploadCreateProjectFiles" },
+			{
+				action: "uploadCreateProjectFiles",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -1842,12 +1901,14 @@ export abstract class LlmService {
 			);
 			const artifacts = limitItems(artifactCandidates, options?.maxItems);
 			if (listOptions.useProviderSession === true) {
-				listOptions.interactionGovernor = undefined;
 				listOptions.skipFeatureSignature = true;
-				recordBrowserScrapeProviderAction(
-					listOptions,
-					"llmService.scopedArtifactTransfersBypassInteractionGovernor",
-				);
+				if (listOptions.preserveInteractionGovernorForProviderSession !== true) {
+					listOptions.interactionGovernor = undefined;
+					recordBrowserScrapeProviderAction(
+						listOptions,
+						"llmService.scopedArtifactTransfersBypassInteractionGovernor",
+					);
+				}
 			}
 			recordBrowserScrapeCandidateCount(
 				listOptions,
@@ -2167,12 +2228,14 @@ export abstract class LlmService {
 			);
 			const knownConversationFileCount = listedConversationFiles.length;
 			if (listOptions.useProviderSession === true) {
-				listOptions.interactionGovernor = undefined;
 				listOptions.skipFeatureSignature = true;
-				recordBrowserScrapeProviderAction(
-					listOptions,
-					"llmService.scopedFileTransfersBypassInteractionGovernor",
-				);
+				if (listOptions.preserveInteractionGovernorForProviderSession !== true) {
+					listOptions.interactionGovernor = undefined;
+					recordBrowserScrapeProviderAction(
+						listOptions,
+						"llmService.scopedFileTransfersBypassInteractionGovernor",
+					);
+				}
 			}
 			recordBrowserScrapeCandidateCount(
 				listOptions,
@@ -2447,7 +2510,10 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(
 			() => this.provider.clickCreateProjectConfirm?.(listOptions) as Promise<void>,
-			{ action: "clickCreateProjectConfirm" },
+			{
+				action: "clickCreateProjectConfirm",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 	}
 
@@ -2481,7 +2547,10 @@ export abstract class LlmService {
 		}
 		const created = await this.withRetry(
 			() => this.provider.createProject?.(input, listOptions) as Promise<Project | null>,
-			{ action: "createProject" },
+			{
+				action: "createProject",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 		if (created?.id) {
 			await this.upsertProjectCacheEntry(listOptions, created);
@@ -2514,6 +2583,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.toggleProjectSidebar?.(listOptions) as Promise<void>, {
 			action: "toggleProjectSidebar",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2524,6 +2594,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.toggleMainSidebar?.(listOptions) as Promise<void>, {
 			action: "toggleMainSidebar",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2534,6 +2605,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.clickHistoryItem?.(listOptions) as Promise<void>, {
 			action: "clickHistoryItem",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2544,6 +2616,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.clickHistorySeeAll?.(listOptions) as Promise<void>, {
 			action: "clickHistorySeeAll",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2554,6 +2627,7 @@ export abstract class LlmService {
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		await this.withRetry(() => this.provider.clickChatArea?.(listOptions) as Promise<void>, {
 			action: "clickChatArea",
+			retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
 		});
 	}
 
@@ -2574,7 +2648,10 @@ export abstract class LlmService {
 					listOptions,
 					options?.modelLabel,
 				) as Promise<void>,
-			{ action: "updateProjectInstructions" },
+			{
+				action: "updateProjectInstructions",
+				retries: listOptions.disableProviderMutationRetry === true ? 0 : undefined,
+			},
 		);
 		const cacheContext = await this.resolveCacheContext(listOptions);
 		await this.cacheStore.writeProjectInstructions(cacheContext, projectId, instructions);
@@ -4092,7 +4169,8 @@ export abstract class LlmService {
 			typeof error === "object" &&
 				error !== null &&
 				"details" in error &&
-				(error as { details?: { effectState?: string } }).details?.effectState === "effect_observed",
+				(error as { details?: { effectState?: string } }).details?.effectState ===
+					"effect_observed",
 		);
 	}
 

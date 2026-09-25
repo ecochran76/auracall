@@ -83,9 +83,18 @@ describe('runBrowserSessionExecution', () => {
     await runBrowserSessionExecution(
       {
         runOptions: { ...baseRunOptions, verbose: true },
-        browserConfig: baseConfig,
+        browserConfig: { ...baseConfig, tabConcurrencyMode: 'tab-affinity' },
         cwd: '/repo',
         log,
+        userConfig: {
+          auracallProfile: 'default',
+          browser: { tabConcurrencyMode: 'tab-affinity', target: 'chatgpt' },
+          profiles: {
+            default: {
+              services: { chatgpt: { identity: { email: 'operator@example.com' } } },
+            },
+          },
+        } as never,
       },
       {
         assemblePrompt: async () => ({
@@ -107,6 +116,10 @@ describe('runBrowserSessionExecution', () => {
     expect(executeBrowser).toHaveBeenCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({ providerSessionAuthorization }),
+        tabAffinityUserConfig: expect.objectContaining({
+          auracallProfile: 'default',
+          browser: expect.objectContaining({ tabConcurrencyMode: 'tab-affinity' }),
+        }),
       }),
     );
     expect(log.mock.calls.some((call) => String(call[0]).includes('operator@example.com'))).toBe(false);

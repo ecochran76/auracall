@@ -16,8 +16,8 @@ import type {
 } from "../src/accountMirror/completionService.js";
 import { createAccountMirrorCompletionStore } from "../src/accountMirror/completionStore.js";
 import type { AccountMirrorRefreshService } from "../src/accountMirror/refreshService.js";
-import type { AccountMirrorSchedulerPassLedger } from "../src/accountMirror/schedulerLedger.js";
 import { writeAccountMirrorSchedulerControlState } from "../src/accountMirror/schedulerControlState.js";
+import type { AccountMirrorSchedulerPassLedger } from "../src/accountMirror/schedulerLedger.js";
 import type { AccountMirrorSchedulerPassResult } from "../src/accountMirror/schedulerService.js";
 import {
 	type AccountMirrorStatusSummary,
@@ -44,16 +44,13 @@ import {
 	writeLazyLiveFollowPreflightStatus,
 } from "../src/preflightStatus.js";
 import type { ArchiveMaterializationJobListRequest } from "../src/runtime/archiveMaterializationJobService.js";
-import type {
-	RunArchiveListRequest,
-	RunArchiveService,
-} from "../src/runtime/archiveService.js";
+import type { RunArchiveListRequest, RunArchiveService } from "../src/runtime/archiveService.js";
 import type { ExecutionRuntimeControlContract } from "../src/runtime/contract.js";
 import { createExecutionRuntimeControl } from "../src/runtime/control.js";
 import {
 	type HistoryMaterializationJob,
-	type HistoryMaterializationJobListRequest,
 	HistoryMaterializationJobControlError,
+	type HistoryMaterializationJobListRequest,
 	type HistoryMaterializationService,
 } from "../src/runtime/historyMaterializationService.js";
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from "../src/runtime/liveServiceStateRegistry.js";
@@ -960,6 +957,25 @@ describe("http responses adapter", () => {
 		} finally {
 			await server.close();
 		}
+	});
+
+	it("owns and stops periodic tab-affinity maintenance with the API lifetime", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-http-tab-maintenance-"));
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const runTabAffinityMaintenance = vi.fn().mockResolvedValue(undefined);
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0, tabAffinityMaintenanceIntervalMs: 10 },
+			{ runTabAffinityMaintenance },
+		);
+
+		await vi.waitFor(() => expect(runTabAffinityMaintenance).toHaveBeenCalled(), {
+			timeout: 1_000,
+		});
+		await server.close();
+		const callsAfterClose = runTabAffinityMaintenance.mock.calls.length;
+		await delay(30);
+		expect(runTabAffinityMaintenance).toHaveBeenCalledTimes(callsAfterClose);
 	});
 
 	it("accepts direct response attachments and stores them as uploadable step artifacts", async () => {
@@ -2569,7 +2585,7 @@ describe("http responses adapter", () => {
 				},
 			});
 			expect(refreshPayload.mirrorStatus.entries[0]).toMatchObject({
-        detectedIdentityKey: "service-account:chatgpt:ecochran76@gmail.com|structure=business",
+				detectedIdentityKey: "service-account:chatgpt:ecochran76@gmail.com|structure=business",
 				mirrorState: expect.objectContaining({
 					queued: false,
 					running: false,
@@ -3159,7 +3175,10 @@ describe("http responses adapter", () => {
 		}
 	});
 
-	it.each(["batch", "availability"])("hydrates broad live-follow status from terminal history materialization jobs with %s archive reads", async (archiveMode) => {
+	it.each([
+		"batch",
+		"availability",
+	])("hydrates broad live-follow status from terminal history materialization jobs with %s archive reads", async (archiveMode) => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-http-account-mirror-status-history-hydration-"),
 		);
@@ -3347,11 +3366,11 @@ describe("http responses adapter", () => {
 		});
 		const listHistoryMaterializationJobsBatch = vi.fn(
 			async (requests: HistoryMaterializationJobListRequest[]) => {
-			const results = [];
-			for (const request of requests) {
-				results.push(await listHistoryMaterializationJobs(request));
-			}
-			return results;
+				const results = [];
+				for (const request of requests) {
+					results.push(await listHistoryMaterializationJobs(request));
+				}
+				return results;
 			},
 		);
 
@@ -3363,8 +3382,15 @@ describe("http responses adapter", () => {
 				accountMirrorStatusRegistry: registry,
 				runArchiveService: {
 					listItems: listArchiveItems,
-					listItemsBatch: archiveMode === "availability" ? vi.fn(async () => { throw new Error("full batch must not run"); }) : listArchiveItemsBatch,
-					...(archiveMode === "availability" ? { listItemsBatchAvailability: listArchiveItemsBatch } : {}),
+					listItemsBatch:
+						archiveMode === "availability"
+							? vi.fn(async () => {
+									throw new Error("full batch must not run");
+								})
+							: listArchiveItemsBatch,
+					...(archiveMode === "availability"
+						? { listItemsBatchAvailability: listArchiveItemsBatch }
+						: {}),
 				} as unknown as RunArchiveService,
 				historyMaterializationService: {
 					listJobs: listHistoryMaterializationJobs,
@@ -3559,7 +3585,8 @@ describe("http responses adapter", () => {
 		// Startup reconciliation must not race the status-only hydration assertion.
 		const server = await createResponsesHttpServer(
 			{
-				host: "127.0.0.1", port: 0,
+				host: "127.0.0.1",
+				port: 0,
 				resumeAccountMirrorCompletionsOnStart: false,
 				reconcileAccountMirrorLiveFollowOnStart: false,
 			},
@@ -4439,11 +4466,11 @@ describe("http responses adapter", () => {
 			{
 				accountMirrorCompletionService: {
 					start,
-						read,
-						list,
-						refreshMaterializationStatuses,
-						refreshMaterializationStatus,
-						control,
+					read,
+					list,
+					refreshMaterializationStatuses,
+					refreshMaterializationStatus,
+					control,
 				},
 			},
 		);
@@ -7729,7 +7756,7 @@ describe("http responses adapter", () => {
 			{
 				host: "127.0.0.1",
 				port: 0,
-					accountMirrorSchedulerIntervalMs: 25,
+				accountMirrorSchedulerIntervalMs: 25,
 				accountMirrorSchedulerDryRun: true,
 			},
 			{
@@ -7741,8 +7768,8 @@ describe("http responses adapter", () => {
 		);
 
 		try {
-				await delay(40);
-				const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			await delay(40);
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
 			expect(response.status).toBe(200);
 			const payload = (await response.json()) as {
 				accountMirrorScheduler: {
@@ -7891,7 +7918,7 @@ describe("http responses adapter", () => {
 		}
 	});
 
-		it("reports foreground scheduler preemption on live-follow target routine decisions", async () => {
+	it("reports foreground scheduler preemption on live-follow target routine decisions", async () => {
 		await useTempAuracallHome("auracall-http-scheduler-preemption-");
 		const config = {
 			model: "gpt-5.2",
@@ -7948,7 +7975,7 @@ describe("http responses adapter", () => {
 			{
 				host: "127.0.0.1",
 				port: 0,
-					accountMirrorSchedulerIntervalMs: 250,
+				accountMirrorSchedulerIntervalMs: 250,
 				accountMirrorSchedulerDryRun: false,
 			},
 			{
@@ -7967,9 +7994,9 @@ describe("http responses adapter", () => {
 		);
 
 		try {
-				await vi.waitFor(() => expect(runOnce).toHaveBeenCalledWith({ dryRun: false }), {
-					timeout: 1_000,
-				});
+			await vi.waitFor(() => expect(runOnce).toHaveBeenCalledWith({ dryRun: false }), {
+				timeout: 1_000,
+			});
 			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
 			expect(response.status).toBe(200);
 			const payload = (await response.json()) as {
@@ -10035,7 +10062,7 @@ describe("http responses adapter", () => {
 								? completedCompletion
 								: id === blockedCompletion.id
 									? blockedCompletion
-								: null,
+									: null,
 					),
 					list: vi.fn(() => [runningCompletion, completedCompletion, blockedCompletion]),
 					control: vi.fn(() => runningCompletion),

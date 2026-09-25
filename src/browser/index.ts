@@ -167,6 +167,7 @@ import {
 	resolveSimpleProviderGuardProfileName,
 	writeSimpleProviderGuardState,
 } from "./simpleProviderGuard.js";
+import { runLegacyChatgptWithConfiguredAffinity } from "./legacyChatgptAffinityRuntime.js";
 import type {
 	BrowserAttachment,
 	BrowserLogger,
@@ -1657,6 +1658,39 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			})}`,
 		);
 	}
+	if (
+		target === "chatgpt" &&
+		config.tabConcurrencyMode === "tab-affinity" &&
+		!options.tabAffinity
+	) {
+		if (!options.tabAffinityUserConfig) {
+			throw new Error(
+				"Legacy ChatGPT tab affinity requires the full profile-resolved user configuration.",
+			);
+		}
+		return runLegacyChatgptWithConfiguredAffinity({
+			userConfig: options.tabAffinityUserConfig,
+			browserOptions: options,
+			resolvedConfig: config,
+			runLeased: ({ host, port, targetId, targetUrl }) =>
+				runRemoteBrowserMode(
+					promptText,
+					attachments,
+					{
+						...config,
+						remoteChrome: { host, port },
+						url: targetUrl,
+					},
+					logger,
+					{
+						...options,
+						tabAffinity: { host, port, targetId },
+						tabAffinityUserConfig: undefined,
+						skipBrowserExecutionOperation: true,
+					},
+				),
+		});
+	}
 
 	// Remote Chrome mode - connect to existing browser
 	if (config.remoteChrome) {
@@ -2417,8 +2451,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		}
 		// Handle thinking time selection if specified
 		const thinkingTime = config.thinkingTime;
-		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
-			const proModeGate = isChatgptProModelTarget(config.desiredModel)
+		const thinkingModel = modelStrategy === "current" ? observedModel : config.desiredModel;
+		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(thinkingModel)) {
+			const proModeGate = isChatgptProModelTarget(thinkingModel)
 				? await raceWithDisconnect(
 						assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy),
 					)
@@ -3391,6 +3426,14 @@ async function runRemoteBrowserMode(
 		);
 	}
 	const { host, port } = remoteChromeConfig;
+	if (
+		options.tabAffinity &&
+		(options.tabAffinity.host !== host || options.tabAffinity.port !== port)
+	) {
+		throw new Error(
+			"Exact tab affinity endpoint does not match the configured remote Chrome endpoint.",
+		);
+	}
 	await enforceChatgptBrowserRateLimitGuard(config, logger, config.manualLoginProfileDir ?? null);
 	logger(`Connecting to remote Chrome at ${host}:${port}`);
 
@@ -3471,6 +3514,7 @@ async function runRemoteBrowserMode(
 
 	try {
 		const connection = await connectToRemoteChrome(host, port, logger, config.url, {
+			exactTargetId: options.tabAffinity?.targetId,
 			compatibleHosts: resolveCompatibleHostsForUrl(config.url),
 			serviceTabLimit: config.serviceTabLimit ?? undefined,
 			blankTabLimit: config.blankTabLimit ?? undefined,
@@ -3499,7 +3543,19 @@ async function runRemoteBrowserMode(
 		// Skip cookie sync for remote Chrome - it already has cookies
 		logger("Skipping cookie sync for remote Chrome (using existing session)");
 
-		await navigateToChatGPT(Page, Runtime, config.url, logger);
+		let exactTargetAlreadyAtRequestedRoute = false;
+		if (options.tabAffinity) {
+			const current = await Runtime.evaluate({
+				expression: "location.href",
+				returnByValue: true,
+			}).catch(() => null);
+			const currentUrl =
+				typeof current?.result?.value === "string" ? current.result.value : null;
+			exactTargetAlreadyAtRequestedRoute = browserRoutesMatch(currentUrl, config.url);
+		}
+		if (!exactTargetAlreadyAtRequestedRoute) {
+			await navigateToChatGPT(Page, Runtime, config.url, logger);
+		}
 		await ensureNotBlocked(Runtime, config.headless, logger);
 		await ensureNoManualClearBlockingPage(Runtime, logger, {
 			action: "ChatGPT remote prompt preparation",
@@ -3613,8 +3669,9 @@ async function runRemoteBrowserMode(
 		}
 		// Handle thinking time selection if specified
 		const thinkingTime = config.thinkingTime;
-		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
-			const proModeGate = isChatgptProModelTarget(config.desiredModel)
+		const thinkingModel = modelStrategy === "current" ? observedModel : config.desiredModel;
+		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(thinkingModel)) {
+			const proModeGate = isChatgptProModelTarget(thinkingModel)
 				? await assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy)
 				: null;
 			await dismissOpenMenus(Runtime).catch(() => false);
@@ -4196,6 +4253,7 @@ async function runRemoteBrowserMode(
 		};
 	} catch (error) {
 		const normalizedError = error instanceof Error ? error : new Error(String(error));
+		const observedEffectState = readProviderEffectState(normalizedError, providerEffectState);
 		const guardedError = await handleChatgptBrowserRateLimitFailure({
 			config,
 			logger,
@@ -4203,7 +4261,7 @@ async function runRemoteBrowserMode(
 			action: "remoteBrowserRun",
 			Runtime: runtimeForGuard,
 			managedProfileDir: config.manualLoginProfileDir ?? null,
-			effectState: readProviderEffectState(normalizedError, providerEffectState),
+			effectState: observedEffectState,
 		});
 		await refreshTerminalIdentity();
 		stopThinkingMonitor?.();
@@ -4211,11 +4269,20 @@ async function runRemoteBrowserMode(
 		connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
 
 		if (!socketClosed) {
-			logger(`Failed to complete ChatGPT run: ${guardedError.message}`);
-			if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === "1") && guardedError.stack) {
-				logger(guardedError.stack);
+			const surfacedError =
+				observedEffectState === "pre_effect" &&
+				readProviderEffectState(guardedError, "unknown") === "unknown"
+					? new BrowserAutomationError(
+							guardedError.message,
+							{ stage: "remote-browser-pre-effect", effectState: "pre_effect", retrySafe: true },
+							guardedError,
+						)
+					: guardedError;
+			logger(`Failed to complete ChatGPT run: ${surfacedError.message}`);
+			if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === "1") && surfacedError.stack) {
+				logger(surfacedError.stack);
 			}
-			throw guardedError;
+			throw surfacedError;
 		}
 
 		throw new BrowserAutomationError(
@@ -4241,18 +4308,38 @@ async function runRemoteBrowserMode(
 			// ignore
 		}
 		removeDialogHandler?.();
-		await closeRemoteChromeTarget(
-			connectedHost,
-			connectedPort,
-			remoteTargetId ?? undefined,
-			logger,
-		);
+		if (!options.tabAffinity) {
+			await closeRemoteChromeTarget(
+				connectedHost,
+				connectedPort,
+				remoteTargetId ?? undefined,
+				logger,
+			);
+		}
 		await disposeRemoteTransport?.().catch(() => undefined);
 		// Don't kill remote Chrome - it's not ours to manage
 		const totalSeconds = (Date.now() - startedAt) / 1000;
 		logger(`Remote session complete • ${totalSeconds.toFixed(1)}s total`);
 	}
 }
+
+function browserRoutesMatch(actualUrl: string | null, expectedUrl: string): boolean {
+	if (!actualUrl) return false;
+	try {
+		const actual = new URL(actualUrl);
+		const expected = new URL(expectedUrl);
+		const normalizePath = (value: string) => value.replace(/\/+$/, "") || "/";
+		return (
+			actual.origin === expected.origin &&
+			normalizePath(actual.pathname) === normalizePath(expected.pathname) &&
+			actual.search === expected.search
+		);
+	} catch {
+		return false;
+	}
+}
+
+export const browserRoutesMatchForTest = browserRoutesMatch;
 
 async function runRemoteGrokBrowserMode(
 	promptText: string,

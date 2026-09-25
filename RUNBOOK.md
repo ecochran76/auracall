@@ -21649,3 +21649,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Fresh status retains Gemini `manual_clear_required` / `google-sorry`; Gemini
   stays disabled and receives no launch, clear, or retry. Issue 9 may close
   after this receipt reaches canonical main.
+
+## Turn 618 | 2026-09-23
+
+- Opened P52 / [Plan 0359](docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md)
+  from current canonical `main` as a planning-only lane. The plan specifies
+  exact conversation-to-tab affinity, one dedicated live-follow crawler tab,
+  bounded lease heartbeat/expiry/retirement, and one aggregate provider
+  interaction ledger.
+- The current exclusive managed-browser-profile queue, service-level tab
+  selection, retained ChatGPT session mechanics, live-follow safety controls,
+  and tenant limits are preserved as the verified baseline. Provider-free
+  ownership and admission contracts must land before ChatGPT call-site
+  adoption.
+- P52 has no implementation custody, branch, or work item yet. No source,
+  install, browser, provider, service, scheduler, issue, publication, or live
+  effect occurred in this planning turn.
+
+## Turn 619 | 2026-09-24
+
+- Began P52 implementation under GitHub issue 46 on
+  `feat/issue-46-browser-tab-affinity`. Current authority is Packet 1
+  provider-free: ownership contract, deterministic fixtures, and the minimum
+  provider-neutral lease seam while the production execution path remains
+  serialized.
+- The primary retains architecture and integration. Parallel workers are
+  restricted to isolated worktrees and low-conflict inventory/test-design
+  lanes; installed/browser/provider/scheduler effects remain excluded.

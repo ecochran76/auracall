@@ -1,14 +1,14 @@
 import type { DevToolsConnectionOptions } from "../../../packages/browser-service/src/types.js";
 import type { ResolvedUserConfig } from "../../config.js";
 import {
-	submitChatgptDeveloperApp,
-	type DeveloperAppSubmissionEvidence,
-	type DeveloperAppSubmissionOptions,
-} from "../chatgptDeveloperAppSubmission.js";
-import {
 	ensureChatgptEcosystemMention,
 	readChatgptEcosystemMention,
 } from "../actions/chatgptEcosystemMention.js";
+import {
+	type DeveloperAppSubmissionEvidence,
+	type DeveloperAppSubmissionOptions,
+	submitChatgptDeveloperApp,
+} from "../chatgptDeveloperAppSubmission.js";
 import {
 	navigateAndSettle,
 	openAndSelectMenuItem,
@@ -24,7 +24,7 @@ import {
 	normalizeChatgptInstalledAppProbes,
 	normalizeChatgptLinkedAppProbes,
 } from "./chatgptAdapter.js";
-import type { ProviderUserIdentity } from "./types.js";
+import type { BrowserProviderListOptions, ProviderUserIdentity } from "./types.js";
 
 export interface ChatgptDeveloperAppStateInput {
 	identity: ProviderUserIdentity | null;
@@ -128,10 +128,15 @@ const CHATGPT_DEVELOPER_APP_ATTACHMENT_STAGE_TIMEOUT_MS = 10_000;
 
 export interface ChatgptDeveloperAppBrowserClient {
 	readonly userConfig: ResolvedUserConfig;
-	getUserIdentity(options?: { abortSignal?: AbortSignal }): Promise<ProviderUserIdentity | null>;
+	getUserIdentity(options?: BrowserProviderListOptions): Promise<ProviderUserIdentity | null>;
 	connectDevTools(
 		options?: DevToolsConnectionOptions,
 	): Promise<{ client: ChromeClient; port: number }>;
+	runUtilityBrowserOperation?<TResult>(input: {
+		options?: BrowserProviderListOptions;
+		mutability: "read-only" | "provider-mutating";
+		run: (options: BrowserProviderListOptions) => Promise<TResult>;
+	}): Promise<TResult>;
 }
 
 export type ChatgptDeveloperAppBrowserClientFactory = (

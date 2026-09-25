@@ -6,6 +6,7 @@ import {
 	type AttachmentInventoryCursor,
 	allocateConversationReadBudgets,
 	buildGeminiRouteProgressEvidence,
+	createAccountMirrorListOptionsForTest,
 	createChatgptAccountMirrorMetadataCollector,
 	mapChatgptLibraryFilesToArtifacts,
 	mapGeminiConversationArtifactsToMediaManifest,
@@ -34,12 +35,12 @@ import {
 import type { AccountMirrorCollectorDiagnosticEvent } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { listDomDriftObservations } from "../../src/browser/domDriftObservations.js";
+import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
 import {
 	recordBrowserScrapeCdpCall,
 	recordBrowserScrapeProviderAction,
 } from "../../src/browser/providers/scrapeTelemetry.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
-import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
 
 function createCollectorProviderSessionProof(
 	providerId: "chatgpt" | "gemini" | "grok",
@@ -87,6 +88,26 @@ describe("ChatGPT account mirror metadata collector", () => {
 				maxMessages: 24,
 			},
 		},
+	});
+
+	test("pins affinity collection to one retained crawler target", () => {
+		const governor = { beforeInteraction: vi.fn(async () => undefined) };
+		expect(
+			createAccountMirrorListOptionsForTest(undefined, governor, undefined, {
+				host: "127.0.0.1",
+				port: 45011,
+				targetId: "crawler-1",
+			}),
+		).toMatchObject({
+			accountMirrorInventory: true,
+			allowNavigation: true,
+			host: "127.0.0.1",
+			port: 45011,
+			preserveActiveTab: true,
+			tabLifecycle: "retain",
+			tabTargetId: "crawler-1",
+			interactionGovernor: governor,
+		});
 	});
 
 	test("allows a slow ChatGPT conversation surface to settle within the outer collector budget", () => {
@@ -988,11 +1009,13 @@ describe("ChatGPT account mirror metadata collector", () => {
 	test("honors requested detail-inventory phase without root or project rail reads", async () => {
 		const calls: string[] = [];
 		const client = {
-			getProviderSessionProof: vi.fn(async () => createCollectorProviderSessionProof("chatgpt", {
-				email: "ecochran76@gmail.com",
-				accountLevel: "Business",
-				source: "auth-session",
-			})),
+			getProviderSessionProof: vi.fn(async () =>
+				createCollectorProviderSessionProof("chatgpt", {
+					email: "ecochran76@gmail.com",
+					accountLevel: "Business",
+					source: "auth-session",
+				}),
+			),
 			listProjects: vi.fn(async () => {
 				calls.push("listProjects");
 				throw new Error("projects should not be read");
@@ -1212,11 +1235,13 @@ describe("ChatGPT account mirror metadata collector", () => {
 	test("continues requested detail-inventory from the persisted selected-row cursor", async () => {
 		const calls: string[] = [];
 		const client = {
-			getProviderSessionProof: vi.fn(async () => createCollectorProviderSessionProof("chatgpt", {
-				email: "ecochran76@gmail.com",
-				accountLevel: "Business",
-				source: "auth-session",
-			})),
+			getProviderSessionProof: vi.fn(async () =>
+				createCollectorProviderSessionProof("chatgpt", {
+					email: "ecochran76@gmail.com",
+					accountLevel: "Business",
+					source: "auth-session",
+				}),
+			),
 			listProjects: vi.fn(async () => {
 				throw new Error("projects should not be read");
 			}),
@@ -1354,11 +1379,13 @@ describe("ChatGPT account mirror metadata collector", () => {
 			},
 		];
 		const client = {
-			getProviderSessionProof: vi.fn(async () => createCollectorProviderSessionProof("chatgpt", {
-				email: "ecochran76@gmail.com",
-				accountLevel: "Business",
-				source: "auth-session",
-			})),
+			getProviderSessionProof: vi.fn(async () =>
+				createCollectorProviderSessionProof("chatgpt", {
+					email: "ecochran76@gmail.com",
+					accountLevel: "Business",
+					source: "auth-session",
+				}),
+			),
 			listProjects: vi.fn(async () => {
 				throw new Error("projects should not be read");
 			}),
@@ -1468,11 +1495,13 @@ describe("ChatGPT account mirror metadata collector", () => {
 
 	test("counts passive telemetry for empty requested detail-inventory parses", async () => {
 		const client = {
-			getProviderSessionProof: vi.fn(async () => createCollectorProviderSessionProof("chatgpt", {
-				email: "ecochran76@gmail.com",
-				accountLevel: "Business",
-				source: "auth-session",
-			})),
+			getProviderSessionProof: vi.fn(async () =>
+				createCollectorProviderSessionProof("chatgpt", {
+					email: "ecochran76@gmail.com",
+					accountLevel: "Business",
+					source: "auth-session",
+				}),
+			),
 			listProjects: vi.fn(async () => {
 				throw new Error("projects should not be read");
 			}),
@@ -1595,11 +1624,13 @@ describe("ChatGPT account mirror metadata collector", () => {
 	test("honors requested project-conversations phase without root rail reads", async () => {
 		const calls: string[] = [];
 		const client = {
-			getProviderSessionProof: vi.fn(async () => createCollectorProviderSessionProof("chatgpt", {
-				email: "ecochran76@gmail.com",
-				accountLevel: "Business",
-				source: "auth-session",
-			})),
+			getProviderSessionProof: vi.fn(async () =>
+				createCollectorProviderSessionProof("chatgpt", {
+					email: "ecochran76@gmail.com",
+					accountLevel: "Business",
+					source: "auth-session",
+				}),
+			),
 			listProjects: vi.fn(async () => {
 				calls.push("listProjects");
 				return [
@@ -2906,10 +2937,12 @@ describe("ChatGPT account mirror metadata collector", () => {
 			provider: "gemini" as const,
 		}));
 		const client = {
-			getProviderSessionProof: vi.fn(async () => createCollectorProviderSessionProof("gemini", {
-				email: "operator@example.com",
-				source: "google-account-label",
-			})),
+			getProviderSessionProof: vi.fn(async () =>
+				createCollectorProviderSessionProof("gemini", {
+					email: "operator@example.com",
+					source: "google-account-label",
+				}),
+			),
 			listProjects: vi.fn(async () => []),
 			listConversations: vi.fn(async () => conversations),
 			listAccountFiles: vi.fn(async () => []),

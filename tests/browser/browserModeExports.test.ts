@@ -18,6 +18,7 @@ import {
   shouldWriteChatgptRateLimitCooldownForTest,
   readProviderEffectStateForTest,
   extractParseableJsonObjectTextForTest,
+  browserRoutesMatchForTest,
 } from '../../src/browser/index.js';
 import { resolveBrowserLaunchPlan } from '../../src/browser/service/browserLaunchPlan.js';
 import { BrowserAutomationError } from '../../src/oracle/errors.js';
@@ -55,6 +56,21 @@ describe('browserMode exports', () => {
   test('re-exports runBrowserMode and constants', () => {
     expect(typeof runBrowserMode).toBe('function');
     expect(typeof CHATGPT_URL).toBe('string');
+  });
+
+  test('recognizes an already exact leased route without weakening origin checks', () => {
+    expect(
+      browserRoutesMatchForTest(
+        'https://chatgpt.com/c/conversation-1/',
+        'https://chatgpt.com/c/conversation-1',
+      ),
+    ).toBe(true);
+    expect(
+      browserRoutesMatchForTest(
+        'https://example.invalid/c/conversation-1',
+        'https://chatgpt.com/c/conversation-1',
+      ),
+    ).toBe(false);
   });
 
   test('suppresses a new cooldown write after provider effect was observed', () => {

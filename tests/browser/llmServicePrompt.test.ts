@@ -37,6 +37,51 @@ class PromptTestLlmService extends LlmService {
 }
 
 describe("LlmService provider prompt", () => {
+	test("preserves matched browser provenance for an exact tab endpoint", async () => {
+		const resolveServiceTarget = vi.fn(async () => ({
+			host: "127.0.0.1",
+			port: 45002,
+			browserProfile: "wsl-chrome-3",
+			sourceBrowserProfile: "Default",
+			managedBrowserProfile: "/managed/wsl-chrome-3/chatgpt",
+			browserProcessId: 1234,
+			tab: { targetId: "unrelated-root", url: "https://chatgpt.com/" },
+		}));
+		const service = new PromptTestLlmService(
+			{ defaultRuntimeProfile: "wsl-chrome-3", browser: { cache: {} } } as ResolvedUserConfig,
+			{
+				id: "chatgpt",
+				config: { id: "chatgpt", selectors: {} as never },
+			} satisfies LlmServiceAdapter,
+			{
+				resolveServiceTarget,
+				getMutationAuditSink: () => undefined,
+			},
+		);
+
+		const options = await service.buildListOptions(
+			{
+				host: "127.0.0.1",
+				port: 45002,
+				tabTargetId: "crawler-target",
+			},
+			{ ensurePort: true },
+		);
+
+		expect(resolveServiceTarget).toHaveBeenCalledWith(
+			expect.objectContaining({ ensurePort: false }),
+		);
+		expect(options.providerSessionAuthorization?.context).toMatchObject({
+			browserProfile: "wsl-chrome-3",
+			sourceBrowserProfile: "Default",
+			managedBrowserProfile: "/managed/wsl-chrome-3/chatgpt",
+			browserProcessId: 1234,
+			browserTargetId: "crawler-target",
+			devtoolsHost: "127.0.0.1",
+			devtoolsPort: 45002,
+		});
+	});
+
 	test("prepares a provider workbench through the shared service seam without planning a prompt", async () => {
 		const result = {
 			chatgptMode: "work" as const,
@@ -263,7 +308,10 @@ describe("LlmService provider prompt", () => {
 			{ host: "explicit-host", port: 42002 },
 		);
 
-		expect(resolveServiceTarget).not.toHaveBeenCalled();
+		expect(resolveServiceTarget).toHaveBeenCalledOnce();
+		expect(resolveServiceTarget).toHaveBeenCalledWith(
+			expect.objectContaining({ serviceId: "grok", ensurePort: false }),
+		);
 		expect(runPrompt).toHaveBeenCalledWith(
 			expect.any(Object),
 			expect.objectContaining({ host: "explicit-host", port: 42002 }),

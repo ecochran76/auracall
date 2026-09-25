@@ -187,6 +187,12 @@ function applyBrowserProfileDefaults(
   if ((overrideExisting || browser.keepBrowser === undefined) && profileBrowser.keepBrowser !== undefined) {
     browser.keepBrowser = profileBrowser.keepBrowser;
   }
+  if (
+    (overrideExisting || browser.tabConcurrencyMode === undefined) &&
+    profileBrowser.tabConcurrencyMode !== undefined
+  ) {
+    browser.tabConcurrencyMode = profileBrowser.tabConcurrencyMode;
+  }
   if ((overrideExisting || browser.serviceTabLimit === undefined) && browserProfile.serviceTabLimit !== undefined) {
     browser.serviceTabLimit = browserProfile.serviceTabLimit;
   }

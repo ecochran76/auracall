@@ -136,6 +136,83 @@ Current active extraction plan:
   menu markup, prefer the package-owned select-and-reopen helpers before adding
   provider-local reopen logic
 
+## Experimental tab-concurrency execution
+
+`browser.tabConcurrencyMode` resolves to `serialized` unless an operator or
+test explicitly selects `tab-affinity`. The serialized default constructs no
+tab registry or aggregate interaction ledger. Explicit affinity currently
+constructs shared file-backed coordination state under
+`~/.auracall/browser-coordination`, exposes read-only status through
+`BrowserAutomationClient.getTabConcurrencyStatus()`, and routes ChatGPT prompt
+execution through exact-tab admission and ownership.
+
+The status projection is intentionally aggregate and content-free. In addition
+to total/fenced leases and interaction/warning counts, it reports active
+provider-guard totals split into indefinite and bounded cooldowns, warning
+classification counts, maximum remaining cooldown, admission-rejection totals
+and reason counts, aggregate active/minute/hour/day usage windows, lease states,
+workload classes, expired-idle and outcome-unknown attention counts, cumulative
+target creation/adoption/navigation/reload/focus/close counts, and retirement
+dispositions. It does not publish target IDs, conversation IDs, operation IDs,
+tenant keys, or provider content. This projection is diagnostic evidence, not
+authority to adopt, navigate, close, or retry any tab.
+
+ChatGPT handoff submission uses the same coordinated browser client in explicit
+affinity mode. Existing conversation bindings are reused only after a live
+target census confirms the exact conversation route; a missing target may be
+replaced, while a live route mismatch fails closed. The legacy direct
+`runBrowserMode()` now uses the same admission/provisioning coordinator for
+ChatGPT when the caller supplies full profile-resolved affinity authority.
+Stored responses and interactive/detached, TUI, and MCP browser sessions carry
+that authority; the legacy response lifecycle attaches only to the leased
+target and retains it. ChatGPT Account Mirror live-follow completions use one
+dedicated crawler lease and the same tenant/provider interaction ledger.
+Direct/manual refreshes and Gemini/Grok remain serialized or otherwise outside
+affinity. ChatGPT project/conversation listing, provider identity reads,
+conversation rename/delete, project/account file upload and delete, inherited
+file/context reads, downloads, materialization, and active-media materialization
+use one reusable exact utility tab per service instance. Project create, rename,
+clone, instruction updates, and public project-UI substeps use the same target.
+Nested operations reuse an already exact target, and affinity-owned scoped sessions keep the aggregate ledger governor
+through transfers. A failed provider mutation is outcome-unknown and that idle
+lease cannot be reacquired. Affinity-owned provider mutations explicitly disable
+retry; serialized callers retain their established behavior. Do not treat
+configured mode or registry files as installed/live acceptance evidence.
+
+Provider-free coexistence is covered by a combined fake-target fixture with two
+conversation leases and one live-follow crawler lease. It proves exact prompt
+targets, non-navigating retained prompt options, sequential crawler use of only
+its dedicated target, and three exactly settled aggregate interactions. This is
+contract evidence only; it does not replace installed/live ChatGPT acceptance.
+
+ChatGPT Skill and Developer App operations also use the utility coordinator.
+Their scoped browser clients attach only with the leased host, port, and target
+ID, consume the aggregate interaction governor, and close before the lease is
+idled. Developer App prompt submission continues through the separate
+conversation-affinity executor rather than turning the utility tab into a chat.
+
+Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
+reconciles expired idle leases for that exact runtime/account/managed browser
+scope. A target is closed only after exact workload identity verification, and
+`closed` is recorded only after a second census proves the target disappeared.
+Outcome-unknown leases are not retired. Retirement runs at acquisition
+boundaries, and the long-running API also owns a non-overlapping
+60-second maintenance cadence when explicit affinity is configured. Maintenance
+uses `ensurePort: false`, so an absent browser is never launched merely for
+cleanup; the affected leases remain idle and are reconsidered later. The loop
+is suppressed for proof-scoped server runs and is cleared and awaited during
+API shutdown.
+
+Active leases persist owner PID plus process-generation identity. Maintenance
+marks dead, replaced, or legacy active owners `restart-unverified`; it releases
+that fence only after proving the exact target absent. Live or mismatched
+targets remain fenced. Status exposes content-free per-binding age and
+elapsed time since last meaningful use, idle/absolute time remaining, plus a
+restart-unverified attention count.
+The same maintenance pass reports aggregate live, fenced, and unleased ChatGPT
+page-target counts. Unleased targets are preserved as observation-only evidence;
+the census grants no authority to adopt, navigate, focus, refresh, or close them.
+
 ## ChatGPT composer-mode boundary
 
 Choose the ChatGPT composer mode before any model action. Chat is AuraCall's

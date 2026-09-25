@@ -24,6 +24,7 @@ export interface BrowserFlagOptions {
   auracallProfileName?: string;
   selectedAgentId?: string | null;
   managedProfileRoot?: string | null;
+  browserTabConcurrencyMode?: 'serialized' | 'tab-affinity';
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
@@ -180,6 +181,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
       typeof options.selectedAgentId === 'string' && options.selectedAgentId.trim().length > 0
         ? options.selectedAgentId.trim()
         : null,
+    tabConcurrencyMode: options.browserTabConcurrencyMode,
     chromeProfile: options.browserChromeProfile ?? undefined,
     chromePath: options.browserChromePath ?? null,
     chromeCookiePath: options.browserCookiePath ?? null,

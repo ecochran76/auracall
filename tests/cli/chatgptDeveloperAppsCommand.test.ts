@@ -50,6 +50,59 @@ function createAdapter(
 }
 
 describe("executeChatgptDeveloperAppOperation", () => {
+	it("binds developer-app mutations to the exact utility tab", async () => {
+		const connectDevTools = vi.fn(async () => ({ client: {}, port: 45011 }));
+		const runUtilityBrowserOperation = vi.fn(async (input) =>
+			input.run({ host: "127.0.0.1", port: 45011, tabTargetId: "utility-tab-1" }),
+		);
+		const close = vi.fn(async () => undefined);
+
+		await runChatgptDeveloperAppOperationForCli(
+			{ browser: { tabConcurrencyMode: "tab-affinity" } } as never,
+			{
+				action: "test",
+				app: "Corel33t",
+				submit: false,
+				confirmed: false,
+				expectedAccount: "eric.cochran@soylei.com",
+			},
+			{
+				createBrowser: async () =>
+					({
+						userConfig: {},
+						getUserIdentity: vi.fn(),
+						connectDevTools,
+						runUtilityBrowserOperation,
+					}) as never,
+				createAdapter: (browser) => ({
+					...createAdapter({
+						readState: async () => {
+							await browser.connectDevTools();
+							return await createAdapter().readState();
+						},
+						selectForTest: async () => ({
+							status: "completed",
+							message: "selected",
+						}),
+					}),
+					close,
+				}),
+			},
+		);
+
+		expect(runUtilityBrowserOperation).toHaveBeenCalledWith(
+			expect.objectContaining({ mutability: "provider-mutating" }),
+		);
+		expect(connectDevTools).toHaveBeenCalledWith(
+			expect.objectContaining({
+				host: "127.0.0.1",
+				port: 45011,
+				tabTargetId: "utility-tab-1",
+			}),
+		);
+		expect(close).toHaveBeenCalledOnce();
+	});
+
 	it.each([
 		"completed",
 		"failed",

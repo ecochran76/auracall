@@ -471,6 +471,8 @@ export async function askOracleFlow(version: string, userConfig: Partial<Resolve
   const browserConfig: BrowserSessionConfig | undefined =
     mode === 'browser'
       ? await buildBrowserConfig({
+          auracallProfileName: userConfig.auracallProfile ?? 'default',
+          browserTabConcurrencyMode: userConfig.browser?.tabConcurrencyMode,
           browserChromeProfile: answers.chromeProfile,
           browserCookiePath: answers.chromeCookiePath,
           browserHideWindow: answers.hideWindow,
@@ -524,6 +526,7 @@ export async function askOracleFlow(version: string, userConfig: Partial<Resolve
       write: combinedWrite,
       version,
       notifications,
+      userConfig: userConfig as ResolvedUserConfig,
     });
     console.log(chalk.green(`Session ${sessionMeta.id} completed.`));
   } catch (error) {

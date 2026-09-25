@@ -39,6 +39,7 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.serviceTabLimit).toBe(3);
     expect(resolved.blankTabLimit).toBe(1);
     expect(resolved.collapseDisposableWindows).toBe(true);
+    expect(resolved.tabConcurrencyMode).toBe('serialized');
   });
 
   test('applies overrides', () => {
@@ -61,6 +62,7 @@ describe('resolveBrowserConfig', () => {
       serviceTabLimit: 5,
       blankTabLimit: 0,
       collapseDisposableWindows: false,
+      tabConcurrencyMode: 'tab-affinity',
     });
     expect(resolved.url).toBe('https://example.com/');
     expect(resolved.selectedAgentId).toBe('analyst');
@@ -80,6 +82,7 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.serviceTabLimit).toBe(5);
     expect(resolved.blankTabLimit).toBe(0);
     expect(resolved.collapseDisposableWindows).toBe(false);
+    expect(resolved.tabConcurrencyMode).toBe('tab-affinity');
   });
 
   test('normalizes agent-browser RDP profiles to persistent headed operation', () => {

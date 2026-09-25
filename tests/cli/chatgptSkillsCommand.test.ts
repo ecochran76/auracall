@@ -52,6 +52,49 @@ function adapterWith(initial: ChatgptSkillState): ChatgptSkillAdapter {
 }
 
 describe("executeChatgptSkillOperation", () => {
+	it("binds Skill inventory work to the exact utility tab", async () => {
+		const connectChatgptPromptWorkbench = vi.fn(async () => ({ client: {}, port: 45011 }));
+		const runUtilityBrowserOperation = vi.fn(async (input) =>
+			input.run({ host: "127.0.0.1", port: 45011, tabTargetId: "utility-tab-1" }),
+		);
+		const close = vi.fn(async () => undefined);
+
+		await runChatgptSkillOperationForCli(
+			{ browser: { tabConcurrencyMode: "tab-affinity" } } as never,
+			{ action: "list", expectedAccount: "owner@example.com" },
+			{
+				createBrowser: async () =>
+					({
+						userConfig: {},
+						getUserIdentity: vi.fn(),
+						connectDevTools: vi.fn(),
+						connectChatgptPromptWorkbench,
+						runUtilityBrowserOperation,
+					}) as never,
+				createAdapter: (browser) => ({
+					...adapterWith(state()),
+					readState: async () => {
+						await browser.connectChatgptPromptWorkbench();
+						return state();
+					},
+					close,
+				}),
+			},
+		);
+
+		expect(runUtilityBrowserOperation).toHaveBeenCalledWith(
+			expect.objectContaining({ mutability: "read-only" }),
+		);
+		expect(connectChatgptPromptWorkbench).toHaveBeenCalledWith(
+			expect.objectContaining({
+				host: "127.0.0.1",
+				port: 45011,
+				tabTargetId: "utility-tab-1",
+			}),
+		);
+		expect(close).toHaveBeenCalledOnce();
+	});
+
 	it("rejects user-added Skill execution in Chat mode before browser launch", async () => {
 		const createBrowser = vi.fn();
 

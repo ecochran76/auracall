@@ -11,6 +11,7 @@ import {
   resolveChatgptSemanticModelSelector,
 } from '../config/modelSelector.js';
 import { runBrowserMode } from '../browser/index.js';
+import { resolveRuntimeProfileUserConfig } from '../browser/service/profileConfig.js';
 import { resumeBrowserSession } from '../browser/reattach.js';
 import { waitForAssistantResponse } from '../browser/actions/assistantResponse.js';
 import type {
@@ -28,6 +29,7 @@ import {
 } from '../browser/providers/providerSessionAuthority.js';
 import { createLlmService } from '../browser/llmService/providers/index.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
+import type { ResolvedUserConfig } from '../config.js';
 import { createGeminiWebExecutor } from '../gemini-web/executor.js';
 import { resolveManagedProfileCookieExportPath } from '../browser/profileStore.js';
 import {
@@ -775,6 +777,10 @@ export function createConfiguredStoredStepExecutor(
     if (service !== 'chatgpt' && service !== 'gemini' && service !== 'grok') {
       throw new Error(`Stored team execution requires a browser-capable service; step ${context.step.id} resolved ${service ?? 'none'}.`);
     }
+    const affinityUserConfig = resolveRuntimeProfileUserConfig(executionConfig, {
+      runtimeProfileId: runtimeSelection.runtimeProfileId,
+      provider: service,
+    }) as ResolvedUserConfig;
 
     const runtimeServiceConfig = readRuntimeServiceConfig(runtimeProfile, service);
     const globalServiceConfig = readGlobalServiceConfig(executionConfig, service);
@@ -1030,10 +1036,16 @@ export function createConfiguredStoredStepExecutor(
       prompt: promptTransport.prompt,
       attachments: promptTransport.attachments,
       browserOperationOwnerCommand: `response-run:${context.record.runId}:${context.step.agentId}`,
+      tabAffinityUserConfig:
+        service === 'chatgpt' && affinityUserConfig.browser?.tabConcurrencyMode === 'tab-affinity'
+          ? affinityUserConfig
+          : undefined,
       config: {
         auracallProfileName: browserFamilyProfileName ?? runtimeSelection.runtimeProfileId,
         selectedAgentId: context.step.agentId,
         target: service,
+        tabConcurrencyMode:
+          service === 'chatgpt' ? affinityUserConfig.browser?.tabConcurrencyMode : undefined,
         projectId,
         conversationId: null,
         url: service === 'chatgpt' ? (targetUrl ?? undefined) : undefined,

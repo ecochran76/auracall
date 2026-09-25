@@ -729,6 +729,8 @@ export function createAccountMirrorCompletionService(input: {
 							: {}),
 						...(collectorTimeoutMs ? { collectorTimeoutMs } : {}),
 						abortSignal,
+						liveFollowOperationId:
+							refreshOperation.mode === "live_follow" ? refreshOperation.id : null,
 					});
 				} catch (error) {
 					const eligibleAt = readEligibleAt(error);

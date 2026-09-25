@@ -16,6 +16,7 @@ describe('browser model selection matchers', () => {
     const expression = buildModelSelectionExpressionForTest('gpt-5.2-pro');
     expect(expression).toContain('[data-testid=\\"model-switcher-dropdown-button\\"]');
     expect(expression).toContain('button.__composer-pill');
+		expect(expression).toContain('button[aria-label=\\"Select ChatGPT model\\"]');
     expect(expression).not.toContain('button[aria-label=\\"Switch model\\"]');
     expect(expression).toContain(`closest('form, [data-testid*="composer"]')`);
     expect(expression).toContain(`closest('[data-testid^="conversation-turn"]')`);
@@ -100,21 +101,28 @@ describe('browser model selection matchers', () => {
       role: 'menuitemradio',
     });
     const menu = new FixtureElement();
+    let menuOpen = false;
     prompt.closestHandler = () => composer;
     composer.queryAllHandler = (selector) => selector.includes('data-animated-slider-trigger') ? [trigger] : [];
     menu.queryAllHandler = () => [selected];
     let triggerClicks = 0;
-    trigger.addEventListener('click', () => { triggerClicks += 1; });
+    trigger.addEventListener('click', () => {
+      triggerClicks += 1;
+      menuOpen = !menuOpen;
+    });
 
     vi.stubGlobal('Element', FixtureElement);
     vi.stubGlobal('HTMLElement', FixtureElement);
     vi.stubGlobal('MouseEvent', Event);
+    vi.stubGlobal('KeyboardEvent', Event);
     vi.stubGlobal('window', {
       getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
     });
     vi.stubGlobal('document', {
-      querySelector: (selector: string) => selector.includes('#prompt-textarea') ? prompt : menu,
-      querySelectorAll: (selector: string) => selector.includes('[role="menu"]') ? [menu] : [],
+      activeElement: menu,
+      body: menu,
+      querySelector: (selector: string) => selector.includes('#prompt-textarea') ? prompt : menuOpen ? menu : null,
+      querySelectorAll: (selector: string) => selector.includes('[role="menu"]') && menuOpen ? [menu] : [],
     });
 
     try {
@@ -122,9 +130,10 @@ describe('browser model selection matchers', () => {
         `return ${buildModelSelectionExpressionForTest(desiredModel, 'current')}`,
       )();
 			await vi.advanceTimersByTimeAsync(25_000);
-			const result = await pending;
+      const result = await pending;
       expect(result).toEqual({ status: 'already-selected', label: selectedLabel });
-      expect(triggerClicks).toBe(1);
+      expect(triggerClicks).toBe(2);
+      expect(menuOpen).toBe(false);
     } finally {
 			vi.useRealTimers();
       vi.unstubAllGlobals();

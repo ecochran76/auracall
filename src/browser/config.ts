@@ -14,6 +14,7 @@ import {
 import { normalizeChatgptComposerMode } from './actions/chatgptComposerMode.js';
 
 export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
+  tabConcurrencyMode: 'serialized',
   browserFamily: null,
   browserBuild: null,
   agentBrowserRdp: null,

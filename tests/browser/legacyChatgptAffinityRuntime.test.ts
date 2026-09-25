@@ -1,0 +1,85 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { createInMemoryProviderInteractionLedger } from "../../packages/browser-service/src/service/interactionLedger.js";
+import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import { runLegacyChatgptWithConfiguredAffinity } from "../../src/browser/legacyChatgptAffinityRuntime.js";
+import type { BrowserTabConcurrencyRuntime } from "../../src/browser/tabConcurrencyRuntime.js";
+import type { ResolvedBrowserConfig } from "../../src/browser/types.js";
+import type { ResolvedUserConfig } from "../../src/config.js";
+
+describe("legacy ChatGPT affinity runtime", () => {
+	it("runs the full legacy executor only on the exact provisioned target", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const ledger = createInMemoryProviderInteractionLedger();
+		const runtime: BrowserTabConcurrencyRuntime = {
+			mode: "tab-affinity",
+			enabled: true,
+			storageRoot: null,
+			registry,
+			ledger,
+			readStatus: vi.fn(),
+		};
+		const userConfig = {
+			auracallProfile: "research",
+			browser: {
+				tabConcurrencyMode: "tab-affinity",
+				target: "chatgpt",
+				url: "https://chatgpt.com/",
+			},
+			services: { chatgpt: { identity: { email: "operator@example.com" } } },
+		} as ResolvedUserConfig;
+		const runLeased = vi.fn(async (target) => ({
+			answerText: "complete answer",
+			answerMarkdown: "complete answer",
+			tookMs: 12,
+			answerTokens: 3,
+			answerChars: 15,
+			chromeHost: target.host,
+			chromePort: target.port,
+			chromeTargetId: target.targetId,
+			tabUrl: "https://chatgpt.com/c/conversation-1",
+			conversationId: "conversation-1",
+		}));
+
+		const result = await runLegacyChatgptWithConfiguredAffinity({
+			userConfig,
+			browserOptions: { prompt: "question" },
+			resolvedConfig: {
+				url: "https://chatgpt.com/",
+				modelStrategy: "ignore",
+				tabConcurrencyMode: "tab-affinity",
+			} as ResolvedBrowserConfig,
+			runtime,
+			resolveServiceTarget: async () => ({
+				host: "127.0.0.1",
+				port: 45100,
+				managedBrowserProfile: "/tmp/managed-chatgpt",
+			}),
+			openTarget: async ({ url }) => ({ targetId: "target-1", url }),
+			closeTarget: async () => undefined,
+			runLeased,
+		});
+
+		expect(runLeased).toHaveBeenCalledWith({
+			host: "127.0.0.1",
+			port: 45100,
+			targetId: "target-1",
+			targetUrl: "https://chatgpt.com/",
+		});
+		expect(result.chromeTargetId).toBe("target-1");
+		expect(
+			await ledger.summarizeUsage({
+				provider: "chatgpt",
+				tenantKey: "service-account:chatgpt:operator@example.com",
+				now: new Date().toISOString(),
+			}),
+		).toMatchObject({ chatsLastHour: 1, interactionsLastMinute: 1 });
+		const leases = await registry.list();
+		expect(leases).toHaveLength(1);
+		expect(leases[0]).toMatchObject({
+			state: "idle",
+			targetId: "target-1",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+		});
+	});
+});

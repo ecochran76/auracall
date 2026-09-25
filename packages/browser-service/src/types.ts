@@ -10,6 +10,9 @@ export interface DevToolsConnectionOptions {
   abortSignal?: AbortSignal;
   stageTimeoutMs?: number;
   onStage?: (stage: DevToolsAttachmentStage) => void;
+  host?: string;
+  port?: number;
+  tabTargetId?: string;
 }
 export type CookieParam = Protocol.Network.CookieParam;
 export type DebugPortStrategy = 'fixed' | 'auto';
@@ -95,6 +98,7 @@ export interface BrowserSessionConfig {
 }
 
 export interface BrowserAutomationConfig {
+  tabConcurrencyMode?: 'serialized' | 'tab-affinity';
   browserFamily?: BrowserProfileFamily | null;
   browserBuild?: AgentBrowserBuild | null;
   agentBrowserRdp?: AgentBrowserRdpConfig | null;

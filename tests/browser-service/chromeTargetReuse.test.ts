@@ -307,6 +307,25 @@ describe("chrome target reuse policy", () => {
 		expect(connection.targetId).toBe("existing-project");
 	});
 
+	it("connectToRemoteChrome attaches only to an exact leased target when requested", async () => {
+		const connection = await connectToRemoteChrome(
+			"127.0.0.1",
+			45920,
+			() => undefined,
+			"https://chatgpt.com/c/unrelated",
+			{ exactTargetId: "leased-chat" },
+		);
+
+		expect(cdpMock.List).not.toHaveBeenCalled();
+		expect(cdpMock.New).not.toHaveBeenCalled();
+		expect(cdpMock).toHaveBeenCalledWith({
+			host: "127.0.0.1",
+			port: 45920,
+			target: "leased-chat",
+		});
+		expect(connection.targetId).toBe("leased-chat");
+	});
+
 	it("connectToRemoteChrome reuses compatible-host tabs instead of opening a sibling host tab", async () => {
 		cdpMock.List.mockResolvedValue([
 			{ id: "chat-openai-tab", type: "page", url: "https://chat.openai.com/c/abc123" },
@@ -367,6 +386,33 @@ describe("chrome target reuse policy", () => {
 
 		expect(cdpMock.Close).toHaveBeenCalledTimes(1);
 		expect(cdpMock.Close).toHaveBeenCalledWith({ host: "127.0.0.1", port: 45920, id: "older-1" });
+	});
+
+	it("opens a dedicated tab without pruning retained service tabs", async () => {
+		cdpMock.List.mockResolvedValue([
+			{ id: "conversation-alpha", type: "page", url: "https://chatgpt.com/c/alpha" },
+			{ id: "conversation-beta", type: "page", url: "https://chatgpt.com/c/beta" },
+			{ id: "conversation-gamma", type: "page", url: "https://chatgpt.com/c/gamma" },
+		]);
+		cdpMock.New.mockResolvedValue({
+			id: "live-follow-root",
+			type: "page",
+			url: "https://chatgpt.com/",
+		});
+
+		const result = await openOrReuseChromeTarget(45920, "https://chatgpt.com/", {
+			host: "127.0.0.1",
+			reusePolicy: "new",
+			matchingTabLimit: 3,
+			cleanupExistingTargets: false,
+		});
+
+		expect(result).toMatchObject({
+			reused: false,
+			reason: "new",
+			target: { id: "live-follow-root" },
+		});
+		expect(cdpMock.Close).not.toHaveBeenCalled();
 	});
 
 	it("closes extra blank tabs beyond the default cap", async () => {

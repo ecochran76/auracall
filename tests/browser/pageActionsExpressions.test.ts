@@ -127,6 +127,29 @@ describe('browser automation expressions', () => {
     expect(expression).toContain(JSON.stringify(ASSISTANT_ROLE_SELECTOR));
   });
 
+  test('extracts the current role-bearing ChatGPT search unit', () => {
+    const prose = new FixtureElement(
+      {},
+      'AURACALL_AFFINITY_ALPHA_20260925_R5',
+      'AURACALL_AFFINITY_ALPHA_20260925_R5',
+      '<p>AURACALL_AFFINITY_ALPHA_20260925_R5</p>',
+      ['.markdown'],
+    );
+    const assistantUnit = new FixtureElement(
+      { 'data-content-search-unit-key': 'fallback-turn-0:2:assistant' },
+      '',
+      '',
+      '',
+      [ASSISTANT_ROLE_SELECTOR],
+      { '.markdown': [prose] },
+    );
+
+    expect(runAssistantExtractorFixture([assistantUnit])).toMatchObject({
+      text: 'AURACALL_AFFINITY_ALPHA_20260925_R5',
+      turnIndex: 0,
+    });
+  });
+
   test('assistant extractor skips an earlier tool card and returns later final prose in the same turn', () => {
     const toolCard = new FixtureElement({ 'data-testid': 'tool-approval-card' });
     const toolStatus = new FixtureElement(
