@@ -50786,3 +50786,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Packet 5E retains preservation as the default, honors explicit job-owned
   navigation, navigates the exact leased target in place, and forbids fallback
   target creation after an exact-target attachment/navigation failure.
+## 2026-09-25 | Plan 0360 exact-route settle enforcement
+
+- Packet 5E merged and installed at canonical `764c8af66`. A bounded two-item
+  proof kept one utility lease and one leased target through three adoptions
+  without a provider warning.
+- The exact target remained on the ChatGPT root after its requested
+  conversation navigation failed to settle. `navigateToChatgptUrl` ignored the
+  failed result whenever no project ID was supplied, so the job entered a long
+  wrong-route read instead of failing closed.
+- Packet 5F now rejects every failed ChatGPT route settle, including ordinary
+  conversation URLs. Focused coverage passes 104 tests; no new live retry was
+  launched.

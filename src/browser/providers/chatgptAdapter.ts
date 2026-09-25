@@ -4922,9 +4922,21 @@ async function navigateToChatgptUrl(
 		mutationAudit: resolveMutationAudit(client),
 		mutationSource: resolveMutationSource(client, "provider:chatgpt", "navigate-url"),
 	});
-	if (projectId && !settled.ok) {
-		throw new Error(settled.reason || `ChatGPT project ${projectId} did not settle`);
-	}
+	assertChatgptNavigationSettledForTest(settled, url, projectId);
+}
+
+export function assertChatgptNavigationSettledForTest(
+	settled: { ok: boolean; reason?: string },
+	url: string,
+	projectId?: string,
+): void {
+	if (settled.ok) return;
+	throw new Error(
+		settled.reason ||
+			(projectId
+				? `ChatGPT project ${projectId} did not settle`
+				: `ChatGPT route ${url} did not settle`),
+	);
 }
 
 async function openProjectSourcesTab(client: ChromeClient, projectId: string): Promise<void> {

@@ -23196,3 +23196,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Utility affinity must preserve the active route by default but honor an
   explicit navigation request. On a mismatched exact target, navigate it in
   place; never respond by opening an unleased replacement tab.
+
+## 2026-09-25 | Treat every failed ChatGPT route settle as terminal
+
+- A successful `Page.navigate` acknowledgement is not proof that the requested
+  route settled. The provider may remain or redirect to another route.
+- Do not discard `navigateAndSettle` failure for non-project URLs. Conversation,
+  root, library, and project navigation must all fail closed before callers read
+  or mutate the wrong page.
+- Cover the generic settle assertion directly so a project-only conditional
+  cannot silently reappear.

@@ -15,6 +15,7 @@ vi.mock("chrome-remote-interface", () => {
 
 import { shouldAttachResolvedServiceTabForTest } from "../../src/browser/llmService/llmService.js";
 import {
+	assertChatgptNavigationSettledForTest,
 	bindChatgptAbortCleanupForTest,
 	closeChatgptTabConnectionForTest,
 	prepareChatgptPromptWorkbenchTargetForTest,
@@ -351,5 +352,27 @@ describe("ChatGPT tab lifecycle", () => {
 				{ ...input, preserveActiveTab: true },
 			),
 		).toBe(false);
+	});
+
+	test("rejects every ChatGPT route that fails to settle", () => {
+		expect(() =>
+			assertChatgptNavigationSettledForTest(
+				{ ok: false, reason: "chatgpt route did not settle" },
+				"https://chatgpt.com/c/conversation-1",
+			),
+		).toThrow("chatgpt route did not settle");
+		expect(() =>
+			assertChatgptNavigationSettledForTest({ ok: false }, "https://chatgpt.com/c/conversation-1"),
+		).toThrow("ChatGPT route https://chatgpt.com/c/conversation-1 did not settle");
+		expect(() =>
+			assertChatgptNavigationSettledForTest(
+				{ ok: false },
+				"https://chatgpt.com/g/project-1/project",
+				"project-1",
+			),
+		).toThrow("ChatGPT project project-1 did not settle");
+		expect(() =>
+			assertChatgptNavigationSettledForTest({ ok: true }, "https://chatgpt.com/c/conversation-1"),
+		).not.toThrow();
 	});
 });
