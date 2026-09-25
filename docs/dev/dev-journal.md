@@ -50810,3 +50810,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   rejected before provider interaction, including continuations already
   waiting in rate-limit pacing. Focused coverage passes 155 tests plus
   typecheck. The managed API remains stopped and no live retry was launched.
+- Read-only scheduler history attributes the separate random utility tab to
+  scheduled detail-inventory refresh
+  `acctmirror_855cb75e-9df6-4645-97d5-b315ce1593d6`, not to the terminal
+  materialization job. Packet 5H will bind that scheduled pass exclusively to
+  its crawler tab.
