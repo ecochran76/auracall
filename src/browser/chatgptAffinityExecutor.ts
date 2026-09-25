@@ -299,6 +299,18 @@ async function settleFailedExecution(
 	now: () => Date,
 	error: unknown,
 ): Promise<void> {
+	if (readFailureEffectState(error) === "pre_effect") {
+		await idleLease(request.registry, claim, now().toISOString(), "none");
+		const settled = await request.ledger.settle({
+			reservationId,
+			settledAt: now().toISOString(),
+			effectState: "none",
+			outcome: "cancelled",
+			stopReason: error instanceof Error ? error.message : String(error),
+		});
+		if (!settled.ok) throw new Error(`Pre-effect interaction settlement failed: ${settled.reason}.`);
+		return;
+	}
 	const used = await request.registry.recordMeaningfulUse({
 		claim,
 		now: now().toISOString(),
@@ -330,6 +342,16 @@ async function settleFailedExecution(
 		stopReason: error instanceof Error ? error.message : String(error),
 	});
 	if (!settled.ok) throw new Error(`Failed interaction settlement failed: ${settled.reason}.`);
+}
+
+function readFailureEffectState(error: unknown): "pre_effect" | "effect_observed" | "unknown" {
+	if (!error || typeof error !== "object") return "unknown";
+	const details = (error as { details?: unknown }).details;
+	if (!details || typeof details !== "object") return "unknown";
+	const effectState = (details as { effectState?: unknown }).effectState;
+	return effectState === "pre_effect" || effectState === "effect_observed" || effectState === "unknown"
+		? effectState
+		: "unknown";
 }
 
 async function idleLease(

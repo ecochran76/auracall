@@ -365,6 +365,51 @@ describe("ChatGPT affinity executor", () => {
 		expect(binding).toMatchObject({ state: "idle", effectState: "outcome-unknown" });
 	});
 
+	test("cancels a confirmed pre-effect failure without consuming settled interaction usage", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+		const ledger = createInMemoryProviderInteractionLedger({ createReservationId: () => "interaction-1" });
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "target-1",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "operation-1",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!reserved.ok) throw new Error("fixture lease conflict");
+		const failure = Object.assign(new Error("selector failed before Send"), {
+			details: { effectState: "pre_effect" },
+		});
+
+		await expect(
+			executeChatgptConversation({
+				mode: "tab-affinity",
+				registry,
+				ledger,
+				lease: reserved.value.lease,
+				claim: reserved.value.claim,
+				operationId: "operation-1",
+				endpoint: { host: "127.0.0.1", port: 45011 },
+				input: { prompt: "continue", conversationId: "conversation-1" },
+				runPrompt: vi.fn(async () => {
+					throw failure;
+				}),
+				policy,
+				reservationTtlMs: 30_000,
+				idleTtlMs: 60_000,
+				now: () => new Date("2026-09-24T12:00:01.000Z"),
+			}),
+		).rejects.toThrow("selector failed before Send");
+
+		expect(await ledger.list()).toEqual([
+			expect.objectContaining({ state: "settled", effectState: "none", outcome: "cancelled" }),
+		]);
+		expect(await registry.list()).toEqual([
+			expect.objectContaining({ state: "idle", effectState: "none" }),
+		]);
+	});
+
 	test("fences the exact lease when ledger settlement fails after provider success", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-1",

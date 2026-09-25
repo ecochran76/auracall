@@ -4253,6 +4253,7 @@ async function runRemoteBrowserMode(
 		};
 	} catch (error) {
 		const normalizedError = error instanceof Error ? error : new Error(String(error));
+		const observedEffectState = readProviderEffectState(normalizedError, providerEffectState);
 		const guardedError = await handleChatgptBrowserRateLimitFailure({
 			config,
 			logger,
@@ -4260,7 +4261,7 @@ async function runRemoteBrowserMode(
 			action: "remoteBrowserRun",
 			Runtime: runtimeForGuard,
 			managedProfileDir: config.manualLoginProfileDir ?? null,
-			effectState: readProviderEffectState(normalizedError, providerEffectState),
+			effectState: observedEffectState,
 		});
 		await refreshTerminalIdentity();
 		stopThinkingMonitor?.();
@@ -4268,11 +4269,20 @@ async function runRemoteBrowserMode(
 		connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
 
 		if (!socketClosed) {
-			logger(`Failed to complete ChatGPT run: ${guardedError.message}`);
-			if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === "1") && guardedError.stack) {
-				logger(guardedError.stack);
+			const surfacedError =
+				observedEffectState === "pre_effect" &&
+				readProviderEffectState(guardedError, "unknown") === "unknown"
+					? new BrowserAutomationError(
+							guardedError.message,
+							{ stage: "remote-browser-pre-effect", effectState: "pre_effect", retrySafe: true },
+							guardedError,
+						)
+					: guardedError;
+			logger(`Failed to complete ChatGPT run: ${surfacedError.message}`);
+			if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === "1") && surfacedError.stack) {
+				logger(surfacedError.stack);
 			}
-			throw guardedError;
+			throw surfacedError;
 		}
 
 		throw new BrowserAutomationError(
