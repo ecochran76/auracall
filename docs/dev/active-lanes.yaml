@@ -1018,16 +1018,16 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: dbb1e606bd4be98bba73d149a734f6a8ddf70453
+    checkpoint: c49c31e23f9af73f7dc53c75e74ffc520096bcee
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
     dependencies: []
     overlaps: []
     reconciled_overlaps: []
-    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Installed Packet 7 proves distinct exact concurrent ChatGPT targets, current-model observation, picker dismissal, and zero-effect cancellation. Both operations now stop before Send because prompt focus does not recognize the current exact data-chatgpt-composer form; a provider-free exact-boundary repair is validated locally.
-    blocker: The current root composer-ownership repair is not installed or live-retested; completed prompt, conversation-route binding, live-follow, and canonical-main acceptance remain open.
-    validation_status: packet-7-exact-tab-and-picker-dismissal-proven-current-composer-ownership-repaired
-    validation_ref: dbb1e606bd4be98bba73d149a734f6a8ddf70453
-    disposition: Installed parity and exact wsl-chrome-3 identity passed. Two simultaneous commands resolved tab-affinity, connected to distinct exact leased targets, observed Latest, dismissed the picker, and failed closed before Send because the visible ProseMirror lived inside the current exact data-chatgpt-composer form rather than a recognized legacy boundary. Both aggregate records settled as effectState none and outcome cancelled; leases are idle with target creation as their only target action. Zero prompts and zero live-follow passes were submitted; no provider warning or CAPTCHA appeared. GitHub Actions remains skipped by operator direction.
+    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Live attempt 1/10 sent two concurrent prompts on distinct exact targets and both provider conversations completed with exact markers. Installed automation failed to observe current role-bearing search-unit DOM, so receipts remain outcome unknown; a provider-free shared selector and observer repair is validated locally.
+    blocker: The current turn-observation repair is not installed or live-retested; durable successful bindings, live-follow coexistence, and canonical-main acceptance remain open.
+    validation_status: packet-7-two-provider-effects-reconciled-current-turn-observer-repaired
+    validation_ref: c49c31e23f9af73f7dc53c75e74ffc520096bcee
+    disposition: Installed parity and exact wsl-chrome-3 identity passed. Two simultaneous commands sent from distinct exact tabs and created two exact conversation routes. Read-only route inspection proves both user prompts, exact assistant markers, and Response complete. The installed legacy turn reader did not observe those effects, so both append-only records remain outcome unknown and are not retried. Shared ChatGPT selectors and readers now recognize current data-content-search-unit-key role suffixes. No provider warning or CAPTCHA appeared; live follow has not run. GitHub Actions remains skipped by operator direction.
     updated_at: 2026-09-24

@@ -50553,3 +50553,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   boundary without broadening to arbitrary forms. Forty focused tests,
   typecheck, and production build pass. Both live records settled cancelled
   with no effect, no prompt or live-follow ran, and integration remains open.
+
+## 2026-09-24 | Plan 0359 current turn observation
+
+- Live attempt 1/10 passed exact concurrent tab ownership through Send. Both
+  ChatGPT conversations completed on distinct routes with the exact requested
+  response markers, as proven by read-only retained-route inspection.
+- Installed automation timed out because the provider replaced legacy turn and
+  author attributes with role-bearing search-unit keys. Both append-only
+  interactions therefore remain outcome unknown despite successful external
+  reconciliation; they were not retried.
+- Shared ChatGPT turn selectors, commit verification, assistant extraction, and
+  adapter message-role inference now recognize the current exact attributes.
+  Six focused suites pass 242 tests; typecheck and production build pass.
+  Live follow remains gated on an installed successful prompt pair.

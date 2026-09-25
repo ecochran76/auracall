@@ -229,17 +229,17 @@ const CHATGPT_CONVERSATION_PROMPT_INPUT_SELECTOR = `textarea[aria-label=${JSON.s
 const CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
 	"conversation_turn_section",
-	'section[data-testid^="conversation-turn-"]',
+	'[data-content-search-unit-key], section[data-testid^="conversation-turn-"]',
 );
 const CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
 	"message_author_role",
-	"[data-message-author-role]",
+	'[data-message-author-role], [data-content-search-unit-key$=":user"], [data-content-search-unit-key$=":assistant"], [data-chatgpt-search-unit-key$=":user"], [data-chatgpt-search-unit-key$=":assistant"]',
 );
 const CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
 	"user_message_author_role",
-	'[data-message-author-role="user"]',
+	'[data-message-author-role="user"], [data-content-search-unit-key$=":user"], [data-chatgpt-search-unit-key$=":user"]',
 );
 const CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
@@ -8936,15 +8936,22 @@ async function readVisibleChatgptConversationMessagesWithClient(
           const pageNodes = fallbackNodes.slice(pageStart, pageStart + pageSize);
           const messages = pageNodes
             .map((node) => {
-              const role = String(node.getAttribute('data-message-author-role') || '').trim();
+	              const searchUnitKey =
+	                node.getAttribute('data-content-search-unit-key') ||
+	                node.getAttribute('data-chatgpt-search-unit-key') ||
+	                '';
+	              const role = String(
+	                node.getAttribute('data-message-author-role') || searchUnitKey.split(':').at(-1) || '',
+	              ).trim();
               if (role !== 'user' && role !== 'assistant' && role !== 'system') return null;
               // textContent avoids the forced layout work of innerText. Paging keeps
               // both DOM traversal and by-value CDP serialization interruptible.
               const text = normalize(node.textContent || '');
               if (!text) return null;
-              const messageId = normalize(
-                node.getAttribute('data-message-id') ||
-                node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)})?.getAttribute('data-turn-id') ||
+	              const messageId = normalize(
+	                node.getAttribute('data-message-id') ||
+	                node.getAttribute('data-chatgpt-search-message-ids')?.trim().split(/ +/)[0] ||
+	                node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)})?.getAttribute('data-turn-id') ||
                 '',
               );
               return { role, text, messageId: messageId || null };
@@ -9325,6 +9332,8 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
               messageIndex,
               role: normalize(
                 roleNode?.getAttribute('data-message-author-role') ||
+	            roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+	            roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
                 section.getAttribute('data-message-author-role') ||
                 section.getAttribute('data-turn') ||
                 '',
@@ -9406,6 +9415,8 @@ async function readVisibleChatgptImageArtifactProbesWithClient(
             messageIndex,
             role: normalize(
               roleNode?.getAttribute('data-message-author-role') ||
+	          roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+	          roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
               section.getAttribute('data-message-author-role') ||
               section.getAttribute('data-turn') ||
               '',
@@ -11828,6 +11839,8 @@ async function tagChatgptArtifactButtonWithClient(
               messageIndex,
               role: normalize(
                 roleNode?.getAttribute('data-message-author-role') ||
+	            roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+	            roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
                 section.getAttribute('data-message-author-role') ||
                 section.getAttribute('data-turn') ||
                 '',

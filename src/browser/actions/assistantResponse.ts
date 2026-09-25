@@ -645,7 +645,11 @@ async function isCompletionVisible(Runtime: ChromeClient['Runtime']): Promise<bo
           if (role === 'assistant') return true;
           const testId = (node.getAttribute('data-testid') || '').toLowerCase();
           if (testId.includes('assistant')) return true;
-          return Boolean(node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
+	      return Boolean(
+	        node.matches(ASSISTANT_SELECTOR) ||
+	        node.querySelector(ASSISTANT_SELECTOR) ||
+	        node.querySelector('[data-testid*="assistant"]')
+	      );
         };
 
         const turns = Array.from(document.querySelectorAll('${CONVERSATION_TURN_SELECTOR}'));
@@ -749,7 +753,7 @@ function buildAssistantResponseProgressExpression(responseBoundary?: AssistantRe
       if (role === 'assistant') return true;
       const testId = (node.getAttribute('data-testid') || '').toLowerCase();
       if (testId.includes('assistant')) return true;
-      return Boolean(node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
+      return Boolean(node.matches(ASSISTANT_SELECTOR) || node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
     };
     const turns = Array.from(document.querySelectorAll(CONVERSATION_SELECTOR));
     let assistantTurn = null;
@@ -864,7 +868,7 @@ function buildResponseObserverExpression(timeoutMs: number, responseBoundary?: A
       if (role === 'assistant') return true;
       const testId = (node.getAttribute('data-testid') || '').toLowerCase();
       if (testId.includes('assistant')) return true;
-      return Boolean(node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
+      return Boolean(node.matches(ASSISTANT_SELECTOR) || node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
     };
 
     const RESPONSE_BOUNDARY = ${JSON.stringify(boundary)};
@@ -1028,7 +1032,7 @@ function buildAssistantExtractor(functionName: string): string {
       if (testId.includes('assistant')) {
         return true;
       }
-      return Boolean(node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
+      return Boolean(node.matches(ASSISTANT_SELECTOR) || node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
     };
 
     const expandCollapsibles = (root) => {
@@ -1275,7 +1279,7 @@ function buildCopyExpression(meta: { messageId?: string | null; turnId?: string 
         if (role === 'assistant') return true;
         const testId = (node.getAttribute('data-testid') || '').toLowerCase();
         if (testId.includes('assistant')) return true;
-        return Boolean(node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
+        return Boolean(node.matches(ASSISTANT_SELECTOR) || node.querySelector(ASSISTANT_SELECTOR) || node.querySelector('[data-testid*="assistant"]'));
       };
       const turns = Array.from(document.querySelectorAll(CONVERSATION_SELECTOR));
       for (let i = turns.length - 1; i >= 0; i -= 1) {

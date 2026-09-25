@@ -23084,3 +23084,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   nodes, because focus is the first step toward a provider mutation.
 - Keep a failure at this gate pre-effect and verify the append-only interaction
   settles cancelled before considering another live attempt.
+
+## 2026-09-24 | Treat ChatGPT search-unit keys as current turn authority
+
+- Current ChatGPT can omit legacy `conversation-turn`,
+  `data-message-author-role`, and `data-turn` attributes while exposing exact
+  `data-content-search-unit-key` and `data-chatgpt-search-unit-key` values whose
+  final segment is `user` or `assistant`.
+- Use the content search unit as the message boundary and infer its role from
+  the exact key suffix. Ensure assistant extractors accept a role-bearing node
+  itself, not only a matching descendant.
+- When Send produced an exact route and response but legacy observation timed
+  out, reconcile read-only and preserve the original outcome-unknown ledger;
+  never blind-retry the same prompt.

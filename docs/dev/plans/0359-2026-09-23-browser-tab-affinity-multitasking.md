@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 42
+Plan version: 43
 
 ## Stable Objective
 
@@ -1610,3 +1610,32 @@ Checkpoint 2026-09-24, current root composer ownership repair:
 - `review_status`: prompt readiness and prompt ownership are separate gates;
   the current provider-owned form must be recognized by its exact durable
   attribute before AuraCall may focus or mutate the editor
+
+Checkpoint 2026-09-24, current turn observation repair:
+
+- `plan_version`: 43
+- `state_transition`: OPEN -> OPEN; two concurrent provider conversations now
+  complete, but installed automation did not recognize the current turn DOM
+- `acceptance_state`: provider effects reconciled; observer repair is
+  provider-free accepted and requires installed retest
+- `progress_classification`: forward progress
+- `evidence`: live attempt 1 of the newly authorized 10-attempt budget sent on
+  distinct exact targets and produced routes
+  `6ab5e3f2-70cc-83ea-a6e1-b76cad61c2ce` and
+  `6ab5e3f4-e368-83ea-ae1a-048059a6aa46`. Read-only exact-route inspection
+  proves each full user prompt, exact requested assistant marker, and terminal
+  `Response complete` state.
+- `material_blockers`: installed commit/response observation still expects
+  legacy `conversation-turn` and author-role attributes. The current UI uses
+  `data-content-search-unit-key` and `data-chatgpt-search-unit-key` role suffixes.
+- `validation_notes`: both historical interaction receipts remain immutable
+  outcome-unknown evidence because the installed verifier timed out after Send.
+  Shared provider selectors, prompt commitment, response extraction, and
+  adapter message-role inference now support the current exact attributes.
+  Six focused suites pass 242 tests; typecheck and production build pass.
+- `next_action_or_stop_reason`: commit and install the observer repair, then use
+  live attempt 2/10 with fresh markers; run live follow only after the installed
+  commands themselves return both exact responses and durable bindings
+- `delegation_status`: no new workers
+- `review_status`: reconciliation proves the provider effects but does not
+  rewrite their outcome-unknown ledgers or substitute for installed acceptance

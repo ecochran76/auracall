@@ -405,6 +405,7 @@
           "[data-testid*=\"model-switcher-\"]"
         ],
         "assistantBubble": [
+          "[data-content-search-unit-key]",
           "article[data-testid^=\"conversation-turn\"]",
           "div[data-testid^=\"conversation-turn\"]",
           "section[data-testid^=\"conversation-turn\"]",
@@ -416,6 +417,8 @@
           "section[data-turn]"
         ],
         "assistantRole": [
+          "[data-content-search-unit-key$=\":assistant\"]",
+          "[data-chatgpt-search-unit-key$=\":assistant\"]",
           "article[data-testid^=\"conversation-turn\"][data-message-author-role=\"assistant\"]",
           "article[data-testid^=\"conversation-turn\"][data-turn=\"assistant\"]",
           "article[data-testid^=\"conversation-turn\"] [data-message-author-role=\"assistant\"]",
@@ -457,9 +460,9 @@
         "selectors": {
           "project_source_row": "div[class*=\"group/file-row\"]",
           "project_sources_tab_id": "[role=\"tab\"][id$=\"-sources\"]",
-          "conversation_turn_section": "section[data-testid^=\"conversation-turn-\"]",
-          "message_author_role": "[data-message-author-role]",
-          "user_message_author_role": "[data-message-author-role=\"user\"]",
+          "conversation_turn_section": "[data-content-search-unit-key], section[data-testid^=\"conversation-turn-\"]",
+          "message_author_role": "[data-message-author-role], [data-content-search-unit-key$=\":user\"], [data-content-search-unit-key$=\":assistant\"], [data-chatgpt-search-unit-key$=\":user\"], [data-chatgpt-search-unit-key$=\":assistant\"]",
+          "user_message_author_role": "[data-message-author-role=\"user\"], [data-content-search-unit-key$=\":user\"], [data-chatgpt-search-unit-key$=\":user\"]",
           "assistant_artifact_button": "button.behavior-btn",
           "textdoc_message": "div[id^=\"textdoc-message-\"]",
           "conversation_options_button": "button[data-testid=\"conversation-options-button\"]",
