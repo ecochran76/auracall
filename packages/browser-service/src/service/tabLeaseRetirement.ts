@@ -33,6 +33,7 @@ export async function retireExpiredTabLeases(input: {
 		endpoint: TabLeaseRetirementEndpoint,
 		targetId: string,
 	) => Promise<void>;
+	endpointAbsenceProvesTargetsMissing?: boolean;
 }): Promise<TabLeaseRetirementOutcome[]> {
 	const now = input.now ?? (() => new Date());
 	const nowIso = now().toISOString();
@@ -52,7 +53,7 @@ export async function retireExpiredTabLeases(input: {
 	for (const candidate of candidates) {
 		const reason = retirementReason(candidate, nowMs);
 		if (!reason) continue;
-		if (!endpoint) {
+		if (!endpoint && !input.endpointAbsenceProvesTargetsMissing) {
 			outcomes.push({
 				leaseId: candidate.leaseId,
 				targetId: candidate.targetId,
@@ -88,7 +89,9 @@ export async function retireExpiredTabLeases(input: {
 		let disposition: TabLeaseFinalDisposition;
 		let detail: string | undefined;
 		try {
-			{
+			if (!endpoint) {
+				disposition = "already-missing";
+			} else {
 				const target = await input.inspectTarget(endpoint, lease.targetId);
 				if (!target) {
 					disposition = "already-missing";
@@ -131,7 +134,7 @@ function retirementReason(
 ): TabLeaseRetirementReason | null {
 	if (lease.state === "retiring") return lease.retirementReason ?? "operator";
 	if (lease.state !== "idle") return null;
-	if (lease.effectState === "outcome-unknown" || lease.effectState === "in-flight") return null;
+	if (lease.effectState === "in-flight") return null;
 	if (nowMs >= Date.parse(lease.absoluteExpiresAt)) return "absolute-expired";
 	if (nowMs >= Date.parse(lease.idleExpiresAt)) return "idle-expired";
 	return null;

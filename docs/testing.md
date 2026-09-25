@@ -664,6 +664,8 @@
         `~/.auracall/soaks`. Finish rejects before 24 elapsed hours; warnings,
         lost/uncertain/restart-unverified/expired leases, and post-baseline
         navigation/reload/focus growth are terminal findings.
+      - lease lifecycle regression contract:
+        `pnpm vitest run tests/browser-service/tabLeaseRetirement.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts tests/browser/configuredChatgptTabMaintenance.test.ts` proves heartbeat expiry, uncertain idle retirement, repeated lost-lease reconciliation, absent-browser release, and exact-target post-close proof without a provider or browser.
       - installed-runtime MCP dashboard/status contract readback:
         `pnpm run smoke:mcp-ops-browser`; it starts a fixture local API server,
         verifies packaged `auracall-mcp` lists `api_ops_browser_status`, and

@@ -20,6 +20,8 @@ export async function reconcileStaleActiveTabLeases(input: {
 	isOwnerAlive?: (processId: number) => boolean;
 }): Promise<StaleActiveTabLeaseReconciliationOutcome[]> {
 	const now = input.now ?? (() => new Date());
+	const nowIso = now().toISOString();
+	const nowMs = Date.parse(nowIso);
 	const ownerAlive = input.isOwnerAlive ?? isProcessAlive;
 	const activeLeases = await input.registry.list({ scope: input.scope, states: ["active"] });
 	const outcomes: StaleActiveTabLeaseReconciliationOutcome[] = [];
@@ -37,13 +39,18 @@ export async function reconcileStaleActiveTabLeases(input: {
 			ownerProcessId === input.currentOwner.processId &&
 			ownerInstanceId !== input.currentOwner.instanceId;
 		const deadOwner = !legacyOwner && !ownerAlive(ownerProcessId);
-		if (!legacyOwner && !replacedCurrentProcess && !deadOwner) continue;
+		const heartbeatExpired =
+			nowMs >= Date.parse(lease.idleExpiresAt) || nowMs >= Date.parse(lease.absoluteExpiresAt);
+		if (!legacyOwner && !replacedCurrentProcess && !deadOwner && !heartbeatExpired) continue;
 
 		const lost = await input.registry.markLost({
 			leaseId: lease.leaseId,
 			expectedRevision: lease.revision,
-			now: now().toISOString(),
-			reason: "restart-unverified",
+			now: nowIso,
+			reason:
+				legacyOwner || replacedCurrentProcess || deadOwner
+					? "restart-unverified"
+					: "heartbeat-expired",
 		});
 		outcomes.push(
 			lost.ok

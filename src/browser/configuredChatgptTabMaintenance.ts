@@ -153,22 +153,23 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 				currentOwner: deps.currentOwner ?? getCurrentTabLeaseOwnerIdentity(),
 				isOwnerAlive: deps.isOwnerAlive,
 			});
-			for (const stale of staleActive) {
-				if (stale.disposition !== "lost" || stale.lostRevision === undefined) continue;
-				summary.restartLostCount += 1;
-				if (!endpoint) {
-					summary.deferredScopeCount += 1;
-					continue;
+			summary.restartLostCount += staleActive.filter(
+				(stale) => stale.disposition === "lost",
+			).length;
+			const lostLeases = await runtime.registry.list({ scope, states: ["lost"] });
+			for (const lostLease of lostLeases) {
+				let target: { url?: string } | undefined;
+				if (endpoint) {
+					const targets = await listTargets(endpoint.port, endpoint.host);
+					target = targets.find((candidate) => {
+						const record = candidate as { id?: string; targetId?: string };
+						return (record.targetId ?? record.id) === lostLease.targetId;
+					}) as { url?: string } | undefined;
 				}
-				const targetMatch = await listTargets(endpoint.port, endpoint.host);
-				const target = targetMatch.find((candidate) => {
-					const record = candidate as { id?: string; targetId?: string };
-					return (record.targetId ?? record.id) === stale.targetId;
-				}) as { url?: string } | undefined;
 				if (!target) {
 					const released = await runtime.registry.releaseLost({
-						leaseId: stale.leaseId,
-						expectedRevision: stale.lostRevision,
+						leaseId: lostLease.leaseId,
+						expectedRevision: lostLease.revision,
 						now: (input.now ?? (() => new Date()))().toISOString(),
 						disposition: "already-missing",
 					});
@@ -176,12 +177,32 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 					else summary.deferredScopeCount += 1;
 					continue;
 				}
-				const lostLease = (await runtime.registry.list({ states: ["lost"] })).find(
-					(lease) => lease.leaseId === stale.leaseId,
-				);
-				if (!lostLease || !chatgptTargetMatchesLease(lostLease, { url: target.url ?? "" })) {
+				if (!chatgptTargetMatchesLease(lostLease, { url: target.url ?? "" })) {
 					summary.restartIdentityMismatchCount += 1;
 					continue;
+				}
+				const nowMs = (input.now ?? (() => new Date()))().getTime();
+				const expired =
+					nowMs >= Date.parse(lostLease.idleExpiresAt) ||
+					nowMs >= Date.parse(lostLease.absoluteExpiresAt);
+				if (expired && endpoint) {
+					await closeTarget(endpoint.host, endpoint.port, lostLease.targetId, () => undefined);
+					const remainingTargets = await listTargets(endpoint.port, endpoint.host);
+					const stillLive = remainingTargets.some((candidate) => {
+						const record = candidate as { id?: string; targetId?: string };
+						return (record.targetId ?? record.id) === lostLease.targetId;
+					});
+					if (!stillLive) {
+						const released = await runtime.registry.releaseLost({
+							leaseId: lostLease.leaseId,
+							expectedRevision: lostLease.revision,
+							now: new Date(nowMs).toISOString(),
+							disposition: "closed",
+						});
+						if (released.ok) summary.closedCount += 1;
+						else summary.deferredScopeCount += 1;
+						continue;
+					}
 				}
 				summary.restartPreservedCount += 1;
 			}
@@ -200,6 +221,7 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 				},
 				closeTarget: (resolvedEndpoint, targetId) =>
 					closeTarget(resolvedEndpoint.host, resolvedEndpoint.port, targetId, () => undefined),
+				endpointAbsenceProvesTargetsMissing: true,
 			});
 			for (const outcome of outcomes) {
 				if (outcome.disposition === "deferred") summary.deferredScopeCount += 1;

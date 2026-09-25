@@ -59,7 +59,7 @@ describe("tab lease retirement", () => {
 		]);
 	});
 
-	test("preserves mismatched and outcome-unknown targets without closing them", async () => {
+	test("preserves an expired target when its current identity does not match the lease", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const mismatch = await registry.reserve({
 			scope,
@@ -75,6 +75,35 @@ describe("tab lease retirement", () => {
 			claim: mismatch.value.claim,
 			now: "2026-09-24T12:00:01.000Z",
 			effectState: "settled",
+		});
+		const closeTarget = vi.fn();
+
+		const outcomes = await retireExpiredTabLeases({
+			registry,
+			scope,
+			now: () => new Date("2026-09-24T12:00:02.000Z"),
+			resolveEndpoint: async () => ({ host: "127.0.0.1", port: 45100 }),
+			inspectTarget: async () => ({ url: "https://example.invalid/c/conversation-1" }),
+			targetMatchesLease: () => false,
+			closeTarget,
+		});
+
+		expect(closeTarget).not.toHaveBeenCalled();
+		expect(outcomes).toEqual([
+			expect.objectContaining({
+				leaseId: mismatch.value.lease.leaseId,
+				disposition: "preserved",
+				detail: "target-identity-mismatch",
+			}),
+		]);
+		expect(await registry.list()).toEqual([
+			expect.objectContaining({ targetId: "target-mismatch", state: "lost" }),
+		]);
+	});
+
+	test("retires an expired outcome-unknown lease when its target is already missing", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-unknown",
 		});
 		const unknown = await registry.reserve({
 			scope,
@@ -98,7 +127,7 @@ describe("tab lease retirement", () => {
 			scope,
 			now: () => new Date("2026-09-24T12:00:02.000Z"),
 			resolveEndpoint: async () => ({ host: "127.0.0.1", port: 45100 }),
-			inspectTarget: async () => ({ url: "https://example.invalid/c/conversation-1" }),
+			inspectTarget: async () => null,
 			targetMatchesLease: () => false,
 			closeTarget,
 		});
@@ -106,16 +135,17 @@ describe("tab lease retirement", () => {
 		expect(closeTarget).not.toHaveBeenCalled();
 		expect(outcomes).toEqual([
 			expect.objectContaining({
-				leaseId: mismatch.value.lease.leaseId,
-				disposition: "preserved",
-				detail: "target-identity-mismatch",
+				leaseId: "lease-unknown",
+				reason: "idle-expired",
+				disposition: "already-missing",
 			}),
 		]);
-		expect(await registry.list()).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ targetId: "target-mismatch", state: "lost" }),
-				expect.objectContaining({ targetId: "target-unknown", state: "idle" }),
-			]),
-		);
+		expect(await registry.list()).toEqual([
+			expect.objectContaining({
+				state: "released",
+				effectState: "outcome-unknown",
+				finalDisposition: "already-missing",
+			}),
+		]);
 	});
 });
