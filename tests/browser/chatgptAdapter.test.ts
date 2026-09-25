@@ -7,6 +7,7 @@ import {
 	beforeChatgptBrowserInteractionForTest,
 	bindChatgptProviderSessionConnectionForTest,
 	buildChatgptAuthSessionIdentityExpression,
+	buildChatgptDisposableRootComposerExpression,
 	buildChatgptCreateProjectDialogStateExpressionForTest,
 	buildChatgptFallbackIdentityExpressionForTest,
 	buildChatgptFeatureProbeExpressionForTest,
@@ -245,6 +246,16 @@ describe("ChatGPT provider-session connection provenance", () => {
 				observation: { email: "operator@example.com", source: "auth-session" },
 			}).verdict,
 		).toBe("match");
+	});
+});
+
+describe("ChatGPT disposable root readiness", () => {
+	test("accepts the current provider-owned ProseMirror composer", () => {
+		const expression = buildChatgptDisposableRootComposerExpression();
+
+		expect(expression).toContain('form[data-chatgpt-composer] .ProseMirror');
+		expect(expression).toContain("editor.closest('form[data-chatgpt-composer]')");
+		expect(expression).toContain("location.pathname !== '/'");
 	});
 });
 

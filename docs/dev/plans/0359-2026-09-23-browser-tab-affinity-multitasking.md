@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 44
+Plan version: 45
 
 ## Stable Objective
 
@@ -1672,3 +1672,29 @@ Checkpoint 2026-09-24, dedicated-tab stockpile cleanup repair:
 - `delegation_status`: no new workers
 - `review_status`: a dedicated crawler tab may be disposable itself, but its
   creation must never classify unrelated retained conversation tabs as stale
+
+Checkpoint 2026-09-24, current disposable-root readiness repair:
+
+- `plan_version`: 45
+- `state_transition`: OPEN -> OPEN; live tab coexistence is proven through
+  crawler creation, while the metadata collector remains blocked at root
+  readiness
+- `acceptance_state`: partial installed/live acceptance plus provider-free repair
+- `progress_classification`: forward progress with one exact read-only DOM drift
+- `evidence`: attempt 6/10 returned both exact R10 markers on retained targets
+  `698D59A1D1CA1C1DDD685921B0B1CF7C` and
+  `443F1786E17EBD7CCAE4368EDA7C9664`. The subsequent isolated completion opened
+  crawler target `9934D30FF9D857185096C50CFB60C373` while both conversation
+  targets remained present.
+- `material_blockers`: disposable-root readiness still recognizes only the
+  legacy textarea selectors, while the current root exposes a visible
+  `.ProseMirror` inside exact `form[data-chatgpt-composer]`.
+- `validation_notes`: the readiness expression now admits that exact
+  provider-owned boundary and retains root-route and visibility checks. Four
+  focused suites pass 206 tests, plus typecheck, production build, and diff
+  hygiene.
+- `next_action_or_stop_reason`: commit, install, and rerun only the bounded
+  metadata-only completion while the R10 conversation tabs remain retained
+- `delegation_status`: no new workers
+- `review_status`: current composer recognition is shared provider knowledge;
+  live follow must not maintain a narrower legacy-only readiness definition

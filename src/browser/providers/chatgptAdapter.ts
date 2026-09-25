@@ -4040,18 +4040,25 @@ export function buildChatgptAuthSessionIdentityExpression(): string {
 async function waitForChatgptDisposableRootComposer(client: ChromeClient): Promise<void> {
 	const ready = await waitForPredicate(
 		client.Runtime,
-		`(() => {
-      if (location.origin !== 'https://chatgpt.com' || location.pathname !== '/') return false;
-      const editor = document.querySelector('#prompt-textarea, textarea[name="prompt-textarea"]');
-      if (!(editor instanceof HTMLElement)) return false;
-      const rect = editor.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    })()`,
+		buildChatgptDisposableRootComposerExpression(),
 		{ timeoutMs: 12_000, description: "fresh ChatGPT root composer" },
 	);
 	if (!ready.ok) {
 		throw new Error("Fresh ChatGPT root tab did not expose one visible prompt composer.");
 	}
+}
+
+export function buildChatgptDisposableRootComposerExpression(): string {
+	return `(() => {
+      if (location.origin !== 'https://chatgpt.com' || location.pathname !== '/') return false;
+      const editor = document.querySelector(
+        '#prompt-textarea, textarea[name="prompt-textarea"], form[data-chatgpt-composer] .ProseMirror'
+      );
+      if (!(editor instanceof HTMLElement)) return false;
+      if (editor.matches('.ProseMirror') && !editor.closest('form[data-chatgpt-composer]')) return false;
+      const rect = editor.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    })()`;
 }
 
 function buildChatgptFallbackIdentityExpression(): string {

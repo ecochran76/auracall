@@ -23110,3 +23110,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Regression coverage must seed more same-provider conversations than the
   legacy cap, open one forced dedicated root, and assert no existing target is
   closed.
+
+## 2026-09-24 | Share current composer authority with disposable-root checks
+
+- A fresh-root identity/readiness gate must recognize the same exact current
+  provider-owned composer boundary as prompt execution. Keeping a legacy-only
+  textarea selector causes read-only live follow to fail even when the root is
+  healthy.
+- Accept `.ProseMirror` only beneath exact `form[data-chatgpt-composer]`, and
+  retain the root-route and visible-rectangle checks. Do not broaden readiness
+  to arbitrary editable content.

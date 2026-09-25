@@ -50584,3 +50584,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   retained same-provider conversations while opening the dedicated root; four
   focused suites pass 205 tests and typecheck passes. Installed retest remains
   open.
+
+## 2026-09-24 | Plan 0359 disposable-root composer readiness
+
+- Attempt 6/10 completed two fresh concurrent R10 conversations after the
+  supported login launcher restored the exact managed browser profile. A
+  repaired live-follow probe then opened its own crawler tab without closing
+  either retained conversation tab, proving the stockpile-cleanup fix live.
+- The bounded collector stopped read-only at identity because its fresh-root
+  gate still accepted only legacy textarea selectors. Current ChatGPT instead
+  exposes the already-known `.ProseMirror` within exact
+  `form[data-chatgpt-composer]`.
+- The root-readiness expression now accepts that provider-owned boundary while
+  preserving root-route and visibility checks. Four focused suites pass 206
+  tests, plus typecheck and production build. No provider warning, CAPTCHA,
+  prompt, or materialization occurred during the failed collector pass.
