@@ -133,6 +133,12 @@ the source packet is safe to integrate.
   mode even though maintenance scans resolved AuraCall runtime profiles.
   Packet 4B makes the default maintenance owner active when any resolved
   ChatGPT runtime profile selects tab-affinity.
+- Packet 4B merged through PR 54 at canonical `d95357ba4` and that exact source
+  was installed. On the first service-owned interval, all five stale fences
+  converged to released: four uncertain leases retained
+  `effectState=outcome-unknown` at revision 6 and the lost settled lease
+  released at revision 7. No managed Chrome process or known debug-port
+  listener appeared. The 24-48 hour soak remains unstarted.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -169,7 +175,7 @@ without manual registry edits and without weakening no-retry uncertainty.
 
 Terminal condition: a nested-profile regression passes and installed
 maintenance releases the stale leases with a zero-process, zero-listener
-browser census.
+browser census. Satisfied by canonical `d95357ba4` on 2026-09-25.
 
 ### Packet 6: Default enablement or retained rollback
 
