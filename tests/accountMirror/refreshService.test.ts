@@ -454,6 +454,54 @@ describe("account mirror refresh service", () => {
 		expect(completeFailure).not.toHaveBeenCalled();
 	});
 
+	test("clears queued state when live-follow affinity acquisition fails", async () => {
+		const affinityConfig = {
+			...config,
+			auracallProfile: "default",
+			browser: { tabConcurrencyMode: "tab-affinity" },
+		};
+		const registry = createAccountMirrorStatusRegistry({
+			config: affinityConfig,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+		const persistence = createNoopPersistence();
+		const service = createAccountMirrorRefreshService({
+			config: affinityConfig,
+			registry,
+			persistence,
+			liveFollowAffinityFactory: vi.fn(async () => {
+				throw new Error("Live-follow browser startup control denied: tab-leases-active.");
+			}),
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+
+		await expect(
+			service.requestRefresh({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				explicitRefresh: true,
+				liveFollowOperationId: "completion-1",
+			}),
+		).rejects.toThrow("Live-follow browser startup control denied: tab-leases-active.");
+
+		expect(
+			registry.readStatus({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				explicitRefresh: true,
+			}).entries[0]?.mirrorState,
+		).toMatchObject({ queued: false, running: false });
+		expect(persistence.writeState).toHaveBeenCalledWith(
+			expect.objectContaining({
+				state: expect.objectContaining({
+					lastCompletedAtMs: Date.parse("2026-04-29T12:00:00.000Z"),
+					lastFailureAtMs: Date.parse("2026-04-29T12:00:00.000Z"),
+					consecutiveFailureCount: 1,
+				}),
+			}),
+		);
+	});
+
 	test("threads requested collector phase into metadata collection", async () => {
 		const metadataCollector = {
 			collect: vi.fn(async (input: AccountMirrorMetadataCollectorInput) => ({

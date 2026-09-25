@@ -23170,3 +23170,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Accept `.ProseMirror` only beneath exact `form[data-chatgpt-composer]`, and
   retain the root-route and visible-rectangle checks. Do not broaden readiness
   to arbitrary editable content.
+## 2026-09-25 | Clear Account Mirror queue state when affinity acquisition fails
+
+- Account Mirror marks a refresh queued before acquiring live-follow tab
+  affinity. That acquisition can hard-stop before the collector's existing
+  cleanup block, so every post-queue pre-collector failure path must explicitly
+  clear `queued` and `running` and persist terminal timestamps.
+- A terminal completion and released provider-work lease are not sufficient
+  evidence that the target registry is reusable. Regression coverage must also
+  assert the mirror status no longer reports `already-queued`.

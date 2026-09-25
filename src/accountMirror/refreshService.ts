@@ -8,6 +8,7 @@ import {
 import { findChromePidUsingUserDataDir } from "../../packages/browser-service/src/processCheck.js";
 import {
 	type BrowserOperationAcquiredResult,
+	type BrowserOperationAcquireResult,
 	type BrowserOperationDispatcher,
 	type BrowserOperationRecord,
 	createFileBackedBrowserOperationDispatcher,
@@ -317,50 +318,86 @@ export function createAccountMirrorRefreshService(input: {
 				operationClass: "exclusive-probe",
 				ownerCommand: `account-mirror-refresh:${provider}:${runtimeProfileId}`,
 			} as const;
-			const affinity =
-				request.liveFollowOperationId && isResolvedUserConfig(input.config)
-					? await liveFollowAffinityFactory({
-							userConfig: input.config,
-							provider,
-							runtimeProfileId,
-							operationId: request.liveFollowOperationId,
-							maxBrowserInteractionsPerMinute:
-								development?.maxBrowserInteractionsPerMinute ??
-								target.limits.maxBrowserInteractionsPerMinute,
-							conversationReadCooldownMs:
-								development?.conversationReadCooldownMs ?? target.limits.conversationReadCooldownMs,
-							pageRefreshCooldownMs:
-								development?.pageRefreshCooldownMs ?? target.limits.pageRefreshCooldownMs,
-							renavigationCooldownMs:
-								development?.renavigationCooldownMs ?? target.limits.renavigationCooldownMs,
-							abortSignal: request.abortSignal,
-							now,
-						})
-					: null;
-			const acquired =
-				affinity?.operation ??
-				(await dispatcher.acquireQueued(operationInput, {
-					timeoutMs: normalizeNonNegativeInteger(request.queueTimeoutMs, 30_000),
-					pollMs: normalizePositiveInteger(request.queuePollMs, 1_000),
-					onBlocked: (result) => {
-						recordBrowserOperationQueueObservation({
-							event: "queued",
-							key: result.key,
-							requested: operationInput,
-							blockedBy: result.blockedBy,
-						});
-						registry.mergeState(
-							{ provider, runtimeProfileId },
-							{
-								queued: true,
-								running: false,
-								lastDispatcherKey: result.key,
-								lastDispatcherBlockedBy: summarizeBrowserOperation(result.blockedBy),
-							},
-						);
+			let affinity: Awaited<ReturnType<typeof liveFollowAffinityFactory>> | null = null;
+			let acquired: BrowserOperationAcquireResult;
+			try {
+				affinity =
+					request.liveFollowOperationId && isResolvedUserConfig(input.config)
+						? await liveFollowAffinityFactory({
+								userConfig: input.config,
+								provider,
+								runtimeProfileId,
+								operationId: request.liveFollowOperationId,
+								maxBrowserInteractionsPerMinute:
+									development?.maxBrowserInteractionsPerMinute ??
+									target.limits.maxBrowserInteractionsPerMinute,
+								conversationReadCooldownMs:
+									development?.conversationReadCooldownMs ??
+									target.limits.conversationReadCooldownMs,
+								pageRefreshCooldownMs:
+									development?.pageRefreshCooldownMs ?? target.limits.pageRefreshCooldownMs,
+								renavigationCooldownMs:
+									development?.renavigationCooldownMs ?? target.limits.renavigationCooldownMs,
+								abortSignal: request.abortSignal,
+								now,
+							})
+						: null;
+				acquired =
+					affinity?.operation ??
+					(await dispatcher.acquireQueued(operationInput, {
+						timeoutMs: normalizeNonNegativeInteger(request.queueTimeoutMs, 30_000),
+						pollMs: normalizePositiveInteger(request.queuePollMs, 1_000),
+						onBlocked: (result) => {
+							recordBrowserOperationQueueObservation({
+								event: "queued",
+								key: result.key,
+								requested: operationInput,
+								blockedBy: result.blockedBy,
+							});
+							registry.mergeState(
+								{ provider, runtimeProfileId },
+								{
+									queued: true,
+									running: false,
+									lastDispatcherKey: result.key,
+									lastDispatcherBlockedBy: summarizeBrowserOperation(result.blockedBy),
+								},
+							);
+						},
+					}));
+			} catch (error) {
+				const completedAt = now();
+				const failureCount = resolveNextConsecutiveFailureCount(target);
+				registry.mergeState(
+					{ provider, runtimeProfileId },
+					{
+						queued: false,
+						running: false,
+						lastFailureAtMs: completedAt.getTime(),
+						lastCompletedAtMs: completedAt.getTime(),
+						consecutiveFailureCount: failureCount,
 					},
-				}));
-
+				);
+				await persistRefreshState(persistence, {
+					provider,
+					runtimeProfileId,
+					browserProfileId: target.browserProfileId,
+					boundIdentityKey: target.expectedIdentityKey,
+					updatedAt: completedAt,
+					state: {
+						detectedIdentityKey: target.detectedIdentityKey,
+						lastAttemptAtMs: queuedAt.getTime(),
+						lastFailureAtMs: completedAt.getTime(),
+						lastCompletedAtMs: completedAt.getTime(),
+						consecutiveFailureCount: failureCount,
+						lastRefreshRequestId: requestId,
+						metadataCounts: target.metadataCounts,
+						metadataEvidence: target.metadataEvidence,
+						backfillLedger: target.backfillLedger,
+					},
+				});
+				throw error;
+			}
 			if (!acquired.acquired) {
 				const completedAt = now();
 				const failureCount = resolveNextConsecutiveFailureCount(target);

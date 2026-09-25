@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 8
+Plan version: 9
 
 ## Stable Objective
 
@@ -32,8 +32,9 @@ provider-specific acceptance exists.
   `wsl-chrome-3` AuraCall runtime profile and exact expected Pro/personal
   identity. Identity drift, CAPTCHA, provider warning, cooldown, unknown
   ownership, or uncertain effect is a hard stop.
-- Never click ChatGPT's `Answer now`. No asset materialization, unrelated
-  scheduler mutation, warning override, or automatic retry is authorized.
+- Never click ChatGPT's `Answer now`. The operator authorized one bounded
+  catch-up with at most six materialization items; unrelated scheduler
+  mutation, warning override, and automatic retry remain unauthorized.
 - Packets 1 through 3 are implemented provider-free. P53 is registered on
   canonical main through PR 50 at `b2d78d8e9`. `/status`, Browser Ops, CLI,
   and MCP share the sanitized affinity projection and visible serialized
@@ -157,6 +158,13 @@ the source packet is safe to integrate.
   reacquisition as designed, but also bypassed the normal option builder that
   attaches identity authority. Packet 5B restores that envelope without
   changing the exact tab or adding provider retries.
+- Packet 5B merged through PR 58 at canonical `d71362be3` and was installed.
+  The first new bounded catch-up was rejected before browser work as
+  `already-queued`, even though the earlier live-follow completion was already
+  terminal. Its failed tab-affinity acquisition had occurred after setting the
+  mirror's in-memory queued flag but before entering the collector cleanup
+  block. Packet 5C clears and persists terminal status on that pre-collector
+  failure path before any further catch-up attempt.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -234,6 +242,20 @@ Terminal condition: the bounded catch-up passes identity authorization,
 completes within aggregate limits, and records any materialization outcome
 without target proliferation or retrying the failed uncertain operation.
 
+### Packet 5C: Pre-collector queued-state cleanup
+
+- Treat live-follow affinity acquisition as part of the refresh lifecycle,
+  even when no browser operation is acquired.
+- If affinity acquisition throws, clear both transient queued/running flags,
+  persist the terminal failure timestamps and counter, and rethrow the original
+  hard-stop error.
+- Prove the target becomes eligible for a new operator-authorized operation
+  rather than remaining falsely `already-queued` for the API process lifetime.
+
+Terminal condition: regression coverage proves a failed affinity acquisition
+cannot strand queued state, then the canonical installed runtime permits one
+fresh bounded catch-up without manual cache edits.
+
 ### Packet 6: Default enablement or retained rollback
 
 - If every soak gate passes, change only the ChatGPT rollout default needed to
@@ -252,7 +274,8 @@ readback, and rollback posture are recorded; issue 49 closes only then.
 - Raising provider interaction limits or weakening warning/cooldown policy.
 - Automatic handling of CAPTCHA, MFA, login, or `Answer now`.
 - A dashboard configuration editor.
-- Asset materialization or unrelated Account Mirror scheduler operations.
+- Asset materialization beyond the explicitly authorized bounded six-item
+  catch-up, or unrelated Account Mirror scheduler operations.
 - Treating a short smoke, fixture, or unelapsed soak as rollout acceptance.
 
 ## Rollback
