@@ -66,6 +66,7 @@ export interface BrowserTabConcurrencyStatus {
 		state: BrowserTabLease["state"];
 		effectState: BrowserTabLease["effectState"];
 		ageMs: number;
+		lastMeaningfulUseAgeMs: number;
 		idleRemainingMs: number;
 		absoluteRemainingMs: number;
 		idleExpired: boolean;
@@ -207,6 +208,7 @@ export function createBrowserTabConcurrencyRuntime(
 						state: lease.state,
 						effectState: lease.effectState,
 						ageMs: Math.max(0, nowMs - Date.parse(lease.acquiredAt)),
+						lastMeaningfulUseAgeMs: Math.max(0, nowMs - Date.parse(lease.lastMeaningfulUseAt)),
 						idleRemainingMs: Math.max(0, Date.parse(lease.idleExpiresAt) - nowMs),
 						absoluteRemainingMs: Math.max(0, Date.parse(lease.absoluteExpiresAt) - nowMs),
 						idleExpired: nowMs >= Date.parse(lease.idleExpiresAt),

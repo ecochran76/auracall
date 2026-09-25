@@ -218,6 +218,7 @@ describe("browser tab concurrency runtime", () => {
 						state: "idle",
 						effectState: "outcome-unknown",
 						ageMs: 120_000,
+						lastMeaningfulUseAgeMs: 119_000,
 						idleRemainingMs: 0,
 						absoluteRemainingMs: 3_480_000,
 						idleExpired: true,
