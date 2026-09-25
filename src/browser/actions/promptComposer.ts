@@ -228,9 +228,9 @@ function buildPromptFocusExpression(): string {
       node.getAttribute('contenteditable') !== 'false';
     const isComposerOwned = (node) => {
       if (node.matches('#prompt-textarea, textarea[name="prompt-textarea"]')) return true;
-      const composer = node.closest('[data-testid*="composer"], form');
-      if (!composer) return false;
-      if (composer.matches('[data-testid*="composer"]')) return true;
+	      const composer = node.closest('[data-testid*="composer"], [data-chatgpt-composer], form');
+	      if (!composer) return false;
+	      if (composer.matches('[data-testid*="composer"], [data-chatgpt-composer]')) return true;
       return Boolean(
         composer.querySelector(
           '#composer-plus-btn, button[data-testid="send-button"], button[data-testid*="composer-send"], input#upload-files',

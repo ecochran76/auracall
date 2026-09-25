@@ -24,7 +24,12 @@ describe("prompt composer focus expression", () => {
 		expect(expression).toContain("document.querySelectorAll(selector)");
 		expect(expression).toContain("getBoundingClientRect");
 		expect(expression).toContain("style.visibility !== 'hidden'");
-		expect(expression).toContain("node.closest('[data-testid*=\"composer\"], form')");
+		expect(expression).toContain(
+			"node.closest('[data-testid*=\"composer\"], [data-chatgpt-composer], form')",
+		);
+		expect(expression).toContain(
+			"composer.matches('[data-testid*=\"composer\"], [data-chatgpt-composer]')",
+		);
 		expect(expression).toContain("data-auracall-prompt-target");
 		expect(expression).not.toContain("const node = document.querySelector(selector)");
 	});

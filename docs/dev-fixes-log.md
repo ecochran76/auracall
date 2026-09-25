@@ -23072,3 +23072,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   pre-Send request fails even though the model observation itself succeeded.
 - Preserve the failure as confirmed pre-effect evidence; do not submit or run
   live follow after a prompt-readiness failure.
+
+## 2026-09-24 | Recognize ChatGPT's exact current composer boundary
+
+- Prompt presence does not prove prompt ownership. ChatGPT's current root
+  editor can be a visible `.ProseMirror` inside
+  `form[data-chatgpt-composer]` without the older composer `data-testid` or
+  legacy send/upload controls.
+- Admit that exact provider-owned form in the prompt-focus ownership check.
+  Do not weaken the guard to accept arbitrary forms or arbitrary editable
+  nodes, because focus is the first step toward a provider mutation.
+- Keep a failure at this gate pre-effect and verify the append-only interaction
+  settles cancelled before considering another live attempt.

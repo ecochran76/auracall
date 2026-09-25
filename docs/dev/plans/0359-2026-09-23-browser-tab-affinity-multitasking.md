@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 41
+Plan version: 42
 
 ## Stable Objective
 
@@ -1576,3 +1576,37 @@ Checkpoint 2026-09-24, current-model picker dismissal repair:
 - `delegation_status`: no new workers
 - `review_status`: read-only observation may open provider UI, but it must
   restore a prompt-ready state before the adapter proceeds
+
+Checkpoint 2026-09-24, current root composer ownership repair:
+
+- `plan_version`: 42
+- `state_transition`: OPEN -> OPEN; the picker is now dismissed live, but the
+  current root composer boundary still blocked both operations before Send
+- `acceptance_state`: partial installed/live acceptance plus provider-free repair
+- `progress_classification`: forward progress with one narrowed provider DOM
+  compatibility blocker
+- `evidence`: exact installed/source parity at `dbb1e606b` and exact
+  `wsl-chrome-3` Pro/personal identity passed. Two simultaneous operations used
+  distinct exact targets `3DAD8619D571AD32AAD01AF4A07FE159` and
+  `80915D9EE03B3B36C2CA0C67A942E5DD`, independently observed `Latest`, closed
+  the picker, and then failed prompt focus with `BODY` active and no menu.
+  Read-only DOM inspection proved the visible editor is `.ProseMirror` inside
+  exact `form[data-chatgpt-composer]`, while ownership recognized only the
+  older `data-testid` or legacy-control forms.
+- `material_blockers`: the exact current-composer ownership repair is not
+  installed or live-retested. No prompt response, conversation route binding,
+  or live-follow pass exists.
+- `validation_notes`: both interactions again settled as `effectState=none`,
+  `outcome=cancelled`; both leases are idle with target creation as their only
+  target action. The repair admits the exact `data-chatgpt-composer` boundary
+  without admitting arbitrary forms. Forty focused prompt-composer and model
+  tests, typecheck, production build, and diff hygiene pass. No warning,
+  CAPTCHA, identity drift, marker submission, or live-follow effect occurred.
+  GitHub Actions remains skipped by operator direction.
+- `next_action_or_stop_reason`: push this provider-free repair and require
+  fresh bounded live authority before another Send attempt; live follow remains
+  conditional on two completed exact-tab conversations
+- `delegation_status`: no new workers
+- `review_status`: prompt readiness and prompt ownership are separate gates;
+  the current provider-owned form must be recognized by its exact durable
+  attribute before AuraCall may focus or mutate the editor

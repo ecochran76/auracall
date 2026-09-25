@@ -50539,3 +50539,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   closed before returning to prompt composition. The focused suite passes 23
   tests with typecheck and production build. The repair is not installed or
   live-retested; Packet 7 and canonical integration remain open.
+
+## 2026-09-24 | Plan 0359 current root composer ownership
+
+- Installed parity and exact `wsl-chrome-3` identity passed before the bounded
+  concurrent retry. Both exact tabs observed `Latest` and dismissed the picker,
+  proving the prior repair, but stopped before Send because prompt focus did
+  not recognize the current root composer boundary.
+- Read-only retained-DOM inspection identified a visible editable `.ProseMirror`
+  inside exact `form[data-chatgpt-composer]`; the older ownership check accepted
+  only `data-testid` composer containers or forms containing legacy controls.
+- Prompt focus now accepts the exact provider-owned `data-chatgpt-composer`
+  boundary without broadening to arbitrary forms. Forty focused tests,
+  typecheck, and production build pass. Both live records settled cancelled
+  with no effect, no prompt or live-follow ran, and integration remains open.
