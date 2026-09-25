@@ -50739,3 +50739,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   preserving root-route and visibility checks. Four focused suites pass 206
   tests, plus typecheck and production build. No provider warning, CAPTCHA,
   prompt, or materialization occurred during the failed collector pass.
+## 2026-09-25 | Plan 0360 pre-collector queued-state cleanup
+
+- Canonical Packet 5B was installed, but its first fresh bounded catch-up was
+  rejected pre-browser as `already-queued` after the preceding live-follow
+  completion had already failed and released provider work.
+- The live-follow affinity factory ran after the registry set `queued=true`
+  but before the collector try/catch. A tab-startup hard stop therefore left a
+  process-local false queue fence despite zero active completions, leases,
+  provider interactions, or warnings.
+- Packet 5C clears and persists terminal mirror state when affinity acquisition
+  throws. Focused refresh-service coverage and typecheck pass; installed
+  catch-up validation remains open.
