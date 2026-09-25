@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 13
+Plan version: 14
 
 ## Stable Objective
 
@@ -199,6 +199,17 @@ the source packet is safe to integrate.
   of failing closed. Packet 5F makes every ChatGPT route-settle failure fatal;
   no further live retry is permitted until that repair is canonical and
   installed.
+- Packet 5F merged through PR 63 at canonical `f62e57e63` and was installed.
+  The preceding job then reached terminal failed with exact identity match,
+  one materialization target creation, five adoptions, and zero warnings. Four
+  navigation reservations nevertheless remained started after terminal job
+  settlement. Their common durable job operation ID proves they came from
+  timed-out browser promises that continued after their `Promise.race` caller
+  returned. A separate random utility lease also appeared after job terminal;
+  its exact caller is not proven, so it is preserved as unattributed evidence.
+  The API was stopped cleanly and both tabs were left for TTL retirement.
+  Packet 5G terminally closes ledger governors so late continuations fail
+  before reserving or performing another provider interaction.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -328,6 +339,21 @@ replacement target, and no provider warning.
 Terminal condition: provider-free coverage proves an unsettled ordinary
 conversation route throws, focused tests plus typecheck/build pass, and the
 canonical installed runtime is ready for a separately authorized bounded proof.
+
+### Packet 5G: Fence browser continuations after operation completion
+
+- Distinguish settling the current interaction from terminally closing its
+  ledger-backed governor.
+- On terminal utility or live-follow completion, close the governor before
+  idling the lease. Reject later interactions both before and after rate-limit
+  pacing, including a continuation already waiting when close occurs.
+- If close races after reservation, start and immediately settle that exact
+  reservation as cancelled/none so the append-only ledger has no orphan.
+
+Terminal condition: provider-free tests prove late and pacing continuations
+cannot create a started orphan, focused materialization/live-follow suites plus
+typecheck/build pass, and the canonical runtime remains stopped pending a
+separately authorized live proof.
 
 ### Packet 6: Default enablement or retained rollback
 

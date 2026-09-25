@@ -171,7 +171,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		reason?: string,
 	) => {
 		if (finished) return;
-		await interactionGovernor.finish({ outcome, effectState, reason });
+		await interactionGovernor.close({ outcome, effectState, reason });
 		const used = await runtime.registry?.recordMeaningfulUse({
 			claim: crawler.claim,
 			now: (input.now ?? (() => new Date()))().toISOString(),

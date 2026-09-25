@@ -16,12 +16,24 @@ export interface LedgerBackedBrowserInteractionGovernor extends BrowserInteracti
 		effectState?: "none" | "settled" | "outcome-unknown";
 		reason?: string | null;
 	}): Promise<void>;
+	close(input?: {
+		outcome?: ProviderInteractionOutcome;
+		effectState?: "none" | "settled" | "outcome-unknown";
+		reason?: string | null;
+	}): Promise<void>;
 }
 
 export class ProviderInteractionAdmissionError extends Error {
 	constructor(readonly reason: string) {
 		super(`Provider interaction admission denied: ${reason}.`);
 		this.name = "ProviderInteractionAdmissionError";
+	}
+}
+
+export class ProviderInteractionGovernorClosedError extends Error {
+	constructor() {
+		super("Provider interaction governor is closed.");
+		this.name = "ProviderInteractionGovernorClosedError";
 	}
 }
 
@@ -38,6 +50,7 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 }): LedgerBackedBrowserInteractionGovernor {
 	const now = input.now ?? (() => new Date());
 	let activeReservationId: string | null = null;
+	let closed = false;
 
 	const finish = async (
 		settlement: {
@@ -63,8 +76,10 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 
 	return {
 		async beforeInteraction(kind = "generic", abortSignal) {
+			if (closed) throw new ProviderInteractionGovernorClosedError();
 			await finish();
 			await input.baseGovernor.beforeInteraction(kind, abortSignal);
+			if (closed) throw new ProviderInteractionGovernorClosedError();
 			const admission = await input.ledger.reserve({
 				scope: input.scope,
 				workloadId: input.workloadId,
@@ -78,6 +93,21 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 				policy: input.policy,
 			});
 			if (!admission.allowed) throw new ProviderInteractionAdmissionError(admission.reason);
+			if (closed) {
+				const started = await input.ledger.start({
+					reservationId: admission.reservation.reservationId,
+					startedAt: now().toISOString(),
+				});
+				if (started.ok) {
+					activeReservationId = admission.reservation.reservationId;
+					await finish({
+						outcome: "cancelled",
+						effectState: "none",
+						reason: "interaction-governor-closed",
+					});
+				}
+				throw new ProviderInteractionGovernorClosedError();
+			}
 			const started = await input.ledger.start({
 				reservationId: admission.reservation.reservationId,
 				startedAt: now().toISOString(),
@@ -86,8 +116,20 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 				throw new Error(`Provider interaction start failed: ${started.reason}.`);
 			}
 			activeReservationId = admission.reservation.reservationId;
+			if (closed) {
+				await finish({
+					outcome: "cancelled",
+					effectState: "none",
+					reason: "interaction-governor-closed",
+				});
+				throw new ProviderInteractionGovernorClosedError();
+			}
 		},
 		finish,
+		async close(settlement = {}) {
+			closed = true;
+			await finish(settlement);
+		},
 	};
 }
 

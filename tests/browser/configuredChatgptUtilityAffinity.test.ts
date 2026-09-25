@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 import { createInMemoryProviderInteractionLedger } from "../../packages/browser-service/src/service/interactionLedger.js";
+import { ProviderInteractionGovernorClosedError } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { runConfiguredChatgptUtilityOperation } from "../../src/browser/configuredChatgptUtilityAffinity.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
@@ -108,6 +109,41 @@ describe("configured ChatGPT utility affinity", () => {
 				},
 			}),
 		).resolves.toBe(false);
+	});
+
+	test("closes the interaction governor when the utility operation returns", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+		const ledger = createInMemoryProviderInteractionLedger();
+		let escapedOptions: BrowserProviderListOptions | undefined;
+
+		await runConfiguredChatgptUtilityOperation({
+			userConfig,
+			browserService: {
+				resolveServiceTarget: vi.fn().mockResolvedValue({
+					host: "127.0.0.1",
+					port: 45011,
+					managedBrowserProfile: "/managed/runtime-1/chatgpt",
+				}),
+			} as never,
+			utilityId: "history-materialization:hmj-1",
+			mutability: "read-only",
+			buildListOptions: async (options) => options,
+			run: async (options) => {
+				escapedOptions = options;
+				return "complete";
+			},
+			deps: {
+				createRuntime: () => ({ registry, ledger }) as never,
+				listTargets: vi.fn(async () => []) as never,
+				openTarget: vi.fn(async () => ({ id: "utility-target" })) as never,
+				closeTarget: vi.fn(),
+			},
+		});
+
+		await expect(
+			escapedOptions?.interactionGovernor?.beforeInteraction("renavigation"),
+		).rejects.toBeInstanceOf(ProviderInteractionGovernorClosedError);
+		expect(await ledger.list()).toEqual([]);
 	});
 
 	test("marks a failed provider mutation outcome unknown without retrying", async () => {
