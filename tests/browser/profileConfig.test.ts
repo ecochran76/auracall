@@ -41,6 +41,7 @@ describe('applyBrowserProfileOverrides', () => {
         historyLimit: 200,
       },
       browser: {
+        tabConcurrencyMode: 'tab-affinity',
         chromePath: '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
         display: ':0.0',
         profilePath: '/mnt/c/Users/ecoch/AppData/Local/Google/Chrome/User Data',
@@ -77,6 +78,7 @@ describe('applyBrowserProfileOverrides', () => {
 
     expect(browser.target).toBe('grok');
     expect(browser.keepBrowser).toBe(true);
+    expect(browser.tabConcurrencyMode).toBe('tab-affinity');
     expect(browser.chromePath).toBe('/mnt/c/Program Files/Google/Chrome/Application/chrome.exe');
     expect(browser.display).toBe(':0.0');
     expect(browser.chromeProfile).toBe('Profile 2');
