@@ -20,6 +20,9 @@ export interface ApiOpsBrowserDashboardSummary {
   hasConfigIdentityProjection: boolean;
   hasConfigLiveFollowProjection: boolean;
   hasConfigLiveFollowControls: boolean;
+  hasTabConcurrencyPanel: boolean;
+  hasTabConcurrencyRollback: boolean;
+  hasTabConcurrencyStatusProjection: boolean;
   hasAgentsTeamsPage: boolean;
   hasAgentsRecentRunsBrowser: boolean;
   hasAgentsRuntimeConversationView: boolean;
@@ -163,6 +166,8 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Service discovery: local=${summary.serviceDiscovery.localBaseUrl ?? 'unknown'} external=${summary.serviceDiscovery.externalBaseUrl ?? 'none'} proxy=${summary.serviceDiscovery.proxyTarget ?? 'none'} auth=${summary.serviceDiscovery.auth ?? 'none'}`,
     `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)} agents=${formatBoolean(dashboard.hasAgentsTeamsPage)} recentRuns=${formatBoolean(dashboard.hasAgentsRecentRunsBrowser)} runtimeChat=${formatBoolean(dashboard.hasAgentsRuntimeConversationView)} runtimeProviderLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationLinks)} runtimeProviderDirectLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationDirectLinks)} runtimeProviderCacheBadges=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationCacheBadges)} recentMirrorDetail=${formatBoolean(dashboard.hasAgentsRecentRunMirrorDetailAction)} recentMirrorSummary=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummary)} recentMirrorDirectLink=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummaryDirectLink)} recentMirrorCacheBadges=${formatBoolean(dashboard.hasAgentsRecentRunMirrorCacheBadges)}`,
+    `Dashboard tab concurrency: panel=${formatBoolean(dashboard.hasTabConcurrencyPanel)} rollback=${formatBoolean(dashboard.hasTabConcurrencyRollback)} status=${formatBoolean(dashboard.hasTabConcurrencyStatusProjection)}`,
+    formatTabConcurrencyStatusLine(summary.status.raw),
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} apiService=${formatBoolean(dashboard.hasApiServiceControls)} apiLogTail=${formatBoolean(dashboard.hasApiLogTailControl)} recentEvents=${formatBoolean(dashboard.hasRecentServiceEventsPanel)} recentEventActions=${formatBoolean(dashboard.hasRecentServiceEventActions)} recentEventFilters=${formatBoolean(dashboard.hasRecentServiceEventFilters)} recentSchedulerDetail=${formatBoolean(dashboard.hasRecentServiceEventSchedulerDetail)} recentEventPersistence=${formatBoolean(dashboard.hasRecentServiceEventPersistence)} preflight=${formatBoolean(dashboard.hasPreflightStatusPanel)} preflightRun=${formatBoolean(dashboard.hasPreflightRunControl)} preflightHistory=${formatBoolean(dashboard.hasPreflightRunHistoryPanel)} preflightSteps=${formatBoolean(dashboard.hasPreflightStepProgress)} preflightLog=${formatBoolean(dashboard.hasPreflightRunLogControl)} browserProcesses=${formatBoolean(dashboard.hasBrowserProcessPanel)} browserProcessPath=${dashboard.usesBrowserProcessesPath ? '/v1/browser/processes' : 'unknown'} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} schedulerWhy=${formatBoolean(dashboard.hasMirrorSchedulerExplanation)} schedulerForeground=${formatBoolean(dashboard.hasMirrorSchedulerForegroundWork)} schedulerWaitTable=${formatBoolean(dashboard.hasMirrorSchedulerWaitTable)} schedulerWaitActions=${formatBoolean(dashboard.hasMirrorSchedulerWaitActions)} schedulerCompletionDetail=${formatBoolean(dashboard.hasMirrorSchedulerCompletionDetail)} schedulerDiagnostics=${formatBoolean(dashboard.hasMirrorSchedulerDiagnosticsBundle)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} rowReconcile=${formatBoolean(dashboard.hasCatalogRowReconciliationActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchDetailCopy=${formatBoolean(dashboard.hasCatalogBatchDetailLinkCopy)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} resultToast=${formatBoolean(dashboard.hasCompletionResultToast)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} confirmCancel=${formatBoolean(dashboard.hasCancelConfirmation)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} runOnePass=${formatBoolean(dashboard.hasRunOnePassCompletionAction)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
@@ -170,6 +175,17 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
     ...formatSchedulerDiagnosticsHintLines(summary.status.schedulerDiagnosticsHints),
   ].join('\n');
+}
+
+function formatTabConcurrencyStatusLine(raw: unknown): string {
+  const status = readObjectField(raw, 'tabConcurrency');
+  const mode = readStringField(status, 'mode') ?? 'unknown';
+  const leases = readObjectField(status, 'leaseStates');
+  const workloads = readObjectField(status, 'workloads');
+  const warnings = readObjectField(status, 'providerWarnings');
+  const usage = readObjectField(status, 'aggregateUsage');
+  const attention = readObjectField(status, 'attention');
+  return `Tab concurrency: mode=${mode} rollback=serialized active=${readNumberField(leases, 'active')} idle=${readNumberField(leases, 'idle')} lost=${readNumberField(leases, 'lost')} conversations=${readNumberField(workloads, 'conversations')} liveFollow=${readNumberField(workloads, 'liveFollow')} warnings=${readNumberField(warnings, 'active')} chatsHour=${readNumberField(usage, 'chatsLastHour')} interactionsMinute=${readNumberField(usage, 'interactionsLastMinute')} expired=${readNumberField(attention, 'expiredIdle')} unknown=${readNumberField(attention, 'outcomeUnknown')}`;
 }
 
 function formatSchedulerDiagnosticsHintLines(hints: ApiStatusCliSummary['schedulerDiagnosticsHints']): string[] {
@@ -191,6 +207,9 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasConfigIdentityProjection, 'Expected /ops/browser Config page to expose bound identity projections.'],
     [summary.hasConfigLiveFollowProjection, 'Expected /ops/browser Config page to expose live-follow eligibility projections.'],
     [summary.hasConfigLiveFollowControls, 'Expected /ops/browser Config page to expose live-follow target controls.'],
+    [summary.hasTabConcurrencyPanel, 'Expected /ops/browser to include sanitized browser tab-concurrency posture.'],
+    [summary.hasTabConcurrencyRollback, 'Expected /ops/browser to show the serialized tab-concurrency rollback.'],
+    [summary.hasTabConcurrencyStatusProjection, 'Expected /ops/browser to render status.tabConcurrency.'],
     [summary.hasAgentsTeamsPage, 'Expected /ops/browser to include the read-only Agents / Teams inspection page.'],
     [summary.hasAgentsRecentRunsBrowser, 'Expected /ops/browser Agents / Teams page to browse recent runtime runs.'],
     [
@@ -375,6 +394,20 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes("postJson('/v1/account-mirrors/completions'")
       && html.includes('data-runtime-profile')
       && html.includes('not live-follow enabled'),
+    hasTabConcurrencyPanel: html.includes('tabConcurrencyPanel')
+      && html.includes('Browser Tab Concurrency')
+      && html.includes('data-tab-concurrency-status="sanitized"'),
+    hasTabConcurrencyRollback: html.includes('browser.tabConcurrencyMode')
+      && html.includes('serialized')
+      && html.includes('Immediate rollback'),
+    hasTabConcurrencyStatusProjection: html.includes('tabConcurrencySummary')
+      && html.includes('tabConcurrencyRaw')
+      && html.includes('renderTabConcurrency')
+      && html.includes('status.tabConcurrency')
+      && html.includes('providerWarnings')
+      && html.includes('admissionRejections')
+      && html.includes('targetActions')
+      && html.includes('retirements'),
     hasAgentsTeamsPage: html.includes('navAgentsTeams')
       && html.includes('href="/agents"')
       && html.includes('agentsTeamsPanel')
@@ -926,6 +959,20 @@ function readStringField(source: unknown, field: string): string | undefined {
   if (!source || typeof source !== 'object' || Array.isArray(source)) return undefined;
   const value = (source as Record<string, unknown>)[field];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function readObjectField(source: unknown, field: string): Record<string, unknown> | undefined {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return undefined;
+  const value = (source as Record<string, unknown>)[field];
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function readNumberField(source: unknown, field: string): number | 'unknown' {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return 'unknown';
+  const value = (source as Record<string, unknown>)[field];
+  return typeof value === 'number' && Number.isFinite(value) ? value : 'unknown';
 }
 
 function normalizeHost(value: string | null | undefined): string {

@@ -157,6 +157,36 @@ dispositions. It does not publish target IDs, conversation IDs, operation IDs,
 tenant keys, or provider content. This projection is diagnostic evidence, not
 authority to adopt, navigate, close, or retry any tab.
 
+The API exposes that same projection as `/status.tabConcurrency`. Browser Ops
+renders it in the read-only **Browser Tab Concurrency** panel, while
+`auracall api ops-browser-status --port <port>` and MCP
+`api_ops_browser_status` verify the dashboard contract and retain the same
+status payload. The immediate rollback is to set
+`browser.tabConcurrencyMode` to `serialized` in the affected AuraCall runtime
+profile and restart the AuraCall service. Serialized mode reports
+`enabled=false` and creates no registry, ledger, or affinity-maintenance owner.
+
+For a guarded rollout, use the append-only soak receipt helper:
+
+```bash
+pnpm run soak:tab-affinity -- start --port 8080 --runtime-profile wsl-chrome-3 \
+  --expected-identity <identity> --source-commit <sha> --installed-version <version>
+pnpm run soak:tab-affinity -- snapshot --port 8080 --receipt-id <id> \
+  --runtime-profile wsl-chrome-3 --expected-identity <identity> \
+  --source-commit <sha> --installed-version <version>
+pnpm run soak:tab-affinity -- finish --port 8080 --receipt-id <id> \
+  --runtime-profile wsl-chrome-3 --expected-identity <identity> \
+  --source-commit <sha> --installed-version <version>
+```
+
+Receipts live at `~/.auracall/soaks/tab-affinity-<id>.jsonl`. Snapshot and
+finish are read-only provider operations. They fail closed on an active
+provider warning, lost or restart-unverified lease, unknown outcome, expired
+idle lease, or navigation/reload/focus growth after the baseline. Finish also
+rejects an unelapsed 24-hour window. The helper records expected identity as
+operator-supplied evidence; callers must independently verify live identity
+before starting the soak.
+
 ChatGPT handoff submission uses the same coordinated browser client in explicit
 affinity mode. Existing conversation bindings are reused only after a live
 target census confirms the exact conversation route; a missing target may be
