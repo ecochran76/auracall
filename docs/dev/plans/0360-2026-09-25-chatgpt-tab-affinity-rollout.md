@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 2
+Plan version: 3
 
 ## Stable Objective
 
@@ -40,6 +40,13 @@ provider-specific acceptance exists.
   rollback. The append-only soak helper enforces hard stops and a real 24-hour
   minimum. Focused validation passes 232 tests plus typecheck; publication of
   this implementation packet and installed soak remain open.
+- PR 51 integrated the provider-free packet at `45a74c1cb`, and that exact
+  merge is installed. Exact ChatGPT identity is Pro/personal and matches the
+  configured `wsl-chrome-3` account. The soak start is correctly blocked by
+  retained historical registry attention: one lost lease, four expired idle
+  leases, and four outcome-unknown fences. No receipt, prompt, live-follow
+  pass, or provider interaction was created. Explicit reconciliation of those
+  fences is the next gate; the rollout must not baseline them away.
 
 ## Acceptance Gates
 
