@@ -23003,3 +23003,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   `lastMeaningfulUseAt` alongside total binding age.
 - Keep this projection identity-free; operators need lifecycle posture, not
   conversation or target contents.
+
+## 2026-09-24 | Prove coexistence in one provider-free fixture
+
+- Separate green tests for leases, exact-target execution, crawler traversal,
+  and accounting do not prove their combined concurrency contract. Retain one
+  integrated fixture with a shared registry and ledger.
+- The fixture should assert both positive ownership and negative cross-tab
+  behavior: each prompt stays on its exact retained target with navigation
+  disabled, the crawler uses only its own target, and settled usage is exact.

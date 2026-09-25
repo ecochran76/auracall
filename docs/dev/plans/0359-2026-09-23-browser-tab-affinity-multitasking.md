@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 35
+Plan version: 36
 
 ## Stable Objective
 
@@ -1403,3 +1403,26 @@ Checkpoint 2026-09-24, meaningful-use status:
 - `delegation_status`: no new workers
 - `review_status`: target-action accounting advanced meaningful-use time in the
   fixture, producing a distinct value from total binding age
+
+Checkpoint 2026-09-24, provider-free coexistence terminal fixture:
+
+- `plan_version`: 36
+- `state_transition`: OPEN -> OPEN; the provider-free terminal condition now
+  has one integrated fixture rather than separate component evidence
+- `acceptance_state`: Packets 1 through 6 provider-free accepted; two exact
+  conversation tabs and one crawler tab coexist, prompts remain non-navigating
+  on their bound targets, crawler traversal stays on its dedicated target, and
+  aggregate accounting settles exactly three interactions
+- `progress_classification`: forward progress
+- `evidence`: commit `81a192b0bca8bc17bedf22eafab96b0e4e1addb8`
+  adds `tests/browser/tabAffinityCoexistence.test.ts`
+- `material_blockers`: Packet 7 installed/live ChatGPT acceptance remains
+  outside current authority
+- `validation_notes`: 36 focused registry, ledger, status, conversation,
+  crawler, and coexistence tests plus typecheck, scoped Biome, and diff hygiene
+  pass; preceding build and lint remain green
+- `next_action_or_stop_reason`: provider-free implementation is evidence-complete;
+  preserve serialized default and await separate Packet 7 authority
+- `delegation_status`: no new workers
+- `review_status`: the fixture uses one real registry and ledger with concurrent
+  fake-target execution, then proves exact routes and rolling usage after settlement

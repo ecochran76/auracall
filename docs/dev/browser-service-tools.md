@@ -179,6 +179,12 @@ lease cannot be reacquired. Affinity-owned provider mutations explicitly disable
 retry; serialized callers retain their established behavior. Do not treat
 configured mode or registry files as installed/live acceptance evidence.
 
+Provider-free coexistence is covered by a combined fake-target fixture with two
+conversation leases and one live-follow crawler lease. It proves exact prompt
+targets, non-navigating retained prompt options, sequential crawler use of only
+its dedicated target, and three exactly settled aggregate interactions. This is
+contract evidence only; it does not replace installed/live ChatGPT acceptance.
+
 ChatGPT Skill and Developer App operations also use the utility coordinator.
 Their scoped browser clients attach only with the leased host, port, and target
 ID, consume the aggregate interaction governor, and close before the lease is

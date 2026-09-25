@@ -50450,3 +50450,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   produces a value distinct from total lease age.
 - Focused status tests, typecheck, scoped Biome, and diff hygiene pass. No
   browser or provider effect ran.
+
+## 2026-09-24 | Provider-free coexistence terminal fixture
+
+- The constituent contracts had separate coverage for two conversation tabs,
+  crawler isolation, and aggregate accounting, but no single fixture proved the
+  Plan 0359 terminal condition end to end.
+- The combined fixture reserves two exact conversation leases and one crawler
+  lease in one registry, admits all three through one ledger, runs concurrent
+  fake-target prompt/crawler work, and proves exact routes plus three settled
+  rolling interactions.
+- Thirty-six focused registry/ledger/status/affinity/coexistence tests,
+  typecheck, scoped Biome, and diff hygiene pass. No browser or provider effect
+  ran; installed/live Packet 7 remains separately gated.
