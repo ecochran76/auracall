@@ -1,5 +1,22 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- Packet 4C merged through PR 56 at canonical `5ebaba198`, passed 234 affected
+  tests plus typecheck/build, and installed. A second installed identity proof
+  again matched the exact Pro/personal account, and affinity status correctly
+  reported released historical uncertainty as zero operational attention.
+- The install restart also reconciled configured live-follow state and created
+  completion `acctmirror_completion_d6b17aa1-41ce-4523-9113-2676ee8e01fd` as
+  `running/backfill_history` with `full_missing_assets`. That is not the
+  metadata-only crawler authorized by the soak plan. The managed API was
+  stopped immediately; graceful shutdown parked the completion queued for
+  restart with pass count zero and no materialization outcome. No prompt or
+  soak receipt was created. The exact Chrome process and isolated proof API
+  were closed.
+- Plan v7 adds Packet 5A. The managed service remains stopped. A separate
+  no-recovery/no-scheduler/no-completion API owns only lease maintenance so the
+  resulting `idle/outcome-unknown` crawler lease can retire at its normal TTL
+  without resuming provider work or launching Chrome. Pausing/cancelling the
+  completion requires separate operator authority.
 - The authorized soak launch used the installed runtime and launched only the
   exact `wsl-chrome-3/chatgpt` managed browser profile. Live auth-session proof
   matched `eric.cochran@soylei.com`, Pro/personal. Before any prompt or receipt,

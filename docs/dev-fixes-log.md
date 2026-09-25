@@ -1,3 +1,10 @@
+- 2026-09-25: Installing or restarting the managed API may reconcile enabled
+  live-follow configuration before a rollout preflight can baseline status.
+  Treat that startup path as a provider-effect gate: verify the persisted
+  completion's phase and materialization policy, and stop the service when it
+  is broader than the authorized crawler. A full-sweep/full-materialization
+  completion is not interchangeable with a metadata-only soak workload.
+
 - 2026-09-25: Durable uncertainty history is not the same as current operator
   attention. Status may retain released `outcome-unknown` records for no-retry
   audit evidence, but operational attention and rollout hard stops must count
