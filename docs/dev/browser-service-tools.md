@@ -185,7 +185,9 @@ provider warning, lost or restart-unverified lease, unknown outcome, expired
 idle lease, or navigation/reload/focus growth after the baseline. Finish also
 rejects an unelapsed 24-hour window. The helper records expected identity as
 operator-supplied evidence; callers must independently verify live identity
-before starting the soak.
+before starting the soak. Unknown-outcome attention covers only leases that
+still operationally fence a target; released uncertainty remains durable audit
+history but is not an active soak hard stop.
 
 ChatGPT handoff submission uses the same coordinated browser client in explicit
 affinity mode. Existing conversation bindings are reused only after a live

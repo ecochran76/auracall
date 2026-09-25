@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 5
+Plan version: 6
 
 ## Stable Objective
 
@@ -139,6 +139,10 @@ the source packet is safe to integrate.
   `effectState=outcome-unknown` at revision 6 and the lost settled lease
   released at revision 7. No managed Chrome process or known debug-port
   listener appeared. The 24-48 hour soak remains unstarted.
+- The authorized soak launch passed exact Pro/personal identity, then stopped
+  before prompts because status counted four released historical uncertainty
+  records as current `outcomeUnknown` attention. Packet 4C corrects that
+  projection without deleting or weakening the retained uncertainty evidence.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -176,6 +180,18 @@ without manual registry edits and without weakening no-retry uncertainty.
 Terminal condition: a nested-profile regression passes and installed
 maintenance releases the stale leases with a zero-process, zero-listener
 browser census. Satisfied by canonical `d95357ba4` on 2026-09-25.
+
+### Packet 4C: Released uncertainty status boundary
+
+- Keep released `outcome-unknown` records durable in the lease registry.
+- Count outcome-unknown attention only across operationally fenced lease
+  states, matching `fencedLeaseCount` and the soak hard-stop meaning.
+- Reinstall the canonical repair, repeat exact identity proof, and require a
+  clean accepted soak-start receipt before any bounded prompt interaction.
+
+Terminal condition: provider-free status regression and installed affinity
+status both prove released history remains present while operational unknown
+attention is zero.
 
 ### Packet 6: Default enablement or retained rollback
 
