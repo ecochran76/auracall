@@ -1,3 +1,9 @@
+- 2026-09-25: Durable uncertainty history is not the same as current operator
+  attention. Status may retain released `outcome-unknown` records for no-retry
+  audit evidence, but operational attention and rollout hard stops must count
+  only leases that still fence a target. Otherwise successful TTL retirement
+  makes every later soak permanently impossible.
+
 - 2026-09-25: A maintenance worker that enumerates AuraCall runtime profiles
   must use the same resolved-profile view when deciding whether to schedule
   itself. Checking only the root browser mode silently disables cleanup when

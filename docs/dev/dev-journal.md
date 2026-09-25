@@ -1,5 +1,15 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- The authorized soak launch used the installed runtime and launched only the
+  exact `wsl-chrome-3/chatgpt` managed browser profile. Live auth-session proof
+  matched `eric.cochran@soylei.com`, Pro/personal. Before any prompt or receipt,
+  the affinity status exposed `outcomeUnknown=4` solely from the four released
+  historical uncertainty records, so the soak correctly stopped. The isolated
+  API and exact identity-smoke Chrome PID were then closed.
+- Plan v6 adds Packet 4C: retain released uncertainty in durable history, but
+  derive operational unknown attention from fenced leases only. This restores
+  the intended no-retry audit trail without making retired ownership an eternal
+  soak hard stop.
 - The exact Packet 4A canonical merge installed and the managed API restarted,
   but no maintenance pass ran after its 60-second interval. The scheduler gate
   inspected only the root serialized browser mode while `wsl-chrome-3` carries

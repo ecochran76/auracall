@@ -197,7 +197,8 @@ export function createBrowserTabConcurrencyRuntime(
 							(nowMs >= Date.parse(lease.idleExpiresAt) ||
 								nowMs >= Date.parse(lease.absoluteExpiresAt)),
 					).length,
-					outcomeUnknown: leases.filter((lease) => lease.effectState === "outcome-unknown").length,
+					outcomeUnknown: fencedLeases.filter((lease) => lease.effectState === "outcome-unknown")
+						.length,
 					restartUnverified: leases.filter(
 						(lease) => lease.state === "lost" && lease.lossReason === "restart-unverified",
 					).length,

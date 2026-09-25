@@ -268,4 +268,66 @@ describe("browser tab concurrency runtime", () => {
 			await rm(directory, { recursive: true, force: true });
 		}
 	});
+
+	test("keeps released uncertainty durable without reporting an operational fence", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-tab-runtime-"));
+		try {
+			const runtime = createBrowserTabConcurrencyRuntime(
+				{ browser: { tabConcurrencyMode: "tab-affinity" } } as never,
+				{
+					storageRoot: path.join(directory, "coordination"),
+					now: () => new Date("2026-09-24T12:00:12.000Z"),
+				},
+			);
+			const registry = runtime.registry;
+			if (!registry) throw new Error("expected tab registry");
+			const reserved = await registry.reserve({
+				scope: {
+					runtimeProfileId: "runtime-1",
+					managedBrowserProfile: "managed-1",
+					service: "chatgpt",
+					tenantKey: "tenant-1",
+				},
+				targetId: "target-1",
+				workload: { kind: "conversation", conversationId: "conversation-1" },
+				operationId: "operation-1",
+				now: "2026-09-24T12:00:00.000Z",
+				idleTtlMs: 10_000,
+				absoluteTtlMs: 60_000,
+			});
+			if (!reserved.ok) throw new Error("expected reservation");
+			const idled = await registry.idle({
+				claim: reserved.value.claim,
+				now: "2026-09-24T12:00:01.000Z",
+				effectState: "outcome-unknown",
+			});
+			if (!idled.ok) throw new Error("expected idle lease");
+			const retiring = await registry.beginRetirement({
+				leaseId: idled.value.leaseId,
+				expectedRevision: idled.value.revision,
+				now: "2026-09-24T12:00:11.000Z",
+				reason: "idle-expired",
+			});
+			if (!retiring.ok) throw new Error("expected retirement");
+			const released = await registry.finishRetirement({
+				leaseId: idled.value.leaseId,
+				retirementRevision: retiring.value.retirementRevision,
+				now: "2026-09-24T12:00:12.000Z",
+				disposition: "already-missing",
+			});
+			if (!released.ok) throw new Error("expected release");
+
+			expect(released.value).toMatchObject({
+				state: "released",
+				effectState: "outcome-unknown",
+			});
+			await expect(runtime.readStatus()).resolves.toMatchObject({
+				fencedLeaseCount: 0,
+				leaseStates: { released: 1 },
+				attention: { outcomeUnknown: 0 },
+			});
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
 });
