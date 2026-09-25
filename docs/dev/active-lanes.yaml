@@ -1017,8 +1017,8 @@ lanes:
     branch: feat/issue-46-browser-tab-affinity
     target: main
     plan_state: CLOSED
-    custody_state: READY_TO_INTEGRATE
-    checkpoint: 7e610e84e
+    custody_state: INTEGRATED
+    checkpoint: 8c7f9b6b1
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
@@ -1026,8 +1026,9 @@ lanes:
     overlaps: []
     reconciled_overlaps: []
     reconciliation_note: Packets 1 through 6 are provider-free accepted. Packet 7 proved two simultaneous exact-tab conversations plus one dedicated metadata-only live-follow pass under the shared ledger on exact wsl-chrome-3 Pro/personal identity. Expired exact leases were released after fresh absence and zero-process proof.
-    blocker: Canonical merge of pull request 47 remains.
-    validation_status: installed-live-accepted-ready-to-integrate
+    blocker: none
+    validation_status: installed-live-accepted-integrated
     validation_ref: docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md
+    integration_receipt: 46d0c0cf9725b507415b5c6a681a682a9bb35d34
     disposition: Exact installed/source parity passed. Two simultaneous commands returned exact markers on distinct route-bound tabs and settled succeeded. A bounded metadata-only completion then completed one pass on a dedicated crawler target while both conversation targets remained unchanged, using two of six provider-read permits with no warning. All accepted leases recorded one target creation and zero navigation, reload, or focus. At expiry the browser endpoint exited; fresh CDP and OS censuses proved zero remaining exact targets or managed-browser processes, and the three fences were released already-missing. GitHub Actions was skipped by operator direction.
     updated_at: 2026-09-24
