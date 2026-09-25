@@ -23051,3 +23051,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   observed model as separate evidence.
 - Keep failures before Send as zero-effect evidence and do not continue to live
   follow until both exact conversation operations complete and bind routes.
+
+## 2026-09-24 | Do not charge confirmed pre-effect affinity failures
+
+- Propagate remote browser effect state through the thrown error boundary so
+  the affinity executor can distinguish a selector failure before Send from an
+  uncertain post-dispatch outcome.
+- Settle explicitly proven pre-effect failures as `none` plus `cancelled`, and
+  idle the exact lease without extending meaningful-use time. Preserve
+  outcome-unknown fencing whenever effect evidence is absent or ambiguous.
+- Never rewrite historical outcome-unknown records merely because later DOM
+  inspection suggests a likely pre-effect failure; append-only evidence wins.

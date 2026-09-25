@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 39
+Plan version: 40
 
 ## Stable Objective
 
@@ -1524,3 +1524,25 @@ Checkpoint 2026-09-24, live exact-tab concurrency proven pre-Send:
 - `review_status`: `current` remains a read-only picker observation contract;
   it is not a request to skip model evidence. The observed model, not the
   requested compatibility label, governs whether thinking controls apply.
+
+Checkpoint 2026-09-24, pre-effect aggregate-accounting repair:
+
+- `plan_version`: 40
+- `state_transition`: OPEN -> OPEN; confirmed pre-Send failures now retain
+  zero-effect accounting instead of conservative outcome-unknown usage
+- `acceptance_state`: provider-free accepted; historical live records remain
+  immutable outcome-unknown evidence and Packet 7 remains open
+- `progress_classification`: forward progress
+- `evidence`: commit `226391c6d00afd1087f59ea41d11cbfa2150d041`
+  preserves remote pre-effect evidence and settles affinity failures as
+  `effectState=none`, `outcome=cancelled`
+- `material_blockers`: the repair is not installed or live-retested; the two
+  historical failed leases remain idle/outcome-unknown on their exact retained
+  targets and must not be silently rewritten
+- `validation_notes`: 47 focused affinity, rate-limit, legacy-runtime, and
+  browser-mode tests pass with typecheck, production build, and diff hygiene
+- `next_action_or_stop_reason`: push the repair and await a fresh bounded live
+  decision; do not run live follow before two prompts complete and bind routes
+- `delegation_status`: no new workers
+- `review_status`: only explicit error effect evidence may cancel usage;
+  unknown failures remain fenced and settled outcome-unknown

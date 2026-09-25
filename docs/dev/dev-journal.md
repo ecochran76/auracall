@@ -50512,3 +50512,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   remote, and adapter paths. Eighty-eight focused tests, typecheck, production
   build, and diff hygiene pass. The repair is not installed; Packet 7 remains
   open and integration is withheld.
+
+## 2026-09-24 | Plan 0359 pre-effect aggregate-accounting repair
+
+- Read-only ledger inspection showed both thinking-control failures persisted
+  as settled/outcome-unknown despite zero Send and exact action counts limited
+  to target creation. Those historical records remain immutable evidence.
+- Remote browser failures now carry explicit pre-effect state into affinity
+  settlement. Confirmed pre-effect failures idle the exact lease with `none`
+  and settle the aggregate record as cancelled; unknown failures retain the
+  existing conservative fence.
+- Forty-seven focused tests, typecheck, production build, and diff hygiene pass.
+  The repair was not installed and no further provider or live-follow effect ran.
