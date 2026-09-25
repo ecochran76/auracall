@@ -206,7 +206,9 @@ file/context reads, downloads, materialization, and active-media materialization
 use one reusable exact utility tab per service instance. Project create, rename,
 clone, instruction updates, and public project-UI substeps use the same target.
 Nested operations reuse an already exact target, and affinity-owned scoped sessions keep the aggregate ledger governor
-through transfers. A failed provider mutation is outcome-unknown and that idle
+through transfers. Exact-target calls rebuild the provider-session authorization
+envelope with browser startup disabled; this preserves the pinned target while
+retaining identity enforcement. A failed provider mutation is outcome-unknown and that idle
 lease cannot be reacquired. Affinity-owned provider mutations explicitly disable
 retry; serialized callers retain their established behavior. Do not treat
 configured mode or registry files as installed/live acceptance evidence.

@@ -51,7 +51,7 @@ export class ChatgptService extends LlmService {
 		run: (exactOptions: BrowserProviderListOptions) => Promise<TResult>,
 	): Promise<TResult> {
 		if (options?.tabTargetId) {
-			return run(options);
+			return run(await this.buildListOptions(options, { ensurePort: false }));
 		}
 		return (await this.runUtilityOperation({
 			userConfig: this.getResolvedUserConfig(),
@@ -69,7 +69,7 @@ export class ChatgptService extends LlmService {
 		run: (exactOptions: BrowserProviderListOptions) => Promise<TResult>,
 	): Promise<TResult> {
 		if (options?.tabTargetId) {
-			return run(options);
+			return run(await this.buildListOptions(options, { ensurePort: false }));
 		}
 		return (await this.runUtilityOperation({
 			userConfig: this.getResolvedUserConfig(),

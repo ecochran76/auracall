@@ -24,6 +24,7 @@ const providerRunPrompt = vi.hoisted(() =>
 	})),
 );
 const providerListProjectFiles = vi.hoisted(() => vi.fn(async () => []));
+const providerListProjects = vi.hoisted(() => vi.fn(async () => []));
 const providerUploadProjectFiles = vi.hoisted(() => vi.fn(async () => undefined));
 const providerRenameProject = vi.hoisted(() => vi.fn(async () => undefined));
 const providerValidateProjectUrl = vi.hoisted(() => vi.fn(async () => undefined));
@@ -38,6 +39,7 @@ vi.mock("../../src/browser/providers/index.js", async (importOriginal) => {
 				? {
 						...provider,
 						runPrompt: providerRunPrompt,
+						listProjects: providerListProjects,
 						listProjectFiles: providerListProjectFiles,
 						uploadProjectFiles: providerUploadProjectFiles,
 						renameProject: providerRenameProject,
@@ -56,6 +58,7 @@ afterEach(async () => {
 	}
 	providerRunPrompt.mockClear();
 	providerListProjectFiles.mockClear();
+	providerListProjects.mockClear();
 	providerUploadProjectFiles.mockReset();
 	providerUploadProjectFiles.mockResolvedValue(undefined);
 	providerRenameProject.mockReset();
@@ -182,6 +185,49 @@ describe("ChatGPT llm service", () => {
 		expect(providerListProjectFiles).toHaveBeenCalledWith(
 			"project-1",
 			expect.objectContaining({ tabTargetId: "utility-tab-1" }),
+		);
+	});
+
+	it("rebuilds provider-session authorization for an already exact affinity target", async () => {
+		stubBrowserServiceTarget();
+		const runUtilityOperation = vi.fn();
+		const { ChatgptService } = await import(
+			"../../src/browser/llmService/providers/chatgptService.js"
+		);
+		const service = ChatgptService.create(
+			{
+				auracallProfile: "wsl-chrome-3",
+				services: { chatgpt: { identity: { email: "operator@example.com" } } },
+				browser: { target: "chatgpt", tabConcurrencyMode: "tab-affinity" },
+			} as ResolvedUserConfig,
+			{ runUtilityOperation: runUtilityOperation as never },
+		);
+
+		await expect(
+			service.listProjects({
+				host: "127.0.0.1",
+				port: 45011,
+				tabTargetId: "crawler-tab-1",
+			}),
+		).resolves.toEqual([]);
+
+		expect(runUtilityOperation).not.toHaveBeenCalled();
+		expect(providerListProjects).toHaveBeenCalledWith(
+			expect.objectContaining({
+				host: "127.0.0.1",
+				port: 45011,
+				tabTargetId: "crawler-tab-1",
+				providerSessionAuthorization: expect.objectContaining({
+					expectation: expect.objectContaining({
+						configuredIdentity: expect.objectContaining({ email: "operator@example.com" }),
+					}),
+					context: expect.objectContaining({
+						providerId: "chatgpt",
+						browserTargetId: "crawler-tab-1",
+						devtoolsPort: 45011,
+					}),
+				}),
+			}),
 		);
 	});
 
