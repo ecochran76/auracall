@@ -78,6 +78,38 @@ describe("configured ChatGPT utility affinity", () => {
 		]);
 	});
 
+	test("lets a job-owned utility tab navigate when the caller explicitly allows it", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => "reservation-1",
+		});
+		const run = vi.fn(async (options: BrowserProviderListOptions) => options.preserveActiveTab);
+
+		await expect(
+			runConfiguredChatgptUtilityOperation({
+				userConfig,
+				browserService: {
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 45011,
+						managedBrowserProfile: "/managed/runtime-1/chatgpt",
+					}),
+				} as never,
+				utilityId: "history-materialization:hmj-1",
+				mutability: "read-only",
+				options: { allowNavigation: true },
+				buildListOptions: async (options) => options,
+				run,
+				deps: {
+					createRuntime: () => ({ registry, ledger }) as never,
+					listTargets: vi.fn(async () => []) as never,
+					openTarget: vi.fn(async () => ({ id: "utility-target" })) as never,
+					closeTarget: vi.fn(),
+				},
+			}),
+		).resolves.toBe(false);
+	});
+
 	test("marks a failed provider mutation outcome unknown without retrying", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const ledger = createInMemoryProviderInteractionLedger({

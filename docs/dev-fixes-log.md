@@ -23188,3 +23188,11 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   boundary. History materialization derives it from the durable job ID so all
   candidate reads reacquire one lease and one exact tab. Keep random identities
   for callers without durable routine ownership.
+## 2026-09-25 | Navigate the exact leased utility tab in place
+
+- Tab identity and route identity are separate. A durable materialization job
+  should retain one target while moving that target through its authorized
+  conversation routes.
+- Utility affinity must preserve the active route by default but honor an
+  explicit navigation request. On a mismatched exact target, navigate it in
+  place; never respond by opening an unleased replacement tab.

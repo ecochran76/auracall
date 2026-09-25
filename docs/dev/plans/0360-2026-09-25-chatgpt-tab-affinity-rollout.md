@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 11
+Plan version: 12
 
 ## Stable Objective
 
@@ -183,6 +183,13 @@ the source packet is safe to integrate.
   from the durable job ID and passes it through every history-materialization
   service construction, allowing the existing lease registry to reacquire the
   same exact tab.
+- Packet 5D merged through PR 61 at canonical `8a36d4126` and was installed.
+  A two-candidate proof created one target and adopted it five times, proving
+  cross-instance reuse. Both candidates then failed because the utility layer
+  forced `preserveActiveTab=true`; the adapter correctly refused to move the
+  root target to the candidate conversation. Packet 5E permits navigation only
+  when the owning caller explicitly requests it and navigates the exact leased
+  target in place rather than falling back to an unleased replacement tab.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -287,6 +294,19 @@ fresh bounded catch-up without manual cache edits.
 Terminal condition: provider-free coverage proves repeated service instances
 for one job present one utility identity and the registry reuses one exact tab;
 installed validation shows no additional utility target during a bounded job.
+
+### Packet 5E: In-place navigation for a job-owned utility tab
+
+- Preserve the active utility route by default, but honor an explicit
+  `allowNavigation=true` request from the durable job.
+- When an exact leased target is on a different valid ChatGPT route, navigate
+  that same target to the preferred conversation and retain its identity.
+- If exact-target attachment or navigation fails, fail closed instead of
+  opening a replacement target outside the lease.
+
+Terminal condition: provider-free navigation tests pass and a bounded installed
+job visits multiple candidate conversations with one target creation, no
+replacement target, and no provider warning.
 
 ### Packet 6: Default enablement or retained rollback
 
