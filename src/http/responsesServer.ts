@@ -109,6 +109,7 @@ import {
 } from "../browser/liveServiceState.js";
 import { clearPersistedBrowserProviderGuard } from "../browser/providerGuardControl.js";
 import { BrowserService } from "../browser/service/browserService.js";
+import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
 import {
 	type BrowserInstanceLease,
 	type BrowserInstanceOperation,
@@ -130,7 +131,11 @@ import type { EffectiveAgent, EffectiveAgentCatalog } from "../config/agentRegis
 import { type AgentRegistryStore, createAgentRegistryStore } from "../config/agentRegistryStore.js";
 import { readApiKeyDiagnosticsFromEnvFile } from "../config/apiKeyEnvDiagnostics.js";
 import { deleteApiKey, issueApiKey } from "../config/apiKeyIssuer.js";
-import { type ProjectedAgent, resolveHostLocalActionExecutionPolicy } from "../config/model.js";
+import {
+	getCurrentRuntimeProfiles,
+	type ProjectedAgent,
+	resolveHostLocalActionExecutionPolicy,
+} from "../config/model.js";
 import { SEMANTIC_MODEL_SELECTORS } from "../config/modelSelector.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { createChatgptBrowserHandoffTargetAdapter } from "../handoff/chatgptBrowserAdapter.js";
@@ -321,6 +326,7 @@ import {
 } from "../workbench/service.js";
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
+export const DEFAULT_TAB_AFFINITY_MAINTENANCE_INTERVAL_MS = 60_000;
 const TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS = 5_000;
 const DEFAULT_STALE_RUNNER_RETENTION = 100;
 const ACCOUNT_MIRROR_COMPLETION_RECENT_STATUS_LIMIT = 10;
@@ -410,6 +416,33 @@ export interface ResponsesHttpServerDeps {
 export interface ResponsesHttpServerInstance {
 	port: number;
 	close(): Promise<void>;
+}
+
+export function resolveTabAffinityMaintenanceIntervalMs(input: {
+	userConfig: ResolvedUserConfig | null;
+	configuredIntervalMs?: number;
+	disabled?: boolean;
+}): number {
+	if (input.disabled) return 0;
+	if (input.configuredIntervalMs !== undefined) {
+		return Math.max(0, input.configuredIntervalMs);
+	}
+	if (!input.userConfig) return 0;
+	if (input.userConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+		return DEFAULT_TAB_AFFINITY_MAINTENANCE_INTERVAL_MS;
+	}
+	for (const runtimeProfileId of Object.keys(
+		getCurrentRuntimeProfiles(input.userConfig as Record<string, unknown>),
+	)) {
+		const runtimeConfig = resolveRuntimeProfileUserConfig(input.userConfig, {
+			runtimeProfileId,
+			provider: "chatgpt",
+		}) as ResolvedUserConfig;
+		if (runtimeConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+			return DEFAULT_TAB_AFFINITY_MAINTENANCE_INTERVAL_MS;
+		}
+	}
+	return 0;
 }
 
 function composeExecutionGates(
@@ -1137,13 +1170,11 @@ export async function createResponsesHttpServer(
 	);
 	const readTabConcurrencyStatus =
 		deps.readTabConcurrencyStatus ?? (() => tabConcurrencyRuntime.readStatus());
-	const tabAffinityMaintenanceIntervalMs = accountMirrorProofScope
-		? 0
-		: Math.max(
-				0,
-				options.tabAffinityMaintenanceIntervalMs ??
-					(resolvedUserConfig?.browser?.tabConcurrencyMode === "tab-affinity" ? 60_000 : 0),
-			);
+	const tabAffinityMaintenanceIntervalMs = resolveTabAffinityMaintenanceIntervalMs({
+		userConfig: resolvedUserConfig,
+		configuredIntervalMs: options.tabAffinityMaintenanceIntervalMs,
+		disabled: Boolean(accountMirrorProofScope),
+	});
 	const tabAffinityMaintenanceLoop = createTabAffinityMaintenanceLoop({
 		intervalMs: tabAffinityMaintenanceIntervalMs,
 		logger,

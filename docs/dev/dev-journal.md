@@ -1,5 +1,11 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- The exact Packet 4A canonical merge installed and the managed API restarted,
+  but no maintenance pass ran after its 60-second interval. The scheduler gate
+  inspected only the root serialized browser mode while `wsl-chrome-3` carries
+  tab-affinity in a nested AuraCall runtime profile. Plan v5 adds Packet 4B so
+  default maintenance ownership follows every resolved ChatGPT runtime profile;
+  the proof-scoped disable and explicit interval override remain intact.
 - The blocked soak preflight exposed a lifecycle bug, not an operator repair
   obligation. `outcome-unknown` idle leases bypassed TTL forever, active leases
   trusted process liveness after heartbeat expiry, previous lost leases were

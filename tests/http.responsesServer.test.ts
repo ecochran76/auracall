@@ -35,6 +35,8 @@ import {
 	assertResponsesHostAllowed,
 	createDefaultRuntimeRunServiceStateProbe,
 	createResponsesHttpServer,
+	DEFAULT_TAB_AFFINITY_MAINTENANCE_INTERVAL_MS,
+	resolveTabAffinityMaintenanceIntervalMs,
 	serveResponsesHttp,
 	summarizeAccountMirrorDiagnosticsBrowserMutationsForTest,
 	terminateSamePortApiServeProcesses,
@@ -976,6 +978,23 @@ describe("http responses adapter", () => {
 		const callsAfterClose = runTabAffinityMaintenance.mock.calls.length;
 		await delay(30);
 		expect(runTabAffinityMaintenance).toHaveBeenCalledTimes(callsAfterClose);
+	});
+
+	it("enables default tab-affinity maintenance for a nested AuraCall runtime profile", () => {
+		const userConfig = {
+			model: "gpt-5.2",
+			browser: { target: "chatgpt", tabConcurrencyMode: "serialized" },
+			profiles: {
+				"wsl-chrome-3": {
+					browser: { tabConcurrencyMode: "tab-affinity" },
+				},
+			},
+		} as never;
+
+		expect(resolveTabAffinityMaintenanceIntervalMs({ userConfig })).toBe(
+			DEFAULT_TAB_AFFINITY_MAINTENANCE_INTERVAL_MS,
+		);
+		expect(resolveTabAffinityMaintenanceIntervalMs({ userConfig, disabled: true })).toBe(0);
 	});
 
 	it("accepts direct response attachments and stores them as uploadable step artifacts", async () => {
