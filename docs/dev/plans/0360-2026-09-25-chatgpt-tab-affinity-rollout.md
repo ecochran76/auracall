@@ -205,9 +205,11 @@ the source packet is safe to integrate.
   navigation reservations nevertheless remained started after terminal job
   settlement. Their common durable job operation ID proves they came from
   timed-out browser promises that continued after their `Promise.race` caller
-  returned. A separate random utility lease also appeared after job terminal;
-  its exact caller is not proven, so it is preserved as unattributed evidence.
-  The API was stopped cleanly and both tabs were left for TTL retirement.
+  returned. A separate random utility lease also appeared after job terminal.
+  Scheduler history and the target status record attribute it to scheduled
+  detail-inventory refresh `acctmirror_855cb75e-9df6-4645-97d5-b315ce1593d6`,
+  which completed one five-interaction pass. The API was stopped cleanly and
+  both tabs were left for TTL retirement.
   Packet 5G terminally closes ledger governors so late continuations fail
   before reserving or performing another provider interaction.
 - Start a bounded soak with two conversation bindings and one dedicated
@@ -354,6 +356,20 @@ Terminal condition: provider-free tests prove late and pacing continuations
 cannot create a started orphan, focused materialization/live-follow suites plus
 typecheck/build pass, and the canonical runtime remains stopped pending a
 separately authorized live proof.
+
+### Packet 5H: Bind scheduled live follow to its crawler tab
+
+- Trace the scheduled Account Mirror collector call that omitted or replaced
+  its supplied exact crawler-tab options and therefore entered generic utility
+  affinity with a random `chatgpt-service-*` identity.
+- Make the scheduler's durable refresh/completion identity and exact crawler
+  target survive every identity, index, and detail-inventory call.
+- Prove provider-free that one scheduled pass cannot create a generic utility
+  lease while a crawler affinity context is present.
+
+Terminal condition: a fixture scheduled pass uses only its crawler lease and
+target, all aggregate interaction records name that routine, and no live proof
+runs until this packet is canonical and installed.
 
 ### Packet 6: Default enablement or retained rollback
 
