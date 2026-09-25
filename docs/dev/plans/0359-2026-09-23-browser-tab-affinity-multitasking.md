@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 37
+Plan version: 38
 
 ## Stable Objective
 
@@ -1467,3 +1467,27 @@ Checkpoint 2026-09-24, Packet 7 installed/live hard stop:
 - `review_status`: canonical-main integration is withheld because the bounded
   live terminal condition did not pass; serialized compatibility remains the
   observed installed behavior
+
+Checkpoint 2026-09-24, Packet 7 provider-free successor repair:
+
+- `plan_version`: 38
+- `state_transition`: OPEN -> OPEN; the two pre-Send live findings now have
+  provider-free regression coverage and repairs
+- `acceptance_state`: provider-free accepted; installed/live acceptance remains
+  unspent after the hard stop
+- `progress_classification`: forward progress
+- `evidence`: commit `06d40c842` preserves runtime-profile
+  `browser.tabConcurrencyMode` during profile materialization and represents
+  Chat/current selection as an explicit selector-free plan
+- `material_blockers`: repaired source is not installed or live-retested;
+  Packet 7 still requires a new bounded live acceptance decision
+- `validation_notes`: eight focused profile/config/session/adapter/runtime
+  suites pass with 133 tests, plus typecheck, production build, and diff hygiene
+- `next_action_or_stop_reason`: preserve zero further provider interaction in
+  this turn; push the provider-free repair and request a fresh bounded Packet 7
+  retry decision
+- `delegation_status`: no new workers
+- `review_status`: the affinity branch already precedes the ordinary outer
+  dispatcher; the live serialization occurred because the selected runtime
+  profile dropped the affinity-mode field, not because the coordinator itself
+  was nested beneath that dispatcher

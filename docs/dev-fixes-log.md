@@ -23028,3 +23028,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Treat both failures as pre-effect evidence: preserve zero interaction counts,
   inspect retained DOM read-only, and require a provider-free successor repair
   before spending another live retry.
+
+## 2026-09-24 | Preserve concurrency mode through runtime-profile materialization
+
+- A nested runtime-profile `browser.tabConcurrencyMode` is operational config,
+  not merely status metadata. Copy it through the same selected-profile browser
+  override seam as `keepBrowser`, model strategy, and other browser behavior.
+- Diagnose a serialized live run from the resolved browser config printed by
+  the installed command. A correctly placed source branch is irrelevant when
+  profile materialization never selects it.
+- Represent Chat/current selection explicitly and skip picker interaction. Do
+  not encode `current` as a `chat-model` plan that calls selector discovery.

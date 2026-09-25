@@ -50483,3 +50483,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   submitted marker. Live follow did not run. Packet 7 and canonical-main
   integration remain unaccepted; the next slice is provider-free dispatcher
   routing plus a selector-free current-model path, not another live retry.
+
+## 2026-09-24 | Plan 0359 Packet 7 provider-free successor repair
+
+- Structural tracing showed the affinity branch already precedes the ordinary
+  outer dispatcher. The selected AuraCall runtime profile instead dropped its
+  nested `browser.tabConcurrencyMode`, causing the installed CLI to remain in
+  serialized compatibility mode despite the configured profile value.
+- Profile materialization now preserves that field. Chat/current model strategy
+  now produces an explicit selector-free plan across local, remote, and adapter
+  workbench paths rather than invoking the root model picker.
+- Eight focused suites pass with 133 tests, plus typecheck, production build,
+  and diff hygiene. This slice is provider-free: repaired source was not
+  installed, no additional prompt ran, and Packet 7 remains open.

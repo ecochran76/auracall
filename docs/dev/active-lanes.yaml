@@ -1018,16 +1018,16 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 80d154394bb5505aaa796bbe2ceb7cb61fa6d1d4
+    checkpoint: 06d40c842bf0299008d6482a2b3cece37f24e9e1
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
     dependencies: []
     overlaps: []
     reconciled_overlaps: []
-    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Authorized Packet 7 proved installed parity and identity, then exposed that ordinary CLI work still enters the profile-wide exclusive dispatcher before affinity execution and that current-model root runs still require a missing model selector.
-    blocker: Provider-free successor repair is required before another live prompt retry; Packet 7 and canonical-main integration are not accepted.
-    validation_status: packet-7-live-hard-stop-pre-send
-    validation_ref: 80d154394bb5505aaa796bbe2ceb7cb61fa6d1d4
-    disposition: Installed source parity and exact wsl-chrome-3 ChatGPT identity passed. The hydrated Chat/Work root toggle repair is committed and provider-free green, but the two-conversation live smoke serialized at the managed-profile dispatcher and both commands stopped before Send on model-selector drift. Zero prompts and zero live-follow passes were submitted; no provider warning or CAPTCHA appeared. GitHub Actions was skipped by operator direction. Integration remains withheld.
+    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Packet 7 stopped pre-Send after selected-profile materialization dropped tab-affinity mode and Chat/current invoked an absent root selector; both findings are repaired provider-free at 06d40c842.
+    blocker: Repaired source is not installed or live-retested; Packet 7 and canonical-main integration are not accepted.
+    validation_status: packet-7-provider-free-successor-green
+    validation_ref: 06d40c842bf0299008d6482a2b3cece37f24e9e1
+    disposition: Installed parity and exact wsl-chrome-3 identity passed before the live hard stop. Provider-free repair now preserves runtime-profile tab-affinity mode and makes Chat/current selector-free; 133 focused tests, typecheck, build, and diff hygiene pass. Zero prompts and zero live-follow passes were submitted, and no provider warning or CAPTCHA appeared. GitHub Actions remains skipped by operator direction. A fresh bounded live retry decision is required before integration.
     updated_at: 2026-09-24
