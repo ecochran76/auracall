@@ -6,6 +6,17 @@
   tab-affinity in a nested AuraCall runtime profile. Plan v5 adds Packet 4B so
   default maintenance ownership follows every resolved ChatGPT runtime profile;
   the proof-scoped disable and explicit interval override remain intact.
+- Packet 4B passed the 220-test HTTP file, typecheck, production build, scoped
+  formatting, and diff checks, then merged through PR 54 at canonical
+  `d95357ba4`. GitHub Actions remained skipped by operator direction. The plan
+  audit exposed only the existing 32 missing policy targets referenced from
+  `AGENTS.md`.
+- The exact canonical merge installed and restarted the API at 09:00:22 CDT.
+  Its first 60-second maintenance tick reduced non-released tab leases from
+  five to zero without starting `wsl-chrome-3` or opening ports 37571/45015.
+  Four revision-6 released records retain `outcome-unknown`; the previously
+  lost settled fence released at revision 7. This is absence-proof lease
+  convergence, not a provider effect or retry. The real soak is still pending.
 - The blocked soak preflight exposed a lifecycle bug, not an operator repair
   obligation. `outcome-unknown` idle leases bypassed TTL forever, active leases
   trusted process liveness after heartbeat expiry, previous lost leases were
