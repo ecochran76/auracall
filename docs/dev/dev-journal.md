@@ -50440,3 +50440,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   uses one captured timestamp for active, minute, hourly, and daily values.
 - Thirty focused affinity/ledger/status tests, typecheck, build, lint, scoped
   Biome, and diff hygiene pass. No browser or provider effect ran.
+
+## 2026-09-24 | Meaningful-use status
+
+- Per-binding status exposed total age and remaining lifetime but omitted the
+  last-meaningful-use posture explicitly required by Packet 6.
+- Status now reports elapsed time since `lastMeaningfulUseAt` without exposing
+  target or conversation identity. The fixture proves target-action accounting
+  produces a value distinct from total lease age.
+- Focused status tests, typecheck, scoped Biome, and diff hygiene pass. No
+  browser or provider effect ran.

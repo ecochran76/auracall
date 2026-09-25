@@ -201,7 +201,8 @@ Active leases persist owner PID plus process-generation identity. Maintenance
 marks dead, replaced, or legacy active owners `restart-unverified`; it releases
 that fence only after proving the exact target absent. Live or mismatched
 targets remain fenced. Status exposes content-free per-binding age and
-idle/absolute time remaining, plus a restart-unverified attention count.
+elapsed time since last meaningful use, idle/absolute time remaining, plus a
+restart-unverified attention count.
 The same maintenance pass reports aggregate live, fenced, and unleased ChatGPT
 page-target counts. Unleased targets are preserved as observation-only evidence;
 the census grants no authority to adopt, navigate, focus, refresh, or close them.

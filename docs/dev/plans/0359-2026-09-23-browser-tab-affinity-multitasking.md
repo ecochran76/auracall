@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 34
+Plan version: 35
 
 ## Stable Objective
 
@@ -1384,3 +1384,22 @@ Checkpoint 2026-09-24, aggregate rolling-usage status:
 - `delegation_status`: no new workers
 - `review_status`: rolling usage is derived from durable ledger records at one
   captured status timestamp; status contains no tenant or workload identity
+
+Checkpoint 2026-09-24, meaningful-use status:
+
+- `plan_version`: 35
+- `state_transition`: OPEN -> OPEN; per-binding status now exposes elapsed time
+  since the exact lease's last meaningful use
+- `acceptance_state`: provider-free accepted; age, last meaningful use, and
+  idle/absolute lifetime posture are all visible without publishing target or
+  conversation identity
+- `progress_classification`: forward progress
+- `evidence`: commit `73ea18f565c500a4f9ea0f062e47d75a60adcb87`
+- `material_blockers`: Packet 7 remains outside provider-free authority
+- `validation_notes`: focused status tests, typecheck, scoped Biome, and diff
+  hygiene pass
+- `next_action_or_stop_reason`: complete the final provider-free requirement
+  audit and preserve the live gate
+- `delegation_status`: no new workers
+- `review_status`: target-action accounting advanced meaningful-use time in the
+  fixture, producing a distinct value from total binding age

@@ -22995,3 +22995,11 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Aggregate across tenant scopes without publishing their identifiers. Include
   the scope in internal workload uniqueness so equal provider IDs from distinct
   tenants do not collapse into one active workload.
+
+## 2026-09-24 | Distinguish total lease age from meaningful-use age
+
+- Remaining idle lifetime alone does not explain whether retained tabs are
+  being extended by substantive work. Expose elapsed time since the persisted
+  `lastMeaningfulUseAt` alongside total binding age.
+- Keep this projection identity-free; operators need lifecycle posture, not
+  conversation or target contents.
