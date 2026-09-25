@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 6
+Plan version: 7
 
 ## Stable Objective
 
@@ -143,6 +143,14 @@ the source packet is safe to integrate.
   before prompts because status counted four released historical uncertainty
   records as current `outcomeUnknown` attention. Packet 4C corrects that
   projection without deleting or weakening the retained uncertainty evidence.
+- Packet 4C merged at canonical `5ebaba198`, passed 234 affected tests plus
+  typecheck/build, and was installed. The repeated identity proof passed, but
+  the managed API restart auto-created a queued live-follow completion in
+  `backfill_history` with `full_missing_assets`, not the authorized
+  metadata-only soak crawler. The API and browser were stopped before prompts,
+  before receipt creation, and before a completed pass or materialization
+  outcome. The managed service remains stopped pending explicit completion
+  control authority.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -192,6 +200,20 @@ browser census. Satisfied by canonical `d95357ba4` on 2026-09-25.
 Terminal condition: provider-free status regression and installed affinity
 status both prove released history remains present while operational unknown
 attention is zero.
+
+### Packet 5A: Live-follow control interlock
+
+- Do not adopt the queued full-sweep/full-materialization completion as soak
+  evidence.
+- Keep the managed API stopped so restart reconciliation cannot resume it.
+- Let isolated no-completion maintenance retire the uncertain crawler lease
+  after its normal TTL without launching Chrome.
+- Require explicit operator authority before pausing or cancelling the queued
+  completion, then configure or invoke only a metadata-only crawler for soak.
+
+Terminal condition: the conflicting completion cannot auto-resume, the stale
+crawler fence is released by TTL, and an accepted soak receipt can be created
+before bounded prompt or crawler interactions.
 
 ### Packet 6: Default enablement or retained rollback
 
