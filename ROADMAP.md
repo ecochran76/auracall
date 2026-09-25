@@ -1,5 +1,13 @@
 # Aura-Call Roadmap
 
+- Active P53 / issue 49: [Plan 0360](docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md)
+  operationalizes Plan 0359 for a guarded ChatGPT rollout. It adds sanitized
+  Browser Ops/CLI/MCP affinity posture, explicit serialized rollback, durable
+  soak receipts, and a real 24-48 hour acceptance window before any ChatGPT
+  default enablement. Gemini and Grok remain serialized. GitHub Actions are
+  skipped by operator direction while unavailable; local validation remains
+  mandatory.
+
 - Active P52 / issue 46: [Plan 0359](docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md)
   replaces managed-browser-profile-wide serialization of ordinary provider
   work with exact tab leases: one tab per conversation and one dedicated
@@ -8,7 +16,8 @@
   identity, CAPTCHA, uncertain-effect, and browser-profile control-plane hard
   stops. Packet 1 provider-free is owned on
   `feat/issue-46-browser-tab-affinity`; provider-free contracts precede ChatGPT
-  integration and any installed/live acceptance.
+  integration and any installed/live acceptance. The lane is now closed and
+  integrated; P53 owns guarded rollout and default-enablement evidence.
 
 - P16 / issue 6 revision-8 recovery implements developer-app terminal response
   through the real shared local/remote lifecycle, with exact app selection,
