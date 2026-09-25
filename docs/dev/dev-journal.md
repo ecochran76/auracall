@@ -50763,3 +50763,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   inventory remains incomplete. The completion was paused between passes,
   proving terminal queue cleanup, then explicitly resumed to continue bounded
   catch-up under the configured cooldowns.
+## 2026-09-25 | Plan 0360 materialization utility-tab identity
+
+- The authorized six-item history-materialization job continued independently
+  after live follow paused. It created successive `chatgpt-service-*` utility
+  leases because each candidate constructed a new `ChatgptService` with a
+  random affinity identity.
+- The managed API was stopped gracefully after the job reached terminal
+  failed. No provider warning or active interaction reservation remained; the
+  live-follow completion remains operator-paused.
+- Packet 5D lets durable history-materialization work supply
+  `history-materialization:<job-id>` to every ChatGPT service instance. The
+  existing lease registry can therefore reacquire one exact utility tab across
+  candidate reads while unrelated utility callers retain random isolation.

@@ -23179,3 +23179,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - A terminal completion and released provider-work lease are not sufficient
   evidence that the target registry is reusable. Regression coverage must also
   assert the mirror status no longer reports `already-queued`.
+## 2026-09-25 | Bind history materialization utility affinity to the job
+
+- A service-instance UUID is not a valid tab identity for a durable routine
+  that reconstructs its service object per candidate. It turns one job into a
+  sequence of unrelated utility tabs.
+- Accept an explicit utility affinity identity at the ChatGPT service factory
+  boundary. History materialization derives it from the durable job ID so all
+  candidate reads reacquire one lease and one exact tab. Keep random identities
+  for callers without durable routine ownership.

@@ -12,7 +12,7 @@ import { LlmService } from "../llmService.js";
 import type { IdentityPrompt, LlmServiceAdapter } from "../types.js";
 
 export class ChatgptService extends LlmService {
-	private readonly utilityAffinityId = `chatgpt-service-${randomUUID()}`;
+	private readonly utilityAffinityId: string;
 	private readonly runUtilityOperation: typeof runConfiguredChatgptUtilityOperation;
 
 	private constructor(
@@ -22,10 +22,13 @@ export class ChatgptService extends LlmService {
 		options?: {
 			identityPrompt?: IdentityPrompt;
 			runUtilityOperation?: typeof runConfiguredChatgptUtilityOperation;
+			utilityAffinityId?: string;
 		},
 	) {
 		super(userConfig, provider, browserService, options);
 		this.runUtilityOperation = options?.runUtilityOperation ?? runConfiguredChatgptUtilityOperation;
+		this.utilityAffinityId =
+			options?.utilityAffinityId?.trim() || `chatgpt-service-${randomUUID()}`;
 	}
 
 	static create(
@@ -35,6 +38,7 @@ export class ChatgptService extends LlmService {
 			browserProcessOwner?: BrowserProcessOwnerAttribution;
 			browserService?: BrowserService;
 			runUtilityOperation?: typeof runConfiguredChatgptUtilityOperation;
+			utilityAffinityId?: string;
 		},
 	): ChatgptService {
 		const provider = getProvider("chatgpt") as LlmServiceAdapter;
