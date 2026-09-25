@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 7
+Plan version: 8
 
 ## Stable Objective
 
@@ -151,6 +151,12 @@ the source packet is safe to integrate.
   before receipt creation, and before a completed pass or materialization
   outcome. The managed service remains stopped pending explicit completion
   control authority.
+- The operator authorized the broader bounded catch-up. Resume reached the
+  existing crawler target but failed before materialization with missing
+  provider-session authorization. Exact-target ChatGPT reads bypassed utility
+  reacquisition as designed, but also bypassed the normal option builder that
+  attaches identity authority. Packet 5B restores that envelope without
+  changing the exact tab or adding provider retries.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -214,6 +220,19 @@ attention is zero.
 Terminal condition: the conflicting completion cannot auto-resume, the stale
 crawler fence is released by TTL, and an accepted soak receipt can be created
 before bounded prompt or crawler interactions.
+
+### Packet 5B: Exact-target provider-session authority
+
+- Rebuild ChatGPT list options for an already exact target with
+  `ensurePort=false`, preserving host, port, and target ID.
+- Attach the configured provider-session authorization before exact-target
+  reads or mutations without reacquiring a utility tab.
+- Reinstall canonically and run only one newly created bounded catch-up after
+  the failed completion and uncertain lease have reached a safe terminal state.
+
+Terminal condition: the bounded catch-up passes identity authorization,
+completes within aggregate limits, and records any materialization outcome
+without target proliferation or retrying the failed uncertain operation.
 
 ### Packet 6: Default enablement or retained rollback
 

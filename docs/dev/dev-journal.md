@@ -1,5 +1,16 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- The operator authorized bounded materialization catch-up before the soak.
+  The parked completion resumed once, made one startup reload, and failed at
+  pass zero before materialization with `ChatGPT provider-session authorization
+  context is missing.` It is terminal failed and will not auto-retry; the
+  crawler lease idled `outcome-unknown` for normal TTL retirement. No provider
+  warning or active ledger reservation remains.
+- Root cause: exact-target ChatGPT affinity correctly skipped nested utility
+  acquisition, but returned raw list options and thereby skipped the standard
+  provider-session authorization builder. Plan v8 Packet 5B rebuilds options
+  with `ensurePort=false`, retaining the same target while restoring identity
+  authority. The focused 13-test service suite and typecheck pass.
 - Packet 4C merged through PR 56 at canonical `5ebaba198`, passed 234 affected
   tests plus typecheck/build, and installed. A second installed identity proof
   again matched the exact Pro/personal account, and affinity status correctly

@@ -1,3 +1,9 @@
+- 2026-09-25: Skipping nested utility-tab acquisition for an already exact
+  ChatGPT target must not skip list-option authorization. Rebuild options with
+  `ensurePort=false` so the exact host, port, and target remain pinned while the
+  configured provider-session authority is attached. Raw exact-target options
+  otherwise pass tab ownership but fail provider identity authorization.
+
 - 2026-09-25: Installing or restarting the managed API may reconcile enabled
   live-follow configuration before a rollout preflight can baseline status.
   Treat that startup path as a provider-effect gate: verify the persisted
