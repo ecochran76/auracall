@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 4
+Plan version: 5
 
 ## Stable Objective
 
@@ -128,6 +128,11 @@ the source packet is safe to integrate.
 - Install only an exact canonical merged commit.
 - Verify installed/source parity and exact expected ChatGPT identity before any
   interaction.
+- Packet 4A is integrated and installed, but its first production maintenance
+  interval exposed a scheduling defect: the API checked only the root browser
+  mode even though maintenance scans resolved AuraCall runtime profiles.
+  Packet 4B makes the default maintenance owner active when any resolved
+  ChatGPT runtime profile selects tab-affinity.
 - Start a bounded soak with two conversation bindings and one dedicated
   metadata-only live-follow crawler. Use the smallest prompt/read budget needed
   to prove coexistence; all later observations are read-only status/census
@@ -153,6 +158,18 @@ durably evidenced. Merely starting the soak is not completion.
 
 Terminal condition: provider-free regression tests prove stale fences converge
 without manual registry edits and without weakening no-retry uncertainty.
+
+### Packet 4B: Runtime-profile maintenance scheduling
+
+- Derive default maintenance ownership from the same resolved AuraCall runtime
+  profiles the maintenance pass visits, not only the root browser block.
+- Preserve explicit interval overrides and proof-scope suppression.
+- Install the exact canonical repair and verify the five stale fences converge
+  without starting the managed browser or performing a provider interaction.
+
+Terminal condition: a nested-profile regression passes and installed
+maintenance releases the stale leases with a zero-process, zero-listener
+browser census.
 
 ### Packet 6: Default enablement or retained rollback
 

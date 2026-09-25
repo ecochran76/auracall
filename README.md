@@ -2030,6 +2030,8 @@ Tab leases are heartbeat- and TTL-governed: maintenance reclaims expired active
 ownership, retires expired idle tabs, and revisits lost leases until target
 absence or an exact post-close census releases them. An uncertain provider
 outcome remains durable no-retry evidence even after its tab lease retires.
+The API enables this maintenance owner when affinity is selected either at the
+root or by any resolved AuraCall runtime profile.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
 For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:

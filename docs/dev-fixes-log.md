@@ -1,3 +1,11 @@
+- 2026-09-25: A maintenance worker that enumerates AuraCall runtime profiles
+  must use the same resolved-profile view when deciding whether to schedule
+  itself. Checking only the root browser mode silently disables cleanup when
+  root behavior is serialized and an explicit nested runtime profile selects
+  tab-affinity. Preserve explicit interval overrides and proof-scope
+  suppression while enabling the default owner if any resolved ChatGPT runtime
+  profile has affinity enabled.
+
 - 2026-09-25: Provider-effect uncertainty and operational tab ownership must
   have separate lifecycles. `outcome-unknown` forbids provider retry; it must
   not disable heartbeat/TTL retirement forever. Reclaim expired active leases

@@ -228,7 +228,8 @@ scope. A target is closed only after exact workload identity verification, and
 An expired `outcome-unknown` lease may retire, but its uncertainty remains in
 the released record and never authorizes prompt retry. Retirement runs at acquisition
 boundaries, and the long-running API also owns a non-overlapping
-60-second maintenance cadence when explicit affinity is configured. Maintenance
+60-second maintenance cadence when explicit affinity is configured on the root
+browser block or any resolved AuraCall runtime profile. Maintenance
 uses `ensurePort: false`, so an absent browser is never launched merely for
 cleanup; endpoint absence from that managed-browser resolution proves its old
 targets are already missing, so expired idle and lost fences are released. The loop
