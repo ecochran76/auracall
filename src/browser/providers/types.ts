@@ -142,7 +142,7 @@ export interface BrowserProviderPromptWorkbenchInput {
 
 export interface BrowserProviderPromptWorkbenchResult {
 	chatgptMode: "chat" | "work";
-	modelSelectionKind: "chat-model" | "chat-current" | "work-model" | "work-current" | "ignore";
+	modelSelectionKind: "chat-model" | "work-model" | "work-current" | "ignore";
 	model: string | null;
 	messages: string[];
 	url: string;

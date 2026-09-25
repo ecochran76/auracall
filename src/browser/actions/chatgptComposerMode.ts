@@ -11,7 +11,6 @@ type ComposerModeOutcome =
 
 export type ChatgptModelSelectionPlan =
 	| { kind: "chat-model"; model: string; strategy: BrowserModelStrategy }
-	| { kind: "chat-current" }
 	| { kind: "work-model"; model: string; strategy: BrowserModelStrategy }
 	| { kind: "work-current" }
 	| { kind: "ignore" };
@@ -68,7 +67,6 @@ export function resolveChatgptModelSelectionPlan(input: {
 			? { kind: "work-model", model: workModel, strategy: input.strategy }
 			: { kind: "work-current" };
 	}
-	if (input.strategy === "current") return { kind: "chat-current" };
 	const desiredModel = input.desiredModel?.trim();
 	return desiredModel
 		? { kind: "chat-model", model: desiredModel, strategy: input.strategy }

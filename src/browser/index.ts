@@ -2446,8 +2446,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			await raceWithDisconnect(ensurePromptReady(Runtime, config.inputTimeoutMs, logger));
 		} else if (modelSelectionPlan.kind === "work-current") {
 			logger("Work model picker: preserving current selection");
-		} else if (modelSelectionPlan.kind === "chat-current") {
-			logger("Model picker: preserving current selection");
 		} else {
 			logger("Model picker: skipped (strategy=ignore)");
 		}
@@ -3665,8 +3663,6 @@ async function runRemoteBrowserMode(
 			await ensurePromptReady(Runtime, config.inputTimeoutMs, logger);
 		} else if (modelSelectionPlan.kind === "work-current") {
 			logger("Work model picker: preserving current selection");
-		} else if (modelSelectionPlan.kind === "chat-current") {
-			logger("Model picker: preserving current selection");
 		} else {
 			logger("Model picker: skipped (strategy=ignore)");
 		}
