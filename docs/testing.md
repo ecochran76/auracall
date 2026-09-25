@@ -659,7 +659,7 @@
         attention, target churn, and retirement posture.
       - provider-free tab-affinity soak contract:
         `pnpm vitest run tests/browser/tabAffinitySoak.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts tests/http.responsesServer.test.ts --maxWorkers 1`.
-        `pnpm run soak:tab-affinity -- <start|snapshot|finish> ...` reads local
+        `pnpm run soak:tab-affinity <start|snapshot|finish> ...` reads local
         `/status` only and appends a mode-0600 JSONL receipt under
         `~/.auracall/soaks`. Finish rejects before 24 elapsed hours; warnings,
         lost/uncertain/restart-unverified/expired leases, and post-baseline

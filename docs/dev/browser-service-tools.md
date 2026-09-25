@@ -169,12 +169,12 @@ profile and restart the AuraCall service. Serialized mode reports
 For a guarded rollout, use the append-only soak receipt helper:
 
 ```bash
-pnpm run soak:tab-affinity -- start --port 8080 --runtime-profile wsl-chrome-3 \
+pnpm run soak:tab-affinity start --port 8080 --runtime-profile wsl-chrome-3 \
   --expected-identity <identity> --source-commit <sha> --installed-version <version>
-pnpm run soak:tab-affinity -- snapshot --port 8080 --receipt-id <id> \
+pnpm run soak:tab-affinity snapshot --port 8080 --receipt-id <id> \
   --runtime-profile wsl-chrome-3 --expected-identity <identity> \
   --source-commit <sha> --installed-version <version>
-pnpm run soak:tab-affinity -- finish --port 8080 --receipt-id <id> \
+pnpm run soak:tab-affinity finish --port 8080 --receipt-id <id> \
   --runtime-profile wsl-chrome-3 --expected-identity <identity> \
   --source-commit <sha> --installed-version <version>
 ```

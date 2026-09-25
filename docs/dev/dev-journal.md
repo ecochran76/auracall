@@ -21,6 +21,20 @@
   accept finish before 24 real elapsed hours.
 - Focused HTTP/CLI/MCP/runtime/soak validation passes 232 tests with typecheck.
   No browser or provider effect occurred.
+- Canonical PR 51 merged at `45a74c1cb`. The exact merge installed as runtime
+  `0.1.1`; the managed API is healthy and its default-profile status correctly
+  remains serialized. A separate isolated `wsl-chrome-3` API was therefore
+  started for soak-scoped status without recovery, drain, scheduler, or
+  completion startup effects.
+- Exact live identity matched `eric.cochran@soylei.com`, Pro/personal. The soak
+  did not start because the affinity registry retains one lost lease, four
+  expired idle leases, and four outcome-unknown fences from prior acceptance.
+  Provider warnings and admission rejections are clear; target navigation,
+  reload, focus, and close totals remain zero. These fences require explicit
+  reconciliation rather than being ignored or automatically retired.
+- The first attempted soak command failed before reading status because the
+  documented `pnpm run` separator was wrong. The documentation is corrected;
+  no receipt was created and no provider interaction occurred.
 
 ## 2026-09-24 | Plan 0359 installed ChatGPT acceptance complete
 
