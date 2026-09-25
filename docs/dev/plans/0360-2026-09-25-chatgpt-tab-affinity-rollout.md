@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 1
+Plan version: 2
 
 ## Stable Objective
 
@@ -34,6 +34,12 @@ provider-specific acceptance exists.
   ownership, or uncertain effect is a hard stop.
 - Never click ChatGPT's `Answer now`. No asset materialization, unrelated
   scheduler mutation, warning override, or automatic retry is authorized.
+- Packets 1 through 3 are implemented provider-free. P53 is registered on
+  canonical main through PR 50 at `b2d78d8e9`. `/status`, Browser Ops, CLI,
+  and MCP share the sanitized affinity projection and visible serialized
+  rollback. The append-only soak helper enforces hard stops and a real 24-hour
+  minimum. Focused validation passes 232 tests plus typecheck; publication of
+  this implementation packet and installed soak remain open.
 
 ## Acceptance Gates
 

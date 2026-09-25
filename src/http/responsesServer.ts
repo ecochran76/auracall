@@ -117,6 +117,10 @@ import {
 } from "../browser/service/stateRegistry.js";
 import { createTabAffinityMaintenanceLoop } from "../browser/tabAffinityMaintenanceLoop.js";
 import {
+	type BrowserTabConcurrencyStatus,
+	createBrowserTabConcurrencyRuntime,
+} from "../browser/tabConcurrencyRuntime.js";
+import {
 	agentConfigUpsertInputSchema,
 	agentRegistrySnapshotSchema,
 	createAgentTeamConfigService,
@@ -399,6 +403,7 @@ export interface ResponsesHttpServerDeps {
 	terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
 	scheduleApiServiceRestart?: (input: ApiServiceRestartRequest) => void;
 	runTabAffinityMaintenance?: () => Promise<void>;
+	readTabConcurrencyStatus?: () => Promise<BrowserTabConcurrencyStatus>;
 	env?: Record<string, string | undefined>;
 }
 
@@ -947,6 +952,7 @@ interface HttpStatusResponse {
 	accountMirrorStatus: AccountMirrorStatusSummary;
 	accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
 	accountMirrorProofScope: AccountMirrorProofScopeStatus;
+	tabConcurrency: BrowserTabConcurrencyStatus;
 	controlReadiness: HttpRunControlReadinessResponse;
 	liveFollow: LiveFollowHealthSummary;
 	executionHints: {
@@ -1125,6 +1131,12 @@ export async function createResponsesHttpServer(
 			agentTeamConfigService,
 		});
 	const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
+	const tabConcurrencyRuntime = createBrowserTabConcurrencyRuntime(
+		resolvedUserConfig ?? ({} as ResolvedUserConfig),
+		{ now },
+	);
+	const readTabConcurrencyStatus =
+		deps.readTabConcurrencyStatus ?? (() => tabConcurrencyRuntime.readStatus());
 	const tabAffinityMaintenanceIntervalMs = accountMirrorProofScope
 		? 0
 		: Math.max(
@@ -1999,6 +2011,7 @@ export async function createResponsesHttpServer(
 							backgroundDrainIntervalMs,
 						},
 					),
+					tabConcurrency: await readTabConcurrencyStatus(),
 					preflight,
 					auth: apiAuthPolicy,
 				});
@@ -3386,6 +3399,7 @@ export async function createResponsesHttpServer(
 							backgroundDrainIntervalMs,
 						},
 					),
+					tabConcurrency: await readTabConcurrencyStatus(),
 					preflight: await readPreflightStatusSummary(preflightRunner),
 					controlResult,
 					auth: apiAuthPolicy,
@@ -5013,6 +5027,7 @@ function createHttpStatusResponse(input: {
 	accountMirrorBrowserProcessStatus?: HttpBrowserProcessStatusResponse | null;
 	accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
 	accountMirrorProofScope: AccountMirrorProofScopeStatus;
+	tabConcurrency: BrowserTabConcurrencyStatus;
 	preflight?: PreflightStatusSummary;
 	controlResult?: HttpStatusResponse["controlResult"];
 	auth: ApiAuthPolicy;
@@ -5197,6 +5212,7 @@ function createHttpStatusResponse(input: {
 		accountMirrorStatus: input.accountMirrorStatus,
 		accountMirrorCompletions: input.accountMirrorCompletions,
 		accountMirrorProofScope: input.accountMirrorProofScope,
+		tabConcurrency: input.tabConcurrency,
 		controlReadiness: createRunControlReadiness({
 			backgroundDrain: input.backgroundDrain,
 			accountMirrorCompletions: input.accountMirrorCompletions,
@@ -11160,6 +11176,15 @@ function createOperatorBrowserDashboardHtml(
         <div id="configLiveFollowSummary" class="muted">Loading...</div>
       </section>
 
+      <section class="panel" id="tabConcurrencyPanel" data-tab-concurrency-status="sanitized">
+        <h2>Browser Tab Concurrency</h2>
+        <div class="notice">Read-only affinity posture. Immediate rollback: set <code>browser.tabConcurrencyMode</code> to <code>serialized</code> and restart the AuraCall service.</div>
+        <dl id="tabConcurrencySummary">
+          <dt>Status</dt><dd class="muted">Loading...</dd>
+        </dl>
+        <pre id="tabConcurrencyRaw">Loading...</pre>
+      </section>
+
       <section class="panel">
         <h2>Account Mirrors</h2>
         <div class="row" style="margin-bottom: 10px;">
@@ -11738,6 +11763,38 @@ function createOperatorBrowserDashboardHtml(
           externalServiceBaseUrl: routes.externalServiceBaseUrl,
         },
       });
+    }
+
+    function renderTabConcurrency(status) {
+      const concurrency = status.tabConcurrency || {};
+      const leaseStates = concurrency.leaseStates || {};
+      const workloads = concurrency.workloads || {};
+      const warnings = concurrency.providerWarnings || {};
+      const rejections = concurrency.admissionRejections || {};
+      const usage = concurrency.aggregateUsage || {};
+      const attention = concurrency.attention || {};
+      const actions = concurrency.targetActions || {};
+      const retirements = concurrency.retirements || {};
+      const mode = concurrency.mode || 'serialized';
+      const attentionCount = Number(attention.expiredIdle || 0)
+        + Number(attention.outcomeUnknown || 0)
+        + Number(attention.restartUnverified || 0)
+        + Number(leaseStates.lost || 0);
+      const guardCount = Number(warnings.active || 0);
+      const tone = guardCount > 0 || attentionCount > 0 ? 'bad' : mode === 'tab-affinity' ? 'ok' : 'warn';
+      $('tabConcurrencySummary').innerHTML = [
+        ['Mode', renderStatusText(mode, tone)],
+        ['Rollback', '<code>browser.tabConcurrencyMode = serialized</code>'],
+        ['Leases', escapeHtml('active=' + Number(leaseStates.active || 0) + ' idle=' + Number(leaseStates.idle || 0) + ' retiring=' + Number(leaseStates.retiring || 0) + ' lost=' + Number(leaseStates.lost || 0))],
+        ['Workloads', escapeHtml('conversation=' + Number(workloads.conversations || 0) + ' new=' + Number(workloads.newConversations || 0) + ' live-follow=' + Number(workloads.liveFollow || 0) + ' utility=' + Number(workloads.ephemeral || 0))],
+        ['Aggregate Usage', escapeHtml('active chats=' + Number(usage.activeChats || 0) + ' chats/hour=' + Number(usage.chatsLastHour || 0) + ' chats/day=' + Number(usage.chatsLastDay || 0) + ' interactions/min=' + Number(usage.interactionsLastMinute || 0))],
+        ['Provider Guards', renderStatusText(guardCount > 0 ? String(guardCount) + ' active' : 'clear', guardCount > 0 ? 'bad' : 'ok')],
+        ['Admission Rejections', escapeHtml(String(Number(rejections.total || 0)) + (rejections.latestReason ? ' latest=' + rejections.latestReason : ''))],
+        ['Attention', renderStatusText(attentionCount > 0 ? String(attentionCount) + ' item(s)' : 'clear', attentionCount > 0 ? 'bad' : 'ok')],
+        ['Target Churn', escapeHtml('create=' + Number(actions.targetCreations || 0) + ' navigate=' + Number(actions.navigations || 0) + ' reload=' + Number(actions.reloads || 0) + ' focus=' + Number(actions.focuses || 0) + ' close=' + Number(actions.closes || 0))],
+        ['Retirements', escapeHtml('closed=' + Number(retirements.closed || 0) + ' missing=' + Number(retirements.alreadyMissing || 0) + ' preserved=' + Number(retirements.preserved || 0))],
+      ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+      $('tabConcurrencyRaw').textContent = asJson(concurrency);
     }
 
     function renderConfigIdentityProjection(status) {
@@ -15791,6 +15848,8 @@ function createOperatorBrowserDashboardHtml(
       $('configRoutingRaw').textContent = 'Loading...';
       $('configIdentitySummary').textContent = 'Loading...';
       $('configLiveFollowSummary').textContent = 'Loading...';
+	  $('tabConcurrencySummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
+	  $('tabConcurrencyRaw').textContent = 'Loading...';
       $('opsControls').textContent = 'Loading controls...';
       $('mirrorStatus').textContent = 'Loading...';
       $('mirrorAttentionQueue').textContent = 'Loading attention queue...';
@@ -15807,6 +15866,7 @@ function createOperatorBrowserDashboardHtml(
         renderConfigRouting(status);
         renderConfigIdentityProjection(status);
         renderConfigLiveFollowProjection(status);
+		renderTabConcurrency(status);
         renderMirrorCompletions(status);
         renderRecentServiceEvents(status);
       } catch (error) {
@@ -15817,6 +15877,8 @@ function createOperatorBrowserDashboardHtml(
         $('configRoutingRaw').textContent = String(error.message || error);
         $('configIdentitySummary').textContent = String(error.message || error);
         $('configLiveFollowSummary').textContent = String(error.message || error);
+		$('tabConcurrencySummary').innerHTML = '<dt>Status</dt><dd class="bad">' + escapeHtml(String(error.message || error)) + '</dd>';
+		$('tabConcurrencyRaw').textContent = String(error.message || error);
         $('opsControls').textContent = String(error.message || error);
         $('mirrorTargetTable').textContent = String(error.message || error);
         $('mirrorActiveCompletionTable').textContent = String(error.message || error);

@@ -10,6 +10,17 @@
 - GitHub Actions are skipped by operator direction while unavailable. This
   registration step performed no browser, provider, installation, scheduler,
   or configuration effect.
+- Packet 2 now projects the existing sanitized affinity snapshot through
+  `/status`, Browser Ops, CLI, and MCP contract readback. The dashboard shows
+  mode, exact serialized rollback, lease/workload pressure, provider guards,
+  aggregate usage, attention, target churn, and retirements without binding
+  identifiers or provider content.
+- Packet 3 adds an append-only mode-0600 JSONL soak helper. It reads local
+  status only, rejects provider warnings, lost/uncertain/restart-unverified or
+  expired leases and post-baseline navigation/reload/focus churn, and cannot
+  accept finish before 24 real elapsed hours.
+- Focused HTTP/CLI/MCP/runtime/soak validation passes 232 tests with typecheck.
+  No browser or provider effect occurred.
 
 ## 2026-09-24 | Plan 0359 installed ChatGPT acceptance complete
 

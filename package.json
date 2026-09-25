@@ -44,6 +44,7 @@
     "smoke:ops-browser-provider-guard": "tsx scripts/smoke-ops-browser-provider-guard.ts",
     "smoke:ops-browser-preflight-run-detail": "tsx scripts/smoke-ops-browser-preflight-run-detail.ts",
     "smoke:mcp-provider-guard": "tsx scripts/smoke-account-mirror-provider-guard-mcp.ts",
+    "soak:tab-affinity": "tsx scripts/tab-affinity-soak.ts",
     "smoke:operator-search-ux": "pnpm run ux:build && tsx scripts/smoke-operator-search-ux.ts",
     "smoke:asset-readback-parity": "tsx scripts/smoke-asset-readback-parity.ts",
     "smoke:archive-materialization-jobs": "tsx scripts/smoke-archive-materialization-jobs.ts",

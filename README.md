@@ -2013,11 +2013,19 @@ Put defaults in `~/.auracall/config.json` (JSON5). Example:
   },
   browser: {
     chatgptUrl: "https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project",
-    chatgptToolApproval: "manual"
+    chatgptToolApproval: "manual",
+    // Opt-in guarded ChatGPT rollout; use "serialized" for immediate rollback.
+    tabConcurrencyMode: "tab-affinity"
   }
 }
 ```
 Use `browser.chatgptUrl` (or the legacy alias `browser.url`) to target a specific ChatGPT workspace/folder for browser automation.
+`tabConcurrencyMode` still defaults to `serialized`. When explicitly set to
+`tab-affinity`, ChatGPT conversations, the live-follow crawler, and utility
+work receive exact tabs while sharing aggregate interaction and provider-warning
+guards. Inspect the sanitized posture in Browser Ops or with
+`auracall api ops-browser-status --port <port>`. Roll back by restoring
+`serialized` and restarting AuraCall; Gemini and Grok remain serialized.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
 For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:

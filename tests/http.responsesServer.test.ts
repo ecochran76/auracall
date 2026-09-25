@@ -23646,6 +23646,13 @@ describe("http responses adapter", () => {
 				executionHints: {
 					bodyObject: "auracall",
 				},
+				tabConcurrency: {
+					mode: "serialized",
+					enabled: false,
+					leaseStates: { active: 0, idle: 0, lost: 0 },
+					workloads: { conversations: 0, liveFollow: 0 },
+					providerWarnings: { active: 0 },
+				},
 				liveFollow: {
 					severity: "attention-needed",
 					schedulerPosture: "disabled",
@@ -23815,6 +23822,11 @@ describe("http responses adapter", () => {
 			expect(html).toContain("launchCommandHasBlankArg");
 			expect(html).toContain("openBlankPageCount");
 			expect(html).toContain("/v1/browser/processes");
+			expect(html).toContain('id="tabConcurrencyPanel"');
+			expect(html).toContain('data-tab-concurrency-status="sanitized"');
+			expect(html).toContain("Browser Tab Concurrency");
+			expect(html).toContain("browser.tabConcurrencyMode");
+			expect(html).toContain("renderTabConcurrency");
 			expect(html).toContain("apiServiceControls");
 			expect(html).toContain("loadApiLogTail");
 			expect(html).toContain("/v1/api/logs/tail?maxBytes=32768");

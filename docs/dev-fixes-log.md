@@ -1,3 +1,11 @@
+- 2026-09-25: A multitab rollout needs one durable, content-free acceptance
+  surface rather than separate ad hoc browser observations. Project the exact
+  lease/ledger status through HTTP, Browser Ops, CLI, and MCP; record soak
+  snapshots append-only; compare navigation/reload/focus counters to the start
+  baseline; and reject completion until a real minimum window has elapsed.
+  Keep rollback visible as `browser.tabConcurrencyMode = serialized` and do
+  not treat an operator-supplied expected identity as live identity proof.
+
 - 2026-09-24: An exact crawler tab endpoint and browser-service provenance are
   complementary, not mutually exclusive. When a caller supplies host, port, or
   target ID, resolve the service target read-only with `ensurePort: false` and
