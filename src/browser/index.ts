@@ -2451,8 +2451,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		}
 		// Handle thinking time selection if specified
 		const thinkingTime = config.thinkingTime;
-		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
-			const proModeGate = isChatgptProModelTarget(config.desiredModel)
+		const thinkingModel = modelStrategy === "current" ? observedModel : config.desiredModel;
+		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(thinkingModel)) {
+			const proModeGate = isChatgptProModelTarget(thinkingModel)
 				? await raceWithDisconnect(
 						assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy),
 					)
@@ -3668,8 +3669,9 @@ async function runRemoteBrowserMode(
 		}
 		// Handle thinking time selection if specified
 		const thinkingTime = config.thinkingTime;
-		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
-			const proModeGate = isChatgptProModelTarget(config.desiredModel)
+		const thinkingModel = modelStrategy === "current" ? observedModel : config.desiredModel;
+		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(thinkingModel)) {
+			const proModeGate = isChatgptProModelTarget(thinkingModel)
 				? await assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy)
 				: null;
 			await dismissOpenMenus(Runtime).catch(() => false);

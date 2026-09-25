@@ -12782,8 +12782,9 @@ async function prepareChatgptPromptWorkbenchInClient(
 		workModel,
 		strategy: modelStrategy,
 	});
+	let selectedModel: string | null = null;
 	if (modelSelectionPlan.kind === "chat-model") {
-		await ensureModelSelection(
+		selectedModel = await ensureModelSelection(
 			Runtime,
 			modelSelectionPlan.model,
 			logger,
@@ -12804,8 +12805,8 @@ async function prepareChatgptPromptWorkbenchInClient(
 	if (
 		chatgptMode === "chat" &&
 		thinkingTime &&
-		desiredModel &&
-		/\b(sol|thinking|pro)\b/i.test(desiredModel)
+		(modelStrategy === "current" ? selectedModel : desiredModel) &&
+		/\b(sol|thinking|pro)\b/i.test((modelStrategy === "current" ? selectedModel : desiredModel) ?? "")
 	) {
 		await ensureThinkingTime(Runtime, thinkingTime, logger);
 	}
@@ -12814,9 +12815,11 @@ async function prepareChatgptPromptWorkbenchInClient(
 		inputTimeoutMs,
 		modelSelectionKind: modelSelectionPlan.kind,
 		model:
-			modelSelectionPlan.kind === "chat-model" || modelSelectionPlan.kind === "work-model"
-				? modelSelectionPlan.model
-				: null,
+			modelSelectionPlan.kind === "chat-model"
+				? selectedModel
+				: modelSelectionPlan.kind === "work-model"
+					? modelSelectionPlan.model
+					: null,
 	};
 }
 
