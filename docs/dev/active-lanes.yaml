@@ -1032,3 +1032,24 @@ lanes:
     integration_receipt: 46d0c0cf9725b507415b5c6a681a682a9bb35d34
     disposition: Exact installed/source parity passed. Two simultaneous commands returned exact markers on distinct route-bound tabs and settled succeeded. A bounded metadata-only completion then completed one pass on a dedicated crawler target while both conversation targets remained unchanged, using two of six provider-read permits with no warning. All accepted leases recorded one target creation and zero navigation, reload, or focus. At expiry the browser endpoint exited; fresh CDP and OS censuses proved zero remaining exact targets or managed-browser processes, and the three fences were released already-missing. GitHub Actions was skipped by operator direction.
     updated_at: 2026-09-24
+  - id: P53
+    objective: Roll out exact ChatGPT tab affinity with sanitized operator posture, explicit serialized rollback, durable soak evidence, and a full elapsed acceptance window before default enablement.
+    plan: docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md
+    plan_ref: refs/heads/feat/issue-49-chatgpt-affinity-rollout
+    branch: feat/issue-49-chatgpt-affinity-rollout
+    target: main
+    plan_state: OPEN
+    custody_state: LOCAL
+    checkpoint: 17001ba1a5305f3641d4f6737e0db17b028e5923
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#49]
+    dependencies: [P52]
+    overlaps: []
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: planned
+    validation_ref: docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md
+    integration_receipt: null
+    disposition: Operator status, rollback, and soak tooling are provider-free first. Installed ChatGPT soak and default enablement remain separate gated packets; Gemini and Grok stay serialized. GitHub Actions are waived by operator direction while unavailable.
+    updated_at: 2026-09-25

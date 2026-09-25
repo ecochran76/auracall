@@ -1,5 +1,18 @@
 # RUNBOOK
 
+## Turn 620 | 2026-09-25
+
+- Opened issue 49 and P53 / [Plan 0360](docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md)
+  from canonical main `17001ba1a`. The lane adds operator affinity posture,
+  explicit serialized rollback, durable soak evidence, and a real 24-48 hour
+  ChatGPT soak before any default enablement.
+- The branch is `feat/issue-49-chatgpt-affinity-rollout`. Gemini and Grok remain
+  serialized. Identity drift, CAPTCHA, provider warning, unknown ownership,
+  uncertain effect, and `Answer now` are hard stops.
+- GitHub Actions are skipped by operator direction while unavailable. No
+  browser, provider, installation, scheduler, or configuration effect occurred
+  while opening the lane.
+
 ## Turn 619 | 2026-09-23
 
 - Renamed the local Git remote `upstream` to `oracle-archive`, preserving its

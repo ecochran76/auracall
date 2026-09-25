@@ -1,3 +1,16 @@
+## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
+
+- Opened issue 49 after a clean owned-repository, permission, duplicate,
+  security-route, and label preflight; assigned it to the authenticated owner.
+- Created `feat/issue-49-chatgpt-affinity-rollout` from canonical main
+  `17001ba1a` and registered P53 as the successor to integrated Plan 0359.
+- The plan freezes operator status parity, explicit serialized rollback,
+  append-only sanitized soak evidence, a real 24-48 hour ChatGPT soak, and a
+  separate default-enablement gate. Gemini and Grok remain serialized.
+- GitHub Actions are skipped by operator direction while unavailable. This
+  registration step performed no browser, provider, installation, scheduler,
+  or configuration effect.
+
 ## 2026-09-24 | Plan 0359 installed ChatGPT acceptance complete
 
 - Exact source/runtime parity at `7e610e84e` preceded one isolated
