@@ -831,16 +831,23 @@ export abstract class LlmService {
 			? (overrides.configuredUrl ?? null)
 			: this.getConfiguredUrl();
 		const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
+		const resolvedTarget = await this.browserService.resolveServiceTarget({
+			serviceId: this.providerId,
+			configuredUrl,
+			ensurePort: overrides.tabTargetId || hasExplicitEndpoint ? false : options.ensurePort,
+			abortSignal: overrides.abortSignal,
+			onStage: options.onPreflightStage,
+		});
+		const explicitEndpointMatches =
+			Boolean(resolvedTarget) &&
+			(!overrides.host || !resolvedTarget?.host || overrides.host === resolvedTarget.host) &&
+			(!overrides.port || !resolvedTarget?.port || overrides.port === resolvedTarget.port);
 		const target =
 			overrides.tabTargetId || hasExplicitEndpoint
-				? null
-				: await this.browserService.resolveServiceTarget({
-						serviceId: this.providerId,
-						configuredUrl,
-						ensurePort: options.ensurePort,
-						abortSignal: overrides.abortSignal,
-						onStage: options.onPreflightStage,
-					});
+				? explicitEndpointMatches
+					? resolvedTarget
+					: null
+				: resolvedTarget;
 		const host = target?.host ?? overrides.host;
 		const port = target?.port ?? overrides.port;
 		const attachResolvedServiceTab = shouldAttachResolvedServiceTab(overrides);

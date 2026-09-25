@@ -1698,3 +1698,33 @@ Checkpoint 2026-09-24, current disposable-root readiness repair:
 - `delegation_status`: no new workers
 - `review_status`: current composer recognition is shared provider knowledge;
   live follow must not maintain a narrower legacy-only readiness definition
+
+Checkpoint 2026-09-24, exact-endpoint provider-session provenance repair:
+
+- `plan_version`: 46
+- `state_transition`: OPEN -> OPEN; the installed crawler passed current root
+  readiness and preserved both retained conversation tabs, then failed closed
+  before collection because its explicit endpoint had erased browser provenance
+- `acceptance_state`: provider-free accepted; installed metadata-only retest is
+  the remaining Packet 7 gate
+- `progress_classification`: forward progress with one shared authorization-seam
+  repair
+- `evidence`: isolated completion
+  `acctmirror_completion_fcbcaaab-1bef-41ab-ab8d-61d396a3e372` opened exact
+  crawler target `C1FAD7161167D81166AF248A5D1D31DB`, passed root readiness,
+  advanced to root-conversations, and retained both R10 conversation targets
+  before `provider_session_provenance_missing`
+- `material_blockers`: the repair is not installed or live-retested
+- `validation_notes`: explicit host, port, or target now performs a read-only
+  `ensurePort=false` service-target resolution and retains browser profile,
+  managed browser profile, source profile, and process identity only when the
+  endpoint matches. The exact caller target remains authoritative. Three
+  focused suites pass 251 tests, plus typecheck and production build. No new
+  prompt, materialization, warning, CAPTCHA, navigation, or reload occurred.
+  GitHub Actions remains skipped by operator direction.
+- `next_action_or_stop_reason`: commit, install, and repeat one isolated
+  metadata-only pass; require terminal completion plus retained-tab and ledger
+  evidence before closing Packet 7
+- `delegation_status`: no new workers
+- `review_status`: explicit execution coordinates must not discard matching
+  read-only browser authority provenance, and mismatches must remain fail-closed

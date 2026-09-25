@@ -1,3 +1,10 @@
+- 2026-09-24: An exact crawler tab endpoint and browser-service provenance are
+  complementary, not mutually exclusive. When a caller supplies host, port, or
+  target ID, resolve the service target read-only with `ensurePort: false` and
+  inherit provenance only when the endpoint matches. Keep the caller's exact
+  target ID authoritative; changed or unavailable endpoints remain
+  provenance-free so provider-session authorization fails closed.
+
 - 2026-09-24: Non-prompt provider CRUD cannot safely inherit generic compatible
   tab selection when conversation tabs and a crawler coexist. Give a service
   instance one exact leased utility tab, route every adapter interaction through

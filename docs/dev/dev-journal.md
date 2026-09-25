@@ -1,3 +1,18 @@
+## 2026-09-24 | Plan 0359 exact-endpoint provenance retention
+
+- An explicit DevTools host, port, or target remains an execution override, but
+  it no longer suppresses read-only resolution of the matching browser-service
+  target. Matching endpoint provenance now supplies the browser profile,
+  managed browser profile, source profile, and process identity while the
+  caller's exact target ID remains authoritative.
+- Explicit endpoints resolve with `ensurePort: false`, so provenance recovery
+  cannot launch or renavigate a browser. A mismatched or unavailable resolved
+  endpoint remains provenance-free and therefore fails closed at the existing
+  provider-session authorization gate.
+- Three focused suites pass 251 tests, with typecheck and production build.
+  Installed metadata-only acceptance remains open; no additional provider
+  prompt was sent.
+
 ## 2026-09-24 | Plan 0359 ChatGPT utility-tab coordination
 
 - ChatGPT project/conversation listing, identity reads, rename, and delete now
