@@ -4,6 +4,7 @@ import { createInMemoryProviderInteractionLedger } from "../../packages/browser-
 import {
 	createLedgerBackedBrowserInteractionGovernor,
 	ProviderInteractionAdmissionError,
+	ProviderInteractionGovernorClosedError,
 } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 
 describe("ledger-backed browser interaction governor", () => {
@@ -82,5 +83,78 @@ describe("ledger-backed browser interaction governor", () => {
 		await expect(governor.beforeInteraction("conversation-read")).rejects.toBeInstanceOf(
 			ProviderInteractionAdmissionError,
 		);
+	});
+
+	test("rejects a late continuation after terminal close without creating another reservation", async () => {
+		let sequence = 0;
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => `reservation-${++sequence}`,
+		});
+		const governor = createLedgerBackedBrowserInteractionGovernor({
+			ledger,
+			scope: {
+				provider: "chatgpt",
+				tenantKey: "tenant-1",
+				runtimeProfileId: "runtime-1",
+				managedBrowserProfile: "managed-1",
+			},
+			workloadId: "utility:job-1",
+			operationId: "job-1",
+			tabLeaseId: "lease-1",
+			policy: {
+				maxConcurrentChats: 4,
+				maxConversationStartsPerHour: 120,
+				maxConversationStartsPerDay: 240,
+				maxInteractionsPerMinute: 20,
+			},
+			baseGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+		});
+
+		await governor.beforeInteraction("conversation-read");
+		await governor.close({ outcome: "failed", effectState: "settled" });
+		await expect(governor.beforeInteraction("renavigation")).rejects.toBeInstanceOf(
+			ProviderInteractionGovernorClosedError,
+		);
+
+		expect(await ledger.list()).toMatchObject([
+			{
+				state: "settled",
+				interactionClass: "conversation-read",
+				outcome: "failed",
+			},
+		]);
+	});
+
+	test("fences a continuation that was still pacing when terminal close occurred", async () => {
+		let releasePacing: (() => void) | undefined;
+		const pacing = new Promise<void>((resolve) => {
+			releasePacing = resolve;
+		});
+		const ledger = createInMemoryProviderInteractionLedger();
+		const governor = createLedgerBackedBrowserInteractionGovernor({
+			ledger,
+			scope: {
+				provider: "chatgpt",
+				tenantKey: "tenant-1",
+				runtimeProfileId: "runtime-1",
+				managedBrowserProfile: "managed-1",
+			},
+			workloadId: "utility:job-1",
+			operationId: "job-1",
+			tabLeaseId: "lease-1",
+			policy: {
+				maxConcurrentChats: 4,
+				maxConversationStartsPerHour: 120,
+				maxConversationStartsPerDay: 240,
+				maxInteractionsPerMinute: 20,
+			},
+			baseGovernor: { beforeInteraction: vi.fn(() => pacing) },
+		});
+
+		const lateInteraction = governor.beforeInteraction("renavigation");
+		await governor.close();
+		releasePacing?.();
+		await expect(lateInteraction).rejects.toBeInstanceOf(ProviderInteractionGovernorClosedError);
+		expect(await ledger.list()).toEqual([]);
 	});
 });

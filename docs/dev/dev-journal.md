@@ -50798,3 +50798,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Packet 5F now rejects every failed ChatGPT route settle, including ordinary
   conversation URLs. Focused coverage passes 104 tests; no new live retry was
   launched.
+## 2026-09-25 | Plan 0360 terminal interaction-governor fence
+
+- Packet 5F merged and installed at canonical `f62e57e63`. The bounded job
+  reached terminal failed with exact identity match, one target creation, five
+  adoptions, and no provider warning.
+- Four started navigation reservations remained after terminal completion.
+  They retain the materialization job's operation ID and were created by
+  browser promises that lost a timeout `Promise.race` but continued executing.
+- Packet 5G adds terminal governor close semantics. Late continuations are
+  rejected before provider interaction, including continuations already
+  waiting in rate-limit pacing. Focused coverage passes 155 tests plus
+  typecheck. The managed API remains stopped and no live retry was launched.

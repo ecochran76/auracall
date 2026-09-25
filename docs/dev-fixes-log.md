@@ -23206,3 +23206,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   or mutate the wrong page.
 - Cover the generic settle assertion directly so a project-only conditional
   cannot silently reappear.
+
+## 2026-09-25 | Terminally close governed browser operations
+
+- A timeout implemented with `Promise.race` does not cancel the losing browser
+  promise. That continuation may wake after its owning job is terminal.
+- Settling the governor's current interaction is not a terminal fence. Add an
+  explicit close state and check it both before and after asynchronous pacing
+  and ledger transitions.
+- Utility and live-follow completion must close their governor before idling
+  the tab lease. A late continuation must fail before another browser action;
+  if it races with reservation, record an explicit cancelled/none settlement
+  instead of leaving an in-flight orphan.

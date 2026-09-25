@@ -198,7 +198,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	}
 	let settlementError: unknown = warningRecordError;
 	try {
-		await governor.finish({ outcome, effectState });
+		await governor.close({ outcome, effectState });
 		const used = await runtime.registry.recordMeaningfulUse({
 			claim: tab.claim,
 			now: now().toISOString(),
