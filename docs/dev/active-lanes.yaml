@@ -1018,16 +1018,16 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 06d40c842bf0299008d6482a2b3cece37f24e9e1
+    checkpoint: 5f92ce9cb99225ef5d1e0cc65fef9c061e1c8f9b
     remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
     integration: merge
     work_items: [ecochran76/auracall#46]
     dependencies: []
     overlaps: []
     reconciled_overlaps: []
-    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Packet 7 stopped pre-Send after selected-profile materialization dropped tab-affinity mode and Chat/current invoked an absent root selector; both findings are repaired provider-free at 06d40c842.
-    blocker: Repaired source is not installed or live-retested; Packet 7 and canonical-main integration are not accepted.
-    validation_status: packet-7-provider-free-successor-green
-    validation_ref: 06d40c842bf0299008d6482a2b3cece37f24e9e1
-    disposition: Installed parity and exact wsl-chrome-3 identity passed before the live hard stop. Provider-free repair now preserves runtime-profile tab-affinity mode and makes Chat/current selector-free; 133 focused tests, typecheck, build, and diff hygiene pass. Zero prompts and zero live-follow passes were submitted, and no provider warning or CAPTCHA appeared. GitHub Actions remains skipped by operator direction. A fresh bounded live retry decision is required before integration.
+    reconciliation_note: Packets 1 through 6 remain provider-free accepted. Installed Packet 7 now proves two concurrent operations acquire distinct exact ChatGPT targets without the profile dispatcher queue. Both stopped pre-Send because thinking-time eligibility used the requested model instead of the independently observed current model; repaired provider-free at 5f92ce9cb.
+    blocker: The latest observed-model thinking repair is not installed or live-retested; completed prompt, live-follow, and canonical-main acceptance remain open.
+    validation_status: packet-7-exact-tab-concurrency-proven-pre-send
+    validation_ref: 5f92ce9cb99225ef5d1e0cc65fef9c061e1c8f9b
+    disposition: Installed parity and exact wsl-chrome-3 identity passed. Two simultaneous commands resolved tab-affinity, connected to distinct exact leased targets, and each observed Latest with no profile-wide queue. Both stopped before Send when inherited light thinking was incorrectly applied from the requested Sol label. The provider-free repair now gates thinking controls from the observed current model; 88 focused tests, typecheck, build, and diff hygiene pass. Zero prompts and zero live-follow passes were submitted; no provider warning or CAPTCHA appeared. GitHub Actions remains skipped by operator direction.
     updated_at: 2026-09-24

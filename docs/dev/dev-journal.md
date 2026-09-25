@@ -50496,3 +50496,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Eight focused suites pass with 133 tests, plus typecheck, production build,
   and diff hygiene. This slice is provider-free: repaired source was not
   installed, no additional prompt ran, and Packet 7 remains open.
+
+## 2026-09-24 | Plan 0359 exact-tab live concurrency proven pre-Send
+
+- The corrected installed runtime resolved `tabConcurrencyMode=tab-affinity`.
+  Two simultaneous conversation operations connected to distinct exact targets
+  without an operation-dispatcher queue, and both independently observed the
+  current root model as `Latest` through the exact `Select ChatGPT model`
+  control.
+- Both stopped before Send because inherited `thinkingTime=light` was evaluated
+  against the requested Sol compatibility label rather than observed `Latest`,
+  which exposes no Thinking chip. No prompt, warning, CAPTCHA, identity drift,
+  or live-follow effect occurred.
+- Current-model thinking eligibility now uses the observed model in local,
+  remote, and adapter paths. Eighty-eight focused tests, typecheck, production
+  build, and diff hygiene pass. The repair is not installed; Packet 7 remains
+  open and integration is withheld.

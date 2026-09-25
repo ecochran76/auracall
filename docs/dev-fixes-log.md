@@ -23037,5 +23037,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Diagnose a serialized live run from the resolved browser config printed by
   the installed command. A correctly placed source branch is irrelevant when
   profile materialization never selects it.
-- Represent Chat/current selection explicitly and skip picker interaction. Do
-  not encode `current` as a `chat-model` plan that calls selector discovery.
+- Preserve Chat/current as a read-only picker observation. Add exact provider
+  selectors when the control drifts; do not redefine `current` to skip model
+  evidence. Use `ignore` when observation is intentionally disabled.
+
+## 2026-09-24 | Gate thinking controls from observed current-model evidence
+
+- Under model strategy `current`, the requested compatibility label is not the
+  active provider model. Use the picker-observed label to decide whether Chat
+  thinking controls exist and are eligible.
+- A current `Latest` observation must not inherit Sol/Thinking controls merely
+  because schema resolution supplied a Sol target. Preserve the requested and
+  observed model as separate evidence.
+- Keep failures before Send as zero-effect evidence and do not continue to live
+  follow until both exact conversation operations complete and bind routes.

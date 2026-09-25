@@ -7,7 +7,7 @@ Target: main
 Integration: merge
 Work item: ecochran76/auracall#46
 Pull request: ecochran76/auracall#47
-Plan version: 38
+Plan version: 39
 
 ## Stable Objective
 
@@ -1491,3 +1491,36 @@ Checkpoint 2026-09-24, Packet 7 provider-free successor repair:
   dispatcher; the live serialization occurred because the selected runtime
   profile dropped the affinity-mode field, not because the coordinator itself
   was nested beneath that dispatcher
+
+Checkpoint 2026-09-24, live exact-tab concurrency proven pre-Send:
+
+- `plan_version`: 39
+- `state_transition`: OPEN -> OPEN; exact-tab concurrent activation is live
+  proven, while completed prompt and live-follow acceptance remain open
+- `acceptance_state`: partial installed/live acceptance; two concurrent
+  conversation operations reached distinct exact leased targets without the
+  managed-profile dispatcher queue, then both stopped before Send
+- `progress_classification`: forward progress plus one new provider-free
+  compatibility repair
+- `evidence`: commit `191883954` restores required read-only current-model
+  observation and adds the exact live root selector
+  `button[aria-label="Select ChatGPT model"]`; commit `5f92ce9cb` derives
+  thinking-control eligibility from the observed model under `current`
+- `material_blockers`: both exact targets observed `Latest`, but inherited
+  `thinkingTime=light` was incorrectly gated by the requested Sol label and
+  attempted a missing Thinking chip. The repair is not installed or live
+  retested. No prompt response, conversation binding, or live-follow pass exists.
+- `validation_notes`: the installed retry resolved `tabConcurrencyMode` as
+  `tab-affinity`, connected concurrently to targets
+  `D5235D00720B660B2A95E3D2CA81BD2C` and
+  `5F3DFE03D95110BE0A6C2A9332409C`, and observed `Latest` independently.
+  No operation-queue message, provider warning, CAPTCHA, identity mismatch, or
+  Send occurred. The follow-up provenance repair passes 88 focused tests,
+  typecheck, production build, and diff hygiene.
+- `next_action_or_stop_reason`: push the provider-free provenance repair and
+  require another bounded installed/live decision before submitting prompts;
+  live follow remains conditional on two completed exact-tab conversations
+- `delegation_status`: no new workers
+- `review_status`: `current` remains a read-only picker observation contract;
+  it is not a request to skip model evidence. The observed model, not the
+  requested compatibility label, governs whether thinking controls apply.
