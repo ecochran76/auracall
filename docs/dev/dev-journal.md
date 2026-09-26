@@ -1,5 +1,16 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- PR 75 merged the missing monotonic soak hard stops at canonical
+  `79ec9d3e1`; 236 affected tests, typecheck, build, and the 360-plan audit
+  passed locally, with GitHub Actions skipped by operator direction. The exact
+  build is installed. After ordinary TTL/target-absence cleanup reached zero
+  fences, authoritative receipt
+  `725d6c25-cab9-4c9d-8b36-9a8622a440a2` started at
+  `2026-09-26T02:10:31.856Z` with two idle conversation leases and one active
+  `steady_follow` / `metadata_only` crawler lease. The first 41-second snapshot
+  remained accepted with no warning, rejection delta, lease attention, target
+  creation, reload, focus, or non-crawler navigation. A five-minute user timer
+  appends snapshots and fail-stops the exact crawler and isolated API.
 - Packet 6 installed preflight used canonical `a089b2ee9`, exact
   `wsl-chrome-3` Pro/personal identity, two minimal ordinary chats, and one
   `steady_follow` / `metadata_only` crawler. Receipt

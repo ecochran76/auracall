@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 23
+Plan version: 24
 
 ## Stable Objective
 
@@ -67,6 +67,14 @@ provider-specific acceptance exists.
   cancelled after 36 seconds and that receipt is retained as preflight-only
   evidence. Plan v23 requires those delta hard stops before the authoritative
   24-hour clock starts.
+- The delta hard stops merged through PR 75 at canonical `79ec9d3e1` and that
+  exact build is installed. Authoritative receipt
+  `725d6c25-cab9-4c9d-8b36-9a8622a440a2` started at
+  `2026-09-26T02:10:31.856Z` with two idle conversation leases and one active
+  metadata-only crawler lease. Its first post-start snapshot is accepted.
+  A five-minute local timer appends snapshots and cancels the exact crawler
+  plus stops the isolated API on any hard stop. The 24-hour elapsed gate is
+  still open; default enablement remains forbidden.
 
 ## Acceptance Gates
 
