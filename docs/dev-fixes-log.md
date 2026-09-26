@@ -1,3 +1,9 @@
+- 2026-09-25: Treat repeated policy identities under new ordinal filenames as
+  stale wire-in entries, not missing modules to synthesize. Compare the
+  `AGENTS.md` list to the installed catalog and actual policy directory, retain
+  the existing canonical module file, remove only the nonexistent duplicate
+  target, and rerun the deterministic plan audit.
+
 - 2026-09-25: Cold-start live-follow acceptance must compare the DevTools page
   ID to the new lease target ID, not merely count Chrome processes. Keep the
   page through its real heartbeat-extended idle TTL and require released lease,
