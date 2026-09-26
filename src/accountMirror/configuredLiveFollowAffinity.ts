@@ -101,6 +101,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		inspectTarget,
 		closeTarget,
 	});
+	let coldStartTargets: Array<{ targetId: string; url: string }> = [];
 	const crawler = await acquireLiveFollowCrawlerTab({
 		registry: runtime.registry,
 		scope,
@@ -119,8 +120,17 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			});
 			const endpoint = toEndpoint(started);
 			if (!endpoint) throw new Error("Live-follow browser startup returned no exact endpoint.");
+			if (!started.tabs) {
+				throw new Error("Live-follow browser startup returned no target census.");
+			}
+			coldStartTargets = started.tabs.flatMap((target) => {
+				if (target.type !== "page") return [];
+				const targetId = target.targetId ?? target.id;
+				return targetId && target.url ? [{ targetId, url: target.url }] : [];
+			});
 			return endpoint;
 		},
+		listTargets: async () => coldStartTargets,
 		inspectTarget,
 		openTarget: async ({ host, port, url }) => {
 			const target = await openChromeTarget(port, url, host);
