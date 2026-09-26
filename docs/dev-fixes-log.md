@@ -1,3 +1,10 @@
+- 2026-09-25: Cold-start live-follow acceptance must compare the DevTools page
+  ID to the new lease target ID, not merely count Chrome processes. Keep the
+  page through its real heartbeat-extended idle TTL and require released lease,
+  target absence, closed DevTools port, and absent proof-owned process as the
+  retirement receipt. A same-target conversation route mismatch is a separate
+  navigation defect; do not mask it by opening another page or retrying reads.
+
 - 2026-09-25: A managed-browser cold start can create the provider page before
   live-follow provisions its crawler. Carry the startup resolution's existing
   page census into lease provisioning and adopt the sole compatible unowned
