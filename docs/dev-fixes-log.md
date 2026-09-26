@@ -1,3 +1,10 @@
+- 2026-09-25: A managed-browser cold start can create the provider page before
+  live-follow provisions its crawler. Carry the startup resolution's existing
+  page census into lease provisioning and adopt the sole compatible unowned
+  target; do not issue a second DevTools list, inspect arbitrary warm
+  endpoints, or close a reusable page when reservation loses a race. Fail
+  closed when multiple compatible cold-start pages make ownership ambiguous.
+
 - 2026-09-25: An isolated lifecycle API must set every effectful cadence to an
   explicit zero even when the CLI help says the cadence defaults disabled;
   resolved configuration may still supply an interval. For tab-maintenance

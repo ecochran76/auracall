@@ -30,6 +30,9 @@ export interface DedicatedBrowserTabInput {
 	now?: () => Date;
 	resolveExistingEndpoint: () => Promise<LiveFollowBrowserEndpoint | null>;
 	startBrowser: () => Promise<LiveFollowBrowserEndpoint>;
+	listTargets?: (
+		endpoint: LiveFollowBrowserEndpoint,
+	) => Promise<Array<{ targetId: string; url: string }>>;
 	inspectTarget: (
 		endpoint: LiveFollowBrowserEndpoint,
 		targetId: string,
@@ -66,6 +69,7 @@ async function acquireDedicatedBrowserTab(
 ): Promise<LiveFollowCrawlerTab> {
 	const now = input.now ?? (() => new Date());
 	let endpoint = await input.resolveExistingEndpoint();
+	let startedBrowser = false;
 	const existing = await input.registry.findByWorkload(input.scope, workload);
 	if (existing) {
 		if (!endpoint) {
@@ -127,6 +131,7 @@ async function acquireDedicatedBrowserTab(
 		let startupError: unknown = null;
 		try {
 			endpoint = await input.startBrowser();
+			startedBrowser = true;
 		} catch (error) {
 			startupError = error;
 		}
@@ -139,11 +144,14 @@ async function acquireDedicatedBrowserTab(
 	}
 	if (!endpoint) throw new Error("Live-follow browser startup returned no endpoint.");
 	assertEndpoint(endpoint, input.scope.managedBrowserProfile);
-	const target = await input.openTarget({
-		host: endpoint.host,
-		port: endpoint.port,
-		url: input.targetUrl,
-	});
+	const reusableTarget = startedBrowser ? await prepareColdStartTarget(input, endpoint) : null;
+	const target =
+		reusableTarget ??
+		(await input.openTarget({
+			host: endpoint.host,
+			port: endpoint.port,
+			url: input.targetUrl,
+		}));
 	const reserved = await input.registry.reserve({
 		scope: input.scope,
 		targetId: requireNonEmpty(target.targetId, "targetId"),
@@ -155,22 +163,26 @@ async function acquireDedicatedBrowserTab(
 		targetFingerprint: requireNonEmpty(target.url, "targetUrl"),
 	});
 	if (!reserved.ok) {
-		await input.closeTarget({
-			host: endpoint.host,
-			port: endpoint.port,
-			targetId: requireNonEmpty(target.targetId, "targetId"),
-		});
+		if (!reusableTarget) {
+			await input.closeTarget({
+				host: endpoint.host,
+				port: endpoint.port,
+				targetId: requireNonEmpty(target.targetId, "targetId"),
+			});
+		}
 		throw new Error(`Live-follow crawler lease reservation failed: ${reserved.conflict.kind}.`);
 	}
-	const created = await input.registry.recordTargetAction({
+	const provisioningAction = reusableTarget ? "adopted" : "target-created";
+	const provisioned = await input.registry.recordTargetAction({
 		claim: reserved.value.claim,
-		action: "target-created",
+		action: provisioningAction,
 		occurredAt: now().toISOString(),
 		idleTtlMs: input.idleTtlMs,
 	});
-	if (!created.ok) {
+	if (!provisioned.ok) {
+		const actionLabel = reusableTarget ? "adoption" : "creation";
 		const accountingError = new Error(
-			`Live-follow crawler creation accounting failed: ${created.conflict.kind}.`,
+			`Live-follow crawler ${actionLabel} accounting failed: ${provisioned.conflict.kind}.`,
 		);
 		const lost = await input.registry.markLost({
 			leaseId: reserved.value.lease.leaseId,
@@ -210,7 +222,41 @@ async function acquireDedicatedBrowserTab(
 		}
 		throw accountingError;
 	}
-	return { ...created.value, endpoint };
+	return { ...provisioned.value, endpoint };
+}
+
+async function prepareColdStartTarget(
+	input: DedicatedBrowserTabInput,
+	endpoint: LiveFollowBrowserEndpoint,
+): Promise<{ targetId: string; url: string } | null> {
+	if (!input.listTargets) return null;
+	const ownedTargetIds = new Set(
+		(await input.registry.list())
+			.filter((lease) => lease.state !== "released")
+			.map((lease) => lease.targetId),
+	);
+	const unowned = (await input.listTargets(endpoint)).filter(
+		(target) => Boolean(target.targetId.trim()) && !ownedTargetIds.has(target.targetId),
+	);
+	const compatible = unowned.filter((target) => isProviderRoute(target.url, input.targetUrl));
+	if (compatible.length > 1) {
+		throw new Error("Live-follow browser startup returned multiple compatible unowned targets.");
+	}
+	if (compatible[0]) return compatible[0];
+	if (unowned.length > 1) {
+		throw new Error("Live-follow browser startup returned multiple incompatible unowned targets.");
+	}
+	const disposable = unowned[0];
+	if (!disposable) return null;
+	await input.closeTarget({
+		host: endpoint.host,
+		port: endpoint.port,
+		targetId: disposable.targetId,
+	});
+	if (await input.inspectTarget(endpoint, disposable.targetId)) {
+		throw new Error("Live-follow browser startup target remained present after close.");
+	}
+	return null;
 }
 
 async function releaseMissingCrawler(

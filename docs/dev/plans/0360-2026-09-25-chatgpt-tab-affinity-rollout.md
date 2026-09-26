@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 17
+Plan version: 18
 
 ## Stable Objective
 
@@ -404,6 +404,17 @@ but perfect one-tab lifecycle acceptance remains open.
 
 Terminal condition: cold-start acceptance has one created-or-adopted page,
 one crawler lease, zero unleased ChatGPT pages, and normal TTL retirement.
+
+Source evidence: the coordinator now adopts the only compatible, unowned page
+reported by a cold browser start and records adoption instead of target
+creation. A sole incompatible startup page is closed and proved absent before
+the crawler is created. It does not inspect arbitrary existing endpoints for
+adoption, and multiple ambiguous cold-start pages fail closed without opening
+another page. The configured ChatGPT adapter reuses the target census already
+returned by `resolveServiceTarget`, refuses an unavailable census, and avoids
+an extra DevTools list request. Focused provider-free tests and typecheck pass.
+Installed cold-start acceptance and TTL retirement remain required before this
+packet is accepted.
 
 ### Packet 6: Default enablement or retained rollback
 

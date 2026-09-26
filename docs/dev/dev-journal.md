@@ -1,5 +1,13 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- Packet 5I source repair now carries the `ensurePort` target census into the
+  live-follow coordinator. A cold start with exactly one compatible unowned
+  page adopts and leases that page instead of calling `openTarget`; a sole
+  incompatible startup page is closed and proved absent before crawler
+  creation, while ambiguous startup pages fail closed. Existing endpoints are
+  not searched for opportunistic adoption, and a reservation race never closes
+  a page this operation did not create. Provider-free coordinator coverage is green;
+  installed cold-start and TTL acceptance remain pending.
 - Installed Packet 5H acceptance completed refresh
   `acctmirror_2018493f-c299-4c10-8ac2-b5ed3c4bce00` on exact
   `wsl-chrome-3`/Pro-personal identity. Five interactions all used
