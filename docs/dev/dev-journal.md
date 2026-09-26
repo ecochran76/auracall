@@ -1,5 +1,18 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- Packet 5I installed acceptance passed on canonical `d45aab67c`. The sole
+  execute pass cold-started `wsl-chrome-3`, adopted the only ChatGPT page into
+  lease `8bd61d7d-e7b7-411c-9a86-572afdb74ac2`, and retained exactly that one
+  page throughout. Accounting remained creations/adoptions `0/1`; five active
+  interactions used the same scheduler operation and no provider warning
+  appeared. After the real 15-minute idle TTL, maintenance fenced and released
+  the settled lease for `idle-expired`; its target, port 45015, and Chrome
+  process were absent. Scheduler, drain, recovery, and completion resume were
+  disabled during retirement.
+- The same canary exposed a distinct follow-up: three detail reads waited about
+  two minutes each and failed because the exact leased target was at ChatGPT
+  root instead of the requested conversation route. No new tab or retry was
+  attempted. Packet 5J owns explicit same-target route-transition semantics.
 - Packet 5I source repair now carries the `ensurePort` target census into the
   live-follow coordinator. A cold start with exactly one compatible unowned
   page adopts and leases that page instead of calling `openTarget`; a sole

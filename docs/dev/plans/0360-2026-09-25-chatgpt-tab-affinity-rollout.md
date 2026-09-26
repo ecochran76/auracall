@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 18
+Plan version: 19
 
 ## Stable Objective
 
@@ -415,6 +415,29 @@ returned by `resolveServiceTarget`, refuses an unavailable census, and avoids
 an extra DevTools list request. Focused provider-free tests and typecheck pass.
 Installed cold-start acceptance and TTL retirement remain required before this
 packet is accepted.
+
+Installed evidence: canonical `d45aab67c` completed one isolated scheduler
+refresh `acctmirror_93f30b23-c053-466e-9d2e-b43b7798f01d` on exact
+`wsl-chrome-3`. Cold start produced one ChatGPT page whose target ID exactly
+matched the new live-follow lease. The lease recorded one adoption, zero target
+creations, and zero navigation/reload/focus/close actions. Five of six allowed
+provider interactions settled without warning. After the fixed idle TTL, the
+lease transitioned through lost fencing to released/settled with
+`retirementReason=idle-expired`; the target, port, and proof-owned Chrome
+process were absent. Packet 5I is accepted.
+
+### Packet 5J: Make leased detail-read route changes explicit
+
+- Diagnose why three detail reads in the Packet 5I canary found the exact
+  leased target at ChatGPT root instead of the requested conversation route.
+- Define the necessary crawler route transition as a governed, rate-limited
+  lease action without restoring random-tab selection or unnecessary refresh.
+- Prove provider-free and installed that sequential detail reads stay on the
+  same target, record the necessary navigation, and do not incur two-minute
+  route-mismatch timeouts.
+
+Terminal condition: multiple detail reads complete on one leased target with
+explicit route-transition accounting, no extra page, and no provider warning.
 
 ### Packet 6: Default enablement or retained rollback
 
