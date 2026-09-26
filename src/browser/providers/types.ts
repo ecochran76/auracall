@@ -47,6 +47,7 @@ export interface BrowserProviderListOptions {
 	historyLimit?: number;
 	historySince?: string;
 	allowNavigation?: boolean;
+	onTargetNavigation?: () => Promise<void> | void;
 	preserveActiveTab?: boolean;
 	tabLifecycle?: "retain" | "retain-new" | "dispose-new";
 	downloadVariantLabel?: string | null;

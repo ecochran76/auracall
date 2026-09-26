@@ -4919,11 +4919,23 @@ async function navigateToChatgptUrl(
 		fallbackToLocationAssign: true,
 		timeoutMs: 10_000,
 		fallbackTimeoutMs: 10_000,
+		interactionGovernor: options?.interactionGovernor,
+		interactionClass: "renavigation",
 		mutationAudit: resolveMutationAudit(client),
 		mutationSource: resolveMutationSource(client, "provider:chatgpt", "navigate-url"),
 	});
+	await recordChatgptTargetNavigation(settled.mutationPerformed, options);
 	assertChatgptNavigationSettledForTest(settled, url, projectId);
 }
+
+async function recordChatgptTargetNavigation(
+	mutationPerformed: boolean,
+	options?: BrowserProviderListOptions,
+): Promise<void> {
+	if (mutationPerformed) await options?.onTargetNavigation?.();
+}
+
+export const recordChatgptTargetNavigationForTest = recordChatgptTargetNavigation;
 
 export function assertChatgptNavigationSettledForTest(
 	settled: { ok: boolean; reason?: string },
@@ -7403,6 +7415,7 @@ async function navigateToChatgptConversation(
 	} else {
 		recordBrowserScrapeProviderAction(options, "chatgpt.skipSameRouteNavigation");
 	}
+	await recordChatgptTargetNavigation(settled.mutationPerformed, options);
 	if (!settled.ok) {
 		throw new Error(settled.reason || `ChatGPT conversation ${conversationId} did not settle`);
 	}

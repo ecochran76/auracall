@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 19
+Plan version: 20
 
 ## Stable Objective
 
@@ -55,6 +55,11 @@ provider-specific acceptance exists.
   deferred cleanup forever. Plan v4 adds a provider-neutral repair packet that
   preserves uncertainty history while making those operational fences
   self-retiring under revision-fenced target-absence or exact-target proof.
+- Packet 5J traced the leased detail-read timeout to contradictory option
+  semantics: Account Mirror explicitly granted navigation on its retained
+  crawler target, while the shared policy rejected every navigation whenever
+  that target was retained. The source repair is implemented and locally
+  verified; canonical integration and installed acceptance remain open.
 
 ## Acceptance Gates
 
@@ -438,6 +443,14 @@ process were absent. Packet 5I is accepted.
 
 Terminal condition: multiple detail reads complete on one leased target with
 explicit route-transition accounting, no extra page, and no provider warning.
+
+Source evidence: explicit `allowNavigation` now controls route authority even
+when `preserveActiveTab` retains the exact target. The ChatGPT transition uses
+the existing renavigation governor, and a physically performed transition
+records a lease navigation action and advances the claim used by the final
+heartbeat/idle transition. Focused provider-free tests pass 255 tests plus
+typecheck and formatting. Canonical integration and installed proof remain
+required before Packet 5J is accepted.
 
 ### Packet 6: Default enablement or retained rollback
 

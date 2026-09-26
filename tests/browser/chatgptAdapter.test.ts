@@ -7,8 +7,8 @@ import {
 	beforeChatgptBrowserInteractionForTest,
 	bindChatgptProviderSessionConnectionForTest,
 	buildChatgptAuthSessionIdentityExpression,
-	buildChatgptDisposableRootComposerExpression,
 	buildChatgptCreateProjectDialogStateExpressionForTest,
+	buildChatgptDisposableRootComposerExpression,
 	buildChatgptFallbackIdentityExpressionForTest,
 	buildChatgptFeatureProbeExpressionForTest,
 	buildChatgptPayloadDirectRetryOptionsForTest,
@@ -66,6 +66,7 @@ import {
 	readVisibleChatgptConversationFilesWithClientForTest,
 	readVisibleChatgptConversationMessagesWithClientForTest,
 	readVisibleChatgptDownloadArtifactProbesWithClientForTest,
+	recordChatgptTargetNavigationForTest,
 	recordChatgptTargetSessionForTest,
 	recoverVisibleChatgptBlockingSurfaceWithClientForTest,
 	resolveChatgptCanvasArtifactContentText,
@@ -95,6 +96,17 @@ import {
 	createBrowserScrapeTelemetryRecorder,
 	withBrowserScrapePendingOperation,
 } from "../../src/browser/providers/scrapeTelemetry.js";
+
+describe("ChatGPT leased-target navigation accounting", () => {
+	test("records only a navigation that was physically performed", async () => {
+		const onTargetNavigation = vi.fn(async () => undefined);
+
+		await recordChatgptTargetNavigationForTest(false, { onTargetNavigation });
+		await recordChatgptTargetNavigationForTest(true, { onTargetNavigation });
+
+		expect(onTargetNavigation).toHaveBeenCalledTimes(1);
+	});
+});
 
 describe("ChatGPT sidebar readiness recovery", () => {
 	test("falls through to the sidebar opener when the readiness transport times out", async () => {
@@ -253,7 +265,7 @@ describe("ChatGPT disposable root readiness", () => {
 	test("accepts the current provider-owned ProseMirror composer", () => {
 		const expression = buildChatgptDisposableRootComposerExpression();
 
-		expect(expression).toContain('form[data-chatgpt-composer] .ProseMirror');
+		expect(expression).toContain("form[data-chatgpt-composer] .ProseMirror");
 		expect(expression).toContain("editor.closest('form[data-chatgpt-composer]')");
 		expect(expression).toContain("location.pathname !== '/'");
 	});

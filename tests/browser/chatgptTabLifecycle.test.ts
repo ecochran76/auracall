@@ -336,7 +336,7 @@ describe("ChatGPT tab lifecycle", () => {
 		const input = {
 			tabTargetId: "job-tab",
 			allowNavigation: true,
-			preserveActiveTab: false,
+			preserveActiveTab: true,
 		};
 		expect(
 			shouldNavigateExactChatgptTargetForTest(
@@ -349,7 +349,7 @@ describe("ChatGPT tab lifecycle", () => {
 			shouldNavigateExactChatgptTargetForTest(
 				"https://chatgpt.com/",
 				"https://chatgpt.com/c/conversation-1",
-				{ ...input, preserveActiveTab: true },
+				{ ...input, allowNavigation: false },
 			),
 		).toBe(false);
 	});
