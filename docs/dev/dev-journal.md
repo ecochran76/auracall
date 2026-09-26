@@ -1,3 +1,18 @@
+## 2026-09-26 | Plan 0360 repaired soak restarted
+
+- Packet 6B merged through PR 81 at canonical `40ae70947`; the installed
+  evaluator bytes match the canonical build. The isolated API runs with its
+  scheduler and startup completion reconciliation disabled.
+- Fresh metadata-only completion
+  `acctmirror_completion_aa5f69be-e74d-49a4-af7e-447e1da65716` owns the sole
+  active live-follow binding. Receipt `b28638f3-f94b-4f54-ac8e-0a35e6066071`
+  started at `2026-09-26T21:29:39.975Z`, and its first timer-owned snapshot
+  remained accepted with no warning, lease attention, rejection delta,
+  reload, or focus.
+- The five-minute monitor now cancels the exact crawler, timer, and paired wake
+  on any rejected snapshot. Wake `wake_20260926_212947_7bcd` is pending for the
+  24-hour gate at `2026-09-27T21:29:47Z`.
+
 ## 2026-09-26 | Plan 0360 TTL-retirement soak repair
 
 - Receipt `d58d2aa1-8506-4b5c-8970-979fe164ac3d` failed after 10m54s because

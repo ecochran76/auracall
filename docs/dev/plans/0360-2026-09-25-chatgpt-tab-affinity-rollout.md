@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 29
+Plan version: 30
 
 ## Stable Objective
 
@@ -592,6 +592,21 @@ unsettled effects, and pre-expiry loss still fail closed. Monitor failure
 cleanup must also cancel the paired delayed wake atomically. Wake
 `wake_20260926_151317_de31` was cancelled at `2026-09-26T21:23:36Z`; the failed
 receipt remains immutable evidence and cannot be resumed.
+
+Packet 6B merged through PR 81 at canonical `40ae709477141a33cbb71b954699a8d3c6cf610e`
+and that exact evaluator build is installed. Fresh metadata-only completion
+`acctmirror_completion_aa5f69be-e74d-49a4-af7e-447e1da65716` started against
+the isolated API with automatic scheduler and startup reconciliation disabled.
+Authoritative receipt `b28638f3-f94b-4f54-ac8e-0a35e6066071` started at
+`2026-09-26T21:29:39.975Z`; its start and first timer-owned snapshot are
+accepted with one active crawler binding, zero lease attention, zero provider
+warnings, no admission-rejection delta, and no reload or focus action.
+
+The five-minute monitor is active. Its failure branch cancels that exact
+crawler, stops the snapshot timer, and cancels paired wake
+`wake_20260926_212947_7bcd`. The wake is pending for
+`2026-09-27T21:29:47Z`. This new clock supersedes the failed receipt but does
+not grant default enablement before terminal acceptance.
 
 ## Non-goals
 
