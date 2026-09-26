@@ -141,6 +141,71 @@ describe("tab-affinity soak evidence", () => {
 		});
 	});
 
+	it("allows a settled expired lease to pass through normal TTL retirement", () => {
+		const current = healthy();
+		current.leaseStates.active = 1;
+		current.leaseStates.lost = 1;
+		current.bindingLifetimes = [
+			{
+				workloadKind: "live-follow",
+				state: "lost",
+				effectState: "settled",
+				ageMs: 901_000,
+				lastMeaningfulUseAgeMs: 901_000,
+				idleRemainingMs: -1_000,
+				absoluteRemainingMs: 27_899_000,
+				idleExpired: true,
+				absoluteExpired: false,
+			},
+		];
+
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current })).toEqual({
+			accepted: true,
+			hardStops: [],
+		});
+	});
+
+	it("still rejects unexplained, unsettled, or pre-expiry lost leases", () => {
+		const unexplained = healthy();
+		unexplained.leaseStates.lost = 1;
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current: unexplained })).toEqual({
+			accepted: false,
+			hardStops: ["lost-lease"],
+		});
+
+		const unsettled = healthy();
+		unsettled.leaseStates.lost = 1;
+		unsettled.bindingLifetimes = [
+			{
+				workloadKind: "conversation",
+				state: "lost",
+				effectState: "outcome-unknown",
+				ageMs: 901_000,
+				lastMeaningfulUseAgeMs: 901_000,
+				idleRemainingMs: -1_000,
+				absoluteRemainingMs: 27_899_000,
+				idleExpired: true,
+				absoluteExpired: false,
+			},
+		];
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current: unsettled })).toEqual({
+			accepted: false,
+			hardStops: ["lost-lease"],
+		});
+
+		const preExpiry = structuredClone(unsettled);
+		preExpiry.bindingLifetimes[0] = {
+			...preExpiry.bindingLifetimes[0]!,
+			effectState: "settled",
+			idleRemainingMs: 1_000,
+			idleExpired: false,
+		};
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current: preExpiry })).toEqual({
+			accepted: false,
+			hardStops: ["lost-lease"],
+		});
+	});
+
 	it("rejects finish before the real minimum window", () => {
 		const event = createTabAffinitySoakEvent({
 			receiptId: "soak-1",

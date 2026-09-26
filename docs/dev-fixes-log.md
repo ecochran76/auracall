@@ -23297,3 +23297,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   and must remain reclaimable through normal lease TTL handling.
 - Regression coverage should prove both halves: the timeout pass advances its
   cursor, and the next pass consumes the remaining conversation.
+
+## 2026-09-26 | Distinguish normal TTL retirement from lease loss in soaks
+
+- A settled idle binding can briefly enter `lost` after its TTL while
+  maintenance proves the owned target absent and releases the lease. Treating
+  every sampled `lost` count as ownership failure makes normal retirement a
+  soak false positive.
+- Exempt only lost bindings whose effect is settled and whose idle or absolute
+  TTL is already expired. Missing lifetime evidence, pre-expiry loss, and
+  unsettled effects remain hard stops.
+- A rejected periodic snapshot is terminal immediately. Its monitor must
+  cancel the exact crawler, snapshot timer, and paired delayed evaluation wake
+  together; do not leave a 24-hour wake for a run that already failed.

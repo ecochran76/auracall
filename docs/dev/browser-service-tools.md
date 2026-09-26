@@ -181,13 +181,22 @@ pnpm run soak:tab-affinity finish --port 8080 --receipt-id <id> \
 
 Receipts live at `~/.auracall/soaks/tab-affinity-<id>.jsonl`. Snapshot and
 finish are read-only provider operations. They fail closed on an active
-provider warning, lost or restart-unverified lease, unknown outcome, expired
-idle lease, or navigation/reload/focus growth after the baseline. Finish also
-rejects an unelapsed 24-hour window. The helper records expected identity as
+provider warning, an unexplained or unsettled lost lease, a restart-unverified
+lease, unknown outcome, expired idle lease, or navigation/reload/focus growth
+after the baseline. A settled binding that is already past its idle or absolute
+TTL may pass briefly through `lost` while normal retirement proves the target
+absent; that expected transition is not a soak failure. Finish also rejects an
+unelapsed 24-hour window. The helper records expected identity as
 operator-supplied evidence; callers must independently verify live identity
 before starting the soak. Unknown-outcome attention covers only leases that
 still operationally fence a target; released uncertainty remains durable audit
 history but is not an active soak hard stop.
+
+An unattended monitor must treat a rejected snapshot as a terminal event. In
+the same failure branch it must cancel the exact crawler, stop its snapshot
+timer, and cancel the paired delayed evaluation wake. A 24-hour wake is only
+valid while every earlier snapshot remains accepted; leaving it pending after
+an early hard stop is stale control state.
 
 ChatGPT handoff submission uses the same coordinated browser client in explicit
 affinity mode. Existing conversation bindings are reused only after a live

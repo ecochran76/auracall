@@ -1,3 +1,19 @@
+## 2026-09-26 | Plan 0360 TTL-retirement soak repair
+
+- Receipt `d58d2aa1-8506-4b5c-8970-979fe164ac3d` failed after 10m54s because
+  the snapshot caught an older settled live-follow binding in the transient
+  `lost` phase of normal idle-TTL retirement. It later released as
+  `idle-expired` / `already-missing`; there were no provider warnings,
+  admission-rejection deltas, uncertain effects, reloads, or focuses.
+- The monitor cancelled the exact crawler and stopped its timer immediately,
+  but the 24-hour wake remained pending. Obsolete wake
+  `wake_20260926_151317_de31` is now cancelled.
+- Packet 6B exempts only settled, already-expired lost bindings from the soak
+  hard stop and keeps unexplained, unsettled, and pre-expiry loss fail-closed.
+  Future monitor failure paths must cancel the crawler, timer, and paired wake
+  together. Provider-free validation and canonical installation precede any
+  fresh soak.
+
 ## 2026-09-26 | Plan 0360 authoritative soak initiated
 
 - Scheduler-owned refresh `acctmirror_e8030c1b-95ae-4766-8522-ea1a61de9902`
