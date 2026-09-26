@@ -1,5 +1,15 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- The authoritative Packet 6 receipt failed after 9 minutes. Completion
+  `acctmirror_completion_6e171858-5e29-464b-95de-7674727bdb8c` hit three
+  consecutive detail-read timeouts and failed at
+  `2026-09-26T02:16:03.072Z`; the next five-minute snapshot recorded one
+  `outcome-unknown` fence and rejected the soak. The monitor fail-stopped the
+  exact crawler and isolated API. A later host reboot restored the enabled
+  normal API, which made two startup attempts; both were denied before browser
+  launch by `tab-leases-active`. The API was stopped again, wake
+  `wake_20260926_023312_48c7` was cancelled, and fresh process/port census found
+  no managed ChatGPT browser and no listeners on 18095, 18096, or 45015.
 - PR 75 merged the missing monotonic soak hard stops at canonical
   `79ec9d3e1`; 236 affected tests, typecheck, build, and the 360-plan audit
   passed locally, with GitHub Actions skipped by operator direction. The exact

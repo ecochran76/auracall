@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 24
+Plan version: 25
 
 ## Stable Objective
 
@@ -75,6 +75,18 @@ provider-specific acceptance exists.
   A five-minute local timer appends snapshots and cancels the exact crawler
   plus stops the isolated API on any hard stop. The 24-hour elapsed gate is
   still open; default enablement remains forbidden.
+- The authoritative soak failed after 9 minutes. Three consecutive crawler
+  detail reads timed out, the completion failed at
+  `2026-09-26T02:16:03.072Z`, and the snapshot at
+  `2026-09-26T02:19:56.632Z` recorded `outcome-unknown`. The five-minute
+  monitor cancelled the crawler and stopped the isolated API as designed.
+  After a host reboot, the enabled normal API made two startup attempts; both
+  were denied before browser launch by `tab-leases-active`. The normal API was
+  stopped again, the obsolete 24-hour wake was cancelled, and ports
+  18095/18096/45015 plus the managed browser process are absent. Receipt
+  `725d6c25-cab9-4c9d-8b36-9a8622a440a2` is failed evidence and cannot satisfy
+  the soak gate. Default enablement remains forbidden pending diagnosis and a
+  new full-duration receipt.
 
 ## Acceptance Gates
 
