@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 22
+Plan version: 23
 
 ## Stable Objective
 
@@ -60,6 +60,13 @@ provider-specific acceptance exists.
   crawler target, while the shared policy rejected every navigation whenever
   that target was retained. The source repair and installed acceptance are
   complete at canonical `2d6115f88`.
+- Packet 6's first installed start receipt proved the intended three-tab
+  coexistence, but preflight found that the receipt evaluator did not fail on
+  post-baseline target creation, a new admission rejection, or a provider
+  warning event that had cooled before the next snapshot. The crawler was
+  cancelled after 36 seconds and that receipt is retained as preflight-only
+  evidence. Plan v23 requires those delta hard stops before the authoritative
+  24-hour clock starts.
 
 ## Acceptance Gates
 

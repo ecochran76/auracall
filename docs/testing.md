@@ -662,10 +662,11 @@
         `pnpm run soak:tab-affinity <start|snapshot|finish> ...` reads local
         `/status` only and appends a mode-0600 JSONL receipt under
         `~/.auracall/soaks`. Finish rejects before 24 elapsed hours; warnings,
-        lost/uncertain/restart-unverified/expired leases, post-baseline
-        non-crawler navigation, and any reload/focus growth are terminal
-        findings. Governed live-follow navigation is reported separately by
-        workload and is expected while the crawler walks conversation routes.
+        lost/uncertain/restart-unverified/expired leases, new warning events or
+        admission rejections, post-baseline target creation or non-crawler
+        navigation, and any reload/focus growth are terminal findings.
+        Governed live-follow navigation is reported separately by workload and
+        is expected while the crawler walks conversation routes.
       - lease lifecycle regression contract:
         `pnpm vitest run tests/browser-service/tabLeaseRetirement.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts tests/browser/configuredChatgptTabMaintenance.test.ts` proves heartbeat expiry, uncertain idle retirement, repeated lost-lease reconciliation, absent-browser release, and exact-target post-close proof without a provider or browser.
       - installed-runtime MCP dashboard/status contract readback:

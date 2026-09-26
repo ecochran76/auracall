@@ -23274,3 +23274,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Publish sanitized target-action totals by workload class. Permit navigation
   growth only for `live-follow`; conversation, new-conversation, and ephemeral
   utility navigation remain soak hard stops, without exposing identifiers.
+
+## 2026-09-25 | Soak deltas must retain transient guard evidence
+
+- Symptom: a tab-affinity soak snapshot could remain accepted after a new
+  target creation or admission rejection, and after a provider warning had
+  cooled between periodic snapshots.
+- Cause: the evaluator checked current active warnings and selected lease and
+  target-action state, but did not compare the durable warning-event,
+  admission-rejection, or target-creation counters with its baseline.
+- Fix: fail closed on growth in all three counters while allowing history that
+  predates the receipt. Governed live-follow navigation remains allowed.
+- Lesson: periodic soak evidence must compare monotonic event counters for
+  transient safety signals; current-state fields alone can miss a violation.
