@@ -50901,3 +50901,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   navigation interactions settled within 0.5-3.8 seconds. Five provider
   interactions settled, no warning appeared, the lease finished idle/settled,
   one matching ChatGPT page remained, and the isolated API was stopped.
+
+## 2026-09-25 | Plan 0360 Packet 6 soak attribution preflight
+
+- The Packet 6 preflight found that the original soak evaluator rejected any
+  navigation growth, which now contradicts Packet 5J's necessary, governed
+  live-follow traversal.
+- Browser tab-concurrency status now aggregates target actions by sanitized
+  workload class. The soak permits only live-follow navigation growth and
+  retains its navigation hard stop for conversation, new-conversation, and
+  ephemeral utility workloads; reload and focus growth remain global stops.
+- Focused soak/runtime tests pass nine tests plus typecheck. The 24-hour clock
+  remains unstarted until this evaluator repair is canonical and installed.

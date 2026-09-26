@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 21
+Plan version: 22
 
 ## Stable Objective
 
@@ -467,6 +467,11 @@ and the isolated API was stopped. Packet 5J is accepted.
 
 ### Packet 6: Default enablement or retained rollback
 
+- Before starting the soak clock, reconcile the evaluator with Packet 5J:
+  permit governed live-follow route traversal while retaining a hard stop on
+  conversation, new-conversation, or utility navigation growth. Publish only
+  sanitized workload-class action totals; expose no target, conversation,
+  operation, tenant, or content identifier.
 - If every soak gate passes, change only the ChatGPT rollout default needed to
   select tab-affinity while retaining explicit `serialized` override.
 - Re-run provider-free and installed status checks and integrate the final

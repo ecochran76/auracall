@@ -73,6 +73,12 @@ export interface BrowserTabConcurrencyStatus {
 		absoluteExpired: boolean;
 	}>;
 	targetActions: BrowserTabActionCounts;
+	targetActionsByWorkload: {
+		conversations: BrowserTabActionCounts;
+		newConversations: BrowserTabActionCounts;
+		liveFollow: BrowserTabActionCounts;
+		ephemeral: BrowserTabActionCounts;
+	};
 	retirements: {
 		closed: number;
 		alreadyMissing: number;
@@ -225,17 +231,19 @@ export function createBrowserTabConcurrencyRuntime(
 								left.absoluteRemainingMs - right.absoluteRemainingMs,
 							].find((value) => value !== 0) ?? 0,
 					),
-				targetActions: leases.reduce<BrowserTabActionCounts>(
-					(totals, lease) => ({
-						targetCreations: totals.targetCreations + lease.actionCounts.targetCreations,
-						adoptions: totals.adoptions + lease.actionCounts.adoptions,
-						navigations: totals.navigations + lease.actionCounts.navigations,
-						reloads: totals.reloads + lease.actionCounts.reloads,
-						focuses: totals.focuses + lease.actionCounts.focuses,
-						closes: totals.closes + lease.actionCounts.closes,
-					}),
-					emptyActionCounts(),
-				),
+				targetActions: sumActionCounts(leases),
+				targetActionsByWorkload: {
+					conversations: sumActionCounts(
+						leases.filter((lease) => lease.workload.kind === "conversation"),
+					),
+					newConversations: sumActionCounts(
+						leases.filter((lease) => lease.workload.kind === "new-conversation"),
+					),
+					liveFollow: sumActionCounts(
+						leases.filter((lease) => lease.workload.kind === "live-follow"),
+					),
+					ephemeral: sumActionCounts(leases.filter((lease) => lease.workload.kind === "ephemeral")),
+				},
 				retirements: {
 					closed: leases.filter((lease) => lease.finalDisposition === "closed").length,
 					alreadyMissing: leases.filter((lease) => lease.finalDisposition === "already-missing")
@@ -276,6 +284,7 @@ function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStat
 		attention: { expiredIdle: 0, outcomeUnknown: 0, restartUnverified: 0 },
 		bindingLifetimes: [],
 		targetActions: emptyActionCounts(),
+		targetActionsByWorkload: emptyTargetActionsByWorkload(),
 		retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
 	};
 }
@@ -289,4 +298,27 @@ function emptyActionCounts(): BrowserTabActionCounts {
 		focuses: 0,
 		closes: 0,
 	};
+}
+
+function emptyTargetActionsByWorkload(): BrowserTabConcurrencyStatus["targetActionsByWorkload"] {
+	return {
+		conversations: emptyActionCounts(),
+		newConversations: emptyActionCounts(),
+		liveFollow: emptyActionCounts(),
+		ephemeral: emptyActionCounts(),
+	};
+}
+
+function sumActionCounts(leases: readonly BrowserTabLease[]): BrowserTabActionCounts {
+	return leases.reduce<BrowserTabActionCounts>(
+		(totals, lease) => ({
+			targetCreations: totals.targetCreations + lease.actionCounts.targetCreations,
+			adoptions: totals.adoptions + lease.actionCounts.adoptions,
+			navigations: totals.navigations + lease.actionCounts.navigations,
+			reloads: totals.reloads + lease.actionCounts.reloads,
+			focuses: totals.focuses + lease.actionCounts.focuses,
+			closes: totals.closes + lease.actionCounts.closes,
+		}),
+		emptyActionCounts(),
+	);
 }

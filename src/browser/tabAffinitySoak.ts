@@ -44,13 +44,23 @@ export function evaluateTabAffinitySoakSnapshot(input: {
 	if (current.attention.outcomeUnknown > 0) hardStops.push("outcome-unknown");
 	if (current.attention.restartUnverified > 0) hardStops.push("restart-unverified");
 	if (current.attention.expiredIdle > 0) hardStops.push("expired-idle");
-	if (current.targetActions.navigations > baseline.targetActions.navigations) {
+	const baselineNonCrawlerNavigations = nonCrawlerNavigationCount(baseline);
+	const currentNonCrawlerNavigations = nonCrawlerNavigationCount(current);
+	if (currentNonCrawlerNavigations > baselineNonCrawlerNavigations) {
 		hardStops.push("navigation-churn");
 	}
 	if (current.targetActions.reloads > baseline.targetActions.reloads)
 		hardStops.push("reload-churn");
 	if (current.targetActions.focuses > baseline.targetActions.focuses) hardStops.push("focus-churn");
 	return { accepted: hardStops.length === 0, hardStops };
+}
+
+function nonCrawlerNavigationCount(status: BrowserTabConcurrencyStatus): number {
+	return (
+		status.targetActionsByWorkload.conversations.navigations +
+		status.targetActionsByWorkload.newConversations.navigations +
+		status.targetActionsByWorkload.ephemeral.navigations
+	);
 }
 
 export function createTabAffinitySoakEvent(input: {
