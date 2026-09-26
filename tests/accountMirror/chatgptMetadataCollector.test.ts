@@ -3235,7 +3235,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(client.connectDevTools).toHaveBeenCalledTimes(1);
 	});
 
-	test("fails fast after three consecutive timed-out conversation detail boundaries", async () => {
+	test("checkpoints and yields after three consecutive timed-out conversation detail boundaries", async () => {
 		const never = () => new Promise<never>(() => {});
 		const checkpoints: AttachmentInventoryCursor[] = [];
 		const diagnostics: AccountMirrorCollectorDiagnosticEvent[] = [];
@@ -3245,37 +3245,64 @@ describe("ChatGPT account mirror metadata collector", () => {
 			provider: "chatgpt" as const,
 		}));
 
-		await expect(
-			readBoundedAttachmentInventory(
-				{
-					listProjectFiles: vi.fn(async () => []),
-					listConversationFiles: vi.fn(never),
-					getConversationContext: vi.fn(never),
+		const inventory = await readBoundedAttachmentInventory(
+			{
+				listProjectFiles: vi.fn(async () => []),
+				listConversationFiles: vi.fn(never),
+				getConversationContext: vi.fn(never),
+			},
+			[],
+			conversations,
+			12,
+			{
+				maxDetailReads: 12,
+				detailReadCap: 12,
+				providerCallTimeoutMs: 1,
+				prioritizeConversations: true,
+				onCheckpoint: (cursor) => {
+					checkpoints.push(cursor);
 				},
-				[],
-				conversations,
-				12,
-				{
-					maxDetailReads: 12,
-					detailReadCap: 12,
-					providerCallTimeoutMs: 1,
-					prioritizeConversations: true,
-					onCheckpoint: (cursor) => {
-						checkpoints.push(cursor);
-					},
-					onDiagnosticEvent: (event) => {
-						diagnostics.push(event);
-					},
+				onDiagnosticEvent: (event) => {
+					diagnostics.push(event);
 				},
-			),
-		).rejects.toThrow(
-			"Detail provider reads timed out for 3 consecutive conversations; last=conv_3.",
+			},
 		);
+		expect(inventory).toMatchObject({
+			truncated: true,
+			cursor: {
+				nextConversationIndex: 3,
+				scannedConversations: 3,
+				yielded: true,
+			},
+		});
 		expect(checkpoints.at(-1)).toMatchObject({
 			nextConversationIndex: 3,
 			scannedConversations: 3,
 		});
 		expect(diagnostics.filter((event) => event.event === "timed_out")).toHaveLength(6);
+
+		const resumedClient = {
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(async (conversationId: string) => ({
+				provider: "chatgpt" as const,
+				conversationId,
+				messages: [],
+				files: [],
+				artifacts: [],
+			})),
+		};
+		const resumed = await readBoundedAttachmentInventory(resumedClient, [], conversations, 12, {
+			maxDetailReads: 12,
+			detailReadCap: 12,
+			cursor: inventory.cursor,
+			prioritizeConversations: true,
+		});
+		expect(resumedClient.getConversationContext).toHaveBeenCalledWith("conv_4", expect.any(Object));
+		expect(resumed.cursor).toMatchObject({
+			nextConversationIndex: 0,
+			yielded: false,
+		});
 	});
 
 	test("fails fast after three consecutive unresolved conversation detail boundaries", async () => {

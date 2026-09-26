@@ -657,6 +657,10 @@ Terminology note:
   `retrievalFailed` means AuraCall did not obtain verified bytes and does not
   prove the provider asset is unavailable; only provider-confirmed 404/410 or
   explicit deleted/expired/not-found evidence is terminal unavailability.
+  Transient detail-read timeout streaks checkpoint and yield the current
+  live-follow pass; a later pass resumes from the next conversation. Because
+  live follow is read-only, such failures do not create an
+  `outcome-unknown` provider-effect fence.
   For ChatGPT conversation payload reads, an in-page 404 remains recoverable
   because the governed reload may still receive the exact payload with 200.
   Only an exact fallback conversation response with 404/410 is classified as

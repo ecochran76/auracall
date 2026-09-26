@@ -28,6 +28,13 @@ export interface ConfiguredLiveFollowAffinityContext {
 	completeFailure(error: unknown): Promise<void>;
 }
 
+export function classifyLiveFollowFailureEffectState(): "settled" {
+	// Live follow only reads provider state. A failed or cancelled traversal may
+	// have completed reads or navigation, but it cannot leave a prompt or other
+	// provider mutation with an unknown outcome.
+	return "settled";
+}
+
 export async function createConfiguredLiveFollowAffinity(input: {
 	userConfig: ResolvedUserConfig;
 	provider: "chatgpt" | "gemini" | "grok";
@@ -241,7 +248,8 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		operation: {
 			acquired: true,
 			operation: operationRecord,
-			release: () => finish("failed", "outcome-unknown", "affinity-context-released"),
+			release: () =>
+				finish("failed", classifyLiveFollowFailureEffectState(), "affinity-context-released"),
 		},
 		completeSuccess: () => finish("succeeded", "settled"),
 		completeFailure: async (error) => {
@@ -250,7 +258,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			try {
 				await finish(
 					"failed",
-					"outcome-unknown",
+					classifyLiveFollowFailureEffectState(),
 					error instanceof Error ? error.message : String(error),
 				);
 			} catch (settlementError) {

@@ -531,6 +531,10 @@
       - steady-follow refreshes reset attachment/detail inventory to the
         current top of the provider rail/project conversation list; full-sweep
         refreshes are the mode that resume the persisted deep attachment cursor
+      - three consecutive detail-read timeouts end the current pass as a
+        checkpointed yield, not a fatal live-follow failure; the next pass
+        resumes at the next conversation, and read-only failure settlement must
+        never create an `outcome-unknown` provider-effect fence
       - Gemini account-mirror discovery reads both the left rail and
         Gem/project conversation histories; project histories reserve bounded
         row budget, distribute it across Gems/projects before deepening one
