@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 26
+Plan version: 27
 
 ## Stable Objective
 
@@ -96,6 +96,17 @@ provider-specific acceptance exists.
   settle as known read-only outcomes. Focused regression coverage proves both
   the timeout pass and its subsequent catch-up pass. A new installed canary and
   full 24-hour receipt remain required; the failed receipt is unchanged.
+- Packet 6A merged through PR 78 at canonical `b209b44c4`, and the installed
+  collector byte-matches that build. Bounded metadata-only completion
+  `acctmirror_completion_ffde29cc-07cf-4771-9152-f0283af49c16` completed one
+  pass in 6m51s without an error, provider warning, or outcome-unknown fence.
+  Its bounded command path used one ephemeral utility lease, so this is direct
+  installed proof of the timeout/catch-up repair but not yet proof of the
+  scheduler live-follow failure finalizer. The settled lease expired normally,
+  lifecycle maintenance released it with target-already-missing proof, and the
+  final census found zero fenced leases, no managed browser, and no listeners
+  on 18095/18096/45015. The next gate is one scheduler-owned live-follow canary;
+  the 24-hour soak remains unstarted.
 
 ## Acceptance Gates
 
@@ -534,6 +545,12 @@ Terminal condition: provider-free regressions, widened local validation,
 canonical integration, exact installation, and one bounded installed canary
 pass without a new outcome-unknown fence. Only then may a new Packet 6 soak
 receipt start.
+
+Installed partial acceptance: canonical `b209b44c4` passes the bounded
+metadata-only completion path without reproducing the fatal timeout or stale
+uncertain lease. Because that path owns an ephemeral utility lease, Packet 6A
+remains open for one scheduler-owned live-follow pass that exercises the
+read-only failure finalizer directly.
 
 ## Non-goals
 
