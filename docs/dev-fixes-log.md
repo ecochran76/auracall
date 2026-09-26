@@ -23287,6 +23287,20 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   predates the receipt. Governed live-follow navigation remains allowed.
 - Lesson: periodic soak evidence must compare monotonic event counters for
   transient safety signals; current-state fields alone can miss a violation.
+
+## 2026-09-26 | Preserve ChatGPT history titles for metadata-only cache rows
+
+- ChatGPT may expose conversation anchors without usable visible text while
+  retaining the human-readable title in its local conversation-history
+  metadata.
+- If a metadata collector consumes that history for timestamps, it must also
+  retain the supplied title and use it before falling back to a provider ID.
+  Otherwise a technically populated cache becomes unusable for discovery even
+  though no content materialization was requested.
+- Keep visible row text authoritative when present, and treat history metadata
+  as a read-only fallback. This must not trigger navigation, refresh, or detail
+  reads.
+
 ## 2026-09-26 | Keep resumable read timeouts out of uncertain-effect fences
 
 - A persisted continuation cursor is recovery state: transient detail-read

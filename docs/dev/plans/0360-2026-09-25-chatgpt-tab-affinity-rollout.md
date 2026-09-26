@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 30
+Plan version: 31
 
 ## Stable Objective
 
@@ -607,6 +607,17 @@ crawler, stops the snapshot timer, and cancels paired wake
 `wake_20260926_212947_7bcd`. The wake is pending for
 `2026-09-27T21:29:47Z`. This new clock supersedes the failed receipt but does
 not grant default enablement before terminal acceptance.
+
+Packet 6C addresses a cache-usability defect discovered during readback of the
+running metadata-only soak. ChatGPT's local conversation-history cache already
+supplied titles alongside timestamps, but the list scraper discarded those
+titles. When current sidebar anchors were virtualized or textless, every row
+fell through to its conversation UUID. The provider-free repair retains the
+history title and uses it after visible row text/options but before anchor or
+UUID fallback. It performs no navigation, refresh, tab creation, or provider
+mutation. The running soak remains untouched while this source repair is
+validated and integrated; installed cache repair requires a separately bounded
+read-only canary before its output is accepted.
 
 ## Non-goals
 
