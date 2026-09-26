@@ -7528,6 +7528,7 @@ async function scrapeChatgptConversations(
           if (!item || typeof item !== 'object' || Array.isArray(item)) return;
           const id = normalize(item.id || item.conversation_id || item.conversationId);
           if (!id) return;
+          const title = normalize(item.title || item.name);
           const updatedAt =
             normalizeTimestamp(item.update_time) ||
             normalizeTimestamp(item.updated_at) ||
@@ -7548,6 +7549,7 @@ async function scrapeChatgptConversations(
           const previous = entries.get(id);
           if (previous && Date.parse(previous.updatedAt) >= Date.parse(updatedAt)) return;
           entries.set(id, {
+            title: title && title !== id ? title : null,
             updatedAt,
             createdAt: normalizeTimestamp(item.create_time || item.created_at || item.createdAt),
             projectId,
@@ -7663,6 +7665,7 @@ async function scrapeChatgptConversations(
         const titleCandidate =
           rowTitle ||
           rowLabel ||
+          normalize(cached?.title || '') ||
           normalize(anchor.getAttribute('aria-label') || '') ||
           normalize(anchor.textContent || '') ||
           normalize(anchor.getAttribute('title') || '');

@@ -498,6 +498,10 @@
         submission blocked by stale cooldown data
       - omitted `--max-passes` means unbounded live follow; `--max-passes`
         is only a debug/test cap
+      - ChatGPT metadata-only collection should retain conversation-history
+        metadata titles when a virtualized sidebar anchor has no usable text;
+        `tests/browser/chatgptAdapter.test.ts` guards the read-only fallback and
+        its precedence over anchor labels and UUID fallback
       - full-sweep backfill is explicit with
         `auracall api mirror-complete --sweep-mode full_sweep --materialization-policy full_missing_assets`;
         optional asset-kind, max-item, snapshot-refresh, and force flags flow

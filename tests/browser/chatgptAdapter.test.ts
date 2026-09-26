@@ -3698,6 +3698,28 @@ describe("matchesChatgptDownloadButtonProbe", () => {
 });
 
 describe("normalizeChatgptConversationLinkProbes", () => {
+	test("keeps metadata-only conversation titles available when sidebar rows have no text", async () => {
+		const source = await fs.readFile(
+			path.resolve("src/browser/providers/chatgptAdapter.ts"),
+			"utf8",
+		);
+		const start = source.indexOf("async function scrapeChatgptConversations(");
+		const end = source.indexOf(
+			"export function normalizeChatgptConversationHistoryLimit",
+			start,
+		);
+		const scraper = source.slice(start, end);
+
+		expect(start).toBeGreaterThanOrEqual(0);
+		expect(end).toBeGreaterThan(start);
+		expect(scraper).toContain("const title = normalize(item.title || item.name);");
+		expect(scraper).toContain("title: title && title !== id ? title : null,");
+		expect(scraper).toContain("normalize(cached?.title || '') ||");
+		expect(scraper.indexOf("normalize(cached?.title || '') ||")).toBeLessThan(
+			scraper.indexOf("normalize(anchor.getAttribute('aria-label') || '') ||"),
+		);
+	});
+
 	test("dedupes conversation ids and prefers concrete titles, urls, and project ids", () => {
 		expect(
 			normalizeChatgptConversationLinkProbes([

@@ -1,3 +1,17 @@
+## 2026-09-26 | Plan 0360 metadata-only title repair
+
+- Readback of today's ChatGPT cache found valid conversation records whose
+  titles had all degraded to provider UUIDs. The metadata collector was reading
+  ChatGPT's local conversation-history objects for timestamps while discarding
+  their title field; virtualized/textless sidebar anchors then had no usable
+  fallback.
+- Packet 6C retains the already-local history title and prefers it before
+  anchor attributes and UUID fallback. This is a read-only extraction change:
+  it adds no provider interaction, navigation, reload, or tab creation.
+- Focused provider-free validation is in progress. The active Packet 6B soak,
+  its timer, and its delayed wake remain untouched pending canonical source and
+  installed-runtime proof.
+
 ## 2026-09-26 | Plan 0360 repaired soak restarted
 
 - Packet 6B merged through PR 81 at canonical `40ae70947`; the installed

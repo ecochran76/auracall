@@ -640,6 +640,10 @@ Terminology note:
   time, source surface, recency rank, and index-row fingerprint. The same object
   is copied into `/v1/search` row metadata for account-mirror conversations; it
   is diagnostic only and never turns cache reads into live provider validation.
+  ChatGPT metadata-only refreshes preserve a human-readable conversation title
+  from the visible index row or ChatGPT's local conversation-history metadata;
+  a virtualized or textless sidebar row does not by itself reduce the cached
+  title to the provider conversation UUID.
   Refresh merges preserve the provider-observed conversation order for newly
   seen rows and append older unobserved cached rows, so a conversation that
   moves to the top of a provider rail/project index stays top-ranked in cache.
