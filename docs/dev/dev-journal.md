@@ -50874,3 +50874,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `acctmirror_855cb75e-9df6-4645-97d5-b315ce1593d6`, not to the terminal
   materialization job. Packet 5H will bind that scheduled pass exclusively to
   its crawler tab.
+
+## 2026-09-25 | Plan 0360 leased detail-read navigation
+
+- Packet 5I's exact crawler target stayed at ChatGPT root because Account
+  Mirror supplied both `allowNavigation=true` and `preserveActiveTab=true`,
+  while the shared navigation policy treated retention as an unconditional
+  navigation ban.
+- Packet 5J makes explicit navigation authority decisive, keeps the same
+  leased target, governs the transition as `renavigation`, and records only a
+  physically performed transition in the lease action counts. The updated
+  claim is carried into terminal heartbeat and idle transitions.
+- Five focused provider-free suites pass 255 tests; typecheck and formatting
+  pass. Installed sequential-read acceptance remains open.

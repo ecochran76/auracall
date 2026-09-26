@@ -173,6 +173,21 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		baseGovernor,
 		now: input.now,
 	});
+	let crawlerClaim = crawler.claim;
+	const recordTargetNavigation = async () => {
+		const recorded = await runtime.registry?.recordTargetAction({
+			claim: crawlerClaim,
+			action: "navigation",
+			occurredAt: (input.now ?? (() => new Date()))().toISOString(),
+			idleTtlMs: 15 * 60_000,
+		});
+		if (!recorded?.ok) {
+			throw new Error(
+				`Live-follow crawler navigation accounting failed: ${recorded?.conflict.kind ?? "missing"}.`,
+			);
+		}
+		crawlerClaim = recorded.value.claim;
+	};
 	let finished = false;
 	let warningRecorded = false;
 	const finish = async (
@@ -183,7 +198,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		if (finished) return;
 		await interactionGovernor.close({ outcome, effectState, reason });
 		const used = await runtime.registry?.recordMeaningfulUse({
-			claim: crawler.claim,
+			claim: crawlerClaim,
 			now: (input.now ?? (() => new Date()))().toISOString(),
 			idleTtlMs: 15 * 60_000,
 			effectState,
@@ -218,6 +233,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 	return {
 		tabAffinity: {
 			host: crawler.endpoint.host,
+			onTargetNavigation: recordTargetNavigation,
 			port: crawler.endpoint.port,
 			targetId: crawler.lease.targetId,
 		},

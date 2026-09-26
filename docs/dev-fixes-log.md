@@ -23253,3 +23253,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   the tab lease. A late continuation must fail before another browser action;
   if it races with reservation, record an explicit cancelled/none settlement
   instead of leaving an in-flight orphan.
+
+## 2026-09-25 | Separate retained-tab lifetime from route authority
+
+- `preserveActiveTab` means retain and reuse the exact target; it must not
+  override an explicit `allowNavigation=true` grant for a routine that owns
+  that target.
+- Route transitions on a leased crawler must pass through the aggregate
+  interaction governor and record a lease navigation action only after a
+  physical navigation occurs. Carry the returned revision-fenced claim into
+  subsequent heartbeat and idle transitions.
+- An explicit `allowNavigation=false` remains a hard navigation prohibition,
+  independent of retention policy.

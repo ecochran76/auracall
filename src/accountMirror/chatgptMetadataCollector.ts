@@ -123,6 +123,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	interactionGovernor?: BrowserInteractionGovernor;
 	tabAffinity?: {
 		host: string;
+		onTargetNavigation?: () => Promise<void> | void;
 		port: number;
 		targetId: string;
 	};
@@ -291,6 +292,7 @@ function createAccountMirrorListOptions(
 			? {
 					allowNavigation: true,
 					host: tabAffinity.host,
+					onTargetNavigation: tabAffinity.onTargetNavigation,
 					port: tabAffinity.port,
 					preserveActiveTab: true,
 					tabLifecycle: "retain" as const,

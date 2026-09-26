@@ -1,6 +1,8 @@
-import type { BrowserProviderListOptions } from './types.js';
+import type { BrowserProviderListOptions } from "./types.js";
 
 export function providerNavigationAllowed(options?: BrowserProviderListOptions): boolean {
-  return options?.preserveActiveTab !== true;
+	if (options?.allowNavigation !== undefined) {
+		return options.allowNavigation;
+	}
+	return options?.preserveActiveTab !== true;
 }
-

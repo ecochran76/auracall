@@ -92,9 +92,11 @@ describe("ChatGPT account mirror metadata collector", () => {
 
 	test("pins affinity collection to one retained crawler target", () => {
 		const governor = { beforeInteraction: vi.fn(async () => undefined) };
+		const onTargetNavigation = vi.fn(async () => undefined);
 		expect(
 			createAccountMirrorListOptionsForTest(undefined, governor, undefined, {
 				host: "127.0.0.1",
+				onTargetNavigation,
 				port: 45011,
 				targetId: "crawler-1",
 			}),
@@ -107,6 +109,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 			tabLifecycle: "retain",
 			tabTargetId: "crawler-1",
 			interactionGovernor: governor,
+			onTargetNavigation,
 		});
 	});
 
