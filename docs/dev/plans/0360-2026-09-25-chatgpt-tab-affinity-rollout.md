@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 27
+Plan version: 28
 
 ## Stable Objective
 
@@ -551,6 +551,32 @@ metadata-only completion path without reproducing the fatal timeout or stale
 uncertain lease. Because that path owns an ephemeral utility lease, Packet 6A
 remains open for one scheduler-owned live-follow pass that exercises the
 read-only failure finalizer directly.
+
+Installed acceptance: canonical `b209b44c4` completed scheduler refresh
+`acctmirror_e8030c1b-95ae-4766-8522-ea1a61de9902` through the scheduler-owned
+live-follow lease. Four paced detail stages completed despite inner payload
+timeouts, the refresh settled successfully, and no provider warning, new
+admission rejection, or outcome-unknown fence appeared. Two ordinary
+conversation bindings then returned their exact minimal response tokens while
+remaining independently leased.
+
+The authoritative Packet 6 soak started at `2026-09-26T15:11:48.207Z` in
+receipt `d58d2aa1-8506-4b5c-8970-979fe164ac3d`, bound to installed version
+`0.1.1`, exact identity `eric.cochran@soylei.com`, and source commit
+`b209b44c4a4b5f33fb652ffc02f8a2b81b202d5b`. Its first snapshot and the first
+timer-owned snapshot were accepted with two active-chat bindings, one active
+metadata-only live-follow binding, zero provider warnings, zero lease
+attention, zero reloads/focuses, and no admission-rejection delta. One older
+settled live-follow binding remains idle under its ordinary TTL; it is not an
+executing completion. The separate full-sweep completion remains parked after
+shutdown with automatic startup reconciliation disabled.
+
+A five-minute user-systemd timer appends snapshots and cancels only completion
+`acctmirror_completion_f9081257-1854-4808-85cc-87ef9e4dfdf9` if a snapshot
+fails. Wake `wake_20260926_151317_de31` is scheduled against the ready
+repo-scoped wake monitor for the 24-hour evaluation gate. The soak is initiated,
+not accepted: default enablement and issue closure remain forbidden until the
+minimum elapsed window passes and the terminal receipt evaluation is accepted.
 
 ## Non-goals
 
