@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 20
+Plan version: 21
 
 ## Stable Objective
 
@@ -58,8 +58,8 @@ provider-specific acceptance exists.
 - Packet 5J traced the leased detail-read timeout to contradictory option
   semantics: Account Mirror explicitly granted navigation on its retained
   crawler target, while the shared policy rejected every navigation whenever
-  that target was retained. The source repair is implemented and locally
-  verified; canonical integration and installed acceptance remain open.
+  that target was retained. The source repair and installed acceptance are
+  complete at canonical `2d6115f88`.
 
 ## Acceptance Gates
 
@@ -449,8 +449,21 @@ when `preserveActiveTab` retains the exact target. The ChatGPT transition uses
 the existing renavigation governor, and a physically performed transition
 records a lease navigation action and advances the claim used by the final
 heartbeat/idle transition. Focused provider-free tests pass 255 tests plus
-typecheck and formatting. Canonical integration and installed proof remain
-required before Packet 5J is accepted.
+typecheck, build, formatting, and the plan audit. The source was integrated
+through PR 72 at canonical `2d6115f88`.
+
+Installed evidence: canonical `2d6115f88` completed scheduler refresh
+`acctmirror_d066eff9-472f-4b95-828c-26537cca119e` on exact `wsl-chrome-3`.
+Four sequential detail reads used lease
+`d4764519-a9a3-47a0-a34b-f19e33a32f01` and target
+`E6D96203C19C96D296FB48B532C0BCD0`. The lease recorded one adoption, four
+navigations, and zero creations/reloads/focuses/closes. Each navigation had a
+separate settled governed interaction; all four detail stages completed with
+no route-mismatch error. The approximately two-minute stage spacing came from
+the configured cooldown, while the navigation interactions themselves settled
+in 0.5-3.8 seconds. One exact ChatGPT page remained bound to the idle/settled
+lease, all five provider interactions settled, no provider warning appeared,
+and the isolated API was stopped. Packet 5J is accepted.
 
 ### Packet 6: Default enablement or retained rollback
 

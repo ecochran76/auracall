@@ -50887,3 +50887,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   claim is carried into terminal heartbeat and idle transitions.
 - Five focused provider-free suites pass 255 tests; typecheck and formatting
   pass. Installed sequential-read acceptance remains open.
+
+## 2026-09-25 | Plan 0360 installed Packet 5J acceptance
+
+- Canonical `2d6115f88` completed one isolated `wsl-chrome-3` scheduler pass
+  across four sequential detail conversations on one crawler lease and one
+  exact target.
+- The lease recorded one adoption and four navigations with zero target
+  creations, reloads, focuses, or closes. Every navigation had a settled
+  aggregate-ledger record, and every detail stage completed without the prior
+  route-mismatch failure.
+- The approximately two-minute intervals were the configured cooldown; actual
+  navigation interactions settled within 0.5-3.8 seconds. Five provider
+  interactions settled, no warning appeared, the lease finished idle/settled,
+  one matching ChatGPT page remained, and the isolated API was stopped.
