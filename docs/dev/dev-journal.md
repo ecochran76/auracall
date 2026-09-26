@@ -1,5 +1,14 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- Packet 6 installed preflight used canonical `a089b2ee9`, exact
+  `wsl-chrome-3` Pro/personal identity, two minimal ordinary chats, and one
+  `steady_follow` / `metadata_only` crawler. Receipt
+  `00b81fbf-18c5-4ca6-84a5-2067e8551475` was accepted for 36 seconds with
+  three fenced leases, no current warning, and no lease attention. It is not
+  the authoritative soak: inspection found the evaluator omitted
+  post-baseline creation, admission-rejection, and cooled-warning-event
+  deltas. The crawler was cancelled without retry; the receipt remains as
+  preflight evidence while those hard stops are repaired.
 - Policy target integrity was restored before Packet 5J work. `AGENTS.md` had
   one valid policy list through 0034 followed by 32 duplicate module identities
   wired to nonexistent 0035-0066 filenames. The dead duplicate block was

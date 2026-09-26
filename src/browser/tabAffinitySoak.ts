@@ -40,10 +40,19 @@ export function evaluateTabAffinitySoakSnapshot(input: {
 	const hardStops: string[] = [];
 	if (current.mode !== "tab-affinity" || !current.enabled) hardStops.push("tab-affinity-disabled");
 	if (current.providerWarnings.active > 0) hardStops.push("provider-warning-active");
+	if (current.providerWarningEventCount > baseline.providerWarningEventCount) {
+		hardStops.push("provider-warning-event");
+	}
+	if (current.admissionRejections.total > baseline.admissionRejections.total) {
+		hardStops.push("admission-rejection");
+	}
 	if (current.leaseStates.lost > 0) hardStops.push("lost-lease");
 	if (current.attention.outcomeUnknown > 0) hardStops.push("outcome-unknown");
 	if (current.attention.restartUnverified > 0) hardStops.push("restart-unverified");
 	if (current.attention.expiredIdle > 0) hardStops.push("expired-idle");
+	if (current.targetActions.targetCreations > baseline.targetActions.targetCreations) {
+		hardStops.push("target-creation-churn");
+	}
 	const baselineNonCrawlerNavigations = nonCrawlerNavigationCount(baseline);
 	const currentNonCrawlerNavigations = nonCrawlerNavigationCount(current);
 	if (currentNonCrawlerNavigations > baselineNonCrawlerNavigations) {

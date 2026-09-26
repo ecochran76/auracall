@@ -81,13 +81,17 @@ describe("tab-affinity soak evidence", () => {
 		});
 	});
 
-	it("fails closed on guard, lease, uncertainty, expiry, and target churn", () => {
+	it("fails closed on guard, quota, lease, uncertainty, expiry, and target churn", () => {
 		const current = healthy();
 		current.providerWarnings.active = 1;
+		current.providerWarningEventCount = 1;
+		current.admissionRejections.total = 1;
+		current.admissionRejections.latestReason = "minute-interaction-limit";
 		current.leaseStates.lost = 1;
 		current.attention.outcomeUnknown = 1;
 		current.attention.restartUnverified = 1;
 		current.attention.expiredIdle = 1;
+		current.targetActions.targetCreations = 4;
 		current.targetActions.navigations = 1;
 		current.targetActionsByWorkload.conversations.navigations = 1;
 		current.targetActions.reloads = 1;
@@ -96,14 +100,33 @@ describe("tab-affinity soak evidence", () => {
 			accepted: false,
 			hardStops: [
 				"provider-warning-active",
+				"provider-warning-event",
+				"admission-rejection",
 				"lost-lease",
 				"outcome-unknown",
 				"restart-unverified",
 				"expired-idle",
+				"target-creation-churn",
 				"navigation-churn",
 				"reload-churn",
 				"focus-churn",
 			],
+		});
+	});
+
+	it("allows warning and rejection history that predates the soak baseline", () => {
+		const baseline = healthy();
+		baseline.providerWarningEventCount = 2;
+		baseline.admissionRejections = {
+			total: 3,
+			latestReason: "minute-interaction-limit",
+			reasons: { "minute-interaction-limit": 3 },
+		};
+		const current = structuredClone(baseline);
+
+		expect(evaluateTabAffinitySoakSnapshot({ baseline, current })).toEqual({
+			accepted: true,
+			hardStops: [],
 		});
 	});
 
