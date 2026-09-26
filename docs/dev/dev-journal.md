@@ -1,3 +1,23 @@
+## 2026-09-26 | Plan 0360 authoritative soak initiated
+
+- Scheduler-owned refresh `acctmirror_e8030c1b-95ae-4766-8522-ea1a61de9902`
+  completed four paced detail stages on canonical `b209b44c4` without a
+  provider warning, new admission rejection, or outcome-unknown fence. Two
+  minimal ordinary ChatGPT prompts then returned their exact response tokens
+  on two independent settled conversation bindings.
+- Metadata-only live-follow completion
+  `acctmirror_completion_f9081257-1854-4808-85cc-87ef9e4dfdf9` is the sole
+  executing crawler loop. The scheduler-created full-sweep record is parked
+  after shutdown and startup completion reconciliation is disabled.
+- Authoritative receipt `d58d2aa1-8506-4b5c-8970-979fe164ac3d` started at
+  `2026-09-26T15:11:48.207Z`. The start, immediate snapshot, and first
+  timer-owned snapshot were accepted with no warnings or lease attention and
+  no reload/focus action. A five-minute fail-stop timer is active; wake
+  `wake_20260926_151317_de31` will resume evaluation at the 24-hour gate.
+- This initiates but does not accept the soak. ChatGPT default enablement and
+  issue 49 closure remain gated on the elapsed terminal evaluation. GitHub
+  Actions remain skipped by operator direction.
+
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
 - The authoritative Packet 6 receipt failed after 9 minutes. Completion
