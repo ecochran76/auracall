@@ -50954,3 +50954,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   fence without weakening provider guards or interaction accounting.
 - Focused regression coverage passes 59 tests. No browser or provider retry
   was launched; the managed API remains stopped.
+## 2026-09-26 | Plan 0360 Packet 6A installed partial acceptance
+
+- PR 78 merged at canonical `b209b44c4`; the installed collector and canonical
+  build both hash to
+  `568ca0c735ab20daca4cd4bb17bac80acd3fec18732185a176e89f580f9e6abf`.
+- Bounded metadata-only completion
+  `acctmirror_completion_ffde29cc-07cf-4771-9152-f0283af49c16` completed one
+  pass in 6m51s with no error, warning, or outcome-unknown fence. It exercised
+  an ephemeral utility lease, so scheduler-owned live-follow settlement still
+  needs one bounded canary before a new soak starts.
+- The settled utility lease expired normally and was released as
+  already-missing after exact proof-owned browser shutdown. Final readback is
+  zero fenced leases and zero lease attention; APIs, port 45015, and the
+  wsl-chrome-3 managed browser are stopped/absent.
