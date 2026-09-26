@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 31
+Plan version: 32
 
 ## Stable Objective
 
@@ -618,6 +618,23 @@ UUID fallback. It performs no navigation, refresh, tab creation, or provider
 mutation. The running soak remains untouched while this source repair is
 validated and integrated; installed cache repair requires a separately bounded
 read-only canary before its output is accepted.
+
+Packet 6C merged through PR 83 at canonical
+`4c6d06d512b11d8aa838c501490f617d5549ea9a`; the installed adapter byte-matches
+that canonical build. Because the running API still held the prior code in
+memory, obsolete completion
+`acctmirror_completion_aa5f69be-e74d-49a4-af7e-447e1da65716` was cancelled
+after ten passes, its snapshot timer was stopped, and paired wake
+`wake_20260926_212947_7bcd` was cancelled. Receipt
+`b28638f3-f94b-4f54-ac8e-0a35e6066071` therefore cannot satisfy the elapsed
+soak gate.
+
+The canonical installed runtime then refreshed the ChatGPT conversation list
+through the repaired read-only adapter. All ten returned cache rows carried
+human-readable titles and zero used the conversation UUID as title. The probe
+performed no prompt submission or asset materialization. Packet 6C is accepted;
+a fresh full-duration Packet 6 receipt remains required before default
+enablement.
 
 ## Non-goals
 

@@ -8,9 +8,18 @@
 - Packet 6C retains the already-local history title and prefers it before
   anchor attributes and UUID fallback. This is a read-only extraction change:
   it adds no provider interaction, navigation, reload, or tab creation.
-- Focused provider-free validation is in progress. The active Packet 6B soak,
-  its timer, and its delayed wake remain untouched pending canonical source and
-  installed-runtime proof.
+- Provider-free validation passed 239 focused tests, typecheck, build, plan
+  audit, and focused lint. GitHub Actions remained skipped by operator
+  direction. PR 83 merged at canonical `4c6d06d51`, and the installed adapter
+  byte-matches that build.
+- The old in-memory API could not prove the repair. Its obsolete completion was
+  cancelled after ten passes, the snapshot timer stopped, and paired wake
+  `wake_20260926_212947_7bcd` cancelled. The canonical installed read-only list
+  refresh then returned and persisted ten human-readable titles with zero
+  UUID-as-title rows; no prompt or asset materialization occurred.
+- Packet 6C is accepted. The cancelled receipt cannot satisfy the elapsed soak
+  gate, so the next step is a fresh full-duration receipt on the repaired
+  runtime.
 
 ## 2026-09-26 | Plan 0360 repaired soak restarted
 
