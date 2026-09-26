@@ -50943,3 +50943,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   ephemeral utility workloads; reload and focus growth remain global stops.
 - Focused soak/runtime tests pass nine tests plus typecheck. The 24-hour clock
   remains unstarted until this evaluator repair is canonical and installed.
+## 2026-09-26 | Plan 0360 resumable timeout repair
+
+- Reproduced the failed Packet 6 behavior provider-free: the third consecutive
+  detail timeout threw after writing a usable continuation cursor, and the
+  live-follow failure finalizer marked the read-only crawler outcome unknown.
+- Packet 6A now yields the current pass at that threshold and resumes the next
+  pass at the following conversation. Live-follow failure and release paths
+  settle as known read-only outcomes, eliminating the permanent uncertainty
+  fence without weakening provider guards or interaction accounting.
+- Focused regression coverage passes 59 tests. No browser or provider retry
+  was launched; the managed API remains stopped.

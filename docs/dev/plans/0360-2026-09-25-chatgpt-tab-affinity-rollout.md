@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 25
+Plan version: 26
 
 ## Stable Objective
 
@@ -87,6 +87,15 @@ provider-specific acceptance exists.
   `725d6c25-cab9-4c9d-8b36-9a8622a440a2` is failed evidence and cannot satisfy
   the soak gate. Default enablement remains forbidden pending diagnosis and a
   new full-duration receipt.
+- Packet 6A reproduced two provider-free defects behind that failure. The
+  detail inventory deliberately promoted three transient timeouts into a fatal
+  crawler error despite persisting a continuation cursor, and the read-only
+  affinity finalizer converted every failure into an `outcome-unknown` lease.
+  The repair now checkpoints and yields the pass at the timeout threshold so a
+  later pass resumes at the next conversation, while all live-follow failures
+  settle as known read-only outcomes. Focused regression coverage proves both
+  the timeout pass and its subsequent catch-up pass. A new installed canary and
+  full 24-hour receipt remain required; the failed receipt is unchanged.
 
 ## Acceptance Gates
 
@@ -508,6 +517,23 @@ and the isolated API was stopped. Packet 5J is accepted.
 
 Terminal condition: the default decision, exact commit, validation, installed
 readback, and rollback posture are recorded; issue 49 closes only then.
+
+### Packet 6A: Resumable timeout and read-only settlement repair
+
+- Replace fatal escalation of three consecutive detail-read timeouts with a
+  persisted yield at the next conversation cursor.
+- Prove the next pass resumes and completes the remaining conversation rather
+  than restarting or abandoning materialization catch-up.
+- Settle live-follow failures as known read-only outcomes; never create an
+  `outcome-unknown` provider-effect fence for a routine that cannot submit.
+- Preserve provider-warning classification and all aggregate interaction
+  accounting. Do not weaken timeout, warning, CAPTCHA, identity, or rate-limit
+  guards.
+
+Terminal condition: provider-free regressions, widened local validation,
+canonical integration, exact installation, and one bounded installed canary
+pass without a new outcome-unknown fence. Only then may a new Packet 6 soak
+receipt start.
 
 ## Non-goals
 

@@ -23287,3 +23287,13 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   predates the receipt. Governed live-follow navigation remains allowed.
 - Lesson: periodic soak evidence must compare monotonic event counters for
   transient safety signals; current-state fields alone can miss a violation.
+## 2026-09-26 | Keep resumable read timeouts out of uncertain-effect fences
+
+- A persisted continuation cursor is recovery state: transient detail-read
+  timeout streaks should yield the pass and let later cycles catch up, not fail
+  the entire live-follow operation.
+- `outcome-unknown` is reserved for provider mutations whose result cannot be
+  established. A read-only crawler failure has a known non-mutating outcome
+  and must remain reclaimable through normal lease TTL handling.
+- Regression coverage should prove both halves: the timeout pass advances its
+  cursor, and the next pass consumes the remaining conversation.

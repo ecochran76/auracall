@@ -1909,9 +1909,13 @@ export async function readBoundedAttachmentInventory(
 				consecutiveUnresolvedConversations = 0;
 			}
 			if (consecutiveConversationTimeouts >= 3) {
-				throw new Error(
-					`Detail provider reads timed out for ${consecutiveConversationTimeouts} consecutive conversations; last=${conversation.id}.`,
-				);
+				// Detail reads are resumable and read-only. Preserve the checkpoint and
+				// yield this pass instead of converting transient provider slowness into
+				// a fatal live-follow operation failure.
+				conversationIndex += 1;
+				truncated = true;
+				yielded = true;
+				break;
 			}
 			if (consecutiveUnresolvedConversations >= 3) {
 				throw new Error(
