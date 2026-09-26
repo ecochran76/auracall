@@ -1,5 +1,9 @@
 ## 2026-09-25 | Plan 0360 guarded ChatGPT tab-affinity rollout opened
 
+- Policy target integrity was restored before Packet 5J work. `AGENTS.md` had
+  one valid policy list through 0034 followed by 32 duplicate module identities
+  wired to nonexistent 0035-0066 filenames. The dead duplicate block was
+  removed without renumbering or rewriting the retained policy modules.
 - Packet 5I installed acceptance passed on canonical `d45aab67c`. The sole
   execute pass cold-started `wsl-chrome-3`, adopted the only ChatGPT page into
   lease `8bd61d7d-e7b7-411c-9a86-572afdb74ac2`, and retained exactly that one
