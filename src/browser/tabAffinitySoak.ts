@@ -46,7 +46,7 @@ export function evaluateTabAffinitySoakSnapshot(input: {
 	if (current.admissionRejections.total > baseline.admissionRejections.total) {
 		hardStops.push("admission-rejection");
 	}
-	if (current.leaseStates.lost > 0) hardStops.push("lost-lease");
+	if (unexpectedLostLeaseCount(current) > 0) hardStops.push("lost-lease");
 	if (current.attention.outcomeUnknown > 0) hardStops.push("outcome-unknown");
 	if (current.attention.restartUnverified > 0) hardStops.push("restart-unverified");
 	if (current.attention.expiredIdle > 0) hardStops.push("expired-idle");
@@ -62,6 +62,16 @@ export function evaluateTabAffinitySoakSnapshot(input: {
 		hardStops.push("reload-churn");
 	if (current.targetActions.focuses > baseline.targetActions.focuses) hardStops.push("focus-churn");
 	return { accepted: hardStops.length === 0, hardStops };
+}
+
+function unexpectedLostLeaseCount(status: BrowserTabConcurrencyStatus): number {
+	const expectedRetirementTransitions = status.bindingLifetimes.filter(
+		(binding) =>
+			binding.state === "lost" &&
+			binding.effectState === "settled" &&
+			(binding.idleExpired || binding.absoluteExpired),
+	).length;
+	return Math.max(0, status.leaseStates.lost - expectedRetirementTransitions);
 }
 
 function nonCrawlerNavigationCount(status: BrowserTabConcurrencyStatus): number {

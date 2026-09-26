@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 28
+Plan version: 29
 
 ## Stable Objective
 
@@ -577,6 +577,21 @@ fails. Wake `wake_20260926_151317_de31` is scheduled against the ready
 repo-scoped wake monitor for the 24-hour evaluation gate. The soak is initiated,
 not accepted: default enablement and issue closure remain forbidden until the
 minimum elapsed window passes and the terminal receipt evaluation is accepted.
+
+The receipt failed at `2026-09-26T15:22:41.947Z` when the evaluator sampled an
+older settled live-follow binding during its normal TTL retirement and
+classified the transient `lost` state as `lost-lease`. The monitor correctly
+cancelled the exact crawler after one completed pass and stopped its timer, but
+left the now-obsolete 24-hour wake pending. Current maintenance subsequently
+released every lease with no warning, unknown outcome, or remaining attention.
+
+Packet 6B narrows this false positive without weakening real loss detection:
+only a lost binding with settled effects and an already-expired idle or
+absolute TTL qualifies as expected retirement. Missing lifetime evidence,
+unsettled effects, and pre-expiry loss still fail closed. Monitor failure
+cleanup must also cancel the paired delayed wake atomically. Wake
+`wake_20260926_151317_de31` was cancelled at `2026-09-26T21:23:36Z`; the failed
+receipt remains immutable evidence and cannot be resumed.
 
 ## Non-goals
 
