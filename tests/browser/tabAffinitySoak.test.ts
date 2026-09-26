@@ -36,6 +36,40 @@ const healthy = (): BrowserTabConcurrencyStatus => ({
 		focuses: 0,
 		closes: 0,
 	},
+	targetActionsByWorkload: {
+		conversations: {
+			targetCreations: 2,
+			adoptions: 0,
+			navigations: 0,
+			reloads: 0,
+			focuses: 0,
+			closes: 0,
+		},
+		newConversations: {
+			targetCreations: 0,
+			adoptions: 0,
+			navigations: 0,
+			reloads: 0,
+			focuses: 0,
+			closes: 0,
+		},
+		liveFollow: {
+			targetCreations: 1,
+			adoptions: 0,
+			navigations: 0,
+			reloads: 0,
+			focuses: 0,
+			closes: 0,
+		},
+		ephemeral: {
+			targetCreations: 0,
+			adoptions: 0,
+			navigations: 0,
+			reloads: 0,
+			focuses: 0,
+			closes: 0,
+		},
+	},
 	retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
 });
 
@@ -55,6 +89,7 @@ describe("tab-affinity soak evidence", () => {
 		current.attention.restartUnverified = 1;
 		current.attention.expiredIdle = 1;
 		current.targetActions.navigations = 1;
+		current.targetActionsByWorkload.conversations.navigations = 1;
 		current.targetActions.reloads = 1;
 		current.targetActions.focuses = 1;
 		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current })).toEqual({
@@ -69,6 +104,17 @@ describe("tab-affinity soak evidence", () => {
 				"reload-churn",
 				"focus-churn",
 			],
+		});
+	});
+
+	it("allows governed crawler navigation while preserving the non-crawler navigation gate", () => {
+		const current = healthy();
+		current.targetActions.navigations = 4;
+		current.targetActionsByWorkload.liveFollow.navigations = 4;
+
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current })).toEqual({
+			accepted: true,
+			hardStops: [],
 		});
 	});
 

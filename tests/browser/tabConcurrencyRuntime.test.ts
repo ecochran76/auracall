@@ -233,6 +233,16 @@ describe("browser tab concurrency runtime", () => {
 					focuses: 0,
 					closes: 0,
 				},
+				targetActionsByWorkload: {
+					conversations: {
+						targetCreations: 0,
+						adoptions: 0,
+						navigations: 1,
+						reloads: 0,
+						focuses: 0,
+						closes: 0,
+					},
+				},
 				retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
 			});
 			expect(JSON.stringify(status)).not.toContain("conversation-secret");

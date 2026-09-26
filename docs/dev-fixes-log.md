@@ -23265,3 +23265,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   subsequent heartbeat and idle transitions.
 - An explicit `allowNavigation=false` remains a hard navigation prohibition,
   independent of retention policy.
+
+## 2026-09-25 | Attribute soak navigation by workload class
+
+- A global navigation delta cannot distinguish crawler traversal from
+  cross-conversation churn once live follow legitimately walks conversation
+  routes on its retained tab.
+- Publish sanitized target-action totals by workload class. Permit navigation
+  growth only for `live-follow`; conversation, new-conversation, and ephemeral
+  utility navigation remain soak hard stops, without exposing identifiers.
