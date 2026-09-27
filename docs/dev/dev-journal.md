@@ -51099,3 +51099,9 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `wake_20260927_131911_97e8` is pending for the 24-hour gate at
   `2026-09-28T13:19:11Z`. Default enablement remains gated on terminal soak
   acceptance.
+- Failure wake `wake_bf8918a0190c41cfbf32540bb06e9376` is also pending on the
+  receipt-specific `.codex-wake/events` failure marker. The snapshot monitor
+  creates that marker only after a rejected receipt snapshot has cancelled the
+  exact crawler, stopped the timer, and cancelled the 24-hour success wake.
+  Native systemd-source observation was unavailable on this host, so its
+  unused source was disabled instead of being treated as armed.
