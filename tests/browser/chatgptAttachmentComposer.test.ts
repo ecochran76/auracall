@@ -3,6 +3,9 @@ import { describe, expect, test, vi } from "vitest";
 import { prepareChatgptWorkbenchLocalAttachment } from "../../src/browser/actions/chatgptComposerTool.js";
 import { ATTACHMENT_MENU_SELECTOR } from "../../src/browser/constants.js";
 
+const CURRENT_ATTACHMENT_MENU_SELECTOR =
+	`button[aria-label="Add files and more"], ${ATTACHMENT_MENU_SELECTOR}`;
+
 class FixtureElement {
 	id = "";
 	textContent = "";
@@ -75,7 +78,7 @@ async function inspectComposer(scenario: Scenario) {
 	input.attributes.set("multiple", "");
 	form.queries.set("editors", [editor]);
 	form.queries.set(
-		ATTACHMENT_MENU_SELECTOR,
+		CURRENT_ATTACHMENT_MENU_SELECTOR,
 		scenario === "two-triggers" ? [trigger, new FixtureElement()] : [trigger],
 	);
 	if (scenario === "foreign-form") input.form = new FixtureElement();
@@ -92,14 +95,14 @@ async function inspectComposer(scenario: Scenario) {
 	if (scenario === "two-composers") {
 		const other = new FixtureElement();
 		other.queries.set("editors", [new FixtureElement()]);
-		other.queries.set(ATTACHMENT_MENU_SELECTOR, [new FixtureElement()]);
+		other.queries.set(CURRENT_ATTACHMENT_MENU_SELECTOR, [new FixtureElement()]);
 		forms.push(other);
 	}
 	const document = new FixtureElement();
 	document.queries.set("form", forms);
 	document.queries.set('input[type="file"]', [input]);
 	document.queries.set(
-		".popover",
+		".composer-home-top-menu, .popover",
 		scenario === "two-popovers" ? [popover, new FixtureElement()] : [popover],
 	);
 	const evaluate = vi.fn(async ({ expression }: { expression: string }) => {

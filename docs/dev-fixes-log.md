@@ -23310,6 +23310,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   from 106 to zero, with zero empty titles. Metadata-only history refresh is a
   valid cache-repair path and does not require transcript or artifact reads.
 
+## 2026-09-27 | Accept the current ChatGPT add-context menu shape
+
+- ChatGPT replaced the `.popover` add-ons surface with
+  `.composer-home-top-menu` and removed role/tabindex markers from its rows.
+- Keep the legacy selectors as fallbacks, but recognize the current root and
+  plain button rows for tool discovery, activation, and local attachment
+  inventory.
+- Preserve the existing fail-closed connector check: a row ending in
+  `Connect` is inventory, not authorization to grant third-party access.
+
 ## 2026-09-26 | Preserve ChatGPT history titles for metadata-only cache rows
 
 - ChatGPT may expose conversation anchors without usable visible text while

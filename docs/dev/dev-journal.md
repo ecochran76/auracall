@@ -51105,3 +51105,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   exact crawler, stopped the timer, and cancelled the 24-hour success wake.
   Native systemd-source observation was unavailable on this host, so its
   unused source was disabled instead of being treated as armed.
+
+## 2026-09-27 | ChatGPT composer menu selector drift repair
+
+- A bounded live inspection found that the current ChatGPT Chat composer now
+  mounts its add-context surface at `.composer-home-top-menu` and exposes
+  choices as plain `button` rows. The prior `.popover` plus role/tabindex item
+  contract therefore failed before prompt submission.
+- The adapter now accepts both the current and legacy roots and row shapes.
+  Focused composer, attachment, and prompt regressions pass (45 tests), and
+  TypeScript typechecking passes. The broader suite remains red only at known
+  environment/timing gates plus the fixture assumption repaired in this slice.
+- Live acceptance is intentionally isolated to a fresh tab on the explicitly
+  selected runtime profile; no affinity-soak tab is reused.

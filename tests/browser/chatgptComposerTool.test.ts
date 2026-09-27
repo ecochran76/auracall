@@ -14,6 +14,7 @@ describe('chatgpt composer tool selection', () => {
   test('recognizes durable non-plugin inline tool pills in the current composer', () => {
     const expression = buildComposerChipVisibleExpressionForTest(['shopping']);
     expect(expression).toContain("root.querySelectorAll('[data-inline-selection-pill]')");
+    expect(expression).toContain('[app-mention-name]');
     expect(expression).not.toContain('#prompt-textarea [data-inline-selection-pill]');
     expect(expression).not.toContain('data-system-hint-type^="plugin:"');
   });
@@ -163,7 +164,12 @@ describe('chatgpt composer tool selection', () => {
     expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({ returnByValue: true }));
     expect(
       evaluate.mock.calls.some(([input]) =>
-        String(input.expression ?? '').includes('.__menu-item, [data-fill][tabindex]'),
+        String(input.expression ?? '').includes('.composer-home-top-menu'),
+      ),
+    ).toBe(true);
+    expect(
+      evaluate.mock.calls.some(([input]) =>
+        String(input.expression ?? '').includes('button, .__menu-item, [data-fill][tabindex]'),
       ),
     ).toBe(true);
     expect(
@@ -197,7 +203,7 @@ describe('chatgpt composer tool selection', () => {
           },
         };
       }
-      if (source.includes('const node = document.querySelector')) {
+      if (source.includes('.find((candidate) =>')) {
         events.push('measure');
         return { result: { value: { x: 24, y: 24 } } };
       }
