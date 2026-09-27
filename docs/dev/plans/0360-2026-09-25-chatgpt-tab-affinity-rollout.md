@@ -669,6 +669,15 @@ existing title over a later UUID placeholder. Provider-free validation and
 canonical installation precede one explicit read-only full-history title
 backfill and any replacement soak.
 
+Packet 6D merged through PR 86 at canonical
+`45e07d6aa57aee72693d0d4e9e9a6ec33c911f45`. The installed navigation helper
+and cache refresh service byte-match the detached canonical build. The explicit
+installed read-only history refresh then completed with a 2,000-row ceiling and
+persisted 505 conversations with zero UUID-as-title placeholders and zero empty
+titles at `2026-09-27T13:15:35.397Z`. It submitted no prompt and performed no
+message-body or artifact materialization. Packet 6D is accepted; a fresh
+full-duration Packet 6 soak remains required before default enablement.
+
 ## Non-goals
 
 - Gemini or Grok concurrent-tab enablement.

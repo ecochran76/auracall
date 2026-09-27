@@ -51075,3 +51075,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   already-missing after exact proof-owned browser shutdown. Final readback is
   zero fenced leases and zero lease attention; APIs, port 45015, and the
   wsl-chrome-3 managed browser are stopped/absent.
+
+## 2026-09-27 | Plan 0360 Packet 6D installed acceptance
+
+- PR 86 merged at canonical `45e07d6aa57aee72693d0d4e9e9a6ec33c911f45`.
+  The installed `ui.js` and `refreshService.js` byte-match the detached
+  canonical build.
+- An explicit installed read-only ChatGPT history refresh completed with a
+  2,000-row ceiling. The persisted cache now contains 505 conversations,
+  zero UUID-as-title placeholders, and zero empty titles; `fetchedAt` is
+  `2026-09-27T13:15:35.397Z`.
+- The first attempt failed closed while the newly launched managed tab was
+  still `about:blank`. After the managed browser reached the ChatGPT root, the
+  same command completed without prompt submission, message-body reads, or
+  artifact materialization. Replacement soak acceptance remains open.
