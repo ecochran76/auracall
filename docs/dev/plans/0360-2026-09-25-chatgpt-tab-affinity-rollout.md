@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 32
+Plan version: 33
 
 ## Stable Objective
 
@@ -635,6 +635,21 @@ human-readable titles and zero used the conversation UUID as title. The probe
 performed no prompt submission or asset materialization. Packet 6C is accepted;
 a fresh full-duration Packet 6 receipt remains required before default
 enablement.
+
+The repaired full-duration receipt is now running. Completion
+`acctmirror_completion_b7b6b4bf-f94c-42f0-9a4f-cf73b20d49ab` started at
+`2026-09-27T01:05:03.223Z` from the canonical installed runtime. Receipt
+`6e02cf86-0269-4132-b731-0e612f151eb4` started at
+`2026-09-27T01:05:09.548Z`; its start and immediate monitor-owned snapshot are
+accepted with one active metadata-only crawler, zero warning events, zero
+lease attention, no reload/focus action, and no post-baseline admission
+rejection or target creation.
+
+The five-minute fail-stop timer is active and bound to this exact receipt and
+completion. Any rejected snapshot cancels the crawler, stops the timer, and
+cancels paired wake `wake_20260927_010520_0514`. That wake is pending for the
+24-hour gate at `2026-09-28T01:05:20Z`. The soak is initiated, not accepted;
+default enablement remains forbidden before terminal evaluation.
 
 ## Non-goals
 

@@ -1,3 +1,19 @@
+## 2026-09-26 | Plan 0360 repaired metadata-title soak started
+
+- Preflight on canonical installed code found zero fenced, active, idle, lost,
+  or attention leases; zero warning/cooldown state; zero recent interactions;
+  and no running completion. The single historical admission rejection remains
+  baseline evidence and any increase is a hard stop.
+- Metadata-only live-follow completion
+  `acctmirror_completion_b7b6b4bf-f94c-42f0-9a4f-cf73b20d49ab` and receipt
+  `6e02cf86-0269-4132-b731-0e612f151eb4` started successfully. The start and
+  immediate monitor snapshot are accepted with one active crawler and no new
+  target creation, warning, rejection, reload, focus, or lease attention.
+- The five-minute fail-stop timer is active. Its exact failure branch cancels
+  the crawler, timer, and paired wake `wake_20260927_010520_0514`. The healthy
+  repo wake monitor will deliver the 24-hour evaluation prompt at
+  `2026-09-28T01:05:20Z`; default enablement remains gated.
+
 ## 2026-09-26 | Plan 0360 metadata-only title repair
 
 - Readback of today's ChatGPT cache found valid conversation records whose
