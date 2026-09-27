@@ -6,9 +6,9 @@ State: CLOSED
 
 GitHub issue `ecochran76/auracall#90` records the current ChatGPT composer
 markup regression. The provider-free repair and one bounded installed
-`wsl-chrome-3` acceptance run are complete on
-`fix/chatgpt-selector-drift`; pull-request integration into canonical `main`
-is the remaining custody gate.
+`wsl-chrome-3` acceptance run completed on `fix/chatgpt-selector-drift`.
+PR 91 integrated the repair into canonical `main` at `54d747f6b`; issue 90 is
+closed as completed and the retained remote topic ref preserves source custody.
 
 ## Scope
 

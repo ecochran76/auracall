@@ -4,8 +4,8 @@
   repairs the current ChatGPT add-context root, trigger, row, and connected-app
   mention shapes while preserving legacy fallbacks and retained-draft
   rejection. Provider-free acceptance and one bounded installed
-  `wsl-chrome-3` run pass; canonical pull-request integration is the remaining
-  custody gate. The lane overlaps Plan 0360 only at shared ChatGPT composer
+  `wsl-chrome-3` run pass; PR 91 integrated the repair at canonical
+  `54d747f6b`. The lane overlaps Plan 0360 only at shared ChatGPT composer
   source and does not change affinity, crawler, scheduler, or soak behavior.
 
 - Active P53 / issue 49: [Plan 0360](docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md)
