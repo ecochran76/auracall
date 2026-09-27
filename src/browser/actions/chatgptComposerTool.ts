@@ -77,9 +77,11 @@ const COMPOSER_TOP_MENU_SIGNAL_SUBSTRINGS = resolveBundledServiceComposerTopMenu
 const KNOWN_COMPOSER_TOOL_LABELS = resolveBundledServiceComposerKnownLabels('chatgpt', []);
 const COMPOSER_FILE_REQUEST_LABELS = resolveBundledServiceComposerFileRequestLabels('chatgpt', []);
 const COMPOSER_CHIP_IGNORE_TOKENS = resolveBundledServiceComposerChipIgnoreTokens('chatgpt', []);
-const CHATGPT_COMPOSER_POPOVER_SELECTOR = '.popover';
+const CHATGPT_COMPOSER_POPOVER_SELECTOR = '.composer-home-top-menu, .popover';
 const CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR =
-  '.__menu-item, [data-fill][tabindex]';
+  'button, .__menu-item, [data-fill][tabindex]';
+const CHATGPT_COMPOSER_TRIGGER_SELECTOR =
+  `button[aria-label="Add files and more"], ${ATTACHMENT_MENU_SELECTOR}`;
 const CHATGPT_LOCAL_FILE_ACTION_LABEL = 'add photos files';
 const CHATGPT_LIBRARY_ACTION_LABEL = 'add from library';
 
@@ -326,7 +328,7 @@ function resolveCurrentComposerToolSelection(
 
 function buildComposerTriggerOptions(): PressButtonOptions {
   return {
-    selector: ATTACHMENT_MENU_SELECTOR,
+    selector: CHATGPT_COMPOSER_TRIGGER_SELECTOR,
     requireVisible: true,
     interactionStrategies: ['pointer', 'click'],
   };
@@ -407,6 +409,26 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
       document.querySelector('form') ??
       document.body;
     if (!root) return null;
+    const mentions = Array.from(root.querySelectorAll('[app-mention-name]')).filter(isVisible);
+    const mentionMatch = mentions
+      .map((node) => ({
+        label: normalize(
+          node.getAttribute?.('app-mention-name') ||
+          node.getAttribute?.('app-mention-display-name') ||
+          node.textContent ||
+          '',
+        ),
+        text: (
+          node.getAttribute?.('app-mention-display-name') ||
+          node.getAttribute?.('app-mention-name') ||
+          node.textContent ||
+          ''
+        ).trim() || null,
+      }))
+      .find((entry) => toolCandidates.length === 0 || scoreLabel(entry.label) > 0);
+    if (mentionMatch) {
+      return { label: mentionMatch.text || mentionMatch.label };
+    }
     const inlinePills = Array.from(
       root.querySelectorAll('[data-inline-selection-pill]'),
     ).filter(isVisible);
@@ -515,7 +537,12 @@ async function openComposerPopoverWithCdp(
   await Input.dispatchKeyEvent({ type: 'keyUp', key: 'Escape', code: 'Escape' }).catch(() => undefined);
   const trigger = await Runtime.evaluate({
     expression: `(() => {
-      const node = document.querySelector(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)});
+      const node = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_TRIGGER_SELECTOR)}))
+        .find((candidate) => {
+          if (!(candidate instanceof HTMLElement)) return false;
+          const rect = candidate.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
       if (!(node instanceof HTMLElement)) return null;
       const rect = node.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return null;
@@ -560,7 +587,7 @@ async function openComposerPopoverWithCdp(
         interactionStrategies: ['click'],
       },
       menuSelector: CHATGPT_COMPOSER_POPOVER_SELECTOR,
-      anchorSelector: ATTACHMENT_MENU_SELECTOR,
+      anchorSelector: CHATGPT_COMPOSER_TRIGGER_SELECTOR,
       timeoutMs: 2_500,
     });
     if (!fallback.ok) return null;
@@ -614,11 +641,11 @@ export async function prepareChatgptWorkbenchLocalAttachment(
         && Array.from(form.querySelectorAll(
           '#prompt-textarea, textarea[name="prompt-textarea"], [contenteditable="true"]',
         )).some(visible)
-        && Array.from(form.querySelectorAll(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)})).some(visible),
+        && Array.from(form.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_TRIGGER_SELECTOR)})).some(visible),
       );
       const composer = composers.length === 1 ? composers[0] : null;
       const triggers = composer
-        ? Array.from(composer.querySelectorAll(${JSON.stringify(ATTACHMENT_MENU_SELECTOR)})).filter(visible)
+        ? Array.from(composer.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_TRIGGER_SELECTOR)})).filter(visible)
         : [];
       const trigger = triggers.length === 1 ? triggers[0] : null;
       const controlledIds = (trigger?.getAttribute('aria-controls') || '').trim().split(/\\s+/).filter(Boolean);
@@ -805,7 +832,7 @@ async function openComposerTopMenu(
   const openedPopover = await openMenu(Runtime, {
     trigger: buildComposerTriggerOptions(),
     menuSelector: CHATGPT_COMPOSER_POPOVER_SELECTOR,
-    anchorSelector: ATTACHMENT_MENU_SELECTOR,
+    anchorSelector: CHATGPT_COMPOSER_TRIGGER_SELECTOR,
     timeoutMs: 5000,
   });
   if (openedPopover.ok) {
@@ -824,7 +851,7 @@ async function openComposerTopMenu(
   const opened = await openMenu(Runtime, {
     trigger: buildComposerTriggerOptions(),
     menuSelector: '[role="menu"]',
-    anchorSelector: ATTACHMENT_MENU_SELECTOR,
+    anchorSelector: CHATGPT_COMPOSER_TRIGGER_SELECTOR,
     expectedItemMatch: buildTopLevelExpectedMatch(toolCandidates),
     timeoutMs: 5000,
   });

@@ -21689,3 +21689,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - The primary retains architecture and integration. Parallel workers are
   restricted to isolated worktrees and low-conflict inventory/test-design
   lanes; installed/browser/provider/scheduler effects remain excluded.
+
+## Turn 620 | 2026-09-27
+
+- Opened issue 90 after the allowlisted forge preflight found no duplicate and
+  resolved the exact existing `bug` label. P54 / Plan 0361 owns the isolated
+  `fix/chatgpt-selector-drift` repair and records overlap with P53 only at the
+  shared ChatGPT composer surface.
+- The repair accepts the current add-context menu and app-mention DOM while
+  retaining legacy fallbacks, exact prompt proof, retained-draft rejection,
+  and the fail-closed connector boundary.
+- Provider-free evidence is green: 45 focused tests, typecheck, build, and diff
+  hygiene. One bounded installed `wsl-chrome-3` run selected the GitHub app,
+  verified the exact normalized prompt, sent once, and completed. Publication,
+  repository CI, published-diff self-check, and pull-request merge remain.

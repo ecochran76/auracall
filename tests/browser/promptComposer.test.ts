@@ -50,6 +50,23 @@ describe("promptComposer", () => {
 		).toBe(true);
 	});
 
+	test("allows only a DOM-confirmed app mention before the requested prompt", () => {
+		expect(
+			promptComposer.composerContainsPromptWithProtectedLabels(
+				"GitHubReview the existing project",
+				"Review the existing project",
+				["GitHub"],
+			),
+		).toBe(true);
+		expect(
+			promptComposer.composerContainsPromptWithProtectedLabels(
+				"Retained draft. Review the existing project",
+				"Review the existing project",
+				["GitHub"],
+			),
+		).toBe(false);
+	});
+
 	test("treats markdown and rich-composer list presentation as equivalent", () => {
 		const markdown = [
 			"Use project `plan-0459`.",
@@ -80,6 +97,7 @@ describe("promptComposer", () => {
 		const expression = promptComposer.buildReadComposerUserTextFunction();
 		expect(expression).toContain("window.getComputedStyle(current).display");
 		expect(expression).toContain("block|list-item|table-row|flex|grid");
+		expect(expression).toContain("[app-mention-name]");
 		expect(expression).not.toContain("cloneNode");
 	});
 

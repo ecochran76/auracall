@@ -40,6 +40,20 @@ function composerContainsPrompt(value: string, prompt: string): boolean {
 	return Boolean(normalizedPrompt) && normalizedComposerText(value) === normalizedPrompt;
 }
 
+function composerContainsPromptWithProtectedLabels(
+	value: string,
+	prompt: string,
+	protectedLabels: readonly string[] = [],
+): boolean {
+	if (composerContainsPrompt(value, prompt)) return true;
+	const observed = normalizedComposerText(value);
+	const expected = normalizedComposerText(prompt);
+	return protectedLabels.some((label) => {
+		const prefix = normalizedComposerText(label);
+		return Boolean(prefix) && (observed === `${prefix}${expected}` || observed === `${prefix} ${expected}`);
+	});
+}
+
 function promptMismatchDiagnostics(value: string, prompt: string) {
 	const observed = normalizedComposerText(value);
 	const expected = normalizedComposerText(prompt);
@@ -65,7 +79,7 @@ function buildReadComposerUserTextFunction(): string {
 	  if (!node) return '';
 	  if (node instanceof HTMLTextAreaElement) return node.value ?? '';
 	  const protectedSelector =
-	    '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
+	    '[data-inline-selection-pill], [app-mention-name], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
 	  const chunks = [];
 	  const appendBoundary = () => {
 	    if (chunks.length > 0 && !/\\s$/.test(chunks[chunks.length - 1] || '')) chunks.push('\\n');
@@ -92,6 +106,7 @@ function buildReadCommittedTurnTextFunction(): string {
 	  if (!node) return '';
 	  const presentationOnlySelector = [
         '[data-inline-selection-pill]',
+		'[app-mention-name]',
 	    'button',
 	    '[role="button"]',
 	    '[role="group"][class*="file-tile"]',
@@ -156,7 +171,7 @@ async function preparePromptComposer(
 	    const target = document.querySelector(${promptTargetSelectorLiteral});
 	    if (!target) return { cleared: false, reason: 'missing-target' };
 	    const protectedSelector =
-	      '[data-inline-selection-pill], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
+	      '[data-inline-selection-pill], [app-mention-name], [data-system-hint-type^="plugin:"], [data-id^="plugin:"]';
 	    const readUserText = ${buildReadComposerUserTextFunction()};
 	    const before = readUserText(target);
 	    if (target instanceof HTMLTextAreaElement) {
@@ -311,12 +326,22 @@ export async function submitPrompt(
       const target = document.querySelector(${promptTargetSelectorLiteral});
       const readText = (node) => node instanceof HTMLTextAreaElement ? node.value ?? '' : node?.innerText ?? node?.textContent ?? '';
 	      const readUserText = ${buildReadComposerUserTextFunction()};
+	      const readWithoutAppMentions = (node) => {
+	        if (!node || node instanceof HTMLTextAreaElement) return readText(node);
+	        const clone = node.cloneNode(true);
+	        clone.querySelectorAll('[app-mention-name], [data-prompt-link-href^="app://"]').forEach((mention) => mention.remove());
+	        return clone.textContent || '';
+	      };
       return {
         editorText: editor?.innerText ?? '',
         fallbackValue: fallback?.value ?? '',
         editorUserText: readUserText(editor),
         targetText: readText(target),
         targetUserText: readUserText(target),
+	        targetWithoutAppMentions: readWithoutAppMentions(target),
+	        targetProtectedLabels: Array.from(target?.querySelectorAll?.('[app-mention-name], [data-prompt-link-href^="app://"]') ?? [])
+	          .map((node) => node.getAttribute?.('app-mention-display-name') || node.getAttribute?.('app-mention-name') || node.textContent || '')
+	          .filter(Boolean),
       };
     })()`,
 		returnByValue: true,
@@ -325,6 +350,8 @@ export async function submitPrompt(
 	const fallbackValueRaw = verification.result?.value?.fallbackValue ?? "";
 	const editorUserTextRaw = verification.result?.value?.editorUserText ?? "";
 	const targetUserTextRaw = verification.result?.value?.targetUserText ?? "";
+	const targetProtectedLabels = verification.result?.value?.targetProtectedLabels ?? [];
+	const targetWithoutAppMentions = verification.result?.value?.targetWithoutAppMentions ?? "";
 	const observedInitialText = targetUserTextRaw || editorUserTextRaw || fallbackValueRaw;
 	if (!observedInitialText.trim()) {
 		// Input.insertText occasionally misses a pill-bearing ProseMirror editor.
@@ -369,7 +396,13 @@ export async function submitPrompt(
 	} else if (
 		!composerContainsPrompt(targetUserTextRaw, prompt) &&
 		!composerContainsPrompt(editorUserTextRaw, prompt) &&
-		!composerContainsPrompt(fallbackValueRaw, prompt)
+		!composerContainsPrompt(fallbackValueRaw, prompt) &&
+		!composerContainsPrompt(targetWithoutAppMentions, prompt) &&
+		!composerContainsPromptWithProtectedLabels(
+			verification.result?.value?.targetText ?? "",
+			prompt,
+			targetProtectedLabels,
+		)
 	) {
 		await logDomFailure(runtime, logger, "prompt-composer-mismatch");
 		throw new BrowserAutomationError(
@@ -392,12 +425,22 @@ export async function submitPrompt(
       const target = document.querySelector(${promptTargetSelectorLiteral});
       const readText = (node) => node instanceof HTMLTextAreaElement ? node.value ?? '' : node?.innerText ?? node?.textContent ?? '';
 	      const readUserText = ${buildReadComposerUserTextFunction()};
+	      const readWithoutAppMentions = (node) => {
+	        if (!node || node instanceof HTMLTextAreaElement) return readText(node);
+	        const clone = node.cloneNode(true);
+	        clone.querySelectorAll('[app-mention-name], [data-prompt-link-href^="app://"]').forEach((mention) => mention.remove());
+	        return clone.textContent || '';
+	      };
       return {
         editorText: editor?.innerText ?? '',
         fallbackValue: fallback?.value ?? '',
         editorUserText: readUserText(editor),
         targetText: readText(target),
         targetUserText: readUserText(target),
+	        targetWithoutAppMentions: readWithoutAppMentions(target),
+	        targetProtectedLabels: Array.from(target?.querySelectorAll?.('[app-mention-name], [data-prompt-link-href^="app://"]') ?? [])
+	          .map((node) => node.getAttribute?.('app-mention-display-name') || node.getAttribute?.('app-mention-name') || node.textContent || '')
+	          .filter(Boolean),
       };
     })()`,
 		returnByValue: true,
@@ -407,10 +450,18 @@ export async function submitPrompt(
 	const observedEditorUserText = postVerification.result?.value?.editorUserText ?? "";
 	const observedTarget = postVerification.result?.value?.targetText ?? "";
 	const observedTargetUserText = postVerification.result?.value?.targetUserText ?? "";
+	const observedTargetProtectedLabels = postVerification.result?.value?.targetProtectedLabels ?? [];
+	const observedTargetWithoutAppMentions = postVerification.result?.value?.targetWithoutAppMentions ?? "";
 	if (
 		!composerContainsPrompt(observedTargetUserText, prompt) &&
 		!composerContainsPrompt(observedEditorUserText, prompt) &&
-		!composerContainsPrompt(observedFallback, prompt)
+		!composerContainsPrompt(observedFallback, prompt) &&
+		!composerContainsPrompt(observedTargetWithoutAppMentions, prompt) &&
+		!composerContainsPromptWithProtectedLabels(
+			observedTarget,
+			prompt,
+			observedTargetProtectedLabels,
+		)
 	) {
 		await logDomFailure(runtime, logger, "prompt-not-in-composer");
 		throw new BrowserAutomationError(
@@ -892,6 +943,7 @@ async function verifyPromptCommitted(
 
 export const __test__ = {
 	composerContainsPrompt,
+	composerContainsPromptWithProtectedLabels,
 	normalizedComposerText,
 	promptMismatchDiagnostics,
 	buildReadComposerUserTextFunction,

@@ -1053,3 +1053,25 @@ lanes:
     integration_receipt: null
     disposition: Operator status, rollback, soak tooling, and heartbeat/TTL lifecycle repair are provider-free accepted. Installed ChatGPT soak and default enablement remain separate gated packets; Gemini and Grok stay serialized. GitHub Actions are waived by operator direction while unavailable.
     updated_at: 2026-09-25
+  - id: P54
+    objective: Repair current ChatGPT composer menu and connected-app mention selector drift without changing affinity or soak behavior.
+    plan: docs/dev/plans/0361-2026-09-27-chatgpt-composer-selector-drift.md
+    plan_ref: refs/heads/fix/chatgpt-selector-drift
+    branch: fix/chatgpt-selector-drift
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 029dffca1
+    remote_ref: refs/remotes/origin/fix/chatgpt-selector-drift
+    integration: merge
+    work_items: [ecochran76/auracall#90]
+    dependencies: []
+    overlaps: [P53]
+    reconciled_overlaps: [P53]
+    reconciliation_note: P54 changes shared ChatGPT composer selection and prompt-verification helpers only; P53 retains all affinity, crawler, scheduler, soak, and default-enablement authority.
+    blocker: null
+    validation_status: provider-free-and-bounded-live-accepted
+    validation_ref: docs/dev/plans/0361-2026-09-27-chatgpt-composer-selector-drift.md
+    integration_receipt: null
+    disposition: Source, focused tests, build, and one bounded installed run are accepted; published PR CI and canonical merge remain.
+    updated_at: 2026-09-27
