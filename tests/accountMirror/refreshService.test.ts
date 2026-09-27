@@ -13,6 +13,7 @@ import {
 	type AccountMirrorRefreshError,
 	classifyChatgptRateLimitCensusProbeForTest,
 	createAccountMirrorRefreshService,
+	mergeConversationsByObservedOrderForTest,
 	readPreviousAccountMirrorFilesForTest,
 	writeChatgptRateLimitCensusGuardForTest,
 } from "../../src/accountMirror/refreshService.js";
@@ -27,6 +28,7 @@ import {
 	clearBrowserOperationQueueObservationsForTest,
 	recordBrowserOperationQueueObservation,
 } from "../../src/browser/operationQueueObservations.js";
+import type { Conversation } from "../../src/browser/providers/domain.js";
 
 const config = {
 	model: "gpt-5.2",
@@ -1870,6 +1872,32 @@ describe("account mirror refresh service", () => {
 				}),
 			}),
 		);
+	});
+
+	test("does not replace a readable cached title with an observed conversation id placeholder", async () => {
+		const existing: Conversation = {
+			id: "6ab7dfd3-7b2c-83e9-9f5c-e0aa1602aa24",
+			title: "Readable cached title",
+			provider: "chatgpt" as const,
+			metadata: { detailCompleteness: "complete" },
+		};
+		const incoming: Conversation = {
+			id: existing.id,
+			title: existing.id,
+			provider: "chatgpt" as const,
+			metadata: { indexObservedAt: "2026-09-27T08:00:00.000Z" },
+		};
+
+		expect(mergeConversationsByObservedOrderForTest([existing], [incoming])).toEqual([
+			{
+				...incoming,
+				title: "Readable cached title",
+				metadata: {
+					detailCompleteness: "complete",
+					indexObservedAt: "2026-09-27T08:00:00.000Z",
+				},
+			},
+		]);
 	});
 
 	test("runs a configured non-default ChatGPT runtime profile refresh", async () => {

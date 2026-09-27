@@ -23288,6 +23288,24 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Lesson: periodic soak evidence must compare monotonic event counters for
   transient safety signals; current-state fields alone can miss a violation.
 
+## 2026-09-27 | Prove route settlement after a missing navigation acknowledgement
+
+- A missing CDP `Page.navigate` acknowledgement does not prove navigation
+  failed; Chromium may already have committed and rendered the requested route.
+- After the acknowledgement deadline, accept the navigation only when the
+  caller's exact route, document-ready, and provider-ready checks all pass.
+  Without positive settlement predicates, preserve the timeout as terminal.
+- Do not issue another navigation merely because the acknowledgement was lost;
+  that creates avoidable route churn on a correctly leased tab.
+
+## 2026-09-27 | Never regress readable cache titles to provider IDs
+
+- Provider index observations can be weaker than retained cache evidence. A
+  conversation UUID used as its own title is a placeholder, not a newer title.
+- Merge metadata and ordering normally, but preserve an existing readable title
+  when an incoming row contains only its ID. A later concrete provider title
+  may still replace the cached title.
+
 ## 2026-09-26 | Preserve ChatGPT history titles for metadata-only cache rows
 
 - ChatGPT may expose conversation anchors without usable visible text while
