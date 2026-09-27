@@ -23305,6 +23305,10 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Merge metadata and ordering normally, but preserve an existing readable title
   when an incoming row contains only its ID. A later concrete provider title
   may still replace the cached title.
+- Installed acceptance against canonical `45e07d6aa` expanded the metadata
+  cache from 301 to 505 conversations and reduced UUID-as-title placeholders
+  from 106 to zero, with zero empty titles. Metadata-only history refresh is a
+  valid cache-repair path and does not require transcript or artifact reads.
 
 ## 2026-09-26 | Preserve ChatGPT history titles for metadata-only cache rows
 
