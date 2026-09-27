@@ -51089,3 +51089,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   still `about:blank`. After the managed browser reached the ChatGPT root, the
   same command completed without prompt submission, message-body reads, or
   artifact materialization. Replacement soak acceptance remains open.
+- Replacement metadata-only completion
+  `acctmirror_completion_ad2a92ab-f272-47c7-b9f1-9ba83671cca8` and receipt
+  `c62a1128-355d-447a-a577-ac41f733f99a` started successfully. The start and
+  immediate monitor snapshots are accepted with one active crawler, zero
+  warning or lease-attention state, unchanged admission rejections, and no
+  reload or focus action.
+- The five-minute fail-stop timer is active and paired wake
+  `wake_20260927_131911_97e8` is pending for the 24-hour gate at
+  `2026-09-28T13:19:11Z`. Default enablement remains gated on terminal soak
+  acceptance.
