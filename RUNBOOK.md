@@ -21703,3 +21703,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   hygiene. One bounded installed `wsl-chrome-3` run selected the GitHub app,
   verified the exact normalized prompt, sent once, and completed. Publication,
   repository CI, published-diff self-check, and pull-request merge remain.
+
+## Turn 621 | 2026-09-27
+
+- Published exact topic head `c8cca3564`, opened PR 91, and self-checked the
+  remote diff against canonical `main`. The PR was conflict-free with zero
+  review threads, reviews, or comments.
+- GitHub reported zero check suites rather than a pending or failing run. The
+  active workflow remained enabled, while `main` had no required checks,
+  protection, or ruleset; the local focused, typecheck, build, plan-audit, and
+  diff gates supplied the documented CI-unavailable fallback.
+- PR 91 merged at canonical `54d747f6b`; issue 90 closed as completed and the
+  exact topic head is ancestral to the fetched remote main. Retain the remote
+  topic ref for audit custody.

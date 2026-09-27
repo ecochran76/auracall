@@ -1060,8 +1060,8 @@ lanes:
     branch: fix/chatgpt-selector-drift
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
-    checkpoint: 029dffca1
+    custody_state: INTEGRATED
+    checkpoint: c8cca35646ac59ca6d22572c1f33d8fe5aa52a43
     remote_ref: refs/remotes/origin/fix/chatgpt-selector-drift
     integration: merge
     work_items: [ecochran76/auracall#90]
@@ -1072,6 +1072,6 @@ lanes:
     blocker: null
     validation_status: provider-free-and-bounded-live-accepted
     validation_ref: docs/dev/plans/0361-2026-09-27-chatgpt-composer-selector-drift.md
-    integration_receipt: null
-    disposition: Source, focused tests, build, and one bounded installed run are accepted; published PR CI and canonical merge remain.
+    integration_receipt: 54d747f6bca13ff8a4be7bf6b0780c4632a4e6fb
+    disposition: PR 91 integrated the provider-free repair and bounded live acceptance evidence; issue 90 is closed and the remote topic ref is retained for audit custody.
     updated_at: 2026-09-27
