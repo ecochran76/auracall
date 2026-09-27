@@ -688,6 +688,10 @@ unchanged admission rejections, and no reload or focus action. The five-minute
 fail-stop timer cancels that exact completion and paired wake
 `wake_20260927_131911_97e8` on any rejected snapshot. The wake is pending for
 the 24-hour gate at `2026-09-28T13:19:11Z`; the soak is initiated, not accepted.
+Failure wake `wake_bf8918a0190c41cfbf32540bb06e9376` independently watches a
+receipt-specific repository event marker created by the fail-stop monitor.
+This provides prompt failure notification while retaining the time-based wake
+for successful terminal evaluation.
 
 ## Non-goals
 
