@@ -2301,13 +2301,13 @@ function mergeById<T extends { id: string }>(existing: readonly T[], incoming: r
 	return [...merged.values()];
 }
 
-function mergeConversationRow<T extends { metadata?: unknown }>(
+function mergeConversationRow<T extends { id: string; title: string; metadata?: unknown }>(
 	existing: T | undefined,
 	incoming: T,
 ): T {
 	const existingMetadata = isRecord(existing?.metadata) ? existing.metadata : {};
 	const incomingMetadata = isRecord(incoming.metadata) ? incoming.metadata : {};
-	return {
+	const merged = {
 		...(existing ?? {}),
 		...incoming,
 		metadata: {
@@ -2315,12 +2315,25 @@ function mergeConversationRow<T extends { metadata?: unknown }>(
 			...incomingMetadata,
 		},
 	};
+	if (
+		existing &&
+		isConversationIdPlaceholderTitle(incoming) &&
+		!isConversationIdPlaceholderTitle(existing)
+	) {
+		return { ...merged, title: existing.title };
+	}
+	return merged;
 }
 
-function mergeConversationsByObservedOrder<T extends { id: string; metadata?: unknown }>(
-	existing: readonly T[],
-	incoming: readonly T[],
-): T[] {
+function isConversationIdPlaceholderTitle(value: { id?: unknown; title?: unknown }): boolean {
+	const id = typeof value.id === "string" ? value.id.trim().toLowerCase() : "";
+	const title = typeof value.title === "string" ? value.title.trim().toLowerCase() : "";
+	return id.length > 0 && title === id;
+}
+
+function mergeConversationsByObservedOrder<
+	T extends { id: string; title: string; metadata?: unknown },
+>(existing: readonly T[], incoming: readonly T[]): T[] {
 	const existingById = new Map(existing.filter((item) => item?.id).map((item) => [item.id, item]));
 	const incomingIds = new Set<string>();
 	const observed = incoming
@@ -2332,6 +2345,8 @@ function mergeConversationsByObservedOrder<T extends { id: string; metadata?: un
 	const retained = existing.filter((item) => item?.id && !incomingIds.has(item.id));
 	return [...observed, ...retained];
 }
+
+export const mergeConversationsByObservedOrderForTest = mergeConversationsByObservedOrder;
 
 function mergeArtifacts(
 	existing: readonly ConversationArtifact[],

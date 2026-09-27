@@ -644,6 +644,11 @@ Terminology note:
   from the visible index row or ChatGPT's local conversation-history metadata;
   a virtualized or textless sidebar row does not by itself reduce the cached
   title to the provider conversation UUID.
+  Cache reconciliation also preserves an existing readable title when a later
+  weak observation contains only that conversation UUID. Operators can use an
+  explicit read-only `conversations --include-history --history-limit <n>
+  --refresh` pass to hydrate older placeholder titles without fetching message
+  bodies or artifacts.
   Refresh merges preserve the provider-observed conversation order for newly
   seen rows and append older unobserved cached rows, so a conversation that
   moves to the top of a provider rail/project index stays top-ranked in cache.

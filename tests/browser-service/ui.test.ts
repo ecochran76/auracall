@@ -1329,6 +1329,38 @@ describe('browser-service ui wait helpers', () => {
     }
   });
 
+  test('navigateAndSettle accepts a timed-out acknowledgement only after route readiness proves settlement', async () => {
+    vi.useFakeTimers();
+    try {
+      const runtime = createRuntime([
+        'https://chatgpt.com/',
+        { path: '/c/expected' },
+        { readyState: 'interactive', visibilityState: 'visible' },
+        { loaded: true },
+      ]);
+      const PAGE = {
+        navigate: vi.fn(() => new Promise<never>(() => undefined)),
+      };
+      const pending = navigateAndSettle({ Page: PAGE as never, Runtime: runtime as never }, {
+        url: 'https://chatgpt.com/c/expected',
+        routeExpression: 'location.pathname === "/c/expected"',
+        readyExpression: 'window.__conversationReady',
+        timeoutMs: 25,
+        pollMs: 1,
+      });
+
+      await vi.advanceTimersByTimeAsync(30);
+
+      await expect(pending).resolves.toMatchObject({
+        ok: true,
+        mutationPerformed: true,
+        phase: 'complete',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test('navigateAndSettle retries with location.assign when the first route settle fails', async () => {
     let fallbackTriggered = false;
     const runtime = {

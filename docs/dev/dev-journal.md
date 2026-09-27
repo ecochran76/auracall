@@ -1,3 +1,20 @@
+## 2026-09-27 | Plan 0360 navigation-ack and retained-title repair
+
+- The repaired-title soak ran 39 passes for roughly seven hours, then failed
+  when `Page.navigate` did not acknowledge within ten seconds. The monitor
+  subsequently rejected the expired idle lease and correctly stopped the timer
+  and paired wake. Maintenance now reports zero active, idle, lost, fenced, or
+  attention leases and zero provider warnings.
+- Packet 6D treats an acknowledgement timeout as recoverable only after the
+  exact route, document-ready state, and provider-ready predicate prove
+  settlement. A timeout without those positive checks still fails closed.
+- Cache reconciliation now prevents a UUID placeholder from overwriting a
+  readable existing title. After canonical installation, an explicit
+  read-only full-history refresh will hydrate older placeholder rows before a
+  replacement soak starts.
+- Provider-free validation currently passes 90 focused tests, typecheck, and
+  production build. GitHub Actions remain skipped by operator direction.
+
 ## 2026-09-26 | Plan 0360 repaired metadata-title soak started
 
 - Preflight on canonical installed code found zero fenced, active, idle, lost,

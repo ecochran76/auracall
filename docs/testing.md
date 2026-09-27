@@ -502,6 +502,12 @@
         metadata titles when a virtualized sidebar anchor has no usable text;
         `tests/browser/chatgptAdapter.test.ts` guards the read-only fallback and
         its precedence over anchor labels and UUID fallback
+      - a timed-out `Page.navigate` acknowledgement is recoverable only when
+        the configured route, document-ready, and provider-ready predicates
+        subsequently prove settlement; an acknowledgement timeout without
+        those predicates remains terminal
+      - cache merge tests must prove a UUID-title observation cannot overwrite
+        an existing readable title
       - full-sweep backfill is explicit with
         `auracall api mirror-complete --sweep-mode full_sweep --materialization-policy full_missing_assets`;
         optional asset-kind, max-item, snapshot-refresh, and force flags flow

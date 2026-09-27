@@ -1238,6 +1238,14 @@ export async function navigateAndSettle(
       });
       return externallySettled;
     }
+    if (
+      navigationOutcome.kind === 'command-timeout' &&
+      !options.routeExpression &&
+      options.waitForDocumentReady === false &&
+      !options.readyExpression
+    ) {
+      throw navigationOutcome.error;
+    }
     const primary = await evaluateState(options.timeoutMs, false, true);
     if (primary.ok || !options.fallbackToLocationAssign) {
       await audit.complete({
@@ -1287,6 +1295,7 @@ async function waitForNavigationCommandOrCompletion(
   completionSignal?: Promise<{ ok: boolean; reason?: string }>,
 ): Promise<
   | { kind: 'command-acknowledged' }
+  | { kind: 'command-timeout'; error: Error }
   | { kind: 'external-completion'; completion: { ok: boolean; reason?: string } }
 > {
   const effectiveTimeoutMs = Math.max(1, timeoutMs);
@@ -1300,10 +1309,13 @@ async function waitForNavigationCommandOrCompletion(
     };
     const timer = setTimeout(() => {
       finish(
-        reject,
-        new Error(
-          `Timed out waiting for Page.navigate acknowledgement after ${effectiveTimeoutMs}ms.`,
-        ),
+        resolve,
+        {
+          kind: 'command-timeout',
+          error: new Error(
+            `Timed out waiting for Page.navigate acknowledgement after ${effectiveTimeoutMs}ms.`,
+          ),
+        },
       );
     }, effectiveTimeoutMs);
 

@@ -6,7 +6,7 @@ Branch: feat/issue-49-chatgpt-affinity-rollout
 Target: main
 Integration: merge
 Work item: ecochran76/auracall#49
-Plan version: 33
+Plan version: 34
 
 ## Stable Objective
 
@@ -650,6 +650,24 @@ completion. Any rejected snapshot cancels the crawler, stops the timer, and
 cancels paired wake `wake_20260927_010520_0514`. That wake is pending for the
 24-hour gate at `2026-09-28T01:05:20Z`. The soak is initiated, not accepted;
 default enablement remains forbidden before terminal evaluation.
+
+That receipt failed after about seven hours. Completion
+`acctmirror_completion_b7b6b4bf-f94c-42f0-9a4f-cf73b20d49ab` completed 39
+passes before a `Page.navigate` acknowledgement failed to arrive within ten
+seconds. The completion became terminal at `2026-09-27T08:04:03.956Z`; the
+monitor rejected the resulting expired idle lease at
+`2026-09-27T08:19:07.254Z`, then stopped its timer and cancelled the paired
+wake. Maintenance released the exact lease with zero remaining attention,
+warnings, reloads, or focuses. The failed receipt remains immutable evidence.
+
+Packet 6D repairs the newly observed boundaries. A missing navigation command
+acknowledgement is no longer fatal when the exact configured route,
+document-ready state, and provider-ready predicate independently prove that
+the requested read-only navigation settled; the same timeout without positive
+settlement proof remains terminal. Cache merge also preserves a readable
+existing title over a later UUID placeholder. Provider-free validation and
+canonical installation precede one explicit read-only full-history title
+backfill and any replacement soak.
 
 ## Non-goals
 
