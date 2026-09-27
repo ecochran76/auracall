@@ -678,6 +678,17 @@ titles at `2026-09-27T13:15:35.397Z`. It submitted no prompt and performed no
 message-body or artifact materialization. Packet 6D is accepted; a fresh
 full-duration Packet 6 soak remains required before default enablement.
 
+The Packet 6D replacement soak is now running. Metadata-only completion
+`acctmirror_completion_ad2a92ab-f272-47c7-b9f1-9ba83671cca8` started at
+`2026-09-27T13:17:51.215Z`; receipt
+`c62a1128-355d-447a-a577-ac41f733f99a` started at
+`2026-09-27T13:18:31.097Z`. Its start and immediate monitor snapshots are
+accepted with one crawler lease, zero provider warnings or lease attention,
+unchanged admission rejections, and no reload or focus action. The five-minute
+fail-stop timer cancels that exact completion and paired wake
+`wake_20260927_131911_97e8` on any rejected snapshot. The wake is pending for
+the 24-hour gate at `2026-09-28T13:19:11Z`; the soak is initiated, not accepted.
+
 ## Non-goals
 
 - Gemini or Grok concurrent-tab enablement.
