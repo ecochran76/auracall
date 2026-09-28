@@ -77,3 +77,27 @@ explicitly unaccepted until a separately authorized fresh installed run.
   caused by this packet and was not expanded into issue 121.
 - No installed runtime, browser interaction, provider submission, session
   retry, or wake dispatch was performed.
+
+## Installed Acceptance | Blocked Before Send
+
+- Installed PR tip `01caa1b64b0442e768d16c667583d58984440227` into the
+  user-scoped runtime and restarted only `auracall-api.service`; the installed
+  composer-tool and ecosystem-mention JavaScript digests exactly matched the
+  checkout.
+- The loopback API restarted at PID `84906`, advertised the schema-v1 terminal
+  receipt route, and the persistent codex-wake monitor remained ready for the
+  exact AuraCall wake root.
+- Required read-only `wsl-chrome-3` app-capability discovery produced no
+  terminal output for more than five minutes and was interrupted. One bounded
+  180-second verbose diagnostic retry reproduced the same silent stall and
+  terminated at its external ceiling.
+- A bounded browser doctor after the first cancellation proved the retained
+  ChatGPT root page was loaded, focused, authenticated, and had one visible
+  contenteditable. It did not establish GitHub capability identity or
+  connection state, so the runbook's pre-Send gate remained unsatisfied.
+- No fresh session slug was allocated, no prompt was submitted, no terminal
+  receipt was expected, and no codex-wake source or wake was armed. The prior
+  terminal session was never retried.
+- Next blocker: diagnose the installed `capabilities` command's non-terminating
+  lifecycle without weakening connected-app discovery or bypassing its browser
+  operation lease, then request a distinct fresh acceptance.

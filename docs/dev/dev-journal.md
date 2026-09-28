@@ -51527,3 +51527,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   build, scoped lint, plan audit, and diff hygiene passed. One unrelated
   lifecycle structure-regex failure reproduced unchanged on the untouched
   baseline. Installed acceptance remains separately gated.
+- Published branch tip `01caa1b64` and opened PR 122. With explicit authority,
+  installed that exact tip and restarted only the loopback AuraCall API.
+- The required read-only GitHub capability discovery then stalled silently.
+  The first attempt was interrupted after more than five minutes; one bounded
+  180-second diagnostic retry reproduced the stall. Browser doctor showed an
+  authenticated focused ChatGPT root, but no stable GitHub capability receipt
+  was obtained.
+- Stopped before Send. No fresh session, provider submission, terminal receipt,
+  wake source, or wake record was created; the earlier terminal session was not
+  retried. The retained browser remains available for bounded diagnosis.
