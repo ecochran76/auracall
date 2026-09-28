@@ -640,6 +640,74 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
+	test("does not retry a named ChatGPT Library inventory timeout", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listAccountFiles: vi.fn(async () => {
+				throw new Error(
+					"ChatGPT Library inventory operation timed out after 30000ms during stage dom-inventory.",
+				);
+			}),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+
+		try {
+			await expect(service.listAccountFiles({ listOptions: {} })).rejects.toThrow(
+				"ChatGPT Library inventory operation timed out after 30000ms during stage dom-inventory.",
+			);
+			expect(provider.listAccountFiles).toHaveBeenCalledOnce();
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("can disable retry for one read-only account Library inventory", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listAccountFiles: vi.fn(async () => {
+				throw new Error("WebSocket connection closed");
+			}),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+		const listOptions: BrowserProviderListOptions = {
+			disableAccountFileListRetry: true,
+		};
+		const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation((callback) => {
+			if (typeof callback === "function") callback();
+			return 0 as unknown as ReturnType<typeof setTimeout>;
+		});
+
+		try {
+			await expect(service.listAccountFiles({ listOptions })).rejects.toThrow(
+				"WebSocket connection closed",
+			);
+			expect(provider.listAccountFiles).toHaveBeenCalledOnce();
+		} finally {
+			setTimeoutSpy.mockRestore();
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("listConversationFiles writes conversation-files cache from provider listConversationFiles", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
@@ -949,29 +1017,33 @@ describe("llmService project file cache writes", () => {
 				messages: [],
 				artifacts,
 			})),
-			materializeConversationArtifact: vi.fn(async (
-				_conversationId: string,
-				artifact: ConversationArtifact,
-				_destDir: string,
-				_projectId: string | undefined,
-				listOptions: BrowserProviderListOptions,
-			) => {
-				expect(listOptions.providerSession).toBeUndefined();
-				listOptions.providerSession = {
-					providerId: "chatgpt",
-					key: artifact.id,
-					value: {},
-					close: async () => { closed.push(artifact.id); },
-				};
-				return {
-					id: `file-${artifact.id}`,
-					name: `${artifact.id}.bin`,
-					provider: "chatgpt",
-					source: "conversation",
-					size: 1,
-					localPath: `/tmp/${artifact.id}.bin`,
-				} satisfies FileRef;
-			}),
+			materializeConversationArtifact: vi.fn(
+				async (
+					_conversationId: string,
+					artifact: ConversationArtifact,
+					_destDir: string,
+					_projectId: string | undefined,
+					listOptions: BrowserProviderListOptions,
+				) => {
+					expect(listOptions.providerSession).toBeUndefined();
+					listOptions.providerSession = {
+						providerId: "chatgpt",
+						key: artifact.id,
+						value: {},
+						close: async () => {
+							closed.push(artifact.id);
+						},
+					};
+					return {
+						id: `file-${artifact.id}`,
+						name: `${artifact.id}.bin`,
+						provider: "chatgpt",
+						source: "conversation",
+						size: 1,
+						localPath: `/tmp/${artifact.id}.bin`,
+					} satisfies FileRef;
+				},
+			),
 		};
 		const service = new TestLlmService(provider as never, new JsonCacheStore(), cacheContext);
 

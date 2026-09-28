@@ -72,6 +72,7 @@ describe("library-files CLI", () => {
 		expect(listLibraryFiles).toHaveBeenCalledWith({
 			abortSignal: expect.any(AbortSignal),
 			configuredUrl: "https://chatgpt.com/library",
+			disableAccountFileListRetry: true,
 			preserveActiveTab: true,
 			requireExistingTarget: true,
 		});
@@ -197,7 +198,7 @@ describe("library-files CLI", () => {
 		}
 	});
 
-	test("keeps the outer watchdog behind preflight, provider timeout, and settlement", async () => {
+	test("keeps the outer watchdog behind the observed preflight and provider settlement boundary", async () => {
 		vi.useFakeTimers();
 		try {
 			const delay = (timeoutMs: number) =>
@@ -207,7 +208,7 @@ describe("library-files CLI", () => {
 				{ json: true },
 				{
 					createClient: async () => {
-						await delay(4_000);
+						await delay(6_000);
 						return {
 							listLibraryFiles: async () => {
 								await delay(6_000);
@@ -223,7 +224,7 @@ describe("library-files CLI", () => {
 				},
 			);
 
-			await vi.advanceTimersByTimeAsync(48_000);
+			await vi.advanceTimersByTimeAsync(50_000);
 			const result = await resultPromise;
 
 			expect(result.exitCode).toBe(1);
