@@ -1,5 +1,14 @@
 # RUNBOOK
 
+## Turn 632 | 2026-09-28
+
+- Reconciled the active-only planning audit for open P55 / [Plan 0362](docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md)
+  by restoring its missing canonical ROADMAP and RUNBOOK wiring.
+- The repair preserves the plan's actual open state: issue 94 provenance is
+  integrated and installed-proven, while the remaining campaign outcomes and
+  combined installed acceptance are not claimed complete. No implementation,
+  issue, browser, provider, installed-runtime, or live-system state changed.
+
 ## Turn 631 | 2026-09-28
 
 - Closed provider-free P73 / [Plan 0373](docs/dev/plans/0373-2026-09-28-library-cli-cache-persistence-bypass.md)

@@ -1,3 +1,10 @@
+## 2026-09-28 | Plan 0362 planning-audit wiring reconciliation
+
+- The active-only planning audit reported exactly two unbaselined findings:
+  open Plan 0362 was absent from `ROADMAP.md` and `RUNBOOK.md`.
+- Added canonical links and a concise current-state projection without changing
+  plan state, priority, scope, issue state, implementation, or live systems.
+
 ## 2026-09-28 | Issue 107 Library CLI cache persistence bypass
 
 - Correct installed diagnostics on canonical `fe6375955` entered
