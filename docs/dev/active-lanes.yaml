@@ -1311,3 +1311,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free source repair only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-28
+  - id: P68
+    objective: Preserve ChatGPT Library terminal results across bounded client and affinity settlement cleanup.
+    plan: docs/dev/plans/0368-2026-09-28-library-terminal-result-cleanup.md
+    plan_ref: refs/heads/fix/issue-107-library-client-cleanup
+    branch: fix/issue-107-library-client-cleanup
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 4ff8edfe0309b76a8cddb4c81c51538227d63564
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64, P65, P66, P67]
+    overlaps: [P53, P63, P65, P66, P67]
+    reconciled_overlaps: [P53, P63, P65, P66, P67]
+    reconciliation_note: P68 changes only terminal-result and cleanup ordering; P53 retains rollout authority, P63 retains the outer deadline/cancellation, P65 retains exact-target exit behavior, P66 retains lease recovery, and P67 retains provider-stage/CDP bounds.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0368-2026-09-28-library-terminal-result-cleanup.md
+    integration_receipt: null
+    disposition: Provider-free corrective lane only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-28

@@ -6,6 +6,7 @@ import {
 import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { createLedgerBackedBrowserInteractionGovernor } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 import {
+	type BrowserTabLeaseRegistry,
 	getCurrentTabLeaseOwnerIdentity,
 	type TabLeaseClaim,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
@@ -22,6 +23,8 @@ import { retireExpiredChatgptTabLeases } from "./chatgptTabRetirement.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
 import type { BrowserService } from "./service/browserService.js";
 import { createBrowserTabConcurrencyRuntime } from "./tabConcurrencyRuntime.js";
+
+const CHATGPT_UTILITY_SETTLEMENT_TIMEOUT_MS = 5_000;
 
 export interface ConfiguredChatgptUtilityAffinityDeps {
 	createRuntime?: typeof createBrowserTabConcurrencyRuntime;
@@ -260,54 +263,110 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		}
 		execution = { ok: false, error };
 	}
-	let settlementError: unknown = warningRecordError;
-	if (governor) {
+	const settlement = settleConfiguredChatgptUtilityOperation({
+		governor,
+		registry: runtime.registry,
+		tab,
+		utilityId: input.utilityId,
+		outcome,
+		effectState,
+		now,
+		initialError: warningRecordError,
+	});
+	const settlementResult = await waitForConfiguredChatgptUtilitySettlement(
+		settlement,
+		CHATGPT_UTILITY_SETTLEMENT_TIMEOUT_MS,
+	);
+	if (!execution.ok) throw execution.error;
+	if (settlementResult.status === "timed-out") {
+		throw new Error(
+			`ChatGPT utility settlement timed out after ${CHATGPT_UTILITY_SETTLEMENT_TIMEOUT_MS}ms.`,
+		);
+	}
+	if (settlementResult.error) throw settlementResult.error;
+	return execution.value;
+}
+
+async function settleConfiguredChatgptUtilityOperation(input: {
+	governor: ReturnType<typeof createLedgerBackedBrowserInteractionGovernor> | null;
+	registry: BrowserTabLeaseRegistry;
+	tab: Awaited<ReturnType<typeof acquireEphemeralBrowserTab>>;
+	utilityId: string;
+	outcome: "succeeded" | "failed";
+	effectState: "settled" | "outcome-unknown";
+	now: () => Date;
+	initialError: unknown;
+}): Promise<unknown> {
+	let settlementError: unknown = input.initialError;
+	if (input.governor) {
 		try {
-			await governor.close({ outcome, effectState });
+			await input.governor.close({ outcome: input.outcome, effectState: input.effectState });
 		} catch (error) {
 			settlementError = error;
 		}
 	}
-	let claim: TabLeaseClaim = tab.claim;
+	let claim: TabLeaseClaim = input.tab.claim;
 	try {
-		const used = await runtime.registry.recordMeaningfulUse({
+		const used = await input.registry.recordMeaningfulUse({
 			claim,
-			now: now().toISOString(),
+			now: input.now().toISOString(),
 			idleTtlMs: 5 * 60_000,
-			effectState,
+			effectState: input.effectState,
 		});
 		if (!used.ok) throw new Error(`ChatGPT utility heartbeat failed: ${used.conflict.kind}.`);
 		claim = used.value.claim;
 	} catch (error) {
 		settlementError ??= error;
-		const current = (await runtime.registry.list()).find(
-			(lease) =>
-				lease.leaseId === tab.lease.leaseId &&
-				lease.state === "active" &&
-				lease.ownerOperationId === input.utilityId,
-		);
-		if (current) {
-			claim = {
-				leaseId: current.leaseId,
-				revision: current.revision,
-				operationId: input.utilityId,
-			};
+		try {
+			const current = (await input.registry.list()).find(
+				(lease) =>
+					lease.leaseId === input.tab.lease.leaseId &&
+					lease.state === "active" &&
+					lease.ownerOperationId === input.utilityId,
+			);
+			if (current) {
+				claim = {
+					leaseId: current.leaseId,
+					revision: current.revision,
+					operationId: input.utilityId,
+				};
+			}
+		} catch (recoveryError) {
+			settlementError ??= recoveryError;
 		}
 	}
 	try {
-		const idled = await runtime.registry.idle({
+		const idled = await input.registry.idle({
 			claim,
-			now: now().toISOString(),
-			effectState,
+			now: input.now().toISOString(),
+			effectState: input.effectState,
 		});
 		if (!idled.ok)
 			throw new Error(`ChatGPT utility idle transition failed: ${idled.conflict.kind}.`);
 	} catch (error) {
 		settlementError ??= error;
 	}
-	if (!execution.ok) throw execution.error;
-	if (settlementError) throw settlementError;
-	return execution.value;
+	return settlementError;
+}
+
+async function waitForConfiguredChatgptUtilitySettlement(
+	settlement: Promise<unknown>,
+	timeoutMs: number,
+): Promise<{ status: "settled"; error: unknown } | { status: "timed-out" }> {
+	let timeout: ReturnType<typeof setTimeout> | undefined;
+	try {
+		return await Promise.race([
+			settlement.then(
+				(error) => ({ status: "settled" as const, error }),
+				(error: unknown) => ({ status: "settled" as const, error }),
+			),
+			new Promise<{ status: "timed-out" }>((resolve) => {
+				timeout = setTimeout(() => resolve({ status: "timed-out" }), timeoutMs);
+			}),
+		]);
+	} finally {
+		if (timeout) clearTimeout(timeout);
+	}
 }
 
 function isExactRoute(actualUrl: string, expectedUrl: string): boolean {

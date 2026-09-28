@@ -252,6 +252,56 @@ describe("configured ChatGPT utility affinity", () => {
 		expect(await ledger.list()).toEqual([]);
 	});
 
+	test("preserves a provider-stage error when governor settlement does not settle", async () => {
+		vi.useFakeTimers();
+		try {
+			const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+			const ledger = createInMemoryProviderInteractionLedger({
+				createReservationId: () => "reservation-1",
+			});
+			const settle = vi
+				.spyOn(ledger, "settle")
+				.mockImplementation(() => new Promise(() => undefined));
+			const operation = runConfiguredChatgptUtilityOperation({
+				userConfig,
+				browserService: {
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 45011,
+						managedBrowserProfile: "/managed/runtime-1/chatgpt",
+					}),
+				} as never,
+				utilityId: "library-files",
+				mutability: "read-only",
+				buildListOptions: async (options) => options,
+				run: async (options) => {
+					await options.interactionGovernor?.beforeInteraction("generic");
+					throw new Error("ChatGPT Library inventory stage dom-inventory timed out after 10000ms.");
+				},
+				deps: {
+					createRuntime: () => ({ registry, ledger }) as never,
+					listTargets: vi.fn(async () => []) as never,
+					openTarget: vi.fn(async () => ({ id: "utility-target" })) as never,
+					closeTarget: vi.fn(),
+				},
+			});
+			const rejection = expect(operation).rejects.toThrow(
+				"ChatGPT Library inventory stage dom-inventory timed out after 10000ms.",
+			);
+
+			await vi.advanceTimersByTimeAsync(5_000);
+			await rejection;
+
+			expect(settle).toHaveBeenCalledOnce();
+			expect((await registry.list())[0]).toMatchObject({
+				state: "active",
+				targetId: "utility-target",
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	test("marks a failed provider mutation outcome unknown without retrying", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const ledger = createInMemoryProviderInteractionLedger({

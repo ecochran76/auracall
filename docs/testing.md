@@ -15,14 +15,18 @@
   provider-facing `AbortSignal`; success, provider error, timeout, and
   cancellation close command-owned resources exactly once; and JSON failures
   return stable error codes with exit 1 or cancellation exit 130.
+  Pending-dispose fixtures prove that client cleanup cannot replace provider
+  success or a named provider-stage error. A pending-governor fixture proves
+  affinity settlement is bounded, preserves that provider error, and retains
+  the unresolved lease in its active fence.
   The exact-target fixtures additionally prove adoption of an existing Library
   page through the production target-list dependency without target
   creation/closure, guaranteed lease settlement after post-acquisition setup
   failure, safe dead-owner recovery, close-on-rejection before provider
   handoff, a named 10-second provider DOM-inventory deadline that initiates
   exact-target CDP client close and bounds a nonsettling close before the
-  45-second CLI deadline, and natural
-  termination of a child fixture with a retained handle.
+  45-second CLI deadline, and natural termination of a child fixture with a
+  retained handle.
   They do not launch a browser, inspect a provider account, or replace the separately
   authorized installed `wsl-chrome-3` acceptance.
 

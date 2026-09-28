@@ -107,6 +107,96 @@ describe("library-files CLI", () => {
 		});
 	});
 
+	test("preserves a provider-stage error when client dispose does not settle", async () => {
+		vi.useFakeTimers();
+		try {
+			const dispose = vi.fn(() => new Promise<void>(() => undefined));
+			const resultPromise = runChatgptLibraryFilesCommandForCli(
+				{} as never,
+				{ json: true },
+				{
+					inventoryTimeoutMs: 25,
+					cleanupTimeoutMs: 10,
+					createClient: async () => ({
+						dispose,
+						listLibraryFiles: async () => {
+							throw new Error(
+								"ChatGPT Library inventory stage dom-inventory timed out after 10000ms.",
+							);
+						},
+					}),
+				},
+			);
+			const guarded = Promise.race([
+				resultPromise,
+				new Promise<"still-pending">((resolve) => {
+					setTimeout(() => resolve("still-pending"), 11);
+				}),
+			]);
+
+			await vi.advanceTimersByTimeAsync(11);
+			const outcome = await guarded;
+			await vi.advanceTimersByTimeAsync(24);
+			await resultPromise;
+
+			expect(outcome).not.toBe("still-pending");
+			expect(dispose).toHaveBeenCalledOnce();
+			expect(JSON.parse((outcome as Awaited<typeof resultPromise>).output)).toMatchObject({
+				error: {
+					code: "library_files_inventory_failed",
+					message: "ChatGPT Library inventory stage dom-inventory timed out after 10000ms.",
+				},
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("returns provider success when client dispose does not settle", async () => {
+		vi.useFakeTimers();
+		try {
+			const dispose = vi.fn(() => new Promise<void>(() => undefined));
+			const resultPromise = runChatgptLibraryFilesCommandForCli(
+				{} as never,
+				{ json: true },
+				{
+					inventoryTimeoutMs: 25,
+					cleanupTimeoutMs: 10,
+					createClient: async () => ({
+						dispose,
+						listLibraryFiles: async () => ({
+							provider: "chatgpt" as const,
+							complete: true,
+							observedAt: "2026-09-28T12:00:00.000Z",
+							files: [],
+						}),
+					}),
+				},
+			);
+			const guarded = Promise.race([
+				resultPromise,
+				new Promise<"still-pending">((resolve) => {
+					setTimeout(() => resolve("still-pending"), 11);
+				}),
+			]);
+
+			await vi.advanceTimersByTimeAsync(11);
+			const outcome = await guarded;
+			await vi.advanceTimersByTimeAsync(24);
+			await resultPromise;
+
+			expect(outcome).not.toBe("still-pending");
+			expect(dispose).toHaveBeenCalledOnce();
+			expect(JSON.parse((outcome as Awaited<typeof resultPromise>).output)).toMatchObject({
+				provider: "chatgpt",
+				complete: true,
+				files: [],
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	test("times out the complete inventory, aborts it, and joins close before returning", async () => {
 		vi.useFakeTimers();
 		try {

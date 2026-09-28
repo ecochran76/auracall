@@ -88,17 +88,13 @@ export async function listChatgptLibraryFilesForCli(
 		client = dependencies.createClient
 			? await dependencies.createClient()
 			: await BrowserAutomationClient.fromConfig(userConfig, { target: "chatgpt" });
-		try {
-			controller.signal.throwIfAborted();
-			return await client.listLibraryFiles({
-				abortSignal: controller.signal,
-				configuredUrl: requireBundledServiceRouteTemplate("chatgpt", "library"),
-				preserveActiveTab: true,
-				requireExistingTarget: true,
-			});
-		} finally {
-			await closeClient();
-		}
+		controller.signal.throwIfAborted();
+		return await client.listLibraryFiles({
+			abortSignal: controller.signal,
+			configuredUrl: requireBundledServiceRouteTemplate("chatgpt", "library"),
+			preserveActiveTab: true,
+			requireExistingTarget: true,
+		});
 	})().finally(() => {
 		operationSettled = true;
 	});

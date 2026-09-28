@@ -205,6 +205,10 @@ auracall features diff --target gemini --json
 # Provider-side interaction, connection, identity, dialog, route-readiness,
 # and DOM-inventory stages are named and bounded inside a 30-second operation
 # ceiling, so a stalled CDP command fails with its stage before that CLI limit.
+# Provider results are fixed before independently bounded client cleanup. The
+# utility governor and lease settlement then have a five-second ceiling; if
+# settlement stalls, the original provider error is retained and the unresolved
+# lease remains fenced rather than becoming available to another process.
 # It adopts an existing exact ChatGPT Library page in the selected managed
 # browser profile; it does not create, refresh, or navigate a replacement page.
 # A dead or expired prior command lease is reconciled only after AuraCall

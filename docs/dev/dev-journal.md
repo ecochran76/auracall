@@ -1,3 +1,23 @@
+## 2026-09-28 | Issue 107 Library terminal result cleanup
+
+- Correct installed acceptance of canonical `4ff8edfe0` still returned the
+  outer `library_files_inventory_timeout` at 45 seconds, although the provider
+  operation and CDP close were now internally bounded. This source slice did
+  not rerun the installed command.
+- Red provider-free fixtures showed the CLI awaited optional client disposal
+  inside the inventory promise, so a pending dispose hid both provider success
+  and the exact named provider-stage error until the outer deadline.
+- CodeGraph also established that production `BrowserAutomationClient` has no
+  dispose/close method. The installed path instead remained vulnerable in
+  configured utility affinity, which awaited governor close, lease heartbeat,
+  recovery listing, and idle transition without a deadline before rethrowing
+  the provider error.
+- The inventory result is now separate from its five-second cleanup join.
+  Affinity settlement is likewise capped at five seconds; a provider error wins
+  over settlement timeout, and a stalled settlement leaves the lease active and
+  fenced. Provider-free fixtures cover success, provider error, pending client
+  disposal, and pending governor settlement. No installed or live effect ran.
+
 ## 2026-09-28 | Issue 107 provider Library inventory liveness
 
 - Correct installed acceptance of canonical `96095e68c` proved exact

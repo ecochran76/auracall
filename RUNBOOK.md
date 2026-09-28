@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 626 | 2026-09-28
+
+- Closed provider-free P68 / [Plan 0368](docs/dev/plans/0368-2026-09-28-library-terminal-result-cleanup.md)
+  for reopened issue 107 from canonical `4ff8edfe0`. Correct installed
+  acceptance still reached the 45-second outer timeout after the provider's
+  newly bounded work should have rejected.
+- Red fixtures proved that the CLI counted optional client disposal inside the
+  inventory promise. Production tracing then showed no dispose hook on
+  `BrowserAutomationClient`; its actual remaining post-provider boundary was
+  unbounded utility governor/lease settlement before the provider error could
+  escape.
+- Client cleanup is now independently bounded, and configured utility
+  settlement has a five-second ceiling. A provider error remains authoritative;
+  an unresolved lease stays actively fenced. No installed command,
+  browser/provider access, retry, refresh, navigation, target creation,
+  attachment, prompt, or Send occurred.
+
 ## Turn 625 | 2026-09-28
 
 - Closed provider-free P67 / [Plan 0367](docs/dev/plans/0367-2026-09-28-library-provider-inventory-liveness.md)
