@@ -35,6 +35,13 @@ affinity soak evaluation.
 - The issue-49 soak lane is active in a separate checkout. Issue #98 owns the
   corrective evaluator semantics that permit attributable ordinary use without
   weakening duplicate/unattributed-target or aggregate-provider guards.
+- P55 provider-free repair is implemented locally. The stored executor now
+  derives the managed browser profile through the canonical launch plan after
+  explicit runtime/provider selection, and profile selection clears a stale
+  managed-profile override when its runtime or provider scope changes. The
+  exact default-Grok/explicit-`wsl-chrome-3` ChatGPT regression plus the
+  profile-config suite pass 29 tests; typecheck passes. Wider focused validation,
+  checkpoint publication, installation, and one bounded live proof remain.
 
 ## Scope
 

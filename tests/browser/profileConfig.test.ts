@@ -387,4 +387,41 @@ describe('applyBrowserProfileOverrides', () => {
       },
     });
   });
+
+  test('drops a stale managed profile when an explicit runtime and provider do not restate it', () => {
+    const selected = resolveRuntimeProfileUserConfig({
+      auracallProfile: 'default',
+      defaultRuntimeProfile: 'default',
+      browser: {
+        target: 'grok',
+        managedProfileRoot: '/home/test/.auracall/browser-profiles',
+        manualLoginProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
+      },
+      browserProfiles: {
+        'wsl-chrome-3': {
+          managedProfileRoot: '/home/test/.auracall/browser-profiles',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'grok',
+        },
+        'wsl-chrome-3': {
+          browserProfile: 'wsl-chrome-3',
+          defaultService: 'chatgpt',
+          services: { chatgpt: {} },
+        },
+      },
+    }, {
+      runtimeProfileId: 'wsl-chrome-3',
+      provider: 'chatgpt',
+    }) as { browser?: Record<string, unknown> };
+
+    expect(selected.browser).toMatchObject({
+      target: 'chatgpt',
+      managedProfileRoot: '/home/test/.auracall/browser-profiles',
+    });
+    expect(selected.browser?.manualLoginProfileDir).toBeUndefined();
+  });
 });

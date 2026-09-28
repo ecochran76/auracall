@@ -20,6 +20,97 @@ describe('configured stored-step executor', () => {
     setAuracallHomeDirOverrideForTest(null);
   });
 
+  it('binds explicit ChatGPT runtime provenance instead of the default Grok managed profile', async () => {
+    const runBrowserModeImpl = vi.fn(async (_options: BrowserRunOptions) => ({
+      answerText: 'AURACALL_PROFILE_PROVENANCE_OK',
+      answerMarkdown: 'AURACALL_PROFILE_PROVENANCE_OK',
+      tookMs: 100,
+      answerTokens: 4,
+      answerChars: 30,
+      tabUrl: 'https://chatgpt.com/c/profile-provenance',
+      conversationId: 'profile-provenance',
+    }));
+    const managedRoot = '/tmp/auracall/browser-profiles';
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        auracallProfile: 'default',
+        defaultRuntimeProfile: 'default',
+        browser: {
+          target: 'grok',
+          managedProfileRoot: managedRoot,
+          manualLoginProfileDir: `${managedRoot}/default/grok`,
+        },
+        browserProfiles: {
+          default: { managedProfileRoot: managedRoot },
+          'wsl-chrome-3': {
+            managedProfileRoot: managedRoot,
+            tabConcurrencyMode: 'tab-affinity',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            engine: 'browser',
+            defaultService: 'grok',
+            browserProfile: 'default',
+          },
+          'wsl-chrome-3': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'wsl-chrome-3',
+            browser: { tabConcurrencyMode: 'tab-affinity' },
+            services: { chatgpt: {} },
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_profile_provenance',
+        revision: 1,
+        bundle: { run: { id: 'teamrun_profile_provenance' } },
+      } as never,
+      step: {
+        id: 'teamrun_profile_provenance:step:1',
+        agentId: 'instant-chatgpt-soylei',
+        runtimeProfileId: 'wsl-chrome-3',
+        browserProfileId: 'wsl-chrome-3',
+        service: 'chatgpt',
+        input: {
+          prompt: 'Reply exactly with AURACALL_PROFILE_PROVENANCE_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    const options = runBrowserModeImpl.mock.calls[0]?.[0];
+    expect(options).toMatchObject({
+      tabAffinityUserConfig: {
+        auracallProfile: 'wsl-chrome-3',
+        browser: {
+          target: 'chatgpt',
+        },
+      },
+      config: {
+        auracallProfileName: 'wsl-chrome-3',
+        target: 'chatgpt',
+        manualLoginProfileDir: `${managedRoot}/wsl-chrome-3/chatgpt`,
+        providerSessionAuthorization: {
+          context: {
+            providerId: 'chatgpt',
+            auracallRuntimeProfile: 'wsl-chrome-3',
+            browserProfile: 'wsl-chrome-3',
+            managedBrowserProfile: `${managedRoot}/wsl-chrome-3/chatgpt`,
+          },
+        },
+      },
+    });
+    expect(JSON.stringify(options)).not.toContain(`${managedRoot}/default/grok`);
+  });
+
   it('executes a Grok browser-backed step from runtime-profile config and returns response output', async () => {
     const runBrowserModeImpl = vi.fn(async (_options) => ({
       answerText: 'AURACALL_TEAM_SMOKE_OK',

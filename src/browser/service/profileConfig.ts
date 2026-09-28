@@ -64,6 +64,20 @@ export function resolveRuntimeProfileUserConfig(
   next.browser = {
     ...(isRecord(next.browser) ? next.browser : {}),
   };
+  const selectedProvider = isServiceId(options.provider) ? options.provider : null;
+  const selectionChanged =
+    userConfig.auracallProfile !== selection.runtimeProfileId ||
+    (selectedProvider !== null && existingBrowser.target !== selectedProvider);
+  if (selectionChanged) {
+    // A managed profile directory is scoped to both the selected browser
+    // profile family and provider. Retaining the prior top-level value while
+    // switching either selection can bind the new request to another
+    // provider's authenticated browser. A selected runtime/service may still
+    // supply its own explicit directory through applyBrowserProfileOverrides;
+    // otherwise the canonical launch-plan resolver derives one below the
+    // selected managed-profile root.
+    delete (next.browser as MutableBrowserConfig).manualLoginProfileDir;
+  }
   if (isServiceId(options.provider)) {
     (next.browser as MutableBrowserConfig).target = options.provider;
   }

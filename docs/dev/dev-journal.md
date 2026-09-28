@@ -51133,3 +51133,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Live testing is authorized after provider-free gates. Every live packet is
   bounded, zero-blind-retry, profile-explicit, and stops on its first decisive
   hard failure.
+- P55 reproduced the issue-94 path provider-free: a stored request selected
+  `wsl-chrome-3` and ChatGPT while raw layered profile reconstruction could
+  still retain the top-level `default/grok` managed directory. The executor now
+  uses the canonical browser launch plan after selection, and profile switching
+  removes a stale managed-directory override before selected defaults apply.
+  The exact regression and adjacent profile-config suite pass 29 tests plus
+  typecheck.
