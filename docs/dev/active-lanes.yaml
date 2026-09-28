@@ -1181,3 +1181,24 @@ lanes:
     integration_receipt: null
     disposition: Local provider-free source slice only; integration and separately authorized installed acceptance remain open.
     updated_at: 2026-09-27
+  - id: P59
+    objective: Publish an exact-receipt codex-wake continuation workflow for one long-running ChatGPT request.
+    plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    plan_ref: refs/heads/feat/issue-97-codex-wake-skill
+    branch: feat/issue-97-codex-wake-skill
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 1b45ca6a209efce33dcba74d08fd4523b249d7a5
+    remote_ref: refs/remotes/origin/feat/issue-97-codex-wake-skill
+    integration: merge
+    work_items: [ecochran76/auracall#97, CochranResearchGroup/codex-wake#169]
+    dependencies: [P55, P56, P57, P58]
+    overlaps: []
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/codex-wake-chatgpt.md
+    integration_receipt: null
+    disposition: Exact receipt observation and published one-request/one-wake workflow passed focused provider-free and no-dispatch validation; installed/live join remains separate.
+    updated_at: 2026-09-27

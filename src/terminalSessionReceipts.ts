@@ -129,6 +129,7 @@ export interface TerminalReceiptVerification {
 	eventId: string;
 	receiptLocator: string;
 	terminalState: TerminalState;
+	terminalAt: string;
 	result: {
 		locator: string;
 		digest: string;
@@ -136,6 +137,21 @@ export interface TerminalReceiptVerification {
 		verified: boolean;
 	} | null;
 	verified: boolean;
+}
+
+export interface TerminalSessionReceiptObservation {
+	object: "auracall_terminal_session_receipt_observation";
+	schemaVersion: 1;
+	eventKind: typeof TERMINAL_SESSION_RECEIPT_EVENT_KIND;
+	eventId: string;
+	idempotencyKey: string;
+	sessionRef: string;
+	status: "pending" | TerminalState | "integrity_error";
+	completedAt: string | null;
+	receiptLocator: string;
+	verified: boolean;
+	result: TerminalReceiptVerification["result"];
+	errorCode: string | null;
 }
 
 interface ReceiptDependencies {
@@ -419,7 +435,15 @@ export async function verifyTerminalSessionReceipt(
 		const session = await store.readSession(sessionId);
 		if (!session) throw new TerminalReceiptInvariantError("session_not_found");
 		const receiptPath = resolveContainedPath(root, receiptLocator(identity.eventId));
-		const receipt = await readReceiptFile(receiptPath);
+		let receipt: TerminalSessionReceipt;
+		try {
+			receipt = await readReceiptFile(receiptPath);
+		} catch (error) {
+			if (isFsError(error, "ENOENT")) {
+				throw new TerminalReceiptInvariantError("receipt_file_missing");
+			}
+			throw error;
+		}
 		assertReceiptIdentity(receipt, identity);
 		const state = terminalStateFromSession(session);
 		if (!state || receipt.terminalState !== state) {
@@ -429,7 +453,15 @@ export async function verifyTerminalSessionReceipt(
 		let resultVerification: TerminalReceiptVerification["result"] = null;
 		if (receipt.result) {
 			const resultPath = resolveContainedPath(root, receipt.result.locator);
-			const result = await readImmutablePrivateFile(resultPath);
+			let result: Buffer;
+			try {
+				result = await readImmutablePrivateFile(resultPath);
+			} catch (error) {
+				if (isFsError(error, "ENOENT")) {
+					throw new TerminalReceiptInvariantError("result_file_missing");
+				}
+				throw error;
+			}
 			const digest = digestBuffer(result);
 			const verified =
 				digest === receipt.result.digest && result.byteLength === receipt.result.bytes;
@@ -448,8 +480,93 @@ export async function verifyTerminalSessionReceipt(
 				eventId: identity.eventId,
 				receiptLocator: receiptLocator(identity.eventId),
 				terminalState: receipt.terminalState,
+				terminalAt: receipt.terminalAt,
 				result: resultVerification,
 				verified: true,
+			},
+		};
+	} catch (error) {
+		return { status: "failed", failure: failureFromError(error, now, identity) };
+	}
+}
+
+/**
+ * Projects one session's deterministic receipt identity into a provider-neutral
+ * HTTP/JSON-friendly completion observation. A terminal provider/session state
+ * is not sufficient: normal terminal statuses are returned only after the
+ * immutable receipt and any result artifact pass verification.
+ */
+export async function readTerminalSessionReceiptObservation(
+	sessionId: string,
+	config: ResolvedUserConfig | undefined,
+	deps: ReceiptDependencies = {},
+): Promise<TerminalReceiptOperationResult<TerminalSessionReceiptObservation>> {
+	const receiptConfig = config?.terminalSessionReceipts;
+	if (!receiptConfig?.enabled) return { status: "disabled" };
+	const now = deps.now ?? (() => new Date());
+	const store = deps.store ?? sessionStore;
+	const identity = createEventIdentity(sessionId);
+	try {
+		const session = await store.readSession(sessionId);
+		if (!session) throw new TerminalReceiptInvariantError("session_not_found");
+		const base = {
+			object: "auracall_terminal_session_receipt_observation" as const,
+			schemaVersion: TERMINAL_SESSION_RECEIPT_SCHEMA_VERSION,
+			eventKind: TERMINAL_SESSION_RECEIPT_EVENT_KIND,
+			eventId: identity.eventId,
+			idempotencyKey: identity.idempotencyKey,
+			sessionRef: identity.sessionRef,
+			receiptLocator: receiptLocator(identity.eventId),
+		};
+		if (!terminalStateFromSession(session)) {
+			return {
+				status: "succeeded",
+				value: {
+					...base,
+					status: "pending",
+					completedAt: null,
+					verified: false,
+					result: null,
+					errorCode: null,
+				},
+			};
+		}
+
+		const verification = await verifyTerminalSessionReceipt(sessionId, config, {
+			store,
+			now,
+		});
+		if (verification.value) {
+			return {
+				status: "succeeded",
+				value: {
+					...base,
+					status: verification.value.terminalState,
+					completedAt: verification.value.terminalAt,
+					verified: true,
+					result: verification.value.result,
+					errorCode: null,
+				},
+			};
+		}
+
+		const successfulResultMissing =
+			terminalStateFromSession(session) === "succeeded" && !session.terminalReceiptIntent?.result;
+		const errorCode = successfulResultMissing
+			? "successful_result_missing"
+			: (verification.failure?.code ?? "receipt_verification_failed");
+		const receiptPending =
+			!successfulResultMissing &&
+			(errorCode === "receipt_file_missing" || errorCode === "receipt_root_missing");
+		return {
+			status: "succeeded",
+			value: {
+				...base,
+				status: receiptPending ? "pending" : "integrity_error",
+				completedAt: receiptPending ? null : (session.completedAt ?? now().toISOString()),
+				verified: false,
+				result: null,
+				errorCode,
 			},
 		};
 	} catch (error) {

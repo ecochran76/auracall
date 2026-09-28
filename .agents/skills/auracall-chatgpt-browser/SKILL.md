@@ -118,6 +118,49 @@ pnpm vitest run \
 For a source change, also run the affected typecheck, lint, build, CodeGraph
 readback, diff hygiene, and planning audit required by repo policy.
 
+## Continue one long request with codex-wake
+
+For a Pro, Deep Research, or connected-capability request that should resume
+the current Codex thread later, follow
+[`docs/codex-wake-chatgpt.md`](../../../docs/codex-wake-chatgpt.md). Read that
+recipe completely before sending the prompt. Its required authority chain is:
+
+1. Enable schema-version-1 terminal-session receipts and confirm the private
+   root is ready.
+2. Verify the installed AuraCall CLI and loopback API share the same user,
+   build, config, and `AURACALL_HOME_DIR`.
+3. Validate the real `CODEX_THREAD_ID` through `codex-wake app status
+   --resume`; require an active monitor for the exact wake root.
+4. Submit one browser request with an explicit AuraCall runtime profile and a
+   unique three-to-five-word `--slug`. Capture the actual session ID from one
+   session inventory readback.
+5. Read `GET /v1/terminal-receipts/{session_id}` once while it is pending and
+   capture the exact `eventId`, `idempotencyKey`, `sessionRef`, and relative
+   `receiptLocator`.
+6. Configure one fixed `codex-wake http-json` source with `/status`,
+   `/eventId`, and `/completedAt`; select the exact observation object and
+   event kind; treat `succeeded`, `error`, `cancelled`, and `integrity_error`
+   as terminal.
+7. Arm one app-server wake with the receipt `idempotencyKey`,
+   `--max-attempts 1`, and `--require-monitor`, then yield. Do not have the
+   agent sleep or poll.
+8. On the resumed turn, read the observation and session once, match both
+   identities, verify `browser.config.auracallProfileName`, ChatGPT target,
+   managed browser profile path, and terminal-receipt intent, then continue
+   only for verified success.
+
+Never substitute `/v1/runs/{run_id}/status`: it does not attest publication of
+the CLI session receipt. Never resubmit after an ambiguous exit or a terminal
+`error`, `cancelled`, or `integrity_error`. A wake acknowledgement proves turn
+submission, not successful resumed work. `codex-wake cancel` cancels only the
+continuation; it does not cancel provider work.
+
+Connected apps use a stable discovered `chatgpt.apps.*` composer-capability ID
+and must already be connected. ChatGPT Library files use the separate
+`auracall.libraryFiles` API request collection; they are not composer tools or
+local attachments, and response-run status is not interchangeable with this
+CLI receipt workflow.
+
 ## Gate live inspection and canaries
 
 - Require explicit authority before launching, attaching to, navigating, or

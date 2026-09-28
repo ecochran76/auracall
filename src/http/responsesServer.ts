@@ -316,6 +316,7 @@ import { createTeamRuntimeBridge, type TeamRuntimeBridge } from "../teams/runtim
 import { TaskRunSpecSchema } from "../teams/schema.js";
 import { buildBoundedTeamTaskRunSpec } from "../teams/taskRunSpecBuilder.js";
 import type { TaskRunSpec } from "../teams/types.js";
+import { readTerminalSessionReceiptObservation } from "../terminalSessionReceipts.js";
 import { getCliVersion } from "../version.js";
 import { createBrowserWorkbenchCapabilityDiagnostics } from "../workbench/browserDiagnostics.js";
 import { createBrowserWorkbenchCapabilityDiscovery } from "../workbench/browserDiscovery.js";
@@ -891,6 +892,7 @@ interface HttpStatusResponse {
 		historyMaterializationTemplate: string;
 		accountMirrorRecoveryCandidates: string;
 		runStatusTemplate: string;
+		terminalSessionReceiptTemplate: string;
 		apiLogTail: string;
 		preflightRunTemplate: string;
 		preflightRunLogTemplate: string;
@@ -4139,6 +4141,37 @@ export async function createResponsesHttpServer(
 				}
 			}
 
+			const terminalReceiptSessionId = matchTerminalSessionReceiptRoute(url.pathname);
+			if (req.method === "GET" && terminalReceiptSessionId) {
+				const observation = await readTerminalSessionReceiptObservation(
+					terminalReceiptSessionId,
+					resolvedUserConfig ?? undefined,
+				);
+				if (observation.status === "disabled") {
+					sendJson(res, 409, {
+						error: {
+							message: "Terminal session receipts are not enabled",
+							type: "terminal_session_receipts_disabled",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				if (!observation.value) {
+					const notFound = observation.failure?.code === "session_not_found";
+					sendJson(res, notFound ? 404 : 500, {
+						error: {
+							message: notFound
+								? `Session ${terminalReceiptSessionId} was not found`
+								: "Terminal session receipt observation failed",
+							type: observation.failure?.code ?? "terminal_session_receipt_error",
+						},
+					} satisfies HttpErrorPayload);
+					return;
+				}
+				sendJson(res, 200, observation.value);
+				return;
+			}
+
 			const runStatusId = matchRunStatusRoute(url.pathname);
 			if (req.method === "GET" && runStatusId) {
 				const runStatusQuery = parseRunStatusQuery(url.searchParams);
@@ -4597,7 +4630,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
 	}
 	logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? "default"}`);
 	logger(
-		"Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/recovery-candidates, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/reconciliations, GET /v1/account-mirrors/reconciliations, GET/POST /v1/account-mirrors/reconciliations/{campaign_id}, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}",
+		"Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, GET /v1/terminal-receipts/{session_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/recovery-candidates, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/reconciliations, GET /v1/account-mirrors/reconciliations, GET/POST /v1/account-mirrors/reconciliations/{campaign_id}, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}",
 	);
 	logger(`Local probe: curl ${probeUrl}/status`);
 	if (serverOptions.dashboardUrl) {
@@ -5157,6 +5190,7 @@ function createHttpStatusResponse(input: {
 			accountMirrorRecoveryCandidates:
 				"/v1/account-mirrors/recovery-candidates[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status=eligible|needs_detail_refresh|deferred|blocked|unsupported|terminal][&action={action}][&includeSearchRows=true|false][&limit=50]",
 			runStatusTemplate: "/v1/runs/{run_id}/status[?diagnostics=browser-state]",
+			terminalSessionReceiptTemplate: "/v1/terminal-receipts/{session_id}",
 			apiLogTail: "/v1/api/logs/tail[?maxBytes=32768]",
 			preflightRunTemplate: "/v1/preflight/lazy-live-follow/runs/{run_id}",
 			preflightRunLogTemplate: "/v1/preflight/lazy-live-follow/runs/{run_id}/log[?maxBytes=32768]",
@@ -10259,6 +10293,17 @@ function matchMediaGenerationStatusRoute(pathname: string): string | null {
 function matchRunStatusRoute(pathname: string): string | null {
 	const match = /^\/v1\/runs\/([^/]+)\/status$/.exec(pathname);
 	return match?.[1] ?? null;
+}
+
+function matchTerminalSessionReceiptRoute(pathname: string): string | null {
+	const match = /^\/v1\/terminal-receipts\/([^/]+)$/.exec(pathname);
+	if (!match?.[1]) return null;
+	try {
+		const sessionId = decodeURIComponent(match[1]);
+		return /^[a-z0-9][a-z0-9-]{0,127}$/.test(sessionId) ? sessionId : null;
+	} catch {
+		return null;
+	}
 }
 
 function matchDomDriftObservationAcceptRoute(pathname: string): string | null {

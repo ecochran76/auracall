@@ -29,9 +29,14 @@ affinity soak evaluation.
 - Local file upload and provider account-library inventory exist as separate
   concepts, but request-time exact Library references are not productized;
   issue #96 owns that outcome.
-- Published AuraCall skills do not yet teach exact-receipt `codex-wake`
-  continuation; issue #97 owns publication after #93, #94, and paired
-  `CochranResearchGroup/codex-wake#169` are usable.
+- Issue #97 owns published exact-receipt `codex-wake` continuation after #93,
+  #94, and paired `CochranResearchGroup/codex-wake#169` became usable.
+- P59/#97 now has a provider-free-accepted candidate from canonical main at
+  `1b45ca6a209efce33dcba74d08fd4523b249d7a5`: an exact terminal-receipt HTTP
+  observation, copyable one-request/one-wake recipe, skill routing, and focused
+  fixtures, including one temporary-loopback `codex-wake --no-dispatch`
+  occurrence proof. Integration and the combined installed/live join remain
+  pending; no provider request was sent in this lane.
 - The issue-49 soak lane is active in a separate checkout. Issue #98 owns the
   corrective evaluator semantics that permit attributable ordinary use without
   weakening duplicate/unattributed-target or aggregate-provider guards.
