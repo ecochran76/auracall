@@ -220,6 +220,11 @@ export interface BrowserTabLeaseRegistry {
     now: string;
     disposition: Extract<TabLeaseFinalDisposition, 'closed' | 'already-missing'>;
   }): Promise<TabLeaseResult<BrowserTabLease>>;
+  releasePreserved(input: {
+    leaseId: string;
+    expectedRevision: number;
+    now: string;
+  }): Promise<TabLeaseResult<BrowserTabLease>>;
   listFencedTargetIds(scope: TabLeaseScope): Promise<string[]>;
   findByWorkload(scope: TabLeaseScope, workload: TabLeaseWorkload): Promise<BrowserTabLease | null>;
   list(input?: {
@@ -813,6 +818,37 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return { ok: true, value: cloneLease(released) };
   }
 
+  async releasePreserved(input: {
+    leaseId: string;
+    expectedRevision: number;
+    now: string;
+  }): Promise<TabLeaseResult<BrowserTabLease>> {
+    const existing = this.leases.get(input.leaseId);
+    if (!existing) return { ok: false, conflict: { kind: 'not-found' } };
+    if (existing.revision !== input.expectedRevision) {
+      return { ok: false, conflict: { kind: 'stale-claim', lease: cloneLease(existing) } };
+    }
+    if (
+      (existing.state !== 'idle' && existing.state !== 'lost') ||
+      existing.ownerOperationId !== null ||
+      existing.ownerProcessId != null ||
+      existing.ownerInstanceId != null ||
+      existing.effectState === 'in-flight' ||
+      existing.effectState === 'outcome-unknown'
+    ) {
+      return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    }
+    const released: BrowserTabLease = {
+      ...existing,
+      revision: existing.revision + 1,
+      state: 'released',
+      heartbeatAt: new Date(parseTimestamp(input.now, 'now')).toISOString(),
+      finalDisposition: 'preserved',
+    };
+    this.leases.set(released.leaseId, released);
+    return { ok: true, value: cloneLease(released) };
+  }
+
   async listFencedTargetIds(scope: TabLeaseScope): Promise<string[]> {
     const normalizedScope = normalizeScope(scope);
     return [...this.leases.values()]
@@ -931,6 +967,10 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
 
   releaseLost(input: Parameters<BrowserTabLeaseRegistry['releaseLost']>[0]) {
     return this.write((registry) => registry.releaseLost(input));
+  }
+
+  releasePreserved(input: Parameters<BrowserTabLeaseRegistry['releasePreserved']>[0]) {
+    return this.write((registry) => registry.releasePreserved(input));
   }
 
   listFencedTargetIds(scope: TabLeaseScope) {

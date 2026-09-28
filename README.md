@@ -204,6 +204,8 @@ auracall features diff --target gemini --json
 # allows up to 5 seconds for abort-driven browser cleanup before returning.
 # It adopts an existing exact ChatGPT Library page in the selected managed
 # browser profile; it does not create, refresh, or navigate a replacement page.
+# A dead or expired prior command lease is reconciled only after AuraCall
+# verifies that its retained target is this same exact Library route.
 # If no exact Library page is available, the command fails closed. After its
 # terminal report, the one-shot CLI exits while leaving the managed browser alive.
 # In --json mode, timeout/provider/cancellation failures are structured JSON

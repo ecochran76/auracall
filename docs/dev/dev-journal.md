@@ -1,3 +1,23 @@
+## 2026-09-28 | Issue 107 production Library lease recovery
+
+- Installed canonical `9fff58ee1` could see an exact `/library` page at the
+  selected endpoint but reported no compatible target. The retained target had
+  an active ephemeral lease owned by a prior process, so the target selector
+  correctly fenced it.
+- CodeGraph located the leak: utility option and governor setup ran after tab
+  acquisition but before the execution settlement guard. A setup exception
+  could therefore leave the lease active indefinitely.
+- All post-acquisition paths now attempt governor closure, meaningful-use
+  accounting, and an idle transition. Read-only exact-target work also
+  reconciles dead/expired owners and releases only safe owner-free lease
+  ownership after verifying the exact requested route. Live-owner and
+  uncertain-effect leases remain fenced.
+- Provider-free production-wiring fixtures use root plus exact `/library`
+  targets and prove first-failure/second-process adoption and retained
+  dead-owner recovery without opening, closing, refreshing, or navigating a
+  target. Existing CLI process-exit and cleanup fixtures remain green. No
+  installed command or provider/browser effect ran.
+
 ## 2026-09-27 | Issue 110 Library lifecycle clock ordering
 
 - Installed canonical `34397a20e` correctly bounded and cleaned the exact

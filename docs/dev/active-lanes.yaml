@@ -1267,3 +1267,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free corrective lane only; integration and installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-27
+  - id: P66
+    objective: Recover safe stranded Library target leases and settle every post-acquisition utility path.
+    plan: docs/dev/plans/0366-2026-09-28-library-lease-recovery.md
+    plan_ref: refs/heads/fix/issue-107-library-production-adoption
+    branch: fix/issue-107-library-production-adoption
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 9fff58ee1f999665df7271dee741731fc52c0394
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64, P65]
+    overlaps: [P53, P63, P65]
+    reconciled_overlaps: [P53, P63, P65]
+    reconciliation_note: P66 changes only configured utility lease settlement and safe exact-route read-only recovery; P53 retains rollout/soak authority, P63 retains timeout/cancellation, and P65 retains exact-target/terminal-exit behavior.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0366-2026-09-28-library-lease-recovery.md
+    integration_receipt: null
+    disposition: Provider-free corrective lane only; integration and installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-28

@@ -1,5 +1,12 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P66 / reopened issue 107: [Plan 0366](docs/dev/plans/0366-2026-09-28-library-lease-recovery.md)
+  closes the entire post-acquisition lease lifecycle and safely reconciles
+  dead/expired prior ownership before adopting the verified exact Library
+  target. Live owners and uncertain effects remain fenced; target creation,
+  closure, refresh, and navigation remain forbidden. Installed acceptance is
+  separately gated.
+
 - Provider-free accepted P65 / reopened issue 107: [Plan 0365](docs/dev/plans/0365-2026-09-27-library-existing-target-exit.md)
   adopts one exact existing ChatGPT Library target without creating,
   refreshing, or unnecessarily navigating a page; closes exact-target CDP

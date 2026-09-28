@@ -17,6 +17,75 @@ const scope: TabLeaseScope = {
 };
 
 describe("tabLeaseRegistry (package)", () => {
+	test("releases settled owner-free lease ownership while preserving the target", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-a" });
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "target-a",
+			workload: { kind: "ephemeral", operationId: "utility-a" },
+			operationId: "utility-a",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		expect(reserved.ok).toBe(true);
+		if (!reserved.ok) throw new Error("expected reservation");
+		const idled = await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-09-24T12:00:01.000Z",
+			effectState: "settled",
+		});
+		expect(idled.ok).toBe(true);
+		if (!idled.ok) throw new Error("expected idle lease");
+
+		await expect(
+			registry.releasePreserved({
+				leaseId: idled.value.leaseId,
+				expectedRevision: idled.value.revision,
+				now: "2026-09-24T12:00:02.000Z",
+			}),
+		).resolves.toEqual({
+			ok: true,
+			value: expect.objectContaining({
+				state: "released",
+				finalDisposition: "preserved",
+				actionCounts: expect.objectContaining({ closes: 0 }),
+			}),
+		});
+		expect(await registry.listFencedTargetIds(scope)).toEqual([]);
+	});
+
+	test("does not release ownership with an unknown provider outcome", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-a" });
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "target-a",
+			workload: { kind: "ephemeral", operationId: "utility-a" },
+			operationId: "utility-a",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		expect(reserved.ok).toBe(true);
+		if (!reserved.ok) throw new Error("expected reservation");
+		const idled = await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-09-24T12:00:01.000Z",
+			effectState: "outcome-unknown",
+		});
+		expect(idled.ok).toBe(true);
+		if (!idled.ok) throw new Error("expected idle lease");
+
+		const released = await registry.releasePreserved({
+			leaseId: idled.value.leaseId,
+			expectedRevision: idled.value.revision,
+			now: "2026-09-24T12:00:02.000Z",
+		});
+		expect(released.ok).toBe(false);
+		if (!released.ok) expect(released.conflict.kind).toBe("invalid-transition");
+		expect(await registry.listFencedTargetIds(scope)).toEqual(["target-a"]);
+	});
+
 	test("documents that the compatibility dispatcher still serializes distinct managed-profile targets", async () => {
 		const dispatcher = createBrowserOperationDispatcher({ isOwnerAlive: () => true });
 		const first = await dispatcher.acquire({
