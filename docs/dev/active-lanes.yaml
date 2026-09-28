@@ -1083,7 +1083,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 252439ddcb6a92cd93d59d630861c5dacf20834c
+    checkpoint: 0b397b900670e004a0aced08d6cf03e04d406a71
     remote_ref: refs/remotes/origin/fix/issue-94-profile-provenance
     integration: merge
     work_items: [ecochran76/auracall#94]
@@ -1091,10 +1091,10 @@ lanes:
     overlaps: [P56, P58]
     reconciled_overlaps: []
     blocker: null
-    validation_status: not-run
+    validation_status: provider-free-accepted-live-pending
     validation_ref: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
     integration_receipt: null
-    disposition: Primary critical-path lane; provider-free repair precedes one bounded installed durable ChatGPT acceptance.
+    disposition: Canonical launch-plan derivation and exact default-Grok versus explicit-wsl-chrome-3 regression pass 92 focused tests, typecheck, lint, and diff checks. Installed live acceptance remains pending.
     updated_at: 2026-09-27
   - id: P56
     objective: Emit provider-neutral durable terminal-session receipts after result persistence for event-driven continuation.
