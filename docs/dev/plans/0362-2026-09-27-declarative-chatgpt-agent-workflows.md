@@ -2,7 +2,7 @@
 
 State: OPEN
 Lane: P55
-Work items: #94, #93, #95, #96, #97, #98
+Work items: #94, #93, #95, #96, #97, #98, #100
 Source base: `origin/main` at `252439ddcb6a92cd93d59d630861c5dacf20834c`
 
 ## Objective
@@ -35,13 +35,16 @@ affinity soak evaluation.
 - The issue-49 soak lane is active in a separate checkout. Issue #98 owns the
   corrective evaluator semantics that permit attributable ordinary use without
   weakening duplicate/unattributed-target or aggregate-provider guards.
-- P55 provider-free repair is implemented locally. The stored executor now
+- P55 is integrated at `562884d032c9b312d7e47c1b333c1b113f21bf42`. The stored executor now
   derives the managed browser profile through the canonical launch plan after
   explicit runtime/provider selection, and profile selection clears a stale
   managed-profile override when its runtime or provider scope changes. The
   exact default-Grok/explicit-`wsl-chrome-3` ChatGPT regression plus the
-  profile-config suite pass 29 tests; typecheck passes. Wider focused validation,
-  checkpoint publication, installation, and one bounded live proof remain.
+  profile-config suite pass 29 tests; wider focused validation, typecheck,
+  lint, and build pass. Installed request `resp_af6395e53fb74c05956de0e9e2559818`
+  proved exact `wsl-chrome-3` / ChatGPT browser provenance with no default-Grok
+  path. The request then stopped pre-effect on current ChatGPT thinking-chip
+  drift; issue #100 owns that separate selector failure, and no retry occurred.
 
 ## Scope
 
@@ -126,6 +129,15 @@ must not own a branch, receive full history, retry, or continue a lane.
      verification without conflating local upload or composer selection.
    - Installed acceptance waits for #94.
 
+5. **P62 / #100 — current thinking-effort selector semantics**
+   - Owner: primary integrator after the Wave 1 merge queue, `gpt-5.6-sol`.
+   - Treat a missing optional/default effort control differently from an
+     absent explicit higher-effort control, while remaining fail-closed on
+     ambiguity.
+   - Acceptance: focused selector regressions plus one bounded installed
+     `wsl-chrome-3` request. Never blindly retry the preserved pre-effect live
+     failure receipt.
+
 ### Join 1: integration
 
 Merge/reconcile in dependency order: #94, #93, #95, then #96. Rebase each
@@ -184,7 +196,7 @@ or acceptance.
 
 ## Acceptance Criteria
 
-- [ ] #94 is integrated and installed evidence proves explicit
+- [x] #94 is integrated and installed evidence proves explicit
       `wsl-chrome-3` ChatGPT requests cannot fall back to default Grok.
 - [ ] #93 is integrated and terminal receipts are atomic, idempotent,
       privacy-bounded, post-persistence, reconciled after restart, and
@@ -197,6 +209,8 @@ or acceptance.
       long-running request plus codex-wake continuation workflow.
 - [ ] #98 is integrated and soak evaluation permits attributable normal use
       while preserving all provider and ownership guards.
+- [ ] #100 is integrated and current ChatGPT effort-selector absence is safe
+      for default/fast intent while explicit higher effort remains fail-closed.
 - [ ] Provider-free focused suites, typecheck, formatting/lint appropriate to
       changed surfaces, and the combined installed ChatGPT acceptance pass.
 - [ ] Plans, active lanes, dev journal, fixes log, user docs, issue states,
