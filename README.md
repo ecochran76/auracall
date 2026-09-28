@@ -92,12 +92,15 @@ auracall features --target gemini --json
 auracall capabilities --target gemini --json
 auracall capabilities --target gemini --static --json
 auracall capabilities --target chatgpt --json
+auracall capabilities --target chatgpt --category app --json
 auracall capabilities --target grok --static --json
 auracall capabilities --target grok --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json
 # ChatGPT discovery accepts current drawer rows without requiring tabindex and
-# reports selected inline tools only from the active composer form.
+# reports selected inline tools only from the active composer form. Connected
+# app results expose metadata.selection.stableId and exactLabel for use as the
+# durable composerTool request value.
 
 # Guarded ChatGPT Skill lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 skills list \
@@ -1236,7 +1239,15 @@ Terminology note:
     - direct browser-backed ChatGPT runs can request volatile workbench tools
       per call with `auracall.composerTool` and
       `auracall.deepResearchPlanAction`, for example Deep Research `edit`
-      review-state runs that can then be polled through generic run status
+      review-state runs that can then be polled through generic run status.
+      `auracall.composerTool` accepts an existing composer-tool ID/alias or a
+      discovered connected app's stable ID (for example
+      `chatgpt.apps.litscout`) or exact unique label (`LitScout`). Connected
+      app selection never installs, reconnects, or approves access: missing,
+      ambiguous, disconnected/approval-required, and unverified rows stop
+      before Send. Completed browser-run metadata includes a bounded
+      `composerCapability` receipt with the requested value and verified
+      observed ID, label, kind, availability, and connection state.
   - `POST /v1/media-generations` accepts the shared media-generation contract
     for `provider = chatgpt|gemini|grok`, `mediaType = image|music|video`, prompt,
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
@@ -1346,7 +1357,11 @@ Terminology note:
     selectable in the active Chat/Work menu or has an active link. Selectable
     apps use `invocationMode = composer_mention`; ChatGPT represents the choice
     as an inline `ecosystemMention` pill and submits the matching `plugin:...`
-    system hint with the prompt.
+    system hint with the prompt. Each observed app includes a
+    `metadata.selection` contract with its stable ID, exact label, connection
+    state, and provider-identity verification. This inventory is derived from
+    exact visible provider rows, so newly visible apps do not require an
+    AuraCall source-code update.
     Grok discovery reports visible Imagine image/video capability evidence
     without submitting a generation request. The matching CLI surface is
     `auracall capabilities --target gemini --json`,

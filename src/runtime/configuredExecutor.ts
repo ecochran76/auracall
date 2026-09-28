@@ -937,7 +937,16 @@ export function createConfiguredStoredStepExecutor(
       await context.runtimeEvidence?.heartbeat(evidence);
     };
     const buildBrowserRuntimeEvidenceDetails = (
-      runtime: Pick<BrowserRuntimeMetadata, 'chromeHost' | 'chromePort' | 'chromeTargetId' | 'tabUrl' | 'conversationId'> | null,
+      runtime: Pick<
+        BrowserRuntimeMetadata,
+        | 'chromeHost'
+        | 'chromePort'
+        | 'chromeTargetId'
+        | 'tabUrl'
+        | 'conversationId'
+        | 'composerTool'
+        | 'composerCapability'
+      > | null,
     ): Record<string, unknown> => ({
       service,
       runtimeProfileId: runtimeSelection.runtimeProfileId,
@@ -949,6 +958,8 @@ export function createConfiguredStoredStepExecutor(
       chromeTargetId: runtime?.chromeTargetId ?? null,
       tabUrl: runtime?.tabUrl ?? null,
       conversationId: runtime?.conversationId ?? null,
+      composerTool: runtime?.composerTool ?? null,
+      composerCapability: runtime?.composerCapability ?? null,
     });
     const recordBrowserRuntimeEvidence = async (evidence: BrowserRuntimeEvidence): Promise<void> => {
       const observation = evidence.observation;
@@ -1122,6 +1133,8 @@ export function createConfiguredStoredStepExecutor(
             chromeTargetId: hint.chromeTargetId ?? null,
             tabUrl: hint.tabUrl ?? null,
             conversationId: hint.conversationId ?? null,
+            composerTool: hint.composerTool ?? null,
+            composerCapability: hint.composerCapability ?? null,
           },
         });
       },
@@ -1379,6 +1392,7 @@ export function createConfiguredStoredStepExecutor(
               observedModel: browserResult.observedModel ?? null,
               modelSelector: agentModelSelector,
               thinkingTime,
+              composerCapability: browserResult.composerCapability ?? null,
               promptTransport,
               cachePath: null,
               cachePathStatus: 'unavailable',
@@ -1435,6 +1449,7 @@ export function createConfiguredStoredStepExecutor(
             observedModel: browserResult.observedModel ?? null,
             modelSelector: agentModelSelector,
             thinkingTime,
+            composerCapability: browserResult.composerCapability ?? null,
             promptTransport,
             cachePath: null,
             cachePathStatus: 'unavailable',

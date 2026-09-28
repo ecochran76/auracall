@@ -5,6 +5,7 @@ import {
   isNonPersistentComposerToolForTest,
   prepareChatgptWorkbenchLocalAttachment,
   resolveChatgptWorkbenchAttachmentSurfaceForTest,
+  resolveChatgptConnectedAppSelectionForTest,
   resolveComposerToolCandidatesForTest,
   resolveComposerToolLocationForTest,
   resolveCurrentComposerToolSelectionForTest,
@@ -97,6 +98,115 @@ describe('chatgpt composer tool selection', () => {
     const logger = () => undefined;
     await expect(ensureChatgptComposerTool(client, 'files', logger)).rejects.toThrow(/Use --file/);
     await expect(ensureChatgptComposerTool(client, 'library', logger)).rejects.toThrow(/separate interactive provider drawer/);
+  });
+
+  test('resolves dynamically discovered connected apps by stable id, exact label, and legacy alias', () => {
+    const inventory = [
+      {
+        label: 'LitScout',
+        appId: 'asdk_app_litscout',
+        pluginId: 'plugin_asdk_app_litscout',
+        selectionState: 'selectable' as const,
+      },
+      {
+        label: 'Google Drive',
+        appId: 'connector_google_drive',
+        pluginId: 'plugin_connector_google_drive',
+        selectionState: 'selected' as const,
+      },
+    ];
+
+    expect(resolveChatgptConnectedAppSelectionForTest('chatgpt.apps.litscout', inventory)).toEqual({
+      status: 'selected',
+      match: inventory[0],
+      capabilityId: 'chatgpt.apps.litscout',
+      acceptedPluginIds: ['asdk_app_litscout'],
+    });
+    expect(resolveChatgptConnectedAppSelectionForTest('LitScout', inventory)).toMatchObject({
+      status: 'selected',
+      capabilityId: 'chatgpt.apps.litscout',
+    });
+    expect(resolveChatgptConnectedAppSelectionForTest('drive', inventory)).toMatchObject({
+      status: 'selected',
+      capabilityId: 'chatgpt.apps.google_drive',
+    });
+  });
+
+  test('fails closed on missing, ambiguous, disconnected, and unverified connected apps', () => {
+    expect(resolveChatgptConnectedAppSelectionForTest('chatgpt.apps.gmail', [])).toEqual({
+      status: 'missing',
+      available: [],
+    });
+    const duplicateLabels = [
+      { label: 'Canva', appId: 'canva-one', selectionState: 'selectable' as const },
+      { label: 'Canva', appId: 'canva-two', selectionState: 'selectable' as const },
+    ];
+    expect(resolveChatgptConnectedAppSelectionForTest('Canva', duplicateLabels)).toEqual({
+      status: 'ambiguous',
+      matches: duplicateLabels,
+    });
+    expect(
+      resolveChatgptConnectedAppSelectionForTest('GitHub', [
+        { label: 'GitHub', pluginId: 'plugin_github', selectionState: 'connect_required' },
+      ]),
+    ).toMatchObject({ status: 'disconnected' });
+    expect(
+      resolveChatgptConnectedAppSelectionForTest('Future App', [
+        { label: 'Future App', selectionState: 'selectable' },
+      ]),
+    ).toMatchObject({ status: 'unverified' });
+  });
+
+  test('surfaces bounded retry-safe pre-Send evidence for a disconnected provider row', async () => {
+    const Runtime = {
+      evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+        if (expression.includes('const appOwned')) {
+          return {
+            result: {
+              value: [
+                {
+                  label: 'Gmail',
+                  appId: 'connector_gmail',
+                  pluginId: 'plugin_connector_gmail',
+                  selectionState: 'connect_required',
+                },
+              ],
+            },
+          };
+        }
+        return {
+          result: {
+            value: {
+              selector: '[data-auracall-chatgpt-composer-menu="true"]',
+              sourceSelector: '.composer-home-top-menu',
+              signature: 'gmail-connect',
+              rect: { x: 0, y: 0, width: 320, height: 400 },
+              distanceToAnchor: null,
+              items: [],
+              itemLabels: ['gmail'],
+            },
+          },
+        };
+      }),
+    };
+
+    await expect(
+      ensureChatgptComposerTool(
+        { Runtime, Input: {}, Page: {} } as never,
+        'chatgpt.apps.gmail',
+        () => undefined,
+      ),
+    ).rejects.toMatchObject({
+      message: expect.stringMatching(/failed before Send: disconnected or approval-required.*retry-safe=true/),
+      details: {
+        stage: 'chatgpt-connected-capability-selection',
+        effectState: 'pre_effect',
+        retrySafe: true,
+        requestedCapability: 'chatgpt.apps.gmail',
+        reason: 'disconnected or approval-required',
+        observedCount: 1,
+      },
+    });
   });
 
   test('recognizes the current workbench attachment rows and unrestricted local upload input', () => {

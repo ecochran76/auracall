@@ -10,12 +10,29 @@ const promptActionMocks = vi.hoisted(() => ({
 	ensureModelSelection: vi.fn(async () => undefined),
 	ensureChatgptWorkModelSelection: vi.fn(async () => undefined),
 	ensureThinkingTime: vi.fn(async () => undefined),
-	ensureChatgptComposerTool: vi.fn(async () => undefined),
+	ensureChatgptComposerTool: vi.fn(async () => ({
+		receipt: {
+			requested: "create image",
+			observed: {
+				id: "chatgpt.media.create_image",
+				label: "Create image",
+				kind: "composer_tool" as const,
+				availability: "available" as const,
+				connectionState: "not_applicable" as const,
+				verified: true as const,
+			},
+		},
+	})),
 	ensureChatgptEcosystemMention: vi.fn(async () => undefined),
+	assertChatgptEcosystemMentionSelected: vi.fn(async () => undefined),
 	clearComposerAttachments: vi.fn(async () => undefined),
 	uploadAttachmentFile: vi.fn(async () => true),
 	waitForAttachmentCompletion: vi.fn(async () => undefined),
-	submitPrompt: vi.fn(async (options: { onPromptDispatched?: () => Promise<void> }) => {
+	submitPrompt: vi.fn(async (options: {
+		beforeSend?: () => void | Promise<void>;
+		onPromptDispatched?: () => Promise<void>;
+	}) => {
+		await options.beforeSend?.();
 		await options.onPromptDispatched?.();
 		return 1;
 	}),
@@ -69,6 +86,7 @@ vi.mock("../../src/browser/actions/chatgptEcosystemMention.js", async (importOri
 		typeof import("../../src/browser/actions/chatgptEcosystemMention.js")
 	>()),
 	ensureChatgptEcosystemMention: promptActionMocks.ensureChatgptEcosystemMention,
+	assertChatgptEcosystemMentionSelected: promptActionMocks.assertChatgptEcosystemMentionSelected,
 }));
 
 vi.mock("../../src/browser/actions/attachments.js", async (importOriginal) => ({
@@ -233,8 +251,12 @@ describe("ChatGPT provider prompt adapter", () => {
 			events.push("composer-ready");
 		});
 		promptActionMocks.submitPrompt.mockImplementation(
-			async (options: { onPromptDispatched?: () => Promise<void> }) => {
+			async (options: {
+				beforeSend?: () => void | Promise<void>;
+				onPromptDispatched?: () => Promise<void>;
+			}) => {
 				events.push("submit");
+				await options.beforeSend?.();
 				await options.onPromptDispatched?.();
 				return 1;
 			},
@@ -319,13 +341,24 @@ describe("ChatGPT provider prompt adapter", () => {
 			"create image",
 			expect.any(Function),
 		);
-		expect(result).toEqual({
+			expect(result).toEqual({
 			text: "",
 			conversationId: "conversation-1",
 			url: submittedUrl,
 			tabTargetId: targetId,
 			devtoolsHost: host,
 			devtoolsPort: port,
+			composerCapability: {
+				requested: "create image",
+				observed: {
+					id: "chatgpt.media.create_image",
+					label: "Create image",
+					kind: "composer_tool",
+					availability: "available",
+					connectionState: "not_applicable",
+					verified: true,
+				},
+			},
 		});
 		expect(onProgress).toHaveBeenCalledWith({
 			phase: "submit_path_observed",
@@ -417,6 +450,10 @@ describe("ChatGPT provider prompt adapter", () => {
 
 		expect(promptActionMocks.ensureChatgptComposerTool).not.toHaveBeenCalled();
 		expect(promptActionMocks.ensureChatgptEcosystemMention).toHaveBeenCalledWith(
+			client,
+			ecosystemMention,
+		);
+		expect(promptActionMocks.assertChatgptEcosystemMentionSelected).toHaveBeenCalledWith(
 			client,
 			ecosystemMention,
 		);

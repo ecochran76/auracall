@@ -51175,3 +51175,22 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   boundary, traversal/schema, unsafe-permission, and symlink fixtures pass.
   Browser-profile selection and codex-wake documentation were not touched;
   installed producer/consumer acceptance remains owned by the Plan 0362 join.
+
+## 2026-09-27 | Issue 95 declarative ChatGPT connected capabilities
+
+- Implemented one provider-neutral selection path over the current ChatGPT
+  composer inventory. Exact visible connected-app rows now resolve from either
+  their discovery ID (`chatgpt.apps.<label_slug>`) or exact unique label without
+  adding app names to AuraCall source.
+- Selection fails before Send for missing, ambiguous, disconnected or
+  approval-required, and provider-identity-unverified rows. AuraCall does not
+  click `Connect`; it verifies the exact ecosystem mention pill again in the
+  prompt composer's `beforeSend` gate.
+- Discovery now publishes the app selection contract, and browser/runtime
+  readback carries a bounded `composerCapability` receipt containing the
+  requested value and verified observed identity. Existing composer-tool IDs
+  and aliases remain on their prior resolution path.
+- Provider-free validation covers future-app discovery, stable-ID/exact-label
+  selection, each fail-closed state, retained conversation-bound selection,
+  pre-Send verification, and stored-run receipt projection. Per lane scope, no
+  installed or live ChatGPT acceptance was run in this worktree.

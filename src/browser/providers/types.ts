@@ -7,6 +7,7 @@ import type {
 	ProviderSessionProof,
 } from "./providerSessionAuthority.js";
 import type { BrowserScrapeTelemetryRecorder } from "./scrapeTelemetry.js";
+import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptComposerTool.js";
 
 export type SelectorList = readonly string[];
 
@@ -129,6 +130,7 @@ export interface BrowserProviderPromptResult {
 	tabTargetId?: string | null;
 	devtoolsHost?: string | null;
 	devtoolsPort?: number | null;
+	composerCapability?: ChatgptComposerCapabilityReceipt;
 }
 
 export interface BrowserProviderPromptWorkbenchInput {

@@ -270,8 +270,9 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
           ? 'available'
           : 'unknown';
     const label = installedApp.name || formatAppLabel(app);
+    const capabilityId = `chatgpt.apps.${app}`;
     capabilities.push({
-      id: `chatgpt.apps.${app}`,
+      id: capabilityId,
       provider: 'chatgpt',
       providerLabels: [label],
       category: 'app',
@@ -294,9 +295,25 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
       metadata: {
         featureSignatureSignal: 'installed_apps',
         app,
+        selection: {
+          kind: 'connected_app',
+          stableId: capabilityId,
+          exactLabel: label,
+          requestForms: ['stable_id', 'exact_unique_label'],
+          connectionState:
+            availability === 'available'
+              ? 'connected'
+              : availability === 'account_gated'
+                ? 'disconnected_or_approval_required'
+                : availability === 'blocked'
+                  ? 'blocked'
+                  : 'unverified',
+          providerIdentityVerified:
+            Boolean(installedApp.pluginId) || installedApp.appIds.length > 0,
+        },
         installed: true,
         pluginId: installedApp.pluginId,
-        appIds: installedApp.appIds,
+        appIds: installedApp.appIds.slice(0, 16),
         installedStatus: installedApp.status,
         installedEnabled: installedApp.enabled,
         installationPolicy: installedApp.installationPolicy,
@@ -320,8 +337,9 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
         : composerApp.selectionState === 'connect_required'
           ? 'account_gated'
           : 'unknown';
+    const capabilityId = `chatgpt.apps.${app}`;
     capabilities.push({
-      id: `chatgpt.apps.${app}`,
+      id: capabilityId,
       provider: 'chatgpt',
       providerLabels: [composerApp.name],
       category: 'app',
@@ -341,6 +359,19 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
       metadata: {
         featureSignatureSignal: 'composer_apps',
         app,
+        selection: {
+          kind: 'connected_app',
+          stableId: capabilityId,
+          exactLabel: composerApp.name,
+          requestForms: ['stable_id', 'exact_unique_label'],
+          connectionState:
+            availability === 'available'
+              ? 'connected'
+              : availability === 'account_gated'
+                ? 'disconnected_or_approval_required'
+                : 'unverified',
+          providerIdentityVerified: Boolean(composerApp.pluginId || composerApp.appId),
+        },
         installed: false,
         composerMode: signals.composerMode,
         composerSelectionState: composerApp.selectionState,
@@ -353,8 +384,9 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
   for (const app of signals.apps) {
     if (structuredAppIds.has(app)) continue;
     const label = formatAppLabel(app);
+    const capabilityId = `chatgpt.apps.${app}`;
     capabilities.push({
-      id: `chatgpt.apps.${app}`,
+      id: capabilityId,
       provider: 'chatgpt',
       providerLabels: [label],
       category: 'app',
@@ -374,6 +406,14 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
       metadata: {
         featureSignatureSignal: 'apps',
         app,
+        selection: {
+          kind: 'connected_app',
+          stableId: capabilityId,
+          exactLabel: label,
+          requestForms: ['stable_id', 'exact_unique_label'],
+          connectionState: 'unverified',
+          providerIdentityVerified: false,
+        },
         installed: false,
       },
     });

@@ -8,6 +8,10 @@ import type {
 import { ATTACHMENT_MENU_SELECTOR } from '../constants.js';
 import { logDomFailure } from '../domDebug.js';
 import {
+  ensureChatgptEcosystemMention,
+  type ChatgptEcosystemMentionRequest,
+} from './chatgptEcosystemMention.js';
+import {
   resolveBundledServiceComposerAliases,
   resolveBundledServiceComposerChipIgnoreTokens,
   resolveBundledServiceComposerFileRequestLabels,
@@ -33,6 +37,45 @@ type ComposerToolOutcome =
   | { status: 'menu-not-found'; availableTopLevel?: string[] }
   | { status: 'option-not-found'; availableTopLevel?: string[]; availableMore?: string[] }
   | { status: 'selection-not-confirmed'; label?: string | null; availableTopLevel?: string[]; availableMore?: string[] };
+
+export type ChatgptComposerCapabilityKind = 'composer_tool' | 'connected_app';
+
+export type ChatgptComposerCapabilityReceipt = {
+  requested: string;
+  observed: {
+    id: string;
+    label: string;
+    kind: ChatgptComposerCapabilityKind;
+    availability: 'available';
+    connectionState: 'connected' | 'not_applicable';
+    verified: true;
+  };
+};
+
+export type ChatgptComposerCapabilitySelection = {
+  receipt: ChatgptComposerCapabilityReceipt;
+  ecosystemMention?: ChatgptEcosystemMentionRequest;
+};
+
+export type ChatgptConnectedAppInventoryItem = {
+  label: string;
+  appId?: string | null;
+  pluginId?: string | null;
+  selectionState: 'selected' | 'selectable' | 'connect_required' | 'unknown';
+};
+
+type ChatgptConnectedAppResolution =
+  | { status: 'not-app' }
+  | { status: 'missing'; available: ChatgptConnectedAppInventoryItem[] }
+  | { status: 'ambiguous'; matches: ChatgptConnectedAppInventoryItem[] }
+  | { status: 'disconnected'; match: ChatgptConnectedAppInventoryItem }
+  | { status: 'unverified'; match: ChatgptConnectedAppInventoryItem }
+  | {
+      status: 'selected';
+      match: ChatgptConnectedAppInventoryItem;
+      capabilityId: string;
+      acceptedPluginIds: string[];
+    };
 
 export type ChatgptComposerToolSelection = {
   label: string | null;
@@ -89,7 +132,7 @@ export async function ensureChatgptComposerTool(
   client: ChromeClient,
   requestedTool: string,
   logger: BrowserLogger,
-): Promise<void> {
+): Promise<ChatgptComposerCapabilitySelection> {
   const { Runtime } = client;
   if (isComposerFileRequest(requestedTool)) {
     throw new Error(
@@ -97,18 +140,72 @@ export async function ensureChatgptComposerTool(
     );
   }
 
+  const connectedApp = await resolveChatgptConnectedAppSelection(client, requestedTool);
+  if (connectedApp.status !== 'not-app') {
+    if (connectedApp.status === 'missing') {
+      throw createConnectedAppSelectionError(
+        requestedTool,
+        'missing',
+        connectedApp.available,
+      );
+    }
+    if (connectedApp.status === 'ambiguous') {
+      throw createConnectedAppSelectionError(
+        requestedTool,
+        'ambiguous',
+        connectedApp.matches,
+      );
+    }
+    if (connectedApp.status === 'disconnected') {
+      throw createConnectedAppSelectionError(
+        requestedTool,
+        'disconnected or approval-required',
+        [connectedApp.match],
+      );
+    }
+    if (connectedApp.status === 'unverified') {
+      throw createConnectedAppSelectionError(
+        requestedTool,
+        'unverified provider identity',
+        [connectedApp.match],
+      );
+    }
+    const ecosystemMention: ChatgptEcosystemMentionRequest = {
+      label: connectedApp.match.label,
+      acceptedPluginIds: connectedApp.acceptedPluginIds,
+      requireFreshConversation: false,
+    };
+    await dismissOpenMenus(Runtime).catch(() => false);
+    await ensureChatgptEcosystemMention(client, ecosystemMention);
+    logger(`Connected app: ${connectedApp.match.label} (${connectedApp.capabilityId})`);
+    return {
+      receipt: {
+        requested: requestedTool,
+        observed: {
+          id: connectedApp.capabilityId,
+          label: connectedApp.match.label,
+          kind: 'connected_app',
+          availability: 'available',
+          connectionState: 'connected',
+          verified: true,
+        },
+      },
+      ecosystemMention,
+    };
+  }
+
   const result = await selectComposerTool(client, requestedTool);
   switch (result.status) {
     case 'already-selected':
       logger(`Composer tool: ${result.label ?? requestedTool} (already selected)`);
-      return;
+      return buildComposerToolCapabilitySelection(requestedTool, result.label ?? requestedTool);
     case 'switched':
       logger(
         result.previousLabel
           ? `Composer tool: ${result.label ?? requestedTool} (was ${result.previousLabel})`
           : `Composer tool: ${result.label ?? requestedTool}`,
       );
-      return;
+      return buildComposerToolCapabilitySelection(requestedTool, result.label ?? requestedTool);
     case 'trigger-not-found':
       await logDomFailure(Runtime, logger, 'chatgpt-composer-tool-trigger');
       throw new Error('Unable to find the ChatGPT Add files and more button in the composer.');
@@ -117,14 +214,14 @@ export async function ensureChatgptComposerTool(
       throw new Error('Unable to open the ChatGPT composer add-ons menu.');
     case 'option-not-found': {
       await logDomFailure(Runtime, logger, 'chatgpt-composer-tool-option');
-      const topHint = result.availableTopLevel?.length ? ` Top level: ${result.availableTopLevel.join(', ')}.` : '';
-      const moreHint = result.availableMore?.length ? ` More: ${result.availableMore.join(', ')}.` : '';
+      const topHint = formatBoundedLabelHint('Top level', result.availableTopLevel);
+      const moreHint = formatBoundedLabelHint('More', result.availableMore);
       throw new Error(`Unable to find ChatGPT composer tool "${requestedTool}".${topHint}${moreHint}`);
     }
     case 'selection-not-confirmed': {
       await logDomFailure(Runtime, logger, 'chatgpt-composer-tool-selection');
-      const topHint = result.availableTopLevel?.length ? ` Top level: ${result.availableTopLevel.join(', ')}.` : '';
-      const moreHint = result.availableMore?.length ? ` More: ${result.availableMore.join(', ')}.` : '';
+      const topHint = formatBoundedLabelHint('Top level', result.availableTopLevel);
+      const moreHint = formatBoundedLabelHint('More', result.availableMore);
       throw new Error(
         `ChatGPT composer tool "${requestedTool}" did not stay selected after activation.${topHint}${moreHint}`,
       );
@@ -137,6 +234,13 @@ export async function ensureChatgptComposerTool(
 
 export function resolveComposerToolCandidatesForTest(requestedTool: string): string[] {
   return resolveComposerToolCandidates(requestedTool);
+}
+
+export function resolveChatgptConnectedAppSelectionForTest(
+  requestedTool: string,
+  inventory: ChatgptConnectedAppInventoryItem[],
+): ChatgptConnectedAppResolution {
+  return resolveConnectedAppSelection(requestedTool, inventory);
 }
 
 export function resolveComposerToolLocationForTest(
@@ -195,6 +299,128 @@ function resolveComposerToolCandidates(requestedTool: string): string[] {
   return Array.from(
     new Set([normalized, ...aliases.map((entry) => normalizeComposerToolLabel(entry)).filter(Boolean)]),
   ).filter(Boolean);
+}
+
+function normalizeConnectedAppId(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function connectedAppCapabilityId(label: string): string {
+  return `chatgpt.apps.${normalizeConnectedAppId(label)}`;
+}
+
+function normalizeProviderIdentity(value: string | null | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^plugin:/, '')
+    .replace(/^plugin_/, '');
+}
+
+function resolveConnectedAppSelection(
+  requestedTool: string,
+  inventory: ChatgptConnectedAppInventoryItem[],
+): ChatgptConnectedAppResolution {
+  const requestedId = requestedTool.trim().toLowerCase();
+  const explicitAppId = requestedId.startsWith('chatgpt.apps.');
+  const candidates = new Set(resolveComposerToolCandidates(requestedTool));
+  const matches = inventory.filter((entry) => {
+    if (explicitAppId && connectedAppCapabilityId(entry.label) === requestedId) return true;
+    return candidates.has(normalizeComposerToolLabel(entry.label));
+  });
+  if (matches.length === 0) {
+    return explicitAppId ? { status: 'missing', available: inventory } : { status: 'not-app' };
+  }
+  if (matches.length !== 1) {
+    return { status: 'ambiguous', matches };
+  }
+  const match = matches[0];
+  if (match.selectionState === 'connect_required') {
+    return { status: 'disconnected', match };
+  }
+  if (match.selectionState !== 'selected' && match.selectionState !== 'selectable') {
+    return { status: 'unverified', match };
+  }
+  const acceptedPluginIds = Array.from(
+    new Set([match.pluginId, match.appId].map(normalizeProviderIdentity).filter(Boolean)),
+  );
+  if (acceptedPluginIds.length === 0) {
+    return { status: 'unverified', match };
+  }
+  return {
+    status: 'selected',
+    match,
+    capabilityId: connectedAppCapabilityId(match.label),
+    acceptedPluginIds,
+  };
+}
+
+function buildComposerToolCapabilitySelection(
+  requestedTool: string,
+  observedLabel: string,
+): ChatgptComposerCapabilitySelection {
+  const normalizedObserved = normalizeComposerToolLabel(observedLabel);
+  const requestedId = requestedTool.trim().toLowerCase();
+  const canonicalId = requestedId.startsWith('chatgpt.')
+    ? requestedId
+    : Object.entries(COMPOSER_TOOL_ALIASES).find(
+        ([key, aliases]) =>
+          key.startsWith('chatgpt.') &&
+          aliases.some((alias) => normalizeComposerToolLabel(alias) === normalizedObserved),
+      )?.[0] ?? `chatgpt.composer.${normalizeConnectedAppId(observedLabel)}`;
+  return {
+    receipt: {
+      requested: requestedTool,
+      observed: {
+        id: canonicalId,
+        label: observedLabel,
+        kind: 'composer_tool',
+        availability: 'available',
+        connectionState: 'not_applicable',
+        verified: true,
+      },
+    },
+  };
+}
+
+function formatBoundedLabelHint(prefix: string, labels: string[] | undefined): string {
+  if (!labels?.length) return '';
+  const bounded = labels.slice(0, 12);
+  const omitted = labels.length - bounded.length;
+  return ` ${prefix}: ${bounded.join(', ')}${omitted > 0 ? ` (+${omitted} more)` : ''}.`;
+}
+
+function createConnectedAppSelectionError(
+  requestedTool: string,
+  reason: string,
+  inventory: ChatgptConnectedAppInventoryItem[],
+): Error {
+  const diagnostics = inventory
+    .slice(0, 12)
+    .map((entry) => `${entry.label}:${entry.selectionState}`)
+    .join(', ');
+  const omitted = Math.max(0, inventory.length - 12);
+  const suffix = diagnostics
+    ? ` Observed: ${diagnostics}${omitted > 0 ? ` (+${omitted} more)` : ''}.`
+    : '';
+  const error = new Error(
+    `ChatGPT connected capability "${requestedTool}" failed before Send: ${reason}. ` +
+      `No prompt was submitted; retry-safe=true.${suffix}`,
+  );
+  Object.assign(error, {
+    details: {
+      stage: 'chatgpt-connected-capability-selection',
+      effectState: 'pre_effect',
+      retrySafe: true,
+      requestedCapability: requestedTool,
+      reason,
+      observedCount: inventory.length,
+    },
+  });
+  return error;
 }
 
 function isComposerFileRequest(requestedTool: string): boolean {
@@ -593,6 +819,102 @@ async function openComposerPopoverWithCdp(
     if (!fallback.ok) return null;
   }
   return readComposerPopoverEntry(Runtime);
+}
+
+async function readChatgptConnectedAppInventory(
+  Runtime: ChromeClient['Runtime'],
+): Promise<ChatgptConnectedAppInventoryItem[]> {
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return rect.width > 0 && rect.height > 0
+          && style.visibility !== 'hidden' && style.display !== 'none';
+      };
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
+        .filter(visible);
+      const root = roots.at(-1);
+      if (!root) return [];
+      return Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
+        .filter(visible)
+        .map((item) => {
+          const primary = item.querySelector('span.max-w-full, span.truncate');
+          const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
+          const icon = item.querySelector(
+            '[data-testid="plugin-icon-wrapper"] img, img[src*="/images/ecosystem/apps/"]'
+          );
+          const iconMatch = (icon?.getAttribute('src') || '').match(
+            /\\/images\\/ecosystem\\/apps\\/([^/]+)\\//i
+          );
+          const href = item.querySelector('a[href*="/plugins/plugin_"]')?.getAttribute('href') || '';
+          const pluginMatch = href.match(/\\/plugins\\/(plugin_[^/?#]+)/i);
+          const explicitAppId = normalize(
+            item.getAttribute('data-app-id') || item.getAttribute('data-plugin-id') || ''
+          );
+          const connectRequired = Boolean(item.querySelector(
+            '[data-suggested-plugin-connect], button[aria-label^="Connect " i]'
+          )) || /(?:^|\\s)connect$/i.test(normalize(item.textContent || ''));
+          const appOwned = Boolean(icon || pluginMatch || explicitAppId || connectRequired);
+          if (!label || !appOwned) return null;
+          const selected =
+            item.getAttribute('aria-selected') === 'true' ||
+            item.getAttribute('aria-checked') === 'true' ||
+            item.getAttribute('data-selected') === 'true' ||
+            ['checked', 'selected', 'on', 'true'].includes(
+              (item.getAttribute('data-state') || '').toLowerCase()
+            );
+          return {
+            label,
+            appId: iconMatch?.[1] || explicitAppId || null,
+            pluginId: pluginMatch?.[1] || null,
+            selectionState: connectRequired ? 'connect_required' : (selected ? 'selected' : 'selectable'),
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 64);
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value;
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): ChatgptConnectedAppInventoryItem[] => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    const label = typeof record.label === 'string' ? record.label.trim() : '';
+    const selectionState = record.selectionState;
+    if (
+      !label ||
+      (selectionState !== 'selected' &&
+        selectionState !== 'selectable' &&
+        selectionState !== 'connect_required' &&
+        selectionState !== 'unknown')
+    ) {
+      return [];
+    }
+    return [{
+      label,
+      appId: typeof record.appId === 'string' ? record.appId.trim() || null : null,
+      pluginId: typeof record.pluginId === 'string' ? record.pluginId.trim() || null : null,
+      selectionState,
+    }];
+  });
+}
+
+async function resolveChatgptConnectedAppSelection(
+  client: ChromeClient,
+  requestedTool: string,
+): Promise<ChatgptConnectedAppResolution> {
+  const popover = await openComposerPopoverWithCdp(client.Runtime, client.Input, client.Page);
+  if (!popover) {
+    return requestedTool.trim().toLowerCase().startsWith('chatgpt.apps.')
+      ? { status: 'missing', available: [] }
+      : { status: 'not-app' };
+  }
+  const inventory = await readChatgptConnectedAppInventory(client.Runtime);
+  return resolveConnectedAppSelection(requestedTool, inventory);
 }
 
 export async function prepareChatgptWorkbenchLocalAttachment(

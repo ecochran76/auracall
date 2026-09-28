@@ -4,6 +4,7 @@ import { chmodSync, createWriteStream, lstatSync, mkdirSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { getAuracallHomeDir } from './auracallHome.js';
+import type { ChatgptComposerCapabilityReceipt } from './browser/actions/chatgptComposerTool.js';
 import { findAllChromeProcesses, isChromeAlive, isPortOpen, isProcessAlive } from './browser/processCheck.js';
 import type {
   BrowserModelStrategy,
@@ -102,6 +103,7 @@ export interface BrowserRuntimeMetadata {
   conversationId?: string;
   observedModel?: string | null;
   composerTool?: string | null;
+  composerCapability?: ChatgptComposerCapabilityReceipt;
   thinkingTime?: string;
   chatgptProMode?: string;
   chatgptAccountLevel?: string;

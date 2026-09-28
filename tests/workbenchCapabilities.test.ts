@@ -383,6 +383,56 @@ describe('workbench capability service', () => {
     ]));
   });
 
+  it('publishes a declarative selection contract for newly observed connected apps', () => {
+    const capabilities = deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
+      JSON.stringify({
+        composer_apps: [
+          {
+            name: 'LitScout',
+            app_id: 'asdk_app_litscout',
+            plugin_id: 'plugin_asdk_app_litscout',
+            selection_state: 'selectable',
+          },
+          {
+            name: 'Future Research App',
+            app_id: 'future_research_app',
+            plugin_id: 'plugin_future_research_app',
+            selection_state: 'connect_required',
+          },
+        ],
+      }),
+      '2026-09-27T12:00:00.000Z',
+    );
+
+    expect(capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'chatgpt.apps.litscout',
+        providerLabels: ['LitScout'],
+        availability: 'available',
+        metadata: expect.objectContaining({
+          selection: {
+            kind: 'connected_app',
+            stableId: 'chatgpt.apps.litscout',
+            exactLabel: 'LitScout',
+            requestForms: ['stable_id', 'exact_unique_label'],
+            connectionState: 'connected',
+            providerIdentityVerified: true,
+          },
+        }),
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.apps.future_research_app',
+        availability: 'account_gated',
+        metadata: expect.objectContaining({
+          selection: expect.objectContaining({
+            exactLabel: 'Future Research App',
+            connectionState: 'disconnected_or_approval_required',
+          }),
+        }),
+      }),
+    ]));
+  });
+
   it('keeps ChatGPT static browser-media and model capabilities visible until live discovery confirms them', async () => {
     const service = createWorkbenchCapabilityService({
       now: () => new Date('2026-04-23T12:00:00.000Z'),
