@@ -1,5 +1,14 @@
 # Testing quickstart
 
+- Terminal-session receipt producer contract (provider-free):
+  `pnpm vitest run tests/terminalSessionReceipts.test.ts tests/cli/sessionRunner.test.ts --maxWorkers=1`.
+  This proves success/error/cancel receipts, result-before-metadata-before-receipt
+  ordering, immutable atomic publication, repeated-finalization deduplication,
+  restart reconciliation after the durable-result boundary, no false success
+  before that boundary, privacy-bounded fields, and fail-closed schema/path/
+  symlink/permission handling. It does not exercise a provider or prove
+  downstream `codex-wake` observation or dispatch.
+
 - Aggregate-status recovery contract (provider-free):
   `pnpm vitest run tests/runtime.store.test.ts tests/runtime.control.test.ts tests/runtime.claims.test.ts tests/runtime.serviceHost.test.ts tests/runtime.archiveService.test.ts tests/http.responsesServer.test.ts --maxWorkers=2`.
   Run the combined files to cover bulk-list parity, bounded availability and

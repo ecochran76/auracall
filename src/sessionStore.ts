@@ -1,20 +1,21 @@
-import type { SessionMetadata, SessionNotifications, StoredRunOptions, SessionModelRun } from './sessionManager.js';
+import type { SessionMetadata, SessionModelRun, SessionNotifications, StoredRunOptions } from './sessionManager.js';
 import {
-  ensureSessionStorage,
-  initializeSession,
-  readSessionMetadata,
-  updateSessionMetadata,
   createSessionLogWriter,
-  readSessionLog,
-  readModelLog,
-  readSessionRequest,
-  listSessionsMetadata,
-  filterSessionsByRange,
   deleteSessionsOlderThan,
-  updateModelRunMetadata,
+  ensureSessionStorage,
+  filterSessionsByRange,
   getSessionPaths,
   getSessionsDir,
+  initializeSession,
+  listSessionsMetadata,
+  readModelLog,
+  readSessionLog,
+  readSessionMetadata,
+  readSessionRequest,
+  updateModelRunMetadata,
+  updateSessionMetadata,
 } from './sessionManager.js';
+
 type InitializeSessionOptionsType = Parameters<typeof initializeSession>[0];
 
 export interface SessionStore {
@@ -107,19 +108,21 @@ class FileSessionStore implements SessionStore {
 }
 
 export const sessionStore: SessionStore = new FileSessionStore();
-export { wait } from './sessionManager.js';
 export type {
+  BrowserContextMetadata,
+  BrowserReattachDiagnosticsMetadata,
+  BrowserRuntimeMetadata,
+  BrowserSessionConfig,
   SessionMetadata,
   SessionMode,
-  BrowserSessionConfig,
-  BrowserContextMetadata,
-  BrowserRuntimeMetadata,
-  BrowserReattachDiagnosticsMetadata,
+  SessionModelRun,
+  SessionStatus,
+  SessionTerminalReceiptIntentMetadata,
+  SessionTerminalReceiptResultMetadata,
   SessionTransportMetadata,
   SessionUserErrorMetadata,
-  SessionStatus,
-  SessionModelRun,
 } from './sessionManager.js';
+export { wait } from './sessionManager.js';
 
 export async function pruneOldSessions(
   hours?: number,

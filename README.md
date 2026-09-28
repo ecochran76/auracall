@@ -2032,6 +2032,37 @@ Put defaults in `~/.auracall/config.json` (JSON5). Example:
   }
 }
 ```
+
+Terminal-session receipts are disabled by default. Enable the provider-neutral
+producer only with an explicit private allowed root:
+
+```json5
+{
+  terminalSessionReceipts: {
+    enabled: true,
+    schemaVersion: 1,
+    root: "auracall-home",
+  },
+}
+```
+
+`auracall-home` resolves to the owner-only
+`~/.auracall/terminal-session-events` directory (or the matching
+`AURACALL_HOME_DIR` location). An absolute custom root is also accepted when it
+is normalized, owned by the current user, has no symlink in its path, and is
+not accessible to group or other users. AuraCall persists an immutable result
+file first, then terminal session metadata, then atomically publishes one
+immutable `auracall.session.terminal` version-1 receipt. Receipts contain a
+hashed session reference, relative result locator, digest, size, bounded
+execution class, and bounded error code; they never contain prompts, response
+bodies, credentials, or absolute result paths.
+
+Inspect the sanitized root identity and delivery ledger with
+`auracall terminal-receipts status`. Add `--session <id>` to verify the exact
+session-to-receipt-to-result digest chain, or `--reconcile` to idempotently
+publish receipts missing after a process crash. Publication failure is reported
+separately and never changes the model outcome or retries provider work.
+
 Use `browser.chatgptUrl` (or the legacy alias `browser.url`) to target a specific ChatGPT workspace/folder for browser automation.
 `tabConcurrencyMode` still defaults to `serialized`. When explicitly set to
 `tab-affinity`, ChatGPT conversations, the live-follow crawler, and utility

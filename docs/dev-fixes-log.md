@@ -23394,3 +23394,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   explained by the workload buckets is unattributed creation. Both remain
   immediate hard stops alongside warning, quota, navigation, reload, focus,
   lease-loss, and outcome-unknown guards.
+
+## 2026-09-27 | Publish terminal-session receipts from durable intent only
+
+- A process exit or callback is not proof that a final result was durably
+  stored. Persist an enabled-only immutable result first, then terminal session
+  metadata containing its relative locator/digest/size, and publish the event
+  only from that durable intent.
+- Make event identity deterministic from a hashed internal session reference.
+  Repeated finalization and restart reconciliation can then deduplicate one
+  immutable receipt without exposing prompt-derived session slugs.
+- Receipt delivery is an observability outcome, not a model outcome. Unsafe
+  roots, symlinks, permission failures, and publication failures fail closed
+  and remain separately readable without retrying provider work or rewriting a
+  completed, failed, or cancelled session.

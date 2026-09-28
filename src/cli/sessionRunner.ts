@@ -1,48 +1,52 @@
-import kleur from 'kleur';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {
-  SessionMetadata,
-  SessionMode,
-  BrowserSessionConfig,
-  BrowserRuntimeMetadata,
-} from '../sessionStore.js';
-import type { RunOracleOptions, UsageSummary } from '../oracle.js';
-import {
-  runOracle,
-  OracleResponseError,
-  OracleTransportError,
-  extractResponseMetadata,
-  asOracleUserError,
-  extractTextOutput,
-} from '../oracle.js';
-import { runBrowserSessionExecution, type BrowserSessionRunnerDeps } from '../browser/sessionRunner.js';
+import { cwd as getCwd } from 'node:process';
+import kleur from 'kleur';
 import {
   isActiveGenerationObservationExpiry,
   readBrowserResponseProgressEvidence,
   reconcileBrowserRuntimeWithResponseProgress,
 } from '../browser/observationLease.js';
-import { renderMarkdownAnsi } from './markdownRenderer.js';
-import { formatResponseMetadata, formatTransportMetadata } from './sessionDisplay.js';
-import { markErrorLogged } from './errorUtils.js';
+import { type BrowserSessionRunnerDeps, runBrowserSessionExecution } from '../browser/sessionRunner.js';
+import type { ResolvedUserConfig } from '../config.js';
+import { DEFAULT_SYSTEM_PROMPT, MODEL_CONFIGS } from '../oracle/config.js';
+import { readFiles } from '../oracle/files.js';
+import { formatFinishLine } from '../oracle/finishLine.js';
+import { isKnownModel, resolveModelConfig } from '../oracle/modelResolver.js';
+import { runMultiModelApiSession } from '../oracle/multiModelRunner.js';
+import { buildPrompt, buildRequestBody } from '../oracle/request.js';
+import { formatTokenEstimate, formatTokenValue } from '../oracle/runUtils.js';
+import { estimateRequestTokens } from '../oracle/tokenEstimate.js';
+import type { RunOracleOptions, UsageSummary } from '../oracle.js';
 import {
+  asOracleUserError,
+  extractResponseMetadata,
+  extractTextOutput,
+  OracleResponseError,
+  OracleTransportError,
+  runOracle,
+} from '../oracle.js';
+import type {
+  BrowserRuntimeMetadata,
+  BrowserSessionConfig,
+  SessionMetadata,
+  SessionMode,
+} from '../sessionStore.js';
+import { sessionStore } from '../sessionStore.js';
+import {
+  prepareTerminalSessionReceipt,
+  publishTerminalSessionReceipt,
+  reconcileTerminalSessionReceipts,
+} from '../terminalSessionReceipts.js';
+import { markErrorLogged } from './errorUtils.js';
+import { renderMarkdownAnsi } from './markdownRenderer.js';
+import {
+  deriveNotificationSettingsFromMetadata,
   type NotificationSettings,
   sendSessionNotification,
-  deriveNotificationSettingsFromMetadata,
 } from './notifier.js';
-import { sessionStore } from '../sessionStore.js';
-import { runMultiModelApiSession } from '../oracle/multiModelRunner.js';
-import { MODEL_CONFIGS, DEFAULT_SYSTEM_PROMPT } from '../oracle/config.js';
-import { isKnownModel } from '../oracle/modelResolver.js';
-import { resolveModelConfig } from '../oracle/modelResolver.js';
-import { buildPrompt, buildRequestBody } from '../oracle/request.js';
-import { estimateRequestTokens } from '../oracle/tokenEstimate.js';
-import { formatTokenEstimate, formatTokenValue } from '../oracle/runUtils.js';
-import { formatFinishLine } from '../oracle/finishLine.js';
 import { sanitizeOscProgress } from './oscUtils.js';
-import { readFiles } from '../oracle/files.js';
-import { cwd as getCwd } from 'node:process';
-import type { ResolvedUserConfig } from '../config.js';
+import { formatResponseMetadata, formatTransportMetadata } from './sessionDisplay.js';
 
 const isTty = process.stdout.isTTY;
 const dim = (text: string): string => (isTty ? kleur.dim(text) : text);
@@ -142,7 +146,14 @@ export async function performSessionRun({
   let latestBrowserRuntime = sessionMeta.browser?.runtime;
   const notificationSettings = notifications ?? deriveNotificationSettingsFromMetadata(sessionMeta, process.env);
   const modelForStatus = runOptions.model ?? sessionMeta.model;
+  let terminalResultText: string | null = null;
   try {
+    const reconciliation = await reconcileTerminalSessionReceipts(userConfig, {
+      excludeSessionId: sessionMeta.id,
+    });
+    if (reconciliation.status === 'failed') {
+      log(dim(`Terminal receipt reconciliation failed (${reconciliation.failure?.code ?? 'unknown'}); continuing session execution.`));
+    }
     await sessionStore.updateSession(sessionMeta.id, {
       status: 'running',
       startedAt: new Date().toISOString(),
@@ -194,20 +205,28 @@ export async function performSessionRun({
           usage: result.usage,
         });
       }
-      await sessionStore.updateSession(sessionMeta.id, {
-        status: 'completed',
-        completedAt: new Date().toISOString(),
-        errorMessage: undefined,
-        usage: result.usage,
-        elapsedMs: result.elapsedMs,
-        browser: {
-          config: browserConfig,
-          runtime: result.runtime,
-          context: browserContext,
+      terminalResultText = result.answerText ?? '';
+      await persistTerminalOutcome({
+        sessionMeta,
+        userConfig,
+        terminalState: 'succeeded',
+        resultText: terminalResultText,
+        log,
+        updates: {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          errorMessage: undefined,
+          usage: result.usage,
+          elapsedMs: result.elapsedMs,
+          browser: {
+            config: browserConfig,
+            runtime: result.runtime,
+            context: browserContext,
+          },
+          response: undefined,
+          transport: undefined,
+          error: undefined,
         },
-        response: undefined,
-        transport: undefined,
-        error: undefined,
       });
       await writeAssistantOutput(runOptions.writeOutputPath, result.answerText ?? '', log);
       await sendSessionNotification(
@@ -383,16 +402,28 @@ export async function performSessionRun({
       log(statusColor(line1));
 
       const hasFailure = summary.rejected.length > 0;
-      await sessionStore.updateSession(sessionMeta.id, {
-        status: hasFailure ? 'error' : 'completed',
-        completedAt: new Date().toISOString(),
-        ...(hasFailure ? {} : { errorMessage: undefined }),
-        usage: aggregateUsage,
-        elapsedMs: summary.elapsedMs,
-        response: undefined,
-        transport: undefined,
-        error: undefined,
-      });
+      terminalResultText = summary.fulfilled
+        .map((entry) => `[${entry.model}]\n${entry.answerText}`)
+        .join('\n\n');
+      if (!hasFailure) {
+        await persistTerminalOutcome({
+          sessionMeta,
+          userConfig,
+          terminalState: 'succeeded',
+          resultText: terminalResultText,
+          log,
+          updates: {
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            errorMessage: undefined,
+            usage: aggregateUsage,
+            elapsedMs: summary.elapsedMs,
+            response: undefined,
+            transport: undefined,
+            error: undefined,
+          },
+        });
+      }
       const totalCharacters = summary.fulfilled.reduce((sum, entry) => sum + entry.answerText.length, 0);
       await sendSessionNotification(
         {
@@ -446,16 +477,6 @@ export async function performSessionRun({
     if (result.mode !== 'live') {
       throw new Error('Unexpected preview result while running a session.');
     }
-    await sessionStore.updateSession(sessionMeta.id, {
-      status: 'completed',
-      completedAt: new Date().toISOString(),
-      errorMessage: undefined,
-      usage: result.usage,
-      elapsedMs: result.elapsedMs,
-      response: extractResponseMetadata(result.response),
-      transport: undefined,
-      error: undefined,
-    });
     if (modelForStatus && singleModelOverride == null) {
       await sessionStore.updateModelRun(sessionMeta.id, modelForStatus, {
         status: 'completed',
@@ -464,6 +485,24 @@ export async function performSessionRun({
       });
     }
     const answerText = extractTextOutput(result.response);
+    terminalResultText = answerText;
+    await persistTerminalOutcome({
+      sessionMeta,
+      userConfig,
+      terminalState: 'succeeded',
+      resultText: answerText,
+      log,
+      updates: {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        errorMessage: undefined,
+        usage: result.usage,
+        elapsedMs: result.elapsedMs,
+        response: extractResponseMetadata(result.response),
+        transport: undefined,
+        error: undefined,
+      },
+    });
     await writeAssistantOutput(runOptions.writeOutputPath, answerText, log);
     await sendSessionNotification(
       {
@@ -571,33 +610,6 @@ export async function performSessionRun({
       log(dim(`Transport: ${transportLine}`));
     }
     const terminalStatus = error instanceof SessionRunCancelledError ? 'cancelled' : 'error';
-    await sessionStore.updateSession(sessionMeta.id, {
-      status: terminalStatus,
-      completedAt: new Date().toISOString(),
-      errorMessage: message,
-      mode,
-      browser: browserConfig
-        ? {
-            config: browserConfig,
-            runtime: browserRuntime ?? sessionMeta.browser?.runtime,
-          }
-        : undefined,
-      response: responseMetadata,
-      transport: transportMetadata,
-      error: userError
-        ? {
-            category: userError.category,
-            message: userError.message,
-            details: userError.details,
-          }
-        : browserResponseProgress
-          ? {
-              category: 'browser-terminal-response',
-              message,
-              details: { browserResponseProgress },
-            }
-          : undefined,
-    });
     if (modelForStatus) {
       await sessionStore.updateModelRun(sessionMeta.id, modelForStatus, {
         status: terminalStatus,
@@ -617,6 +629,40 @@ export async function performSessionRun({
             : undefined,
       });
     }
+    await persistTerminalOutcome({
+      sessionMeta,
+      userConfig,
+      terminalState: terminalStatus,
+      resultText: terminalResultText,
+      log,
+      updates: {
+        status: terminalStatus,
+        completedAt: new Date().toISOString(),
+        errorMessage: message,
+        mode,
+        browser: browserConfig
+          ? {
+              config: browserConfig,
+              runtime: browserRuntime ?? sessionMeta.browser?.runtime,
+            }
+          : undefined,
+        response: responseMetadata,
+        transport: transportMetadata,
+        error: userError
+          ? {
+              category: userError.category,
+              message: userError.message,
+              details: userError.details,
+            }
+          : browserResponseProgress
+            ? {
+                category: 'browser-terminal-response',
+                message,
+                details: { browserResponseProgress },
+              }
+            : undefined,
+      },
+    });
     throw error;
   } finally {
     if (overallTimeout) {
@@ -630,6 +676,47 @@ export async function performSessionRun({
       }
     }
   }
+}
+
+async function persistTerminalOutcome(input: {
+  sessionMeta: SessionMetadata;
+  userConfig?: ResolvedUserConfig;
+  terminalState: 'succeeded' | 'error' | 'cancelled';
+  resultText?: string | null;
+  updates: Partial<SessionMetadata>;
+  log: (message: string) => void;
+}): Promise<SessionMetadata> {
+  const prepared = await prepareTerminalSessionReceipt({
+    config: input.userConfig,
+    session: input.sessionMeta,
+    terminalState: input.terminalState,
+    resultText: input.resultText,
+  });
+  if (prepared.status === 'failed') {
+    input.log(
+      dim(
+        `Terminal receipt result persistence failed (${prepared.failure?.code ?? 'unknown'}); model outcome remains unchanged.`,
+      ),
+    );
+  }
+  const persisted = await sessionStore.updateSession(input.sessionMeta.id, {
+    ...input.updates,
+    ...(prepared.value ? { terminalReceiptIntent: prepared.value.intent } : {}),
+  });
+  if (prepared.value) {
+    const published = await publishTerminalSessionReceipt({
+      config: input.userConfig,
+      session: persisted,
+    });
+    if (published.status === 'failed') {
+      input.log(
+        dim(
+          `Terminal receipt publication failed (${published.failure?.code ?? 'unknown'}); model outcome remains unchanged.`,
+        ),
+      );
+    }
+  }
+  return persisted;
 }
 
 function hasExactBrowserReattachIdentity(runtime: BrowserRuntimeMetadata | undefined): runtime is BrowserRuntimeMetadata {

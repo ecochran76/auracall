@@ -251,6 +251,10 @@ import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../src/workbench/browserDiscovery.js';
 import { createBrowserWorkbenchCapabilityDiagnostics } from '../src/workbench/browserDiagnostics.js';
 import { performSessionRun, SessionRunCancelledError } from '../src/cli/sessionRunner.js';
+import {
+  buildTerminalSessionReceiptStatusPayload,
+  formatTerminalSessionReceiptStatusPayload,
+} from '../src/cli/terminalSessionReceiptCommand.js';
 import { buildRootBrowserProviderSessionAuthorization } from '../src/cli/browserProviderSession.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -10297,6 +10301,37 @@ profileCommand
 const configCommand = program
   .command('config')
   .description('Manage Aura-Call config files.');
+
+const terminalSessionReceiptsCommand = program
+  .command('terminal-receipts')
+  .description('Inspect provider-neutral terminal-session receipt delivery.');
+
+terminalSessionReceiptsCommand
+  .command('status')
+  .description('Show terminal-session receipt configuration, delivery, and reconciliation status.')
+  .option('--reconcile', 'Idempotently publish any missing receipts for durably terminal sessions.', false)
+  .option('--session <id>', 'Verify one exact stored session, receipt, and result digest.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const payload = await buildTerminalSessionReceiptStatusPayload({
+      config: userConfig,
+      reconcile: Boolean(commandOptions.reconcile),
+      sessionId:
+        typeof commandOptions.session === 'string' && commandOptions.session.trim().length > 0
+          ? commandOptions.session.trim()
+          : null,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(payload, null, 2));
+      return;
+    }
+    console.log(formatTerminalSessionReceiptStatusPayload(payload));
+  });
 
 configCommand
   .command('doctor')

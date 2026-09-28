@@ -3,7 +3,7 @@ import fsPromises from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { beforeAll, afterAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 vi.mock('../../src/oracle.ts', async () => {
   const actual = await vi.importActual<typeof import('../../src/oracle.ts')>('../../src/oracle.ts');
@@ -23,6 +23,11 @@ vi.mock('../../src/browser/sessionRunner.ts', () => ({
 vi.mock('../../src/cli/notifier.ts', () => ({
   sendSessionNotification: vi.fn(),
   deriveNotificationSettingsFromMetadata: vi.fn(() => ({ enabled: true, sound: false })),
+}));
+vi.mock('../../src/terminalSessionReceipts.ts', () => ({
+  prepareTerminalSessionReceipt: vi.fn(async () => ({ status: 'disabled' })),
+  publishTerminalSessionReceipt: vi.fn(async () => ({ status: 'disabled' })),
+  reconcileTerminalSessionReceipts: vi.fn(async () => ({ status: 'disabled' })),
 }));
 
 const sessionStoreMock = vi.hoisted(() => ({
@@ -44,24 +49,29 @@ vi.mock('../../src/sessionStore.ts', () => ({
   sessionStore: sessionStoreMock,
 }));
 
-import type { SessionMetadata, SessionModelRun } from '../../src/sessionManager.ts';
-import type { ModelName } from '../../src/oracle.ts';
+import { runBrowserSessionExecution } from '../../src/browser/sessionRunner.ts';
+import { sendSessionNotification } from '../../src/cli/notifier.ts';
 import {
+  deriveModelOutputPath,
   performSessionRun,
   SessionRunCancelledError,
   SessionRunTimeoutError,
 } from '../../src/cli/sessionRunner.ts';
-import { BrowserAutomationError, FileValidationError, OracleResponseError, OracleTransportError, runOracle } from '../../src/oracle.ts';
+import type { ResolvedUserConfig } from '../../src/config.ts';
 import {
-  runMultiModelApiSession,
   type ModelExecutionResult,
   type MultiModelRunSummary,
+  runMultiModelApiSession,
 } from '../../src/oracle/multiModelRunner.ts';
-import type { OracleResponse, RunOracleResult } from '../../src/oracle.ts';
-import { runBrowserSessionExecution } from '../../src/browser/sessionRunner.ts';
-import { sendSessionNotification } from '../../src/cli/notifier.ts';
+import type { ModelName, OracleResponse, RunOracleResult } from '../../src/oracle.ts';
+import { BrowserAutomationError, FileValidationError, OracleResponseError, OracleTransportError, runOracle } from '../../src/oracle.ts';
+import type { SessionMetadata, SessionModelRun } from '../../src/sessionManager.ts';
+import {
+  prepareTerminalSessionReceipt,
+  publishTerminalSessionReceipt,
+  reconcileTerminalSessionReceipts,
+} from '../../src/terminalSessionReceipts.ts';
 import { getCliVersion } from '../../src/version.ts';
-import { deriveModelOutputPath } from '../../src/cli/sessionRunner.ts';
 
 const baseSessionMeta: SessionMetadata = {
   id: 'sess-1',
@@ -99,6 +109,12 @@ beforeEach(() => {
   });
   vi.mocked(runMultiModelApiSession).mockReset();
   vi.mocked(runMultiModelApiSession).mockResolvedValue({ fulfilled: [], rejected: [], elapsedMs: 0 });
+  vi.mocked(prepareTerminalSessionReceipt).mockReset();
+  vi.mocked(prepareTerminalSessionReceipt).mockResolvedValue({ status: 'disabled' });
+  vi.mocked(publishTerminalSessionReceipt).mockReset();
+  vi.mocked(publishTerminalSessionReceipt).mockResolvedValue({ status: 'disabled' });
+  vi.mocked(reconcileTerminalSessionReceipts).mockReset();
+  vi.mocked(reconcileTerminalSessionReceipts).mockResolvedValue({ status: 'disabled' });
   sessionStoreMock.createLogWriter.mockReturnValue({
     logLine: vi.fn(),
     writeChunk: vi.fn(),
@@ -150,6 +166,110 @@ describe('performSessionRun', () => {
       expect.objectContaining({ status: 'completed' }),
     );
     expect(vi.mocked(sendSessionNotification)).toHaveBeenCalled();
+  });
+
+  test('publishes an enabled terminal receipt only after result and terminal metadata persistence', async () => {
+    const liveResult: RunOracleResult = {
+      mode: 'live',
+      usage: { inputTokens: 1, outputTokens: 2, reasoningTokens: 0, totalTokens: 3 },
+      elapsedMs: 50,
+      response: {
+        id: 'resp',
+        usage: {},
+        output: [{ type: 'message', content: [{ type: 'output_text', text: 'durable answer' }] }],
+      },
+    };
+    vi.mocked(runOracle).mockResolvedValue(liveResult);
+    vi.mocked(prepareTerminalSessionReceipt).mockResolvedValue({
+      status: 'succeeded',
+      value: {
+        intent: {
+          schemaVersion: 1,
+          eventKind: 'auracall.session.terminal',
+          eventId: 'evt_test',
+          idempotencyKey: 'sha256:test',
+          sessionRef: 'sha256:session',
+          terminalState: 'succeeded',
+          persistedAt: '2026-09-27T00:00:00.000Z',
+          result: { locator: 'results/v1/evt_test.txt', digest: 'sha256:result', bytes: 14 },
+        },
+      },
+    });
+    sessionStoreMock.updateSession.mockImplementation(async (_id: string, updates: Partial<SessionMetadata>) => ({
+      ...baseSessionMeta,
+      ...updates,
+    }));
+    const userConfig = {
+      model: 'gpt-5.6-sol',
+      browser: {},
+      terminalSessionReceipts: { enabled: true, root: 'auracall-home', schemaVersion: 1 },
+    } as ResolvedUserConfig;
+
+    await performSessionRun({
+      sessionMeta: baseSessionMeta,
+      runOptions: baseRunOptions,
+      mode: 'api',
+      cwd: '/tmp',
+      log,
+      write,
+      version: cliVersion,
+      userConfig,
+    });
+
+    expect(prepareTerminalSessionReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({ terminalState: 'succeeded', resultText: 'durable answer' }),
+    );
+    expect(publishTerminalSessionReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        session: expect.objectContaining({
+          status: 'completed',
+          terminalReceiptIntent: expect.objectContaining({ eventId: 'evt_test' }),
+        }),
+      }),
+    );
+    const prepareOrder = vi.mocked(prepareTerminalSessionReceipt).mock.invocationCallOrder[0] ?? 0;
+    const terminalUpdateOrder = sessionStoreMock.updateSession.mock.invocationCallOrder.at(-1) ?? 0;
+    const publishOrder = vi.mocked(publishTerminalSessionReceipt).mock.invocationCallOrder[0] ?? 0;
+    expect(prepareOrder).toBeLessThan(terminalUpdateOrder);
+    expect(terminalUpdateOrder).toBeLessThan(publishOrder);
+  });
+
+  test('keeps a successful model outcome when receipt result persistence fails', async () => {
+    vi.mocked(runOracle).mockResolvedValue({
+      mode: 'live',
+      usage: { inputTokens: 1, outputTokens: 1, reasoningTokens: 0, totalTokens: 2 },
+      elapsedMs: 20,
+      response: {
+        id: 'resp',
+        usage: {},
+        output: [{ type: 'message', content: [{ type: 'output_text', text: 'answer survives' }] }],
+      },
+    });
+    vi.mocked(prepareTerminalSessionReceipt).mockResolvedValue({
+      status: 'failed',
+      failure: { code: 'receipt_root_permissions_unsafe', at: '2026-09-27T00:00:00.000Z' },
+    });
+
+    await expect(
+      performSessionRun({
+        sessionMeta: baseSessionMeta,
+        runOptions: baseRunOptions,
+        mode: 'api',
+        cwd: '/tmp',
+        log,
+        write,
+        version: cliVersion,
+        userConfig: {
+          model: 'gpt-5.6-sol',
+          browser: {},
+          terminalSessionReceipts: { enabled: true, root: 'auracall-home', schemaVersion: 1 },
+        } as ResolvedUserConfig,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(sessionStoreMock.updateSession.mock.calls.at(-1)?.[1]).toMatchObject({ status: 'completed' });
+    expect(publishTerminalSessionReceipt).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('model outcome remains unchanged'));
   });
 
   test('writes final assistant output to disk for single-model runs', async () => {
