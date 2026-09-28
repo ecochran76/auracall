@@ -1,5 +1,13 @@
 # Testing quickstart
 
+- Provider-interaction lifecycle clock ordering (provider-free):
+  `pnpm vitest run tests/browser-service/ledgerInteractionGovernor.test.ts`.
+  The backwards-clock regression proves one governor never emits settlement
+  before its own start even if the injected wall clock regresses. Pair it with
+  `tests/browser-service/interactionLedger.test.ts` to retain the ledger's
+  direct rejection of genuinely out-of-order caller input. This does not run
+  the installed `wsl-chrome-3` Library inventory.
+
 - ChatGPT Library CLI lifecycle contract (provider-free):
   `pnpm vitest run tests/cli.libraryFilesCommand.test.ts`.
   This proves that client creation/browser discovery and inventory share one

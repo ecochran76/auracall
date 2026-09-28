@@ -53,6 +53,48 @@ describe("ledger-backed browser interaction governor", () => {
 		]);
 	});
 
+	test("keeps lifecycle timestamps ordered when the injected wall clock moves backward", async () => {
+		const timestamps = [
+			"2026-09-27T12:00:00.001Z",
+			"2026-09-27T12:00:00.002Z",
+			"2026-09-27T11:59:59.999Z",
+		];
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => "reservation-1",
+		});
+		const governor = createLedgerBackedBrowserInteractionGovernor({
+			ledger,
+			scope: {
+				provider: "chatgpt",
+				tenantKey: "tenant-1",
+				runtimeProfileId: "runtime-1",
+				managedBrowserProfile: "managed-1",
+			},
+			workloadId: "utility:library-files",
+			operationId: "library-files",
+			tabLeaseId: "lease-library",
+			policy: {
+				maxConcurrentChats: 4,
+				maxConversationStartsPerHour: 120,
+				maxConversationStartsPerDay: 240,
+				maxInteractionsPerMinute: 20,
+			},
+			baseGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+			now: () => new Date(timestamps.shift() ?? "2026-09-27T11:59:59.999Z"),
+		});
+
+		await governor.beforeInteraction("generic");
+		await expect(governor.finish()).resolves.toBeUndefined();
+
+		expect(await ledger.list()).toMatchObject([
+			{
+				state: "settled",
+				startedAt: "2026-09-27T12:00:00.002Z",
+				settledAt: "2026-09-27T12:00:00.002Z",
+			},
+		]);
+	});
+
 	test("denies the next interaction at the tenant-wide rolling-minute boundary", async () => {
 		let sequence = 0;
 		const ledger = createInMemoryProviderInteractionLedger({

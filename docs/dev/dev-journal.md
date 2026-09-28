@@ -1,3 +1,21 @@
+## 2026-09-27 | Issue 110 Library lifecycle clock ordering
+
+- Installed canonical `34397a20e` correctly bounded and cleaned the exact
+  `wsl-chrome-3` Library inventory but returned in 2.9 seconds with
+  `library_files_inventory_failed: settledAt cannot be earlier than startedAt`.
+  This provider-free slice did not retry the installed command.
+- The strict ledger invariant was correct. The ledger-backed browser
+  interaction governor independently read the wall clock for reservation,
+  start, and settlement, so a backwards host-clock correction could make its
+  own terminal receipt invalid.
+- The governor now retains one nondecreasing lifecycle timestamp sequence.
+  It clamps a regressed wall-clock reading to the last emitted instant while
+  leaving direct ledger validation strict.
+- A deterministic injected-clock fixture reproduces the exact error before the
+  fix and proves ordered settlement after it. Exact runtime-profile selection,
+  read-only Library behavior, timeout/cancellation cleanup, tab affinity, and
+  target lifecycle remain unchanged. Installed acceptance is separately gated.
+
 ## 2026-09-27 | Issue 107 bounded Library CLI lifecycle
 
 - Installed canonical `ed7e1f0dc` had left

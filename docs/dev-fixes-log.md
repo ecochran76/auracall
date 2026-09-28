@@ -9,6 +9,12 @@
   resubmitting provider work. `codex-wake` should use the receipt's exact
   idempotency key and resume a verified app-server thread once.
 
+- 2026-09-27: Wall-clock timestamps emitted by one lifecycle owner must remain
+  causally ordered even if the host clock moves backward. Keep the persistence
+  ledger strict, but clamp the governor's reservation/start/settlement reads to
+  a nondecreasing sequence. Test this with an injected backwards clock; do not
+  misclassify an internal receipt-ordering failure as a provider failure.
+
 - 2026-09-27: A CLI timeout must cover browser/client discovery as well as the
   final provider call, and `Promise.race` alone is not resource cleanup. Forward
   one abort signal through the whole read-only operation, close or dispose the

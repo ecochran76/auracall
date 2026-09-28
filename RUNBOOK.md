@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 623 | 2026-09-27
+
+- Closed provider-free P64 / [Plan 0364](docs/dev/plans/0364-2026-09-27-library-lifecycle-clock-ordering.md)
+  for issue 110 from canonical `34397a20e`. The installed receipt had proved
+  issue 107's bounded cleanup but exposed an internal lifecycle error when the
+  wall clock placed settlement before start.
+- The shared ledger-backed governor now clamps its own timestamp reads to one
+  nondecreasing causal sequence while the persistence ledger retains strict
+  rejection of genuinely invalid caller input. A deterministic backwards-clock
+  fixture fails with the exact retained error before the repair and passes
+  after it.
+- Nine focused provider-free files pass 48 tests with typecheck, scoped Biome,
+  goal-plan audit, and diff hygiene. No installed command, browser/provider
+  access, retry, refresh, navigation, target creation, or mutation occurred;
+  exact `wsl-chrome-3` acceptance remains separately governed.
+
 ## Turn 622 | 2026-09-27
 
 - Closed the provider-free P63 / [Plan 0363](docs/dev/plans/0363-2026-09-27-library-cli-lifecycle.md)

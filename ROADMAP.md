@@ -1,5 +1,12 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P64 / issue 110: [Plan 0364](docs/dev/plans/0364-2026-09-27-library-lifecycle-clock-ordering.md)
+  keeps each ledger-backed browser interaction governor's reservation, start,
+  and settlement timestamps nondecreasing when the host wall clock moves
+  backward. The persistence ledger remains strict, and Library timeout,
+  cancellation, cleanup, exact-profile, tab-affinity, and target semantics are
+  unchanged. Installed `wsl-chrome-3` acceptance remains separately gated.
+
 - Provider-free accepted P63 / issue 107: [Plan 0363](docs/dev/plans/0363-2026-09-27-library-cli-lifecycle.md)
   bounds the complete read-only ChatGPT Library CLI inventory to 45 seconds,
   forwards timeout and operator cancellation through the existing exact-profile
