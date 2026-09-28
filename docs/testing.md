@@ -19,7 +19,10 @@
   page through the production target-list dependency without target
   creation/closure, guaranteed lease settlement after post-acquisition setup
   failure, safe dead-owner recovery, close-on-rejection before provider
-  handoff, and natural termination of a child fixture with a retained handle.
+  handoff, a named 10-second provider DOM-inventory deadline that initiates
+  exact-target CDP client close and bounds a nonsettling close before the
+  45-second CLI deadline, and natural
+  termination of a child fixture with a retained handle.
   They do not launch a browser, inspect a provider account, or replace the separately
   authorized installed `wsl-chrome-3` acceptance.
 

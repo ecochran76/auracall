@@ -1,3 +1,23 @@
+## 2026-09-28 | Issue 107 provider Library inventory liveness
+
+- Correct installed acceptance of canonical `96095e68c` proved exact
+  `/library` target adoption and safe lease settlement, then returned the
+  outer `library_files_inventory_timeout` after 45 seconds. Target action
+  counts and the target set remained unchanged.
+- A provider-free production-adapter fixture reproduced the remaining defect:
+  the Library DOM `Runtime.evaluate` could remain pending indefinitely, while
+  the account-file path neither bounded that stage nor raced its attached CDP
+  work against abort.
+- Library inventory now reports named interaction, connection, identity,
+  dialog, route-readiness, and DOM stages. Each stage is bounded, the complete
+  provider operation is capped at 30 seconds inside the CLI's 45-second
+  deadline, and abort closes the attached CDP client even when the outstanding
+  CDP promise itself never settles.
+- The exact-target fixture proves the `dom-inventory` timeout at 10 seconds,
+  one client close, and zero navigation. No installed command, live browser,
+  provider access, retry, refresh, target creation, attachment, prompt, or Send
+  ran in this source slice.
+
 ## 2026-09-28 | Issue 107 production Library lease recovery
 
 - Installed canonical `9fff58ee1` could see an exact `/library` page at the

@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createChatgptAdapter } from "../../src/browser/providers/chatgptAdapter.js";
 import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
+import { createBrowserScrapeTelemetryRecorder } from "../../src/browser/providers/scrapeTelemetry.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 
 const promptActionMocks = vi.hoisted(() => ({
@@ -149,6 +150,108 @@ describe("ChatGPT provider prompt adapter", () => {
 			"ChatGPT target blank-target is on about:blank, not the expected https://chatgpt.com/library.",
 		);
 		expect(client.close).toHaveBeenCalledOnce();
+	});
+
+	test("bounds an unsettled exact-target Library DOM inventory and closes its CDP client", async () => {
+		vi.useFakeTimers();
+		try {
+			const targetUrl = "https://chatgpt.com/library";
+			const targetId = "chatgpt-library-target";
+			const host = "127.0.0.1";
+			const port = 45009;
+			const authority = createProviderSessionAuthority({
+				services: { chatgpt: { identity: { email: "operator@example.com" } } },
+			});
+			const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+			const context = {
+				providerId: "chatgpt" as const,
+				auracallRuntimeProfile: "wsl-chrome-3",
+				browserProfile: "wsl-chrome-3",
+				sourceBrowserProfile: "Default",
+				managedBrowserProfile: "/managed/wsl-chrome-3/chatgpt",
+				browserProcessId: 1234,
+				browserTargetId: targetId,
+				devtoolsHost: host,
+				devtoolsPort: port,
+			};
+			let inventoryStarted: (() => void) | null = null;
+			const started = new Promise<void>((resolve) => {
+				inventoryStarted = resolve;
+			});
+			const Runtime = {
+				enable: vi.fn(async () => undefined),
+				evaluate: vi.fn(({ expression }: { expression: string }) => {
+					if (expression.includes("for (let attempt = 0; attempt < 12")) {
+						inventoryStarted?.();
+						return new Promise<never>(() => undefined);
+					}
+					if (expression === "location.href") {
+						return Promise.resolve({ result: { value: targetUrl } });
+					}
+					if (expression.includes("fetch('/api/auth/session'")) {
+						return Promise.resolve({
+							result: { value: { user: { email: "operator@example.com" }, account: null } },
+						});
+					}
+					if (expression.includes("script#client-bootstrap")) {
+						return Promise.resolve({ result: { value: null } });
+					}
+					if (expression.includes("create project")) {
+						return Promise.resolve({ result: { value: { present: false } } });
+					}
+					return Promise.resolve({ result: { value: { ok: true } } });
+				}),
+			};
+			const client = {
+				Runtime,
+				Page: {
+					enable: vi.fn(async () => undefined),
+					navigate: vi.fn(async () => ({ frameId: "frame-1" })),
+				},
+				Input: {},
+				DOM: {},
+				close: vi.fn(() => new Promise<void>(() => undefined)),
+			};
+			chatgptConnectionMocks.connectToChromeTarget.mockResolvedValueOnce(client);
+
+			const pending = createChatgptAdapter().listAccountFiles?.({
+				host,
+				port,
+				tabTargetId: targetId,
+				configuredUrl: targetUrl,
+				preserveActiveTab: true,
+				requireExistingTarget: true,
+				scrapeTelemetry,
+				providerSessionAuthorization: {
+					authority,
+					context,
+					expectation: authority.resolveExpectation(context),
+				},
+			});
+			const rejection = expect(pending).rejects.toThrow(
+				"ChatGPT Library inventory stage dom-inventory timed out after 10000ms.",
+			);
+
+			await started;
+			await vi.advanceTimersByTimeAsync(10_000);
+			await vi.advanceTimersByTimeAsync(3_000);
+
+			await rejection;
+			expect(client.close).toHaveBeenCalledOnce();
+			expect(client.Page.navigate).not.toHaveBeenCalled();
+			expect(chatgptConnectionMocks.connectToChromeTarget).toHaveBeenCalledWith({
+				host,
+				port,
+				target: targetId,
+				abortSignal: expect.any(AbortSignal),
+			});
+			expect(scrapeTelemetry.pendingOperation).toBeNull();
+			expect(scrapeTelemetry.providerActions["chatgpt.listAccountFiles.dom-inventory"]).toBe(
+				1,
+			);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	test("rejects unsupported completion before browser interaction", async () => {

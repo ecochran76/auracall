@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P67 / reopened issue 107: [Plan 0367](docs/dev/plans/0367-2026-09-28-library-provider-inventory-liveness.md)
+  bounds named provider stages and the complete Library provider operation
+  beneath the CLI's 45-second deadline. A stalled CDP promise is raced against
+  abort, the command-owned client is closed independently, and the exact page
+  target remains unmodified. Installed acceptance is separately gated.
+
 - Provider-free accepted P66 / reopened issue 107: [Plan 0366](docs/dev/plans/0366-2026-09-28-library-lease-recovery.md)
   closes the entire post-acquisition lease lifecycle and safely reconciles
   dead/expired prior ownership before adopting the verified exact Library

@@ -23493,3 +23493,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - One-shot browser commands should close owned resources and retain a terminal
   process-exit boundary after their final output so an incidental handle cannot
   turn a structured result into another hang.
+
+## 2026-09-28 | Bound provider stages beneath the command deadline
+
+- An outer CLI timeout is terminal-output protection, not proof that its
+  provider operation or CDP request settled. A pending `Runtime.evaluate` can
+  ignore abort and retain its socket after the outer result is already known.
+- Give read-only provider work a smaller whole-operation deadline and named
+  stage deadlines. Race every attached-client operation against the same abort
+  signal, close the CDP client on abort, and bound that close independently.
+- Preserve the page target while closing only the command-owned CDP
+  connection. Regression coverage should leave an actual production-adapter
+  CDP promise pending and prove the operation fails at the named stage before
+  the outer command deadline without navigation or target disposal.
