@@ -51580,3 +51580,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   leases. Neither session was retried, no wake was armed, and further provider
   attempts stopped. Issue 121 remains open pending admission-race resolution
   and one complete connector-plus-wake acceptance.
+- The legitimate idle lease later expired normally. Fresh installed session
+  `github-wake-1790632645` selected GitHub, committed the connector plus full
+  prompt, and received the exact expected issue title. AuraCall misclassified
+  the successful exchange as `Prompt did not appear in conversation before
+  timeout` because the committed connector is rendered as an
+  `app://connector_...` prompt link rather than the composer-time app mention.
+- Its verified terminal event matched the armed wake, but the single dispatch
+  attempt encountered an active Codex writer and failed; the terminal session
+  was not retried or re-armed. The committed-turn reader now removes the
+  observed connector presentation node, with a focused provider-free
+  regression. A fresh installed run still gates closure.

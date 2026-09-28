@@ -167,3 +167,27 @@ explicitly unaccepted until a separately authorized fresh installed run.
 - Source correction is complete, but installed connector selection, response,
   and automatic Codex resumption remain unaccepted behind the independent
   tab-lease admission race. Issue 121 therefore remains open.
+
+## Installed Connector Success | Committed-turn False Negative
+
+- The legitimate idle lease expired normally without deletion or override.
+  Installed session `github-wake-1790632645` then selected the GitHub connected
+  app, submitted the prompt, and received the exact expected issue title.
+- Screenshot and CDP readback prove the committed user turn retained the GitHub
+  connector plus the complete prompt, and ChatGPT replied
+  `Select ChatGPT connected apps through filtered drawer rows`.
+- AuraCall nevertheless emitted verified terminal error receipt
+  `evt_7f792f71e5c0e712d01290f7df6cfed7f76e267cd174807c8520e52e979f611f`
+  because committed connector markup changes from `[app-mention-name]` in the
+  composer to `[data-prompt-link-href="app://connector_..."]` in the user turn.
+  The verifier counted the presentation-only `GitHub` label as prompt text and
+  falsely reported that the prompt did not appear.
+- The exact terminal event matched wake
+  `wake_94e56c971e3c406aafda2d93bf5b5e1f`, but its single app-server dispatch
+  attempt encountered an active writer and failed. The session was not retried
+  and its terminal receipt was not re-armed.
+- The committed-turn reader now excludes connector presentation nodes whose
+  `data-prompt-link-href` starts with `app://`. A provider-free regression uses
+  the observed committed markup and proves the retained prompt text is read
+  exactly. Fresh installed acceptance remains required for both the corrected
+  terminal classification and automatic Codex resumption.

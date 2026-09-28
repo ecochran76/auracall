@@ -11,9 +11,13 @@ describe("promptComposer", () => {
 			constructor(
 				public childNodes: unknown[],
 				public pill = false,
+				public connector = false,
 			) {}
 			matches(selector: string) {
-				return this.pill && selector.includes("[data-inline-selection-pill]");
+				return (
+					(this.pill && selector.includes("[data-inline-selection-pill]")) ||
+					(this.connector && selector.includes('[data-prompt-link-href^="app://"]'))
+				);
 			}
 		}
 		const text = (value: string) => ({ nodeType: 3, textContent: value });
@@ -26,6 +30,9 @@ describe("promptComposer", () => {
 		const prompt = "Investigate this snippet.";
 		expect(
 			read(new Element([new Element([text("Codebase Investigator")], true), text(prompt)])),
+		).toBe(prompt);
+		expect(
+			read(new Element([new Element([text("GitHub")], false, true), text(prompt)])),
 		).toBe(prompt);
 		expect(read(new Element([text("Retained user text. "), text(prompt)]))).toBe(
 			"Retained user text. " + prompt,

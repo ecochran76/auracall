@@ -23601,3 +23601,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   exact-label node. Query each selector separately in priority order and use
   the first result; apply that same extraction rule to inventory, filtered
   drawer readback, and activation.
+
+## 2026-09-28 | Exclude committed connector links from prompt verification
+
+- ChatGPT renders a selected app differently after submission: the composer
+  `[app-mention-name]` object becomes a presentation-only element whose
+  `data-prompt-link-href` starts with `app://connector_` in the committed user
+  turn.
+- Prompt-commit verification must ignore that connector label while retaining
+  adjacent authored text. Otherwise a successful Send and provider response
+  can be reported as a false timeout because the observed text is prefixed by
+  the connected-app name.
+- Keep the exclusion narrow to `app://` prompt links; ordinary committed links
+  and user text remain part of the exact prompt readback.
