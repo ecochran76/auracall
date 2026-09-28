@@ -4,7 +4,7 @@ import { createExecutionResponseMessage } from './apiModel.js';
 import type { ExecuteStoredRunStepContext, ExecuteStoredRunStepResult } from './runner.js';
 import type { ExecutionServiceHostDeps } from './serviceHost.js';
 import type { TeamRunArtifactRef } from '../teams/types.js';
-import { getAgent, getRuntimeProfileBrowserProfileId, resolveRuntimeSelection } from '../config/model.js';
+import { getAgent, resolveRuntimeSelection } from '../config/model.js';
 import { resolveConfiguredServiceAccountId } from '../config/serviceAccountIdentity.js';
 import {
   isChatgptSemanticModelSelector,
@@ -12,6 +12,7 @@ import {
 } from '../config/modelSelector.js';
 import { runBrowserMode } from '../browser/index.js';
 import { resolveRuntimeProfileUserConfig } from '../browser/service/profileConfig.js';
+import { resolveBrowserLaunchPlan } from '../browser/service/browserLaunchPlan.js';
 import { resumeBrowserSession } from '../browser/reattach.js';
 import { waitForAssistantResponse } from '../browser/actions/assistantResponse.js';
 import type {
@@ -781,6 +782,15 @@ export function createConfiguredStoredStepExecutor(
       runtimeProfileId: runtimeSelection.runtimeProfileId,
       provider: service,
     }) as ResolvedUserConfig;
+    const browserLaunchPlan = resolveBrowserLaunchPlan({
+      source: { kind: 'user-config', config: affinityUserConfig },
+      intent: {
+        provider: service,
+        runtimeProfileId: runtimeSelection.runtimeProfileId,
+        browserProfileId: runtimeSelection.browserProfileId,
+        agentId: context.step.agentId,
+      },
+    });
 
     const runtimeServiceConfig = readRuntimeServiceConfig(runtimeProfile, service);
     const globalServiceConfig = readGlobalServiceConfig(executionConfig, service);
@@ -878,16 +888,8 @@ export function createConfiguredStoredStepExecutor(
       service === 'chatgpt' && projectId
         ? resolveChatgptProjectUrl(projectId)
         : configuredServiceUrl;
-    const manualLoginProfileDir =
-      asNonEmptyString(runtimeServiceConfig?.manualLoginProfileDir) ??
-      asNonEmptyString(runtimeBrowserConfig?.manualLoginProfileDir) ??
-      asNonEmptyString(browserProfileConfig?.manualLoginProfileDir) ??
-      asNonEmptyString(browserConfigRecord?.manualLoginProfileDir) ??
-      null;
-    const browserFamilyProfileName =
-      manualLoginProfileDir && runtimeProfile
-        ? getRuntimeProfileBrowserProfileId(runtimeProfile)
-        : null;
+    const manualLoginProfileDir = browserLaunchPlan.managedBrowserProfile.directory;
+    const browserFamilyProfileName = browserLaunchPlan.selection.browserProfileId;
     const inlineCookies =
       service === 'gemini'
         ? await resolveConfiguredExecutorInlineCookies(manualLoginProfileDir)

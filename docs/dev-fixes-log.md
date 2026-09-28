@@ -23298,6 +23298,23 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Do not issue another navigation merely because the acknowledgement was lost;
   that creates avoidable route churn on a correctly leased tab.
 
+## 2026-09-27 | Derive durable execution profiles after explicit selection
+
+- A durable request can correctly select an AuraCall runtime profile, browser
+  profile, and provider while still inheriting a stale top-level managed browser
+  directory from the process default. That produces internally contradictory
+  provenance such as `wsl-chrome-3` plus `default/grok` and fails before Send.
+- Treat a managed browser directory as scoped to both browser profile and
+  provider. When either explicit selection changes, discard the prior
+  directory unless the selected runtime/service supplies its own override.
+- Durable stored execution must derive the final directory through the same
+  canonical browser launch-plan resolver used by browser service. Do not
+  reconstruct security-sensitive launch provenance from an independent raw
+  precedence chain.
+- Regression coverage must keep the process default on Grok while selecting an
+  explicit ChatGPT runtime and prove that no default-Grok path survives in the
+  browser run options or provider-session authorization context.
+
 ## 2026-09-27 | Never regress readable cache titles to provider IDs
 
 - Provider index observations can be weaker than retained cache evidence. A
