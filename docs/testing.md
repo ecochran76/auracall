@@ -9,16 +9,19 @@
   the installed `wsl-chrome-3` Library inventory.
 
 - ChatGPT Library CLI lifecycle contract (provider-free):
-  `pnpm vitest run tests/cli.libraryFilesCommand.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts tests/browser/configuredChatgptUtilityAffinity.production.test.ts tests/browser/chatgptPromptAdapter.test.ts`.
+  `pnpm vitest run tests/cli.libraryFilesCommand.test.ts tests/browser/llmServiceFiles.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts tests/browser/configuredChatgptUtilityAffinity.production.test.ts tests/browser/chatgptPromptAdapter.test.ts`.
   This proves that client creation/browser discovery and inventory share one
-  49-second operation deadline; timeout and caller cancellation reach the
+  54-second operation deadline; timeout and caller cancellation reach the
   provider-facing `AbortSignal`; success, provider error, timeout, and
   cancellation close command-owned resources exactly once; and JSON failures
   return stable error codes with exit 1 or cancellation exit 130.
-  A fake-clock composition fixture includes preflight, the provider's
+  A fake-clock composition fixture reaches the observed 50-second boundary
+  with preflight, the provider's
   30-second ceiling, three-second CDP close, and five-second affinity
   settlement and proves their named provider error wins before the later
-  55-second outer watchdog.
+  60-second outer watchdog. Account-file service fixtures prove the named
+  timeout is already non-retryable and that this exact CLI read also disables
+  retries for connection-shaped failures.
   Pending-dispose fixtures prove that client cleanup cannot replace provider
   success or a named provider-stage error. A pending-governor fixture proves
   affinity settlement is bounded, preserves that provider error, and retains

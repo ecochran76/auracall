@@ -3408,7 +3408,11 @@ export abstract class LlmService {
 		recordBrowserScrapeProviderAction(listOptions, "provider.listAccountFiles");
 		const files = await this.withRetry(
 			() => this.provider.listAccountFiles?.(listOptions) as Promise<FileRef[]>,
-			{ action: "listAccountFiles" },
+			{
+				action: "listAccountFiles",
+				retries: listOptions.disableAccountFileListRetry === true ? 0 : undefined,
+				abortSignal: listOptions.abortSignal,
+			},
 		);
 		const normalizedFiles = Array.isArray(files) ? files : [];
 		const cacheContext = await this.resolveCacheContext(listOptions);

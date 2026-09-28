@@ -1,3 +1,12 @@
+- 2026-09-28: Size nested browser deadlines from the observed complete
+  single-attempt path, not only nominal adapter timers. Target acquisition,
+  adapter abort cleanup, and lease settlement can consume material time around
+  a provider's internal ceiling. Keep the shared operation bound above the
+  observed boundary, cleanup separately bounded, and the watchdog above their
+  total. For an exact-target one-shot inventory, explicitly disable generic
+  provider retry so a connection-shaped cleanup failure cannot repeat the
+  read or consume the terminal margin.
+
 - 2026-09-28: Nested timeouts need a compositional ordering invariant, not
   merely individually bounded stages. If preflight precedes a provider
   deadline and cleanup follows it, the terminal-output watchdog must be

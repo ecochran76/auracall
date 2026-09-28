@@ -4,8 +4,8 @@ import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { requireBundledServiceRouteTemplate } from "../services/registry.js";
 
-const DEFAULT_LIBRARY_FILES_INVENTORY_TIMEOUT_MS = 55_000;
-const DEFAULT_LIBRARY_FILES_OPERATION_TIMEOUT_MS = 49_000;
+const DEFAULT_LIBRARY_FILES_INVENTORY_TIMEOUT_MS = 60_000;
+const DEFAULT_LIBRARY_FILES_OPERATION_TIMEOUT_MS = 54_000;
 const DEFAULT_LIBRARY_FILES_CLEANUP_TIMEOUT_MS = 5_000;
 
 interface ChatgptLibraryFilesCliClient {
@@ -101,6 +101,7 @@ export async function listChatgptLibraryFilesForCli(
 		return await client.listLibraryFiles({
 			abortSignal: controller.signal,
 			configuredUrl: requireBundledServiceRouteTemplate("chatgpt", "library"),
+			disableAccountFileListRetry: true,
 			preserveActiveTab: true,
 			requireExistingTarget: true,
 		});

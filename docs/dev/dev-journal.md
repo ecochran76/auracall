@@ -1,3 +1,23 @@
+## 2026-09-28 | Issue 107 Library single-read deadline margin
+
+- Correct installed acceptance of canonical `d89abd46` returned the inner
+  `library_files_inventory_timeout` at 49 seconds while leaving the exact
+  target set unchanged. This source slice did not rerun that command.
+- The exact lease was acquired at `12:06:37.658Z`; its governed interaction
+  ran from `12:06:38.132Z` to `12:06:38.821Z`, and its idle heartbeat settled
+  at `12:07:22.204Z`, about 44.55 seconds after acquisition. Together with
+  pre-acquisition work, the one-attempt path crossed the 49-second boundary.
+- CodeGraph showed account-file reads use generic `withRetry`. Deterministic
+  call-count tests proved the named adapter timeout was already non-retryable,
+  while a connection-shaped error could still begin a second read. The live
+  evidence therefore reflects an undersized single-attempt budget, not proof
+  of an actual retry.
+- The exact CLI inventory now requests one provider read, shares a 54-second
+  operation deadline, retains five-second cleanup, and keeps its final
+  watchdog at 60 seconds. A red-before-green fake-clock fixture preserves a
+  named result at the observed 50-second boundary. No installed or live effect
+  ran.
+
 ## 2026-09-28 | Issue 107 Library deadline composition
 
 - Correct installed acceptance of canonical `34fd52d0` still returned the

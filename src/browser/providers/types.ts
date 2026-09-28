@@ -1,6 +1,7 @@
 import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
+import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptComposerTool.js";
 import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from "../libraryFiles.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
 import type {
@@ -8,7 +9,6 @@ import type {
 	ProviderSessionProof,
 } from "./providerSessionAuthority.js";
 import type { BrowserScrapeTelemetryRecorder } from "./scrapeTelemetry.js";
-import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptComposerTool.js";
 
 export type SelectorList = readonly string[];
 
@@ -64,6 +64,7 @@ export interface BrowserProviderListOptions {
 	interactionGovernor?: BrowserInteractionGovernor;
 	preserveInteractionGovernorForProviderSession?: boolean;
 	disableProviderMutationRetry?: boolean;
+	disableAccountFileListRetry?: boolean;
 	providerSessionAuthorization?: ProviderSessionAuthorization;
 	onProviderSessionProof?: (proof: ProviderSessionProof) => void;
 	skipFeatureSignature?: boolean;

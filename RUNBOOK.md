@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 628 | 2026-09-28
+
+- Closed provider-free P70 / [Plan 0370](docs/dev/plans/0370-2026-09-28-library-single-read-deadline-margin.md)
+  for reopened issue 107 from canonical `d89abd46`. Correct installed
+  acceptance returned the 49-second inner timeout without target churn.
+- Lease evidence measured about 44.55 seconds from acquisition to idle
+  settlement. CodeGraph and deterministic call counts proved the named adapter
+  timeout was already non-retryable; only a connection-shaped error could
+  trigger the generic second attempt.
+- This CLI path now requests one provider read, uses a 54-second shared
+  operation deadline and five-second cleanup bound, and retains a later
+  60-second watchdog. A fake-clock regression preserves the named result at
+  the observed 50-second boundary. No installed command, browser/provider
+  access, retry, refresh, navigation, target creation, attachment, prompt, or
+  Send occurred.
+
 ## Turn 627 | 2026-09-28
 
 - Closed provider-free P69 / [Plan 0369](docs/dev/plans/0369-2026-09-28-library-deadline-composition.md)

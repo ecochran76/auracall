@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P70 / reopened issue 107: [Plan 0370](docs/dev/plans/0370-2026-09-28-library-single-read-deadline-margin.md)
+  gives one exact-target Library read a 54-second shared operation deadline,
+  five-second cleanup bound, and later 60-second watchdog. Explicit no-retry
+  semantics prevent connection-shaped failures from repeating the provider
+  read. Installed acceptance is separately gated.
+
 - Provider-free accepted P69 / reopened issue 107: [Plan 0369](docs/dev/plans/0369-2026-09-28-library-deadline-composition.md)
   makes the 49-second shared operation deadline, five-second cleanup bound,
   and later 55-second watchdog explicitly ordered. Preflight plus provider and
