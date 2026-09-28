@@ -23506,3 +23506,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   connection. Regression coverage should leave an actual production-adapter
   CDP promise pending and prove the operation fails at the named stage before
   the outer command deadline without navigation or target disposal.
+
+## 2026-09-28 | Keep terminal results outside cleanup promises
+
+- A resource-cleanup `finally` attached to the promise governed by an outer
+  operation deadline makes cleanup latency indistinguishable from unfinished
+  work. Capture the provider result first, then join cleanup under its own
+  deadline without letting cleanup failure replace that result.
+- Trace the production object before attributing a hang to an optional cleanup
+  hook. The Library CLI interface allowed `dispose`/`close`, but the production
+  client implemented neither; the real post-provider wait was affinity
+  governor and lease settlement.
+- Bound that settlement as one sequence. If it stalls after provider failure,
+  preserve the provider error and leave the active lease fence intact; do not
+  mark the target idle or silently make it available to another process.

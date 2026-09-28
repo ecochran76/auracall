@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P68 / reopened issue 107: [Plan 0368](docs/dev/plans/0368-2026-09-28-library-terminal-result-cleanup.md)
+  separates the provider result from bounded CLI client cleanup and caps
+  configured utility governor/lease settlement at five seconds. A stalled
+  settlement preserves the original provider-stage error and retains the
+  unresolved lease fence. Installed acceptance is separately gated.
+
 - Provider-free accepted P67 / reopened issue 107: [Plan 0367](docs/dev/plans/0367-2026-09-28-library-provider-inventory-liveness.md)
   bounds named provider stages and the complete Library provider operation
   beneath the CLI's 45-second deadline. A stalled CDP promise is raced against
