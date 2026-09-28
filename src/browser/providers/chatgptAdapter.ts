@@ -40,11 +40,16 @@ import {
 	assertChatgptEcosystemMentionSelected,
 	ensureChatgptEcosystemMention,
 } from "../actions/chatgptEcosystemMention.js";
+import {
+	attachChatgptLibraryFiles,
+	verifyChatgptLibraryFileAttachments,
+} from "../actions/chatgptLibraryFiles.js";
 import { ensureChatgptWorkModelSelection } from "../actions/chatgptWorkModelSelection.js";
 import { ensureModelSelection } from "../actions/modelSelection.js";
 import { ensurePromptReady } from "../actions/navigation.js";
 import { submitPrompt } from "../actions/promptComposer.js";
 import { ensureThinkingTime } from "../actions/thinkingTime.js";
+import type { LibraryFileAttachmentReceipt } from "../libraryFiles.js";
 import {
 	extractChatgptRateLimitSummary,
 	isChatgptRateLimitMessage,
@@ -13057,6 +13062,8 @@ export function createChatgptAdapter(): Pick<
 					await ensurePromptReady(Runtime, inputTimeoutMs, logger);
 				}
 				const attachments = input.attachments ?? [];
+				const libraryFiles = input.libraryFiles ?? [];
+				let libraryFileReceipt: LibraryFileAttachmentReceipt | undefined;
 				const attachmentNames = attachments.map((attachment) => path.basename(attachment.path));
 				let attachmentWaitTimedOut = false;
 				if (attachments.length > 0) {
@@ -13088,6 +13095,10 @@ export function createChatgptAdapter(): Pick<
 						);
 					}
 				}
+				if (libraryFiles.length > 0) {
+					libraryFileReceipt = await attachChatgptLibraryFiles(client, libraryFiles, logger);
+					await ensurePromptReady(Runtime, inputTimeoutMs, logger);
+				}
 				const ecosystemMentionBeforeSend = selectedEcosystemMention;
 				await submitPrompt(
 					{
@@ -13095,9 +13106,14 @@ export function createChatgptAdapter(): Pick<
 						input: Input,
 						attachmentNames: attachmentWaitTimedOut ? [] : attachmentNames,
 						inputTimeoutMs,
-						beforeSend: ecosystemMentionBeforeSend
-							? () => assertChatgptEcosystemMentionSelected(client, ecosystemMentionBeforeSend)
-							: undefined,
+						beforeSend: async () => {
+							if (libraryFileReceipt) {
+								await verifyChatgptLibraryFileAttachments(client, libraryFileReceipt.attached);
+							}
+							if (ecosystemMentionBeforeSend) {
+								await assertChatgptEcosystemMentionSelected(client, ecosystemMentionBeforeSend);
+							}
+						},
 						onPromptDispatched: () => logger("Prompt dispatched"),
 					},
 					input.prompt,
@@ -13109,6 +13125,7 @@ export function createChatgptAdapter(): Pick<
 				});
 				return {
 					text: "",
+					...(libraryFileReceipt ? { libraryFiles: libraryFileReceipt } : {}),
 					conversationId: url ? extractChatgptConversationIdFromUrl(url) : null,
 					url,
 					tabTargetId: connection.targetId ?? null,

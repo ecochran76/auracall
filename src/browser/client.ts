@@ -9,6 +9,10 @@ import type { ResolvedUserConfig } from '../config.js';
 import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
 import { type DiagnosisReport, diagnoseProvider } from '../inspector/doctor.js';
 import { runChatgptPromptWithConfiguredAffinity } from './chatgptAffinityRuntime.js';
+import {
+  createLibraryFileInventoryFromFileRefs,
+  type LibraryFileInventory,
+} from './libraryFiles.js';
 import { createLlmService } from './llmService/index.js';
 import type { LlmService } from './llmService/llmService.js';
 import type { PromptInput, PromptResult } from './llmService/types.js';
@@ -221,6 +225,14 @@ export class BrowserAutomationClient {
     options?: BrowserProviderListOptions,
   ): Promise<FileRef[]> {
     return this.llmService.listAccountFiles({ listOptions: options });
+  }
+
+  async listLibraryFiles(
+    options?: BrowserProviderListOptions,
+  ): Promise<LibraryFileInventory> {
+    const observedAt = new Date().toISOString();
+    const files = await this.listAccountFiles(options);
+    return createLibraryFileInventoryFromFileRefs(this.target, files, { observedAt });
   }
 
   async downloadAccountFile(

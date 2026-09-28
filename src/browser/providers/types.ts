@@ -1,6 +1,7 @@
 import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
+import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from "../libraryFiles.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
 import type {
 	ProviderSessionAuthorization,
@@ -103,6 +104,7 @@ export interface ProviderUserIdentity {
 
 export interface BrowserProviderPromptInput {
 	prompt: string;
+	libraryFiles?: LibraryFileSelector[];
 	ecosystemMention?: {
 		label: string;
 		acceptedPluginIds: string[];
@@ -125,6 +127,7 @@ export interface BrowserProviderPromptInput {
 
 export interface BrowserProviderPromptResult {
 	text: string;
+	libraryFiles?: LibraryFileAttachmentReceipt;
 	conversationId?: string | null;
 	url?: string | null;
 	tabTargetId?: string | null;

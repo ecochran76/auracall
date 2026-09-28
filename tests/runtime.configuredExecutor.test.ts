@@ -2164,6 +2164,11 @@ describe('configured stored-step executor', () => {
       answerChars: 23,
       tabUrl: 'https://chatgpt.com/c/mock-chatgpt-pin',
       conversationId: 'mock-chatgpt-pin',
+      libraryFiles: {
+        requested: [{ id: 'file_packet' }],
+        attached: [{ id: 'file_packet', name: 'Packet.pdf', provider: 'chatgpt' as const }],
+        inventoryObservedAt: '2026-09-27T12:00:00.000Z',
+      },
     }));
 
     const executeStoredRunStep = createConfiguredStoredStepExecutor(
@@ -2199,13 +2204,16 @@ describe('configured stored-step executor', () => {
       { runBrowserModeImpl },
     );
 
-    await executeStoredRunStep?.({
+    const result = await executeStoredRunStep?.({
       record: {
         runId: 'teamrun_chatgpt_pin_1',
         revision: 1,
         bundle: {
           run: {
             id: 'teamrun_chatgpt_pin_1',
+            initialInputs: {
+              auracall: { libraryFiles: [{ id: 'file_packet' }] },
+            },
           },
         },
       } as never,
@@ -2229,12 +2237,21 @@ describe('configured stored-step executor', () => {
         config: expect.objectContaining({
           desiredModel: 'GPT-5.2',
         }),
+        libraryFiles: [{ id: 'file_packet' }],
       }),
     );
     const callOptions = runBrowserModeImpl.mock.calls.at(0)?.[0] as
       | { config?: { thinkingTime?: string } }
       | undefined;
     expect(callOptions?.config?.thinkingTime).toBeUndefined();
+    expect(result?.output?.structuredData).toMatchObject({
+      browserRun: {
+        libraryFiles: {
+          requested: [{ id: 'file_packet' }],
+          attached: [{ id: 'file_packet', name: 'Packet.pdf', provider: 'chatgpt' }],
+        },
+      },
+    });
   });
 
   it('persists Gemini passive observations from browser execution metadata', async () => {

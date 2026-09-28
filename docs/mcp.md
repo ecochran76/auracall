@@ -28,7 +28,7 @@ scoped keys, response batches, attachments, and polling rules, see
 ### `response_create`
 - Inputs: `model`, `input`, optional `instructions`, `runtimeProfile`,
   `agent`, `service`, `transport`, `outputContract`, `composerTool`,
-  `deepResearchPlanAction`, `attachments`, and `metadata`.
+  `libraryFiles`, `deepResearchPlanAction`, `attachments`, and `metadata`.
 - Behavior: creates one durable response run through the same stored-step
   response service used by local API `/v1/responses`. Browser-backed ChatGPT
   calls can request volatile workbench tools per call, for example
@@ -40,6 +40,12 @@ scoped keys, response batches, attachments, and polling rules, see
   `mimeType`, and optional `uri`. Local paths and `file://` URIs become
   browser-uploadable step artifacts; remote URIs are retained for metadata and
   future materialization.
+- `libraryFiles` is a separate ChatGPT provider-Library selector collection.
+  Each entry contains exactly one stable provider `id` or exact unique `name`.
+  It never accepts local paths or file contents. Missing/stale IDs, duplicate
+  names, incomplete inventory, and unverified document references fail before
+  Send; `run_status` readback retains only bounded requested/attached
+  identities.
 - Polling contract: create the response once, keep the returned `id`, and use
   `run_status` for subsequent state checks. Status readback is file-backed and
   must not resubmit the prompt, reopen a provider tool, or navigate the browser.

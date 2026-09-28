@@ -56,6 +56,10 @@ import { copyToClipboard } from '../src/cli/clipboard.js';
 import { buildMarkdownBundle } from '../src/cli/markdownBundle.js';
 import { shouldDetachSession } from '../src/cli/detach.js';
 import { applyHiddenAliases } from '../src/cli/hiddenAliases.js';
+import {
+  formatLibraryFileInventory,
+  listChatgptLibraryFilesForCli,
+} from '../src/cli/libraryFilesCommand.js';
 import { buildBrowserConfig, resolveBrowserModelLabel } from '../src/cli/browserConfig.js';
 import {
   defaultSetupVerificationPrompt,
@@ -5855,6 +5859,21 @@ program
       return;
     }
     console.log(formatWorkbenchCapabilityReport(report));
+  });
+
+program
+  .command('library-files')
+  .description('List usable ChatGPT Library files with stable provider IDs.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command) {
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...(typeof this.opts === 'function' ? this.opts() : {}),
+    } as OptionValues;
+    const userConfig = await resolveConfig(commandOptions, process.cwd(), process.env);
+    const inventory = await listChatgptLibraryFilesForCli(userConfig);
+    console.log(commandOptions.json ? JSON.stringify(inventory, null, 2) : formatLibraryFileInventory(inventory));
+    if (!inventory.complete) process.exitCode = 1;
   });
 
 const featuresCommand = program

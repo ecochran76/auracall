@@ -25,6 +25,12 @@ const promptActionMocks = vi.hoisted(() => ({
 	})),
 	ensureChatgptEcosystemMention: vi.fn(async () => undefined),
 	assertChatgptEcosystemMentionSelected: vi.fn(async () => undefined),
+	attachChatgptLibraryFiles: vi.fn(async (_client, selectors) => ({
+		requested: selectors,
+		attached: [{ id: "file_packet", name: "Packet.pdf", provider: "chatgpt" as const }],
+		inventoryObservedAt: "2026-09-27T12:00:00.000Z",
+	})),
+	verifyChatgptLibraryFileAttachments: vi.fn(async () => undefined),
 	clearComposerAttachments: vi.fn(async () => undefined),
 	uploadAttachmentFile: vi.fn(async () => true),
 	waitForAttachmentCompletion: vi.fn(async () => undefined),
@@ -87,6 +93,14 @@ vi.mock("../../src/browser/actions/chatgptEcosystemMention.js", async (importOri
 	>()),
 	ensureChatgptEcosystemMention: promptActionMocks.ensureChatgptEcosystemMention,
 	assertChatgptEcosystemMentionSelected: promptActionMocks.assertChatgptEcosystemMentionSelected,
+}));
+
+vi.mock("../../src/browser/actions/chatgptLibraryFiles.js", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("../../src/browser/actions/chatgptLibraryFiles.js")
+	>()),
+	attachChatgptLibraryFiles: promptActionMocks.attachChatgptLibraryFiles,
+	verifyChatgptLibraryFileAttachments: promptActionMocks.verifyChatgptLibraryFileAttachments,
 }));
 
 vi.mock("../../src/browser/actions/attachments.js", async (importOriginal) => ({
@@ -482,7 +496,19 @@ describe("ChatGPT provider prompt adapter", () => {
 		promptActionMocks.waitForAttachmentCompletion.mockImplementation(async () => {
 			events.push("settled");
 		});
-		promptActionMocks.submitPrompt.mockImplementation(async () => {
+		promptActionMocks.attachChatgptLibraryFiles.mockImplementation(async (_client, selectors) => {
+			events.push("library");
+			return {
+				requested: selectors,
+				attached: [{ id: "file_packet", name: "Packet.pdf", provider: "chatgpt" }],
+				inventoryObservedAt: "2026-09-27T12:00:00.000Z",
+			};
+		});
+		promptActionMocks.verifyChatgptLibraryFileAttachments.mockImplementation(async () => {
+			events.push("verify");
+		});
+		promptActionMocks.submitPrompt.mockImplementation(async (submitOptions) => {
+			await submitOptions.beforeSend?.();
 			events.push("submit");
 			return 1;
 		});
@@ -545,17 +571,18 @@ describe("ChatGPT provider prompt adapter", () => {
 			sizeBytes: 42,
 		};
 
-		await createChatgptAdapter().runPrompt?.(
+		const result = await createChatgptAdapter().runPrompt?.(
 			{
 				prompt: "Continue with attached context.",
 				attachments: [attachment],
+				libraryFiles: [{ id: "file_packet" }],
 				completionMode: "prompt_submitted",
 				targetUrl,
 			},
 			options,
 		);
 
-		expect(events).toEqual(["upload", "settled", "submit"]);
+		expect(events).toEqual(["upload", "settled", "library", "verify", "submit"]);
 		expect(promptActionMocks.clearComposerAttachments).toHaveBeenCalledWith(
 			Runtime,
 			5_000,
@@ -578,6 +605,20 @@ describe("ChatGPT provider prompt adapter", () => {
 			"Continue with attached context.",
 			expect.any(Function),
 		);
+		expect(promptActionMocks.attachChatgptLibraryFiles).toHaveBeenCalledWith(
+			client,
+			[{ id: "file_packet" }],
+			expect.any(Function),
+		);
+		expect(promptActionMocks.verifyChatgptLibraryFileAttachments).toHaveBeenCalledWith(
+			client,
+			[{ id: "file_packet", name: "Packet.pdf", provider: "chatgpt" }],
+		);
+		expect(result?.libraryFiles).toEqual({
+			requested: [{ id: "file_packet" }],
+			attached: [{ id: "file_packet", name: "Packet.pdf", provider: "chatgpt" }],
+			inventoryObservedAt: "2026-09-27T12:00:00.000Z",
+		});
 	});
 
 	test("closes an owned ChatGPT connection when prompt preparation fails after authorization", async () => {

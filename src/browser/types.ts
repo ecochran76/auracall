@@ -1,5 +1,6 @@
 import type * as BaseTypes from '../../packages/browser-service/src/types.js';
 import type { ResolvedUserConfig } from '../config.js';
+import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from './libraryFiles.js';
 import type { ProviderSessionAuthorization } from './providers/providerSessionAuthority.js';
 import type { ChatgptComposerCapabilityReceipt } from './actions/chatgptComposerTool.js';
 
@@ -104,6 +105,7 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
   /** Full profile-resolved configuration required to construct durable affinity state. */
   tabAffinityUserConfig?: ResolvedUserConfig;
   ecosystemMention?: import('./actions/chatgptEcosystemMention.js').ChatgptEcosystemMentionRequest;
+  libraryFiles?: LibraryFileSelector[];
   onProviderEffectState?: (state: 'pre_effect' | 'unknown' | 'effect_observed') => void;
   runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
   runtimeEvidenceCb?: (evidence: BrowserRuntimeEvidence) => void | Promise<void>;
@@ -128,6 +130,7 @@ export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   chatgptDeepResearchModifyPlanVisible?: boolean;
   chatgptDeepResearchReviewEvidence?: Record<string, unknown> | null;
   passiveObservations?: BrowserPassiveObservation[];
+  libraryFiles?: LibraryFileAttachmentReceipt;
 };
 
 export type ResolvedBrowserConfig = BaseTypes.ResolvedBrowserConfig & LlmBrowserFields;

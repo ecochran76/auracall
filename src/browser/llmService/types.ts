@@ -10,6 +10,7 @@ import type {
 import type { Conversation, Project, ProviderId } from '../providers/domain.js';
 import type { ResolvedUserConfig } from '../../config.js';
 import type { BrowserAttachment } from '../types.js';
+import type { LibraryFileSelector } from '../libraryFiles.js';
 
 export type LlmCapabilities = {
   projects?: boolean;
@@ -68,6 +69,7 @@ export type PromptPlan = {
 export type PromptInput = {
   prompt: string;
   attachments?: BrowserAttachment[];
+  libraryFiles?: LibraryFileSelector[];
   capabilityId?: string | null;
   completionMode?: 'assistant_response' | 'prompt_submitted';
   configuredUrl?: string | null;

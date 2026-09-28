@@ -66,10 +66,17 @@ For direct `/v1/responses` requests, place the selector under `auracall`:
   "auracall": {
     "runtimeProfile": "default",
     "service": "chatgpt",
+    "libraryFiles": [{ "id": "file_reference_packet" }],
     "outputContract": "auracall.step-output.v1"
   }
 }
 ```
+
+`libraryFiles` selects existing provider Library documents by stable provider
+ID or exact unique name. It is deliberately distinct from top-level local
+`attachments` and from `auracall.composerTool`. Terminal browser-run metadata
+records only requested and verified attached identities, never file contents
+or unrestricted paths.
 
 Legacy steps without one of those selectors keep plain-text behavior.
 

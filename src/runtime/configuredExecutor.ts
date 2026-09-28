@@ -11,6 +11,10 @@ import {
   resolveChatgptSemanticModelSelector,
 } from '../config/modelSelector.js';
 import { runBrowserMode } from '../browser/index.js';
+import {
+  normalizeLibraryFileSelectors,
+  type LibraryFileSelector,
+} from '../browser/libraryFiles.js';
 import { resolveRuntimeProfileUserConfig } from '../browser/service/profileConfig.js';
 import { resolveBrowserLaunchPlan } from '../browser/service/browserLaunchPlan.js';
 import { resumeBrowserSession } from '../browser/reattach.js';
@@ -495,6 +499,20 @@ function asDeepResearchPlanAction(value: unknown): 'start' | 'edit' | null {
   return value === 'start' || value === 'edit' ? value : null;
 }
 
+function asLibraryFileSelectors(value: unknown): LibraryFileSelector[] {
+  if (value == null) return [];
+  if (!Array.isArray(value)) throw new Error('auracall.libraryFiles must be an array.');
+  return normalizeLibraryFileSelectors(
+    value.map((selector): LibraryFileSelector => {
+      if (!isRecord(selector)) throw new Error('Each Library file selector must be an object.');
+      return {
+        ...(typeof selector.id === 'string' ? { id: selector.id } : {}),
+        ...(typeof selector.name === 'string' ? { name: selector.name } : {}),
+      } as LibraryFileSelector;
+    }),
+  );
+}
+
 function asThinkingTimeLevel(value: unknown): 'light' | 'standard' | 'extended' | 'heavy' | null {
   return value === 'light' || value === 'standard' || value === 'extended' || value === 'heavy' ? value : null;
 }
@@ -807,6 +825,7 @@ export function createConfiguredStoredStepExecutor(
     const requestAuracall = isRecord(runInitialInputs?.auracall)
       ? runInitialInputs.auracall
       : null;
+    const libraryFiles = asLibraryFileSelectors(requestAuracall?.libraryFiles);
     const agentConfig = getAgent(executionConfig, context.step.agentId);
     const agentModel = asNonEmptyString(agentConfig?.model);
     const agentModelSelector = asNonEmptyString(agentConfig?.modelSelector);
@@ -1048,6 +1067,7 @@ export function createConfiguredStoredStepExecutor(
     const browserRunOptions: BrowserRunOptions = {
       prompt: promptTransport.prompt,
       attachments: promptTransport.attachments,
+      ...(libraryFiles.length > 0 ? { libraryFiles } : {}),
       browserOperationOwnerCommand: `response-run:${context.record.runId}:${context.step.agentId}`,
       tabAffinityUserConfig:
         service === 'chatgpt' && affinityUserConfig.browser?.tabConcurrencyMode === 'tab-affinity'
@@ -1398,6 +1418,7 @@ export function createConfiguredStoredStepExecutor(
               cachePathStatus: 'unavailable',
               cachePathReason: 'provider cache identity is not resolved during stored-step execution',
               passiveObservations: browserResult.passiveObservations ?? [],
+              libraryFiles: browserResult.libraryFiles ?? null,
               chatgptDeepResearchStage: browserResult.chatgptDeepResearchStage ?? null,
               chatgptDeepResearchPlanAction: browserResult.chatgptDeepResearchPlanAction ?? null,
               chatgptDeepResearchStartMethod: browserResult.chatgptDeepResearchStartMethod ?? null,
@@ -1455,6 +1476,7 @@ export function createConfiguredStoredStepExecutor(
             cachePathStatus: 'unavailable',
             cachePathReason: 'provider cache identity is not resolved during stored-step execution',
             passiveObservations: browserResult.passiveObservations ?? [],
+            libraryFiles: browserResult.libraryFiles ?? null,
             chatgptDeepResearchStage: browserResult.chatgptDeepResearchStage ?? null,
             chatgptDeepResearchPlanAction: browserResult.chatgptDeepResearchPlanAction ?? null,
             chatgptDeepResearchStartMethod: browserResult.chatgptDeepResearchStartMethod ?? null,

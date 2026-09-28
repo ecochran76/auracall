@@ -47,6 +47,7 @@ describe('mcp response_create tool', () => {
       transport: 'browser',
       composerTool: 'deep-research',
       deepResearchPlanAction: 'edit',
+      libraryFiles: [{ id: 'file_packet' }, { name: 'Unique Notes.pdf' }],
       metadata: {
         smoke: true,
       },
@@ -72,6 +73,7 @@ describe('mcp response_create tool', () => {
         transport: 'browser',
         composerTool: 'deep-research',
         deepResearchPlanAction: 'edit',
+        libraryFiles: [{ id: 'file_packet' }, { name: 'Unique Notes.pdf' }],
       },
     });
     expect(result).toMatchObject({

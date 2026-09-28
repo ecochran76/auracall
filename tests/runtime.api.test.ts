@@ -21,6 +21,7 @@ describe('runtime api model', () => {
         transport: 'browser',
         composerTool: 'deep-research',
         deepResearchPlanAction: 'edit',
+        libraryFiles: [{ id: 'file_packet' }, { name: 'Unique Notes.pdf' }],
       },
     });
 
@@ -34,6 +35,7 @@ describe('runtime api model', () => {
         transport: 'browser',
         composerTool: 'deep-research',
         deepResearchPlanAction: 'edit',
+        libraryFiles: [{ id: 'file_packet' }, { name: 'Unique Notes.pdf' }],
       },
     });
   });

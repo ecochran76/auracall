@@ -92,6 +92,13 @@ Current limits:
     `file://` URIs are projected into the stored step artifact list so the
     browser executor can upload them; remote HTTP(S) URIs are preserved as
     metadata but are not downloaded automatically.
+  - ChatGPT browser requests may separately include
+    `auracall.libraryFiles: [{"id":"file_..."}]` or exact unique names such
+    as `[{"name":"Reference packet.pdf"}]`. These are existing provider
+    Library references, not local `attachments` and not `composerTool`
+    selections. AuraCall inventories and resolves them in the current bound
+    conversation tab, fails closed on incomplete or ambiguous evidence, and
+    verifies the composer document references before Send.
   - project-bound workflows should bootstrap downstream clients through
     `POST /v1/agent-setup-handoffs` when they need a ready-to-source scoped
     client env and non-secret status; use `POST /v1/agent-setup-packages` only

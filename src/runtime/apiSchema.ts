@@ -31,6 +31,11 @@ export const ExecutionResponseArtifactTypeSchema = z.enum([
   'generated',
 ]);
 
+export const LibraryFileSelectorSchema = z.union([
+  z.object({ id: z.string().min(1), name: z.never().optional() }),
+  z.object({ id: z.never().optional(), name: z.string().min(1) }),
+]);
+
 export const ExecutionRequestExtensionHintsSchema: z.ZodType<ExecutionRequestExtensionHints> = z.object({
   runtimeProfile: z.string().nullable().optional(),
   agent: z.string().nullable().optional(),
@@ -40,6 +45,7 @@ export const ExecutionRequestExtensionHintsSchema: z.ZodType<ExecutionRequestExt
   outputContract: z.string().nullable().optional(),
   composerTool: z.string().nullable().optional(),
   deepResearchPlanAction: z.enum(['start', 'edit']).nullable().optional(),
+  libraryFiles: z.array(LibraryFileSelectorSchema).optional(),
 });
 
 export const ExecutionRequestInputMessageSchema: z.ZodType<ExecutionRequestInputMessage> = z.object({

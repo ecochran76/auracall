@@ -1,3 +1,25 @@
+## 2026-09-27 | Issue 96 exact ChatGPT Library references
+
+- Added a provider-neutral `libraryFiles` selector and receipt contract using
+  stable provider IDs or exact unique names. Resolution fails closed on
+  duplicate selectors/IDs/names, missing or stale IDs, and incomplete
+  inventory.
+- ChatGPT now opens the composer Library picker in the already bound tab,
+  inventories the full stable picker surface, selects exact rows, closes the
+  picker without route refresh, and verifies document references again in the
+  final pre-Send gate. Local uploads and composer tools retain their separate
+  paths.
+- Added `auracall library-files --json`, durable `/v1/responses` and MCP
+  `response_create` request wiring, and privacy-bounded requested/attached
+  browser-run metadata. Provider-free tests and typecheck are the acceptance
+  boundary in this lane; installed ChatGPT acceptance remains with the primary
+  integration packet after issue 94.
+- Provider-free validation: 115 focused tests passed across Library contracts,
+  CLI formatting, ChatGPT prompt integration, LLM prompt/service routing,
+  durable response/API/MCP handling, and the configured executor. Typecheck,
+  changed-file lint, new-file format checks, `git diff --check`, CLI help, and
+  a fresh CodeGraph sync/status also passed.
+
 ## 2026-09-27 | Plan 0360 navigation-ack and retained-title repair
 
 - The repaired-title soak ran 39 passes for roughly seven hours, then failed

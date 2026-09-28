@@ -180,6 +180,7 @@ describe('runtime responses service', () => {
         service: 'chatgpt',
         agent: 'planner',
         outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+        libraryFiles: [{ id: 'file_packet' }, { name: 'Unique Notes.pdf' }],
       },
     });
 
@@ -205,6 +206,7 @@ describe('runtime responses service', () => {
         agent: 'planner',
         service: 'chatgpt',
         outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+        libraryFiles: [{ id: 'file_packet' }, { name: 'Unique Notes.pdf' }],
       },
     });
     expect(capturedStepId).toBe('resp_service_ctx_1:step:1');
