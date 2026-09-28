@@ -1,3 +1,10 @@
+- 2026-09-27: Existing provider Library files need their own request identity
+  and pre-Send proof boundary. Do not reinterpret local `--file` paths or
+  `composerTool` labels as provider documents. Inventory stable provider IDs
+  in the current composer picker, reject incomplete/duplicate/stale evidence,
+  close the picker without route churn, and persist only bounded requested and
+  verified attached identities.
+
 - 2026-09-25: Treat repeated policy identities under new ordinal filenames as
   stale wire-in entries, not missing modules to synthesize. Compare the
   `AGENTS.md` list to the installed catalog and actual policy directory, retain

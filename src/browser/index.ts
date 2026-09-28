@@ -31,6 +31,10 @@ import {
 } from "./actions/chatgptEcosystemMention.js";
 import type { ChatgptComposerCapabilityReceipt } from "./actions/chatgptComposerTool.js";
 import {
+	attachChatgptLibraryFiles,
+	verifyChatgptLibraryFileAttachments,
+} from "./actions/chatgptLibraryFiles.js";
+import {
 	ensureGrokLoggedIn,
 	ensureGrokPromptReady,
 	navigateToGrok,
@@ -169,6 +173,7 @@ import {
 	writeSimpleProviderGuardState,
 } from "./simpleProviderGuard.js";
 import { runLegacyChatgptWithConfiguredAffinity } from "./legacyChatgptAffinityRuntime.js";
+import type { LibraryFileAttachmentReceipt } from "./libraryFiles.js";
 import type {
 	BrowserAttachment,
 	BrowserLogger,
@@ -1626,8 +1631,15 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	}
 
 	const attachments: BrowserAttachment[] = options.attachments ?? [];
+	const libraryFiles = options.libraryFiles ?? [];
 	const fallbackSubmission = options.fallbackSubmission;
 	const { config, target, logger } = await resolveBrowserRuntimeEntryContext(options);
+	if (libraryFiles.length > 0 && target !== "chatgpt") {
+		throw new BrowserAutomationError(
+			"Provider Library file references are currently supported only for ChatGPT browser runs.",
+			{ effectState: "pre_effect" },
+		);
+	}
 	if (
 		options.ecosystemMention &&
 		(target !== "chatgpt" ||
@@ -1635,6 +1647,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			config.composerTool ||
 			options.fallbackSubmission ||
 			attachments.length > 0 ||
+			libraryFiles.length > 0 ||
 			config.projectId ||
 			config.conversationId ||
 			new URL(config.url).pathname !== "/")
@@ -2007,6 +2020,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	let answerText = "";
 	let answerMarkdown = "";
 	let answerHtml = "";
+	let libraryFileReceipt: LibraryFileAttachmentReceipt | undefined;
 	let runStatus: "attempted" | "complete" = "attempted";
 	let connectionClosedUnexpectedly = false;
 	let stopThinkingMonitor: (() => void) | null = null;
@@ -2597,6 +2611,12 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					}
 				}
 			}
+			if (libraryFiles.length > 0) {
+				libraryFileReceipt = await raceWithDisconnect(
+					attachChatgptLibraryFiles(client as ChromeClient, libraryFiles, logger),
+				);
+				await raceWithDisconnect(ensurePromptReady(Runtime, config.inputTimeoutMs, logger));
+			}
 			let baselineTurns = await readConversationTurnCount(Runtime, logger);
 			// Learned: return baselineTurns so assistant polling can ignore earlier content.
 			const sendAttachmentNames = attachmentWaitTimedOut ? [] : attachmentNames;
@@ -2608,6 +2628,12 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					baselineTurns: baselineTurns ?? undefined,
 					inputTimeoutMs: config.inputTimeoutMs ?? undefined,
 					beforeSend: async () => {
+						if (libraryFileReceipt) {
+							await verifyChatgptLibraryFileAttachments(
+								client as ChromeClient,
+								libraryFileReceipt.attached,
+							);
+						}
 						const ecosystemMention = selectedComposerMention ?? options.ecosystemMention;
 						if (ecosystemMention) {
 							await assertChatgptEcosystemMentionSelected(
@@ -2822,6 +2848,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
 				chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
 				passiveObservations,
+				...(libraryFileReceipt ? { libraryFiles: libraryFileReceipt } : {}),
 				controllerPid: process.pid,
 			};
 		}
@@ -3167,6 +3194,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
 			chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
 			passiveObservations,
+			...(libraryFileReceipt ? { libraryFiles: libraryFileReceipt } : {}),
 			controllerPid: process.pid,
 		};
 	} catch (error) {
@@ -3428,6 +3456,7 @@ async function runRemoteBrowserMode(
 	options: BrowserRunOptions,
 ): Promise<BrowserRunResult> {
 	const remoteChromeConfig = config.remoteChrome;
+	const libraryFiles = options.libraryFiles ?? [];
 	if (!remoteChromeConfig) {
 		throw new Error(
 			"Remote Chrome configuration missing. Pass --remote-chrome <host:port> to use this mode.",
@@ -3505,6 +3534,7 @@ async function runRemoteBrowserMode(
 	let answerText = "";
 	let answerMarkdown = "";
 	let answerHtml = "";
+	let libraryFileReceipt: LibraryFileAttachmentReceipt | undefined;
 	let connectionClosedUnexpectedly = false;
 	let stopThinkingMonitor: (() => void) | null = null;
 	let removeDialogHandler: (() => void) | null = null;
@@ -3788,6 +3818,14 @@ async function runRemoteBrowserMode(
 				await waitForAttachmentCompletion(Runtime, waitBudget, attachmentNames, logger);
 				logger("All attachments uploaded");
 			}
+			if (libraryFiles.length > 0) {
+				libraryFileReceipt = await attachChatgptLibraryFiles(
+					client as ChromeClient,
+					libraryFiles,
+					logger,
+				);
+				await ensurePromptReady(Runtime, config.inputTimeoutMs, logger);
+			}
 			let baselineTurns = await readConversationTurnCount(Runtime, logger);
 			const committedTurns = await submitPrompt(
 				{
@@ -3797,6 +3835,12 @@ async function runRemoteBrowserMode(
 					baselineTurns: baselineTurns ?? undefined,
 					inputTimeoutMs: config.inputTimeoutMs ?? undefined,
 					beforeSend: async () => {
+						if (libraryFileReceipt) {
+							await verifyChatgptLibraryFileAttachments(
+								client as ChromeClient,
+								libraryFileReceipt.attached,
+							);
+						}
 						const ecosystemMention = selectedComposerMention ?? options.ecosystemMention;
 						if (ecosystemMention) {
 							await assertChatgptEcosystemMentionSelected(
@@ -3967,6 +4011,7 @@ async function runRemoteBrowserMode(
 				chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
 				chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
 				passiveObservations,
+				...(libraryFileReceipt ? { libraryFiles: libraryFileReceipt } : {}),
 				controllerPid: process.pid,
 			};
 		}
@@ -4264,6 +4309,7 @@ async function runRemoteBrowserMode(
 			chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
 			chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
 			passiveObservations,
+			...(libraryFileReceipt ? { libraryFiles: libraryFileReceipt } : {}),
 			controllerPid: process.pid,
 		};
 	} catch (error) {

@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import {
+  normalizeLibraryFileSelectors,
+  type LibraryFileSelector,
+} from '../browser/libraryFiles.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY, type TeamRunArtifactRef } from '../teams/types.js';
 import {
   createTaskRunSpecRecordStore,
@@ -433,6 +437,20 @@ function normalizeAuracallFromRecord(input: unknown): NonNullable<ExecutionReque
 
   const deepResearchPlanAction = normalizeDeepResearchPlanAction(input.deepResearchPlanAction);
   if (deepResearchPlanAction !== null) next.deepResearchPlanAction = deepResearchPlanAction;
+
+  if (input.libraryFiles != null) {
+    if (!Array.isArray(input.libraryFiles)) {
+      throw new Error('Stored auracall.libraryFiles must be an array.');
+    }
+    const selectors = input.libraryFiles.map((value): LibraryFileSelector => {
+      if (!isObject(value)) throw new Error('Stored Library file selector must be an object.');
+      return {
+        ...(typeof value.id === 'string' ? { id: value.id } : {}),
+        ...(typeof value.name === 'string' ? { name: value.name } : {}),
+      } as LibraryFileSelector;
+    });
+    next.libraryFiles = normalizeLibraryFileSelectors(selectors);
+  }
 
   return next;
 }

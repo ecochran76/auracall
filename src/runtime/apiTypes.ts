@@ -1,4 +1,5 @@
 import type { ExecutionRunRecordBundle } from './types.js';
+import type { LibraryFileSelector } from '../browser/libraryFiles.js';
 
 export type ExecutionTransport = 'api' | 'browser' | 'auto';
 
@@ -26,6 +27,7 @@ export interface ExecutionRequestExtensionHints {
   outputContract?: string | null;
   composerTool?: string | null;
   deepResearchPlanAction?: 'start' | 'edit' | null;
+  libraryFiles?: LibraryFileSelector[];
 }
 
 export interface ExecutionRequestInputMessage {

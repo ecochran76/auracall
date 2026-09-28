@@ -1154,6 +1154,7 @@ export abstract class LlmService {
 					{
 						prompt: input.prompt,
 						attachments: input.attachments,
+						libraryFiles: input.libraryFiles,
 						capabilityId: input.capabilityId,
 						completionMode: input.completionMode,
 						targetUrl: plan.targetUrl,

@@ -13,6 +13,11 @@ const responseCreateAttachmentInputShape = z.object({
   uri: z.string().min(1).nullable().optional(),
 });
 
+const responseCreateLibraryFileSelectorShape = z.union([
+  z.object({ id: z.string().min(1), name: z.never().optional() }),
+  z.object({ id: z.never().optional(), name: z.string().min(1) }),
+]);
+
 const responseCreateInputShape = {
   model: z.string().min(1),
   input: z.string().min(1),
@@ -25,6 +30,7 @@ const responseCreateInputShape = {
   outputContract: z.string().min(1).nullable().optional(),
   composerTool: z.string().min(1).nullable().optional(),
   deepResearchPlanAction: z.enum(['start', 'edit']).nullable().optional(),
+  libraryFiles: z.array(responseCreateLibraryFileSelectorShape).optional(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 } satisfies z.ZodRawShape;
 
@@ -51,7 +57,7 @@ export function registerResponseCreateTool(
     {
       title: 'Create Aura-Call response run',
       description:
-        'Create one durable Aura-Call response run. Browser-backed ChatGPT requests can pass composerTool and deepResearchPlanAction, then poll the returned id with run_status.',
+        'Create one durable Aura-Call response run. Browser-backed ChatGPT requests can pass composerTool, deepResearchPlanAction, and exact Library file selectors, then poll the returned id with run_status.',
       inputSchema: responseCreateInputShape,
       outputSchema: responseCreateOutputShape,
     },
@@ -79,6 +85,7 @@ export function createResponseCreateToolHandler(
         ...(payload.outputContract ? { outputContract: payload.outputContract } : {}),
         ...(payload.composerTool ? { composerTool: payload.composerTool } : {}),
         ...(payload.deepResearchPlanAction ? { deepResearchPlanAction: payload.deepResearchPlanAction } : {}),
+        ...(payload.libraryFiles ? { libraryFiles: payload.libraryFiles } : {}),
       },
     };
     const result = await responsesService.createResponse(request);

@@ -198,6 +198,10 @@ auracall media inspect <media_generation_id> --json
 auracall features snapshot --target gemini --json
 auracall features diff --target gemini --json
 
+# List usable ChatGPT provider Library files. These stable provider IDs are
+# separate from local paths passed through --file and from composer tools.
+auracall --profile wsl-chrome-3 library-files --json
+
 # Local dev-only OpenAI-compatible responses server
 auracall api serve
 
@@ -1248,6 +1252,12 @@ Terminology note:
       before Send. Completed browser-run metadata includes a bounded
       `composerCapability` receipt with the requested value and verified
       observed ID, label, kind, availability, and connection state.
+    - existing ChatGPT Library documents use the distinct
+      `auracall.libraryFiles` array. Each entry contains exactly one stable
+      provider `id` or exact unique `name`; duplicate, missing, stale,
+      ambiguous, incomplete, or unverified selections fail before Send.
+      Readback exposes only the bounded requested and attached identities under
+      `metadata.executionSummary.browserRunSummary.libraryFiles`.
   - `POST /v1/media-generations` accepts the shared media-generation contract
     for `provider = chatgpt|gemini|grok`, `mediaType = image|music|video`, prompt,
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
