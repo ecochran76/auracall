@@ -12,7 +12,11 @@
   fixture proves the provider files return without either cache call; default
   account-file listing continues to persist its cache.
 - No deadline, retry, exact-target, navigation, refresh, creation, disposal, or
-  settlement behavior changed. No installed command or live effect ran.
+  settlement behavior changed. After local commit `9cebdc9c3`, one installed
+  read-only `wsl-chrome-3` acceptance terminated in 2.37 seconds without the
+  cache hang, but returned an incomplete zero-file inventory. No retry, prompt,
+  Send, or provider mutation ran. Full acceptance remains unresolved; live
+  GitHub readback currently reports issue 107 closed.
 
 ## Turn 630 | 2026-09-28
 

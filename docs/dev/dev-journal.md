@@ -15,7 +15,14 @@
   with neither hook called after the fix. The existing default persistence
   fixture remains green.
 - No deadline changed. No installed command, browser/provider access, retry,
-  refresh, navigation, target creation, attachment, prompt, or Send ran.
+  refresh, navigation, target creation, attachment, prompt, or Send ran during
+  provider-free validation.
+- After commit `9cebdc9c3`, one user-runtime install and one read-only
+  `wsl-chrome-3` Library acceptance ran. It exited in 2.37 seconds with
+  `complete: false` and zero usable files, so the prior cache-persistence hang
+  did not recur but full issue acceptance did not pass. The reduced output did
+  not retain `incompleteReason`; no retry ran. Live GitHub readback currently
+  reports issue 107 closed, and this lane did not mutate tracker state.
 
 ## 2026-09-28 | Issue 107 Library lifecycle diagnostics
 

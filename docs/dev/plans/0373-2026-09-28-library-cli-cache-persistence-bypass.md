@@ -70,6 +70,19 @@ preserving cache behavior for Account Mirror and every general list caller.
 - `next_action_or_stop_reason`: commit locally and stop before installation,
   browser access, provider work, push, merge, or rebase
 
+## Installed Acceptance Readback
+
+- Commit `9cebdc9c308638ceef9aab3a43c3b6f753fdacba` was installed once with
+  `pnpm run install:user-runtime`; the installed bundle contained the CLI-only
+  skip option and the pre-cache early return.
+- One read-only `auracall --profile wsl-chrome-3 library-files --json` ran. It
+  terminated in 2.37 seconds instead of reproducing the cache-persistence hang,
+  but returned exit 1 with `complete: false` and zero usable files.
+- The privacy-reduced acceptance projection did not retain
+  `incompleteReason`; no second provider run was made. This accepts the bounded
+  cache-hang correction only. Full issue 107 acceptance remains unresolved;
+  live GitHub readback currently reports the issue closed.
+
 ## Definition Of Done
 
 The one-shot CLI returns its already-complete provider inventory before local

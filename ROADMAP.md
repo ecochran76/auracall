@@ -4,8 +4,10 @@
   makes the exact one-shot Library CLI return its completed provider inventory
   before account-cache context resolution or persistence. Account Mirror and
   general account-file listing retain their existing persistent path; no
-  deadline, target, navigation, or retry semantics changed. Installed
-  acceptance is separately gated.
+  deadline, target, navigation, or retry semantics changed. One installed
+  read-only acceptance returned promptly but produced an incomplete zero-file
+  inventory. Full acceptance remains unresolved even though the live GitHub
+  issue is currently closed.
 
 - Provider-free accepted P72 / reopened issue 107: [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
   carries a privacy-bounded stage and cleanup timeline through the exact CLI,
