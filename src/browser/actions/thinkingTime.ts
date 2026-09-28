@@ -65,17 +65,17 @@ export async function ensureThinkingTime(
   Runtime: ChromeClient['Runtime'],
   level: ThinkingTimeLevel,
   logger: BrowserLogger,
-) {
+): Promise<boolean> {
   const result = await evaluateThinkingTimeSelection(Runtime, level);
   const capitalizedLevel = level.charAt(0).toUpperCase() + level.slice(1);
 
   switch (result?.status) {
     case 'already-selected':
       logger(`Thinking time: ${result.label ?? capitalizedLevel} (already selected)`);
-      return;
+      return true;
     case 'switched':
       logger(`Thinking time: ${result.label ?? capitalizedLevel}`);
-      return;
+      return true;
     case 'option-disabled':
       await logDomFailure(Runtime, logger, 'thinking-option-disabled');
       throw new ThinkingTierUnavailableError(
@@ -84,6 +84,12 @@ export async function ensureThinkingTime(
         result.notice ?? null,
       );
     case 'chip-not-found': {
+      if (level === 'light') {
+        logger(
+          'Thinking time: no separate effort control; using the provider default for Instant intent.',
+        );
+        return false;
+      }
       await logDomFailure(Runtime, logger, 'thinking-chip');
       throw new Error('Unable to find the Thinking chip button in the composer area.');
     }
@@ -103,52 +109,16 @@ export async function ensureThinkingTime(
 }
 
 /**
- * Best-effort selection of a thinking time level in ChatGPT's composer pill menu.
- * Safe by default: if the pill/menu/option isn't present, we continue without throwing.
- * @param level - The thinking time intensity: 'light', 'standard', 'extended', or 'heavy'
+ * Compatibility wrapper for callers that previously requested best-effort selection.
+ * Only the default/Instant intent may proceed when no separate effort control exists;
+ * explicit higher effort and ambiguous selector surfaces remain fail-closed.
  */
 export async function ensureThinkingTimeIfAvailable(
   Runtime: ChromeClient['Runtime'],
   level: ThinkingTimeLevel,
   logger: BrowserLogger,
 ): Promise<boolean> {
-  try {
-    const result = await evaluateThinkingTimeSelection(Runtime, level);
-    const capitalizedLevel = level.charAt(0).toUpperCase() + level.slice(1);
-
-    switch (result?.status) {
-      case 'already-selected':
-        logger(`Thinking time: ${result.label ?? capitalizedLevel} (already selected)`);
-        return true;
-      case 'switched':
-        logger(`Thinking time: ${result.label ?? capitalizedLevel}`);
-        return true;
-      case 'option-disabled':
-        logger(
-          `Thinking time: ${result.label ?? capitalizedLevel} is unavailable on this account (${result.notice ?? 'no reason given'}); keeping the effort already selected in ChatGPT.`,
-        );
-        return false;
-      case 'chip-not-found':
-      case 'menu-not-found':
-      case 'option-not-found':
-        if (logger.verbose) {
-          logger(`Thinking time: ${result.status.replaceAll('-', ' ')}; continuing with default.`);
-        }
-        return false;
-      default:
-        if (logger.verbose) {
-          logger('Thinking time: unknown outcome; continuing with default.');
-        }
-        return false;
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (logger.verbose) {
-      logger(`Thinking time selection failed (${message}); continuing with default.`);
-      await logDomFailure(Runtime, logger, 'thinking-time');
-    }
-    return false;
-  }
+  return ensureThinkingTime(Runtime, level, logger);
 }
 
 async function evaluateThinkingTimeSelection(

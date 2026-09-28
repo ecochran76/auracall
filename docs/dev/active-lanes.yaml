@@ -1159,3 +1159,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free locator and attachment lane; installed acceptance depends on P55.
     updated_at: 2026-09-27
+  - id: P62
+    objective: Treat absent default ChatGPT effort controls as provider defaults while keeping explicit higher effort fail-closed.
+    plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    plan_ref: refs/heads/fix/issue-100-thinking-selector
+    branch: fix/issue-100-thinking-selector
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 1b45ca6a209efce33dcba74d08fd4523b249d7a5
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#100]
+    dependencies: [P55]
+    overlaps: [P53]
+    reconciled_overlaps: [P53]
+    reconciliation_note: P62 changes shared ChatGPT effort-selection semantics and confirmed-selection metadata only; P53 retains affinity rollout, soak, and default-enablement authority.
+    blocker: null
+    validation_status: provider-free-focused-passed
+    validation_ref: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    integration_receipt: null
+    disposition: Local provider-free source slice only; integration and separately authorized installed acceptance remain open.
+    updated_at: 2026-09-27

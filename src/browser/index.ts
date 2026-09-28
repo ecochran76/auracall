@@ -2478,7 +2478,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					)
 				: null;
 			await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
-			await raceWithDisconnect(
+			const thinkingTimeSelected = await raceWithDisconnect(
 				withRetries(() => ensureThinkingTime(Runtime, thinkingTime, logger), {
 					retries: 2,
 					delayMs: 300,
@@ -2491,12 +2491,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					},
 				}),
 			);
-			selectedThinkingTime = thinkingTime;
-			selectedChatgptProMode = proModeGate?.proMode ?? null;
-			selectedChatgptAccountLevel = proModeGate?.accountLevel ?? null;
-			selectedChatgptAccountPlanType = proModeGate?.accountPlanType ?? null;
-			selectedChatgptAccountStructure = proModeGate?.accountStructure ?? null;
-			await emitRuntimeHint();
+			if (thinkingTimeSelected) {
+				selectedThinkingTime = thinkingTime;
+				selectedChatgptProMode = proModeGate?.proMode ?? null;
+				selectedChatgptAccountLevel = proModeGate?.accountLevel ?? null;
+				selectedChatgptAccountPlanType = proModeGate?.accountPlanType ?? null;
+				selectedChatgptAccountStructure = proModeGate?.accountStructure ?? null;
+				await emitRuntimeHint();
+			}
 		}
 		if (config.composerTool) {
 			if (chatgptMode === "work") {
@@ -3717,23 +3719,28 @@ async function runRemoteBrowserMode(
 				? await assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy)
 				: null;
 			await dismissOpenMenus(Runtime).catch(() => false);
-			await withRetries(() => ensureThinkingTime(Runtime, thinkingTime, logger), {
-				retries: 2,
-				delayMs: 300,
-				onRetry: (attempt, error) => {
-					if (options.verbose) {
-						logger(
-							`[retry] Thinking time (${thinkingTime}) attempt ${attempt + 1}: ${error instanceof Error ? error.message : error}`,
-						);
-					}
+			const thinkingTimeSelected = await withRetries(
+				() => ensureThinkingTime(Runtime, thinkingTime, logger),
+				{
+					retries: 2,
+					delayMs: 300,
+					onRetry: (attempt, error) => {
+						if (options.verbose) {
+							logger(
+								`[retry] Thinking time (${thinkingTime}) attempt ${attempt + 1}: ${error instanceof Error ? error.message : error}`,
+							);
+						}
+					},
 				},
-			});
-			selectedThinkingTime = thinkingTime;
-			selectedChatgptProMode = proModeGate?.proMode ?? null;
-			selectedChatgptAccountLevel = proModeGate?.accountLevel ?? null;
-			selectedChatgptAccountPlanType = proModeGate?.accountPlanType ?? null;
-			selectedChatgptAccountStructure = proModeGate?.accountStructure ?? null;
-			await emitRuntimeHint();
+			);
+			if (thinkingTimeSelected) {
+				selectedThinkingTime = thinkingTime;
+				selectedChatgptProMode = proModeGate?.proMode ?? null;
+				selectedChatgptAccountLevel = proModeGate?.accountLevel ?? null;
+				selectedChatgptAccountPlanType = proModeGate?.accountPlanType ?? null;
+				selectedChatgptAccountStructure = proModeGate?.accountStructure ?? null;
+				await emitRuntimeHint();
+			}
 		}
 		if (config.composerTool) {
 			if (chatgptMode === "work") {

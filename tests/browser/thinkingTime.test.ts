@@ -133,6 +133,16 @@ describe('browser thinking-time selection expression', () => {
     }
   });
 
+  it('reports exact control absence for a composer without a Thinking chip', async () => {
+    installFixtureDocument(() => []);
+
+    const result = new Function(
+      `return ${buildThinkingTimeExpressionForTest('light')}`,
+    )() as Promise<unknown>;
+
+    await expect(result).resolves.toEqual({ status: 'chip-not-found' });
+  });
+
   it('opens the exact Configure control on the integrated Pro selector', async () => {
     vi.useFakeTimers();
     const chip = new FixtureElement('Pro • Standard', { 'aria-haspopup': 'menu' });
@@ -289,6 +299,52 @@ describe('browser thinking-time selection expression', () => {
 });
 
 describe('unavailable thinking-time tiers', () => {
+  it('uses the provider default when Instant intent has no separate effort control', async () => {
+    const runtime = {
+      evaluate: vi.fn().mockResolvedValue({
+        result: { value: { status: 'chip-not-found' } },
+      }),
+    };
+    const logger = vi.fn();
+    Object.assign(logger, { verbose: false });
+
+    await expect(ensureThinkingTime(runtime as never, 'light', logger as never)).resolves.toBe(false);
+    expect(logger).toHaveBeenCalledWith(
+      'Thinking time: no separate effort control; using the provider default for Instant intent.',
+    );
+  });
+
+  it.each(['standard', 'extended', 'heavy'] as const)(
+    'fails closed when explicit %s effort has no separate control',
+    async (level) => {
+      const runtime = {
+        evaluate: vi.fn().mockResolvedValue({
+          result: { value: { status: 'chip-not-found' } },
+        }),
+      };
+      const logger = vi.fn();
+      Object.assign(logger, { verbose: false });
+
+      await expect(ensureThinkingTime(runtime as never, level, logger as never)).rejects.toThrow(
+        'Unable to find the Thinking chip button in the composer area.',
+      );
+    },
+  );
+
+  it('fails closed when Instant intent finds an ambiguous effort surface', async () => {
+    const runtime = {
+      evaluate: vi.fn().mockResolvedValue({
+        result: { value: { status: 'menu-not-found' } },
+      }),
+    };
+    const logger = vi.fn();
+    Object.assign(logger, { verbose: false });
+
+    await expect(ensureThinkingTime(runtime as never, 'light', logger as never)).rejects.toThrow(
+      'Unable to find the Thinking time dropdown menu.',
+    );
+  });
+
   it('fails closed with a typed browser automation error for strict selection', async () => {
     const runtime = {
       evaluate: vi.fn().mockResolvedValue({
@@ -317,7 +373,7 @@ describe('unavailable thinking-time tiers', () => {
     );
   });
 
-  it('keeps the current effort and reports false for best-effort selection', async () => {
+  it('does not weaken unavailable explicit effort through the compatibility helper', async () => {
     const runtime = {
       evaluate: vi.fn().mockResolvedValue({
         result: { value: { status: 'option-disabled', label: 'Extended', notice: null } },
@@ -326,10 +382,9 @@ describe('unavailable thinking-time tiers', () => {
     const logger = vi.fn();
     Object.assign(logger, { verbose: false });
 
-    await expect(ensureThinkingTimeIfAvailable(runtime as never, 'extended', logger as never)).resolves.toBe(false);
-    expect(logger).toHaveBeenCalledWith(
-      'Thinking time: Extended is unavailable on this account (no reason given); keeping the effort already selected in ChatGPT.',
-    );
+    await expect(
+      ensureThinkingTimeIfAvailable(runtime as never, 'extended', logger as never),
+    ).rejects.toBeInstanceOf(ThinkingTierUnavailableError);
   });
 });
 

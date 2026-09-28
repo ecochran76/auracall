@@ -51216,3 +51216,23 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   selection, each fail-closed state, retained conversation-bound selection,
   pre-Send verification, and stored-run receipt projection. Per lane scope, no
   installed or live ChatGPT acceptance was run in this worktree.
+
+## 2026-09-27 | Plan 0362 P62 issue 100 provider-free selector repair
+
+- CodeGraph traced all three ChatGPT prompt paths to the shared
+  `ensureThinkingTime(...)` action. The action treated every missing Thinking
+  chip as a hard selector failure, and its unused compatibility helper was even
+  broader, swallowing unavailable explicit higher effort.
+- The shared action now treats only `light`/Instant as provider-default intent
+  when the exact chip is absent. Medium, High, Extra High, disabled choices,
+  missing menus or options, and unknown outcomes still fail before Send. Local
+  and remote browser paths record a selected thinking time only after the
+  action positively confirms it.
+- Provider-free regression tests first reproduced the fast/instant failure and
+  the unsafe higher-effort helper behavior, then passed after the repair.
+  Six focused selector/config suites pass 136 tests; typecheck, scoped Biome
+  lint, the 362-candidate plan audit, and diff hygiene pass. The branch was
+  reconciled to current `origin/main` before its local commit; no browser,
+  provider, install, push, merge, post-commit rebase, or retry effect was
+  performed. Installed acceptance for #100 remains outside this bounded source
+  slice.
