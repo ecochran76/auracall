@@ -202,6 +202,9 @@ auracall features diff --target gemini --json
 # separate from local paths passed through --file and from composer tools.
 # The complete read-only inventory is bounded to 45 seconds, then AuraCall
 # allows up to 5 seconds for abort-driven browser cleanup before returning.
+# Provider-side interaction, connection, identity, dialog, route-readiness,
+# and DOM-inventory stages are named and bounded inside a 30-second operation
+# ceiling, so a stalled CDP command fails with its stage before that CLI limit.
 # It adopts an existing exact ChatGPT Library page in the selected managed
 # browser profile; it does not create, refresh, or navigate a replacement page.
 # A dead or expired prior command lease is reconciled only after AuraCall

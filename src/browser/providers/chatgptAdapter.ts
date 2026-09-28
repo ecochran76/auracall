@@ -338,6 +338,11 @@ const CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS = resolveBundledServiceUiLabelSet(
 	.filter(Boolean);
 const CHATGPT_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts("chatgpt");
 const CHATGPT_CDP_LIST_TIMEOUT_MS = 5_000;
+const CHATGPT_LIBRARY_INVENTORY_OPERATION_TIMEOUT_MS = 30_000;
+const CHATGPT_LIBRARY_CONNECT_STAGE_TIMEOUT_MS = 15_000;
+const CHATGPT_LIBRARY_STAGE_TIMEOUT_MS = 10_000;
+const CHATGPT_LIBRARY_DIALOG_STAGE_TIMEOUT_MS = 5_000;
+const CHATGPT_CDP_CLOSE_TIMEOUT_MS = 3_000;
 const CHATGPT_PROJECT_URL_TEMPLATE = requireBundledServiceRouteTemplate("chatgpt", "project");
 const CHATGPT_PROJECT_SOURCES_URL_TEMPLATE = requireBundledServiceRouteTemplate(
 	"chatgpt",
@@ -1931,6 +1936,132 @@ function withChatgptTimeout<T>(
 			},
 		);
 	});
+}
+
+function waitForChatgptOperationWithAbort<T>(
+	operation: Promise<T>,
+	signal: AbortSignal | undefined,
+): Promise<T> {
+	if (!signal) return operation;
+	if (signal.aborted) {
+		return Promise.reject(signal.reason ?? new Error("ChatGPT browser operation aborted."));
+	}
+	return new Promise<T>((resolve, reject) => {
+		const onAbort = () => {
+			cleanup();
+			reject(signal.reason ?? new Error("ChatGPT browser operation aborted."));
+		};
+		const cleanup = () => signal.removeEventListener("abort", onAbort);
+		signal.addEventListener("abort", onAbort, { once: true });
+		operation.then(
+			(value) => {
+				cleanup();
+				resolve(value);
+			},
+			(error) => {
+				cleanup();
+				reject(error);
+			},
+		);
+	});
+}
+
+type ChatgptLibraryInventoryStage =
+	| "interaction-governor"
+	| "connect"
+	| "identity"
+	| "dialog-cleanup"
+	| "route-readiness"
+	| "dom-inventory";
+
+class ChatgptLibraryInventoryStageTimeoutError extends Error {
+	readonly code = "chatgpt_library_inventory_stage_timeout";
+
+	constructor(
+		readonly stage: ChatgptLibraryInventoryStage,
+		readonly timeoutMs: number,
+		kind: "stage" | "operation" = "stage",
+	) {
+		super(
+			kind === "stage"
+				? `ChatGPT Library inventory stage ${stage} timed out after ${timeoutMs}ms.`
+				: `ChatGPT Library inventory operation timed out after ${timeoutMs}ms during stage ${stage}.`,
+		);
+		this.name = "ChatgptLibraryInventoryStageTimeoutError";
+	}
+}
+
+async function runChatgptLibraryInventoryOperation<T>(
+	options: BrowserProviderListOptions | undefined,
+	task: (
+		scopedOptions: BrowserProviderListOptions,
+		runStage: <R>(
+			stage: ChatgptLibraryInventoryStage,
+			operation: () => Promise<R>,
+			timeoutMs?: number,
+		) => Promise<R>,
+	) => Promise<T>,
+): Promise<T> {
+	const controller = new AbortController();
+	const callerSignal = options?.abortSignal;
+	let currentStage: ChatgptLibraryInventoryStage = "interaction-governor";
+	const forwardCallerAbort = () => {
+		if (!controller.signal.aborted) {
+			controller.abort(
+				callerSignal?.reason ?? new Error("ChatGPT Library inventory aborted."),
+			);
+		}
+	};
+	if (callerSignal?.aborted) {
+		forwardCallerAbort();
+	} else {
+		callerSignal?.addEventListener("abort", forwardCallerAbort, { once: true });
+	}
+	const operationTimer = setTimeout(() => {
+		if (controller.signal.aborted) return;
+		controller.abort(
+			new ChatgptLibraryInventoryStageTimeoutError(
+				currentStage,
+				CHATGPT_LIBRARY_INVENTORY_OPERATION_TIMEOUT_MS,
+				"operation",
+			),
+		);
+	}, CHATGPT_LIBRARY_INVENTORY_OPERATION_TIMEOUT_MS);
+	const scopedOptions: BrowserProviderListOptions = {
+		...options,
+		abortSignal: controller.signal,
+	};
+	const runStage = async <R>(
+		stage: ChatgptLibraryInventoryStage,
+		operation: () => Promise<R>,
+		timeoutMs = CHATGPT_LIBRARY_STAGE_TIMEOUT_MS,
+	): Promise<R> => {
+		currentStage = stage;
+		recordBrowserScrapeProviderAction(scopedOptions, `chatgpt.listAccountFiles.${stage}`);
+		return withBrowserScrapePendingOperation(
+			scopedOptions,
+			`chatgpt.library-files.${stage}`,
+			async () => {
+				controller.signal.throwIfAborted();
+				const stageTimer = setTimeout(() => {
+					if (controller.signal.aborted) return;
+					controller.abort(new ChatgptLibraryInventoryStageTimeoutError(stage, timeoutMs));
+				}, timeoutMs);
+				try {
+					return await waitForChatgptOperationWithAbort(operation(), controller.signal);
+				} finally {
+					clearTimeout(stageTimer);
+				}
+			},
+		);
+	};
+
+	try {
+		return await task(scopedOptions, runStage);
+	} finally {
+		clearTimeout(operationTimer);
+		callerSignal?.removeEventListener("abort", forwardCallerAbort);
+	}
 }
 
 function listChatgptChromeTargets(
@@ -4288,12 +4419,28 @@ async function connectToChatgptTab(
 		try {
 			recordBrowserScrapeCdpCall(options, "Target.attachToTarget");
 			recordBrowserScrapeProviderAction(options, "chatgpt.connectExistingTarget");
-			const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
+			const client = await connectToChromeTarget({
+				host,
+				port,
+				target: options.tabTargetId,
+				abortSignal: options.abortSignal,
+			});
 			exactTargetClient = client;
-			await enableChatgptTargetDomains(client, options.tabTargetId, options);
+			await waitForChatgptOperationWithAbort(
+				enableChatgptTargetDomains(client, options.tabTargetId, options),
+				options.abortSignal,
+			);
 			setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
-			await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
-			const currentUrl = await readChatgptLocationHref(client.Runtime).catch(() => null);
+			await waitForChatgptOperationWithAbort(
+				dismissCreateProjectDialogIfOpen(client.Runtime),
+				options.abortSignal,
+			).catch(() => undefined);
+			options.abortSignal?.throwIfAborted();
+			const currentUrl = await waitForChatgptOperationWithAbort(
+				readChatgptLocationHref(client.Runtime),
+				options.abortSignal,
+			).catch(() => null);
+			options.abortSignal?.throwIfAborted();
 			if (!isChatgptTargetReusableForPreferredUrl(currentUrl, preferredUrl)) {
 				if (!shouldNavigateExactChatgptTargetForTest(currentUrl, preferredUrl, options)) {
 					throw new Error(
@@ -4319,7 +4466,13 @@ async function connectToChatgptTab(
 			recordChatgptTargetSession(options, "retain", connection.targetId);
 			return bindChatgptProviderSessionConnection(options, connection);
 		} catch (error) {
-			await exactTargetClient?.close().catch(() => undefined);
+			if (exactTargetClient) {
+				await withChatgptTimeout(
+					exactTargetClient.close(),
+					CHATGPT_CDP_CLOSE_TIMEOUT_MS,
+					`Timed out closing the rejected ChatGPT CDP client after ${CHATGPT_CDP_CLOSE_TIMEOUT_MS}ms.`,
+				).catch(() => undefined);
+			}
 			if (!providerNavigationAllowed(options) || options.tabTargetId) {
 				throw error;
 			}
@@ -4539,7 +4692,11 @@ async function closeChatgptTabConnection(
 		| Partial<ChatgptScopedTabSessionValue>
 		| undefined;
 	if (options?.useProviderSession && retainedSession?.connection === connection) return;
-	await connection.client.close().catch(() => undefined);
+	await withChatgptTimeout(
+		connection.client.close(),
+		CHATGPT_CDP_CLOSE_TIMEOUT_MS,
+		`Timed out closing the ChatGPT CDP client after ${CHATGPT_CDP_CLOSE_TIMEOUT_MS}ms.`,
+	).catch(() => undefined);
 	if (!shouldDisposeChatgptTabConnection(connection, options)) {
 		return;
 	}
@@ -4604,7 +4761,10 @@ async function runWithChatgptAbortBoundConnection<T>(
 	const unbindAbortCleanup = bindChatgptAbortCleanup(connection, options);
 	try {
 		options?.abortSignal?.throwIfAborted();
-		return await read(connection.client);
+		return await waitForChatgptOperationWithAbort(
+			read(connection.client),
+			options?.abortSignal,
+		);
 	} finally {
 		const cleanupStarted = unbindAbortCleanup.cleanupStarted();
 		unbindAbortCleanup();
@@ -13494,21 +13654,46 @@ export function createChatgptAdapter(): Pick<
 			}
 		},
 		async listAccountFiles(options?: BrowserProviderListOptions): Promise<FileRef[]> {
-			await beforeChatgptBrowserInteraction(options, "page-refresh");
-			const connection = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
-			const { client } = connection;
-			try {
-				await assertChatgptExpectedIdentity(client, options);
-				await dismissCreateProjectDialogIfOpen(client.Runtime, {
-					strict: true,
-					source: "list-account-files",
-				});
-				await navigateToChatgptUrl(client, CHATGPT_LIBRARY_URL, undefined, options);
-				const inventory = await readChatgptLibraryItemsWithClient(client);
-				return inventory.files;
-			} finally {
-				await closeChatgptTabConnection(connection, options);
-			}
+			return runChatgptLibraryInventoryOperation(options, async (scopedOptions, runStage) => {
+				await runStage("interaction-governor", () =>
+					beforeChatgptBrowserInteraction(scopedOptions, "page-refresh"),
+				);
+				const connection = await runStage(
+					"connect",
+					() => connectToChatgptTab(scopedOptions, CHATGPT_LIBRARY_URL),
+					CHATGPT_LIBRARY_CONNECT_STAGE_TIMEOUT_MS,
+				);
+				return runWithChatgptAbortBoundConnection(
+					connection,
+					scopedOptions,
+					async (client) => {
+						await runStage("identity", () =>
+							assertChatgptExpectedIdentity(client, scopedOptions),
+						);
+						await runStage(
+							"dialog-cleanup",
+							() =>
+								dismissCreateProjectDialogIfOpen(client.Runtime, {
+									strict: true,
+									source: "list-account-files",
+								}),
+							CHATGPT_LIBRARY_DIALOG_STAGE_TIMEOUT_MS,
+						);
+						await runStage("route-readiness", () =>
+							navigateToChatgptUrl(
+								client,
+								CHATGPT_LIBRARY_URL,
+								undefined,
+								scopedOptions,
+							),
+						);
+						const inventory = await runStage("dom-inventory", () =>
+							readChatgptLibraryItemsWithClient(client),
+						);
+						return inventory.files;
+					},
+				);
+			});
 		},
 		async downloadAccountFile(
 			fileId: string,

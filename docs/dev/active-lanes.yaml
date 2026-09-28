@@ -1289,3 +1289,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free corrective lane only; integration and installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-28
+  - id: P67
+    objective: Bound adopted-target ChatGPT Library provider stages beneath the CLI deadline and close stalled CDP clients.
+    plan: docs/dev/plans/0367-2026-09-28-library-provider-inventory-liveness.md
+    plan_ref: refs/heads/fix/issue-107-library-inventory-stage
+    branch: fix/issue-107-library-inventory-stage
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 96095e68c4199bff5db33f180b56609c27e0f6ca
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64, P65, P66]
+    overlaps: [P53, P63, P65, P66]
+    reconciled_overlaps: [P53, P63, P65, P66]
+    reconciliation_note: P67 changes only provider-side Library inventory liveness and CDP connection cleanup; P53 retains rollout authority, P63 retains the outer CLI deadline, P65 retains exact-target exit behavior, and P66 retains lease recovery.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0367-2026-09-28-library-provider-inventory-liveness.md
+    integration_receipt: null
+    disposition: Provider-free source repair only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-28

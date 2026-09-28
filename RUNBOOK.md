@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 625 | 2026-09-28
+
+- Closed provider-free P67 / [Plan 0367](docs/dev/plans/0367-2026-09-28-library-provider-inventory-liveness.md)
+  for reopened issue 107 from canonical `96095e68c`. Correct installed
+  acceptance had proved exact-target adoption and lease cleanup, then exposed
+  the downstream provider operation still running until the 45-second outer
+  CLI timeout.
+- A production-adapter fixture reproduced an indefinitely pending Library DOM
+  `Runtime.evaluate`. The provider now has named stage deadlines, a 30-second
+  whole-operation ceiling, abort-raced attached-client work, and independently
+  bounded CDP close.
+- Focused provider-free coverage proves a `dom-inventory` timeout, one client
+  close, and no navigation. No installed command, browser/provider access,
+  retry, refresh, target creation, target disposal, attachment, prompt, or Send
+  occurred; installed `wsl-chrome-3` acceptance remains separately governed.
+
 ## Turn 624 | 2026-09-28
 
 - Closed provider-free P66 / [Plan 0366](docs/dev/plans/0366-2026-09-28-library-lease-recovery.md)
