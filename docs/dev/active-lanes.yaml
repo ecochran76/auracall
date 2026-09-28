@@ -1245,3 +1245,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free corrective lane only; integration and installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-27
+  - id: P65
+    objective: Adopt an existing exact ChatGPT Library target and terminate the one-shot inventory CLI after terminal output.
+    plan: docs/dev/plans/0365-2026-09-27-library-existing-target-exit.md
+    plan_ref: refs/heads/fix/issue-107-library-target-exit
+    branch: fix/issue-107-library-target-exit
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 48955d62c7d415fe892cf41620967de7631ca293
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64]
+    overlaps: [P53, P63]
+    reconciled_overlaps: [P53, P63]
+    reconciliation_note: P65 changes only Library inventory target acquisition and terminal cleanup; P53 retains rollout/soak authority and P63 retains the bounded timeout/cancellation contract.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0365-2026-09-27-library-existing-target-exit.md
+    integration_receipt: null
+    disposition: Provider-free corrective lane only; integration and installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-27

@@ -4284,10 +4284,12 @@ async function connectToChatgptTab(
 		}
 	}
 	if (options?.tabTargetId && port) {
+		let exactTargetClient: ChromeClient | null = null;
 		try {
 			recordBrowserScrapeCdpCall(options, "Target.attachToTarget");
 			recordBrowserScrapeProviderAction(options, "chatgpt.connectExistingTarget");
 			const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
+			exactTargetClient = client;
 			await enableChatgptTargetDomains(client, options.tabTargetId, options);
 			setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
 			await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
@@ -4317,6 +4319,7 @@ async function connectToChatgptTab(
 			recordChatgptTargetSession(options, "retain", connection.targetId);
 			return bindChatgptProviderSessionConnection(options, connection);
 		} catch (error) {
+			await exactTargetClient?.close().catch(() => undefined);
 			if (!providerNavigationAllowed(options) || options.tabTargetId) {
 				throw error;
 			}
@@ -4407,6 +4410,9 @@ async function connectToChatgptTab(
 	const tabPolicy = resolveBrowserTabPolicy(options);
 
 	if (!targetInfo) {
+		if (options?.requireExistingTarget) {
+			throw new Error(`No existing ChatGPT target matches ${preferredUrl}.`);
+		}
 		recordBrowserScrapeCdpCall(options, "Target.createTarget");
 		recordBrowserScrapeProviderAction(options, "chatgpt.openTarget");
 		const opened = failedTargetId

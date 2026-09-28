@@ -51316,3 +51316,20 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   exactly event `evt_test` once under `codex-waked --no-dispatch`. No Codex turn
   or provider work was dispatched. The wake was cancelled, archived, and its
   source removed after evidence capture.
+## 2026-09-27 | Issue #107 reopened target adoption and exit repair
+
+- Started P65 from canonical `origin/main` at `48955d62c` in an isolated
+  worktree. The retained installed receipt showed a newly opened `about:blank`
+  target and a process that stayed alive after structured failure.
+- CodeGraph traced target acquisition to configured utility affinity, which
+  omitted its existing-target list when acquiring an ephemeral lease. It also
+  showed that exact-target route rejection occurred before the CDP client was
+  returned to normal provider cleanup.
+- Library inventory now requires one existing exact `/library` target, leaves
+  unrelated pages untouched, reconciles only its own stale blank lease, and
+  fails closed without target creation.
+  Exact-target pre-handoff errors close their client, and the one-shot command
+  exits after output and signal-listener cleanup.
+- Provider-free regressions cover exact adoption, absence, CDP cleanup, and a
+  retained event-loop handle. No install, live browser, provider access,
+  retry, navigation, refresh, target creation, attachment, prompt, or Send ran.
