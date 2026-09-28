@@ -1,3 +1,12 @@
+- 2026-09-28: Nested timeouts need a compositional ordering invariant, not
+  merely individually bounded stages. If preflight precedes a provider
+  deadline and cleanup follows it, the terminal-output watchdog must be
+  strictly later than their bounded total or it can mask the named inner
+  failure. Use one shared operation abort deadline, a separately bounded
+  cleanup join, and a final watchdog with explicit margin. Interaction-ledger
+  timestamps can prove one governed interaction settled but are not a clock
+  for the complete CLI path.
+
 - 2026-09-27: Event-driven continuation must observe the exact durable
   terminal-session receipt, not a broader process or response-run status. The
   new `GET /v1/terminal-receipts/{session_id}` projection publishes the

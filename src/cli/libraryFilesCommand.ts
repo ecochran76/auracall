@@ -4,7 +4,8 @@ import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { requireBundledServiceRouteTemplate } from "../services/registry.js";
 
-const DEFAULT_LIBRARY_FILES_INVENTORY_TIMEOUT_MS = 45_000;
+const DEFAULT_LIBRARY_FILES_INVENTORY_TIMEOUT_MS = 55_000;
+const DEFAULT_LIBRARY_FILES_OPERATION_TIMEOUT_MS = 49_000;
 const DEFAULT_LIBRARY_FILES_CLEANUP_TIMEOUT_MS = 5_000;
 
 interface ChatgptLibraryFilesCliClient {
@@ -16,6 +17,7 @@ interface ChatgptLibraryFilesCliClient {
 export interface ChatgptLibraryFilesCliDependencies {
 	createClient?: () => Promise<ChatgptLibraryFilesCliClient>;
 	inventoryTimeoutMs?: number;
+	operationTimeoutMs?: number;
 	cleanupTimeoutMs?: number;
 }
 
@@ -64,6 +66,13 @@ export async function listChatgptLibraryFilesForCli(
 		dependencies.cleanupTimeoutMs,
 		DEFAULT_LIBRARY_FILES_CLEANUP_TIMEOUT_MS,
 	);
+	const operationTimeoutMs = Math.min(
+		normalizePositiveTimeout(
+			dependencies.operationTimeoutMs,
+			DEFAULT_LIBRARY_FILES_OPERATION_TIMEOUT_MS,
+		),
+		Math.max(1, inventoryTimeoutMs - cleanupTimeoutMs - 1),
+	);
 	const controller = new AbortController();
 	const stopForwardingAbort = forwardAbort(dependencies.abortSignal, controller);
 	let client: ChatgptLibraryFilesCliClient | null = null;
@@ -98,9 +107,10 @@ export async function listChatgptLibraryFilesForCli(
 	})().finally(() => {
 		operationSettled = true;
 	});
+	const boundedOperation = runWithInventoryDeadline(operation, controller, operationTimeoutMs);
 
 	try {
-		return await runWithInventoryDeadline(operation, controller, inventoryTimeoutMs);
+		return await runWithInventoryDeadline(boundedOperation, controller, inventoryTimeoutMs);
 	} finally {
 		stopForwardingAbort();
 		if (!operationSettled && !controller.signal.aborted) {

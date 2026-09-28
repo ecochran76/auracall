@@ -197,6 +197,47 @@ describe("library-files CLI", () => {
 		}
 	});
 
+	test("keeps the outer watchdog behind preflight, provider timeout, and settlement", async () => {
+		vi.useFakeTimers();
+		try {
+			const delay = (timeoutMs: number) =>
+				new Promise<void>((resolve) => setTimeout(resolve, timeoutMs));
+			const resultPromise = runChatgptLibraryFilesCommandForCli(
+				{} as never,
+				{ json: true },
+				{
+					createClient: async () => {
+						await delay(4_000);
+						return {
+							listLibraryFiles: async () => {
+								await delay(6_000);
+								await delay(30_000);
+								await delay(3_000);
+								await delay(5_000);
+								throw new Error(
+									"ChatGPT Library inventory stage dom-inventory timed out after 10000ms.",
+								);
+							},
+						};
+					},
+				},
+			);
+
+			await vi.advanceTimersByTimeAsync(48_000);
+			const result = await resultPromise;
+
+			expect(result.exitCode).toBe(1);
+			expect(JSON.parse(result.output)).toMatchObject({
+				error: {
+					code: "library_files_inventory_failed",
+					message: "ChatGPT Library inventory stage dom-inventory timed out after 10000ms.",
+				},
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	test("times out the complete inventory, aborts it, and joins close before returning", async () => {
 		vi.useFakeTimers();
 		try {
@@ -210,7 +251,8 @@ describe("library-files CLI", () => {
 				{} as never,
 				{ json: true },
 				{
-					inventoryTimeoutMs: 25,
+					inventoryTimeoutMs: 40,
+					operationTimeoutMs: 25,
 					cleanupTimeoutMs: 10,
 					createClient: async () => ({
 						close,
@@ -249,7 +291,8 @@ describe("library-files CLI", () => {
 				{} as never,
 				{ json: true },
 				{
-					inventoryTimeoutMs: 25,
+					inventoryTimeoutMs: 40,
+					operationTimeoutMs: 25,
 					cleanupTimeoutMs: 10,
 					createClient: async () => new Promise(() => undefined),
 				},

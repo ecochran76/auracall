@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P69 / reopened issue 107: [Plan 0369](docs/dev/plans/0369-2026-09-28-library-deadline-composition.md)
+  makes the 49-second shared operation deadline, five-second cleanup bound,
+  and later 55-second watchdog explicitly ordered. Preflight plus provider and
+  settlement latency can no longer let the outer watchdog mask a named inner
+  result. Installed acceptance is separately gated.
+
 - Provider-free accepted P68 / reopened issue 107: [Plan 0368](docs/dev/plans/0368-2026-09-28-library-terminal-result-cleanup.md)
   separates the provider result from bounded CLI client cleanup and caps
   configured utility governor/lease settlement at five seconds. A stalled

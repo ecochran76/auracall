@@ -200,11 +200,12 @@ auracall features diff --target gemini --json
 
 # List usable ChatGPT provider Library files. These stable provider IDs are
 # separate from local paths passed through --file and from composer tools.
-# The complete read-only inventory is bounded to 45 seconds, then AuraCall
-# allows up to 5 seconds for abort-driven browser cleanup before returning.
+# The complete read-only operation is bounded to 49 seconds, then AuraCall
+# allows up to 5 seconds for abort-driven browser cleanup before returning;
+# a later 55-second watchdog cannot replace the operation's named result.
 # Provider-side interaction, connection, identity, dialog, route-readiness,
 # and DOM-inventory stages are named and bounded inside a 30-second operation
-# ceiling, so a stalled CDP command fails with its stage before that CLI limit.
+# ceiling, so a stalled CDP command fails with its stage before either CLI limit.
 # Provider results are fixed before independently bounded client cleanup. The
 # utility governor and lease settlement then have a five-second ceiling; if
 # settlement stalls, the original provider error is retained and the unresolved
