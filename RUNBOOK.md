@@ -2,6 +2,13 @@
 
 ## Turn 623 | 2026-09-27
 
+- Closed provider-free P65 / [Plan 0365](docs/dev/plans/0365-2026-09-27-library-existing-target-exit.md)
+  for reopened issue 107 from canonical `48955d62c`. CodeGraph identified the
+  omitted existing-target list and the exact-target pre-handoff CDP leak. The
+  repair adopts only an existing exact Library page, never creates a blank
+  replacement, closes failed attachments, and exits after terminal output.
+  No installed command or provider effect was run.
+
 - Closed provider-free P64 / [Plan 0364](docs/dev/plans/0364-2026-09-27-library-lifecycle-clock-ordering.md)
   for issue 110 from canonical `34397a20e`. The installed receipt had proved
   issue 107's bounded cleanup but exposed an internal lifecycle error when the

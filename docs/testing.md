@@ -9,13 +9,16 @@
   the installed `wsl-chrome-3` Library inventory.
 
 - ChatGPT Library CLI lifecycle contract (provider-free):
-  `pnpm vitest run tests/cli.libraryFilesCommand.test.ts`.
+  `pnpm vitest run tests/cli.libraryFilesCommand.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts tests/browser/chatgptPromptAdapter.test.ts`.
   This proves that client creation/browser discovery and inventory share one
   whole-operation deadline; timeout and caller cancellation reach the
   provider-facing `AbortSignal`; success, provider error, timeout, and
   cancellation close command-owned resources exactly once; and JSON failures
-  return stable error codes with exit 1 or cancellation exit 130. It does not
-  launch a browser, inspect a provider account, or replace the separately
+  return stable error codes with exit 1 or cancellation exit 130.
+  The exact-target fixtures additionally prove adoption of an existing Library
+  page without target creation/closure, close-on-rejection before provider
+  handoff, and natural termination of a child fixture with a retained handle.
+  They do not launch a browser, inspect a provider account, or replace the separately
   authorized installed `wsl-chrome-3` acceptance.
 
 - Terminal-session receipt producer contract (provider-free):

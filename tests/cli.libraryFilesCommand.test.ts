@@ -1,3 +1,6 @@
+import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import {
 	ChatgptLibraryFilesCancelledError,
@@ -7,6 +10,52 @@ import {
 } from "../src/cli/libraryFilesCommand.js";
 
 describe("library-files CLI", () => {
+	test("hooks terminal output to the bounded one-shot process exit boundary", async () => {
+		const source = await fs.readFile(path.resolve("bin/auracall.ts"), "utf8");
+		const start = source.indexOf(".command('library-files')");
+		const end = source.indexOf("const featuresCommand = program", start);
+		const action = source.slice(start, end);
+		expect(start).toBeGreaterThanOrEqual(0);
+		expect(end).toBeGreaterThan(start);
+		expect(action).toContain("exitAfterCompletedBrowserProbeCommand();");
+	});
+
+	test("exits after structured terminal output despite a retained event-loop handle", async () => {
+		const fixture = path.resolve("tests/fixtures/libraryFilesExit.fixture.ts");
+		const child = spawn(process.execPath, ["--import", "tsx", fixture], {
+			cwd: process.cwd(),
+			env: { ...process.env },
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		let stdout = "";
+		let stderr = "";
+		child.stdout.on("data", (chunk) => {
+			stdout += String(chunk);
+		});
+		child.stderr.on("data", (chunk) => {
+			stderr += String(chunk);
+		});
+		const result = await Promise.race([
+			new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) => {
+				child.once("exit", (code, signal) => resolve({ code, signal }));
+			}),
+			new Promise<never>((_, reject) => {
+				const timer = setTimeout(() => {
+					child.kill("SIGKILL");
+					reject(new Error("library-files exit fixture retained its event-loop handle"));
+				}, 2_000);
+				timer.unref();
+			}),
+		]);
+
+		expect(stderr).toBe("");
+		expect(JSON.parse(stdout)).toMatchObject({
+			object: "auracall.library_files_error",
+			status: "error",
+		});
+		expect(result).toEqual({ code: 0, signal: null });
+	});
+
 	test("lists bounded provider identities through the dedicated Library surface and closes once", async () => {
 		const close = vi.fn(async () => undefined);
 		const listLibraryFiles = vi.fn(async () => ({
@@ -20,7 +69,12 @@ describe("library-files CLI", () => {
 		});
 
 		expect(listLibraryFiles).toHaveBeenCalledOnce();
-		expect(listLibraryFiles).toHaveBeenCalledWith({ abortSignal: expect.any(AbortSignal) });
+		expect(listLibraryFiles).toHaveBeenCalledWith({
+			abortSignal: expect.any(AbortSignal),
+			configuredUrl: "https://chatgpt.com/library",
+			preserveActiveTab: true,
+			requireExistingTarget: true,
+		});
 		expect(close).toHaveBeenCalledOnce();
 		expect(formatLibraryFileInventory(inventory)).toContain("- file_packet  Packet.pdf");
 	});

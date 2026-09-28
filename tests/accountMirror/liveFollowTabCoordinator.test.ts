@@ -207,6 +207,66 @@ describe("live-follow crawler tab coordinator", () => {
 		});
 	});
 
+	test("replaces a retained blank lease by adopting an existing exact target", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: (() => {
+				let index = 0;
+				return () => `lease-${++index}`;
+			})(),
+		});
+		const common = {
+			registry,
+			scope,
+			operationId: "library-files",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			resolveExistingEndpoint: async () => ({
+				host: "127.0.0.1",
+				port: 45011,
+				managedBrowserProfile: scope.managedBrowserProfile,
+			}),
+			startBrowser: vi.fn(),
+			closeTarget: vi.fn(),
+		};
+		const stale = await acquireEphemeralBrowserTab({
+			...common,
+			targetUrl: "https://chatgpt.com/library",
+			inspectTarget: vi.fn(),
+			openTarget: vi.fn(async () => ({ targetId: "blank-target", url: "about:blank" })),
+		});
+		await registry.idle({
+			claim: stale.claim,
+			now: "2026-09-27T12:00:01.000Z",
+			effectState: "settled",
+		});
+		const openTarget = vi.fn();
+
+		const adopted = await acquireEphemeralBrowserTab({
+			...common,
+			targetUrl: "https://chatgpt.com/library",
+			requireExistingTarget: true,
+			listTargets: async () => [
+				{ targetId: "blank-target", url: "about:blank" },
+				{ targetId: "library-target", url: "https://chatgpt.com/library" },
+			],
+			inspectTarget: vi.fn(async (_endpoint, targetId) =>
+				targetId === "blank-target" ? { url: "about:blank" } : null,
+			),
+			openTarget,
+		});
+
+		expect(adopted.lease).toMatchObject({
+			targetId: "library-target",
+			actionCounts: { targetCreations: 0, adoptions: 1 },
+		});
+		expect(openTarget).not.toHaveBeenCalled();
+		expect(common.closeTarget).toHaveBeenCalledWith({
+			host: "127.0.0.1",
+			port: 45011,
+			targetId: "blank-target",
+		});
+	});
+
 	test("closes and releases a new crawler when creation accounting fails", async () => {
 		const baseRegistry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-crawler",

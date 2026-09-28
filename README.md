@@ -202,6 +202,10 @@ auracall features diff --target gemini --json
 # separate from local paths passed through --file and from composer tools.
 # The complete read-only inventory is bounded to 45 seconds, then AuraCall
 # allows up to 5 seconds for abort-driven browser cleanup before returning.
+# It adopts an existing exact ChatGPT Library page in the selected managed
+# browser profile; it does not create, refresh, or navigate a replacement page.
+# If no exact Library page is available, the command fails closed. After its
+# terminal report, the one-shot CLI exits while leaving the managed browser alive.
 # In --json mode, timeout/provider/cancellation failures are structured JSON
 # with a nonzero exit status; SIGINT/SIGTERM/SIGQUIT cancellation exits 130.
 auracall --profile wsl-chrome-3 library-files --json

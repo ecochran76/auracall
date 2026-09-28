@@ -17,6 +17,112 @@ const userConfig = {
 } as never;
 
 describe("configured ChatGPT utility affinity", () => {
+	test("adopts the existing exact Library target without opening or closing a page", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-library",
+		});
+		const ledger = createInMemoryProviderInteractionLedger();
+		const openTarget = vi.fn();
+		const closeTarget = vi.fn();
+		const run = vi.fn(async (options: BrowserProviderListOptions) => options.tabTargetId);
+
+		await expect(
+			runConfiguredChatgptUtilityOperation({
+				userConfig: {
+					auracallProfile: "runtime-1",
+					browser: {
+						tabConcurrencyMode: "tab-affinity",
+						chatgptUrl: "https://chatgpt.com/",
+					},
+					profiles: {
+						"runtime-1": {
+							services: { chatgpt: { identity: { accountId: "account-1" } } },
+						},
+					},
+				} as never,
+				browserService: {
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 45011,
+						managedBrowserProfile: "/managed/runtime-1/chatgpt",
+					}),
+				} as never,
+				utilityId: "library-files",
+				mutability: "read-only",
+				options: {
+					configuredUrl: "https://chatgpt.com/library",
+					preserveActiveTab: true,
+					requireExistingTarget: true,
+				},
+				buildListOptions: async (options) => options,
+				run,
+				deps: {
+					createRuntime: () => ({ registry, ledger }) as never,
+					listTargets: vi.fn(async () => [
+						{ id: "blank-target", url: "about:blank" },
+						{ id: "library-target", url: "https://chatgpt.com/library?fixture=1" },
+					]) as never,
+					openTarget: openTarget as never,
+					closeTarget,
+				},
+			}),
+		).resolves.toBe("library-target");
+
+		expect(run).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tabTargetId: "library-target",
+				tabUrl: "https://chatgpt.com/library?fixture=1",
+				preserveActiveTab: true,
+			}),
+		);
+		expect(openTarget).not.toHaveBeenCalled();
+		expect(closeTarget).not.toHaveBeenCalled();
+	});
+
+	test("fails closed without creating a target when no exact Library target exists", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const ledger = createInMemoryProviderInteractionLedger();
+		const openTarget = vi.fn();
+		await expect(
+			runConfiguredChatgptUtilityOperation({
+				userConfig: {
+					auracallProfile: "runtime-1",
+					browser: {
+						tabConcurrencyMode: "tab-affinity",
+						chatgptUrl: "https://chatgpt.com/",
+					},
+					profiles: {
+						"runtime-1": {
+							services: { chatgpt: { identity: { accountId: "account-1" } } },
+						},
+					},
+				} as never,
+				browserService: {
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 45011,
+						managedBrowserProfile: "/managed/runtime-1/chatgpt",
+					}),
+				} as never,
+				utilityId: "library-files",
+				mutability: "read-only",
+				options: {
+					configuredUrl: "https://chatgpt.com/library",
+					requireExistingTarget: true,
+				},
+				buildListOptions: async (options) => options,
+				run: vi.fn(),
+				deps: {
+					createRuntime: () => ({ registry, ledger }) as never,
+					listTargets: vi.fn(async () => [{ id: "blank-target", url: "about:blank" }]) as never,
+					openTarget: openTarget as never,
+					closeTarget: vi.fn(),
+				},
+			}),
+		).rejects.toThrow("no existing compatible target");
+		expect(openTarget).not.toHaveBeenCalled();
+	});
+
 	test("reuses one exact utility target and accounts each read", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const ledger = createInMemoryProviderInteractionLedger({

@@ -2,6 +2,7 @@ import { BrowserAutomationClient } from "../browser/client.js";
 import type { LibraryFileInventory } from "../browser/libraryFiles.js";
 import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { ResolvedUserConfig } from "../config.js";
+import { requireBundledServiceRouteTemplate } from "../services/registry.js";
 
 const DEFAULT_LIBRARY_FILES_INVENTORY_TIMEOUT_MS = 45_000;
 const DEFAULT_LIBRARY_FILES_CLEANUP_TIMEOUT_MS = 5_000;
@@ -89,7 +90,12 @@ export async function listChatgptLibraryFilesForCli(
 			: await BrowserAutomationClient.fromConfig(userConfig, { target: "chatgpt" });
 		try {
 			controller.signal.throwIfAborted();
-			return await client.listLibraryFiles({ abortSignal: controller.signal });
+			return await client.listLibraryFiles({
+				abortSignal: controller.signal,
+				configuredUrl: requireBundledServiceRouteTemplate("chatgpt", "library"),
+				preserveActiveTab: true,
+				requireExistingTarget: true,
+			});
 		} finally {
 			await closeClient();
 		}

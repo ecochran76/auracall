@@ -23467,3 +23467,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Return whether the effort control was actually selected and persist selected
   thinking-time metadata only after positive confirmation. Requested default
   effort is not proof that a provider control existed or changed.
+## 2026-09-27 | Read-only inventory must acquire before it creates
+
+- A target-listing dependency is not protective unless it is wired into the
+  lease acquisition path. Read-only inventory should select the exact existing
+  provider route and fail closed when absent, rather than manufacturing a blank
+  target that later route validation rejects.
+- A resource acquired inside a connector remains locally owned until the
+  connector returns it. Any validation failure before that handoff must close
+  the CDP client locally, including its attached relay cleanup.
+- One-shot browser commands should close owned resources and retain a terminal
+  process-exit boundary after their final output so an incidental handle cannot
+  turn a structured result into another hang.

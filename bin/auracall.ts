@@ -5884,8 +5884,13 @@ program
         abortSignal: controller.signal,
         json: Boolean(commandOptions.json),
       });
-      if (result.stream === 'stdout') console.log(result.output);
-      else console.error(result.output);
+      const output = result.stream === 'stdout' ? process.stdout : process.stderr;
+      await new Promise<void>((resolve, reject) => {
+        output.write(`${result.output}\n`, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
       if (result.exitCode !== 0) process.exitCode = result.exitCode;
     } finally {
       for (const signal of signals) {
@@ -5893,6 +5898,7 @@ program
         if (handler) process.removeListener(signal, handler);
       }
     }
+    exitAfterCompletedBrowserProbeCommand();
   });
 
 const featuresCommand = program

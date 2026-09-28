@@ -120,6 +120,37 @@ describe("ChatGPT provider prompt adapter", () => {
 		vi.clearAllMocks();
 	});
 
+	test("closes an exact-target connection when its route is rejected before handoff", async () => {
+		const client = {
+			Runtime: {
+				enable: vi.fn(async () => undefined),
+				evaluate: vi.fn(async ({ expression }: { expression: string }) =>
+					expression === "location.href"
+						? { result: { value: "about:blank" } }
+						: { result: { value: null } },
+				),
+			},
+			Page: { enable: vi.fn(async () => undefined) },
+			Input: {},
+			DOM: {},
+			close: vi.fn(async () => undefined),
+		};
+		chatgptConnectionMocks.connectToChromeTarget.mockResolvedValueOnce(client);
+
+		await expect(
+			createChatgptAdapter().listAccountFiles?.({
+				host: "127.0.0.1",
+				port: 45009,
+				tabTargetId: "blank-target",
+				configuredUrl: "https://chatgpt.com/library",
+				preserveActiveTab: true,
+			}),
+		).rejects.toThrow(
+			"ChatGPT target blank-target is on about:blank, not the expected https://chatgpt.com/library.",
+		);
+		expect(client.close).toHaveBeenCalledOnce();
+	});
+
 	test("rejects unsupported completion before browser interaction", async () => {
 		const adapter = createChatgptAdapter();
 

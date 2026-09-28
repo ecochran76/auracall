@@ -33,6 +33,7 @@ export interface DedicatedBrowserTabInput {
 	listTargets?: (
 		endpoint: LiveFollowBrowserEndpoint,
 	) => Promise<Array<{ targetId: string; url: string }>>;
+	requireExistingTarget?: boolean;
 	inspectTarget: (
 		endpoint: LiveFollowBrowserEndpoint,
 		targetId: string,
@@ -79,7 +80,12 @@ async function acquireDedicatedBrowserTab(
 		}
 		assertEndpoint(endpoint, input.scope.managedBrowserProfile);
 		const inspected = await input.inspectTarget(endpoint, existing.targetId);
-		if (inspected && isProviderRoute(inspected.url, input.targetUrl)) {
+		if (
+			inspected &&
+			(input.requireExistingTarget
+				? isExactProviderRoute(inspected.url, input.targetUrl)
+				: isProviderRoute(inspected.url, input.targetUrl))
+		) {
 			const acquired = await input.registry.acquire({
 				scope: input.scope,
 				workload,
@@ -110,12 +116,34 @@ async function acquireDedicatedBrowserTab(
 				reason: "identity-conflict",
 			});
 			if (!lost.ok) throw new Error(`Live-follow crawler loss failed: ${lost.conflict.kind}.`);
-			throw new Error("Live-follow crawler target is live on a different provider route.");
+			if (!input.requireExistingTarget) {
+				throw new Error("Live-follow crawler target is live on a different provider route.");
+			}
+			await input.closeTarget({
+				host: endpoint.host,
+				port: endpoint.port,
+				targetId: existing.targetId,
+			});
+			const released = await input.registry.releaseLost({
+				leaseId: lost.value.leaseId,
+				expectedRevision: lost.value.revision,
+				now: now().toISOString(),
+				disposition: "closed",
+			});
+			if (!released.ok) {
+				throw new Error(
+					`Live-follow crawler stale-target release failed: ${released.conflict.kind}.`,
+				);
+			}
+		} else {
+			await releaseMissingCrawler(input.registry, existing, now().toISOString());
 		}
-		await releaseMissingCrawler(input.registry, existing, now().toISOString());
 	}
 
 	if (!endpoint) {
+		if (input.requireExistingTarget) {
+			throw new Error("Dedicated browser work requires an existing compatible target.");
+		}
 		let claim: BrowserProfileControlClaim | null = null;
 		const control = await input.registry.acquireProfileControl({
 			scope: input.scope,
@@ -144,7 +172,14 @@ async function acquireDedicatedBrowserTab(
 	}
 	if (!endpoint) throw new Error("Live-follow browser startup returned no endpoint.");
 	assertEndpoint(endpoint, input.scope.managedBrowserProfile);
-	const reusableTarget = startedBrowser ? await prepareColdStartTarget(input, endpoint) : null;
+	const reusableTarget = input.requireExistingTarget
+		? await selectExistingTarget(input, endpoint)
+		: startedBrowser
+			? await prepareColdStartTarget(input, endpoint)
+			: null;
+	if (input.requireExistingTarget && !reusableTarget) {
+		throw new Error("Dedicated browser work found no existing compatible target.");
+	}
 	const target =
 		reusableTarget ??
 		(await input.openTarget({
@@ -225,6 +260,30 @@ async function acquireDedicatedBrowserTab(
 	return { ...provisioned.value, endpoint };
 }
 
+async function selectExistingTarget(
+	input: DedicatedBrowserTabInput,
+	endpoint: LiveFollowBrowserEndpoint,
+): Promise<{ targetId: string; url: string } | null> {
+	if (!input.listTargets) {
+		throw new Error("Dedicated browser work cannot inspect existing targets.");
+	}
+	const ownedTargetIds = new Set(
+		(await input.registry.list())
+			.filter((lease) => lease.state !== "released")
+			.map((lease) => lease.targetId),
+	);
+	const compatible = (await input.listTargets(endpoint)).filter(
+		(target) =>
+			Boolean(target.targetId.trim()) &&
+			!ownedTargetIds.has(target.targetId) &&
+			isExactProviderRoute(target.url, input.targetUrl),
+	);
+	if (compatible.length > 1) {
+		throw new Error("Dedicated browser work found multiple existing compatible targets.");
+	}
+	return compatible[0] ?? null;
+}
+
 async function prepareColdStartTarget(
 	input: DedicatedBrowserTabInput,
 	endpoint: LiveFollowBrowserEndpoint,
@@ -294,6 +353,20 @@ function assertEndpoint(endpoint: LiveFollowBrowserEndpoint, managedBrowserProfi
 function isProviderRoute(actualUrl: string, expectedUrl: string): boolean {
 	try {
 		return new URL(actualUrl).hostname === new URL(expectedUrl).hostname;
+	} catch {
+		return false;
+	}
+}
+
+function isExactProviderRoute(actualUrl: string, expectedUrl: string): boolean {
+	try {
+		const actual = new URL(actualUrl);
+		const expected = new URL(expectedUrl);
+		const normalizePath = (value: string) => value.replace(/\/+$/, "") || "/";
+		return (
+			actual.origin === expected.origin &&
+			normalizePath(actual.pathname) === normalizePath(expected.pathname)
+		);
 	} catch {
 		return false;
 	}

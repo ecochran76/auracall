@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P65 / reopened issue 107: [Plan 0365](docs/dev/plans/0365-2026-09-27-library-existing-target-exit.md)
+  adopts one exact existing ChatGPT Library target without creating,
+  refreshing, or unnecessarily navigating a page; closes exact-target CDP
+  attachments that fail before handoff; and terminates the one-shot CLI after
+  terminal output. Installed `wsl-chrome-3` acceptance remains separately gated.
+
 - Provider-free accepted P64 / issue 110: [Plan 0364](docs/dev/plans/0364-2026-09-27-library-lifecycle-clock-ordering.md)
   keeps each ledger-backed browser interaction governor's reservation, start,
   and settlement timestamps nondecreasing when the host wall clock moves

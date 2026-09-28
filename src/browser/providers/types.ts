@@ -56,6 +56,7 @@ export interface BrowserProviderListOptions {
 	discoveryAction?: "grok-imagine-video-mode" | null;
 	includeInstalledApps?: boolean;
 	requirePromptWorkbenchTarget?: boolean;
+	requireExistingTarget?: boolean;
 	browserService?: import("../service/types.js").BrowserServiceHandle;
 	modelLabel?: string;
 	mutationAudit?: BrowserMutationAuditSink;

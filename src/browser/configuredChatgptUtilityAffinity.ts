@@ -52,7 +52,10 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	if (!tenantKey)
 		throw new Error("ChatGPT utility affinity requires a configured tenant identity.");
 	const configuredUrl =
-		input.userConfig.browser?.chatgptUrl ?? input.userConfig.browser?.url ?? "https://chatgpt.com/";
+		input.options?.configuredUrl ??
+		input.userConfig.browser?.chatgptUrl ??
+		input.userConfig.browser?.url ??
+		"https://chatgpt.com/";
 	const initialTarget = await input.browserService.resolveServiceTarget({
 		serviceId: "chatgpt",
 		configuredUrl,
@@ -121,6 +124,17 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			if (!endpoint) throw new Error("ChatGPT utility browser startup returned no exact endpoint.");
 			return endpoint;
 		},
+		listTargets: async ({ host, port }) =>
+			(await (input.deps?.listTargets ?? listChromeTargets)(port, host))
+				.filter((target) => !target.type || target.type === "page")
+				.map((target) => ({
+					targetId:
+						(target as { targetId?: string; id?: string }).targetId ??
+						(target as { id?: string }).id ??
+						"",
+					url: typeof target.url === "string" ? target.url : "",
+				})),
+		requireExistingTarget: input.options?.requireExistingTarget,
 		inspectTarget,
 		openTarget: async ({ host, port, url }) => {
 			const target = await (input.deps?.openTarget ?? openChromeTarget)(port, url, host);
