@@ -51473,7 +51473,6 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free regressions cover exact adoption, absence, CDP cleanup, and a
   retained event-loop handle. No install, live browser, provider access,
   retry, navigation, refresh, target creation, attachment, prompt, or Send ran.
-
 ## 2026-09-28 | Plan 0375 provider-free browser-coordination repair
 
 - Reproduced issue 123 at the production affinity seam: a foreground
@@ -51513,3 +51512,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   existing wait. Desired Work still fails without positive Work evidence;
   project landing pages still require controls; current-route Work badges still
   reject implicit Chat. No installed or live provider effect ran.
+
+## 2026-09-28 | Issue 121 connected-app selection reliability
+
+- Preserved terminal session `mail-architectu-wake-1790608058` without retry;
+  its verified error receipt proves publication but not automatic Codex wake.
+- Read-only browser inspection stopped at the active installed API operation
+  lease. No override, navigation, click, cleanup, prompt submission, or wake
+  arming occurred.
+- Opened issue 121 and Plan 0374 / lane P74 from canonical `origin/main`.
+- Implemented provider-free classification for manifest-known markerless app
+  rows plus ecosystem-mention provider-identity verification at source
+  checkpoint `098fc819e`. Focused and adjacent behavioral tests, typecheck,
+  build, scoped lint, plan audit, and diff hygiene passed. One unrelated
+  lifecycle structure-regex failure reproduced unchanged on the untouched
+  baseline. Installed acceptance remains separately gated.

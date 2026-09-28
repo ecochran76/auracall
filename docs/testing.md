@@ -1,5 +1,13 @@
 # Testing quickstart
 
+- ChatGPT connected-app selection reliability (provider-free):
+  `pnpm vitest run tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptEcosystemMention.test.ts`.
+  This proves manifest-known app rows remain on the ecosystem-mention path
+  when current menu markup omits legacy app markers, while the selected mention
+  must expose provider identity and the existing exact identity check remains
+  in force before Send. It does not submit a provider prompt or prove a
+  codex-wake dispatch.
+
 - Provider-interaction lifecycle clock ordering (provider-free):
   `pnpm vitest run tests/browser-service/ledgerInteractionGovernor.test.ts`.
   The backwards-clock regression proves one governor never emits settlement

@@ -1465,3 +1465,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free diagnostic lane only; integration and separately authorized installed wsl-chrome-3 localization remain open.
     updated_at: 2026-09-28
+  - id: P74
+    objective: Keep markerless known ChatGPT connected apps on the identity-verified ecosystem-mention path.
+    plan: docs/dev/plans/0374-2026-09-28-chatgpt-connected-app-selection-reliability.md
+    plan_ref: refs/heads/fix/issue-121-connected-app-selection
+    branch: fix/issue-121-connected-app-selection
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 098fc819e70bab95c8863d7ed9b48e3efa466fe5
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#121]
+    dependencies: [P61]
+    overlaps: [P61]
+    reconciled_overlaps: [P61]
+    reconciliation_note: P74 preserves Plan 0361 current-menu support and changes only markerless known-app classification plus provider-identity verification through the existing mention path.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0374-2026-09-28-chatgpt-connected-app-selection-reliability.md
+    integration_receipt: null
+    disposition: Provider-free correction accepted locally; publication, integration, and fresh installed acceptance remain separate gates.
+    updated_at: 2026-09-28

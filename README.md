@@ -100,7 +100,10 @@ auracall capabilities --target grok --entrypoint grok-imagine --discovery-action
 # ChatGPT discovery accepts current drawer rows without requiring tabindex and
 # reports selected inline tools only from the active composer form. Connected
 # app results expose metadata.selection.stableId and exactLabel for use as the
-# durable composerTool request value.
+# durable composerTool request value. When current connected-app rows omit
+# provider identity attributes, known app labels are routed through the
+# ecosystem-mention picker and are accepted only after the resulting composer
+# pill exposes a provider identity; arbitrary label-only rows remain untrusted.
 
 # Guarded ChatGPT Skill lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 skills list \

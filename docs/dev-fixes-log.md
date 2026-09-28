@@ -23555,7 +23555,6 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Bound that settlement as one sequence. If it stalls after provider failure,
   preserve the provider error and leave the active lease fence intact; do not
   mark the target idle or silently make it available to another process.
-
 ## 2026-09-28 | Discover live managed-profile owners before requesting startup control
 
 - A no-launch endpoint lookup must still inspect the live managed-profile
@@ -23581,3 +23580,16 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   established conversation routes to use editor evidence for desired Chat.
   The editor alone never proves Work, project landing pages remain explicit,
   and an active current-route Work badge remains authoritative.
+
+## 2026-09-28 | Verify markerless connected apps through their composer mention
+
+- Current ChatGPT menu rows can retain an exact known app label while omitting
+  legacy ecosystem icon paths, plugin links, identity attributes, and Connect
+  controls. Falling through to generic tool selection then applies the wrong
+  stayed-selected contract.
+- Use the bundled app manifest only to choose the connected-app path; do not
+  treat it as provider identity. Require the selected ecosystem mention pill
+  to expose a non-empty provider identity and retain that identity for the
+  existing pre-Send recheck.
+- Unknown markerless labels, ambiguous matches, disconnected rows, and absent
+  mention identity remain fail-closed.
