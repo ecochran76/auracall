@@ -11,10 +11,14 @@
 - ChatGPT Library CLI lifecycle contract (provider-free):
   `pnpm vitest run tests/cli.libraryFilesCommand.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts tests/browser/configuredChatgptUtilityAffinity.production.test.ts tests/browser/chatgptPromptAdapter.test.ts`.
   This proves that client creation/browser discovery and inventory share one
-  whole-operation deadline; timeout and caller cancellation reach the
+  49-second operation deadline; timeout and caller cancellation reach the
   provider-facing `AbortSignal`; success, provider error, timeout, and
   cancellation close command-owned resources exactly once; and JSON failures
   return stable error codes with exit 1 or cancellation exit 130.
+  A fake-clock composition fixture includes preflight, the provider's
+  30-second ceiling, three-second CDP close, and five-second affinity
+  settlement and proves their named provider error wins before the later
+  55-second outer watchdog.
   Pending-dispose fixtures prove that client cleanup cannot replace provider
   success or a named provider-stage error. A pending-governor fixture proves
   affinity settlement is bounded, preserves that provider error, and retains
@@ -25,7 +29,7 @@
   failure, safe dead-owner recovery, close-on-rejection before provider
   handoff, a named 10-second provider DOM-inventory deadline that initiates
   exact-target CDP client close and bounds a nonsettling close before the
-  45-second CLI deadline, and natural termination of a child fixture with a
+  CLI operation deadline, and natural termination of a child fixture with a
   retained handle.
   They do not launch a browser, inspect a provider account, or replace the separately
   authorized installed `wsl-chrome-3` acceptance.

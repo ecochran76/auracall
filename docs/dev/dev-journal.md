@@ -1,3 +1,24 @@
+## 2026-09-28 | Issue 107 Library deadline composition
+
+- Correct installed acceptance of canonical `34fd52d0` still returned the
+  outer `library_files_inventory_timeout` at 45 seconds while leaving the
+  exact target set unchanged. This source slice did not rerun that command.
+- Persisted evidence showed the newest exact-target lease was acquired at
+  `11:49:15.955Z`, then recorded meaningful use and idle settlement at
+  `11:49:59.001Z` and `11:49:59.008Z`. The provider interaction reservation
+  itself settled in 0.558 seconds, confirming that interaction-ledger timing
+  does not represent the complete CLI/provider/cleanup path.
+- CodeGraph established that the 45-second CLI timer began before client
+  creation and affinity acquisition, while the provider's 30-second ceiling
+  began only inside the adapter and could be followed by three-second CDP
+  close and five-second affinity settlement bounds. Those individually valid
+  timers could therefore compose beyond the earlier outer watchdog.
+- The full read-only operation now has a shared 49-second abort deadline,
+  cleanup retains its five-second bound, and a separate 55-second watchdog is
+  strictly later than both. A fake-clock regression composes preflight,
+  provider timeout, CDP close, and settlement and proves the named provider
+  stage error is not masked. No installed or live effect ran.
+
 ## 2026-09-28 | Issue 107 Library terminal result cleanup
 
 - Correct installed acceptance of canonical `4ff8edfe0` still returned the

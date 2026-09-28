@@ -1333,3 +1333,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free corrective lane only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-28
+  - id: P69
+    objective: Order the Library operation, cleanup, and outer watchdog deadlines so named inner results remain authoritative.
+    plan: docs/dev/plans/0369-2026-09-28-library-deadline-composition.md
+    plan_ref: refs/heads/fix/issue-107-library-budget-composition
+    branch: fix/issue-107-library-budget-composition
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 34fd52d0cde851082c2645b65b48f5dd9337b1be
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64, P65, P66, P67, P68]
+    overlaps: [P53, P63, P67, P68]
+    reconciled_overlaps: [P53, P63, P67, P68]
+    reconciliation_note: P69 changes only deadline composition; P53 retains rollout authority, P63 retains cancellation/error output, P67 retains provider-stage/CDP bounds, and P68 retains cleanup/settlement ordering.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0369-2026-09-28-library-deadline-composition.md
+    integration_receipt: null
+    disposition: Provider-free corrective lane only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-28

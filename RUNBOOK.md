@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 627 | 2026-09-28
+
+- Closed provider-free P69 / [Plan 0369](docs/dev/plans/0369-2026-09-28-library-deadline-composition.md)
+  for reopened issue 107 from canonical `34fd52d0`. Correct installed
+  acceptance still reached the 45-second outer timeout with no target churn.
+- CodeGraph and persisted lease timing showed the outer timer covered
+  preflight before the provider's later 30-second ceiling, then raced up to
+  three seconds of CDP close and five seconds of affinity settlement. The
+  provider interaction receipt alone did not measure this full path.
+- The shared operation now aborts at 49 seconds, cleanup remains bounded to
+  five seconds, and the terminal watchdog is later at 55 seconds. Fake-clock
+  coverage composes all stages and proves a named provider error remains
+  authoritative. No installed command, browser/provider access, retry,
+  refresh, navigation, target creation, attachment, prompt, or Send occurred.
+
 ## Turn 626 | 2026-09-28
 
 - Closed provider-free P68 / [Plan 0368](docs/dev/plans/0368-2026-09-28-library-terminal-result-cleanup.md)
