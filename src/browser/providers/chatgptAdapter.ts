@@ -4745,7 +4745,11 @@ async function closeAbortedChatgptTabConnection(
 		(connection.borrowedFromSession || retainedConnection === connection)
 	) {
 		options.providerSession = undefined;
-		await providerSession.close().catch(() => undefined);
+		await withChatgptTimeout(
+			providerSession.close(),
+			CHATGPT_CDP_CLOSE_TIMEOUT_MS,
+			`Timed out closing the aborted ChatGPT provider session after ${CHATGPT_CDP_CLOSE_TIMEOUT_MS}ms.`,
+		).catch(() => undefined);
 		return;
 	}
 	await closeChatgptTabConnection(connection, options);

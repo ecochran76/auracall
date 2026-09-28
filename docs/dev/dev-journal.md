@@ -1,3 +1,20 @@
+## 2026-09-28 | Issue 107 Library provider-session close bound
+
+- Current canonical source `9d7a2d6f` already disables retry for the exact
+  Library read, but the named 30-second provider timeout could still be masked
+  by the later CLI watchdog. This source slice did not rerun the installed
+  command.
+- CodeGraph located the remaining wait in abort cleanup: the borrowed
+  ChatGPT provider-session branch called `providerSession.close()` without the
+  bound used by the ordinary CDP connection-close path, and the abort wrapper
+  awaited that cleanup before rethrowing the named stage error.
+- A red-before-green fake-clock fixture remained pending at 33.001 seconds
+  before the repair. Provider-session abort close now uses the existing
+  three-second CDP close bound; the original named error returns, the session
+  close is initiated once, and the retained target is not closed or disposed.
+- No installed command, live browser/provider access, retry, refresh,
+  navigation, target creation, attachment, prompt, or Send ran.
+
 ## 2026-09-28 | Issue 107 Library single-read deadline margin
 
 - Correct installed acceptance of canonical `d89abd46` returned the inner

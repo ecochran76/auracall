@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 629 | 2026-09-28
+
+- Closed provider-free P71 / [Plan 0371](docs/dev/plans/0371-2026-09-28-library-provider-session-close-bound.md)
+  for reopened issue 107 from canonical `9d7a2d6f`. CodeGraph showed the
+  abort-cleanup wrapper awaited a borrowed provider session's unbounded
+  `close()` before returning the named 30-second provider-stage timeout.
+- A red-before-green fake-clock fixture remained pending at 33.001 seconds.
+  The provider-session close now uses the existing three-second CDP close
+  bound, returns the original named error, initiates close once, clears the
+  consumed session reference, and does not close or dispose the retained
+  target.
+- No deadline was widened. No installed command, browser/provider access,
+  retry, refresh, navigation, target creation, attachment, prompt, or Send
+  occurred.
+
 ## Turn 628 | 2026-09-28
 
 - Closed provider-free P70 / [Plan 0370](docs/dev/plans/0370-2026-09-28-library-single-read-deadline-margin.md)

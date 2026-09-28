@@ -208,6 +208,8 @@ auracall features diff --target gemini --json
 # Provider-side interaction, connection, identity, dialog, route-readiness,
 # and DOM-inventory stages are named and bounded inside a 30-second operation
 # ceiling, so a stalled CDP command fails with its stage before either CLI limit.
+# Abort cleanup also bounds provider-session close to the existing 3-second CDP
+# close window, so a session that will not close cannot hide that named stage.
 # Provider results are fixed before independently bounded client cleanup. The
 # utility governor and lease settlement then have a five-second ceiling; if
 # settlement stalls, the original provider error is retained and the unresolved

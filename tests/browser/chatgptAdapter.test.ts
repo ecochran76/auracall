@@ -69,6 +69,7 @@ import {
 	recordChatgptTargetNavigationForTest,
 	recordChatgptTargetSessionForTest,
 	recoverVisibleChatgptBlockingSurfaceWithClientForTest,
+	runWithChatgptAbortBoundConnectionForTest,
 	resolveChatgptCanvasArtifactContentText,
 	resolveChatgptConversationUrl,
 	resolveChatgptDownloadUrlFromJson,
@@ -96,6 +97,7 @@ import {
 	createBrowserScrapeTelemetryRecorder,
 	withBrowserScrapePendingOperation,
 } from "../../src/browser/providers/scrapeTelemetry.js";
+import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 
 describe("ChatGPT leased-target navigation accounting", () => {
 	test("records only a navigation that was physically performed", async () => {
@@ -355,6 +357,70 @@ describe("closeChatgptTabConnection", () => {
 		});
 
 		expect(close).not.toHaveBeenCalled();
+	});
+
+	test("bounds a pending provider-session close after a named Library abort", async () => {
+		vi.useFakeTimers();
+		try {
+			const controller = new AbortController();
+			const closeSession = vi.fn(() => new Promise<void>(() => undefined));
+			const connection = {
+				client: { close: vi.fn(async () => undefined) },
+				targetId: "library-target",
+				shouldClose: false,
+				host: "127.0.0.1",
+				port: 45015,
+				usedExisting: true,
+				borrowedFromSession: true,
+			};
+			const options: BrowserProviderListOptions = {
+				abortSignal: controller.signal,
+				useProviderSession: true,
+				providerSession: {
+					providerId: "chatgpt",
+					key: "chatgpt:127.0.0.1:45015:https://chatgpt.com/library",
+					value: { connection },
+					close: closeSession,
+				},
+			};
+			const pending = runWithChatgptAbortBoundConnectionForTest(
+				connection as never,
+				options,
+				async () => new Promise<never>(() => undefined),
+			);
+			const outcome = Promise.race([
+				pending.then(
+					() => ({ status: "resolved" as const }),
+					(error: unknown) => ({
+						status: "rejected" as const,
+						message: error instanceof Error ? error.message : String(error),
+					}),
+				),
+				new Promise<{ status: "still-pending" }>((resolve) => {
+					setTimeout(() => resolve({ status: "still-pending" }), 33_001);
+				}),
+			]);
+			setTimeout(() => {
+				controller.abort(
+					new Error(
+						"ChatGPT Library inventory operation timed out after 30000ms during stage dom-inventory.",
+					),
+				);
+			}, 30_000);
+
+			await vi.advanceTimersByTimeAsync(33_001);
+
+			expect(await outcome).toEqual({
+				status: "rejected",
+				message:
+					"ChatGPT Library inventory operation timed out after 30000ms during stage dom-inventory.",
+			});
+			expect(closeSession).toHaveBeenCalledOnce();
+			expect(options.providerSession).toBeUndefined();
+			expect(connection.client.close).not.toHaveBeenCalled();
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 

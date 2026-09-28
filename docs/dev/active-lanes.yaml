@@ -1377,3 +1377,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free corrective lane only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-28
+  - id: P71
+    objective: Bound abort-driven borrowed ChatGPT provider-session close so the named Library result remains authoritative.
+    plan: docs/dev/plans/0371-2026-09-28-library-provider-session-close-bound.md
+    plan_ref: refs/heads/fix/issue-107-library-session-close-timeout
+    branch: fix/issue-107-library-session-close-timeout
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 9d7a2d6fab63bdc4b59ffe15fc4f5e3611df5a5a
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64, P65, P66, P67, P68, P69, P70]
+    overlaps: [P53, P63, P67, P68, P69, P70]
+    reconciled_overlaps: [P53, P63, P67, P68, P69, P70]
+    reconciliation_note: P71 changes only abort-driven provider-session close waiting; P53 retains rollout authority, P63 retains cancellation/error output, P67 retains provider-stage/CDP bounds, P68 retains cleanup ordering, P69 retains deadline composition, and P70 retains one-read/no-retry semantics.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0371-2026-09-28-library-provider-session-close-bound.md
+    integration_receipt: null
+    disposition: Provider-free corrective lane only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-28
