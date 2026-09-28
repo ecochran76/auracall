@@ -159,6 +159,11 @@ reconciliation work; inspect both intents rather than choosing the newest edit.
    - Permit exactly attributable legitimate conversation target creation while
      retaining hard stops for duplicates, unattributed targets, cross-binding,
      forbidden actions, provider warnings, and global rate windows.
+   - The original receipt stopped at 20:00Z on one authorized #94
+     `new-conversation` target. The provider-free repair now requires every
+     target-creation delta to reconcile one-for-one both to a workload bucket
+     and to a newly recorded workload; aggregate mismatch and duplicate
+     creation remain hard stops.
 
 7. **P61 — combined installed acceptance**
    - Build and install only an exact integrated canonical candidate.
