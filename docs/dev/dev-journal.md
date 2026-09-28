@@ -1,3 +1,27 @@
+## 2026-09-27 | Issue 107 bounded Library CLI lifecycle
+
+- Installed canonical `ed7e1f0dc` had left
+  `auracall --profile wsl-chrome-3 library-files --json` alive beyond 180
+  seconds with no output. The exact process was interrupted once; this repair
+  did not retry that inventory or perform any browser/provider action.
+- The CLI now applies one 45-second deadline across client creation, browser
+  discovery, tab-affinity acquisition, provider inventory, and cache
+  persistence. Timeout and SIGINT/SIGTERM/SIGQUIT cancellation propagate
+  through the existing provider `AbortSignal`, then the command joins
+  operation settlement and close/dispose for a bounded five-second cleanup
+  window.
+- JSON mode now returns `auracall.library_files_error` with stable timeout,
+  cancellation, or provider-failure codes and a nonzero status. Human mode
+  returns one concise terminal error. Successful and incomplete inventories
+  preserve the existing output contract.
+- The call remains read-only and passes only the new abort signal into the
+  existing exact AuraCall runtime profile and ChatGPT tab-affinity path. It
+  adds no refresh, navigation, retry, or target-creation behavior.
+- Provider-free fixtures cover success, provider error, in-flight timeout,
+  client-creation/browser-discovery timeout, cancellation, cleanup ordering,
+  and exit classification. Installed `wsl-chrome-3` acceptance remains
+  explicitly withheld for a separate authorized packet.
+
 ## 2026-09-27 | Issue 96 exact ChatGPT Library references
 
 - Added a provider-neutral `libraryFiles` selector and receipt contract using

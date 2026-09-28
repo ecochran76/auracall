@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 622 | 2026-09-27
+
+- Closed the provider-free P63 / [Plan 0363](docs/dev/plans/0363-2026-09-27-library-cli-lifecycle.md)
+  correction for issue 107 from canonical `ed7e1f0dc`. The complete
+  `library-files` command now has one 45-second deadline and forwards timeout
+  or operator cancellation into the existing exact-profile, tab-affinity, and
+  provider cleanup path before a bounded five-second cleanup join.
+- JSON failures now return a stable `auracall.library_files_error` document
+  and nonzero exit status; SIGINT/SIGTERM/SIGQUIT cancellation exits 130.
+  Successful and incomplete inventory output remains unchanged.
+- Provider-free success, error, timeout, discovery-timeout, cancellation, and
+  cleanup-order fixtures pass with adjacent Library/affinity coverage,
+  typecheck, build, scoped lint, and diff hygiene. No installed command,
+  browser/provider action, retry, refresh, navigation, or new target occurred;
+  exact `wsl-chrome-3` installed acceptance remains separately governed.
+
 ## Turn 620 | 2026-09-25
 
 - Opened issue 49 and P53 / [Plan 0360](docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md)

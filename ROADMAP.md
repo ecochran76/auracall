@@ -1,5 +1,13 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P63 / issue 107: [Plan 0363](docs/dev/plans/0363-2026-09-27-library-cli-lifecycle.md)
+  bounds the complete read-only ChatGPT Library CLI inventory to 45 seconds,
+  forwards timeout and operator cancellation through the existing exact-profile
+  and tab-affinity path, and boundedly joins resource cleanup before returning
+  structured terminal failures. Provider-free fixtures, typecheck, build,
+  scoped lint, and diff hygiene pass; installed `wsl-chrome-3` acceptance is
+  deliberately withheld for a separately authorized effect packet.
+
 - Completed P54 / issue 90: [Plan 0361](docs/dev/plans/0361-2026-09-27-chatgpt-composer-selector-drift.md)
   repairs the current ChatGPT add-context root, trigger, row, and connected-app
   mention shapes while preserving legacy fallbacks and retained-draft

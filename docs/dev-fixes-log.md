@@ -9,6 +9,14 @@
   resubmitting provider work. `codex-wake` should use the receipt's exact
   idempotency key and resume a verified app-server thread once.
 
+- 2026-09-27: A CLI timeout must cover browser/client discovery as well as the
+  final provider call, and `Promise.race` alone is not resource cleanup. Forward
+  one abort signal through the whole read-only operation, close or dispose the
+  command-owned client exactly once on every terminal path, and boundedly join
+  both operation settlement and cleanup before emitting structured failure
+  output. Preserve the original error classification even when timeout-driven
+  cleanup settles the losing provider promise later.
+
 - 2026-09-27: Existing provider Library files need their own request identity
   and pre-Send proof boundary. Do not reinterpret local `--file` paths or
   `composerTool` labels as provider documents. Inventory stable provider IDs

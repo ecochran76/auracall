@@ -1202,3 +1202,24 @@ lanes:
     integration_receipt: null
     disposition: Exact receipt observation and published one-request/one-wake workflow passed focused provider-free and no-dispatch validation; installed/live join remains separate.
     updated_at: 2026-09-27
+  - id: P63
+    objective: Bound ChatGPT Library CLI inventory and guarantee terminal browser cleanup and structured failure output.
+    plan: docs/dev/plans/0363-2026-09-27-library-cli-lifecycle.md
+    plan_ref: refs/heads/fix/issue-107-library-cli-lifecycle
+    branch: fix/issue-107-library-cli-lifecycle
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: ed7e1f0dc74d6f31d6c92781f22a38f3f22ee070
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P58]
+    overlaps: [P53]
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0363-2026-09-27-library-cli-lifecycle.md
+    integration_receipt: null
+    disposition: Provider-free source accepted locally; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-27

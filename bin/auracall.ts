@@ -57,8 +57,8 @@ import { buildMarkdownBundle } from '../src/cli/markdownBundle.js';
 import { shouldDetachSession } from '../src/cli/detach.js';
 import { applyHiddenAliases } from '../src/cli/hiddenAliases.js';
 import {
-  formatLibraryFileInventory,
-  listChatgptLibraryFilesForCli,
+  ChatgptLibraryFilesCancelledError,
+  runChatgptLibraryFilesCommandForCli,
 } from '../src/cli/libraryFilesCommand.js';
 import { buildBrowserConfig, resolveBrowserModelLabel } from '../src/cli/browserConfig.js';
 import {
@@ -5871,9 +5871,28 @@ program
       ...(typeof this.opts === 'function' ? this.opts() : {}),
     } as OptionValues;
     const userConfig = await resolveConfig(commandOptions, process.cwd(), process.env);
-    const inventory = await listChatgptLibraryFilesForCli(userConfig);
-    console.log(commandOptions.json ? JSON.stringify(inventory, null, 2) : formatLibraryFileInventory(inventory));
-    if (!inventory.complete) process.exitCode = 1;
+    const controller = new AbortController();
+    const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGQUIT'];
+    const handlers = new Map<NodeJS.Signals, () => void>();
+    for (const signal of signals) {
+      const handler = () => controller.abort(new ChatgptLibraryFilesCancelledError(signal));
+      handlers.set(signal, handler);
+      process.once(signal, handler);
+    }
+    try {
+      const result = await runChatgptLibraryFilesCommandForCli(userConfig, {
+        abortSignal: controller.signal,
+        json: Boolean(commandOptions.json),
+      });
+      if (result.stream === 'stdout') console.log(result.output);
+      else console.error(result.output);
+      if (result.exitCode !== 0) process.exitCode = result.exitCode;
+    } finally {
+      for (const signal of signals) {
+        const handler = handlers.get(signal);
+        if (handler) process.removeListener(signal, handler);
+      }
+    }
   });
 
 const featuresCommand = program
