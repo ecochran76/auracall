@@ -1,5 +1,12 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P72 / reopened issue 107: [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
+  carries a privacy-bounded stage and cleanup timeline through the exact CLI,
+  configured-affinity, service, and adapter path. A whole-operation timeout can
+  now distinguish affinity, duplicate service option construction, provider,
+  cache, abort cleanup, and settlement waits without another budget change.
+  Installed localization is separately gated.
+
 - Provider-free accepted P71 / reopened issue 107: [Plan 0371](docs/dev/plans/0371-2026-09-28-library-provider-session-close-bound.md)
   applies the existing three-second CDP close bound to abort-driven borrowed
   provider-session close. A session that never closes can no longer keep the

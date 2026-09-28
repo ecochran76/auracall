@@ -1399,3 +1399,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free corrective lane only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-28
+  - id: P72
+    objective: Localize the remaining Library whole-operation timeout with privacy-bounded production lifecycle diagnostics.
+    plan: docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md
+    plan_ref: refs/heads/fix/issue-107-library-diagnostics
+    branch: fix/issue-107-library-diagnostics
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: a8d340b03c45bfca44c386f5804f36e19f38feab
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64, P65, P66, P67, P68, P69, P70, P71]
+    overlaps: [P53, P63, P67, P68, P69, P70, P71]
+    reconciled_overlaps: [P53, P63, P67, P68, P69, P70, P71]
+    reconciliation_note: P72 adds only privacy-bounded Library lifecycle diagnostics; P53 retains rollout authority, P63 retains terminal output, P67 retains provider-stage bounds, P68 retains cleanup ordering, P69-P70 retain deadline/no-retry semantics, and P71 retains provider-session close bounds.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md
+    integration_receipt: null
+    disposition: Provider-free diagnostic lane only; integration and separately authorized installed wsl-chrome-3 localization remain open.
+    updated_at: 2026-09-28

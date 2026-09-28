@@ -2,6 +2,7 @@ import type { BrowserInteractionGovernor } from "../../../packages/browser-servi
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
 import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptComposerTool.js";
+import type { LibraryInventoryLifecycle } from "../libraryInventoryDiagnostics.js";
 import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from "../libraryFiles.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
 import type {
@@ -76,6 +77,7 @@ export interface BrowserProviderListOptions {
 		maxMessages?: number | null;
 	};
 	scrapeTelemetry?: BrowserScrapeTelemetryRecorder;
+	libraryInventoryLifecycle?: LibraryInventoryLifecycle;
 	useProviderSession?: boolean;
 	keepProviderSessionOpen?: boolean;
 	providerSession?: BrowserProviderScopedSession;

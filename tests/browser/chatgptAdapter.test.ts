@@ -362,6 +362,7 @@ describe("closeChatgptTabConnection", () => {
 	test("bounds a pending provider-session close after a named Library abort", async () => {
 		vi.useFakeTimers();
 		try {
+			const cleanupPhases: string[] = [];
 			const controller = new AbortController();
 			const closeSession = vi.fn(() => new Promise<void>(() => undefined));
 			const connection = {
@@ -375,6 +376,10 @@ describe("closeChatgptTabConnection", () => {
 			};
 			const options: BrowserProviderListOptions = {
 				abortSignal: controller.signal,
+				libraryInventoryLifecycle: {
+					onStageEntered: vi.fn(),
+					onCleanupPhase: (phase) => cleanupPhases.push(phase),
+				},
 				useProviderSession: true,
 				providerSession: {
 					providerId: "chatgpt",
@@ -418,6 +423,11 @@ describe("closeChatgptTabConnection", () => {
 			expect(closeSession).toHaveBeenCalledOnce();
 			expect(options.providerSession).toBeUndefined();
 			expect(connection.client.close).not.toHaveBeenCalled();
+			expect(cleanupPhases).toEqual([
+				"abort-cleanup-started",
+				"read-rejected",
+				"abort-cleanup-timed-out",
+			]);
 		} finally {
 			vi.useRealTimers();
 		}

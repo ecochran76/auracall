@@ -221,7 +221,10 @@ auracall features diff --target gemini --json
 # If no exact Library page is available, the command fails closed. After its
 # terminal report, the one-shot CLI exits while leaving the managed browser alive.
 # In --json mode, timeout/provider/cancellation failures are structured JSON
-# with a nonzero exit status; SIGINT/SIGTERM/SIGQUIT cancellation exits 130.
+# with a nonzero exit status. Their diagnostics include only the last closed-
+# vocabulary Library stage, bounded cleanup phases, and timestamps (at most 32
+# events); they exclude URLs, target IDs, account data, and provider content.
+# SIGINT/SIGTERM/SIGQUIT cancellation exits 130.
 auracall --profile wsl-chrome-3 library-files --json
 
 # Local dev-only OpenAI-compatible responses server

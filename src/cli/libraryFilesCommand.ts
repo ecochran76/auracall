@@ -1,4 +1,11 @@
 import { BrowserAutomationClient } from "../browser/client.js";
+import {
+	createLibraryInventoryDiagnosticsRecorder,
+	type LibraryInventoryDiagnosticsSnapshot,
+	type LibraryInventoryLifecycle,
+	recordLibraryInventoryCleanupPhase,
+	recordLibraryInventoryStage,
+} from "../browser/libraryInventoryDiagnostics.js";
 import type { LibraryFileInventory } from "../browser/libraryFiles.js";
 import type { BrowserProviderListOptions } from "../browser/providers/types.js";
 import type { ResolvedUserConfig } from "../config.js";
@@ -19,6 +26,7 @@ export interface ChatgptLibraryFilesCliDependencies {
 	inventoryTimeoutMs?: number;
 	operationTimeoutMs?: number;
 	cleanupTimeoutMs?: number;
+	libraryInventoryLifecycle?: LibraryInventoryLifecycle;
 }
 
 export interface ChatgptLibraryFilesCommandOptions {
@@ -74,7 +82,13 @@ export async function listChatgptLibraryFilesForCli(
 		Math.max(1, inventoryTimeoutMs - cleanupTimeoutMs - 1),
 	);
 	const controller = new AbortController();
-	const stopForwardingAbort = forwardAbort(dependencies.abortSignal, controller);
+	const diagnosticsRecorder = dependencies.libraryInventoryLifecycle
+		? null
+		: createLibraryInventoryDiagnosticsRecorder();
+	const libraryInventoryLifecycle =
+		dependencies.libraryInventoryLifecycle ?? diagnosticsRecorder?.lifecycle;
+	const lifecycleOptions = { libraryInventoryLifecycle };
+	const stopForwardingAbort = forwardAbort(dependencies.abortSignal, controller, lifecycleOptions);
 	let client: ChatgptLibraryFilesCliClient | null = null;
 	let closePromise: Promise<void> | null = null;
 	let operationSettled = false;
@@ -94,27 +108,46 @@ export async function listChatgptLibraryFilesForCli(
 	};
 
 	const operation = (async () => {
+		recordLibraryInventoryStage(lifecycleOptions, "cli-client-create");
 		client = dependencies.createClient
 			? await dependencies.createClient()
 			: await BrowserAutomationClient.fromConfig(userConfig, { target: "chatgpt" });
 		controller.signal.throwIfAborted();
-		return await client.listLibraryFiles({
-			abortSignal: controller.signal,
-			configuredUrl: requireBundledServiceRouteTemplate("chatgpt", "library"),
-			disableAccountFileListRetry: true,
-			preserveActiveTab: true,
-			requireExistingTarget: true,
-		});
+		recordLibraryInventoryStage(lifecycleOptions, "cli-inventory-read");
+		try {
+			return await client.listLibraryFiles({
+				abortSignal: controller.signal,
+				configuredUrl: requireBundledServiceRouteTemplate("chatgpt", "library"),
+				disableAccountFileListRetry: true,
+				libraryInventoryLifecycle,
+				preserveActiveTab: true,
+				requireExistingTarget: true,
+			});
+		} catch (error) {
+			recordLibraryInventoryCleanupPhase(lifecycleOptions, "read-rejected");
+			throw error;
+		}
 	})().finally(() => {
 		operationSettled = true;
 	});
-	const boundedOperation = runWithInventoryDeadline(operation, controller, operationTimeoutMs);
+	const boundedOperation = runWithInventoryDeadline(
+		operation,
+		controller,
+		operationTimeoutMs,
+		lifecycleOptions,
+	);
 
 	try {
-		return await runWithInventoryDeadline(boundedOperation, controller, inventoryTimeoutMs);
+		return await runWithInventoryDeadline(
+			boundedOperation,
+			controller,
+			inventoryTimeoutMs,
+			lifecycleOptions,
+		);
 	} finally {
 		stopForwardingAbort();
 		if (!operationSettled && !controller.signal.aborted) {
+			recordLibraryInventoryCleanupPhase(lifecycleOptions, "provider-abort-requested");
 			controller.abort(new ChatgptLibraryFilesCancelledError());
 		}
 		await runWithCleanupDeadline(
@@ -129,10 +162,12 @@ export async function runChatgptLibraryFilesCommandForCli(
 	options: ChatgptLibraryFilesCommandOptions,
 	dependencies: ChatgptLibraryFilesCliDependencies = {},
 ): Promise<ChatgptLibraryFilesTerminalResult> {
+	const diagnostics = createLibraryInventoryDiagnosticsRecorder();
 	try {
 		const inventory = await listChatgptLibraryFilesForCli(userConfig, {
 			...dependencies,
 			abortSignal: options.abortSignal,
+			libraryInventoryLifecycle: diagnostics.lifecycle,
 		});
 		return {
 			exitCode: inventory.complete ? 0 : 1,
@@ -142,7 +177,7 @@ export async function runChatgptLibraryFilesCommandForCli(
 				: formatLibraryFileInventory(inventory),
 		};
 	} catch (error) {
-		const failure = createLibraryFilesFailure(error);
+		const failure = createLibraryFilesFailure(error, diagnostics.snapshot());
 		return {
 			exitCode: failure.error.code === "library_files_inventory_cancelled" ? 130 : 1,
 			stream: options.json ? "stdout" : "stderr",
@@ -175,7 +210,10 @@ export function formatLibraryFileInventory(inventory: LibraryFileInventory): str
 	return lines.join("\n");
 }
 
-function createLibraryFilesFailure(error: unknown): {
+function createLibraryFilesFailure(
+	error: unknown,
+	diagnostics: LibraryInventoryDiagnosticsSnapshot,
+): {
 	object: "auracall.library_files_error";
 	status: "error";
 	error: {
@@ -186,20 +224,31 @@ function createLibraryFilesFailure(error: unknown): {
 		message: string;
 		timeoutMs?: number;
 		signal?: string | null;
+		diagnostics: LibraryInventoryDiagnosticsSnapshot;
 	};
 } {
 	if (error instanceof ChatgptLibraryFilesTimeoutError) {
 		return {
 			object: "auracall.library_files_error",
 			status: "error",
-			error: { code: error.code, message: error.message, timeoutMs: error.timeoutMs },
+			error: {
+				code: error.code,
+				message: error.message,
+				timeoutMs: error.timeoutMs,
+				diagnostics,
+			},
 		};
 	}
 	if (error instanceof ChatgptLibraryFilesCancelledError) {
 		return {
 			object: "auracall.library_files_error",
 			status: "error",
-			error: { code: error.code, message: error.message, signal: error.signal },
+			error: {
+				code: error.code,
+				message: error.message,
+				signal: error.signal,
+				diagnostics,
+			},
 		};
 	}
 	return {
@@ -208,14 +257,20 @@ function createLibraryFilesFailure(error: unknown): {
 		error: {
 			code: "library_files_inventory_failed",
 			message: error instanceof Error ? error.message : String(error),
+			diagnostics,
 		},
 	};
 }
 
-function forwardAbort(source: AbortSignal | undefined, target: AbortController): () => void {
+function forwardAbort(
+	source: AbortSignal | undefined,
+	target: AbortController,
+	lifecycleOptions: { libraryInventoryLifecycle?: LibraryInventoryLifecycle },
+): () => void {
 	if (!source) return () => undefined;
 	const abort = () => {
 		if (target.signal.aborted) return;
+		recordLibraryInventoryCleanupPhase(lifecycleOptions, "provider-abort-requested");
 		const reason =
 			source.reason instanceof ChatgptLibraryFilesCancelledError
 				? source.reason
@@ -234,6 +289,7 @@ async function runWithInventoryDeadline<T>(
 	operation: Promise<T>,
 	controller: AbortController,
 	timeoutMs: number,
+	lifecycleOptions: { libraryInventoryLifecycle?: LibraryInventoryLifecycle },
 ): Promise<T> {
 	let timeout: ReturnType<typeof setTimeout> | null = null;
 	let removeAbortListener: () => void = () => undefined;
@@ -251,6 +307,7 @@ async function runWithInventoryDeadline<T>(
 		const timedOut = new Promise<never>((_resolve, reject) => {
 			timeout = setTimeout(() => {
 				const error = new ChatgptLibraryFilesTimeoutError(timeoutMs);
+				recordLibraryInventoryCleanupPhase(lifecycleOptions, "provider-abort-requested");
 				controller.abort(error);
 				reject(error);
 			}, timeoutMs);

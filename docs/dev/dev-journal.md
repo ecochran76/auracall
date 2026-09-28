@@ -1,3 +1,25 @@
+## 2026-09-28 | Issue 107 Library lifecycle diagnostics
+
+- Correct installed acceptance of canonical `a8d340b03` still returned the
+  CLI's 54-second operation timeout while leaving the target set unchanged.
+  This source slice did not rerun that command.
+- CodeGraph and source tracing show the adapter's 30-second timer begins only
+  after configured affinity and service option construction. After affinity
+  has already built exact host/port/target options, `LlmService.listAccountFiles`
+  builds them again through the full service-target resolution path before the
+  adapter timer starts. That duplicate pre-adapter resolve is the strongest
+  remaining await candidate, but this diagnostic slice does not remove it.
+- Structured JSON failures now include a maximum 32-event closed-vocabulary
+  timeline with last stage, cleanup phase, and ISO timestamps. Instrumented
+  boundaries cover CLI create/read, affinity preflight/read/settlement, service
+  option/provider/cache work, adapter stages, and abort cleanup.
+- Red-before-green fixtures cover the whole-operation timeout, real production
+  affinity wiring, pending provider-session close, and service cache stages.
+  Diagnostics contain no URL, target ID, account identity, managed browser
+  profile, provider content, or raw error detail.
+- No deadline widening, installed command, live browser/provider access,
+  retry, refresh, navigation, target creation, attachment, prompt, or Send ran.
+
 ## 2026-09-28 | Issue 107 Library provider-session close bound
 
 - Current canonical source `9d7a2d6f` already disables retry for the exact

@@ -19,6 +19,10 @@ import {
 	resolveChatgptTenantLimits,
 } from "../runtime/tenantExecutionLimits.js";
 import { classifyStructuredProviderWarning } from "./chatgptAffinityRuntime.js";
+import {
+	recordLibraryInventoryCleanupPhase,
+	recordLibraryInventoryStage,
+} from "./libraryInventoryDiagnostics.js";
 import { retireExpiredChatgptTabLeases } from "./chatgptTabRetirement.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
 import type { BrowserService } from "./service/browserService.js";
@@ -66,6 +70,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		input.userConfig.browser?.chatgptUrl ??
 		input.userConfig.browser?.url ??
 		"https://chatgpt.com/";
+	recordLibraryInventoryStage(input.options, "affinity-resolve-target");
 	const initialTarget = await input.browserService.resolveServiceTarget({
 		serviceId: "chatgpt",
 		configuredUrl,
@@ -106,6 +111,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			targetId,
 			() => undefined,
 		);
+	recordLibraryInventoryStage(input.options, "affinity-reconcile-leases");
 	await reconcileStaleActiveTabLeases({
 		registry: runtime.registry,
 		scope,
@@ -142,6 +148,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			}
 		}
 	}
+	recordLibraryInventoryStage(input.options, "affinity-retire-leases");
 	await retireExpiredChatgptTabLeases({
 		registry: runtime.registry,
 		scope,
@@ -150,6 +157,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		inspectTarget,
 		closeTarget,
 	});
+	recordLibraryInventoryStage(input.options, "affinity-acquire-target");
 	const tab = await acquireEphemeralBrowserTab({
 		registry: runtime.registry,
 		scope,
@@ -197,6 +205,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	let providerRunStarted = false;
 	let execution: { ok: true; value: TResult } | { ok: false; error: unknown };
 	try {
+		recordLibraryInventoryStage(input.options, "affinity-build-options");
 		const options = await input.buildListOptions({
 			...(input.options ?? {}),
 			host: tab.endpoint.host,
@@ -233,6 +242,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			now,
 		});
 		providerRunStarted = true;
+		recordLibraryInventoryStage(input.options, "affinity-provider-read");
 		execution = {
 			ok: true,
 			value: await input.run({
@@ -243,6 +253,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			}),
 		};
 	} catch (error) {
+		recordLibraryInventoryCleanupPhase(input.options, "read-rejected");
 		outcome = "failed";
 		effectState =
 			input.mutability === "provider-mutating" && providerRunStarted
@@ -263,6 +274,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		}
 		execution = { ok: false, error };
 	}
+	recordLibraryInventoryCleanupPhase(input.options, "affinity-settlement-started");
 	const settlement = settleConfiguredChatgptUtilityOperation({
 		governor,
 		registry: runtime.registry,
@@ -276,6 +288,12 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	const settlementResult = await waitForConfiguredChatgptUtilitySettlement(
 		settlement,
 		CHATGPT_UTILITY_SETTLEMENT_TIMEOUT_MS,
+	);
+	recordLibraryInventoryCleanupPhase(
+		input.options,
+		settlementResult.status === "timed-out"
+			? "affinity-settlement-timed-out"
+			: "affinity-settlement-settled",
 	);
 	if (!execution.ok) throw execution.error;
 	if (settlementResult.status === "timed-out") {
