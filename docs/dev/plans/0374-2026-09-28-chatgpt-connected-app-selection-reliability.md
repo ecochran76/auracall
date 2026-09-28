@@ -148,3 +148,22 @@ explicitly unaccepted until a separately authorized fresh installed run.
 - Terminal error receipt:
   `evt_66eef8046cb8b3048b22e2f5ffbac831af918898fd575d5492e164e77ba7a3ff`.
   The session was not retried and no wake was armed against its terminal receipt.
+
+## Post-fix Installed Acceptance | Admission Race
+
+- Installed commit `b46044aff613b5a6ca324266dff0a3c5c8c7d684` into the
+  user runtime, restarted only `auracall-api.service`, and verified exact byte
+  parity for the changed composer-tool JavaScript.
+- Session `github-wake-1790631985` terminated before browser startup with
+  `tab-leases-active`; verified receipt event:
+  `evt_9b058e33d09d70666bd078c8ad7a7dce6590b87251e93ed75a2ca81be1622155`.
+- A fresh read-only control-plane snapshot immediately afterward reported zero
+  active browser operations and zero tab leases. One new uniquely identified
+  session, `github-wake-1790632021`, nevertheless reproduced the same startup
+  denial; verified receipt event:
+  `evt_1697bba0c1638d2030ad55f5f4272348817e7e31419b77d6ad6ad5af8058033a`.
+- Both failures were pre-provider and neither session was retried. No wake was
+  armed against either terminal receipt. Further provider attempts stopped.
+- Source correction is complete, but installed connector selection, response,
+  and automatic Codex resumption remain unaccepted behind the independent
+  tab-lease admission race. Issue 121 therefore remains open.

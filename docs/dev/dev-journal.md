@@ -51570,3 +51570,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   returned an earlier outer `span.truncate` before the later exact-label span.
   Connected-app inventory, filtered-menu readback, and activation now query
   primary-label selectors in explicit priority order.
+- Installed source commit `b46044aff` with exact changed-module byte parity.
+  Two uniquely identified post-fix sessions then terminated before browser
+  startup with `tab-leases-active`: `github-wake-1790631985` / event
+  `evt_9b058e33d09d70666bd078c8ad7a7dce6590b87251e93ed75a2ca81be1622155`
+  and `github-wake-1790632021` / event
+  `evt_1697bba0c1638d2030ad55f5f4272348817e7e31419b77d6ad6ad5af8058033a`.
+  Between them, the API reported zero active browser operations and zero tab
+  leases. Neither session was retried, no wake was armed, and further provider
+  attempts stopped. Issue 121 remains open pending admission-race resolution
+  and one complete connector-plus-wake acceptance.
