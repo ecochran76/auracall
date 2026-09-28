@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 630 | 2026-09-28
+
+- Closed provider-free P72 / [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
+  for reopened issue 107 from canonical `a8d340b03`. Correct installed
+  acceptance still returned the 54-second CLI operation timeout with no target
+  churn, so this slice stopped changing deadline budgets.
+- Structured JSON failures now carry a capped, closed-vocabulary stage and
+  cleanup timeline through CLI, configured affinity, service, and adapter
+  production boundaries. It records no URLs, target IDs, account data,
+  managed browser profile paths, provider content, or raw errors.
+- Source tracing identifies the duplicate `LlmService.listAccountFiles`
+  option build after exact affinity acquisition and before the adapter timer as
+  the strongest remaining wait candidate. One separately authorized installed
+  readback can now confirm or reject it. No installed command or live effect
+  ran.
+
 ## Turn 629 | 2026-09-28
 
 - Closed provider-free P71 / [Plan 0371](docs/dev/plans/0371-2026-09-28-library-provider-session-close-bound.md)

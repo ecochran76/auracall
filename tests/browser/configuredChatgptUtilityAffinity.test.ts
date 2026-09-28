@@ -255,6 +255,7 @@ describe("configured ChatGPT utility affinity", () => {
 	test("preserves a provider-stage error when governor settlement does not settle", async () => {
 		vi.useFakeTimers();
 		try {
+			const cleanupPhases: string[] = [];
 			const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 			const ledger = createInMemoryProviderInteractionLedger({
 				createReservationId: () => "reservation-1",
@@ -273,6 +274,12 @@ describe("configured ChatGPT utility affinity", () => {
 				} as never,
 				utilityId: "library-files",
 				mutability: "read-only",
+				options: {
+					libraryInventoryLifecycle: {
+						onStageEntered: vi.fn(),
+						onCleanupPhase: (phase) => cleanupPhases.push(phase),
+					},
+				},
 				buildListOptions: async (options) => options,
 				run: async (options) => {
 					await options.interactionGovernor?.beforeInteraction("generic");
@@ -297,6 +304,11 @@ describe("configured ChatGPT utility affinity", () => {
 				state: "active",
 				targetId: "utility-target",
 			});
+			expect(cleanupPhases).toEqual([
+				"read-rejected",
+				"affinity-settlement-started",
+				"affinity-settlement-timed-out",
+			]);
 		} finally {
 			vi.useRealTimers();
 		}

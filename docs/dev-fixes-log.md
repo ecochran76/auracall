@@ -1,3 +1,12 @@
+- 2026-09-28: When nested browser deadlines keep masking the owner of a wait,
+  stop widening budgets and emit one privacy-bounded lifecycle receipt through
+  the real call chain. Use a closed stage/phase vocabulary, capped timestamps,
+  and no endpoint, target, account, profile-path, content, or raw-error fields.
+  Instrument work before its await: exact affinity acquisition can still be
+  followed by a duplicate full service-target option build before the provider
+  timer starts, and a later outer timeout otherwise cannot distinguish it from
+  adapter or cache work.
+
 - 2026-09-28: Every abort-cleanup branch must share the same bounded close
   contract before its cleanup promise is joined. A borrowed provider session
   can bypass the ordinary CDP connection close; awaiting its `close()` without

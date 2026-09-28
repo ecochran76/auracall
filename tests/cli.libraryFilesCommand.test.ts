@@ -2,6 +2,9 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
+import { createInMemoryProviderInteractionLedger } from "../packages/browser-service/src/service/interactionLedger.js";
+import { createInMemoryBrowserTabLeaseRegistry } from "../packages/browser-service/src/service/tabLeaseRegistry.js";
+import { runConfiguredChatgptUtilityOperation } from "../src/browser/configuredChatgptUtilityAffinity.js";
 import {
 	ChatgptLibraryFilesCancelledError,
 	formatLibraryFileInventory,
@@ -69,13 +72,19 @@ describe("library-files CLI", () => {
 		});
 
 		expect(listLibraryFiles).toHaveBeenCalledOnce();
-		expect(listLibraryFiles).toHaveBeenCalledWith({
-			abortSignal: expect.any(AbortSignal),
-			configuredUrl: "https://chatgpt.com/library",
-			disableAccountFileListRetry: true,
-			preserveActiveTab: true,
-			requireExistingTarget: true,
-		});
+		expect(listLibraryFiles).toHaveBeenCalledWith(
+			expect.objectContaining({
+				abortSignal: expect.any(AbortSignal),
+				configuredUrl: "https://chatgpt.com/library",
+				disableAccountFileListRetry: true,
+				libraryInventoryLifecycle: expect.objectContaining({
+					onCleanupPhase: expect.any(Function),
+					onStageEntered: expect.any(Function),
+				}),
+				preserveActiveTab: true,
+				requireExistingTarget: true,
+			}),
+		);
 		expect(close).toHaveBeenCalledOnce();
 		expect(formatLibraryFileInventory(inventory)).toContain("- file_packet  Packet.pdf");
 	});
@@ -279,6 +288,202 @@ describe("library-files CLI", () => {
 					code: "library_files_inventory_timeout",
 					timeoutMs: 25,
 				},
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("reports the last Library stage and cleanup timeline on whole-operation timeout", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-09-28T18:00:00.000Z"));
+		try {
+			const resultPromise = runChatgptLibraryFilesCommandForCli(
+				{} as never,
+				{ json: true },
+				{
+					inventoryTimeoutMs: 40,
+					operationTimeoutMs: 25,
+					cleanupTimeoutMs: 10,
+					createClient: async () => ({
+						close: vi.fn(async () => undefined),
+						listLibraryFiles: async (options) => {
+							options?.libraryInventoryLifecycle?.onStageEntered("dom-inventory");
+							return new Promise((_resolve, reject) => {
+								options?.abortSignal?.addEventListener(
+									"abort",
+									() => {
+										options.libraryInventoryLifecycle?.onCleanupPhase("abort-cleanup-started");
+										setTimeout(() => {
+											options.libraryInventoryLifecycle?.onCleanupPhase("abort-cleanup-timed-out");
+											reject(options.abortSignal?.reason);
+										}, 3);
+									},
+									{ once: true },
+								);
+							});
+						},
+					}),
+				},
+			);
+
+			await vi.advanceTimersByTimeAsync(28);
+			const result = await resultPromise;
+			const failure = JSON.parse(result.output);
+
+			expect(result.exitCode).toBe(1);
+			expect(failure).toMatchObject({
+				error: {
+					code: "library_files_inventory_timeout",
+					timeoutMs: 25,
+					diagnostics: {
+						lastStage: "dom-inventory",
+						lastStageEnteredAt: "2026-09-28T18:00:00.000Z",
+						cleanupPhase: "read-rejected",
+						cleanupPhaseObservedAt: "2026-09-28T18:00:00.028Z",
+						timeline: [
+							{
+								kind: "stage",
+								stage: "cli-client-create",
+								observedAt: "2026-09-28T18:00:00.000Z",
+							},
+							{
+								kind: "stage",
+								stage: "cli-inventory-read",
+								observedAt: "2026-09-28T18:00:00.000Z",
+							},
+							{
+								kind: "stage",
+								stage: "dom-inventory",
+								observedAt: "2026-09-28T18:00:00.000Z",
+							},
+							expect.objectContaining({
+								kind: "cleanup",
+								phase: "provider-abort-requested",
+							}),
+							expect.objectContaining({
+								kind: "cleanup",
+								phase: "abort-cleanup-started",
+							}),
+							expect.objectContaining({
+								kind: "cleanup",
+								phase: "abort-cleanup-timed-out",
+							}),
+							{
+								kind: "cleanup",
+								phase: "read-rejected",
+								observedAt: "2026-09-28T18:00:00.028Z",
+							},
+						],
+					},
+				},
+			});
+			expect(result.output).not.toContain("library-target");
+			expect(result.output).not.toContain("127.0.0.1");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("reports production affinity stage and settlement on whole-operation timeout", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-09-28T19:00:00.000Z"));
+		try {
+			const registry = createInMemoryBrowserTabLeaseRegistry({
+				createLeaseId: () => "lease-library-diagnostics",
+			});
+			const ledger = createInMemoryProviderInteractionLedger();
+			const resultPromise = runChatgptLibraryFilesCommandForCli(
+				{} as never,
+				{ json: true },
+				{
+					inventoryTimeoutMs: 40,
+					operationTimeoutMs: 25,
+					cleanupTimeoutMs: 10,
+					createClient: async () => ({
+						listLibraryFiles: async (options) =>
+							(await runConfiguredChatgptUtilityOperation({
+								userConfig: {
+									auracallProfile: "runtime-1",
+									browser: { tabConcurrencyMode: "tab-affinity" },
+									profiles: {
+										"runtime-1": {
+											services: {
+												chatgpt: { identity: { accountId: "account-1" } },
+											},
+										},
+									},
+								} as never,
+								browserService: {
+									resolveServiceTarget: vi.fn().mockResolvedValue({
+										host: "127.0.0.1",
+										port: 45015,
+										managedBrowserProfile: "/managed/runtime-1/chatgpt",
+									}),
+								} as never,
+								utilityId: "library-files-diagnostics",
+								mutability: "read-only",
+								options,
+								buildListOptions: async (exactOptions) => exactOptions,
+								run: async (exactOptions) =>
+									new Promise((_resolve, reject) => {
+										exactOptions.abortSignal?.addEventListener(
+											"abort",
+											() => reject(exactOptions.abortSignal?.reason),
+											{ once: true },
+										);
+									}),
+								deps: {
+									createRuntime: () => ({ registry, ledger }) as never,
+									listTargets: vi.fn(async () => [
+										{
+											id: "library-target",
+											url: "https://chatgpt.com/library",
+										},
+									]) as never,
+									openTarget: vi.fn() as never,
+									closeTarget: vi.fn(),
+								},
+							})) as never,
+					}),
+				},
+			);
+
+			await vi.advanceTimersByTimeAsync(25);
+			const result = await resultPromise;
+			const failure = JSON.parse(result.output);
+
+			expect(failure.error).toMatchObject({
+				code: "library_files_inventory_timeout",
+				timeoutMs: 25,
+				diagnostics: {
+					lastStage: "affinity-provider-read",
+					cleanupPhase: "affinity-settlement-settled",
+				},
+			});
+			expect(failure.error.diagnostics.timeline).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						kind: "cleanup",
+						phase: "provider-abort-requested",
+					}),
+					expect.objectContaining({
+						kind: "cleanup",
+						phase: "read-rejected",
+					}),
+					expect.objectContaining({
+						kind: "cleanup",
+						phase: "affinity-settlement-started",
+					}),
+					expect.objectContaining({
+						kind: "cleanup",
+						phase: "affinity-settlement-settled",
+					}),
+				]),
+			);
+			expect((await registry.list())[0]).toMatchObject({
+				state: "idle",
+				targetId: "library-target",
 			});
 		} finally {
 			vi.useRealTimers();

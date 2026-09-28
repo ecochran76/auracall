@@ -629,10 +629,24 @@ describe("llmService project file cache writes", () => {
 			listAccountFiles: vi.fn(async () => files),
 		};
 		const service = new TestLlmService(provider as never, store, cacheContext);
+		const stages: string[] = [];
 
 		try {
-			const result = await service.listAccountFiles({ listOptions: {} });
+			const result = await service.listAccountFiles({
+				listOptions: {
+					libraryInventoryLifecycle: {
+						onStageEntered: (stage) => stages.push(stage),
+						onCleanupPhase: vi.fn(),
+					},
+				},
+			});
 			expect(result).toEqual(files);
+			expect(stages).toEqual([
+				"service-build-list-options",
+				"service-provider-read",
+				"service-cache-context",
+				"service-cache-write",
+			]);
 			const cached = await store.readAccountFiles(cacheContext);
 			expect(cached.items).toEqual(files);
 		} finally {

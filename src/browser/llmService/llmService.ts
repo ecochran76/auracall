@@ -30,6 +30,7 @@ import {
 	writeChatgptRateLimitGuardState,
 } from "../chatgptRateLimitGuard.js";
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
+import { recordLibraryInventoryStage } from "../libraryInventoryDiagnostics.js";
 import {
 	type ConversationContextReadOutcome,
 	type ConversationContextReadReceipt,
@@ -1679,8 +1680,10 @@ export abstract class LlmService {
 		if (!this.provider.listAccountFiles) {
 			throw new Error(`Account file listing is not supported for ${this.providerId}.`);
 		}
+		recordLibraryInventoryStage(options?.listOptions, "service-build-list-options");
 		const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
 		recordBrowserScrapeProviderAction(listOptions, "llmService.listAccountFiles");
+		recordLibraryInventoryStage(listOptions, "service-provider-read");
 		return this.refreshAccountFilesCache(listOptions);
 	}
 
@@ -3415,7 +3418,9 @@ export abstract class LlmService {
 			},
 		);
 		const normalizedFiles = Array.isArray(files) ? files : [];
+		recordLibraryInventoryStage(listOptions, "service-cache-context");
 		const cacheContext = await this.resolveCacheContext(listOptions);
+		recordLibraryInventoryStage(listOptions, "service-cache-write");
 		await this.cacheStore.writeAccountFiles(cacheContext, normalizedFiles);
 		return normalizedFiles;
 	}

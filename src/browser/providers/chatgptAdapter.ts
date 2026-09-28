@@ -56,6 +56,10 @@ import {
 } from "../chatgptRateLimitGuard.js";
 import { captureBrowserPostmortemSnapshot, persistBrowserPostmortemRecord } from "../domDebug.js";
 import { recordDomDriftObservation } from "../domDriftObservations.js";
+import {
+	recordLibraryInventoryCleanupPhase,
+	recordLibraryInventoryStage,
+} from "../libraryInventoryDiagnostics.js";
 import { ChatgptFeatureSchema } from "../llmService/providers/schema.js";
 import {
 	armDownloadCapture,
@@ -1938,6 +1942,26 @@ function withChatgptTimeout<T>(
 	});
 }
 
+async function waitForChatgptCleanup(
+	operation: Promise<unknown>,
+	timeoutMs: number,
+): Promise<"settled" | "timed-out"> {
+	let timeout: NodeJS.Timeout | null = null;
+	try {
+		return await Promise.race([
+			operation.then(
+				() => "settled" as const,
+				() => "settled" as const,
+			),
+			new Promise<"timed-out">((resolve) => {
+				timeout = setTimeout(() => resolve("timed-out"), timeoutMs);
+			}),
+		]);
+	} finally {
+		if (timeout) clearTimeout(timeout);
+	}
+}
+
 function waitForChatgptOperationWithAbort<T>(
 	operation: Promise<T>,
 	signal: AbortSignal | undefined,
@@ -2007,9 +2031,8 @@ async function runChatgptLibraryInventoryOperation<T>(
 	let currentStage: ChatgptLibraryInventoryStage = "interaction-governor";
 	const forwardCallerAbort = () => {
 		if (!controller.signal.aborted) {
-			controller.abort(
-				callerSignal?.reason ?? new Error("ChatGPT Library inventory aborted."),
-			);
+			recordLibraryInventoryCleanupPhase(options, "provider-abort-requested");
+			controller.abort(callerSignal?.reason ?? new Error("ChatGPT Library inventory aborted."));
 		}
 	};
 	if (callerSignal?.aborted) {
@@ -2019,6 +2042,7 @@ async function runChatgptLibraryInventoryOperation<T>(
 	}
 	const operationTimer = setTimeout(() => {
 		if (controller.signal.aborted) return;
+		recordLibraryInventoryCleanupPhase(options, "provider-abort-requested");
 		controller.abort(
 			new ChatgptLibraryInventoryStageTimeoutError(
 				currentStage,
@@ -2037,6 +2061,7 @@ async function runChatgptLibraryInventoryOperation<T>(
 		timeoutMs = CHATGPT_LIBRARY_STAGE_TIMEOUT_MS,
 	): Promise<R> => {
 		currentStage = stage;
+		recordLibraryInventoryStage(scopedOptions, stage);
 		recordBrowserScrapeProviderAction(scopedOptions, `chatgpt.listAccountFiles.${stage}`);
 		return withBrowserScrapePendingOperation(
 			scopedOptions,
@@ -2045,6 +2070,7 @@ async function runChatgptLibraryInventoryOperation<T>(
 				controller.signal.throwIfAborted();
 				const stageTimer = setTimeout(() => {
 					if (controller.signal.aborted) return;
+					recordLibraryInventoryCleanupPhase(scopedOptions, "provider-abort-requested");
 					controller.abort(new ChatgptLibraryInventoryStageTimeoutError(stage, timeoutMs));
 				}, timeoutMs);
 				try {
@@ -4686,25 +4712,25 @@ async function closeChatgptTabConnection(
 		"client" | "targetId" | "shouldClose" | "host" | "port" | "borrowedFromSession"
 	>,
 	options?: BrowserProviderListOptions,
-): Promise<void> {
-	if (connection.borrowedFromSession) return;
+): Promise<"settled" | "timed-out"> {
+	if (connection.borrowedFromSession) return "settled";
 	const retainedSession = options?.providerSession?.value as
 		| Partial<ChatgptScopedTabSessionValue>
 		| undefined;
-	if (options?.useProviderSession && retainedSession?.connection === connection) return;
-	await withChatgptTimeout(
+	if (options?.useProviderSession && retainedSession?.connection === connection) return "settled";
+	const closeStatus = await waitForChatgptCleanup(
 		connection.client.close(),
 		CHATGPT_CDP_CLOSE_TIMEOUT_MS,
-		`Timed out closing the ChatGPT CDP client after ${CHATGPT_CDP_CLOSE_TIMEOUT_MS}ms.`,
-	).catch(() => undefined);
+	);
 	if (!shouldDisposeChatgptTabConnection(connection, options)) {
-		return;
+		return closeStatus;
 	}
 	await CDP.Close({
 		host: connection.host,
 		port: connection.port,
 		id: connection.targetId as string,
 	}).catch(() => undefined);
+	return closeStatus;
 }
 
 export const closeChatgptTabConnectionForTest = closeChatgptTabConnection;
@@ -4718,7 +4744,13 @@ function bindChatgptAbortCleanup(
 	let cleanupPromise: Promise<void> | null = null;
 	const closeAbortedConnection = () => {
 		if (cleanupPromise) return;
-		cleanupPromise = closeAbortedChatgptTabConnection(connection, options);
+		recordLibraryInventoryCleanupPhase(options, "abort-cleanup-started");
+		cleanupPromise = closeAbortedChatgptTabConnection(connection, options).then((status) => {
+			recordLibraryInventoryCleanupPhase(
+				options,
+				status === "timed-out" ? "abort-cleanup-timed-out" : "abort-cleanup-settled",
+			);
+		});
 	};
 	const unbind = (() => {
 		if (signal) signal.removeEventListener("abort", closeAbortedConnection);
@@ -4734,7 +4766,7 @@ function bindChatgptAbortCleanup(
 async function closeAbortedChatgptTabConnection(
 	connection: ChatgptTabConnection,
 	options?: BrowserProviderListOptions,
-): Promise<void> {
+): Promise<"settled" | "timed-out"> {
 	const providerSession = options?.providerSession;
 	const retainedConnection = (
 		providerSession?.value as Partial<ChatgptScopedTabSessionValue> | null | undefined
@@ -4745,14 +4777,12 @@ async function closeAbortedChatgptTabConnection(
 		(connection.borrowedFromSession || retainedConnection === connection)
 	) {
 		options.providerSession = undefined;
-		await withChatgptTimeout(
-			providerSession.close(),
+		return waitForChatgptCleanup(
+			Promise.resolve().then(() => providerSession.close()),
 			CHATGPT_CDP_CLOSE_TIMEOUT_MS,
-			`Timed out closing the aborted ChatGPT provider session after ${CHATGPT_CDP_CLOSE_TIMEOUT_MS}ms.`,
-		).catch(() => undefined);
-		return;
+		);
 	}
-	await closeChatgptTabConnection(connection, options);
+	return closeChatgptTabConnection(connection, options);
 }
 
 export const bindChatgptAbortCleanupForTest = bindChatgptAbortCleanup;
@@ -4765,10 +4795,10 @@ async function runWithChatgptAbortBoundConnection<T>(
 	const unbindAbortCleanup = bindChatgptAbortCleanup(connection, options);
 	try {
 		options?.abortSignal?.throwIfAborted();
-		return await waitForChatgptOperationWithAbort(
-			read(connection.client),
-			options?.abortSignal,
-		);
+		return await waitForChatgptOperationWithAbort(read(connection.client), options?.abortSignal);
+	} catch (error) {
+		recordLibraryInventoryCleanupPhase(options, "read-rejected");
+		throw error;
 	} finally {
 		const cleanupStarted = unbindAbortCleanup.cleanupStarted();
 		unbindAbortCleanup();
