@@ -51159,3 +51159,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   and newly recorded workload counts. This admits the observed one-for-one
   foreground use while still rejecting aggregate-unattributed and duplicate
   target creation. The focused nine-case evaluator suite and typecheck pass.
+
+## 2026-09-27 | Issue #93 provider-neutral terminal-session receipts
+
+- Implemented the P56 vertical slice on `feat/issue-93-terminal-receipts`:
+  disabled-by-default schema/config, owner-only allowed-root enforcement,
+  immutable version-1 result and receipt files, hashed session/event identity,
+  bounded error/execution fields, delivery ledger/status, exact digest
+  verification, and idempotent restart reconciliation.
+- Session finalization now persists an enabled-only canonical result before the
+  terminal metadata intent and publishes only afterward. Receipt preparation or
+  publication failure is logged separately and cannot change the provider/model
+  outcome or cause a retry.
+- Provider-free success, error, cancellation, repeated-finalization, crash
+  boundary, traversal/schema, unsafe-permission, and symlink fixtures pass.
+  Browser-profile selection and codex-wake documentation were not touched;
+  installed producer/consumer acceptance remains owned by the Plan 0362 join.

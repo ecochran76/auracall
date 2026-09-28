@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { parseDuration } from '../browser/utils.js';
 import { ChatgptFeatureSchema, GeminiFeatureSchema, GrokFeatureSchema } from '../browser/llmService/providers/schema.js';
+import { parseDuration } from '../browser/utils.js';
 
 // Helper for duration parsing (string "1h" or number ms)
 // biome-ignore lint/style/useNamingConvention: schema helper naming is stable.
@@ -518,6 +518,32 @@ export const OracleRuntimeConfigSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const TerminalSessionReceiptsConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    root: z
+      .string()
+      .trim()
+      .min(1)
+      .refine(
+        (value) => value === 'auracall-home' || /^(?:\/|[A-Za-z]:[\\/]|\\\\)/.test(value),
+        'terminalSessionReceipts.root must be "auracall-home" or an absolute path.',
+      )
+      .optional(),
+    schemaVersion: z.literal(1).default(1),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.enabled && !value.root) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['root'],
+        message: 'terminalSessionReceipts.root is required when receipt emission is enabled.',
+      });
+    }
+  });
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ConfigSchema = z.object({
   version: z.number().optional(),
   globals: z
@@ -587,6 +613,7 @@ export const ConfigSchema = z.object({
   teams: z.record(z.string(), TeamConfigSchema).optional(),
   dev: OracleDevConfigSchema.optional(),
   runtime: OracleRuntimeConfigSchema.optional(),
+  terminalSessionReceipts: TerminalSessionReceiptsConfigSchema.optional(),
 
   // Nested
   browser: BrowserConfigSchema.default({}),

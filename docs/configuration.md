@@ -840,6 +840,52 @@ If the config is missing or invalid, Aura-Call falls back to defaults and prints
 
 Chromium-based browsers usually need both `chromePath` (binary) and `chromeCookiePath` (cookie DB) set so automation can launch the right executable and reuse your login. See [docs/chromium-forks.md](chromium-forks.md) for detailed paths per browser/OS.
 
+## Terminal-session receipts
+
+The provider-neutral terminal-session receipt producer is opt-in and disabled
+when `terminalSessionReceipts` is absent. Enable schema version 1 with one
+explicit allowed root:
+
+```json5
+{
+  terminalSessionReceipts: {
+    enabled: true,
+    schemaVersion: 1,
+    root: "auracall-home", // managed owner-only terminal-session-events child
+  },
+}
+```
+
+`root` may be `auracall-home` or a normalized absolute path. Relative paths,
+path traversal, filesystem roots, symlinks, non-owner paths, and roots or
+managed subdirectories with group/other permission bits fail closed. Newly
+created directories use mode `0700`; immutable result and receipt files use
+mode `0400` on POSIX systems.
+
+For successful terminal sessions, AuraCall writes and syncs the canonical
+result inside the allowed root, persists terminal session metadata containing
+only the relative result locator/digest/size and immutable event identity, and
+then atomically publishes the receipt. Error and cancelled receipts contain no
+raw diagnostic message. A publication failure is retained as delivery status;
+it does not rewrite the session outcome or retry model/provider work.
+
+Use these readback and recovery surfaces:
+
+```sh
+auracall terminal-receipts status
+auracall terminal-receipts status --json
+auracall terminal-receipts status --session <session-id>
+auracall terminal-receipts status --reconcile
+```
+
+Status shows a sanitized root label and fingerprint, schema version, last
+successful emission, last bounded failure, and last reconciliation counters.
+`--session` verifies the receipt identity plus result digest without printing
+the result. `--reconcile` is idempotent: an existing immutable event is
+deduplicated, a terminal error/cancellation can be reconstructed from bounded
+metadata, and a successful session without a durably persisted result intent is
+left without a receipt rather than inferred as successful.
+
 ## Session retention
 
 Each invocation can optionally prune cached sessions before starting new work:

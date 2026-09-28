@@ -1,19 +1,19 @@
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { chmodSync, createWriteStream, lstatSync, mkdirSync } from 'node:fs';
-import type { WriteStream } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import type { WriteStream } from 'node:fs';
+import { chmodSync, createWriteStream, lstatSync, mkdirSync } from 'node:fs';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { getAuracallHomeDir } from './auracallHome.js';
+import { findAllChromeProcesses, isChromeAlive, isPortOpen, isProcessAlive } from './browser/processCheck.js';
 import type {
   BrowserModelStrategy,
   ChatgptToolApprovalPolicy,
   CookieParam,
   DebugPortStrategy,
 } from './browser/types.js';
-import { isChromeAlive, isProcessAlive, isPortOpen, findAllChromeProcesses } from './browser/processCheck.js';
-import type { TransportFailureReason, AzureOptions, ModelName, ThinkingTimeLevel } from './oracle.js';
-import { DEFAULT_MODEL } from './oracle.js';
 import { safeModelSlug } from './oracle/modelResolver.js';
-import { getAuracallHomeDir } from './auracallHome.js';
+import type { AzureOptions, ModelName, ThinkingTimeLevel, TransportFailureReason } from './oracle.js';
+import { DEFAULT_MODEL } from './oracle.js';
 
 export type SessionMode = 'api' | 'browser';
 
@@ -152,6 +152,23 @@ export interface SessionUserErrorMetadata {
   details?: Record<string, unknown>;
 }
 
+export interface SessionTerminalReceiptResultMetadata {
+  locator: string;
+  digest: string;
+  bytes: number;
+}
+
+export interface SessionTerminalReceiptIntentMetadata {
+  schemaVersion: 1;
+  eventKind: 'auracall.session.terminal';
+  eventId: string;
+  idempotencyKey: string;
+  sessionRef: string;
+  terminalState: 'succeeded' | 'error' | 'cancelled';
+  persistedAt: string;
+  result?: SessionTerminalReceiptResultMetadata | null;
+}
+
 export interface StoredRunOptions {
   prompt?: string;
   file?: string[];
@@ -206,6 +223,7 @@ export interface SessionMetadata {
   response?: SessionResponseMetadata;
   transport?: SessionTransportMetadata;
   error?: SessionUserErrorMetadata;
+  terminalReceiptIntent?: SessionTerminalReceiptIntentMetadata;
 }
 
 export type SessionStatus = 'pending' | 'running' | 'completed' | 'error' | 'cancelled';
