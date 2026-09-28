@@ -724,13 +724,20 @@ async function readComposerPopoverEntry(
         .replace(/\\s+/g, ' ')
         .trim()
         .toLowerCase();
+      const primarySelectors = [
+        'span.min-w-0.truncate.shrink-0',
+        'span.max-w-full',
+        'span.truncate',
+      ];
       const root = roots.filter(isVisible).at(-1);
       if (!root) return null;
       root.setAttribute('data-auracall-chatgpt-composer-menu', 'true');
       const items = Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(isVisible)
         .map((item) => {
-          const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
+          const primary = primarySelectors
+            .map((selector) => item.querySelector(selector))
+            .find(Boolean);
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           return {
             label,
@@ -875,6 +882,11 @@ function buildChatgptConnectedAppInventoryExpression(): string {
           && style.visibility !== 'hidden' && style.display !== 'none';
       };
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const primarySelectors = [
+        'span.min-w-0.truncate.shrink-0',
+        'span.max-w-full',
+        'span.truncate',
+      ];
       const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
         .filter(visible);
       const root = roots.at(-1);
@@ -882,7 +894,9 @@ function buildChatgptConnectedAppInventoryExpression(): string {
       return Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(visible)
         .map((item) => {
-          const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
+          const primary = primarySelectors
+            .map((selector) => item.querySelector(selector))
+            .find(Boolean);
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           const icon = item.querySelector(
             '[data-testid="plugin-icon-wrapper"] img, img[src*="/images/ecosystem/apps/"]'
@@ -1042,6 +1056,11 @@ async function activateComposerPopoverItem(
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
+      const primarySelectors = [
+        'span.min-w-0.truncate.shrink-0',
+        'span.max-w-full',
+        'span.truncate',
+      ];
       const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
         .filter(visible);
       const root = roots.at(-1);
@@ -1049,7 +1068,9 @@ async function activateComposerPopoverItem(
       const ranked = Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(visible)
         .map((item) => {
-          const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
+          const primary = primarySelectors
+            .map((selector) => item.querySelector(selector))
+            .find(Boolean);
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           return { item, label, score: score(label) };
         })

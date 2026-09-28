@@ -23595,3 +23595,9 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   that object.
 - Unknown markerless labels, ambiguous matches, rows ending in `Connect`, and
   absent or mismatched connector objects remain fail-closed before Send.
+- Do not express preferred DOM selectors as one comma-separated
+  `querySelector()` argument. CSS selector lists return the first matching node
+  in document order, so an outer description wrapper can precede the intended
+  exact-label node. Query each selector separately in priority order and use
+  the first result; apply that same extraction rule to inventory, filtered
+  drawer readback, and activation.

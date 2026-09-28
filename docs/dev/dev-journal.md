@@ -51560,3 +51560,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `evt_45d98dd41979596590b284b8cc8d49494059c4e26a8e38bd19eebfbe7091f7a0`
   was already terminal on first authenticated observation. Per the no-resubmit
   and no-terminal-arm rules, no retry or wake was created.
+- A new installed run, `github-wake-1790631700`, used the current-model
+  strategy and reached connected-app discovery. It observed the selectable
+  GitHub row but failed closed before Send because the inventory label included
+  the adjacent description text. Receipt
+  `evt_66eef8046cb8b3048b22e2f5ffbac831af918898fd575d5492e164e77ba7a3ff`
+  is terminal; the session was not retried and no wake was armed.
+- CDP inspection proved the exact DOM cause: a comma-separated selector list
+  returned an earlier outer `span.truncate` before the later exact-label span.
+  Connected-app inventory, filtered-menu readback, and activation now query
+  primary-label selectors in explicit priority order.

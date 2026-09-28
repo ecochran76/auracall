@@ -162,6 +162,8 @@ describe('chatgpt composer tool selection', () => {
     const expression = buildChatgptConnectedAppInventoryExpressionForTest();
     expect(expression).toContain('"github"');
     expect(expression).toContain('knownAppLabels.has(label.toLowerCase())');
+    expect(expression).toContain('const primarySelectors = [');
+    expect(expression).toContain('.map((selector) => item.querySelector(selector))');
     expect(
       resolveChatgptConnectedAppSelectionForTest('github', [
         { label: 'GitHub', selectionState: 'selectable' },

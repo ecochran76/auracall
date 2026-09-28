@@ -1,6 +1,6 @@
 # ChatGPT Connected-App Selection Reliability | 0374-2026-09-28
 
-State: CLOSED
+State: OPEN
 Lane: P74
 Work item: #121
 Source base: `origin/main` at `fe6375955848afabacd9ef554dc943529866bcd1`
@@ -129,3 +129,22 @@ explicitly unaccepted until a separately authorized fresh installed run.
   provider response, and automatic Codex resumption remain unexercised in one
   complete installed run. The new independent blocker is model-label drift,
   not connector selection.
+
+## Current Installed Reproduction | Exact Label Extraction
+
+- Submitted exactly one new installed run, `github-wake-1790631700`, with
+  `--browser-model-strategy current` so issue 121 acceptance did not depend on
+  the unrelated `6 Pro` selector drift.
+- The run remained pre-Send and retry-safe, but exposed the remaining issue-121
+  defect: inventory observed `GitHubTriage PRs, issues, CI, and publish flows`
+  as selectable while resolution reported the GitHub capability missing.
+- Screenshot/CDP inspection proved the row contains an inner exact `GitHub`
+  span followed by a description span. The comma-separated primary-label
+  selector returned the earlier outer wrapper in document order, concatenating
+  the label and description.
+- Regression coverage now requires primary selectors to be queried in explicit
+  priority order. The same extraction contract is used for initial inventory,
+  filtered drawer readback, and row activation.
+- Terminal error receipt:
+  `evt_66eef8046cb8b3048b22e2f5ffbac831af918898fd575d5492e164e77ba7a3ff`.
+  The session was not retried and no wake was armed against its terminal receipt.
