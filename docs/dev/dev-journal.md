@@ -51551,3 +51551,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   developer-app `@mention` behavior remains unchanged. Focused tests and
   typecheck pass; no Send, approval, `Answer now`, provider request, session
   retry, or wake action occurred.
+- Installed corrected PR tip `b5f8c46f7`, restarted only the loopback API,
+  and submitted one fresh read-only GitHub run, `github-wake-1790616900`.
+  It terminated at the pre-effect model gate because ChatGPT exposed `6Pro`
+  while the configured selector requested `6 Pro`; connector selection and
+  Send were never reached.
+- Verified terminal error receipt
+  `evt_45d98dd41979596590b284b8cc8d49494059c4e26a8e38bd19eebfbe7091f7a0`
+  was already terminal on first authenticated observation. Per the no-resubmit
+  and no-terminal-arm rules, no retry or wake was created.

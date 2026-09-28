@@ -109,3 +109,23 @@ explicitly unaccepted until a separately authorized fresh installed run.
 - Next blocker: diagnose the installed `capabilities` command's non-terminating
   lifecycle without weakening connected-app discovery or bypassing its browser
   operation lease, then request a distinct fresh acceptance.
+
+## Corrected Installed Run | Terminal Before Connector Selection
+
+- Installed corrected PR tip `b5f8c46f7f06ee837190665380bef9769c7d5314`
+  into the user runtime, restarted only `auracall-api.service`, and verified
+  byte parity for the changed composer-tool and ecosystem-mention modules.
+- Submitted exactly one fresh authorized read-only run:
+  `github-wake-1790616900`, using AuraCall runtime profile `wsl-chrome-3` and
+  stable capability `chatgpt.apps.github`.
+- The run terminated before connector selection or Send because the model
+  switcher exposed `6Pro` while the configured selector requested `6 Pro`.
+  The provider boundary remained `pre_effect` and `retrySafe=true`.
+- AuraCall published verified terminal error receipt
+  `evt_45d98dd41979596590b284b8cc8d49494059c4e26a8e38bd19eebfbe7091f7a0`.
+  The receipt was already terminal at the first authenticated observation, so
+  no wake was armed and the session was not retried.
+- Result: receipt publication passed again; the corrected connector selection,
+  provider response, and automatic Codex resumption remain unexercised in one
+  complete installed run. The new independent blocker is model-label drift,
+  not connector selection.
