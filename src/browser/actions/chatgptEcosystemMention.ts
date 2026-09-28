@@ -13,6 +13,12 @@ export interface ChatgptEcosystemMentionSelection {
 	pluginId: string | null;
 }
 
+export interface ChatgptObservedEcosystemMentionRequest {
+	label: string;
+	/** Connected capabilities may use an empty composer in a bound conversation. */
+	requireFreshConversation?: boolean;
+}
+
 export async function readChatgptEcosystemMention(
 	client: ChromeClient,
 ): Promise<ChatgptEcosystemMentionSelection | null> {
@@ -46,6 +52,27 @@ export async function ensureChatgptEcosystemMention(
 	if (!request.label.trim() || acceptedPluginIds.length === 0) {
 		throw new Error("ChatGPT ecosystem mention requires a label and at least one app identity.");
 	}
+	await selectChatgptEcosystemMention(client, request, acceptedPluginIds);
+}
+
+export async function selectChatgptEcosystemMentionWithObservedIdentity(
+	client: ChromeClient,
+	request: ChatgptObservedEcosystemMentionRequest,
+): Promise<ChatgptEcosystemMentionSelection> {
+	const mention = await selectChatgptEcosystemMention(client, request, null);
+	if (!mention.pluginId) {
+		throw new Error(
+			`Unable to verify ChatGPT app ${request.label}: the selected ecosystem mention exposed no provider identity.`,
+		);
+	}
+	return mention;
+}
+
+async function selectChatgptEcosystemMention(
+	client: ChromeClient,
+	request: ChatgptObservedEcosystemMentionRequest,
+	acceptedPluginIds: string[] | null,
+): Promise<ChatgptEcosystemMentionSelection> {
 	const requireFreshConversation = request.requireFreshConversation !== false;
 	const pristine = await client.Runtime.evaluate({
 		expression: `(() => {
@@ -105,13 +132,15 @@ export async function ensureChatgptEcosystemMention(
 		!selected.ok ||
 		!normalize(selected.matchedLabel).includes(normalize(request.label)) ||
 		!mention ||
-		!acceptedPluginIds.includes(normalizeAppIdentity(mention.pluginId))
+		(acceptedPluginIds === null && normalize(mention.label) !== normalize(request.label)) ||
+		(acceptedPluginIds !== null && !acceptedPluginIds.includes(normalizeAppIdentity(mention.pluginId)))
 	) {
 		const diagnostic = await readMentionPickerDiagnostic(client);
 		throw new Error(
 			`Unable to select ChatGPT developer app ${request.label} from the composer mention picker: ${selected.reason ?? "exact app pill not verified"} (${diagnostic}).`,
 		);
 	}
+	return mention;
 }
 
 export async function assertChatgptEcosystemMentionSelected(

@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	ensureChatgptEcosystemMention,
+	selectChatgptEcosystemMentionWithObservedIdentity,
 	assertChatgptEcosystemMentionSelected,
 	readChatgptEcosystemMention,
 } from "../../src/browser/actions/chatgptEcosystemMention.js";
@@ -109,6 +110,52 @@ describe("ChatGPT ecosystem mention selection", () => {
 			expression.includes("pills.length === 0"),
 		);
 		expect(pristineExpression).toContain("(false ? turns.length === 0 : true)");
+	});
+
+	it("captures provider identity from a verified connected-app mention when menu rows omit it", async () => {
+		const Runtime = {
+			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+				if (expression.includes("pills.length === 0")) return { result: { value: true } };
+				if (expression.includes("document.getSelection")) return { result: { value: true } };
+				return {
+					result: {
+						value: { label: "GitHub", pluginId: "plugin:connector_github" },
+					},
+				};
+			}),
+		};
+		const Input = { insertText: vi.fn(async () => undefined) };
+		uiMocks.pressButton
+			.mockResolvedValueOnce({ ok: true })
+			.mockResolvedValueOnce({ ok: true, matchedLabel: "GitHub" });
+
+		await expect(
+			selectChatgptEcosystemMentionWithObservedIdentity(
+				{ Runtime, Input } as never,
+				{ label: "GitHub", requireFreshConversation: false },
+			),
+		).resolves.toEqual({ label: "GitHub", pluginId: "plugin:connector_github" });
+		expect(Input.insertText).toHaveBeenCalledWith({ text: "@GitHub" });
+	});
+
+	it("fails closed when a markerless app mention exposes no provider identity", async () => {
+		const Runtime = {
+			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+				if (expression.includes("pills.length === 0")) return { result: { value: true } };
+				if (expression.includes("document.getSelection")) return { result: { value: true } };
+				return { result: { value: { label: "GitHub", pluginId: null } } };
+			}),
+		};
+		uiMocks.pressButton
+			.mockResolvedValueOnce({ ok: true })
+			.mockResolvedValueOnce({ ok: true, matchedLabel: "GitHub" });
+
+		await expect(
+			selectChatgptEcosystemMentionWithObservedIdentity(
+				{ Runtime, Input: { insertText: vi.fn(async () => undefined) } } as never,
+				{ label: "GitHub", requireFreshConversation: false },
+			),
+		).rejects.toThrow(/exposed no provider identity/);
 	});
 
 	it("rejects a pill from a different app identity", async () => {

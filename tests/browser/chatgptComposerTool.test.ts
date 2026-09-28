@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
+  buildChatgptConnectedAppInventoryExpressionForTest,
   buildComposerChipVisibleExpressionForTest,
   ensureChatgptComposerTool,
   isNonPersistentComposerToolForTest,
@@ -10,6 +11,15 @@ import {
   resolveComposerToolLocationForTest,
   resolveCurrentComposerToolSelectionForTest,
 } from '../../src/browser/actions/chatgptComposerTool.js';
+
+const ecosystemMocks = vi.hoisted(() => ({
+  selectWithObservedIdentity: vi.fn(),
+}));
+
+vi.mock('../../src/browser/actions/chatgptEcosystemMention.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/browser/actions/chatgptEcosystemMention.js')>()),
+  selectChatgptEcosystemMentionWithObservedIdentity: ecosystemMocks.selectWithObservedIdentity,
+}));
 
 describe('chatgpt composer tool selection', () => {
   test('recognizes durable non-plugin inline tool pills in the current composer', () => {
@@ -155,6 +165,66 @@ describe('chatgpt composer tool selection', () => {
         { label: 'Future App', selectionState: 'selectable' },
       ]),
     ).toMatchObject({ status: 'unverified' });
+  });
+
+  test('keeps markerless known app rows in inventory for mention-picker identity verification', () => {
+    const expression = buildChatgptConnectedAppInventoryExpressionForTest();
+    expect(expression).toContain('"github"');
+    expect(expression).toContain('knownAppLabels.has(label.toLowerCase())');
+    expect(
+      resolveChatgptConnectedAppSelectionForTest('github', [
+        { label: 'GitHub', selectionState: 'selectable' },
+      ]),
+    ).toMatchObject({ status: 'unverified', match: { label: 'GitHub' } });
+  });
+
+  test('routes a markerless GitHub row through identity-verified ecosystem mention selection', async () => {
+    ecosystemMocks.selectWithObservedIdentity.mockResolvedValueOnce({
+      label: 'GitHub',
+      pluginId: 'plugin:connector_github',
+    });
+    const Runtime = {
+      evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+        if (expression.includes('const knownAppLabels')) {
+          return {
+            result: {
+              value: [{ label: 'GitHub', selectionState: 'selectable' }],
+            },
+          };
+        }
+        return {
+          result: {
+            value: {
+              selector: '[data-auracall-chatgpt-composer-menu="true"]',
+              sourceSelector: '.composer-home-top-menu',
+              signature: 'github-markerless',
+              rect: { x: 0, y: 0, width: 320, height: 400 },
+              distanceToAnchor: null,
+              items: [],
+              itemLabels: ['github'],
+            },
+          },
+        };
+      }),
+    };
+
+    await expect(
+      ensureChatgptComposerTool(
+        { Runtime, Input: {}, Page: {} } as never,
+        'github',
+        () => undefined,
+      ),
+    ).resolves.toMatchObject({
+      receipt: {
+        requested: 'github',
+        observed: { id: 'chatgpt.apps.github', kind: 'connected_app', verified: true },
+      },
+      ecosystemMention: { acceptedPluginIds: ['plugin:connector_github'] },
+    });
+    expect(ecosystemMocks.selectWithObservedIdentity).toHaveBeenCalledWith(
+      expect.anything(),
+      { label: 'GitHub', requireFreshConversation: false },
+    );
   });
 
   test('surfaces bounded retry-safe pre-Send evidence for a disconnected provider row', async () => {
