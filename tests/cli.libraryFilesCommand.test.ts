@@ -83,6 +83,7 @@ describe("library-files CLI", () => {
 				}),
 				preserveActiveTab: true,
 				requireExistingTarget: true,
+				skipAccountFileCachePersistence: true,
 			}),
 		);
 		expect(close).toHaveBeenCalledOnce();

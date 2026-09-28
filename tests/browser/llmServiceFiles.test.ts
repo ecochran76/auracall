@@ -654,6 +654,62 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
+	test("returns one-shot Library files without entering pending account cache hooks", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-skip-cache-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		const files: FileRef[] = [
+			{ id: "file-cli", name: "CLI.pdf", provider: "chatgpt", source: "account" },
+		];
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			listAccountFiles: vi.fn(async () => files),
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+		const stages: string[] = [];
+		const resolveCacheContext = vi
+			.spyOn(service, "resolveCacheContext")
+			.mockImplementation(() => new Promise(() => undefined));
+		const writeAccountFiles = vi
+			.spyOn(store, "writeAccountFiles")
+			.mockImplementation(() => new Promise(() => undefined));
+		let deadline: ReturnType<typeof setTimeout> | null = null;
+
+		try {
+			const outcome = await Promise.race([
+				service.listAccountFiles({
+					listOptions: {
+						disableAccountFileListRetry: true,
+						libraryInventoryLifecycle: {
+							onStageEntered: (stage) => stages.push(stage),
+							onCleanupPhase: vi.fn(),
+						},
+						skipAccountFileCachePersistence: true,
+					},
+				}),
+				new Promise<"cache-hooks-pending">((resolve) => {
+					deadline = setTimeout(() => resolve("cache-hooks-pending"), 10);
+				}),
+			]);
+
+			expect(outcome).toEqual(files);
+			expect(provider.listAccountFiles).toHaveBeenCalledOnce();
+			expect(stages).toEqual(["service-build-list-options", "service-provider-read"]);
+			expect(resolveCacheContext).not.toHaveBeenCalled();
+			expect(writeAccountFiles).not.toHaveBeenCalled();
+		} finally {
+			if (deadline) clearTimeout(deadline);
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("does not retry a named ChatGPT Library inventory timeout", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-files-"));
 		setAuracallHomeDirOverrideForTest(homeDir);

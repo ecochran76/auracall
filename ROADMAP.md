@@ -1,5 +1,21 @@
 # Aura-Call Roadmap
 
+- Open P55 / issues 93-98 and 100: [Plan 0362](docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md)
+  governs the declarative, resumable ChatGPT agent-workflow campaign. Current
+  state: explicit `wsl-chrome-3` provenance for issue 94 is integrated and
+  installed-proven; terminal receipts, connected-capability selection, exact
+  Library references, the published codex-wake continuation, soak attribution,
+  effort-selector integration, and combined installed acceptance remain open.
+
+- Provider-free accepted P73 / reopened issue 107: [Plan 0373](docs/dev/plans/0373-2026-09-28-library-cli-cache-persistence-bypass.md)
+  makes the exact one-shot Library CLI return its completed provider inventory
+  before account-cache context resolution or persistence. Account Mirror and
+  general account-file listing retain their existing persistent path; no
+  deadline, target, navigation, or retry semantics changed. One installed
+  read-only acceptance returned promptly but produced an incomplete zero-file
+  inventory. Full acceptance remains unresolved even though the live GitHub
+  issue is currently closed.
+
 - Provider-free accepted P72 / reopened issue 107: [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
   carries a privacy-bounded stage and cleanup timeline through the exact CLI,
   configured-affinity, service, and adapter path. A whole-operation timeout can
