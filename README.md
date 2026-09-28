@@ -210,6 +210,9 @@ auracall features diff --target gemini --json
 # ceiling, so a stalled CDP command fails with its stage before either CLI limit.
 # Abort cleanup also bounds provider-session close to the existing 3-second CDP
 # close window, so a session that will not close cannot hide that named stage.
+# Once the provider returns, this one-shot command returns those files without
+# resolving or writing the account-file cache. Account Mirror and general
+# account-file listing retain their existing cache persistence behavior.
 # Provider results are fixed before independently bounded client cleanup. The
 # utility governor and lease settlement then have a five-second ceiling; if
 # settlement stalls, the original provider error is retained and the unresolved

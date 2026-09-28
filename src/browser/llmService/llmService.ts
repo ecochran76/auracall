@@ -3418,6 +3418,7 @@ export abstract class LlmService {
 			},
 		);
 		const normalizedFiles = Array.isArray(files) ? files : [];
+		if (listOptions.skipAccountFileCachePersistence === true) return normalizedFiles;
 		recordLibraryInventoryStage(listOptions, "service-cache-context");
 		const cacheContext = await this.resolveCacheContext(listOptions);
 		recordLibraryInventoryStage(listOptions, "service-cache-write");

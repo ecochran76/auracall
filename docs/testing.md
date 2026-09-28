@@ -36,6 +36,10 @@
   settlement path. The timeline is capped at 32 closed-vocabulary events and
   contains no URL, target ID, account identity, managed browser profile, or
   provider content.
+  The exact CLI list options also skip account-file cache persistence after the
+  provider result. A pending-hook regression proves the returned inventory does
+  not enter cache-context resolution or cache write, while the adjacent default
+  listing fixture continues to prove general callers persist account files.
   The exact-target fixtures additionally prove adoption of an existing Library
   page through the production target-list dependency without target
   creation/closure, guaranteed lease settlement after post-acquisition setup

@@ -1421,3 +1421,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free diagnostic lane only; integration and separately authorized installed wsl-chrome-3 localization remain open.
     updated_at: 2026-09-28
+  - id: P73
+    objective: Return exact Library CLI provider inventory without waiting for account-file cache persistence.
+    plan: docs/dev/plans/0373-2026-09-28-library-cli-cache-persistence-bypass.md
+    plan_ref: refs/heads/fix/issue-107-library-cache-bypass
+    branch: fix/issue-107-library-cache-bypass
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: fe6375955848afabacd9ef554dc943529866bcd1
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#107]
+    dependencies: [P63, P64, P65, P66, P67, P68, P69, P70, P71, P72]
+    overlaps: [P53, P63, P67, P68, P69, P70, P71, P72]
+    reconciled_overlaps: [P53, P63, P67, P68, P69, P70, P71, P72]
+    reconciliation_note: P73 bypasses account-file cache persistence only for the exact Library CLI; P53 retains rollout authority, P63 retains terminal output, P67-P71 retain provider and cleanup bounds, and P72 retains lifecycle diagnostics.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0373-2026-09-28-library-cli-cache-persistence-bypass.md
+    integration_receipt: null
+    disposition: Provider-free corrective lane only; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-28

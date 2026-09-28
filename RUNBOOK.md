@@ -1,5 +1,19 @@
 # RUNBOOK
 
+## Turn 631 | 2026-09-28
+
+- Closed provider-free P73 / [Plan 0373](docs/dev/plans/0373-2026-09-28-library-cli-cache-persistence-bypass.md)
+  for reopened issue 107 from canonical `fe6375955`. Installed lifecycle
+  diagnostics proved the Library DOM inventory completed in about 23
+  milliseconds and local account-cache context resolution retained the result
+  for about 50.6 seconds.
+- The exact `library-files` CLI now opts out of account-file cache context and
+  persistence after its provider result. A red-before-green pending-hook
+  fixture proves the provider files return without either cache call; default
+  account-file listing continues to persist its cache.
+- No deadline, retry, exact-target, navigation, refresh, creation, disposal, or
+  settlement behavior changed. No installed command or live effect ran.
+
 ## Turn 630 | 2026-09-28
 
 - Closed provider-free P72 / [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)

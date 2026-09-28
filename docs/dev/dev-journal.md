@@ -1,3 +1,22 @@
+## 2026-09-28 | Issue 107 Library CLI cache persistence bypass
+
+- Correct installed diagnostics on canonical `fe6375955` entered
+  `dom-inventory` at `12:53:15.143` and `service-cache-context` at
+  `12:53:15.166`; the provider inventory therefore completed in about 23
+  milliseconds. The CLI requested abort at `12:54:05.757`, then entered
+  `service-cache-write` and settled affinity by `12:54:06.377`.
+- `LlmService.refreshAccountFilesCache` unconditionally joined cache identity
+  resolution and persistence after the provider result. The exact CLI now sets
+  `skipAccountFileCachePersistence` and receives normalized provider files
+  before either cache hook. No other caller sets the option.
+- A red-before-green provider-free regression used a successful provider with
+  pending cache-context and cache-write hooks. It initially returned the
+  `cache-hooks-pending` sentinel, then returned the provider files immediately
+  with neither hook called after the fix. The existing default persistence
+  fixture remains green.
+- No deadline changed. No installed command, browser/provider access, retry,
+  refresh, navigation, target creation, attachment, prompt, or Send ran.
+
 ## 2026-09-28 | Issue 107 Library lifecycle diagnostics
 
 - Correct installed acceptance of canonical `a8d340b03` still returned the

@@ -1,5 +1,12 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P73 / reopened issue 107: [Plan 0373](docs/dev/plans/0373-2026-09-28-library-cli-cache-persistence-bypass.md)
+  makes the exact one-shot Library CLI return its completed provider inventory
+  before account-cache context resolution or persistence. Account Mirror and
+  general account-file listing retain their existing persistent path; no
+  deadline, target, navigation, or retry semantics changed. Installed
+  acceptance is separately gated.
+
 - Provider-free accepted P72 / reopened issue 107: [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
   carries a privacy-bounded stage and cleanup timeline through the exact CLI,
   configured-affinity, service, and adapter path. A whole-operation timeout can
