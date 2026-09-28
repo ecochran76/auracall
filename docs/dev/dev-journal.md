@@ -51118,3 +51118,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   environment/timing gates plus the fixture assumption repaired in this slice.
 - Live acceptance is intentionally isolated to a fresh tab on the explicitly
   selected runtime profile; no affinity-soak tab is reused.
+
+## 2026-09-27 | Plan 0362 declarative agent workflow campaign
+
+- Opened issues 95 through 98 for connected capability selection, exact
+  provider Library references, published codex-wake continuation guidance, and
+  legitimate-activity soak attribution. Existing issues 94 and 93 remain the
+  profile-provenance and terminal-receipt prerequisites.
+- Started four isolated worktrees from canonical `origin/main` at
+  `252439ddcb6a92cd93d59d630861c5dacf20834c`. The active issue-49 soak checkout
+  remains untouched.
+- The primary owns issue 94. Three bounded subagents own issues 93, 95, and 96.
+  Sustained lanes use `gpt-5.6-sol`; no GPT-6 model owns or continues a lane.
+- Live testing is authorized after provider-free gates. Every live packet is
+  bounded, zero-blind-retry, profile-explicit, and stops on its first decisive
+  hard failure.

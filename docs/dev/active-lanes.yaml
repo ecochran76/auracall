@@ -1075,3 +1075,87 @@ lanes:
     integration_receipt: 54d747f6bca13ff8a4be7bf6b0780c4632a4e6fb
     disposition: PR 91 integrated the provider-free repair and bounded live acceptance evidence; issue 90 is closed and the remote topic ref is retained for audit custody.
     updated_at: 2026-09-27
+  - id: P55
+    objective: Repair durable API runtime-profile provenance so explicit wsl-chrome-3 ChatGPT work cannot fall back to default Grok.
+    plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    plan_ref: refs/heads/fix/issue-94-profile-provenance
+    branch: fix/issue-94-profile-provenance
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 252439ddcb6a92cd93d59d630861c5dacf20834c
+    remote_ref: refs/remotes/origin/fix/issue-94-profile-provenance
+    integration: merge
+    work_items: [ecochran76/auracall#94]
+    dependencies: []
+    overlaps: [P56, P58]
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: not-run
+    validation_ref: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    integration_receipt: null
+    disposition: Primary critical-path lane; provider-free repair precedes one bounded installed durable ChatGPT acceptance.
+    updated_at: 2026-09-27
+  - id: P56
+    objective: Emit provider-neutral durable terminal-session receipts after result persistence for event-driven continuation.
+    plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    plan_ref: refs/heads/fix/issue-94-profile-provenance
+    branch: feat/issue-93-terminal-receipts
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 252439ddcb6a92cd93d59d630861c5dacf20834c
+    remote_ref: refs/remotes/origin/feat/issue-93-terminal-receipts
+    integration: merge
+    work_items: [ecochran76/auracall#93]
+    dependencies: []
+    overlaps: [P55]
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: not-run
+    validation_ref: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    integration_receipt: null
+    disposition: Provider-free producer work may proceed in parallel; installed consumer acceptance depends on P55.
+    updated_at: 2026-09-27
+  - id: P57
+    objective: Let agents discover and declaratively select ChatGPT tools and connected apps without manual CDP or source edits.
+    plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    plan_ref: refs/heads/fix/issue-94-profile-provenance
+    branch: feat/issue-95-chatgpt-connectors
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 252439ddcb6a92cd93d59d630861c5dacf20834c
+    remote_ref: refs/remotes/origin/feat/issue-95-chatgpt-connectors
+    integration: merge
+    work_items: [ecochran76/auracall#95]
+    dependencies: []
+    overlaps: [P58]
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: not-run
+    validation_ref: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    integration_receipt: null
+    disposition: Vertical provider-neutral discovery and ChatGPT selection lane with backward-compatible composerTool semantics.
+    updated_at: 2026-09-27
+  - id: P58
+    objective: Let agents discover and attach exact ChatGPT Library files through a distinct provider-neutral request surface.
+    plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    plan_ref: refs/heads/fix/issue-94-profile-provenance
+    branch: feat/issue-96-library-references
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 252439ddcb6a92cd93d59d630861c5dacf20834c
+    remote_ref: refs/remotes/origin/feat/issue-96-library-references
+    integration: merge
+    work_items: [ecochran76/auracall#96]
+    dependencies: []
+    overlaps: [P55, P57]
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: not-run
+    validation_ref: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
+    integration_receipt: null
+    disposition: Provider-free locator and attachment lane; installed acceptance depends on P55.
+    updated_at: 2026-09-27
