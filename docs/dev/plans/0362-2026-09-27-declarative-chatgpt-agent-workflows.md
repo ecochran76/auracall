@@ -238,3 +238,18 @@ installed candidate passes the combined acceptance; codex-wake resumes from an
 integrity-checked terminal receipt; normal concurrent AuraCall use is accepted
 by attributed soak evaluation; and no required work or unresolved corrective
 finding remains.
+
+## P62 Provider-Free Checkpoint | 2026-09-27
+
+- Branch `fix/issue-100-thinking-selector` was reconciled before its local
+  commit to current `origin/main` at `1b45ca6a2`, after the #93 through #96 and
+  #98 integrations.
+- The exact absent-control outcome is optional only for default/fast/Instant
+  intent. Explicit Medium, High, and Extra High effort and every ambiguous or
+  disabled selector outcome remain fail-closed before Send.
+- Six provider-free focused selector/config suites pass 136 tests; typecheck,
+  scoped Biome lint, the 362-candidate plan audit, and diff hygiene pass. The
+  source slice deliberately performed no install, browser/provider request,
+  push, merge, post-commit rebase, or live retry.
+- P62 remains `OPEN` for integration and any separately authorized installed
+  acceptance; the preserved pre-effect receipt was not retried.

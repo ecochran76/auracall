@@ -23430,3 +23430,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   roots, symlinks, permission failures, and publication failures fail closed
   and remain separately readable without retrying provider work or rewriting a
   completed, failed, or cancelled session.
+
+## 2026-09-27 | Treat absent default-effort controls as provider defaults
+
+- A semantic fast/instant request can select a valid provider model that has no
+  separate reasoning-effort control. Treating that exact absence as selector
+  failure misclassifies provider-default execution and stops before Send.
+- Only `light`/Instant/default effort may continue on the exact
+  `chip-not-found` outcome. Medium, High, and Extra High requests, disabled
+  options, missing menus or options, and unknown outcomes remain fail-closed.
+- Return whether the effort control was actually selected and persist selected
+  thinking-time metadata only after positive confirmation. Requested default
+  effort is not proof that a provider control existed or changed.
