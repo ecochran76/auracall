@@ -51150,3 +51150,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   no Thinking chip after `chatgpt:instant` resolved to Sol with light effort.
   This is a separate selector contract defect tracked as #100. The failure was
   explicitly `pre_effect` and was not retried.
+- The issue-49 soak accepted through 19:55Z, then its 20:00Z snapshot rejected
+  solely on `target-creation-churn` after the authorized #94 request added one
+  `new-conversation` workload and one matching target. Reloads, focuses,
+  warnings, and uncertain outcomes remained zero; the monitor stopped and the
+  failed soak was not restarted.
+- P60 now reconciles creation deltas against both per-workload action counters
+  and newly recorded workload counts. This admits the observed one-for-one
+  foreground use while still rejecting aggregate-unattributed and duplicate
+  target creation. The focused nine-case evaluator suite and typecheck pass.

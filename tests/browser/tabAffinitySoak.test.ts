@@ -141,6 +141,41 @@ describe("tab-affinity soak evidence", () => {
 		});
 	});
 
+	it("allows target creation attributed one-for-one to new foreground work", () => {
+		const current = healthy();
+		current.leaseCount += 1;
+		current.workloads.newConversations += 1;
+		current.targetActions.targetCreations += 1;
+		current.targetActions.navigations += 1;
+		current.targetActionsByWorkload.newConversations.targetCreations += 1;
+		current.targetActionsByWorkload.liveFollow.navigations += 1;
+
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current })).toEqual({
+			accepted: true,
+			hardStops: [],
+		});
+	});
+
+	it("rejects unattributed and duplicate target creation", () => {
+		const unattributed = healthy();
+		unattributed.targetActions.targetCreations += 1;
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current: unattributed })).toEqual(
+			{
+				accepted: false,
+				hardStops: ["target-creation-churn"],
+			},
+		);
+
+		const duplicate = healthy();
+		duplicate.workloads.newConversations += 1;
+		duplicate.targetActions.targetCreations += 2;
+		duplicate.targetActionsByWorkload.newConversations.targetCreations += 2;
+		expect(evaluateTabAffinitySoakSnapshot({ baseline: healthy(), current: duplicate })).toEqual({
+			accepted: false,
+			hardStops: ["target-creation-churn"],
+		});
+	});
+
 	it("allows a settled expired lease to pass through normal TTL retirement", () => {
 		const current = healthy();
 		current.leaseStates.active = 1;

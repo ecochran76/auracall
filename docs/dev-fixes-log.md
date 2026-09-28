@@ -23382,3 +23382,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - A rejected periodic snapshot is terminal immediately. Its monitor must
   cancel the exact crawler, snapshot timer, and paired delayed evaluation wake
   together; do not leave a 24-hour wake for a run that already failed.
+
+## 2026-09-27 | Attribute soak target creation to newly recorded work
+
+- Aggregate target-creation growth alone cannot distinguish legitimate
+  foreground AuraCall use from tab churn. Reconcile each positive aggregate
+  delta against the per-workload action counters and the corresponding newly
+  recorded workload count.
+- Accept only one-for-one attributed growth. A per-workload creation delta
+  larger than its workload delta is duplicate creation; an aggregate delta not
+  explained by the workload buckets is unattributed creation. Both remain
+  immediate hard stops alongside warning, quota, navigation, reload, focus,
+  lease-loss, and outcome-unknown guards.

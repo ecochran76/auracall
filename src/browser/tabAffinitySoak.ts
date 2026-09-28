@@ -50,7 +50,7 @@ export function evaluateTabAffinitySoakSnapshot(input: {
 	if (current.attention.outcomeUnknown > 0) hardStops.push("outcome-unknown");
 	if (current.attention.restartUnverified > 0) hardStops.push("restart-unverified");
 	if (current.attention.expiredIdle > 0) hardStops.push("expired-idle");
-	if (current.targetActions.targetCreations > baseline.targetActions.targetCreations) {
+	if (hasUnexpectedTargetCreation(baseline, current)) {
 		hardStops.push("target-creation-churn");
 	}
 	const baselineNonCrawlerNavigations = nonCrawlerNavigationCount(baseline);
@@ -62,6 +62,31 @@ export function evaluateTabAffinitySoakSnapshot(input: {
 		hardStops.push("reload-churn");
 	if (current.targetActions.focuses > baseline.targetActions.focuses) hardStops.push("focus-churn");
 	return { accepted: hardStops.length === 0, hardStops };
+}
+
+function hasUnexpectedTargetCreation(
+	baseline: BrowserTabConcurrencyStatus,
+	current: BrowserTabConcurrencyStatus,
+): boolean {
+	const totalDelta = current.targetActions.targetCreations - baseline.targetActions.targetCreations;
+	if (totalDelta <= 0) return false;
+
+	const workloadKinds = [
+		["conversations", "conversations"],
+		["newConversations", "newConversations"],
+		["liveFollow", "liveFollow"],
+		["ephemeral", "ephemeral"],
+	] as const;
+	let attributedDelta = 0;
+	for (const [actionKind, workloadKind] of workloadKinds) {
+		const actionDelta =
+			current.targetActionsByWorkload[actionKind].targetCreations -
+			baseline.targetActionsByWorkload[actionKind].targetCreations;
+		const workloadDelta = current.workloads[workloadKind] - baseline.workloads[workloadKind];
+		if (actionDelta < 0 || workloadDelta < 0 || actionDelta > workloadDelta) return true;
+		attributedDelta += actionDelta;
+	}
+	return attributedDelta !== totalDelta;
 }
 
 function unexpectedLostLeaseCount(status: BrowserTabConcurrencyStatus): number {
