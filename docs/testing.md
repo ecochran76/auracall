@@ -1,5 +1,15 @@
 # Testing quickstart
 
+- ChatGPT Library CLI lifecycle contract (provider-free):
+  `pnpm vitest run tests/cli.libraryFilesCommand.test.ts`.
+  This proves that client creation/browser discovery and inventory share one
+  whole-operation deadline; timeout and caller cancellation reach the
+  provider-facing `AbortSignal`; success, provider error, timeout, and
+  cancellation close command-owned resources exactly once; and JSON failures
+  return stable error codes with exit 1 or cancellation exit 130. It does not
+  launch a browser, inspect a provider account, or replace the separately
+  authorized installed `wsl-chrome-3` acceptance.
+
 - Terminal-session receipt producer contract (provider-free):
   `pnpm vitest run tests/docs.codexWakeChatgpt.test.ts tests/terminalSessionReceipts.test.ts tests/http.terminalSessionReceipts.test.ts tests/cli/sessionRunner.test.ts --maxWorkers=1`.
   This proves success/error/cancel receipts, result-before-metadata-before-receipt

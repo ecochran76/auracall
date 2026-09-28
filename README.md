@@ -200,6 +200,10 @@ auracall features diff --target gemini --json
 
 # List usable ChatGPT provider Library files. These stable provider IDs are
 # separate from local paths passed through --file and from composer tools.
+# The complete read-only inventory is bounded to 45 seconds, then AuraCall
+# allows up to 5 seconds for abort-driven browser cleanup before returning.
+# In --json mode, timeout/provider/cancellation failures are structured JSON
+# with a nonzero exit status; SIGINT/SIGTERM/SIGQUIT cancellation exits 130.
 auracall --profile wsl-chrome-3 library-files --json
 
 # Local dev-only OpenAI-compatible responses server
