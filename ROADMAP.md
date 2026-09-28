@@ -1,5 +1,12 @@
 # Aura-Call Roadmap
 
+- Provider-free accepted P71 / reopened issue 107: [Plan 0371](docs/dev/plans/0371-2026-09-28-library-provider-session-close-bound.md)
+  applies the existing three-second CDP close bound to abort-driven borrowed
+  provider-session close. A session that never closes can no longer keep the
+  abort cleanup join pending until the later CLI watchdog masks the named
+  provider-stage error; retained target semantics remain unchanged. Installed
+  acceptance is separately gated.
+
 - Provider-free accepted P70 / reopened issue 107: [Plan 0370](docs/dev/plans/0370-2026-09-28-library-single-read-deadline-margin.md)
   gives one exact-target Library read a 54-second shared operation deadline,
   five-second cleanup bound, and later 60-second watchdog. Explicit no-retry

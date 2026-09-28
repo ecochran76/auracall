@@ -9,7 +9,7 @@
   the installed `wsl-chrome-3` Library inventory.
 
 - ChatGPT Library CLI lifecycle contract (provider-free):
-  `pnpm vitest run tests/cli.libraryFilesCommand.test.ts tests/browser/llmServiceFiles.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts tests/browser/configuredChatgptUtilityAffinity.production.test.ts tests/browser/chatgptPromptAdapter.test.ts`.
+  `pnpm vitest run tests/cli.libraryFilesCommand.test.ts tests/browser/llmServiceFiles.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts tests/browser/configuredChatgptUtilityAffinity.production.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptPromptAdapter.test.ts`.
   This proves that client creation/browser discovery and inventory share one
   54-second operation deadline; timeout and caller cancellation reach the
   provider-facing `AbortSignal`; success, provider error, timeout, and
@@ -26,6 +26,10 @@
   success or a named provider-stage error. A pending-governor fixture proves
   affinity settlement is bounded, preserves that provider error, and retains
   the unresolved lease in its active fence.
+  A fake-clock pending-provider-session-close fixture proves that the named
+  30-second provider-stage timeout returns after the existing three-second CDP
+  close bound even when session close never settles, without closing the
+  retained target.
   The exact-target fixtures additionally prove adoption of an existing Library
   page through the production target-list dependency without target
   creation/closure, guaranteed lease settlement after post-acquisition setup

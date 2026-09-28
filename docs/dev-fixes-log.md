@@ -1,3 +1,11 @@
+- 2026-09-28: Every abort-cleanup branch must share the same bounded close
+  contract before its cleanup promise is joined. A borrowed provider session
+  can bypass the ordinary CDP connection close; awaiting its `close()` without
+  the existing three-second bound lets a later CLI watchdog mask the original
+  named provider-stage error. Initiate session close once, clear the consumed
+  reference, bound only the wait, preserve the original error, and leave the
+  retained target untouched.
+
 - 2026-09-28: Size nested browser deadlines from the observed complete
   single-attempt path, not only nominal adapter timers. Target acquisition,
   adapter abort cleanup, and lease settlement can consume material time around
