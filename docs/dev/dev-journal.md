@@ -51537,3 +51537,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Stopped before Send. No fresh session, provider submission, terminal receipt,
   wake source, or wake record was created; the earlier terminal session was not
   retried. The retained browser remains available for bounded diagnosis.
+- Reopened the implementation after operator correction: connected apps are
+  selected inside the open tool drawer by typing the connector name and
+  activating the filtered row, not through the developer-app `@mention`
+  picker.
+- Screenshot and CDP inspection on the retained authenticated browser proved
+  the exact GitHub flow. The filtered row was activated once and produced a
+  non-editable `[app-mention-name="github"]` object with
+  `app-mention-path="app://connector_76869538009648d5b282a4bb21c3d157"` plus
+  a trailing editable text span. The unsent draft was then cleared.
+- Corrected source now always performs the drawer filter for connected apps,
+  rejects `Connect` rows, and verifies the inline connector path. Private
+  developer-app `@mention` behavior remains unchanged. Focused tests and
+  typecheck pass; no Send, approval, `Answer now`, provider request, session
+  retry, or wake action occurred.

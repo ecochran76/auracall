@@ -1,17 +1,3 @@
-import type { ChromeClient, BrowserLogger } from '../types.js';
-import type {
-  LabelMatchOptions,
-  PressButtonOptions,
-  VisibleMenuInventoryEntry,
-  VisibleMenuInventoryItem,
-} from '../service/ui.js';
-import { ATTACHMENT_MENU_SELECTOR } from '../constants.js';
-import { logDomFailure } from '../domDebug.js';
-import {
-  ensureChatgptEcosystemMention,
-  selectChatgptEcosystemMentionWithObservedIdentity,
-  type ChatgptEcosystemMentionRequest,
-} from './chatgptEcosystemMention.js';
 import {
   resolveBundledServiceAppTokens,
   resolveBundledServiceComposerAliases,
@@ -19,10 +5,18 @@ import {
   resolveBundledServiceComposerFileRequestLabels,
   resolveBundledServiceComposerKnownLabels,
   resolveBundledServiceComposerMoreLabels,
+  resolveBundledServiceComposerTopLevelSentinels,
   resolveBundledServiceComposerTopMenuSignalLabels,
   resolveBundledServiceComposerTopMenuSignalSubstrings,
-  resolveBundledServiceComposerTopLevelSentinels,
 } from '../../services/registry.js';
+import { ATTACHMENT_MENU_SELECTOR } from '../constants.js';
+import { logDomFailure } from '../domDebug.js';
+import type {
+  LabelMatchOptions,
+  PressButtonOptions,
+  VisibleMenuInventoryEntry,
+  VisibleMenuInventoryItem,
+} from '../service/ui.js';
 import {
   collectVisibleMenuInventory,
   dismissOpenMenus,
@@ -31,6 +25,8 @@ import {
   selectAndVerifyNestedMenuPathOption,
   waitForPredicate,
 } from '../service/ui.js';
+import type { BrowserLogger, ChromeClient } from '../types.js';
+import type { ChatgptEcosystemMentionRequest } from './chatgptEcosystemMention.js';
 
 type ComposerToolOutcome =
   | { status: 'already-selected'; label?: string | null }
@@ -166,62 +162,28 @@ export async function ensureChatgptComposerTool(
         [connectedApp.match],
       );
     }
-    if (connectedApp.status === 'unverified') {
-      if (!isKnownConnectedAppLabel(connectedApp.match.label)) {
-        throw createConnectedAppSelectionError(
-          requestedTool,
-          'unverified provider identity',
-          [connectedApp.match],
-        );
-      }
-      await dismissOpenMenus(Runtime).catch(() => false);
-      const observedMention = await selectChatgptEcosystemMentionWithObservedIdentity(client, {
-        label: connectedApp.match.label,
-        requireFreshConversation: false,
-      });
-      const observedPluginId = observedMention.pluginId;
-      if (!observedPluginId) {
-        throw createConnectedAppSelectionError(
-          requestedTool,
-          'unverified provider identity',
-          [connectedApp.match],
-        );
-      }
-      const ecosystemMention: ChatgptEcosystemMentionRequest = {
-        label: connectedApp.match.label,
-        acceptedPluginIds: [observedPluginId],
-        requireFreshConversation: false,
-      };
-      const capabilityId = connectedAppCapabilityId(connectedApp.match.label);
-      logger(`Connected app: ${connectedApp.match.label} (${capabilityId}; identity verified from composer mention)`);
-      return {
-        receipt: {
-          requested: requestedTool,
-          observed: {
-            id: capabilityId,
-            label: connectedApp.match.label,
-            kind: 'connected_app',
-            availability: 'available',
-            connectionState: 'connected',
-            verified: true,
-          },
-        },
-        ecosystemMention,
-      };
+    if (connectedApp.status === 'unverified' && !isKnownConnectedAppLabel(connectedApp.match.label)) {
+      throw createConnectedAppSelectionError(
+        requestedTool,
+        'unverified provider identity',
+        [connectedApp.match],
+      );
     }
-    const ecosystemMention: ChatgptEcosystemMentionRequest = {
-      label: connectedApp.match.label,
-      acceptedPluginIds: connectedApp.acceptedPluginIds,
-      requireFreshConversation: false,
-    };
-    await dismissOpenMenus(Runtime).catch(() => false);
-    await ensureChatgptEcosystemMention(client, ecosystemMention);
-    logger(`Connected app: ${connectedApp.match.label} (${connectedApp.capabilityId})`);
+    const selectedApp = await selectConnectedAppFromComposerDrawer(client, connectedApp.match.label);
+    if (!selectedApp) {
+      throw createConnectedAppSelectionError(
+        requestedTool,
+        'selection not confirmed in composer',
+        [connectedApp.match],
+      );
+    }
+    const capabilityId = connectedAppCapabilityId(connectedApp.match.label);
+    logger(`Connected app: ${connectedApp.match.label} (${capabilityId}; ${selectedApp.connectorPath})`);
     return {
       receipt: {
         requested: requestedTool,
         observed: {
-          id: connectedApp.capabilityId,
+          id: capabilityId,
           label: connectedApp.match.label,
           kind: 'connected_app',
           availability: 'available',
@@ -229,7 +191,6 @@ export async function ensureChatgptComposerTool(
           verified: true,
         },
       },
-      ecosystemMention,
     };
   }
 
@@ -769,7 +730,7 @@ async function readComposerPopoverEntry(
       const items = Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(isVisible)
         .map((item) => {
-          const primary = item.querySelector('span.max-w-full, span.truncate');
+          const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           return {
             label,
@@ -921,7 +882,7 @@ function buildChatgptConnectedAppInventoryExpression(): string {
       return Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(visible)
         .map((item) => {
-          const primary = item.querySelector('span.max-w-full, span.truncate');
+          const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           const icon = item.querySelector(
             '[data-testid="plugin-icon-wrapper"] img, img[src*="/images/ecosystem/apps/"]'
@@ -1004,7 +965,7 @@ export async function prepareChatgptWorkbenchLocalAttachment(
         ? Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
             .filter(visible)
             .map((item) => {
-              const primary = item.querySelector('span.max-w-full, span.truncate');
+              const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
               const label = normalizeText(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
               const fullText = normalizeText(item.innerText || item.textContent || '');
               const description = fullText.toLowerCase().startsWith(label.toLowerCase())
@@ -1088,7 +1049,7 @@ async function activateComposerPopoverItem(
       const ranked = Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(visible)
         .map((item) => {
-          const primary = item.querySelector('span.max-w-full, span.truncate');
+          const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           return { item, label, score: score(label) };
         })
@@ -1150,6 +1111,97 @@ async function searchComposerPopover(
     if (entry && findBestComposerToolItem(entry.items, toolCandidates)) {
       return entry;
     }
+  }
+  return null;
+}
+
+type SelectedConnectedApp = {
+  label: string;
+  connectorPath: string;
+};
+
+async function readSelectedConnectedApp(
+  Runtime: ChromeClient['Runtime'],
+  requestedLabel: string,
+): Promise<SelectedConnectedApp | null> {
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').trim().toLowerCase();
+      const requested = normalize(${JSON.stringify(requestedLabel)});
+      const composer = Array.from(document.querySelectorAll('[contenteditable="true"][role="textbox"]'))
+        .find((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+      if (!composer) return null;
+      const mention = Array.from(composer.querySelectorAll('[app-mention-name]'))
+        .find((node) => normalize(
+          node.getAttribute('app-mention-display-name') ||
+          node.getAttribute('app-mention-name') ||
+          node.textContent
+        ) === requested);
+      if (!mention) return null;
+      const connectorPath =
+        mention.getAttribute('app-mention-path') ||
+        mention.getAttribute('data-prompt-link-href') ||
+        '';
+      if (!connectorPath.startsWith('app://connector_')) return null;
+      return {
+        label: (
+          mention.getAttribute('app-mention-display-name') ||
+          mention.getAttribute('app-mention-name') ||
+          mention.textContent ||
+          ''
+        ).trim(),
+        connectorPath,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value as SelectedConnectedApp | null | undefined;
+  return typeof value?.label === 'string' && typeof value.connectorPath === 'string' ? value : null;
+}
+
+async function selectConnectedAppFromComposerDrawer(
+  client: ChromeClient,
+  requestedLabel: string,
+): Promise<SelectedConnectedApp | null> {
+  const existing = await readSelectedConnectedApp(client.Runtime, requestedLabel);
+  if (existing) return existing;
+
+  const popover = await openComposerPopoverWithCdp(client.Runtime, client.Input, client.Page);
+  if (!popover) return null;
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const composer = Array.from(document.querySelectorAll('[contenteditable="true"][role="textbox"]'))
+        .find((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+      composer?.focus();
+      return Boolean(composer);
+    })()`,
+    returnByValue: true,
+  });
+  const candidates = resolveComposerToolCandidates(requestedLabel);
+  const searched = await searchComposerPopover(client, requestedLabel, candidates);
+  if (!searched) {
+    await clearComposerPopoverSearch(client);
+    await dismissOpenMenus(client.Runtime).catch(() => false);
+    return null;
+  }
+  const activated = await activateComposerPopoverItem(client, candidates);
+  if (!activated) {
+    await clearComposerPopoverSearch(client);
+    await dismissOpenMenus(client.Runtime).catch(() => false);
+    return null;
+  }
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const selected = await readSelectedConnectedApp(client.Runtime, requestedLabel);
+    if (selected) return selected;
   }
   return null;
 }

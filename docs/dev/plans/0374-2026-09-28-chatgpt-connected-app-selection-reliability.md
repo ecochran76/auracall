@@ -8,9 +8,8 @@ Branch: `fix/issue-121-connected-app-selection`
 
 ## Objective
 
-Keep known ChatGPT connected apps on the ecosystem-mention selection path when
-current composer rows omit the legacy DOM markers used to distinguish apps
-from generic tools.
+Select known ChatGPT connected apps through ChatGPT's composer tool drawer and
+verify the inline connector object that selection inserts into the composer.
 
 ## Current State
 
@@ -27,10 +26,12 @@ from generic tools.
 - Recognize exact known connected-app labels from the bundled ChatGPT app
   manifest even when a menu row has no legacy icon, link, identity attribute,
   or Connect marker.
-- Select markerless known apps through the composer ecosystem-mention picker.
-- Require the resulting mention pill to expose a non-empty provider identity
-  before returning a verified connected-app receipt.
-- Retain the observed provider identity for the existing pre-Send recheck.
+- With the drawer open, type the exact connector label into the composer,
+  activate the filtered row once, and never click a `Connect` row.
+- Require the resulting non-editable `[app-mention-name]` object to expose an
+  exact label and `app://connector_...` path before returning a verified
+  connected-app receipt.
+- Leave the separate developer-app `@mention` path unchanged.
 - Add provider-free regressions and update operator-facing documentation.
 
 ## Non-goals
@@ -46,7 +47,7 @@ from generic tools.
 
 - [x] Markerless rows for manifest-known apps remain available for connected-
       app resolution.
-- [x] Their ecosystem mention must expose a provider identity or fail closed.
+- [x] Drawer selection must expose an exact inline connector object or fail closed.
 - [x] Unknown markerless rows remain on the generic-tool path.
 - [x] Existing missing, ambiguous, disconnected, and identity-mismatch cases
       remain fail-closed before Send.
@@ -63,9 +64,14 @@ explicitly unaccepted until a separately authorized fresh installed run.
 
 ## Validation Evidence
 
-- Source checkpoint: `098fc819e70bab95c8863d7ed9b48e3efa466fe5`.
-- Focused selection suites: 30/30 passed.
-- Adjacent prompt and developer-app behavioral suites: 57/57 passed.
+- Superseded source checkpoint: `098fc819e70bab95c8863d7ed9b48e3efa466fe5`
+  used the wrong developer-app `@mention` interaction and is not acceptance evidence.
+- Live screenshot/CDP inspection proved the current drawer contract without
+  Send: opening `Add files and more`, typing `GitHub`, and activating the only
+  filtered row produced `[app-mention-name="github"]` with
+  `app-mention-path="app://connector_76869538009648d5b282a4bb21c3d157"`.
+- Focused corrected selection suites: 28/28 passed.
+- Adjacent prompt and developer-app behavioral suites: 26/26 passed.
 - `pnpm typecheck`: passed.
 - Scoped Biome lint: passed with only the pre-existing CDP naming warnings in
   `chatgptComposerTool.test.ts`.
@@ -75,8 +81,9 @@ explicitly unaccepted until a separately authorized fresh installed run.
 - `tests/browser/llmServicePromptStructure.test.ts` retains one baseline regex
   failure reproduced unchanged on the untouched issue-107 worktree; it is not
   caused by this packet and was not expanded into issue 121.
-- No installed runtime, browser interaction, provider submission, session
-  retry, or wake dispatch was performed.
+- The inspection changed only the unsent composer and then cleared it. No
+  provider submission, session retry, approval, `Answer now`, or wake dispatch
+  was performed.
 
 ## Installed Acceptance | Blocked Before Send
 

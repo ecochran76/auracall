@@ -100,10 +100,10 @@ auracall capabilities --target grok --entrypoint grok-imagine --discovery-action
 # ChatGPT discovery accepts current drawer rows without requiring tabindex and
 # reports selected inline tools only from the active composer form. Connected
 # app results expose metadata.selection.stableId and exactLabel for use as the
-# durable composerTool request value. When current connected-app rows omit
-# provider identity attributes, known app labels are routed through the
-# ecosystem-mention picker and are accepted only after the resulting composer
-# pill exposes a provider identity; arbitrary label-only rows remain untrusted.
+# durable composerTool request value. Connected apps are selected by typing the
+# exact label while the drawer is open and activating the filtered row. The
+# resulting inline object must expose an app://connector_... identity;
+# arbitrary label-only rows remain untrusted.
 
 # Guarded ChatGPT Skill lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 skills list \
@@ -1393,9 +1393,10 @@ Terminology note:
     inventory, linked/authentication state, and current composer visibility.
     An installed app is not reported as currently invocable unless it is
     selectable in the active Chat/Work menu or has an active link. Selectable
-    apps use `invocationMode = composer_mention`; ChatGPT represents the choice
-    as an inline `ecosystemMention` pill and submits the matching `plugin:...`
-    system hint with the prompt. Each observed app includes a
+    apps use `invocationMode = composer_mention`; AuraCall opens the composer
+    tool drawer, types the exact connector name to filter it, activates the
+    matching row, and verifies the resulting inline object by its
+    `app://connector_...` path before prompt text is added. Each observed app includes a
     `metadata.selection` contract with its stable ID, exact label, connection
     state, and provider-identity verification. This inventory is derived from
     exact visible provider rows, so newly visible apps do not require an

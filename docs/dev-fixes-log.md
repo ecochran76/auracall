@@ -23581,15 +23581,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   The editor alone never proves Work, project landing pages remain explicit,
   and an active current-route Work badge remains authoritative.
 
-## 2026-09-28 | Verify markerless connected apps through their composer mention
 
-- Current ChatGPT menu rows can retain an exact known app label while omitting
-  legacy ecosystem icon paths, plugin links, identity attributes, and Connect
-  controls. Falling through to generic tool selection then applies the wrong
-  stayed-selected contract.
-- Use the bundled app manifest only to choose the connected-app path; do not
-  treat it as provider identity. Require the selected ecosystem mention pill
-  to expose a non-empty provider identity and retain that identity for the
-  existing pre-Send recheck.
-- Unknown markerless labels, ambiguous matches, disconnected rows, and absent
-  mention identity remain fail-closed.
+## 2026-09-28 | Select connected apps through filtered composer drawer rows
+
+- Current ChatGPT connected apps live in the composer tool drawer. With the
+  drawer open, type the exact connector name into the focused composer, wait
+  for the filtered row, and activate that row once. Do not route connected
+  apps through the developer-app `@mention` picker.
+- Selection replaces the typed filter with a non-editable inline
+  `[app-mention-name]` object. Verify its exact label and an
+  `app://connector_...` value from `app-mention-path` or
+  `data-prompt-link-href`; ordinary prompt text can then exist before or after
+  that object.
+- Unknown markerless labels, ambiguous matches, rows ending in `Connect`, and
+  absent or mismatched connector objects remain fail-closed before Send.

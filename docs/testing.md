@@ -2,11 +2,10 @@
 
 - ChatGPT connected-app selection reliability (provider-free):
   `pnpm vitest run tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptEcosystemMention.test.ts`.
-  This proves manifest-known app rows remain on the ecosystem-mention path
-  when current menu markup omits legacy app markers, while the selected mention
-  must expose provider identity and the existing exact identity check remains
-  in force before Send. It does not submit a provider prompt or prove a
-  codex-wake dispatch.
+  This proves manifest-known app rows remain on the connected-app path when
+  current menu markup omits legacy app markers, while drawer filtering must
+  produce an exact inline `app://connector_...` object before Send. It does not
+  submit a provider prompt or prove a codex-wake dispatch.
 
 - Provider-interaction lifecycle clock ordering (provider-free):
   `pnpm vitest run tests/browser-service/ledgerInteractionGovernor.test.ts`.
@@ -270,6 +269,11 @@
     before Send. It then uses the shared assistant-response lifecycle so tool
     and app-security approval gates are detected and exposed. Provider/live
     behavior remains unaccepted until separately authorized
+  - connected apps use the open composer tool drawer, not the developer-app
+    `@mention` picker: type the exact connector name into the focused composer,
+    activate the filtered row once, and require the resulting non-editable
+    `[app-mention-name]` object to expose an `app://connector_...` identity
+    before adding prompt text or allowing Send
   - issue-6 fixtures in `tests/browser/chatgptDeveloperAppLifecycle.test.ts`
     cross the real adapter -> shared runBrowserMode -> remote response/P45
     seam with hermetic transport and fail-closed launcher mocks. They prove
