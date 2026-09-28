@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 624 | 2026-09-28
+
+- Closed provider-free P66 / [Plan 0366](docs/dev/plans/0366-2026-09-28-library-lease-recovery.md)
+  for reopened issue 107 from canonical `9fff58ee1`. CodeGraph showed that
+  post-acquisition option/governor setup failures bypassed settlement, leaving
+  the exact Library target actively leased and therefore correctly excluded by
+  the production selector.
+- The repair settles every post-acquisition path, reconciles dead/expired
+  owners, and releases only safe owner-free read-only lease ownership after
+  verifying the exact `/library` route. It does not ignore live ownership or
+  uncertain effects and does not create, close, refresh, or navigate a target.
+- Provider-free production-wiring, dead-owner, registry, affinity, coordinator,
+  and CLI lifecycle fixtures pass. No installed command, browser/provider
+  access, retry, or mutation occurred; exact `wsl-chrome-3` acceptance remains
+  separately governed.
+
 ## Turn 623 | 2026-09-27
 
 - Closed provider-free P65 / [Plan 0365](docs/dev/plans/0365-2026-09-27-library-existing-target-exit.md)

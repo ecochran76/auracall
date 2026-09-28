@@ -5,6 +5,11 @@ import {
 } from "../../packages/browser-service/src/chromeLifecycle.js";
 import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { createLedgerBackedBrowserInteractionGovernor } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
+import {
+	getCurrentTabLeaseOwnerIdentity,
+	type TabLeaseClaim,
+} from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import { reconcileStaleActiveTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
 import { acquireEphemeralBrowserTab } from "../accountMirror/liveFollowTabCoordinator.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
@@ -23,6 +28,8 @@ export interface ConfiguredChatgptUtilityAffinityDeps {
 	listTargets?: typeof listChromeTargets;
 	openTarget?: typeof openChromeTarget;
 	closeTarget?: typeof closeRemoteChromeTarget;
+	currentOwner?: { processId: number; instanceId: string };
+	isOwnerAlive?: (processId: number) => boolean;
 }
 
 export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
@@ -96,6 +103,42 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			targetId,
 			() => undefined,
 		);
+	await reconcileStaleActiveTabLeases({
+		registry: runtime.registry,
+		scope,
+		now,
+		currentOwner: input.deps?.currentOwner ?? getCurrentTabLeaseOwnerIdentity(),
+		isOwnerAlive: input.deps?.isOwnerAlive,
+	});
+	if (
+		input.mutability === "read-only" &&
+		input.options?.requireExistingTarget &&
+		toEndpoint(initialTarget)
+	) {
+		const endpoint = toEndpoint(initialTarget);
+		if (endpoint) {
+			const recoverable = await runtime.registry.list({
+				scope,
+				states: ["idle", "lost"],
+			});
+			for (const lease of recoverable) {
+				if (
+					lease.workload.kind !== "ephemeral" ||
+					lease.effectState === "in-flight" ||
+					lease.effectState === "outcome-unknown"
+				) {
+					continue;
+				}
+				const target = await inspectTarget(endpoint, lease.targetId);
+				if (!target || !isExactRoute(target.url, configuredUrl)) continue;
+				await runtime.registry.releasePreserved({
+					leaseId: lease.leaseId,
+					expectedRevision: lease.revision,
+					now: now().toISOString(),
+				});
+			}
+		}
+	}
 	await retireExpiredChatgptTabLeases({
 		registry: runtime.registry,
 		scope,
@@ -144,45 +187,49 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		},
 		closeTarget: ({ host, port, targetId }) => closeTarget({ host, port }, targetId),
 	});
-	const options = await input.buildListOptions({
-		...(input.options ?? {}),
-		host: tab.endpoint.host,
-		port: tab.endpoint.port,
-		tabTargetId: tab.lease.targetId,
-		tabUrl: tab.lease.targetFingerprint ?? configuredUrl,
-		tabLifecycle: "retain",
-		preserveActiveTab: input.options?.preserveActiveTab ?? input.options?.allowNavigation !== true,
-	});
-	const baseGovernor =
-		options.interactionGovernor ??
-		createBrowserInteractionGovernor({ abortSignal: input.options?.abortSignal });
-	const limits = resolveChatgptTenantLimits(
-		input.userConfig as Record<string, unknown>,
-		runtimeProfileId,
-	);
-	const governor = createLedgerBackedBrowserInteractionGovernor({
-		ledger: runtime.ledger,
-		scope: { provider: "chatgpt", tenantKey, runtimeProfileId, managedBrowserProfile },
-		workloadId: `utility:${input.utilityId}`,
-		operationId: input.utilityId,
-		tabLeaseId: tab.lease.leaseId,
-		policy: {
-			maxConcurrentChats: limits.maxConcurrentChats,
-			maxConversationStartsPerHour: limits.maxChatsPerHour,
-			maxConversationStartsPerDay: limits.maxChatsPerDay,
-			maxInteractionsPerMinute: resolveChatgptInteractionsPerMinute(
-				input.userConfig as Record<string, unknown>,
-				runtimeProfileId,
-			),
-		},
-		baseGovernor,
-		now,
-	});
 	let effectState: "settled" | "outcome-unknown" = "settled";
 	let outcome: "succeeded" | "failed" = "succeeded";
 	let warningRecordError: unknown = null;
+	let governor: ReturnType<typeof createLedgerBackedBrowserInteractionGovernor> | null = null;
+	let providerRunStarted = false;
 	let execution: { ok: true; value: TResult } | { ok: false; error: unknown };
 	try {
+		const options = await input.buildListOptions({
+			...(input.options ?? {}),
+			host: tab.endpoint.host,
+			port: tab.endpoint.port,
+			tabTargetId: tab.lease.targetId,
+			tabUrl: tab.lease.targetFingerprint ?? configuredUrl,
+			tabLifecycle: "retain",
+			preserveActiveTab:
+				input.options?.preserveActiveTab ?? input.options?.allowNavigation !== true,
+		});
+		const baseGovernor =
+			options.interactionGovernor ??
+			createBrowserInteractionGovernor({ abortSignal: input.options?.abortSignal });
+		const limits = resolveChatgptTenantLimits(
+			input.userConfig as Record<string, unknown>,
+			runtimeProfileId,
+		);
+		governor = createLedgerBackedBrowserInteractionGovernor({
+			ledger: runtime.ledger,
+			scope: { provider: "chatgpt", tenantKey, runtimeProfileId, managedBrowserProfile },
+			workloadId: `utility:${input.utilityId}`,
+			operationId: input.utilityId,
+			tabLeaseId: tab.lease.leaseId,
+			policy: {
+				maxConcurrentChats: limits.maxConcurrentChats,
+				maxConversationStartsPerHour: limits.maxChatsPerHour,
+				maxConversationStartsPerDay: limits.maxChatsPerDay,
+				maxInteractionsPerMinute: resolveChatgptInteractionsPerMinute(
+					input.userConfig as Record<string, unknown>,
+					runtimeProfileId,
+				),
+			},
+			baseGovernor,
+			now,
+		});
+		providerRunStarted = true;
 		execution = {
 			ok: true,
 			value: await input.run({
@@ -194,7 +241,10 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		};
 	} catch (error) {
 		outcome = "failed";
-		effectState = input.mutability === "provider-mutating" ? "outcome-unknown" : "settled";
+		effectState =
+			input.mutability === "provider-mutating" && providerRunStarted
+				? "outcome-unknown"
+				: "settled";
 		const warning = classifyStructuredProviderWarning(error);
 		if (warning) {
 			try {
@@ -211,26 +261,65 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		execution = { ok: false, error };
 	}
 	let settlementError: unknown = warningRecordError;
+	if (governor) {
+		try {
+			await governor.close({ outcome, effectState });
+		} catch (error) {
+			settlementError = error;
+		}
+	}
+	let claim: TabLeaseClaim = tab.claim;
 	try {
-		await governor.close({ outcome, effectState });
 		const used = await runtime.registry.recordMeaningfulUse({
-			claim: tab.claim,
+			claim,
 			now: now().toISOString(),
 			idleTtlMs: 5 * 60_000,
 			effectState,
 		});
 		if (!used.ok) throw new Error(`ChatGPT utility heartbeat failed: ${used.conflict.kind}.`);
+		claim = used.value.claim;
+	} catch (error) {
+		settlementError ??= error;
+		const current = (await runtime.registry.list()).find(
+			(lease) =>
+				lease.leaseId === tab.lease.leaseId &&
+				lease.state === "active" &&
+				lease.ownerOperationId === input.utilityId,
+		);
+		if (current) {
+			claim = {
+				leaseId: current.leaseId,
+				revision: current.revision,
+				operationId: input.utilityId,
+			};
+		}
+	}
+	try {
 		const idled = await runtime.registry.idle({
-			claim: used.value.claim,
+			claim,
 			now: now().toISOString(),
 			effectState,
 		});
 		if (!idled.ok)
 			throw new Error(`ChatGPT utility idle transition failed: ${idled.conflict.kind}.`);
 	} catch (error) {
-		settlementError = error;
+		settlementError ??= error;
 	}
 	if (!execution.ok) throw execution.error;
 	if (settlementError) throw settlementError;
 	return execution.value;
+}
+
+function isExactRoute(actualUrl: string, expectedUrl: string): boolean {
+	try {
+		const actual = new URL(actualUrl);
+		const expected = new URL(expectedUrl);
+		const normalizePath = (value: string) => value.replace(/\/+$/, "") || "/";
+		return (
+			actual.origin === expected.origin &&
+			normalizePath(actual.pathname) === normalizePath(expected.pathname)
+		);
+	} catch {
+		return false;
+	}
 }

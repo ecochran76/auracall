@@ -23467,6 +23467,20 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Return whether the effort control was actually selected and persist selected
   thinking-time metadata only after positive confirmation. Requested default
   effort is not proof that a provider control existed or changed.
+
+## 2026-09-28 | Settle leases across the entire post-acquisition region
+
+- A browser target can be acquired before request options, governors, or
+  provider clients are built. The cleanup boundary must begin immediately
+  after acquisition; guarding only the provider callback leaves earlier setup
+  failures able to strand active ownership.
+- Never solve a stranded lease by ignoring the fence. Reconcile only dead or
+  expired owners, retain uncertain-effect fencing, verify the current target's
+  exact route, and release ownership with a preserved-target disposition.
+- Production dependency wiring deserves its own fixture: mocking the Chrome
+  lifecycle module catches cases where injected unit dependencies pass while
+  the default runtime enumerator is omitted or mapped incorrectly.
+
 ## 2026-09-27 | Read-only inventory must acquire before it creates
 
 - A target-listing dependency is not protective unless it is wired into the
