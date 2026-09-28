@@ -1,6 +1,7 @@
 import type * as BaseTypes from '../../packages/browser-service/src/types.js';
 import type { ResolvedUserConfig } from '../config.js';
 import type { ProviderSessionAuthorization } from './providers/providerSessionAuthority.js';
+import type { ChatgptComposerCapabilityReceipt } from './actions/chatgptComposerTool.js';
 
 export type {
   ChromeClient,
@@ -67,6 +68,7 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   conversationId?: string;
   observedModel?: string | null;
   composerTool?: string | null;
+  composerCapability?: ChatgptComposerCapabilityReceipt;
   thinkingTime?: string;
   chatgptProMode?: string;
   chatgptAccountLevel?: string;
@@ -112,6 +114,7 @@ export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   conversationId?: string;
   observedModel?: string | null;
   composerTool?: string | null;
+  composerCapability?: ChatgptComposerCapabilityReceipt;
   thinkingTime?: string;
   chatgptProMode?: string;
   chatgptAccountLevel?: string;

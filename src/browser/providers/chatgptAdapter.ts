@@ -36,7 +36,10 @@ import {
 	resolveChatgptModelSelectionPlan,
 } from "../actions/chatgptComposerMode.js";
 import { ensureChatgptComposerTool } from "../actions/chatgptComposerTool.js";
-import { ensureChatgptEcosystemMention } from "../actions/chatgptEcosystemMention.js";
+import {
+	assertChatgptEcosystemMentionSelected,
+	ensureChatgptEcosystemMention,
+} from "../actions/chatgptEcosystemMention.js";
 import { ensureChatgptWorkModelSelection } from "../actions/chatgptWorkModelSelection.js";
 import { ensureModelSelection } from "../actions/modelSelection.js";
 import { ensurePromptReady } from "../actions/navigation.js";
@@ -357,7 +360,8 @@ const CHATGPT_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens("chat
 	company_knowledge: ["company knowledge"],
 	shopping: ["shopping"],
 });
-const CHATGPT_COMPOSER_MENU_ITEM_SELECTOR = ".__menu-item, [data-fill][tabindex]";
+const CHATGPT_COMPOSER_MENU_ROOT_SELECTOR = ".composer-home-top-menu, .popover";
+const CHATGPT_COMPOSER_MENU_ITEM_SELECTOR = "button, .__menu-item, [data-fill][tabindex]";
 const CHATGPT_INLINE_SELECTION_PILL_SELECTOR = "[data-inline-selection-pill]";
 const CHATGPT_ARTIFACT_KIND_EXTENSIONS = resolveBundledServiceArtifactKindExtensions("chatgpt", {
 	spreadsheet: ["csv", "tsv", "xls", "xlsx", "ods"],
@@ -5915,7 +5919,7 @@ function buildChatgptFeatureProbeExpression(): string {
 	      click(trigger);
 	      await wait(500);
 	      const menu = Array.from(document.querySelectorAll(
-	        'form[data-type="unified-composer"] .popover, form .popover',
+	        ${JSON.stringify(CHATGPT_COMPOSER_MENU_ROOT_SELECTOR)},
 	      )).filter(isVisible).at(-1);
 	      if (menu) {
 	        const items = Array.from(menu.querySelectorAll(
@@ -6086,7 +6090,7 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 	});
 	const visible = await waitForPredicate(
 		client.Runtime,
-		`(() => Array.from(document.querySelectorAll('.popover')).some((node) => {
+		`(() => Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_MENU_ROOT_SELECTOR)})).some((node) => {
 			if (!(node instanceof HTMLElement)) return false;
 			const rect = node.getBoundingClientRect();
 			return rect.width > 0 && rect.height > 0
@@ -6112,7 +6116,7 @@ async function readChatgptComposerSurfaceProbe(client: ChromeClient): Promise<{
 				.find((node) => node.getAttribute('aria-checked') === 'true');
 			const modeText = lower(modeButton?.textContent || '');
 			const composer_mode = modeText === 'work' ? 'work' : (modeText === 'chat' ? 'chat' : null);
-				const menu = Array.from(document.querySelectorAll('.popover'))
+				const menu = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_MENU_ROOT_SELECTOR)}))
 					.filter((node) => isVisible(node)
 						&& Boolean(node.querySelector(${JSON.stringify(CHATGPT_COMPOSER_MENU_ITEM_SELECTOR)})))
 					.at(-1);
@@ -12998,6 +13002,8 @@ export function createChatgptAdapter(): Pick<
 			const composerTool = isImageGeneration
 				? "create image"
 				: (browserConfig?.composerTool ?? null);
+			let composerCapability: BrowserProviderPromptResult["composerCapability"];
+			let selectedEcosystemMention = input.ecosystemMention;
 			const logger = ((message: string): void => {
 				void input.onProgress?.({
 					phase: "submit_path_observed",
@@ -13026,7 +13032,13 @@ export function createChatgptAdapter(): Pick<
 							"ChatGPT composer tools currently belong to Chat mode. Request Chat mode or omit --browser-composer-tool for Work.",
 						);
 					}
-					await ensureChatgptComposerTool(client, composerTool, logger);
+					const capabilitySelection = await ensureChatgptComposerTool(
+						client,
+						composerTool,
+						logger,
+					);
+					composerCapability = capabilitySelection.receipt;
+					selectedEcosystemMention = capabilitySelection.ecosystemMention ?? selectedEcosystemMention;
 					await ensurePromptReady(Runtime, inputTimeoutMs, logger);
 				}
 				if (input.ecosystemMention) {
@@ -13041,6 +13053,7 @@ export function createChatgptAdapter(): Pick<
 						);
 					}
 					await ensureChatgptEcosystemMention(client, input.ecosystemMention);
+					selectedEcosystemMention = input.ecosystemMention;
 					await ensurePromptReady(Runtime, inputTimeoutMs, logger);
 				}
 				const attachments = input.attachments ?? [];
@@ -13075,12 +13088,16 @@ export function createChatgptAdapter(): Pick<
 						);
 					}
 				}
+				const ecosystemMentionBeforeSend = selectedEcosystemMention;
 				await submitPrompt(
 					{
 						runtime: Runtime,
 						input: Input,
 						attachmentNames: attachmentWaitTimedOut ? [] : attachmentNames,
 						inputTimeoutMs,
+						beforeSend: ecosystemMentionBeforeSend
+							? () => assertChatgptEcosystemMentionSelected(client, ecosystemMentionBeforeSend)
+							: undefined,
 						onPromptDispatched: () => logger("Prompt dispatched"),
 					},
 					input.prompt,
@@ -13097,6 +13114,7 @@ export function createChatgptAdapter(): Pick<
 					tabTargetId: connection.targetId ?? null,
 					devtoolsHost: connection.host ?? null,
 					devtoolsPort: connection.port ?? null,
+					composerCapability,
 				};
 			});
 		},

@@ -23346,6 +23346,21 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   missing pre-submit control is a pre-effect selector defect, not evidence of
   browser-profile fallback and not authority for a blind retry.
 
+## 2026-09-27 | Resolve connected capabilities from verified provider rows
+
+- Connected-app names are provider inventory, not a source-code registry.
+  Derive agent-facing app capabilities from the current exact composer rows and
+  expose both a label-derived stable discovery ID and the exact observed label.
+- A label match alone is insufficient authorization. Require one unique row,
+  a selectable/selected connection state, and a provider app/plugin identity;
+  treat `Connect`, missing identity, and duplicate labels as pre-Send stops.
+- Preserve a small receipt boundary: requested selector plus observed ID,
+  label, kind, availability, connection state, and verification flag. Do not
+  persist private provider payloads merely to prove selection.
+- Revalidate the exact ecosystem mention identity immediately before Send.
+  Conversation-bound reuse is safe only with an empty, pill-free composer and
+  does not authorize refresh, navigation, connection, or approval churn.
+
 ## 2026-09-26 | Preserve ChatGPT history titles for metadata-only cache rows
 
 - ChatGPT may expose conversation anchors without usable visible text while

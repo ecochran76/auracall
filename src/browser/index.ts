@@ -27,7 +27,9 @@ import { createChatgptToolApprovalHandler } from "./actions/chatgptToolApproval.
 import {
 	ensureChatgptEcosystemMention,
 	assertChatgptEcosystemMentionSelected,
+	type ChatgptEcosystemMentionRequest,
 } from "./actions/chatgptEcosystemMention.js";
+import type { ChatgptComposerCapabilityReceipt } from "./actions/chatgptComposerTool.js";
 import {
 	ensureGrokLoggedIn,
 	ensureGrokPromptReady,
@@ -117,7 +119,6 @@ import {
 	navigateToPromptReadyWithFallback,
 	readAssistantSnapshot,
 	readAssistantResponseProgress,
-	readCurrentChatgptComposerTool,
 	submitPrompt,
 	uploadAttachmentFile,
 	waitForAssistantResponse,
@@ -1740,6 +1741,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	let selectedChatgptAccountLevel: string | null = null;
 	let selectedChatgptAccountPlanType: string | null = null;
 	let selectedChatgptAccountStructure: string | null = null;
+	let selectedComposerTool: string | null = null;
+	let selectedComposerCapability: ChatgptComposerCapabilityReceipt | null = null;
+	let selectedComposerMention: ChatgptEcosystemMentionRequest | null = null;
 	let chatgptDeepResearchStage: ChatgptDeepResearchStage | null = null;
 	let chatgptDeepResearchPlanAction: "start" | "edit" | null = null;
 	let chatgptDeepResearchStartMethod: "manual" | "auto" | null = null;
@@ -1839,6 +1843,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			tabUrl: lastUrl,
 			conversationId,
 			observedModel,
+			composerTool: selectedComposerTool,
+			composerCapability: selectedComposerCapability ?? undefined,
 			userDataDir,
 			controllerPid: process.pid,
 			thinkingTime: selectedThinkingTime ?? undefined,
@@ -2001,7 +2007,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	let answerText = "";
 	let answerMarkdown = "";
 	let answerHtml = "";
-	let selectedComposerTool: string | null = null;
 	let runStatus: "attempted" | "complete" = "attempted";
 	let connectionClosedUnexpectedly = false;
 	let stopThinkingMonitor: (() => void) | null = null;
@@ -2486,7 +2491,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				);
 			}
 			await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
-			await raceWithDisconnect(
+			const capabilitySelection = await raceWithDisconnect(
 				withRetries(
 					() =>
 						ensureChatgptComposerTool(
@@ -2507,10 +2512,10 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					},
 				),
 			);
-			const composerSelection = await raceWithDisconnect(readCurrentChatgptComposerTool(Runtime));
-			selectedComposerTool =
-				composerSelection.label ??
-				(isChatgptDeepResearchTool(config.composerTool) ? config.composerTool : null);
+			selectedComposerCapability = capabilitySelection.receipt;
+			selectedComposerMention = capabilitySelection.ecosystemMention ?? null;
+			selectedComposerTool = capabilitySelection.receipt.observed.label;
+			await emitRuntimeHint();
 			if (isChatgptDeepResearchTool(selectedComposerTool ?? config.composerTool)) {
 				const identity = await raceWithDisconnect(
 					readVerifiedChatgptAccountIdentity(Runtime, "Deep Research"),
@@ -2603,10 +2608,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					baselineTurns: baselineTurns ?? undefined,
 					inputTimeoutMs: config.inputTimeoutMs ?? undefined,
 					beforeSend: async () => {
-						if (options.ecosystemMention) {
+						const ecosystemMention = selectedComposerMention ?? options.ecosystemMention;
+						if (ecosystemMention) {
 							await assertChatgptEcosystemMentionSelected(
 								client as ChromeClient,
-								options.ecosystemMention,
+								ecosystemMention,
 							);
 							// Send may take effect even if its CDP acknowledgement is lost.
 							providerEffectState = "unknown";
@@ -2802,6 +2808,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
 				observedModel,
 				composerTool: selectedComposerTool,
+				composerCapability: selectedComposerCapability ?? undefined,
 				thinkingTime: selectedThinkingTime ?? undefined,
 				chatgptProMode: selectedChatgptProMode ?? undefined,
 				chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
@@ -3146,6 +3153,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
 			observedModel,
 			composerTool: selectedComposerTool,
+			composerCapability: selectedComposerCapability ?? undefined,
 			thinkingTime: selectedThinkingTime ?? undefined,
 			chatgptProMode: selectedChatgptProMode ?? undefined,
 			chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
@@ -3451,6 +3459,9 @@ async function runRemoteBrowserMode(
 	let selectedChatgptAccountLevel: string | null = null;
 	let selectedChatgptAccountPlanType: string | null = null;
 	let selectedChatgptAccountStructure: string | null = null;
+	let selectedComposerTool: string | null = null;
+	let selectedComposerCapability: ChatgptComposerCapabilityReceipt | null = null;
+	let selectedComposerMention: ChatgptEcosystemMentionRequest | null = null;
 	let chatgptDeepResearchStage: ChatgptDeepResearchStage | null = null;
 	let chatgptDeepResearchPlanAction: "start" | "edit" | null = null;
 	let chatgptDeepResearchStartMethod: "manual" | "auto" | null = null;
@@ -3468,6 +3479,8 @@ async function runRemoteBrowserMode(
 				chromeTargetId: remoteTargetId ?? undefined,
 				tabUrl: lastUrl,
 				observedModel,
+				composerTool: selectedComposerTool,
+				composerCapability: selectedComposerCapability ?? undefined,
 				conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
 				controllerPid: process.pid,
 				thinkingTime: selectedThinkingTime ?? undefined,
@@ -3492,7 +3505,6 @@ async function runRemoteBrowserMode(
 	let answerText = "";
 	let answerMarkdown = "";
 	let answerHtml = "";
-	let selectedComposerTool: string | null = null;
 	let connectionClosedUnexpectedly = false;
 	let stopThinkingMonitor: (() => void) | null = null;
 	let removeDialogHandler: (() => void) | null = null;
@@ -3700,7 +3712,7 @@ async function runRemoteBrowserMode(
 				);
 			}
 			await dismissOpenMenus(Runtime).catch(() => false);
-			await withRetries(
+			const capabilitySelection = await withRetries(
 				() => ensureChatgptComposerTool(client as ChromeClient, config.composerTool as string, logger),
 				{
 					retries: 2,
@@ -3714,10 +3726,10 @@ async function runRemoteBrowserMode(
 					},
 				},
 			);
-			const composerSelection = await readCurrentChatgptComposerTool(Runtime);
-			selectedComposerTool =
-				composerSelection.label ??
-				(isChatgptDeepResearchTool(config.composerTool) ? config.composerTool : null);
+			selectedComposerCapability = capabilitySelection.receipt;
+			selectedComposerMention = capabilitySelection.ecosystemMention ?? null;
+			selectedComposerTool = capabilitySelection.receipt.observed.label;
+			await emitRuntimeHint();
 			if (isChatgptDeepResearchTool(selectedComposerTool ?? config.composerTool)) {
 				const identity = await readVerifiedChatgptAccountIdentity(Runtime, "Deep Research");
 				selectedChatgptAccountLevel = identity.accountLevel ?? null;
@@ -3785,10 +3797,11 @@ async function runRemoteBrowserMode(
 					baselineTurns: baselineTurns ?? undefined,
 					inputTimeoutMs: config.inputTimeoutMs ?? undefined,
 					beforeSend: async () => {
-						if (options.ecosystemMention) {
+						const ecosystemMention = selectedComposerMention ?? options.ecosystemMention;
+						if (ecosystemMention) {
 							await assertChatgptEcosystemMentionSelected(
 								client as ChromeClient,
-								options.ecosystemMention,
+								ecosystemMention,
 							);
 							// Send may take effect even if its CDP acknowledgement is lost.
 							providerEffectState = "unknown";
@@ -3940,6 +3953,7 @@ async function runRemoteBrowserMode(
 				conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
 				observedModel,
 				composerTool: selectedComposerTool,
+				composerCapability: selectedComposerCapability ?? undefined,
 				thinkingTime: selectedThinkingTime ?? undefined,
 				chatgptProMode: selectedChatgptProMode ?? undefined,
 				chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
@@ -4236,6 +4250,7 @@ async function runRemoteBrowserMode(
 			conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
 			observedModel,
 			composerTool: selectedComposerTool,
+			composerCapability: selectedComposerCapability ?? undefined,
 			thinkingTime: selectedThinkingTime ?? undefined,
 			chatgptProMode: selectedChatgptProMode ?? undefined,
 			chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,

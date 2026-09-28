@@ -4,6 +4,8 @@ import type { ChromeClient } from "../types.js";
 export interface ChatgptEcosystemMentionRequest {
 	label: string;
 	acceptedPluginIds: string[];
+	/** Developer-app tests require a new chat; connected capabilities may use an empty composer in a bound conversation. */
+	requireFreshConversation?: boolean;
 }
 
 export interface ChatgptEcosystemMentionSelection {
@@ -44,6 +46,7 @@ export async function ensureChatgptEcosystemMention(
 	if (!request.label.trim() || acceptedPluginIds.length === 0) {
 		throw new Error("ChatGPT ecosystem mention requires a label and at least one app identity.");
 	}
+	const requireFreshConversation = request.requireFreshConversation !== false;
 	const pristine = await client.Runtime.evaluate({
 		expression: `(() => {
       const editor = document.querySelector('#prompt-textarea[contenteditable="true"]');
@@ -51,13 +54,14 @@ export async function ensureChatgptEcosystemMention(
       const text = String(editor.innerText || '').trim();
       const pills = editor.querySelectorAll('[data-inline-selection-pill]');
       const turns = document.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]');
-      return text.length === 0 && pills.length === 0 && turns.length === 0;
+      return text.length === 0 && pills.length === 0
+        && (${JSON.stringify(requireFreshConversation)} ? turns.length === 0 : true);
     })()`,
 		returnByValue: true,
 	});
 	if (pristine.result?.value !== true) {
 		throw new Error(
-			`ChatGPT developer app ${request.label} requires a fresh empty pill-free composer before selection.`,
+			`ChatGPT app ${request.label} requires an empty pill-free composer${requireFreshConversation ? " in a fresh chat" : ""} before selection.`,
 		);
 	}
 

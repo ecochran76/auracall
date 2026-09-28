@@ -78,6 +78,39 @@ describe("ChatGPT ecosystem mention selection", () => {
 		expect(Input.insertText).toHaveBeenCalledWith({ text: "@LitScout" });
 	});
 
+	it("allows a connected capability in a conversation-bound tab while keeping the composer empty", async () => {
+		const evaluatedExpressions: string[] = [];
+		const Runtime = {
+			evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+				evaluatedExpressions.push(expression);
+				if (expression.includes("pills.length === 0")) return { result: { value: true } };
+				if (expression.includes("document.getSelection")) return { result: { value: true } };
+				return {
+					result: {
+						value: { label: "Gmail", pluginId: "plugin:connector_gmail" },
+					},
+				};
+			}),
+		};
+		uiMocks.pressButton
+			.mockResolvedValueOnce({ ok: true })
+			.mockResolvedValueOnce({ ok: true, matchedLabel: "Gmail" });
+
+		await ensureChatgptEcosystemMention(
+			{ Runtime, Input: { insertText: vi.fn(async () => undefined) } } as never,
+			{
+				label: "Gmail",
+				acceptedPluginIds: ["connector_gmail"],
+				requireFreshConversation: false,
+			},
+		);
+
+		const pristineExpression = evaluatedExpressions.find((expression) =>
+			expression.includes("pills.length === 0"),
+		);
+		expect(pristineExpression).toContain("(false ? turns.length === 0 : true)");
+	});
+
 	it("rejects a pill from a different app identity", async () => {
 		const Runtime = {
 			evaluate: vi.fn(async ({ expression }: { expression: string }) => {

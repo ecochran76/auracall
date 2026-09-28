@@ -95,6 +95,8 @@ export async function runBrowserSessionExecution(
         conversationId: (result as { conversationId?: string }).conversationId,
         observedModel: (result as { observedModel?: string | null }).observedModel ?? undefined,
         composerTool: (result as { composerTool?: string | null }).composerTool ?? undefined,
+        composerCapability:
+          (result as BrowserRunResult).composerCapability ?? undefined,
         thinkingTime: (result as { thinkingTime?: string }).thinkingTime,
         chatgptProMode: (result as { chatgptProMode?: string }).chatgptProMode,
         chatgptAccountLevel: (result as { chatgptAccountLevel?: string }).chatgptAccountLevel,
