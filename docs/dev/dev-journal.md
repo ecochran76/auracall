@@ -51236,3 +51236,41 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   provider, install, push, merge, post-commit rebase, or retry effect was
   performed. Installed acceptance for #100 remains outside this bounded source
   slice.
+
+## 2026-09-27 | Issue #97 exact-receipt codex-wake continuation
+
+- Started P59 from canonical `origin/main` at
+  `1b45ca6a209efce33dcba74d08fd4523b249d7a5` in isolated worktree
+  `/home/ecochran76/workspace.local/auracall-issue97` on
+  `feat/issue-97-codex-wake-skill`. No rebase, merge, push, installed-runtime
+  mutation, or provider request belongs to this lane.
+- Re-read the repo-local ChatGPT browser skill and installed `codex-wake`
+  skill. Verified installed `codex-wake 0.6.0`, current upstream generic
+  HTTP/JSON completion-source documentation, and closed paired issue
+  `CochranResearchGroup/codex-wake#169` / merged PR #170 read-only.
+- Found that `/v1/runs/{run_id}/status` cannot prove publication of the #93 CLI
+  terminal-session receipt. Added a privacy-bounded
+  `GET /v1/terminal-receipts/{session_id}` projection over the deterministic
+  event identity. Pending and missing-receipt states do not infer terminal
+  completion; succeeded/error/cancelled require full receipt/result
+  verification; corrupted evidence yields `integrity_error` for one fail-closed
+  continuation.
+- Published a copyable one-submit/one-wake recipe with exact response,
+  session, event, receipt, result, Codex thread, and `wsl-chrome-3` provenance
+  readback; explicit hard stops; bounded wake cancellation/archival/source
+  cleanup; and separate connected-capability and Library-reference examples.
+- Provider-free validation exercises the observation function and HTTP route
+  without browser/provider effects. A temporary-loopback `codex-wake`
+  `--no-dispatch` fixture is the downstream source/predicate/dedup gate; it is
+  not live delivery evidence.
+- Validation passed: 42 focused Vitest cases across receipt production,
+  session finalization, the HTTP observation, and deterministic published-doc
+  checks; TypeScript typecheck; focused Biome check; production build; skill
+  `quick_validate.py`; docs inventory; plan audit; diff hygiene; and an
+  up-to-date CodeGraph index.
+- Installed `codex-wake 0.6.0` provider-free acceptance used one temporary
+  loopback JSON source and a temporary wake root. The pending source armed one
+  app-server-targeted fixture wake; a terminal `succeeded` payload reserved
+  exactly event `evt_test` once under `codex-waked --no-dispatch`. No Codex turn
+  or provider work was dispatched. The wake was cancelled, archived, and its
+  source removed after evidence capture.

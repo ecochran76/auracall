@@ -1,3 +1,14 @@
+- 2026-09-27: Event-driven continuation must observe the exact durable
+  terminal-session receipt, not a broader process or response-run status. The
+  new `GET /v1/terminal-receipts/{session_id}` projection publishes the
+  deterministic receipt event/session identity while work is pending and
+  reports normal terminal states only after the immutable receipt and result
+  digest verify. Missing post-terminal receipts remain pending for
+  reconciliation; malformed or corrupted receipt evidence becomes terminal
+  `integrity_error` so an agent can report once without trusting the result or
+  resubmitting provider work. `codex-wake` should use the receipt's exact
+  idempotency key and resume a verified app-server thread once.
+
 - 2026-09-27: Existing provider Library files need their own request identity
   and pre-Send proof boundary. Do not reinterpret local `--file` paths or
   `composerTool` labels as provider documents. Inventory stable provider IDs

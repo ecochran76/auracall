@@ -9,6 +9,7 @@ import { sessionStore } from "../src/sessionStore.js";
 import {
 	prepareTerminalSessionReceipt,
 	publishTerminalSessionReceipt,
+	readTerminalSessionReceiptObservation,
 	readTerminalSessionReceiptStatus,
 	reconcileTerminalSessionReceipts,
 	verifyTerminalSessionReceipt,
@@ -23,6 +24,94 @@ describe("terminal session receipts", () => {
 		receiptRoot = path.join(temporaryHome, "events");
 		setAuracallHomeDirOverrideForTest(temporaryHome);
 		await sessionStore.ensureStorage();
+	});
+
+	test("exposes one stable provider-neutral observation from pending through terminal success", async () => {
+		const config = enabledConfig(receiptRoot);
+		const session = await sessionStore.createSession(
+			{ prompt: "private observation prompt", model: "gpt-5.6-sol", mode: "browser" },
+			process.cwd(),
+		);
+		const pending = await readTerminalSessionReceiptObservation(session.id, config);
+		expect(pending.value).toMatchObject({
+			object: "auracall_terminal_session_receipt_observation",
+			eventKind: "auracall.session.terminal",
+			status: "pending",
+			completedAt: null,
+			verified: false,
+		});
+		expect(pending.value?.idempotencyKey).toMatch(/^sha256:/);
+
+		const prepared = await prepareTerminalSessionReceipt({
+			config,
+			session,
+			terminalState: "succeeded",
+			resultText: "private result",
+		});
+		const persisted = await sessionStore.updateSession(session.id, {
+			status: "completed",
+			completedAt: "2026-09-27T15:00:00.000Z",
+			terminalReceiptIntent: prepared.value?.intent,
+		});
+		await publishTerminalSessionReceipt({ config, session: persisted });
+
+		const terminal = await readTerminalSessionReceiptObservation(session.id, config);
+		expect(terminal.value).toMatchObject({
+			eventId: pending.value?.eventId,
+			sessionRef: pending.value?.sessionRef,
+			status: "succeeded",
+			completedAt: "2026-09-27T15:00:00.000Z",
+			verified: true,
+			result: { verified: true },
+			errorCode: null,
+		});
+		expect(JSON.stringify(terminal.value)).not.toContain("private observation prompt");
+		expect(JSON.stringify(terminal.value)).not.toContain("private result");
+		expect(JSON.stringify(terminal.value)).not.toContain(receiptRoot);
+	});
+
+	test("keeps a missing receipt pending and surfaces corrupted receipt integrity as terminal", async () => {
+		const config = enabledConfig(receiptRoot);
+		const session = await sessionStore.createSession(
+			{ prompt: "integrity", model: "gpt-5.6-sol" },
+			process.cwd(),
+		);
+		const prepared = await prepareTerminalSessionReceipt({
+			config,
+			session,
+			terminalState: "succeeded",
+			resultText: "stable answer",
+		});
+		const persisted = await sessionStore.updateSession(session.id, {
+			status: "completed",
+			completedAt: "2026-09-27T16:00:00.000Z",
+			terminalReceiptIntent: prepared.value?.intent,
+		});
+
+		const missing = await readTerminalSessionReceiptObservation(session.id, config);
+		expect(missing.value).toMatchObject({
+			status: "pending",
+			completedAt: null,
+			verified: false,
+			errorCode: "receipt_file_missing",
+		});
+
+		const published = await publishTerminalSessionReceipt({ config, session: persisted });
+		const resultPath = path.join(
+			receiptRoot,
+			...(published.value?.result?.locator.split("/") ?? []),
+		);
+		if (process.platform !== "win32") await fs.chmod(resultPath, 0o600);
+		await fs.writeFile(resultPath, "tampered", "utf8");
+		if (process.platform !== "win32") await fs.chmod(resultPath, 0o400);
+
+		const corrupted = await readTerminalSessionReceiptObservation(session.id, config);
+		expect(corrupted.value).toMatchObject({
+			status: "integrity_error",
+			completedAt: "2026-09-27T16:00:00.000Z",
+			verified: false,
+			errorCode: "result_digest_mismatch",
+		});
 	});
 
 	afterEach(async () => {
@@ -257,9 +346,15 @@ describe("terminal session receipts", () => {
 			now: fixedClock("2026-09-27T14:00:01.000Z"),
 		});
 		const verification = await verifyTerminalSessionReceipt(session.id, config);
+		const observation = await readTerminalSessionReceiptObservation(session.id, config);
 
 		expect(reconciliation.value).toMatchObject({ scanned: 1, emitted: 0, failed: 1 });
 		expect(verification.status).toBe("failed");
+		expect(observation.value).toMatchObject({
+			status: "integrity_error",
+			verified: false,
+			errorCode: "successful_result_missing",
+		});
 	});
 
 	test("fails closed for unsafe permissions and symlink roots", async () => {

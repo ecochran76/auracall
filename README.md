@@ -2088,6 +2088,16 @@ session-to-receipt-to-result digest chain, or `--reconcile` to idempotently
 publish receipts missing after a process crash. Publication failure is reported
 separately and never changes the model outcome or retries provider work.
 
+For event-driven agent continuation, the local API exposes the privacy-bounded
+`GET /v1/terminal-receipts/{session_id}` observation. It remains `pending`
+until the exact immutable receipt verifies, then reports `succeeded`, `error`,
+or `cancelled`; receipt-integrity failures report `integrity_error`. Point a
+`codex-wake http-json` source at this route, not the broader run-status route.
+The complete one-request, one-wake, no-resubmit workflow—including exact
+`wsl-chrome-3` provenance checks, hard stops, cancellation, connected-app, and
+Library guidance—is in
+[docs/codex-wake-chatgpt.md](docs/codex-wake-chatgpt.md).
+
 Use `browser.chatgptUrl` (or the legacy alias `browser.url`) to target a specific ChatGPT workspace/folder for browser automation.
 `tabConcurrencyMode` still defaults to `serialized`. When explicitly set to
 `tab-affinity`, ChatGPT conversations, the live-follow crawler, and utility
