@@ -23337,6 +23337,15 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Preserve the existing fail-closed connector check: a row ending in
   `Connect` is inventory, not authorization to grant third-party access.
 
+## 2026-09-27 | Prove selected browser provenance before classifying later UI failures
+
+- A terminal request failure does not erase earlier, independently observed
+  provenance. Preserve runtime hints that identify the selected AuraCall
+  runtime profile, service, managed browser profile, target ID, and URL.
+- Classify a later provider-UI selector failure by its own effect boundary. A
+  missing pre-submit control is a pre-effect selector defect, not evidence of
+  browser-profile fallback and not authority for a blind retry.
+
 ## 2026-09-26 | Preserve ChatGPT history titles for metadata-only cache rows
 
 - ChatGPT may expose conversation anchors without usable visible text while

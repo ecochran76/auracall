@@ -51140,3 +51140,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   removes a stale managed-directory override before selected defaults apply.
   The exact regression and adjacent profile-config suite pass 29 tests plus
   typecheck.
+- P55 was merged through PR #99 at
+  `562884d032c9b312d7e47c1b333c1b113f21bf42`, installed from a detached
+  canonical worktree, and exercised through an isolated API server on port
+  18194. Response `resp_af6395e53fb74c05956de0e9e2559818` reported runtime
+  profile `wsl-chrome-3`, service `chatgpt`, browser profile `wsl-chrome-3`,
+  and target `https://chatgpt.com/`; no default-Grok path appeared.
+- The same request stopped before submission because the current composer had
+  no Thinking chip after `chatgpt:instant` resolved to Sol with light effort.
+  This is a separate selector contract defect tracked as #100. The failure was
+  explicitly `pre_effect` and was not retried.
