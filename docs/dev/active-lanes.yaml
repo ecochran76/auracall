@@ -1223,3 +1223,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free source accepted locally; integration and separately authorized installed wsl-chrome-3 acceptance remain open.
     updated_at: 2026-09-27
+  - id: P64
+    objective: Preserve causal interaction-ledger timestamps when the wall clock moves backward during Library inventory.
+    plan: docs/dev/plans/0364-2026-09-27-library-lifecycle-clock-ordering.md
+    plan_ref: refs/heads/fix/issue-110-library-clock-ordering
+    branch: fix/issue-110-library-clock-ordering
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 34397a20e237544abc8139bf0f10aafb99237f4b
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#110]
+    dependencies: [P63]
+    overlaps: [P53, P63]
+    reconciled_overlaps: [P53, P63]
+    reconciliation_note: P64 changes only the shared ledger-backed governor timestamp ordering; P53 retains rollout/soak authority and P63 retains the Library CLI timeout/cancellation lifecycle contract.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0364-2026-09-27-library-lifecycle-clock-ordering.md
+    integration_receipt: null
+    disposition: Provider-free corrective lane only; integration and installed wsl-chrome-3 acceptance remain open.
+    updated_at: 2026-09-27

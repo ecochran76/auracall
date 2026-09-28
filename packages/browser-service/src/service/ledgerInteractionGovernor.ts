@@ -49,6 +49,14 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 	now?: () => Date;
 }): LedgerBackedBrowserInteractionGovernor {
 	const now = input.now ?? (() => new Date());
+	let latestLifecycleTimestampMs = Number.NEGATIVE_INFINITY;
+	const readLifecycleTimestamp = () => {
+		// The ledger intentionally rejects causal timestamps that move backward.
+		// Preserve that invariant across host wall-clock corrections within this owner.
+		const observedAtMs = now().getTime();
+		latestLifecycleTimestampMs = Math.max(latestLifecycleTimestampMs, observedAtMs);
+		return new Date(latestLifecycleTimestampMs).toISOString();
+	};
 	let activeReservationId: string | null = null;
 	let closed = false;
 
@@ -64,7 +72,7 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 		activeReservationId = null;
 		const settled = await input.ledger.settle({
 			reservationId,
-			settledAt: now().toISOString(),
+			settledAt: readLifecycleTimestamp(),
 			effectState: settlement.effectState ?? "settled",
 			outcome: settlement.outcome ?? "succeeded",
 			stopReason: settlement.reason,
@@ -88,7 +96,7 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 				interactionClass: toLedgerInteractionClass(kind),
 				mutability: isMutating(kind) ? "provider-mutating" : "read-only",
 				startsNewConversation: false,
-				now: now().toISOString(),
+				now: readLifecycleTimestamp(),
 				reservationTtlMs: input.reservationTtlMs ?? 30_000,
 				policy: input.policy,
 			});
@@ -96,7 +104,7 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 			if (closed) {
 				const started = await input.ledger.start({
 					reservationId: admission.reservation.reservationId,
-					startedAt: now().toISOString(),
+					startedAt: readLifecycleTimestamp(),
 				});
 				if (started.ok) {
 					activeReservationId = admission.reservation.reservationId;
@@ -110,7 +118,7 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 			}
 			const started = await input.ledger.start({
 				reservationId: admission.reservation.reservationId,
-				startedAt: now().toISOString(),
+				startedAt: readLifecycleTimestamp(),
 			});
 			if (!started.ok) {
 				throw new Error(`Provider interaction start failed: ${started.reason}.`);
