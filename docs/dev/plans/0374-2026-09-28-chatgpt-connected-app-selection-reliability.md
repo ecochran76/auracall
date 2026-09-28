@@ -66,6 +66,7 @@ explicitly unaccepted until a separately authorized fresh installed run.
 
 - Superseded source checkpoint: `098fc819e70bab95c8863d7ed9b48e3efa466fe5`
   used the wrong developer-app `@mention` interaction and is not acceptance evidence.
+- Corrected source checkpoint: `423131184ab7f3b4876256e63f97402b6e8e1d5b`.
 - Live screenshot/CDP inspection proved the current drawer contract without
   Send: opening `Add files and more`, typing `GitHub`, and activating the only
   filtered row produced `[app-mention-name="github"]` with
