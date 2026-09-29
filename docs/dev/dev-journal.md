@@ -51656,3 +51656,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `visibility_result.classification=visible_prompt_observed`. Cleanup archived
   the wake, removed its source and temporary credential, restarted the wake
   service, and confirmed zero active wakes. Installed acceptance is complete.
+- Issue 128 diagnosis localized the installed inline-file false negative to
+  committed-turn DOM fidelity rather than prompt assembly: the full 10,526
+  characters were queued, but `<br>` boundaries disappeared and a presentation
+  ellipsis remained. Plan 0377 / lane P77 owns a provider-free exactness repair;
+  the terminal session is not eligible for retry.
