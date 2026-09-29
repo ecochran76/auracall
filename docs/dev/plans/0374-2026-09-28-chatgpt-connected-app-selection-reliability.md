@@ -1,6 +1,6 @@
 # ChatGPT Connected-App Selection Reliability | 0374-2026-09-28
 
-State: OPEN
+State: CLOSED
 Lane: P74
 Work item: #121
 Source base: `origin/main` at `fe6375955848afabacd9ef554dc943529866bcd1`
@@ -20,7 +20,7 @@ verify the inline connector object that selection inserts into the composer.
 - A second authorized session, `github-wake-1790647330`, also completed the
   exact connector request and published verified succeeded receipt
   `evt_a90be7c8f0b433bb45632e3f145f2d6546eab591a94f1aa5576acc4ee59a11a4`.
-- Automatic Codex resumption is still unaccepted because both wakes forced the
+- At that checkpoint, automatic Codex resumption was unaccepted because both wakes forced the
   app-server transport into the active writer even though the originating
   Codex TUI exposed tmux pane `%28`. The recipe and skill now preserve
   codex-wake's default current-pane capture for tmux and reserve explicit
@@ -32,6 +32,10 @@ verify the inline connector object that selection inserts into the composer.
   provider effect because two unexpired idle leases fenced browser startup
   after the managed browser endpoint was already absent. That fence was a
   product defect, not an acceptable environmental gate. No wake was armed.
+- Exact-tip session `github-tui-wake-1790653512` completed the connected GitHub
+  request, published a verified succeeded receipt, and triggered one tmux wake
+  with acknowledgement plus `visible_prompt_observed`. Installed acceptance is
+  complete.
 
 ## Scope
 
@@ -65,14 +69,17 @@ verify the inline connector object that selection inserts into the composer.
       remain fail-closed before Send.
 - [x] Focused tests, typecheck, scoped lint/build checks, planning audit, and
       diff hygiene pass.
-- [x] One fresh installed acceptance remains a separate explicit authority
-      gate after source validation.
+- [x] A fresh installed acceptance ran only after its separate explicit
+      authority gate and source validation.
+- [x] One exact terminal receipt triggers the originating Codex TUI through
+      tmux with acknowledgement and visible-prompt evidence.
 
 ## Definition Of Done
 
 The provider-free correction is committed on the issue-backed branch with
-current validation evidence, while the complete codex-wake path remains
-explicitly unaccepted until a separately authorized fresh installed run.
+current validation evidence, and a separately authorized fresh installed run
+proves the complete codex-wake path through terminal receipt, tmux submission
+acknowledgement, and visible-prompt observation.
 
 ## Validation Evidence
 
@@ -314,3 +321,26 @@ explicitly unaccepted until a separately authorized fresh installed run.
   regression. Five focused suites now pass 38/38 with typecheck and scoped
   Biome checks. No provider submission, wake, or source occurred in the failed
   installed retry.
+
+## Accepted Installed Run | Tmux Wake Succeeded
+
+- After a WSL reboot, re-anchored the clean branch at
+  `46742378c8edf31cf9e3c25a4d6092b484995fd9`, rebuilt, and verified complete
+  installed `dist` parity. Fresh runtime evidence showed API PID `31156`, wake
+  monitor PID `31158`, zero active wakes, and no surviving managed Chrome
+  processes before the run.
+- Session `github-tui-wake-1790653512` used AuraCall runtime profile
+  `wsl-chrome-3`, exact connected capability `chatgpt.apps.github`, ChatGPT Pro
+  personal identity, and one provider submission. It returned exactly
+  `Select ChatGPT connected apps through filtered drawer rows`.
+- Receipt `evt_cc2994e4c18d5e8be148c33ec4a4c134c7920f3ab8c6db5895ae3e8c5d005966`
+  verified `succeeded` with result digest
+  `sha256:dbf1bbc9fe31b74e8dc913fff16d0cdaf426c6b3494d9440e5b568171bee7ef0`
+  and 73 bytes.
+- Wake `wake_9159b865e70645b8b12cb5631abf9fb9` matched that exact event in one
+  attempt, selected tmux transport and the original pane, observed submission
+  acknowledgement, and classified visibility as `visible_prompt_observed`.
+- Cleanup archived the wake, removed its HTTP/JSON source, removed the
+  temporary user-manager credential, restarted the persistent wake service,
+  and confirmed zero active wakes. No retry, scheduler control, or
+  materialization control ran.

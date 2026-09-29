@@ -51645,3 +51645,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   across the exact managed browser profile. The new cross-tenant/dead-owner
   regression passes; five focused suites now pass 38/38. No provider request,
   wake, or source was created.
+- After WSL recovery, rebuilt exact commit `46742378c`, verified complete
+  installed `dist` parity, and re-anchored fresh API, process, monitor, wake,
+  tmux, and managed-browser state. Session `github-tui-wake-1790653512`
+  selected the exact connected GitHub capability, submitted once, returned the
+  expected issue title, and published verified succeeded receipt
+  `evt_cc2994e4c18d5e8be148c33ec4a4c134c7920f3ab8c6db5895ae3e8c5d005966`.
+- Wake `wake_9159b865e70645b8b12cb5631abf9fb9` matched the exact receipt in
+  one attempt through tmux, observed acknowledgement, and recorded
+  `visibility_result.classification=visible_prompt_observed`. Cleanup archived
+  the wake, removed its source and temporary credential, restarted the wake
+  service, and confirmed zero active wakes. Installed acceptance is complete.

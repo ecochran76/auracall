@@ -23406,6 +23406,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   and must be released. Preserve live-owner active leases and all in-flight,
   outcome-unknown, retiring, and unresolved lost fences.
 
+## 2026-09-28 | Prove TUI wake success beyond dispatch
+
+- A terminal provider receipt and a submitted wake are separate acceptance
+  boundaries. For an operator-visible Codex TUI continuation, require the wake
+  record to match the exact receipt event, use tmux transport, observe the
+  submission acknowledgement, and record `visible_prompt_observed`.
+- Preserve the wake's captured original pane rather than substituting an
+  app-server thread because an environment also exposes a thread ID. Archive
+  the one-off wake and remove its source and temporary credential only after
+  the resumed turn verifies session provenance and the stored result.
+
 ## 2026-09-27 | Derive durable execution profiles after explicit selection
 
 - A durable request can correctly select an AuraCall runtime profile, browser
