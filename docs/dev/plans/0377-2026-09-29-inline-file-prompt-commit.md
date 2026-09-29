@@ -33,6 +33,9 @@ classification.
 - Source commit `5dc24ca8941ed22875cf01e1fb731a471ebc7a55` now preserves
   `<br>` boundaries, normalizes one terminal presentation ellipsis, and reports
   committed-but-unverified turns with truthful effect state and error wording.
+- Self-review commit `5109272d23018006843d0c26c23a20f0acef082f`
+  confines ellipsis equivalence to post-Send committed-turn verification;
+  pre-Send composer equality remains exact and rejects the same extra glyph.
 
 ## Execution Packet
 

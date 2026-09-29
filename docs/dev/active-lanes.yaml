@@ -1495,7 +1495,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE
-    checkpoint: 5dc24ca8941ed22875cf01e1fb731a471ebc7a55
+    checkpoint: 5109272d23018006843d0c26c23a20f0acef082f
     remote_ref: null
     integration: merge
     work_items: [ecochran76/auracall#128]
