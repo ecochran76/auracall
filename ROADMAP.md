@@ -1,5 +1,13 @@
 # Aura-Call Roadmap
 
+- Active P75 / issue 123: [Plan 0375](docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md)
+  repairs the prerequisite exact-tab admission/config inconsistency exposed by
+  issue 121 acceptance. Foreground conversations, utility/history-
+  materialization, and live-follow work must coexist on distinct exact targets
+  when the managed browser already exists, while genuine profile-wide startup
+  remains exclusive. This lane merges before PR 122 is rebased and does not
+  own connected-app code.
+
 - Provider-free accepted P72 / reopened issue 107: [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
   carries a privacy-bounded stage and cleanup timeline through the exact CLI,
   configured-affinity, service, and adapter path. A whole-operation timeout can

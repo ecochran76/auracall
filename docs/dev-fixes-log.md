@@ -23555,3 +23555,18 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Bound that settlement as one sequence. If it stalls after provider failure,
   preserve the provider error and leave the active lease fence intact; do not
   mark the target idle or silently make it available to another process.
+
+## 2026-09-28 | Discover live managed-profile owners before requesting startup control
+
+- A no-launch endpoint lookup must still inspect the live managed-profile
+  owner. Registry absence is not proof that Chrome is absent, and escalating
+  directly to browser-startup control incorrectly conflicts with unrelated
+  exact-tab leases.
+- Adopt only a responsive DevTools endpoint attributable to that owner. If an
+  owner exists without an attributable responsive endpoint, keep the
+  duplicate-process refusal; if no owner exists, only an explicit launch path
+  may request profile-wide startup control.
+- API concurrency status is aggregate user-scoped evidence. When root config is
+  serialized but a resolved AuraCall runtime profile selects affinity, report
+  the shared affinity registry and ledger rather than an empty serialized
+  projection.

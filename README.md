@@ -2138,7 +2138,10 @@ ownership, retires expired idle tabs, and revisits lost leases until target
 absence or an exact post-close census releases them. An uncertain provider
 outcome remains durable no-retry evidence even after its tab lease retires.
 The API enables this maintenance owner when affinity is selected either at the
-root or by any resolved AuraCall runtime profile.
+root or by any resolved AuraCall runtime profile. Its aggregate
+`/status.tabConcurrency` projection uses the same effective-mode rule, so a
+serialized root does not hide shared affinity coordination selected by a
+nested AuraCall runtime profile.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
 For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:

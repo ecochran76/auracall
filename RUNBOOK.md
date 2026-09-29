@@ -21866,3 +21866,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - PR 91 merged at canonical `54d747f6b`; issue 90 closed as completed and the
   exact topic head is ancestral to the fetched remote main. Retain the remote
   topic ref for audit custody.
+
+## Turn 622 | 2026-09-28
+
+- Opened issue 123 after an exact duplicate search found no matching work item.
+  P75 / Plan 0375 owns the browser-coordination prerequisite on
+  `fix/issue-123-tab-affinity-coexistence` from canonical
+  `fe6375955848afabacd9ef554dc943529866bcd1`.
+- Issue 121 / PR 122 remains connector-only and blocked at installed acceptance.
+  P75 must first reproduce and repair the case where an existing managed
+  browser plus unrelated exact-tab leases incorrectly denies foreground work
+  with `tab-leases-active`.
+- No browser, provider, scheduler, lease override, service restart, installed
+  runtime change, or terminal-session retry occurred in this planning packet.

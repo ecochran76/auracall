@@ -161,7 +161,9 @@ The API exposes that same projection as `/status.tabConcurrency`. Browser Ops
 renders it in the read-only **Browser Tab Concurrency** panel, while
 `auracall api ops-browser-status --port <port>` and MCP
 `api_ops_browser_status` verify the dashboard contract and retain the same
-status payload. The immediate rollback is to set
+status payload. The projection reports affinity whenever the root or any
+resolved AuraCall runtime profile selects affinity because all such profiles
+share the same user-scoped registry and ledger. The immediate rollback is to set
 `browser.tabConcurrencyMode` to `serialized` in the affected AuraCall runtime
 profile and restart the AuraCall service. Serialized mode reports
 `enabled=false` and creates no registry, ledger, or affinity-maintenance owner.
