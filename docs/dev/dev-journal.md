@@ -51669,3 +51669,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Published-diff self-review found and corrected one scope leak: terminal
   ellipsis tolerance now exists only in committed-turn normalization, while
   pre-Send composer verification explicitly remains fail-closed.
+- PR 129 merged the validated repair to `main` at `4e5938cde`; issue 128 closed
+  automatically. Closeout remained documentation-only and did not install,
+  restart services, retry the terminal session, or create another provider
+  effect.
