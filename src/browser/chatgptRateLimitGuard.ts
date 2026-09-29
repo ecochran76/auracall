@@ -160,6 +160,51 @@ export async function writeChatgptRateLimitGuardState(
 	await fs.rename(tempPath, statePath);
 }
 
+export async function recordChatgptRateLimitDetection(options: {
+	profileName?: string | null;
+	managedProfileDir?: string | null;
+	managedProfileRoot?: string | null;
+	cacheRoot?: string | null;
+	action: string;
+	reason?: string | null;
+	now?: number;
+}): Promise<ChatgptRateLimitGuardState> {
+	const now = options.now ?? Date.now();
+	const profile = resolveChatgptRateLimitProfileName(options);
+	const stateOptions = {
+		profileName: profile,
+		managedProfileDir: options.managedProfileDir,
+		managedProfileRoot: options.managedProfileRoot,
+		cacheRoot: options.cacheRoot,
+	};
+	const current = await readChatgptRateLimitGuardState(stateOptions);
+	const cooldownUntil = now + resolveChatgptRateLimitCooldownMs(current, now);
+	const recentMutations = appendChatgptMutationRecord(
+		current?.recentMutations ?? current?.recentMutationAts,
+		options.action,
+		now,
+		CHATGPT_MUTATION_WINDOW_MS,
+	);
+	const next: ChatgptRateLimitGuardState = {
+		provider: "chatgpt",
+		profile,
+		updatedAt: now,
+		lastMutationAt: now,
+		recentMutations,
+		recentMutationAts: recentMutations.map((entry) => entry.at),
+		recentRateLimitDetectionAts: appendChatgptRateLimitDetection(
+			current?.recentRateLimitDetectionAts,
+			now,
+		),
+		cooldownDetectedAt: now,
+		cooldownUntil,
+		cooldownReason: options.reason?.trim() || undefined,
+		cooldownAction: options.action,
+	};
+	await writeChatgptRateLimitGuardState(next, stateOptions);
+	return next;
+}
+
 export function isChatgptRateLimitMessage(message: string): boolean {
 	return /too many requests|too quickly|rate limit/i.test(message);
 }

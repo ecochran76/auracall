@@ -23677,3 +23677,21 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   conversation with a cleared composer proves provider effect even when its
   text remains unverified; report `effect_observed` and do not imply Send may
   have failed.
+
+## 2026-09-29 | Reconcile delayed account-wide ChatGPT rate limits before lease release
+
+- The phrase classifier was already correct, but browser prompt failures only
+  inspected the attached target at the instant the active error was handled.
+  An account-wide warning that appeared later or on a sibling ChatGPT tab
+  could escape the profile guard entirely.
+- After an observed or uncertain provider effect, local and remote browser
+  runs now perform a bounded read-only census of ChatGPT page targets on the
+  same DevTools endpoint. The leased target is checked first; sibling CDP
+  clients are always closed after inspection.
+- A detected warning records the browser-profile cooldown even after provider
+  effect, then returns a structured `retrySafe=false` reconciliation error.
+  Successful terminal paths run the same census before recording success and
+  releasing their lease.
+- The census never navigates, clicks, dismisses, or closes a target and retains
+  only the target identity, URL, sanitized summary, source class, and poll
+  attempt as diagnostic evidence.

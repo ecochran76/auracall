@@ -1,5 +1,11 @@
 # Aura-Call Roadmap
 
+- Active P78 / issue 131: [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)
+  adds bounded terminal reconciliation for delayed account-wide ChatGPT rate
+  limits on the leased or sibling same-profile target. The source packet is
+  provider-free and preserves non-retryable post-effect semantics; installation
+  and live provider acceptance remain separately gated.
+
 - Completed P76 / issue 125: [Plan 0376](docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md)
   integrated the control-less root Chat composer repair through PR 126 at
   canonical `2321ab9a2`, preserving explicit Work evidence and Chat/Work

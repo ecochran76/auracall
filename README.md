@@ -1006,6 +1006,12 @@ Terminology note:
   cooldown expires, Account Mirror closes that warning tab and records one new
   bounded cooldown instead of creating a manual-clear guard. It never clicks or
   dismisses the provider warning.
+  Browser prompt runs also perform a bounded terminal census after a possible
+  provider effect. A delayed `Too many requests` surface on the leased or a
+  sibling ChatGPT tab on the same browser endpoint records the shared browser
+  profile cooldown before the lease is released. Post-effect detections remain
+  non-retryable and never resubmit the prompt; the census does not navigate,
+  click, dismiss, or close provider tabs.
   Full-sweep completion refreshes use a longer collector timeout than ordinary
   refreshes so conservative provider pacing has room to finish a bounded pass;
   ChatGPT identity discovery uses the same 240-second browser-work allowance as
