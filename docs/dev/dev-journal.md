@@ -51618,3 +51618,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   capture when available and reserve explicit app-server targeting for
   headless continuation. The failed wake is archived, its source and temporary
   credential are removed, and no provider retry ran.
+- Retried the installed acceptance with explicit authority after restarting
+  the stale API service. Exact installed `dist` parity, receipt readiness,
+  monitor readiness, and tmux pane `%28` passed, but fresh session
+  `github-tui-wake-1790650111` failed closed at browser startup with
+  `tab-leases-active`. Receipt
+  `evt_0dd700113a904028d83b30c15e5fdc83680a417d6bb58f87d44e74491a691249`
+  verified terminal `error` before provider effect. Read-only concurrency
+  evidence showed two legitimate unexpired settled idle leases and no active,
+  lost, or uncertain lease. No wake/source was armed; the temporary wake-service
+  credential was removed and active wake count remained zero. A distinct fresh
+  run requires new retry authority after lease retirement.

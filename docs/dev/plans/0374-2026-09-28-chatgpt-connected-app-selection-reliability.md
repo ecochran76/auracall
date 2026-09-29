@@ -27,7 +27,11 @@ verify the inline connector object that selection inserts into the composer.
   app-server targeting for headless workflows.
 - Both failed wakes were single-attempt and were not retried. They are archived,
   their sources and temporary service credential are removed, and active wake
-  count is zero. One fresh tmux-targeted installed acceptance remains open.
+  count is zero.
+- Authorized session `github-tui-wake-1790650111` then failed closed before
+  provider effect because two valid unexpired idle tab leases fenced browser
+  startup. No wake was armed. One fresh tmux-targeted installed acceptance
+  remains open and requires new retry authority after the leases retire.
 
 ## Scope
 
@@ -254,3 +258,28 @@ explicitly unaccepted until a separately authorized fresh installed run.
   default tmux capture for a live TUI, explicit validated app-server targeting
   only for a headless workflow. A published-doc regression preserves this
   transport split. One fresh tmux-targeted installed acceptance remains.
+
+## Tmux-Targeted Retry | Pre-Effect Lease Fence
+
+- Restarted the authorized installed API service after its prior PID remained
+  active without a listening socket. The old process required systemd's
+  bounded stop timeout and `SIGKILL`; the replacement became healthy at PID
+  `48758` on configured loopback port `18095`.
+- The complete installed `dist` tree still matched the tested checkout, the
+  schema-v1 terminal receipt route was ready, the persistent wake monitor was
+  active, and the executing Codex TUI exposed tmux pane `%28`.
+- Fresh session `github-tui-wake-1790650111` selected AuraCall runtime profile
+  `wsl-chrome-3` and stable capability `chatgpt.apps.github`, but browser
+  startup failed with `tab-leases-active` before opening or submitting to
+  ChatGPT. Verified terminal error receipt:
+  `evt_0dd700113a904028d83b30c15e5fdc83680a417d6bb58f87d44e74491a691249`.
+- Read-only tab-concurrency evidence showed zero active, lost, retiring, or
+  uncertain leases and two settled idle leases with about 95 and 228 seconds
+  remaining. They were legitimate fences, so the run did not override or
+  retire them.
+- No wake or HTTP/JSON source was created. The temporary user-manager API
+  credential was removed, the wake service was restarted without it, and the
+  persistent wake root again reported zero active wakes.
+- Result: the corrected tmux transport was selected but not exercised because
+  the request ended pre-effect. Do not retry this terminal session. A distinct
+  fresh run needs explicit authority after the idle leases retire.
