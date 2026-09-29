@@ -51625,7 +51625,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `tab-leases-active`. Receipt
   `evt_0dd700113a904028d83b30c15e5fdc83680a417d6bb58f87d44e74491a691249`
   verified terminal `error` before provider effect. Read-only concurrency
-  evidence showed two legitimate unexpired settled idle leases and no active,
-  lost, or uncertain lease. No wake/source was armed; the temporary wake-service
-  credential was removed and active wake count remained zero. A distinct fresh
-  run requires new retry authority after lease retirement.
+  evidence showed two unexpired settled idle leases and no active, lost, or
+  uncertain lease. No wake/source was armed; the temporary wake-service
+  credential was removed and active wake count remained zero.
+- Reclassified that lease fence as a product defect: with no managed-browser
+  endpoint, the idle targets could not still exist and should not block a new
+  browser startup until TTL expiry. Added a red-first provisioner regression
+  and repaired the absent-browser path to release only safe idle `none` or
+  `settled` leases as `target-missing`/`already-missing`. Active, in-flight,
+  outcome-unknown, retiring, and lost states remain fail-closed. Five focused
+  suites pass 37/37; scoped Biome and typecheck also pass.

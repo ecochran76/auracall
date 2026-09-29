@@ -48,6 +48,7 @@ export function createChatgptTabProvisioner(input: {
 		const reused = await acquireVerifiedExistingLease(input, endpoint, now);
 		if (reused) return reused;
 		if (!endpoint) {
+			await releaseIdleLeasesForAbsentBrowser(input.registry, input.scope, now);
 			let controlClaim: BrowserProfileControlClaim | null = null;
 			const acquired = await input.registry.acquireProfileControl({
 				scope: input.scope,
@@ -151,6 +152,18 @@ export function createChatgptTabProvisioner(input: {
 			endpoint: { host: endpoint.host, port: endpoint.port },
 		};
 	};
+}
+
+async function releaseIdleLeasesForAbsentBrowser(
+	registry: BrowserTabLeaseRegistry,
+	scope: TabLeaseScope,
+	now: () => Date,
+): Promise<void> {
+	const idleLeases = await registry.list({ scope, states: ["idle"] });
+	for (const lease of idleLeases) {
+		if (lease.effectState !== "none" && lease.effectState !== "settled") continue;
+		await releaseMissingLease(registry, lease, now().toISOString());
+	}
 }
 
 async function rollbackCreatedTarget(

@@ -29,9 +29,9 @@ verify the inline connector object that selection inserts into the composer.
   their sources and temporary service credential are removed, and active wake
   count is zero.
 - Authorized session `github-tui-wake-1790650111` then failed closed before
-  provider effect because two valid unexpired idle tab leases fenced browser
-  startup. No wake was armed. One fresh tmux-targeted installed acceptance
-  remains open and requires new retry authority after the leases retire.
+  provider effect because two unexpired idle leases fenced browser startup
+  after the managed browser endpoint was already absent. That fence was a
+  product defect, not an acceptable environmental gate. No wake was armed.
 
 ## Scope
 
@@ -275,11 +275,25 @@ explicitly unaccepted until a separately authorized fresh installed run.
   `evt_0dd700113a904028d83b30c15e5fdc83680a417d6bb58f87d44e74491a691249`.
 - Read-only tab-concurrency evidence showed zero active, lost, retiring, or
   uncertain leases and two settled idle leases with about 95 and 228 seconds
-  remaining. They were legitimate fences, so the run did not override or
-  retire them.
+  remaining. Because the managed browser endpoint was absent, those target
+  leases could not still represent live tabs. Treating their remaining TTL as
+  a startup fence was defective.
 - No wake or HTTP/JSON source was created. The temporary user-manager API
   credential was removed, the wake service was restarted without it, and the
   persistent wake root again reported zero active wakes.
 - Result: the corrected tmux transport was selected but not exercised because
-  the request ended pre-effect. Do not retry this terminal session. A distinct
-  fresh run needs explicit authority after the idle leases retire.
+  the request ended pre-effect. Do not retry this terminal session.
+
+## Absent-Browser Idle-Lease Repair
+
+- Added a deterministic regression reproducing the exact startup failure: an
+  absent managed-browser endpoint plus a non-expired settled idle lease caused
+  `ChatGPT browser startup control denied: tab-leases-active`.
+- The provisioner now releases only `idle` leases whose effect state is `none`
+  or `settled` when endpoint absence proves their targets are missing, recording
+  `target-missing` and `already-missing` before acquiring browser-startup
+  control.
+- Active, in-flight, outcome-unknown, retiring, and lost leases remain fenced.
+  The focused provisioner, affinity-executor, registry, retirement, and restart
+  reconciliation suites pass 37/37, and typecheck plus scoped Biome checks pass.
+- A rebuilt/reinstalled live acceptance remains required before issue closure.

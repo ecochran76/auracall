@@ -173,6 +173,64 @@ describe("ChatGPT tab provisioner", () => {
 		});
 	});
 
+	test("releases settled idle leases when the managed browser endpoint is absent", async () => {
+		const leaseIds = ["lease-stale", "lease-new"];
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => leaseIds.shift() ?? "lease-unexpected",
+			createControlId: () => "control-1",
+		});
+		const stale = await registry.reserve({
+			scope,
+			targetId: "target-stale",
+			workload: { kind: "ephemeral", operationId: "history-materialization-stale" },
+			operationId: "operation-stale",
+			now: "2026-09-24T12:00:00.000Z",
+			idleTtlMs: 900_000,
+			absoluteTtlMs: 3_600_000,
+			targetFingerprint: "https://chatgpt.com/c/stale",
+		});
+		if (!stale.ok) throw new Error("fixture reservation failed");
+		await registry.idle({
+			claim: stale.value.claim,
+			now: "2026-09-24T12:00:01.000Z",
+			effectState: "settled",
+		});
+		const startBrowser = vi.fn(async () => ({
+			host: "127.0.0.1",
+			port: 45011,
+			managedBrowserProfile: scope.managedBrowserProfile,
+		}));
+		const provision = createChatgptTabProvisioner({
+			registry,
+			scope,
+			workload: { kind: "new-conversation", reservationId: "conversation-reservation-1" },
+			operationId: "operation-new",
+			targetUrl: "https://chatgpt.com/",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			now: () => new Date("2026-09-24T12:00:02.000Z"),
+			resolveExistingEndpoint: async () => null,
+			startBrowser,
+			openTarget: async () => ({ targetId: "target-new", url: "https://chatgpt.com/" }),
+			closeTarget: vi.fn(),
+		});
+
+		const result = await provision({ interactionReservationId: "interaction-1" });
+
+		expect(startBrowser).toHaveBeenCalledOnce();
+		expect(result.lease).toMatchObject({ leaseId: "lease-new", targetId: "target-new" });
+		expect(await registry.list()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					leaseId: "lease-stale",
+					state: "released",
+					lossReason: "target-missing",
+					finalDisposition: "already-missing",
+				}),
+			]),
+		);
+	});
+
 	test("holds profile control only around browser startup before target creation", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-1",

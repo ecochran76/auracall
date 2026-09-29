@@ -23392,6 +23392,17 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   headless/non-tmux workflow. Verify tmux acknowledgement and visible-prompt
   classification separately from provider receipt success.
 
+## 2026-09-28 | Release safe idle tab leases when their browser is absent
+
+- A non-expired idle tab lease is reusable only while its managed-browser
+  endpoint still exists. If endpoint resolution proves the browser absent, its
+  target cannot remain live and the lease must not block browser startup until
+  its TTL expires.
+- Before acquiring browser-startup control, release only idle leases with
+  `none` or `settled` effect state as `target-missing`/`already-missing`.
+  Preserve active, in-flight, outcome-unknown, retiring, and lost fences so an
+  ambiguous provider effect never becomes retryable through startup recovery.
+
 ## 2026-09-27 | Derive durable execution profiles after explicit selection
 
 - A durable request can correctly select an AuraCall runtime profile, browser
