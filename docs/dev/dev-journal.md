@@ -51698,3 +51698,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - PR 132 merged the validated repair to canonical `main` at `ec5c30030146` and
   closed issue 131. P78 is reconciled as integrated; installed acceptance and
   any live ChatGPT request remain deliberately unperformed.
+
+## 2026-09-29 | Issue 135 owned browser exit retirement
+
+- Runtime evidence showed an absent `wsl-chrome-3` Chrome/DevTools endpoint
+  while `browser-state.json` retained the failed materialization job's owner,
+  operation, lease, PID, and port. Linux had already reused that PID for
+  `slack-receipts-mcp`; Slack did not acquire the lease.
+- Issue 135 and Plan 0379 / lane P79 now govern a provider-free repair in the
+  reusable browser-service lifecycle and registry layers.
+- The required invariant is generation-safe retirement: owned child exit and
+  explicit/signal-driven kill may delete only the exact matching registered
+  launch, never a replacement entry for the same managed browser profile.
+- Graphiti was healthy but returned no prior fact for this defect. Current
+  runtime evidence, CodeGraph source flow, and focused tests remain authority.

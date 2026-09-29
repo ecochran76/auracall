@@ -17,7 +17,12 @@ import {
   probeWindowsLocalDevToolsPort,
 } from './processCheck.js';
 import { isWindowsPath, isWslEnvironment, toWindowsPath } from './platformPaths.js';
-import { findActiveInstance, registerInstance, unregisterInstance } from './service/stateRegistry.js';
+import {
+  findActiveInstance,
+  registerInstance,
+  unregisterInstanceIfMatches,
+  type BrowserInstanceGeneration,
+} from './service/stateRegistry.js';
 import { resolveProfileDirectoryName } from './service/profile.js';
 import {
   DEFAULT_DEBUG_PORT,
@@ -171,6 +176,11 @@ export async function launchChrome(
         profileName: resolvedProfileName,
         windowsChromeFromWsl,
         skipShutdown: false,
+        registeredGeneration: {
+          pid: registered.pid,
+          port: registered.port,
+          launchedAt: registered.launchedAt,
+        },
       });
     }
     logger(`Found active Chrome instance in registry (pid ${registered.pid}, port ${registered.port}); reusing.`);
@@ -218,6 +228,7 @@ export async function launchChrome(
             `Found running Chrome using profile ${userDataDir} on port ${activePort} started by this run; re-adopting with cleanup ownership.`,
           );
           if (registryOptions) {
+            const launchedAt = new Date().toISOString();
             await registerInstance(registryOptions, {
               pid: existingPid,
               port: activePort,
@@ -225,8 +236,20 @@ export async function launchChrome(
               profilePath: userDataDir,
               profileName: resolvedProfileName,
               type: 'chrome',
-              launchedAt: new Date().toISOString(),
-              lastSeenAt: new Date().toISOString(),
+              launchedAt,
+              lastSeenAt: launchedAt,
+            });
+            return createAdoptedChromeHandle({
+              pid: existingPid,
+              port: activePort,
+              host: runtimeHost,
+              logger,
+              registryOptions,
+              profilePath: userDataDir,
+              profileName: resolvedProfileName,
+              windowsChromeFromWsl,
+              skipShutdown: false,
+              registeredGeneration: { pid: existingPid, port: activePort, launchedAt },
             });
           }
           return createAdoptedChromeHandle({
@@ -452,23 +475,50 @@ export async function launchChrome(
   }
   const runtimeHost = await ensurePersistentDevToolsEndpoint(launcher.port, probeHost ?? '127.0.0.1', logger);
 
+  let registeredGeneration: BrowserInstanceGeneration | null = null;
   if (launcher.pid && registryOptions) {
-    await registerInstance(registryOptions, {
+    const launchedAt = new Date().toISOString();
+    const generation = {
+      pid: launcher.pid,
+      port: launcher.port,
+      launchedAt,
+    };
+    registeredGeneration = generation;
+    const registration = registerInstance(registryOptions, {
       pid: launcher.pid,
       port: launcher.port,
       host: runtimeHost,
       profilePath: userDataDir,
       profileName: resolvedProfileName,
       type: 'chrome',
-      launchedAt: new Date().toISOString(),
-      lastSeenAt: new Date().toISOString(),
+      launchedAt,
+      lastSeenAt: launchedAt,
     });
+    launcher.process?.once('exit', () => {
+      void registration
+        .then(() => unregisterInstanceIfMatches(
+          registryOptions,
+          userDataDir,
+          resolvedProfileName,
+          generation,
+        ))
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          logger(`Failed to retire exited Chrome registry generation: ${message}`);
+        });
+    });
+    await registration;
   }
 
   const originalKill = launcher.kill;
   const kill = async () => {
-    if (registryOptions) {
-      await unregisterInstance(registryOptions, userDataDir, resolvedProfileName);
+    if (registryOptions && registeredGeneration) {
+      await unregisterInstanceIfMatches(
+        registryOptions,
+        userDataDir,
+        resolvedProfileName,
+        registeredGeneration,
+      );
     }
     return originalKill();
   };
@@ -617,6 +667,7 @@ function createAdoptedChromeHandle(options: {
   profileName: string;
   windowsChromeFromWsl: boolean;
   skipShutdown: boolean;
+  registeredGeneration?: BrowserInstanceGeneration;
 }): LaunchedChrome & { host?: string } {
   const {
     pid,
@@ -628,6 +679,7 @@ function createAdoptedChromeHandle(options: {
     profileName,
     windowsChromeFromWsl,
     skipShutdown,
+    registeredGeneration,
   } = options;
   if (skipShutdown) {
     return {
@@ -644,8 +696,13 @@ function createAdoptedChromeHandle(options: {
     pid,
     port,
     kill: async () => {
-      if (registryOptions) {
-        await unregisterInstance(registryOptions, profilePath, profileName);
+      if (registryOptions && registeredGeneration) {
+        await unregisterInstanceIfMatches(
+          registryOptions,
+          profilePath,
+          profileName,
+          registeredGeneration,
+        );
       }
       await terminateOwnedChromeProcess(pid, logger, { windowsChromeFromWsl });
     },
