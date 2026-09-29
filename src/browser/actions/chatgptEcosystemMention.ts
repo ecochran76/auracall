@@ -46,6 +46,14 @@ export async function ensureChatgptEcosystemMention(
 	if (!request.label.trim() || acceptedPluginIds.length === 0) {
 		throw new Error("ChatGPT ecosystem mention requires a label and at least one app identity.");
 	}
+	await selectChatgptEcosystemMention(client, request, acceptedPluginIds);
+}
+
+async function selectChatgptEcosystemMention(
+	client: ChromeClient,
+	request: ChatgptEcosystemMentionRequest,
+	acceptedPluginIds: string[],
+): Promise<void> {
 	const requireFreshConversation = request.requireFreshConversation !== false;
 	const pristine = await client.Runtime.evaluate({
 		expression: `(() => {

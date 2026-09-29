@@ -23365,6 +23365,58 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Do not issue another navigation merely because the acknowledgement was lost;
   that creates avoidable route churn on a correctly leased tab.
 
+## 2026-09-28 | Recheck terminal state before creating a receipt wake
+
+- A pending terminal-receipt observation can become terminal between identity
+  capture and HTTP/JSON source configuration, especially for short connected-
+  app requests.
+- Treat the fixed-source check as an action gate, not merely a connectivity
+  assertion. If it reports a terminal state or event ID, stop before the wake
+  creation command even when the earlier observation was pending.
+- Do not chain source check and wake creation when the check result must decide
+  whether creation is permitted. A post-terminal wake can consume its sole
+  app-server attempt against the still-active originating writer and cannot
+  prove automatic resumption.
+
+## 2026-09-28 | Let codex-wake capture the active TUI transport
+
+- A Codex thread ID does not mean app-server is the correct wake transport.
+  When the executing Codex session exposes `TMUX_PANE` and `TMUX`, codex-wake's
+  default creation path captures the current pane and socket for an
+  operator-visible TUI continuation.
+- Passing `--app-server-thread-id` explicitly overrides that capture. The wake
+  can then fail against the current active writer even though the tmux target
+  was available and appropriate.
+- Runtime-select the transport before wake creation. Use default tmux capture
+  for a live TUI; use an explicitly validated app-server thread only for a
+  headless/non-tmux workflow. Verify tmux acknowledgement and visible-prompt
+  classification separately from provider receipt success.
+
+## 2026-09-28 | Release safe idle tab leases when their browser is absent
+
+- A non-expired idle tab lease is reusable only while its managed-browser
+  endpoint still exists. If endpoint resolution proves the browser absent, its
+  target cannot remain live and the lease must not block browser startup until
+  its TTL expires.
+- Before acquiring browser-startup control, release only idle leases with
+  `none` or `settled` effect state as `target-missing`/`already-missing`.
+- Startup fencing is profile-wide, so absent-browser reconciliation must use
+  the same managed-browser-profile scope rather than the request tenant alone.
+  A safe active lease owned by a proven-dead PID is also a missing-target fence
+  and must be released. Preserve live-owner active leases and all in-flight,
+  outcome-unknown, retiring, and unresolved lost fences.
+
+## 2026-09-28 | Prove TUI wake success beyond dispatch
+
+- A terminal provider receipt and a submitted wake are separate acceptance
+  boundaries. For an operator-visible Codex TUI continuation, require the wake
+  record to match the exact receipt event, use tmux transport, observe the
+  submission acknowledgement, and record `visible_prompt_observed`.
+- Preserve the wake's captured original pane rather than substituting an
+  app-server thread because an environment also exposes a thread ID. Archive
+  the one-off wake and remove its source and temporary credential only after
+  the resumed turn verifies session provenance and the stored result.
+
 ## 2026-09-27 | Derive durable execution profiles after explicit selection
 
 - A durable request can correctly select an AuraCall runtime profile, browser
@@ -23555,7 +23607,6 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Bound that settlement as one sequence. If it stalls after provider failure,
   preserve the provider error and leave the active lease fence intact; do not
   mark the target idle or silently make it available to another process.
-
 ## 2026-09-28 | Discover live managed-profile owners before requesting startup control
 
 - A no-launch endpoint lookup must still inspect the live managed-profile
@@ -23581,3 +23632,37 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   established conversation routes to use editor evidence for desired Chat.
   The editor alone never proves Work, project landing pages remain explicit,
   and an active current-route Work badge remains authoritative.
+
+
+## 2026-09-28 | Select connected apps through filtered composer drawer rows
+
+- Current ChatGPT connected apps live in the composer tool drawer. With the
+  drawer open, type the exact connector name into the focused composer, wait
+  for the filtered row, and activate that row once. Do not route connected
+  apps through the developer-app `@mention` picker.
+- Selection replaces the typed filter with a non-editable inline
+  `[app-mention-name]` object. Verify its exact label and an
+  `app://connector_...` value from `app-mention-path` or
+  `data-prompt-link-href`; ordinary prompt text can then exist before or after
+  that object.
+- Unknown markerless labels, ambiguous matches, rows ending in `Connect`, and
+  absent or mismatched connector objects remain fail-closed before Send.
+- Do not express preferred DOM selectors as one comma-separated
+  `querySelector()` argument. CSS selector lists return the first matching node
+  in document order, so an outer description wrapper can precede the intended
+  exact-label node. Query each selector separately in priority order and use
+  the first result; apply that same extraction rule to inventory, filtered
+  drawer readback, and activation.
+
+## 2026-09-28 | Exclude committed connector links from prompt verification
+
+- ChatGPT renders a selected app differently after submission: the composer
+  `[app-mention-name]` object becomes a presentation-only element whose
+  `data-prompt-link-href` starts with `app://connector_` in the committed user
+  turn.
+- Prompt-commit verification must ignore that connector label while retaining
+  adjacent authored text. Otherwise a successful Send and provider response
+  can be reported as a false timeout because the observed text is prefixed by
+  the connected-app name.
+- Keep the exclusion narrow to `app://` prompt links; ordinary committed links
+  and user text remain part of the exact prompt readback.

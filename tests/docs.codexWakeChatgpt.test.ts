@@ -21,7 +21,19 @@ describe("published codex-wake ChatGPT workflow", () => {
 		}
 		expect(recipe).toContain('--idempotency-key "$receipt_idempotency_key"');
 		expect(recipe).toContain("--max-attempts 1");
+		expect(recipe).toContain(`if [[ -n "\${TMUX_PANE-}" && -n "\${TMUX-}" ]]`);
+		expect(recipe).toContain("wake_target_args=()");
+		expect(recipe).toContain(`"\${wake_target_args[@]}"`);
 		expect(recipe).toContain('--app-server-thread-id "$thread_id"');
+		const tmuxBranch = recipe.indexOf(`if [[ -n "\${TMUX_PANE-}" && -n "\${TMUX-}" ]]`);
+		const headlessBranch = recipe.indexOf("else", tmuxBranch);
+		const appServerOverride = recipe.indexOf('--app-server-thread-id "$thread_id"', headlessBranch);
+		const branchEnd = recipe.indexOf("\nfi", appServerOverride);
+		expect(tmuxBranch).toBeGreaterThanOrEqual(0);
+		expect(headlessBranch).toBeGreaterThan(tmuxBranch);
+		expect(appServerOverride).toBeGreaterThan(headlessBranch);
+		expect(branchEnd).toBeGreaterThan(appServerOverride);
+		expect(recipe).toContain("visibility_result.classification=visible_prompt_observed");
 		expect(recipe).toContain("--require-monitor");
 		expect(recipe).toContain("--profile wsl-chrome-3");
 		expect(recipe).toContain("Never resubmit the provider request");
@@ -39,6 +51,7 @@ describe("published codex-wake ChatGPT workflow", () => {
 		expect(skill).toContain("docs/codex-wake-chatgpt.md");
 		expect(skill).toContain("GET /v1/terminal-receipts/{session_id}");
 		expect(skill).toContain("`--max-attempts 1`");
+		expect(skill).toContain("default current-pane capture");
 		expect(readme).toContain("[docs/codex-wake-chatgpt.md](docs/codex-wake-chatgpt.md)");
 	});
 });

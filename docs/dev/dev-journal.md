@@ -51473,7 +51473,6 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free regressions cover exact adoption, absence, CDP cleanup, and a
   retained event-loop handle. No install, live browser, provider access,
   retry, navigation, refresh, target creation, attachment, prompt, or Send ran.
-
 ## 2026-09-28 | Plan 0375 provider-free browser-coordination repair
 
 - Reproduced issue 123 at the production affinity seam: a foreground
@@ -51513,3 +51512,147 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   existing wait. Desired Work still fails without positive Work evidence;
   project landing pages still require controls; current-route Work badges still
   reject implicit Chat. No installed or live provider effect ran.
+
+## 2026-09-28 | Issue 121 connected-app selection reliability
+
+- Preserved terminal session `mail-architectu-wake-1790608058` without retry;
+  its verified error receipt proves publication but not automatic Codex wake.
+- Read-only browser inspection stopped at the active installed API operation
+  lease. No override, navigation, click, cleanup, prompt submission, or wake
+  arming occurred.
+- Opened issue 121 and Plan 0374 / lane P74 from canonical `origin/main`.
+- Implemented provider-free classification for manifest-known markerless app
+  rows plus ecosystem-mention provider-identity verification at source
+  checkpoint `098fc819e`. Focused and adjacent behavioral tests, typecheck,
+  build, scoped lint, plan audit, and diff hygiene passed. One unrelated
+  lifecycle structure-regex failure reproduced unchanged on the untouched
+  baseline. Installed acceptance remains separately gated.
+- Published branch tip `01caa1b64` and opened PR 122. With explicit authority,
+  installed that exact tip and restarted only the loopback AuraCall API.
+- The required read-only GitHub capability discovery then stalled silently.
+  The first attempt was interrupted after more than five minutes; one bounded
+  180-second diagnostic retry reproduced the stall. Browser doctor showed an
+  authenticated focused ChatGPT root, but no stable GitHub capability receipt
+  was obtained.
+- Stopped before Send. No fresh session, provider submission, terminal receipt,
+  wake source, or wake record was created; the earlier terminal session was not
+  retried. The retained browser remains available for bounded diagnosis.
+- Reopened the implementation after operator correction: connected apps are
+  selected inside the open tool drawer by typing the connector name and
+  activating the filtered row, not through the developer-app `@mention`
+  picker.
+- Screenshot and CDP inspection on the retained authenticated browser proved
+  the exact GitHub flow. The filtered row was activated once and produced a
+  non-editable `[app-mention-name="github"]` object with
+  `app-mention-path="app://connector_76869538009648d5b282a4bb21c3d157"` plus
+  a trailing editable text span. The unsent draft was then cleared.
+- Corrected source now always performs the drawer filter for connected apps,
+  rejects `Connect` rows, and verifies the inline connector path. Private
+  developer-app `@mention` behavior remains unchanged. Focused tests and
+  typecheck pass; no Send, approval, `Answer now`, provider request, session
+  retry, or wake action occurred.
+- Installed corrected PR tip `b5f8c46f7`, restarted only the loopback API,
+  and submitted one fresh read-only GitHub run, `github-wake-1790616900`.
+  It terminated at the pre-effect model gate because ChatGPT exposed `6Pro`
+  while the configured selector requested `6 Pro`; connector selection and
+  Send were never reached.
+- Verified terminal error receipt
+  `evt_45d98dd41979596590b284b8cc8d49494059c4e26a8e38bd19eebfbe7091f7a0`
+  was already terminal on first authenticated observation. Per the no-resubmit
+  and no-terminal-arm rules, no retry or wake was created.
+- A new installed run, `github-wake-1790631700`, used the current-model
+  strategy and reached connected-app discovery. It observed the selectable
+  GitHub row but failed closed before Send because the inventory label included
+  the adjacent description text. Receipt
+  `evt_66eef8046cb8b3048b22e2f5ffbac831af918898fd575d5492e164e77ba7a3ff`
+  is terminal; the session was not retried and no wake was armed.
+- CDP inspection proved the exact DOM cause: a comma-separated selector list
+  returned an earlier outer `span.truncate` before the later exact-label span.
+  Connected-app inventory, filtered-menu readback, and activation now query
+  primary-label selectors in explicit priority order.
+- Installed source commit `b46044aff` with exact changed-module byte parity.
+  Two uniquely identified post-fix sessions then terminated before browser
+  startup with `tab-leases-active`: `github-wake-1790631985` / event
+  `evt_9b058e33d09d70666bd078c8ad7a7dce6590b87251e93ed75a2ca81be1622155`
+  and `github-wake-1790632021` / event
+  `evt_1697bba0c1638d2030ad55f5f4272348817e7e31419b77d6ad6ad5af8058033a`.
+  Between them, the API reported zero active browser operations and zero tab
+  leases. Neither session was retried, no wake was armed, and further provider
+  attempts stopped. Issue 121 remains open pending admission-race resolution
+  and one complete connector-plus-wake acceptance.
+- The legitimate idle lease later expired normally. Fresh installed session
+  `github-wake-1790632645` selected GitHub, committed the connector plus full
+  prompt, and received the exact expected issue title. AuraCall misclassified
+  the successful exchange as `Prompt did not appear in conversation before
+  timeout` because the committed connector is rendered as an
+  `app://connector_...` prompt link rather than the composer-time app mention.
+- Its verified terminal event matched the armed wake, but the single dispatch
+  attempt encountered an active Codex writer and failed; the terminal session
+  was not retried or re-armed. The committed-turn reader now removes the
+  observed connector presentation node, with a focused provider-free
+  regression. A fresh installed run still gates closure.
+- Rebuilt and installed exact rebased PR tip `94323efca` with complete `dist`
+  byte parity and an active API at PID `28623`. A single 240-second read-only
+  capability inventory again stalled without output and was not retried.
+- Fresh session `github-connector-1790645332` then used the stable GitHub
+  capability through `wsl-chrome-3`, verified the exact connected object and
+  SoyLei Pro identity before Send, submitted once, and returned the expected
+  issue title. Verified succeeded receipt
+  `evt_59a5c1f7a6e650b31b6a364e574c0f3592063ebb941986b581a2d3c49ca6ccef`
+  binds a 73-byte result with digest
+  `sha256:dbf1bbc9fe31b74e8dc913fff16d0cdaf426c6b3494d9440e5b568171bee7ef0`.
+- Wake setup raced the fast terminal receipt: its source check already returned
+  `succeeded`, but the chained command still created
+  `wake_1a94b101f2dc4867bfbc6885b0ba92bf`. The only app-server attempt failed
+  against the current active writer. No retry or second wake ran. The failed
+  wake is archived, its source and temporary service credential are removed,
+  and active wake count is zero. Connector acceptance passed; automatic Codex
+  resumption, merge, and issue closure remain open.
+- A second authorized session, `github-wake-1790647330`, again completed the
+  exact GitHub connector request and published verified succeeded receipt
+  `evt_a90be7c8f0b433bb45632e3f145f2d6546eab591a94f1aa5576acc4ee59a11a4`.
+  Its wake was armed while pending but failed its sole dispatch because the
+  AuraCall recipe forced app-server targeting into the still-active writer.
+- Current runtime evidence showed `TMUX_PANE=%28`; codex-wake's default path
+  would have captured that active TUI. The recipe and skill now preserve tmux
+  capture when available and reserve explicit app-server targeting for
+  headless continuation. The failed wake is archived, its source and temporary
+  credential are removed, and no provider retry ran.
+- Retried the installed acceptance with explicit authority after restarting
+  the stale API service. Exact installed `dist` parity, receipt readiness,
+  monitor readiness, and tmux pane `%28` passed, but fresh session
+  `github-tui-wake-1790650111` failed closed at browser startup with
+  `tab-leases-active`. Receipt
+  `evt_0dd700113a904028d83b30c15e5fdc83680a417d6bb58f87d44e74491a691249`
+  verified terminal `error` before provider effect. Read-only concurrency
+  evidence showed two unexpired settled idle leases and no active, lost, or
+  uncertain lease. No wake/source was armed; the temporary wake-service
+  credential was removed and active wake count remained zero.
+- Reclassified that lease fence as a product defect: with no managed-browser
+  endpoint, the idle targets could not still exist and should not block a new
+  browser startup until TTL expiry. Added a red-first provisioner regression
+  and repaired the absent-browser path to release only safe idle `none` or
+  `settled` leases as `target-missing`/`already-missing`. Active, in-flight,
+  outcome-unknown, retiring, and lost states remain fail-closed. Five focused
+  suites pass 37/37; scoped Biome and typecheck also pass.
+- Installed exact repair commit `47c3d7f13` and retried after proving full
+  installed parity, API PID `4949`, receipt readiness, wake-monitor readiness,
+  and tmux pane `%28`. Session `github-tui-wake-1790652238` still failed
+  pre-effect because a settled active ephemeral lease remained owned by dead
+  pre-restart PID `48758`. The cleanup scope also needed to match profile-wide
+  startup fencing rather than the request tenant alone. Expanded the repair to
+  release safe idle leases plus safe active leases with a proven-dead owner
+  across the exact managed browser profile. The new cross-tenant/dead-owner
+  regression passes; five focused suites now pass 38/38. No provider request,
+  wake, or source was created.
+- After WSL recovery, rebuilt exact commit `46742378c`, verified complete
+  installed `dist` parity, and re-anchored fresh API, process, monitor, wake,
+  tmux, and managed-browser state. Session `github-tui-wake-1790653512`
+  selected the exact connected GitHub capability, submitted once, returned the
+  expected issue title, and published verified succeeded receipt
+  `evt_cc2994e4c18d5e8be148c33ec4a4c134c7920f3ab8c6db5895ae3e8c5d005966`.
+- Wake `wake_9159b865e70645b8b12cb5631abf9fb9` matched the exact receipt in
+  one attempt through tmux, observed acknowledgement, and recorded
+  `visibility_result.classification=visible_prompt_observed`. Cleanup archived
+  the wake, removed its source and temporary credential, restarted the wake
+  service, and confirmed zero active wakes. Installed acceptance is complete.

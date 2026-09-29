@@ -1,26 +1,22 @@
-import type { ChromeClient, BrowserLogger } from '../types.js';
+import {
+  resolveBundledServiceAppTokens,
+  resolveBundledServiceComposerAliases,
+  resolveBundledServiceComposerChipIgnoreTokens,
+  resolveBundledServiceComposerFileRequestLabels,
+  resolveBundledServiceComposerKnownLabels,
+  resolveBundledServiceComposerMoreLabels,
+  resolveBundledServiceComposerTopLevelSentinels,
+  resolveBundledServiceComposerTopMenuSignalLabels,
+  resolveBundledServiceComposerTopMenuSignalSubstrings,
+} from '../../services/registry.js';
+import { ATTACHMENT_MENU_SELECTOR } from '../constants.js';
+import { logDomFailure } from '../domDebug.js';
 import type {
   LabelMatchOptions,
   PressButtonOptions,
   VisibleMenuInventoryEntry,
   VisibleMenuInventoryItem,
 } from '../service/ui.js';
-import { ATTACHMENT_MENU_SELECTOR } from '../constants.js';
-import { logDomFailure } from '../domDebug.js';
-import {
-  ensureChatgptEcosystemMention,
-  type ChatgptEcosystemMentionRequest,
-} from './chatgptEcosystemMention.js';
-import {
-  resolveBundledServiceComposerAliases,
-  resolveBundledServiceComposerChipIgnoreTokens,
-  resolveBundledServiceComposerFileRequestLabels,
-  resolveBundledServiceComposerKnownLabels,
-  resolveBundledServiceComposerMoreLabels,
-  resolveBundledServiceComposerTopMenuSignalLabels,
-  resolveBundledServiceComposerTopMenuSignalSubstrings,
-  resolveBundledServiceComposerTopLevelSentinels,
-} from '../../services/registry.js';
 import {
   collectVisibleMenuInventory,
   dismissOpenMenus,
@@ -29,6 +25,8 @@ import {
   selectAndVerifyNestedMenuPathOption,
   waitForPredicate,
 } from '../service/ui.js';
+import type { BrowserLogger, ChromeClient } from '../types.js';
+import type { ChatgptEcosystemMentionRequest } from './chatgptEcosystemMention.js';
 
 type ComposerToolOutcome =
   | { status: 'already-selected'; label?: string | null }
@@ -112,6 +110,7 @@ type ChatgptWorkbenchAttachmentInventory = {
 };
 
 const COMPOSER_TOOL_ALIASES = resolveBundledServiceComposerAliases('chatgpt', {});
+const KNOWN_CONNECTED_APP_LABELS = Object.keys(resolveBundledServiceAppTokens('chatgpt', {}));
 
 const COMPOSER_TOP_LEVEL_SENTINELS = resolveBundledServiceComposerTopLevelSentinels('chatgpt', []);
 const COMPOSER_MORE_LABELS = resolveBundledServiceComposerMoreLabels('chatgpt', []);
@@ -163,26 +162,28 @@ export async function ensureChatgptComposerTool(
         [connectedApp.match],
       );
     }
-    if (connectedApp.status === 'unverified') {
+    if (connectedApp.status === 'unverified' && !isKnownConnectedAppLabel(connectedApp.match.label)) {
       throw createConnectedAppSelectionError(
         requestedTool,
         'unverified provider identity',
         [connectedApp.match],
       );
     }
-    const ecosystemMention: ChatgptEcosystemMentionRequest = {
-      label: connectedApp.match.label,
-      acceptedPluginIds: connectedApp.acceptedPluginIds,
-      requireFreshConversation: false,
-    };
-    await dismissOpenMenus(Runtime).catch(() => false);
-    await ensureChatgptEcosystemMention(client, ecosystemMention);
-    logger(`Connected app: ${connectedApp.match.label} (${connectedApp.capabilityId})`);
+    const selectedApp = await selectConnectedAppFromComposerDrawer(client, connectedApp.match.label);
+    if (!selectedApp) {
+      throw createConnectedAppSelectionError(
+        requestedTool,
+        'selection not confirmed in composer',
+        [connectedApp.match],
+      );
+    }
+    const capabilityId = connectedAppCapabilityId(connectedApp.match.label);
+    logger(`Connected app: ${connectedApp.match.label} (${capabilityId}; ${selectedApp.connectorPath})`);
     return {
       receipt: {
         requested: requestedTool,
         observed: {
-          id: connectedApp.capabilityId,
+          id: capabilityId,
           label: connectedApp.match.label,
           kind: 'connected_app',
           availability: 'available',
@@ -190,7 +191,6 @@ export async function ensureChatgptComposerTool(
           verified: true,
         },
       },
-      ecosystemMention,
     };
   }
 
@@ -241,6 +241,10 @@ export function resolveChatgptConnectedAppSelectionForTest(
   inventory: ChatgptConnectedAppInventoryItem[],
 ): ChatgptConnectedAppResolution {
   return resolveConnectedAppSelection(requestedTool, inventory);
+}
+
+export function buildChatgptConnectedAppInventoryExpressionForTest(): string {
+  return buildChatgptConnectedAppInventoryExpression();
 }
 
 export function resolveComposerToolLocationForTest(
@@ -310,6 +314,13 @@ function normalizeConnectedAppId(value: string): string {
 
 function connectedAppCapabilityId(label: string): string {
   return `chatgpt.apps.${normalizeConnectedAppId(label)}`;
+}
+
+function isKnownConnectedAppLabel(label: string): boolean {
+  const normalized = normalizeComposerToolLabel(label);
+  return KNOWN_CONNECTED_APP_LABELS.some(
+    (knownLabel) => normalizeComposerToolLabel(knownLabel) === normalized,
+  );
 }
 
 function normalizeProviderIdentity(value: string | null | undefined): string {
@@ -713,13 +724,20 @@ async function readComposerPopoverEntry(
         .replace(/\\s+/g, ' ')
         .trim()
         .toLowerCase();
+      const primarySelectors = [
+        'span.min-w-0.truncate.shrink-0',
+        'span.max-w-full',
+        'span.truncate',
+      ];
       const root = roots.filter(isVisible).at(-1);
       if (!root) return null;
       root.setAttribute('data-auracall-chatgpt-composer-menu', 'true');
       const items = Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(isVisible)
         .map((item) => {
-          const primary = item.querySelector('span.max-w-full, span.truncate');
+          const primary = primarySelectors
+            .map((selector) => item.querySelector(selector))
+            .find(Boolean);
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           return {
             label,
@@ -825,57 +843,7 @@ async function readChatgptConnectedAppInventory(
   Runtime: ChromeClient['Runtime'],
 ): Promise<ChatgptConnectedAppInventoryItem[]> {
   const result = await Runtime.evaluate({
-    expression: `(() => {
-      const visible = (node) => {
-        if (!(node instanceof HTMLElement)) return false;
-        const rect = node.getBoundingClientRect();
-        const style = getComputedStyle(node);
-        return rect.width > 0 && rect.height > 0
-          && style.visibility !== 'hidden' && style.display !== 'none';
-      };
-      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
-        .filter(visible);
-      const root = roots.at(-1);
-      if (!root) return [];
-      return Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
-        .filter(visible)
-        .map((item) => {
-          const primary = item.querySelector('span.max-w-full, span.truncate');
-          const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
-          const icon = item.querySelector(
-            '[data-testid="plugin-icon-wrapper"] img, img[src*="/images/ecosystem/apps/"]'
-          );
-          const iconMatch = (icon?.getAttribute('src') || '').match(
-            /\\/images\\/ecosystem\\/apps\\/([^/]+)\\//i
-          );
-          const href = item.querySelector('a[href*="/plugins/plugin_"]')?.getAttribute('href') || '';
-          const pluginMatch = href.match(/\\/plugins\\/(plugin_[^/?#]+)/i);
-          const explicitAppId = normalize(
-            item.getAttribute('data-app-id') || item.getAttribute('data-plugin-id') || ''
-          );
-          const connectRequired = Boolean(item.querySelector(
-            '[data-suggested-plugin-connect], button[aria-label^="Connect " i]'
-          )) || /(?:^|\\s)connect$/i.test(normalize(item.textContent || ''));
-          const appOwned = Boolean(icon || pluginMatch || explicitAppId || connectRequired);
-          if (!label || !appOwned) return null;
-          const selected =
-            item.getAttribute('aria-selected') === 'true' ||
-            item.getAttribute('aria-checked') === 'true' ||
-            item.getAttribute('data-selected') === 'true' ||
-            ['checked', 'selected', 'on', 'true'].includes(
-              (item.getAttribute('data-state') || '').toLowerCase()
-            );
-          return {
-            label,
-            appId: iconMatch?.[1] || explicitAppId || null,
-            pluginId: pluginMatch?.[1] || null,
-            selectionState: connectRequired ? 'connect_required' : (selected ? 'selected' : 'selectable'),
-          };
-        })
-        .filter(Boolean)
-        .slice(0, 64);
-    })()`,
+    expression: buildChatgptConnectedAppInventoryExpression(),
     returnByValue: true,
   });
   const value = result.result?.value;
@@ -901,6 +869,71 @@ async function readChatgptConnectedAppInventory(
       selectionState,
     }];
   });
+}
+
+function buildChatgptConnectedAppInventoryExpression(): string {
+  return `(() => {
+      const knownAppLabels = new Set(${JSON.stringify(KNOWN_CONNECTED_APP_LABELS)});
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return rect.width > 0 && rect.height > 0
+          && style.visibility !== 'hidden' && style.display !== 'none';
+      };
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const primarySelectors = [
+        'span.min-w-0.truncate.shrink-0',
+        'span.max-w-full',
+        'span.truncate',
+      ];
+      const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
+        .filter(visible);
+      const root = roots.at(-1);
+      if (!root) return [];
+      return Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
+        .filter(visible)
+        .map((item) => {
+          const primary = primarySelectors
+            .map((selector) => item.querySelector(selector))
+            .find(Boolean);
+          const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
+          const icon = item.querySelector(
+            '[data-testid="plugin-icon-wrapper"] img, img[src*="/images/ecosystem/apps/"]'
+          );
+          const iconMatch = (icon?.getAttribute('src') || '').match(
+            /\\/images\\/ecosystem\\/apps\\/([^/]+)\\//i
+          );
+          const href = item.querySelector('a[href*="/plugins/plugin_"]')?.getAttribute('href') || '';
+          const pluginMatch = href.match(/\\/plugins\\/(plugin_[^/?#]+)/i);
+          const explicitAppId = normalize(
+            item.getAttribute('data-app-id') || item.getAttribute('data-plugin-id') || ''
+          );
+          const connectRequired = Boolean(item.querySelector(
+            '[data-suggested-plugin-connect], button[aria-label^="Connect " i]'
+          )) || /(?:^|\\s)connect$/i.test(normalize(item.textContent || ''));
+          const appOwned = Boolean(
+            icon || pluginMatch || explicitAppId || connectRequired ||
+            knownAppLabels.has(label.toLowerCase())
+          );
+          if (!label || !appOwned) return null;
+          const selected =
+            item.getAttribute('aria-selected') === 'true' ||
+            item.getAttribute('aria-checked') === 'true' ||
+            item.getAttribute('data-selected') === 'true' ||
+            ['checked', 'selected', 'on', 'true'].includes(
+              (item.getAttribute('data-state') || '').toLowerCase()
+            );
+          return {
+            label,
+            appId: iconMatch?.[1] || explicitAppId || null,
+            pluginId: pluginMatch?.[1] || null,
+            selectionState: connectRequired ? 'connect_required' : (selected ? 'selected' : 'selectable'),
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 64);
+    })()`;
 }
 
 async function resolveChatgptConnectedAppSelection(
@@ -946,7 +979,7 @@ export async function prepareChatgptWorkbenchLocalAttachment(
         ? Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
             .filter(visible)
             .map((item) => {
-              const primary = item.querySelector('span.max-w-full, span.truncate');
+              const primary = item.querySelector('span.min-w-0.truncate.shrink-0, span.max-w-full, span.truncate');
               const label = normalizeText(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
               const fullText = normalizeText(item.innerText || item.textContent || '');
               const description = fullText.toLowerCase().startsWith(label.toLowerCase())
@@ -1023,6 +1056,11 @@ async function activateComposerPopoverItem(
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
+      const primarySelectors = [
+        'span.min-w-0.truncate.shrink-0',
+        'span.max-w-full',
+        'span.truncate',
+      ];
       const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_SELECTOR)}))
         .filter(visible);
       const root = roots.at(-1);
@@ -1030,7 +1068,9 @@ async function activateComposerPopoverItem(
       const ranked = Array.from(root.querySelectorAll(${JSON.stringify(CHATGPT_COMPOSER_POPOVER_ITEM_SELECTOR)}))
         .filter(visible)
         .map((item) => {
-          const primary = item.querySelector('span.max-w-full, span.truncate');
+          const primary = primarySelectors
+            .map((selector) => item.querySelector(selector))
+            .find(Boolean);
           const label = normalize(primary?.textContent || (item.textContent || '').split('\\n')[0] || '');
           return { item, label, score: score(label) };
         })
@@ -1092,6 +1132,97 @@ async function searchComposerPopover(
     if (entry && findBestComposerToolItem(entry.items, toolCandidates)) {
       return entry;
     }
+  }
+  return null;
+}
+
+type SelectedConnectedApp = {
+  label: string;
+  connectorPath: string;
+};
+
+async function readSelectedConnectedApp(
+  Runtime: ChromeClient['Runtime'],
+  requestedLabel: string,
+): Promise<SelectedConnectedApp | null> {
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').trim().toLowerCase();
+      const requested = normalize(${JSON.stringify(requestedLabel)});
+      const composer = Array.from(document.querySelectorAll('[contenteditable="true"][role="textbox"]'))
+        .find((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+      if (!composer) return null;
+      const mention = Array.from(composer.querySelectorAll('[app-mention-name]'))
+        .find((node) => normalize(
+          node.getAttribute('app-mention-display-name') ||
+          node.getAttribute('app-mention-name') ||
+          node.textContent
+        ) === requested);
+      if (!mention) return null;
+      const connectorPath =
+        mention.getAttribute('app-mention-path') ||
+        mention.getAttribute('data-prompt-link-href') ||
+        '';
+      if (!connectorPath.startsWith('app://connector_')) return null;
+      return {
+        label: (
+          mention.getAttribute('app-mention-display-name') ||
+          mention.getAttribute('app-mention-name') ||
+          mention.textContent ||
+          ''
+        ).trim(),
+        connectorPath,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value as SelectedConnectedApp | null | undefined;
+  return typeof value?.label === 'string' && typeof value.connectorPath === 'string' ? value : null;
+}
+
+async function selectConnectedAppFromComposerDrawer(
+  client: ChromeClient,
+  requestedLabel: string,
+): Promise<SelectedConnectedApp | null> {
+  const existing = await readSelectedConnectedApp(client.Runtime, requestedLabel);
+  if (existing) return existing;
+
+  const popover = await openComposerPopoverWithCdp(client.Runtime, client.Input, client.Page);
+  if (!popover) return null;
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const composer = Array.from(document.querySelectorAll('[contenteditable="true"][role="textbox"]'))
+        .find((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+      composer?.focus();
+      return Boolean(composer);
+    })()`,
+    returnByValue: true,
+  });
+  const candidates = resolveComposerToolCandidates(requestedLabel);
+  const searched = await searchComposerPopover(client, requestedLabel, candidates);
+  if (!searched) {
+    await clearComposerPopoverSearch(client);
+    await dismissOpenMenus(client.Runtime).catch(() => false);
+    return null;
+  }
+  const activated = await activateComposerPopoverItem(client, candidates);
+  if (!activated) {
+    await clearComposerPopoverSearch(client);
+    await dismissOpenMenus(client.Runtime).catch(() => false);
+    return null;
+  }
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const selected = await readSelectedConnectedApp(client.Runtime, requestedLabel);
+    if (selected) return selected;
   }
   return null;
 }

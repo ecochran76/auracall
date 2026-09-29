@@ -1465,3 +1465,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free diagnostic lane only; integration and separately authorized installed wsl-chrome-3 localization remain open.
     updated_at: 2026-09-28
+  - id: P74
+    objective: Select known ChatGPT connected apps through filtered drawer rows and verify their inline connector objects.
+    plan: docs/dev/plans/0374-2026-09-28-chatgpt-connected-app-selection-reliability.md
+    plan_ref: refs/heads/fix/issue-121-connected-app-selection
+    branch: fix/issue-121-connected-app-selection
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 423131184ab7f3b4876256e63f97402b6e8e1d5b
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#121]
+    dependencies: [P61]
+    overlaps: [P61]
+    reconciled_overlaps: [P61]
+    reconciliation_note: P74 preserves Plan 0361 current-menu support, corrects the connected-app interaction to drawer filtering, and leaves private developer-app @mention selection unchanged.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0374-2026-09-28-chatgpt-connected-app-selection-reliability.md
+    integration_receipt: null
+    disposition: Provider-free correction accepted locally; publication, integration, and fresh installed acceptance remain separate gates.
+    updated_at: 2026-09-28

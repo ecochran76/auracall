@@ -107,6 +107,7 @@ function buildReadCommittedTurnTextFunction(): string {
 	  const presentationOnlySelector = [
         '[data-inline-selection-pill]',
 		'[app-mention-name]',
+		'[data-prompt-link-href^="app://"]',
 	    'button',
 	    '[role="button"]',
 	    '[role="group"][class*="file-tile"]',
