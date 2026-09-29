@@ -51661,3 +51661,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   characters were queued, but `<br>` boundaries disappeared and a presentation
   ellipsis remained. Plan 0377 / lane P77 owns a provider-free exactness repair;
   the terminal session is not eligible for retry.
+- Commit `5dc24ca89` preserves `<br>` boundaries, removes only a terminal
+  presentation ellipsis during comparison, retains authored-text rejection,
+  and classifies a new committed turn with a cleared composer and conversation
+  route as `effect_observed`. Focused and adjacent tests pass 57/57; typecheck,
+  scoped Biome, and build pass.

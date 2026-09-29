@@ -30,6 +30,9 @@ classification.
   the provider effect `unknown`.
 - Existing focused tests pass 27/27 and do not reproduce this inline-file DOM
   presentation.
+- Source commit `5dc24ca8941ed22875cf01e1fb731a471ebc7a55` now preserves
+  `<br>` boundaries, normalizes one terminal presentation ellipsis, and reports
+  committed-but-unverified turns with truthful effect state and error wording.
 
 ## Execution Packet
 
@@ -57,16 +60,17 @@ classification.
 
 ## Acceptance Criteria
 
-- [ ] A provider-free regression reproduces the observed inline-file
+- [x] A provider-free regression reproduces the observed inline-file
       committed-turn false negative and fails before the repair.
-- [ ] `<br>` and block presentation boundaries preserve enough structure for
+- [x] `<br>` and block presentation boundaries preserve enough structure for
       the submitted effective prompt and committed turn to normalize equally.
-- [ ] One bounded provider presentation ellipsis is tolerated without allowing
+- [x] One bounded provider presentation ellipsis is tolerated without allowing
       unrecognized authored text.
-- [ ] A new committed user turn plus cleared composer and conversation route is
+- [x] A new committed user turn plus cleared composer and conversation route is
       classified `effect_observed` on verification failure.
-- [ ] Focused/adjacent tests, typecheck, scoped lint, build, diff hygiene, plan
-      audit, and lane audit pass.
+- [x] Focused/adjacent tests, typecheck, scoped lint, build, diff hygiene, and
+      plan audit pass; the P77 lane adds no new finding to the repo-wide lane
+      audit's pre-existing unrelated debt.
 - [ ] Source changes are committed, pushed, reviewed through a linked pull
       request, and reconciled with the issue before closure.
 
@@ -76,3 +80,17 @@ classification.
 - Stop if the repair accepts any fixture containing added authored text.
 - Keep installed/live acceptance separate from provider-free source proof.
 
+## Provider-Free Validation
+
+- The `<br>` regression failed before the repair with
+  `Observed evidence:- First result- Second result` and passed afterward.
+- The bounded terminal-ellipsis regression failed before normalization and
+  passed afterward; authored suffix text remains rejected.
+- Focused and adjacent browser tests: 57/57 passed.
+- `pnpm typecheck`: passed.
+- Scoped Biome check: passed with only the pre-existing exported `__test__`
+  naming warning and three pre-existing informational suggestions.
+- `pnpm build`: passed.
+- Plan-library audit: 376 candidates, 0 validation errors.
+- The repo-wide active-lane audit remains non-green on pre-existing lanes; its
+  reported problems contain no P77 finding.

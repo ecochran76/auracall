@@ -23666,3 +23666,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   the connected-app name.
 - Keep the exclusion narrow to `app://` prompt links; ordinary committed links
   and user text remain part of the exact prompt readback.
+## 2026-09-29 | Preserve inline-file committed-turn presentation
+
+- A full effective prompt can reach ChatGPT while committed-turn extraction
+  drops `<br>` boundaries, causing Markdown list markers to attach to preceding
+  text and fail exact normalized comparison. Preserve explicit break elements
+  as text boundaries before normalizing rich user turns.
+- Treat one terminal provider presentation ellipsis as chrome, but continue to
+  reject any following authored text. A new user turn beyond the baseline in a
+  conversation with a cleared composer proves provider effect even when its
+  text remains unverified; report `effect_observed` and do not imply Send may
+  have failed.

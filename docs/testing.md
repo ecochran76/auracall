@@ -1,5 +1,13 @@
 # Testing quickstart
 
+- ChatGPT inline-file prompt commitment (provider-free):
+  `pnpm vitest run tests/browser/promptComposer.test.ts tests/browser/sessionRunner.test.ts`.
+  This proves committed-turn extraction preserves rich-composer `<br>`
+  boundaries, treats only a terminal presentation ellipsis as equivalent,
+  rejects added authored text, and reports a newly committed in-conversation
+  turn with a cleared composer as `effect_observed` even when text verification
+  still fails. It does not submit a provider prompt or retry a terminal session.
+
 - ChatGPT connected-app selection reliability (provider-free):
   `pnpm vitest run tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptEcosystemMention.test.ts`.
   This proves manifest-known app rows remain on the connected-app path when
