@@ -13,13 +13,17 @@ verify the inline connector object that selection inserts into the composer.
 
 ## Current State
 
-- Session `mail-architectu-wake-1790608058` published verified terminal error
-  receipt `evt_fa137ebe788e59b375a4cd027968e91f7ad108efbd376b0e6f7b433d887babcc`.
-- GitHub was visible in the composer menu but fell through to generic
-  persistent-tool selection and failed its stayed-selected proof before Send.
-- The terminal session was not retried and no wake was armed.
-- The retained browser is still protected by its installed API operation; this
-  plan does not override that lease or clean up its state.
+- Installed session `github-connector-1790645332` selected the exact connected
+  GitHub object, submitted once, returned the expected issue title, and
+  published verified succeeded receipt
+  `evt_59a5c1f7a6e650b31b6a364e574c0f3592063ebb941986b581a2d3c49ca6ccef`.
+- Automatic Codex resumption is still unaccepted. The source check observed the
+  receipt already terminal, but the chained setup command nevertheless created
+  wake `wake_1a94b101f2dc4867bfbc6885b0ba92bf`; its only dispatch attempt failed
+  because this thread still had an active writer.
+- The failed wake was not retried. It is archived, its exact HTTP/JSON source
+  is removed, the temporary service credential is removed, and active wake
+  count is zero.
 
 ## Scope
 
@@ -191,3 +195,39 @@ explicitly unaccepted until a separately authorized fresh installed run.
   the observed committed markup and proves the retained prompt text is read
   exactly. Fresh installed acceptance remains required for both the corrected
   terminal classification and automatic Codex resumption.
+
+## Exact-tip Installed Acceptance | Connector Passed, Wake Missed
+
+- Built and installed exact PR tip
+  `94323efcaafe80483cca516bf47868e667098123`; the complete installed `dist`
+  tree matched the checkout byte-for-byte and `auracall-api.service` restarted
+  active at PID `28623`.
+- The existing read-only capability inventory again emitted no output and hit
+  its single 240-second ceiling. It was not retried. The one authorized request
+  instead used the previously proven stable capability ID
+  `chatgpt.apps.github`, with the installed path retaining every pre-Send
+  account and connector verification.
+- Session `github-connector-1790645332` used AuraCall runtime profile
+  `wsl-chrome-3`, managed browser profile
+  `~/.auracall/browser-profiles/wsl-chrome-3/chatgpt`, ChatGPT Pro personal
+  identity `eric.cochran@soylei.com`, and an exact connected/available/verified
+  `chatgpt.apps.github` object. It submitted once and returned exactly
+  `Select ChatGPT connected apps through filtered drawer rows`.
+- Terminal receipt
+  `evt_59a5c1f7a6e650b31b6a364e574c0f3592063ebb941986b581a2d3c49ca6ccef`
+  verified succeeded with result digest
+  `sha256:dbf1bbc9fe31b74e8dc913fff16d0cdaf426c6b3494d9440e5b568171bee7ef0`
+  and 73 bytes.
+- The pending observation was captured before completion, but the fixed source
+  check raced and returned terminal `succeeded`. The same chained command then
+  incorrectly armed `wake_1a94b101f2dc4867bfbc6885b0ba92bf` after terminal
+  completion. Its sole app-server dispatch failed with `active writer`; no
+  automatic Codex resumption occurred and no second wake was armed.
+- Cleanup archived the failed wake, removed source
+  `auracall-github-connector-1790645332`, removed the temporary
+  `AURACALL_API_KEY` user-manager credential, restarted the existing wake
+  service, and confirmed zero active wakes. Scheduler and materialization
+  controls were not paused, resumed, or otherwise changed.
+- Result: issue 121's installed connector and corrected committed-turn
+  classification are accepted. PR merge and issue closure remain blocked on
+  the still-required automatic Codex resumption proof.

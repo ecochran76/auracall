@@ -51591,3 +51591,20 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   was not retried or re-armed. The committed-turn reader now removes the
   observed connector presentation node, with a focused provider-free
   regression. A fresh installed run still gates closure.
+- Rebuilt and installed exact rebased PR tip `94323efca` with complete `dist`
+  byte parity and an active API at PID `28623`. A single 240-second read-only
+  capability inventory again stalled without output and was not retried.
+- Fresh session `github-connector-1790645332` then used the stable GitHub
+  capability through `wsl-chrome-3`, verified the exact connected object and
+  SoyLei Pro identity before Send, submitted once, and returned the expected
+  issue title. Verified succeeded receipt
+  `evt_59a5c1f7a6e650b31b6a364e574c0f3592063ebb941986b581a2d3c49ca6ccef`
+  binds a 73-byte result with digest
+  `sha256:dbf1bbc9fe31b74e8dc913fff16d0cdaf426c6b3494d9440e5b568171bee7ef0`.
+- Wake setup raced the fast terminal receipt: its source check already returned
+  `succeeded`, but the chained command still created
+  `wake_1a94b101f2dc4867bfbc6885b0ba92bf`. The only app-server attempt failed
+  against the current active writer. No retry or second wake ran. The failed
+  wake is archived, its source and temporary service credential are removed,
+  and active wake count is zero. Connector acceptance passed; automatic Codex
+  resumption, merge, and issue closure remain open.

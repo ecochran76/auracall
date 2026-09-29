@@ -23365,6 +23365,19 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Do not issue another navigation merely because the acknowledgement was lost;
   that creates avoidable route churn on a correctly leased tab.
 
+## 2026-09-28 | Recheck terminal state before creating a receipt wake
+
+- A pending terminal-receipt observation can become terminal between identity
+  capture and HTTP/JSON source configuration, especially for short connected-
+  app requests.
+- Treat the fixed-source check as an action gate, not merely a connectivity
+  assertion. If it reports a terminal state or event ID, stop before the wake
+  creation command even when the earlier observation was pending.
+- Do not chain source check and wake creation when the check result must decide
+  whether creation is permitted. A post-terminal wake can consume its sole
+  app-server attempt against the still-active originating writer and cannot
+  prove automatic resumption.
+
 ## 2026-09-27 | Derive durable execution profiles after explicit selection
 
 - A durable request can correctly select an AuraCall runtime profile, browser
