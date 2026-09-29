@@ -5,6 +5,7 @@ import {
   buildThinkingStatusExpressionForTest,
   buildChatgptProjectDispatchProbeExpressionForTest,
   formatChatgptBlockingSurfaceErrorForTest,
+  handleChatgptBrowserRateLimitFailureForTest,
   logChatgptUnexpectedStateForTest,
   resolveBrowserRuntimeEntryContextForTest,
   resolveChatgptProviderSessionProcessIdForTest,
@@ -20,6 +21,7 @@ import {
   extractParseableJsonObjectTextForTest,
   browserRoutesMatchForTest,
 } from '../../src/browser/index.js';
+import { readChatgptRateLimitGuardState } from '../../src/browser/chatgptRateLimitGuard.js';
 import { resolveBrowserLaunchPlan } from '../../src/browser/service/browserLaunchPlan.js';
 import { BrowserAutomationError } from '../../src/oracle/errors.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
@@ -73,10 +75,108 @@ describe('browserMode exports', () => {
     ).toBe(false);
   });
 
-  test('suppresses a new cooldown write after provider effect was observed', () => {
-    expect(shouldWriteChatgptRateLimitCooldownForTest('effect_observed')).toBe(false);
+  test('persists a cooldown after rate-limit detection regardless of provider effect state', () => {
+    expect(shouldWriteChatgptRateLimitCooldownForTest('effect_observed')).toBe(true);
     expect(shouldWriteChatgptRateLimitCooldownForTest('pre_effect')).toBe(true);
     expect(shouldWriteChatgptRateLimitCooldownForTest('unknown')).toBe(true);
+  });
+
+  test('persists a post-effect cooldown while keeping the result non-retryable', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-post-effect-rate-limit-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const originalError = new BrowserAutomationError('prompt commit could not be verified', {
+      effectState: 'effect_observed',
+    });
+
+    try {
+      const result = await handleChatgptBrowserRateLimitFailureForTest({
+        config: resolvedBrowserConfig({
+          auracallProfileName: 'wsl-chrome-3',
+          managedProfileRoot: path.join(homeDir, 'browser-profiles'),
+          manualLogin: true,
+          manualLoginProfileDir: path.join(
+            homeDir,
+            'browser-profiles',
+            'wsl-chrome-3',
+            'chatgpt',
+          ),
+        }),
+        logger: Object.assign(() => undefined, { verbose: false }),
+        error: originalError,
+        action: 'remoteBrowserRun',
+        effectState: 'effect_observed',
+        detectedRateLimit: {
+          targetId: 'sibling-target',
+          url: 'https://chatgpt.com/c/sibling',
+          reason: 'Too many requests.',
+          source: 'dialog',
+          attempt: 2,
+          isCurrentTarget: false,
+        },
+      });
+
+      expect(result).toMatchObject({
+        details: {
+          code: 'rate-limit-after-effect',
+          effectState: 'effect_observed',
+          retrySafe: false,
+          reason: 'Too many requests.',
+          rateLimitEvidence: {
+            targetId: 'sibling-target',
+            source: 'dialog',
+            attempt: 2,
+            isCurrentTarget: false,
+          },
+        },
+        cause: originalError,
+      });
+      const guard = await readChatgptRateLimitGuardState({ profileName: 'default' });
+      expect(guard).toMatchObject({
+        profile: 'default',
+        cooldownReason: 'Too many requests.',
+        cooldownAction: 'remoteBrowserRun',
+      });
+      expect(guard?.cooldownUntil).toBeGreaterThan(Date.now());
+    } finally {
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('keeps an uncertain-effect rate-limit result explicitly non-retryable', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-unknown-effect-rate-limit-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    try {
+      const result = await handleChatgptBrowserRateLimitFailureForTest({
+        config: resolvedBrowserConfig({}),
+        logger: Object.assign(() => undefined, { verbose: false }),
+        error: new BrowserAutomationError('send acknowledgement was lost', {
+          effectState: 'unknown',
+        }),
+        action: 'remoteBrowserRun',
+        effectState: 'unknown',
+        detectedRateLimit: {
+          targetId: 'leased-target',
+          url: 'https://chatgpt.com/c/leased',
+          reason: 'Too many requests.',
+          source: 'dialog',
+          attempt: 1,
+          isCurrentTarget: true,
+        },
+      });
+
+      expect(result).toMatchObject({
+        details: {
+          code: 'rate-limit-after-effect',
+          effectState: 'unknown',
+          retrySafe: false,
+        },
+      });
+    } finally {
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(homeDir, { recursive: true, force: true });
+    }
   });
 
   test('carries structured provider-effect evidence across later browser failures', () => {

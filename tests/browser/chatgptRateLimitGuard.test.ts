@@ -11,6 +11,7 @@ import {
 	isChatgptRateLimitMessage,
 	pruneChatgptMutationHistory,
 	readChatgptRateLimitGuardState,
+	recordChatgptRateLimitDetection,
 	resolveChatgptRateLimitCooldownMs,
 	resolveChatgptRateLimitGuardPath,
 	resolveChatgptRateLimitProfileName,
@@ -124,6 +125,35 @@ describe("chatgptRateLimitGuard", () => {
 					"rate-limit-default.json",
 				),
 			);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("records a profile cooldown after a post-effect rate-limit detection", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-chatgpt-detection-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const now = 1_000_000;
+
+		try {
+			const recorded = await recordChatgptRateLimitDetection({
+				profileName: "wsl-chrome-3",
+				action: "remoteBrowserRun",
+				reason: "Too many requests.",
+				now,
+			});
+
+			expect(recorded).toMatchObject({
+				profile: "wsl-chrome-3",
+				cooldownDetectedAt: now,
+				cooldownUntil: now + 5 * 60_000,
+				cooldownReason: "Too many requests.",
+				cooldownAction: "remoteBrowserRun",
+				recentRateLimitDetectionAts: [now],
+			});
+			await expect(
+				readChatgptRateLimitGuardState({ profileName: "wsl-chrome-3" }),
+			).resolves.toEqual(recorded);
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
 		}
