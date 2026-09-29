@@ -31,8 +31,11 @@ receipt is not published yet stays `pending`.
   runtime are hard stops.
 - Obtain explicit authority before the command that sends the prompt. Discovery,
   receipt reads, and wake setup do not grant provider-effect authority.
-- Use an existing resumable Codex thread. The recipe expects
-  `CODEX_THREAD_ID`; validate it with `codex-wake app status --resume`. Do not
+- Select the wake transport from the Codex runtime that is actually executing
+  this recipe. When `TMUX_PANE` and `TMUX` identify the current Codex TUI,
+  preserve codex-wake's default tmux capture and do not pass app-server flags.
+  Only a headless/non-tmux workflow should use an existing resumable
+  `CODEX_THREAD_ID`, validated with `codex-wake app status --resume`. Do not
   substitute a guessed or placeholder thread ID.
 - Verify the exact wake root has an active persistent monitor. If
   `monitor_ready` is false, stop. Installing or repairing a service is a
@@ -46,7 +49,18 @@ codex_wake_bin="$(command -v codex-wake)"
 codex_bin="$(command -v codex)"
 wake_root="$PWD/.codex/wake"
 api_base="http://127.0.0.1:8080"
-thread_id="${CODEX_THREAD_ID:?CODEX_THREAD_ID must identify this resumable thread}"
+wake_target_args=()
+
+if [[ -n "${TMUX_PANE-}" && -n "${TMUX-}" ]]; then
+  printf 'Wake transport: current Codex TUI in tmux pane %s\n' "$TMUX_PANE"
+else
+  thread_id="${CODEX_THREAD_ID:?headless wake requires a resumable CODEX_THREAD_ID}"
+  "$codex_wake_bin" app status --resume --codex-path "$codex_bin" --json "$thread_id"
+  wake_target_args=(
+    --app-server-thread-id "$thread_id"
+    --app-server-codex-path "$codex_bin"
+  )
+fi
 
 "$auracall_bin" --version
 "$codex_wake_bin" --version
@@ -54,14 +68,15 @@ thread_id="${CODEX_THREAD_ID:?CODEX_THREAD_ID must identify this resumable threa
   '.enabled == true and (.rootState == "ready" or .rootState == "ready-to-create")'
 "$codex_wake_bin" --wake-root "$wake_root" monitor check --json | jq -e \
   '.monitor_ready == true'
-"$codex_wake_bin" app status --resume --codex-path "$codex_bin" --json "$thread_id"
 curl --fail --silent --show-error "$api_base/status" | jq -e \
   '.routes.terminalSessionReceiptTemplate == "/v1/terminal-receipts/{session_id}"'
 ```
 
-An active writer is expected while the current agent is preparing the wake.
-The request must still be pending when armed, and the agent should yield after
-registration so the thread becomes idle. This recipe sets one dispatch attempt
+For the tmux path, codex-wake captures the current pane and socket when it
+creates the wake; this is the operator-visible TUI continuation path. For the
+headless path, an active writer is expected while the current agent prepares
+the wake. In either case, the request must still be pending when armed, and the
+agent should yield after registration. This recipe sets one dispatch attempt
 and does not enable active-writer retry.
 
 ## Submit once and capture exact identity
@@ -147,8 +162,7 @@ interactive setup shell; otherwise source observation fails closed.
   --source "$source_id" \
   --idempotency-key "$receipt_idempotency_key" \
   --max-attempts 1 \
-  --app-server-thread-id "$thread_id" \
-  --app-server-codex-path "$codex_bin" \
+  "${wake_target_args[@]}" \
   --require-monitor -- \
   "AuraCall session $session_id published terminal receipt $event_id. Read $receipt_url once. Match eventId $event_id and sessionRef $session_ref. Never resubmit the provider request. Verify wsl-chrome-3 provenance. On succeeded, read the stored session once and continue. On error, cancelled, or integrity_error, report the receipt and stop."
 
@@ -157,11 +171,14 @@ interactive setup shell; otherwise source observation fails closed.
 
 Record the printed wake ID, then end the current turn. `codex-wake` performs
 the bounded source observation; the Codex agent should not loop, sleep, or poll.
-Submission acknowledgement later proves only that the wake turn was submitted,
-not that the resumed work succeeded. Controller/process exit is not a wake
-condition and does not prove a persisted result. Repeated source observations
-of the same event remain one occurrence; do not register a second wake for the
-same event ID.
+For tmux, require an acknowledgement plus
+`visibility_result.classification=visible_prompt_observed` (or direct pane
+inspection) before claiming operator-visible continuation. For app-server,
+require its submitted/acknowledged dispatch evidence. Submission
+acknowledgement alone does not prove that resumed work succeeded.
+Controller/process exit is not a wake condition and does not prove a persisted
+result. Repeated source observations of the same event remain one occurrence;
+do not register a second wake for the same event ID.
 
 ## Resume once and verify provenance
 

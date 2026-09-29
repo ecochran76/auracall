@@ -131,8 +131,11 @@ recipe completely before sending the prompt. Its required authority chain is:
    root is ready.
 2. Verify the installed AuraCall CLI and loopback API share the same user,
    build, config, and `AURACALL_HOME_DIR`.
-3. Validate the real `CODEX_THREAD_ID` through `codex-wake app status
-   --resume`; require an active monitor for the exact wake root.
+3. Select the actual Codex runtime transport and require an active monitor for
+   the exact wake root. A live tmux-hosted Codex TUI must use codex-wake's
+   default current-pane capture; omit all app-server flags. Only a headless
+   workflow may validate and target a real `CODEX_THREAD_ID` through
+   `codex-wake app status --resume`.
 4. Submit one browser request with an explicit AuraCall runtime profile and a
    unique three-to-five-word `--slug`. Capture the actual session ID from one
    session inventory readback.
@@ -143,9 +146,10 @@ recipe completely before sending the prompt. Its required authority chain is:
    `/eventId`, and `/completedAt`; select the exact observation object and
    event kind; treat `succeeded`, `error`, `cancelled`, and `integrity_error`
    as terminal.
-7. Arm one app-server wake with the receipt `idempotencyKey`,
-   `--max-attempts 1`, and `--require-monitor`, then yield. Do not have the
-   agent sleep or poll.
+7. Arm one wake through the selected transport with the receipt
+   `idempotencyKey`, `--max-attempts 1`, and `--require-monitor`, then yield.
+   Do not have the agent sleep or poll. For a tmux TUI, require acknowledgement
+   plus visible-prompt evidence before claiming automatic resumption.
 8. On the resumed turn, read the observation and session once, match both
    identities, verify `browser.config.auracallProfileName`, ChatGPT target,
    managed browser profile path, and terminal-receipt intent, then continue

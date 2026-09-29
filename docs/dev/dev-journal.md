@@ -51608,3 +51608,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   wake is archived, its source and temporary service credential are removed,
   and active wake count is zero. Connector acceptance passed; automatic Codex
   resumption, merge, and issue closure remain open.
+- A second authorized session, `github-wake-1790647330`, again completed the
+  exact GitHub connector request and published verified succeeded receipt
+  `evt_a90be7c8f0b433bb45632e3f145f2d6546eab591a94f1aa5576acc4ee59a11a4`.
+  Its wake was armed while pending but failed its sole dispatch because the
+  AuraCall recipe forced app-server targeting into the still-active writer.
+- Current runtime evidence showed `TMUX_PANE=%28`; codex-wake's default path
+  would have captured that active TUI. The recipe and skill now preserve tmux
+  capture when available and reserve explicit app-server targeting for
+  headless continuation. The failed wake is archived, its source and temporary
+  credential are removed, and no provider retry ran.

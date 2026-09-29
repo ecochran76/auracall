@@ -23378,6 +23378,20 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   app-server attempt against the still-active originating writer and cannot
   prove automatic resumption.
 
+## 2026-09-28 | Let codex-wake capture the active TUI transport
+
+- A Codex thread ID does not mean app-server is the correct wake transport.
+  When the executing Codex session exposes `TMUX_PANE` and `TMUX`, codex-wake's
+  default creation path captures the current pane and socket for an
+  operator-visible TUI continuation.
+- Passing `--app-server-thread-id` explicitly overrides that capture. The wake
+  can then fail against the current active writer even though the tmux target
+  was available and appropriate.
+- Runtime-select the transport before wake creation. Use default tmux capture
+  for a live TUI; use an explicitly validated app-server thread only for a
+  headless/non-tmux workflow. Verify tmux acknowledgement and visible-prompt
+  classification separately from provider receipt success.
+
 ## 2026-09-27 | Derive durable execution profiles after explicit selection
 
 - A durable request can correctly select an AuraCall runtime profile, browser

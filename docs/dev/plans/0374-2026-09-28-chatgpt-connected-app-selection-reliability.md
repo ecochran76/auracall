@@ -17,13 +17,17 @@ verify the inline connector object that selection inserts into the composer.
   GitHub object, submitted once, returned the expected issue title, and
   published verified succeeded receipt
   `evt_59a5c1f7a6e650b31b6a364e574c0f3592063ebb941986b581a2d3c49ca6ccef`.
-- Automatic Codex resumption is still unaccepted. The source check observed the
-  receipt already terminal, but the chained setup command nevertheless created
-  wake `wake_1a94b101f2dc4867bfbc6885b0ba92bf`; its only dispatch attempt failed
-  because this thread still had an active writer.
-- The failed wake was not retried. It is archived, its exact HTTP/JSON source
-  is removed, the temporary service credential is removed, and active wake
-  count is zero.
+- A second authorized session, `github-wake-1790647330`, also completed the
+  exact connector request and published verified succeeded receipt
+  `evt_a90be7c8f0b433bb45632e3f145f2d6546eab591a94f1aa5576acc4ee59a11a4`.
+- Automatic Codex resumption is still unaccepted because both wakes forced the
+  app-server transport into the active writer even though the originating
+  Codex TUI exposed tmux pane `%28`. The recipe and skill now preserve
+  codex-wake's default current-pane capture for tmux and reserve explicit
+  app-server targeting for headless workflows.
+- Both failed wakes were single-attempt and were not retried. They are archived,
+  their sources and temporary service credential are removed, and active wake
+  count is zero. One fresh tmux-targeted installed acceptance remains open.
 
 ## Scope
 
@@ -231,3 +235,22 @@ explicitly unaccepted until a separately authorized fresh installed run.
 - Result: issue 121's installed connector and corrected committed-turn
   classification are accepted. PR merge and issue closure remain blocked on
   the still-required automatic Codex resumption proof.
+
+## Second Wake Attempt | Wrong Transport
+
+- Fresh authorized session `github-wake-1790647330` again selected and
+  verified the exact connected GitHub object, returned the expected issue
+  title, and published verified succeeded receipt
+  `evt_a90be7c8f0b433bb45632e3f145f2d6546eab591a94f1aa5576acc4ee59a11a4`.
+- Wake `wake_c0fa53414f6f49708bcb41ef8f3630fb` was correctly armed while the
+  receipt was pending and matched its exact terminal event. It did not resume
+  Codex because the recipe forced app-server dispatch into the active writer.
+- The executing Codex runtime was a tmux-hosted TUI with `TMUX_PANE=%28`.
+  Installed codex-wake 0.6.0 defaults to capturing that pane; the explicit
+  `--app-server-thread-id` option overrides the appropriate TUI transport.
+- The failed wake was not retried. It is archived, its source and temporary
+  service credential are removed, and active wake count is zero.
+- The canonical recipe and browser skill now select the actual runtime:
+  default tmux capture for a live TUI, explicit validated app-server targeting
+  only for a headless workflow. A published-doc regression preserves this
+  transport split. One fresh tmux-targeted installed acceptance remains.
