@@ -1,10 +1,10 @@
 # Aura-Call Roadmap
 
-- Active P76 / issue 125: [Plan 0376](docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md)
-  repairs the current control-less root Chat composer false negative while
-  preserving explicit Work evidence and Chat/Work selector separation. It is
-  the source prerequisite before issue 121 spends a fresh connector-plus-wake
-  acceptance.
+- Completed P76 / issue 125: [Plan 0376](docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md)
+  integrated the control-less root Chat composer repair through PR 126 at
+  canonical `2321ab9a2`, preserving explicit Work evidence and Chat/Work
+  selector separation. Issue 121 retains the separately governed fresh
+  connector-plus-wake acceptance.
 
 - Completed P75 / issue 123: [Plan 0375](docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md)
   integrated exact-tab coexistence through PR 124 at canonical `1398eadd7`.
