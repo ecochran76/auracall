@@ -76,9 +76,10 @@ limits, provider-warning stops, identity checks, and uncertain-effect fences.
   background workload and one new exact foreground target. Do not pause
   schedulers, override leases, retry a terminal session, or click ChatGPT's
   `Answer now` control.
-- Terminal condition: both workloads retain distinct targets, the foreground
-  request reaches its expected terminal result, registry/ledger evidence is
-  settled, and final service/browser health is known.
+- Terminal condition: both workloads retain distinct targets and the
+  foreground request reaches provider execution without waiting for the
+  unrelated lease. A later provider-specific pre-effect failure is recorded as
+  a separate successor instead of spending another coordination retry.
 
 ### Join | Issue 121 continuation
 
@@ -115,8 +116,27 @@ limits, provider-warning stops, identity checks, and uncertain-effect fences.
       identity, CAPTCHA, and effect-state hard stops remain intact.
 - [ ] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
       planning audit, and active-lane audit pass.
-- [ ] One exact installed coexistence smoke passes with source/runtime parity
-      and final ownership reconciliation.
+- [x] One exact installed coexistence smoke passes the coordination boundary
+      with source/runtime parity and final ownership reconciliation.
+
+## Installed Acceptance Receipt
+
+- Installed source commit `3209a323c` with byte-identical built and installed
+  browser-service and HTTP-server modules.
+- Existing history materialization retained active exact target
+  `26B8137AF4C8F9F8A36777DA75486C93`; the foreground run concurrently acquired
+  distinct exact target `A87C08DBBB9A6977FF6BD5FCDF8286B2` on the already
+  live managed browser at port `45015`.
+- The foreground path no longer requested browser-startup control or returned
+  `tab-leases-active`. It attached, navigated, passed login, and verified the
+  configured `eric.cochran@soylei.com` Pro personal binding.
+- Current ChatGPT composer mode markup then failed closed before Send with
+  `effectState=pre_effect`; no prompt was submitted and no retry ran. Issue 125
+  owns that provider-selector successor and blocks issue 121's final
+  connector-plus-wake acceptance.
+- The foreground lease settled idle with `effectState=none`; the unrelated
+  materialization lease remained active, and managed Chrome PID `58611`
+  remained live.
 
 ## Definition Of Done
 

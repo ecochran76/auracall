@@ -51490,4 +51490,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   serialized posture.
 - Provider-free regressions cover the exact unrelated-lease failure, direct
   no-launch owner adoption, and nested-profile HTTP status projection. The
-  installed coexistence smoke remains the final pre-merge acceptance gate.
+  installed runtime matched both changed built modules byte-for-byte. With an
+  active history-materialization lease on target `26B813...6C93`, one fresh
+  foreground run acquired distinct target `A87C08...86B2`, adopted port
+  `45015`, and verified the configured SoyLei identity without
+  `tab-leases-active` or browser-startup control.
+- The same one-shot run then stopped before Send on current ChatGPT root
+  composer-mode drift. Its lease settled idle with `effectState=none`; the
+  materialization lease stayed active and Chrome PID `58611` stayed live. No
+  retry ran. Issue 125 owns the provider-selector successor before issue 121's
+  final connector-plus-wake acceptance.
