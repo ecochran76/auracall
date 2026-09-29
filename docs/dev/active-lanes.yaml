@@ -1081,20 +1081,43 @@ lanes:
     plan_ref: refs/heads/fix/issue-123-tab-affinity-coexistence
     branch: fix/issue-123-tab-affinity-coexistence
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: fe6375955848afabacd9ef554dc943529866bcd1
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 0a800e22de8af69c77842c33eefb666d3775ca65
     remote_ref: refs/remotes/origin/fix/issue-123-tab-affinity-coexistence
     integration: merge
     work_items: [ecochran76/auracall#123]
     dependencies: [P52]
     overlaps: [P53]
-    reconciled_overlaps: []
+    reconciled_overlaps: [P53]
+    reconciliation_note: P75 changed only shared endpoint discovery and aggregate status; P53 retains rollout authority and issue 125 owns the later provider-specific composer drift.
     blocker: null
-    validation_status: planned-red-reproduction-pending
+    validation_status: installed-coexistence-accepted-integrated
     validation_ref: docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md
+    integration_receipt: 1398eadd763db1e29d7586b4cf9659fbd2fc69d9
+    disposition: PR 124 integrated the validated coordination repair and issue 123 closed; issue 125 owns the independent pre-Send composer drift.
+    updated_at: 2026-09-28
+  - id: P76
+    objective: Recognize the current control-less ChatGPT root Chat composer without weakening explicit Work evidence.
+    plan: docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md
+    plan_ref: refs/heads/fix/issue-125-root-chat-mode
+    branch: fix/issue-125-root-chat-mode
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 1398eadd763db1e29d7586b4cf9659fbd2fc69d9
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#125]
+    dependencies: [P75]
+    overlaps: [P53, P54]
+    reconciled_overlaps: [P53, P54]
+    reconciliation_note: P76 changes only ChatGPT composer-mode classification; P53 retains rollout authority and P54 retains composer tool and connected-app selection.
+    blocker: null
+    validation_status: red-reproduction-passed
+    validation_ref: docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md
     integration_receipt: null
-    disposition: Issue 123 blocks only the final installed acceptance for issue 121; PR 122 retains connector-only ownership.
+    disposition: Provider-free repair in progress; no installed or live effect belongs to this packet.
     updated_at: 2026-09-28
   - id: P55
     objective: Repair durable API runtime-profile provenance so explicit wsl-chrome-3 ChatGPT work cannot fall back to default Grok.

@@ -1,12 +1,15 @@
 # Aura-Call Roadmap
 
-- Active P75 / issue 123: [Plan 0375](docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md)
-  repairs the prerequisite exact-tab admission/config inconsistency exposed by
-  issue 121 acceptance. Foreground conversations, utility/history-
-  materialization, and live-follow work must coexist on distinct exact targets
-  when the managed browser already exists, while genuine profile-wide startup
-  remains exclusive. This lane merges before PR 122 is rebased and does not
-  own connected-app code.
+- Active P76 / issue 125: [Plan 0376](docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md)
+  repairs the current control-less root Chat composer false negative while
+  preserving explicit Work evidence and Chat/Work selector separation. It is
+  the source prerequisite before issue 121 spends a fresh connector-plus-wake
+  acceptance.
+
+- Completed P75 / issue 123: [Plan 0375](docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md)
+  integrated exact-tab coexistence through PR 124 at canonical `1398eadd7`.
+  The installed smoke proved distinct foreground and history-materialization
+  targets, then stopped pre-Send on the separate issue-125 composer drift.
 
 - Provider-free accepted P72 / reopened issue 107: [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
   carries a privacy-bounded stage and cleanup timeline through the exact CLI,

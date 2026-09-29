@@ -1,6 +1,6 @@
 # Tab-Affinity Workload Coexistence | 0375-2026-09-28
 
-State: OPEN
+State: CLOSED
 Lane: P75
 Work item: ecochran76/auracall#123
 Source base: `origin/main` at `fe6375955848afabacd9ef554dc943529866bcd1`
@@ -114,7 +114,7 @@ limits, provider-warning stops, identity checks, and uncertain-effect fences.
       remains exact and mutually isolated.
 - [x] `maxConcurrentChats`, aggregate interaction limits, provider warnings,
       identity, CAPTCHA, and effect-state hard stops remain intact.
-- [ ] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
+- [x] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
       planning audit, and active-lane audit pass.
 - [x] One exact installed coexistence smoke passes the coordination boundary
       with source/runtime parity and final ownership reconciliation.

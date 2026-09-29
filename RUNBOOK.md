@@ -1,5 +1,17 @@
 # RUNBOOK
 
+## Turn 631 | 2026-09-28
+
+- Reconciled integrated P75 / Plan 0375 at canonical merge `1398eadd7`; issue
+  123 is closed and PR 122 is rebased, validated, and pushed at `311438f8a`.
+- Opened P76 / Plan 0376 for issue 125 from canonical main. The exact installed
+  failure is a current root Chat composer with a visible enabled editor but no
+  historical Chat/Work control after the full hydration wait.
+- A deterministic provider-free regression fails with the retained
+  `mode-not-found` result for desired Chat while the adjacent root desired-Work
+  case remains fail-closed. No install, browser/provider effect, scheduler
+  control, terminal-session retry, or GitHub Actions run occurred.
+
 ## Turn 630 | 2026-09-28
 
 - Closed provider-free P72 / [Plan 0372](docs/dev/plans/0372-2026-09-28-library-lifecycle-diagnostics.md)
