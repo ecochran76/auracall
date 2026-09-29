@@ -31,8 +31,13 @@ function normalizedComposerText(value: string): string {
 		.replace(/`([^`]*)`/g, "$1")
 		.replace(/^\s{0,3}#{1,6}\s+/gm, "")
 		.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/gm, "")
-		.replace(/\s*…\s*$/u, "")
 		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function normalizedCommittedTurnText(value: string): string {
+	return normalizedComposerText(value)
+		.replace(/\s*…\s*$/u, "")
 		.trim();
 }
 
@@ -952,6 +957,7 @@ async function verifyPromptCommitted(
 export const __test__ = {
 	composerContainsPrompt,
 	composerContainsPromptWithProtectedLabels,
+	normalizedCommittedTurnText,
 	normalizedComposerText,
 	promptMismatchDiagnostics,
 	buildReadComposerUserTextFunction,
