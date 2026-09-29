@@ -143,6 +143,41 @@ describe('BrowserService DevTools attachment liveness', () => {
 });
 
 describe('BrowserService core launch port handling', () => {
+	test('adopts a responsive managed-profile owner during no-launch discovery', async () => {
+		processCheckMocks.isDevToolsResponsive.mockResolvedValueOnce(true);
+		const launchManualLoginSession = vi.fn();
+		const resolveManagedProfileOwner = vi.fn(async () => ({
+			host: '127.0.0.1',
+			port: 45011,
+			pid: 1234,
+		}));
+		const service = new BrowserService(
+			{
+				...DEFAULT_BROWSER_CONFIG,
+				manualLoginProfileDir: '/tmp/auracall/wsl-chrome-3/chatgpt',
+				chromeProfile: 'Default',
+			} as ResolvedBrowserConfig,
+			{
+				resolveBrowserListTarget: vi.fn(async () => undefined),
+				resolveManagedProfileOwner,
+				pruneRegistry: vi.fn(async () => {}),
+				launchManualLoginSession,
+			},
+		);
+
+		const target = await service.resolveDevToolsTarget({
+			ensurePort: false,
+			defaultProfileDir: '/tmp/auracall/wsl-chrome-3/chatgpt',
+			launchUrl: 'https://chatgpt.com/',
+		});
+
+		expect(target).toEqual({ host: '127.0.0.1', port: 45011, launched: false });
+		expect(resolveManagedProfileOwner).toHaveBeenCalledWith(
+			'/tmp/auracall/wsl-chrome-3/chatgpt',
+		);
+		expect(launchManualLoginSession).not.toHaveBeenCalled();
+	});
+
   test('reattaches to a responsive Chrome process that owns the managed browser profile', async () => {
     processCheckMocks.isDevToolsResponsive.mockResolvedValueOnce(true);
     const launchManualLoginSession = vi.fn();

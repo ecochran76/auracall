@@ -446,6 +446,26 @@ export function resolveTabAffinityMaintenanceIntervalMs(input: {
 	return 0;
 }
 
+function resolveTabConcurrencyStatusUserConfig(
+	userConfig: ResolvedUserConfig | null,
+): ResolvedUserConfig {
+	if (!userConfig || userConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+		return userConfig ?? ({} as ResolvedUserConfig);
+	}
+	for (const runtimeProfileId of Object.keys(
+		getCurrentRuntimeProfiles(userConfig as Record<string, unknown>),
+	)) {
+		const runtimeConfig = resolveRuntimeProfileUserConfig(userConfig, {
+			runtimeProfileId,
+			provider: "chatgpt",
+		}) as ResolvedUserConfig;
+		if (runtimeConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+			return runtimeConfig;
+		}
+	}
+	return userConfig;
+}
+
 function composeExecutionGates(
 	...gates: ExecutionServiceHostExecutionGate[]
 ): ExecutionServiceHostExecutionGate {
@@ -1167,7 +1187,7 @@ export async function createResponsesHttpServer(
 		});
 	const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
 	const tabConcurrencyRuntime = createBrowserTabConcurrencyRuntime(
-		resolvedUserConfig ?? ({} as ResolvedUserConfig),
+		resolveTabConcurrencyStatusUserConfig(resolvedUserConfig),
 		{ now },
 	);
 	const readTabConcurrencyStatus =

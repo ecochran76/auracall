@@ -101,17 +101,17 @@ limits, provider-warning stops, identity checks, and uncertain-effect fences.
 
 ## Acceptance Criteria
 
-- [ ] One deterministic provider-free regression reproduces the installed
+- [x] One deterministic provider-free regression reproduces the installed
       foreground denial with an existing endpoint and unrelated exact-tab
       lease.
-- [ ] Ordinary exact-tab reservation does not require profile-wide startup
+- [x] Ordinary exact-tab reservation does not require profile-wide startup
       control when the managed endpoint already exists.
-- [ ] Absent-browser startup remains blocked while any fenced lease exists.
-- [ ] API, CLI, and background-worker effective-mode/status evidence agrees for
+- [x] Absent-browser startup remains blocked while any fenced lease exists.
+- [x] API, CLI, and background-worker effective-mode/status evidence agrees for
       the selected AuraCall runtime profile.
-- [ ] Conversation, utility/materialization, and live-follow target ownership
+- [x] Conversation, utility/materialization, and live-follow target ownership
       remains exact and mutually isolated.
-- [ ] `maxConcurrentChats`, aggregate interaction limits, provider warnings,
+- [x] `maxConcurrentChats`, aggregate interaction limits, provider warnings,
       identity, CAPTCHA, and effect-state hard stops remain intact.
 - [ ] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
       planning audit, and active-lane audit pass.

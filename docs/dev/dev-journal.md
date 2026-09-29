@@ -51473,3 +51473,21 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free regressions cover exact adoption, absence, CDP cleanup, and a
   retained event-loop handle. No install, live browser, provider access,
   retry, navigation, refresh, target creation, attachment, prompt, or Send ran.
+
+## 2026-09-28 | Plan 0375 provider-free browser-coordination repair
+
+- Reproduced issue 123 at the production affinity seam: a foreground
+  conversation with an unrelated exact-tab lease failed with
+  `tab-leases-active` even though the managed browser already exposed a live
+  DevTools endpoint.
+- The no-launch service-target lookup consulted the endpoint registry but
+  skipped live managed-profile owner discovery. It now adopts a responsive
+  owner during `ensurePort=false`; absent or unresponsive browser startup keeps
+  the existing profile-wide exclusion and fail-closed behavior.
+- Reconciled API status with the maintenance owner: root or any resolved
+  AuraCall runtime profile selecting affinity now exposes the shared aggregate
+  registry and ledger as `tab-affinity` instead of falsely reporting a
+  serialized posture.
+- Provider-free regressions cover the exact unrelated-lease failure, direct
+  no-launch owner adoption, and nested-profile HTTP status projection. The
+  installed coexistence smoke remains the final pre-merge acceptance gate.
