@@ -1,6 +1,6 @@
 # ChatGPT Rate-Limit Terminal Reconciliation | 0378-2026-09-29
 
-State: OPEN
+State: CLOSED
 Lane: P78
 Work item: ecochran76/auracall#131
 Source base: `origin/main` at `5ba27dc614f12babdf2e5f04aa4c75fd8b88fe48`
@@ -107,3 +107,12 @@ semantics.
 Provider-free fixtures and current source validation are authorized. Installing
 the runtime, restarting services, dismissing the warning, or running a live
 provider canary require a separate explicit authority gate.
+
+## Integration Receipt
+
+- PR 132 merged into canonical `origin/main` as
+  `ec5c30030146f9622a2fe31fae73881330bf21de`.
+- GitHub automatically closed issue 131 from the merged `Closes #131` link.
+- No live ChatGPT request, runtime installation, service restart, warning
+  dismissal, navigation, click, tab closure, or prompt retry occurred during
+  implementation and integration.
