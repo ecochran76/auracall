@@ -2,6 +2,13 @@
 
 ## Turn 631 | 2026-09-28
 
+- Integrated P76 / Plan 0376 through PR 126 at canonical `2321ab9a2`; issue
+  125 is closed. Exact root Chat may use editor evidence only after the bounded
+  explicit-control wait, while Work and project-landing boundaries remain
+  fail-closed.
+- Provider-free verification passed 24 focused and 158 adjacent tests plus
+  typecheck, scoped lint, build, diff hygiene, and plan audit. No installed or
+  live provider effect ran; issue 121 / PR 122 retains that authority.
 - Reconciled integrated P75 / Plan 0375 at canonical merge `1398eadd7`; issue
   123 is closed and PR 122 is rebased, validated, and pushed at `311438f8a`.
 - Opened P76 / Plan 0376 for issue 125 from canonical main. The exact installed

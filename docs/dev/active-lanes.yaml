@@ -1103,10 +1103,10 @@ lanes:
     plan_ref: refs/heads/fix/issue-125-root-chat-mode
     branch: fix/issue-125-root-chat-mode
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 1398eadd763db1e29d7586b4cf9659fbd2fc69d9
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 56ef1bd4f2f562a713fd106239910492121111e2
+    remote_ref: refs/remotes/origin/fix/issue-125-root-chat-mode
     integration: merge
     work_items: [ecochran76/auracall#125]
     dependencies: [P75]
@@ -1114,10 +1114,10 @@ lanes:
     reconciled_overlaps: [P53, P54]
     reconciliation_note: P76 changes only ChatGPT composer-mode classification; P53 retains rollout authority and P54 retains composer tool and connected-app selection.
     blocker: null
-    validation_status: red-reproduction-passed
+    validation_status: provider-free-accepted-integrated
     validation_ref: docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md
-    integration_receipt: null
-    disposition: Provider-free repair in progress; no installed or live effect belongs to this packet.
+    integration_receipt: 2321ab9a212b0ed4d11579f7217086ac60dd14b1
+    disposition: PR 126 integrated the provider-free repair and issue 125 closed; issue 121 and PR 122 retain the separately governed connector-plus-wake acceptance.
     updated_at: 2026-09-28
   - id: P55
     objective: Repair durable API runtime-profile provenance so explicit wsl-chrome-3 ChatGPT work cannot fall back to default Grok.

@@ -1,6 +1,6 @@
 # Root Chat Composer-Mode Drift | 0376-2026-09-28
 
-State: OPEN
+State: CLOSED
 Lane: P76
 Work item: ecochran76/auracall#125
 Source base: `origin/main` at `1398eadd763db1e29d7586b4cf9659fbd2fc69d9`
@@ -68,7 +68,7 @@ Work rejection, or the separation between Chat and Work model controls.
 - [x] Active current-route Work evidence continues to reject implicit Chat.
 - [x] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
       planning audit, and lane audit pass.
-- [ ] The validated source repair is merged, issue 125 is closed, and the
+- [x] The validated source repair is merged, issue 125 is closed, and the
       Session 1 handoff is rewritten with the canonical merge receipt.
 
 ## Definition Of Done
