@@ -1075,6 +1075,27 @@ lanes:
     integration_receipt: 54d747f6bca13ff8a4be7bf6b0780c4632a4e6fb
     disposition: PR 91 integrated the provider-free repair and bounded live acceptance evidence; issue 90 is closed and the remote topic ref is retained for audit custody.
     updated_at: 2026-09-27
+  - id: P75
+    objective: Restore exact-tab coexistence for foreground, utility or materialization, and live-follow workloads when the managed ChatGPT browser already exists.
+    plan: docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md
+    plan_ref: refs/heads/fix/issue-123-tab-affinity-coexistence
+    branch: fix/issue-123-tab-affinity-coexistence
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: fe6375955848afabacd9ef554dc943529866bcd1
+    remote_ref: refs/remotes/origin/fix/issue-123-tab-affinity-coexistence
+    integration: merge
+    work_items: [ecochran76/auracall#123]
+    dependencies: [P52]
+    overlaps: [P53]
+    reconciled_overlaps: []
+    blocker: null
+    validation_status: planned-red-reproduction-pending
+    validation_ref: docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md
+    integration_receipt: null
+    disposition: Issue 123 blocks only the final installed acceptance for issue 121; PR 122 retains connector-only ownership.
+    updated_at: 2026-09-28
   - id: P55
     objective: Repair durable API runtime-profile provenance so explicit wsl-chrome-3 ChatGPT work cannot fall back to default Grok.
     plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
