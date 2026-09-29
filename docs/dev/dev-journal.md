@@ -51715,3 +51715,6 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free checkpoint `36a6061484` passes 55 focused and adjacent tests,
   typecheck, production build, and diff hygiene. The active-plan audit reports
   only the pre-existing Plan 0362 wiring findings; no live effect occurred.
+- PR 136 merged at canonical receipt `6f4b3b34918157e64ba0fff069e3280f6eb9bf11`
+  and closed issue 135. P79 is integrated; installed adoption and live
+  acceptance were deliberately not performed.

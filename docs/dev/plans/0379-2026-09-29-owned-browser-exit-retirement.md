@@ -36,7 +36,7 @@ allowing a delayed event or reused PID to remove a replacement instance.
 
 ## Current State
 
-- Issue 135 is open, assigned, and linked to this active implementation lane.
+- Issue 135 was closed by the canonical integration of PR 136.
 - The generation-matched registry test first failed because no conditional
   retirement API existed; the owned-child-exit test then failed because no
   exit observer invoked retirement.
@@ -47,6 +47,8 @@ allowing a delayed event or reused PID to remove a replacement instance.
   files, plus typecheck and production build. No live effect was used.
 - Validated implementation checkpoint:
   `36a6061484dc7070f22ba575d141b0047a322a82`.
+- Canonical merge receipt:
+  `6f4b3b34918157e64ba0fff069e3280f6eb9bf11`.
 
 ## Execution Packet
 
@@ -84,5 +86,5 @@ allowing a delayed event or reused PID to remove a replacement instance.
 
 ## Current Next Action
 
-Publish the validated checkpoint and open the issue-linked PR for canonical
-integration. Installed-runtime adoption remains separately gated.
+Source implementation and integration are complete. Installed-runtime adoption
+and any live acceptance remain separately gated and were not performed.
