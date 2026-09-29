@@ -51656,3 +51656,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `visibility_result.classification=visible_prompt_observed`. Cleanup archived
   the wake, removed its source and temporary credential, restarted the wake
   service, and confirmed zero active wakes. Installed acceptance is complete.
+- Issue 128 diagnosis localized the installed inline-file false negative to
+  committed-turn DOM fidelity rather than prompt assembly: the full 10,526
+  characters were queued, but `<br>` boundaries disappeared and a presentation
+  ellipsis remained. Plan 0377 / lane P77 owns a provider-free exactness repair;
+  the terminal session is not eligible for retry.
+- Commit `5dc24ca89` preserves `<br>` boundaries, removes only a terminal
+  presentation ellipsis during comparison, retains authored-text rejection,
+  and classifies a new committed turn with a cleared composer and conversation
+  route as `effect_observed`. Focused and adjacent tests pass 57/57; typecheck,
+  scoped Biome, and build pass.
+- Published-diff self-review found and corrected one scope leak: terminal
+  ellipsis tolerance now exists only in committed-turn normalization, while
+  pre-Send composer verification explicitly remains fail-closed.

@@ -1487,3 +1487,25 @@ lanes:
     integration_receipt: null
     disposition: Provider-free correction accepted locally; publication, integration, and fresh installed acceptance remain separate gates.
     updated_at: 2026-09-28
+  - id: P77
+    objective: Verify committed ChatGPT turns against the exact effective prompt when text files are pasted inline.
+    plan: docs/dev/plans/0377-2026-09-29-inline-file-prompt-commit.md
+    plan_ref: refs/heads/fix/issue-128-inline-file-commit
+    branch: fix/issue-128-inline-file-commit
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE
+    checkpoint: 5109272d23018006843d0c26c23a20f0acef082f
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#128]
+    dependencies: [P74]
+    overlaps: [P74]
+    reconciled_overlaps: [P74]
+    reconciliation_note: P77 changes only committed-turn text fidelity and effect classification; P74 retains connected-app selection and completed wake acceptance.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0377-2026-09-29-inline-file-prompt-commit.md
+    integration_receipt: null
+    disposition: Provider-free repair accepted; publication, review, integration, and any installed live acceptance remain separate gates.
+    updated_at: 2026-09-29
