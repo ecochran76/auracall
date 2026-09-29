@@ -1,6 +1,6 @@
 # Owned Browser Exit Registry Retirement | 0379-2026-09-29
 
-State: OPEN
+State: CLOSED
 Lane: P79
 Work item: ecochran76/auracall#135
 Source base: `origin/main` at `660b7ec7473d2f5bbee60f9ac83c817f91dbda8f`
@@ -45,6 +45,8 @@ allowing a delayed event or reused PID to remove a replacement instance.
   existing SIGTERM hook converge on that idempotent operation.
 - Focused and adjacent provider-free validation passes 55 tests across eight
   files, plus typecheck and production build. No live effect was used.
+- Validated implementation checkpoint:
+  `36a6061484dc7070f22ba575d141b0047a322a82`.
 
 ## Execution Packet
 
@@ -82,5 +84,5 @@ allowing a delayed event or reused PID to remove a replacement instance.
 
 ## Current Next Action
 
-Complete diff and planning hygiene, publish the implementation checkpoint, and
-open the issue-linked PR for canonical integration.
+Publish the validated checkpoint and open the issue-linked PR for canonical
+integration. Installed-runtime adoption remains separately gated.

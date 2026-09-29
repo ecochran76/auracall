@@ -51712,3 +51712,6 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   launch, never a replacement entry for the same managed browser profile.
 - Graphiti was healthy but returned no prior fact for this defect. Current
   runtime evidence, CodeGraph source flow, and focused tests remain authority.
+- Provider-free checkpoint `36a6061484` passes 55 focused and adjacent tests,
+  typecheck, production build, and diff hygiene. The active-plan audit reports
+  only the pre-existing Plan 0362 wiring findings; no live effect occurred.

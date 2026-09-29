@@ -1537,9 +1537,9 @@ lanes:
     plan_ref: refs/heads/fix/issue-135-browser-exit-retirement
     branch: fix/issue-135-browser-exit-retirement
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 660b7ec7473d2f5bbee60f9ac83c817f91dbda8f
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 36a6061484dc7070f22ba575d141b0047a322a82
     remote_ref: null
     integration: merge
     work_items: [ecochran76/auracall#135]
@@ -1548,8 +1548,8 @@ lanes:
     reconciled_overlaps: []
     reconciliation_note: P79 is a provider-neutral browser process/registry lifecycle repair; it does not alter P78 rate-limit reconciliation or invoke live provider work.
     blocker: null
-    validation_status: red-regression-pending
+    validation_status: provider-free-accepted
     validation_ref: docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md
     integration_receipt: null
-    disposition: Provider-free source repair only; installed runtime and live acceptance are outside this lane.
+    disposition: Provider-free repair accepted locally; publication and integration remain open, while installed runtime and live acceptance stay outside this lane.
     updated_at: 2026-09-29
