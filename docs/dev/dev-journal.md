@@ -51673,3 +51673,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   automatically. Closeout remained documentation-only and did not install,
   restart services, retry the terminal session, or create another provider
   effect.
+
+## 2026-09-29 | Issue 131 ChatGPT rate-limit terminal reconciliation
+
+- Opened issue 131 after the operator observed ChatGPT's account-wide `Too many
+  requests` warning without a corresponding `wsl-chrome-3` cooldown record.
+- Confirmed the installed phrase classifier exists; the gap is bounded to
+  delayed or sibling-target warning visibility after the active error path.
+- Plan 0378 / lane P78 owns a provider-free terminal reconciliation repair.
+  Live requests, warning dismissal, installation, and service mutation remain
+  outside this packet.

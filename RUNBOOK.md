@@ -21898,3 +21898,14 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   with `tab-leases-active`.
 - No browser, provider, scheduler, lease override, service restart, installed
   runtime change, or terminal-session retry occurred in this planning packet.
+
+## Turn 623 | 2026-09-29
+
+- Opened issue 131 after an allowlisted forge preflight found no duplicate and
+  resolved the exact existing `bug` label.
+- P78 / [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)
+  owns a bounded provider-free repair for delayed account-wide ChatGPT rate
+  limits on the leased or sibling same-profile target.
+- The packet must persist a profile cooldown while preserving post-effect
+  non-retryability. No live request, warning dismissal, install, service
+  restart, or browser mutation is authorized.
