@@ -21909,3 +21909,9 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - The packet must persist a profile cooldown while preserving post-effect
   non-retryability. No live request, warning dismissal, install, service
   restart, or browser mutation is authorized.
+- Provider-free implementation passed typecheck, build, diff hygiene, and
+  290 focused/adjacent tests across 8 files. The 377-plan audit reported zero
+  validation errors.
+- PR 132 merged the repair to canonical `main` at
+  `ec5c30030146f9622a2fe31fae73881330bf21de`; issue 131 closed automatically.
+  No installed or live provider action was performed.

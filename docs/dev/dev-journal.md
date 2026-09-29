@@ -51695,3 +51695,6 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   and the 377-plan audit passed. Scoped Biome reported only the expected fake
   CDP `Runtime` naming warning. No live ChatGPT request, installation, browser
   mutation, or service restart was performed.
+- PR 132 merged the validated repair to canonical `main` at `ec5c30030146` and
+  closed issue 131. P78 is reconciled as integrated; installed acceptance and
+  any live ChatGPT request remain deliberately unperformed.
