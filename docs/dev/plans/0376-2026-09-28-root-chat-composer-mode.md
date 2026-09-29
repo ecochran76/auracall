@@ -61,12 +61,12 @@ Work rejection, or the separation between Chat and Work model controls.
 
 - [x] A deterministic provider-free regression reproduces the captured root
       Chat false negative.
-- [ ] Root Chat succeeds only after the existing mode-control wait when one
+- [x] Root Chat succeeds only after the existing mode-control wait when one
       exact visible enabled prompt editor exists and no active Work marker is
       present.
-- [ ] Explicit Work remains unavailable without exact Work evidence.
-- [ ] Active current-route Work evidence continues to reject implicit Chat.
-- [ ] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
+- [x] Explicit Work remains unavailable without exact Work evidence.
+- [x] Active current-route Work evidence continues to reject implicit Chat.
+- [x] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
       planning audit, and lane audit pass.
 - [ ] The validated source repair is merged, issue 125 is closed, and the
       Session 1 handoff is rewritten with the canonical merge receipt.

@@ -140,9 +140,10 @@
 - ChatGPT Chat/Work composer boundary:
   - normal browser runs default to Chat; Work requires
     `--browser-chatgpt-mode work`
-  - an established conversation with no rendered mode control may qualify as
-    Chat only when its exact visible, enabled ChatGPT prompt editor is present
-    and the active current-route conversation has no exact `Work` badge
+  - an established conversation, or the exact `/` root after its bounded
+    mode-control hydration wait, may qualify as Chat without a rendered mode
+    control only when its exact visible, enabled ChatGPT prompt editor is
+    present and the active current-route conversation has no exact `Work` badge
   - `[data-animated-slider-trigger=true]` is model/thinking UI, not a mode
     discriminator; ordinary Chat may expose it with text such as `High`
   - established Work requires positive proof from the visible active

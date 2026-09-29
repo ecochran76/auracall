@@ -23570,3 +23570,14 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   serialized but a resolved AuraCall runtime profile selects affinity, report
   the shared affinity registry and ledger rather than an empty serialized
   projection.
+
+## 2026-09-28 | Accept root Chat only after the explicit mode-control wait
+
+- A current ChatGPT root may expose one exact enabled prompt editor without
+  rendering the historical Chat/Work controls. Restricting the control-less
+  Chat fallback to conversation routes turns that valid root into a false
+  pre-Send failure.
+- Preserve the bounded control wait first, then allow only exact `/` and
+  established conversation routes to use editor evidence for desired Chat.
+  The editor alone never proves Work, project landing pages remain explicit,
+  and an active current-route Work badge remains authoritative.

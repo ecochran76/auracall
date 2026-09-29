@@ -139,7 +139,7 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
       .map((node) => ({ node, label: normalize(node.textContent) }))
       .filter(({ label }) => label === 'chat' || label === 'work');
     // A root/project landing composer can hydrate before its sticky Work control.
-    // Only an established conversation may use the historical control-less fallback.
+    // Root Chat may use the control-less fallback only after that bounded wait.
     const establishedConversation = /^\\/c\\/[^/]+\\/?$/.test(location.pathname) ||
       projectConversationRoute(location.pathname) !== null;
 	    let radios = readModes('[role="radio"]');
@@ -177,7 +177,8 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
           ? { status: 'already-selected', mode: DESIRED_MODE }
           : { status: 'mode-not-found', availableModes: ['Work'] };
       }
-      if (establishedConversation && DESIRED_MODE === 'chat' && radios.length === 0) {
+      const controlLessChatEligible = establishedConversation || location.pathname === '/';
+      if (controlLessChatEligible && DESIRED_MODE === 'chat' && radios.length === 0) {
         const composerStartedAt = performance.now();
         while (performance.now() - composerStartedAt < 10000) {
           if (hasActiveConversationWorkMarker()) break;

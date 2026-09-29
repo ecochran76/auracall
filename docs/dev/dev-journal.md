@@ -51500,3 +51500,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   materialization lease stayed active and Chrome PID `58611` stayed live. No
   retry ran. Issue 125 owns the provider-selector successor before issue 121's
   final connector-plus-wake acceptance.
+
+## 2026-09-28 | Plan 0376 root Chat composer-mode repair
+
+- The installed issue-123 smoke proved browser coordination, then stopped
+  before Send because the exact ChatGPT root exposed a ready `Ask ChatGPT`
+  editor without historical Chat/Work controls.
+- A provider-free root-route fixture reproduced the exact `mode-not-found`
+  result after the full control-hydration wait. The implementation had retained
+  the editor fallback only for established conversation routes.
+- The exact `/` root may now use that fallback for desired Chat after the
+  existing wait. Desired Work still fails without positive Work evidence;
+  project landing pages still require controls; current-route Work badges still
+  reject implicit Chat. No installed or live provider effect ran.

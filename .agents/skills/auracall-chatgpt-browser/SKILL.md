@@ -73,7 +73,9 @@ Support the verified mode-control families without broad text matching:
   by the visible active conversation link whose `href` resolves to the current
   pathname and whose descendant `span` has exact normalized text `Work`.
 - Established Chat may use the exact visible enabled prompt editor only when
-  that active Work badge is absent. A visible `High` thinking control does not
+  that active Work badge is absent. The exact `/` root may use the same
+  fallback only after the bounded explicit-control wait completes. Neither
+  fallback can establish Work. A visible `High` thinking control does not
   disqualify Chat.
 
 Treat Work's model selector as a separate nested surface:
