@@ -15,7 +15,7 @@ sibling ChatGPT target before releasing a browser operation, persist the
 browser-profile cooldown, and preserve truthful non-retryable provider-effect
 semantics.
 
-## Current State
+## Current Evidence
 
 - Installed session `mail-wake-review-1790685771` reached a committed user turn
   and then terminated as a prompt-commit verification failure before ChatGPT's
@@ -27,8 +27,11 @@ semantics.
   active error; after cleanup it has no bounded delayed or sibling-target
   reconciliation.
 - Issue 131 records the defect and provider-free acceptance contract.
-- The implementation remains absent; the next action is the delayed
-  sibling-target RED fixture through the planned reconciliation interface.
+- Source checkpoint `813c4a6d86fc34c2c052328222f60bbea7c9898e`
+  implements bounded leased/sibling-target reconciliation on both local and
+  remote browser paths, including early terminal returns.
+- Post-effect and uncertain-effect detections now persist the browser-profile
+  cooldown while preserving `retrySafe=false` and the original effect state.
 
 ## Execution Packet
 
@@ -58,20 +61,37 @@ semantics.
 
 ## Acceptance Criteria
 
-- [ ] A provider-free regression reproduces delayed sibling-target detection
+- [x] A provider-free regression reproduces delayed sibling-target detection
       and fails before the repair.
-- [ ] Delayed warning detection works for both the leased target and a sibling
+- [x] Delayed warning detection works for both the leased target and a sibling
       ChatGPT target on the same browser endpoint.
-- [ ] Non-ChatGPT and non-page targets are excluded, inspected clients are
+- [x] Non-ChatGPT and non-page targets are excluded, inspected clients are
       closed, and target content is not retained in diagnostics.
-- [ ] No-warning reconciliation terminates within its configured deterministic
+- [x] No-warning reconciliation terminates within its configured deterministic
       attempt/interval bound.
-- [ ] A detected post-effect rate limit persists the profile cooldown and
+- [x] A detected post-effect rate limit persists the profile cooldown and
       returns `retrySafe=false` without changing the original effect state.
-- [ ] Existing pre-effect rate-limit handling and prompt-effect reconciliation
+- [x] Existing pre-effect rate-limit handling and prompt-effect reconciliation
       remain green.
-- [ ] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
+- [x] Focused and adjacent tests, typecheck, scoped lint, build, diff hygiene,
       plan audit, and lane audit complete with truthful receipts.
+
+## Provider-Free Validation
+
+- The delayed sibling-target test failed before implementation because the
+  reconciliation module did not exist, then passed with the bounded target
+  census.
+- Focused and adjacent browser tests: 290/290 passed across 8 files.
+- `pnpm typecheck`: passed.
+- Scoped Biome check on the focused new/guard files passed with only the
+  expected fake-CDP `Runtime` naming warning. Legacy broad files were not
+  mechanically reformatted.
+- `pnpm build`: passed.
+- `git diff --check`: passed.
+- Plan-library audit: 377 candidates, 0 validation errors.
+- The active-lane audit correctly reported P78's pre-closeout checkpoint
+  metadata as stale; this reconciliation updates the lane to the published
+  source checkpoint. Unrelated catalog debt remains outside P78.
 
 ## Stop Rules
 

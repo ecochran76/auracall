@@ -51683,3 +51683,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Plan 0378 / lane P78 owns a provider-free terminal reconciliation repair.
   Live requests, warning dismissal, installation, and service mutation remain
   outside this packet.
+- Implemented a bounded three-pass terminal census over ChatGPT page targets
+  on the exact browser endpoint, inspecting the leased target first and closing
+  every sibling inspection client without navigation, clicks, or tab closure.
+- Wired the census into local and remote success and failure exits. A detected
+  warning now persists the browser-profile cooldown even after an observed or
+  uncertain provider effect, while returning `retrySafe=false` and preserving
+  the original effect classification.
+- Provider-free validation at source checkpoint `813c4a6d8`: typecheck and
+  build passed; 290 focused/adjacent tests passed across 8 files; diff hygiene
+  and the 377-plan audit passed. Scoped Biome reported only the expected fake
+  CDP `Runtime` naming warning. No live ChatGPT request, installation, browser
+  mutation, or service restart was performed.

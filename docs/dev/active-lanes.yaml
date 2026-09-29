@@ -1516,9 +1516,9 @@ lanes:
     branch: fix/issue-131-chatgpt-rate-limit-reconciliation
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 5ba27dc614f12babdf2e5f04aa4c75fd8b88fe48
-    remote_ref: null
+    custody_state: INTEGRATION_READY
+    checkpoint: 813c4a6d86fc34c2c052328222f60bbea7c9898e
+    remote_ref: refs/remotes/origin/fix/issue-131-chatgpt-rate-limit-reconciliation
     integration: merge
     work_items: [ecochran76/auracall#131]
     dependencies: [P77]
@@ -1526,8 +1526,8 @@ lanes:
     reconciled_overlaps: [P77]
     reconciliation_note: P78 changes terminal rate-limit reconciliation and profile cooldown persistence; P77 retains committed-turn text fidelity and effect classification.
     blocker: null
-    validation_status: planned
+    validation_status: provider-free-accepted
     validation_ref: docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md
     integration_receipt: null
-    disposition: Provider-free source repair in progress; no installed or live provider action is authorized.
+    disposition: Provider-free repair accepted and published for integration; no installed or live provider action was performed.
     updated_at: 2026-09-29
