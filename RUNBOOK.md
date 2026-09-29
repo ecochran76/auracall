@@ -21927,3 +21927,6 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   callback or reused PID cannot delete a replacement managed browser profile
   record. No browser launch, install, service restart, scheduler mutation, or
   provider action is authorized in this lane.
+- PR 136 merged P79 to canonical `main` at `6f4b3b349`; issue 135 closed.
+  Provider-free validation remains the source acceptance boundary; no
+  installed-runtime or live-provider action occurred.

@@ -1534,11 +1534,11 @@ lanes:
   - id: P79
     objective: Retire exact owned browser registry generations when Chrome exits without deleting replacement leases.
     plan: docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md
-    plan_ref: refs/heads/fix/issue-135-browser-exit-retirement
+    plan_ref: refs/remotes/origin/main
     branch: fix/issue-135-browser-exit-retirement
     target: main
     plan_state: CLOSED
-    custody_state: INTEGRATION_READY
+    custody_state: INTEGRATED
     checkpoint: 36a6061484dc7070f22ba575d141b0047a322a82
     remote_ref: null
     integration: merge
@@ -1550,6 +1550,6 @@ lanes:
     blocker: null
     validation_status: provider-free-accepted
     validation_ref: docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md
-    integration_receipt: null
-    disposition: Provider-free repair accepted locally; publication and integration remain open, while installed runtime and live acceptance stay outside this lane.
+    integration_receipt: 6f4b3b34918157e64ba0fff069e3280f6eb9bf11
+    disposition: Provider-free repair integrated through PR 136 and issue 135 closed; installed runtime and live acceptance were not performed.
     updated_at: 2026-09-29
