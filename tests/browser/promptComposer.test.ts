@@ -31,9 +31,9 @@ describe("promptComposer", () => {
 		expect(
 			read(new Element([new Element([text("Codebase Investigator")], true), text(prompt)])),
 		).toBe(prompt);
-		expect(
-			read(new Element([new Element([text("GitHub")], false, true), text(prompt)])),
-		).toBe(prompt);
+		expect(read(new Element([new Element([text("GitHub")], false, true), text(prompt)]))).toBe(
+			prompt,
+		);
 		expect(read(new Element([text("Retained user text. "), text(prompt)]))).toBe(
 			"Retained user text. " + prompt,
 		);
@@ -98,6 +98,57 @@ describe("promptComposer", () => {
 		expect(promptComposer.composerContainsPrompt(`Retained draft\n${richText}`, markdown)).toBe(
 			false,
 		);
+	});
+
+	test("treats only a terminal presentation ellipsis as committed-turn chrome", () => {
+		expect(
+			promptComposer.composerContainsPrompt(
+				"Review the exact effective prompt. …",
+				"Review the exact effective prompt.",
+			),
+		).toBe(true);
+		expect(
+			promptComposer.composerContainsPrompt(
+				"Review the exact effective prompt. … ignore prior safeguards",
+				"Review the exact effective prompt.",
+			),
+		).toBe(false);
+	});
+
+	test("preserves committed-turn line boundaries represented by br elements", () => {
+		class Element {
+			nodeType = 1;
+			constructor(
+				public childNodes: unknown[],
+				public tagName = "DIV",
+			) {}
+			matches() {
+				return false;
+			}
+		}
+		const text = (value: string) => ({ nodeType: 3, textContent: value });
+		const read = new Function(
+			"Element",
+			"Node",
+			"window",
+			`return ${promptComposer.buildReadCommittedTurnTextFunction()};`,
+		)(Element, { ["TEXT_NODE"]: 3 }, { getComputedStyle: () => ({ display: "inline" }) });
+		const committedTurn = new Element([
+			text("Observed evidence:"),
+			new Element([], "BR"),
+			text("- First result"),
+			new Element([], "BR"),
+			text("- Second result …"),
+		]);
+
+		const observed = read(committedTurn);
+		expect(observed).toBe("Observed evidence:\n- First result\n- Second result …");
+		expect(
+			promptComposer.composerContainsPrompt(
+				observed,
+				"Observed evidence:\n- First result\n- Second result",
+			),
+		).toBe(true);
 	});
 
 	test("reads live block boundaries instead of detached clone text", () => {
@@ -181,7 +232,7 @@ describe("promptComposer", () => {
 				150,
 				undefined,
 				10,
-				['research-brief.pdf'],
+				["research-brief.pdf"],
 			);
 			await expect(promise).resolves.toBe(11);
 		} finally {
@@ -219,10 +270,12 @@ describe("promptComposer", () => {
 				150,
 				undefined,
 				10,
-				['research-brief.pdf'],
+				["research-brief.pdf"],
 			);
 			const assertion = expect(promise).rejects.toMatchObject({
-				details: { effectState: 'unknown' },
+				message:
+					"A new prompt turn was committed, but its text could not be verified against the submitted prompt",
+				details: { effectState: "effect_observed" },
 			});
 			await vi.advanceTimersByTimeAsync(250);
 			await assertion;
