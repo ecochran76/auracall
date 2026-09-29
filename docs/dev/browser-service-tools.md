@@ -118,6 +118,15 @@ Current upgrade backlog:
 - lessons review: [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-lessons-review-2026-03-30.md)
 - Aura-Call-only workflow work: [auracall-browser-onboarding-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/auracall-browser-onboarding-backlog.md)
 
+Owned Chrome lifecycle state is generation-bound. A launched instance is
+identified by its managed browser profile plus PID, DevTools port, and
+`launchedAt`. Child exit, explicit shutdown, and signal-driven shutdown retire
+only that exact registry generation; a delayed callback cannot delete a newer
+replacement's owner, operation, or lease. Registry mutation uses a short
+cross-process file lock so matching and deletion remain atomic with replacement
+registration. Liveness pruning remains the recovery path for abrupt exits that
+cannot deliver a child event.
+
 Current DOM-drift extraction priorities live in the 2026-03-28 section of
 [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md):
 - `navigateAndSettle(...)`

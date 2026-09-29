@@ -21915,3 +21915,15 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - PR 132 merged the repair to canonical `main` at
   `ec5c30030146f9622a2fe31fae73881330bf21de`; issue 131 closed automatically.
   No installed or live provider action was performed.
+
+## Turn 624 | 2026-09-29
+
+- Opened issue 135 after forge preflight and duplicate search confirmed the
+  owned target, exact existing `bug` label, and no matching work item.
+- P79 / [Plan 0379](docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md)
+  owns a provider-free browser-service repair for stale registry owner,
+  operation, and lease state after an owned Chrome process exits.
+- Retirement must match the exact launched generation so an old child-exit
+  callback or reused PID cannot delete a replacement managed browser profile
+  record. No browser launch, install, service restart, scheduler mutation, or
+  provider action is authorized in this lane.

@@ -23695,3 +23695,21 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - The census never navigates, clicks, dismisses, or closes a target and retains
   only the target identity, URL, sanitized summary, source class, and poll
   attempt as diagnostic evidence.
+
+## 2026-09-29 | Owned Chrome exit left stale browser owner and lease state
+
+- Symptom: an owned managed browser profile remained in `browser-state.json`
+  after Chrome and its DevTools endpoint exited. The stale owner, operation,
+  lease, PID, and port survived long enough for Linux to reuse the PID for an
+  unrelated process.
+- Cause: explicit owned-handle shutdown deleted registry state by managed
+  browser profile alone, and ordinary child exit had no lifecycle observer.
+  Liveness pruning could repair the record only when a later read happened.
+- Fix: owned launches now observe child `exit`, and child exit, explicit kill,
+  and SIGTERM-driven kill all use an idempotent retirement operation matched on
+  PID, DevTools port, and `launchedAt`. Registry mutations are serialized under
+  a cross-process lock, preventing an old callback from racing and deleting a
+  replacement generation.
+- Guardrail: never treat PID equality alone as browser ownership proof. Keep
+  adopted/external browsers non-owned, and retain liveness pruning only as
+  abrupt-crash recovery.

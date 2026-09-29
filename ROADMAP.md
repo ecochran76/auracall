@@ -4388,6 +4388,12 @@ Release discipline:
 ### Browser Service Hardening
 See [docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md](docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md).
 
+- P79 / [Plan 0379](docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md)
+  is active under issue 135 to make owned Chrome exit retire only its exact
+  browser-registry generation. The provider-free lane explicitly guards newer
+  replacement leases from delayed callbacks and leaves installed/live effects
+  outside scope.
+
 Historical focused reliability slices:
 - [docs/dev/plans/0141-2026-06-12-agent-browser-migration.md](docs/dev/plans/0141-2026-06-12-agent-browser-migration.md) (closed as pilot deferred; no-launch BYOP mapping accepted, live mutation held for agent-browser external-BYOP adopt/reuse support)
 - [docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md](docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md) (closed)
