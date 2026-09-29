@@ -23400,8 +23400,11 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
   its TTL expires.
 - Before acquiring browser-startup control, release only idle leases with
   `none` or `settled` effect state as `target-missing`/`already-missing`.
-  Preserve active, in-flight, outcome-unknown, retiring, and lost fences so an
-  ambiguous provider effect never becomes retryable through startup recovery.
+- Startup fencing is profile-wide, so absent-browser reconciliation must use
+  the same managed-browser-profile scope rather than the request tenant alone.
+  A safe active lease owned by a proven-dead PID is also a missing-target fence
+  and must be released. Preserve live-owner active leases and all in-flight,
+  outcome-unknown, retiring, and unresolved lost fences.
 
 ## 2026-09-27 | Derive durable execution profiles after explicit selection
 

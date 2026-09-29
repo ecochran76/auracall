@@ -297,3 +297,20 @@ explicitly unaccepted until a separately authorized fresh installed run.
   The focused provisioner, affinity-executor, registry, retirement, and restart
   reconciliation suites pass 37/37, and typecheck plus scoped Biome checks pass.
 - A rebuilt/reinstalled live acceptance remains required before issue closure.
+
+## Exact-Tip Retry | Dead Active Lease Fence
+
+- Installed exact commit `47c3d7f1340c247c3a578adb9f3d7746ba623ea7`,
+  verified complete `dist` parity, restarted the API at PID `4949`, and proved
+  receipt, monitor, and tmux-pane readiness.
+- Fresh session `github-tui-wake-1790652238` again failed pre-effect with
+  `tab-leases-active`. The remaining fence was not idle: it was a settled
+  active ephemeral lease still owned by dead pre-restart PID `48758`.
+- The repair now scans the whole managed-browser profile rather than only the
+  request tenant. When the endpoint is absent, it releases safe idle leases and
+  safe active leases whose owner PID is proven dead. Live owners and ambiguous
+  effects remain fenced.
+- The exact stale-active, cross-tenant profile case has a deterministic
+  regression. Five focused suites now pass 38/38 with typecheck and scoped
+  Biome checks. No provider submission, wake, or source occurred in the failed
+  installed retry.

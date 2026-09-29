@@ -1,3 +1,4 @@
+import { isProcessAlive } from "../../../packages/browser-service/src/processCheck.js";
 import type {
 	BrowserProfileControlClaim,
 	BrowserTabLease,
@@ -31,6 +32,7 @@ export function createChatgptTabProvisioner(input: {
 	idleTtlMs: number;
 	absoluteTtlMs: number;
 	profileControlTtlMs?: number;
+	isOwnerAlive?: (processId: number) => boolean;
 	now?: () => Date;
 	resolveExistingEndpoint: () => Promise<ChatgptManagedBrowserEndpoint | null>;
 	startBrowser: () => Promise<ChatgptManagedBrowserEndpoint>;
@@ -48,7 +50,12 @@ export function createChatgptTabProvisioner(input: {
 		const reused = await acquireVerifiedExistingLease(input, endpoint, now);
 		if (reused) return reused;
 		if (!endpoint) {
-			await releaseIdleLeasesForAbsentBrowser(input.registry, input.scope, now);
+			await releaseIdleLeasesForAbsentBrowser(
+				input.registry,
+				input.scope,
+				now,
+				input.isOwnerAlive ?? isProcessAlive,
+			);
 			let controlClaim: BrowserProfileControlClaim | null = null;
 			const acquired = await input.registry.acquireProfileControl({
 				scope: input.scope,
@@ -158,10 +165,24 @@ async function releaseIdleLeasesForAbsentBrowser(
 	registry: BrowserTabLeaseRegistry,
 	scope: TabLeaseScope,
 	now: () => Date,
+	isOwnerAlive: (processId: number) => boolean,
 ): Promise<void> {
-	const idleLeases = await registry.list({ scope, states: ["idle"] });
-	for (const lease of idleLeases) {
+	const profileLeases = await registry.list({
+		scope: {
+			runtimeProfileId: scope.runtimeProfileId,
+			managedBrowserProfile: scope.managedBrowserProfile,
+			service: scope.service,
+		},
+		states: ["active", "idle"],
+	});
+	for (const lease of profileLeases) {
 		if (lease.effectState !== "none" && lease.effectState !== "settled") continue;
+		if (lease.state === "active") {
+			const ownerProcessId = lease.ownerProcessId;
+			if (typeof ownerProcessId !== "number" || isOwnerAlive(ownerProcessId)) {
+				continue;
+			}
+		}
 		await releaseMissingLease(registry, lease, now().toISOString());
 	}
 }

@@ -51635,3 +51635,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `settled` leases as `target-missing`/`already-missing`. Active, in-flight,
   outcome-unknown, retiring, and lost states remain fail-closed. Five focused
   suites pass 37/37; scoped Biome and typecheck also pass.
+- Installed exact repair commit `47c3d7f13` and retried after proving full
+  installed parity, API PID `4949`, receipt readiness, wake-monitor readiness,
+  and tmux pane `%28`. Session `github-tui-wake-1790652238` still failed
+  pre-effect because a settled active ephemeral lease remained owned by dead
+  pre-restart PID `48758`. The cleanup scope also needed to match profile-wide
+  startup fencing rather than the request tenant alone. Expanded the repair to
+  release safe idle leases plus safe active leases with a proven-dead owner
+  across the exact managed browser profile. The new cross-tenant/dead-owner
+  regression passes; five focused suites now pass 38/38. No provider request,
+  wake, or source was created.
