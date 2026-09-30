@@ -20,11 +20,11 @@ describe('provider mutation audit context', () => {
     );
   });
 
-  test('annotates a connected client with fallback provider context', () => {
+  test('annotates a connected client with fallback provider context', async () => {
     const sink = () => undefined;
     const client = {} as Parameters<typeof annotateClientMutationContext>[0];
 
-    annotateClientMutationContext(client, { mutationAudit: sink }, 'provider:chatgpt');
+    await annotateClientMutationContext(client, { mutationAudit: sink }, 'provider:chatgpt');
 
     expect(resolveMutationAudit(client)).toBe(sink);
     expect(resolveMutationSource(client, 'provider:chatgpt', 'navigate-url')).toBe(

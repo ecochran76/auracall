@@ -59,6 +59,7 @@ vi.mock("../../packages/browser-service/src/windowsLoopbackRelay.js", async (imp
 
 import {
 	connectToRemoteChrome,
+	openChromeTarget,
 	openOrReuseChromeTarget,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
 import { createInMemoryBrowserMutationLog } from "../../packages/browser-service/src/service/mutationDispatcher.js";
@@ -66,6 +67,13 @@ import { createInMemoryBrowserMutationLog } from "../../packages/browser-service
 describe("chrome target reuse policy", () => {
 	afterEach(() => {
 		vi.clearAllMocks();
+	});
+
+	it("rejects raw target creation without explicit pre-lease authority", async () => {
+		await expect(openChromeTarget(45920, "https://chatgpt.com/")).rejects.toThrow(
+			"explicit pre-lease acquisition authority",
+		);
+		expect(cdpMock.New).not.toHaveBeenCalled();
 	});
 
 	it("reuses the most recent exact URL match before opening a new tab", async () => {
@@ -87,6 +95,34 @@ describe("chrome target reuse policy", () => {
 		expect(cdpMock).toHaveBeenCalledWith({ host: "127.0.0.1", port: 45920, target: "newer-grok" });
 		expect(client.Page.navigate).not.toHaveBeenCalled();
 		expect(cdpMock.New).not.toHaveBeenCalled();
+	});
+
+	it("admits reused-target navigation through the provider traffic governor before effect", async () => {
+		cdpMock.List.mockResolvedValue([
+			{ id: "existing-grok", type: "page", url: "https://grok.com/project/old" },
+		]);
+		const settle = vi.fn(async () => undefined);
+		const begin = vi.fn(async () => ({ id: "traffic-1", settle }));
+
+		await openOrReuseChromeTarget(45920, "https://grok.com/project/new", {
+			host: "127.0.0.1",
+			reusePolicy: "same-origin",
+			providerTrafficGovernor: { attribution: {} as never, begin },
+		});
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				kind: "target-open-or-reuse",
+				interactionClass: "renavigation",
+				targetId: "existing-grok",
+			}),
+		);
+		expect(begin.mock.invocationCallOrder[0]).toBeLessThan(
+			client.Page.navigate.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+		);
+		expect(settle).toHaveBeenCalledWith(
+			expect.objectContaining({ outcome: "succeeded", targetId: "existing-grok" }),
+		);
 	});
 
 	it("does not raise the tab when suppressFocus is enabled", async () => {
@@ -213,6 +249,42 @@ describe("chrome target reuse policy", () => {
 		expect(cdpMock.New).not.toHaveBeenCalled();
 	});
 
+	it("acquires exact provider traffic authority before reusing a target", async () => {
+		cdpMock.List.mockResolvedValue([
+			{ id: "existing-project", type: "page", url: "https://grok.com/project/abc123" },
+		]);
+		const order: string[] = [];
+		client.Page.navigate.mockImplementation(async () => {
+			order.push("effect");
+		});
+		const settle = vi.fn(async () => {
+			order.push("settle");
+		});
+		const close = vi.fn(async () => {
+			order.push("close");
+		});
+		const acquire = vi.fn(async ({ targetId }: { targetId: string }) => ({
+			governor: {
+				attribution: {} as never,
+				begin: vi.fn(async () => {
+					order.push("admit");
+					return { id: "action-1", settle };
+				}),
+			},
+			close,
+		}));
+
+		await openOrReuseChromeTarget(45920, "https://grok.com/project/def456", {
+			host: "127.0.0.1",
+			reusePolicy: "same-origin",
+			providerTrafficRequired: true,
+			providerTrafficAuthorityFactory: { acquire },
+		});
+
+		expect(acquire).toHaveBeenCalledWith({ targetId: "existing-project" });
+		expect(order).toEqual(["admit", "effect", "settle", "close"]);
+	});
+
 	it("can select a compatible-host page without navigating the reused target", async () => {
 		cdpMock.List.mockResolvedValue([
 			{ id: "chat-openai-tab", type: "page", url: "https://chat.openai.com/c/abc123" },
@@ -286,6 +358,20 @@ describe("chrome target reuse policy", () => {
 		]);
 	});
 
+	it("fails before creating a provider target when no exact lease can exist yet", async () => {
+		cdpMock.List.mockResolvedValue([]);
+
+		await expect(
+			openOrReuseChromeTarget(45920, "https://grok.com/", {
+				host: "127.0.0.1",
+				reusePolicy: "new",
+				providerTrafficRequired: true,
+				providerTrafficAuthorityFactory: { acquire: vi.fn() },
+			}),
+		).rejects.toThrow("Provider traffic governor is required before physical action");
+		expect(cdpMock.New).not.toHaveBeenCalled();
+	});
+
 	it("connectToRemoteChrome reuses same-origin tabs instead of creating duplicates", async () => {
 		cdpMock.List.mockResolvedValue([
 			{ id: "existing-project", type: "page", url: "https://grok.com/project/abc123" },
@@ -305,6 +391,25 @@ describe("chrome target reuse policy", () => {
 			target: "existing-project",
 		});
 		expect(connection.targetId).toBe("existing-project");
+	});
+
+	it("connectToRemoteChrome fails closed when required provider authority cannot open a target", async () => {
+		cdpMock.List.mockResolvedValue([]);
+
+		await expect(
+			connectToRemoteChrome(
+				"127.0.0.1",
+				45920,
+				() => undefined,
+				"https://chatgpt.com/",
+				{
+					providerTrafficRequired: true,
+					providerTrafficAuthorityFactory: { acquire: vi.fn() },
+				},
+			),
+		).rejects.toThrow("Provider traffic governor is required before physical action");
+		expect(cdpMock.New).not.toHaveBeenCalled();
+		expect(cdpMock).not.toHaveBeenCalled();
 	});
 
 	it("connectToRemoteChrome attaches only to an exact leased target when requested", async () => {

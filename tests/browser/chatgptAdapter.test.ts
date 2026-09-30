@@ -1976,6 +1976,20 @@ describe("downloadChatgptConversationFilesWithClient", () => {
 });
 
 describe("beforeChatgptBrowserInteraction", () => {
+	test("does not double-admit an action owned by the provider traffic governor", async () => {
+		const beforeInteraction = vi.fn(async () => undefined);
+
+		await beforeChatgptBrowserInteractionForTest(
+			{
+				interactionGovernor: { beforeInteraction },
+				providerTrafficGovernor: { attribution: {} as never, begin: vi.fn() },
+			},
+			"renavigation",
+		);
+
+		expect(beforeInteraction).not.toHaveBeenCalled();
+	});
+
 	test("does not reapply conversation-read pacing inside a scoped provider session", async () => {
 		const beforeInteraction = vi.fn(async () => undefined);
 		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
@@ -2957,7 +2971,7 @@ describe("readChatgptConversationPayloadWithClient", () => {
 					reload: vi.fn(),
 				},
 			};
-			annotateClientMutationContext(
+			await annotateClientMutationContext(
 				client as never,
 				{
 					mutationAudit: (record) => {
@@ -3208,7 +3222,7 @@ describe("readChatgptConversationPayloadWithClient", () => {
 				reload: vi.fn(),
 			},
 		};
-		annotateClientMutationContext(
+		await annotateClientMutationContext(
 			client as never,
 			{
 				mutationAudit: (record) => {

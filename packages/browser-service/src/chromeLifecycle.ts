@@ -37,6 +37,11 @@ import {
   WINDOWS_LOOPBACK_REMOTE_HOST,
 } from './windowsLoopbackRelay.js';
 import { beginBrowserMutation, type BrowserMutationAuditSink } from './service/mutationDispatcher.js';
+import type {
+  ProviderTrafficAction,
+  ProviderTrafficAuthorityFactory,
+  ProviderTrafficGovernor,
+} from './service/providerTrafficGovernor.js';
 
 const execFileAsync = promisify(execFile);
 const WINDOWS_WSL_DISCOVERY_ATTEMPTS = 40;
@@ -1091,12 +1096,26 @@ function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: strin
   });
 }
 
+export interface PreLeaseTargetAcquisitionAuthority {
+  kind: 'pre-lease-target-acquisition';
+  operationId: string;
+  reason: string;
+}
+
 export async function openChromeTarget(
   port: number,
   url: string,
   host?: string,
   logger: BrowserLogger = () => undefined,
+  authority?: PreLeaseTargetAcquisitionAuthority,
 ) {
+  if (
+    authority?.kind !== 'pre-lease-target-acquisition' ||
+    !authority.operationId.trim() ||
+    !authority.reason.trim()
+  ) {
+    throw new Error('Chrome target creation requires explicit pre-lease acquisition authority.');
+  }
   const endpoint = await resolveChromeEndpoint(host, port, logger);
   try {
     return await CDP.New({ host: endpoint.host, port: endpoint.port, url });
@@ -1113,6 +1132,67 @@ export type OpenOrReuseChromeTargetResult = {
   reason: 'exact' | 'blank' | 'same-origin' | 'compatible-host' | 'new';
 };
 
+async function beginTargetTrafficAction(input: {
+  governor?: ProviderTrafficGovernor;
+  authorityFactory?: ProviderTrafficAuthorityFactory;
+  mutationAudit?: BrowserMutationAuditSink;
+  source: string;
+  requestedUrl: string;
+  fromUrl?: string | null;
+  toUrl: string;
+  targetId?: string | null;
+  reused: boolean;
+  reason: string;
+  providerTrafficRequired?: boolean;
+}): Promise<ProviderTrafficAction> {
+  const authority =
+    !input.governor && input.authorityFactory && input.targetId
+      ? await input.authorityFactory.acquire({ targetId: input.targetId })
+      : undefined;
+  const governor = input.governor ?? authority?.governor;
+  if (governor) {
+    const action = await governor.begin({
+      kind: 'target-open-or-reuse',
+      interactionClass: 'renavigation',
+      source: input.source,
+      requestedUrl: input.requestedUrl,
+      fromUrl: input.fromUrl,
+      toUrl: input.toUrl,
+      targetId: input.targetId,
+      reused: input.reused,
+      reason: input.reason,
+    });
+    return {
+      id: action.id,
+      async settle(details) {
+        try {
+          await action.settle(details);
+        } finally {
+          await authority?.close({
+            outcome: details.outcome === 'succeeded' ? 'succeeded' : 'failed',
+            effectState: 'settled',
+            reason: details.error ?? details.reason ?? null,
+          });
+        }
+      },
+    };
+  }
+  if (input.providerTrafficRequired) {
+    throw new Error(`Provider traffic governor is required before physical action: ${input.source}.`);
+  }
+  const legacy = beginBrowserMutation(input.mutationAudit, {
+    kind: 'target-open-or-reuse',
+    source: input.source,
+    requestedUrl: input.requestedUrl,
+    fromUrl: input.fromUrl,
+    toUrl: input.toUrl,
+    targetId: input.targetId,
+    reused: input.reused,
+    reason: input.reason,
+  });
+  return { id: legacy.id, settle: legacy.complete };
+}
+
 export async function openOrReuseChromeTarget(
   port: number,
   url: string,
@@ -1128,6 +1208,9 @@ export async function openOrReuseChromeTarget(
 	    suppressFocus?: boolean;
 	    navigateReusedTargets?: boolean;
 	    mutationAudit?: BrowserMutationAuditSink;
+	    providerTrafficGovernor?: ProviderTrafficGovernor;
+	    providerTrafficAuthorityFactory?: ProviderTrafficAuthorityFactory;
+	    providerTrafficRequired?: boolean;
 	    mutationSource?: string;
 	  } = {},
 	): Promise<OpenOrReuseChromeTargetResult> {
@@ -1152,9 +1235,12 @@ export async function openOrReuseChromeTarget(
       );
       if (exactTarget) {
         const targetId = resolveTargetId(exactTarget);
-        const audit = beginBrowserMutation(options.mutationAudit, {
-          kind: 'target-open-or-reuse',
-          source: mutationSource,
+	        const audit = await beginTargetTrafficAction({
+	          governor: options.providerTrafficGovernor,
+	          authorityFactory: options.providerTrafficAuthorityFactory,
+	          mutationAudit: options.mutationAudit,
+	          providerTrafficRequired: options.providerTrafficRequired,
+	          source: mutationSource,
           requestedUrl: url,
           fromUrl: exactTarget.url ?? null,
           toUrl: exactTarget.url ?? url,
@@ -1163,7 +1249,7 @@ export async function openOrReuseChromeTarget(
           reason: 'exact',
         });
         await focusChromeTarget(endpoint.host, endpoint.port, targetId, url, false, options.suppressFocus);
-        await audit.complete({
+	        await audit.settle({
           outcome: 'succeeded',
           targetId,
           toUrl: exactTarget.url ?? url,
@@ -1186,8 +1272,11 @@ export async function openOrReuseChromeTarget(
       const blankTarget = findLastMatchingTarget(pageTargets, (target) => isReusableBlankTarget(target.url ?? ''));
       if (blankTarget) {
         const targetId = resolveTargetId(blankTarget);
-        const audit = beginBrowserMutation(options.mutationAudit, {
-          kind: 'target-open-or-reuse',
+	        const audit = await beginTargetTrafficAction({
+	          governor: options.providerTrafficGovernor,
+	          authorityFactory: options.providerTrafficAuthorityFactory,
+	          mutationAudit: options.mutationAudit,
+	          providerTrafficRequired: options.providerTrafficRequired,
           source: mutationSource,
           requestedUrl: url,
           fromUrl: blankTarget.url ?? null,
@@ -1197,7 +1286,7 @@ export async function openOrReuseChromeTarget(
           reason: 'blank',
         });
         await focusChromeTarget(endpoint.host, endpoint.port, targetId, url, true, options.suppressFocus);
-        await audit.complete({
+	        await audit.settle({
           outcome: 'succeeded',
           targetId,
           toUrl: url,
@@ -1225,8 +1314,11 @@ export async function openOrReuseChromeTarget(
 	        if (sameOriginTarget) {
 	          const targetId = resolveTargetId(sameOriginTarget);
 	          const targetUrl = navigateReusedTargets ? url : sameOriginTarget.url ?? url;
-	          const audit = beginBrowserMutation(options.mutationAudit, {
-	            kind: 'target-open-or-reuse',
+	          const audit = await beginTargetTrafficAction({
+	            governor: options.providerTrafficGovernor,
+	            authorityFactory: options.providerTrafficAuthorityFactory,
+	            mutationAudit: options.mutationAudit,
+	            providerTrafficRequired: options.providerTrafficRequired,
 	            source: mutationSource,
 	            requestedUrl: url,
 	            fromUrl: sameOriginTarget.url ?? null,
@@ -1243,7 +1335,7 @@ export async function openOrReuseChromeTarget(
 	            navigateReusedTargets,
 	            options.suppressFocus,
 	          );
-	          await audit.complete({
+	          await audit.settle({
 	            outcome: 'succeeded',
 	            targetId,
 	            toUrl: targetUrl,
@@ -1270,8 +1362,11 @@ export async function openOrReuseChromeTarget(
 	          if (compatibleHostTarget) {
 	            const targetId = resolveTargetId(compatibleHostTarget);
 	            const targetUrl = navigateReusedTargets ? url : compatibleHostTarget.url ?? url;
-	            const audit = beginBrowserMutation(options.mutationAudit, {
-	              kind: 'target-open-or-reuse',
+	            const audit = await beginTargetTrafficAction({
+	              governor: options.providerTrafficGovernor,
+	              authorityFactory: options.providerTrafficAuthorityFactory,
+	              mutationAudit: options.mutationAudit,
+	              providerTrafficRequired: options.providerTrafficRequired,
 	              source: mutationSource,
 	              requestedUrl: url,
 	              fromUrl: compatibleHostTarget.url ?? null,
@@ -1288,7 +1383,7 @@ export async function openOrReuseChromeTarget(
 	              navigateReusedTargets,
 	              options.suppressFocus,
 	            );
-	            await audit.complete({
+	            await audit.settle({
 	              outcome: 'succeeded',
 	              targetId,
 	              toUrl: targetUrl,
@@ -1311,8 +1406,11 @@ export async function openOrReuseChromeTarget(
       }
     }
 
-    const audit = beginBrowserMutation(options.mutationAudit, {
-      kind: 'target-open-or-reuse',
+	    const audit = await beginTargetTrafficAction({
+	      governor: options.providerTrafficGovernor,
+	      authorityFactory: options.providerTrafficAuthorityFactory,
+	      mutationAudit: options.mutationAudit,
+	      providerTrafficRequired: options.providerTrafficRequired,
       source: mutationSource,
       requestedUrl: url,
       toUrl: url,
@@ -1320,7 +1418,7 @@ export async function openOrReuseChromeTarget(
       reason: 'new',
     });
     const created = await CDP.New({ host: endpoint.host, port: endpoint.port, url });
-    await audit.complete({
+	    await audit.settle({
       outcome: 'succeeded',
       targetId: resolveTargetId(created),
       toUrl: created.url ?? url,
@@ -1359,11 +1457,14 @@ export async function connectToRemoteChrome(
     serviceTabLimit?: number;
     blankTabLimit?: number;
     collapseDisposableWindows?: boolean;
-	    suppressFocus?: boolean;
-	    navigateReusedTargets?: boolean;
-	    mutationAudit?: BrowserMutationAuditSink;
-	    mutationSource?: string;
-	  } = {},
+    suppressFocus?: boolean;
+    navigateReusedTargets?: boolean;
+    mutationAudit?: BrowserMutationAuditSink;
+    providerTrafficGovernor?: ProviderTrafficGovernor;
+    providerTrafficAuthorityFactory?: ProviderTrafficAuthorityFactory;
+    providerTrafficRequired?: boolean;
+    mutationSource?: string;
+  } = {},
 ): Promise<RemoteChromeConnection> {
   const endpoint = await resolveChromeEndpoint(host, port, logger);
   const connectHost = endpoint.host;
@@ -1400,12 +1501,15 @@ export async function connectToRemoteChrome(
         compatibleHosts: options.compatibleHosts,
         matchingTabLimit: options.serviceTabLimit,
         blankTabLimit: options.blankTabLimit,
-	        collapseDisposableWindows: options.collapseDisposableWindows,
-	        suppressFocus: options.suppressFocus,
-	        navigateReusedTargets: options.navigateReusedTargets,
-	        mutationAudit: options.mutationAudit,
-	        mutationSource: options.mutationSource ?? 'browser-service:connectToRemoteChrome',
-	      });
+        collapseDisposableWindows: options.collapseDisposableWindows,
+        suppressFocus: options.suppressFocus,
+        navigateReusedTargets: options.navigateReusedTargets,
+        mutationAudit: options.mutationAudit,
+        providerTrafficGovernor: options.providerTrafficGovernor,
+        providerTrafficAuthorityFactory: options.providerTrafficAuthorityFactory,
+        providerTrafficRequired: options.providerTrafficRequired,
+        mutationSource: options.mutationSource ?? 'browser-service:connectToRemoteChrome',
+      });
       const targetId = resolveTargetId(opened.target);
       const client = await CDP({ host: connectHost, port: connectPort, target: targetId });
       logger(
@@ -1415,6 +1519,10 @@ export async function connectToRemoteChrome(
       );
       return { client, targetId, host: connectHost, port: connectPort, dispose: disposeRelay };
     } catch (error) {
+      if (options.providerTrafficRequired) {
+        await disposeRelay?.().catch(() => undefined);
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       logger(`Failed to open dedicated remote Chrome tab (${message}); falling back to first target.`);
     }

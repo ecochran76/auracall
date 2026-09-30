@@ -23713,3 +23713,28 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Guardrail: never treat PID equality alone as browser ownership proof. Keep
   adopted/external browsers non-owned, and retain liveness pruning only as
   abrupt-crash recovery.
+# 2026-09-29 — Provider traffic must have one authoritative lifecycle
+
+Optional pacing and best-effort mutation diagnostics are insufficient safety
+boundaries when provider traffic can originate from background reconciliation.
+A physical provider action must carry immutable runtime/profile/workload/
+operation/tab-lease attribution, verify the current lease generation, complete
+persisted admission and start recording before effect, settle the reservation
+immediately after effect, and durably persist any visible provider warning and
+cooldown before permitting later traffic.
+
+Serialized execution is not an exemption from that safety contract. Keep
+`enabled=false` as the concurrency-mode signal, but construct the same durable
+registry and interaction ledger in serialized mode. Configured ChatGPT, Gemini,
+and Grok clients acquire exact ephemeral authority when attaching to a target;
+target reuse acquires authority before focus or navigation, and client close
+settles and releases it exactly once. If no exact managed browser profile or
+target lease can be established, fail before the physical action rather than
+falling back to optional pacing or diagnostics.
+
+Legacy prompt execution must carry that exact authority too. Passing a leased
+target while dropping its governor creates an attribution bypass, and recovery
+navigation cannot rely on hidden properties after reducing a CDP client to
+`{ Page, Runtime }`. Thread the governor explicitly through leased execution
+and recovery helpers, and never fall back to an arbitrary first target after a
+required-authority attachment failure.

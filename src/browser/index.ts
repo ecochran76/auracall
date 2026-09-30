@@ -9,7 +9,10 @@ import {
 	createFileBackedBrowserOperationDispatcher,
 	formatBrowserOperationBusyResult,
 } from "../../packages/browser-service/src/service/operationDispatcher.js";
+import { createInMemoryBrowserMutationLog } from "../../packages/browser-service/src/service/mutationDispatcher.js";
+import type { ProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import type { ResolvedUserConfig } from "../config.js";
 import { BrowserAutomationError } from "../oracle/errors.js";
 import { formatElapsed } from "../oracle/format.js";
 import type { ThinkingTimeLevel } from "../oracle/types.js";
@@ -98,6 +101,7 @@ import {
 	INPUT_SELECTORS,
 } from "./constants.js";
 import { syncCookies } from "./cookies.js";
+import { createConfiguredProviderTrafficAuthorityFactory } from "./configuredProviderTrafficAuthority.js";
 import {
 	captureBrowserPostmortemSnapshot,
 	logBrowserPostmortemSnapshot,
@@ -105,6 +109,10 @@ import {
 	persistBrowserPostmortemRecord,
 } from "./domDebug.js";
 import { recordBrowserOperationQueueObservation } from "./operationQueueObservations.js";
+import {
+	annotateClientMutationContext,
+	resolveProviderTrafficGovernor,
+} from "./providers/mutationAudit.js";
 import {
 	BrowserObservationLeaseExpiredError,
 	type BrowserResponseProgressEvidence,
@@ -276,6 +284,52 @@ function promptRequestsJsonObject(promptText: string): boolean {
 
 const DEFAULT_JSON_OBJECT_COMPLETION_TIMEOUT_MS = 600_000;
 const MAX_JSON_OBJECT_CONTINUE_CLICKS = 3;
+
+async function attachBrowserRunProviderTraffic(input: {
+	client: ChromeClient;
+	options: BrowserRunOptions;
+	provider: "chatgpt" | "gemini" | "grok";
+	managedBrowserProfile: string;
+	targetId: string;
+}): Promise<void> {
+	const mutationAudit = createInMemoryBrowserMutationLog().record;
+	if (input.options.providerTrafficGovernor) {
+		await annotateClientMutationContext(
+			input.client,
+			{
+				providerTrafficGovernor: input.options.providerTrafficGovernor,
+				providerTrafficRequired: true,
+				mutationAudit,
+			},
+			`provider:${input.provider}:browser-run`,
+			input.targetId,
+		);
+		return;
+	}
+	const userConfig =
+		input.options.tabAffinityUserConfig ??
+		({
+			auracallProfile: input.options.config?.auracallProfileName ?? "default",
+			browser: { tabConcurrencyMode: "serialized" },
+		} as ResolvedUserConfig);
+	const factory = createConfiguredProviderTrafficAuthorityFactory({
+		userConfig,
+		mutationAudit,
+		provider: input.provider,
+		managedBrowserProfile: input.managedBrowserProfile,
+		baseOptions: { abortSignal: input.options.abortSignal },
+	});
+	await annotateClientMutationContext(
+		input.client,
+		{
+			providerTrafficAuthorityFactory: factory,
+			providerTrafficRequired: true,
+			mutationAudit,
+		},
+		`provider:${input.provider}:browser-run`,
+		input.targetId,
+	);
+}
 
 function extractParseableJsonObjectText(text: string): string | null {
 	const trimmed = text.trim();
@@ -1769,7 +1823,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			userConfig: options.tabAffinityUserConfig,
 			browserOptions: options,
 			resolvedConfig: config,
-			runLeased: ({ host, port, targetId, targetUrl }) =>
+			runLeased: ({ host, port, targetId, targetUrl, providerTrafficGovernor }) =>
 				runRemoteBrowserMode(
 					promptText,
 					attachments,
@@ -1782,6 +1836,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					{
 						...options,
 						tabAffinity: { host, port, targetId },
+						providerTrafficGovernor,
 						tabAffinityUserConfig: undefined,
 						skipBrowserExecutionOperation: true,
 					},
@@ -2083,7 +2138,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	const openDedicatedPromptTarget = async (): Promise<
 		Awaited<ReturnType<typeof connectToChromeTarget>>
 	> => {
-		const openedTarget = await openChromeTarget(chrome.port, "about:blank", chromeHost, logger);
+		const openedTarget = await openChromeTarget(chrome.port, "about:blank", chromeHost, logger, {
+			kind: "pre-lease-target-acquisition",
+			operationId:
+				browserOperation?.operation.id ??
+				options.browserOperationOwnerCommand ??
+				"browser-run-pre-lease-target",
+			reason: "dedicated ChatGPT browser-run target acquisition",
+		});
 		const targetId = resolveChromeTargetIdForBrowserRun(openedTarget);
 		lastTargetId = targetId;
 		lastUrl = openedTarget.url ?? "about:blank";
@@ -2094,6 +2156,13 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			target: targetId,
 			logger,
 			abortSignal: options.abortSignal,
+		});
+		await attachBrowserRunProviderTraffic({
+			client: dedicatedClient,
+			options,
+			provider: "chatgpt",
+			managedBrowserProfile: userDataDir,
+			targetId,
 		});
 		logger("Connected to Chrome DevTools protocol");
 		await emitRuntimeHint();
@@ -3043,6 +3112,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				logger,
 				assistantResponseBoundary,
 				{
+					providerTrafficGovernor: resolveProviderTrafficGovernor(client),
 					onPassiveDomProbe: async () => {
 						await recordTargetBoundPassiveObservation({
 							state: "thinking",
@@ -3693,18 +3763,51 @@ async function runRemoteBrowserMode(
 	};
 
 	try {
+		const remoteManagedBrowserProfile =
+			config.providerSessionAuthorization?.context.managedBrowserProfile ??
+			resolveBrowserLaunchPlan({ source: { kind: "session-config", config } }).managedBrowserProfile
+				.directory;
+		const remoteMutationAudit = createInMemoryBrowserMutationLog().record;
+		const remoteTrafficFactory = options.providerTrafficGovernor
+			? undefined
+			: createConfiguredProviderTrafficAuthorityFactory({
+					userConfig:
+						options.tabAffinityUserConfig ??
+						({
+							auracallProfile: config.auracallProfileName ?? "default",
+							browser: { tabConcurrencyMode: "serialized" },
+						} as ResolvedUserConfig),
+					mutationAudit: remoteMutationAudit,
+					provider: "chatgpt",
+					managedBrowserProfile: remoteManagedBrowserProfile,
+					baseOptions: { abortSignal: options.abortSignal },
+				});
 		const connection = await connectToRemoteChrome(host, port, logger, config.url, {
 			exactTargetId: options.tabAffinity?.targetId,
 			compatibleHosts: resolveCompatibleHostsForUrl(config.url),
 			serviceTabLimit: config.serviceTabLimit ?? undefined,
 			blankTabLimit: config.blankTabLimit ?? undefined,
 			collapseDisposableWindows: config.collapseDisposableWindows,
+			mutationAudit: remoteMutationAudit,
+			providerTrafficGovernor: options.providerTrafficGovernor,
+			providerTrafficAuthorityFactory: remoteTrafficFactory,
+			providerTrafficRequired: true,
 		});
 		client = connection.client;
 		remoteTargetId = connection.targetId ?? null;
 		connectedHost = connection.host;
 		connectedPort = connection.port;
 		disposeRemoteTransport = connection.dispose ?? null;
+		if (!remoteTargetId) {
+			throw new Error("Remote ChatGPT browser run requires an exact target ID.");
+		}
+		await attachBrowserRunProviderTraffic({
+			client,
+			options,
+			provider: "chatgpt",
+			managedBrowserProfile: remoteManagedBrowserProfile,
+			targetId: remoteTargetId,
+		});
 		await emitRuntimeHint();
 		const markConnectionLost = () => {
 			connectionClosedUnexpectedly = true;
@@ -4263,6 +4366,7 @@ async function runRemoteBrowserMode(
 			logger,
 			assistantResponseBoundary,
 			{
+				providerTrafficGovernor: resolveProviderTrafficGovernor(client),
 				onPassiveDomProbe: async () => {
 					recordBrowserPassiveObservation(passiveObservations, {
 						state: "thinking",
@@ -4888,6 +4992,7 @@ async function waitForAssistantResponseWithReload(
 	logger: BrowserLogger,
 	responseBoundary?: AssistantResponseBoundary,
 	options: {
+		providerTrafficGovernor?: ProviderTrafficGovernor;
 		onResponseIncoming?: () => void | Promise<void>;
 		onPassiveDomProbe?: () => void | Promise<void>;
 		onProgress?: (progress: BrowserResponseProgressEvidence) => void | Promise<void>;
@@ -4963,6 +5068,7 @@ async function waitForAssistantResponseWithReload(
 				url: conversationUrl,
 				timeoutMs: 45_000,
 				mutationSource: "legacy:chatgpt:assistant-response-retry-navigation",
+				providerTrafficGovernor: options.providerTrafficGovernor,
 			},
 		);
 		if (!settled.ok) {

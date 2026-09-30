@@ -54,6 +54,7 @@ import {
 	annotateClientMutationContext,
 	resolveMutationAudit,
 	resolveMutationSource,
+	resolveProviderTrafficGovernor,
 } from "./mutationAudit.js";
 import { providerNavigationAllowed } from "./navigationPolicy.js";
 import type {
@@ -1149,6 +1150,12 @@ async function connectToGeminiTab(
 		try {
 			const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
 			await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+			await annotateClientMutationContext(
+				client,
+				options,
+				"provider:gemini",
+				options.tabTargetId,
+			);
 			const connection = {
 				client,
 				targetId: options.tabTargetId,
@@ -1239,6 +1246,11 @@ async function connectToGeminiTab(
 			compatibleHosts: GEMINI_COMPATIBLE_HOSTS,
 			navigateReusedTargets: false,
 			mutationAudit: resolveMutationAudit(options),
+			providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+			providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+			providerTrafficRequired:
+				options?.providerTrafficRequired === true ||
+				resolveProviderTrafficGovernor(options) !== undefined,
 			mutationSource: resolveMutationSource(options, "provider:gemini", "connect-tab"),
 		});
 		targetInfo = opened.target ?? undefined;
@@ -1251,7 +1263,7 @@ async function connectToGeminiTab(
 	}
 	const client = await connectToChromeTarget({ host, port, target: targetId });
 	await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-	annotateClientMutationContext(client, options, "provider:gemini");
+	await annotateClientMutationContext(client, options, "provider:gemini", targetId);
 	const connection = { client, targetId, shouldClose, host, port, usedExisting };
 	retainGeminiScopedSession(options, sessionKey, connection);
 	return connection;

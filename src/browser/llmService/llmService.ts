@@ -6,6 +6,7 @@ import {
 	type BrowserInteractionGovernor,
 	createBrowserInteractionGovernor,
 } from "../../../packages/browser-service/src/service/interactionGovernor.js";
+import { createInMemoryBrowserMutationLog } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from "../../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../../config.js";
@@ -29,6 +30,7 @@ import {
 	resolveChatgptRateLimitCooldownMs,
 	writeChatgptRateLimitGuardState,
 } from "../chatgptRateLimitGuard.js";
+import { createConfiguredProviderTrafficAuthorityFactory } from "../configuredProviderTrafficAuthority.js";
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
 import { recordLibraryInventoryStage } from "../libraryInventoryDiagnostics.js";
 import {
@@ -886,7 +888,11 @@ export abstract class LlmService {
 		};
 		const providerSessionExpectation =
 			this.providerSessionAuthority.resolveExpectation(providerSessionContext);
-		return {
+		const mutationAudit =
+			overrides.mutationAudit ??
+			this.browserService.getMutationAuditSink?.() ??
+			createInMemoryBrowserMutationLog().record;
+		const resolvedOptions: BrowserProviderListOptions = {
 			...overrides,
 			port,
 			host,
@@ -895,10 +901,11 @@ export abstract class LlmService {
 				overrides.tabTargetId ?? (attachResolvedServiceTab ? target?.tab?.targetId : undefined),
 			tabUrl: overrides.tabUrl ?? (attachResolvedServiceTab ? target?.tab?.url : undefined),
 			browserService: this.browserService,
-			mutationAudit: overrides.mutationAudit ?? this.browserService.getMutationAuditSink?.(),
+			mutationAudit,
 			mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
 			interactionGovernor:
 				overrides.interactionGovernor ?? this.resolveBrowserInteractionGovernor(overrides),
+			providerTrafficRequired: true,
 			providerSessionAuthorization: {
 				authority: this.providerSessionAuthority,
 				context: providerSessionContext,
@@ -910,6 +917,21 @@ export abstract class LlmService {
 				},
 			},
 		};
+		if (!resolvedOptions.providerTrafficGovernor) {
+			const managedBrowserProfile = providerSessionContext.managedBrowserProfile?.trim();
+			if (managedBrowserProfile) {
+				resolvedOptions.providerTrafficAuthorityFactory =
+					overrides.providerTrafficAuthorityFactory ??
+					createConfiguredProviderTrafficAuthorityFactory({
+						userConfig: this.userConfig,
+						mutationAudit,
+						provider: this.providerId,
+						managedBrowserProfile,
+						baseOptions: resolvedOptions,
+					});
+			}
+		}
+		return resolvedOptions;
 	}
 
 	async getProviderSessionProof(

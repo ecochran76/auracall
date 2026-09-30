@@ -998,6 +998,12 @@ Terminology note:
   read, the current detail loop stops before another provider interaction and
   the matching account-mirror target immediately projects the same cooldown;
   completion and scheduler work remain ineligible until that boundary.
+  Leased ChatGPT prompt, utility, live-follow, and materialization navigation
+  now share one provider-traffic lifecycle: exact lease ownership, persisted
+  admission/start, physical mutation settlement, and a visible warning probe.
+  A detected `Too many requests` surface writes both provider-interaction
+  warning evidence and the managed browser profile cooldown before later work
+  can proceed.
   Real ChatGPT rate-limit detections retain a bounded 24-hour history per
   browser profile and escalate from 5 to 15 and 45 minutes, capped at six
   hours, so repeated provider limits cannot settle into a fixed short retry
@@ -2152,6 +2158,12 @@ root or by any resolved AuraCall runtime profile. Its aggregate
 `/status.tabConcurrency` projection uses the same effective-mode rule, so a
 serialized root does not hide shared affinity coordination selected by a
 nested AuraCall runtime profile.
+Serialized mode now also retains the same durable tab-lease and provider-
+interaction safety stores used for traffic admission. It remains
+concurrency-disabled (`enabled=false`); the stores exist so configured ChatGPT,
+Gemini, and Grok browser actions cannot fall back to un-attributed provider
+traffic. If AuraCall cannot establish the exact managed browser profile and tab
+lease, it stops before the physical action.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
 For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:

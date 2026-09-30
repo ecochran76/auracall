@@ -60,12 +60,18 @@ describe("legacy ChatGPT affinity runtime", () => {
 			runLeased,
 		});
 
-		expect(runLeased).toHaveBeenCalledWith({
+		expect(runLeased).toHaveBeenCalledWith(expect.objectContaining({
 			host: "127.0.0.1",
 			port: 45100,
 			targetId: "target-1",
 			targetUrl: "https://chatgpt.com/",
-		});
+			providerTrafficGovernor: expect.objectContaining({
+				attribution: expect.objectContaining({
+					tabLeaseId: expect.any(String),
+					operationId: expect.any(String),
+				}),
+			}),
+		}));
 		expect(result.chromeTargetId).toBe("target-1");
 		expect(
 			await ledger.summarizeUsage({

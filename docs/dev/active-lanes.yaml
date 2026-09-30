@@ -1553,3 +1553,25 @@ lanes:
     integration_receipt: 6f4b3b34918157e64ba0fff069e3280f6eb9bf11
     disposition: Provider-free repair integrated through PR 136 and issue 135 closed; installed runtime and live acceptance were not performed.
     updated_at: 2026-09-29
+  - id: P80
+    objective: Route every AuraCall-initiated provider-browser action through one authoritative browser-service traffic governor.
+    plan: docs/dev/plans/0380-2026-09-29-provider-traffic-governor.md
+    plan_ref: refs/heads/fix/issue-138-provider-traffic-governor
+    branch: fix/issue-138-provider-traffic-governor
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 2f638ac3c
+    remote_ref: refs/remotes/origin/fix/issue-138-provider-traffic-governor
+    integration: merge
+    work_items: [ecochran76/auracall#138]
+    dependencies: [P78, P79]
+    overlaps: [P78]
+    reconciled_overlaps: [P78]
+    reconciliation_note: P80 generalizes provider-action admission and warning persistence below P78; P78 retains prompt-terminal delayed warning reconciliation.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0380-2026-09-29-provider-traffic-governor.md
+    integration_receipt: null
+    disposition: Provider-free acceptance complete; awaiting review and pull-request integration. Issue 139 and network metering remain deferred.
+    updated_at: 2026-09-29

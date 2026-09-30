@@ -6,6 +6,7 @@ import {
 	type BrowserInteractionGovernor,
 	createBrowserInteractionGovernor,
 } from "../../packages/browser-service/src/service/interactionGovernor.js";
+import type { ProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import { readChatgptRateLimitGuardState } from "../browser/chatgptRateLimitGuard.js";
 import { BrowserAutomationClient } from "../browser/client.js";
@@ -121,6 +122,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	providerCallTimeoutMs?: number | null;
 	detailReadCap?: number | null;
 	interactionGovernor?: BrowserInteractionGovernor;
+	providerTrafficGovernor?: ProviderTrafficGovernor;
 	tabAffinity?: {
 		host: string;
 		onTargetNavigation?: () => Promise<void> | void;
@@ -281,10 +283,12 @@ function createAccountMirrorListOptions(
 	interactionGovernor?: BrowserInteractionGovernor,
 	scrapeTelemetry = createBrowserScrapeTelemetryRecorder(),
 	tabAffinity?: AccountMirrorMetadataCollectorInput["tabAffinity"],
+	providerTrafficGovernor?: ProviderTrafficGovernor,
 ): BrowserProviderListOptions {
 	return {
 		...(abortSignal ? { abortSignal } : {}),
 		...(interactionGovernor ? { interactionGovernor } : {}),
+		...(providerTrafficGovernor ? { providerTrafficGovernor } : {}),
 		scrapeTelemetry,
 		accountMirrorInventory: true,
 		skipFeatureSignature: true,
@@ -410,6 +414,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				pacer,
 				scrapeTelemetry,
 				input.tabAffinity,
+				input.providerTrafficGovernor,
 			);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
 			await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "page-refresh");

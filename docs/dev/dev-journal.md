@@ -51718,3 +51718,72 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - PR 136 merged at canonical receipt `6f4b3b34918157e64ba0fff069e3280f6eb9bf11`
   and closed issue 135. P79 is integrated; installed adoption and live
   acceptance were deliberately not performed.
+
+## 2026-09-29 | Issue 138 authoritative provider traffic governor
+
+- A recurring live-follow incident showed ChatGPT's visible `Too many requests`
+  warning while `wsl-chrome-3` retained no rate-limit detection or cooldown and
+  the provider-interaction ledger retained no warning. Later reload/read work
+  still settled as successful.
+- Containment paused the account-mirror scheduler, left zero queued/running
+  completions, and closed only the owned `wsl-chrome-3` browser. The scheduler
+  must remain paused throughout provider-free source work.
+- Issue 138 / Plan 0380 / lane P80 now own the architecture repair: combine
+  physical mutation dispatch, ledger-backed admission, exact lease attribution,
+  post-action warning detection, and cooldown persistence into one mandatory
+  browser-service governor lifecycle.
+- Issue 139 owns the dependent incremental reconciliation algorithm. CDP network
+  metering and HTTPS interception remain deferred.
+# 2026-09-29 — Issue 138 provider traffic governor implementation
+
+- Added the provider-neutral `ProviderTrafficGovernor` lifecycle with immutable
+  attribution, fail-closed lease/admission/start ordering, immediate physical
+  settlement, bounded warning probing, durable warning persistence, and
+  same-operation fencing.
+- Threaded the governor through Account Mirror live-follow metadata collection,
+  provider list options, CDP client context, and browser-service navigation and
+  reload/fallback seams. The configured ChatGPT path now verifies the current
+  exact lease generation and writes both ledger warning evidence and the
+  managed browser profile cooldown when the visible rate-limit dialog is found.
+- Provider-free checkpoint validation: 122 focused tests and TypeScript
+  typecheck pass. No browser, provider, scheduler, lease, or installed-runtime
+  effect was performed.
+- The second implementation packet extended the same governor through shared
+  ChatGPT utility affinity, leased prompt affinity, and provider target reuse.
+  Direct navigation/reload CDP effects remain concentrated in browser-service;
+  provider target-reuse callers now pass the carried governor. A structural
+  regression inventories those seams.
+- Raw target creation now fails before `CDP.New` without explicit attributed
+  pre-lease acquisition authority; all production callers declare that boundary,
+  while reused-target provider work uses the governor. The expanded provider-free
+  checkpoint passes 285 focused and adjacent tests plus typecheck and diff hygiene.
+- Remaining before closeout: full build/lint/planning and CodeGraph audits,
+  plan/lane reconciliation, review/integration, and installed adoption decision.
+- Completion-audit hardening marks every CDP client carrying provider traffic
+  authority as governor-required. Losing that governor now throws before the
+  physical action instead of silently falling back to optional pacing/audit.
+  Provider-neutral Gemini/Grok paths without configured lease authority retain
+  their existing behavior; they cannot falsely claim the governed contract.
+- The provider-neutral completion packet removes that residual exception.
+  Serialized mode now retains durable traffic-safety registry/ledger state
+  while remaining concurrency-disabled. Configured ChatGPT, Gemini, and Grok
+  options require authority; exact target reuse and CDP client attachment
+  acquire short-lived exact leases, ledger-backed admission, and authoritative
+  mutation recording, while client close idles and releases that authority once.
+  Missing managed-profile/target authority fails before the physical action.
+  Provider-free validation currently passes 312 adjacent adapter/service tests,
+  the 9-test authority/runtime slice, typecheck, and exact target-reuse ordering.
+
+- Completion audit found and closed a legacy direct-prompt bypass: the leased
+  governor was discarded before remote execution, recovery refresh rebuilt a
+  partial CDP carrier without authority, and required-authority connection
+  failure could fall back to the first tab. Checkpoint `2f638ac3c` preserves the
+  exact governor through those paths and fails closed instead of cross-target
+  fallback.
+- Final provider-free evidence includes 72 focused/affected passing tests,
+  3,414 comprehensive passing tests with 69 skips, typecheck, production build,
+  full lint with zero errors, and diff hygiene. After repairing four failures
+  caused by minimal test doubles, the broad-suite exceptions are the two known
+  baseline failures (one structural assertion and one Grok timeout) and stale
+  pre-reboot Node executable paths in three MCP stdio suites. No live provider/
+  browser, scheduler, install, or lease effect occurred.

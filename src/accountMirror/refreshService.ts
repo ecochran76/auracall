@@ -560,6 +560,7 @@ export function createAccountMirrorRefreshService(input: {
 							return false;
 						},
 						interactionGovernor: affinity?.interactionGovernor,
+						providerTrafficGovernor: affinity?.providerTrafficGovernor,
 						tabAffinity: affinity?.tabAffinity,
 					}),
 					development?.maxWallTimeMs ??

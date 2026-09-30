@@ -4,7 +4,6 @@ import path from "node:path";
 import CDP from "chrome-remote-interface";
 import {
 	connectToChromeTarget,
-	openChromeTarget,
 	openOrReuseChromeTarget,
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
 import type { BrowserInteractionClass } from "../../../packages/browser-service/src/service/interactionGovernor.js";
@@ -107,6 +106,7 @@ import {
 	annotateClientMutationContext,
 	resolveMutationAudit,
 	resolveMutationSource,
+	resolveProviderTrafficGovernor,
 } from "./mutationAudit.js";
 import { providerNavigationAllowed } from "./navigationPolicy.js";
 import { assertProviderSessionAuthorization } from "./providerSessionAuthority.js";
@@ -1396,6 +1396,11 @@ async function beforeChatgptBrowserInteraction(
 	options: BrowserProviderListOptions | undefined,
 	kind: BrowserInteractionClass,
 ): Promise<void> {
+	if (options?.providerTrafficGovernor) {
+		// The physical browser seam owns admission for governed traffic. Calling
+		// the legacy governor here would reserve and count the same action twice.
+		return;
+	}
 	if (kind === "conversation-read" && options?.useProviderSession && options.providerSession) {
 		recordBrowserScrapeProviderAction(options, "chatgpt.skipScopedInteractionGovernor");
 		return;
@@ -4456,6 +4461,12 @@ async function connectToChatgptTab(
 				enableChatgptTargetDomains(client, options.tabTargetId, options),
 				options.abortSignal,
 			);
+			await annotateClientMutationContext(
+				client,
+				options,
+				"provider:chatgpt",
+				options.tabTargetId,
+			);
 			setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
 			await waitForChatgptOperationWithAbort(
 				dismissCreateProjectDialogIfOpen(client.Runtime),
@@ -4594,12 +4605,12 @@ async function connectToChatgptTab(
 		}
 		recordBrowserScrapeCdpCall(options, "Target.createTarget");
 		recordBrowserScrapeProviderAction(options, "chatgpt.openTarget");
-		const opened = failedTargetId
-			? { target: await openChromeTarget(resolvedPort, preferredUrl, host), reused: false }
-			: await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
+		const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
 					host,
 					reusePolicy:
-						forceNewDisposableTab || !extractChatgptConversationIdFromUrl(preferredUrl)
+						failedTargetId ||
+						forceNewDisposableTab ||
+						!extractChatgptConversationIdFromUrl(preferredUrl)
 							? "new"
 							: "same-origin",
 					compatibleHosts: CHATGPT_COMPATIBLE_HOSTS,
@@ -4609,6 +4620,11 @@ async function connectToChatgptTab(
 					cleanupExistingTargets: !forceNewDisposableTab,
 					suppressFocus: tabPolicy.suppressFocus,
 					mutationAudit: resolveMutationAudit(options),
+					providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+					providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+					providerTrafficRequired:
+						options?.providerTrafficRequired === true ||
+						resolveProviderTrafficGovernor(options) !== undefined,
 					mutationSource: resolveMutationSource(options, "provider:chatgpt", "connect-tab"),
 				});
 		targetInfo = opened.target ?? undefined;
@@ -4631,8 +4647,23 @@ async function connectToChatgptTab(
 		if (!options?.tabTargetId && providerNavigationAllowed(options)) {
 			recordBrowserScrapeCdpCall(options, "Target.createTarget");
 			recordBrowserScrapeProviderAction(options, "chatgpt.openTargetAfterAttachFailure");
-			const opened = await openChromeTarget(resolvedPort, preferredUrl, host);
-			const freshTargetId = resolveChatgptTargetId(opened);
+			const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
+				host,
+				reusePolicy: "new",
+				cleanupExistingTargets: false,
+				mutationAudit: resolveMutationAudit(options),
+				providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+				providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+				providerTrafficRequired:
+					options?.providerTrafficRequired === true ||
+					resolveProviderTrafficGovernor(options) !== undefined,
+				mutationSource: resolveMutationSource(
+					options,
+					"provider:chatgpt",
+					"recover-attach-target",
+				),
+			});
+			const freshTargetId = resolveChatgptTargetId(opened.target);
 			if (freshTargetId) {
 				client = await connectToChromeTarget({ host, port: resolvedPort, target: freshTargetId });
 				recordBrowserScrapeCdpCall(options, "Target.attachToTarget");
@@ -4645,7 +4676,7 @@ async function connectToChatgptTab(
 			throw error;
 		}
 	}
-	annotateClientMutationContext(client, options, "provider:chatgpt");
+	await annotateClientMutationContext(client, options, "provider:chatgpt", resolvedTargetId);
 	setClientSuppressFocus(client, tabPolicy.suppressFocus);
 	await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
 	const connection = {
@@ -9022,6 +9053,7 @@ async function readVisibleChatgptDeepResearchArtifactsFromTargets(
 	targetContext?: { host: string; port: number; targetId?: string | null },
 	messageIndex?: number,
 	allowedFrameUrls: Set<string> = new Set(),
+	options?: BrowserProviderListOptions,
 ): Promise<ConversationArtifact[]> {
 	if (!targetContext?.port || allowedFrameUrls.size === 0) {
 		return [];
@@ -9044,6 +9076,12 @@ async function readVisibleChatgptDeepResearchArtifactsFromTargets(
 			if (!frameClient) continue;
 			try {
 				await frameClient.Runtime.enable();
+				await annotateClientMutationContext(
+					frameClient,
+					options,
+					"provider:chatgpt:deep-research-frame",
+					targetId,
+				);
 				const { result } = await frameClient.Runtime.evaluate({
 					expression: `(() => {
           const normalize = (value) => String(value || '')
@@ -9426,6 +9464,7 @@ async function readChatgptConversationContextWithClient(
 				targetContext,
 				messages.length,
 				deepResearchFrameUrls,
+				options,
 			);
 			const normalizedMessages = messages.map(({ role, text }) => ({ role, text }));
 			for (const artifact of deepResearchArtifacts) {
@@ -12532,6 +12571,7 @@ async function materializeChatgptDeepResearchExportWithClient(
 	artifact: ConversationArtifact,
 	destDir: string,
 	targetContext?: { host: string; port: number; targetId?: string | null },
+	options?: BrowserProviderListOptions,
 ): Promise<FileRef | null> {
 	const exportVariant =
 		typeof artifact.metadata?.exportVariant === "string" ? artifact.metadata.exportVariant : null;
@@ -12587,6 +12627,12 @@ async function materializeChatgptDeepResearchExportWithClient(
 			if (!frameClient) continue;
 			try {
 				await frameClient.Runtime.enable();
+				await annotateClientMutationContext(
+					frameClient,
+					options,
+					"provider:chatgpt:deep-research-export",
+					targetId,
+				);
 				const clicked = await frameClient.Runtime.evaluate({
 					expression: buildChatgptDeepResearchExportControlExpression(exportLabel),
 					returnByValue: true,
@@ -12764,6 +12810,7 @@ async function materializeChatgptConversationArtifactWithClient(
 					artifact,
 					destDir,
 					targetContext,
+					options,
 				);
 			}
 			if (artifact.kind === "document" && typeof artifact.metadata?.contentText === "string") {

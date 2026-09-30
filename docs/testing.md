@@ -1,5 +1,14 @@
 # Testing quickstart
 
+- Provider traffic authority in serialized and affinity modes (provider-free):
+  `pnpm vitest run tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser-service/providerTrafficStructural.test.ts`.
+  This proves serialized execution retains its non-affinity behavior while
+  configured provider clients still acquire exact durable leases, persist
+  admission before target reuse or in-page effects, and release client-owned
+  authority exactly once. A required target creation with no exact lease fails
+  before `CDP.New`; explicit pre-lease acquisition remains the only target-ID
+  bootstrap exception. It does not launch a browser or contact a provider.
+
 - ChatGPT inline-file prompt commitment (provider-free):
   `pnpm vitest run tests/browser/promptComposer.test.ts tests/browser/sessionRunner.test.ts`.
   This proves committed-turn extraction preserves rich-composer `<br>`
@@ -654,8 +663,16 @@
       - ChatGPT conversation navigation must not call `Page.navigate` when the
         attached target already has the canonical requested URL and its
         route/document/conversation predicates are ready; physical navigation,
-        reload, and their fallbacks must cross the shared interaction governor
-        immediately before mutation
+        reload, reused-target routing, and their fallbacks must cross the
+        provider traffic governor immediately before mutation. The governor
+        verifies exact runtime/profile/workload/operation/tab-lease attribution,
+        completes admission and awaited start recording before effect, and
+        settles physical evidence before probing for a visible provider warning
+      - raw target creation is not provider work yet because no target ID exists
+        to lease; every `openChromeTarget` caller must therefore provide an
+        explicit `pre-lease-target-acquisition` authority with an operation ID
+        and reason, and the acquired target must immediately enter its owning
+        lease coordinator
       - the scheduler is disabled unless
         `--account-mirror-scheduler-interval-ms <ms>` is set
       - without `--account-mirror-scheduler-execute`, scheduler passes are

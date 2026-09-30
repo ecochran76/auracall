@@ -104,6 +104,8 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
   tabAffinity?: { host: string; port: number; targetId: string };
   /** Full profile-resolved configuration required to construct durable affinity state. */
   tabAffinityUserConfig?: ResolvedUserConfig;
+  /** Exact leased provider traffic authority carried by affinity execution. */
+  providerTrafficGovernor?: import('../../packages/browser-service/src/service/providerTrafficGovernor.js').ProviderTrafficGovernor;
   ecosystemMention?: import('./actions/chatgptEcosystemMention.js').ChatgptEcosystemMentionRequest;
   libraryFiles?: LibraryFileSelector[];
   onProviderEffectState?: (state: 'pre_effect' | 'unknown' | 'effect_observed') => void;

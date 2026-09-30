@@ -1,6 +1,15 @@
 import type { ChromeClient } from '../types.js';
 import type { BrowserInteractionClass, BrowserInteractionGovernor } from './interactionGovernor.js';
-import { beginBrowserMutation, type BrowserMutationAuditSink } from './mutationDispatcher.js';
+import {
+  beginBrowserMutation,
+  type BrowserMutationAuditSink,
+  type BrowserMutationKind,
+} from './mutationDispatcher.js';
+import type {
+  ProviderTrafficAction,
+  ProviderTrafficGovernor,
+} from './providerTrafficGovernor.js';
+import { ProviderTrafficGovernorRequiredError } from './providerTrafficGovernor.js';
 
 export const DEFAULT_DIALOG_SELECTORS = ['[role="dialog"]', 'dialog', '[aria-modal="true"]'] as const;
 const DEFAULT_VISIBLE_MENU_SELECTORS = [
@@ -554,6 +563,7 @@ export type NavigateAndSettleOptions = WaitForPredicateOptions & {
   mutationAudit?: BrowserMutationAuditSink;
   mutationSource?: string;
   interactionGovernor?: BrowserInteractionGovernor;
+  providerTrafficGovernor?: ProviderTrafficGovernor;
   interactionClass?: BrowserInteractionClass;
   /**
    * Settles the governed navigation audit from caller-owned response evidence
@@ -584,6 +594,7 @@ export type ReloadAndSettleOptions = WaitForPredicateOptions & {
   mutationAudit?: BrowserMutationAuditSink;
   mutationSource?: string;
   interactionGovernor?: BrowserInteractionGovernor;
+  providerTrafficGovernor?: ProviderTrafficGovernor;
   interactionClass?: BrowserInteractionClass;
   /**
    * Settles the governed reload audit from caller-owned response evidence when
@@ -599,6 +610,48 @@ export type ReloadAndSettleResult = {
   reason?: string;
   documentReady?: WaitForPredicateResult;
 };
+
+async function beginUiPhysicalAction(input: {
+  providerTrafficGovernor?: ProviderTrafficGovernor;
+  interactionGovernor?: BrowserInteractionGovernor;
+  interactionClass: BrowserInteractionClass;
+  mutationAudit?: BrowserMutationAuditSink;
+  kind: BrowserMutationKind;
+  source: string;
+  requestedUrl?: string | null;
+  fromUrl?: string | null;
+  fallbackUsed?: boolean;
+  reason?: string | null;
+  providerTrafficRequired?: boolean;
+}): Promise<ProviderTrafficAction> {
+  if (input.providerTrafficGovernor) {
+    return input.providerTrafficGovernor.begin({
+      kind: input.kind,
+      interactionClass: input.interactionClass,
+      source: input.source,
+      requestedUrl: input.requestedUrl,
+      fromUrl: input.fromUrl,
+      fallbackUsed: input.fallbackUsed,
+      reason: input.reason,
+    });
+  }
+  if (input.providerTrafficRequired) {
+    throw new ProviderTrafficGovernorRequiredError(input.source);
+  }
+  await input.interactionGovernor?.beforeInteraction(input.interactionClass);
+  const legacy = beginBrowserMutation(input.mutationAudit, {
+    kind: input.kind,
+    source: input.source,
+    requestedUrl: input.requestedUrl,
+    fromUrl: input.fromUrl,
+    fallbackUsed: input.fallbackUsed,
+    reason: input.reason,
+  });
+  return {
+    id: legacy.id,
+    settle: legacy.complete,
+  };
+}
 
 export type CollectUiDiagnosticsOptions = {
   rootSelectors?: readonly string[];
@@ -1114,6 +1167,10 @@ export async function navigateAndSettle(
   options: NavigateAndSettleOptions,
 ): Promise<NavigateAndSettleResult> {
   const mutationSource = options.mutationSource ?? 'browser-service:navigateAndSettle';
+  const providerTrafficGovernor = options.providerTrafficGovernor ??
+    (client as { __auracallProviderTrafficGovernor?: ProviderTrafficGovernor }).__auracallProviderTrafficGovernor;
+  const providerTrafficRequired =
+    (client as { __auracallProviderTrafficRequired?: boolean }).__auracallProviderTrafficRequired === true;
   const mutationAudit = options.mutationAudit;
   const fromUrl = await readLocationHrefForAudit(client.Runtime);
   const evaluateState = async (
@@ -1205,14 +1262,26 @@ export async function navigateAndSettle(
     }
   }
 
-  const audit = beginBrowserMutation(mutationAudit, {
+  let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction({
+    providerTrafficGovernor,
+    providerTrafficRequired,
+    interactionGovernor: options.interactionGovernor,
+    interactionClass: options.interactionClass ?? 'renavigation',
+    mutationAudit,
     kind: 'navigate',
     source: mutationSource,
     requestedUrl: options.url,
     fromUrl,
   });
+  const settleActiveAction = async (
+    details: Parameters<ProviderTrafficAction['settle']>[0],
+  ): Promise<void> => {
+    const action = activeAction;
+    if (!action) return;
+    activeAction = null;
+    await action.settle({ ...details, probeContext: details.probeContext ?? client.Runtime });
+  };
   try {
-    await options.interactionGovernor?.beforeInteraction(options.interactionClass ?? 'renavigation');
     const navigationCommand = client.Page.navigate({ url: options.url });
     const navigationOutcome = await waitForNavigationCommandOrCompletion(
       navigationCommand,
@@ -1229,7 +1298,7 @@ export async function navigateAndSettle(
         phase: 'complete',
         reason: completion.reason,
       };
-      await audit.complete({
+      await settleActiveAction({
         outcome: externallySettled.ok ? 'succeeded' : 'failed',
         toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
         fallbackUsed: false,
@@ -1248,7 +1317,7 @@ export async function navigateAndSettle(
     }
     const primary = await evaluateState(options.timeoutMs, false, true);
     if (primary.ok || !options.fallbackToLocationAssign) {
-      await audit.complete({
+      await settleActiveAction({
         outcome: primary.ok ? 'succeeded' : 'failed',
         toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
         fallbackUsed: primary.fallbackUsed,
@@ -1257,7 +1326,26 @@ export async function navigateAndSettle(
       return primary;
     }
 
-    await options.interactionGovernor?.beforeInteraction(options.interactionClass ?? 'renavigation');
+    await settleActiveAction({
+      outcome: 'failed',
+      toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
+      fallbackUsed: false,
+      reason: 'primary-navigation-did-not-settle',
+      error: primary.reason ?? null,
+    });
+    activeAction = await beginUiPhysicalAction({
+      providerTrafficGovernor,
+      providerTrafficRequired,
+      interactionGovernor: options.interactionGovernor,
+      interactionClass: options.interactionClass ?? 'renavigation',
+      mutationAudit,
+      kind: 'location-assign',
+      source: mutationSource,
+      requestedUrl: options.url,
+      fromUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
+      fallbackUsed: true,
+      reason: 'location-assign-fallback',
+    });
     await client.Runtime.evaluate({
       expression: `(() => {
         const target = ${JSON.stringify(options.url)};
@@ -1271,7 +1359,7 @@ export async function navigateAndSettle(
     }).catch(() => undefined);
 
     const fallback = await evaluateState(options.fallbackTimeoutMs ?? options.timeoutMs, true, true);
-    await audit.complete({
+    await settleActiveAction({
       outcome: fallback.ok ? 'succeeded' : 'failed',
       toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
       fallbackUsed: true,
@@ -1280,7 +1368,7 @@ export async function navigateAndSettle(
     });
     return fallback;
   } catch (error) {
-    await audit.complete({
+    await settleActiveAction({
       outcome: 'failed',
       toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
       error: error instanceof Error ? error.message : String(error),
@@ -1356,14 +1444,31 @@ export async function reloadAndSettle(
   options: ReloadAndSettleOptions = {},
 ): Promise<ReloadAndSettleResult> {
   const mutationSource = options.mutationSource ?? 'browser-service:reloadAndSettle';
+  const providerTrafficGovernor = options.providerTrafficGovernor ??
+    (client as { __auracallProviderTrafficGovernor?: ProviderTrafficGovernor }).__auracallProviderTrafficGovernor;
+  const providerTrafficRequired =
+    (client as { __auracallProviderTrafficRequired?: boolean }).__auracallProviderTrafficRequired === true;
   const mutationAudit = options.mutationAudit;
   const fromUrl = mutationAudit ? await readLocationHrefForAudit(client.Runtime) : null;
-  const audit = beginBrowserMutation(mutationAudit, {
+  let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction({
+    providerTrafficGovernor,
+    providerTrafficRequired,
+    interactionGovernor: options.interactionGovernor,
+    interactionClass: options.interactionClass ?? 'page-refresh',
+    mutationAudit,
     kind: 'reload',
     source: mutationSource,
     requestedUrl: fromUrl,
     fromUrl,
   });
+  const settleActiveAction = async (
+    details: Parameters<ProviderTrafficAction['settle']>[0],
+  ): Promise<void> => {
+    const action = activeAction;
+    if (!action) return;
+    activeAction = null;
+    await action.settle({ ...details, probeContext: details.probeContext ?? client.Runtime });
+  };
 
   const evaluateReady = async (fallbackUsed: boolean): Promise<ReloadAndSettleResult> => {
     if (options.waitForDocumentReady === false) {
@@ -1389,7 +1494,6 @@ export async function reloadAndSettle(
 
   try {
     try {
-      await options.interactionGovernor?.beforeInteraction(options.interactionClass ?? 'page-refresh');
       const reloadCommand = client.Page.reload({ ignoreCache: options.ignoreCache });
       if (options.completionSignal) {
         const commandFailure = new Promise<never>((_resolve, reject) => {
@@ -1401,7 +1505,7 @@ export async function reloadAndSettle(
           fallbackUsed: false,
           reason: completion.reason,
         };
-        await audit.complete({
+        await settleActiveAction({
           outcome: externallySettled.ok ? 'succeeded' : 'failed',
           toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
           fallbackUsed: false,
@@ -1415,13 +1519,32 @@ export async function reloadAndSettle(
       if (!options.fallbackToLocationReload) {
         throw error;
       }
-      await options.interactionGovernor?.beforeInteraction(options.interactionClass ?? 'page-refresh');
+      await settleActiveAction({
+        outcome: 'failed',
+        toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
+        fallbackUsed: false,
+        reason: 'page-reload-command-failed',
+        error: error instanceof Error ? error.message : String(error),
+      });
+      activeAction = await beginUiPhysicalAction({
+        providerTrafficGovernor,
+        providerTrafficRequired,
+        interactionGovernor: options.interactionGovernor,
+        interactionClass: options.interactionClass ?? 'page-refresh',
+        mutationAudit,
+        kind: 'location-assign',
+        source: mutationSource,
+        requestedUrl: fromUrl,
+        fromUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
+        fallbackUsed: true,
+        reason: 'location-reload-fallback',
+      });
       await client.Runtime.evaluate({
         expression: 'location.reload()',
         awaitPromise: false,
       }).catch(() => undefined);
       const fallback = await evaluateReady(true);
-      await audit.complete({
+      await settleActiveAction({
         outcome: fallback.ok ? 'succeeded' : 'failed',
         toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
         fallbackUsed: true,
@@ -1432,7 +1555,7 @@ export async function reloadAndSettle(
     }
 
     const primary = await evaluateReady(false);
-    await audit.complete({
+    await settleActiveAction({
       outcome: primary.ok ? 'succeeded' : 'failed',
       toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
       fallbackUsed: false,
@@ -1440,7 +1563,7 @@ export async function reloadAndSettle(
     });
     return primary;
   } catch (error) {
-    await audit.complete({
+    await settleActiveAction({
       outcome: 'failed',
       toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
       error: error instanceof Error ? error.message : String(error),
