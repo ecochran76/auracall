@@ -54,6 +54,7 @@ import {
 	annotateClientMutationContext,
 	resolveMutationAudit,
 	resolveMutationSource,
+	resolveProviderTrafficGovernor,
 } from "./mutationAudit.js";
 import { providerNavigationAllowed } from "./navigationPolicy.js";
 import type {
@@ -1239,6 +1240,7 @@ async function connectToGeminiTab(
 			compatibleHosts: GEMINI_COMPATIBLE_HOSTS,
 			navigateReusedTargets: false,
 			mutationAudit: resolveMutationAudit(options),
+			providerTrafficGovernor: resolveProviderTrafficGovernor(options),
 			mutationSource: resolveMutationSource(options, "provider:gemini", "connect-tab"),
 		});
 		targetInfo = opened.target ?? undefined;

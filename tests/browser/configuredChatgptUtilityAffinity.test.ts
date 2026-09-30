@@ -73,6 +73,12 @@ describe("configured ChatGPT utility affinity", () => {
 				tabTargetId: "library-target",
 				tabUrl: "https://chatgpt.com/library?fixture=1",
 				preserveActiveTab: true,
+				providerTrafficGovernor: expect.objectContaining({
+					attribution: expect.objectContaining({
+						operationId: "library-files",
+						tabLeaseId: "lease-library",
+					}),
+				}),
 			}),
 		);
 		expect(openTarget).not.toHaveBeenCalled();

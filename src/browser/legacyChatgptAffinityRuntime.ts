@@ -101,8 +101,12 @@ export async function runLegacyChatgptWithConfiguredAffinity(input: {
 			input.resolveServiceTarget ?? ((options) => browserService.resolveServiceTarget(options)),
 		openTarget:
 			input.openTarget ??
-			(async ({ host, port, url }) => {
-				const target = await openChromeTarget(port, url, host);
+			(async ({ host, port, url, operationId }) => {
+				const target = await openChromeTarget(port, url, host, undefined, {
+					kind: "pre-lease-target-acquisition",
+					operationId,
+					reason: "legacy ChatGPT prompt lease acquisition",
+				});
 				const targetId = typeof target === "string" ? target : target.id;
 				if (!targetId) throw new Error("Legacy ChatGPT target creation returned no target ID.");
 				return { targetId, url };

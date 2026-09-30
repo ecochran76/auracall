@@ -654,8 +654,16 @@
       - ChatGPT conversation navigation must not call `Page.navigate` when the
         attached target already has the canonical requested URL and its
         route/document/conversation predicates are ready; physical navigation,
-        reload, and their fallbacks must cross the shared interaction governor
-        immediately before mutation
+        reload, reused-target routing, and their fallbacks must cross the
+        provider traffic governor immediately before mutation. The governor
+        verifies exact runtime/profile/workload/operation/tab-lease attribution,
+        completes admission and awaited start recording before effect, and
+        settles physical evidence before probing for a visible provider warning
+      - raw target creation is not provider work yet because no target ID exists
+        to lease; every `openChromeTarget` caller must therefore provide an
+        explicit `pre-lease-target-acquisition` authority with an operation ID
+        and reason, and the acquired target must immediately enter its owning
+        lease coordinator
       - the scheduler is disabled unless
         `--account-mirror-scheduler-interval-ms <ms>` is set
       - without `--account-mirror-scheduler-execute`, scheduler passes are

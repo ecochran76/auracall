@@ -81,6 +81,17 @@ describe("ChatGPT affinity executor", () => {
 
 		expect(result.status).toBe("completed");
 		expect(acquireTab).toHaveBeenCalledOnce();
+		expect(runPrompt).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				providerTrafficGovernor: expect.objectContaining({
+					attribution: expect.objectContaining({
+						operationId: "operation-1",
+						tabLeaseId: "lease-1",
+					}),
+				}),
+			}),
+		);
 		expect((await ledger.listEvents()).map((event) => event.type)).toEqual([
 			"reservation-created",
 			"interaction-started",

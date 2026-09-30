@@ -59,6 +59,7 @@ vi.mock("../../packages/browser-service/src/windowsLoopbackRelay.js", async (imp
 
 import {
 	connectToRemoteChrome,
+	openChromeTarget,
 	openOrReuseChromeTarget,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
 import { createInMemoryBrowserMutationLog } from "../../packages/browser-service/src/service/mutationDispatcher.js";
@@ -66,6 +67,13 @@ import { createInMemoryBrowserMutationLog } from "../../packages/browser-service
 describe("chrome target reuse policy", () => {
 	afterEach(() => {
 		vi.clearAllMocks();
+	});
+
+	it("rejects raw target creation without explicit pre-lease authority", async () => {
+		await expect(openChromeTarget(45920, "https://chatgpt.com/")).rejects.toThrow(
+			"explicit pre-lease acquisition authority",
+		);
+		expect(cdpMock.New).not.toHaveBeenCalled();
 	});
 
 	it("reuses the most recent exact URL match before opening a new tab", async () => {
@@ -87,6 +95,34 @@ describe("chrome target reuse policy", () => {
 		expect(cdpMock).toHaveBeenCalledWith({ host: "127.0.0.1", port: 45920, target: "newer-grok" });
 		expect(client.Page.navigate).not.toHaveBeenCalled();
 		expect(cdpMock.New).not.toHaveBeenCalled();
+	});
+
+	it("admits reused-target navigation through the provider traffic governor before effect", async () => {
+		cdpMock.List.mockResolvedValue([
+			{ id: "existing-grok", type: "page", url: "https://grok.com/project/old" },
+		]);
+		const settle = vi.fn(async () => undefined);
+		const begin = vi.fn(async () => ({ id: "traffic-1", settle }));
+
+		await openOrReuseChromeTarget(45920, "https://grok.com/project/new", {
+			host: "127.0.0.1",
+			reusePolicy: "same-origin",
+			providerTrafficGovernor: { attribution: {} as never, begin },
+		});
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				kind: "target-open-or-reuse",
+				interactionClass: "renavigation",
+				targetId: "existing-grok",
+			}),
+		);
+		expect(begin.mock.invocationCallOrder[0]).toBeLessThan(
+			client.Page.navigate.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+		);
+		expect(settle).toHaveBeenCalledWith(
+			expect.objectContaining({ outcome: "succeeded", targetId: "existing-grok" }),
+		);
 	});
 
 	it("does not raise the tab when suppressFocus is enabled", async () => {

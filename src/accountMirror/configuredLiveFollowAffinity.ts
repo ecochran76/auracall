@@ -14,6 +14,7 @@ import {
 	type ProviderTrafficGovernor,
 } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { classifyStructuredProviderWarning } from "../browser/chatgptAffinityRuntime.js";
+import { probeVisibleChatgptRateLimitWarning } from "../browser/chatgptProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "../browser/chatgptRateLimitGuard.js";
 import { retireExpiredChatgptTabLeases } from "../browser/chatgptTabRetirement.js";
 import { BrowserService } from "../browser/service/browserService.js";
@@ -146,7 +147,11 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		listTargets: async () => coldStartTargets,
 		inspectTarget,
 		openTarget: async ({ host, port, url }) => {
-			const target = await openChromeTarget(port, url, host);
+			const target = await openChromeTarget(port, url, host, undefined, {
+				kind: "pre-lease-target-acquisition",
+				operationId: input.operationId,
+				reason: "live-follow crawler lease acquisition",
+			});
 			const targetId = typeof target === "string" ? target : target.id;
 			if (!targetId) throw new Error("Live-follow target creation returned no target ID.");
 			return { targetId, url };
@@ -199,22 +204,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		interactionGovernor,
 		mutationAudit: browserService.getMutationAuditSink(),
 		settleInteraction: (settlement) => interactionGovernor.finish(settlement),
-		probeWarning: async (context) => {
-			const runtimeContext = context as {
-				evaluate?: (input: {
-					expression: string;
-					returnByValue: boolean;
-				}) => Promise<{ result?: { value?: unknown } }>;
-			} | null;
-			if (!runtimeContext?.evaluate) return null;
-			const evaluated = await runtimeContext.evaluate({
-				expression: `(() => Array.from(document.querySelectorAll('[role="dialog"],[aria-modal="true"],[role="alert"],[aria-live]')).filter((node) => { const rect = node.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; }).map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim()).find((text) => /too many requests|making requests too quickly|rate limit/i.test(text))?.slice(0, 240) || null)()`,
-				returnByValue: true,
-			});
-			const reason =
-				typeof evaluated.result?.value === "string" ? evaluated.result.value.trim() : "";
-			return reason ? { classification: "rate-limit", reason } : null;
-		},
+		probeWarning: probeVisibleChatgptRateLimitWarning,
 		persistWarning: async (warning) => {
 			const observedAt = (input.now ?? (() => new Date()))();
 			await runtime.ledger?.recordProviderWarning({

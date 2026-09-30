@@ -37,6 +37,7 @@ import {
   WINDOWS_LOOPBACK_REMOTE_HOST,
 } from './windowsLoopbackRelay.js';
 import { beginBrowserMutation, type BrowserMutationAuditSink } from './service/mutationDispatcher.js';
+import type { ProviderTrafficAction, ProviderTrafficGovernor } from './service/providerTrafficGovernor.js';
 
 const execFileAsync = promisify(execFile);
 const WINDOWS_WSL_DISCOVERY_ATTEMPTS = 40;
@@ -1091,12 +1092,26 @@ function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: strin
   });
 }
 
+export interface PreLeaseTargetAcquisitionAuthority {
+  kind: 'pre-lease-target-acquisition';
+  operationId: string;
+  reason: string;
+}
+
 export async function openChromeTarget(
   port: number,
   url: string,
   host?: string,
   logger: BrowserLogger = () => undefined,
+  authority?: PreLeaseTargetAcquisitionAuthority,
 ) {
+  if (
+    authority?.kind !== 'pre-lease-target-acquisition' ||
+    !authority.operationId.trim() ||
+    !authority.reason.trim()
+  ) {
+    throw new Error('Chrome target creation requires explicit pre-lease acquisition authority.');
+  }
   const endpoint = await resolveChromeEndpoint(host, port, logger);
   try {
     return await CDP.New({ host: endpoint.host, port: endpoint.port, url });
@@ -1113,6 +1128,43 @@ export type OpenOrReuseChromeTargetResult = {
   reason: 'exact' | 'blank' | 'same-origin' | 'compatible-host' | 'new';
 };
 
+async function beginTargetTrafficAction(input: {
+  governor?: ProviderTrafficGovernor;
+  mutationAudit?: BrowserMutationAuditSink;
+  source: string;
+  requestedUrl: string;
+  fromUrl?: string | null;
+  toUrl: string;
+  targetId?: string | null;
+  reused: boolean;
+  reason: string;
+}): Promise<ProviderTrafficAction> {
+  if (input.governor) {
+    return input.governor.begin({
+      kind: 'target-open-or-reuse',
+      interactionClass: 'renavigation',
+      source: input.source,
+      requestedUrl: input.requestedUrl,
+      fromUrl: input.fromUrl,
+      toUrl: input.toUrl,
+      targetId: input.targetId,
+      reused: input.reused,
+      reason: input.reason,
+    });
+  }
+  const legacy = beginBrowserMutation(input.mutationAudit, {
+    kind: 'target-open-or-reuse',
+    source: input.source,
+    requestedUrl: input.requestedUrl,
+    fromUrl: input.fromUrl,
+    toUrl: input.toUrl,
+    targetId: input.targetId,
+    reused: input.reused,
+    reason: input.reason,
+  });
+  return { id: legacy.id, settle: legacy.complete };
+}
+
 export async function openOrReuseChromeTarget(
   port: number,
   url: string,
@@ -1128,6 +1180,7 @@ export async function openOrReuseChromeTarget(
 	    suppressFocus?: boolean;
 	    navigateReusedTargets?: boolean;
 	    mutationAudit?: BrowserMutationAuditSink;
+	    providerTrafficGovernor?: ProviderTrafficGovernor;
 	    mutationSource?: string;
 	  } = {},
 	): Promise<OpenOrReuseChromeTargetResult> {
@@ -1152,9 +1205,10 @@ export async function openOrReuseChromeTarget(
       );
       if (exactTarget) {
         const targetId = resolveTargetId(exactTarget);
-        const audit = beginBrowserMutation(options.mutationAudit, {
-          kind: 'target-open-or-reuse',
-          source: mutationSource,
+	        const audit = await beginTargetTrafficAction({
+	          governor: options.providerTrafficGovernor,
+	          mutationAudit: options.mutationAudit,
+	          source: mutationSource,
           requestedUrl: url,
           fromUrl: exactTarget.url ?? null,
           toUrl: exactTarget.url ?? url,
@@ -1163,7 +1217,7 @@ export async function openOrReuseChromeTarget(
           reason: 'exact',
         });
         await focusChromeTarget(endpoint.host, endpoint.port, targetId, url, false, options.suppressFocus);
-        await audit.complete({
+	        await audit.settle({
           outcome: 'succeeded',
           targetId,
           toUrl: exactTarget.url ?? url,
@@ -1186,8 +1240,9 @@ export async function openOrReuseChromeTarget(
       const blankTarget = findLastMatchingTarget(pageTargets, (target) => isReusableBlankTarget(target.url ?? ''));
       if (blankTarget) {
         const targetId = resolveTargetId(blankTarget);
-        const audit = beginBrowserMutation(options.mutationAudit, {
-          kind: 'target-open-or-reuse',
+	        const audit = await beginTargetTrafficAction({
+	          governor: options.providerTrafficGovernor,
+	          mutationAudit: options.mutationAudit,
           source: mutationSource,
           requestedUrl: url,
           fromUrl: blankTarget.url ?? null,
@@ -1197,7 +1252,7 @@ export async function openOrReuseChromeTarget(
           reason: 'blank',
         });
         await focusChromeTarget(endpoint.host, endpoint.port, targetId, url, true, options.suppressFocus);
-        await audit.complete({
+	        await audit.settle({
           outcome: 'succeeded',
           targetId,
           toUrl: url,
@@ -1225,8 +1280,9 @@ export async function openOrReuseChromeTarget(
 	        if (sameOriginTarget) {
 	          const targetId = resolveTargetId(sameOriginTarget);
 	          const targetUrl = navigateReusedTargets ? url : sameOriginTarget.url ?? url;
-	          const audit = beginBrowserMutation(options.mutationAudit, {
-	            kind: 'target-open-or-reuse',
+	          const audit = await beginTargetTrafficAction({
+	            governor: options.providerTrafficGovernor,
+	            mutationAudit: options.mutationAudit,
 	            source: mutationSource,
 	            requestedUrl: url,
 	            fromUrl: sameOriginTarget.url ?? null,
@@ -1243,7 +1299,7 @@ export async function openOrReuseChromeTarget(
 	            navigateReusedTargets,
 	            options.suppressFocus,
 	          );
-	          await audit.complete({
+	          await audit.settle({
 	            outcome: 'succeeded',
 	            targetId,
 	            toUrl: targetUrl,
@@ -1270,8 +1326,9 @@ export async function openOrReuseChromeTarget(
 	          if (compatibleHostTarget) {
 	            const targetId = resolveTargetId(compatibleHostTarget);
 	            const targetUrl = navigateReusedTargets ? url : compatibleHostTarget.url ?? url;
-	            const audit = beginBrowserMutation(options.mutationAudit, {
-	              kind: 'target-open-or-reuse',
+	            const audit = await beginTargetTrafficAction({
+	              governor: options.providerTrafficGovernor,
+	              mutationAudit: options.mutationAudit,
 	              source: mutationSource,
 	              requestedUrl: url,
 	              fromUrl: compatibleHostTarget.url ?? null,
@@ -1288,7 +1345,7 @@ export async function openOrReuseChromeTarget(
 	              navigateReusedTargets,
 	              options.suppressFocus,
 	            );
-	            await audit.complete({
+	            await audit.settle({
 	              outcome: 'succeeded',
 	              targetId,
 	              toUrl: targetUrl,
@@ -1311,8 +1368,9 @@ export async function openOrReuseChromeTarget(
       }
     }
 
-    const audit = beginBrowserMutation(options.mutationAudit, {
-      kind: 'target-open-or-reuse',
+	    const audit = await beginTargetTrafficAction({
+	      governor: options.providerTrafficGovernor,
+	      mutationAudit: options.mutationAudit,
       source: mutationSource,
       requestedUrl: url,
       toUrl: url,
@@ -1320,7 +1378,7 @@ export async function openOrReuseChromeTarget(
       reason: 'new',
     });
     const created = await CDP.New({ host: endpoint.host, port: endpoint.port, url });
-    await audit.complete({
+	    await audit.settle({
       outcome: 'succeeded',
       targetId: resolveTargetId(created),
       toUrl: created.url ?? url,

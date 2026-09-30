@@ -998,6 +998,12 @@ Terminology note:
   read, the current detail loop stops before another provider interaction and
   the matching account-mirror target immediately projects the same cooldown;
   completion and scheduler work remain ineligible until that boundary.
+  Leased ChatGPT prompt, utility, live-follow, and materialization navigation
+  now share one provider-traffic lifecycle: exact lease ownership, persisted
+  admission/start, physical mutation settlement, and a visible warning probe.
+  A detected `Too many requests` surface writes both provider-interaction
+  warning evidence and the managed browser profile cooldown before later work
+  can proceed.
   Real ChatGPT rate-limit detections retain a bounded 24-hour history per
   browser profile and escalate from 5 to 15 and 45 minutes, capped at six
   hours, so repeated provider limits cannot settle into a fixed short retry

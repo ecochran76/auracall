@@ -2083,7 +2083,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	const openDedicatedPromptTarget = async (): Promise<
 		Awaited<ReturnType<typeof connectToChromeTarget>>
 	> => {
-		const openedTarget = await openChromeTarget(chrome.port, "about:blank", chromeHost, logger);
+		const openedTarget = await openChromeTarget(chrome.port, "about:blank", chromeHost, logger, {
+			kind: "pre-lease-target-acquisition",
+			operationId:
+				browserOperation?.operation.id ??
+				options.browserOperationOwnerCommand ??
+				"browser-run-pre-lease-target",
+			reason: "dedicated ChatGPT browser-run target acquisition",
+		});
 		const targetId = resolveChromeTargetIdForBrowserRun(openedTarget);
 		lastTargetId = targetId;
 		lastUrl = openedTarget.url ?? "about:blank";

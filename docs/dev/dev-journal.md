@@ -51748,6 +51748,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free checkpoint validation: 122 focused tests and TypeScript
   typecheck pass. No browser, provider, scheduler, lease, or installed-runtime
   effect was performed.
-- Remaining before closeout: govern target creation/reuse and prove prompt,
-  CRUD, and diagnostic paths cannot bypass the lifecycle; add structural
-  inventory coverage and complete adjacent validation.
+- The second implementation packet extended the same governor through shared
+  ChatGPT utility affinity, leased prompt affinity, and provider target reuse.
+  Direct navigation/reload CDP effects remain concentrated in browser-service;
+  provider target-reuse callers now pass the carried governor. A structural
+  regression inventories those seams.
+- Raw target creation now fails before `CDP.New` without explicit attributed
+  pre-lease acquisition authority; all production callers declare that boundary,
+  while reused-target provider work uses the governor. The expanded provider-free
+  checkpoint passes 285 focused and adjacent tests plus typecheck and diff hygiene.
+- Remaining before closeout: full build/lint/planning and CodeGraph audits,
+  plan/lane reconciliation, review/integration, and installed adoption decision.

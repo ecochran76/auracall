@@ -4,7 +4,6 @@ import path from "node:path";
 import CDP from "chrome-remote-interface";
 import {
 	connectToChromeTarget,
-	openChromeTarget,
 	openOrReuseChromeTarget,
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
 import type { BrowserInteractionClass } from "../../../packages/browser-service/src/service/interactionGovernor.js";
@@ -107,6 +106,7 @@ import {
 	annotateClientMutationContext,
 	resolveMutationAudit,
 	resolveMutationSource,
+	resolveProviderTrafficGovernor,
 } from "./mutationAudit.js";
 import { providerNavigationAllowed } from "./navigationPolicy.js";
 import { assertProviderSessionAuthorization } from "./providerSessionAuthority.js";
@@ -4594,12 +4594,12 @@ async function connectToChatgptTab(
 		}
 		recordBrowserScrapeCdpCall(options, "Target.createTarget");
 		recordBrowserScrapeProviderAction(options, "chatgpt.openTarget");
-		const opened = failedTargetId
-			? { target: await openChromeTarget(resolvedPort, preferredUrl, host), reused: false }
-			: await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
+		const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
 					host,
 					reusePolicy:
-						forceNewDisposableTab || !extractChatgptConversationIdFromUrl(preferredUrl)
+						failedTargetId ||
+						forceNewDisposableTab ||
+						!extractChatgptConversationIdFromUrl(preferredUrl)
 							? "new"
 							: "same-origin",
 					compatibleHosts: CHATGPT_COMPATIBLE_HOSTS,
@@ -4609,6 +4609,7 @@ async function connectToChatgptTab(
 					cleanupExistingTargets: !forceNewDisposableTab,
 					suppressFocus: tabPolicy.suppressFocus,
 					mutationAudit: resolveMutationAudit(options),
+					providerTrafficGovernor: resolveProviderTrafficGovernor(options),
 					mutationSource: resolveMutationSource(options, "provider:chatgpt", "connect-tab"),
 				});
 		targetInfo = opened.target ?? undefined;
@@ -4631,8 +4632,19 @@ async function connectToChatgptTab(
 		if (!options?.tabTargetId && providerNavigationAllowed(options)) {
 			recordBrowserScrapeCdpCall(options, "Target.createTarget");
 			recordBrowserScrapeProviderAction(options, "chatgpt.openTargetAfterAttachFailure");
-			const opened = await openChromeTarget(resolvedPort, preferredUrl, host);
-			const freshTargetId = resolveChatgptTargetId(opened);
+			const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
+				host,
+				reusePolicy: "new",
+				cleanupExistingTargets: false,
+				mutationAudit: resolveMutationAudit(options),
+				providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+				mutationSource: resolveMutationSource(
+					options,
+					"provider:chatgpt",
+					"recover-attach-target",
+				),
+			});
+			const freshTargetId = resolveChatgptTargetId(opened.target);
 			if (freshTargetId) {
 				client = await connectToChromeTarget({ host, port: resolvedPort, target: freshTargetId });
 				recordBrowserScrapeCdpCall(options, "Target.attachToTarget");

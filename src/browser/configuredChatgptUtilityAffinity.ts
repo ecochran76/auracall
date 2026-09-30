@@ -5,6 +5,11 @@ import {
 } from "../../packages/browser-service/src/chromeLifecycle.js";
 import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { createLedgerBackedBrowserInteractionGovernor } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
+import { createProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
+import {
+	createInMemoryBrowserMutationLog,
+	type BrowserMutationAuditSink,
+} from "../../packages/browser-service/src/service/mutationDispatcher.js";
 import {
 	type BrowserTabLeaseRegistry,
 	getCurrentTabLeaseOwnerIdentity,
@@ -19,6 +24,8 @@ import {
 	resolveChatgptTenantLimits,
 } from "../runtime/tenantExecutionLimits.js";
 import { classifyStructuredProviderWarning } from "./chatgptAffinityRuntime.js";
+import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
+import { probeVisibleChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import {
 	recordLibraryInventoryCleanupPhase,
 	recordLibraryInventoryStage,
@@ -37,6 +44,7 @@ export interface ConfiguredChatgptUtilityAffinityDeps {
 	closeTarget?: typeof closeRemoteChromeTarget;
 	currentOwner?: { processId: number; instanceId: string };
 	isOwnerAlive?: (processId: number) => boolean;
+	mutationAudit?: BrowserMutationAuditSink;
 }
 
 export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
@@ -191,7 +199,13 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		requireExistingTarget: input.options?.requireExistingTarget,
 		inspectTarget,
 		openTarget: async ({ host, port, url }) => {
-			const target = await (input.deps?.openTarget ?? openChromeTarget)(port, url, host);
+				const target = input.deps?.openTarget
+					? await input.deps.openTarget(port, url, host)
+					: await openChromeTarget(port, url, host, undefined, {
+							kind: "pre-lease-target-acquisition",
+							operationId: input.utilityId,
+							reason: "ChatGPT utility lease acquisition",
+						});
 			const targetId = typeof target === "string" ? target : target.id;
 			if (!targetId) throw new Error("ChatGPT utility target creation returned no target ID.");
 			return { targetId, url };
@@ -223,7 +237,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			input.userConfig as Record<string, unknown>,
 			runtimeProfileId,
 		);
-		governor = createLedgerBackedBrowserInteractionGovernor({
+			governor = createLedgerBackedBrowserInteractionGovernor({
 			ledger: runtime.ledger,
 			scope: { provider: "chatgpt", tenantKey, runtimeProfileId, managedBrowserProfile },
 			workloadId: `utility:${input.utilityId}`,
@@ -240,14 +254,62 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			},
 			baseGovernor,
 			now,
-		});
-		providerRunStarted = true;
+			});
+			const providerTrafficGovernor = createProviderTrafficGovernor({
+				attribution: {
+					provider: "chatgpt",
+					runtimeProfileId,
+					managedBrowserProfile,
+					workloadId: `utility:${input.utilityId}`,
+					operationId: input.utilityId,
+					tabLeaseId: tab.lease.leaseId,
+				},
+				interactionGovernor: governor,
+				mutationAudit:
+					options.mutationAudit ??
+					input.deps?.mutationAudit ??
+					input.browserService.getMutationAuditSink?.() ??
+					createInMemoryBrowserMutationLog().record,
+				settleInteraction: (settlement) => governor?.finish(settlement) ?? Promise.resolve(),
+				assertLease: async (attribution) => {
+					const lease = (await runtime.registry?.list({ scope, states: ["active"] }))?.find(
+						(candidate) => candidate.leaseId === attribution.tabLeaseId,
+					);
+					if (
+						!lease ||
+						lease.ownerOperationId !== attribution.operationId ||
+						lease.targetId !== tab.lease.targetId ||
+						lease.revision !== tab.claim.revision
+					) {
+						throw new Error("Provider traffic tab lease ownership changed before utility action.");
+					}
+				},
+				probeWarning: probeVisibleChatgptRateLimitWarning,
+				persistWarning: async (warning) => {
+					const observedAt = now();
+					await runtime.ledger?.recordProviderWarning({
+						scope: { provider: "chatgpt", tenantKey, runtimeProfileId, managedBrowserProfile },
+						classification: warning.classification,
+						reason: warning.reason,
+						observedAt: observedAt.toISOString(),
+					});
+					await recordChatgptRateLimitDetection({
+						profileName: runtimeProfileId,
+						managedProfileDir: managedBrowserProfile,
+						action: `utility:${input.utilityId}:provider-traffic-governor`,
+						reason: warning.reason,
+						now: observedAt.getTime(),
+					});
+				},
+			});
+			providerRunStarted = true;
 		recordLibraryInventoryStage(input.options, "affinity-provider-read");
 		execution = {
 			ok: true,
 			value: await input.run({
 				...options,
-				interactionGovernor: governor,
+					interactionGovernor: governor,
+					providerTrafficGovernor,
 				preserveInteractionGovernorForProviderSession: true,
 				disableProviderMutationRetry: input.mutability === "provider-mutating",
 			}),

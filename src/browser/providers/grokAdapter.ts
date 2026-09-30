@@ -17,7 +17,7 @@ import {
   type ProviderSessionProof,
 } from './providerSessionAuthority.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
-import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
+import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource, resolveProviderTrafficGovernor } from './mutationAudit.js';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import {
   detectGrokSignedInIdentity,
@@ -5816,6 +5816,7 @@ async function connectToGrokTab(
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
+      providerTrafficGovernor: resolveProviderTrafficGovernor(options),
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab'),
     });
     targetInfo = opened.target ?? undefined;
@@ -5835,6 +5836,7 @@ async function connectToGrokTab(
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
+      providerTrafficGovernor: resolveProviderTrafficGovernor(options),
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab-fallback'),
     });
     targetInfo = opened.target ?? undefined;
@@ -7569,6 +7571,7 @@ async function connectToGrokProjectTab(
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
+      providerTrafficGovernor: resolveProviderTrafficGovernor(options),
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-project-tab'),
     });
     targetInfo = opened.target ?? undefined;
