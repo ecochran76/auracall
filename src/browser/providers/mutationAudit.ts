@@ -7,6 +7,7 @@ type MutationContextCarrier = {
 	__auracallMutationAudit?: BrowserMutationAuditSink;
 	__auracallMutationSourcePrefix?: string;
 	__auracallProviderTrafficGovernor?: ProviderTrafficGovernor;
+	__auracallProviderTrafficRequired?: boolean;
 };
 
 function asMutationContextCarrier(value: unknown): MutationContextCarrier | null {
@@ -36,6 +37,7 @@ export function annotateClientMutationContext(
 	const extendedClient = client as ChromeClient & MutationContextCarrier;
 	extendedClient.__auracallMutationAudit = options?.mutationAudit;
 	extendedClient.__auracallProviderTrafficGovernor = options?.providerTrafficGovernor;
+	extendedClient.__auracallProviderTrafficRequired = options?.providerTrafficGovernor !== undefined;
 	extendedClient.__auracallMutationSourcePrefix =
 		normalizeMutationSourcePrefix(options?.mutationSourcePrefix) ?? defaultSourcePrefix;
 }

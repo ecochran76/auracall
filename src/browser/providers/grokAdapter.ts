@@ -5817,6 +5817,7 @@ async function connectToGrokTab(
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
       providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+      providerTrafficRequired: resolveProviderTrafficGovernor(options) !== undefined,
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab'),
     });
     targetInfo = opened.target ?? undefined;
@@ -5837,6 +5838,7 @@ async function connectToGrokTab(
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
       providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+      providerTrafficRequired: resolveProviderTrafficGovernor(options) !== undefined,
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab-fallback'),
     });
     targetInfo = opened.target ?? undefined;
@@ -7572,6 +7574,7 @@ async function connectToGrokProjectTab(
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
       providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+      providerTrafficRequired: resolveProviderTrafficGovernor(options) !== undefined,
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-project-tab'),
     });
     targetInfo = opened.target ?? undefined;

@@ -73,6 +73,13 @@ export class ProviderTrafficWarningError extends Error {
 	}
 }
 
+export class ProviderTrafficGovernorRequiredError extends Error {
+	constructor(readonly source: string) {
+		super(`Provider traffic governor is required before physical action: ${source}.`);
+		this.name = "ProviderTrafficGovernorRequiredError";
+	}
+}
+
 export function createProviderTrafficGovernor(input: {
 	attribution: ProviderTrafficAttribution;
 	interactionGovernor: BrowserInteractionGovernor;

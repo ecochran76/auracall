@@ -4610,6 +4610,7 @@ async function connectToChatgptTab(
 					suppressFocus: tabPolicy.suppressFocus,
 					mutationAudit: resolveMutationAudit(options),
 					providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+					providerTrafficRequired: resolveProviderTrafficGovernor(options) !== undefined,
 					mutationSource: resolveMutationSource(options, "provider:chatgpt", "connect-tab"),
 				});
 		targetInfo = opened.target ?? undefined;
@@ -4638,6 +4639,7 @@ async function connectToChatgptTab(
 				cleanupExistingTargets: false,
 				mutationAudit: resolveMutationAudit(options),
 				providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+				providerTrafficRequired: resolveProviderTrafficGovernor(options) !== undefined,
 				mutationSource: resolveMutationSource(
 					options,
 					"provider:chatgpt",

@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import type { BrowserMutationRecord } from "../../packages/browser-service/src/service/mutationDispatcher.js";
+import { navigateAndSettle } from "../../packages/browser-service/src/service/ui.js";
 import {
 	createProviderTrafficGovernor,
 	ProviderTrafficAttributionError,
@@ -69,6 +70,21 @@ describe("provider traffic governor", () => {
 			rejectedStart.begin({ kind: "reload", interactionClass: "page-refresh", source: "test" }),
 		).rejects.toThrow("ledger-unwritable");
 		expect(physicalEffect).not.toHaveBeenCalled();
+	});
+
+	test("fails before effect when a provider-marked client loses its governor", async () => {
+		const navigate = vi.fn(async () => undefined);
+		await expect(
+			navigateAndSettle(
+				{
+					Page: { navigate } as never,
+					Runtime: { evaluate: vi.fn(async () => ({ result: { value: null } })) } as never,
+					__auracallProviderTrafficRequired: true,
+				} as never,
+				{ url: "https://chatgpt.com/c/1" },
+			),
+		).rejects.toThrow("Provider traffic governor is required");
+		expect(navigate).not.toHaveBeenCalled();
 	});
 
 	test("records settlement and persists a warning before rejecting later traffic", async () => {

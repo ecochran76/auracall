@@ -1241,6 +1241,7 @@ async function connectToGeminiTab(
 			navigateReusedTargets: false,
 			mutationAudit: resolveMutationAudit(options),
 			providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+			providerTrafficRequired: resolveProviderTrafficGovernor(options) !== undefined,
 			mutationSource: resolveMutationSource(options, "provider:gemini", "connect-tab"),
 		});
 		targetInfo = opened.target ?? undefined;

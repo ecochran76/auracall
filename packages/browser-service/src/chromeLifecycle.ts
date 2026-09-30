@@ -1138,6 +1138,7 @@ async function beginTargetTrafficAction(input: {
   targetId?: string | null;
   reused: boolean;
   reason: string;
+  providerTrafficRequired?: boolean;
 }): Promise<ProviderTrafficAction> {
   if (input.governor) {
     return input.governor.begin({
@@ -1151,6 +1152,9 @@ async function beginTargetTrafficAction(input: {
       reused: input.reused,
       reason: input.reason,
     });
+  }
+  if (input.providerTrafficRequired) {
+    throw new Error(`Provider traffic governor is required before physical action: ${input.source}.`);
   }
   const legacy = beginBrowserMutation(input.mutationAudit, {
     kind: 'target-open-or-reuse',
@@ -1181,6 +1185,7 @@ export async function openOrReuseChromeTarget(
 	    navigateReusedTargets?: boolean;
 	    mutationAudit?: BrowserMutationAuditSink;
 	    providerTrafficGovernor?: ProviderTrafficGovernor;
+	    providerTrafficRequired?: boolean;
 	    mutationSource?: string;
 	  } = {},
 	): Promise<OpenOrReuseChromeTargetResult> {
@@ -1208,6 +1213,7 @@ export async function openOrReuseChromeTarget(
 	        const audit = await beginTargetTrafficAction({
 	          governor: options.providerTrafficGovernor,
 	          mutationAudit: options.mutationAudit,
+	          providerTrafficRequired: options.providerTrafficRequired,
 	          source: mutationSource,
           requestedUrl: url,
           fromUrl: exactTarget.url ?? null,
@@ -1243,6 +1249,7 @@ export async function openOrReuseChromeTarget(
 	        const audit = await beginTargetTrafficAction({
 	          governor: options.providerTrafficGovernor,
 	          mutationAudit: options.mutationAudit,
+	          providerTrafficRequired: options.providerTrafficRequired,
           source: mutationSource,
           requestedUrl: url,
           fromUrl: blankTarget.url ?? null,
@@ -1283,6 +1290,7 @@ export async function openOrReuseChromeTarget(
 	          const audit = await beginTargetTrafficAction({
 	            governor: options.providerTrafficGovernor,
 	            mutationAudit: options.mutationAudit,
+	            providerTrafficRequired: options.providerTrafficRequired,
 	            source: mutationSource,
 	            requestedUrl: url,
 	            fromUrl: sameOriginTarget.url ?? null,
@@ -1329,6 +1337,7 @@ export async function openOrReuseChromeTarget(
 	            const audit = await beginTargetTrafficAction({
 	              governor: options.providerTrafficGovernor,
 	              mutationAudit: options.mutationAudit,
+	              providerTrafficRequired: options.providerTrafficRequired,
 	              source: mutationSource,
 	              requestedUrl: url,
 	              fromUrl: compatibleHostTarget.url ?? null,
@@ -1371,6 +1380,7 @@ export async function openOrReuseChromeTarget(
 	    const audit = await beginTargetTrafficAction({
 	      governor: options.providerTrafficGovernor,
 	      mutationAudit: options.mutationAudit,
+	      providerTrafficRequired: options.providerTrafficRequired,
       source: mutationSource,
       requestedUrl: url,
       toUrl: url,

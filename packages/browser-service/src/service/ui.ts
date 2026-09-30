@@ -9,6 +9,7 @@ import type {
   ProviderTrafficAction,
   ProviderTrafficGovernor,
 } from './providerTrafficGovernor.js';
+import { ProviderTrafficGovernorRequiredError } from './providerTrafficGovernor.js';
 
 export const DEFAULT_DIALOG_SELECTORS = ['[role="dialog"]', 'dialog', '[aria-modal="true"]'] as const;
 const DEFAULT_VISIBLE_MENU_SELECTORS = [
@@ -621,6 +622,7 @@ async function beginUiPhysicalAction(input: {
   fromUrl?: string | null;
   fallbackUsed?: boolean;
   reason?: string | null;
+  providerTrafficRequired?: boolean;
 }): Promise<ProviderTrafficAction> {
   if (input.providerTrafficGovernor) {
     return input.providerTrafficGovernor.begin({
@@ -632,6 +634,9 @@ async function beginUiPhysicalAction(input: {
       fallbackUsed: input.fallbackUsed,
       reason: input.reason,
     });
+  }
+  if (input.providerTrafficRequired) {
+    throw new ProviderTrafficGovernorRequiredError(input.source);
   }
   await input.interactionGovernor?.beforeInteraction(input.interactionClass);
   const legacy = beginBrowserMutation(input.mutationAudit, {
@@ -1164,6 +1169,8 @@ export async function navigateAndSettle(
   const mutationSource = options.mutationSource ?? 'browser-service:navigateAndSettle';
   const providerTrafficGovernor = options.providerTrafficGovernor ??
     (client as { __auracallProviderTrafficGovernor?: ProviderTrafficGovernor }).__auracallProviderTrafficGovernor;
+  const providerTrafficRequired =
+    (client as { __auracallProviderTrafficRequired?: boolean }).__auracallProviderTrafficRequired === true;
   const mutationAudit = options.mutationAudit;
   const fromUrl = await readLocationHrefForAudit(client.Runtime);
   const evaluateState = async (
@@ -1257,6 +1264,7 @@ export async function navigateAndSettle(
 
   let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction({
     providerTrafficGovernor,
+    providerTrafficRequired,
     interactionGovernor: options.interactionGovernor,
     interactionClass: options.interactionClass ?? 'renavigation',
     mutationAudit,
@@ -1327,6 +1335,7 @@ export async function navigateAndSettle(
     });
     activeAction = await beginUiPhysicalAction({
       providerTrafficGovernor,
+      providerTrafficRequired,
       interactionGovernor: options.interactionGovernor,
       interactionClass: options.interactionClass ?? 'renavigation',
       mutationAudit,
@@ -1437,10 +1446,13 @@ export async function reloadAndSettle(
   const mutationSource = options.mutationSource ?? 'browser-service:reloadAndSettle';
   const providerTrafficGovernor = options.providerTrafficGovernor ??
     (client as { __auracallProviderTrafficGovernor?: ProviderTrafficGovernor }).__auracallProviderTrafficGovernor;
+  const providerTrafficRequired =
+    (client as { __auracallProviderTrafficRequired?: boolean }).__auracallProviderTrafficRequired === true;
   const mutationAudit = options.mutationAudit;
   const fromUrl = mutationAudit ? await readLocationHrefForAudit(client.Runtime) : null;
   let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction({
     providerTrafficGovernor,
+    providerTrafficRequired,
     interactionGovernor: options.interactionGovernor,
     interactionClass: options.interactionClass ?? 'page-refresh',
     mutationAudit,
@@ -1516,6 +1528,7 @@ export async function reloadAndSettle(
       });
       activeAction = await beginUiPhysicalAction({
         providerTrafficGovernor,
+        providerTrafficRequired,
         interactionGovernor: options.interactionGovernor,
         interactionClass: options.interactionClass ?? 'page-refresh',
         mutationAudit,

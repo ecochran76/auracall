@@ -51759,3 +51759,8 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   checkpoint passes 285 focused and adjacent tests plus typecheck and diff hygiene.
 - Remaining before closeout: full build/lint/planning and CodeGraph audits,
   plan/lane reconciliation, review/integration, and installed adoption decision.
+- Completion-audit hardening marks every CDP client carrying provider traffic
+  authority as governor-required. Losing that governor now throws before the
+  physical action instead of silently falling back to optional pacing/audit.
+  Provider-neutral Gemini/Grok paths without configured lease authority retain
+  their existing behavior; they cannot falsely claim the governed contract.
