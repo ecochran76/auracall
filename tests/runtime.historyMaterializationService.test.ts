@@ -62,6 +62,7 @@ describe("history materialization service", () => {
 		);
 		setAuracallHomeDirOverrideForTest(homeDir);
 		let scheduled: (() => Promise<void>) | undefined;
+		const recordConversationEvidence = vi.fn(async () => undefined);
 		const service = createHistoryMaterializationService({
 			config: {},
 			catalogService: {
@@ -84,6 +85,7 @@ describe("history materialization service", () => {
 			schedule: (work) => {
 				scheduled = work;
 			},
+			recordConversationEvidence,
 			materializeConversation: vi.fn(
 				async (target): Promise<HistoryMaterializationResult> => ({
 					object: "history_materialization_result",
@@ -168,6 +170,18 @@ describe("history materialization service", () => {
 				],
 			},
 		});
+		expect(recordConversationEvidence).toHaveBeenCalledWith(
+			expect.objectContaining({ conversationId: "conv_volatile_fixture" }),
+			expect.objectContaining({
+				frontierState: expect.objectContaining({
+					action: "materialize_retained",
+					outcome: "deferred",
+					assetAvailability: "unknown",
+					artifactResolutions: 2,
+					downloads: 0,
+				}),
+			}),
+		);
 	});
 
 	it("batches filtered job lists through one store snapshot", async () => {
@@ -2799,6 +2813,13 @@ describe("history materialization service", () => {
 				manifestObservedAt: "2026-05-22T18:02:01.000Z",
 				materializedAt: "2026-05-22T18:02:01.000Z",
 				assetCompleteness: "complete",
+				frontierState: expect.objectContaining({
+					action: "materialize_retained",
+					outcome: "complete",
+					assetAvailability: "available",
+					artifactResolutions: 1,
+					downloads: 1,
+				}),
 			}),
 		);
 		const completed = await service.readJob("hmj_refresh_snapshot_1");

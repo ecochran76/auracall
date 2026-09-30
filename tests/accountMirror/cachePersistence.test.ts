@@ -653,6 +653,15 @@ describe("account mirror cache persistence", () => {
 					routeabilityState: "routeable",
 					messageCount: 4,
 					artifactCount: 1,
+					frontierState: {
+						action: "materialize_retained",
+						outcome: "complete",
+						assetAvailability: "available",
+						retryNotBefore: null,
+						checkpointedAt: "2026-05-23T16:00:01.000Z",
+						artifactResolutions: 2,
+						downloads: 1,
+					},
 				},
 			});
 			const missingWithoutUpsert = await updateConversationEvidence?.({
@@ -708,6 +717,16 @@ describe("account mirror cache persistence", () => {
 								"conversation-not-found-or-unavailable: exact fallback response returned status 404",
 							messageCount: 4,
 							artifactCount: 1,
+							changeFrontierState: {
+								action: "materialize_retained",
+								outcome: "complete",
+								assetAvailability: "available",
+								checkpointedAt: "2026-05-23T16:00:01.000Z",
+								physicalActivity: {
+									artifactResolutions: 2,
+									downloads: 1,
+								},
+							},
 						},
 					},
 					{

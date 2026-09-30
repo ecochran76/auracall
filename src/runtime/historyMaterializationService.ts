@@ -4002,13 +4002,26 @@ function evidenceFromMaterializationResult(
 		(entry) => entry.status === "materialized",
 	).length;
 	const duplicateAliasCount = result.entries.filter((entry) => entry.status === "duplicate").length;
+	const unavailableCount = result.entries.filter(
+		(entry) =>
+			entry.assetAvailability === "unavailable" || entry.failureKind === "provider_unavailable",
+	).length;
+	const completedCount = materializedCount + duplicateAliasCount;
+	const terminal = entryCount > 0 && unavailableCount === entryCount;
+	const complete = entryCount > 0 && completedCount === entryCount;
 	return {
 		manifestObservedAt: result.generatedAt,
 		materializedAt: materializedCount > 0 ? result.generatedAt : undefined,
-		assetCompleteness:
-			entryCount > 0 && materializedCount + duplicateAliasCount === entryCount
-				? "complete"
-				: undefined,
+		assetCompleteness: complete ? "complete" : undefined,
+		frontierState: {
+			action: "materialize_retained",
+			outcome: terminal ? "terminal" : complete ? "complete" : "deferred",
+			assetAvailability: terminal ? "unavailable" : complete ? "available" : "unknown",
+			retryNotBefore: null,
+			checkpointedAt: result.generatedAt,
+			artifactResolutions: entryCount,
+			downloads: materializedCount,
+		},
 	};
 }
 

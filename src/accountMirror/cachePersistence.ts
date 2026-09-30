@@ -22,6 +22,7 @@ import { normalizeAccountMirrorBackfillLedger } from "./backfillLedger.js";
 import {
 	type AccountMirrorProviderIndexEpoch,
 	createAccountMirrorProviderIndexEpoch,
+	normalizeAccountMirrorConversationWorkState,
 	normalizeAccountMirrorProviderIndexEpoch,
 	rollAccountMirrorConversationWorkState,
 } from "./changeFrontierState.js";
@@ -82,6 +83,15 @@ export interface AccountMirrorConversationEvidence {
 	fileCount?: number | null;
 	sourceCount?: number | null;
 	artifactCount?: number | null;
+	frontierState?: {
+		action: "materialize_retained";
+		outcome: "complete" | "deferred" | "terminal";
+		assetAvailability: "available" | "unavailable" | "unknown";
+		retryNotBefore: string | null;
+		checkpointedAt: string;
+		artifactResolutions: number;
+		downloads: number;
+	} | null;
 }
 
 export interface AccountMirrorPersistence {
@@ -377,12 +387,37 @@ function mergeConversationEvidence(
 	evidence: AccountMirrorConversationEvidence,
 ): Conversation {
 	const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
-	const cleaned = cleanEvidenceRecord(evidence);
+	const { frontierState, ...surfaceEvidence } = evidence;
+	const cleaned = cleanEvidenceRecord(surfaceEvidence);
+	const existingWorkState = normalizeAccountMirrorConversationWorkState(
+		metadata.changeFrontierState,
+	);
+	const changeFrontierState =
+		frontierState && existingWorkState
+			? {
+					...existingWorkState,
+					action: frontierState.action,
+					outcome: frontierState.outcome,
+					assetAvailability: frontierState.assetAvailability,
+					retryNotBefore: frontierState.retryNotBefore,
+					checkpointedAt: frontierState.checkpointedAt,
+					physicalActivity: {
+						...existingWorkState.physicalActivity,
+						artifactResolutions:
+							existingWorkState.physicalActivity.artifactResolutions +
+							Math.max(0, Math.floor(frontierState.artifactResolutions)),
+						downloads:
+							existingWorkState.physicalActivity.downloads +
+							Math.max(0, Math.floor(frontierState.downloads)),
+					},
+				}
+			: metadata.changeFrontierState;
 	return {
 		...conversation,
 		metadata: {
 			...metadata,
 			...cleaned,
+			...(changeFrontierState ? { changeFrontierState } : {}),
 		},
 	};
 }

@@ -703,6 +703,15 @@ Terminology note:
   More than one recorded navigation for a row fails closed. Matching-epoch
   bundles checkpoint their action, outcome, fingerprint, and physical counters
   into durable work state; stale-epoch bundles are ignored.
+  A durable detail fingerprint also marks that conversation as eligible for
+  retained-snapshot materialization. Completion combines those retained rows
+  with rows visited in the current pass, so asset work consumes cached detail
+  and manifest evidence without reopening or refreshing the conversation.
+  Materialization checkpoints the aggregate row outcome and physical artifact
+  resolution/download counters. Per-entry availability remains authoritative:
+  confirmed missing volatile uploads are `unavailable`, while an unresolved
+  persistent Library row remains `unknown`; a mixed result therefore stays
+  deferred rather than falsely making the whole conversation terminal.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>

@@ -13,6 +13,7 @@ import {
 	type AccountMirrorRefreshError,
 	classifyChatgptRateLimitCensusProbeForTest,
 	createAccountMirrorRefreshService,
+	deriveRetainedMaterializationConversationIdsForTest,
 	mergeConversationsByObservedOrderForTest,
 	readPreviousAccountMirrorFilesForTest,
 	writeChatgptRateLimitCensusGuardForTest,
@@ -89,6 +90,47 @@ describe("account mirror refresh service", () => {
 		setAuracallHomeDirOverrideForTest(homeDir);
 		return homeDir;
 	}
+
+	test("selects retained detail fingerprints for route-free materialization reuse", () => {
+		const counters = {
+			targetsCreated: 0,
+			navigations: 0,
+			reloads: 0,
+			snapshotRefreshes: 0,
+			artifactResolutions: 0,
+			downloads: 0,
+		};
+		const conversation = (id: string, availability: "available" | "unavailable" | "unknown") => ({
+			id,
+			title: id,
+			provider: "chatgpt" as const,
+			metadata: {
+				changeFrontierState: {
+					object: "account_mirror_conversation_work_state",
+					version: 1,
+					conversationKey: `key_${id}`,
+					epochId: "epoch_previous",
+					indexFingerprint: `index_${id}`,
+					detailFingerprint: `detail_${id}`,
+					action: "visit_once",
+					outcome: "complete",
+					assetAvailability: availability,
+					retryNotBefore: null,
+					checkpointedAt: "2026-09-30T18:00:00.000Z",
+					physicalActivity: counters,
+					lifetimePhysicalActivity: counters,
+				},
+			},
+		});
+
+		expect(
+			deriveRetainedMaterializationConversationIdsForTest([
+				conversation("retained", "unknown"),
+				conversation("terminal", "unavailable"),
+				{ id: "legacy", title: "legacy", provider: "chatgpt" },
+			]),
+		).toEqual(["retained"]);
+	});
 
 	test("bounds prior conversation cache hydration by cycle size and concurrency", async () => {
 		let activeReads = 0;

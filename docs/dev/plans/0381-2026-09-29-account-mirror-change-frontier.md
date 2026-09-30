@@ -166,7 +166,7 @@ checkpoint schema converge on shared account-mirror types.
    detail plus artifact refs in one governed route visit and preserve current
    routeability, identity, lease, and warning contracts. Terminal condition:
    one selected row yields at most one physical visit receipt.
-5. **P4 — Retained-evidence materialization.** Consume visit bundles or retained
+5. **P4 — Retained-evidence materialization (source complete).** Consume visit bundles or retained
    refs without a second snapshot refresh; persist terminal/deferred outcomes
    after every row. Terminal condition: timeout resume continues after retained
    complete work.
@@ -183,6 +183,16 @@ checkpoint schema converge on shared account-mirror types.
 P0 fixture capture and P1 schema design can be investigated independently, but
 P1 must land before P2. P3 and P5 may proceed after the planner contract is
 frozen; P4 joins P3 and the durable state. P6 is serialized after all joins.
+
+P4 carries durable detail fingerprints into completion-owned materialization,
+deduplicates them with current-pass detail rows, and reuses the cached snapshot
+without a second provider refresh. Each materialization result checkpoints the
+row action/outcome, aggregate availability, and artifact-resolution/download
+counters. Mixed persistent/volatile outcomes remain deferred/unknown at the
+row level while preserving each entry's explicit availability. Focused and
+adjacent P4 coverage is green (213 tests); no browser or provider work ran.
+The next source packet is P5 interaction amplification and warning-signature
+evidence.
 
 ## Acceptance Criteria
 

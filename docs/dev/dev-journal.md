@@ -51920,3 +51920,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   suites pass 283/283 with TypeScript and diff hygiene. This packet remained
   provider-free; the scheduler remains paused. Next is P4 retained-evidence
   materialization without a second snapshot refresh.
+## 2026-09-30 | Issue 139 retained-evidence materialization
+
+- Durable detail fingerprints now nominate retained snapshot evidence for
+  completion-owned materialization, deduplicated with current-pass detail rows.
+  The history materializer consumes that evidence without reopening or
+  refreshing the conversation when no new snapshot is required.
+- Materialization checkpoints row action/outcome, aggregate availability, and
+  physical artifact-resolution/download counters. Individual volatile and
+  persistent asset availability remains intact; mixed results stay deferred.
+- Focused and adjacent coverage passed 213 tests plus typecheck and diff
+  hygiene. The production scheduler stayed paused and no provider work ran.

@@ -23804,3 +23804,11 @@ detail completeness, a sanitized fingerprint, artifact/file refs, and target,
 navigation, and reload deltas into one visit bundle. Fail closed on multiple
 navigations and persist bundle counters only when its epoch exactly matches the
 snapshot epoch.
+- 2026-09-30: A durable detail fingerprint is reusable materialization
+  evidence, not a reason to reopen the provider conversation. Carry retained
+  fingerprint rows into completion-owned materialization, deduplicate them with
+  current-pass visits, and checkpoint artifact-resolution/download counters.
+  Keep availability authoritative per entry: a confirmed missing volatile
+  upload can be unavailable while an unresolved persistent Library row remains
+  unknown, so mixed conversation-level state must remain deferred rather than
+  terminal.

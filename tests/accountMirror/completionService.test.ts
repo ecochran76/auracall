@@ -2359,6 +2359,7 @@ describe("account mirror completion service", () => {
 				projectSampleIds: [],
 				conversationSampleIds: ["conv_collector_fresh_1"],
 				detailConversationIdsThisPass: ["conv_collector_fresh_1"],
+				retainedMaterializationConversationIds: ["conv_retained_1"],
 				truncated: { projects: false, conversations: false, artifacts: false },
 			},
 		}));
@@ -2412,7 +2413,7 @@ describe("account mirror completion service", () => {
 			reconcile: true,
 			refreshSnapshot: true,
 			reuseSnapshotAfter: "2026-04-30T12:00:00.000Z",
-			reuseSnapshotConversationIds: ["conv_collector_fresh_1"],
+			reuseSnapshotConversationIds: ["conv_collector_fresh_1", "conv_retained_1"],
 			providerWorkNotBefore: "2026-04-30T12:02:01.000Z",
 			interactionPolicy: {
 				maxInteractionsPerMinute: 8,
@@ -2438,7 +2439,7 @@ describe("account mirror completion service", () => {
 					reconcile: true,
 					refreshSnapshot: true,
 					reuseSnapshotAfter: "2026-04-30T12:00:00.000Z",
-					reuseSnapshotConversationIds: ["conv_collector_fresh_1"],
+					reuseSnapshotConversationIds: ["conv_collector_fresh_1", "conv_retained_1"],
 					providerWorkNotBefore: "2026-04-30T12:02:01.000Z",
 					interactionPolicy: {
 						maxInteractionsPerMinute: 8,

@@ -234,6 +234,7 @@ export type AccountMirrorMetadataEvidence = {
 	projectSampleIds: string[];
 	conversationSampleIds: string[];
 	detailConversationIdsThisPass?: string[];
+	retainedMaterializationConversationIds?: string[];
 	countEvidence?: AccountMirrorMetadataCountEvidence | null;
 	detailScannedThisPass?: AccountMirrorDetailScannedEvidence | null;
 	assetInventory?: AccountMirrorAssetInventoryEvidence | null;
@@ -1051,6 +1052,9 @@ function normalizeMetadataEvidence(
 		projectSampleIds: normalizeStringArray(value.projectSampleIds),
 		conversationSampleIds: normalizeStringArray(value.conversationSampleIds),
 		detailConversationIdsThisPass: normalizeStringArray(value.detailConversationIdsThisPass),
+		retainedMaterializationConversationIds: normalizeStringArray(
+			value.retainedMaterializationConversationIds,
+		),
 		countEvidence: normalizeCountEvidence(value.countEvidence),
 		detailScannedThisPass: normalizeDetailScannedEvidence(value.detailScannedThisPass),
 		assetInventory: normalizeAssetInventoryEvidence(value.assetInventory),

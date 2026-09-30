@@ -38,6 +38,7 @@ import {
 	type AccountMirrorPersistence,
 	createAccountMirrorPersistence,
 } from "./cachePersistence.js";
+import { normalizeAccountMirrorConversationWorkState } from "./changeFrontierState.js";
 import {
 	AccountMirrorIdentityMismatchError,
 	type AccountMirrorMetadataCollector,
@@ -2156,6 +2157,9 @@ function withRefreshEvidenceModel(input: {
 		metadataCounts: mergedTotal,
 		evidence: {
 			...input.collection.evidence,
+			retainedMaterializationConversationIds: deriveRetainedMaterializationConversationIds(
+				input.mergedManifests.conversations,
+			),
 			countEvidence: {
 				observedThisPass: input.collection.metadataCounts,
 				retainedFromCache: input.retainedCounts,
@@ -2194,6 +2198,23 @@ function withRefreshEvidenceModel(input: {
 		},
 	};
 }
+
+function deriveRetainedMaterializationConversationIds(
+	conversations: readonly Conversation[],
+): string[] {
+	const ids: string[] = [];
+	for (const conversation of conversations) {
+		const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+		const state = normalizeAccountMirrorConversationWorkState(metadata.changeFrontierState);
+		if (!state?.detailFingerprint) continue;
+		if (state.assetAvailability === "unavailable") continue;
+		ids.push(conversation.id);
+	}
+	return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+}
+
+export const deriveRetainedMaterializationConversationIdsForTest =
+	deriveRetainedMaterializationConversationIds;
 
 function countsFromManifests(
 	manifests: AccountMirrorMetadataCollectorResult["manifests"],
