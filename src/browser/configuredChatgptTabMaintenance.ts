@@ -60,6 +60,86 @@ export interface ConfiguredChatgptTabMaintenanceDeps {
 	isOwnerAlive?: (processId: number) => boolean;
 }
 
+export interface ConfiguredChatgptShutdownLeaseRetirementSummary {
+	retiredLeaseIds: string[];
+	deferredLeaseIds: string[];
+}
+
+/**
+ * Reconcile lease records only after the caller has positively established
+ * that the exact managed browser is stopped. This deliberately performs no
+ * browser or provider I/O.
+ */
+export async function retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown(input: {
+	userConfig: ResolvedUserConfig | Record<string, unknown>;
+	runtimeProfileId: string;
+	managedBrowserProfile: string;
+	now?: () => Date;
+	deps?: Pick<ConfiguredChatgptTabMaintenanceDeps, "createRuntime">;
+}): Promise<ConfiguredChatgptShutdownLeaseRetirementSummary> {
+	const summary: ConfiguredChatgptShutdownLeaseRetirementSummary = {
+		retiredLeaseIds: [],
+		deferredLeaseIds: [],
+	};
+	const runtimeProfileId = input.runtimeProfileId.trim();
+	const managedBrowserProfile = input.managedBrowserProfile.trim();
+	if (!runtimeProfileId || !managedBrowserProfile) return summary;
+	const config = resolveRuntimeProfileUserConfig(input.userConfig as ResolvedUserConfig, {
+		runtimeProfileId,
+		provider: "chatgpt",
+	}) as ResolvedUserConfig;
+	if (config.browser?.tabConcurrencyMode !== "tab-affinity") return summary;
+	const tenantKey = resolveConfiguredServiceAccountId(config as Record<string, unknown>, {
+		serviceId: "chatgpt",
+		runtimeProfileId,
+	});
+	if (!tenantKey) throw new Error("configured ChatGPT tenant identity is missing");
+	const runtime = (input.deps?.createRuntime ?? createBrowserTabConcurrencyRuntime)(config);
+	if (!runtime.registry) throw new Error("tab-affinity registry is unavailable");
+	const idleLeases = await runtime.registry.list({
+		scope: {
+			runtimeProfileId,
+			managedBrowserProfile,
+			service: "chatgpt",
+			tenantKey,
+		},
+		states: ["idle"],
+	});
+	for (const lease of idleLeases.sort((left, right) => left.leaseId.localeCompare(right.leaseId))) {
+		if (
+			lease.ownerOperationId !== null ||
+			lease.effectState === "in-flight" ||
+			lease.effectState === "outcome-unknown"
+		) {
+			summary.deferredLeaseIds.push(lease.leaseId);
+			continue;
+		}
+		const now = (input.now ?? (() => new Date()))().toISOString();
+		const retiring = await runtime.registry.beginRetirement({
+			leaseId: lease.leaseId,
+			expectedRevision: lease.revision,
+			now,
+			reason: "operator",
+		});
+		if (!retiring.ok) {
+			summary.deferredLeaseIds.push(lease.leaseId);
+			continue;
+		}
+		const released = await runtime.registry.finishRetirement({
+			leaseId: lease.leaseId,
+			retirementRevision: retiring.value.retirementRevision,
+			now,
+			disposition: "already-missing",
+		});
+		if (!released.ok) {
+			summary.deferredLeaseIds.push(lease.leaseId);
+			continue;
+		}
+		summary.retiredLeaseIds.push(lease.leaseId);
+	}
+	return summary;
+}
+
 export async function runConfiguredChatgptTabMaintenance(input: {
 	userConfig: ResolvedUserConfig;
 	now?: () => Date;

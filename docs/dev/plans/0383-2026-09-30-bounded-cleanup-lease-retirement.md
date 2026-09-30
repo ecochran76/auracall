@@ -24,6 +24,14 @@ for nonexistent targets. Normal affinity settlement idles leases for reuse;
 the bounded cleanup paths terminate the whole browser without immediately
 retiring those idle records, leaving retirement to the 15-minute expiry path.
 
+The provider-free repair is implemented: both cleanup paths call one
+configured ChatGPT shutdown-reconciliation helper after exact process-absence
+proof and while their browser-operation fence is still held. The red regression
+and the widened 240-test lease/affinity/completion/refresh/materialization gate,
+typecheck, production build, affected Biome check, and diff hygiene pass.
+Integration, exact install, and reconciliation of the two installed canary
+leases remain.
+
 ## Architecture Contract
 
 1. Affinity settlement may continue to idle a reusable target while its exact
@@ -56,13 +64,13 @@ retiring those idle records, leaving retirement to the 15-minute expiry path.
 
 ## Acceptance Criteria
 
-- [ ] Provider-free coverage fails before the repair and proves immediate
+- [x] Provider-free coverage fails before the repair and proves immediate
       `idle` to `retiring` to `released/already-missing` transitions afterward.
-- [ ] Only the exact stopped browser scope is affected; active, in-flight,
+- [x] Only the exact stopped browser scope is affected; active, in-flight,
       ambiguous, and unrelated leases remain fail-closed.
-- [ ] Both bounded metadata cleanup and history-materialization cleanup invoke
+- [x] Both bounded metadata cleanup and history-materialization cleanup invoke
       the same deep reconciliation helper after positive shutdown proof.
-- [ ] Focused and adjacent tests, typecheck, build, affected lint, diff hygiene,
+- [x] Focused and adjacent tests, typecheck, build, affected lint, diff hygiene,
       and active-plan audit pass.
 - [ ] The exact canonical merge is installed and the two canary leases are
       locally reconciled to released with no browser process or port listener.

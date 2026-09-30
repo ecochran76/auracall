@@ -1,6 +1,6 @@
 # Live-Follow Governor Bootstrap | 0382-2026-09-30
 
-State: OPEN
+State: CLOSED
 Lane: P82
 Work item: ecochran76/auracall#146
 Source base: `origin/main` at `35f854ad5`
@@ -25,13 +25,17 @@ physical action: provider:chatgpt:connect-tab.` Direct CDP observation recorded
 one ChatGPT root target and 152 requests before failure, with no document
 navigation and no visible rate-limit warning.
 
-The exact cause is the completion mode split. Supplying `maxPasses` creates a
+The exact cause was the completion mode split. Supplying `maxPasses` creates a
 `bounded` completion, while `AccountMirrorCompletionService` supplies
 `liveFollowOperationId` only when the mode is `live_follow`. Every bounded
 completion therefore passes `null`, bypasses `createConfiguredLiveFollowAffinity`,
 creates no crawler lease or lease-bound governor, and falls into the generic
 ChatGPT connect-tab path. The shared governor-required seam then correctly
-fails closed.
+fails closed. PR #147 integrated the repair at `939726286`, and the exact merge
+was installed. Its one authorized direct-CDP canary completed without a visible
+provider warning and proved the governor/lease path, while exposing successor
+Issue #148: bounded browser shutdown left two settled idle lease records for
+targets that no longer existed. Plan 0383 owns that separate cleanup defect.
 
 ## Architecture Contract
 
@@ -69,25 +73,30 @@ fails closed.
 
 ## Acceptance Criteria
 
-- [ ] Provider-free coverage reproduces the bounded-mode affinity bypass and
+- [x] Provider-free coverage reproduces the bounded-mode affinity bypass and
       passes only when the exact completion operation ID reaches the affinity
       factory and refresh request.
-- [ ] Cold start creates or adopts exactly one candidate crawler target and
+- [x] Cold start creates or adopts exactly one candidate crawler target and
       reserves exactly one active live-follow lease.
-- [ ] The final governor is bound to the exact lease generation and owns every
+- [x] The final governor is bound to the exact lease generation and owns every
       post-reservation connect, navigation, refresh, and warning probe.
-- [ ] Stale, duplicate, mismatched, or ambiguous targets and leases fail closed.
-- [ ] Startup/target physical work contributes to sanitized aggregate traffic
+- [x] Stale, duplicate, mismatched, or ambiguous targets and leases fail closed.
+- [x] Startup/target physical work contributes to sanitized aggregate traffic
       and amplification evidence.
-- [ ] Provider-free warning fixtures stop immediately and preserve the existing
+- [x] Provider-free warning fixtures stop immediately and preserve the existing
       sanitized signature without dismissal or retry.
-- [ ] Focused and adjacent tests, typecheck, build, affected lint, CodeGraph,
+- [x] Focused and adjacent tests, typecheck, build, affected lint, CodeGraph,
       diff hygiene, and planning audit pass.
 - [ ] The exact canonical merge is installed and one bounded `wsl-chrome-3`
       `steady_follow` canary completes or reaches a truthful governed terminal
       state under direct CDP with no warning and no residual bad lease.
-- [ ] Scheduler posture remains paused after acceptance; resume remains a
+- [x] Scheduler posture remains paused after acceptance; resume remains a
       separate operator decision.
+
+The residual-lease clause in the unchecked installed-canary criterion failed
+and was transferred without retry to Issue #148 / Plan 0383. That successor
+does not invalidate the governor-bootstrap acceptance proved by this closed
+plan.
 
 ## Non-goals
 

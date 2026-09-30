@@ -28,6 +28,7 @@ import {
 import { getDefaultAccountMirrorPolitenessPolicy } from "../accountMirror/politePolicy.js";
 import { accountMirrorIdentityKeysMatch } from "../accountMirror/tenantBinding.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import { retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown } from "../browser/configuredChatgptTabMaintenance.js";
 import { DEFAULT_CONVERSATION_CONTEXT_TIMEOUT_MS } from "../browser/llmService/llmService.js";
 import { createLlmService } from "../browser/llmService/providers/index.js";
 import type { ConversationContextReadReceipt } from "../browser/providers/cache.js";
@@ -558,6 +559,7 @@ export interface HistoryMaterializationServiceDeps {
 		config: ResolvedUserConfig | Record<string, unknown>,
 		request: HistoryMaterializationCreateRequest,
 	) => Promise<void>;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown?: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 	materializeConversation?: (
 		target: HistoryMaterializationTarget,
 		request: HistoryMaterializationCreateRequest,
@@ -894,6 +896,9 @@ export function createHistoryMaterializationService(
 		: null;
 	const cleanupManagedBrowser =
 		deps.cleanupManagedBrowser ?? cleanupHistoryMaterializationManagedBrowser;
+	const retireIdleChatgptLeasesAfterManagedBrowserShutdown =
+		deps.retireIdleChatgptLeasesAfterManagedBrowserShutdown ??
+		retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 	let queue = Promise.resolve();
 	const scheduledJobIds = new Set<string>();
 	const providerWorkContexts = new Map<string, HistoryMaterializationProviderWorkContext>();
@@ -1222,6 +1227,11 @@ export function createHistoryMaterializationService(
 					} finally {
 						if (cleanupBrowserBackedProviderWork) {
 							await cleanupManagedBrowser(deps.config, running.request);
+							await reconcileStoppedHistoryMaterializationChatgptLeases({
+								config: deps.config,
+								request: running.request,
+								retireIdleChatgptLeasesAfterManagedBrowserShutdown,
+							});
 						}
 						await releaseHistoryMaterializationBrowserOperations(browserOperations);
 					}
@@ -1416,6 +1426,11 @@ export function createHistoryMaterializationService(
 			if (browserOperations) {
 				try {
 					await cleanupManagedBrowser(deps.config, job.request);
+					await reconcileStoppedHistoryMaterializationChatgptLeases({
+						config: deps.config,
+						request: job.request,
+						retireIdleChatgptLeasesAfterManagedBrowserShutdown,
+					});
 				} finally {
 					await releaseHistoryMaterializationBrowserOperations(browserOperations);
 				}
@@ -6758,6 +6773,32 @@ async function cleanupHistoryMaterializationManagedBrowser(
 		if (primaryPid) pids.add(primaryPid);
 		if (pids.size === 0) continue;
 		await terminateHistoryMaterializationManagedBrowserPids([...pids]).catch(() => undefined);
+		const remainingPrimaryPid = await findChromePidUsingUserDataDir(managedProfileDir).catch(
+			() => null,
+		);
+		const remainingPids = await findHistoryMaterializationManagedBrowserPids(managedProfileDir);
+		if (remainingPrimaryPid) remainingPids.add(remainingPrimaryPid);
+		if (remainingPids.size > 0) {
+			throw new Error(
+				`Managed browser profile remained owned by PID ${[...remainingPids].sort((a, b) => a - b)[0]} after bounded cleanup.`,
+			);
+		}
+	}
+}
+
+async function reconcileStoppedHistoryMaterializationChatgptLeases(input: {
+	config: ResolvedUserConfig | Record<string, unknown>;
+	request: HistoryMaterializationCreateRequest;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
+}): Promise<void> {
+	const target = resolveHistoryMaterializationBrowserOperationTarget(input.config, input.request);
+	if (!target || target.provider !== "chatgpt" || !input.request.runtimeProfile) return;
+	for (const managedBrowserProfile of target.managedProfileDirs) {
+		await input.retireIdleChatgptLeasesAfterManagedBrowserShutdown({
+			userConfig: input.config,
+			runtimeProfileId: input.request.runtimeProfile,
+			managedBrowserProfile,
+		});
 	}
 }
 

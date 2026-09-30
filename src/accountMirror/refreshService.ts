@@ -24,6 +24,7 @@ import {
 	resolveChatgptRateLimitCooldownMs,
 	writeChatgptRateLimitGuardState,
 } from "../browser/chatgptRateLimitGuard.js";
+import { retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown } from "../browser/configuredChatgptTabMaintenance.js";
 import { recordDomDriftObservation } from "../browser/domDriftObservations.js";
 import {
 	type BrowserOperationQueueObservation,
@@ -217,6 +218,7 @@ export function createAccountMirrorRefreshService(input: {
 	generateRequestId?: () => string;
 	developmentControlsEnabled?: boolean;
 	liveFollowAffinityFactory?: typeof createConfiguredLiveFollowAffinity;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown?: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 }): AccountMirrorRefreshService {
 	const now = input.now ?? (() => new Date());
 	const registry =
@@ -247,6 +249,9 @@ export function createAccountMirrorRefreshService(input: {
 	const generateRequestId = input.generateRequestId ?? (() => `acctmirror_${randomUUID()}`);
 	const liveFollowAffinityFactory =
 		input.liveFollowAffinityFactory ?? createConfiguredLiveFollowAffinity;
+	const retireIdleChatgptLeasesAfterManagedBrowserShutdown =
+		input.retireIdleChatgptLeasesAfterManagedBrowserShutdown ??
+		retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 
 	return {
 		async requestRefresh(request = {}) {
@@ -734,6 +739,7 @@ export function createAccountMirrorRefreshService(input: {
 					managedProfileDir,
 					findManagedBrowserPid,
 					terminateManagedBrowserProcess,
+					retireIdleChatgptLeasesAfterManagedBrowserShutdown,
 				});
 				return {
 					object: "account_mirror_refresh",
@@ -928,6 +934,7 @@ export function createAccountMirrorRefreshService(input: {
 					managedProfileDir,
 					findManagedBrowserPid,
 					terminateManagedBrowserProcess,
+					retireIdleChatgptLeasesAfterManagedBrowserShutdown,
 				});
 				if (isIdentityMismatch) {
 					throw new AccountMirrorRefreshError(
@@ -1360,12 +1367,24 @@ async function cleanupManagedBrowserAfterRefresh(input: {
 		provider: AccountMirrorProvider;
 		runtimeProfileId: string;
 	}) => Promise<void>;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 }): Promise<AccountMirrorRefreshBrowserLifecycle | null> {
 	if (input.request.cleanupManagedBrowserAfterRefresh !== true) {
 		return null;
 	}
 	const pid = await input.findManagedBrowserPid(input.managedProfileDir);
 	if (!pid) {
+		try {
+			await reconcileStoppedAccountMirrorChatgptLeases(input);
+		} catch (error) {
+			return {
+				cleanupRequested: true,
+				status: "failed",
+				managedProfileDir: input.managedProfileDir,
+				pid: null,
+				message: error instanceof Error ? error.message : String(error),
+			};
+		}
 		return {
 			cleanupRequested: true,
 			status: "not_running",
@@ -1396,6 +1415,7 @@ async function cleanupManagedBrowserAfterRefresh(input: {
 				message: `Managed browser profile remained owned by PID ${remainingOwnerPid} after bounded cleanup.`,
 			};
 		}
+		await reconcileStoppedAccountMirrorChatgptLeases(input);
 		return {
 			cleanupRequested: true,
 			status: "terminated",
@@ -1412,6 +1432,21 @@ async function cleanupManagedBrowserAfterRefresh(input: {
 			message: error instanceof Error ? error.message : String(error),
 		};
 	}
+}
+
+async function reconcileStoppedAccountMirrorChatgptLeases(input: {
+	config: Record<string, unknown> | null | undefined;
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	managedProfileDir: string;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
+}): Promise<void> {
+	if (input.provider !== "chatgpt" || !input.config || typeof input.config !== "object") return;
+	await input.retireIdleChatgptLeasesAfterManagedBrowserShutdown({
+		userConfig: input.config,
+		runtimeProfileId: input.runtimeProfileId,
+		managedBrowserProfile: input.managedProfileDir,
+	});
 }
 
 async function terminateManagedBrowserProcessByPid(input: { pid: number }): Promise<void> {

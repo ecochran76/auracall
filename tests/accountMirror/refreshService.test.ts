@@ -2212,6 +2212,10 @@ describe("account mirror refresh service", () => {
 			.mockResolvedValueOnce(4343)
 			.mockResolvedValueOnce(null);
 		const terminateManagedBrowserProcess = vi.fn(async () => {});
+		const retireIdleChatgptLeasesAfterManagedBrowserShutdown = vi.fn(async () => ({
+			retiredLeaseIds: ["lease-1"],
+			deferredLeaseIds: [],
+		}));
 		const service = createAccountMirrorRefreshService({
 			config,
 			dispatcher: createBrowserOperationDispatcher(),
@@ -2223,6 +2227,7 @@ describe("account mirror refresh service", () => {
 			persistence: createNoopPersistence(),
 			findManagedBrowserPid,
 			terminateManagedBrowserProcess,
+			retireIdleChatgptLeasesAfterManagedBrowserShutdown,
 			generateRequestId: () => "acctmirror_chatgpt_failed_cleanup",
 		});
 
@@ -2243,6 +2248,12 @@ describe("account mirror refresh service", () => {
 			}),
 		);
 		expect(findManagedBrowserPid).toHaveBeenCalledTimes(2);
+		expect(retireIdleChatgptLeasesAfterManagedBrowserShutdown).toHaveBeenCalledWith(
+			expect.objectContaining({
+				runtimeProfileId: "default",
+				managedBrowserProfile: expect.stringContaining("chatgpt"),
+			}),
+		);
 	});
 
 	test("reports dispatcher busy instead of bypassing the browser control plane", async () => {
