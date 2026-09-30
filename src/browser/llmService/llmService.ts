@@ -6,6 +6,7 @@ import {
 	type BrowserInteractionGovernor,
 	createBrowserInteractionGovernor,
 } from "../../../packages/browser-service/src/service/interactionGovernor.js";
+import { createInMemoryBrowserMutationLog } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from "../../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../../config.js";
@@ -887,6 +888,10 @@ export abstract class LlmService {
 		};
 		const providerSessionExpectation =
 			this.providerSessionAuthority.resolveExpectation(providerSessionContext);
+		const mutationAudit =
+			overrides.mutationAudit ??
+			this.browserService.getMutationAuditSink?.() ??
+			createInMemoryBrowserMutationLog().record;
 		const resolvedOptions: BrowserProviderListOptions = {
 			...overrides,
 			port,
@@ -896,7 +901,7 @@ export abstract class LlmService {
 				overrides.tabTargetId ?? (attachResolvedServiceTab ? target?.tab?.targetId : undefined),
 			tabUrl: overrides.tabUrl ?? (attachResolvedServiceTab ? target?.tab?.url : undefined),
 			browserService: this.browserService,
-			mutationAudit: overrides.mutationAudit ?? this.browserService.getMutationAuditSink?.(),
+			mutationAudit,
 			mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
 			interactionGovernor:
 				overrides.interactionGovernor ?? this.resolveBrowserInteractionGovernor(overrides),
@@ -919,7 +924,7 @@ export abstract class LlmService {
 					overrides.providerTrafficAuthorityFactory ??
 					createConfiguredProviderTrafficAuthorityFactory({
 						userConfig: this.userConfig,
-						mutationAudit: this.browserService.getMutationAuditSink(),
+						mutationAudit,
 						provider: this.providerId,
 						managedBrowserProfile,
 						baseOptions: resolvedOptions,
