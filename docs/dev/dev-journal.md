@@ -51955,3 +51955,13 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The integrated provider-free gate passed 505 tests, typecheck, production
   build, affected formatting/lint, diff hygiene, and active-plan audit with
   zero errors. The scheduler remained paused; no provider work ran.
+## 2026-09-30 | Issue 139 merge and installed closeout
+
+- PR #144 merged to `main` as
+  `faa4163aeabd578c373b6548d18615c268071f8c`; issue #139 closed as completed.
+- The verified build was installed into `~/.auracall/user-runtime`. Installed
+  files contain the authoritative planner call, durable frontier plan,
+  amplification metrics, and warning classifier signature.
+- The user API restarted healthy at PID 45285. Local status returned `ok: true`
+  and scheduler posture `paused`; the scheduler unit remained inactive. No
+  browser/provider work, warning dismissal, prompt, or scheduler resume ran.

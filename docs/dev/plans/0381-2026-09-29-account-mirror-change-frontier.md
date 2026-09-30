@@ -1,6 +1,6 @@
 # Account-Mirror Changed-Frontier Reconciliation | 0381-2026-09-29
 
-State: OPEN
+State: CLOSED
 Lane: P81
 Work item: ecochran76/auracall#139
 Source base: `origin/main` at `67fa54e3a`
@@ -302,6 +302,9 @@ active-plan audit with zero validation errors.
 
 ## Current Next Action
 
-Publish and integrate the source branch. Installed/live acceptance and
-scheduler resume remain separately authorized and are not required for this
-source plan.
+No source work remains. PR #144 merged as
+`faa4163aeabd578c373b6548d18615c268071f8c`; issue #139 is closed. The merged
+runtime was installed from the verified source tree, the user API restarted
+healthy, and its local status retained scheduler posture `paused` with the
+scheduler unit inactive. A future live canary or scheduler resume requires new
+exact operator authority.
