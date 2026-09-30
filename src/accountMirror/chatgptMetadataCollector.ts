@@ -33,13 +33,20 @@ import type {
 	ProviderUserIdentity,
 } from "../browser/providers/types.js";
 import { resolveRuntimeProfileUserConfig as resolveBrowserRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
+import { getCurrentRuntimeProfiles, getRuntimeProfileBrowserProfileId } from "../config/model.js";
 import type { ResolvedUserConfig } from "../config.js";
+import { createAccountMirrorProviderIndexEpoch } from "./changeFrontierState.js";
 import type { AccountMirrorConversationMaterializationPolicy } from "./conversationFreshness.js";
 import {
 	applyConversationFreshnessFrontier,
 	type ConversationFreshnessFrontierCachedSummary,
 	type ConversationFreshnessFrontierEvidence,
 } from "./conversationFreshnessFrontier.js";
+import {
+	type ConversationVisitBundle,
+	createConversationVisitBundle,
+	snapshotAccountMirrorVisitTelemetry,
+} from "./conversationVisitBundle.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
@@ -202,6 +209,7 @@ export interface AccountMirrorMetadataCollectorResult {
 		files: FileRef[];
 		media: AccountMirrorMediaManifestEntry[];
 	};
+	visitBundles?: ConversationVisitBundle[];
 	evidence: AccountMirrorMetadataEvidence;
 }
 
@@ -547,6 +555,17 @@ export function createChatgptAccountMirrorMetadataCollector(
 			const conversations = honorRequestedDetailPhase
 				? requestedDetailConversations
 				: mergeConversationsById([...rootConversations.items, ...projectConversations]);
+			const providerIndexEpoch = createAccountMirrorProviderIndexEpoch({
+				provider: input.provider,
+				runtimeProfileId: input.runtimeProfileId,
+				browserProfileId: getRuntimeProfileBrowserProfileId(
+					getCurrentRuntimeProfiles(userConfig)[input.runtimeProfileId],
+				),
+				boundIdentityKey: detectedIdentityKey,
+				observedAt: new Date().toISOString(),
+				projectCount: projects.items.length,
+				conversations,
+			});
 			const attachmentCursor = selectAttachmentInventoryCursorForRequestedPhase(
 				input.provider,
 				input.sweepMode,
@@ -625,6 +644,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 								previousFiles: input.previousFiles,
 								providerCallTimeoutMs: resolveCollectorDetailCallTimeoutMs(input),
 								readProviderGuard: () => readActiveChatgptRateLimitReason(input.runtimeProfileId),
+								freshnessEpoch: providerIndexEpoch.epochId,
 								detailReadCap: input.detailReadCap ?? undefined,
 								onDiagnosticEvent: input.onDiagnosticEvent,
 								onCheckpoint: (attachmentCursor) =>
@@ -742,6 +762,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 					files: inventory.files,
 					media: inventory.media,
 				},
+				visitBundles: readConversationVisitBundles(inventory),
 				evidence: {
 					identitySource: identity?.source ?? null,
 					providerSessionProof: summarizeProviderSessionProof(providerSessionProof),
@@ -783,6 +804,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 						attachmentCursor: inventory.cursor,
 					},
 					conversationFreshnessFrontier: frontier.evidence,
+					providerIndexEpoch,
 					projectConversations: projectConversationCursor,
 					attachmentInventory: inventory.cursor,
 				},
@@ -1603,6 +1625,7 @@ export async function readBoundedAttachmentInventory(
 				providerCallTimeoutMs?: number | null;
 				detailReadCap?: number;
 				coalesceConversationReads?: boolean;
+				freshnessEpoch?: string | null;
 				readProviderGuard?: () => Promise<string | null>;
 				onDiagnosticEvent?: (event: AccountMirrorCollectorDiagnosticEvent) => Promise<void> | void;
 				onCheckpoint?: (cursor: AttachmentInventoryCursor) => Promise<void> | void;
@@ -1611,6 +1634,7 @@ export async function readBoundedAttachmentInventory(
 	artifacts: ConversationArtifact[];
 	files: FileRef[];
 	media: AccountMirrorMediaManifestEntry[];
+	visitBundles: ConversationVisitBundle[];
 	truncated: boolean;
 	cursor: AttachmentInventoryCursor;
 	progress: AttachmentInventoryProgress;
@@ -1631,6 +1655,8 @@ export async function readBoundedAttachmentInventory(
 	const detailReadCap = typeof options === "number" ? 6 : Math.max(1, options.detailReadCap ?? 6);
 	const coalesceConversationReads =
 		typeof options === "number" ? false : options.coalesceConversationReads === true;
+	const freshnessEpoch =
+		typeof options === "number" ? null : options.freshnessEpoch?.trim() || null;
 	const readProviderGuard = typeof options === "number" ? undefined : options.readProviderGuard;
 	const onDiagnosticEvent = typeof options === "number" ? undefined : options.onDiagnosticEvent;
 	const onCheckpoint = typeof options === "number" ? undefined : options.onCheckpoint;
@@ -1650,6 +1676,7 @@ export async function readBoundedAttachmentInventory(
 			artifacts: [],
 			files: [],
 			media: [],
+			visitBundles: [],
 			truncated: projects.length > 0 || conversations.length > 0,
 			cursor: createAttachmentInventoryCursor(previousCursor, {
 				projectsLength: projects.length,
@@ -1666,6 +1693,7 @@ export async function readBoundedAttachmentInventory(
 	const artifacts = new Map<string, ConversationArtifact>();
 	const files = new Map<string, FileRef>();
 	const progress = createAttachmentInventoryProgress();
+	const visitBundles: ConversationVisitBundle[] = [];
 	let remaining = limit;
 	let remainingDetailReads = detailReadLimit;
 	let truncated = false;
@@ -1806,6 +1834,7 @@ export async function readBoundedAttachmentInventory(
 				projectId: conversation.projectId,
 				providerCallTimeoutMs,
 			});
+			const telemetryBefore = snapshotAccountMirrorVisitTelemetry(listOptions?.scrapeTelemetry);
 			const contextResult = await safeReadConversationContext(
 				client,
 				conversation,
@@ -1815,6 +1844,7 @@ export async function readBoundedAttachmentInventory(
 				previousConversationDetail,
 				pacer,
 			);
+			const telemetryAfter = snapshotAccountMirrorVisitTelemetry(listOptions?.scrapeTelemetry);
 			await reportDiagnostic({
 				stage: "conversation-context",
 				event: contextResult.outcome,
@@ -1831,6 +1861,19 @@ export async function readBoundedAttachmentInventory(
 			}
 			await throwIfDetailProviderGuardObserved(readProviderGuard, conversation.id);
 			const context = contextResult.context;
+			const contextChunk = readAccountMirrorContextChunkMetadata(context);
+			if (freshnessEpoch) {
+				visitBundles.push(
+					createConversationVisitBundle({
+						conversationId: conversation.id,
+						freshnessEpoch,
+						context,
+						detailComplete: contextChunk?.nextMessageIndex == null,
+						before: telemetryBefore,
+						after: telemetryAfter,
+					}),
+				);
+			}
 			const conversationFiles = coalesceConversationReads
 				? (context?.files ?? [])
 				: (conversationFileResult?.files ?? []);
@@ -1838,7 +1881,6 @@ export async function readBoundedAttachmentInventory(
 				conversationFiles.length > 0
 					? []
 					: selectPreviousConversationFiles(previousFiles, conversation);
-			const contextChunk = readAccountMirrorContextChunkMetadata(context);
 			if (context && contextChunk?.nextMessageIndex == null) {
 				progress.contextObservedConversationIds.push(conversation.id);
 				if (coalesceConversationReads || conversationFileResult?.observed) {
@@ -1947,6 +1989,7 @@ export async function readBoundedAttachmentInventory(
 		artifacts: [...artifacts.values()],
 		files: [...files.values()],
 		media: [],
+		visitBundles,
 		truncated,
 		cursor: createAttachmentInventoryCursor(previousCursor, {
 			projectsLength: projects.length,
@@ -2010,6 +2053,12 @@ function hasAttachmentInventoryProgress(
 	);
 }
 
+function readConversationVisitBundles(value: unknown): ConversationVisitBundle[] {
+	if (typeof value !== "object" || value === null || !("visitBundles" in value)) return [];
+	const bundles = (value as { visitBundles?: unknown }).visitBundles;
+	return Array.isArray(bundles) ? (bundles as ConversationVisitBundle[]) : [];
+}
+
 function isAttachmentInventoryProgress(value: unknown): value is AttachmentInventoryProgress {
 	if (typeof value !== "object" || value === null) return false;
 	const record = value as Partial<Record<keyof AttachmentInventoryProgress, unknown>>;
@@ -2048,12 +2097,14 @@ export async function readBoundedChatgptDetailInventory(
 				prioritizeConversations?: boolean;
 				previousFiles?: readonly FileRef[] | null;
 				skipAccountLibraryInventory?: boolean;
+				freshnessEpoch?: string | null;
 				readProviderGuard?: () => Promise<string | null>;
 		  } = 6,
 ): Promise<{
 	artifacts: ConversationArtifact[];
 	files: FileRef[];
 	media: AccountMirrorMediaManifestEntry[];
+	visitBundles: ConversationVisitBundle[];
 	truncated: boolean;
 	cursor: AttachmentInventoryCursor;
 	progress: AttachmentInventoryProgress;
@@ -2109,6 +2160,7 @@ export async function readBoundedChatgptDetailInventory(
 		artifacts: mergeConversationArtifacts(library.artifacts, attachmentInventory.artifacts),
 		files: mergeFileRefs(library.files, attachmentInventory.files),
 		media: [],
+		visitBundles: attachmentInventory.visitBundles,
 		truncated: library.truncated || attachmentInventory.truncated,
 		cursor: attachmentInventory.cursor,
 		progress: attachmentInventory.progress,
@@ -2566,6 +2618,7 @@ async function safeReadConversationContext(
 			providerListOptions = {
 				...(providerListOptions ?? {}),
 				useProviderSession: true,
+				accountMirrorSingleConversationVisit: true,
 				providerSession: listOptions?.providerSession,
 				// The first chunk may perform one governed recovery mutation. A continuation
 				// must reuse that retained target and stay direct-fetch-only so pagination

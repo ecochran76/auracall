@@ -162,7 +162,7 @@ checkpoint schema converge on shared account-mirror types.
 3. **P2 — Pure frontier planner (source complete).** Implement deterministic action selection,
    retry horizons, stable dedupe, and resumable keyset checkpoints. Terminal
    condition: table-driven provider-free tests cover every action/state edge.
-4. **P3 — Once-per-epoch visit bundle.** Have the ChatGPT collector produce
+4. **P3 — Once-per-epoch visit bundle (source complete).** Have the ChatGPT collector produce
    detail plus artifact refs in one governed route visit and preserve current
    routeability, identity, lease, and warning contracts. Terminal condition:
    one selected row yields at most one physical visit receipt.
@@ -261,10 +261,20 @@ boundaries, changed fingerprints, retained evidence, and unchanged complete
 rows. Stable pseudokeys deduplicate rows and provide an exact resume cursor;
 missing cursors restart safely. Fifteen table-driven planner cases pass without
 browser or provider work.
+P3 now creates the provider-index epoch immediately after shared index
+acquisition and binds each coalesced ChatGPT context read to one
+`ConversationVisitBundle`. The bundle contains detail completeness and a
+sanitized fingerprint, retained artifact/file references, route evidence, and
+per-row physical target/navigation/reload counts. Account-mirror reads no
+longer enter the forced payload-route fallback, transient blocking-surface
+reload, or conversation-reopen paths after the admitted route visit. Multiple
+recorded navigations fail closed, and only a bundle matching the persisted
+epoch can checkpoint durable action/outcome and physical counters. The 283-test
+affected collector/adapter/refresh/persistence gate passes provider-free.
 
 ## Current Next Action
 
-Implement P3 by threading the P2 plan into the collector and producing one
-governed `ConversationVisitBundle` per `visit_once` decision. The bundle must
-carry detail and artifact references plus one physical-visit receipt, and no
-selected row may navigate more than once in the epoch.
+Implement P4 retained-evidence materialization from the P2 plan. Consume either
+the current visit bundle or a persisted detail fingerprint and manifest without
+refreshing the conversation snapshot, then checkpoint available, unavailable,
+deferred, and terminal outcomes after each row.

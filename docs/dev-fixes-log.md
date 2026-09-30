@@ -23789,3 +23789,18 @@ Keyset resume must use the persisted pseudokey, not an array offset. Resume
 after an exact key and deduplicate repeated keys without provider work. If the
 checkpoint is absent from the new index, restart the bounded plan and surface
 that fact rather than skipping an unknown prefix.
+
+## 2026-09-30 | One detail row must own one route visit bundle
+
+Coalescing file and artifact reads into a context API is insufficient if the
+provider adapter can still force-navigate the same conversation for payload
+fallback or recovery. Account-mirror detail reads must prohibit route-bound
+payload fallback, transient-surface reload, and conversation reopen after the
+admitted visit. Prefer the already loaded DOM and defer incomplete evidence to
+a later epoch.
+
+Measure physical work around each context read, not only at pass level. Bind
+detail completeness, a sanitized fingerprint, artifact/file refs, and target,
+navigation, and reload deltas into one visit bundle. Fail closed on multiple
+navigations and persist bundle counters only when its epoch exactly matches the
+snapshot epoch.

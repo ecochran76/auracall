@@ -327,6 +327,75 @@ describe("account mirror cache persistence", () => {
 		}
 	});
 
+	test("checkpoints a matching visit bundle into durable physical work state", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-visit-bundle-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheStore = createCacheStore("dual");
+		const persistence = createAccountMirrorPersistence({ config: {}, cacheStore });
+		const context: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "ecochran76@gmail.com",
+		};
+		try {
+			await persistence.writeSnapshot(baseRecord);
+			const snapshot = await cacheStore.readAccountMirrorSnapshot(context);
+			const epochId = snapshot.items?.metadataEvidence?.providerIndexEpoch?.epochId;
+			if (!epochId) throw new Error("Expected persisted provider index epoch.");
+
+			await persistence.writeSnapshot({
+				...baseRecord,
+				visitBundles: [
+					{
+						object: "account_mirror_conversation_visit_bundle",
+						version: 1,
+						conversationId: "conv_1",
+						freshnessEpoch: epochId,
+						detail: {
+							observed: true,
+							complete: true,
+							messageCount: 3,
+							fingerprint: "sha256:detail-visit",
+						},
+						artifacts: [],
+						files: [],
+						route: { state: "routeable" },
+						physicalVisit: {
+							object: "account_mirror_physical_visit_receipt",
+							version: 1,
+							targetsCreated: 1,
+							navigations: 1,
+							reloads: 0,
+						},
+					},
+				],
+			});
+
+			await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+				items: [
+					{
+						metadata: {
+							changeFrontierState: {
+								action: "visit_once",
+								outcome: "complete",
+								detailFingerprint: "sha256:detail-visit",
+								physicalActivity: {
+									targetsCreated: 1,
+									navigations: 1,
+									reloads: 0,
+									snapshotRefreshes: 1,
+								},
+							},
+						},
+					},
+				],
+			});
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("persists account-mirror target failure state across registry refreshes", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-status-"));
 		setAuracallHomeDirOverrideForTest(homeDir);

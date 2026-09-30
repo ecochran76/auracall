@@ -51899,3 +51899,24 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Fifteen table-driven planner cases plus the P1 state and legacy freshness
   suites pass. No browser/provider action occurred; the scheduler remains
   paused. Next is P3 once-per-epoch visit-bundle integration.
+
+## 2026-09-30 | Issue 139 P3 single-visit bundle and receipt
+
+- The collector now creates the exact provider-index epoch immediately after
+  shared index acquisition and passes it through every selected ChatGPT detail
+  read and later persistence.
+- One coalesced context read returns one `ConversationVisitBundle` containing
+  detail completeness/fingerprint, artifact and file refs, route evidence, and
+  per-row target, navigation, and reload counts.
+- Account-mirror reads no longer force the conversation payload route after a
+  failed in-page fetch, reload transient blocking surfaces, or reopen the
+  conversation during the same logical visit. Non-account-mirror fallback
+  behavior remains available and now records its physical mutations.
+- More than one recorded navigation in a row fails closed. Persistence accepts
+  only a matching-epoch bundle and checkpoints its visit action/outcome,
+  detail fingerprint, and physical counters; stale bundles cannot contaminate
+  a later epoch.
+- The affected collector, ChatGPT adapter, refresh, persistence, and bundle
+  suites pass 283/283 with TypeScript and diff hygiene. This packet remained
+  provider-free; the scheduler remains paused. Next is P4 retained-evidence
+  materialization without a second snapshot refresh.

@@ -695,6 +695,14 @@ Terminology note:
   and only current retained detail plus manifest evidence can materialize
   missing assets without a route visit. Resume checkpoints use the hashed
   conversation key; an absent checkpoint safely restarts the bounded plan.
+  A selected ChatGPT detail row produces one `ConversationVisitBundle` that
+  carries detail completeness, a sanitized detail fingerprint, artifact/file
+  references, route evidence, and its own physical target/navigation/reload
+  receipt. Account-mirror reads prohibit the forced payload-route fallback,
+  transient-surface reload, and conversation reopen after that route visit.
+  More than one recorded navigation for a row fails closed. Matching-epoch
+  bundles checkpoint their action, outcome, fingerprint, and physical counters
+  into durable work state; stale-epoch bundles are ignored.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>

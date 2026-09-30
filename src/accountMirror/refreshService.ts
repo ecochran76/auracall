@@ -668,6 +668,7 @@ export function createAccountMirrorRefreshService(input: {
 					metadataCounts: collectionWithPriorManifests.metadataCounts,
 					metadataEvidence: collectionWithPriorManifests.evidence,
 					manifests: collectionWithPriorManifests.manifests,
+					visitBundles: collectionWithPriorManifests.visitBundles,
 				});
 				await persistRefreshState(persistence, {
 					provider,

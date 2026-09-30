@@ -1126,7 +1126,10 @@ async function recoverVisibleChatgptBlockingSurfaceWithClient(
 		return null;
 	}
 	if (resolved.kind !== "rate-limit") {
-		if (!providerNavigationAllowed(options)) {
+		if (
+			!providerNavigationAllowed(options) ||
+			options?.accountMirrorSingleConversationVisit === true
+		) {
 			return {
 				action: "reload-page",
 				outcome: "skipped",
@@ -1134,6 +1137,8 @@ async function recoverVisibleChatgptBlockingSurfaceWithClient(
 			};
 		}
 		try {
+			recordBrowserScrapeCdpCall(options, "Page.reload");
+			recordBrowserScrapeProviderAction(options, "chatgpt.reloadBlockingSurface");
 			await reloadAndSettle(client, {
 				ignoreCache: true,
 				waitForDocumentReady: false,
@@ -1333,7 +1338,10 @@ function buildChatgptConversationReopen(
 	options?: BrowserProviderListOptions,
 ): () => Promise<ChatgptRecoveryActionResult> {
 	return async () => {
-		if (!providerNavigationAllowed(options)) {
+		if (
+			!providerNavigationAllowed(options) ||
+			options?.accountMirrorSingleConversationVisit === true
+		) {
 			return {
 				action: "reopen-conversation",
 				outcome: "skipped",
@@ -3334,6 +3342,10 @@ export async function readChatgptConversationPayloadWithClient(
 	if (!providerNavigationAllowed(options)) {
 		return null;
 	}
+	if (options?.accountMirrorSingleConversationVisit === true) {
+		recordBrowserScrapeProviderAction(options, "chatgpt.skipPayloadRouteFallback.singleVisit");
+		return null;
+	}
 
 	const targetUrl = resolveChatgptConversationApiUrl(conversationId);
 	await client.Network.enable().catch(() => undefined);
@@ -3412,6 +3424,8 @@ export async function readChatgptConversationPayloadWithClient(
 	// home before the fallback starts. The exact Network response is the payload
 	// completion signal, so a pending Page.navigate acknowledgement must not gate
 	// this read after responseReceived/loadingFinished deliver the complete body.
+	recordBrowserScrapeCdpCall(options, "Page.navigate");
+	recordBrowserScrapeProviderAction(options, "chatgpt.navigatePayloadRouteFallback");
 	await navigateAndSettle(client, {
 		url: resolveChatgptConversationUrl(conversationId, _projectId),
 		forceNavigation: true,
@@ -3426,7 +3440,10 @@ export async function readChatgptConversationPayloadWithClient(
 			ok: response !== null,
 			reason: response ? undefined : "Exact conversation payload response not observed.",
 		})),
-	}).catch(() => finishBody(null));
+	}).catch(() => {
+		finishBody(null);
+		return null;
+	});
 	const response = await bodyPromise;
 	if (response?.kind === "terminal-unavailable") {
 		throw createChatgptConversationUnavailableError(conversationId, response.status);

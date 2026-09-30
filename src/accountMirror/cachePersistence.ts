@@ -22,8 +22,10 @@ import { normalizeAccountMirrorBackfillLedger } from "./backfillLedger.js";
 import {
 	type AccountMirrorProviderIndexEpoch,
 	createAccountMirrorProviderIndexEpoch,
+	normalizeAccountMirrorProviderIndexEpoch,
 	rollAccountMirrorConversationWorkState,
 } from "./changeFrontierState.js";
+import type { ConversationVisitBundle } from "./conversationVisitBundle.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
 import type {
 	AccountMirrorMetadataCounts,
@@ -52,6 +54,7 @@ export interface AccountMirrorPersistenceRecord {
 		files: FileRef[];
 		media: AccountMirrorMediaManifestEntry[];
 	};
+	visitBundles?: readonly ConversationVisitBundle[];
 }
 
 export interface AccountMirrorConversationContextCacheEntry {
@@ -190,7 +193,12 @@ export function createAccountMirrorPersistence(input: {
 			await cacheStore.writeProjects(context, record.manifests.projects);
 			await cacheStore.writeConversations(
 				context,
-				annotateSnapshotConversations(record, epoch, existingConversations.items),
+				annotateSnapshotConversations(
+					record,
+					epoch,
+					existingConversations.items,
+					record.visitBundles ?? [],
+				),
 			);
 			await cacheStore.writeAccountMirrorArtifacts(context, record.manifests.artifacts);
 			await cacheStore.writeAccountMirrorFiles(context, record.manifests.files);
@@ -402,9 +410,15 @@ function annotateSnapshotConversations(
 	record: AccountMirrorPersistenceRecord,
 	epoch: AccountMirrorProviderIndexEpoch,
 	existingConversations: readonly Conversation[],
+	visitBundles: readonly ConversationVisitBundle[],
 ): Conversation[] {
 	const existingById = new Map(
 		existingConversations.map((conversation) => [conversation.id, conversation]),
+	);
+	const visitBundleById = new Map(
+		visitBundles
+			.filter((bundle) => bundle.freshnessEpoch === epoch.epochId)
+			.map((bundle) => [bundle.conversationId, bundle]),
 	);
 	return record.manifests.conversations.map((conversation, index) => {
 		const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
@@ -412,6 +426,34 @@ function annotateSnapshotConversations(
 			? existingById.get(conversation.id)?.metadata
 			: {};
 		const conversationFingerprint = fingerprintConversationIndexRow(conversation);
+		const rolledState = rollAccountMirrorConversationWorkState({
+			conversation: {
+				...conversation,
+				metadata: { ...metadata, conversationFingerprint },
+			},
+			epoch,
+			previous: existingMetadata?.changeFrontierState,
+		});
+		const visitBundle = visitBundleById.get(conversation.id);
+		const changeFrontierState = visitBundle
+			? {
+					...rolledState,
+					detailFingerprint: visitBundle.detail.fingerprint,
+					action: "visit_once" as const,
+					outcome: visitBundle.detail.complete ? ("complete" as const) : ("deferred" as const),
+					checkpointedAt: epoch.observedAt,
+					physicalActivity: {
+						...rolledState.physicalActivity,
+						targetsCreated:
+							rolledState.physicalActivity.targetsCreated +
+							visitBundle.physicalVisit.targetsCreated,
+						navigations:
+							rolledState.physicalActivity.navigations + visitBundle.physicalVisit.navigations,
+						reloads: rolledState.physicalActivity.reloads + visitBundle.physicalVisit.reloads,
+						snapshotRefreshes: rolledState.physicalActivity.snapshotRefreshes + 1,
+					},
+				}
+			: rolledState;
 		return {
 			...conversation,
 			metadata: {
@@ -420,14 +462,7 @@ function annotateSnapshotConversations(
 				indexSource: conversation.projectId ? "project-conversations" : "left-rail",
 				indexRank: index,
 				conversationFingerprint,
-				changeFrontierState: rollAccountMirrorConversationWorkState({
-					conversation: {
-						...conversation,
-						metadata: { ...metadata, conversationFingerprint },
-					},
-					epoch,
-					previous: existingMetadata?.changeFrontierState,
-				}),
+				changeFrontierState,
 			},
 		};
 	});
@@ -436,6 +471,10 @@ function annotateSnapshotConversations(
 function createProviderIndexEpoch(
 	record: AccountMirrorPersistenceRecord,
 ): AccountMirrorProviderIndexEpoch {
+	const collected = normalizeAccountMirrorProviderIndexEpoch(
+		record.metadataEvidence?.providerIndexEpoch,
+	);
+	if (collected) return collected;
 	return createAccountMirrorProviderIndexEpoch({
 		provider: record.provider,
 		runtimeProfileId: record.runtimeProfileId,

@@ -37,6 +37,7 @@ import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { listDomDriftObservations } from "../../src/browser/domDriftObservations.js";
 import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
 import {
+	createBrowserScrapeTelemetryRecorder,
 	recordBrowserScrapeCdpCall,
 	recordBrowserScrapeProviderAction,
 } from "../../src/browser/providers/scrapeTelemetry.js";
@@ -81,6 +82,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 		listOptions: {
 			...accountMirrorTabLifecycle,
 			useProviderSession: true,
+			accountMirrorSingleConversationVisit: true,
 			providerSession: undefined,
 			preserveActiveTab: false,
 			accountMirrorContextChunk: {
@@ -1764,6 +1766,50 @@ describe("ChatGPT account mirror metadata collector", () => {
 			detailObservedConversationIds: [],
 			contextObservedConversationIds: [],
 		});
+	});
+
+	test("binds one coalesced ChatGPT context read to one visit receipt", async () => {
+		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+		const client = {
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(
+				async (_conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					recordBrowserScrapeCdpCall(options?.listOptions, "Page.navigate");
+					return {
+						provider: "chatgpt" as const,
+						conversationId: "conv_receipt",
+						messages: [{ role: "user" as const, text: "fixture" }],
+						artifacts: [],
+						files: [],
+						sources: [],
+					};
+				},
+			),
+		};
+
+		const inventory = await readBoundedChatgptDetailInventory(
+			client,
+			[],
+			[{ id: "conv_receipt", title: "Receipt", provider: "chatgpt" }],
+			4,
+			{
+				maxDetailReads: 1,
+				freshnessEpoch: "epoch_receipt",
+				listOptions: { scrapeTelemetry },
+				skipAccountLibraryInventory: true,
+			},
+		);
+
+		expect(inventory.visitBundles).toEqual([
+			expect.objectContaining({
+				conversationId: "conv_receipt",
+				freshnessEpoch: "epoch_receipt",
+				detail: expect.objectContaining({ observed: true, complete: true, messageCount: 1 }),
+				physicalVisit: expect.objectContaining({ navigations: 1, reloads: 0 }),
+			}),
+		]);
 	});
 
 	test("paces ChatGPT detail inventory reads through the browser interaction governor", async () => {
