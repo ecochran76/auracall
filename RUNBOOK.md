@@ -21948,3 +21948,5 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   the current collection-oriented service model. The account-mirror scheduler
   remains operator-paused; installed adoption and live acceptance are outside
   this planning slice.
+- PR 142 merged the plan to canonical `main` at `fcf388fe8`. Issue 139 and
+  Plan 0381 remain open for the provider-free implementation packets.
