@@ -44725,6 +44725,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   chunk. Diagnostics correctly classified the duplicate. No rate-limit,
   ChatGPT guard, CAPTCHA, verification, identity conflict, or second pass
   occurred.
+- PR 140 merged the provider-free repair to canonical `main` at
+  `6eb52c43298a32311c129666eddd1af3a72463f3` and closed Issue 138. P80 is
+  integrated; the scheduler remains operator-paused, and installed adoption,
+  live acceptance, Issue 139, and network metering remain outside this lane.
 - A post-cancel race let the in-flight refresh settle and queue
   `hmj_153db2c1a1b54933b3518027478298c`; its only execution produced 1
   materialized, 6 skipped, and 1 `retrieval_failed`. This keeps M5 open and

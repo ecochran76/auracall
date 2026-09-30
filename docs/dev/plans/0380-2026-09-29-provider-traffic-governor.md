@@ -1,6 +1,6 @@
 # Authoritative Provider Traffic Governor | 0380-2026-09-29
 
-State: OPEN
+State: CLOSED
 Lane: P80
 Work item: ecochran76/auracall#138
 Source base: `origin/main` at `51efd47732af8c2c68be6c1fb4532e502cc7121a`
@@ -140,9 +140,10 @@ cooldown before any later action can proceed.
 
 ## Current Next Action
 
-Publish the provider-free acceptance receipt, review the branch, and integrate
-through the required pull-request path. Installed adoption and live acceptance
-remain explicitly outside this plan.
+Source work is complete and integrated through PR 140 at
+`6eb52c43298a32311c129666eddd1af3a72463f3`. Installed adoption and live
+acceptance remain explicitly outside this plan; the account-mirror scheduler
+remains operator-paused.
 
 ## Provider-Free Acceptance Receipt
 
