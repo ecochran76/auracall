@@ -797,7 +797,7 @@ describe("account mirror completion service", () => {
 		expect(service.read("acctmirror_pause_waiter")?.status).toBe("paused");
 	});
 
-	test("persists operation state for restart readback", async () => {
+	test("persists bounded operation state and preserves its live-follow affinity id", async () => {
 		const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-completion-store-"));
 		try {
 			const store = createAccountMirrorCompletionStore({
@@ -835,6 +835,11 @@ describe("account mirror completion service", () => {
 				mode: "bounded",
 				passCount: 1,
 			});
+			expect(requestRefresh).toHaveBeenCalledWith(
+				expect.objectContaining({
+					liveFollowOperationId: "acctmirror_persisted",
+				}),
+			);
 			expect(await store.listOperations({ activeOnly: false, limit: null })).toHaveLength(1);
 			expect(await store.listOperations({ activeOnly: true, limit: null })).toHaveLength(0);
 

@@ -729,8 +729,7 @@ export function createAccountMirrorCompletionService(input: {
 							: {}),
 						...(collectorTimeoutMs ? { collectorTimeoutMs } : {}),
 						abortSignal,
-						liveFollowOperationId:
-							refreshOperation.mode === "live_follow" ? refreshOperation.id : null,
+						liveFollowOperationId: refreshOperation.id,
 					});
 				} catch (error) {
 					const eligibleAt = readEligibleAt(error);
@@ -1790,11 +1789,7 @@ async function shouldQueueMaterialization(
 	if (!operation.materializationPolicy && operation.sweepMode !== "full_sweep") return false;
 	if (operation.materializationCursor?.passCount === operation.passCount) return false;
 	if (operation.provider === "gemini" && isGeminiShellOnlyRouteChurn(operation)) return false;
-	return hasActionableMaterializationBacklog(
-		operation,
-		statusEntry,
-		readMaterializationBacklog,
-	);
+	return hasActionableMaterializationBacklog(operation, statusEntry, readMaterializationBacklog);
 }
 
 async function shouldQueueMaterializationFromCompleteLedger(
@@ -1817,11 +1812,7 @@ async function shouldQueueMaterializationFromCompleteLedger(
 	if ((missing?.artifacts ?? 0) + (missing?.files ?? 0) + (missing?.media ?? 0) <= 0) {
 		return false;
 	}
-	return hasActionableMaterializationBacklog(
-		operation,
-		statusEntry,
-		readMaterializationBacklog,
-	);
+	return hasActionableMaterializationBacklog(operation, statusEntry, readMaterializationBacklog);
 }
 
 async function hasActionableMaterializationBacklog(

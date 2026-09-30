@@ -589,7 +589,9 @@
         persisted browser guard, so a successful clear cannot leave browser
         submission blocked by stale cooldown data
       - omitted `--max-passes` means unbounded live follow; `--max-passes`
-        is only a debug/test cap
+        is only a debug/test cap and must preserve the exact completion
+        operation id through configured tab affinity and provider-traffic
+        governance
       - ChatGPT metadata-only collection should retain conversation-history
         metadata titles when a virtualized sidebar anchor has no usable text;
         `tests/browser/chatgptAdapter.test.ts` guards the read-only fallback and

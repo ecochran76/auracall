@@ -25,23 +25,24 @@ physical action: provider:chatgpt:connect-tab.` Direct CDP observation recorded
 one ChatGPT root target and 152 requests before failure, with no document
 navigation and no visible rate-limit warning.
 
-The bootstrap order is circular. `createConfiguredLiveFollowAffinity` must
-resolve or start the managed browser and acquire the crawler target before it
-has the crawler lease ID required by the final `ProviderTrafficGovernor`.
-However, the browser startup/connect-tab seam already requires a governor.
+The exact cause is the completion mode split. Supplying `maxPasses` creates a
+`bounded` completion, while `AccountMirrorCompletionService` supplies
+`liveFollowOperationId` only when the mode is `live_follow`. Every bounded
+completion therefore passes `null`, bypasses `createConfiguredLiveFollowAffinity`,
+creates no crawler lease or lease-bound governor, and falls into the generic
+ChatGPT connect-tab path. The shared governor-required seam then correctly
+fails closed.
 
 ## Architecture Contract
 
-1. Cold-start target acquisition is a distinct, explicit pre-lease phase. It
-   must have bounded attribution and traffic admission; it is not exempt from
-   the governor contract.
-2. Pre-lease authority may perform only the minimum physical work required to
-   resolve/start the exact managed browser and obtain the candidate crawler
-   target. It must not navigate, reload, focus, enumerate conversation detail,
-   or submit provider content.
-3. The candidate target is reserved exactly once. After reservation, the
-   lease-bound governor replaces the pre-lease authority for every subsequent
-   action. No action may fall through to an ungoverned compatibility path.
+1. A bounded pass is still live-follow execution. `maxPasses` caps execution
+   and requests cleanup; it must not disable configured tab affinity.
+2. Every completion refresh supplies its exact completion operation ID to the
+   affinity factory. The factory remains authoritative for returning a
+   lease-bound context or `null` for serialized and unsupported paths.
+3. The candidate crawler target is reserved exactly once and the resulting
+   lease-bound governor owns every subsequent physical action. No action may
+   fall through to an ungoverned compatibility path.
 4. Existing endpoints and targets must be inspected before reuse. Missing,
    duplicate, stale, cross-route, cross-account, or ambiguously owned targets
    fail closed and are never silently adopted.
@@ -54,12 +55,12 @@ However, the browser startup/connect-tab seam already requires a governor.
 
 ## Execution
 
-1. Add a provider-free cold-start regression that reproduces the installed
-   failure at the real `resolveServiceTarget` / connect-tab boundary.
-2. Introduce the minimum explicit pre-lease provider-traffic authority needed
-   for exact target acquisition, with bounded attribution and settlement.
-3. Hand off atomically to the lease-bound live-follow governor and prove one
-   lease, one target, and no ungoverned physical action.
+1. Add a provider-free completion-service regression that reproduces the
+   bounded-mode loss of `liveFollowOperationId`.
+2. Preserve the exact operation ID for bounded and unbounded completion
+   refreshes and prove the affinity context reaches the collector.
+3. Prove the existing live-follow affinity path still yields one lease, one
+   target, and no ungoverned physical action.
 4. Run focused and adjacent provider-free suites, typecheck, affected lint and
    build, CodeGraph readback, diff hygiene, and planning audit.
 5. Merge through a pull request, install the exact canonical merge, restart the
@@ -68,8 +69,9 @@ However, the browser startup/connect-tab seam already requires a governor.
 
 ## Acceptance Criteria
 
-- [ ] Provider-free coverage reproduces the former cold-start failure and
-      passes only when startup/connect-tab has explicit traffic authority.
+- [ ] Provider-free coverage reproduces the bounded-mode affinity bypass and
+      passes only when the exact completion operation ID reaches the affinity
+      factory and refresh request.
 - [ ] Cold start creates or adopts exactly one candidate crawler target and
       reserves exactly one active live-follow lease.
 - [ ] The final governor is bound to the exact lease generation and owns every
@@ -105,4 +107,3 @@ However, the browser startup/connect-tab seam already requires a governor.
   governor, and completion evidence first.
 - Keep `auracall-account-mirror-scheduler.service` inactive and the API
   scheduler operator-paused throughout this plan.
-

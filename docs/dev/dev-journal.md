@@ -51979,3 +51979,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   and no visible rate-limit warning. The completion was not retried.
 - Issue #146 and Plan 0382 now govern the corrective lane. The scheduler stays
   paused; the next step is a provider-free regression and bootstrap repair.
+- Source reconciliation found that bounded mode alone nulled
+  `liveFollowOperationId`; no lease was ever created. The completion service
+  now preserves its exact operation ID for bounded and unbounded passes, while
+  the affinity factory still selects tab-affinity versus serialized behavior.
+- The focused regression failed before the fix and passed after it. The
+  adjacent completion, refresh, affinity, lease, governor, and warning gate is
+  green at 130 tests; broader validation and installed acceptance remain.
