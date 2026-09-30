@@ -51818,3 +51818,29 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `fcf388fe8c9ffc56279d5952beff9a31abc22219`. Issue 139 and Plan 0381 remain
   open for provider-free implementation; planning integration does not claim
   the algorithm is repaired.
+
+## 2026-09-30 | Issue 139 direct-CDP algorithm survey
+
+- Installed current main, kept the production account-mirror scheduler paused,
+  and ran a bounded isolated API proof against AuraCall runtime profile
+  `wsl-chrome-3`. The proof server was stopped afterward.
+- Added a sanitized CDP capture harness and recorded every ChatGPT page
+  target's Network/Page/Runtime events while polling the visible DOM for the
+  known `Too many requests` dialog. No warning or verification surface appeared.
+- Two one-item detail passes deterministically caused three same-conversation
+  navigations and 888/853 requests. This disproves the earlier one-item/one-read
+  cost model and establishes full-page hydration as the dominant amplification.
+- A retained reconciliation still caused 239 requests before making zero asset
+  attempts. A persistent Library lookup caused 293 requests before a terminal
+  `library_row_not_found` failure.
+- Four volatile upload probes stopped locally with zero provider requests. The
+  sampled skip was backed by exact older `tile_not_found` evidence, but that
+  evidence is only a failed child beneath a succeeded job and has no explicit
+  `unavailable`, failure-kind, or retryability value.
+- Current installed browser retirement cleaned stale ownership left by the
+  older runtime. Historical tab-lease ledger rows were not misreported as
+  active leases.
+- Durable sanitized analysis:
+  `docs/dev/notes/2026-09-30-issue139-live-algorithm-cdp-survey.md`.
+- Next: encode these observed branches as provider-free P0 fixtures, then make
+  physical visits and asset availability explicit planner state.

@@ -23738,3 +23738,23 @@ navigation cannot rely on hidden properties after reducing a CDP client to
 `{ Page, Runtime }`. Thread the governor explicitly through leased execution
 and recovery helpers, and never fall back to an arbitrary first target after a
 required-authority attachment failure.
+
+## 2026-09-30 | Count physical browser work, not logical frontier rows
+
+A bounded frontier does not imply bounded provider traffic. Direct CDP evidence
+showed one account-mirror detail row navigating to the same ChatGPT conversation
+three times and producing more than 850 requests because each route visit
+rehydrated the application. Likewise, a retained materialization performed
+provider work before discovering that it had no actionable asset attempt.
+
+Admission and acceptance metrics must therefore count physical navigations,
+reloads, target creation, and artifact-resolution attempts. Select actionable
+work locally before opening the provider, reuse one loaded conversation visit
+bundle throughout detail and materialization, and reject any implementation
+whose logical item limit can still multiply into unbounded physical work.
+
+Volatile asset terminality is a separate state from aggregate job success. A
+`tile_not_found`, expired, missing, or provider-unavailable asset should persist
+an explicit `unavailable` availability value plus failure class and retryability.
+Do not hide that child state beneath a succeeded parent or rely on a free-text
+reason as the only durable availability signal.

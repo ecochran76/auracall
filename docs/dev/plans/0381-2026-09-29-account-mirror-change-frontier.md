@@ -3,8 +3,8 @@
 State: OPEN
 Lane: P81
 Work item: ecochran76/auracall#139
-Source base: `origin/main` at `71aa56a30`
-Branch: `plan/issue-139-change-frontier`
+Source base: `origin/main` at `67fa54e3a`
+Branch: `feat/issue-139-change-frontier`
 Target: `main`
 Integration: merge
 
@@ -116,6 +116,37 @@ available resource-path classes when already observable. This evidence supports
 temporal correlation only; it must not claim which browser or network request
 caused throttling. Full CDP network metering remains deferred.
 
+## 2026-09-30 direct-CDP algorithm evidence
+
+The operator subsequently authorized a bounded installed-runtime exercise of
+the algorithm. The capture attached directly to every managed ChatGPT page
+target through CDP and recorded sanitized Network/Page/Runtime events plus a
+continuous visible rate-warning probe. The production scheduler remained
+paused; the exercise used an isolated API server and stopped without resuming
+the scheduler.
+
+- Two independent one-item detail passes produced 888 and 853 requests. Each
+  newly created work target navigated to the same conversation three times and
+  repeatedly hydrated the broader ChatGPT application.
+- A retained-snapshot reconciliation with `refreshSnapshot=false` still
+  produced 239 requests and one navigation before terminating without an
+  asset attempt.
+- One persistent Library-file attempt produced 293 requests and one navigation
+  before a non-retryable `library_row_not_found` result.
+- Four volatile-upload probes terminated from local evidence with zero CDP
+  requests or navigations. The sampled terminal evidence was an exact older
+  `tile_not_found` family, not a current-catalog title collision.
+- That terminal volatile child is represented only as `failed` under a
+  `succeeded` parent, with no explicit availability, failure kind, or retry
+  field. Terminal behavior exists, but durable `unavailable` semantics do not.
+- No visible rate-limit warning appeared in any probe.
+
+The sanitized ledger and analysis are in
+`docs/dev/notes/2026-09-30-issue139-live-algorithm-cdp-survey.md`. This evidence
+replaces the earlier assumption that a selected conversation approximates one
+provider read; physical navigation and hydration are the required accounting
+unit.
+
 ## Execution Graph
 
 The critical path remains single-owner because the planner, visit bundle, and
@@ -182,8 +213,9 @@ frozen; P4 joins P3 and the durable state. P6 is serialized after all joins.
 
 - No HTTPS interception proxy, full CDP network meter, request-body capture, or
   causal attribution from performance timing.
-- No scheduler resume, installed-runtime update, live provider acceptance,
-  prompt submission, warning dismissal, or automated retry.
+- No scheduler resume, prompt submission, warning dismissal, or automated
+  retry. The bounded installed-runtime CDP exercise recorded above is the only
+  authorized live-provider exception in this plan.
 - No optimization tied only to volatile DOM selectors or the superseded
   assumption that ChatGPT is a single sidebar collection.
 - No closure of arbitrary retained ChatGPT tabs.
@@ -201,15 +233,18 @@ frozen; P4 joins P3 and the durable state. P6 is serialized after all joins.
 
 ## Current State
 
-Issue #138's provider-traffic governor is integrated. The bounded current-
-interface survey and source-flow analysis are complete, no warning was
-triggered, and no physical provider action was performed. This planning packet
-integrated through PR 142 at canonical merge receipt `fcf388fe8c9ffc56279d5952beff9a31abc22219`.
-Issue #139 and this plan remain open for implementation, provider-free
-acceptance, installation, and any separately authorized live canary.
+Issue #138's provider-traffic governor is integrated. The planning packet
+integrated through PR 142 at canonical merge receipt
+`fcf388fe8c9ffc56279d5952beff9a31abc22219`. The separately authorized direct-
+CDP survey now establishes deterministic three-navigation detail amplification,
+provider work before materialization actionability, provider-sparing terminal
+upload guards, and missing explicit volatile-asset availability. Current main
+was installed for the survey; the production scheduler remained paused and the
+isolated proof server was stopped. Issue #139 and this plan remain open for the
+algorithm repair and provider-free acceptance.
 
 ## Current Next Action
 
-Implement P0 as provider-free fixtures that encode the current shared
-collection epoch and reproduce duplicate conversation refresh/materialization
-without contacting ChatGPT.
+Convert the captured detail, retained-materialization, Library, and volatile-
+upload outcomes into provider-free P0 fixtures. Freeze the measured physical
+amplification and explicit `unavailable` semantics before implementing P1/P2.
