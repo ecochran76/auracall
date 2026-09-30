@@ -1575,3 +1575,25 @@ lanes:
     integration_receipt: 6eb52c43298a32311c129666eddd1af3a72463f3
     disposition: Provider-free repair integrated through PR 140 and issue 138 closed; scheduler resume, installed adoption, live acceptance, Issue 139, and network metering remain outside this lane.
     updated_at: 2026-09-29
+  - id: P81
+    objective: Make account-mirror reconciliation proportional to the changed or genuinely incomplete frontier.
+    plan: docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md
+    plan_ref: refs/heads/plan/issue-139-change-frontier
+    branch: plan/issue-139-change-frontier
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: null
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#139]
+    dependencies: [P80]
+    overlaps: [P80]
+    reconciled_overlaps: [P80]
+    reconciliation_note: P81 consumes P80's provider-traffic governor for admission, action receipts, and warning persistence; it changes account-mirror selection and evidence reuse without creating another traffic-control seam.
+    blocker: null
+    validation_status: planned-current-interface-surveyed
+    validation_ref: docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md
+    integration_receipt: null
+    disposition: Current ChatGPT interface surveyed read-only; provider-free implementation is ready to begin while the scheduler remains operator-paused.
+    updated_at: 2026-09-29

@@ -21930,3 +21930,21 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - PR 136 merged P79 to canonical `main` at `6f4b3b349`; issue 135 closed.
   Provider-free validation remains the source acceptance boundary; no
   installed-runtime or live-provider action occurred.
+
+## Turn 625 | 2026-09-29
+
+- Planned Issue 139 as P81 / [Plan 0381](docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md)
+  after Issue 138's provider-traffic governor integrated through PR 140.
+- A bounded read-only survey attached to the already-running `wsl-chrome-3`
+  root surface. It observed current shared collections and retained target
+  topology without navigation, reload, click, prompt, target creation/closure,
+  warning dismissal, or scheduler mutation.
+- No rate-limit warning was visible or triggered. The plan requires every
+  reconciliation action to retain a sanitized append-only record and requires
+  any future warning to freeze work and persist its bounded signature plus the
+  preceding interaction timeline. Correlation must not be reported as causal
+  network attribution.
+- The first implementation packet is provider-free fixture work representing
+  the current collection-oriented service model. The account-mirror scheduler
+  remains operator-paused; installed adoption and live acceptance are outside
+  this planning slice.
