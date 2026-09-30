@@ -25,11 +25,9 @@ describe("configured provider traffic authority", () => {
 				userConfig: config,
 				provider: "gemini",
 				managedBrowserProfile: "/managed/gemini",
-				browserService: {
-					getMutationAuditSink: () => (record: { phase: string; targetId?: string | null }) => {
-						records.push(record);
-					},
-				} as never,
+				mutationAudit: (record) => {
+					records.push(record);
+				},
 				baseOptions: {},
 			});
 

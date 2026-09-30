@@ -919,7 +919,7 @@ export abstract class LlmService {
 					overrides.providerTrafficAuthorityFactory ??
 					createConfiguredProviderTrafficAuthorityFactory({
 						userConfig: this.userConfig,
-						browserService: this.browserService,
+						mutationAudit: this.browserService.getMutationAuditSink(),
 						provider: this.providerId,
 						managedBrowserProfile,
 						baseOptions: resolvedOptions,

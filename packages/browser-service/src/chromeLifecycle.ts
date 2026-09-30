@@ -1457,11 +1457,14 @@ export async function connectToRemoteChrome(
     serviceTabLimit?: number;
     blankTabLimit?: number;
     collapseDisposableWindows?: boolean;
-	    suppressFocus?: boolean;
-	    navigateReusedTargets?: boolean;
-	    mutationAudit?: BrowserMutationAuditSink;
-	    mutationSource?: string;
-	  } = {},
+    suppressFocus?: boolean;
+    navigateReusedTargets?: boolean;
+    mutationAudit?: BrowserMutationAuditSink;
+    providerTrafficGovernor?: ProviderTrafficGovernor;
+    providerTrafficAuthorityFactory?: ProviderTrafficAuthorityFactory;
+    providerTrafficRequired?: boolean;
+    mutationSource?: string;
+  } = {},
 ): Promise<RemoteChromeConnection> {
   const endpoint = await resolveChromeEndpoint(host, port, logger);
   const connectHost = endpoint.host;
@@ -1498,12 +1501,15 @@ export async function connectToRemoteChrome(
         compatibleHosts: options.compatibleHosts,
         matchingTabLimit: options.serviceTabLimit,
         blankTabLimit: options.blankTabLimit,
-	        collapseDisposableWindows: options.collapseDisposableWindows,
-	        suppressFocus: options.suppressFocus,
-	        navigateReusedTargets: options.navigateReusedTargets,
-	        mutationAudit: options.mutationAudit,
-	        mutationSource: options.mutationSource ?? 'browser-service:connectToRemoteChrome',
-	      });
+        collapseDisposableWindows: options.collapseDisposableWindows,
+        suppressFocus: options.suppressFocus,
+        navigateReusedTargets: options.navigateReusedTargets,
+        mutationAudit: options.mutationAudit,
+        providerTrafficGovernor: options.providerTrafficGovernor,
+        providerTrafficAuthorityFactory: options.providerTrafficAuthorityFactory,
+        providerTrafficRequired: options.providerTrafficRequired,
+        mutationSource: options.mutationSource ?? 'browser-service:connectToRemoteChrome',
+      });
       const targetId = resolveTargetId(opened.target);
       const client = await CDP({ host: connectHost, port: connectPort, target: targetId });
       logger(
@@ -1513,6 +1519,10 @@ export async function connectToRemoteChrome(
       );
       return { client, targetId, host: connectHost, port: connectPort, dispose: disposeRelay };
     } catch (error) {
+      if (options.providerTrafficRequired) {
+        await disposeRelay?.().catch(() => undefined);
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       logger(`Failed to open dedicated remote Chrome tab (${message}); falling back to first target.`);
     }

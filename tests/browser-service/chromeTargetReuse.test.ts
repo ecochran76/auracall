@@ -393,6 +393,25 @@ describe("chrome target reuse policy", () => {
 		expect(connection.targetId).toBe("existing-project");
 	});
 
+	it("connectToRemoteChrome fails closed when required provider authority cannot open a target", async () => {
+		cdpMock.List.mockResolvedValue([]);
+
+		await expect(
+			connectToRemoteChrome(
+				"127.0.0.1",
+				45920,
+				() => undefined,
+				"https://chatgpt.com/",
+				{
+					providerTrafficRequired: true,
+					providerTrafficAuthorityFactory: { acquire: vi.fn() },
+				},
+			),
+		).rejects.toThrow("Provider traffic governor is required before physical action");
+		expect(cdpMock.New).not.toHaveBeenCalled();
+		expect(cdpMock).not.toHaveBeenCalled();
+	});
+
 	it("connectToRemoteChrome attaches only to an exact leased target when requested", async () => {
 		const connection = await connectToRemoteChrome(
 			"127.0.0.1",

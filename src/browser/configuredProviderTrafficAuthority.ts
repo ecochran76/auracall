@@ -10,6 +10,7 @@ import type {
 	TabLeaseClaim,
 	TabLeaseScope,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import type { BrowserMutationAuditSink } from "../../packages/browser-service/src/service/mutationDispatcher.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { resolveChatgptInteractionsPerMinute } from "../runtime/tenantExecutionLimits.js";
@@ -17,7 +18,6 @@ import { probeVisibleChatgptRateLimitWarning } from "./chatgptProviderTraffic.js
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
 import type { ProviderId } from "./providers/domain.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
-import type { BrowserService } from "./service/browserService.js";
 import { createBrowserTabConcurrencyRuntime } from "./tabConcurrencyRuntime.js";
 
 const PROVIDER_TRAFFIC_IDLE_TTL_MS = 5 * 60_000;
@@ -25,7 +25,7 @@ const PROVIDER_TRAFFIC_ABSOLUTE_TTL_MS = 60 * 60_000;
 
 export function createConfiguredProviderTrafficAuthorityFactory(input: {
 	userConfig: ResolvedUserConfig;
-	browserService: BrowserService;
+	mutationAudit: BrowserMutationAuditSink;
 	provider: ProviderId;
 	managedBrowserProfile: string;
 	baseOptions: BrowserProviderListOptions;
@@ -105,8 +105,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 					tabLeaseId: reserved.value.lease.leaseId,
 				},
 				interactionGovernor,
-				mutationAudit:
-					input.baseOptions.mutationAudit ?? input.browserService.getMutationAuditSink(),
+				mutationAudit: input.baseOptions.mutationAudit ?? input.mutationAudit,
 				settleInteraction: (settlement) => interactionGovernor.finish(settlement),
 				assertLease: async (attribution) => {
 					const lease = (await registry.list({ scope, states: ["active"] })).find(

@@ -25,6 +25,7 @@ export interface LegacyChatgptLeasedTarget {
 	port: number;
 	targetId: string;
 	targetUrl: string;
+	providerTrafficGovernor: NonNullable<BrowserRunOptions["providerTrafficGovernor"]>;
 }
 
 export async function runLegacyChatgptWithConfiguredAffinity(input: {
@@ -75,6 +76,9 @@ export async function runLegacyChatgptWithConfiguredAffinity(input: {
 			if (!options.tabTargetId || !options.host || !options.port) {
 				throw new Error("Legacy ChatGPT affinity did not receive an exact leased target.");
 			}
+			if (!options.providerTrafficGovernor) {
+				throw new Error("Legacy ChatGPT affinity did not receive provider traffic authority.");
+			}
 			const targetUrl = promptInput.conversationId
 				? resolveChatgptConversationUrl(
 						promptInput.conversationId,
@@ -86,6 +90,7 @@ export async function runLegacyChatgptWithConfiguredAffinity(input: {
 				port: options.port,
 				targetId: options.tabTargetId,
 				targetUrl,
+				providerTrafficGovernor: options.providerTrafficGovernor,
 			});
 			legacyResultRef.current = legacyResult;
 			return {

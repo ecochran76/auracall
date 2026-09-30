@@ -60,6 +60,18 @@ describe("provider traffic structural boundary", () => {
 		}
 	});
 
+	test("legacy ChatGPT prompt and recovery navigation retain exact traffic authority", () => {
+		const browserMode = read("src/browser/index.ts");
+		const affinityRuntime = read("src/browser/legacyChatgptAffinityRuntime.ts");
+		expect(affinityRuntime).toContain("providerTrafficGovernor: options.providerTrafficGovernor");
+		expect(browserMode).toContain(
+			"providerTrafficGovernor: resolveProviderTrafficGovernor(client)",
+		);
+		expect(browserMode).toContain(
+			'providerTrafficGovernor: options.providerTrafficGovernor',
+		);
+	});
+
 	test("requires explicit pre-lease authority at every raw target creation call site", () => {
 		for (const file of [
 			"src/browser/index.ts",
