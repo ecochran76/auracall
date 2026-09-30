@@ -203,9 +203,10 @@ frozen; P4 joins P3 and the durable state. P6 is serialized after all joins.
 
 Issue #138's provider-traffic governor is integrated. The bounded current-
 interface survey and source-flow analysis are complete, no warning was
-triggered, and no physical provider action was performed. Implementation,
-provider-free acceptance, installation, and any separately authorized live
-canary remain open.
+triggered, and no physical provider action was performed. This planning packet
+integrated through PR 142 at canonical merge receipt `fcf388fe8c9ffc56279d5952beff9a31abc22219`.
+Issue #139 and this plan remain open for implementation, provider-free
+acceptance, installation, and any separately authorized live canary.
 
 ## Current Next Action
 

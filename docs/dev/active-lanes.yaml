@@ -1578,13 +1578,13 @@ lanes:
   - id: P81
     objective: Make account-mirror reconciliation proportional to the changed or genuinely incomplete frontier.
     plan: docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md
-    plan_ref: refs/heads/plan/issue-139-change-frontier
+    plan_ref: refs/remotes/origin/main
     branch: plan/issue-139-change-frontier
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: null
-    remote_ref: null
+    custody_state: INTEGRATED
+    checkpoint: 6bb09b85a7284bb895f5877b53241ac7acfe11a7
+    remote_ref: refs/remotes/origin/plan/issue-139-change-frontier
     integration: merge
     work_items: [ecochran76/auracall#139]
     dependencies: [P80]
@@ -1592,8 +1592,8 @@ lanes:
     reconciled_overlaps: [P80]
     reconciliation_note: P81 consumes P80's provider-traffic governor for admission, action receipts, and warning persistence; it changes account-mirror selection and evidence reuse without creating another traffic-control seam.
     blocker: null
-    validation_status: planned-current-interface-surveyed
+    validation_status: planning-integrated-current-interface-surveyed
     validation_ref: docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md
-    integration_receipt: null
-    disposition: Current ChatGPT interface surveyed read-only; provider-free implementation is ready to begin while the scheduler remains operator-paused.
+    integration_receipt: fcf388fe8c9ffc56279d5952beff9a31abc22219
+    disposition: Planning integrated through PR 142; Issue 139 and Plan 0381 remain open for provider-free implementation while the scheduler remains operator-paused.
     updated_at: 2026-09-29

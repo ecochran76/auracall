@@ -51814,3 +51814,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   visit/refresh/materialization behavior against fixtures representing the
   current service collections. Installation, scheduler resume, and live
   acceptance remain separately gated.
+- PR 142 merged the planning packet to canonical `main` at
+  `fcf388fe8c9ffc56279d5952beff9a31abc22219`. Issue 139 and Plan 0381 remain
+  open for provider-free implementation; planning integration does not claim
+  the algorithm is repaired.
