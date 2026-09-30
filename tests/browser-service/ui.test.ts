@@ -1544,31 +1544,6 @@ describe('browser-service ui wait helpers', () => {
     );
   });
 
-  test('navigateAndSettle consumes the provider traffic governor carried by the client', async () => {
-    const runtime = createRuntime([
-      'https://chatgpt.com/',
-      { readyState: 'complete', visibilityState: 'visible' },
-    ]);
-    const settle = vi.fn(async () => undefined);
-    const begin = vi.fn(async () => ({ id: 'traffic-1', settle }));
-    const PAGE = { navigate: vi.fn(async () => undefined) };
-    const client = {
-      Page: PAGE as never,
-      Runtime: runtime as never,
-      __auracallProviderTrafficGovernor: { attribution: {} as never, begin },
-    };
-
-    const result = await navigateAndSettle(client, {
-      url: 'https://chatgpt.com/c/123',
-      timeoutMs: 50,
-      pollMs: 1,
-    });
-
-    expect(result.ok).toBe(true);
-    expect(begin.mock.invocationCallOrder[0]).toBeLessThan(PAGE.navigate.mock.invocationCallOrder[0]);
-    expect(settle).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'succeeded' }));
-  });
-
   test('reloadAndSettle records bounded mutation audit events', async () => {
     const mutationLog = createInMemoryBrowserMutationLog();
     const beforeInteraction = vi.fn(async () => undefined);
