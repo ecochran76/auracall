@@ -51986,3 +51986,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The focused regression failed before the fix and passed after it. The
   adjacent completion, refresh, affinity, lease, governor, and warning gate is
   green at 130 tests; broader validation and installed acceptance remain.
+- Issue #146 repair integrated through PR 147 at `939726286` and was installed
+  byte-identically. One direct-CDP bounded canary completed one pass and one
+  selected materialization attempt without a visible rate-limit warning.
+- The canary exposed Issue #148: exact managed-browser cleanup removed the
+  process and listener but left its live-follow and ephemeral leases `idle` for
+  nonexistent targets. Plan 0383 owns immediate post-shutdown retirement; no
+  additional provider canary is authorized or required.

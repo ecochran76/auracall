@@ -1600,13 +1600,13 @@ lanes:
   - id: P82
     objective: Repair cold-start ChatGPT live-follow provider-traffic governor bootstrap without weakening lease or warning hard stops.
     plan: docs/dev/plans/0382-2026-09-30-live-follow-governor-bootstrap.md
-    plan_ref: refs/heads/fix/issue-146-live-follow-governor-bootstrap
+    plan_ref: refs/remotes/origin/main
     branch: fix/issue-146-live-follow-governor-bootstrap
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 35f854ad5a832a1c0c505a1e2b00928b01f46d54
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: bb90338915cd208228266cbcb70010d2c5dfe795
+    remote_ref: refs/remotes/origin/fix/issue-146-live-follow-governor-bootstrap
     integration: merge
     work_items: [ecochran76/auracall#146]
     dependencies: [P80, P81]
@@ -1614,8 +1614,30 @@ lanes:
     reconciled_overlaps: [P80, P81]
     reconciliation_note: P82 preserves P80 governor-required semantics and repairs only the pre-lease bootstrap exposed by P81 installed acceptance.
     blocker: null
-    validation_status: installed-defect-reproduced
+    validation_status: provider-free-accepted-integrated-installed-live-accepted-with-successor
     validation_ref: docs/dev/plans/0382-2026-09-30-live-follow-governor-bootstrap.md
+    integration_receipt: 93972628624b8ea5b2420dade5891312ed49ffbb
+    disposition: Bounded affinity repair integrated through PR 147 and installed; one direct-CDP canary completed with no warning and exposed successor Issue 148 for immediate post-shutdown idle-lease retirement.
+    updated_at: 2026-09-30
+  - id: P83
+    objective: Retire idle ChatGPT tab leases immediately after exact bounded managed-browser shutdown proves their targets nonexistent.
+    plan: docs/dev/plans/0383-2026-09-30-bounded-cleanup-lease-retirement.md
+    plan_ref: refs/heads/fix/issue-148-bounded-cleanup-lease-retirement
+    branch: fix/issue-148-bounded-cleanup-lease-retirement
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 93972628624b8ea5b2420dade5891312ed49ffbb
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#148]
+    dependencies: [P82]
+    overlaps: [P80, P81, P82]
+    reconciled_overlaps: [P80, P81, P82]
+    reconciliation_note: P83 preserves P80/P82 lease and governor hard stops while reconciling only idle targets after exact owned browser shutdown.
+    blocker: null
+    validation_status: installed-defect-reproduced
+    validation_ref: docs/dev/plans/0383-2026-09-30-bounded-cleanup-lease-retirement.md
     integration_receipt: null
-    disposition: One bounded installed canary failed before pass one after 152 directly observed requests; source repair and exact installed re-acceptance remain.
+    disposition: One completed installed canary left two idle leases fencing nonexistent targets; provider-free repair and local installed reconciliation remain.
     updated_at: 2026-09-30
