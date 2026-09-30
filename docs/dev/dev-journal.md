@@ -51791,3 +51791,26 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   baseline failures (one structural assertion and one Grok timeout) and stale
   pre-reboot Node executable paths in three MCP stdio suites. No live provider/
   browser, scheduler, install, or lease effect occurred.
+
+## 2026-09-29 | Issue 139 changed-frontier planning and current-interface survey
+
+- Issue 139 / Plan 0381 / lane P81 now govern the incremental reconciliation
+  algorithm after the Issue 138 traffic governor.
+- A bounded read-only survey attached to the existing `wsl-chrome-3` ChatGPT
+  root without navigation, reload, click, prompt, target creation, target
+  closure, or warning dismissal. The scheduler remained operator-paused.
+- The current root is a collection-oriented surface: global conversations,
+  pins/pages, spaces, automations, and per-project conversation lists hydrate
+  alongside visible Pinned, Projects, and Recents sections. The plan therefore
+  uses one shared provider-index epoch rather than optimizing legacy sidebar
+  traversal.
+- Ten ready ChatGPT root targets were retained at survey time. They were
+  observed but not closed or treated as account-mirror-owned.
+- No rate-limit warning was visible or triggered. Plan 0381 requires a
+  sanitized append-only interaction timeline and, if a warning appears, a
+  bounded signature of the warning plus preceding action classes and timing;
+  that evidence may support correlation but not causal network attribution.
+- Next implementation packet is provider-free: reproduce duplicate
+  visit/refresh/materialization behavior against fixtures representing the
+  current service collections. Installation, scheduler resume, and live
+  acceptance remain separately gated.
