@@ -51943,3 +51943,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   cumulative counts. It excludes operation/lease IDs, routes, and content.
 - The 182-test focused provider-free gate, typecheck, and diff hygiene pass.
   The production scheduler stayed paused and no provider work ran.
+## 2026-09-30 | Issue 139 authoritative planner integration
+
+- P6 discovered that the pure changed-frontier planner had no production
+  caller. Steady live follow now invokes it after the shared provider-index
+  epoch; only changed rows enter detail work, retained rows bypass it, and
+  complete/deferred/terminal decisions are checkpointed without route work.
+- Unmigrated rows retain one compatibility pass through the legacy selector;
+  explicit full sweeps preserve their existing all-row behavior. Deferred
+  materialization writes the provider failure cooldown to `retryNotBefore`.
+- The integrated provider-free gate passed 505 tests, typecheck, production
+  build, affected formatting/lint, diff hygiene, and active-plan audit with
+  zero errors. The scheduler remained paused; no provider work ran.

@@ -202,6 +202,20 @@ export function emptyPhysicalActivityCounters(): AccountMirrorPhysicalActivityCo
 	};
 }
 
+export function fingerprintAccountMirrorConversationIndexRow(conversation: Conversation): string {
+	const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+	return fingerprint({
+		id: conversation.id,
+		title: conversation.title,
+		provider: conversation.provider,
+		projectId: conversation.projectId ?? null,
+		url: conversation.url ?? null,
+		updatedAt: conversation.updatedAt ?? null,
+		latestTurnId:
+			readMetadataString(metadata, "latestTurnId") ?? readMetadataString(metadata, "lastMessageId"),
+	});
+}
+
 function normalizePhysicalActivityCounters(value: unknown): AccountMirrorPhysicalActivityCounters {
 	const record = isRecord(value) ? value : {};
 	return {

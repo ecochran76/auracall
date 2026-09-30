@@ -7,6 +7,10 @@ import {
 } from "./backfillLedger.js";
 import type { AccountMirrorChangeFrontierMetrics } from "./changeFrontierMetrics.js";
 import {
+	type AccountMirrorChangeFrontierPlan,
+	normalizeAccountMirrorChangeFrontierPlan,
+} from "./changeFrontierPlanner.js";
+import {
 	type AccountMirrorProviderIndexEpoch,
 	normalizeAccountMirrorProviderIndexEpoch,
 } from "./changeFrontierState.js";
@@ -243,6 +247,7 @@ export type AccountMirrorMetadataEvidence = {
 	conversationFreshnessFrontier?: ConversationFreshnessFrontierEvidence | null;
 	providerIndexEpoch?: AccountMirrorProviderIndexEpoch | null;
 	changeFrontierMetrics?: AccountMirrorChangeFrontierMetrics | null;
+	changeFrontierPlan?: AccountMirrorChangeFrontierPlan | null;
 	routeProgress?: AccountMirrorRouteProgressEvidence | null;
 	collectorProgress?: AccountMirrorCollectorPhaseProgressEvidence | null;
 	collectorDiagnostics?: AccountMirrorCollectorDiagnosticEvent[];
@@ -1066,6 +1071,7 @@ function normalizeMetadataEvidence(
 		),
 		providerIndexEpoch: normalizeAccountMirrorProviderIndexEpoch(value.providerIndexEpoch),
 		changeFrontierMetrics: normalizeChangeFrontierMetrics(value.changeFrontierMetrics),
+		changeFrontierPlan: normalizeAccountMirrorChangeFrontierPlan(value.changeFrontierPlan),
 		routeProgress: normalizeRouteProgressEvidence(value.routeProgress),
 		attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
 		collectorProgress: normalizeCollectorProgressEvidence(value.collectorProgress),

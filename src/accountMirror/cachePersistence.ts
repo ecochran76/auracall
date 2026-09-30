@@ -22,6 +22,7 @@ import { normalizeAccountMirrorBackfillLedger } from "./backfillLedger.js";
 import {
 	type AccountMirrorProviderIndexEpoch,
 	createAccountMirrorProviderIndexEpoch,
+	fingerprintAccountMirrorConversationIndexRow,
 	normalizeAccountMirrorConversationWorkState,
 	normalizeAccountMirrorProviderIndexEpoch,
 	rollAccountMirrorConversationWorkState,
@@ -459,12 +460,18 @@ function annotateSnapshotConversations(
 			.filter((bundle) => bundle.freshnessEpoch === epoch.epochId)
 			.map((bundle) => [bundle.conversationId, bundle]),
 	);
+	const frontierPlan = record.metadataEvidence?.changeFrontierPlan;
+	const frontierDecisionByKey = new Map(
+		frontierPlan?.epochId === epoch.epochId
+			? frontierPlan.decisions.map((decision) => [decision.conversationKey, decision] as const)
+			: [],
+	);
 	return record.manifests.conversations.map((conversation, index) => {
 		const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
 		const existingMetadata = isRecord(existingById.get(conversation.id)?.metadata)
 			? existingById.get(conversation.id)?.metadata
 			: {};
-		const conversationFingerprint = fingerprintConversationIndexRow(conversation);
+		const conversationFingerprint = fingerprintAccountMirrorConversationIndexRow(conversation);
 		const rolledState = rollAccountMirrorConversationWorkState({
 			conversation: {
 				...conversation,
@@ -474,6 +481,7 @@ function annotateSnapshotConversations(
 			previous: existingMetadata?.changeFrontierState,
 		});
 		const visitBundle = visitBundleById.get(conversation.id);
+		const frontierDecision = frontierDecisionByKey.get(rolledState.conversationKey);
 		const changeFrontierState = visitBundle
 			? {
 					...rolledState,
@@ -492,7 +500,22 @@ function annotateSnapshotConversations(
 						snapshotRefreshes: rolledState.physicalActivity.snapshotRefreshes + 1,
 					},
 				}
-			: rolledState;
+			: frontierDecision
+				? {
+						...rolledState,
+						action: frontierDecision.action,
+						outcome:
+							frontierDecision.action === "defer" || frontierDecision.action === "visit_once"
+								? ("deferred" as const)
+								: frontierDecision.action === "materialize_retained"
+									? ("pending" as const)
+									: frontierDecision.reason === "same_epoch_terminal" ||
+											frontierDecision.reason === "provider_unavailable"
+										? ("terminal" as const)
+										: ("complete" as const),
+						checkpointedAt: epoch.observedAt,
+					}
+				: rolledState;
 		return {
 			...conversation,
 			metadata: {
@@ -523,21 +546,6 @@ function createProviderIndexEpoch(
 		projectCount: record.manifests.projects.length,
 		conversations: record.manifests.conversations,
 	});
-}
-
-function fingerprintConversationIndexRow(conversation: Conversation): string {
-	const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
-	const source = {
-		id: conversation.id,
-		title: conversation.title,
-		provider: conversation.provider,
-		projectId: conversation.projectId ?? null,
-		url: conversation.url ?? null,
-		updatedAt: conversation.updatedAt ?? null,
-		latestTurnId: readMetadataString(metadata, ["latestTurnId", "lastMessageId"]),
-	};
-	const digest = createHash("sha256").update(JSON.stringify(source)).digest("hex");
-	return `sha256:${digest.slice(0, 32)}`;
 }
 
 function createMirrorCacheContext(input: {
@@ -789,15 +797,6 @@ function readNestedString(
 	}
 	const trimmed = typeof current === "string" ? current.trim() : "";
 	return trimmed.length > 0 ? trimmed : null;
-}
-
-function readMetadataString(value: Record<string, unknown>, fields: string[]): string | null {
-	for (const field of fields) {
-		const candidate = value[field];
-		if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
-		if (typeof candidate === "number" && Number.isFinite(candidate)) return String(candidate);
-	}
-	return null;
 }
 
 function readOptionalString(value: unknown): string | null {

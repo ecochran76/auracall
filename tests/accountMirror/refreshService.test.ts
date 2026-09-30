@@ -305,6 +305,7 @@ describe("account mirror refresh service", () => {
 			previousEvidence: null,
 			previousFiles: [],
 			previousConversationFreshness: new Map(),
+			previousConversationWorkStates: new Map(),
 			abortSignal: expect.any(AbortSignal),
 		});
 		const collectCalls = metadataCollector.collect.mock.calls as unknown as [

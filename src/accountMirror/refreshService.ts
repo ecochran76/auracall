@@ -503,6 +503,13 @@ export function createAccountMirrorRefreshService(input: {
 					boundIdentityKey: target.expectedIdentityKey ?? null,
 					limit: 10_000,
 				});
+				const previousConversationWorkStates = new Map(
+					(previousCatalog?.conversations ?? []).flatMap((conversation) => {
+						const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+						const state = normalizeAccountMirrorConversationWorkState(metadata.changeFrontierState);
+						return state ? [[conversation.id, state] as const] : [];
+					}),
+				);
 				const previousFiles = await readPreviousAccountMirrorFiles({
 					persistence,
 					provider,
@@ -544,6 +551,7 @@ export function createAccountMirrorRefreshService(input: {
 						previousEvidence: target.metadataEvidence,
 						previousFiles,
 						previousConversationFreshness,
+						previousConversationWorkStates,
 						onIdentityVerified: (evidence) => {
 							verifiedIdentityRef.current = evidence;
 						},
@@ -2160,6 +2168,7 @@ function withRefreshEvidenceModel(input: {
 			...input.collection.evidence,
 			changeFrontierMetrics: deriveAccountMirrorChangeFrontierMetrics(
 				input.mergedManifests.conversations,
+				input.collection.evidence.changeFrontierPlan ?? null,
 			),
 			retainedMaterializationConversationIds: deriveRetainedMaterializationConversationIds(
 				input.mergedManifests.conversations,

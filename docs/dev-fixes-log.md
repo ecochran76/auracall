@@ -23819,3 +23819,10 @@ snapshot epoch.
   account data, headers, cookies, or content in that signature. Separately
   publish current-epoch changed-frontier amplification metrics so deterministic
   fixtures can compare intended work with physical work.
+- 2026-09-30: A pure planner and comprehensive unit table do not change runtime
+  behavior unless the collector calls that planner and persists every decision.
+  Wire deterministic selection immediately after the shared index epoch, keep
+  legacy selection only as an explicit migration/full-sweep boundary, and
+  checkpoint skip/defer/materialize decisions even when no detail visit occurs.
+  Deferred asset failures must also persist a provider-specific
+  `retryNotBefore`; an outcome label alone does not prevent immediate re-entry.

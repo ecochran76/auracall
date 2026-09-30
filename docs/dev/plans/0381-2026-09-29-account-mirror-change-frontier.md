@@ -174,7 +174,7 @@ checkpoint schema converge on shared account-mirror types.
    bounded warning-signature context through the existing governor/ledger.
    Terminal condition: fixtures reconstruct the likely preceding behavior
    without provider identifiers or content.
-7. **P6 — Integration proof and docs.** Run focused and adjacent provider-free
+7. **P6 — Integration proof and docs (source complete).** Run focused and adjacent provider-free
    suites, typecheck, lint/build as affected, structural and planning audits,
    and update user/operator contracts. A live canary, installed adoption, or
    scheduler resume requires a separate exact authority and is not acceptance
@@ -202,25 +202,25 @@ source packet is P6 integration proof, planner wiring audit, and docs.
 
 - [x] Provider-free fixtures represent the surveyed current collection model
       and demonstrate the redundant existing behavior.
-- [ ] One lightweight shared index epoch precedes route selection; unchanged
+- [x] One lightweight shared index epoch precedes route selection; unchanged
       complete conversations perform zero route visits, snapshot refreshes,
       and artifact resolution attempts.
-- [ ] A changed conversation is visited no more than once per freshness epoch,
+- [x] A changed conversation is visited no more than once per freshness epoch,
       and one visit supplies both detail and artifact references.
-- [ ] Retained, already-materialized, or duplicate assets do not cause
+- [x] Retained, already-materialized, or duplicate assets do not cause
       conversation navigation or snapshot refresh.
-- [ ] Guarded, failed, deferred, and terminal rows persist explicit eligibility;
+- [x] Guarded, failed, deferred, and terminal rows persist explicit eligibility;
       no row re-enters before its retry horizon.
-- [ ] Resume after interruption continues after durably completed rows without
+- [x] Resume after interruption continues after durably completed rows without
       resetting the changed frontier.
 - [x] Per-pass metrics expose index rows, selected actions, physical visits,
       reloads, snapshot refreshes, artifact resolutions/downloads, duplicates,
       deferred rows, and amplification ratios without sensitive identifiers.
 - [x] A provider-free warning fixture freezes work and persists the bounded
       sanitized warning signature plus preceding interaction timeline.
-- [ ] Existing cache identity, routeability, integrity, traffic-governor,
+- [x] Existing cache identity, routeability, integrity, traffic-governor,
       lease-generation, and `Answer now` prohibitions remain green.
-- [ ] The source checkpoint passes targeted and adjacent tests, typecheck,
+- [x] The source checkpoint passes targeted and adjacent tests, typecheck,
       affected lint/build, diff hygiene, CodeGraph, and planning/lane audits.
 
 ## Non-goals
@@ -291,10 +291,17 @@ checkpoints aggregate outcome plus per-entry availability and physical asset
 counters. P5 adds current-epoch amplification metrics and persists the bounded
 sanitized warning signature with the preceding interaction window. Both
 packets are provider-free; the scheduler remains paused.
+P6 found and repaired an integration defect: the P2 planner previously had no
+production caller. Steady live follow now invokes it after the shared index
+epoch, with legacy selection only for unmigrated rows and explicit full sweeps.
+Planner decisions are checkpointed even when no detail visit occurs. Deferred
+materialization now writes the provider failure cooldown into
+`retryNotBefore`. The integrated provider-free gate passes 505 tests,
+typecheck, production build, affected formatting/lint, diff hygiene, and the
+active-plan audit with zero validation errors.
 
 ## Current Next Action
 
-Run P6 integration proof and audit that the pure P2 planner is the authoritative
-selection path rather than a parallel unused model. Close any remaining retry-
-horizon or resume gap before broader provider-free validation. Installed/live
-acceptance and scheduler resume remain separately authorized.
+Publish and integrate the source branch. Installed/live acceptance and
+scheduler resume remain separately authorized and are not required for this
+source plan.

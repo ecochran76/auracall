@@ -695,6 +695,13 @@ Terminology note:
   and only current retained detail plus manifest evidence can materialize
   missing assets without a route visit. Resume checkpoints use the hashed
   conversation key; an absent checkpoint safely restarts the bounded plan.
+  For steady live follow, this plan is authoritative once a cached row has
+  migrated work state. Changed rows alone enter the detail reader; retained-
+  asset rows proceed directly to materialization; complete, terminal, guarded,
+  and retry-delayed rows do not enter route work. Legacy rows use the prior
+  freshness selector for one migration pass, while explicit full sweeps retain
+  their existing all-row semantics. Non-visit decisions are checkpointed with
+  the epoch so interruption does not reset completed work.
   A selected ChatGPT detail row produces one `ConversationVisitBundle` that
   carries detail completeness, a sanitized detail fingerprint, artifact/file
   references, route evidence, and its own physical target/navigation/reload
@@ -712,6 +719,8 @@ Terminology note:
   confirmed missing volatile uploads are `unavailable`, while an unresolved
   persistent Library row remains `unknown`; a mixed result therefore stays
   deferred rather than falsely making the whole conversation terminal.
+  Deferred materialization records the provider-specific failure cooldown as
+  its retry-not-before boundary and cannot immediately re-enter the frontier.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>

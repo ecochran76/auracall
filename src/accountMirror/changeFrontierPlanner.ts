@@ -75,6 +75,37 @@ export function planAccountMirrorChangeFrontier(input: {
 	};
 }
 
+export function normalizeAccountMirrorChangeFrontierPlan(
+	value: unknown,
+): AccountMirrorChangeFrontierPlan | null {
+	if (
+		!isRecord(value) ||
+		value.object !== "account_mirror_change_frontier_plan" ||
+		value.version !== 1
+	) {
+		return null;
+	}
+	const epochId = normalizeOptionalString(value.epochId);
+	if (!epochId || !Array.isArray(value.decisions)) return null;
+	const decisions = value.decisions.flatMap((item) => {
+		if (!isRecord(item)) return [];
+		const conversationKey = normalizeOptionalString(item.conversationKey);
+		const action = normalizeAction(item.action);
+		const reason = normalizeReason(item.reason);
+		if (!conversationKey || !action || !reason) return [];
+		return [decision(conversationKey, action, reason)];
+	});
+	return {
+		object: "account_mirror_change_frontier_plan",
+		version: 1,
+		epochId,
+		resumeAfterConversationKey: normalizeOptionalString(value.resumeAfterConversationKey),
+		checkpointFound: value.checkpointFound === true,
+		decisions,
+		counts: countActions(decisions),
+	};
+}
+
 function decideRow(input: {
 	epochId: string;
 	now: string;
@@ -153,8 +184,37 @@ function isFuture(value: string | null, now: string): boolean {
 	return Number.isFinite(timestamp) && Number.isFinite(nowTimestamp) && timestamp > nowTimestamp;
 }
 
-function normalizeOptionalString(value: string | null | undefined): string | null {
+function normalizeOptionalString(value: unknown): string | null {
 	if (typeof value !== "string") return null;
 	const normalized = value.trim();
 	return normalized || null;
+}
+
+function normalizeAction(value: unknown): AccountMirrorFrontierAction | null {
+	return value === "skip" ||
+		value === "visit_once" ||
+		value === "materialize_retained" ||
+		value === "defer"
+		? value
+		: null;
+}
+
+function normalizeReason(value: unknown): AccountMirrorFrontierDecisionReason | null {
+	return value === "duplicate_conversation_key" ||
+		value === "retry_not_before" ||
+		value === "same_epoch_complete" ||
+		value === "same_epoch_terminal" ||
+		value === "provider_guarded" ||
+		value === "identity_mismatch" ||
+		value === "provider_unavailable" ||
+		value === "unchanged_complete" ||
+		value === "retained_assets_actionable" ||
+		value === "retained_assets_incomplete" ||
+		value === "detail_or_index_changed"
+		? value
+		: null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

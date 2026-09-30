@@ -177,6 +177,7 @@ describe("history materialization service", () => {
 					action: "materialize_retained",
 					outcome: "deferred",
 					assetAvailability: "unknown",
+					retryNotBefore: "2026-09-30T16:02:01.000Z",
 					artifactResolutions: 2,
 					downloads: 0,
 				}),

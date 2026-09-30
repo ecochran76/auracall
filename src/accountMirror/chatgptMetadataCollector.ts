@@ -35,8 +35,19 @@ import type {
 import { resolveRuntimeProfileUserConfig as resolveBrowserRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
 import { getCurrentRuntimeProfiles, getRuntimeProfileBrowserProfileId } from "../config/model.js";
 import type { ResolvedUserConfig } from "../config.js";
-import { createAccountMirrorProviderIndexEpoch } from "./changeFrontierState.js";
-import type { AccountMirrorConversationMaterializationPolicy } from "./conversationFreshness.js";
+import {
+	type AccountMirrorChangeFrontierPlan,
+	planAccountMirrorChangeFrontier,
+} from "./changeFrontierPlanner.js";
+import {
+	type AccountMirrorConversationWorkState,
+	createAccountMirrorProviderIndexEpoch,
+	fingerprintAccountMirrorConversationIndexRow,
+} from "./changeFrontierState.js";
+import type {
+	AccountMirrorConversationFreshness,
+	AccountMirrorConversationMaterializationPolicy,
+} from "./conversationFreshness.js";
 import {
 	applyConversationFreshnessFrontier,
 	type ConversationFreshnessFrontierCachedSummary,
@@ -121,6 +132,7 @@ export interface AccountMirrorMetadataCollectorInput {
 		string,
 		ConversationFreshnessFrontierCachedSummary
 	> | null;
+	previousConversationWorkStates?: ReadonlyMap<string, AccountMirrorConversationWorkState> | null;
 	shouldYield?: () => Promise<boolean> | boolean;
 	onIdentityVerified?: (evidence: AccountMirrorVerifiedIdentityEvidence) => Promise<void> | void;
 	onProgress?: (progress: AccountMirrorCollectorPhaseProgressEvidence) => Promise<void> | void;
@@ -572,7 +584,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				requestedPhase,
 				input.previousEvidence ?? null,
 			);
-			const frontier = honorRequestedDetailPhase
+			const legacyFrontier = honorRequestedDetailPhase
 				? {
 						detailConversations: requestedDetailConversations,
 						evidence: input.previousEvidence?.conversationFreshnessFrontier ?? null,
@@ -586,6 +598,21 @@ export function createChatgptAccountMirrorMetadataCollector(
 						attachmentCursor,
 						freshFrontierThreshold: input.limits.freshFrontierThreshold,
 					});
+			const deterministicFrontier =
+				honorRequestedDetailPhase || (input.sweepMode ?? "steady_follow") === "full_sweep"
+					? { detailConversations: legacyFrontier.detailConversations, plan: null }
+					: applyDeterministicChangeFrontier({
+							conversations,
+							legacyDetailConversations: legacyFrontier.detailConversations,
+							previousConversationFreshness: input.previousConversationFreshness ?? null,
+							previousConversationWorkStates: input.previousConversationWorkStates ?? null,
+							epochId: providerIndexEpoch.epochId,
+							now: providerIndexEpoch.observedAt,
+						});
+			const frontier = {
+				detailConversations: deterministicFrontier.detailConversations,
+				evidence: legacyFrontier.evidence,
+			};
 			await reportCollectorProgress(input, {
 				phase: "detail-inventory",
 				event: "started",
@@ -805,6 +832,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 					},
 					conversationFreshnessFrontier: frontier.evidence,
 					providerIndexEpoch,
+					changeFrontierPlan: deterministicFrontier.plan,
 					projectConversations: projectConversationCursor,
 					attachmentInventory: inventory.cursor,
 				},
@@ -892,6 +920,74 @@ export function selectConversationDetailCandidates(input: {
 	return {
 		detailConversations: result.conversations,
 		evidence: result.evidence,
+	};
+}
+
+export function applyDeterministicChangeFrontier(input: {
+	conversations: readonly Conversation[];
+	legacyDetailConversations: readonly Conversation[];
+	previousConversationFreshness: ReadonlyMap<
+		string,
+		ConversationFreshnessFrontierCachedSummary
+	> | null;
+	previousConversationWorkStates: ReadonlyMap<string, AccountMirrorConversationWorkState> | null;
+	epochId: string;
+	now: string;
+}): { detailConversations: Conversation[]; plan: AccountMirrorChangeFrontierPlan | null } {
+	if (!input.previousConversationFreshness || !input.previousConversationWorkStates) {
+		return { detailConversations: [...input.legacyDetailConversations], plan: null };
+	}
+	const rows = input.conversations.flatMap((conversation) => {
+		const workState = input.previousConversationWorkStates?.get(conversation.id);
+		const summary = input.previousConversationFreshness?.get(conversation.id);
+		if (!workState || !summary) return [];
+		return [{ workState, freshness: freshnessFromSummary(summary, conversation) }];
+	});
+	if (rows.length === 0) {
+		return { detailConversations: [...input.legacyDetailConversations], plan: null };
+	}
+	const plan = planAccountMirrorChangeFrontier({
+		epochId: input.epochId,
+		now: input.now,
+		rows,
+	});
+	const decisionByKey = new Map(
+		plan.decisions.map((decision) => [decision.conversationKey, decision]),
+	);
+	const legacyIds = new Set(input.legacyDetailConversations.map((conversation) => conversation.id));
+	const detailConversations = input.conversations.filter((conversation) => {
+		const workState = input.previousConversationWorkStates?.get(conversation.id);
+		if (!workState) return legacyIds.has(conversation.id);
+		const decision = decisionByKey.get(workState.conversationKey);
+		return decision ? decision.action === "visit_once" : legacyIds.has(conversation.id);
+	});
+	return { detailConversations, plan };
+}
+
+function freshnessFromSummary(
+	summary: ConversationFreshnessFrontierCachedSummary,
+	conversation: Conversation,
+): AccountMirrorConversationFreshness {
+	return {
+		object: "account_mirror_conversation_freshness",
+		state: summary.freshnessState,
+		reasons: [],
+		indexObservedAt: null,
+		indexSource: null,
+		indexRank: null,
+		detailObservedAt: summary.detailObservedAt,
+		manifestObservedAt: summary.manifestObservedAt,
+		materializedAt: null,
+		routeabilityObservedAt: null,
+		routeabilityState: summary.routeabilityState,
+		conversationFingerprint: fingerprintAccountMirrorConversationIndexRow(conversation),
+		detailCompleteness: summary.detailCompleteness ?? "unknown",
+		assetCompleteness: summary.assetCompleteness,
+		assetCounts: {
+			known: summary.knownAssetCount ?? summary.missingLocalCount,
+			local: summary.localAssetCount ?? 0,
+			missingLocal: summary.missingLocalCount,
+		},
 	};
 }
 

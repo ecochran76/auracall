@@ -1,4 +1,5 @@
 import type { Conversation } from "../browser/providers/domain.js";
+import type { AccountMirrorChangeFrontierPlan } from "./changeFrontierPlanner.js";
 import {
 	type AccountMirrorFrontierAction,
 	normalizeAccountMirrorConversationWorkState,
@@ -23,6 +24,7 @@ export interface AccountMirrorChangeFrontierMetrics {
 
 export function deriveAccountMirrorChangeFrontierMetrics(
 	conversations: readonly Conversation[],
+	plan: AccountMirrorChangeFrontierPlan | null = null,
 ): AccountMirrorChangeFrontierMetrics {
 	const metrics: AccountMirrorChangeFrontierMetrics = {
 		version: 1,
@@ -54,6 +56,13 @@ export function deriveAccountMirrorChangeFrontierMetrics(
 		metrics.physical.artifactResolutions += state.physicalActivity.artifactResolutions;
 		metrics.physical.downloads += state.physicalActivity.downloads;
 		metrics.physical.duplicates += state.physicalActivity.duplicates;
+	}
+	if (plan) {
+		metrics.actions = {
+			...plan.counts,
+			unplanned: Math.max(0, conversations.length - plan.decisions.length),
+		};
+		metrics.deferredRows = plan.counts.defer;
 	}
 	metrics.amplification.physicalActions =
 		metrics.physical.visits +

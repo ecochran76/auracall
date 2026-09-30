@@ -25,6 +25,7 @@ import {
 	type AccountMirrorCatalogService,
 	createAccountMirrorCatalogService,
 } from "../accountMirror/catalogService.js";
+import { getDefaultAccountMirrorPolitenessPolicy } from "../accountMirror/politePolicy.js";
 import { accountMirrorIdentityKeysMatch } from "../accountMirror/tenantBinding.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import { DEFAULT_CONVERSATION_CONTEXT_TIMEOUT_MS } from "../browser/llmService/llmService.js";
@@ -4009,6 +4010,16 @@ function evidenceFromMaterializationResult(
 	const completedCount = materializedCount + duplicateAliasCount;
 	const terminal = entryCount > 0 && unavailableCount === entryCount;
 	const complete = entryCount > 0 && completedCount === entryCount;
+	const deferredRetryNotBefore =
+		!terminal && !complete
+			? new Date(
+					Date.parse(result.generatedAt) +
+						(result.target
+							? getDefaultAccountMirrorPolitenessPolicy(result.target.provider)
+									.failureBaseCooldownMs
+							: 2 * 60_000),
+				).toISOString()
+			: null;
 	return {
 		manifestObservedAt: result.generatedAt,
 		materializedAt: materializedCount > 0 ? result.generatedAt : undefined,
@@ -4017,7 +4028,7 @@ function evidenceFromMaterializationResult(
 			action: "materialize_retained",
 			outcome: terminal ? "terminal" : complete ? "complete" : "deferred",
 			assetAvailability: terminal ? "unavailable" : complete ? "available" : "unknown",
-			retryNotBefore: null,
+			retryNotBefore: deferredRetryNotBefore,
 			checkpointedAt: result.generatedAt,
 			artifactResolutions: entryCount,
 			downloads: materializedCount,

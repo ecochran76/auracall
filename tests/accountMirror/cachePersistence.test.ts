@@ -396,6 +396,67 @@ describe("account mirror cache persistence", () => {
 		}
 	});
 
+	test("checkpoints non-visit planner decisions for resume without route work", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-frontier-plan-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheStore = createCacheStore("dual");
+		const persistence = createAccountMirrorPersistence({ config: {}, cacheStore });
+		const context: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "ecochran76@gmail.com",
+		};
+		try {
+			await persistence.writeSnapshot(baseRecord);
+			const first = await cacheStore.readConversations(context);
+			const state = first.items[0]?.metadata?.changeFrontierState as
+				| { epochId?: string; conversationKey?: string }
+				| undefined;
+			if (!state?.epochId || !state.conversationKey) throw new Error("Expected frontier state.");
+
+			await persistence.writeSnapshot({
+				...baseRecord,
+				metadataEvidence: {
+					...baseRecord.metadataEvidence,
+					changeFrontierPlan: {
+						object: "account_mirror_change_frontier_plan",
+						version: 1,
+						epochId: state.epochId,
+						resumeAfterConversationKey: null,
+						checkpointFound: true,
+						decisions: [
+							{
+								conversationKey: state.conversationKey,
+								action: "skip",
+								reason: "unchanged_complete",
+								checkpointKey: state.conversationKey,
+							},
+						],
+						counts: { skip: 1, visit_once: 0, materialize_retained: 0, defer: 0 },
+					},
+				},
+			});
+
+			await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+				items: [
+					{
+						metadata: {
+							changeFrontierState: {
+								action: "skip",
+								outcome: "complete",
+								checkpointedAt: baseRecord.completedAt,
+								physicalActivity: { navigations: 0, snapshotRefreshes: 0 },
+							},
+						},
+					},
+				],
+			});
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("persists account-mirror target failure state across registry refreshes", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-status-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
