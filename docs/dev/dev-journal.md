@@ -51965,3 +51965,24 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The user API restarted healthy at PID 45285. Local status returned `ok: true`
   and scheduler posture `paused`; the scheduler unit remained inactive. No
   browser/provider work, warning dismissal, prompt, or scheduler resume ran.
+
+## 2026-09-30 | Issue 146 live-follow governor bootstrap defect
+
+- The authorized installed Issue 139 canary began with the scheduler paused,
+  zero non-released tab leases, zero active browser-profile controls, and no
+  `wsl-chrome-3` managed browser process or DevTools listener.
+- Completion `acctmirror_completion_91246108-b7fc-44ae-bec7-0586effb6c43`
+  failed before pass one because `provider:chatgpt:connect-tab` required a
+  traffic governor before the lease-bound governor could be constructed.
+- A direct read-only CDP observer saw one root ChatGPT target and 152 requests
+  (151 ChatGPT, one third-party), zero document requests or frame navigations,
+  and no visible rate-limit warning. The completion was not retried.
+- Issue #146 and Plan 0382 now govern the corrective lane. The scheduler stays
+  paused; the next step is a provider-free regression and bootstrap repair.
+- Source reconciliation found that bounded mode alone nulled
+  `liveFollowOperationId`; no lease was ever created. The completion service
+  now preserves its exact operation ID for bounded and unbounded passes, while
+  the affinity factory still selects tab-affinity versus serialized behavior.
+- The focused regression failed before the fix and passed after it. The
+  adjacent completion, refresh, affinity, lease, governor, and warning gate is
+  green at 130 tests; broader validation and installed acceptance remain.

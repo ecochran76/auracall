@@ -23777,6 +23777,18 @@ and zero counters. Persist only hashed account/conversation scope keys in the
 frontier state; raw provider identities and conversation identifiers remain in
 their existing governed cache fields, not in operational accounting records.
 
+## 2026-09-30 | A bounded pass must retain live-follow affinity
+
+- `maxPasses` bounds execution and requests managed-browser cleanup; it does
+  not turn a ChatGPT account-mirror pass into an unleased generic browser read.
+- Always carry the exact completion operation ID into the refresh service and
+  let the configured affinity factory decide whether the provider/runtime uses
+  tab affinity or the serialized fallback.
+- A mode-only gate on `liveFollowOperationId` bypassed the crawler lease and
+  traffic governor for every bounded canary. The shared physical-action seam
+  then correctly rejected `provider:chatgpt:connect-tab`, but only after the
+  browser root had loaded provider resources.
+
 ## 2026-09-30 | Changed fingerprints outrank retained materialization
 
 Choose exactly one changed-frontier action per conversation and order the

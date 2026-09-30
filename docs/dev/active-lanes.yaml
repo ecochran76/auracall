@@ -1581,7 +1581,7 @@ lanes:
     plan_ref: refs/remotes/origin/main
     branch: plan/issue-139-change-frontier
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: INTEGRATED
     checkpoint: 6bb09b85a7284bb895f5877b53241ac7acfe11a7
     remote_ref: refs/remotes/origin/plan/issue-139-change-frontier
@@ -1592,8 +1592,30 @@ lanes:
     reconciled_overlaps: [P80]
     reconciliation_note: P81 consumes P80's provider-traffic governor for admission, action receipts, and warning persistence; it changes account-mirror selection and evidence reuse without creating another traffic-control seam.
     blocker: null
-    validation_status: planning-integrated-current-interface-surveyed
+    validation_status: provider-free-accepted-integrated-installed
     validation_ref: docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md
-    integration_receipt: fcf388fe8c9ffc56279d5952beff9a31abc22219
-    disposition: Planning integrated through PR 142; Issue 139 and Plan 0381 remain open for provider-free implementation while the scheduler remains operator-paused.
-    updated_at: 2026-09-29
+    integration_receipt: 35f854ad5a832a1c0c505a1e2b00928b01f46d54
+    disposition: Implementation and closeout integrated through PRs 144 and 145; Issue 139 closed and the exact runtime was installed with the scheduler paused. Installed canary exposed successor Issue 146.
+    updated_at: 2026-09-30
+  - id: P82
+    objective: Repair cold-start ChatGPT live-follow provider-traffic governor bootstrap without weakening lease or warning hard stops.
+    plan: docs/dev/plans/0382-2026-09-30-live-follow-governor-bootstrap.md
+    plan_ref: refs/heads/fix/issue-146-live-follow-governor-bootstrap
+    branch: fix/issue-146-live-follow-governor-bootstrap
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 35f854ad5a832a1c0c505a1e2b00928b01f46d54
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#146]
+    dependencies: [P80, P81]
+    overlaps: [P80, P81]
+    reconciled_overlaps: [P80, P81]
+    reconciliation_note: P82 preserves P80 governor-required semantics and repairs only the pre-lease bootstrap exposed by P81 installed acceptance.
+    blocker: null
+    validation_status: installed-defect-reproduced
+    validation_ref: docs/dev/plans/0382-2026-09-30-live-follow-governor-bootstrap.md
+    integration_receipt: null
+    disposition: One bounded installed canary failed before pass one after 152 directly observed requests; source repair and exact installed re-acceptance remain.
+    updated_at: 2026-09-30

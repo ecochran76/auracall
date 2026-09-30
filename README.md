@@ -1003,7 +1003,9 @@ Terminology note:
   on the configured local API. The command returns an id immediately; the
   service backfills history until no more history is detected, then stays in
   steady follow and periodically crawls for new content. `--max-passes` is a
-  debug cap, not the default. `auracall api mirror-completion-status <id>`
+  debug cap, not the default; it does not disable the selected runtime's tab
+  affinity, traffic governor, lease accounting, or warning hard stops.
+  `auracall api mirror-completion-status <id>`
   polls a bounded mode, phase, next-attempt, count, materialization-outcome,
   and latest-lifecycle projection without refreshing materialization state.
   Use the authenticated HTTP route with `?detail=full` for a one-off full
