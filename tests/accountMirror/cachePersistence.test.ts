@@ -661,6 +661,7 @@ describe("account mirror cache persistence", () => {
 						checkpointedAt: "2026-05-23T16:00:01.000Z",
 						artifactResolutions: 2,
 						downloads: 1,
+						duplicates: 1,
 					},
 				},
 			});

@@ -4021,6 +4021,7 @@ function evidenceFromMaterializationResult(
 			checkpointedAt: result.generatedAt,
 			artifactResolutions: entryCount,
 			downloads: materializedCount,
+			duplicates: duplicateAliasCount,
 		},
 	};
 }

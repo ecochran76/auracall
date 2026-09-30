@@ -12,6 +12,7 @@ export interface AccountMirrorPhysicalActivityCounters {
 	snapshotRefreshes: number;
 	artifactResolutions: number;
 	downloads: number;
+	duplicates: number;
 }
 
 export interface AccountMirrorProviderIndexEpoch {
@@ -197,6 +198,7 @@ export function emptyPhysicalActivityCounters(): AccountMirrorPhysicalActivityCo
 		snapshotRefreshes: 0,
 		artifactResolutions: 0,
 		downloads: 0,
+		duplicates: 0,
 	};
 }
 
@@ -209,6 +211,7 @@ function normalizePhysicalActivityCounters(value: unknown): AccountMirrorPhysica
 		snapshotRefreshes: nonNegativeInteger(record.snapshotRefreshes),
 		artifactResolutions: nonNegativeInteger(record.artifactResolutions),
 		downloads: nonNegativeInteger(record.downloads),
+		duplicates: nonNegativeInteger(record.duplicates),
 	};
 }
 
@@ -223,6 +226,7 @@ function addPhysicalActivityCounters(
 		snapshotRefreshes: left.snapshotRefreshes + right.snapshotRefreshes,
 		artifactResolutions: left.artifactResolutions + right.artifactResolutions,
 		downloads: left.downloads + right.downloads,
+		duplicates: left.duplicates + right.duplicates,
 	};
 }
 

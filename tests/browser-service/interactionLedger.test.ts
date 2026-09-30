@@ -139,6 +139,89 @@ describe("interactionLedger (package)", () => {
 		).toEqual(["frozen", "frozen"]);
 	});
 
+	test("persists a sanitized bounded interaction window with a provider warning", async () => {
+		let sequence = 0;
+		const ledger = createInMemoryProviderInteractionLedger({
+			createReservationId: () => `warning-evidence-${++sequence}`,
+		});
+		const policy = {
+			maxConcurrentChats: 4,
+			maxConversationStartsPerHour: 120,
+			maxConversationStartsPerDay: 240,
+		};
+		for (const [index, interactionClass] of (
+			["navigation", "conversation-read"] as const
+		).entries()) {
+			const second = index * 2;
+			const admission = await ledger.reserve({
+				scope: foregroundScope,
+				workloadId: "live-follow:fixture",
+				operationId: "operation-fixture",
+				tabLeaseId: "lease-fixture",
+				interactionClass,
+				mutability: "read-only",
+				startsNewConversation: false,
+				now: `2026-09-24T13:00:0${second}.000Z`,
+				reservationTtlMs: 30_000,
+				policy,
+			});
+			if (!admission.allowed) throw new Error("expected warning-evidence admission");
+			await ledger.start({
+				reservationId: admission.reservation.reservationId,
+				startedAt: `2026-09-24T13:00:0${second}.250Z`,
+			});
+			await ledger.settle({
+				reservationId: admission.reservation.reservationId,
+				settledAt: `2026-09-24T13:00:0${second + 1}.000Z`,
+				effectState: "settled",
+				outcome: "succeeded",
+			});
+		}
+
+		const recorded = await ledger.recordProviderWarning({
+			scope: foregroundScope,
+			classification: "rate-limit",
+			reason: "requests too quickly",
+			observedAt: "2026-09-24T13:00:05.000Z",
+			evidence: {
+				classifierVersion: "chatgpt-visible-blocking-surface-v1",
+				visibleSummary: "Too many requests; temporarily limited.",
+				sourceTargetClass: "leased-page",
+				openTargetCount: 7,
+				resourcePathClasses: ["Conversation", "conversation", "Project Index"],
+				precedingInteractionLimit: 3,
+			},
+		});
+
+		expect(recorded.warning.evidence).toEqual({
+			version: 1,
+			classifierVersion: "chatgpt-visible-blocking-surface-v1",
+			visibleSummary: "Too many requests; temporarily limited.",
+			sourceTargetClass: "leased-page",
+			firstObservedAt: "2026-09-24T13:00:05.000Z",
+			openTargetCount: 7,
+			precedingInteractions: [
+				expect.objectContaining({
+					deltaMs: null,
+					interactionClass: "navigation",
+					eventType: "interaction-settled",
+				}),
+				expect.objectContaining({ deltaMs: 1_250, interactionClass: "conversation-read" }),
+				expect.objectContaining({ deltaMs: 750, interactionClass: "conversation-read" }),
+			],
+			cumulativeCounts: {
+				interactions: 2,
+				navigations: 1,
+				reloads: 0,
+				conversationReads: 1,
+				artifactReads: 0,
+			},
+			resourcePathClasses: ["conversation", "project index"],
+		});
+		expect(JSON.stringify(recorded.warning.evidence)).not.toContain("operation-fixture");
+		expect(JSON.stringify(recorded.warning.evidence)).not.toContain("lease-fixture");
+	});
+
 	test("operator clearance replaces an indefinite warning with a bounded quiet cooldown", async () => {
 		const ledger = createInMemoryProviderInteractionLedger({
 			createReservationId: () => "reservation-after-clear",
@@ -431,6 +514,12 @@ describe("interactionLedger (package)", () => {
 				classification: "human-verification",
 				reason: "provider verification required",
 				observedAt: "2026-09-24T12:30:01.000Z",
+				evidence: {
+					classifierVersion: "fixture-v1",
+					visibleSummary: "Provider verification required.",
+					sourceTargetClass: "leased-page",
+					openTargetCount: 2,
+				},
 			});
 			const afterWarningRestart = createFileBackedProviderInteractionLedger(options);
 			const warningDenied = await afterWarningRestart.reserve({
@@ -448,7 +537,14 @@ describe("interactionLedger (package)", () => {
 			expect(warningDenied).toMatchObject({
 				allowed: false,
 				reason: "provider-warning",
-				warning: { classification: "human-verification" },
+				warning: {
+					classification: "human-verification",
+					evidence: {
+						classifierVersion: "fixture-v1",
+						openTargetCount: 2,
+						cumulativeCounts: { interactions: 1 },
+					},
+				},
 			});
 			expect((await afterWarningRestart.listEvents()).map((event) => event.type)).toEqual([
 				"reservation-created",

@@ -170,7 +170,7 @@ checkpoint schema converge on shared account-mirror types.
    refs without a second snapshot refresh; persist terminal/deferred outcomes
    after every row. Terminal condition: timeout resume continues after retained
    complete work.
-6. **P5 — Amplification and incident evidence.** Publish sanitized counters and
+6. **P5 — Amplification and incident evidence (source complete).** Publish sanitized counters and
    bounded warning-signature context through the existing governor/ledger.
    Terminal condition: fixtures reconstruct the likely preceding behavior
    without provider identifiers or content.
@@ -190,9 +190,13 @@ without a second provider refresh. Each materialization result checkpoints the
 row action/outcome, aggregate availability, and artifact-resolution/download
 counters. Mixed persistent/volatile outcomes remain deferred/unknown at the
 row level while preserving each entry's explicit availability. Focused and
-adjacent P4 coverage is green (213 tests); no browser or provider work ran.
-The next source packet is P5 interaction amplification and warning-signature
-evidence.
+adjacent P4 coverage is green (478 tests); no browser or provider work ran. P5
+publishes current-epoch action and physical-work counters, including duplicates
+and an amplification ratio. Provider-warning persistence now captures a
+versioned sanitized signature and capped preceding interaction timeline with
+inter-action deltas while excluding operation, lease, route, and provider
+identifiers. Its provider-free focused gate is green (182 tests). The next
+source packet is P6 integration proof, planner wiring audit, and docs.
 
 ## Acceptance Criteria
 
@@ -209,10 +213,10 @@ evidence.
       no row re-enters before its retry horizon.
 - [ ] Resume after interruption continues after durably completed rows without
       resetting the changed frontier.
-- [ ] Per-pass metrics expose index rows, selected actions, physical visits,
+- [x] Per-pass metrics expose index rows, selected actions, physical visits,
       reloads, snapshot refreshes, artifact resolutions/downloads, duplicates,
       deferred rows, and amplification ratios without sensitive identifiers.
-- [ ] A provider-free warning fixture freezes work and persists the bounded
+- [x] A provider-free warning fixture freezes work and persists the bounded
       sanitized warning signature plus preceding interaction timeline.
 - [ ] Existing cache identity, routeability, integrity, traffic-governor,
       lease-generation, and `Answer now` prohibitions remain green.
@@ -281,10 +285,16 @@ reload, or conversation-reopen paths after the admitted route visit. Multiple
 recorded navigations fail closed, and only a bundle matching the persisted
 epoch can checkpoint durable action/outcome and physical counters. The 283-test
 affected collector/adapter/refresh/persistence gate passes provider-free.
+P4 reuses current or durably fingerprinted detail/manifest evidence for
+completion-owned materialization without a second snapshot refresh, and
+checkpoints aggregate outcome plus per-entry availability and physical asset
+counters. P5 adds current-epoch amplification metrics and persists the bounded
+sanitized warning signature with the preceding interaction window. Both
+packets are provider-free; the scheduler remains paused.
 
 ## Current Next Action
 
-Implement P4 retained-evidence materialization from the P2 plan. Consume either
-the current visit bundle or a persisted detail fingerprint and manifest without
-refreshing the conversation snapshot, then checkpoint available, unavailable,
-deferred, and terminal outcomes after each row.
+Run P6 integration proof and audit that the pure P2 planner is the authoritative
+selection path rather than a parallel unused model. Close any remaining retry-
+horizon or resume gap before broader provider-free validation. Installed/live
+acceptance and scheduler resume remain separately authorized.

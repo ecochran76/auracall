@@ -5,6 +5,7 @@ import {
 	type AccountMirrorBackfillLedger,
 	normalizeAccountMirrorBackfillLedger,
 } from "./backfillLedger.js";
+import type { AccountMirrorChangeFrontierMetrics } from "./changeFrontierMetrics.js";
 import {
 	type AccountMirrorProviderIndexEpoch,
 	normalizeAccountMirrorProviderIndexEpoch,
@@ -241,6 +242,7 @@ export type AccountMirrorMetadataEvidence = {
 	scrapeBudget?: AccountMirrorScrapeBudgetEvidence | null;
 	conversationFreshnessFrontier?: ConversationFreshnessFrontierEvidence | null;
 	providerIndexEpoch?: AccountMirrorProviderIndexEpoch | null;
+	changeFrontierMetrics?: AccountMirrorChangeFrontierMetrics | null;
 	routeProgress?: AccountMirrorRouteProgressEvidence | null;
 	collectorProgress?: AccountMirrorCollectorPhaseProgressEvidence | null;
 	collectorDiagnostics?: AccountMirrorCollectorDiagnosticEvent[];
@@ -1063,6 +1065,7 @@ function normalizeMetadataEvidence(
 			value.conversationFreshnessFrontier,
 		),
 		providerIndexEpoch: normalizeAccountMirrorProviderIndexEpoch(value.providerIndexEpoch),
+		changeFrontierMetrics: normalizeChangeFrontierMetrics(value.changeFrontierMetrics),
 		routeProgress: normalizeRouteProgressEvidence(value.routeProgress),
 		attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
 		collectorProgress: normalizeCollectorProgressEvidence(value.collectorProgress),
@@ -1072,6 +1075,41 @@ function normalizeMetadataEvidence(
 			projects: value.truncated?.projects === true,
 			conversations: value.truncated?.conversations === true,
 			artifacts: value.truncated?.artifacts === true,
+		},
+	};
+}
+
+function normalizeChangeFrontierMetrics(
+	value: AccountMirrorChangeFrontierMetrics | null | undefined,
+): AccountMirrorChangeFrontierMetrics | null {
+	if (!value || value.version !== 1) return null;
+	return {
+		version: 1,
+		indexRows: normalizeCount(value.indexRows),
+		actions: {
+			skip: normalizeCount(value.actions?.skip),
+			visit_once: normalizeCount(value.actions?.visit_once),
+			materialize_retained: normalizeCount(value.actions?.materialize_retained),
+			defer: normalizeCount(value.actions?.defer),
+			unplanned: normalizeCount(value.actions?.unplanned),
+		},
+		physical: {
+			visits: normalizeCount(value.physical?.visits),
+			navigations: normalizeCount(value.physical?.navigations),
+			reloads: normalizeCount(value.physical?.reloads),
+			snapshotRefreshes: normalizeCount(value.physical?.snapshotRefreshes),
+			artifactResolutions: normalizeCount(value.physical?.artifactResolutions),
+			downloads: normalizeCount(value.physical?.downloads),
+			duplicates: normalizeCount(value.physical?.duplicates),
+		},
+		deferredRows: normalizeCount(value.deferredRows),
+		amplification: {
+			physicalActions: normalizeCount(value.amplification?.physicalActions),
+			perActionableRow:
+				typeof value.amplification?.perActionableRow === "number" &&
+				Number.isFinite(value.amplification.perActionableRow)
+					? Math.max(0, value.amplification.perActionableRow)
+					: 0,
 		},
 	};
 }

@@ -51931,3 +51931,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   persistent asset availability remains intact; mixed results stay deferred.
 - Focused and adjacent coverage passed 213 tests plus typecheck and diff
   hygiene. The production scheduler stayed paused and no provider work ran.
+## 2026-09-30 | Issue 139 amplification and warning evidence
+
+- Current-epoch changed-frontier evidence now aggregates action counts,
+  physical visits/navigation/reloads, snapshot refreshes, artifact resolutions,
+  downloads, duplicates, deferred rows, and a per-actionable-row amplification
+  ratio without conversation identifiers.
+- Provider-warning persistence now adds a versioned classifier signature,
+  sanitized visible summary, source target class, first observation, open-page
+  count, and a capped preceding interaction timeline with timing deltas and
+  cumulative counts. It excludes operation/lease IDs, routes, and content.
+- The 182-test focused provider-free gate, typecheck, and diff hygiene pass.
+  The production scheduler stayed paused and no provider work ran.

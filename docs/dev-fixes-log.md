@@ -23812,3 +23812,10 @@ snapshot epoch.
   upload can be unavailable while an unresolved persistent Library row remains
   unknown, so mixed conversation-level state must remain deferred rather than
   terminal.
+- 2026-09-30: A provider-warning flag alone cannot explain likely rate-limit
+  precursors. Persist a capped sanitized interaction window with timing deltas,
+  action classes, outcomes, open-page count, and cumulative physical counts at
+  first observation. Never place URLs, provider IDs, operation/lease IDs,
+  account data, headers, cookies, or content in that signature. Separately
+  publish current-epoch changed-frontier amplification metrics so deterministic
+  fixtures can compare intended work with physical work.

@@ -91,6 +91,7 @@ export interface AccountMirrorConversationEvidence {
 		checkpointedAt: string;
 		artifactResolutions: number;
 		downloads: number;
+		duplicates: number;
 	} | null;
 }
 
@@ -409,6 +410,9 @@ function mergeConversationEvidence(
 						downloads:
 							existingWorkState.physicalActivity.downloads +
 							Math.max(0, Math.floor(frontierState.downloads)),
+						duplicates:
+							existingWorkState.physicalActivity.duplicates +
+							Math.max(0, Math.floor(frontierState.duplicates)),
 					},
 				}
 			: metadata.changeFrontierState;

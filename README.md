@@ -1046,7 +1046,15 @@ Terminology note:
   admission/start, physical mutation settlement, and a visible warning probe.
   A detected `Too many requests` surface writes both provider-interaction
   warning evidence and the managed browser profile cooldown before later work
-  can proceed.
+  can proceed. The warning evidence includes a versioned classifier, sanitized
+  visible summary, source target class, first observation time, open-page count,
+  and a capped preceding interaction timeline with timing deltas and cumulative
+  navigation/reload/read counts. It excludes URLs, provider identifiers,
+  operation IDs, lease IDs, account data, headers, cookies, and content.
+  Account-mirror refresh evidence also publishes current-epoch changed-frontier
+  action counts, physical visits/navigation/reloads, snapshot refreshes,
+  artifact resolutions, downloads, duplicates, deferred rows, and a bounded
+  amplification ratio.
   Real ChatGPT rate-limit detections retain a bounded 24-hour history per
   browser profile and escalate from 5 to 15 and 45 minutes, capped at six
   hours, so repeated provider limits cannot settle into a fixed short retry

@@ -38,6 +38,7 @@ import {
 	type AccountMirrorPersistence,
 	createAccountMirrorPersistence,
 } from "./cachePersistence.js";
+import { deriveAccountMirrorChangeFrontierMetrics } from "./changeFrontierMetrics.js";
 import { normalizeAccountMirrorConversationWorkState } from "./changeFrontierState.js";
 import {
 	AccountMirrorIdentityMismatchError,
@@ -2157,6 +2158,9 @@ function withRefreshEvidenceModel(input: {
 		metadataCounts: mergedTotal,
 		evidence: {
 			...input.collection.evidence,
+			changeFrontierMetrics: deriveAccountMirrorChangeFrontierMetrics(
+				input.mergedManifests.conversations,
+			),
 			retainedMaterializationConversationIds: deriveRetainedMaterializationConversationIds(
 				input.mergedManifests.conversations,
 			),

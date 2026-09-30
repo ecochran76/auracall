@@ -55,6 +55,7 @@ function work(
 			snapshotRefreshes: 0,
 			artifactResolutions: 0,
 			downloads: 0,
+			duplicates: 0,
 		},
 		lifetimePhysicalActivity: {
 			targetsCreated: 0,
@@ -63,6 +64,7 @@ function work(
 			snapshotRefreshes: 0,
 			artifactResolutions: 0,
 			downloads: 0,
+			duplicates: 0,
 		},
 		...override,
 	};
