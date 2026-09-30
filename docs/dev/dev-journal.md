@@ -51734,3 +51734,20 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   browser-service governor lifecycle.
 - Issue 139 owns the dependent incremental reconciliation algorithm. CDP network
   metering and HTTPS interception remain deferred.
+# 2026-09-29 — Issue 138 provider traffic governor implementation
+
+- Added the provider-neutral `ProviderTrafficGovernor` lifecycle with immutable
+  attribution, fail-closed lease/admission/start ordering, immediate physical
+  settlement, bounded warning probing, durable warning persistence, and
+  same-operation fencing.
+- Threaded the governor through Account Mirror live-follow metadata collection,
+  provider list options, CDP client context, and browser-service navigation and
+  reload/fallback seams. The configured ChatGPT path now verifies the current
+  exact lease generation and writes both ledger warning evidence and the
+  managed browser profile cooldown when the visible rate-limit dialog is found.
+- Provider-free checkpoint validation: 122 focused tests and TypeScript
+  typecheck pass. No browser, provider, scheduler, lease, or installed-runtime
+  effect was performed.
+- Remaining before closeout: govern target creation/reuse and prove prompt,
+  CRUD, and diagnostic paths cannot bypass the lifecycle; add structural
+  inventory coverage and complete adjacent validation.

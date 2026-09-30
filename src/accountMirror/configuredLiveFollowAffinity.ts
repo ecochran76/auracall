@@ -9,7 +9,12 @@ import {
 	type LedgerBackedBrowserInteractionGovernor,
 } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 import type { BrowserOperationAcquiredResult } from "../../packages/browser-service/src/service/operationDispatcher.js";
+import {
+	createProviderTrafficGovernor,
+	type ProviderTrafficGovernor,
+} from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { classifyStructuredProviderWarning } from "../browser/chatgptAffinityRuntime.js";
+import { recordChatgptRateLimitDetection } from "../browser/chatgptRateLimitGuard.js";
 import { retireExpiredChatgptTabLeases } from "../browser/chatgptTabRetirement.js";
 import { BrowserService } from "../browser/service/browserService.js";
 import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
@@ -23,6 +28,7 @@ import { acquireLiveFollowCrawlerTab } from "./liveFollowTabCoordinator.js";
 export interface ConfiguredLiveFollowAffinityContext {
 	tabAffinity: NonNullable<AccountMirrorMetadataCollectorInput["tabAffinity"]>;
 	interactionGovernor: LedgerBackedBrowserInteractionGovernor;
+	providerTrafficGovernor: ProviderTrafficGovernor;
 	operation: BrowserOperationAcquiredResult;
 	completeSuccess(): Promise<void>;
 	completeFailure(error: unknown): Promise<void>;
@@ -181,6 +187,69 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		now: input.now,
 	});
 	let crawlerClaim = crawler.claim;
+	const providerTrafficGovernor = createProviderTrafficGovernor({
+		attribution: {
+			provider: "chatgpt",
+			runtimeProfileId: input.runtimeProfileId,
+			managedBrowserProfile,
+			workloadId: `live-follow:${input.operationId}`,
+			operationId: input.operationId,
+			tabLeaseId: crawler.lease.leaseId,
+		},
+		interactionGovernor,
+		mutationAudit: browserService.getMutationAuditSink(),
+		settleInteraction: (settlement) => interactionGovernor.finish(settlement),
+		probeWarning: async (context) => {
+			const runtimeContext = context as {
+				evaluate?: (input: {
+					expression: string;
+					returnByValue: boolean;
+				}) => Promise<{ result?: { value?: unknown } }>;
+			} | null;
+			if (!runtimeContext?.evaluate) return null;
+			const evaluated = await runtimeContext.evaluate({
+				expression: `(() => Array.from(document.querySelectorAll('[role="dialog"],[aria-modal="true"],[role="alert"],[aria-live]')).filter((node) => { const rect = node.getBoundingClientRect(); return rect.width > 0 && rect.height > 0; }).map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim()).find((text) => /too many requests|making requests too quickly|rate limit/i.test(text))?.slice(0, 240) || null)()`,
+				returnByValue: true,
+			});
+			const reason =
+				typeof evaluated.result?.value === "string" ? evaluated.result.value.trim() : "";
+			return reason ? { classification: "rate-limit", reason } : null;
+		},
+		persistWarning: async (warning) => {
+			const observedAt = (input.now ?? (() => new Date()))();
+			await runtime.ledger?.recordProviderWarning({
+				scope: {
+					provider: "chatgpt",
+					tenantKey,
+					runtimeProfileId: input.runtimeProfileId,
+					managedBrowserProfile,
+				},
+				classification: warning.classification,
+				reason: warning.reason,
+				observedAt: observedAt.toISOString(),
+			});
+			await recordChatgptRateLimitDetection({
+				profileName: input.runtimeProfileId,
+				managedProfileDir: managedBrowserProfile,
+				action: "account-mirror:provider-traffic-governor",
+				reason: warning.reason,
+				now: observedAt.getTime(),
+			});
+			warningRecorded = true;
+		},
+		assertLease: async (attribution) => {
+			const leases = await runtime.registry?.list({ scope, states: ["active"] });
+			const lease = leases?.find((candidate) => candidate.leaseId === attribution.tabLeaseId);
+			if (
+				!lease ||
+				lease.ownerOperationId !== attribution.operationId ||
+				lease.targetId !== crawler.lease.targetId ||
+				lease.revision !== crawlerClaim.revision
+			) {
+				throw new Error("Provider traffic tab lease ownership changed before action.");
+			}
+		},
+	});
 	const recordTargetNavigation = async () => {
 		const recorded = await runtime.registry?.recordTargetAction({
 			claim: crawlerClaim,
@@ -245,6 +314,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			targetId: crawler.lease.targetId,
 		},
 		interactionGovernor,
+		providerTrafficGovernor,
 		operation: {
 			acquired: true,
 			operation: operationRecord,

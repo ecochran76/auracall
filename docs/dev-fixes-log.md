@@ -23713,3 +23713,12 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Guardrail: never treat PID equality alone as browser ownership proof. Keep
   adopted/external browsers non-owned, and retain liveness pruning only as
   abrupt-crash recovery.
+# 2026-09-29 — Provider traffic must have one authoritative lifecycle
+
+Optional pacing and best-effort mutation diagnostics are insufficient safety
+boundaries when provider traffic can originate from background reconciliation.
+A physical provider action must carry immutable runtime/profile/workload/
+operation/tab-lease attribution, verify the current lease generation, complete
+persisted admission and start recording before effect, settle the reservation
+immediately after effect, and durably persist any visible provider warning and
+cooldown before permitting later traffic.
