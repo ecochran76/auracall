@@ -49,6 +49,10 @@ cooldown before any later action can proceed.
   fail-closed admission. Target reuse is admitted before focus/navigation and
   client close releases its authority exactly once; an un-attributable target
   creation or attachment stops before provider effect.
+- The legacy direct browser prompt path now preserves the exact leased governor
+  through local and remote target attachment and assistant-response recovery.
+  Required-authority connection failures no longer fall back to an arbitrary
+  first target.
 
 ## Architecture Contract
 
@@ -95,23 +99,23 @@ cooldown before any later action can proceed.
 
 ## Acceptance Criteria
 
-- [ ] Provider-free reproduction proves a visible post-action ChatGPT warning
+- [x] Provider-free reproduction proves a visible post-action ChatGPT warning
       on scheduler/materialization work was previously absent from both the
       interaction ledger and profile cooldown.
-- [ ] All AuraCall-initiated physical target, navigation, reload, location
+- [x] All AuraCall-initiated physical target, navigation, reload, location
       assignment, and governed in-page actions traverse one browser-service
       governor lifecycle.
-- [ ] Provider work with missing operation or tab-lease attribution fails
+- [x] Provider work with missing operation or tab-lease attribution fails
       before any physical action.
-- [ ] Persisted admission, pacing, and start recording finish before effect;
+- [x] Persisted admission, pacing, and start recording finish before effect;
       an unreadable or unwritable authoritative safety state fails closed.
-- [ ] A detected warning records a sanitized provider warning, persists the
+- [x] A detected warning records a sanitized provider warning, persists the
       profile cooldown, freezes related work, and rejects the next action.
-- [ ] Prompt, live follow, history materialization, CRUD, and diagnostics have
+- [x] Prompt, live follow, history materialization, CRUD, and diagnostics have
       no lower-level provider-work mutation bypass.
-- [ ] Existing effect-state truthfulness, lease generation fencing, terminal
+- [x] Existing effect-state truthfulness, lease generation fencing, terminal
       reconciliation, and `Answer now` prohibition remain green.
-- [ ] Provider-free focused and adjacent validation, typecheck, lint, build,
+- [x] Provider-free focused and adjacent validation, typecheck, lint, build,
       diff hygiene, CodeGraph, and planning/lane audits pass with durable
       receipts.
 
@@ -136,5 +140,22 @@ cooldown before any later action can proceed.
 
 ## Current Next Action
 
-Complete the provider-free comprehensive validation and structural/CodeGraph
-audit, then reconcile the plan, lane, and Issue 138 receipts for integration.
+Publish the provider-free acceptance receipt, review the branch, and integrate
+through the required pull-request path. Installed adoption and live acceptance
+remain explicitly outside this plan.
+
+## Provider-Free Acceptance Receipt
+
+- Source checkpoint: `2f638ac3c`.
+- Focused governor/legacy prompt verification: 72 tests passed across the
+  affected authority, prompt, lease, target-reuse, and structural suites.
+- Comprehensive suite before the final compatibility repair: 3,414 tests
+  passed and 69 skipped. Four change-related failures exposed minimal
+  browser-service test doubles; checkpoint `2f638ac3c` repaired them and the
+  affected 72-test slice passes. The remaining broad-suite exceptions are the
+  two established baseline failures (one structural assertion and one Grok
+  timeout) plus three MCP stdio suites referencing a Node executable removed
+  by the WSL reboot.
+- Typecheck, production build, full lint (zero errors; existing warnings only),
+  and diff hygiene pass. No live provider, browser, scheduler, lease, install,
+  or runtime effect was performed.

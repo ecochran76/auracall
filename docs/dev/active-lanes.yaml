@@ -1561,8 +1561,8 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: null
-    remote_ref: null
+    checkpoint: 2f638ac3c
+    remote_ref: refs/remotes/origin/fix/issue-138-provider-traffic-governor
     integration: merge
     work_items: [ecochran76/auracall#138]
     dependencies: [P78, P79]
@@ -1570,8 +1570,8 @@ lanes:
     reconciled_overlaps: [P78]
     reconciliation_note: P80 generalizes provider-action admission and warning persistence below P78; P78 retains prompt-terminal delayed warning reconciliation.
     blocker: null
-    validation_status: planning
+    validation_status: provider-free-accepted
     validation_ref: docs/dev/plans/0380-2026-09-29-provider-traffic-governor.md
     integration_receipt: null
-    disposition: Provider-free implementation lane; Issue 139 and network metering remain deferred.
+    disposition: Provider-free acceptance complete; awaiting review and pull-request integration. Issue 139 and network metering remain deferred.
     updated_at: 2026-09-29

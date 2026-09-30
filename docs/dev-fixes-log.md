@@ -23731,3 +23731,10 @@ target reuse acquires authority before focus or navigation, and client close
 settles and releases it exactly once. If no exact managed browser profile or
 target lease can be established, fail before the physical action rather than
 falling back to optional pacing or diagnostics.
+
+Legacy prompt execution must carry that exact authority too. Passing a leased
+target while dropping its governor creates an attribution bypass, and recovery
+navigation cannot rely on hidden properties after reducing a CDP client to
+`{ Page, Runtime }`. Thread the governor explicitly through leased execution
+and recovery helpers, and never fall back to an arbitrary first target after a
+required-authority attachment failure.

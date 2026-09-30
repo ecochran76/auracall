@@ -51773,3 +51773,17 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   Missing managed-profile/target authority fails before the physical action.
   Provider-free validation currently passes 312 adjacent adapter/service tests,
   the 9-test authority/runtime slice, typecheck, and exact target-reuse ordering.
+
+- Completion audit found and closed a legacy direct-prompt bypass: the leased
+  governor was discarded before remote execution, recovery refresh rebuilt a
+  partial CDP carrier without authority, and required-authority connection
+  failure could fall back to the first tab. Checkpoint `2f638ac3c` preserves the
+  exact governor through those paths and fails closed instead of cross-target
+  fallback.
+- Final provider-free evidence includes 72 focused/affected passing tests,
+  3,414 comprehensive passing tests with 69 skips, typecheck, production build,
+  full lint with zero errors, and diff hygiene. After repairing four failures
+  caused by minimal test doubles, the broad-suite exceptions are the two known
+  baseline failures (one structural assertion and one Grok timeout) and stale
+  pre-reboot Node executable paths in three MCP stdio suites. No live provider/
+  browser, scheduler, install, or lease effect occurred.
