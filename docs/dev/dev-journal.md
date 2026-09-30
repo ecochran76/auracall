@@ -51864,3 +51864,20 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `unknown` availability rather than falsely terminalizing a persistent file.
 - Focused 93-test materialization/fixture run and TypeScript typecheck pass.
   Next is the P1 durable epoch/work-state schema and migration contract.
+
+## 2026-09-30 | Issue 139 P1 durable epoch and work state
+
+- Added a versioned provider-index epoch containing sanitized scope hashes,
+  index fingerprint, observation time, and project/conversation coverage.
+- Every persisted conversation now carries versioned change-frontier work
+  state: action, outcome, availability, retry/checkpoint fields, and explicit
+  physical targets, navigations, reloads, refreshes, resolutions, and downloads.
+- Same-epoch snapshot rewrites preserve work and counters. A new epoch rolls
+  current physical counters into lifetime totals, resets the row to pending,
+  and retains availability evidence.
+- Legacy, malformed, or missing state migrates conservatively to pending work,
+  unknown availability, and zero counters. Raw account and conversation ids are
+  not retained in the new state keys.
+- Nine focused normalization/persistence tests and TypeScript typecheck pass.
+  This packet remained provider-free and left the scheduler paused. Next is the
+  P2 pure deterministic frontier planner.

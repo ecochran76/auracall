@@ -679,6 +679,15 @@ Terminology note:
   from the visible index row or ChatGPT's local conversation-history metadata;
   a virtualized or textless sidebar row does not by itself reduce the cached
   title to the provider conversation UUID.
+  Each snapshot also records a versioned `providerIndexEpoch`, and each cached
+  conversation carries versioned `changeFrontierState`. These records use
+  hashed identity/conversation scope keys, preserve explicit asset availability
+  (`available`, `unavailable`, or `unknown`), and distinguish current-epoch
+  physical browser activity from lifetime totals. Rewriting the same epoch
+  preserves its checkpoint and counters; the next epoch rolls those counters
+  into lifetime totals and returns the row to pending planning. Existing or
+  malformed cache rows migrate conservatively to pending work with unknown
+  availability and zero physical counters.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>

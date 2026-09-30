@@ -1,10 +1,14 @@
+import type { ProviderSessionProofSummary } from "../browser/providers/providerSessionAuthority.js";
 import { getCurrentRuntimeProfiles, getRuntimeProfileBrowserProfileId } from "../config/model.js";
 import { createConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
-import type { ProviderSessionProofSummary } from "../browser/providers/providerSessionAuthority.js";
 import {
 	type AccountMirrorBackfillLedger,
 	normalizeAccountMirrorBackfillLedger,
 } from "./backfillLedger.js";
+import {
+	type AccountMirrorProviderIndexEpoch,
+	normalizeAccountMirrorProviderIndexEpoch,
+} from "./changeFrontierState.js";
 import type {
 	AccountMirrorCompletionMaterializationAssetKind,
 	AccountMirrorCompletionMaterializationPolicy,
@@ -235,6 +239,7 @@ export type AccountMirrorMetadataEvidence = {
 	assetInventory?: AccountMirrorAssetInventoryEvidence | null;
 	scrapeBudget?: AccountMirrorScrapeBudgetEvidence | null;
 	conversationFreshnessFrontier?: ConversationFreshnessFrontierEvidence | null;
+	providerIndexEpoch?: AccountMirrorProviderIndexEpoch | null;
 	routeProgress?: AccountMirrorRouteProgressEvidence | null;
 	collectorProgress?: AccountMirrorCollectorPhaseProgressEvidence | null;
 	collectorDiagnostics?: AccountMirrorCollectorDiagnosticEvent[];
@@ -1053,6 +1058,7 @@ function normalizeMetadataEvidence(
 		conversationFreshnessFrontier: normalizeConversationFreshnessFrontierEvidence(
 			value.conversationFreshnessFrontier,
 		),
+		providerIndexEpoch: normalizeAccountMirrorProviderIndexEpoch(value.providerIndexEpoch),
 		routeProgress: normalizeRouteProgressEvidence(value.routeProgress),
 		attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
 		collectorProgress: normalizeCollectorProgressEvidence(value.collectorProgress),

@@ -23763,3 +23763,16 @@ Do not infer volatility from a `chatgpt://file/` location alone. ChatGPT
 Library files use provider file identifiers too but are persistent inventory.
 A `library_row_not_found` DOM lookup failure remains `unknown`; only confirmed
 volatile missing/expired evidence becomes non-retryable `unavailable`.
+
+## 2026-09-30 | Roll physical activity across provider-index epochs
+
+Logical frontier-row counts cannot stand in for browser cost. Persist current-
+epoch counts for target creation, navigation, reload, snapshot refresh,
+artifact resolution, and download, then roll them into lifetime totals when a
+new provider-index epoch begins. Same-epoch persistence must be idempotent and
+must not reset completed work or double-count activity.
+
+Treat old or malformed work-state records as pending with unknown availability
+and zero counters. Persist only hashed account/conversation scope keys in the
+frontier state; raw provider identities and conversation identifiers remain in
+their existing governed cache fields, not in operational accounting records.

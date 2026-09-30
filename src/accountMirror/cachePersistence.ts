@@ -19,6 +19,11 @@ import type {
 } from "../browser/providers/domain.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { normalizeAccountMirrorBackfillLedger } from "./backfillLedger.js";
+import {
+	type AccountMirrorProviderIndexEpoch,
+	createAccountMirrorProviderIndexEpoch,
+	rollAccountMirrorConversationWorkState,
+} from "./changeFrontierState.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
 import type {
 	AccountMirrorMetadataCounts,
@@ -157,6 +162,8 @@ export function createAccountMirrorPersistence(input: {
 				provider: record.provider,
 				boundIdentityKey: record.boundIdentityKey,
 			});
+			const epoch = createProviderIndexEpoch(record);
+			const existingConversations = await cacheStore.readConversations(context);
 			const snapshot: AccountMirrorCacheSnapshot = {
 				object: "account_mirror_snapshot",
 				version: 1,
@@ -166,7 +173,9 @@ export function createAccountMirrorPersistence(input: {
 				detectedAccountLevel: record.detectedAccountLevel,
 				collectedAt: record.completedAt,
 				metadataCounts: record.metadataCounts,
-				metadataEvidence: record.metadataEvidence,
+				metadataEvidence: record.metadataEvidence
+					? { ...record.metadataEvidence, providerIndexEpoch: epoch }
+					: null,
 				refresh: {
 					requestId: record.requestId,
 					runtimeProfileId: record.runtimeProfileId,
@@ -179,7 +188,10 @@ export function createAccountMirrorPersistence(input: {
 			};
 			await cacheStore.writeAccountMirrorSnapshot(context, snapshot);
 			await cacheStore.writeProjects(context, record.manifests.projects);
-			await cacheStore.writeConversations(context, annotateSnapshotConversations(record));
+			await cacheStore.writeConversations(
+				context,
+				annotateSnapshotConversations(record, epoch, existingConversations.items),
+			);
 			await cacheStore.writeAccountMirrorArtifacts(context, record.manifests.artifacts);
 			await cacheStore.writeAccountMirrorFiles(context, record.manifests.files);
 			await cacheStore.writeAccountMirrorMedia(context, record.manifests.media);
@@ -386,9 +398,20 @@ function hasConversationContextPayload(context: ConversationContext): boolean {
 	);
 }
 
-function annotateSnapshotConversations(record: AccountMirrorPersistenceRecord): Conversation[] {
+function annotateSnapshotConversations(
+	record: AccountMirrorPersistenceRecord,
+	epoch: AccountMirrorProviderIndexEpoch,
+	existingConversations: readonly Conversation[],
+): Conversation[] {
+	const existingById = new Map(
+		existingConversations.map((conversation) => [conversation.id, conversation]),
+	);
 	return record.manifests.conversations.map((conversation, index) => {
 		const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+		const existingMetadata = isRecord(existingById.get(conversation.id)?.metadata)
+			? existingById.get(conversation.id)?.metadata
+			: {};
+		const conversationFingerprint = fingerprintConversationIndexRow(conversation);
 		return {
 			...conversation,
 			metadata: {
@@ -396,9 +419,31 @@ function annotateSnapshotConversations(record: AccountMirrorPersistenceRecord): 
 				indexObservedAt: record.completedAt,
 				indexSource: conversation.projectId ? "project-conversations" : "left-rail",
 				indexRank: index,
-				conversationFingerprint: fingerprintConversationIndexRow(conversation),
+				conversationFingerprint,
+				changeFrontierState: rollAccountMirrorConversationWorkState({
+					conversation: {
+						...conversation,
+						metadata: { ...metadata, conversationFingerprint },
+					},
+					epoch,
+					previous: existingMetadata?.changeFrontierState,
+				}),
 			},
 		};
+	});
+}
+
+function createProviderIndexEpoch(
+	record: AccountMirrorPersistenceRecord,
+): AccountMirrorProviderIndexEpoch {
+	return createAccountMirrorProviderIndexEpoch({
+		provider: record.provider,
+		runtimeProfileId: record.runtimeProfileId,
+		browserProfileId: record.browserProfileId,
+		boundIdentityKey: record.boundIdentityKey,
+		observedAt: record.completedAt,
+		projectCount: record.manifests.projects.length,
+		conversations: record.manifests.conversations,
 	});
 }
 

@@ -156,7 +156,7 @@ checkpoint schema converge on shared account-mirror types.
    ChatGPT interface as provider-free fixtures and prove redundant
    visit/refresh/materialization behavior. Terminal condition: RED fixtures
    identify exact amplification without live provider work.
-2. **P1 — Durable state.** Add versioned index-epoch and conversation-work
+2. **P1 — Durable state (source complete).** Add versioned index-epoch and conversation-work
    state with migration/default behavior for existing caches. Terminal
    condition: old caches load safely and round-trip the new states.
 3. **P2 — Pure frontier planner.** Implement deterministic action selection,
@@ -247,10 +247,17 @@ amplification signatures, provider work before retained-materialization
 actionability, and persistent-versus-volatile asset outcomes. New job results
 also persist explicit per-entry availability: confirmed volatile misses become
 non-retryable `unavailable`, while persistent Library row lookup failures stay
-`unknown`.
+`unknown`. P1 now persists a sanitized, versioned provider-index epoch with
+coverage and stable fingerprints plus a versioned work record on every cached
+conversation. Same-epoch rewrites preserve action, outcome, checkpoint, and
+physical counters; a later epoch rolls those counters into lifetime totals and
+returns the row to pending planning. Invalid or legacy state loads as the safe
+pending/unknown/zero default. Nine focused persistence and normalization tests,
+including migration and epoch rollover, pass without browser or provider work.
 
 ## Current Next Action
 
-Define the P1 durable epoch/work-state schema, including physical interaction
-counters and the explicit availability state established by P0, then freeze its
-migration/default behavior before implementing the P2 planner.
+Implement the P2 pure frontier planner over the frozen P1 epoch/work-state
+contract. Cover every `skip`, `visit_once`, `materialize_retained`, and `defer`
+edge, retry horizons, stable dedupe, and resumable keyset checkpoints with
+provider-free table-driven tests.
