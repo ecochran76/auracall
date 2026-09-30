@@ -23838,3 +23838,18 @@ snapshot epoch.
   checkpoint skip/defer/materialize decisions even when no detail visit occurs.
   Deferred asset failures must also persist a provider-specific
   `retryNotBefore`; an outcome label alone does not prevent immediate re-entry.
+
+## 2026-09-30 | Exact browser shutdown must retire reusable idle leases
+
+Idling a tab lease is correct while its managed browser remains available for
+reuse. Once bounded cleanup has positively established that the exact owned
+browser process is gone, leaving that lease idle creates a false
+`tab-leases-active` fence for a target that cannot exist.
+
+Keep shutdown proof and lease mutation separate but adjacent. Both metadata and
+history-materialization cleanup call one provider-free reconciliation seam
+while their exact browser-operation fence is still held. That seam resolves the
+configured tenant and exact AuraCall runtime profile plus managed browser
+profile, then uses the registry's ordinary `idle -> retiring -> released`
+transition with `operator` / `already-missing`. Never force-release active,
+in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.

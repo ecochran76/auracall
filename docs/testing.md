@@ -122,6 +122,13 @@
   This proves an explicit one-pass ceiling requests managed-browser cleanup and
   ordinary indefinite live follow retains its existing ownership policy.
 
+- Bounded managed-browser lease-retirement regression (provider-free):
+  `pnpm vitest run tests/browser/configuredChatgptTabMaintenance.test.ts tests/accountMirror/refreshService.test.ts tests/runtime.historyMaterializationService.test.ts`.
+  This proves successful exact ChatGPT browser shutdown retires settled idle
+  crawler and materialization leases through the shared registry state machine.
+  Active, in-flight, outcome-unknown, identity-ambiguous, and unrelated leases
+  remain fenced; the test does not launch a browser or contact ChatGPT.
+
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
 - Browser launch plan contract (provider-free):
   `pnpm vitest run tests/browser/browserLaunchPlan.test.ts tests/browser/browserLaunchPlanStructure.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/configModel.test.ts`.

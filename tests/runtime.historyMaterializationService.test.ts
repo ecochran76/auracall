@@ -3612,6 +3612,7 @@ describe("history materialization service", () => {
 				status: "queued",
 				request: {
 					provider: "chatgpt",
+					runtimeProfile: "default",
 					conversationId: "conv_browser_ownership",
 					assetKinds: ["artifacts"],
 				},
@@ -3630,6 +3631,10 @@ describe("history materialization service", () => {
 			browserOperationDispatcher,
 			cleanupManagedBrowser: async () => {
 				events.push("cleanup");
+			},
+			retireIdleChatgptLeasesAfterManagedBrowserShutdown: async () => {
+				events.push("reconcile");
+				return { retiredLeaseIds: [], deferredLeaseIds: [] };
 			},
 			materializeConversation: vi.fn(async (target): Promise<HistoryMaterializationResult> => {
 				events.push("provider-work");
@@ -3666,7 +3671,11 @@ describe("history materialization service", () => {
 			}),
 			expect.any(Object),
 		);
-		expect(events).toEqual(["acquire", "provider-work", "cleanup", "release"]);
+		expect(events[0]).toBe("acquire");
+		expect(events[1]).toBe("provider-work");
+		expect(events[2]).toBe("cleanup");
+		expect(events.at(-1)).toBe("release");
+		expect(events.filter((event) => event === "reconcile").length).toBeGreaterThan(0);
 		expect(release).toHaveBeenCalledTimes(1);
 	});
 

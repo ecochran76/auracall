@@ -721,6 +721,11 @@ Terminology note:
   deferred rather than falsely making the whole conversation terminal.
   Deferred materialization records the provider-specific failure cooldown as
   its retry-not-before boundary and cannot immediately re-enter the frontier.
+  When an explicitly bounded pass shuts down its exact managed browser,
+  AuraCall also retires settled idle ChatGPT tab leases in that same AuraCall
+  runtime profile, managed browser profile, service, and tenant scope as
+  `already-missing`. Active, in-flight, outcome-unknown, or unrelated leases
+  remain fenced for operator reconciliation rather than being force-released.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>

@@ -51986,3 +51986,28 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The focused regression failed before the fix and passed after it. The
   adjacent completion, refresh, affinity, lease, governor, and warning gate is
   green at 130 tests; broader validation and installed acceptance remain.
+- Issue #146 repair integrated through PR 147 at `939726286` and was installed
+  byte-identically. One direct-CDP bounded canary completed one pass and one
+  selected materialization attempt without a visible rate-limit warning.
+- The canary exposed Issue #148: exact managed-browser cleanup removed the
+  process and listener but left its live-follow and ephemeral leases `idle` for
+  nonexistent targets. Plan 0383 owns immediate post-shutdown retirement; no
+  additional provider canary is authorized or required.
+
+## 2026-09-30 | Issue 148 bounded-cleanup lease retirement
+
+- Confirmed both bounded cleanup paths stopped exact managed Chromium processes
+  without reconciling their reusable idle tab leases.
+- Added one provider-free configured ChatGPT shutdown helper that retires only
+  settled idle leases in the exact runtime/profile/service/tenant scope through
+  `retiring` to `released/already-missing`.
+- Metadata refresh and history materialization now invoke that same helper only
+  after positive process-absence proof and before releasing their browser
+  operation fence. History cleanup also verifies no owned PID remains after
+  termination.
+- The regression failed against the old implementation, then the widened
+  lease/affinity/completion/refresh/materialization suites passed 240/240 with
+  typecheck, production build, affected Biome check, and diff hygiene. Active,
+  outcome-unknown, and unrelated leases remained fenced. Integration, exact
+  install, and local reconciliation of the two canary leases remain; the
+  scheduler stays paused and no provider work is authorized.
