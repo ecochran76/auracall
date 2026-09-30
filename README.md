@@ -688,6 +688,13 @@ Terminology note:
   into lifetime totals and returns the row to pending planning. Existing or
   malformed cache rows migrate conservatively to pending work with unknown
   availability and zero physical counters.
+  Changed-frontier planning is deterministic and provider-free: each row
+  becomes exactly one of `skip`, `visit_once`, `materialize_retained`, or
+  `defer`. Active guards, identity mismatches, and future retry horizons defer;
+  terminal provider/volatile absence skips; changed index evidence visits once;
+  and only current retained detail plus manifest evidence can materialize
+  missing assets without a route visit. Resume checkpoints use the hashed
+  conversation key; an absent checkpoint safely restarts the bounded plan.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>

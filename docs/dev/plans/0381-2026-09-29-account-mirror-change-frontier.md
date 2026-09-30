@@ -159,7 +159,7 @@ checkpoint schema converge on shared account-mirror types.
 2. **P1 — Durable state (source complete).** Add versioned index-epoch and conversation-work
    state with migration/default behavior for existing caches. Terminal
    condition: old caches load safely and round-trip the new states.
-3. **P2 — Pure frontier planner.** Implement deterministic action selection,
+3. **P2 — Pure frontier planner (source complete).** Implement deterministic action selection,
    retry horizons, stable dedupe, and resumable keyset checkpoints. Terminal
    condition: table-driven provider-free tests cover every action/state edge.
 4. **P3 — Once-per-epoch visit bundle.** Have the ChatGPT collector produce
@@ -254,10 +254,17 @@ physical counters; a later epoch rolls those counters into lifetime totals and
 returns the row to pending planning. Invalid or legacy state loads as the safe
 pending/unknown/zero default. Nine focused persistence and normalization tests,
 including migration and epoch rollover, pass without browser or provider work.
+P2 now maps each row to exactly one of `skip`, `visit_once`,
+`materialize_retained`, or `defer`. Its decision precedence protects retry and
+guard horizons, completed/terminal same-epoch rows, identity and availability
+boundaries, changed fingerprints, retained evidence, and unchanged complete
+rows. Stable pseudokeys deduplicate rows and provide an exact resume cursor;
+missing cursors restart safely. Fifteen table-driven planner cases pass without
+browser or provider work.
 
 ## Current Next Action
 
-Implement the P2 pure frontier planner over the frozen P1 epoch/work-state
-contract. Cover every `skip`, `visit_once`, `materialize_retained`, and `defer`
-edge, retry horizons, stable dedupe, and resumable keyset checkpoints with
-provider-free table-driven tests.
+Implement P3 by threading the P2 plan into the collector and producing one
+governed `ConversationVisitBundle` per `visit_once` decision. The bundle must
+carry detail and artifact references plus one physical-visit receipt, and no
+selected row may navigate more than once in the epoch.

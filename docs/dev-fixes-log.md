@@ -23776,3 +23776,16 @@ Treat old or malformed work-state records as pending with unknown availability
 and zero counters. Persist only hashed account/conversation scope keys in the
 frontier state; raw provider identities and conversation identifiers remain in
 their existing governed cache fields, not in operational accounting records.
+
+## 2026-09-30 | Changed fingerprints outrank retained materialization
+
+Choose exactly one changed-frontier action per conversation and order the
+decision guards explicitly. A changed index fingerprint must select one fresh
+visit before missing-asset logic can reuse retained detail or manifest
+evidence; otherwise a stale reference can bypass the route refresh merely
+because local bytes are absent.
+
+Keyset resume must use the persisted pseudokey, not an array offset. Resume
+after an exact key and deduplicate repeated keys without provider work. If the
+checkpoint is absent from the new index, restart the bounded plan and surface
+that fact rather than skipping an unknown prefix.

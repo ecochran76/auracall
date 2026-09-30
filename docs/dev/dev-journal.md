@@ -51881,3 +51881,21 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Nine focused normalization/persistence tests and TypeScript typecheck pass.
   This packet remained provider-free and left the scheduler paused. Next is the
   P2 pure deterministic frontier planner.
+
+## 2026-09-30 | Issue 139 P2 pure changed-frontier planner
+
+- Added a provider-free planner that maps every row to exactly one of `skip`,
+  `visit_once`, `materialize_retained`, or `defer` with a durable reason and
+  hashed checkpoint key.
+- Decision precedence stops active retry horizons and provider guards, retains
+  same-epoch complete/terminal work, defers identity mismatches, and skips
+  confirmed provider or volatile absence.
+- Changed index fingerprints force a fresh visit before retained evidence can
+  be consumed. Missing assets use `materialize_retained` only when current
+  detail and manifest evidence are both present.
+- Duplicate pseudokeys never create a second provider action. Exact keyset
+  checkpoints resume after completed work; an absent key safely restarts the
+  bounded row set rather than silently dropping work.
+- Fifteen table-driven planner cases plus the P1 state and legacy freshness
+  suites pass. No browser/provider action occurred; the scheduler remains
+  paused. Next is P3 once-per-epoch visit-bundle integration.
