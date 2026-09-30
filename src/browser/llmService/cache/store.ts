@@ -1,6 +1,6 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import type {
   Conversation,
   ConversationArtifact,
@@ -55,6 +55,22 @@ export interface CachedConversationContextEntry {
   path: string | null;
 }
 
+interface AccountMirrorCacheProviderIndexEpoch {
+  object: 'account_mirror_provider_index_epoch';
+  version: 1;
+  epochId: string;
+  provider: 'chatgpt' | 'gemini' | 'grok';
+  runtimeProfileId: string;
+  browserProfileId: string | null;
+  identityScopeHash: string;
+  observedAt: string;
+  indexFingerprint: string;
+  coverage: {
+    conversations: number;
+    projects: number;
+  };
+}
+
 const ACCOUNT_FILES_ENTITY_ID = '__account__';
 const ACCOUNT_MIRROR_ENTITY_ID = '__mirror__';
 const ACCOUNT_MIRROR_ARTIFACTS_ENTITY_ID = '__mirror_artifacts__';
@@ -80,6 +96,7 @@ export interface AccountMirrorCacheSnapshot {
     identitySource: string | null;
     projectSampleIds: string[];
     conversationSampleIds: string[];
+    providerIndexEpoch?: AccountMirrorCacheProviderIndexEpoch | null;
     attachmentInventory?: {
       nextProjectIndex: number;
       nextConversationIndex: number;

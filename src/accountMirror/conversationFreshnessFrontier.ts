@@ -21,12 +21,16 @@ export type ConversationFreshnessFrontierRowDecision = "selected" | "fresh-front
 
 export interface ConversationFreshnessFrontierCachedSummary {
 	conversationId: string;
+	conversationFingerprint?: string;
 	detailObservedAt: string | null;
+	detailCompleteness?: AccountMirrorConversationFreshness["detailCompleteness"];
 	manifestObservedAt: string | null;
 	freshnessState: AccountMirrorConversationFreshnessState | "unknown";
 	routeabilityState: AccountMirrorConversationFreshness["routeabilityState"];
 	assetCompleteness: AccountMirrorConversationFreshness["assetCompleteness"];
 	missingLocalCount: number;
+	knownAssetCount?: number;
+	localAssetCount?: number;
 	incompleteDetailChunk: boolean;
 }
 
@@ -74,12 +78,16 @@ export function buildConversationFreshnessSummaryMap(
 		if (!freshness) continue;
 		summaries.set(conversationId, {
 			conversationId,
+			conversationFingerprint: freshness.conversationFingerprint,
 			detailObservedAt: freshness.detailObservedAt,
+			detailCompleteness: freshness.detailCompleteness,
 			manifestObservedAt: freshness.manifestObservedAt,
 			freshnessState: freshness.state,
 			routeabilityState: freshness.routeabilityState,
 			assetCompleteness: freshness.assetCompleteness,
 			missingLocalCount: Math.max(0, Math.floor(freshness.assetCounts.missingLocal)),
+			knownAssetCount: Math.max(0, Math.floor(freshness.assetCounts.known)),
+			localAssetCount: Math.max(0, Math.floor(freshness.assetCounts.local)),
 			incompleteDetailChunk: false,
 		});
 	}

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+	buildLiveFollowWarningEvidence,
 	classifyLiveFollowFailureEffectState,
 	classifyLiveFollowWarning,
 } from "../../src/accountMirror/configuredLiveFollowAffinity.js";
@@ -23,6 +24,18 @@ describe("configured live-follow affinity", () => {
 		expect(classifyLiveFollowWarning(error)).toEqual({
 			classification: "rate-limit",
 			reason: "ChatGPT requests-too-quickly warning detected.",
+		});
+	});
+
+	test("builds privacy-bounded warning evidence without provider identifiers", () => {
+		expect(
+			buildLiveFollowWarningEvidence({ reason: "Too many requests; temporarily limited." }, 7),
+		).toEqual({
+			classifierVersion: "chatgpt-visible-blocking-surface-v1",
+			visibleSummary: "Too many requests; temporarily limited.",
+			sourceTargetClass: "leased-page",
+			openTargetCount: 7,
+			resourcePathClasses: [],
 		});
 	});
 });

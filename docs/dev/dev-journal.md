@@ -51818,3 +51818,140 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `fcf388fe8c9ffc56279d5952beff9a31abc22219`. Issue 139 and Plan 0381 remain
   open for provider-free implementation; planning integration does not claim
   the algorithm is repaired.
+
+## 2026-09-30 | Issue 139 direct-CDP algorithm survey
+
+- Installed current main, kept the production account-mirror scheduler paused,
+  and ran a bounded isolated API proof against AuraCall runtime profile
+  `wsl-chrome-3`. The proof server was stopped afterward.
+- Added a sanitized CDP capture harness and recorded every ChatGPT page
+  target's Network/Page/Runtime events while polling the visible DOM for the
+  known `Too many requests` dialog. No warning or verification surface appeared.
+- Two one-item detail passes deterministically caused three same-conversation
+  navigations and 888/853 requests. This disproves the earlier one-item/one-read
+  cost model and establishes full-page hydration as the dominant amplification.
+- A retained reconciliation still caused 239 requests before making zero asset
+  attempts. A persistent Library lookup caused 293 requests before a terminal
+  `library_row_not_found` failure.
+- Four volatile upload probes stopped locally with zero provider requests. The
+  sampled skip was backed by exact older `tile_not_found` evidence, but that
+  evidence is only a failed child beneath a succeeded job and has no explicit
+  `unavailable`, failure-kind, or retryability value.
+- Current installed browser retirement cleaned stale ownership left by the
+  older runtime. Historical tab-lease ledger rows were not misreported as
+  active leases.
+- Durable sanitized analysis:
+  `docs/dev/notes/2026-09-30-issue139-live-algorithm-cdp-survey.md`.
+- Next: encode these observed branches as provider-free P0 fixtures, then make
+  physical visits and asset availability explicit planner state.
+
+## 2026-09-30 | Issue 139 P0 fixture and volatile availability contract
+
+- Added a compact provider-free fixture derived from the direct-CDP survey. It
+  freezes both 853/888-request detail passes, their three same-conversation
+  navigations, retained provider work with zero asset attempts, persistent
+  Library retrieval failure, volatile terminal skip, and absence of a visible
+  rate-limit warning.
+- Added deterministic tests proving the logical two-interaction model
+  undercounts physical detail work and that retained materialization reaches
+  the provider before actionability is known.
+- Detailed materialization entries now carry explicit `assetAvailability`.
+  Materialized/duplicate assets are `available`; confirmed volatile missing
+  assets are `unavailable`, `provider_unavailable`, and non-retryable; other
+  failures are `unknown`.
+- Kept persistent ChatGPT Library `library_row_not_found` distinct from volatile
+  terminal absence. A missing Library DOM row remains a retrieval failure with
+  `unknown` availability rather than falsely terminalizing a persistent file.
+- Focused 93-test materialization/fixture run and TypeScript typecheck pass.
+  Next is the P1 durable epoch/work-state schema and migration contract.
+
+## 2026-09-30 | Issue 139 P1 durable epoch and work state
+
+- Added a versioned provider-index epoch containing sanitized scope hashes,
+  index fingerprint, observation time, and project/conversation coverage.
+- Every persisted conversation now carries versioned change-frontier work
+  state: action, outcome, availability, retry/checkpoint fields, and explicit
+  physical targets, navigations, reloads, refreshes, resolutions, and downloads.
+- Same-epoch snapshot rewrites preserve work and counters. A new epoch rolls
+  current physical counters into lifetime totals, resets the row to pending,
+  and retains availability evidence.
+- Legacy, malformed, or missing state migrates conservatively to pending work,
+  unknown availability, and zero counters. Raw account and conversation ids are
+  not retained in the new state keys.
+- Nine focused normalization/persistence tests and TypeScript typecheck pass.
+  This packet remained provider-free and left the scheduler paused. Next is the
+  P2 pure deterministic frontier planner.
+
+## 2026-09-30 | Issue 139 P2 pure changed-frontier planner
+
+- Added a provider-free planner that maps every row to exactly one of `skip`,
+  `visit_once`, `materialize_retained`, or `defer` with a durable reason and
+  hashed checkpoint key.
+- Decision precedence stops active retry horizons and provider guards, retains
+  same-epoch complete/terminal work, defers identity mismatches, and skips
+  confirmed provider or volatile absence.
+- Changed index fingerprints force a fresh visit before retained evidence can
+  be consumed. Missing assets use `materialize_retained` only when current
+  detail and manifest evidence are both present.
+- Duplicate pseudokeys never create a second provider action. Exact keyset
+  checkpoints resume after completed work; an absent key safely restarts the
+  bounded row set rather than silently dropping work.
+- Fifteen table-driven planner cases plus the P1 state and legacy freshness
+  suites pass. No browser/provider action occurred; the scheduler remains
+  paused. Next is P3 once-per-epoch visit-bundle integration.
+
+## 2026-09-30 | Issue 139 P3 single-visit bundle and receipt
+
+- The collector now creates the exact provider-index epoch immediately after
+  shared index acquisition and passes it through every selected ChatGPT detail
+  read and later persistence.
+- One coalesced context read returns one `ConversationVisitBundle` containing
+  detail completeness/fingerprint, artifact and file refs, route evidence, and
+  per-row target, navigation, and reload counts.
+- Account-mirror reads no longer force the conversation payload route after a
+  failed in-page fetch, reload transient blocking surfaces, or reopen the
+  conversation during the same logical visit. Non-account-mirror fallback
+  behavior remains available and now records its physical mutations.
+- More than one recorded navigation in a row fails closed. Persistence accepts
+  only a matching-epoch bundle and checkpoints its visit action/outcome,
+  detail fingerprint, and physical counters; stale bundles cannot contaminate
+  a later epoch.
+- The affected collector, ChatGPT adapter, refresh, persistence, and bundle
+  suites pass 283/283 with TypeScript and diff hygiene. This packet remained
+  provider-free; the scheduler remains paused. Next is P4 retained-evidence
+  materialization without a second snapshot refresh.
+## 2026-09-30 | Issue 139 retained-evidence materialization
+
+- Durable detail fingerprints now nominate retained snapshot evidence for
+  completion-owned materialization, deduplicated with current-pass detail rows.
+  The history materializer consumes that evidence without reopening or
+  refreshing the conversation when no new snapshot is required.
+- Materialization checkpoints row action/outcome, aggregate availability, and
+  physical artifact-resolution/download counters. Individual volatile and
+  persistent asset availability remains intact; mixed results stay deferred.
+- Focused and adjacent coverage passed 213 tests plus typecheck and diff
+  hygiene. The production scheduler stayed paused and no provider work ran.
+## 2026-09-30 | Issue 139 amplification and warning evidence
+
+- Current-epoch changed-frontier evidence now aggregates action counts,
+  physical visits/navigation/reloads, snapshot refreshes, artifact resolutions,
+  downloads, duplicates, deferred rows, and a per-actionable-row amplification
+  ratio without conversation identifiers.
+- Provider-warning persistence now adds a versioned classifier signature,
+  sanitized visible summary, source target class, first observation, open-page
+  count, and a capped preceding interaction timeline with timing deltas and
+  cumulative counts. It excludes operation/lease IDs, routes, and content.
+- The 182-test focused provider-free gate, typecheck, and diff hygiene pass.
+  The production scheduler stayed paused and no provider work ran.
+## 2026-09-30 | Issue 139 authoritative planner integration
+
+- P6 discovered that the pure changed-frontier planner had no production
+  caller. Steady live follow now invokes it after the shared provider-index
+  epoch; only changed rows enter detail work, retained rows bypass it, and
+  complete/deferred/terminal decisions are checkpointed without route work.
+- Unmigrated rows retain one compatibility pass through the legacy selector;
+  explicit full sweeps preserve their existing all-row behavior. Deferred
+  materialization writes the provider failure cooldown to `retryNotBefore`.
+- The integrated provider-free gate passed 505 tests, typecheck, production
+  build, affected formatting/lint, diff hygiene, and active-plan audit with
+  zero errors. The scheduler remained paused; no provider work ran.

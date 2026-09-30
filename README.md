@@ -679,6 +679,48 @@ Terminology note:
   from the visible index row or ChatGPT's local conversation-history metadata;
   a virtualized or textless sidebar row does not by itself reduce the cached
   title to the provider conversation UUID.
+  Each snapshot also records a versioned `providerIndexEpoch`, and each cached
+  conversation carries versioned `changeFrontierState`. These records use
+  hashed identity/conversation scope keys, preserve explicit asset availability
+  (`available`, `unavailable`, or `unknown`), and distinguish current-epoch
+  physical browser activity from lifetime totals. Rewriting the same epoch
+  preserves its checkpoint and counters; the next epoch rolls those counters
+  into lifetime totals and returns the row to pending planning. Existing or
+  malformed cache rows migrate conservatively to pending work with unknown
+  availability and zero physical counters.
+  Changed-frontier planning is deterministic and provider-free: each row
+  becomes exactly one of `skip`, `visit_once`, `materialize_retained`, or
+  `defer`. Active guards, identity mismatches, and future retry horizons defer;
+  terminal provider/volatile absence skips; changed index evidence visits once;
+  and only current retained detail plus manifest evidence can materialize
+  missing assets without a route visit. Resume checkpoints use the hashed
+  conversation key; an absent checkpoint safely restarts the bounded plan.
+  For steady live follow, this plan is authoritative once a cached row has
+  migrated work state. Changed rows alone enter the detail reader; retained-
+  asset rows proceed directly to materialization; complete, terminal, guarded,
+  and retry-delayed rows do not enter route work. Legacy rows use the prior
+  freshness selector for one migration pass, while explicit full sweeps retain
+  their existing all-row semantics. Non-visit decisions are checkpointed with
+  the epoch so interruption does not reset completed work.
+  A selected ChatGPT detail row produces one `ConversationVisitBundle` that
+  carries detail completeness, a sanitized detail fingerprint, artifact/file
+  references, route evidence, and its own physical target/navigation/reload
+  receipt. Account-mirror reads prohibit the forced payload-route fallback,
+  transient-surface reload, and conversation reopen after that route visit.
+  More than one recorded navigation for a row fails closed. Matching-epoch
+  bundles checkpoint their action, outcome, fingerprint, and physical counters
+  into durable work state; stale-epoch bundles are ignored.
+  A durable detail fingerprint also marks that conversation as eligible for
+  retained-snapshot materialization. Completion combines those retained rows
+  with rows visited in the current pass, so asset work consumes cached detail
+  and manifest evidence without reopening or refreshing the conversation.
+  Materialization checkpoints the aggregate row outcome and physical artifact
+  resolution/download counters. Per-entry availability remains authoritative:
+  confirmed missing volatile uploads are `unavailable`, while an unresolved
+  persistent Library row remains `unknown`; a mixed result therefore stays
+  deferred rather than falsely making the whole conversation terminal.
+  Deferred materialization records the provider-specific failure cooldown as
+  its retry-not-before boundary and cannot immediately re-enter the frontier.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>
@@ -758,8 +800,18 @@ Terminology note:
   asset transfer failure makes both the result and durable job `failed`, even
   when another selected asset materializes. Synthetic terminal routeability
   placeholders and provider-guard evidence retain their dedicated semantics;
-  they are not reclassified as ordinary transfer failures. A completion-owned
-  failed job with zero verified materializations blocks its live-follow
+  they are not reclassified as ordinary transfer failures.
+  Detailed materialization results also expose per-entry `assetAvailability`:
+  `available` for materialized or duplicate local assets, `unavailable` for a
+  confirmed missing volatile provider asset, and `unknown` when failure does
+  not prove terminal absence. Confirmed volatile misses default to
+  `failureKind: "provider_unavailable"` and `retryable: false`. A persistent
+  ChatGPT Library `library_row_not_found` lookup remains `unknown`; a missing
+  rendered Library row is not evidence that the provider file ceased to exist.
+  Legacy jobs without this field retain their original reason-based terminal
+  compatibility.
+
+  A completion-owned failed job with zero verified materializations blocks its live-follow
   operation before another provider pass; inspect and correct the
   materialization or account/browser condition, then start a fresh bounded
   operation rather than relying on automatic retry. When the same failed job
@@ -1003,7 +1055,15 @@ Terminology note:
   admission/start, physical mutation settlement, and a visible warning probe.
   A detected `Too many requests` surface writes both provider-interaction
   warning evidence and the managed browser profile cooldown before later work
-  can proceed.
+  can proceed. The warning evidence includes a versioned classifier, sanitized
+  visible summary, source target class, first observation time, open-page count,
+  and a capped preceding interaction timeline with timing deltas and cumulative
+  navigation/reload/read counts. It excludes URLs, provider identifiers,
+  operation IDs, lease IDs, account data, headers, cookies, and content.
+  Account-mirror refresh evidence also publishes current-epoch changed-frontier
+  action counts, physical visits/navigation/reloads, snapshot refreshes,
+  artifact resolutions, downloads, duplicates, deferred rows, and a bounded
+  amplification ratio.
   Real ChatGPT rate-limit detections retain a bounded 24-hour history per
   browser profile and escalate from 5 to 15 and 45 minutes, capped at six
   hours, so repeated provider limits cannot settle into a fixed short retry

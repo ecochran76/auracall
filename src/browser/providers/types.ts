@@ -79,6 +79,8 @@ export interface BrowserProviderListOptions {
 	disableProjectClickFallback?: boolean;
 	abortSignal?: AbortSignal;
 	accountMirrorInventory?: boolean;
+	/** Prevent a detail read from force-navigating an already admitted conversation route again. */
+	accountMirrorSingleConversationVisit?: boolean;
 	accountMirrorContextChunk?: {
 		startMessageIndex?: number | null;
 		maxMessages?: number | null;

@@ -23738,3 +23738,91 @@ navigation cannot rely on hidden properties after reducing a CDP client to
 `{ Page, Runtime }`. Thread the governor explicitly through leased execution
 and recovery helpers, and never fall back to an arbitrary first target after a
 required-authority attachment failure.
+
+## 2026-09-30 | Count physical browser work, not logical frontier rows
+
+A bounded frontier does not imply bounded provider traffic. Direct CDP evidence
+showed one account-mirror detail row navigating to the same ChatGPT conversation
+three times and producing more than 850 requests because each route visit
+rehydrated the application. Likewise, a retained materialization performed
+provider work before discovering that it had no actionable asset attempt.
+
+Admission and acceptance metrics must therefore count physical navigations,
+reloads, target creation, and artifact-resolution attempts. Select actionable
+work locally before opening the provider, reuse one loaded conversation visit
+bundle throughout detail and materialization, and reject any implementation
+whose logical item limit can still multiply into unbounded physical work.
+
+Volatile asset terminality is a separate state from aggregate job success. A
+`tile_not_found`, expired, missing, or provider-unavailable asset should persist
+an explicit `unavailable` availability value plus failure class and retryability.
+Do not hide that child state beneath a succeeded parent or rely on a free-text
+reason as the only durable availability signal.
+
+Do not infer volatility from a `chatgpt://file/` location alone. ChatGPT
+Library files use provider file identifiers too but are persistent inventory.
+A `library_row_not_found` DOM lookup failure remains `unknown`; only confirmed
+volatile missing/expired evidence becomes non-retryable `unavailable`.
+
+## 2026-09-30 | Roll physical activity across provider-index epochs
+
+Logical frontier-row counts cannot stand in for browser cost. Persist current-
+epoch counts for target creation, navigation, reload, snapshot refresh,
+artifact resolution, and download, then roll them into lifetime totals when a
+new provider-index epoch begins. Same-epoch persistence must be idempotent and
+must not reset completed work or double-count activity.
+
+Treat old or malformed work-state records as pending with unknown availability
+and zero counters. Persist only hashed account/conversation scope keys in the
+frontier state; raw provider identities and conversation identifiers remain in
+their existing governed cache fields, not in operational accounting records.
+
+## 2026-09-30 | Changed fingerprints outrank retained materialization
+
+Choose exactly one changed-frontier action per conversation and order the
+decision guards explicitly. A changed index fingerprint must select one fresh
+visit before missing-asset logic can reuse retained detail or manifest
+evidence; otherwise a stale reference can bypass the route refresh merely
+because local bytes are absent.
+
+Keyset resume must use the persisted pseudokey, not an array offset. Resume
+after an exact key and deduplicate repeated keys without provider work. If the
+checkpoint is absent from the new index, restart the bounded plan and surface
+that fact rather than skipping an unknown prefix.
+
+## 2026-09-30 | One detail row must own one route visit bundle
+
+Coalescing file and artifact reads into a context API is insufficient if the
+provider adapter can still force-navigate the same conversation for payload
+fallback or recovery. Account-mirror detail reads must prohibit route-bound
+payload fallback, transient-surface reload, and conversation reopen after the
+admitted visit. Prefer the already loaded DOM and defer incomplete evidence to
+a later epoch.
+
+Measure physical work around each context read, not only at pass level. Bind
+detail completeness, a sanitized fingerprint, artifact/file refs, and target,
+navigation, and reload deltas into one visit bundle. Fail closed on multiple
+navigations and persist bundle counters only when its epoch exactly matches the
+snapshot epoch.
+- 2026-09-30: A durable detail fingerprint is reusable materialization
+  evidence, not a reason to reopen the provider conversation. Carry retained
+  fingerprint rows into completion-owned materialization, deduplicate them with
+  current-pass visits, and checkpoint artifact-resolution/download counters.
+  Keep availability authoritative per entry: a confirmed missing volatile
+  upload can be unavailable while an unresolved persistent Library row remains
+  unknown, so mixed conversation-level state must remain deferred rather than
+  terminal.
+- 2026-09-30: A provider-warning flag alone cannot explain likely rate-limit
+  precursors. Persist a capped sanitized interaction window with timing deltas,
+  action classes, outcomes, open-page count, and cumulative physical counts at
+  first observation. Never place URLs, provider IDs, operation/lease IDs,
+  account data, headers, cookies, or content in that signature. Separately
+  publish current-epoch changed-frontier amplification metrics so deterministic
+  fixtures can compare intended work with physical work.
+- 2026-09-30: A pure planner and comprehensive unit table do not change runtime
+  behavior unless the collector calls that planner and persists every decision.
+  Wire deterministic selection immediately after the shared index epoch, keep
+  legacy selection only as an explicit migration/full-sweep boundary, and
+  checkpoint skip/defer/materialize decisions even when no detail visit occurs.
+  Deferred asset failures must also persist a provider-specific
+  `retryNotBefore`; an outcome label alone does not prevent immediate re-entry.

@@ -815,8 +815,12 @@ export function createAccountMirrorCompletionService(input: {
 				if (refreshed && queuedCompletionMaterialization) {
 					await queueCompletionMaterialization(refreshed, {
 						reuseSnapshotAfter: refresh.startedAt,
-						reuseSnapshotConversationIds:
-							refresh.metadataEvidence?.detailConversationIdsThisPass ?? [],
+						reuseSnapshotConversationIds: [
+							...new Set([
+								...(refresh.metadataEvidence?.detailConversationIdsThisPass ?? []),
+								...(refresh.metadataEvidence?.retainedMaterializationConversationIds ?? []),
+							]),
+						],
 						interactionPolicy: materializationInteractionPolicy(refreshedStatusEntry),
 						providerWorkNotBefore: materializationProviderWorkNotBefore(
 							refresh,

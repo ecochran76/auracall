@@ -25,6 +25,7 @@ import {
 	type AccountMirrorCatalogService,
 	createAccountMirrorCatalogService,
 } from "../accountMirror/catalogService.js";
+import { getDefaultAccountMirrorPolitenessPolicy } from "../accountMirror/politePolicy.js";
 import { accountMirrorIdentityKeysMatch } from "../accountMirror/tenantBinding.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import { DEFAULT_CONVERSATION_CONTEXT_TIMEOUT_MS } from "../browser/llmService/llmService.js";
@@ -152,6 +153,7 @@ export interface HistoryMaterializationManifestEntry {
 	size: number | null;
 	materializationMethod: string | null;
 	reason: string | null;
+	assetAvailability?: "available" | "unavailable" | "unknown";
 	failureKind?: "provider_unavailable" | "retrieval_failed" | null;
 	retryable?: boolean | null;
 	archiveItemId: string | null;
@@ -1224,12 +1226,13 @@ export function createHistoryMaterializationService(
 						await releaseHistoryMaterializationBrowserOperations(browserOperations);
 					}
 				});
+				const availabilityResult = withExplicitAssetAvailability(materializationResult);
 				const result: HistoryMaterializationResult = {
-					...materializationResult,
-					status: resolveHistoryMaterializationJobResultStatus(materializationResult),
+					...availabilityResult,
+					status: resolveHistoryMaterializationJobResultStatus(availabilityResult),
 					providerSessionProof:
 						providerWorkContext(running.id, running.request).providerSessionProofSummary ??
-						materializationResult.providerSessionProof ??
+						availabilityResult.providerSessionProof ??
 						null,
 				};
 				if (historyMaterializationResultHasProviderGuard(result)) {
@@ -4000,13 +4003,37 @@ function evidenceFromMaterializationResult(
 		(entry) => entry.status === "materialized",
 	).length;
 	const duplicateAliasCount = result.entries.filter((entry) => entry.status === "duplicate").length;
+	const unavailableCount = result.entries.filter(
+		(entry) =>
+			entry.assetAvailability === "unavailable" || entry.failureKind === "provider_unavailable",
+	).length;
+	const completedCount = materializedCount + duplicateAliasCount;
+	const terminal = entryCount > 0 && unavailableCount === entryCount;
+	const complete = entryCount > 0 && completedCount === entryCount;
+	const deferredRetryNotBefore =
+		!terminal && !complete
+			? new Date(
+					Date.parse(result.generatedAt) +
+						(result.target
+							? getDefaultAccountMirrorPolitenessPolicy(result.target.provider)
+									.failureBaseCooldownMs
+							: 2 * 60_000),
+				).toISOString()
+			: null;
 	return {
 		manifestObservedAt: result.generatedAt,
 		materializedAt: materializedCount > 0 ? result.generatedAt : undefined,
-		assetCompleteness:
-			entryCount > 0 && materializedCount + duplicateAliasCount === entryCount
-				? "complete"
-				: undefined,
+		assetCompleteness: complete ? "complete" : undefined,
+		frontierState: {
+			action: "materialize_retained",
+			outcome: terminal ? "terminal" : complete ? "complete" : "deferred",
+			assetAvailability: terminal ? "unavailable" : complete ? "available" : "unknown",
+			retryNotBefore: deferredRetryNotBefore,
+			checkpointedAt: result.generatedAt,
+			artifactResolutions: entryCount,
+			downloads: materializedCount,
+			duplicates: duplicateAliasCount,
+		},
 	};
 }
 
@@ -5335,6 +5362,7 @@ async function materializedAccountLibraryFileFamilySignatures(input: {
 }
 
 function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEntry): boolean {
+	if (entry.assetAvailability === "unavailable") return true;
 	if (entry.status !== "failed" && entry.status !== "skipped") return false;
 	if (
 		!isVolatileProviderAssetLocation(entry.remoteUrl) &&
@@ -5343,6 +5371,9 @@ function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEn
 		return false;
 	}
 	const reason = entry.reason?.trim().toLowerCase() ?? "";
+	// Account Library rows are persistent provider inventory. A missing DOM row
+	// is a retrieval failure, not proof that the underlying file is gone.
+	if (reason.includes("library_row_not_found")) return false;
 	if (!reason) return true;
 	return (
 		reason.includes("expired") ||
@@ -5353,6 +5384,28 @@ function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEn
 		reason.includes("tile_not_found") ||
 		reason.includes("archive_linkage_missing")
 	);
+}
+
+function withExplicitAssetAvailability(
+	result: HistoryMaterializationResult,
+): HistoryMaterializationResult {
+	return {
+		...result,
+		entries: result.entries.map((entry) => {
+			if (entry.status === "materialized" || entry.status === "duplicate") {
+				return { ...entry, assetAvailability: "available" as const };
+			}
+			if (isConfirmedVolatileMissingEntry(entry)) {
+				return {
+					...entry,
+					assetAvailability: "unavailable" as const,
+					failureKind: entry.failureKind ?? "provider_unavailable",
+					retryable: entry.retryable ?? false,
+				};
+			}
+			return { ...entry, assetAvailability: "unknown" as const };
+		}),
+	};
 }
 
 function isVolatileProviderAssetLocation(value: string | null | undefined): boolean {

@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "kind": "account-mirror-cdp-capture",
+  "startedAt": "2026-09-30T14:08:06.164Z",
+  "completedAt": "2026-09-30T14:08:07.502Z",
+  "scope": {
+    "provider": "chatgpt",
+    "runtimeProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "wsl-chrome-3/chatgpt",
+    "requestedPhase": "detail-inventory",
+    "mode": "materialize-retained",
+    "maxConversations": 1,
+    "maxPasses": 1,
+    "scheduler": "isolated-disabled"
+  },
+  "targets": {
+    "before": 12,
+    "after": 12
+  },
+  "warning": null,
+  "run": {
+    "status": "queued",
+    "startedAt": null,
+    "completedAt": null,
+    "attemptCount": 0,
+    "error": null,
+    "message": "History materialization job queued.",
+    "metrics": null,
+    "candidateFunnel": null,
+    "snapshotRefresh": null,
+    "manifest": [],
+    "scrapeTelemetry": null
+  },
+  "metrics": {
+    "eventCount": 14,
+    "requestCount": 0,
+    "navigationCount": 0,
+    "routeCounts": []
+  },
+  "events": [
+    {
+      "at": "2026-09-30T14:08:06.253Z",
+      "elapsedMs": 90,
+      "kind": "cdp.target.attached",
+      "targetKey": "5c439fed7780",
+      "route": "/c/:conversation",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.260Z",
+      "elapsedMs": 96,
+      "kind": "cdp.target.attached",
+      "targetKey": "6399de340239",
+      "route": "/c/:conversation",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.267Z",
+      "elapsedMs": 103,
+      "kind": "cdp.target.attached",
+      "targetKey": "b9ac6b82ae3b",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.271Z",
+      "elapsedMs": 107,
+      "kind": "cdp.target.attached",
+      "targetKey": "c8b24f09de31",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.278Z",
+      "elapsedMs": 114,
+      "kind": "cdp.target.attached",
+      "targetKey": "1bd30ca1f321",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.281Z",
+      "elapsedMs": 117,
+      "kind": "cdp.target.attached",
+      "targetKey": "df67225997ae",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.285Z",
+      "elapsedMs": 121,
+      "kind": "cdp.target.attached",
+      "targetKey": "fcd9492ceb82",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.290Z",
+      "elapsedMs": 126,
+      "kind": "cdp.target.attached",
+      "targetKey": "8ce79bdee85e",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.295Z",
+      "elapsedMs": 131,
+      "kind": "cdp.target.attached",
+      "targetKey": "82dd2b6e78af",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.303Z",
+      "elapsedMs": 139,
+      "kind": "cdp.target.attached",
+      "targetKey": "2b6b1c400581",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.306Z",
+      "elapsedMs": 142,
+      "kind": "cdp.target.attached",
+      "targetKey": "a8fe20c689aa",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.310Z",
+      "elapsedMs": 146,
+      "kind": "cdp.target.attached",
+      "targetKey": "7fcce7940d92",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:06.311Z",
+      "elapsedMs": 147,
+      "kind": "capture.started",
+      "targetCount": 12
+    },
+    {
+      "at": "2026-09-30T14:08:07.472Z",
+      "elapsedMs": 1308,
+      "kind": "materialization-run.started",
+      "refreshSnapshot": false,
+      "maxItems": 1,
+      "reused": false
+    }
+  ]
+}

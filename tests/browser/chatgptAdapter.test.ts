@@ -69,7 +69,6 @@ import {
 	recordChatgptTargetNavigationForTest,
 	recordChatgptTargetSessionForTest,
 	recoverVisibleChatgptBlockingSurfaceWithClientForTest,
-	runWithChatgptAbortBoundConnectionForTest,
 	resolveChatgptCanvasArtifactContentText,
 	resolveChatgptConversationUrl,
 	resolveChatgptDownloadUrlFromJson,
@@ -79,6 +78,7 @@ import {
 	resolveChatgptProjectSettingsCommitLabelsForTest,
 	resolveChatgptProjectSourceUploadActionLabelsForTest,
 	resolveChatgptProjectUrl,
+	runWithChatgptAbortBoundConnectionForTest,
 	selectChatgptDownloadFailure,
 	serializeChatgptGridRowsToCsv,
 	summarizeChatgptDownloadJsonShape,
@@ -2568,6 +2568,31 @@ describe("isRetryableConnectionError", () => {
 });
 
 describe("readChatgptConversationPayloadWithClient", () => {
+	test("does not force a second route visit for account-mirror payload fallback", async () => {
+		const client = {
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Runtime: {
+				evaluate: vi.fn(async () => ({
+					result: { value: { ok: false, status: 404, body: "{}" } },
+				})),
+			},
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Network: { enable: vi.fn() },
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Page: { enable: vi.fn(), navigate: vi.fn() },
+		};
+
+		await expect(
+			readChatgptConversationPayloadWithClient(client as never, "conversation-single", null, {
+				allowNavigation: true,
+				accountMirrorInventory: true,
+				accountMirrorSingleConversationVisit: true,
+			}),
+		).resolves.toBeNull();
+		expect(client.Network.enable).not.toHaveBeenCalled();
+		expect(client.Page.navigate).not.toHaveBeenCalled();
+	});
+
 	test("reacquires the exact payload from ChatGPT home through one route-bound fallback", async () => {
 		vi.useFakeTimers();
 		try {
@@ -3305,6 +3330,28 @@ describe("readChatgptConversationPayloadWithClient", () => {
 });
 
 describe("recoverVisibleChatgptBlockingSurfaceWithClient", () => {
+	test("does not reload a blocking surface during an account-mirror single visit", async () => {
+		const client = {
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Page: { enable: vi.fn(), reload: vi.fn() },
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Runtime: { evaluate: vi.fn() },
+		};
+
+		await expect(
+			recoverVisibleChatgptBlockingSurfaceWithClientForTest(
+				client as never,
+				{
+					kind: "transient-error",
+					summary: "Something went wrong while loading the conversation.",
+					selector: null,
+				},
+				{ allowNavigation: true, accountMirrorSingleConversationVisit: true },
+			),
+		).resolves.toMatchObject({ action: "reload-page", outcome: "skipped" });
+		expect(client.Page.reload).not.toHaveBeenCalled();
+	});
+
 	test("skips reload recovery when preserveActiveTab is set", async () => {
 		const client = {
 			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
@@ -3794,10 +3841,7 @@ describe("normalizeChatgptConversationLinkProbes", () => {
 			"utf8",
 		);
 		const start = source.indexOf("async function scrapeChatgptConversations(");
-		const end = source.indexOf(
-			"export function normalizeChatgptConversationHistoryLimit",
-			start,
-		);
+		const end = source.indexOf("export function normalizeChatgptConversationHistoryLimit", start);
 		const scraper = source.slice(start, end);
 
 		expect(start).toBeGreaterThanOrEqual(0);

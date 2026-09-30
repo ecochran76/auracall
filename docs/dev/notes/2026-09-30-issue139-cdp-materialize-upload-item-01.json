@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "account-mirror-cdp-capture",
+  "startedAt": "2026-09-30T14:28:42.740Z",
+  "completedAt": "2026-09-30T14:28:48.631Z",
+  "scope": {
+    "provider": "chatgpt",
+    "runtimeProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "wsl-chrome-3/chatgpt",
+    "requestedPhase": null,
+    "mode": "materialize-upload-item",
+    "maxConversations": 1,
+    "maxPasses": 1,
+    "scheduler": "isolated-disabled"
+  },
+  "targets": {
+    "before": 0,
+    "after": 0
+  },
+  "warning": null,
+  "run": {
+    "status": "skipped",
+    "startedAt": "2026-09-30T14:28:44.222Z",
+    "completedAt": "2026-09-30T14:28:46.702Z",
+    "attemptCount": 1,
+    "error": null,
+    "message": "Selected account mirror catalog asset family is already terminal in local evidence.",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "skipped": 1,
+      "failed": 0
+    },
+    "candidateFunnel": null,
+    "snapshotRefresh": null,
+    "manifest": [],
+    "scrapeTelemetry": null
+  },
+  "metrics": {
+    "eventCount": 2,
+    "requestCount": 0,
+    "navigationCount": 0,
+    "routeCounts": []
+  },
+  "events": [
+    {
+      "at": "2026-09-30T14:28:42.789Z",
+      "elapsedMs": 49,
+      "kind": "capture.started",
+      "targetCount": 0
+    },
+    {
+      "at": "2026-09-30T14:28:44.016Z",
+      "elapsedMs": 1276,
+      "kind": "materialization-run.started",
+      "refreshSnapshot": false,
+      "maxItems": 1,
+      "reused": false,
+      "selectedKind": "volatile-conversation-upload",
+      "selectedKey": "dad951b548a4"
+    }
+  ]
+}

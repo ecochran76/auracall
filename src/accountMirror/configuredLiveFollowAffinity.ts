@@ -207,6 +207,12 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		probeWarning: probeVisibleChatgptRateLimitWarning,
 		persistWarning: async (warning) => {
 			const observedAt = (input.now ?? (() => new Date()))();
+			const targets = await listChromeTargets(crawler.endpoint.port, crawler.endpoint.host).catch(
+				() => null,
+			);
+			const openTargetCount = targets
+				? targets.filter((target) => target.type === "page").length
+				: null;
 			await runtime.ledger?.recordProviderWarning({
 				scope: {
 					provider: "chatgpt",
@@ -217,6 +223,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 				classification: warning.classification,
 				reason: warning.reason,
 				observedAt: observedAt.toISOString(),
+				evidence: buildLiveFollowWarningEvidence(warning, openTargetCount),
 			});
 			await recordChatgptRateLimitDetection({
 				profileName: input.runtimeProfileId,
@@ -327,6 +334,13 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			let warningError: unknown = null;
 			if (warning && !warningRecorded) {
 				try {
+					const targets = await listChromeTargets(
+						crawler.endpoint.port,
+						crawler.endpoint.host,
+					).catch(() => null);
+					const openTargetCount = targets
+						? targets.filter((target) => target.type === "page").length
+						: null;
 					await runtime.ledger?.recordProviderWarning({
 						scope: {
 							provider: "chatgpt",
@@ -336,6 +350,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 						},
 						...warning,
 						observedAt: (input.now ?? (() => new Date()))().toISOString(),
+						evidence: buildLiveFollowWarningEvidence(warning, openTargetCount),
 					});
 					warningRecorded = true;
 				} catch (recordError) {
@@ -351,6 +366,19 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			if (finishError) throw finishError;
 			if (warningError) throw warningError;
 		},
+	};
+}
+
+export function buildLiveFollowWarningEvidence(
+	warning: { reason: string },
+	openTargetCount: number | null,
+) {
+	return {
+		classifierVersion: "chatgpt-visible-blocking-surface-v1",
+		visibleSummary: warning.reason,
+		sourceTargetClass: "leased-page",
+		openTargetCount,
+		resourcePathClasses: [],
 	};
 }
 

@@ -38,6 +38,8 @@ import {
 	type AccountMirrorPersistence,
 	createAccountMirrorPersistence,
 } from "./cachePersistence.js";
+import { deriveAccountMirrorChangeFrontierMetrics } from "./changeFrontierMetrics.js";
+import { normalizeAccountMirrorConversationWorkState } from "./changeFrontierState.js";
 import {
 	AccountMirrorIdentityMismatchError,
 	type AccountMirrorMetadataCollector,
@@ -501,6 +503,13 @@ export function createAccountMirrorRefreshService(input: {
 					boundIdentityKey: target.expectedIdentityKey ?? null,
 					limit: 10_000,
 				});
+				const previousConversationWorkStates = new Map(
+					(previousCatalog?.conversations ?? []).flatMap((conversation) => {
+						const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+						const state = normalizeAccountMirrorConversationWorkState(metadata.changeFrontierState);
+						return state ? [[conversation.id, state] as const] : [];
+					}),
+				);
 				const previousFiles = await readPreviousAccountMirrorFiles({
 					persistence,
 					provider,
@@ -542,6 +551,7 @@ export function createAccountMirrorRefreshService(input: {
 						previousEvidence: target.metadataEvidence,
 						previousFiles,
 						previousConversationFreshness,
+						previousConversationWorkStates,
 						onIdentityVerified: (evidence) => {
 							verifiedIdentityRef.current = evidence;
 						},
@@ -668,6 +678,7 @@ export function createAccountMirrorRefreshService(input: {
 					metadataCounts: collectionWithPriorManifests.metadataCounts,
 					metadataEvidence: collectionWithPriorManifests.evidence,
 					manifests: collectionWithPriorManifests.manifests,
+					visitBundles: collectionWithPriorManifests.visitBundles,
 				});
 				await persistRefreshState(persistence, {
 					provider,
@@ -2155,6 +2166,13 @@ function withRefreshEvidenceModel(input: {
 		metadataCounts: mergedTotal,
 		evidence: {
 			...input.collection.evidence,
+			changeFrontierMetrics: deriveAccountMirrorChangeFrontierMetrics(
+				input.mergedManifests.conversations,
+				input.collection.evidence.changeFrontierPlan ?? null,
+			),
+			retainedMaterializationConversationIds: deriveRetainedMaterializationConversationIds(
+				input.mergedManifests.conversations,
+			),
 			countEvidence: {
 				observedThisPass: input.collection.metadataCounts,
 				retainedFromCache: input.retainedCounts,
@@ -2193,6 +2211,23 @@ function withRefreshEvidenceModel(input: {
 		},
 	};
 }
+
+function deriveRetainedMaterializationConversationIds(
+	conversations: readonly Conversation[],
+): string[] {
+	const ids: string[] = [];
+	for (const conversation of conversations) {
+		const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+		const state = normalizeAccountMirrorConversationWorkState(metadata.changeFrontierState);
+		if (!state?.detailFingerprint) continue;
+		if (state.assetAvailability === "unavailable") continue;
+		ids.push(conversation.id);
+	}
+	return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+}
+
+export const deriveRetainedMaterializationConversationIdsForTest =
+	deriveRetainedMaterializationConversationIds;
 
 function countsFromManifests(
 	manifests: AccountMirrorMetadataCollectorResult["manifests"],
