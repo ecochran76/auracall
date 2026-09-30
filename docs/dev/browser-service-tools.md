@@ -148,12 +148,13 @@ Current active extraction plan:
 ## Experimental tab-concurrency execution
 
 `browser.tabConcurrencyMode` resolves to `serialized` unless an operator or
-test explicitly selects `tab-affinity`. The serialized default constructs no
-tab registry or aggregate interaction ledger. Explicit affinity currently
-constructs shared file-backed coordination state under
-`~/.auracall/browser-coordination`, exposes read-only status through
-`BrowserAutomationClient.getTabConcurrencyStatus()`, and routes ChatGPT prompt
-execution through exact-tab admission and ownership.
+test explicitly selects `tab-affinity`. Both modes construct shared file-backed
+provider-traffic safety state under `~/.auracall/browser-coordination`, expose
+read-only status through `BrowserAutomationClient.getTabConcurrencyStatus()`,
+and require exact-tab admission and ownership for configured provider clients.
+Serialized mode still disables concurrent tab-affinity execution; its registry
+and interaction ledger exist so provider traffic cannot bypass persisted
+admission merely by using the compatibility execution mode.
 
 The status projection is intentionally aggregate and content-free. In addition
 to total/fenced leases and interaction/warning counts, it reports active
@@ -175,7 +176,8 @@ resolved AuraCall runtime profile selects affinity because all such profiles
 share the same user-scoped registry and ledger. The immediate rollback is to set
 `browser.tabConcurrencyMode` to `serialized` in the affected AuraCall runtime
 profile and restart the AuraCall service. Serialized mode reports
-`enabled=false` and creates no registry, ledger, or affinity-maintenance owner.
+`enabled=false` and creates no affinity-maintenance owner, but retains the
+registry and ledger as authoritative traffic-safety state.
 
 For a guarded rollout, use the append-only soak receipt helper:
 

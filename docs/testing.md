@@ -1,5 +1,14 @@
 # Testing quickstart
 
+- Provider traffic authority in serialized and affinity modes (provider-free):
+  `pnpm vitest run tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser-service/providerTrafficStructural.test.ts`.
+  This proves serialized execution retains its non-affinity behavior while
+  configured provider clients still acquire exact durable leases, persist
+  admission before target reuse or in-page effects, and release client-owned
+  authority exactly once. A required target creation with no exact lease fails
+  before `CDP.New`; explicit pre-lease acquisition remains the only target-ID
+  bootstrap exception. It does not launch a browser or contact a provider.
+
 - ChatGPT inline-file prompt commitment (provider-free):
   `pnpm vitest run tests/browser/promptComposer.test.ts tests/browser/sessionRunner.test.ts`.
   This proves committed-turn extraction preserves rich-composer `<br>`

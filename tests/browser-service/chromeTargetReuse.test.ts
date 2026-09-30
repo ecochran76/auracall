@@ -249,6 +249,42 @@ describe("chrome target reuse policy", () => {
 		expect(cdpMock.New).not.toHaveBeenCalled();
 	});
 
+	it("acquires exact provider traffic authority before reusing a target", async () => {
+		cdpMock.List.mockResolvedValue([
+			{ id: "existing-project", type: "page", url: "https://grok.com/project/abc123" },
+		]);
+		const order: string[] = [];
+		client.Page.navigate.mockImplementation(async () => {
+			order.push("effect");
+		});
+		const settle = vi.fn(async () => {
+			order.push("settle");
+		});
+		const close = vi.fn(async () => {
+			order.push("close");
+		});
+		const acquire = vi.fn(async ({ targetId }: { targetId: string }) => ({
+			governor: {
+				attribution: {} as never,
+				begin: vi.fn(async () => {
+					order.push("admit");
+					return { id: "action-1", settle };
+				}),
+			},
+			close,
+		}));
+
+		await openOrReuseChromeTarget(45920, "https://grok.com/project/def456", {
+			host: "127.0.0.1",
+			reusePolicy: "same-origin",
+			providerTrafficRequired: true,
+			providerTrafficAuthorityFactory: { acquire },
+		});
+
+		expect(acquire).toHaveBeenCalledWith({ targetId: "existing-project" });
+		expect(order).toEqual(["admit", "effect", "settle", "close"]);
+	});
+
 	it("can select a compatible-host page without navigating the reused target", async () => {
 		cdpMock.List.mockResolvedValue([
 			{ id: "chat-openai-tab", type: "page", url: "https://chat.openai.com/c/abc123" },
@@ -320,6 +356,20 @@ describe("chrome target reuse policy", () => {
 				targetId: "fresh-tab",
 			}),
 		]);
+	});
+
+	it("fails before creating a provider target when no exact lease can exist yet", async () => {
+		cdpMock.List.mockResolvedValue([]);
+
+		await expect(
+			openOrReuseChromeTarget(45920, "https://grok.com/", {
+				host: "127.0.0.1",
+				reusePolicy: "new",
+				providerTrafficRequired: true,
+				providerTrafficAuthorityFactory: { acquire: vi.fn() },
+			}),
+		).rejects.toThrow("Provider traffic governor is required before physical action");
+		expect(cdpMock.New).not.toHaveBeenCalled();
 	});
 
 	it("connectToRemoteChrome reuses same-origin tabs instead of creating duplicates", async () => {

@@ -1,5 +1,8 @@
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
-import type { ProviderTrafficGovernor } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
+import type {
+	ProviderTrafficAuthority,
+	ProviderTrafficGovernor,
+} from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type { ChromeClient } from "../types.js";
 import type { BrowserProviderListOptions } from "./types.js";
 
@@ -8,6 +11,7 @@ type MutationContextCarrier = {
 	__auracallMutationSourcePrefix?: string;
 	__auracallProviderTrafficGovernor?: ProviderTrafficGovernor;
 	__auracallProviderTrafficRequired?: boolean;
+	__auracallProviderTrafficAuthority?: ProviderTrafficAuthority;
 };
 
 function asMutationContextCarrier(value: unknown): MutationContextCarrier | null {
@@ -29,17 +33,53 @@ function normalizeMutationSourcePrefix(value: string | null | undefined): string
 	return normalized.length > 0 ? normalized : null;
 }
 
-export function annotateClientMutationContext(
+export async function annotateClientMutationContext(
 	client: ChromeClient,
 	options: BrowserProviderListOptions | undefined,
 	defaultSourcePrefix: string,
-): void {
+	resolvedTargetId?: string,
+): Promise<void> {
 	const extendedClient = client as ChromeClient & MutationContextCarrier;
+	const targetId = resolvedTargetId?.trim() || options?.tabTargetId?.trim();
+	const authority =
+		!options?.providerTrafficGovernor && options?.providerTrafficAuthorityFactory && targetId
+			? await options.providerTrafficAuthorityFactory.acquire({ targetId })
+			: undefined;
+	if (options?.providerTrafficRequired && !options.providerTrafficGovernor && !authority) {
+		throw new Error(
+			`Provider traffic authority is unavailable for target ${targetId || "unknown"}.`,
+		);
+	}
 	extendedClient.__auracallMutationAudit = options?.mutationAudit;
-	extendedClient.__auracallProviderTrafficGovernor = options?.providerTrafficGovernor;
-	extendedClient.__auracallProviderTrafficRequired = options?.providerTrafficGovernor !== undefined;
+	extendedClient.__auracallProviderTrafficGovernor =
+		options?.providerTrafficGovernor ?? authority?.governor;
+	extendedClient.__auracallProviderTrafficRequired =
+		options?.providerTrafficRequired === true ||
+		options?.providerTrafficGovernor !== undefined ||
+		options?.providerTrafficAuthorityFactory !== undefined;
+	extendedClient.__auracallProviderTrafficAuthority = authority;
 	extendedClient.__auracallMutationSourcePrefix =
 		normalizeMutationSourcePrefix(options?.mutationSourcePrefix) ?? defaultSourcePrefix;
+	if (authority) {
+		const close = client.close.bind(client);
+		let closed = false;
+		client.close = async () => {
+			if (closed) return;
+			closed = true;
+			let closeError: unknown = null;
+			try {
+				await close();
+			} catch (error) {
+				closeError = error;
+			}
+			await authority.close({
+				outcome: closeError ? "failed" : "succeeded",
+				effectState: closeError ? "outcome-unknown" : "settled",
+				reason: closeError instanceof Error ? closeError.message : null,
+			});
+			if (closeError) throw closeError;
+		};
+	}
 }
 
 export function resolveProviderTrafficGovernor(

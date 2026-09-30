@@ -37,7 +37,11 @@ import {
   WINDOWS_LOOPBACK_REMOTE_HOST,
 } from './windowsLoopbackRelay.js';
 import { beginBrowserMutation, type BrowserMutationAuditSink } from './service/mutationDispatcher.js';
-import type { ProviderTrafficAction, ProviderTrafficGovernor } from './service/providerTrafficGovernor.js';
+import type {
+  ProviderTrafficAction,
+  ProviderTrafficAuthorityFactory,
+  ProviderTrafficGovernor,
+} from './service/providerTrafficGovernor.js';
 
 const execFileAsync = promisify(execFile);
 const WINDOWS_WSL_DISCOVERY_ATTEMPTS = 40;
@@ -1130,6 +1134,7 @@ export type OpenOrReuseChromeTargetResult = {
 
 async function beginTargetTrafficAction(input: {
   governor?: ProviderTrafficGovernor;
+  authorityFactory?: ProviderTrafficAuthorityFactory;
   mutationAudit?: BrowserMutationAuditSink;
   source: string;
   requestedUrl: string;
@@ -1140,8 +1145,13 @@ async function beginTargetTrafficAction(input: {
   reason: string;
   providerTrafficRequired?: boolean;
 }): Promise<ProviderTrafficAction> {
-  if (input.governor) {
-    return input.governor.begin({
+  const authority =
+    !input.governor && input.authorityFactory && input.targetId
+      ? await input.authorityFactory.acquire({ targetId: input.targetId })
+      : undefined;
+  const governor = input.governor ?? authority?.governor;
+  if (governor) {
+    const action = await governor.begin({
       kind: 'target-open-or-reuse',
       interactionClass: 'renavigation',
       source: input.source,
@@ -1152,6 +1162,20 @@ async function beginTargetTrafficAction(input: {
       reused: input.reused,
       reason: input.reason,
     });
+    return {
+      id: action.id,
+      async settle(details) {
+        try {
+          await action.settle(details);
+        } finally {
+          await authority?.close({
+            outcome: details.outcome === 'succeeded' ? 'succeeded' : 'failed',
+            effectState: 'settled',
+            reason: details.error ?? details.reason ?? null,
+          });
+        }
+      },
+    };
   }
   if (input.providerTrafficRequired) {
     throw new Error(`Provider traffic governor is required before physical action: ${input.source}.`);
@@ -1185,6 +1209,7 @@ export async function openOrReuseChromeTarget(
 	    navigateReusedTargets?: boolean;
 	    mutationAudit?: BrowserMutationAuditSink;
 	    providerTrafficGovernor?: ProviderTrafficGovernor;
+	    providerTrafficAuthorityFactory?: ProviderTrafficAuthorityFactory;
 	    providerTrafficRequired?: boolean;
 	    mutationSource?: string;
 	  } = {},
@@ -1212,6 +1237,7 @@ export async function openOrReuseChromeTarget(
         const targetId = resolveTargetId(exactTarget);
 	        const audit = await beginTargetTrafficAction({
 	          governor: options.providerTrafficGovernor,
+	          authorityFactory: options.providerTrafficAuthorityFactory,
 	          mutationAudit: options.mutationAudit,
 	          providerTrafficRequired: options.providerTrafficRequired,
 	          source: mutationSource,
@@ -1248,6 +1274,7 @@ export async function openOrReuseChromeTarget(
         const targetId = resolveTargetId(blankTarget);
 	        const audit = await beginTargetTrafficAction({
 	          governor: options.providerTrafficGovernor,
+	          authorityFactory: options.providerTrafficAuthorityFactory,
 	          mutationAudit: options.mutationAudit,
 	          providerTrafficRequired: options.providerTrafficRequired,
           source: mutationSource,
@@ -1289,6 +1316,7 @@ export async function openOrReuseChromeTarget(
 	          const targetUrl = navigateReusedTargets ? url : sameOriginTarget.url ?? url;
 	          const audit = await beginTargetTrafficAction({
 	            governor: options.providerTrafficGovernor,
+	            authorityFactory: options.providerTrafficAuthorityFactory,
 	            mutationAudit: options.mutationAudit,
 	            providerTrafficRequired: options.providerTrafficRequired,
 	            source: mutationSource,
@@ -1336,6 +1364,7 @@ export async function openOrReuseChromeTarget(
 	            const targetUrl = navigateReusedTargets ? url : compatibleHostTarget.url ?? url;
 	            const audit = await beginTargetTrafficAction({
 	              governor: options.providerTrafficGovernor,
+	              authorityFactory: options.providerTrafficAuthorityFactory,
 	              mutationAudit: options.mutationAudit,
 	              providerTrafficRequired: options.providerTrafficRequired,
 	              source: mutationSource,
@@ -1379,6 +1408,7 @@ export async function openOrReuseChromeTarget(
 
 	    const audit = await beginTargetTrafficAction({
 	      governor: options.providerTrafficGovernor,
+	      authorityFactory: options.providerTrafficAuthorityFactory,
 	      mutationAudit: options.mutationAudit,
 	      providerTrafficRequired: options.providerTrafficRequired,
       source: mutationSource,

@@ -43,6 +43,12 @@ cooldown before any later action can proceed.
 - Issue 138 is open and linked to dependent algorithm issue 139.
 - This lane starts from the current canonical remote tip in an isolated clean
   worktree. No installed-runtime or live-provider action belongs to this plan.
+- Provider-neutral configured clients now acquire exact ephemeral traffic
+  authority in both serialized and affinity modes. Serialized mode remains
+  concurrency-disabled but retains the durable registry/ledger required for
+  fail-closed admission. Target reuse is admitted before focus/navigation and
+  client close releases its authority exactly once; an un-attributable target
+  creation or attachment stops before provider effect.
 
 ## Architecture Contract
 
@@ -130,5 +136,5 @@ cooldown before any later action can proceed.
 
 ## Current Next Action
 
-Publish this planning checkpoint and Issue 138 claim, then add the focused RED
-governor lifecycle tests before implementation.
+Complete the provider-free comprehensive validation and structural/CodeGraph
+audit, then reconcile the plan, lane, and Issue 138 receipts for integration.

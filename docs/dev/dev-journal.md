@@ -51764,3 +51764,12 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   physical action instead of silently falling back to optional pacing/audit.
   Provider-neutral Gemini/Grok paths without configured lease authority retain
   their existing behavior; they cannot falsely claim the governed contract.
+- The provider-neutral completion packet removes that residual exception.
+  Serialized mode now retains durable traffic-safety registry/ledger state
+  while remaining concurrency-disabled. Configured ChatGPT, Gemini, and Grok
+  options require authority; exact target reuse and CDP client attachment
+  acquire short-lived exact leases, ledger-backed admission, and authoritative
+  mutation recording, while client close idles and releases that authority once.
+  Missing managed-profile/target authority fails before the physical action.
+  Provider-free validation currently passes 312 adjacent adapter/service tests,
+  the 9-test authority/runtime slice, typecheck, and exact target-reuse ordering.

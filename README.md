@@ -2158,6 +2158,12 @@ root or by any resolved AuraCall runtime profile. Its aggregate
 `/status.tabConcurrency` projection uses the same effective-mode rule, so a
 serialized root does not hide shared affinity coordination selected by a
 nested AuraCall runtime profile.
+Serialized mode now also retains the same durable tab-lease and provider-
+interaction safety stores used for traffic admission. It remains
+concurrency-disabled (`enabled=false`); the stores exist so configured ChatGPT,
+Gemini, and Grok browser actions cannot fall back to un-attributed provider
+traffic. If AuraCall cannot establish the exact managed browser profile and tab
+lease, it stops before the physical action.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
 For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:

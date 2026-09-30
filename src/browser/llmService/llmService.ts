@@ -29,6 +29,7 @@ import {
 	resolveChatgptRateLimitCooldownMs,
 	writeChatgptRateLimitGuardState,
 } from "../chatgptRateLimitGuard.js";
+import { createConfiguredProviderTrafficAuthorityFactory } from "../configuredProviderTrafficAuthority.js";
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
 import { recordLibraryInventoryStage } from "../libraryInventoryDiagnostics.js";
 import {
@@ -886,7 +887,7 @@ export abstract class LlmService {
 		};
 		const providerSessionExpectation =
 			this.providerSessionAuthority.resolveExpectation(providerSessionContext);
-		return {
+		const resolvedOptions: BrowserProviderListOptions = {
 			...overrides,
 			port,
 			host,
@@ -899,6 +900,7 @@ export abstract class LlmService {
 			mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
 			interactionGovernor:
 				overrides.interactionGovernor ?? this.resolveBrowserInteractionGovernor(overrides),
+			providerTrafficRequired: true,
 			providerSessionAuthorization: {
 				authority: this.providerSessionAuthority,
 				context: providerSessionContext,
@@ -910,6 +912,21 @@ export abstract class LlmService {
 				},
 			},
 		};
+		if (!resolvedOptions.providerTrafficGovernor) {
+			const managedBrowserProfile = providerSessionContext.managedBrowserProfile?.trim();
+			if (managedBrowserProfile) {
+				resolvedOptions.providerTrafficAuthorityFactory =
+					overrides.providerTrafficAuthorityFactory ??
+					createConfiguredProviderTrafficAuthorityFactory({
+						userConfig: this.userConfig,
+						browserService: this.browserService,
+						provider: this.providerId,
+						managedBrowserProfile,
+						baseOptions: resolvedOptions,
+					});
+			}
+		}
+		return resolvedOptions;
 	}
 
 	async getProviderSessionProof(

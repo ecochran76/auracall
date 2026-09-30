@@ -31,7 +31,7 @@ describe("provider traffic structural boundary", () => {
 		);
 	});
 
-	test("threads the provider traffic governor into every provider target reuse call", () => {
+	test("threads provider traffic authority into every provider target reuse call", () => {
 		for (const file of [
 			"src/browser/providers/chatgptAdapter.ts",
 			"src/browser/providers/geminiAdapter.ts",
@@ -41,7 +41,22 @@ describe("provider traffic structural boundary", () => {
 			for (const match of source.matchAll(/openOrReuseChromeTarget\(/g)) {
 				const call = source.slice(match.index, match.index + 1_200);
 				expect(call, file).toContain("providerTrafficGovernor:");
+				expect(call, file).toContain("providerTrafficAuthorityFactory:");
+				expect(call, file).toContain("providerTrafficRequired:");
 			}
+		}
+	});
+
+	test("configured provider options require traffic authority before adapter effects", () => {
+		const service = read("src/browser/llmService/llmService.ts");
+		expect(service).toContain("providerTrafficRequired: true");
+		expect(service).toContain("createConfiguredProviderTrafficAuthorityFactory");
+		for (const file of [
+			"src/browser/providers/chatgptAdapter.ts",
+			"src/browser/providers/geminiAdapter.ts",
+			"src/browser/providers/grokAdapter.ts",
+		]) {
+			expect(read(file), file).toContain("await annotateClientMutationContext(");
 		}
 	});
 

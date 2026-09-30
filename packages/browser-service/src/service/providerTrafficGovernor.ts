@@ -59,6 +59,19 @@ export interface ProviderTrafficGovernor {
 	begin(input: ProviderTrafficActionInput): Promise<ProviderTrafficAction>;
 }
 
+export interface ProviderTrafficAuthority {
+	governor: ProviderTrafficGovernor;
+	close(input?: {
+		outcome?: "succeeded" | "failed" | "cancelled";
+		effectState?: "none" | "settled" | "outcome-unknown";
+		reason?: string | null;
+	}): Promise<void>;
+}
+
+export interface ProviderTrafficAuthorityFactory {
+	acquire(input: { targetId: string }): Promise<ProviderTrafficAuthority>;
+}
+
 export class ProviderTrafficAttributionError extends Error {
 	constructor(readonly field: keyof ProviderTrafficAttribution) {
 		super(`Provider traffic attribution requires ${field}.`);
