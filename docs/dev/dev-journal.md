@@ -51844,3 +51844,23 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `docs/dev/notes/2026-09-30-issue139-live-algorithm-cdp-survey.md`.
 - Next: encode these observed branches as provider-free P0 fixtures, then make
   physical visits and asset availability explicit planner state.
+
+## 2026-09-30 | Issue 139 P0 fixture and volatile availability contract
+
+- Added a compact provider-free fixture derived from the direct-CDP survey. It
+  freezes both 853/888-request detail passes, their three same-conversation
+  navigations, retained provider work with zero asset attempts, persistent
+  Library retrieval failure, volatile terminal skip, and absence of a visible
+  rate-limit warning.
+- Added deterministic tests proving the logical two-interaction model
+  undercounts physical detail work and that retained materialization reaches
+  the provider before actionability is known.
+- Detailed materialization entries now carry explicit `assetAvailability`.
+  Materialized/duplicate assets are `available`; confirmed volatile missing
+  assets are `unavailable`, `provider_unavailable`, and non-retryable; other
+  failures are `unknown`.
+- Kept persistent ChatGPT Library `library_row_not_found` distinct from volatile
+  terminal absence. A missing Library DOM row remains a retrieval failure with
+  `unknown` availability rather than falsely terminalizing a persistent file.
+- Focused 93-test materialization/fixture run and TypeScript typecheck pass.
+  Next is the P1 durable epoch/work-state schema and migration contract.

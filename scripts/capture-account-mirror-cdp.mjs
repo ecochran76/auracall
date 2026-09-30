@@ -261,6 +261,7 @@ function summarizeRun(run) {
         retryable: entry.retryable ?? null,
         materializationMethod: entry.materializationMethod ?? null,
         reason: sanitizeText(entry.reason),
+        assetAvailability: entry.assetAvailability ?? null,
         hasLocalPath: Boolean(entry.localPath),
         hasChecksum: Boolean(entry.checksumSha256),
         size: entry.size ?? null,

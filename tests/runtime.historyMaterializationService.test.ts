@@ -56,6 +56,120 @@ describe("history materialization service", () => {
 		);
 	});
 
+	it("marks a volatile miss unavailable without terminalizing a persistent Library retrieval failure", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-history-materialize-volatile-unavailable-"),
+		);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		let scheduled: (() => Promise<void>) | undefined;
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: vi.fn(async () => ({
+					object: "account_mirror_catalog" as const,
+					generatedAt: "2026-09-30T16:00:00.000Z",
+					kind: "all" as const,
+					limit: 500,
+					entries: [],
+					metrics: { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
+				})),
+				readItem: vi.fn(),
+			},
+			generateId: () => "hmj_volatile_unavailable",
+			now: sequenceNow([
+				"2026-09-30T16:00:00.000Z",
+				"2026-09-30T16:00:01.000Z",
+				"2026-09-30T16:00:02.000Z",
+			]),
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: vi.fn(
+				async (target): Promise<HistoryMaterializationResult> => ({
+					object: "history_materialization_result",
+					generatedAt: "2026-09-30T16:00:01.000Z",
+					status: "failed",
+					target,
+					source: {
+						type: "conversation",
+						provider: "chatgpt",
+						conversationId: target.conversationId,
+					},
+					manifestPaths: [],
+					entries: [
+						{
+							kind: "file",
+							providerId: "chatgpt://file/file_volatile_fixture",
+							title: "volatile-fixture.txt",
+							status: "failed",
+							localPath: null,
+							remoteUrl: "chatgpt://file/file_volatile_fixture",
+							cacheKey: null,
+							checksumSha256: null,
+							mimeType: "text/plain",
+							size: null,
+							materializationMethod: null,
+							reason: "tile_not_found",
+							archiveItemId: null,
+							assetRoute: null,
+						},
+						{
+							kind: "file",
+							providerId: "chatgpt://file/file_persistent_fixture",
+							title: "persistent-fixture.txt",
+							status: "failed",
+							localPath: null,
+							remoteUrl: "chatgpt://file/file_persistent_fixture",
+							cacheKey: null,
+							checksumSha256: null,
+							mimeType: "text/plain",
+							size: null,
+							materializationMethod: null,
+							reason: "ChatGPT account library file fetch failed: library_row_not_found",
+							failureKind: "retrieval_failed",
+							retryable: false,
+							archiveItemId: null,
+							assetRoute: null,
+						},
+					],
+					archiveItems: [],
+					metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 2 },
+					message: "Volatile provider asset is no longer available.",
+				}),
+			),
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			runtimeProfile: "wsl-chrome-3",
+			conversationId: "conv_volatile_fixture",
+			assetKinds: ["files"],
+			refreshSnapshot: false,
+		});
+		if (!scheduled) throw new Error("Expected volatile fixture job to be scheduled.");
+		await scheduled();
+
+		await expect(service.readJob("hmj_volatile_unavailable")).resolves.toMatchObject({
+			status: "failed",
+			result: {
+				entries: [
+					{
+						status: "failed",
+						assetAvailability: "unavailable",
+						failureKind: "provider_unavailable",
+						retryable: false,
+					},
+					{
+						status: "failed",
+						assetAvailability: "unknown",
+						failureKind: "retrieval_failed",
+						retryable: false,
+					},
+				],
+			},
+		});
+	});
+
 	it("batches filtered job lists through one store snapshot", async () => {
 		const store = createInMemoryHistoryMaterializationJobStore([
 			buildHistoryMaterializationJob({
@@ -8329,7 +8443,13 @@ describe("history materialization service", () => {
 				provider: "chatgpt",
 				runtimeProfile: "wsl-chrome-3",
 			}),
-			result: expect.objectContaining(guardedResult),
+			result: expect.objectContaining({
+				...guardedResult,
+				entries: guardedResult.entries.map((entry) => ({
+					...entry,
+					assetAvailability: "unknown",
+				})),
+			}),
 		});
 		await expect(service.readJob("hmj_guard_projection_1")).resolves.toMatchObject({
 			status: "skipped",

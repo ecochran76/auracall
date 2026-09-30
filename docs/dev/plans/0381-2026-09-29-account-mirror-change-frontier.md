@@ -186,7 +186,7 @@ frozen; P4 joins P3 and the durable state. P6 is serialized after all joins.
 
 ## Acceptance Criteria
 
-- [ ] Provider-free fixtures represent the surveyed current collection model
+- [x] Provider-free fixtures represent the surveyed current collection model
       and demonstrate the redundant existing behavior.
 - [ ] One lightweight shared index epoch precedes route selection; unchanged
       complete conversations perform zero route visits, snapshot refreshes,
@@ -241,10 +241,16 @@ provider work before materialization actionability, provider-sparing terminal
 upload guards, and missing explicit volatile-asset availability. Current main
 was installed for the survey; the production scheduler remained paused and the
 isolated proof server was stopped. Issue #139 and this plan remain open for the
-algorithm repair and provider-free acceptance.
+algorithm repair and provider-free acceptance. P0 now includes a compact live-
+CDP-derived fixture that reproduces the two independent detail-pass
+amplification signatures, provider work before retained-materialization
+actionability, and persistent-versus-volatile asset outcomes. New job results
+also persist explicit per-entry availability: confirmed volatile misses become
+non-retryable `unavailable`, while persistent Library row lookup failures stay
+`unknown`.
 
 ## Current Next Action
 
-Convert the captured detail, retained-materialization, Library, and volatile-
-upload outcomes into provider-free P0 fixtures. Freeze the measured physical
-amplification and explicit `unavailable` semantics before implementing P1/P2.
+Define the P1 durable epoch/work-state schema, including physical interaction
+counters and the explicit availability state established by P0, then freeze its
+migration/default behavior before implementing the P2 planner.

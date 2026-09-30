@@ -758,8 +758,18 @@ Terminology note:
   asset transfer failure makes both the result and durable job `failed`, even
   when another selected asset materializes. Synthetic terminal routeability
   placeholders and provider-guard evidence retain their dedicated semantics;
-  they are not reclassified as ordinary transfer failures. A completion-owned
-  failed job with zero verified materializations blocks its live-follow
+  they are not reclassified as ordinary transfer failures.
+  Detailed materialization results also expose per-entry `assetAvailability`:
+  `available` for materialized or duplicate local assets, `unavailable` for a
+  confirmed missing volatile provider asset, and `unknown` when failure does
+  not prove terminal absence. Confirmed volatile misses default to
+  `failureKind: "provider_unavailable"` and `retryable: false`. A persistent
+  ChatGPT Library `library_row_not_found` lookup remains `unknown`; a missing
+  rendered Library row is not evidence that the provider file ceased to exist.
+  Legacy jobs without this field retain their original reason-based terminal
+  compatibility.
+
+  A completion-owned failed job with zero verified materializations blocks its live-follow
   operation before another provider pass; inspect and correct the
   materialization or account/browser condition, then start a fresh bounded
   operation rather than relying on automatic retry. When the same failed job

@@ -23758,3 +23758,8 @@ Volatile asset terminality is a separate state from aggregate job success. A
 an explicit `unavailable` availability value plus failure class and retryability.
 Do not hide that child state beneath a succeeded parent or rely on a free-text
 reason as the only durable availability signal.
+
+Do not infer volatility from a `chatgpt://file/` location alone. ChatGPT
+Library files use provider file identifiers too but are persistent inventory.
+A `library_row_not_found` DOM lookup failure remains `unknown`; only confirmed
+volatile missing/expired evidence becomes non-retryable `unavailable`.

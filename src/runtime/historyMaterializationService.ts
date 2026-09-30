@@ -152,6 +152,7 @@ export interface HistoryMaterializationManifestEntry {
 	size: number | null;
 	materializationMethod: string | null;
 	reason: string | null;
+	assetAvailability?: "available" | "unavailable" | "unknown";
 	failureKind?: "provider_unavailable" | "retrieval_failed" | null;
 	retryable?: boolean | null;
 	archiveItemId: string | null;
@@ -1224,12 +1225,13 @@ export function createHistoryMaterializationService(
 						await releaseHistoryMaterializationBrowserOperations(browserOperations);
 					}
 				});
+				const availabilityResult = withExplicitAssetAvailability(materializationResult);
 				const result: HistoryMaterializationResult = {
-					...materializationResult,
-					status: resolveHistoryMaterializationJobResultStatus(materializationResult),
+					...availabilityResult,
+					status: resolveHistoryMaterializationJobResultStatus(availabilityResult),
 					providerSessionProof:
 						providerWorkContext(running.id, running.request).providerSessionProofSummary ??
-						materializationResult.providerSessionProof ??
+						availabilityResult.providerSessionProof ??
 						null,
 				};
 				if (historyMaterializationResultHasProviderGuard(result)) {
@@ -5335,6 +5337,7 @@ async function materializedAccountLibraryFileFamilySignatures(input: {
 }
 
 function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEntry): boolean {
+	if (entry.assetAvailability === "unavailable") return true;
 	if (entry.status !== "failed" && entry.status !== "skipped") return false;
 	if (
 		!isVolatileProviderAssetLocation(entry.remoteUrl) &&
@@ -5343,6 +5346,9 @@ function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEn
 		return false;
 	}
 	const reason = entry.reason?.trim().toLowerCase() ?? "";
+	// Account Library rows are persistent provider inventory. A missing DOM row
+	// is a retrieval failure, not proof that the underlying file is gone.
+	if (reason.includes("library_row_not_found")) return false;
 	if (!reason) return true;
 	return (
 		reason.includes("expired") ||
@@ -5353,6 +5359,28 @@ function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEn
 		reason.includes("tile_not_found") ||
 		reason.includes("archive_linkage_missing")
 	);
+}
+
+function withExplicitAssetAvailability(
+	result: HistoryMaterializationResult,
+): HistoryMaterializationResult {
+	return {
+		...result,
+		entries: result.entries.map((entry) => {
+			if (entry.status === "materialized" || entry.status === "duplicate") {
+				return { ...entry, assetAvailability: "available" as const };
+			}
+			if (isConfirmedVolatileMissingEntry(entry)) {
+				return {
+					...entry,
+					assetAvailability: "unavailable" as const,
+					failureKind: entry.failureKind ?? "provider_unavailable",
+					retryable: entry.retryable ?? false,
+				};
+			}
+			return { ...entry, assetAvailability: "unknown" as const };
+		}),
+	};
 }
 
 function isVolatileProviderAssetLocation(value: string | null | undefined): boolean {

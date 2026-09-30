@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-30",
+  "provider": "chatgpt",
+  "runtimeProfile": "wsl-chrome-3",
+  "warningClassifier": "chatgpt-visible-rate-limit-dialog-v1",
+  "observations": [
+    {
+      "case": "detail-pass-1",
+      "logicalRows": 1,
+      "logicalActiveInteractions": 2,
+      "physicalRequests": 888,
+      "topFrameNavigations": 4,
+      "sameConversationNavigations": 3,
+      "assetAttempts": 0,
+      "warningDetected": false,
+      "outcome": "completed"
+    },
+    {
+      "case": "detail-pass-2",
+      "logicalRows": 1,
+      "logicalActiveInteractions": 2,
+      "physicalRequests": 853,
+      "topFrameNavigations": 4,
+      "sameConversationNavigations": 3,
+      "assetAttempts": 0,
+      "warningDetected": false,
+      "outcome": "completed"
+    },
+    {
+      "case": "retained-reconciliation",
+      "logicalRows": 1,
+      "logicalActiveInteractions": null,
+      "physicalRequests": 239,
+      "topFrameNavigations": 1,
+      "sameConversationNavigations": 1,
+      "assetAttempts": 0,
+      "warningDetected": false,
+      "outcome": "skipped"
+    },
+    {
+      "case": "persistent-library-file",
+      "logicalRows": 1,
+      "logicalActiveInteractions": null,
+      "physicalRequests": 293,
+      "topFrameNavigations": 1,
+      "sameConversationNavigations": 0,
+      "assetAttempts": 1,
+      "warningDetected": false,
+      "outcome": "retrieval_failed",
+      "assetPersistence": "persistent",
+      "expectedAvailability": "unknown"
+    },
+    {
+      "case": "volatile-upload-terminal",
+      "logicalRows": 1,
+      "logicalActiveInteractions": 0,
+      "physicalRequests": 0,
+      "topFrameNavigations": 0,
+      "sameConversationNavigations": 0,
+      "assetAttempts": 0,
+      "warningDetected": false,
+      "outcome": "terminal_evidence_skip",
+      "assetPersistence": "volatile",
+      "terminalReasonClass": "tile_not_found",
+      "expectedAvailability": "unavailable"
+    }
+  ]
+}
