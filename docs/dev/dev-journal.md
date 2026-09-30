@@ -51718,3 +51718,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - PR 136 merged at canonical receipt `6f4b3b34918157e64ba0fff069e3280f6eb9bf11`
   and closed issue 135. P79 is integrated; installed adoption and live
   acceptance were deliberately not performed.
+
+## 2026-09-29 | Issue 138 authoritative provider traffic governor
+
+- A recurring live-follow incident showed ChatGPT's visible `Too many requests`
+  warning while `wsl-chrome-3` retained no rate-limit detection or cooldown and
+  the provider-interaction ledger retained no warning. Later reload/read work
+  still settled as successful.
+- Containment paused the account-mirror scheduler, left zero queued/running
+  completions, and closed only the owned `wsl-chrome-3` browser. The scheduler
+  must remain paused throughout provider-free source work.
+- Issue 138 / Plan 0380 / lane P80 now own the architecture repair: combine
+  physical mutation dispatch, ledger-backed admission, exact lease attribution,
+  post-action warning detection, and cooldown persistence into one mandatory
+  browser-service governor lifecycle.
+- Issue 139 owns the dependent incremental reconciliation algorithm. CDP network
+  metering and HTTPS interception remain deferred.
