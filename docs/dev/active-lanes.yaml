@@ -1622,13 +1622,13 @@ lanes:
   - id: P83
     objective: Retire idle ChatGPT tab leases immediately after exact bounded managed-browser shutdown proves their targets nonexistent.
     plan: docs/dev/plans/0383-2026-09-30-bounded-cleanup-lease-retirement.md
-    plan_ref: refs/heads/fix/issue-148-bounded-cleanup-lease-retirement
+    plan_ref: refs/remotes/origin/main
     branch: fix/issue-148-bounded-cleanup-lease-retirement
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 93972628624b8ea5b2420dade5891312ed49ffbb
-    remote_ref: null
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 199b1b94a20645938b0e06370907f2838295c900
+    remote_ref: refs/remotes/origin/fix/issue-148-bounded-cleanup-lease-retirement
     integration: merge
     work_items: [ecochran76/auracall#148]
     dependencies: [P82]
@@ -1636,8 +1636,8 @@ lanes:
     reconciled_overlaps: [P80, P81, P82]
     reconciliation_note: P83 preserves P80/P82 lease and governor hard stops while reconciling only idle targets after exact owned browser shutdown.
     blocker: null
-    validation_status: installed-defect-reproduced
+    validation_status: provider-free-accepted-integrated-installed
     validation_ref: docs/dev/plans/0383-2026-09-30-bounded-cleanup-lease-retirement.md
-    integration_receipt: null
-    disposition: One completed installed canary left two idle leases fencing nonexistent targets; provider-free repair and local installed reconciliation remain.
+    integration_receipt: 669ad3a272794d5e499fc8693465fe3b3f99c198
+    disposition: Shared post-shutdown lease retirement integrated through PR 149 and installed byte-identically; both canary leases are released, no exact browser process or listener remains, and the scheduler stays paused without another provider canary.
     updated_at: 2026-09-30
