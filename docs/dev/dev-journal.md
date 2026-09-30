@@ -52008,6 +52008,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The regression failed against the old implementation, then the widened
   lease/affinity/completion/refresh/materialization suites passed 240/240 with
   typecheck, production build, affected Biome check, and diff hygiene. Active,
-  outcome-unknown, and unrelated leases remained fenced. Integration, exact
-  install, and local reconciliation of the two canary leases remain; the
-  scheduler stays paused and no provider work is authorized.
+  outcome-unknown, and unrelated leases remained fenced. The scheduler stayed
+  paused and no provider work was authorized during source validation.
+- PR #149 merged at `669ad3a27`. The installed helper, account-mirror refresh,
+  and history-materialization artifacts match the built source hashes exactly.
+- Both canary leases had naturally expired through the old path before install
+  and now read `released/already-missing`; the installed helper returned an
+  empty no-op result and the exact runtime profile has zero non-released leases.
+- The installed API is healthy on port 18095. `wsl-chrome-3` has no managed
+  browser process or port 45015 listener. API scheduler posture/state remain
+  paused and the scheduler unit remains inactive. No provider canary, warning
+  dismissal, navigation, reload, or retry ran during this repair closeout.

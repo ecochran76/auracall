@@ -1,6 +1,6 @@
 # Bounded Cleanup Lease Retirement | 0383-2026-09-30
 
-State: OPEN
+State: CLOSED
 Lane: P83
 Work item: ecochran76/auracall#148
 Source base: `origin/main` at `939726286`
@@ -29,8 +29,14 @@ configured ChatGPT shutdown-reconciliation helper after exact process-absence
 proof and while their browser-operation fence is still held. The red regression
 and the widened 240-test lease/affinity/completion/refresh/materialization gate,
 typecheck, production build, affected Biome check, and diff hygiene pass.
-Integration, exact install, and reconciliation of the two installed canary
-leases remain.
+PR #149 integrated the repair at `669ad3a27`. The exact merge was installed;
+the three changed runtime artifacts match their built source hashes. The two
+canary leases had already traversed the old expiry path to
+`released/already-missing`, so the installed helper correctly returned an empty
+local reconciliation result. There are zero non-released `wsl-chrome-3` leases,
+no exact managed-browser process, and no port 45015 listener. The API is healthy
+with scheduler posture paused, the scheduler unit remains inactive, and no
+additional provider canary ran.
 
 ## Architecture Contract
 
@@ -72,9 +78,9 @@ leases remain.
       the same deep reconciliation helper after positive shutdown proof.
 - [x] Focused and adjacent tests, typecheck, build, affected lint, diff hygiene,
       and active-plan audit pass.
-- [ ] The exact canonical merge is installed and the two canary leases are
+- [x] The exact canonical merge is installed and the two canary leases are
       locally reconciled to released with no browser process or port listener.
-- [ ] Scheduler unit and operator posture remain paused; no additional provider
+- [x] Scheduler unit and operator posture remain paused; no additional provider
       canary is run.
 
 ## Non-goals
