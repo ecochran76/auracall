@@ -52183,3 +52183,24 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   77,324 edges). Impact review covered the shared governor, staged controller,
   configured utility affinity, live-follow affinity, refresh service, and
   their tests.
+
+## 2026-09-30 - Issue 151 installed direct-CDP acceptance and closeout
+
+- PR #153 merged the implementation at canonical SHA `f55e68726`. A detached
+  canonical build was installed, and every touched installed runtime artifact
+  matched the build byte-for-byte. The installed API was healthy and the
+  scheduler remained paused.
+- Exact inert preflight removed one orphaned owned browser process and then
+  confirmed zero exact process, listener, or non-released lease before live
+  work. No unrelated browser state was touched.
+- The sole installed canary completed one pass with a `clean_completion`
+  outcome. AuraCall recorded one explicit navigation; continuous direct CDP
+  observed one top-level document/navigation, four subframe navigations, and
+  163 total requests. No visible rate-limit warning or observer error appeared,
+  and no retry ran.
+- Exact cleanup stopped the owned browser and retired its settled idle lease
+  through the installed maintenance path. The fresh final census was zero for
+  exact processes, listeners, and non-released leases. Scheduler state and
+  posture remained paused pending a separate operator decision.
+- Plan 0385 and lane P84 are closed. The sanitized acceptance receipt is
+  `docs/dev/notes/2026-09-30-issue-151-final-live-acceptance.md`.
