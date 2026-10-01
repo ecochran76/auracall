@@ -52131,3 +52131,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Gate A remains open because cold-start target creation happens before the
   lease-backed governor exists, and recovery needs a separately causal
   admission rather than implicit reuse of ordinary route authority.
+
+## 2026-09-30 | Issue 151 Gate A provider-free acceptance
+
+- Routed cold-start crawler target creation through the shared provider-traffic
+  governor before `openTarget`. It carries a one-use bootstrap plan and a
+  provisional pre-lease attribution; denied admission leaves the target and
+  lease registries untouched, while failed post-create settlement closes the
+  exact unleased target.
+- Added separately causal recovery admission. Recovery requires a frozen phase,
+  a distinct SHA-256 work key, a nonempty reason, and a one-use budget; ordinary
+  route capacity cannot be reused as recovery authority.
+- Confirmed reservation rollback after cancelled delegate admission and retained
+  the one-visit invariant. The widened production-path gate passes 285/285 with
+  typecheck. No provider/browser activity ran.
+- Gate A is complete. Gate B warning/cooldown correlation is next.

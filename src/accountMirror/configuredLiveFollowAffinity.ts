@@ -12,6 +12,7 @@ import type { BrowserOperationAcquiredResult } from "../../packages/browser-serv
 import {
 	createProviderTrafficGovernor,
 	type ProviderTrafficGovernor,
+	withProviderTrafficContext,
 } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { classifyStructuredProviderWarning } from "../browser/chatgptAffinityRuntime.js";
 import { probeVisibleChatgptRateLimitWarning } from "../browser/chatgptProviderTraffic.js";
@@ -25,6 +26,7 @@ import type { ResolvedUserConfig } from "../config.js";
 import { resolveChatgptTenantLimits } from "../runtime/tenantExecutionLimits.js";
 import type { AccountMirrorMetadataCollectorInput } from "./chatgptMetadataCollector.js";
 import { acquireLiveFollowCrawlerTab } from "./liveFollowTabCoordinator.js";
+import { withAccountMirrorProviderTrafficPlan } from "./providerTrafficPlan.js";
 
 export interface ConfiguredLiveFollowAffinityContext {
 	tabAffinity: NonNullable<AccountMirrorMetadataCollectorInput["tabAffinity"]>;
@@ -115,6 +117,48 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		inspectTarget,
 		closeTarget,
 	});
+	const limits = resolveChatgptTenantLimits(
+		clientConfig as Record<string, unknown>,
+		input.runtimeProfileId,
+	);
+	const baseGovernor = createBrowserInteractionGovernor({
+		maxInteractionsPerMinute: input.maxBrowserInteractionsPerMinute,
+		cooldownsByClass: {
+			"conversation-read": input.conversationReadCooldownMs,
+			"page-refresh": input.pageRefreshCooldownMs,
+			renavigation: input.renavigationCooldownMs,
+		},
+		abortSignal: input.abortSignal,
+	});
+	const preLeaseProviderTrafficGovernor = withProviderTrafficContext(
+		withAccountMirrorProviderTrafficPlan(
+			createProviderTrafficGovernor({
+				attribution: {
+					provider: "chatgpt",
+					runtimeProfileId: input.runtimeProfileId,
+					managedBrowserProfile,
+					workloadId: `live-follow:${input.operationId}`,
+					operationId: input.operationId,
+					tabLeaseId: `pre-lease:${input.operationId}`,
+				},
+				interactionGovernor: baseGovernor,
+				mutationAudit: browserService.getMutationAuditSink(),
+			}),
+			{
+				object: "account_mirror_provider_traffic_plan",
+				version: 1,
+				budgets: [
+					{
+						phase: "bootstrap",
+						kind: "target_create",
+						workKey: "scope:crawler-target",
+						limit: 1,
+					},
+				],
+			},
+		),
+		{ trafficPhase: "bootstrap", workKey: "scope:crawler-target" },
+	);
 	let coldStartTargets: Array<{ targetId: string; url: string }> = [];
 	const crawler = await acquireLiveFollowCrawlerTab({
 		registry: runtime.registry,
@@ -145,6 +189,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			return endpoint;
 		},
 		listTargets: async () => coldStartTargets,
+		preLeaseProviderTrafficGovernor,
 		inspectTarget,
 		openTarget: async ({ host, port, url }) => {
 			const target = await openChromeTarget(port, url, host, undefined, {
@@ -157,19 +202,6 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			return { targetId, url };
 		},
 		closeTarget: ({ host, port, targetId }) => closeTarget({ host, port }, targetId),
-	});
-	const limits = resolveChatgptTenantLimits(
-		clientConfig as Record<string, unknown>,
-		input.runtimeProfileId,
-	);
-	const baseGovernor = createBrowserInteractionGovernor({
-		maxInteractionsPerMinute: input.maxBrowserInteractionsPerMinute,
-		cooldownsByClass: {
-			"conversation-read": input.conversationReadCooldownMs,
-			"page-refresh": input.pageRefreshCooldownMs,
-			renavigation: input.renavigationCooldownMs,
-		},
-		abortSignal: input.abortSignal,
 	});
 	const interactionGovernor = createLedgerBackedBrowserInteractionGovernor({
 		ledger: runtime.ledger,

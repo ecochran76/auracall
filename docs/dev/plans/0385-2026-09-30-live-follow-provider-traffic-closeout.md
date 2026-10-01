@@ -5,7 +5,7 @@ Lane: P84
 Work item: ecochran76/auracall#151
 Predecessor: `docs/dev/plans/0384-2026-09-30-live-follow-provider-traffic-efficiency.md`
 Source base: `origin/main` at `3912b3cb1bbaaf4ba8663a4508fe7cd4d5106f53`
-Implementation checkpoint: `f1db89bb1061922848f6ceb6fa2d09ca7a6381d8`
+Implementation checkpoint: pending Gate A publication
 Branch: `plan/issue-151-live-follow-traffic-efficiency`
 Target: `main`
 Integration: merge
@@ -20,19 +20,20 @@ canary while the scheduler remains paused.
 
 ## Current State
 
-The branch is published through the Gate A checkpoint `63997984c`.
-Plan 0384's
+The branch is published through exact-work checkpoint `ce64403d3`; the completed
+Gate A source and provider-free acceptance are pending publication in the next
+checkpoint. Plan 0384's
 P0 through P3 outcomes are provider-free complete, and its first P4 primitive
 can reject over-budget actions before delegating to the shared governor. The
-Gate A is in progress: the real refresh path now creates a staged controller,
+Gate A is provider-free complete: the real refresh path creates a staged controller,
 freezes bootstrap/index authority before collection, freezes detail authority
 after frontier selection, and yields after one planned detail read rather than
 attempting a second navigation. In-page actions are no longer mislabeled as
-route visits. The next checkpoint adds exact SHA-256 row keys to detail and
-materialization traffic, including the snapshot-refresh path, and enforces the
-materialization plan inside configured utility affinity. Pre-lease cold-start
-target creation and explicit recovery admission still remain before Gate A can
-close. The remaining work is
+route visits. Exact SHA-256 row keys bind detail and materialization traffic,
+including the snapshot-refresh path, and the materialization plan is enforced
+inside configured utility affinity. Cold-start target
+creation is admitted through a one-use bootstrap plan before the target opens,
+and recovery requires a separately hashed causal admission. The remaining work is
 the single end-to-end chain defined by Gates A through F:
 production pass-plan enforcement, warning/cooldown correlation, canonical
 integration, exact installation, one live canary, and issue reconciliation.
@@ -120,6 +121,8 @@ gate. The final live gate has one attempt and no automated retry.
 ## Completion Gates
 
 ### Gate A - Production enforcement
+
+Status: COMPLETE (provider-free source and production-path tests)
 
 Wire deterministic staged pass-plan construction into the real metadata and
 materialization paths. Every controllable provider action must reserve matching
@@ -223,10 +226,10 @@ operator decision after acceptance.
 
 ## Acceptance Ledger
 
-- [ ] Production metadata and materialization paths enforce a frozen staged
+- [x] Production metadata and materialization paths enforce a frozen staged
       traffic plan before each controllable action.
-- [ ] No-action materialization produces zero provider work.
-- [ ] One selected conversation is visited at most once absent separately
+- [x] No-action materialization produces zero provider work.
+- [x] One selected conversation is visited at most once absent separately
       admitted and receipted recovery.
 - [ ] Every top-level document and explicit navigation reconciles; unexplained
       controllable activity fails closed.

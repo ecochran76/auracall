@@ -177,6 +177,33 @@ describe("account-mirror provider traffic plan", () => {
 		expect(begin).toHaveBeenCalledTimes(1);
 	});
 
+	it("rolls back reserved capacity when delegate admission is cancelled", async () => {
+		const cancelled = new DOMException("cancelled", "AbortError");
+		const begin = vi
+			.fn()
+			.mockRejectedValueOnce(cancelled)
+			.mockResolvedValueOnce({ id: "action", settle: vi.fn() });
+		const governor = withAccountMirrorProviderTrafficPlan(
+			{ attribution: {} as never, begin },
+			{
+				object: "account_mirror_provider_traffic_plan",
+				version: 1,
+				budgets: [{ phase: "detail", kind: "page_navigate", limit: 1 }],
+			},
+		);
+		const action = {
+			kind: "navigate" as const,
+			interactionClass: "conversation-read" as const,
+			source: "fixture:cancelled-admission",
+			trafficPhase: "detail" as const,
+			workKey: "scope:conversation-detail",
+		};
+
+		await expect(governor.begin(action)).rejects.toBe(cancelled);
+		await expect(governor.begin(action)).resolves.toMatchObject({ id: "action" });
+		expect(begin).toHaveBeenCalledTimes(2);
+	});
+
 	it("freezes staged phase authority before delegating exact planned work", async () => {
 		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
 		const controller = createAccountMirrorProviderTrafficPlanController({
@@ -288,6 +315,62 @@ describe("account-mirror provider traffic plan", () => {
 		expect(begin).not.toHaveBeenCalled();
 		expect(selected).toMatch(/^sha256:[a-f0-9]{64}$/);
 		expect(selected).not.toContain("selected-id");
+	});
+
+	it("requires a separately causal admission for one recovery visit", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const controller = createAccountMirrorProviderTrafficPlanController({
+			attribution: {} as never,
+			begin,
+		});
+		const ordinaryKey = createAccountMirrorProviderTrafficWorkKey("conversation", "row-1");
+		const recoveryKey = createAccountMirrorProviderTrafficWorkKey("recovery", "row-1:route-stall");
+		controller.freezePhase("detail", [
+			{ phase: "detail", kind: "page_navigate", workKey: ordinaryKey, limit: 1 },
+		]);
+
+		await controller.governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture:ordinary",
+			trafficPhase: "detail",
+			workKey: ordinaryKey,
+		});
+		await expect(
+			controller.governor.begin({
+				kind: "navigate",
+				interactionClass: "provider-recovery",
+				source: "fixture:implicit-recovery",
+				trafficPhase: "detail",
+				workKey: ordinaryKey,
+				reason: "route-stall",
+			}),
+		).rejects.toBeInstanceOf(ProviderTrafficBudgetExceededError);
+
+		controller.admitRecovery({
+			phase: "detail",
+			kind: "page_navigate",
+			workKey: recoveryKey,
+			reason: "route-stall",
+		});
+		await expect(
+			controller.governor.begin({
+				kind: "navigate",
+				interactionClass: "provider-recovery",
+				source: "fixture:recovery",
+				trafficPhase: "detail",
+				workKey: recoveryKey,
+				reason: "route-stall",
+			}),
+		).resolves.toMatchObject({ id: "action" });
+		expect(begin).toHaveBeenCalledTimes(2);
+		expect(controller.snapshotPlan().budgets).toContainEqual({
+			phase: "detail",
+			kind: "page_navigate",
+			workKey: recoveryKey,
+			reason: "route-stall",
+			limit: 1,
+		});
 	});
 
 	it("keeps in-page actions distinct from route visits", () => {

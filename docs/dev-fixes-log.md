@@ -23885,3 +23885,15 @@ in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.
 - Treat pre-lease target creation as a separate unresolved boundary; do not
   claim complete governor coverage merely because all post-lease actions are
   budgeted.
+
+# 2026-09-30: Govern target creation before lease acquisition
+
+- A lease-backed governor cannot authorize creation of the target from which
+  that lease will be created. Use the same provider-traffic governor with
+  explicit provisional pre-lease attribution and a one-use bootstrap plan,
+  then reserve the lease only after the governed action settles.
+- If post-create settlement fails, close the exact unleased target before
+  propagating the failure. Admission failure must occur before `openTarget`.
+- Recovery is not spare ordinary capacity. Require a distinct hashed work key,
+  causal reason, and one-use admission so its receipt can be tied to the
+  original planned route without silently widening that route's budget.

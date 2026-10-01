@@ -44,6 +44,7 @@ export interface AccountMirrorProviderTrafficBudget {
 	phase: Exclude<AccountMirrorProviderTrafficPhase, "unattributed">;
 	kind: AccountMirrorProviderTrafficEffectKind;
 	workKey?: string;
+	reason?: string;
 	limit: number;
 }
 
@@ -118,6 +119,12 @@ export interface AccountMirrorProviderTrafficPlanController {
 		phase: Exclude<AccountMirrorProviderTrafficPhase, "unattributed">,
 		budgets: readonly AccountMirrorProviderTrafficBudget[],
 	): void;
+	admitRecovery(input: {
+		phase: Exclude<AccountMirrorProviderTrafficPhase, "unattributed">;
+		kind: AccountMirrorProviderTrafficEffectKind;
+		workKey: string;
+		reason: string;
+	}): void;
 	snapshotPlan(): AccountMirrorProviderTrafficPlan;
 }
 
@@ -171,7 +178,7 @@ export function freezeAccountMirrorDetailTrafficPlan(
 }
 
 export function createAccountMirrorProviderTrafficWorkKey(
-	scope: "conversation" | "project" | "materialization",
+	scope: "conversation" | "project" | "materialization" | "recovery",
 	localId: string,
 ): string {
 	return `sha256:${createHash("sha256").update(`${scope}\0${localId}`).digest("hex")}`;
@@ -192,12 +199,17 @@ export function createAccountMirrorProviderTrafficPlanController(
 		phase: AccountMirrorProviderTrafficPhase,
 		kind: AccountMirrorProviderTrafficEffectKind,
 		workKey: string | null | undefined,
+		interactionClass: string,
+		reason: string | null | undefined,
 	) =>
 		budgets.reduce(
 			(total, budget) =>
 				budget.phase === phase &&
 				budget.kind === kind &&
-				(budget.workKey === undefined || budget.workKey === workKey)
+				(budget.workKey === undefined || budget.workKey === workKey) &&
+				(budget.reason
+					? interactionClass === "provider-recovery" && budget.reason === reason
+					: interactionClass !== "provider-recovery")
 					? total + Math.max(0, Math.floor(budget.limit))
 					: total,
 			0,
@@ -206,11 +218,18 @@ export function createAccountMirrorProviderTrafficPlanController(
 		phase: AccountMirrorProviderTrafficPhase,
 		kind: AccountMirrorProviderTrafficEffectKind,
 		workKey: string | null | undefined,
+		interactionClass: string,
+		reason: string | null | undefined,
 	) => {
 		const hasExact = budgets.some(
-			(budget) => budget.phase === phase && budget.kind === kind && budget.workKey === workKey,
+			(budget) =>
+				budget.phase === phase &&
+				budget.kind === kind &&
+				budget.workKey === workKey &&
+				(budget.reason ?? null) ===
+					(interactionClass === "provider-recovery" ? (reason ?? null) : null),
 		);
-		return plannedKey(phase, kind, hasExact ? workKey : null);
+		return `${plannedKey(phase, kind, hasExact ? workKey : null)}:${interactionClass === "provider-recovery" ? (reason ?? "missing-reason") : "ordinary"}`;
 	};
 	const budgetedGovernor: ProviderTrafficGovernor = {
 		attribution: governor.attribution,
@@ -218,8 +237,8 @@ export function createAccountMirrorProviderTrafficPlanController(
 			const kind = mutationEffectKind(input.kind);
 			if (!kind) return governor.begin(input);
 			const phase = input.trafficPhase ?? "unattributed";
-			const limit = budgetLimit(phase, kind, input.workKey);
-			const key = budgetKey(phase, kind, input.workKey);
+			const limit = budgetLimit(phase, kind, input.workKey, input.interactionClass, input.reason);
+			const key = budgetKey(phase, kind, input.workKey, input.interactionClass, input.reason);
 			const next = (admitted.get(key) ?? 0) + 1;
 			if (next > limit) throw new ProviderTrafficBudgetExceededError(phase, kind, limit);
 			admitted.set(key, next);
@@ -250,6 +269,26 @@ export function createAccountMirrorProviderTrafficPlanController(
 				});
 			}
 			frozenPhases.add(phase);
+		},
+		admitRecovery({ phase, kind, workKey, reason }) {
+			if (!frozenPhases.has(phase)) {
+				throw new Error(`Provider traffic recovery requires frozen phase ${phase}.`);
+			}
+			const normalizedWorkKey = workKey.trim();
+			const normalizedReason = reason.trim();
+			if (!/^sha256:[a-f0-9]{64}$/.test(normalizedWorkKey)) {
+				throw new Error("Provider traffic recovery requires a privacy-bounded sha256 work key.");
+			}
+			if (!normalizedReason) {
+				throw new Error("Provider traffic recovery requires a causal reason.");
+			}
+			budgets.push({
+				phase,
+				kind,
+				workKey: normalizedWorkKey,
+				reason: normalizedReason,
+				limit: 1,
+			});
 		},
 		snapshotPlan: () => ({
 			object: "account_mirror_provider_traffic_plan",
