@@ -171,6 +171,14 @@ Evidence required:
 
 ### Gate C - Source and integration acceptance
 
+Status: IN PROGRESS (source validation complete; PR and canonical merge pending)
+
+The full provider-free suite produced 3,487 passes, 65 skips, and two
+reproducible unrelated failures whose source and tests are unchanged from
+`origin/main`: a Grok fixture timeout and a stale ChatGPT source-shape
+assertion. Focused/adjacent tests, typecheck, build, diff hygiene, plan audit,
+CodeGraph sync, and impact review are green.
+
 Validate the complete production path rather than only new helpers. Run focused
 and adjacent tests, affected tests, typecheck, production build, affected lint,
 diff hygiene, CodeGraph sync/impact review, plan audit, and active-lane audit.

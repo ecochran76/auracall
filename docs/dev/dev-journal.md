@@ -52170,3 +52170,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   `clean_completion`, `cleanup_failure`, active work, and other failures.
 - Provider-free Gate B validation passed: 72 focused/adjacent tests plus
   typecheck. No browser or provider activity occurred.
+## 2026-09-30 - Issue 151 Gate C source validation
+
+- Full provider-free suite: 3,487 passed, 65 skipped, and 2 failed across 397
+  files. Both failures reproduce in isolation and their source/test files are
+  byte-identical to `origin/main`: the disabled Grok video readback fixture
+  exceeds its 5-second timeout, and the ChatGPT prompt structure test expects
+  a source shape absent on main. They are recorded as unrelated, not excluded.
+- Issue 151 focused and adjacent suites remain green (72 tests), along with
+  typecheck, production build, diff hygiene, and the active-plan audit.
+- CodeGraph was synchronized after the changes (1,015 files, 19,352 nodes,
+  77,324 edges). Impact review covered the shared governor, staged controller,
+  configured utility affinity, live-follow affinity, refresh service, and
+  their tests.
