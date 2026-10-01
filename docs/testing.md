@@ -695,6 +695,12 @@
         verifies exact runtime/profile/workload/operation/tab-lease attribution,
         completes admission and awaited start recording before effect, and
         settles physical evidence before probing for a visible provider warning
+      - installed traffic acceptance should attach a continuous passive
+        direct-CDP observer before the bounded pass, reconcile AuraCall's
+        explicit navigation count with top-level document/navigation events,
+        retain subframes and hydration requests separately, and keep the
+        observer attached through the final delayed-warning probe; the observer
+        must not click, reload, navigate, dismiss, or retry
       - raw target creation is not provider work yet because no target ID exists
         to lease; every `openChromeTarget` caller must therefore provide an
         explicit `pre-lease-target-acquisition` authority with an operation ID

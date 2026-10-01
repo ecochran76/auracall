@@ -23914,3 +23914,21 @@ counts, timestamps, and outcomes; omit work keys, action IDs, URLs, target IDs,
 and provider content. Project a separate terminal outcome in scheduler
 diagnostics so budget exhaustion, warning stop, successful completion, and
 cleanup failure are not collapsed into a generic error.
+
+## 2026-09-30: Reconcile installed traffic acceptance with continuous direct CDP
+
+- Start the passive direct-CDP observer before the sole installed canary and
+  keep it attached through the terminal warning window. Compare AuraCall's
+  admitted explicit navigations with direct-CDP top-level documents while
+  retaining subframes and hydration requests as distinct observations.
+- A paused scheduler can still support one bounded acceptance pass through the
+  existing completion control. Do not resume continuous scheduling merely to
+  exercise one completion, and do not turn the control into retry authority.
+- Installed diagnostics can omit browser-mutation detail when the API service's
+  active AuraCall runtime profile differs from the canary profile. In that
+  case, require both the canary's own sanitized mutation telemetry and the
+  independent direct-CDP receipt rather than treating the absent projection as
+  zero activity.
+- Finish with a fresh exact-scope process, listener, and lease census. Retire
+  only a settled idle lease after positively proving its owned browser is gone;
+  active, ambiguous, or unrelated leases remain hard stops.

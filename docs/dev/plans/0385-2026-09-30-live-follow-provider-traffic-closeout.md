@@ -1,11 +1,11 @@
 # Live-Follow Provider-Traffic Closeout | 0385-2026-09-30
 
-State: OPEN
+State: CLOSED
 Lane: P84
 Work item: ecochran76/auracall#151
 Predecessor: `docs/dev/plans/0384-2026-09-30-live-follow-provider-traffic-efficiency.md`
 Source base: `origin/main` at `3912b3cb1bbaaf4ba8663a4508fe7cd4d5106f53`
-Implementation checkpoint: pending Gate A publication
+Implementation checkpoint: `f55e687261a063f36b94cd41dd40d89fba233686`
 Branch: `plan/issue-151-live-follow-traffic-efficiency`
 Target: `main`
 Integration: merge
@@ -20,26 +20,20 @@ canary while the scheduler remains paused.
 
 ## Current State
 
-The branch is published through exact-work checkpoint `ce64403d3`; the completed
-Gate A source and provider-free acceptance are pending publication in the next
-checkpoint. Plan 0384's
-P0 through P3 outcomes are provider-free complete, and its first P4 primitive
-can reject over-budget actions before delegating to the shared governor. The
-Gate A is provider-free complete: the real refresh path creates a staged controller,
-freezes bootstrap/index authority before collection, freezes detail authority
-after frontier selection, and yields after one planned detail read rather than
-attempting a second navigation. In-page actions are no longer mislabeled as
-route visits. Exact SHA-256 row keys bind detail and materialization traffic,
-including the snapshot-refresh path, and the materialization plan is enforced
-inside configured utility affinity. Cold-start target
-creation is admitted through a one-use bootstrap plan before the target opens,
-and recovery requires a separately hashed causal admission. The remaining work is
-the single end-to-end chain defined by Gates A through F:
-production pass-plan enforcement, warning/cooldown correlation, canonical
-integration, exact installation, one live canary, and issue reconciliation.
+All gates are complete. PR #153 merged the implementation at canonical SHA
+`f55e687261a063f36b94cd41dd40d89fba233686`; the installed runtime was built
+from that detached canonical checkout and its touched artifacts matched the
+build byte-for-byte. The sole installed direct-CDP canary completed one bounded
+pass with one explicit `Page.navigate`, one top-level document/navigation, and
+163 total requests. It produced a `clean_completion` outcome, no visible
+rate-limit warning, no observer error, and no automatic retry.
 
-The scheduler remains operator-paused and its unit inactive. No live provider
-attempt has been used by this successor.
+Exact post-run cleanup retired the settled idle lease after the owned browser
+shutdown. The final census found zero exact managed browser processes, zero
+DevTools listeners, and zero non-released exact-scope leases. The scheduler
+remains operator-paused; resuming it is a separate decision outside this plan.
+The sanitized durable receipt is
+`docs/dev/notes/2026-09-30-issue-151-final-live-acceptance.md`.
 
 ## Why This Successor Exists
 
@@ -63,17 +57,15 @@ The accepted Plan 0384 evidence is inherited rather than repeated or reopened:
 - paused scheduler and inactive scheduler unit as the required operating
   posture.
 
-## Remaining Outcome Gap
+## Outcome Proof
 
-The source has the primitives but not yet the production proof chain. The live
-collector and materializer must consume one deterministic pass plan before
-route work; budget exhaustion and warning/cooldown evidence must converge in
-one receipt; the canonical merge must be installed exactly; and one installed
-canary must demonstrate less physical provider traffic without lease, process,
-listener, attribution, or warning regressions.
-
-No intermediate test count, commit, pull request, install, or clean canary
-alone closes the issue. Every gate below must have current evidence.
+The production collector and materializer consume the deterministic staged pass
+plan before controllable work. Budget, phase, warning, cooldown, and terminal
+outcome evidence converge in sanitized receipts. The canonical merge was
+installed exactly, and the sole installed canary demonstrated lower physical
+provider traffic without lease, process, listener, attribution, or warning
+regressions. The gate evidence below and the durable acceptance receipt jointly
+close the outcome; no intermediate checkpoint was treated as sufficient alone.
 
 ## Controlling Design
 
@@ -171,7 +163,7 @@ Evidence required:
 
 ### Gate C - Source and integration acceptance
 
-Status: IN PROGRESS (source validation complete; PR and canonical merge pending)
+Status: COMPLETE
 
 The full provider-free suite produced 3,487 passes, 65 skips, and two
 reproducible unrelated failures whose source and tests are unchanged from
@@ -192,6 +184,8 @@ the only install candidate.
 
 ### Gate D - Exact install and inert preflight
 
+Status: COMPLETE
+
 Build and install the canonical merge, then prove byte or artifact identity for
 the touched runtime surfaces. Before any provider work, read back:
 
@@ -206,6 +200,8 @@ Ambiguity fails closed. Cleanup may touch only exact owned state and must be
 followed by a fresh process, listener, and lease census.
 
 ### Gate E - Single installed direct-CDP acceptance
+
+Status: COMPLETE (one attempt consumed; no retry)
 
 With the scheduler still paused, run one bounded real AuraCall pass under
 continuous direct-CDP observation. Do not perform a preparatory provider
@@ -233,6 +229,8 @@ authorize a second canary.
 
 ### Gate F - Reconciliation and issue disposition
 
+Status: COMPLETE
+
 Update this plan, the active lane, dev journal, fixes log, testing/operator
 documentation, and a durable sanitized acceptance receipt with the canonical
 merge, installed identity, commands, counters, stop state, and post-run census.
@@ -249,21 +247,21 @@ operator decision after acceptance.
 - [x] No-action materialization produces zero provider work.
 - [x] One selected conversation is visited at most once absent separately
       admitted and receipted recovery.
-- [ ] Every top-level document and explicit navigation reconciles; unexplained
+- [x] Every top-level document and explicit navigation reconciles; unexplained
       controllable activity fails closed.
-- [ ] Phase counters agree with direct-CDP controllable effects while frames
+- [x] Phase counters agree with direct-CDP controllable effects while frames
       and hydration remain distinct.
 - [x] Warning correlation freezes admissions and persists a privacy-safe
       signature plus bounded preceding interaction/effect window.
 - [x] Provider-free coverage proves budget exhaustion, rollback, cancellation,
       delayed warning, cooldown, restart, and unattributed-document behavior.
-- [ ] Existing identity, lease-generation, traffic-governor, cleanup, privacy,
+- [x] Existing identity, lease-generation, traffic-governor, cleanup, privacy,
       cooldown, and `Answer now` prohibitions remain green.
-- [ ] Source, integration, plan/lane, and exact-install gates pass against the
+- [x] Source, integration, plan/lane, and exact-install gates pass against the
       canonical merge.
-- [ ] The one installed canary meets the navigation/request thresholds and
+- [x] The one installed canary meets the navigation/request thresholds and
       leaves a clean process/listener/lease census.
-- [ ] Scheduler posture and unit remain paused pending a separate operator
+- [x] Scheduler posture and unit remain paused pending a separate operator
       decision.
 
 ## Bounds and Checkpoints

@@ -1647,9 +1647,9 @@ lanes:
     plan_ref: refs/heads/plan/issue-151-live-follow-traffic-efficiency
     branch: plan/issue-151-live-follow-traffic-efficiency
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: f1db89bb1061922848f6ceb6fa2d09ca7a6381d8
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: f55e687261a063f36b94cd41dd40d89fba233686
     remote_ref: refs/remotes/origin/plan/issue-151-live-follow-traffic-efficiency
     integration: merge
     work_items: [ecochran76/auracall#151]
@@ -1658,8 +1658,8 @@ lanes:
     reconciled_overlaps: [P80, P81]
     reconciliation_note: P84 consumes the shared P80 governor and P81 changed-frontier state; it adds phase attribution, earlier actionability filtering, route reuse, and physical traffic acceptance without creating another control seam.
     blocker: null
-    validation_status: provider-free-implementation-in-progress
-    validation_ref: docs/dev/plans/0385-2026-09-30-live-follow-provider-traffic-closeout.md
-    integration_receipt: null
-    disposition: Plan 0385 inherits accepted Plan 0384 evidence and governs the remaining end-to-end outcome through production enforcement, warning correlation, canonical integration, exact install, one direct-CDP canary, and issue reconciliation; scheduler resume remains excluded.
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-30-issue-151-final-live-acceptance.md
+    integration_receipt: f55e687261a063f36b94cd41dd40d89fba233686
+    disposition: PR 153 integrated the governed provider-traffic path, the canonical build was installed byte-identically, and the sole direct-CDP canary completed with one top-level navigation, 163 requests, no warning, and a clean exact-scope census; scheduler resume remains excluded.
     updated_at: 2026-09-30
