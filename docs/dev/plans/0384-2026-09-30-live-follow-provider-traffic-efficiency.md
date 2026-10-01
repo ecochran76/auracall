@@ -1,12 +1,21 @@
 # Live-Follow Provider-Traffic Efficiency | 0384-2026-09-30
 
-State: OPEN
+State: CANCELLED
 Lane: P84
 Work item: ecochran76/auracall#151
 Source base: `origin/main` at `aa385d2e1`
 Branch: `plan/issue-151-live-follow-traffic-efficiency`
 Target: `main`
 Integration: merge
+Successor: `docs/dev/plans/0385-2026-09-30-live-follow-provider-traffic-closeout.md`
+
+## Disposition
+
+Superseded on 2026-09-30 by Plan 0385 after P0 through P3 and the first P4
+budget primitive were implemented. The stable objective, Issue #151 authority,
+accepted evidence, branch custody, retry history, and live-safety constraints
+carry forward unchanged. This is a control-plan replacement, not abandonment of
+the objective and not authorization to resume the scheduler.
 
 ## Stable Objective
 

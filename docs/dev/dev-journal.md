@@ -52077,3 +52077,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Began P4 with a budget wrapper that rejects a second detail navigation before
   delegating to the underlying governor. Production pass-plan construction and
   warning integration remain. No browser/provider work ran.
+
+## 2026-09-30 | Issue 151 completion-plan reframe
+
+- Replaced Plan 0384's remaining slice-by-slice P4/P5 framing with Plan 0385,
+  one outcome-level completion controller for production enforcement, warning
+  correlation, canonical integration, exact installation, the sole final
+  direct-CDP canary, and truthful issue disposition.
+- Plan 0385 inherits the accepted baseline, P0 through P3 evidence, current
+  implementation checkpoint, retry history, privacy boundaries, and scheduler
+  posture. The reframe does not reopen accepted work or reset live-attempt and
+  review bounds.
+- The final canary remains limited to one attempt after every provider-free,
+  integration, install, and inert-preflight gate passes. Scheduler resume,
+  automatic warning dismissal, provider retries, and the deferred network
+  meter remain outside scope.
