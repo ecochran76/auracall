@@ -52019,3 +52019,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   browser process or port 45015 listener. API scheduler posture/state remain
   paused and the scheduler unit remains inactive. No provider canary, warning
   dismissal, navigation, reload, or retry ran during this repair closeout.
+
+## 2026-09-30 | Issue 151 provider-traffic efficiency plan
+
+- Opened Issue #151 from the accepted direct-CDP canary evidence: one bounded
+  pass produced 2,146 requests, 11 document loads, four `Page.navigate`
+  commands, and six of six logical interactions despite no visible warning.
+- Plan 0384 / lane P84 turns the remaining problem into one bounded successor
+  plan executed through serial provider-free slices: baseline attribution,
+  deep shared instrumentation, local actionability, one-pass route reuse, and
+  deterministic budgets before a single final installed canary.
+- The raw network meter remains deferred. The plan first governs the actions
+  AuraCall controls and requires every top-level document/navigation to
+  reconcile to a precomputed route plan.
+- The scheduler and its unit remain paused. No browser/provider activity was
+  performed while creating this plan.

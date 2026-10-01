@@ -1641,3 +1641,25 @@ lanes:
     integration_receipt: 669ad3a272794d5e499fc8693465fe3b3f99c198
     disposition: Shared post-shutdown lease retirement integrated through PR 149 and installed byte-identically; both canary leases are released, no exact browser process or listener remains, and the scheduler stays paused without another provider canary.
     updated_at: 2026-09-30
+  - id: P84
+    objective: Reduce bounded live-follow provider traffic to locally selected actionable work with phase-attributed physical budgets.
+    plan: docs/dev/plans/0384-2026-09-30-live-follow-provider-traffic-efficiency.md
+    plan_ref: refs/heads/plan/issue-151-live-follow-traffic-efficiency
+    branch: plan/issue-151-live-follow-traffic-efficiency
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: aa385d2e1d187499d836eb7ac09ca1f9365dd93b
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#151]
+    dependencies: [P80, P81, P82, P83]
+    overlaps: [P80, P81]
+    reconciled_overlaps: [P80, P81]
+    reconciliation_note: P84 consumes the shared P80 governor and P81 changed-frontier state; it adds phase attribution, earlier actionability filtering, route reuse, and physical traffic acceptance without creating another control seam.
+    blocker: null
+    validation_status: planned-provider-free-first
+    validation_ref: docs/dev/plans/0384-2026-09-30-live-follow-provider-traffic-efficiency.md
+    integration_receipt: null
+    disposition: Issue 151 and the bounded successor plan are open. Implementation is serialized through provider-free slices; one final direct-CDP canary is gated, and scheduler resume is excluded.
+    updated_at: 2026-09-30
