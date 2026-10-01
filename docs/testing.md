@@ -9,6 +9,13 @@
   phase plus privacy-bounded work attribution. It does not launch a browser,
   contact ChatGPT, or prove CDP effect reconciliation.
 
+- Account-mirror local materialization actionability (provider-free):
+  `pnpm vitest run tests/accountMirror/completionService.test.ts -t "requires positive local backlog evidence|does not queue raw missing assets"`.
+  This proves that implicit steady-follow materialization requires positive
+  locally retrievable missing-asset evidence; merely unknown/deferred backlog
+  evidence performs no job creation or provider work. Explicit full-sweep
+  requests preserve their separately requested fallback.
+
 - Provider traffic authority in serialized and affinity modes (provider-free):
   `pnpm vitest run tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser-service/providerTrafficStructural.test.ts`.
   This proves serialized execution retains its non-affinity behavior while

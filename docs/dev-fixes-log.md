@@ -23853,3 +23853,13 @@ configured tenant and exact AuraCall runtime profile plus managed browser
 profile, then uses the registry's ordinary `idle -> retiring -> released`
 transition with `operator` / `already-missing`. Never force-release active,
 in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.
+## 2026-09-30: Missing or uncertain materialization backlog is not actionability
+
+- Implicit steady-follow materialization previously treated unknown/deferred
+  rows as sufficient reason to create a provider job.
+- Fail closed before implicit job creation: require a positive local
+  `retrievableMissing` count. Preserve unknown/deferred evidence for later
+  reconciliation without converting uncertainty into provider traffic.
+  Keep explicitly requested full sweeps distinct from that implicit path.
+- Regression: `tests/accountMirror/completionService.test.ts` covers both the
+  pure decision and the production no-job path.

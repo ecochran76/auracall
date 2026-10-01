@@ -52049,3 +52049,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The focused 69-test gate and typecheck pass. P0 is source-complete; P1 still
   needs CDP effect reconciliation and materialization-phase attribution. The
   scheduler stayed paused and no browser/provider work ran.
+
+## 2026-09-30 | Issue 151 P2 local materialization actionability
+
+- Removed the permissive steady-follow fallback that treated missing local
+  actionability evidence as authorization to materialize. Explicit full-sweep
+  requests retain their operator-requested fallback when no reader exists.
+- Implicit materialization now requires a positive `retrievableMissing` count.
+  Unknown or deferred rows remain visible but cannot independently cause a
+  provider route, snapshot refresh, or artifact attempt.
+- The focused regression proves both the pure decision and the production
+  completion path: four unknown/deferred rows with zero retrievable assets do
+  not create a history-materialization job. No browser/provider work ran.

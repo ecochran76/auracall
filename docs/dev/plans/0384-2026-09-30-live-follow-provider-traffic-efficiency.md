@@ -46,6 +46,12 @@ phase and privacy-bounded work-key context, and the metadata collector binds
 `bootstrap`, `index`, and `detail` contexts before adapter work. CDP effect
 reconciliation and materialization-phase wiring remain.
 
+P2 is source-complete. Implicit steady-follow materialization now requires
+positive local `retrievableMissing` evidence. A missing backlog reader, an
+unreadable backlog, or `unknownOrDeferred` evidence alone cannot create that
+job and therefore cannot open a provider route. Explicit `full_sweep` requests
+retain their existing operator-requested fallback when no reader is configured.
+
 ## Problem Boundary
 
 Logical governor permits do not describe browser page hydration. One admitted
@@ -132,6 +138,8 @@ Status: IN PROGRESS
   provider identifiers or a second instrumentation seam.
 
 ### P2 - Local actionability gate
+
+Status: COMPLETE (provider-free source)
 
 - Outcome: filter detail and materialization work from durable local evidence
   before any provider route action is admitted.
