@@ -43,14 +43,28 @@ controllable navigations/top-level documents from subframes and hydration.
 Unattributed controllable effects and phase-budget overages fail closed. P1 is
 in progress: browser-service mutation receipts now preserve immutable traffic
 phase and privacy-bounded work-key context, and the metadata collector binds
-`bootstrap`, `index`, and `detail` contexts before adapter work. CDP effect
-reconciliation and materialization-phase wiring remain.
+`bootstrap`, `index`, and `detail` contexts before adapter work. Completed
+governor actions now reconcile with phase-attributed CDP effects without
+retaining action IDs, routes, or source strings, and utility-affinity history
+materialization binds its own phase before provider work. P1 is source-complete.
 
 P2 is source-complete. Implicit steady-follow materialization now requires
 positive local `retrievableMissing` evidence. A missing backlog reader, an
 unreadable backlog, or `unknownOrDeferred` evidence alone cannot create that
 job and therefore cannot open a provider route. Explicit `full_sweep` requests
 retain their existing operator-requested fallback when no reader is configured.
+
+P3 was revalidated against the integrated once-per-epoch visit bundle and
+retained-snapshot path. One row fails closed above one navigation, current-pass
+and retained conversation IDs are passed into materialization, and the history
+service skips snapshot refresh for those exact IDs. Together with P2's no-job
+gate, a zero-action candidate performs no provider route work. P3 is complete.
+
+P4 is in progress. A provider-free budget wrapper now reserves controllable
+phase actions before delegating to the shared governor, rolls back a failed
+admission, and rejects over-budget work before the underlying action can begin.
+Production pass-plan construction and warning/cooldown receipt integration
+remain.
 
 ## Problem Boundary
 
@@ -123,7 +137,7 @@ Status: COMPLETE (provider-free source)
 
 ### P1 - Deep phase-aware traffic instrumentation
 
-Status: IN PROGRESS
+Status: COMPLETE (provider-free source)
 
 - Outcome: extend the existing browser-service governor/ledger so callers
   attach a closed-vocabulary phase and local work key before each physical
@@ -154,6 +168,8 @@ Status: COMPLETE (provider-free source)
 
 ### P3 - One-pass route reuse
 
+Status: COMPLETE (provider-free source and revalidated integrated behavior)
+
 - Outcome: make metadata, detail, and materialization share one current-pass
   route-use record and visit bundle, falling back to retained evidence without
   rehydrating the same conversation.
@@ -166,6 +182,8 @@ Status: COMPLETE (provider-free source)
   recovery admission and causal receipt are present.
 
 ### P4 - Deterministic budgets and warning correlation
+
+Status: IN PROGRESS
 
 - Outcome: bind phase budgets to the precomputed traffic plan, yield or stop
   before excess work, and correlate a detected warning with the exact bounded

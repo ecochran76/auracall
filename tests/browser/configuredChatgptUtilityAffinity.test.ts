@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { createInMemoryProviderInteractionLedger } from "../../packages/browser-service/src/service/interactionLedger.js";
 import { ProviderInteractionGovernorClosedError } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
+import type { BrowserMutationRecord } from "../../packages/browser-service/src/service/mutationDispatcher.js";
 import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { runConfiguredChatgptUtilityOperation } from "../../src/browser/configuredChatgptUtilityAffinity.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
@@ -24,7 +25,16 @@ describe("configured ChatGPT utility affinity", () => {
 		const ledger = createInMemoryProviderInteractionLedger();
 		const openTarget = vi.fn();
 		const closeTarget = vi.fn();
-		const run = vi.fn(async (options: BrowserProviderListOptions) => options.tabTargetId);
+		const records: BrowserMutationRecord[] = [];
+		const run = vi.fn(async (options: BrowserProviderListOptions) => {
+			const action = await options.providerTrafficGovernor?.begin({
+				kind: "navigate",
+				interactionClass: "conversation-read",
+				source: "history-materialization:fixture",
+			});
+			await action?.settle({ outcome: "succeeded" });
+			return options.tabTargetId;
+		});
 
 		await expect(
 			runConfiguredChatgptUtilityOperation({
@@ -53,6 +63,10 @@ describe("configured ChatGPT utility affinity", () => {
 					configuredUrl: "https://chatgpt.com/library",
 					preserveActiveTab: true,
 					requireExistingTarget: true,
+					providerTrafficContext: {
+						trafficPhase: "materialization",
+						workKey: "scope:history-materialization",
+					},
 				},
 				buildListOptions: async (options) => options,
 				run,
@@ -64,6 +78,9 @@ describe("configured ChatGPT utility affinity", () => {
 					]) as never,
 					openTarget: openTarget as never,
 					closeTarget,
+					mutationAudit: async (record) => {
+						records.push(record);
+					},
 				},
 			}),
 		).resolves.toBe("library-target");
@@ -83,6 +100,18 @@ describe("configured ChatGPT utility affinity", () => {
 		);
 		expect(openTarget).not.toHaveBeenCalled();
 		expect(closeTarget).not.toHaveBeenCalled();
+		expect(records).toEqual([
+			expect.objectContaining({
+				phase: "start",
+				trafficPhase: "materialization",
+				workKey: "scope:history-materialization",
+			}),
+			expect.objectContaining({
+				phase: "complete",
+				trafficPhase: "materialization",
+				workKey: "scope:history-materialization",
+			}),
+		]);
 	});
 
 	test("fails closed without creating a target when no exact Library target exists", async () => {

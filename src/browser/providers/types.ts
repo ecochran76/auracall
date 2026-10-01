@@ -2,6 +2,7 @@ import type { BrowserInteractionGovernor } from "../../../packages/browser-servi
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type {
 	ProviderTrafficAuthorityFactory,
+	ProviderTrafficContext,
 	ProviderTrafficGovernor,
 } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
@@ -68,6 +69,7 @@ export interface BrowserProviderListOptions {
 	mutationSourcePrefix?: string;
 	interactionGovernor?: BrowserInteractionGovernor;
 	providerTrafficGovernor?: ProviderTrafficGovernor;
+	providerTrafficContext?: ProviderTrafficContext;
 	providerTrafficAuthorityFactory?: ProviderTrafficAuthorityFactory;
 	providerTrafficRequired?: boolean;
 	preserveInteractionGovernorForProviderSession?: boolean;

@@ -1,9 +1,13 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { BrowserMutationRecord } from "../../packages/browser-service/src/service/mutationDispatcher.js";
 import {
 	type AccountMirrorProviderTrafficObservation,
 	assertAccountMirrorProviderTrafficReconciled,
+	createAccountMirrorProviderTrafficObservation,
+	ProviderTrafficBudgetExceededError,
 	reconcileAccountMirrorProviderTraffic,
+	withAccountMirrorProviderTrafficPlan,
 } from "../../src/accountMirror/providerTrafficPlan.js";
 
 const baseline = JSON.parse(
@@ -92,5 +96,80 @@ describe("account-mirror provider traffic plan", () => {
 		expect(() => assertAccountMirrorProviderTrafficReconciled(report)).toThrow(
 			"1 provider traffic budget violation",
 		);
+	});
+
+	it("reconciles completed governor actions with phase-attributed CDP effects", () => {
+		const mutations: BrowserMutationRecord[] = [
+			{
+				id: "action-1",
+				phase: "start",
+				kind: "navigate",
+				source: "fixture",
+				trafficPhase: "detail",
+				workKey: "sha256:redacted",
+				at: "2026-09-30T00:00:00.000Z",
+			},
+			{
+				id: "action-1",
+				phase: "complete",
+				kind: "navigate",
+				source: "fixture",
+				trafficPhase: "detail",
+				workKey: "sha256:redacted",
+				at: "2026-09-30T00:00:01.000Z",
+				outcome: "succeeded",
+			},
+		];
+
+		const observation = createAccountMirrorProviderTrafficObservation({
+			observedAt: "2026-09-30T00:00:02.000Z",
+			logicalInteractions: 1,
+			mutations,
+			cdpEffects: [
+				{ phase: "detail", kind: "top_level_document", count: 1 },
+				{ phase: "detail", kind: "frame_navigation", count: 3 },
+				{ phase: "detail", kind: "network_request", count: 410 },
+			],
+			warningObserved: false,
+		});
+
+		expect(observation.effects).toEqual([
+			{ phase: "detail", kind: "page_navigate", count: 1 },
+			{ phase: "detail", kind: "top_level_document", count: 1 },
+			{ phase: "detail", kind: "frame_navigation", count: 3 },
+			{ phase: "detail", kind: "network_request", count: 410 },
+		]);
+		expect(JSON.stringify(observation)).not.toContain("action-1");
+		expect(JSON.stringify(observation)).not.toContain("fixture");
+	});
+
+	it("rejects excess controllable actions before the underlying governor admits them", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const governor = withAccountMirrorProviderTrafficPlan(
+			{ attribution: {} as never, begin },
+			{
+				object: "account_mirror_provider_traffic_plan",
+				version: 1,
+				budgets: [{ phase: "detail", kind: "page_navigate", limit: 1 }],
+			},
+		);
+
+		await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture:first",
+			trafficPhase: "detail",
+			workKey: "scope:conversation-detail",
+		});
+		await expect(
+			governor.begin({
+				kind: "navigate",
+				interactionClass: "conversation-read",
+				source: "fixture:second",
+				trafficPhase: "detail",
+				workKey: "scope:conversation-detail",
+			}),
+		).rejects.toBeInstanceOf(ProviderTrafficBudgetExceededError);
+		expect(begin).toHaveBeenCalledTimes(1);
 	});
 });

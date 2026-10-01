@@ -6,8 +6,10 @@
   This preserves the sanitized Issue #151 baseline, fails unexplained
   top-level navigation and phase-budget overages, and proves that account-
   mirror bootstrap, index, and detail adapter work inherits immutable traffic
-  phase plus privacy-bounded work attribution. It does not launch a browser,
-  contact ChatGPT, or prove CDP effect reconciliation.
+  phase plus privacy-bounded work attribution. It also reconciles completed
+  governor actions with phase-attributed CDP counters and proves budget
+  exhaustion stops before underlying admission. It does not launch a browser
+  or contact ChatGPT.
 
 - Account-mirror local materialization actionability (provider-free):
   `pnpm vitest run tests/accountMirror/completionService.test.ts -t "requires positive local backlog evidence|does not queue raw missing assets"`.

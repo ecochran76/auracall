@@ -4202,6 +4202,10 @@ async function materializeConversationTarget(input: {
 	const listOptions = {
 		...resolveHistoryMaterializationProviderListOptions(input.target),
 		...(input.interactionGovernor ? { interactionGovernor: input.interactionGovernor } : {}),
+		providerTrafficContext: {
+			trafficPhase: "materialization" as const,
+			workKey: "scope:history-materialization",
+		},
 		scrapeTelemetry,
 		useProviderSession: true,
 		keepProviderSessionOpen: true,

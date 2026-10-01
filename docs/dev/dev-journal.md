@@ -52061,3 +52061,19 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - The focused regression proves both the pure decision and the production
   completion path: four unknown/deferred rows with zero retrievable assets do
   not create a history-materialization job. No browser/provider work ran.
+
+## 2026-09-30 | Issue 151 P1/P3 completion and P4 budget tracer
+
+- Completed provider-free phase attribution by joining completed mutation
+  receipts with caller-supplied CDP effects into one sanitized observation.
+  Action IDs, provider sources, routes, and raw work identifiers do not enter
+  the derived evidence.
+- History materialization utility affinity now binds the `materialization`
+  phase and a bounded scope key before the shared governor admits provider
+  work.
+- Revalidated the existing one-visit bundle and retained-snapshot path: a row
+  rejects multiple navigations and exact reused conversation IDs skip a second
+  snapshot refresh. P2 prevents creation of the no-action job entirely.
+- Began P4 with a budget wrapper that rejects a second detail navigation before
+  delegating to the underlying governor. Production pass-plan construction and
+  warning integration remain. No browser/provider work ran.
