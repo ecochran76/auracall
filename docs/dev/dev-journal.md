@@ -52157,3 +52157,16 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free tests cover both the persistence race and delayed-warning
   detection. Gate B remains open for the combined budget/phase/guard receipt
   and scheduler outcome diagnostics.
+## 2026-09-30 - Issue 151 Gate B provider-free acceptance
+
+- Bound the exact staged controller's privacy-safe admission snapshot into
+  warning persistence: phase and effect counts include admitted, limit, and
+  remaining values without work keys or provider IDs.
+- Added a bounded recent-effect window at the shared governor seam containing
+  only timestamp, phase, mutation kind, and outcome. The ledger combines it
+  with the existing sanitized interaction timeline and persisted warning and
+  cooldown record.
+- Scheduler diagnostics now distinguish `budget_exhausted`, `warning_stop`,
+  `clean_completion`, `cleanup_failure`, active work, and other failures.
+- Provider-free Gate B validation passed: 72 focused/adjacent tests plus
+  typecheck. No browser or provider activity occurred.

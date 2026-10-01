@@ -234,6 +234,57 @@ export function createAccountMirrorProviderTrafficPlanController(
 	const budgetedGovernor: ProviderTrafficGovernor = {
 		attribution: governor.attribution,
 		checkWarning: governor.checkWarning?.bind(governor),
+		snapshotAdmissionState: () => {
+			const byBudget = new Map<
+				string,
+				{ phase: string; kind: string; admitted: number; limit: number }
+			>();
+			for (const budget of budgets) {
+				const interactionClass = budget.reason ? "provider-recovery" : "ordinary";
+				const key = budgetKey(
+					budget.phase,
+					budget.kind,
+					budget.workKey,
+					interactionClass,
+					budget.reason,
+				);
+				const aggregateKey = `${budget.phase}:${budget.kind}`;
+				const current = byBudget.get(aggregateKey) ?? {
+					phase: budget.phase,
+					kind: budget.kind,
+					admitted: 0,
+					limit: 0,
+				};
+				current.admitted += admitted.get(key) ?? 0;
+				current.limit += budget.limit;
+				byBudget.set(aggregateKey, current);
+			}
+			const budgetState = [...byBudget.values()].map((entry) => ({
+				...entry,
+				remaining: Math.max(0, entry.limit - entry.admitted),
+			}));
+			const byPhase = new Map<string, { phase: string; admitted: number; limit: number }>();
+			for (const entry of budgetState) {
+				const current = byPhase.get(entry.phase) ?? {
+					phase: entry.phase,
+					admitted: 0,
+					limit: 0,
+				};
+				current.admitted += entry.admitted;
+				current.limit += entry.limit;
+				byPhase.set(entry.phase, current);
+			}
+			const recentEffects = governor.snapshotAdmissionState?.().recentEffects;
+			return {
+				version: 1,
+				phases: [...byPhase.values()].map((entry) => ({
+					...entry,
+					remaining: Math.max(0, entry.limit - entry.admitted),
+				})),
+				budgets: budgetState,
+				...(recentEffects ? { recentEffects } : {}),
+			};
+		},
 		async begin(input) {
 			const kind = mutationEffectKind(input.kind);
 			if (!kind) return governor.begin(input);

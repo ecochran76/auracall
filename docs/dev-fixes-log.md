@@ -23905,3 +23905,12 @@ admitted. Set the latch as soon as the classifier returns a warning, then
 persist it. Keep the last bounded probe context and perform one passive final
 check before reporting a pass as successful so a late-rendered warning remains
 attributable without causing any new provider traffic.
+## Join warning evidence at the traffic-governor seam
+
+Warning text alone cannot explain which bounded work preceded a stop. Expose a
+sanitized admission snapshot from the staged traffic controller and retain a
+short effect window in the shared governor. Persist only phase, effect kind,
+counts, timestamps, and outcomes; omit work keys, action IDs, URLs, target IDs,
+and provider content. Project a separate terminal outcome in scheduler
+diagnostics so budget exhaustion, warning stop, successful completion, and
+cleanup failure are not collapsed into a generic error.

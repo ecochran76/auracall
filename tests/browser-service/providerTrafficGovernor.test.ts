@@ -225,6 +225,14 @@ describe("provider traffic governor", () => {
 			trafficPhase: "detail",
 			workKey: "sha256:fixture-work-key",
 		});
+		expect(governor.snapshotAdmissionState?.().recentEffects).toEqual([
+			expect.objectContaining({
+				phase: "detail",
+				kind: "navigate",
+				outcome: "succeeded",
+			}),
+		]);
+		expect(JSON.stringify(governor.snapshotAdmissionState?.())).not.toContain("fixture-work-key");
 	});
 
 	test("binds a phase context without allowing a nested caller to replace it", async () => {

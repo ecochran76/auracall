@@ -204,6 +204,33 @@ describe("account-mirror provider traffic plan", () => {
 		expect(begin).toHaveBeenCalledTimes(2);
 	});
 
+	it("exposes privacy-safe phase admission state for warning receipts", async () => {
+		const rawWorkKey = createAccountMirrorProviderTrafficWorkKey("conversation", "secret-id");
+		const governor = withAccountMirrorProviderTrafficPlan(
+			{ attribution: {} as never, begin: vi.fn(async () => ({ id: "action", settle: vi.fn() })) },
+			{
+				object: "account_mirror_provider_traffic_plan",
+				version: 1,
+				budgets: [{ phase: "detail", kind: "page_navigate", workKey: rawWorkKey, limit: 2 }],
+			},
+		);
+		await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture",
+			trafficPhase: "detail",
+			workKey: rawWorkKey,
+		});
+
+		expect(governor.snapshotAdmissionState?.()).toEqual({
+			version: 1,
+			phases: [{ phase: "detail", admitted: 1, limit: 2, remaining: 1 }],
+			budgets: [{ phase: "detail", kind: "page_navigate", admitted: 1, limit: 2, remaining: 1 }],
+		});
+		expect(JSON.stringify(governor.snapshotAdmissionState?.())).not.toContain("secret-id");
+		expect(JSON.stringify(governor.snapshotAdmissionState?.())).not.toContain(rawWorkKey);
+	});
+
 	it("freezes staged phase authority before delegating exact planned work", async () => {
 		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
 		const controller = createAccountMirrorProviderTrafficPlanController({

@@ -61,6 +61,25 @@ export interface ProviderTrafficGovernor {
 	readonly attribution: ProviderTrafficAttribution;
 	begin(input: ProviderTrafficActionInput): Promise<ProviderTrafficAction>;
 	checkWarning?(context?: unknown): Promise<void>;
+	snapshotAdmissionState?(): ProviderTrafficAdmissionState;
+}
+
+export interface ProviderTrafficAdmissionState {
+	version: 1;
+	phases: Array<{ phase: string; admitted: number; limit: number; remaining: number }>;
+	budgets: Array<{
+		phase: string;
+		kind: string;
+		admitted: number;
+		limit: number;
+		remaining: number;
+	}>;
+	recentEffects?: Array<{
+		occurredAt: string;
+		phase: string;
+		kind: string;
+		outcome: BrowserMutationOutcome;
+	}>;
 }
 
 export interface ProviderTrafficAuthority {
@@ -92,6 +111,7 @@ export function withProviderTrafficContext(
 	return {
 		attribution: governor.attribution,
 		checkWarning: governor.checkWarning?.bind(governor),
+		snapshotAdmissionState: governor.snapshotAdmissionState?.bind(governor),
 		begin: (input) =>
 			governor.begin({
 				...input,
@@ -146,6 +166,7 @@ export function createProviderTrafficGovernor(input: {
 	const createActionId = input.createActionId ?? crypto.randomUUID;
 	let observedWarning: ProviderTrafficWarning | null = null;
 	let lastProbeContext: unknown;
+	const recentEffects: NonNullable<ProviderTrafficAdmissionState["recentEffects"]> = [];
 	const checkWarning = async (context?: unknown) => {
 		if (observedWarning) throw new ProviderTrafficWarningError(observedWarning);
 		if (context !== undefined) lastProbeContext = context;
@@ -166,6 +187,12 @@ export function createProviderTrafficGovernor(input: {
 	return {
 		attribution,
 		checkWarning,
+		snapshotAdmissionState: () => ({
+			version: 1,
+			phases: [],
+			budgets: [],
+			recentEffects: recentEffects.map((effect) => ({ ...effect })),
+		}),
 		async begin(actionInput) {
 			if (observedWarning) throw new ProviderTrafficWarningError(observedWarning);
 			actionInput.abortSignal?.throwIfAborted();
@@ -215,6 +242,13 @@ export function createProviderTrafficGovernor(input: {
 						outcome: details.outcome,
 						error: details.error ?? null,
 					});
+					recentEffects.push({
+						occurredAt: new Date().toISOString(),
+						phase: actionInput.trafficPhase ?? "unattributed",
+						kind: actionInput.kind,
+						outcome: details.outcome,
+					});
+					if (recentEffects.length > 20) recentEffects.splice(0, recentEffects.length - 20);
 					await input.settleInteraction?.({
 						outcome: details.outcome === "succeeded" ? "succeeded" : "failed",
 						effectState: "settled",

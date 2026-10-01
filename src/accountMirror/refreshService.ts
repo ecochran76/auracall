@@ -492,6 +492,13 @@ export function createAccountMirrorRefreshService(input: {
 							development?.maxConversations ?? target.limits.maxPageReadsPerCycle,
 					})
 				: null;
+			if (providerTrafficPlanController?.governor.snapshotAdmissionState) {
+				affinity?.bindProviderTrafficAdmissionState?.(
+					providerTrafficPlanController.governor.snapshotAdmissionState.bind(
+						providerTrafficPlanController.governor,
+					),
+				);
+			}
 			try {
 				const providerGuard = await providerGuardCensus({
 					config: input.config,

@@ -143,12 +143,15 @@ Evidence required:
 
 ### Gate B - Warning and cooldown correlation
 
-Status: IN PROGRESS
+Status: COMPLETE (provider-free source and production-path tests)
 
-The governor now freezes admissions before warning persistence and performs a
+The governor freezes admissions before warning persistence and performs a
 final passive check using the last bounded probe context before successful
-live-follow settlement. The remaining Gate B work is the joined
-budget/phase/guard receipt and explicit scheduler outcome classification.
+live-follow settlement. Warning evidence now joins sanitized phase/effect
+admission counts, a bounded recent-effect window, the existing interaction
+timeline, warning classification, and persisted cooldown state. Scheduler
+diagnostics classify budget exhaustion, warning stop, clean completion,
+cleanup failure, active work, and other failure separately.
 
 Join budget state, phase counters, warning classification, and cooldown/stop
 state in the installed-runtime receipt path. A warning observed during or after
@@ -242,9 +245,9 @@ operator decision after acceptance.
       controllable activity fails closed.
 - [ ] Phase counters agree with direct-CDP controllable effects while frames
       and hydration remain distinct.
-- [ ] Warning correlation freezes admissions and persists a privacy-safe
+- [x] Warning correlation freezes admissions and persists a privacy-safe
       signature plus bounded preceding interaction/effect window.
-- [ ] Provider-free coverage proves budget exhaustion, rollback, cancellation,
+- [x] Provider-free coverage proves budget exhaustion, rollback, cancellation,
       delayed warning, cooldown, restart, and unattributed-document behavior.
 - [ ] Existing identity, lease-generation, traffic-governor, cleanup, privacy,
       cooldown, and `Answer now` prohibitions remain green.

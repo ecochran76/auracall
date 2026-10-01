@@ -190,6 +190,13 @@ describe("interactionLedger (package)", () => {
 				openTargetCount: 7,
 				resourcePathClasses: ["Conversation", "conversation", "Project Index"],
 				precedingInteractionLimit: 3,
+				trafficAdmission: {
+					version: 1,
+					phases: [{ phase: "DETAIL", admitted: 1, limit: 2, remaining: 1 }],
+					budgets: [
+						{ phase: "DETAIL", kind: "page_navigate", admitted: 1, limit: 2, remaining: 1 },
+					],
+				},
 			},
 		});
 
@@ -217,6 +224,11 @@ describe("interactionLedger (package)", () => {
 				artifactReads: 0,
 			},
 			resourcePathClasses: ["conversation", "project index"],
+			trafficAdmission: {
+				version: 1,
+				phases: [{ phase: "detail", admitted: 1, limit: 2, remaining: 1 }],
+				budgets: [{ phase: "detail", kind: "page_navigate", admitted: 1, limit: 2, remaining: 1 }],
+			},
 		});
 		expect(JSON.stringify(recorded.warning.evidence)).not.toContain("operation-fixture");
 		expect(JSON.stringify(recorded.warning.evidence)).not.toContain("lease-fixture");
