@@ -68,6 +68,7 @@ import type {
 } from "./politePolicy.js";
 import {
 	type AccountMirrorProviderTrafficPlanController,
+	createAccountMirrorProviderTrafficWorkKey,
 	freezeAccountMirrorDetailTrafficPlan,
 } from "./providerTrafficPlan.js";
 import type {
@@ -347,6 +348,20 @@ function createAccountMirrorListOptions(
 
 export const createAccountMirrorListOptionsForTest = createAccountMirrorListOptions;
 
+function withDetailProviderTrafficContext(
+	listOptions: BrowserProviderListOptions | undefined,
+	workKey: string,
+): BrowserProviderListOptions | undefined {
+	if (!listOptions?.providerTrafficGovernor) return listOptions;
+	return {
+		...listOptions,
+		providerTrafficGovernor: withProviderTrafficContext(listOptions.providerTrafficGovernor, {
+			trafficPhase: "detail",
+			workKey,
+		}),
+	};
+}
+
 function withAccountMirrorTabLifecycle(
 	listOptions?: BrowserProviderListOptions,
 	enabled = true,
@@ -469,7 +484,9 @@ export function createChatgptAccountMirrorMetadataCollector(
 				scrapeTelemetry,
 				input.tabAffinity,
 				input.providerTrafficGovernor,
-				{ trafficPhase: "detail", workKey: "scope:conversation-detail" },
+				input.providerTrafficPlanController
+					? undefined
+					: { trafficPhase: "detail", workKey: "scope:conversation-detail" },
 			);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
 			await beforeAccountMirrorBrowserInteraction(identityListOptions, pacer, "page-refresh");
@@ -677,6 +694,10 @@ export function createChatgptAccountMirrorMetadataCollector(
 					(input.sweepMode ?? "steady_follow") === "steady_follow" &&
 					frontier.detailConversations.length > 0
 				);
+			const prioritizeDetailConversations =
+				honorRequestedDetailPhase ||
+				((input.sweepMode ?? "steady_follow") === "steady_follow" &&
+					frontier.detailConversations.length > 0);
 			const interactionCappedDetailReads = capDetailReadsForActiveInteractionBudget({
 				maxDetailReads: input.limits.maxPageReadsPerCycle,
 				maxBrowserInteractionsPerMinute: input.limits.maxBrowserInteractionsPerMinute,
@@ -686,7 +707,9 @@ export function createChatgptAccountMirrorMetadataCollector(
 				chatgptAccountLibraryRead,
 			});
 			const maxDetailReads = input.providerTrafficPlanController
-				? Math.min(1, interactionCappedDetailReads)
+				? chatgptAccountLibraryRead
+					? 0
+					: Math.min(1, interactionCappedDetailReads)
 				: interactionCappedDetailReads;
 			const remainingDetailSurfaces = frontier.detailConversations.length + projects.items.length;
 			const budgetYieldCause = (
@@ -697,8 +720,23 @@ export function createChatgptAccountMirrorMetadataCollector(
 				? createProviderInteractionBudgetYieldCause()
 				: null;
 			if (input.providerTrafficPlanController) {
+				const selectedDetailWorkKey = chatgptAccountLibraryRead
+					? "scope:account-library"
+					: prioritizeDetailConversations && frontier.detailConversations[0]
+						? createAccountMirrorProviderTrafficWorkKey(
+								"conversation",
+								frontier.detailConversations[0].id,
+							)
+						: projects.items[0]
+							? createAccountMirrorProviderTrafficWorkKey("project", projects.items[0].id)
+							: frontier.detailConversations[0]
+								? createAccountMirrorProviderTrafficWorkKey(
+										"conversation",
+										frontier.detailConversations[0].id,
+									)
+								: null;
 				freezeAccountMirrorDetailTrafficPlan(input.providerTrafficPlanController, {
-					maxDetailReads,
+					workKeys: selectedDetailWorkKey ? [selectedDetailWorkKey] : [],
 				});
 			}
 			const inventory =
@@ -730,10 +768,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 										conversationsObserved: conversations.length,
 										attachmentCursor,
 									}),
-								prioritizeConversations:
-									honorRequestedDetailPhase ||
-									((input.sweepMode ?? "steady_follow") === "steady_follow" &&
-										frontier.detailConversations.length > 0),
+								prioritizeConversations: prioritizeDetailConversations,
+								usePerSurfaceTrafficContext: Boolean(input.providerTrafficPlanController),
 								skipAccountLibraryInventory:
 									honorRequestedDetailPhase ||
 									((input.sweepMode ?? "steady_follow") === "steady_follow" &&
@@ -1770,6 +1806,7 @@ export async function readBoundedAttachmentInventory(
 				detailReadCap?: number;
 				coalesceConversationReads?: boolean;
 				freshnessEpoch?: string | null;
+				usePerSurfaceTrafficContext?: boolean;
 				readProviderGuard?: () => Promise<string | null>;
 				onDiagnosticEvent?: (event: AccountMirrorCollectorDiagnosticEvent) => Promise<void> | void;
 				onCheckpoint?: (cursor: AttachmentInventoryCursor) => Promise<void> | void;
@@ -1801,6 +1838,8 @@ export async function readBoundedAttachmentInventory(
 		typeof options === "number" ? false : options.coalesceConversationReads === true;
 	const freshnessEpoch =
 		typeof options === "number" ? null : options.freshnessEpoch?.trim() || null;
+	const usePerSurfaceTrafficContext =
+		typeof options === "number" ? false : options.usePerSurfaceTrafficContext === true;
 	const readProviderGuard = typeof options === "number" ? undefined : options.readProviderGuard;
 	const onDiagnosticEvent = typeof options === "number" ? undefined : options.onDiagnosticEvent;
 	const onCheckpoint = typeof options === "number" ? undefined : options.onCheckpoint;
@@ -1869,6 +1908,12 @@ export async function readBoundedAttachmentInventory(
 			}
 			const project = projects[projectIndex];
 			if (!project) break;
+			const projectListOptions = usePerSurfaceTrafficContext
+				? withDetailProviderTrafficContext(
+						listOptions,
+						createAccountMirrorProviderTrafficWorkKey("project", project.id),
+					)
+				: listOptions;
 			remainingDetailReads -= 1;
 			scannedProjects += 1;
 			progress.scannedProjectIds.push(project.id);
@@ -1877,7 +1922,7 @@ export async function readBoundedAttachmentInventory(
 			const projectFiles = await safeReadProjectFiles(
 				client,
 				project,
-				listOptions,
+				projectListOptions,
 				observation,
 				providerCallTimeoutMs,
 				pacer,
@@ -1928,6 +1973,12 @@ export async function readBoundedAttachmentInventory(
 			}
 			const conversation = conversations[conversationIndex];
 			if (!conversation) break;
+			const conversationListOptions = usePerSurfaceTrafficContext
+				? withDetailProviderTrafficContext(
+						listOptions,
+						createAccountMirrorProviderTrafficWorkKey("conversation", conversation.id),
+					)
+				: listOptions;
 			const previousConversationDetail =
 				previousCursor?.conversationDetail?.conversationId === conversation.id
 					? previousCursor.conversationDetail
@@ -1951,7 +2002,7 @@ export async function readBoundedAttachmentInventory(
 					conversation,
 					observation,
 					providerCallTimeoutMs,
-					listOptions,
+					conversationListOptions,
 					pacer,
 				);
 				await reportDiagnostic({
@@ -1978,17 +2029,21 @@ export async function readBoundedAttachmentInventory(
 				projectId: conversation.projectId,
 				providerCallTimeoutMs,
 			});
-			const telemetryBefore = snapshotAccountMirrorVisitTelemetry(listOptions?.scrapeTelemetry);
+			const telemetryBefore = snapshotAccountMirrorVisitTelemetry(
+				conversationListOptions?.scrapeTelemetry,
+			);
 			const contextResult = await safeReadConversationContext(
 				client,
 				conversation,
 				observation,
 				providerCallTimeoutMs,
-				listOptions,
+				conversationListOptions,
 				previousConversationDetail,
 				pacer,
 			);
-			const telemetryAfter = snapshotAccountMirrorVisitTelemetry(listOptions?.scrapeTelemetry);
+			const telemetryAfter = snapshotAccountMirrorVisitTelemetry(
+				conversationListOptions?.scrapeTelemetry,
+			);
 			await reportDiagnostic({
 				stage: "conversation-context",
 				event: contextResult.outcome,
@@ -2242,6 +2297,7 @@ export async function readBoundedChatgptDetailInventory(
 				previousFiles?: readonly FileRef[] | null;
 				skipAccountLibraryInventory?: boolean;
 				freshnessEpoch?: string | null;
+				usePerSurfaceTrafficContext?: boolean;
 				readProviderGuard?: () => Promise<string | null>;
 		  } = 6,
 ): Promise<{
@@ -2266,10 +2322,14 @@ export async function readBoundedChatgptDetailInventory(
 			? CHATGPT_DETAIL_READ_TIMEOUT_MS
 			: (options.providerCallTimeoutMs ?? CHATGPT_DETAIL_READ_TIMEOUT_MS);
 	const hasAttachmentSurfaces = projects.length > 0 || conversations.length > 0;
+	const libraryListOptions =
+		typeof options !== "number" && options.usePerSurfaceTrafficContext
+			? withDetailProviderTrafficContext(listOptions, "scope:account-library")
+			: listOptions;
 	const library = skipAccountLibraryInventory
 		? { artifacts: [], files: [], truncated: false }
 		: await readBoundedChatgptLibraryInventory(client, limit, {
-				listOptions,
+				listOptions: libraryListOptions,
 				pacer,
 				observation,
 				providerCallTimeoutMs,

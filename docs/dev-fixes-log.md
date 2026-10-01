@@ -23873,3 +23873,15 @@ in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.
   exception after work selection.
 - Keep in-page actions distinct from route visits in traffic evidence; merging
   them hides which physical behavior actually caused provider hydration.
+
+# 2026-09-30: Bind traffic budgets to exact privacy-safe work
+
+- A phase-wide `scope:*` key proves attribution but not selection. Hash the
+  local row identity into a stable `sha256:*` key and bind both the plan and the
+  adapter-facing governor to that exact value.
+- Apply a materialization plan inside configured utility affinity before adding
+  its phase context. This lets the budget inspect the final phase/work key and
+  reject excess activity before the shared governor writes an admission.
+- Treat pre-lease target creation as a separate unresolved boundary; do not
+  claim complete governor coverage merely because all post-lease actions are
+  budgeted.

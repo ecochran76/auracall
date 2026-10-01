@@ -20,6 +20,7 @@ import {
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { reconcileStaleActiveTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
 import { acquireEphemeralBrowserTab } from "../accountMirror/liveFollowTabCoordinator.js";
+import { withAccountMirrorProviderTrafficPlan } from "../accountMirror/providerTrafficPlan.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
 import {
@@ -305,9 +306,15 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 				});
 			},
 		});
-		const providerTrafficGovernor = options.providerTrafficContext
-			? withProviderTrafficContext(baseProviderTrafficGovernor, options.providerTrafficContext)
+		const plannedProviderTrafficGovernor = options.accountMirrorProviderTrafficPlan
+			? withAccountMirrorProviderTrafficPlan(
+					baseProviderTrafficGovernor,
+					options.accountMirrorProviderTrafficPlan,
+				)
 			: baseProviderTrafficGovernor;
+		const providerTrafficGovernor = options.providerTrafficContext
+			? withProviderTrafficContext(plannedProviderTrafficGovernor, options.providerTrafficContext)
+			: plannedProviderTrafficGovernor;
 		providerRunStarted = true;
 		recordLibraryInventoryStage(input.options, "affinity-provider-read");
 		execution = {

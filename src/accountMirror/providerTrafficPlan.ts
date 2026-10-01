@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export type AccountMirrorProviderTrafficPhase =
 	| "bootstrap"
 	| "index"
@@ -157,23 +159,22 @@ export function createAccountMirrorMetadataTrafficPlanController(
 
 export function freezeAccountMirrorDetailTrafficPlan(
 	controller: AccountMirrorProviderTrafficPlanController,
-	input: { maxDetailReads: number },
+	input: { workKeys: readonly string[] },
 ): void {
-	const detailReads = Math.max(0, Math.floor(input.maxDetailReads));
-	controller.freezePhase("detail", [
-		{
-			phase: "detail",
-			kind: "page_navigate",
-			workKey: "scope:conversation-detail",
-			limit: Math.min(1, detailReads),
-		},
-		{
-			phase: "detail",
-			kind: "in_page_action",
-			workKey: "scope:conversation-detail",
-			limit: detailReads,
-		},
-	]);
+	controller.freezePhase(
+		"detail",
+		input.workKeys.flatMap((workKey) => [
+			{ phase: "detail" as const, kind: "page_navigate" as const, workKey, limit: 1 },
+			{ phase: "detail" as const, kind: "in_page_action" as const, workKey, limit: 1 },
+		]),
+	);
+}
+
+export function createAccountMirrorProviderTrafficWorkKey(
+	scope: "conversation" | "project" | "materialization",
+	localId: string,
+): string {
+	return `sha256:${createHash("sha256").update(`${scope}\0${localId}`).digest("hex")}`;
 }
 
 export function createAccountMirrorProviderTrafficPlanController(

@@ -26,6 +26,7 @@ import {
 	createAccountMirrorCatalogService,
 } from "../accountMirror/catalogService.js";
 import { getDefaultAccountMirrorPolitenessPolicy } from "../accountMirror/politePolicy.js";
+import { createAccountMirrorProviderTrafficWorkKey } from "../accountMirror/providerTrafficPlan.js";
 import { accountMirrorIdentityKeysMatch } from "../accountMirror/tenantBinding.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import { retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown } from "../browser/configuredChatgptTabMaintenance.js";
@@ -3851,9 +3852,11 @@ async function refreshConversationSnapshotTarget(input: {
 				: undefined,
 		},
 	);
+	const trafficOptions = createHistoryMaterializationTrafficOptions(input.target.conversationId, 1);
 	const listOptions = {
 		...resolveHistoryMaterializationProviderListOptions(input.target),
 		...(input.interactionGovernor ? { interactionGovernor: input.interactionGovernor } : {}),
+		...trafficOptions,
 		onProviderSessionProof: input.onProviderSessionProof,
 	};
 	let contextReadReceipt: ConversationContextReadReceipt | null = null;
@@ -4202,10 +4205,10 @@ async function materializeConversationTarget(input: {
 	const listOptions = {
 		...resolveHistoryMaterializationProviderListOptions(input.target),
 		...(input.interactionGovernor ? { interactionGovernor: input.interactionGovernor } : {}),
-		providerTrafficContext: {
-			trafficPhase: "materialization" as const,
-			workKey: "scope:history-materialization",
-		},
+		...createHistoryMaterializationTrafficOptions(
+			input.target.conversationId,
+			Math.max(1, selectedKinds.length),
+		),
 		scrapeTelemetry,
 		useProviderSession: true,
 		keepProviderSessionOpen: true,
@@ -6265,6 +6268,32 @@ export function resolveHistoryMaterializationProviderListOptions(
 		allowNavigation: true,
 		accountMirrorInventory: true,
 		skipFeatureSignature: true,
+	};
+}
+
+export function createHistoryMaterializationTrafficOptions(
+	conversationId: string,
+	inPageActionLimit: number,
+): Pick<BrowserProviderListOptions, "providerTrafficContext" | "accountMirrorProviderTrafficPlan"> {
+	const workKey = createAccountMirrorProviderTrafficWorkKey("materialization", conversationId);
+	return {
+		providerTrafficContext: {
+			trafficPhase: "materialization",
+			workKey,
+		},
+		accountMirrorProviderTrafficPlan: {
+			object: "account_mirror_provider_traffic_plan",
+			version: 1,
+			budgets: [
+				{ phase: "materialization", kind: "page_navigate", workKey, limit: 1 },
+				{
+					phase: "materialization",
+					kind: "in_page_action",
+					workKey,
+					limit: Math.max(1, Math.floor(inPageActionLimit)),
+				},
+			],
+		},
 	};
 }
 

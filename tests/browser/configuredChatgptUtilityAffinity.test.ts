@@ -158,6 +158,69 @@ describe("configured ChatGPT utility affinity", () => {
 		expect(openTarget).not.toHaveBeenCalled();
 	});
 
+	test("enforces a materialization traffic plan before a second provider action", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => "lease-materialization",
+		});
+		const ledger = createInMemoryProviderInteractionLedger();
+		const records: BrowserMutationRecord[] = [];
+		const workKey = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+		await expect(
+			runConfiguredChatgptUtilityOperation({
+				userConfig,
+				browserService: {
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 45011,
+						managedBrowserProfile: "/managed/runtime-1/chatgpt",
+					}),
+				} as never,
+				utilityId: "history-materialization:hmj-budget",
+				mutability: "read-only",
+				options: {
+					configuredUrl: "https://chatgpt.com/library",
+					preserveActiveTab: true,
+					requireExistingTarget: true,
+					providerTrafficContext: { trafficPhase: "materialization", workKey },
+					accountMirrorProviderTrafficPlan: {
+						object: "account_mirror_provider_traffic_plan",
+						version: 1,
+						budgets: [{ phase: "materialization", kind: "page_navigate", workKey, limit: 1 }],
+					},
+				},
+				buildListOptions: async (options) => options,
+				run: async (options) => {
+					const first = await options.providerTrafficGovernor?.begin({
+						kind: "navigate",
+						interactionClass: "conversation-read",
+						source: "history-materialization:first",
+					});
+					await first?.settle({ outcome: "succeeded" });
+					await options.providerTrafficGovernor?.begin({
+						kind: "navigate",
+						interactionClass: "conversation-read",
+						source: "history-materialization:second",
+					});
+				},
+				deps: {
+					createRuntime: () => ({ registry, ledger }) as never,
+					listTargets: vi.fn(async () => [
+						{ id: "library-target", url: "https://chatgpt.com/library" },
+					]) as never,
+					openTarget: vi.fn() as never,
+					closeTarget: vi.fn(),
+					mutationAudit: async (record) => {
+						records.push(record);
+					},
+				},
+			}),
+		).rejects.toThrow(
+			"Provider traffic budget exhausted for materialization/page_navigate at limit 1",
+		);
+		expect(records).toHaveLength(2);
+	});
+
 	test("reuses one exact utility target and accounts each read", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const ledger = createInMemoryProviderInteractionLedger({

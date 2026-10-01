@@ -20,7 +20,7 @@ canary while the scheduler remains paused.
 
 ## Current State
 
-The branch is published through the Plan 0385 control checkpoint `f43eede84`.
+The branch is published through the Gate A checkpoint `63997984c`.
 Plan 0384's
 P0 through P3 outcomes are provider-free complete, and its first P4 primitive
 can reject over-budget actions before delegating to the shared governor. The
@@ -28,8 +28,11 @@ Gate A is in progress: the real refresh path now creates a staged controller,
 freezes bootstrap/index authority before collection, freezes detail authority
 after frontier selection, and yields after one planned detail read rather than
 attempting a second navigation. In-page actions are no longer mislabeled as
-route visits. Materialization-path budgeting, exact per-row work keys, and
-recovery admission still remain before Gate A can close. The remaining work is
+route visits. The next checkpoint adds exact SHA-256 row keys to detail and
+materialization traffic, including the snapshot-refresh path, and enforces the
+materialization plan inside configured utility affinity. Pre-lease cold-start
+target creation and explicit recovery admission still remain before Gate A can
+close. The remaining work is
 the single end-to-end chain defined by Gates A through F:
 production pass-plan enforcement, warning/cooldown correlation, canonical
 integration, exact installation, one live canary, and issue reconciliation.

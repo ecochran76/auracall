@@ -7,6 +7,7 @@ import {
 	createAccountMirrorMetadataTrafficPlanController,
 	createAccountMirrorProviderTrafficObservation,
 	createAccountMirrorProviderTrafficPlanController,
+	createAccountMirrorProviderTrafficWorkKey,
 	freezeAccountMirrorDetailTrafficPlan,
 	ProviderTrafficBudgetExceededError,
 	reconcileAccountMirrorProviderTraffic,
@@ -237,14 +238,15 @@ describe("account-mirror provider traffic plan", () => {
 			{ attribution: {} as never, begin },
 			{ maxPageReadsPerCycle: 4 },
 		);
-		freezeAccountMirrorDetailTrafficPlan(controller, { maxDetailReads: 3 });
+		const workKey = createAccountMirrorProviderTrafficWorkKey("conversation", "conversation-1");
+		freezeAccountMirrorDetailTrafficPlan(controller, { workKeys: [workKey] });
 
 		await controller.governor.begin({
 			kind: "navigate",
 			interactionClass: "conversation-read",
 			source: "fixture:detail:first",
 			trafficPhase: "detail",
-			workKey: "scope:conversation-detail",
+			workKey,
 		});
 		await expect(
 			controller.governor.begin({
@@ -252,16 +254,40 @@ describe("account-mirror provider traffic plan", () => {
 				interactionClass: "conversation-read",
 				source: "fixture:detail:second",
 				trafficPhase: "detail",
-				workKey: "scope:conversation-detail",
+				workKey,
 			}),
 		).rejects.toBeInstanceOf(ProviderTrafficBudgetExceededError);
 		expect(controller.snapshotPlan().budgets).toContainEqual({
 			phase: "detail",
 			kind: "page_navigate",
-			workKey: "scope:conversation-detail",
+			workKey,
 			limit: 1,
 		});
 		expect(begin).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not admit a different row under another selected row's detail authority", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const controller = createAccountMirrorMetadataTrafficPlanController(
+			{ attribution: {} as never, begin },
+			{ maxPageReadsPerCycle: 4 },
+		);
+		const selected = createAccountMirrorProviderTrafficWorkKey("conversation", "selected-id");
+		const unselected = createAccountMirrorProviderTrafficWorkKey("conversation", "other-id");
+		freezeAccountMirrorDetailTrafficPlan(controller, { workKeys: [selected] });
+
+		await expect(
+			controller.governor.begin({
+				kind: "navigate",
+				interactionClass: "conversation-read",
+				source: "fixture:detail:unselected",
+				trafficPhase: "detail",
+				workKey: unselected,
+			}),
+		).rejects.toMatchObject({ limit: 0 });
+		expect(begin).not.toHaveBeenCalled();
+		expect(selected).toMatch(/^sha256:[a-f0-9]{64}$/);
+		expect(selected).not.toContain("selected-id");
 	});
 
 	it("keeps in-page actions distinct from route visits", () => {

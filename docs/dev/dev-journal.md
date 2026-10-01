@@ -52111,3 +52111,23 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   build, and diff hygiene. No provider/browser work ran.
 - Gate A remains open for materialization budgeting, exact per-row work keys,
   and explicit recovery admission.
+
+## 2026-09-30 | Issue 151 Gate A exact-work checkpoint
+
+- Replaced the coarse detail/materialization scope with deterministic SHA-256
+  work keys derived from local conversation or project identity. Raw row IDs do
+  not enter governor receipts or traffic plans.
+- Metadata detail options now bind the exact selected surface before adapter
+  work. Unselected rows have zero authority, and account-library work retains a
+  separate bounded scope.
+- Both history-materialization transfer and snapshot-refresh paths now construct
+  exact materialization plans. Configured utility affinity applies the plan
+  inside the real governor chain before phase context, and a production-path
+  regression proves the second navigation is rejected before a third mutation
+  record can be written.
+- The focused metadata, refresh, materialization, affinity, and plan suites pass
+  201/201 with typecheck, production build, Biome, and diff hygiene. No provider
+  or browser work ran.
+- Gate A remains open because cold-start target creation happens before the
+  lease-backed governor exists, and recovery needs a separately causal
+  admission rather than implicit reuse of ordinary route authority.

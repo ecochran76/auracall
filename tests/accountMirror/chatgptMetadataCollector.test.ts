@@ -37,6 +37,11 @@ import {
 	shouldReadProjectConversationsForAccountMirror,
 	shouldResumeChatgptAttachmentInventoryCursor,
 } from "../../src/accountMirror/chatgptMetadataCollector.js";
+import {
+	createAccountMirrorMetadataTrafficPlanController,
+	createAccountMirrorProviderTrafficWorkKey,
+	freezeAccountMirrorDetailTrafficPlan,
+} from "../../src/accountMirror/providerTrafficPlan.js";
 import type { AccountMirrorCollectorDiagnosticEvent } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { listDomDriftObservations } from "../../src/browser/domDriftObservations.js";
@@ -152,6 +157,62 @@ describe("ChatGPT account mirror metadata collector", () => {
 			expect.objectContaining({
 				trafficPhase: "detail",
 				workKey: "scope:conversation-detail",
+			}),
+		);
+	});
+
+	test("binds selected detail work to its privacy-bounded row key", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const controller = createAccountMirrorMetadataTrafficPlanController(
+			{ attribution: {} as never, begin },
+			{ maxPageReadsPerCycle: 4 },
+		);
+		const selectedWorkKey = createAccountMirrorProviderTrafficWorkKey(
+			"conversation",
+			"conversation-selected",
+		);
+		freezeAccountMirrorDetailTrafficPlan(controller, { workKeys: [selectedWorkKey] });
+		const getConversationContext = vi.fn(async (_id, options) => {
+			const action = await options.listOptions.providerTrafficGovernor.begin({
+				kind: "navigate",
+				interactionClass: "conversation-read",
+				source: "fixture:conversation-context",
+			});
+			await action.settle({ outcome: "succeeded" });
+			return { messages: [], artifacts: [], files: [] };
+		});
+
+		await readBoundedChatgptDetailInventory(
+			{
+				listAccountFiles: vi.fn(async () => []),
+				listProjectFiles: vi.fn(async () => []),
+				listConversationFiles: vi.fn(async () => []),
+				getConversationContext,
+			} as never,
+			[],
+			[
+				{
+					id: "conversation-selected",
+					title: "Selected",
+					provider: "chatgpt",
+				},
+			],
+			4,
+			{
+				maxDetailReads: 1,
+				prioritizeConversations: true,
+				skipAccountLibraryInventory: true,
+				usePerSurfaceTrafficContext: true,
+				listOptions: {
+					providerTrafficGovernor: controller.governor,
+				},
+			},
+		);
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				trafficPhase: "detail",
+				workKey: selectedWorkKey,
 			}),
 		);
 	});

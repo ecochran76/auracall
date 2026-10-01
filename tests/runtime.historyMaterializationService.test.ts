@@ -13,6 +13,7 @@ import type { ProviderSessionProof } from "../src/browser/providers/providerSess
 import type { RunArchiveItem, RunArchiveService } from "../src/runtime/archiveService.js";
 import {
 	createHistoryMaterializationService,
+	createHistoryMaterializationTrafficOptions,
 	formatHistoryMaterializationFailureReason,
 	type HistoryAccountLibraryListInput,
 	type HistoryAccountLibraryMaterializeInput,
@@ -42,6 +43,18 @@ describe("history materialization service", () => {
 			"history-materialization:hmj_123",
 		);
 		expect(historyMaterializationUtilityAffinityId(null)).toBeUndefined();
+	});
+
+	it("constructs exact privacy-bounded materialization traffic authority", () => {
+		const options = createHistoryMaterializationTrafficOptions("conversation-sensitive", 2);
+		const workKey = options.providerTrafficContext?.workKey;
+
+		expect(workKey).toMatch(/^sha256:[a-f0-9]{64}$/);
+		expect(workKey).not.toContain("conversation-sensitive");
+		expect(options.accountMirrorProviderTrafficPlan?.budgets).toEqual([
+			{ phase: "materialization", kind: "page_navigate", workKey, limit: 1 },
+			{ phase: "materialization", kind: "in_page_action", workKey, limit: 2 },
+		]);
 	});
 
 	it("classifies an all-failed transfer result as failed rather than skipped", () => {
