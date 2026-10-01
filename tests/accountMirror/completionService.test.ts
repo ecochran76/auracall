@@ -6,6 +6,7 @@ import type { AccountMirrorBackfillLedger } from "../../src/accountMirror/backfi
 import {
 	type AccountMirrorCompletionOperation,
 	createAccountMirrorCompletionService,
+	hasLocallyActionableMaterializationBacklog,
 } from "../../src/accountMirror/completionService.js";
 import { createAccountMirrorCompletionStore } from "../../src/accountMirror/completionStore.js";
 import { chooseLiveFollowCyclePhase } from "../../src/accountMirror/liveFollowCycleDecision.js";
@@ -156,6 +157,22 @@ function createRefreshResult(): AccountMirrorRefreshResult {
 }
 
 describe("live-follow cycle decision", () => {
+	test("requires positive local backlog evidence before provider materialization", () => {
+		expect(hasLocallyActionableMaterializationBacklog(undefined)).toBe(false);
+		expect(
+			hasLocallyActionableMaterializationBacklog({
+				retrievableMissing: 0,
+				unknownOrDeferred: 4,
+			}),
+		).toBe(false);
+		expect(
+			hasLocallyActionableMaterializationBacklog({
+				retrievableMissing: 1,
+				unknownOrDeferred: 0,
+			}),
+		).toBe(true);
+	});
+
 	test("continues conversation detail when a detail cursor is pending", () => {
 		const decision = chooseLiveFollowCyclePhase({
 			operation: {
@@ -2611,7 +2628,7 @@ describe("account mirror completion service", () => {
 			);
 		const readMaterializationBacklog = vi.fn(async () => ({
 			retrievableMissing: 0,
-			unknownOrDeferred: 0,
+			unknownOrDeferred: 4,
 		}));
 		const registry = createAccountMirrorStatusRegistry({
 			config,

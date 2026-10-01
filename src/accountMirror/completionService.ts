@@ -249,6 +249,18 @@ type AccountMirrorMaterializationBacklogReader = (input: {
 	unknownOrDeferred: number;
 } | null>;
 
+export function hasLocallyActionableMaterializationBacklog(
+	backlog:
+		| {
+				retrievableMissing: number;
+				unknownOrDeferred: number;
+		  }
+		| null
+		| undefined,
+): boolean {
+	return Math.max(0, Math.floor(backlog?.retrievableMissing ?? 0)) > 0;
+}
+
 export function projectAccountMirrorCompletionForMonitoring(
 	operation: AccountMirrorCompletionOperation,
 ): AccountMirrorCompletionOperation {
@@ -1820,15 +1832,15 @@ async function hasActionableMaterializationBacklog(
 	statusEntry: AccountMirrorStatusEntry | null | undefined,
 	readMaterializationBacklog: AccountMirrorMaterializationBacklogReader | undefined,
 ): Promise<boolean> {
-	if (!readMaterializationBacklog) return true;
+	if (!readMaterializationBacklog) return operation.sweepMode === "full_sweep";
 	if (!statusEntry) return false;
 	try {
 		const backlog = await readMaterializationBacklog({
 			provider: operation.provider,
 			runtimeProfileId: operation.runtimeProfileId,
 		});
-		if (!backlog) return true;
-		return backlog.retrievableMissing > 0 || backlog.unknownOrDeferred > 0;
+		if (!backlog) return operation.sweepMode === "full_sweep";
+		return hasLocallyActionableMaterializationBacklog(backlog);
 	} catch {
 		return false;
 	}

@@ -2,9 +2,11 @@ import type { BrowserInteractionGovernor } from "../../../packages/browser-servi
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type {
 	ProviderTrafficAuthorityFactory,
+	ProviderTrafficContext,
 	ProviderTrafficGovernor,
 } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
+import type { AccountMirrorProviderTrafficPlan } from "../../accountMirror/providerTrafficPlan.js";
 import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptComposerTool.js";
 import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from "../libraryFiles.js";
 import type { LibraryInventoryLifecycle } from "../libraryInventoryDiagnostics.js";
@@ -68,6 +70,8 @@ export interface BrowserProviderListOptions {
 	mutationSourcePrefix?: string;
 	interactionGovernor?: BrowserInteractionGovernor;
 	providerTrafficGovernor?: ProviderTrafficGovernor;
+	providerTrafficContext?: ProviderTrafficContext;
+	accountMirrorProviderTrafficPlan?: AccountMirrorProviderTrafficPlan;
 	providerTrafficAuthorityFactory?: ProviderTrafficAuthorityFactory;
 	providerTrafficRequired?: boolean;
 	preserveInteractionGovernorForProviderSession?: boolean;

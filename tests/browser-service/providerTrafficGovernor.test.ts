@@ -1,12 +1,13 @@
 import { describe, expect, test, vi } from "vitest";
 import type { BrowserMutationRecord } from "../../packages/browser-service/src/service/mutationDispatcher.js";
-import { navigateAndSettle } from "../../packages/browser-service/src/service/ui.js";
 import {
 	createProviderTrafficGovernor,
 	ProviderTrafficAttributionError,
 	type ProviderTrafficWarning,
 	ProviderTrafficWarningError,
+	withProviderTrafficContext,
 } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
+import { navigateAndSettle } from "../../packages/browser-service/src/service/ui.js";
 
 const attribution = {
 	provider: "chatgpt",
@@ -133,5 +134,127 @@ describe("provider traffic governor", () => {
 		await expect(
 			governor.begin({ kind: "reload", interactionClass: "page-refresh", source: "late" }),
 		).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+	});
+
+	test("freezes admissions before warning persistence completes", async () => {
+		let releasePersistence: (() => void) | undefined;
+		const persistenceBlocked = new Promise<void>((resolve) => {
+			releasePersistence = resolve;
+		});
+		const governor = createProviderTrafficGovernor({
+			attribution,
+			interactionGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+			mutationAudit: vi.fn(async () => undefined),
+			probeWarning: vi.fn(async () => ({
+				classification: "rate-limit" as const,
+				reason: "Too many requests",
+			})),
+			persistWarning: vi.fn(async () => persistenceBlocked),
+		});
+		const action = await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture",
+		});
+		const settling = action.settle({ outcome: "succeeded", probeContext: { visible: true } });
+		await vi.waitFor(async () => {
+			await expect(
+				governor.begin({ kind: "reload", interactionClass: "page-refresh", source: "late" }),
+			).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+		});
+		releasePersistence?.();
+		await expect(settling).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+	});
+
+	test("detects a delayed warning with a final passive probe", async () => {
+		let visible = false;
+		const probeWarning = vi.fn(async (context: unknown) =>
+			visible && context
+				? { classification: "rate-limit" as const, reason: "temporarily limited" }
+				: null,
+		);
+		const persistWarning = vi.fn(async () => undefined);
+		const governor = createProviderTrafficGovernor({
+			attribution,
+			interactionGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+			mutationAudit: vi.fn(async () => undefined),
+			probeWarning,
+			persistWarning,
+		});
+		const runtime = { evaluate: vi.fn() };
+		const action = await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture",
+		});
+		await action.settle({ outcome: "succeeded", probeContext: runtime });
+		visible = true;
+		await expect(governor.checkWarning?.()).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+		expect(probeWarning).toHaveBeenLastCalledWith(runtime, attribution);
+		expect(persistWarning).toHaveBeenCalledOnce();
+	});
+
+	test("persists phase and privacy-bounded work attribution before physical traffic", async () => {
+		const observedRecords: BrowserMutationRecord[] = [];
+		const governor = createProviderTrafficGovernor({
+			attribution,
+			interactionGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+			mutationAudit: async (record) => {
+				observedRecords.push(record);
+			},
+			createActionId: () => "action-phase-1",
+		});
+
+		const action = await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "live-follow:detail",
+			trafficPhase: "detail",
+			workKey: "sha256:fixture-work-key",
+		});
+		await action.settle({ outcome: "succeeded" });
+
+		expect(observedRecords).toHaveLength(2);
+		expect(observedRecords[0]).toMatchObject({
+			phase: "start",
+			trafficPhase: "detail",
+			workKey: "sha256:fixture-work-key",
+		});
+		expect(observedRecords[1]).toMatchObject({
+			phase: "complete",
+			trafficPhase: "detail",
+			workKey: "sha256:fixture-work-key",
+		});
+		expect(governor.snapshotAdmissionState?.().recentEffects).toEqual([
+			expect.objectContaining({
+				phase: "detail",
+				kind: "navigate",
+				outcome: "succeeded",
+			}),
+		]);
+		expect(JSON.stringify(governor.snapshotAdmissionState?.())).not.toContain("fixture-work-key");
+	});
+
+	test("binds a phase context without allowing a nested caller to replace it", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const scoped = withProviderTrafficContext(
+			{ attribution, begin },
+			{ trafficPhase: "index", workKey: "scope:provider-index" },
+		);
+
+		await scoped.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "nested-provider-call",
+			trafficPhase: "detail",
+			workKey: "raw-conversation-id",
+		});
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				trafficPhase: "index",
+				workKey: "scope:provider-index",
+			}),
+		);
 	});
 });

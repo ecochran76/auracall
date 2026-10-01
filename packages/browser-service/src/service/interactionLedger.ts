@@ -71,6 +71,23 @@ export interface ProviderWarningEvidence {
     artifactReads: number;
   };
   resourcePathClasses: string[];
+  trafficAdmission?: {
+    version: 1;
+    phases: Array<{ phase: string; admitted: number; limit: number; remaining: number }>;
+    budgets: Array<{
+      phase: string;
+      kind: string;
+      admitted: number;
+      limit: number;
+      remaining: number;
+    }>;
+    recentEffects?: Array<{
+      occurredAt: string;
+      phase: string;
+      kind: string;
+      outcome: string;
+    }>;
+  };
 }
 
 export interface ProviderWarningRecord {
@@ -205,6 +222,7 @@ export interface ProviderInteractionLedger {
       openTargetCount?: number | null;
       resourcePathClasses?: string[];
       precedingInteractionLimit?: number;
+      trafficAdmission?: ProviderWarningEvidence['trafficAdmission'];
     } | null;
   }): Promise<{ warning: ProviderWarningRecord; frozenReservationIds: string[] }>;
   clearProviderWarning(input: {
@@ -558,6 +576,7 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       openTargetCount?: number | null;
       resourcePathClasses?: string[];
       precedingInteractionLimit?: number;
+      trafficAdmission?: ProviderWarningEvidence['trafficAdmission'];
     } | null;
   }): Promise<{ warning: ProviderWarningRecord; frozenReservationIds: string[] }> {
     const scope = normalizeScope(input.scope);
@@ -1121,6 +1140,22 @@ function cloneWarning(warning: ProviderWarningRecord): ProviderWarningRecord {
           precedingInteractions: warning.evidence.precedingInteractions.map((entry) => ({ ...entry })),
           cumulativeCounts: { ...warning.evidence.cumulativeCounts },
           resourcePathClasses: [...warning.evidence.resourcePathClasses],
+          ...(warning.evidence.trafficAdmission
+            ? {
+                trafficAdmission: {
+                  version: 1,
+                  phases: warning.evidence.trafficAdmission.phases.map((entry) => ({ ...entry })),
+                  budgets: warning.evidence.trafficAdmission.budgets.map((entry) => ({ ...entry })),
+                  ...(warning.evidence.trafficAdmission.recentEffects
+                    ? {
+                        recentEffects: warning.evidence.trafficAdmission.recentEffects.map((entry) => ({
+                          ...entry,
+                        })),
+                      }
+                    : {}),
+                },
+              }
+            : {}),
         }
       : null,
   };
@@ -1134,6 +1169,7 @@ function buildProviderWarningEvidence(input: {
     openTargetCount?: number | null;
     resourcePathClasses?: string[];
     precedingInteractionLimit?: number;
+    trafficAdmission?: ProviderWarningEvidence['trafficAdmission'];
   };
   observedAt: string;
   events: ProviderInteractionEvent[];
@@ -1182,6 +1218,39 @@ function buildProviderWarningEvidence(input: {
     resourcePathClasses: [...new Set((input.input.resourcePathClasses ?? [])
       .map((value) => value.trim().toLowerCase())
       .filter(Boolean))].slice(0, 20),
+    ...(input.input.trafficAdmission
+      ? {
+          trafficAdmission: {
+            version: 1,
+            phases: input.input.trafficAdmission.phases.map(sanitizeTrafficAdmissionEntry),
+            budgets: input.input.trafficAdmission.budgets.map(sanitizeTrafficAdmissionEntry),
+            ...(input.input.trafficAdmission.recentEffects
+              ? {
+                  recentEffects: input.input.trafficAdmission.recentEffects.slice(-20).map((entry) => ({
+                    occurredAt: new Date(Date.parse(entry.occurredAt)).toISOString(),
+                    phase: requireNonEmpty(entry.phase, 'trafficAdmission.effect.phase').toLowerCase(),
+                    kind: requireNonEmpty(entry.kind, 'trafficAdmission.effect.kind').toLowerCase(),
+                    outcome: requireNonEmpty(entry.outcome, 'trafficAdmission.effect.outcome').toLowerCase(),
+                  })),
+                }
+              : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+function sanitizeTrafficAdmissionEntry<
+  T extends { phase: string; admitted: number; limit: number; remaining: number },
+>(
+  entry: T,
+): T {
+  return {
+    ...entry,
+    phase: requireNonEmpty(entry.phase, 'trafficAdmission.phase').toLowerCase(),
+    admitted: Math.max(0, Math.floor(entry.admitted)),
+    limit: Math.max(0, Math.floor(entry.limit)),
+    remaining: Math.max(0, Math.floor(entry.remaining)),
   };
 }
 

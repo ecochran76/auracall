@@ -23853,3 +23853,64 @@ configured tenant and exact AuraCall runtime profile plus managed browser
 profile, then uses the registry's ordinary `idle -> retiring -> released`
 transition with `operator` / `already-missing`. Never force-release active,
 in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.
+## 2026-09-30: Missing or uncertain materialization backlog is not actionability
+
+- Implicit steady-follow materialization previously treated unknown/deferred
+  rows as sufficient reason to create a provider job.
+- Fail closed before implicit job creation: require a positive local
+  `retrievableMissing` count. Preserve unknown/deferred evidence for later
+  reconciliation without converting uncertainty into provider traffic.
+  Keep explicitly requested full sweeps distinct from that implicit path.
+- Regression: `tests/accountMirror/completionService.test.ts` covers both the
+  pure decision and the production no-job path.
+# 2026-09-30: Freeze provider-traffic authority in the production pass
+
+- A traffic-budget helper is not enforcement until the production orchestration
+  wraps the governor that adapters actually receive.
+- Freeze discovery budgets before collection and detail budgets only after the
+  deterministic frontier exists. When a budget is intentionally smaller than
+  the frontier, cap and yield before the excess call instead of relying on an
+  exception after work selection.
+- Keep in-page actions distinct from route visits in traffic evidence; merging
+  them hides which physical behavior actually caused provider hydration.
+
+# 2026-09-30: Bind traffic budgets to exact privacy-safe work
+
+- A phase-wide `scope:*` key proves attribution but not selection. Hash the
+  local row identity into a stable `sha256:*` key and bind both the plan and the
+  adapter-facing governor to that exact value.
+- Apply a materialization plan inside configured utility affinity before adding
+  its phase context. This lets the budget inspect the final phase/work key and
+  reject excess activity before the shared governor writes an admission.
+- Treat pre-lease target creation as a separate unresolved boundary; do not
+  claim complete governor coverage merely because all post-lease actions are
+  budgeted.
+
+# 2026-09-30: Govern target creation before lease acquisition
+
+- A lease-backed governor cannot authorize creation of the target from which
+  that lease will be created. Use the same provider-traffic governor with
+  explicit provisional pre-lease attribution and a one-use bootstrap plan,
+  then reserve the lease only after the governed action settles.
+- If post-create settlement fails, close the exact unleased target before
+  propagating the failure. Admission failure must occur before `openTarget`.
+- Recovery is not spare ordinary capacity. Require a distinct hashed work key,
+  causal reason, and one-use admission so its receipt can be tied to the
+  original planned route without silently widening that route's budget.
+## Freeze provider traffic before persisting a visible warning
+
+When warning persistence is asynchronous, setting the in-memory stop latch
+after the write leaves a window in which another provider action can be
+admitted. Set the latch as soon as the classifier returns a warning, then
+persist it. Keep the last bounded probe context and perform one passive final
+check before reporting a pass as successful so a late-rendered warning remains
+attributable without causing any new provider traffic.
+## Join warning evidence at the traffic-governor seam
+
+Warning text alone cannot explain which bounded work preceded a stop. Expose a
+sanitized admission snapshot from the staged traffic controller and retain a
+short effect window in the shared governor. Persist only phase, effect kind,
+counts, timestamps, and outcomes; omit work keys, action IDs, URLs, target IDs,
+and provider content. Project a separate terminal outcome in scheduler
+diagnostics so budget exhaustion, warning stop, successful completion, and
+cleanup failure are not collapsed into a generic error.

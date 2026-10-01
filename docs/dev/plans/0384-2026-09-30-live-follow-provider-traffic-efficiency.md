@@ -1,12 +1,21 @@
 # Live-Follow Provider-Traffic Efficiency | 0384-2026-09-30
 
-State: OPEN
+State: CANCELLED
 Lane: P84
 Work item: ecochran76/auracall#151
 Source base: `origin/main` at `aa385d2e1`
 Branch: `plan/issue-151-live-follow-traffic-efficiency`
 Target: `main`
 Integration: merge
+Successor: `docs/dev/plans/0385-2026-09-30-live-follow-provider-traffic-closeout.md`
+
+## Disposition
+
+Superseded on 2026-09-30 by Plan 0385 after P0 through P3 and the first P4
+budget primitive were implemented. The stable objective, Issue #151 authority,
+accepted evidence, branch custody, retry history, and live-safety constraints
+carry forward unchanged. This is a control-plan replacement, not abandonment of
+the objective and not authorization to resume the scheduler.
 
 ## Stable Objective
 
@@ -36,6 +45,35 @@ idle leases. The unresolved gate is traffic amplification, not lease cleanup.
 Issue #151 is the governing work item. Live follow remains paused while this
 plan proceeds provider-free. The final installed direct-CDP canary is a
 separate gated slice and is limited to one attempt after all source gates pass.
+
+P0 is source-complete. The accepted canary is preserved as a sanitized
+provider-free fixture, and a typed reconciliation contract distinguishes
+controllable navigations/top-level documents from subframes and hydration.
+Unattributed controllable effects and phase-budget overages fail closed. P1 is
+in progress: browser-service mutation receipts now preserve immutable traffic
+phase and privacy-bounded work-key context, and the metadata collector binds
+`bootstrap`, `index`, and `detail` contexts before adapter work. Completed
+governor actions now reconcile with phase-attributed CDP effects without
+retaining action IDs, routes, or source strings, and utility-affinity history
+materialization binds its own phase before provider work. P1 is source-complete.
+
+P2 is source-complete. Implicit steady-follow materialization now requires
+positive local `retrievableMissing` evidence. A missing backlog reader, an
+unreadable backlog, or `unknownOrDeferred` evidence alone cannot create that
+job and therefore cannot open a provider route. Explicit `full_sweep` requests
+retain their existing operator-requested fallback when no reader is configured.
+
+P3 was revalidated against the integrated once-per-epoch visit bundle and
+retained-snapshot path. One row fails closed above one navigation, current-pass
+and retained conversation IDs are passed into materialization, and the history
+service skips snapshot refresh for those exact IDs. Together with P2's no-job
+gate, a zero-action candidate performs no provider route work. P3 is complete.
+
+P4 is in progress. A provider-free budget wrapper now reserves controllable
+phase actions before delegating to the shared governor, rolls back a failed
+admission, and rejects over-budget work before the underlying action can begin.
+Production pass-plan construction and warning/cooldown receipt integration
+remain.
 
 ## Problem Boundary
 
@@ -92,6 +130,8 @@ does not authorize the next live effect.
 
 ### P0 - Baseline and attribution contract
 
+Status: COMPLETE (provider-free source)
+
 - Outcome: encode the accepted 2,146-request canary as a sanitized provider-
   free fixture and define reconciliation between logical actions, CDP
   commands, top-level documents, frames, and subrequests.
@@ -105,6 +145,8 @@ does not authorize the next live effect.
   `unattributed`; no provider or browser process is launched.
 
 ### P1 - Deep phase-aware traffic instrumentation
+
+Status: COMPLETE (provider-free source)
 
 - Outcome: extend the existing browser-service governor/ledger so callers
   attach a closed-vocabulary phase and local work key before each physical
@@ -120,6 +162,8 @@ does not authorize the next live effect.
 
 ### P2 - Local actionability gate
 
+Status: COMPLETE (provider-free source)
+
 - Outcome: filter detail and materialization work from durable local evidence
   before any provider route action is admitted.
 - Expected write surface: change-frontier planner/state, artifact recovery
@@ -133,6 +177,8 @@ does not authorize the next live effect.
 
 ### P3 - One-pass route reuse
 
+Status: COMPLETE (provider-free source and revalidated integrated behavior)
+
 - Outcome: make metadata, detail, and materialization share one current-pass
   route-use record and visit bundle, falling back to retained evidence without
   rehydrating the same conversation.
@@ -145,6 +191,8 @@ does not authorize the next live effect.
   recovery admission and causal receipt are present.
 
 ### P4 - Deterministic budgets and warning correlation
+
+Status: IN PROGRESS
 
 - Outcome: bind phase budgets to the precomputed traffic plan, yield or stop
   before excess work, and correlate a detected warning with the exact bounded

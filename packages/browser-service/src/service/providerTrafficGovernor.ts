@@ -7,6 +7,7 @@ import type {
 	BrowserMutationKind,
 	BrowserMutationOutcome,
 	BrowserMutationRecord,
+	ProviderTrafficPhase,
 } from "./mutationDispatcher.js";
 
 export interface ProviderTrafficAttribution {
@@ -28,6 +29,8 @@ export interface ProviderTrafficActionInput {
 	kind: BrowserMutationKind;
 	interactionClass: BrowserInteractionClass;
 	source: string;
+	trafficPhase?: ProviderTrafficPhase | null;
+	workKey?: string | null;
 	abortSignal?: AbortSignal | null;
 	requestedUrl?: string | null;
 	fromUrl?: string | null;
@@ -57,6 +60,26 @@ export interface ProviderTrafficAction {
 export interface ProviderTrafficGovernor {
 	readonly attribution: ProviderTrafficAttribution;
 	begin(input: ProviderTrafficActionInput): Promise<ProviderTrafficAction>;
+	checkWarning?(context?: unknown): Promise<void>;
+	snapshotAdmissionState?(): ProviderTrafficAdmissionState;
+}
+
+export interface ProviderTrafficAdmissionState {
+	version: 1;
+	phases: Array<{ phase: string; admitted: number; limit: number; remaining: number }>;
+	budgets: Array<{
+		phase: string;
+		kind: string;
+		admitted: number;
+		limit: number;
+		remaining: number;
+	}>;
+	recentEffects?: Array<{
+		occurredAt: string;
+		phase: string;
+		kind: string;
+		outcome: BrowserMutationOutcome;
+	}>;
 }
 
 export interface ProviderTrafficAuthority {
@@ -70,6 +93,32 @@ export interface ProviderTrafficAuthority {
 
 export interface ProviderTrafficAuthorityFactory {
 	acquire(input: { targetId: string }): Promise<ProviderTrafficAuthority>;
+}
+
+export interface ProviderTrafficContext {
+	trafficPhase: ProviderTrafficPhase;
+	workKey: string;
+}
+
+export function withProviderTrafficContext(
+	governor: ProviderTrafficGovernor,
+	context: ProviderTrafficContext,
+): ProviderTrafficGovernor {
+	const workKey = context.workKey.trim();
+	if (!/^(?:scope|sha256):[a-zA-Z0-9._-]+$/.test(workKey)) {
+		throw new Error("Provider traffic work key must be a privacy-bounded scope or sha256 key.");
+	}
+	return {
+		attribution: governor.attribution,
+		checkWarning: governor.checkWarning?.bind(governor),
+		snapshotAdmissionState: governor.snapshotAdmissionState?.bind(governor),
+		begin: (input) =>
+			governor.begin({
+				...input,
+				trafficPhase: context.trafficPhase,
+				workKey,
+			}),
+	};
 }
 
 export class ProviderTrafficAttributionError extends Error {
@@ -116,9 +165,34 @@ export function createProviderTrafficGovernor(input: {
 	const attribution = normalizeAttribution(input.attribution);
 	const createActionId = input.createActionId ?? crypto.randomUUID;
 	let observedWarning: ProviderTrafficWarning | null = null;
+	let lastProbeContext: unknown;
+	const recentEffects: NonNullable<ProviderTrafficAdmissionState["recentEffects"]> = [];
+	const checkWarning = async (context?: unknown) => {
+		if (observedWarning) throw new ProviderTrafficWarningError(observedWarning);
+		if (context !== undefined) lastProbeContext = context;
+		const warning = input.probeWarning
+			? await input.probeWarning(lastProbeContext, attribution)
+			: null;
+		if (!warning) return;
+		// Freeze first. Persistence may be asynchronous or fail, but no later
+		// provider action may pass admission after a visible warning is known.
+		observedWarning = warning;
+		if (!input.persistWarning) {
+			throw new Error("Provider traffic warning persistence is not configured.");
+		}
+		await input.persistWarning(warning, attribution);
+		throw new ProviderTrafficWarningError(warning);
+	};
 
 	return {
 		attribution,
+		checkWarning,
+		snapshotAdmissionState: () => ({
+			version: 1,
+			phases: [],
+			budgets: [],
+			recentEffects: recentEffects.map((effect) => ({ ...effect })),
+		}),
 		async begin(actionInput) {
 			if (observedWarning) throw new ProviderTrafficWarningError(observedWarning);
 			actionInput.abortSignal?.throwIfAborted();
@@ -135,6 +209,8 @@ export function createProviderTrafficGovernor(input: {
 				phase: "start",
 				kind: actionInput.kind,
 				source: actionInput.source,
+				trafficPhase: actionInput.trafficPhase ?? null,
+				workKey: actionInput.workKey ?? null,
 				at: new Date().toISOString(),
 				requestedUrl: actionInput.requestedUrl ?? null,
 				fromUrl: actionInput.fromUrl ?? null,
@@ -166,22 +242,20 @@ export function createProviderTrafficGovernor(input: {
 						outcome: details.outcome,
 						error: details.error ?? null,
 					});
+					recentEffects.push({
+						occurredAt: new Date().toISOString(),
+						phase: actionInput.trafficPhase ?? "unattributed",
+						kind: actionInput.kind,
+						outcome: details.outcome,
+					});
+					if (recentEffects.length > 20) recentEffects.splice(0, recentEffects.length - 20);
 					await input.settleInteraction?.({
 						outcome: details.outcome === "succeeded" ? "succeeded" : "failed",
 						effectState: "settled",
 						reason: details.error ?? details.reason ?? null,
 					});
 
-					const warning = input.probeWarning
-						? await input.probeWarning(details.probeContext, attribution)
-						: null;
-					if (!warning) return;
-					if (!input.persistWarning) {
-						throw new Error("Provider traffic warning persistence is not configured.");
-					}
-					await input.persistWarning(warning, attribution);
-					observedWarning = warning;
-					throw new ProviderTrafficWarningError(warning);
+					await checkWarning(details.probeContext);
 				},
 			};
 		},

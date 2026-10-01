@@ -52034,3 +52034,152 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   reconcile to a precomputed route plan.
 - The scheduler and its unit remain paused. No browser/provider activity was
   performed while creating this plan.
+
+## 2026-09-30 | Issue 151 P0 and P1 phase-attribution checkpoint
+
+- Added a sanitized fixture for the accepted 2,146-request canary and a typed
+  provider-traffic plan/reconciliation contract. The baseline fails with 15
+  explicitly unattributed controllable effects while retaining subframe and
+  hydration counts as separate observations.
+- Added phase-budget reconciliation: attributed controllable effects that lack
+  or exceed a precomputed phase budget fail closed.
+- Extended shared browser mutation receipts with immutable traffic phase and
+  privacy-bounded work-key fields. Account-mirror metadata collection now
+  scopes provider traffic to bootstrap, index, or detail before adapter calls.
+- The focused 69-test gate and typecheck pass. P0 is source-complete; P1 still
+  needs CDP effect reconciliation and materialization-phase attribution. The
+  scheduler stayed paused and no browser/provider work ran.
+
+## 2026-09-30 | Issue 151 P2 local materialization actionability
+
+- Removed the permissive steady-follow fallback that treated missing local
+  actionability evidence as authorization to materialize. Explicit full-sweep
+  requests retain their operator-requested fallback when no reader exists.
+- Implicit materialization now requires a positive `retrievableMissing` count.
+  Unknown or deferred rows remain visible but cannot independently cause a
+  provider route, snapshot refresh, or artifact attempt.
+- The focused regression proves both the pure decision and the production
+  completion path: four unknown/deferred rows with zero retrievable assets do
+  not create a history-materialization job. No browser/provider work ran.
+
+## 2026-09-30 | Issue 151 P1/P3 completion and P4 budget tracer
+
+- Completed provider-free phase attribution by joining completed mutation
+  receipts with caller-supplied CDP effects into one sanitized observation.
+  Action IDs, provider sources, routes, and raw work identifiers do not enter
+  the derived evidence.
+- History materialization utility affinity now binds the `materialization`
+  phase and a bounded scope key before the shared governor admits provider
+  work.
+- Revalidated the existing one-visit bundle and retained-snapshot path: a row
+  rejects multiple navigations and exact reused conversation IDs skip a second
+  snapshot refresh. P2 prevents creation of the no-action job entirely.
+- Began P4 with a budget wrapper that rejects a second detail navigation before
+  delegating to the underlying governor. Production pass-plan construction and
+  warning integration remain. No browser/provider work ran.
+
+## 2026-09-30 | Issue 151 completion-plan reframe
+
+- Replaced Plan 0384's remaining slice-by-slice P4/P5 framing with Plan 0385,
+  one outcome-level completion controller for production enforcement, warning
+  correlation, canonical integration, exact installation, the sole final
+  direct-CDP canary, and truthful issue disposition.
+- Plan 0385 inherits the accepted baseline, P0 through P3 evidence, current
+  implementation checkpoint, retry history, privacy boundaries, and scheduler
+  posture. The reframe does not reopen accepted work or reset live-attempt and
+  review bounds.
+- The final canary remains limited to one attempt after every provider-free,
+  integration, install, and inert-preflight gate passes. Scheduler resume,
+  automatic warning dismissal, provider retries, and the deferred network
+  meter remain outside scope.
+
+## 2026-09-30 | Issue 151 Gate A production-budget checkpoint
+
+- Wired the provider-traffic budget into the real live-follow refresh path.
+  Bootstrap and index authority freeze before collection; detail authority
+  freezes only after deterministic frontier selection.
+- The controlled ChatGPT pass now yields after one planned detail read instead
+  of entering a second navigation that the budget would reject. A production-
+  path regression proves a second index navigation is rejected before the
+  underlying governor begins it.
+- Separated `in-page-click` observation as `in_page_action`; it is no longer
+  falsely reported as a route visit. Delegate admission failure still rolls
+  back reserved capacity.
+- Focused and adjacent metadata, refresh, completion, materialization, and
+  utility-affinity tests passed 268/268 after correcting a widened Gemini yield
+  regression. The final focused rerun passed 101/101 with typecheck, production
+  build, and diff hygiene. No provider/browser work ran.
+- Gate A remains open for materialization budgeting, exact per-row work keys,
+  and explicit recovery admission.
+
+## 2026-09-30 | Issue 151 Gate A exact-work checkpoint
+
+- Replaced the coarse detail/materialization scope with deterministic SHA-256
+  work keys derived from local conversation or project identity. Raw row IDs do
+  not enter governor receipts or traffic plans.
+- Metadata detail options now bind the exact selected surface before adapter
+  work. Unselected rows have zero authority, and account-library work retains a
+  separate bounded scope.
+- Both history-materialization transfer and snapshot-refresh paths now construct
+  exact materialization plans. Configured utility affinity applies the plan
+  inside the real governor chain before phase context, and a production-path
+  regression proves the second navigation is rejected before a third mutation
+  record can be written.
+- The focused metadata, refresh, materialization, affinity, and plan suites pass
+  201/201 with typecheck, production build, Biome, and diff hygiene. No provider
+  or browser work ran.
+- Gate A remains open because cold-start target creation happens before the
+  lease-backed governor exists, and recovery needs a separately causal
+  admission rather than implicit reuse of ordinary route authority.
+
+## 2026-09-30 | Issue 151 Gate A provider-free acceptance
+
+- Routed cold-start crawler target creation through the shared provider-traffic
+  governor before `openTarget`. It carries a one-use bootstrap plan and a
+  provisional pre-lease attribution; denied admission leaves the target and
+  lease registries untouched, while failed post-create settlement closes the
+  exact unleased target.
+- Added separately causal recovery admission. Recovery requires a frozen phase,
+  a distinct SHA-256 work key, a nonempty reason, and a one-use budget; ordinary
+  route capacity cannot be reused as recovery authority.
+- Confirmed reservation rollback after cancelled delegate admission and retained
+  the one-visit invariant. The widened production-path gate passes 285/285 with
+  typecheck. No provider/browser activity ran.
+- Gate A is complete. Gate B warning/cooldown correlation is next.
+## 2026-09-30 - Issue 151 Gate B warning admission freeze
+
+- Made visible-warning detection freeze the provider-traffic governor before
+  asynchronous warning persistence, closing the concurrent-admission window.
+- Added a final passive warning check that reuses the last bounded probe
+  context before a live-follow pass can settle successfully. This detects a
+  warning rendered just after the final admitted action without reload,
+  navigation, dismissal, or retry.
+- Provider-free tests cover both the persistence race and delayed-warning
+  detection. Gate B remains open for the combined budget/phase/guard receipt
+  and scheduler outcome diagnostics.
+## 2026-09-30 - Issue 151 Gate B provider-free acceptance
+
+- Bound the exact staged controller's privacy-safe admission snapshot into
+  warning persistence: phase and effect counts include admitted, limit, and
+  remaining values without work keys or provider IDs.
+- Added a bounded recent-effect window at the shared governor seam containing
+  only timestamp, phase, mutation kind, and outcome. The ledger combines it
+  with the existing sanitized interaction timeline and persisted warning and
+  cooldown record.
+- Scheduler diagnostics now distinguish `budget_exhausted`, `warning_stop`,
+  `clean_completion`, `cleanup_failure`, active work, and other failures.
+- Provider-free Gate B validation passed: 72 focused/adjacent tests plus
+  typecheck. No browser or provider activity occurred.
+## 2026-09-30 - Issue 151 Gate C source validation
+
+- Full provider-free suite: 3,487 passed, 65 skipped, and 2 failed across 397
+  files. Both failures reproduce in isolation and their source/test files are
+  byte-identical to `origin/main`: the disabled Grok video readback fixture
+  exceeds its 5-second timeout, and the ChatGPT prompt structure test expects
+  a source shape absent on main. They are recorded as unrelated, not excluded.
+- Issue 151 focused and adjacent suites remain green (72 tests), along with
+  typecheck, production build, diff hygiene, and the active-plan audit.
+- CodeGraph was synchronized after the changes (1,015 files, 19,352 nodes,
+  77,324 edges). Impact review covered the shared governor, staged controller,
+  configured utility affinity, live-follow affinity, refresh service, and
+  their tests.

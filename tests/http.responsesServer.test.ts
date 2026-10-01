@@ -8564,6 +8564,7 @@ describe("http responses adapter", () => {
 				completion: {
 					id: "acctmirror_diagnostics_1",
 					status: "running",
+					providerTrafficOutcome: "active",
 					phase: "backfill_history",
 					passCount: 2,
 					latestLifecycleEvent: {

@@ -1,5 +1,23 @@
 # Testing quickstart
 
+- Account-mirror provider-traffic planning and phase attribution
+  (provider-free):
+  `pnpm vitest run tests/accountMirror/providerTrafficPlan.test.ts tests/browser-service/providerTrafficGovernor.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
+  This preserves the sanitized Issue #151 baseline, fails unexplained
+  top-level navigation and phase-budget overages, and proves that account-
+  mirror bootstrap, index, and detail adapter work inherits immutable traffic
+  phase plus privacy-bounded work attribution. It also reconciles completed
+  governor actions with phase-attributed CDP counters and proves budget
+  exhaustion stops before underlying admission. It does not launch a browser
+  or contact ChatGPT.
+
+- Account-mirror local materialization actionability (provider-free):
+  `pnpm vitest run tests/accountMirror/completionService.test.ts -t "requires positive local backlog evidence|does not queue raw missing assets"`.
+  This proves that implicit steady-follow materialization requires positive
+  locally retrievable missing-asset evidence; merely unknown/deferred backlog
+  evidence performs no job creation or provider work. Explicit full-sweep
+  requests preserve their separately requested fallback.
+
 - Provider traffic authority in serialized and affinity modes (provider-free):
   `pnpm vitest run tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser-service/providerTrafficStructural.test.ts`.
   This proves serialized execution retains its non-affinity behavior while

@@ -9,6 +9,13 @@ export type BrowserMutationKind =
 
 export type BrowserMutationPhase = 'start' | 'complete';
 
+export type ProviderTrafficPhase =
+  | 'bootstrap'
+  | 'index'
+  | 'detail'
+  | 'materialization'
+  | 'cleanup';
+
 export type BrowserMutationOutcome = 'succeeded' | 'failed';
 
 export interface BrowserMutationRecord {
@@ -16,6 +23,8 @@ export interface BrowserMutationRecord {
   phase: BrowserMutationPhase;
   kind: BrowserMutationKind;
   source: string;
+  trafficPhase?: ProviderTrafficPhase | null;
+  workKey?: string | null;
   at: string;
   requestedUrl?: string | null;
   fromUrl?: string | null;
@@ -39,6 +48,8 @@ export interface BrowserMutationLog {
 export interface BeginBrowserMutationInput {
   kind: BrowserMutationKind;
   source: string;
+  trafficPhase?: ProviderTrafficPhase | null;
+  workKey?: string | null;
   requestedUrl?: string | null;
   fromUrl?: string | null;
   toUrl?: string | null;
@@ -77,6 +88,8 @@ export function beginBrowserMutation(
     phase: 'start',
     kind: input.kind,
     source: input.source,
+    trafficPhase: input.trafficPhase ?? null,
+    workKey: input.workKey ?? null,
     at: new Date().toISOString(),
     requestedUrl: input.requestedUrl ?? null,
     fromUrl: input.fromUrl ?? null,

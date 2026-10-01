@@ -48,6 +48,7 @@ import {
 	clearAccountMirrorProviderGuard,
 	DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
 } from "../accountMirror/providerGuardControl.js";
+import { classifyAccountMirrorProviderTrafficOutcome } from "../accountMirror/providerTrafficOutcome.js";
 import { createAccountMirrorProviderWorkCoordinator } from "../accountMirror/providerWorkCoordinator.js";
 import {
 	type AccountMirrorReconciliationCampaign,
@@ -6236,6 +6237,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 	latestLifecycleEvent: LiveFollowTargetAccountSummary["latestLifecycleEvent"];
 	accountLibraryCursor: AccountMirrorCompletionOperation["accountLibraryCursor"] | null;
 	error: AccountMirrorCompletionOperation["error"];
+	providerTrafficOutcome: ReturnType<typeof classifyAccountMirrorProviderTrafficOutcome>;
 } {
 	return {
 		id: operation.id,
@@ -6248,6 +6250,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 		latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
 		accountLibraryCursor: operation.accountLibraryCursor ?? null,
 		error: operation.error,
+		providerTrafficOutcome: classifyAccountMirrorProviderTrafficOutcome(operation),
 	};
 }
 
