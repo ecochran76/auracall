@@ -60,6 +60,7 @@ import type {
 	AccountMirrorProviderGuardKind,
 	AccountMirrorProviderGuardState,
 } from "./politePolicy.js";
+import { createAccountMirrorMetadataTrafficPlanController } from "./providerTrafficPlan.js";
 import type {
 	AccountMirrorCollectorDiagnosticEvent,
 	AccountMirrorCollectorPhase,
@@ -485,6 +486,12 @@ export function createAccountMirrorRefreshService(input: {
 			const collectorSignal = request.abortSignal
 				? AbortSignal.any([collectorAbort.signal, request.abortSignal])
 				: collectorAbort.signal;
+			const providerTrafficPlanController = affinity?.providerTrafficGovernor
+				? createAccountMirrorMetadataTrafficPlanController(affinity.providerTrafficGovernor, {
+						maxPageReadsPerCycle:
+							development?.maxConversations ?? target.limits.maxPageReadsPerCycle,
+					})
+				: null;
 			try {
 				const providerGuard = await providerGuardCensus({
 					config: input.config,
@@ -575,7 +582,9 @@ export function createAccountMirrorRefreshService(input: {
 							return false;
 						},
 						interactionGovernor: affinity?.interactionGovernor,
-						providerTrafficGovernor: affinity?.providerTrafficGovernor,
+						providerTrafficGovernor:
+							providerTrafficPlanController?.governor ?? affinity?.providerTrafficGovernor,
+						providerTrafficPlanController: providerTrafficPlanController ?? undefined,
 						tabAffinity: affinity?.tabAffinity,
 					}),
 					development?.maxWallTimeMs ??

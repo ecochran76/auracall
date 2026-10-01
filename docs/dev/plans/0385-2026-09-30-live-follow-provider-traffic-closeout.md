@@ -20,10 +20,17 @@ canary while the scheduler remains paused.
 
 ## Current State
 
-The branch is published at implementation checkpoint `f1db89bb1`. Plan 0384's
+The branch is published through the Plan 0385 control checkpoint `f43eede84`.
+Plan 0384's
 P0 through P3 outcomes are provider-free complete, and its first P4 primitive
 can reject over-budget actions before delegating to the shared governor. The
-remaining work is the single end-to-end chain defined by Gates A through F:
+Gate A is in progress: the real refresh path now creates a staged controller,
+freezes bootstrap/index authority before collection, freezes detail authority
+after frontier selection, and yields after one planned detail read rather than
+attempting a second navigation. In-page actions are no longer mislabeled as
+route visits. Materialization-path budgeting, exact per-row work keys, and
+recovery admission still remain before Gate A can close. The remaining work is
+the single end-to-end chain defined by Gates A through F:
 production pass-plan enforcement, warning/cooldown correlation, canonical
 integration, exact installation, one live canary, and issue reconciliation.
 

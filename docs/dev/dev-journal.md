@@ -52092,3 +52092,22 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   integration, install, and inert-preflight gate passes. Scheduler resume,
   automatic warning dismissal, provider retries, and the deferred network
   meter remain outside scope.
+
+## 2026-09-30 | Issue 151 Gate A production-budget checkpoint
+
+- Wired the provider-traffic budget into the real live-follow refresh path.
+  Bootstrap and index authority freeze before collection; detail authority
+  freezes only after deterministic frontier selection.
+- The controlled ChatGPT pass now yields after one planned detail read instead
+  of entering a second navigation that the budget would reject. A production-
+  path regression proves a second index navigation is rejected before the
+  underlying governor begins it.
+- Separated `in-page-click` observation as `in_page_action`; it is no longer
+  falsely reported as a route visit. Delegate admission failure still rolls
+  back reserved capacity.
+- Focused and adjacent metadata, refresh, completion, materialization, and
+  utility-affinity tests passed 268/268 after correcting a widened Gemini yield
+  regression. The final focused rerun passed 101/101 with typecheck, production
+  build, and diff hygiene. No provider/browser work ran.
+- Gate A remains open for materialization budgeting, exact per-row work keys,
+  and explicit recovery admission.

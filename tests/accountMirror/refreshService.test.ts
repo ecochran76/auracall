@@ -547,6 +547,86 @@ describe("account mirror refresh service", () => {
 		);
 	});
 
+	test("rejects production live-follow traffic above the frozen index plan before delegation", async () => {
+		const providerTrafficBegin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const metadataCollector = {
+			collect: vi.fn(async (collectorInput: AccountMirrorMetadataCollectorInput) => {
+				const action = await collectorInput.providerTrafficGovernor?.begin({
+					kind: "navigate",
+					interactionClass: "conversation-read",
+					source: "fixture:index:first",
+					trafficPhase: "index",
+					workKey: "scope:provider-index",
+				});
+				await action?.settle({ outcome: "succeeded" });
+				await collectorInput.providerTrafficGovernor?.begin({
+					kind: "navigate",
+					interactionClass: "conversation-read",
+					source: "fixture:index:second",
+					trafficPhase: "index",
+					workKey: "scope:provider-index",
+				});
+				throw new Error("unreachable");
+			}),
+		};
+		const completeFailure = vi.fn(async () => undefined);
+		const affinityConfig = {
+			...config,
+			auracallProfile: "default",
+			browser: { tabConcurrencyMode: "tab-affinity" },
+		};
+		const service = createAccountMirrorRefreshService({
+			config: affinityConfig,
+			registry: createAccountMirrorStatusRegistry({
+				config: affinityConfig,
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			metadataCollector,
+			persistence: createNoopPersistence(),
+			liveFollowAffinityFactory: vi.fn(async () => ({
+				tabAffinity: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+				interactionGovernor: {
+					beforeInteraction: vi.fn(async () => undefined),
+					finish: vi.fn(),
+				},
+				providerTrafficGovernor: {
+					attribution: {} as never,
+					begin: providerTrafficBegin,
+				},
+				operation: {
+					acquired: true as const,
+					operation: {
+						id: "completion-budget",
+						key: "tab-lease:lease-crawler",
+						managedProfileDir: "/managed/chatgpt",
+						serviceTarget: "chatgpt",
+						kind: "browser-execution" as const,
+						operationClass: "shared-read" as const,
+						ownerPid: process.pid,
+						ownerCommand: "account-mirror-live-follow:completion-budget",
+						startedAt: "2026-04-29T12:00:00.000Z",
+						updatedAt: "2026-04-29T12:00:00.000Z",
+					},
+					release: vi.fn(async () => undefined),
+				},
+				completeSuccess: vi.fn(async () => undefined),
+				completeFailure,
+			})) as never,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+
+		await expect(
+			service.requestRefresh({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				explicitRefresh: true,
+				liveFollowOperationId: "completion-budget",
+			}),
+		).rejects.toThrow("Provider traffic budget exhausted for index/page_navigate at limit 1");
+		expect(providerTrafficBegin).toHaveBeenCalledTimes(1);
+		expect(completeFailure).toHaveBeenCalledOnce();
+	});
+
 	test("threads requested collector phase into metadata collection", async () => {
 		const metadataCollector = {
 			collect: vi.fn(async (input: AccountMirrorMetadataCollectorInput) => ({

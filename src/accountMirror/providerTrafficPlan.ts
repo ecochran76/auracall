@@ -9,6 +9,7 @@ export type AccountMirrorProviderTrafficPhase =
 export type AccountMirrorProviderTrafficEffectKind =
 	| "target_create"
 	| "route_visit"
+	| "in_page_action"
 	| "page_navigate"
 	| "reload"
 	| "top_level_document"
@@ -40,6 +41,7 @@ export interface AccountMirrorProviderTrafficObservation {
 export interface AccountMirrorProviderTrafficBudget {
 	phase: Exclude<AccountMirrorProviderTrafficPhase, "unattributed">;
 	kind: AccountMirrorProviderTrafficEffectKind;
+	workKey?: string;
 	limit: number;
 }
 
@@ -74,6 +76,7 @@ export interface AccountMirrorProviderTrafficReconciliation {
 const CONTROLLABLE_EFFECTS = new Set<AccountMirrorProviderTrafficEffectKind>([
 	"target_create",
 	"route_visit",
+	"in_page_action",
 	"page_navigate",
 	"reload",
 	"top_level_document",
@@ -97,20 +100,125 @@ export function withAccountMirrorProviderTrafficPlan(
 	governor: ProviderTrafficGovernor,
 	plan: AccountMirrorProviderTrafficPlan,
 ): ProviderTrafficGovernor {
-	const limits = new Map<string, number>();
-	for (const budget of plan.budgets) {
-		const key = `${budget.phase}:${budget.kind}`;
-		limits.set(key, (limits.get(key) ?? 0) + Math.max(0, Math.floor(budget.limit)));
+	const controller = createAccountMirrorProviderTrafficPlanController(governor);
+	for (const phase of uniquePhases(plan.budgets)) {
+		controller.freezePhase(
+			phase,
+			plan.budgets.filter((budget) => budget.phase === phase),
+		);
 	}
+	return controller.governor;
+}
+
+export interface AccountMirrorProviderTrafficPlanController {
+	readonly governor: ProviderTrafficGovernor;
+	freezePhase(
+		phase: Exclude<AccountMirrorProviderTrafficPhase, "unattributed">,
+		budgets: readonly AccountMirrorProviderTrafficBudget[],
+	): void;
+	snapshotPlan(): AccountMirrorProviderTrafficPlan;
+}
+
+export function createAccountMirrorMetadataTrafficPlanController(
+	governor: ProviderTrafficGovernor,
+	input: { maxPageReadsPerCycle: number },
+): AccountMirrorProviderTrafficPlanController {
+	const controller = createAccountMirrorProviderTrafficPlanController(governor);
+	controller.freezePhase("bootstrap", [
+		{
+			phase: "bootstrap",
+			kind: "page_navigate",
+			workKey: "scope:identity",
+			limit: 1,
+		},
+		{
+			phase: "bootstrap",
+			kind: "in_page_action",
+			workKey: "scope:identity",
+			limit: 1,
+		},
+	]);
+	controller.freezePhase("index", [
+		{
+			phase: "index",
+			kind: "page_navigate",
+			workKey: "scope:provider-index",
+			limit: 1,
+		},
+		{
+			phase: "index",
+			kind: "in_page_action",
+			workKey: "scope:provider-index",
+			limit: Math.max(0, Math.floor(input.maxPageReadsPerCycle)) + 2,
+		},
+	]);
+	return controller;
+}
+
+export function freezeAccountMirrorDetailTrafficPlan(
+	controller: AccountMirrorProviderTrafficPlanController,
+	input: { maxDetailReads: number },
+): void {
+	const detailReads = Math.max(0, Math.floor(input.maxDetailReads));
+	controller.freezePhase("detail", [
+		{
+			phase: "detail",
+			kind: "page_navigate",
+			workKey: "scope:conversation-detail",
+			limit: Math.min(1, detailReads),
+		},
+		{
+			phase: "detail",
+			kind: "in_page_action",
+			workKey: "scope:conversation-detail",
+			limit: detailReads,
+		},
+	]);
+}
+
+export function createAccountMirrorProviderTrafficPlanController(
+	governor: ProviderTrafficGovernor,
+): AccountMirrorProviderTrafficPlanController {
+	const budgets: AccountMirrorProviderTrafficBudget[] = [];
+	const frozenPhases = new Set<Exclude<AccountMirrorProviderTrafficPhase, "unattributed">>();
 	const admitted = new Map<string, number>();
-	return {
+	const plannedKey = (
+		phase: AccountMirrorProviderTrafficPhase,
+		kind: AccountMirrorProviderTrafficEffectKind,
+		workKey: string | null | undefined,
+	) => `${phase}:${kind}:${workKey ?? "*"}`;
+	const budgetLimit = (
+		phase: AccountMirrorProviderTrafficPhase,
+		kind: AccountMirrorProviderTrafficEffectKind,
+		workKey: string | null | undefined,
+	) =>
+		budgets.reduce(
+			(total, budget) =>
+				budget.phase === phase &&
+				budget.kind === kind &&
+				(budget.workKey === undefined || budget.workKey === workKey)
+					? total + Math.max(0, Math.floor(budget.limit))
+					: total,
+			0,
+		);
+	const budgetKey = (
+		phase: AccountMirrorProviderTrafficPhase,
+		kind: AccountMirrorProviderTrafficEffectKind,
+		workKey: string | null | undefined,
+	) => {
+		const hasExact = budgets.some(
+			(budget) => budget.phase === phase && budget.kind === kind && budget.workKey === workKey,
+		);
+		return plannedKey(phase, kind, hasExact ? workKey : null);
+	};
+	const budgetedGovernor: ProviderTrafficGovernor = {
 		attribution: governor.attribution,
 		async begin(input) {
 			const kind = mutationEffectKind(input.kind);
 			if (!kind) return governor.begin(input);
 			const phase = input.trafficPhase ?? "unattributed";
-			const key = `${phase}:${kind}`;
-			const limit = limits.get(key) ?? 0;
+			const limit = budgetLimit(phase, kind, input.workKey);
+			const key = budgetKey(phase, kind, input.workKey);
 			const next = (admitted.get(key) ?? 0) + 1;
 			if (next > limit) throw new ProviderTrafficBudgetExceededError(phase, kind, limit);
 			admitted.set(key, next);
@@ -122,6 +230,38 @@ export function withAccountMirrorProviderTrafficPlan(
 			}
 		},
 	};
+	return {
+		governor: budgetedGovernor,
+		freezePhase(phase, phaseBudgets) {
+			if (frozenPhases.has(phase)) {
+				throw new Error(`Provider traffic phase ${phase} is already frozen.`);
+			}
+			for (const budget of phaseBudgets) {
+				if (budget.phase !== phase) {
+					throw new Error(
+						`Provider traffic budget phase ${budget.phase} does not match frozen phase ${phase}.`,
+					);
+				}
+				budgets.push({
+					...budget,
+					...(budget.workKey ? { workKey: budget.workKey.trim() } : {}),
+					limit: Math.max(0, Math.floor(budget.limit)),
+				});
+			}
+			frozenPhases.add(phase);
+		},
+		snapshotPlan: () => ({
+			object: "account_mirror_provider_traffic_plan",
+			version: 1,
+			budgets: budgets.map((budget) => ({ ...budget })),
+		}),
+	};
+}
+
+function uniquePhases(
+	budgets: readonly AccountMirrorProviderTrafficBudget[],
+): Array<Exclude<AccountMirrorProviderTrafficPhase, "unattributed">> {
+	return [...new Set(budgets.map((budget) => budget.phase))];
 }
 
 export function createAccountMirrorProviderTrafficObservation(input: {
@@ -251,7 +391,7 @@ function mutationEffectKind(
 	if (kind === "navigate" || kind === "location-assign") return "page_navigate";
 	if (kind === "reload") return "reload";
 	if (kind === "target-open-or-reuse") return "target_create";
-	if (kind === "in-page-click") return "route_visit";
+	if (kind === "in-page-click") return "in_page_action";
 	return null;
 }
 

@@ -4,7 +4,10 @@ import type { BrowserMutationRecord } from "../../packages/browser-service/src/s
 import {
 	type AccountMirrorProviderTrafficObservation,
 	assertAccountMirrorProviderTrafficReconciled,
+	createAccountMirrorMetadataTrafficPlanController,
 	createAccountMirrorProviderTrafficObservation,
+	createAccountMirrorProviderTrafficPlanController,
+	freezeAccountMirrorDetailTrafficPlan,
 	ProviderTrafficBudgetExceededError,
 	reconcileAccountMirrorProviderTraffic,
 	withAccountMirrorProviderTrafficPlan,
@@ -171,5 +174,115 @@ describe("account-mirror provider traffic plan", () => {
 			}),
 		).rejects.toBeInstanceOf(ProviderTrafficBudgetExceededError);
 		expect(begin).toHaveBeenCalledTimes(1);
+	});
+
+	it("freezes staged phase authority before delegating exact planned work", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const controller = createAccountMirrorProviderTrafficPlanController({
+			attribution: {} as never,
+			begin,
+		});
+
+		controller.freezePhase("bootstrap", [
+			{
+				phase: "bootstrap",
+				kind: "page_navigate",
+				workKey: "scope:identity",
+				limit: 1,
+			},
+		]);
+
+		await controller.governor.begin({
+			kind: "navigate",
+			interactionClass: "page-refresh",
+			source: "fixture:identity",
+			trafficPhase: "bootstrap",
+			workKey: "scope:identity",
+		});
+		await expect(
+			controller.governor.begin({
+				kind: "navigate",
+				interactionClass: "conversation-read",
+				source: "fixture:unplanned-index",
+				trafficPhase: "index",
+				workKey: "scope:provider-index",
+			}),
+		).rejects.toMatchObject({
+			name: "ProviderTrafficBudgetExceededError",
+			trafficPhase: "index",
+			kind: "page_navigate",
+			limit: 0,
+		});
+		expect(() => controller.freezePhase("bootstrap", [])).toThrow(
+			"Provider traffic phase bootstrap is already frozen",
+		);
+		expect(begin).toHaveBeenCalledTimes(1);
+		expect(controller.snapshotPlan()).toEqual({
+			object: "account_mirror_provider_traffic_plan",
+			version: 1,
+			budgets: [
+				{
+					phase: "bootstrap",
+					kind: "page_navigate",
+					workKey: "scope:identity",
+					limit: 1,
+				},
+			],
+		});
+	});
+
+	it("freezes the detail frontier to one ordinary navigation while retaining exact local work", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const controller = createAccountMirrorMetadataTrafficPlanController(
+			{ attribution: {} as never, begin },
+			{ maxPageReadsPerCycle: 4 },
+		);
+		freezeAccountMirrorDetailTrafficPlan(controller, { maxDetailReads: 3 });
+
+		await controller.governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture:detail:first",
+			trafficPhase: "detail",
+			workKey: "scope:conversation-detail",
+		});
+		await expect(
+			controller.governor.begin({
+				kind: "navigate",
+				interactionClass: "conversation-read",
+				source: "fixture:detail:second",
+				trafficPhase: "detail",
+				workKey: "scope:conversation-detail",
+			}),
+		).rejects.toBeInstanceOf(ProviderTrafficBudgetExceededError);
+		expect(controller.snapshotPlan().budgets).toContainEqual({
+			phase: "detail",
+			kind: "page_navigate",
+			workKey: "scope:conversation-detail",
+			limit: 1,
+		});
+		expect(begin).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps in-page actions distinct from route visits", () => {
+		const observation = createAccountMirrorProviderTrafficObservation({
+			observedAt: "2026-09-30T00:00:00.000Z",
+			logicalInteractions: 1,
+			mutations: [
+				{
+					id: "action",
+					phase: "complete",
+					kind: "in-page-click",
+					source: "fixture",
+					trafficPhase: "index",
+					workKey: "scope:provider-index",
+					at: "2026-09-30T00:00:00.000Z",
+					outcome: "succeeded",
+				},
+			],
+			warningObserved: false,
+		});
+
+		expect(observation.effects).toEqual([{ phase: "index", kind: "in_page_action", count: 1 }]);
 	});
 });

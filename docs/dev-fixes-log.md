@@ -23863,3 +23863,13 @@ in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.
   Keep explicitly requested full sweeps distinct from that implicit path.
 - Regression: `tests/accountMirror/completionService.test.ts` covers both the
   pure decision and the production no-job path.
+# 2026-09-30: Freeze provider-traffic authority in the production pass
+
+- A traffic-budget helper is not enforcement until the production orchestration
+  wraps the governor that adapters actually receive.
+- Freeze discovery budgets before collection and detail budgets only after the
+  deterministic frontier exists. When a budget is intentionally smaller than
+  the frontier, cap and yield before the excess call instead of relying on an
+  exception after work selection.
+- Keep in-page actions distinct from route visits in traffic evidence; merging
+  them hides which physical behavior actually caused provider hydration.

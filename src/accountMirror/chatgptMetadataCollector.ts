@@ -66,6 +66,10 @@ import type {
 	AccountMirrorIdentityEvidenceSource,
 	AccountMirrorProvider,
 } from "./politePolicy.js";
+import {
+	type AccountMirrorProviderTrafficPlanController,
+	freezeAccountMirrorDetailTrafficPlan,
+} from "./providerTrafficPlan.js";
 import type {
 	AccountMirrorCollectorDiagnosticEvent,
 	AccountMirrorCollectorPhase,
@@ -145,6 +149,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	detailReadCap?: number | null;
 	interactionGovernor?: BrowserInteractionGovernor;
 	providerTrafficGovernor?: ProviderTrafficGovernor;
+	providerTrafficPlanController?: AccountMirrorProviderTrafficPlanController;
 	tabAffinity?: {
 		host: string;
 		onTargetNavigation?: () => Promise<void> | void;
@@ -672,7 +677,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 					(input.sweepMode ?? "steady_follow") === "steady_follow" &&
 					frontier.detailConversations.length > 0
 				);
-			const maxDetailReads = capDetailReadsForActiveInteractionBudget({
+			const interactionCappedDetailReads = capDetailReadsForActiveInteractionBudget({
 				maxDetailReads: input.limits.maxPageReadsPerCycle,
 				maxBrowserInteractionsPerMinute: input.limits.maxBrowserInteractionsPerMinute,
 				projectIndexRead,
@@ -680,10 +685,22 @@ export function createChatgptAccountMirrorMetadataCollector(
 				projectConversationReads: projectConversationCursor?.scannedProjects ?? 0,
 				chatgptAccountLibraryRead,
 			});
-			const budgetYieldCause =
-				maxDetailReads <= 0 && frontier.detailConversations.length + projects.items.length > 0
-					? createProviderInteractionBudgetYieldCause()
-					: null;
+			const maxDetailReads = input.providerTrafficPlanController
+				? Math.min(1, interactionCappedDetailReads)
+				: interactionCappedDetailReads;
+			const remainingDetailSurfaces = frontier.detailConversations.length + projects.items.length;
+			const budgetYieldCause = (
+				input.providerTrafficPlanController
+					? maxDetailReads < remainingDetailSurfaces
+					: maxDetailReads <= 0 && remainingDetailSurfaces > 0
+			)
+				? createProviderInteractionBudgetYieldCause()
+				: null;
+			if (input.providerTrafficPlanController) {
+				freezeAccountMirrorDetailTrafficPlan(input.providerTrafficPlanController, {
+					maxDetailReads,
+				});
+			}
 			const inventory =
 				input.provider === "chatgpt"
 					? await readBoundedChatgptDetailInventory(
