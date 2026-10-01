@@ -60,6 +60,7 @@ export interface ProviderTrafficAction {
 export interface ProviderTrafficGovernor {
 	readonly attribution: ProviderTrafficAttribution;
 	begin(input: ProviderTrafficActionInput): Promise<ProviderTrafficAction>;
+	checkWarning?(context?: unknown): Promise<void>;
 }
 
 export interface ProviderTrafficAuthority {
@@ -90,6 +91,7 @@ export function withProviderTrafficContext(
 	}
 	return {
 		attribution: governor.attribution,
+		checkWarning: governor.checkWarning?.bind(governor),
 		begin: (input) =>
 			governor.begin({
 				...input,
@@ -143,9 +145,27 @@ export function createProviderTrafficGovernor(input: {
 	const attribution = normalizeAttribution(input.attribution);
 	const createActionId = input.createActionId ?? crypto.randomUUID;
 	let observedWarning: ProviderTrafficWarning | null = null;
+	let lastProbeContext: unknown;
+	const checkWarning = async (context?: unknown) => {
+		if (observedWarning) throw new ProviderTrafficWarningError(observedWarning);
+		if (context !== undefined) lastProbeContext = context;
+		const warning = input.probeWarning
+			? await input.probeWarning(lastProbeContext, attribution)
+			: null;
+		if (!warning) return;
+		// Freeze first. Persistence may be asynchronous or fail, but no later
+		// provider action may pass admission after a visible warning is known.
+		observedWarning = warning;
+		if (!input.persistWarning) {
+			throw new Error("Provider traffic warning persistence is not configured.");
+		}
+		await input.persistWarning(warning, attribution);
+		throw new ProviderTrafficWarningError(warning);
+	};
 
 	return {
 		attribution,
+		checkWarning,
 		async begin(actionInput) {
 			if (observedWarning) throw new ProviderTrafficWarningError(observedWarning);
 			actionInput.abortSignal?.throwIfAborted();
@@ -201,16 +221,7 @@ export function createProviderTrafficGovernor(input: {
 						reason: details.error ?? details.reason ?? null,
 					});
 
-					const warning = input.probeWarning
-						? await input.probeWarning(details.probeContext, attribution)
-						: null;
-					if (!warning) return;
-					if (!input.persistWarning) {
-						throw new Error("Provider traffic warning persistence is not configured.");
-					}
-					await input.persistWarning(warning, attribution);
-					observedWarning = warning;
-					throw new ProviderTrafficWarningError(warning);
+					await checkWarning(details.probeContext);
 				},
 			};
 		},

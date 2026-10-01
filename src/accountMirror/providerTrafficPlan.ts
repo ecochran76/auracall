@@ -233,6 +233,7 @@ export function createAccountMirrorProviderTrafficPlanController(
 	};
 	const budgetedGovernor: ProviderTrafficGovernor = {
 		attribution: governor.attribution,
+		checkWarning: governor.checkWarning?.bind(governor),
 		async begin(input) {
 			const kind = mutationEffectKind(input.kind);
 			if (!kind) return governor.begin(input);

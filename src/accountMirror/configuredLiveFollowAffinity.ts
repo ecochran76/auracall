@@ -350,7 +350,12 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			release: () =>
 				finish("failed", classifyLiveFollowFailureEffectState(), "affinity-context-released"),
 		},
-		completeSuccess: () => finish("succeeded", "settled"),
+		completeSuccess: async () => {
+			// The visible blocking surface can arrive after the final action settles.
+			// Reuse that action's probe context once before declaring the pass clean.
+			await providerTrafficGovernor.checkWarning?.();
+			await finish("succeeded", "settled");
+		},
 		completeFailure: async (error) => {
 			const warning = classifyLiveFollowWarning(error);
 			let finishError: unknown = null;

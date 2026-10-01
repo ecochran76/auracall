@@ -52146,3 +52146,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   the one-visit invariant. The widened production-path gate passes 285/285 with
   typecheck. No provider/browser activity ran.
 - Gate A is complete. Gate B warning/cooldown correlation is next.
+## 2026-09-30 - Issue 151 Gate B warning admission freeze
+
+- Made visible-warning detection freeze the provider-traffic governor before
+  asynchronous warning persistence, closing the concurrent-admission window.
+- Added a final passive warning check that reuses the last bounded probe
+  context before a live-follow pass can settle successfully. This detects a
+  warning rendered just after the final admitted action without reload,
+  navigation, dismissal, or retry.
+- Provider-free tests cover both the persistence race and delayed-warning
+  detection. Gate B remains open for the combined budget/phase/guard receipt
+  and scheduler outcome diagnostics.

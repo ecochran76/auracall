@@ -136,6 +136,64 @@ describe("provider traffic governor", () => {
 		).rejects.toBeInstanceOf(ProviderTrafficWarningError);
 	});
 
+	test("freezes admissions before warning persistence completes", async () => {
+		let releasePersistence: (() => void) | undefined;
+		const persistenceBlocked = new Promise<void>((resolve) => {
+			releasePersistence = resolve;
+		});
+		const governor = createProviderTrafficGovernor({
+			attribution,
+			interactionGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+			mutationAudit: vi.fn(async () => undefined),
+			probeWarning: vi.fn(async () => ({
+				classification: "rate-limit" as const,
+				reason: "Too many requests",
+			})),
+			persistWarning: vi.fn(async () => persistenceBlocked),
+		});
+		const action = await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture",
+		});
+		const settling = action.settle({ outcome: "succeeded", probeContext: { visible: true } });
+		await vi.waitFor(async () => {
+			await expect(
+				governor.begin({ kind: "reload", interactionClass: "page-refresh", source: "late" }),
+			).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+		});
+		releasePersistence?.();
+		await expect(settling).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+	});
+
+	test("detects a delayed warning with a final passive probe", async () => {
+		let visible = false;
+		const probeWarning = vi.fn(async (context: unknown) =>
+			visible && context
+				? { classification: "rate-limit" as const, reason: "temporarily limited" }
+				: null,
+		);
+		const persistWarning = vi.fn(async () => undefined);
+		const governor = createProviderTrafficGovernor({
+			attribution,
+			interactionGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+			mutationAudit: vi.fn(async () => undefined),
+			probeWarning,
+			persistWarning,
+		});
+		const runtime = { evaluate: vi.fn() };
+		const action = await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "fixture",
+		});
+		await action.settle({ outcome: "succeeded", probeContext: runtime });
+		visible = true;
+		await expect(governor.checkWarning?.()).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+		expect(probeWarning).toHaveBeenLastCalledWith(runtime, attribution);
+		expect(persistWarning).toHaveBeenCalledOnce();
+	});
+
 	test("persists phase and privacy-bounded work attribution before physical traffic", async () => {
 		const observedRecords: BrowserMutationRecord[] = [];
 		const governor = createProviderTrafficGovernor({

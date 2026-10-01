@@ -23897,3 +23897,11 @@ in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.
 - Recovery is not spare ordinary capacity. Require a distinct hashed work key,
   causal reason, and one-use admission so its receipt can be tied to the
   original planned route without silently widening that route's budget.
+## Freeze provider traffic before persisting a visible warning
+
+When warning persistence is asynchronous, setting the in-memory stop latch
+after the write leaves a window in which another provider action can be
+admitted. Set the latch as soon as the classifier returns a warning, then
+persist it. Keep the last bounded probe context and perform one passive final
+check before reporting a pass as successful so a late-rendered warning remains
+attributable without causing any new provider traffic.

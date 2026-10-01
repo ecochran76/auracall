@@ -143,6 +143,13 @@ Evidence required:
 
 ### Gate B - Warning and cooldown correlation
 
+Status: IN PROGRESS
+
+The governor now freezes admissions before warning persistence and performs a
+final passive check using the last bounded probe context before successful
+live-follow settlement. The remaining Gate B work is the joined
+budget/phase/guard receipt and explicit scheduler outcome classification.
+
 Join budget state, phase counters, warning classification, and cooldown/stop
 state in the installed-runtime receipt path. A warning observed during or after
 the last admitted action must remain attributable to the bounded preceding
