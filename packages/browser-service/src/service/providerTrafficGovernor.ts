@@ -7,6 +7,7 @@ import type {
 	BrowserMutationKind,
 	BrowserMutationOutcome,
 	BrowserMutationRecord,
+	ProviderTrafficPhase,
 } from "./mutationDispatcher.js";
 
 export interface ProviderTrafficAttribution {
@@ -28,6 +29,8 @@ export interface ProviderTrafficActionInput {
 	kind: BrowserMutationKind;
 	interactionClass: BrowserInteractionClass;
 	source: string;
+	trafficPhase?: ProviderTrafficPhase | null;
+	workKey?: string | null;
 	abortSignal?: AbortSignal | null;
 	requestedUrl?: string | null;
 	fromUrl?: string | null;
@@ -70,6 +73,30 @@ export interface ProviderTrafficAuthority {
 
 export interface ProviderTrafficAuthorityFactory {
 	acquire(input: { targetId: string }): Promise<ProviderTrafficAuthority>;
+}
+
+export interface ProviderTrafficContext {
+	trafficPhase: ProviderTrafficPhase;
+	workKey: string;
+}
+
+export function withProviderTrafficContext(
+	governor: ProviderTrafficGovernor,
+	context: ProviderTrafficContext,
+): ProviderTrafficGovernor {
+	const workKey = context.workKey.trim();
+	if (!/^(?:scope|sha256):[a-zA-Z0-9._-]+$/.test(workKey)) {
+		throw new Error("Provider traffic work key must be a privacy-bounded scope or sha256 key.");
+	}
+	return {
+		attribution: governor.attribution,
+		begin: (input) =>
+			governor.begin({
+				...input,
+				trafficPhase: context.trafficPhase,
+				workKey,
+			}),
+	};
 }
 
 export class ProviderTrafficAttributionError extends Error {
@@ -135,6 +162,8 @@ export function createProviderTrafficGovernor(input: {
 				phase: "start",
 				kind: actionInput.kind,
 				source: actionInput.source,
+				trafficPhase: actionInput.trafficPhase ?? null,
+				workKey: actionInput.workKey ?? null,
 				at: new Date().toISOString(),
 				requestedUrl: actionInput.requestedUrl ?? null,
 				fromUrl: actionInput.fromUrl ?? null,

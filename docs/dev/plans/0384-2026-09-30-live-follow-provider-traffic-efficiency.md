@@ -37,6 +37,15 @@ Issue #151 is the governing work item. Live follow remains paused while this
 plan proceeds provider-free. The final installed direct-CDP canary is a
 separate gated slice and is limited to one attempt after all source gates pass.
 
+P0 is source-complete. The accepted canary is preserved as a sanitized
+provider-free fixture, and a typed reconciliation contract distinguishes
+controllable navigations/top-level documents from subframes and hydration.
+Unattributed controllable effects and phase-budget overages fail closed. P1 is
+in progress: browser-service mutation receipts now preserve immutable traffic
+phase and privacy-bounded work-key context, and the metadata collector binds
+`bootstrap`, `index`, and `detail` contexts before adapter work. CDP effect
+reconciliation and materialization-phase wiring remain.
+
 ## Problem Boundary
 
 Logical governor permits do not describe browser page hydration. One admitted
@@ -92,6 +101,8 @@ does not authorize the next live effect.
 
 ### P0 - Baseline and attribution contract
 
+Status: COMPLETE (provider-free source)
+
 - Outcome: encode the accepted 2,146-request canary as a sanitized provider-
   free fixture and define reconciliation between logical actions, CDP
   commands, top-level documents, frames, and subrequests.
@@ -105,6 +116,8 @@ does not authorize the next live effect.
   `unattributed`; no provider or browser process is launched.
 
 ### P1 - Deep phase-aware traffic instrumentation
+
+Status: IN PROGRESS
 
 - Outcome: extend the existing browser-service governor/ledger so callers
   attach a closed-vocabulary phase and local work key before each physical

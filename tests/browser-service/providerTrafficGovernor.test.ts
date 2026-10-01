@@ -1,12 +1,13 @@
 import { describe, expect, test, vi } from "vitest";
 import type { BrowserMutationRecord } from "../../packages/browser-service/src/service/mutationDispatcher.js";
-import { navigateAndSettle } from "../../packages/browser-service/src/service/ui.js";
 import {
 	createProviderTrafficGovernor,
 	ProviderTrafficAttributionError,
 	type ProviderTrafficWarning,
 	ProviderTrafficWarningError,
+	withProviderTrafficContext,
 } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
+import { navigateAndSettle } from "../../packages/browser-service/src/service/ui.js";
 
 const attribution = {
 	provider: "chatgpt",
@@ -133,5 +134,61 @@ describe("provider traffic governor", () => {
 		await expect(
 			governor.begin({ kind: "reload", interactionClass: "page-refresh", source: "late" }),
 		).rejects.toBeInstanceOf(ProviderTrafficWarningError);
+	});
+
+	test("persists phase and privacy-bounded work attribution before physical traffic", async () => {
+		const observedRecords: BrowserMutationRecord[] = [];
+		const governor = createProviderTrafficGovernor({
+			attribution,
+			interactionGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+			mutationAudit: async (record) => {
+				observedRecords.push(record);
+			},
+			createActionId: () => "action-phase-1",
+		});
+
+		const action = await governor.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "live-follow:detail",
+			trafficPhase: "detail",
+			workKey: "sha256:fixture-work-key",
+		});
+		await action.settle({ outcome: "succeeded" });
+
+		expect(observedRecords).toHaveLength(2);
+		expect(observedRecords[0]).toMatchObject({
+			phase: "start",
+			trafficPhase: "detail",
+			workKey: "sha256:fixture-work-key",
+		});
+		expect(observedRecords[1]).toMatchObject({
+			phase: "complete",
+			trafficPhase: "detail",
+			workKey: "sha256:fixture-work-key",
+		});
+	});
+
+	test("binds a phase context without allowing a nested caller to replace it", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const scoped = withProviderTrafficContext(
+			{ attribution, begin },
+			{ trafficPhase: "index", workKey: "scope:provider-index" },
+		);
+
+		await scoped.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "nested-provider-call",
+			trafficPhase: "detail",
+			workKey: "raw-conversation-id",
+		});
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				trafficPhase: "index",
+				workKey: "scope:provider-index",
+			}),
+		);
 	});
 });

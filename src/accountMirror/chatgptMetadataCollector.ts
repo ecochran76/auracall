@@ -6,7 +6,10 @@ import {
 	type BrowserInteractionGovernor,
 	createBrowserInteractionGovernor,
 } from "../../packages/browser-service/src/service/interactionGovernor.js";
-import type { ProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
+import {
+	type ProviderTrafficGovernor,
+	withProviderTrafficContext,
+} from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import { readChatgptRateLimitGuardState } from "../browser/chatgptRateLimitGuard.js";
 import { BrowserAutomationClient } from "../browser/client.js";
@@ -304,11 +307,21 @@ function createAccountMirrorListOptions(
 	scrapeTelemetry = createBrowserScrapeTelemetryRecorder(),
 	tabAffinity?: AccountMirrorMetadataCollectorInput["tabAffinity"],
 	providerTrafficGovernor?: ProviderTrafficGovernor,
+	trafficContext?: {
+		trafficPhase: "bootstrap" | "index" | "detail";
+		workKey: string;
+	},
 ): BrowserProviderListOptions {
+	const scopedProviderTrafficGovernor =
+		providerTrafficGovernor && trafficContext
+			? withProviderTrafficContext(providerTrafficGovernor, trafficContext)
+			: providerTrafficGovernor;
 	return {
 		...(abortSignal ? { abortSignal } : {}),
 		...(interactionGovernor ? { interactionGovernor } : {}),
-		...(providerTrafficGovernor ? { providerTrafficGovernor } : {}),
+		...(scopedProviderTrafficGovernor
+			? { providerTrafficGovernor: scopedProviderTrafficGovernor }
+			: {}),
 		scrapeTelemetry,
 		accountMirrorInventory: true,
 		skipFeatureSignature: true,
@@ -429,15 +442,32 @@ export function createChatgptAccountMirrorMetadataCollector(
 				);
 			throwIfCollectionAborted(input.abortSignal);
 			const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
-			const listOptions = createAccountMirrorListOptions(
+			const identityListOptions = createAccountMirrorListOptions(
 				input.abortSignal,
 				pacer,
 				scrapeTelemetry,
 				input.tabAffinity,
 				input.providerTrafficGovernor,
+				{ trafficPhase: "bootstrap", workKey: "scope:identity" },
+			);
+			const indexListOptions = createAccountMirrorListOptions(
+				input.abortSignal,
+				pacer,
+				scrapeTelemetry,
+				input.tabAffinity,
+				input.providerTrafficGovernor,
+				{ trafficPhase: "index", workKey: "scope:provider-index" },
+			);
+			const detailListOptions = createAccountMirrorListOptions(
+				input.abortSignal,
+				pacer,
+				scrapeTelemetry,
+				input.tabAffinity,
+				input.providerTrafficGovernor,
+				{ trafficPhase: "detail", workKey: "scope:conversation-detail" },
 			);
 			await reportCollectorProgress(input, { phase: "identity", event: "started" });
-			await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "page-refresh");
+			await beforeAccountMirrorBrowserInteraction(identityListOptions, pacer, "page-refresh");
 			const identityProviderCallTimeoutMs = resolveCollectorDiscoveryCallTimeoutMs(
 				input,
 				"page-refresh",
@@ -447,7 +477,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 				"identity",
 				() =>
 					withProviderCallTimeout(
-						(abortSignal) => client.getProviderSessionProof({ ...listOptions, abortSignal }),
+						(abortSignal) =>
+							client.getProviderSessionProof({ ...identityListOptions, abortSignal }),
 						identityProviderCallTimeoutMs,
 						`Identity discovery timed out for ${input.provider}/${input.runtimeProfileId}.`,
 						input.abortSignal,
@@ -491,7 +522,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				: skipSteadyFollowProjectDiscovery
 					? await readSkippedCollectorProjects(input)
 					: await runCollectorDiagnosticStage(input, "project-index", () =>
-							readCollectorProjects(input, client, listOptions, pacer),
+							readCollectorProjects(input, client, indexListOptions, pacer),
 						);
 			throwIfCollectionAborted(input.abortSignal);
 			const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
@@ -508,7 +539,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 								input,
 								client,
 								conversationBudgets.rootRows,
-								listOptions,
+								indexListOptions,
 								pacer,
 							),
 						);
@@ -539,7 +570,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				);
 				const result = await runCollectorDiagnosticStage(input, "project-conversations", () =>
 					readBoundedProjectConversations(client, projects.items, remainingConversationBudget, {
-						listOptions,
+						listOptions: indexListOptions,
 						pacer,
 						observation: createAccountMirrorObservationContext(input, client),
 						tolerateReadFailure: input.provider === "gemini",
@@ -665,7 +696,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 								cursor: detailAttachmentCursor,
 								budgetYieldCause,
 								shouldYield: input.shouldYield,
-								listOptions,
+								listOptions: detailListOptions,
 								pacer,
 								observation: createAccountMirrorObservationContext(input, client),
 								previousFiles: input.previousFiles,
@@ -704,7 +735,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 									cursor: detailAttachmentCursor,
 									budgetYieldCause,
 									shouldYield: input.shouldYield,
-									listOptions,
+									listOptions: detailListOptions,
 									pacer,
 									observation: createAccountMirrorObservationContext(input, client),
 								},
@@ -719,7 +750,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 										cursor: detailAttachmentCursor,
 										budgetYieldCause,
 										shouldYield: input.shouldYield,
-										listOptions,
+										listOptions: detailListOptions,
 										pacer,
 										observation: createAccountMirrorObservationContext(input, client),
 									},

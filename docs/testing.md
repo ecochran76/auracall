@@ -1,5 +1,14 @@
 # Testing quickstart
 
+- Account-mirror provider-traffic planning and phase attribution
+  (provider-free):
+  `pnpm vitest run tests/accountMirror/providerTrafficPlan.test.ts tests/browser-service/providerTrafficGovernor.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
+  This preserves the sanitized Issue #151 baseline, fails unexplained
+  top-level navigation and phase-budget overages, and proves that account-
+  mirror bootstrap, index, and detail adapter work inherits immutable traffic
+  phase plus privacy-bounded work attribution. It does not launch a browser,
+  contact ChatGPT, or prove CDP effect reconciliation.
+
 - Provider traffic authority in serialized and affinity modes (provider-free):
   `pnpm vitest run tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser-service/providerTrafficStructural.test.ts`.
   This proves serialized execution retains its non-affinity behavior while

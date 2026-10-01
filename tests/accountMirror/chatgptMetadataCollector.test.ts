@@ -131,6 +131,31 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
+	test("binds provider traffic to the collector phase before adapter work", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const options = createAccountMirrorListOptionsForTest(
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			{ attribution: {} as never, begin },
+			{ trafficPhase: "detail", workKey: "scope:conversation-detail" },
+		);
+
+		await options.providerTrafficGovernor?.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "provider:chatgpt:conversation-detail",
+		});
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				trafficPhase: "detail",
+				workKey: "scope:conversation-detail",
+			}),
+		);
+	});
+
 	test("allows a slow ChatGPT conversation surface to settle within the outer collector budget", () => {
 		expect(
 			resolveCollectorDetailCallTimeoutMsForTest({

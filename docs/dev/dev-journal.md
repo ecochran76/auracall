@@ -52034,3 +52034,18 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   reconcile to a precomputed route plan.
 - The scheduler and its unit remain paused. No browser/provider activity was
   performed while creating this plan.
+
+## 2026-09-30 | Issue 151 P0 and P1 phase-attribution checkpoint
+
+- Added a sanitized fixture for the accepted 2,146-request canary and a typed
+  provider-traffic plan/reconciliation contract. The baseline fails with 15
+  explicitly unattributed controllable effects while retaining subframe and
+  hydration counts as separate observations.
+- Added phase-budget reconciliation: attributed controllable effects that lack
+  or exceed a precomputed phase budget fail closed.
+- Extended shared browser mutation receipts with immutable traffic phase and
+  privacy-bounded work-key fields. Account-mirror metadata collection now
+  scopes provider traffic to bootstrap, index, or detail before adapter calls.
+- The focused 69-test gate and typecheck pass. P0 is source-complete; P1 still
+  needs CDP effect reconciliation and materialization-phase attribution. The
+  scheduler stayed paused and no browser/provider work ran.
