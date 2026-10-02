@@ -65,8 +65,11 @@ itself, but artifact discovery and click-time tagging derived modern role keys
 only from descendants. On a surface without an outer legacy conversation-turn
 section, an assistant node therefore received no assistant role and all of its
 controls were discarded. Source now derives the role from both the selected
-node and its descendant role node. Gate D remains open; this source follow-up
-has not been installed or re-probed, and no further live attempt is authorized.
+node and its descendant role node. PR #160 merged this follow-up at canonical
+`d8ed3c96f`; its installed adapter is byte-identical at SHA-256
+`b6e64869d8c4351b66efe6da9fd6b647f749f69a699422d1a8cb093843f233d8`.
+Gate D remains open; the installed follow-up has not been re-probed, and no
+further live attempt is authorized.
 
 ## Observed Defect
 
