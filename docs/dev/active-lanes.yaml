@@ -1674,14 +1674,14 @@ lanes:
     checkpoint: b6130fc1f9dcc1b8bb25258fd3d8705b54c8ebd8
     remote_ref: refs/remotes/origin/fix/chatgpt-materialization-surface
     integration: merge
-    work_items: []
+    work_items: [ecochran76/auracall#165]
     dependencies: [P84]
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: Canonical trusted-pointer repair requires installation parity and bounded installed product-path acceptance; Gate D remains open.
-    validation_status: trusted-activation-source-integrated-install-live-pending
-    validation_ref: docs/dev/notes/2026-10-02-plan0386-agentic-generated-asset-control.md
+    blocker: Installed trusted-pointer control settled skipped with zero materialized assets; provider-free discovery diagnosis is required before another live attempt.
+    validation_status: installed-parity-passed-live-control-skipped-gate-d-open
+    validation_ref: docs/dev/notes/2026-10-02-plan0386-trusted-installed-control.json
     integration_receipt: 554cbe58b8d30b2360d6780894f1c31cbcf5444c
-    disposition: PR 162 merged exact trusted-pointer head b6130fc1f after 187 adapter tests and typecheck passed. Direct agentic download is evidence for the repair hypothesis, not installed product acceptance. This reconciliation performs no installation or provider effects.
+    disposition: Canonical 2ff53befb installed with exact parity. Sole job hmj_92e88aa5b845422d96a5bb2e84575885 returned skipped with zero assets and no manifest; identity matched and no warning appeared. Final jobs, non-released leases, exact browser processes and listeners are zero; scheduler remains paused. Gate D is open and no retry ran.
     updated_at: 2026-10-02

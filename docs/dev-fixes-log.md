@@ -23995,3 +23995,11 @@ cleanup failure are not collapsed into a generic error.
   SHA-256 `c463e95d...8a46dc`; the focused regression executes the new helper
   and asserts every CDP input event. Adapter tests (187), typecheck, and build
   pass. Installed product-path acceptance remains a separate gate.
+
+## 2026-10-02 | Keep trusted activation and product discovery acceptance separate
+
+- An exact canonical install and a proven manual CDP download do not prove the
+  product discovers that asset. The Plan 0386 installed control still returned
+  no candidates before any manifest or transfer existed.
+- Preserve this terminal result and diagnose discovery provider-free rather
+  than spending another live attempt on the activation hypothesis alone.

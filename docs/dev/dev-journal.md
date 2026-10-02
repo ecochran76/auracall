@@ -1,3 +1,14 @@
+## 2026-10-02 | Plan 0386 installed trusted-pointer control
+
+- Installed canonical `2ff53befb` with exact adapter/service byte parity and
+  healthy API. Scheduler stayed paused.
+- Sole authorized artifact-only job `hmj_92e88aa5b845422d96a5bb2e84575885`
+  returned skipped: zero assets/manifest/archive entries, identity matched,
+  no warning. No retry ran; Gate D remains open.
+- Fresh cleanup: 207 released leases, zero active jobs, exact browser processes,
+  and endpoint listeners. Issue 165 owns provider-free diagnosis; sanitized
+  receipt: `docs/dev/notes/2026-10-02-plan0386-trusted-installed-control.json`.
+
 ## 2026-10-02 | Issue 163 root and worktree reconciliation
 
 - PR 162 merged at `554cbe58b`; root re-anchored to canonical main. Primary
