@@ -1,0 +1,82 @@
+{
+  "schema": "auracall.plan0386.installed-control.v1",
+  "canonicalCommit": "2ff53befb01e234eb640813ef9191270467b2ee7",
+  "jobId": "hmj_92e88aa5b845422d96a5bb2e84575885",
+  "status": "skipped",
+  "attemptCount": 1,
+  "startedAt": "2026-10-02T22:42:27.009Z",
+  "completedAt": "2026-10-02T22:42:52.807Z",
+  "request": {
+    "runtimeProfile": "wsl-chrome-3",
+    "assetKinds": [
+      "artifacts"
+    ],
+    "maxItems": 1,
+    "refreshSnapshot": false,
+    "force": true,
+    "providerWorkTimeoutMs": 240000
+  },
+  "metrics": {
+    "conversations": 1,
+    "materialized": 0,
+    "duplicateAliases": 0,
+    "skipped": 1,
+    "failed": 0
+  },
+  "manifestCount": 0,
+  "entryCount": 0,
+  "archiveItemCount": 0,
+  "identityVerdict": "match",
+  "identityDimensions": [
+    {
+      "dimension": "email",
+      "state": "match"
+    },
+    {
+      "dimension": "plan",
+      "state": "match"
+    },
+    {
+      "dimension": "structure",
+      "state": "match"
+    },
+    {
+      "dimension": "account-level",
+      "state": "match"
+    }
+  ],
+  "watcher": {
+    "endpointMode": "managed-profile-devtools-active-port",
+    "resolvedPort": 57387,
+    "hardStop": null,
+    "errors": [],
+    "counterDelta": {
+      "networkRequests": 243,
+      "documentRequests": 2,
+      "topLevelFrameNavigations": 2,
+      "subframeNavigations": 5,
+      "targetsObserved": 1
+    },
+    "scope": "between pre-job snapshot and terminal readback; includes residual profile-bootstrap traffic"
+  },
+  "cleanup": {
+    "schedulerState": "paused",
+    "activeHistoryJobs": 0,
+    "totalLeases": 207,
+    "nonReleasedLeases": 0,
+    "exactBrowserProcesses": 0,
+    "exactEndpointListeners": 0
+  },
+  "parity": {
+    "src/browser/providers/chatgptAdapter.js": {
+      "sourceSha256": "3853ab9c163c59f076ef3e7c80593f54c660f83e7e7c5df832782650edc1788c",
+      "installedSha256": "3853ab9c163c59f076ef3e7c80593f54c660f83e7e7c5df832782650edc1788c",
+      "equal": true
+    },
+    "src/runtime/historyMaterializationService.js": {
+      "sourceSha256": "bf2a99f151d960c13a5a3eb42f6b0e5fd2748c09ade48865fb0eba2fad5eab42",
+      "installedSha256": "bf2a99f151d960c13a5a3eb42f6b0e5fd2748c09ade48865fb0eba2fad5eab42",
+      "equal": true
+    }
+  }
+}

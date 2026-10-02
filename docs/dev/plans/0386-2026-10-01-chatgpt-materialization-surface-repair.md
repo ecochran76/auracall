@@ -83,6 +83,16 @@ sequence. Gate D remains open pending canonical integration, install, and one
 installed product-path positive control; the direct agentic receipt is not
 substituted for that gate.
 
+The operator then authorized one installed product control after PR #162 merged.
+Canonical `2ff53befb` was installed with exact adapter/service parity. Job
+`hmj_92e88aa5b845422d96a5bb2e84575885` ran once and settled `skipped` with
+zero assets, no manifest entries, and no failures. Product identity matched;
+no warning was observed. Fresh cleanup proved zero active jobs, zero
+non-released leases, zero exact browser processes/listeners, and scheduler
+still paused. Gate D remains OPEN; no retry ran. Evidence:
+`docs/dev/notes/2026-10-02-plan0386-trusted-installed-control.md`.
+Issue #165 owns the next provider-free diagnosis; no new live budget is inferred.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal
