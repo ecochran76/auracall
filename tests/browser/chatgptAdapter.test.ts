@@ -4174,6 +4174,9 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		expect(expression).not.toContain("for (let attempt = 0; attempt < 20");
 		expect(expression).toContain("Open preview of");
 		expect(expression).toContain("previewMatch?.[1]");
+		expect(expression).toContain("MutationObserver");
+		expect(expression).toContain("setTimeout(finish, 5_000)");
+		expect(expression).toContain("downloadMatch?.[1]");
 	});
 
 	test("emits stable conversation file refs from user-turn probes", () => {

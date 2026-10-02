@@ -256,7 +256,7 @@ const CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR = resolveBundledServiceDomSelect
 const CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
 	"assistant_artifact_button",
-	'button.behavior-btn, button[aria-label^="Open preview of "]',
+	'button.behavior-btn, button[aria-label^="Open preview of "], [aria-label^="Download "]:not([aria-label="Download file"])',
 );
 const CHATGPT_TEXTDOC_MESSAGE_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
@@ -9632,7 +9632,7 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
 		() =>
 			withChatgptTimeout(
 				client.Runtime.evaluate({
-					expression: `(() => {
+					expression: `(async () => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const isVisible = (node) => {
         if (!(node instanceof Element)) return false;
@@ -9642,7 +9642,8 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
       const artifactTitle = (button) => {
         const ariaLabel = normalize(button.getAttribute('aria-label') || '');
         const previewMatch = ariaLabel.match(/^Open preview of\\s+(.+)$/i);
-        return normalize(previewMatch?.[1] || button.textContent || ariaLabel || '');
+        const downloadMatch = ariaLabel.match(/^Download\\s+(.+)$/i);
+        return normalize(previewMatch?.[1] || downloadMatch?.[1] || button.textContent || ariaLabel || '');
       };
       const collect = () => {
         const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
@@ -9684,9 +9685,25 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
           return buttons;
         });
       };
-      // The caller has already established conversation-surface readiness.
-      // Repeating this layout-forcing full-DOM scan can monopolize a large
-      // conversation renderer, so collect the ready surface exactly once.
+      // Message readiness can precede late-mounted generated-file controls.
+      // Wait on DOM mutation rather than reloading, navigating, or repeatedly
+      // forcing a full layout scan, then collect the settled surface once.
+      if (!document.querySelector(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)})) {
+        await new Promise((resolve) => {
+          let settled = false;
+          const finish = () => {
+            if (settled) return;
+            settled = true;
+            observer.disconnect();
+            resolve(undefined);
+          };
+          const observer = new MutationObserver(() => {
+            if (document.querySelector(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)})) finish();
+          });
+          observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+          setTimeout(finish, 5_000);
+        });
+      }
       return collect();
     })()`,
 					awaitPromise: true,
@@ -9941,8 +9958,24 @@ async function readVisibleChatgptConversationFilesWithClient(
         return items;
       };
 		// Conversation-surface readiness is established by the caller. Repeating
-		// this full-DOM scan can monopolize a large conversation's renderer after
-		// the outer CDP deadline has fired, so collect the ready surface once.
+		// Message readiness can precede late-mounted upload tiles. Wait without a
+		// reload/navigation and collect the full ready surface exactly once.
+		if (!document.querySelector('button[aria-label^="Open preview of "], [role="group"][aria-label]')) {
+			await new Promise((resolve) => {
+				let settled = false;
+				const finish = () => {
+					if (settled) return;
+					settled = true;
+					observer.disconnect();
+					resolve(undefined);
+				};
+				const observer = new MutationObserver(() => {
+					if (document.querySelector('button[aria-label^="Open preview of "], [role="group"][aria-label]')) finish();
+				});
+				observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+				setTimeout(finish, 5_000);
+			});
+		}
 		return collect();
 	})()`,
 			awaitPromise: true,
@@ -12158,7 +12191,8 @@ async function tagChatgptArtifactButtonWithClient(
         const artifactTitle = (node) => {
           const ariaLabel = normalize(node.getAttribute('aria-label') || '');
           const previewMatch = ariaLabel.match(/^Open preview of\\s+(.+)$/i);
-          return normalize(previewMatch?.[1] || node.textContent || ariaLabel || '').toLowerCase();
+          const downloadMatch = ariaLabel.match(/^Download\\s+(.+)$/i);
+          return normalize(previewMatch?.[1] || downloadMatch?.[1] || node.textContent || ariaLabel || '').toLowerCase();
         };
         document.querySelectorAll('[' + attr + ']').forEach((node) => node.removeAttribute(attr));
         const expectedTitle = normalize(${JSON.stringify(artifact.title)}).toLowerCase();
