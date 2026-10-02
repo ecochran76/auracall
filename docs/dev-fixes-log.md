@@ -23946,3 +23946,9 @@ cleanup failure are not collapsed into a generic error.
 - Passive acceptance observers must bind the exact runtime-resolved DevTools
   endpoint. A fixed remembered port can silently watch a different or absent
   browser when managed Chrome uses dynamic port assignment.
+- Conversation/message readiness is not generated-asset readiness. Current
+  file controls can mount after message extraction has already succeeded. A
+  single immediate DOM scan therefore converts a recoverable late-hydration
+  state into a false empty result. Wait once with a bounded `MutationObserver`,
+  then perform one full collection; do not reload, navigate, or loop full-DOM
+  scans.

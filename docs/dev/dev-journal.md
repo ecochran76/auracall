@@ -52230,3 +52230,14 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   still-open exact dynamic endpoint found no rate-limit dialog; its page had
   returned to ChatGPT home, so it correctly provided no conversation assets
   and did not consume the live materialization canary.
+- Installed acceptance: canonical merge `ef2ca681a` was installed with exact
+  adapter/manifest checksums and the scheduler remained paused. The sole
+  materialization canary `hmj_6b3e342c2e144f5bab077a244f27d6d0`
+  still returned zero assets without a provider warning. Reconciliation with
+  the earlier passive evidence localized the remaining gap: the job completed
+  before the current generated-file controls finished mounting; repeated
+  passive snapshots shortly afterward contained the expected controls. The
+  provider-free follow-up now waits once on DOM mutation for late asset
+  controls, without reload/navigation/polling, and also recognizes the current
+  filename-bearing `Download <filename>` semantic control. No second live
+  materialization attempt is authorized in this plan.
