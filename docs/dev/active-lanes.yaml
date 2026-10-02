@@ -1671,7 +1671,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: OWNED
-    checkpoint: faac74e6b
+    checkpoint: d8ed3c96f
     remote_ref: refs/remotes/origin/fix/chatgpt-materialization-surface
     integration: merge
     work_items: []
@@ -1682,6 +1682,6 @@ lanes:
     blocker: Installed positive-control acceptance remains after the authorized retry exposed modern role-bearing selector roots being discarded when role evidence was read only from descendants.
     validation_status: installed-source-accepted-live-pending
     validation_ref: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    integration_receipt: faac74e6b
-    disposition: PR 158 is installed, but the authorized positive control still returned zero assets; a provider-free selector-self repair is green but not integrated or installed, the scheduler is paused, the exact census is clean, and another live attempt is not authorized.
+    integration_receipt: d8ed3c96f
+    disposition: The authorized positive control still returned zero assets; PR 160 integrated and installed the selector-self repair byte-identically, the scheduler is paused, the exact census is clean, and another live attempt is not authorized.
     updated_at: 2026-10-02

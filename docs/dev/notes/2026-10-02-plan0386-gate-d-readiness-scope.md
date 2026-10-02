@@ -69,5 +69,10 @@ return a modern role-bearing search-unit node itself, but the artifact paths
 read modern role keys only from a descendant. The source follow-up reads
 `data-content-search-unit-key` and `data-chatgpt-search-unit-key` from both the
 selected node and its descendant role node across artifact discovery, image
-discovery, readiness, and click-time tagging. This follow-up remains
-source-only; another live attempt requires separate authority.
+discovery, readiness, and click-time tagging. PR #160 merged the follow-up at
+canonical `d8ed3c96f3878ea9fdc68614a2bc2bb9e164a74b`; the installed adapter
+matches its build at SHA-256
+`b6e64869d8c4351b66efe6da9fd6b647f749f69a699422d1a8cb093843f233d8`.
+The installed API is active, scheduler posture is paused, and active history
+materialization jobs are zero. Another live attempt requires separate
+authority.

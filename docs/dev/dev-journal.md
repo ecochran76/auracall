@@ -52296,4 +52296,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   while artifact discovery inspected modern role keys only on descendants.
   The provider-free follow-up reads both the selected root and descendant
   across discovery/readiness/tagging. Focused tests (282), typecheck, and the
-  production build pass. No additional live attempt is authorized.
+  production build pass. PR #160 merged the fix at canonical `d8ed3c96f`; the
+  installed adapter matches at SHA-256 `b6e64869...43f233d8`. The API is active,
+  scheduler remains paused, and active materialization jobs are zero. No
+  additional live attempt is authorized.
