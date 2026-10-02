@@ -52300,3 +52300,22 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   installed adapter matches at SHA-256 `b6e64869...43f233d8`. The API is active,
   scheduler remains paused, and active materialization jobs are zero. No
   additional live attempt is authorized.
+
+## 2026-10-02 - Plan 0386 agentic generated-asset materialization
+
+- Directly browsed the exact `wsl-chrome-3` managed profile rather than asking
+  the product materializer to describe its own surface. The newest Bailey
+  branch was a clean negative control; one final navigation to the root Bailey
+  chat exposed the generated PPTX, DOCX, and ZIP controls.
+- Captured the actual structural contract: the assistant role is carried by
+  the selected `data-content-search-unit-key` root, preview controls are
+  buttons, and the direct ZIP is a filename-labelled `span[role="button"]`.
+- A DOM `target.click()` did not start a download. One trusted CDP pointer click
+  on the same unique ZIP control completed a 1,721,645-byte download at SHA-256
+  `c463e95d...8a46dc`; `unzip -t` verified the contained DOCX.
+- Replaced the product artifact path's untrusted click with visible-center CDP
+  mouse dispatch. The focused test executes and asserts the three-event pointer
+  sequence. All 187 adapter tests, typecheck, and production build pass.
+- No warning, CAPTCHA, prompt, reload, or retry occurred. Exact PID cleanup left
+  no managed-profile process or listener and zero non-released leases. The
+  scheduler remains paused. Installed product-path acceptance is still pending.
