@@ -2388,6 +2388,39 @@ describe("resolveChatgptProjectUrl", () => {
 });
 
 describe("classifyChatgptBlockingSurfaceProbe", () => {
+	test("classifies the captured ChatGPT rate-limit dialog fixture", async () => {
+		const fixturePath = path.join(process.cwd(), "tests/fixtures/chatgpt-rate-limit-dialog.html");
+		const html = await fs.readFile(fixturePath, "utf8");
+		const dialogHtml = html.match(/<div\s+role="dialog"[\s\S]*<\/div>\s*$/i)?.[0] ?? "";
+		const ariaLabelledBy = dialogHtml.match(/aria-labelledby="([^"]+)"/i)?.[1] ?? "";
+		const heading = dialogHtml.match(
+			new RegExp(`<h2\\s+id="${ariaLabelledBy}"[^>]*>([\\s\\S]*?)<\\/h2>`, "i"),
+		)?.[1];
+		const buttonLabels = Array.from(
+			dialogHtml.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/gi),
+		).map((match) =>
+			match[1]
+				.replace(/<[^>]+>/g, " ")
+				.replace(/\s+/g, " ")
+				.trim(),
+		);
+		const text = dialogHtml
+			.replace(/<[^>]+>/g, " ")
+			.replace(/\s+/g, " ")
+			.trim();
+
+		expect(ariaLabelledBy).toBe("radix-_r_217_");
+		expect(heading).toBe("Too many requests");
+		expect(buttonLabels).toEqual(["Got it"]);
+		expect(text).toContain("You’re making requests too quickly.");
+		expect(text).toContain("We’ve temporarily limited access to your conversations");
+		expect(text).toContain("Please wait a few minutes before trying again.");
+		expect(classifyChatgptBlockingSurfaceProbe({ text, buttonLabels })).toEqual({
+			kind: "rate-limit",
+			summary: "Too many requests",
+		});
+	});
+
 	test("classifies rate limit surfaces", () => {
 		expect(
 			classifyChatgptBlockingSurfaceProbe({

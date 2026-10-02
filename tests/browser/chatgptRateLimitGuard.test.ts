@@ -33,9 +33,9 @@ describe("chatgptRateLimitGuard", () => {
 
 	test("detects and summarizes live ChatGPT rate-limit messages", () => {
 		const message =
-			"Too many requests. You’re making requests too quickly. Please try again later.";
+			"Too many requests You’re making requests too quickly. We’ve temporarily limited access to your conversations to protect your data. Please wait a few minutes before trying again. Got it";
 		expect(isChatgptRateLimitMessage(message)).toBe(true);
-		expect(extractChatgptRateLimitSummary(message)).toBe("Too many requests.");
+		expect(extractChatgptRateLimitSummary(message)).toBe("Too many requests");
 	});
 
 	test("escalates cooldown for repeated ChatGPT rate-limit detections", () => {

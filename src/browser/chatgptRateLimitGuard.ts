@@ -167,7 +167,7 @@ export function isChatgptRateLimitMessage(message: string): boolean {
 export function extractChatgptRateLimitSummary(message: string): string | null {
 	const normalized = message.replace(/\s+/g, " ").trim();
 	const direct = normalized.match(
-		/(too many requests[^.]*\.?|you(?:'|’)re making requests too quickly[^.]*\.?)/i,
+		/(too many requests\b\.?|you(?:'|’)re making requests too quickly[^.]*\.?)/i,
 	);
 	if (direct?.[1]) {
 		return direct[1].trim();

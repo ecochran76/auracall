@@ -51105,3 +51105,9 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   exact crawler, stopped the timer, and cancelled the 24-hour success wake.
   Native systemd-source observation was unavailable on this host, so its
   unused source was disabled instead of being treated as armed.
+
+## 2026-10-02 | Preserve the observed ChatGPT rate-limit dialog as a positive control
+
+- Converted the operator-supplied `Too many requests` dialog DOM into a provider-free fixture instead of relying only on synthetic warning strings.
+- The focused classifier test now binds the dialog's `aria-labelledby` heading, visible body text, and `Got it` button before asserting the deterministic `rate-limit` classification.
+- Tightened summary extraction so a heading without terminal punctuation remains the stable `Too many requests` signature rather than absorbing the following body sentence.

@@ -23346,3 +23346,9 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - A rejected periodic snapshot is terminal immediately. Its monitor must
   cancel the exact crawler, snapshot timer, and paired delayed evaluation wake
   together; do not leave a 24-hour wake for a run that already failed.
+
+## 2026-10-02 | Keep provider warning DOM as a deterministic positive control
+
+- When an operator supplies the exact provider warning DOM, preserve a sanitized fixture and test its semantic dialog signature; a hand-written message-only test is not equivalent evidence.
+- For ChatGPT rate limiting, bind `[role="dialog"]`, its `aria-labelledby` heading (`Too many requests`), the visible request-throttling body, and the `Got it` acknowledgement before classification.
+- Keep the recorded fixture provider-free and never require a live warning recurrence to validate the classifier.
