@@ -43,9 +43,13 @@ turn. Unrelated page controls could therefore settle readiness early.
 
 The source follow-up scopes readiness to the same turn structure used by
 collection and adds explicit recoverability states. Gate D remains open until
-that source repair is integrated, installed, and a newly authorized single
-positive control materializes and verifies one asset. No further live retry is
-authorized by this slice.
+that source repair is proven by a newly authorized single positive control
+that materializes and verifies one asset. PR #158 integrated the repair at
+canonical merge `faac74e6b`; the canonical build is installed with byte-exact
+adapter and materialization-service artifacts. The installed API is healthy,
+the scheduler remains paused, no materialization job is active, and the exact
+`wsl-chrome-3` census has zero owned browser processes and zero non-released
+leases. No further live retry is authorized by this slice.
 
 ## Observed Defect
 
