@@ -4181,6 +4181,8 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		expect(expression).toContain("downloadMatch?.[1]");
 		expect(expression).toContain("hasAssistantArtifactControl");
 		expect(expression).toContain("role === 'assistant'");
+		expect(expression).toContain("section.getAttribute('data-content-search-unit-key')");
+		expect(expression).toContain("section.getAttribute('data-chatgpt-search-unit-key')");
 	});
 
 	test("emits stable conversation file refs from user-turn probes", () => {

@@ -9656,6 +9656,8 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
                 roleNode?.getAttribute('data-message-author-role') ||
 	            roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
 	            roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
                 section.getAttribute('data-message-author-role') ||
                 section.getAttribute('data-turn') ||
                 '',
@@ -9693,6 +9695,8 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
           roleNode?.getAttribute('data-message-author-role') ||
           roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
           roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+          section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+          section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
           section.getAttribute('data-message-author-role') ||
           section.getAttribute('data-turn') ||
           '',
@@ -9771,6 +9775,8 @@ async function readVisibleChatgptImageArtifactProbesWithClient(
               roleNode?.getAttribute('data-message-author-role') ||
 	          roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
 	          roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+              section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+              section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
               section.getAttribute('data-message-author-role') ||
               section.getAttribute('data-turn') ||
               '',
@@ -12237,6 +12243,8 @@ async function tagChatgptArtifactButtonWithClient(
                 roleNode?.getAttribute('data-message-author-role') ||
 	            roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
 	            roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
                 section.getAttribute('data-message-author-role') ||
                 section.getAttribute('data-turn') ||
                 '',

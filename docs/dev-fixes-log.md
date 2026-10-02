@@ -23966,3 +23966,15 @@ cleanup failure are not collapsed into a generic error.
   control is a `repair_prompt_candidate`, metadata-only inventory is not a
   download failure, and only explicit provider evidence is
   `terminally_unavailable`.
+
+## 2026-10-02: Role-bearing selector roots must classify themselves
+
+- When a selector union can match both an outer turn container and the nested
+  role-bearing search unit, `querySelector()` alone is insufficient: it never
+  returns the selected element itself.
+- Derive role evidence from both the selected root and an eligible descendant.
+  Otherwise current `[data-content-search-unit-key$=":assistant"]` markup can
+  be visible and selectable while artifact discovery silently assigns no role
+  and drops every control.
+- Keep this role contract identical across readiness, artifact/image
+  discovery, and click-time tagging so admission and activation cannot drift.

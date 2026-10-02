@@ -52278,3 +52278,22 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   active history-materialization jobs, all 204 leases released, and no exact
   `wsl-chrome-3` browser process. Only the separately authorized live positive
   proof remains.
+
+## 2026-10-02 - Plan 0386 installed retry and selector-self diagnosis
+
+- The separately authorized single retry
+  `hmj_ac49686510764445a6ecb8b3ebc8498d` used the same root Bailey
+  conversation, `wsl-chrome-3`, artifacts-only, `maxItems=1`, no refresh, and
+  no retry. It again returned zero entries and zero materializations with a
+  matching provider identity.
+- Continuous direct CDP followed exact port `45015`; the attempt added 315
+  requests, three documents, one top-level navigation, and ten subframe
+  navigations. No rate-limit/CAPTCHA hard stop or watcher error appeared.
+  Cleanup left no exact browser process and all 205 leases released. Scheduler
+  posture remained paused.
+- Structural trace localized the remaining source defect: modern
+  `[data-content-search-unit-key]` roots can carry their own assistant role,
+  while artifact discovery inspected modern role keys only on descendants.
+  The provider-free follow-up reads both the selected root and descendant
+  across discovery/readiness/tagging. Focused tests (282), typecheck, and the
+  production build pass. No additional live attempt is authorized.
