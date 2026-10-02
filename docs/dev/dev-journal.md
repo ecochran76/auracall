@@ -1,3 +1,14 @@
+## 2026-10-02 | Issue 163 root and worktree reconciliation
+
+- PR 162 merged at `554cbe58b`; root re-anchored to canonical main. Primary
+  verification: 187 adapter tests and typecheck passed.
+- Preserved two unpublished-to-main affinity commits, three dirty recovery
+  files, open PR 120, and the untracked root receipt. Worktree review and
+  remaining catalog problems are recorded in
+  `docs/dev/notes/2026-10-02-issue163-worktree-reconciliation.md`.
+- P53 now projects paused-ref custody; P85 records the canonical trusted-pointer
+  integration while leaving Gate D open. No install or provider effect ran.
+
 ## 2026-09-28 | Issue 107 Library lifecycle diagnostics
 
 - Correct installed acceptance of canonical `a8d340b03` still returned the
