@@ -52241,3 +52241,15 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   controls, without reload/navigation/polling, and also recognizes the current
   filename-bearing `Download <filename>` semantic control. No second live
   materialization attempt is authorized in this plan.
+- Closeout checkpoint: PR #156 merged the readiness follow-up at canonical
+  `404053dd1` and that merge was installed. Installed/source SHA-256 values
+  match for both `chatgptAdapter.js`
+  (`25ca2e335d4bca5aa68c11716e34729b385a44838d0f532e0f4e38b0eb4277cb`)
+  and `auracall.services.json`
+  (`0e0ce2092e40f796f29558c9296e6e90db001757793be13ff9e800e57f92c186`).
+  Final readback: scheduler paused, no queued/running materialization jobs,
+  zero exact owned browser processes/listeners, and zero non-released exact
+  leases. The dynamic observer is active and reports `currentPort: null` when
+  the managed browser is absent; it detected no hard stop during the consumed
+  canary. The installed positive control remains unproven because the live
+  attempt bound was not widened.
