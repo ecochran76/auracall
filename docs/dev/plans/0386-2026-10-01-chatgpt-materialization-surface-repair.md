@@ -51,6 +51,23 @@ the scheduler remains paused, no materialization job is active, and the exact
 `wsl-chrome-3` census has zero owned browser processes and zero non-released
 leases. No further live retry is authorized by this slice.
 
+A newly authorized installed retry, job
+`hmj_ac49686510764445a6ecb8b3ebc8498d`, again completed cleanly with zero
+assets. Identity matched, the warning observer followed exact dynamic port
+`45015`, no hard stop appeared, and cleanup left all 205 leases released. CDP
+recorded 315 requests, three documents, one top-level navigation, and ten
+subframe navigations for the bounded attempt. This disproved the turn-scoped
+wait as a complete repair.
+
+Provider-free trace then found a distinct selector-self defect. The configured
+turn selector can return the role-bearing `[data-content-search-unit-key]` node
+itself, but artifact discovery and click-time tagging derived modern role keys
+only from descendants. On a surface without an outer legacy conversation-turn
+section, an assistant node therefore received no assistant role and all of its
+controls were discarded. Source now derives the role from both the selected
+node and its descendant role node. Gate D remains open; this source follow-up
+has not been installed or re-probed, and no further live attempt is authorized.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal
@@ -72,6 +89,12 @@ different turn could satisfy the wait, causing the selected Bailey turn to be
 collected before its generated-file control appeared. Empty results also lacked
 an explicit distinction between recoverable missing controls, metadata-only
 inventory, and provider-confirmed terminal loss.
+
+A fourth defect assumed every selected turn root contained a separate role
+descendant. Current search-unit markup can make that selected root the
+role-bearing node itself. Failing to inspect the root's own
+`data-content-search-unit-key` or `data-chatgpt-search-unit-key` collapses a
+visible assistant turn into an untyped root and yields a false empty result.
 
 ## Scope
 

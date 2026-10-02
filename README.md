@@ -938,7 +938,9 @@ Terminology note:
   unrelated download control cannot satisfy the request.
   The bounded late-control wait is scoped to the relevant assistant or user
   turn. A preview/download control elsewhere on the page cannot end readiness
-  for the selected asset surface.
+  for the selected asset surface. Current search-unit markup may carry the
+  assistant/user role on the selected root itself; AuraCall reads role evidence
+  from both that root and its nested role node.
   ChatGPT `files-download` JSON may supply a signed URL as the JSON string
   itself, a recognized shallow URL field, or one `data`/`result` wrapper.
   Parsing a URL is not materialization proof: AuraCall still requires the

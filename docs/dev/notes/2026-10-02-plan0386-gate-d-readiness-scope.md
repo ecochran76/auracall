@@ -51,3 +51,23 @@ exact `wsl-chrome-3` browser process remains.
 Obtain separate authority for one no-retry installed positive control. Gate D
 closes only when one Bailey asset is readable and its filename, size/type
 evidence, checksum, manifest, and archive projection agree.
+
+## Subsequent authorized retry
+
+Job `hmj_ac49686510764445a6ecb8b3ebc8498d` ran once against the same root
+Bailey conversation after the scoped-readiness repair was installed. It
+completed `skipped` with one conversation, zero entries, zero materialized
+assets, and zero failures. Provider identity matched on every required
+dimension. The direct-CDP watcher followed port `45015`, observed no warning or
+error, and accumulated 315 requests, three document requests, one top-level
+navigation, and ten subframe navigations during this attempt. Final state was
+zero exact browser processes and 205 released leases with no non-released
+lease. No retry ran.
+
+The failure localized another provider-free defect: the turn selector may
+return a modern role-bearing search-unit node itself, but the artifact paths
+read modern role keys only from a descendant. The source follow-up reads
+`data-content-search-unit-key` and `data-chatgpt-search-unit-key` from both the
+selected node and its descendant role node across artifact discovery, image
+discovery, readiness, and click-time tagging. This follow-up remains
+source-only; another live attempt requires separate authority.

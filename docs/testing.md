@@ -5,6 +5,8 @@
   This proves late asset readiness is scoped to assistant/user turns rather
   than any matching page control, and distinguishes downloadable, repair-prompt
   candidate, metadata-only, terminally unavailable, and materialized entries.
+  It also proves modern search-unit roots can supply their own assistant/user
+  role instead of requiring a separate descendant role node.
   It does not launch a browser, download an asset, or send a repair prompt.
 
 - Account-mirror provider-traffic planning and phase attribution
