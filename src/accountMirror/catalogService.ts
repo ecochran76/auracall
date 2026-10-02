@@ -245,7 +245,10 @@ function annotateCatalogItemMaterializationEligibility(
     ...item,
     metadata: {
       ...metadata,
-      materializationEligibility: eligibility,
+      materializationEligibility: {
+        ...eligibility,
+        recoverabilityState: 'metadata_only',
+      },
     },
   };
 }

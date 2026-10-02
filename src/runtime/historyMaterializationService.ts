@@ -158,9 +158,17 @@ export interface HistoryMaterializationManifestEntry {
 	assetAvailability?: "available" | "unavailable" | "unknown";
 	failureKind?: "provider_unavailable" | "retrieval_failed" | null;
 	retryable?: boolean | null;
+	recoverabilityState?: HistoryMaterializationRecoverabilityState;
 	archiveItemId: string | null;
 	assetRoute: string | null;
 }
+
+export type HistoryMaterializationRecoverabilityState =
+	| "downloadable_now"
+	| "repair_prompt_candidate"
+	| "metadata_only"
+	| "terminally_unavailable"
+	| "materialized";
 
 export interface HistoryMaterializationTarget {
 	provider: ProviderId;
@@ -1924,6 +1932,7 @@ async function materializeProjectSources(input: {
 				)?.items ?? [])
 			: [];
 	applyArchiveLinks(entries, archiveItems);
+	applyRecoverabilityStates(entries);
 	const generatedAt = input.now().toISOString();
 	const metrics = summarizeEntries(entries, 1);
 	const status = resolveHistoryMaterializationResultStatus(metrics);
@@ -2220,6 +2229,7 @@ async function materializeAccountLibraryCatalogItem(input: {
 				)?.items ?? [])
 			: [];
 	applyArchiveLinks(entries, archiveItems);
+	applyRecoverabilityStates(entries);
 	const generatedAt = input.now().toISOString();
 	const metrics = summarizeEntries(entries, 0);
 	const status = resolveHistoryMaterializationResultStatus(metrics);
@@ -3583,6 +3593,7 @@ async function materializeMatchedMediaGeneration(input: {
 		response.artifacts.map((artifact) => historyEntryFromMediaArtifact(artifact)),
 	);
 	applyArchiveLinks(entries, archiveItems);
+	applyRecoverabilityStates(entries);
 	const generatedAt = input.now().toISOString();
 	const metrics = summarizeEntries(entries, 1);
 	return {
@@ -4352,6 +4363,7 @@ async function materializeConversationTarget(input: {
 					)?.items ?? [])
 				: [];
 		applyArchiveLinks(entries, archiveItems);
+		applyRecoverabilityStates(entries);
 		const generatedAt = input.now().toISOString();
 		const metrics = summarizeEntries(entries, 1);
 		return {
@@ -4375,6 +4387,40 @@ async function materializeConversationTarget(input: {
 	} finally {
 		await listOptions.providerSession?.close();
 		await scrapeTelemetryProgressWrite;
+	}
+}
+
+export function classifyHistoryMaterializationEntryRecoverability(
+	entry: HistoryMaterializationManifestEntry,
+): HistoryMaterializationRecoverabilityState {
+	if (
+		(entry.status === "materialized" || entry.status === "duplicate") &&
+		Boolean(entry.localPath || entry.checksumSha256 || entry.assetRoute)
+	) {
+		return "materialized";
+	}
+	if (entry.reason === "missing_live_control") {
+		return "repair_prompt_candidate";
+	}
+	if (
+		entry.assetAvailability === "unavailable" ||
+		entry.failureKind === "provider_unavailable"
+	) {
+		return "terminally_unavailable";
+	}
+	if (
+		(entry.failureKind === "retrieval_failed" && entry.retryable === true) ||
+		entry.retryable === true ||
+		(entry.status !== "failed" && Boolean(entry.remoteUrl && entry.providerId))
+	) {
+		return "downloadable_now";
+	}
+	return "metadata_only";
+}
+
+function applyRecoverabilityStates(entries: HistoryMaterializationManifestEntry[]): void {
+	for (const entry of entries) {
+		entry.recoverabilityState = classifyHistoryMaterializationEntryRecoverability(entry);
 	}
 }
 

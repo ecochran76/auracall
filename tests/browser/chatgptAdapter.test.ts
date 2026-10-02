@@ -4109,6 +4109,8 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(1);
 		expect(expression).toContain('button[aria-label^="Open preview of "]');
 		expect(expression).toContain("/^Open preview of\\s+(.+)$/i");
+		expect(expression).toContain("hasUserFileControl");
+		expect(expression).toContain('[data-message-author-role=\\"user\\"]');
 	});
 
 	test("bounds a stalled visible download artifact probe and records its pending operation", async () => {
@@ -4177,6 +4179,8 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		expect(expression).toContain("MutationObserver");
 		expect(expression).toContain("setTimeout(finish, 5_000)");
 		expect(expression).toContain("downloadMatch?.[1]");
+		expect(expression).toContain("hasAssistantArtifactControl");
+		expect(expression).toContain("role === 'assistant'");
 	});
 
 	test("emits stable conversation file refs from user-turn probes", () => {
@@ -4751,6 +4755,7 @@ describe("mergeChatgptConversationArtifacts", () => {
 				messageId: "assist-dom-1",
 				metadata: {
 					liveControlState: "available",
+					recoverabilityState: "downloadable_now",
 					liveControlUri: "chatgpt://download-button/turn-1/0",
 					liveControlArtifactId: "download-dom:turn-1:0",
 					turnId: "turn-1",
@@ -4810,6 +4815,7 @@ describe("ChatGPT payload live-control reconciliation", () => {
 			metadata: {
 				liveControlState: "missing",
 				liveControlReason: "missing_live_control",
+				recoverabilityState: "repair_prompt_candidate",
 			},
 		});
 	});
@@ -4838,6 +4844,7 @@ describe("ChatGPT payload live-control reconciliation", () => {
 		expect(result[0]?.metadata).toMatchObject({
 			liveControlState: "missing",
 			liveControlReason: "missing_live_control",
+			recoverabilityState: "repair_prompt_candidate",
 		});
 		expect(result[1]?.id).toBe("download-dom:wrong-turn:0");
 	});

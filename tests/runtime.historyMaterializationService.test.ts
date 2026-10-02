@@ -12,6 +12,7 @@ import type { ProviderCacheContext } from "../src/browser/providers/cache.js";
 import type { ProviderSessionProof } from "../src/browser/providers/providerSessionAuthority.js";
 import type { RunArchiveItem, RunArchiveService } from "../src/runtime/archiveService.js";
 import {
+	classifyHistoryMaterializationEntryRecoverability,
 	createHistoryMaterializationService,
 	createHistoryMaterializationTrafficOptions,
 	formatHistoryMaterializationFailureReason,
@@ -67,6 +68,61 @@ describe("history materialization service", () => {
 		expect(resolveHistoryMaterializationResultStatus({ materialized: 1, failed: 11 })).toBe(
 			"materialized",
 		);
+	});
+
+	it("classifies materialization recoverability without collapsing recoverable controls into unavailable assets", () => {
+		const entry = (overrides: Record<string, unknown> = {}) => ({
+			kind: "artifact" as const,
+			providerId: "artifact-1",
+			title: "proposal.docx",
+			status: "skipped" as const,
+			localPath: null,
+			remoteUrl: null,
+			cacheKey: null,
+			checksumSha256: null,
+			mimeType: null,
+			size: null,
+			materializationMethod: null,
+			reason: null,
+			archiveItemId: null,
+			assetRoute: null,
+			...overrides,
+		});
+
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({ status: "materialized", localPath: "/tmp/proposal.docx" }),
+			),
+		).toBe("materialized");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(entry({ reason: "missing_live_control" })),
+		).toBe("repair_prompt_candidate");
+		expect(classifyHistoryMaterializationEntryRecoverability(entry())).toBe("metadata_only");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({ status: "failed", failureKind: "provider_unavailable", retryable: false }),
+			),
+		).toBe("terminally_unavailable");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({
+					status: "failed",
+					failureKind: "retrieval_failed",
+					retryable: true,
+					remoteUrl: "chatgpt://download-button/turn-1/0",
+				}),
+			),
+		).toBe("downloadable_now");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({
+					status: "failed",
+					failureKind: "retrieval_failed",
+					retryable: false,
+					remoteUrl: "chatgpt://file/persistent-provider-row",
+				}),
+			),
+		).toBe("metadata_only");
 	});
 
 	it("marks a volatile miss unavailable without terminalizing a persistent Library retrieval failure", async () => {

@@ -32,10 +32,20 @@ production build, plan audit, and diff hygiene. The scheduler is paused, no
 materialization job is active, and the final exact census has zero owned
 `wsl-chrome-3` browser processes, listeners, or non-released leases.
 
-Gate D remains open: the plan's one live attempt was consumed by the readiness
-finding, so the installed follow-up has not been re-probed live. A future live
-positive control requires a separately authorized acceptance attempt; it must
-reuse the dynamic endpoint observer and the same no-retry hard stops.
+An independently authorized Gate D retry, job
+`hmj_1d8bf96fdc8e44c28b8c6dbf384e0d80`, ran once against the root Bailey
+proposal conversation on installed `wsl-chrome-3`. It stopped cleanly with no
+rate-limit warning, retry, or leaked browser/lease, but again returned zero
+assets. Direct CDP observed the exact dynamic endpoint. Reconciliation exposed
+a narrower readiness defect: the wait tested for any matching control on the
+page, while collection required a control inside the relevant assistant/user
+turn. Unrelated page controls could therefore settle readiness early.
+
+The source follow-up scopes readiness to the same turn structure used by
+collection and adds explicit recoverability states. Gate D remains open until
+that source repair is integrated, installed, and a newly authorized single
+positive control materializes and verifies one asset. No further live retry is
+authorized by this slice.
 
 ## Observed Defect
 
@@ -51,6 +61,13 @@ A separate acceptance-observation defect hard-coded DevTools port `45015` even
 though the exact `wsl-chrome-3` launch returned dynamic port `55627`. Product
 traffic guards use the resolved runtime session; acceptance observation must do
 the same and may not silently watch a stale endpoint.
+
+A third defect made the bounded readiness wait page-global even though typed
+collection is turn-scoped. A control mounted in unrelated page chrome or a
+different turn could satisfy the wait, causing the selected Bailey turn to be
+collected before its generated-file control appeared. Empty results also lacked
+an explicit distinction between recoverable missing controls, metadata-only
+inventory, and provider-confirmed terminal loss.
 
 ## Scope
 

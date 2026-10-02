@@ -9685,10 +9685,26 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
           return buttons;
         });
       };
+      const hasAssistantArtifactControl = () => Array.from(
+        document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}),
+      ).some((section) => {
+        const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
+        const role = normalize(
+          roleNode?.getAttribute('data-message-author-role') ||
+          roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+          roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+          section.getAttribute('data-message-author-role') ||
+          section.getAttribute('data-turn') ||
+          '',
+        );
+        return role === 'assistant' && Boolean(
+          section.querySelector(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}),
+        );
+      });
       // Message readiness can precede late-mounted generated-file controls.
       // Wait on DOM mutation rather than reloading, navigating, or repeatedly
       // forcing a full layout scan, then collect the settled surface once.
-      if (!document.querySelector(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)})) {
+      if (!hasAssistantArtifactControl()) {
         await new Promise((resolve) => {
           let settled = false;
           const finish = () => {
@@ -9698,7 +9714,7 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
             resolve(undefined);
           };
           const observer = new MutationObserver(() => {
-            if (document.querySelector(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)})) finish();
+            if (hasAssistantArtifactControl()) finish();
           });
           observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
           setTimeout(finish, 5_000);
@@ -9957,10 +9973,19 @@ async function readVisibleChatgptConversationFilesWithClient(
         });
         return items;
       };
+		const hasUserFileControl = () => Array.from(
+			document.querySelectorAll(
+				${JSON.stringify(`${CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR} ${CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR}`)},
+			),
+		)
+			.filter((node) => !node.parentElement?.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}))
+			.some((node) => Boolean(
+				node.querySelector('button[aria-label^="Open preview of "], [role="group"][aria-label]'),
+			));
 		// Conversation-surface readiness is established by the caller. Repeating
 		// Message readiness can precede late-mounted upload tiles. Wait without a
 		// reload/navigation and collect the full ready surface exactly once.
-		if (!document.querySelector('button[aria-label^="Open preview of "], [role="group"][aria-label]')) {
+		if (!hasUserFileControl()) {
 			await new Promise((resolve) => {
 				let settled = false;
 				const finish = () => {
@@ -9970,7 +9995,7 @@ async function readVisibleChatgptConversationFilesWithClient(
 					resolve(undefined);
 				};
 				const observer = new MutationObserver(() => {
-					if (document.querySelector('button[aria-label^="Open preview of "], [role="group"][aria-label]')) finish();
+					if (hasUserFileControl()) finish();
 				});
 				observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
 				setTimeout(finish, 5_000);

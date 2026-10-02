@@ -23952,3 +23952,17 @@ cleanup failure are not collapsed into a generic error.
   state into a false empty result. Wait once with a bounded `MutationObserver`,
   then perform one full collection; do not reload, navigate, or loop full-DOM
   scans.
+
+## 2026-10-02: Scope late asset readiness to the typed conversation turn
+
+- A bounded wait is still incorrect when its predicate is broader than the
+  collector. ChatGPT may expose unrelated preview/download controls elsewhere
+  on the page; a page-global predicate can settle before the selected
+  assistant or user turn mounts its own control.
+- Use the same role/turn structure for the readiness predicate and final
+  collection. Mutation observation remains bounded and passive: no reload,
+  navigation, polling loop, or provider prompt is needed.
+- Preserve actionable absence semantics. A payload asset missing its live
+  control is a `repair_prompt_candidate`, metadata-only inventory is not a
+  download failure, and only explicit provider evidence is
+  `terminally_unavailable`.
