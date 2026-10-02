@@ -14,6 +14,29 @@ current provider surface, fail explicitly when that surface drifts again, and
 prove one installed positive control without resuming continuous scheduling or
 spending an unbounded provider-traffic budget.
 
+## Current State
+
+PR #155 integrated the current semantic preview/download selector repair and
+was installed from canonical merge `ef2ca681a`. Its sole installed canary,
+`hmj_6b3e342c2e144f5bab077a244f27d6d0`, stopped cleanly with no visible
+rate-limit warning but still produced zero assets. Earlier passive snapshots of
+the same chat showed the controls mounting only after the materializer had
+already settled, localizing a second defect in asset readiness rather than
+filename parsing alone.
+
+PR #156 integrated a bounded `MutationObserver` readiness wait plus the current
+filename-bearing `Download <filename>` control at canonical merge `404053dd1`.
+That merge is installed with byte-identical adapter and manifest artifacts.
+Provider-free validation passes 282 focused/adjacent tests, typecheck,
+production build, plan audit, and diff hygiene. The scheduler is paused, no
+materialization job is active, and the final exact census has zero owned
+`wsl-chrome-3` browser processes, listeners, or non-released leases.
+
+Gate D remains open: the plan's one live attempt was consumed by the readiness
+finding, so the installed follow-up has not been re-probed live. A future live
+positive control requires a separately authorized acceptance attempt; it must
+reuse the dynamic endpoint observer and the same no-retry hard stops.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal
