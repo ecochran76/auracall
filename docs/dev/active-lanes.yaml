@@ -1039,20 +1039,20 @@ lanes:
     branch: feat/issue-49-chatgpt-affinity-rollout
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 4ca1a6cb36aff86d96f39ae243fa09fec3261c39
+    custody_state: PAUSED_REF
+    checkpoint: aed59b6c84af7b9e1edd11283c9bfd6e828f10c8
     remote_ref: refs/remotes/origin/feat/issue-49-chatgpt-affinity-rollout
     integration: merge
     work_items: [ecochran76/auracall#49]
     dependencies: [P52]
     overlaps: []
     reconciled_overlaps: []
-    blocker: null
+    blocker: Two published commits remain outside main; issue 49 is closed but the branch-local plan remains OPEN.
     validation_status: provider-free-lifecycle-repair-passed
     validation_ref: docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md
     integration_receipt: null
     disposition: Operator status, rollback, soak tooling, and heartbeat/TTL lifecycle repair are provider-free accepted. Installed ChatGPT soak and default enablement remain separate gated packets; Gemini and Grok stay serialized. GitHub Actions are waived by operator direction while unavailable.
-    updated_at: 2026-09-25
+    updated_at: 2026-10-02
   - id: P54
     objective: Repair current ChatGPT composer menu and connected-app mention selector drift without changing affinity or soak behavior.
     plan: docs/dev/plans/0361-2026-09-27-chatgpt-composer-selector-drift.md
@@ -1670,8 +1670,8 @@ lanes:
     branch: fix/chatgpt-materialization-surface
     target: main
     plan_state: OPEN
-    custody_state: OWNED
-    checkpoint: d8ed3c96f
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: b6130fc1f9dcc1b8bb25258fd3d8705b54c8ebd8
     remote_ref: refs/remotes/origin/fix/chatgpt-materialization-surface
     integration: merge
     work_items: []
@@ -1679,9 +1679,9 @@ lanes:
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: Installed positive-control acceptance remains after the authorized retry exposed modern role-bearing selector roots being discarded when role evidence was read only from descendants.
-    validation_status: installed-source-accepted-live-pending
-    validation_ref: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    integration_receipt: d8ed3c96f
-    disposition: The authorized positive control still returned zero assets; PR 160 integrated and installed the selector-self repair byte-identically, the scheduler is paused, the exact census is clean, and another live attempt is not authorized.
+    blocker: Canonical trusted-pointer repair requires installation parity and bounded installed product-path acceptance; Gate D remains open.
+    validation_status: trusted-activation-source-integrated-install-live-pending
+    validation_ref: docs/dev/notes/2026-10-02-plan0386-agentic-generated-asset-control.md
+    integration_receipt: 554cbe58b8d30b2360d6780894f1c31cbcf5444c
+    disposition: PR 162 merged exact trusted-pointer head b6130fc1f after 187 adapter tests and typecheck passed. Direct agentic download is evidence for the repair hypothesis, not installed product acceptance. This reconciliation performs no installation or provider effects.
     updated_at: 2026-10-02
