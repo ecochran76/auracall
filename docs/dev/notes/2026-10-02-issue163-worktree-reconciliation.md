@@ -90,7 +90,9 @@ retained. Seven missing detached registrations are eligible for targeted prune.
 
 Before the two scoped projection repairs, catalog-only audit against canonical
 main reported 86 problems. This is not global governance acceptance.
-The complete pre-repair finding set follows; most concerns are historical plan
+After the P53/P85 repairs, audit against the proposed commit reports 82
+remaining problems and zero findings on those two lanes. The complete
+pre-repair finding set follows; most concerns are historical plan
 metadata, missing remote custody, stale checkpoints, and unresolved overlaps.
 
 - P74: unknown dependency lane: P61
