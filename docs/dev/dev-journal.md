@@ -52271,3 +52271,10 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free validation is green for 282 focused tests and typecheck. Gate D
   remains open pending integration, install, and separately authorized live
   proof of one readable Bailey asset.
+- PR #158 merged the scoped-readiness repair at canonical
+  `faac74e6b60f4356781be512719855d5dea44751`. The canonical build was installed
+  and the changed adapter/materialization-service artifacts match installed
+  bytes exactly. Fresh readback shows the API active, scheduler paused, zero
+  active history-materialization jobs, all 204 leases released, and no exact
+  `wsl-chrome-3` browser process. Only the separately authorized live positive
+  proof remains.

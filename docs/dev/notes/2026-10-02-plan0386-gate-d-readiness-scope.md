@@ -38,7 +38,16 @@ structure as collection and records explicit recoverability states:
 
 ## Remaining gate
 
-Integrate and install the scoped-readiness repair, then obtain separate
-authority for one no-retry installed positive control. Gate D closes only when
-one Bailey asset is readable and its filename, size/type evidence, checksum,
-manifest, and archive projection agree.
+PR #158 integrated the scoped-readiness repair at canonical merge
+`faac74e6b60f4356781be512719855d5dea44751`, and that canonical build is
+installed. Source and installed SHA-256 values match for
+`chatgptAdapter.js` (`32bc610239f01dce2d94a14ce0609d73768044fe2faeb99b5a768f32f651ff5a`)
+and `historyMaterializationService.js`
+(`bf2a99f151d960c13a5a3eb42f6b0e5fd2748c09ade48865fb0eba2fad5eab42`).
+The installed API is active, the scheduler remains paused, active history
+materialization jobs are zero, all 204 recorded leases are released, and no
+exact `wsl-chrome-3` browser process remains.
+
+Obtain separate authority for one no-retry installed positive control. Gate D
+closes only when one Bailey asset is readable and its filename, size/type
+evidence, checksum, manifest, and archive projection agree.

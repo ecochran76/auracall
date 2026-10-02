@@ -1671,7 +1671,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: OWNED
-    checkpoint: 404053dd1
+    checkpoint: faac74e6b
     remote_ref: refs/remotes/origin/fix/chatgpt-materialization-surface
     integration: merge
     work_items: []
@@ -1679,9 +1679,9 @@ lanes:
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: Installed positive-control acceptance remains after the one authorized attempt exposed late asset-control hydration.
+    blocker: Installed positive-control acceptance remains after the authorized retry exposed page-global readiness settling before the selected turn mounted its control.
     validation_status: installed-source-accepted-live-pending
     validation_ref: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    integration_receipt: 404053dd1
-    disposition: PRs 155 and 156 integrated and the canonical readiness follow-up is installed byte-identically; source validation is green, the scheduler is paused, the exact census is clean, and a separately authorized no-retry positive control remains.
-    updated_at: 2026-10-01
+    integration_receipt: faac74e6b
+    disposition: PR 158 integrated and installed the turn-scoped readiness and recoverability-state repair byte-identically; source validation is green, the scheduler is paused, the exact census is clean, and a separately authorized no-retry positive control remains.
+    updated_at: 2026-10-02
