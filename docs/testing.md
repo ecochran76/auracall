@@ -1,5 +1,12 @@
 # Testing quickstart
 
+- ChatGPT materialization surface and recoverability states (provider-free):
+  `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/catalogService.test.ts tests/runtime.historyMaterializationService.test.ts`.
+  This proves late asset readiness is scoped to assistant/user turns rather
+  than any matching page control, and distinguishes downloadable, repair-prompt
+  candidate, metadata-only, terminally unavailable, and materialized entries.
+  It does not launch a browser, download an asset, or send a repair prompt.
+
 - Account-mirror provider-traffic planning and phase attribution
   (provider-free):
   `pnpm vitest run tests/accountMirror/providerTrafficPlan.test.ts tests/browser-service/providerTrafficGovernor.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.

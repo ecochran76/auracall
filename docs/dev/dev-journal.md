@@ -52253,3 +52253,21 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   the managed browser is absent; it detected no hard stop during the consumed
   canary. The installed positive control remains unproven because the live
   attempt bound was not widened.
+
+## 2026-10-02 - Plan 0386 authorized positive-control retry
+
+- Ran exactly one installed Bailey generated-artifact control after an inert
+  preflight. Job `hmj_1d8bf96fdc8e44c28b8c6dbf384e0d80` used
+  `wsl-chrome-3`, no snapshot refresh, `maxItems=1`, and no retry. It terminated
+  skipped with zero typed assets and no provider warning.
+- The dynamic CDP observer followed the exact managed endpoint and recorded no
+  rate-limit/CAPTCHA hard stop. The browser cleaned itself up and the scheduler
+  remained paused.
+- Source diagnosis found the remaining race: readiness used a page-global
+  preview/download selector, while collection was assistant/user-turn scoped.
+  The repair now applies identical structural scope to readiness and labels
+  results as downloadable, repair-prompt candidate, metadata-only, terminally
+  unavailable, or materialized. Automatic repair prompting remains excluded.
+- Provider-free validation is green for 282 focused tests and typecheck. Gate D
+  remains open pending integration, install, and separately authorized live
+  proof of one readable Bailey asset.

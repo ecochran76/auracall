@@ -815,6 +815,14 @@ Terminology note:
   rendered Library row is not evidence that the provider file ceased to exist.
   Legacy jobs without this field retain their original reason-based terminal
   compatibility.
+  New results also expose `recoverabilityState` so operator action is not
+  inferred from an empty download result: `downloadable_now` identifies a
+  concrete retrievable control, `repair_prompt_candidate` preserves a payload
+  asset whose live control is missing, `metadata_only` records inventory that
+  has no current retrieval path, `terminally_unavailable` requires explicit
+  provider-unavailable evidence, and `materialized` identifies verified local
+  output. A repair-prompt candidate is diagnostic only; AuraCall does not send
+  a repair prompt automatically.
 
   A completion-owned failed job with zero verified materializations blocks its live-follow
   operation before another provider pass; inspect and correct the
@@ -928,6 +936,9 @@ Terminology note:
   `Download file` button is an action, not a filename. Discovery and
   materialization preserve the same turn/message/index identity so an
   unrelated download control cannot satisfy the request.
+  The bounded late-control wait is scoped to the relevant assistant or user
+  turn. A preview/download control elsewhere on the page cannot end readiness
+  for the selected asset surface.
   ChatGPT `files-download` JSON may supply a signed URL as the JSON string
   itself, a recognized shallow URL field, or one `data`/`result` wrapper.
   Parsing a URL is not materialization proof: AuraCall still requires the

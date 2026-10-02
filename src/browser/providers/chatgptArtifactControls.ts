@@ -174,6 +174,7 @@ export function reconcileChatgptPayloadDownloadControls(
 				metadata: {
 					...(artifact.metadata ?? {}),
 					liveControlState: "available",
+					recoverabilityState: "downloadable_now",
 					liveControlUri: control.uri ?? null,
 					liveControlArtifactId: control.id,
 					...(readMetadataString(control, "turnId")
@@ -197,6 +198,7 @@ export function reconcileChatgptPayloadDownloadControls(
 				...metadata,
 				liveControlState: "missing",
 				liveControlReason: CHATGPT_MISSING_LIVE_CONTROL_REASON,
+				recoverabilityState: "repair_prompt_candidate",
 			},
 		};
 	});
